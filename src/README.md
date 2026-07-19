@@ -6,37 +6,58 @@ The authoritative distributable source for MissionChief Command Nexus is:
 src/missionchief-command-nexus.user.js
 ```
 
-## Current source intake
+## Current baseline
 
-- Unified release line: `1.0.x`
-- Imported baseline: Mission Finder V10.6.69 with Unit, Station & Personnel Tools V4.2.8
-- Initial repository metadata version: `1.0.0`
-- Licence: MIT
-- Developer and source-code owner: **MartyBlyth**
-- Project helper: **Conroy1988**
+| Item | Value |
+|---|---|
+| Command Nexus version | `1.0.1` |
+| Mission Finder baseline | `V10.6.69` |
+| Unit, Station & Personnel baseline | `V4.2.8` |
+| Licence | MIT |
+| Developer and source-code owner | **MartyBlyth** |
+| Repository and documentation support | **Conroy1988** |
 
-The original uploaded source was converted from `.txt` to the installable `.user.js` filename. Only the userscript metadata block was standardized for repository, licence, support and release automation. The operational script body and compatibility guards were retained.
+The source was imported as one installable `.user.js` file with one standardized Command Nexus metadata block. The established operational bodies, compatibility guards and module startup isolation were retained.
+
+## Current implementation model
+
+The file contains:
+
+1. One outer Command Nexus installation guard.
+2. The Resource Administration Engine.
+3. The Mission Operations Engine.
+4. A shared vehicle-training registry used for qualification-aware selection.
+
+The source is merged and installable, but deeper interface, lifecycle and storage consolidation remains subject to testing and MartyBlyth's technical direction.
 
 ## Distribution rule
 
-`src/missionchief-command-nexus.user.js` on `main` is the single source Greasy Fork must fetch. Feature branches are development-only and must not be used as the synchronization URL.
+`src/missionchief-command-nexus.user.js` on `main` is the only authoritative synchronization source. Feature branches, pull-request refs, copied text files and GitHub Release assets must not be configured as the live synchronization URL.
 
-Raw production source:
+Raw canonical source:
 
 ```text
 https://raw.githubusercontent.com/Team-Killing-Bastards/MissionChief-Command-Nexus/main/src/missionchief-command-nexus.user.js
 ```
 
-## Required release checks
+## Source-change requirements
 
-Before merging a source change:
+Before publishing a source change:
 
+- Pull the current `main` baseline.
+- Change the canonical `.user.js` file only.
 - Increase `@version`.
+- Update `CHANGELOG.md`.
 - Run `node --check src/missionchief-command-nexus.user.js`.
 - Run `node scripts/validate-userscript.mjs`.
-- Update `CHANGELOG.md`.
+- Run `python3 scripts/check_repository.py`.
 - Complete the relevant MissionChief regression checks.
-- Confirm no account-specific data, credentials or private configuration was introduced.
-- Do not run the unified script and either legacy standalone script simultaneously.
+- Record the tested domain, browser, userscript manager and interacting scripts.
+- Confirm no account data, credentials, webhook URLs or private configuration was introduced.
+- Do not run Command Nexus alongside either legacy standalone script.
 
-See [Greasy Fork Automated Release Setup](../docs/GREASY_FORK_SETUP.md) for publication details.
+## High-risk source areas
+
+Changes involving dispatch, patient demand, trained-personnel matching, personnel assignment, bulk naming, storage migration, queue continuation or lifecycle cleanup require explicit evidence and rollback notes.
+
+Start with [Developer Handoff](../docs/DEVELOPER_HANDOFF.md). Publication details are in [Greasy Fork Automated Release Setup](../docs/GREASY_FORK_SETUP.md).
