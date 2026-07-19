@@ -1,30 +1,42 @@
 # Source Directory
 
-The unified MissionChief Command Nexus source has not yet been imported.
-
-This directory is reserved for the code developed by **MartyBlyth** when the two existing userscripts are merged.
-
-## Intended entry file
-
-The final distributable userscript is expected to use a clear filename such as:
+The authoritative distributable source for MissionChief Command Nexus is:
 
 ```text
-MissionChief_Command_Nexus.user.js
+src/missionchief-command-nexus.user.js
 ```
 
-The exact source layout remains a technical decision for MartyBlyth.
+## Current source intake
 
-## Source intake requirements
+- Unified release line: `1.0.x`
+- Imported baseline: Mission Finder V10.6.69 with Unit, Station & Personnel Tools V4.2.8
+- Initial repository metadata version: `1.0.0`
+- Licence: MIT
+- Developer and source-code owner: **MartyBlyth**
+- Project helper: **Conroy1988**
 
-Before importing either original userscript:
+The original uploaded source was converted from `.txt` to the installable `.user.js` filename. Only the userscript metadata block was standardized for repository, licence, support and release automation. The operational script body and compatibility guards were retained.
 
-- Confirm the latest source version.
-- Record the source URL and version.
-- Record a checksum where practical.
-- Preserve the original MIT attribution.
-- Avoid committing account-specific data or private configuration.
-- Do not run both source scripts and the merged script simultaneously during integrated testing.
+## Distribution rule
 
-## Ownership
+`src/missionchief-command-nexus.user.js` on `main` is the single source Greasy Fork must fetch. Feature branches are development-only and must not be used as the synchronization URL.
 
-MartyBlyth is the project developer and source-code owner. Conroy1988 assists with repository administration and documentation only.
+Raw production source:
+
+```text
+https://raw.githubusercontent.com/Team-Killing-Bastards/MissionChief-Command-Nexus/main/src/missionchief-command-nexus.user.js
+```
+
+## Required release checks
+
+Before merging a source change:
+
+- Increase `@version`.
+- Run `node --check src/missionchief-command-nexus.user.js`.
+- Run `node scripts/validate-userscript.mjs`.
+- Update `CHANGELOG.md`.
+- Complete the relevant MissionChief regression checks.
+- Confirm no account-specific data, credentials or private configuration was introduced.
+- Do not run the unified script and either legacy standalone script simultaneously.
+
+See [Greasy Fork Automated Release Setup](../docs/GREASY_FORK_SETUP.md) for publication details.
