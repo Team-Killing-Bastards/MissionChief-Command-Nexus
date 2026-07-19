@@ -4,12 +4,18 @@ on:
   push:
     tags:
       - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag, for example v1.0.2. Leave blank to use the current @version on main.'
+        required: false
+        type: string
 
 permissions:
   contents: write
 
 concurrency:
-  group: create-release-${{ github.ref }}
+  group: create-release-${{ github.event_name }}-${{ inputs.release_tag || github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -19,27 +25,92 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      - name: Check out repository
+      - name: Check out release source
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          ref: ${{ github.event_name == 'workflow_dispatch' && 'main' || github.ref }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
 
-      - name: Confirm tagged commit is contained in main
+      - name: Resolve and verify release context
         shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REQUESTED_TAG: ${{ inputs.release_tag }}
         run: |
-          git fetch origin main --no-tags
+          set -euo pipefail
 
-          if ! git merge-base --is-ancestor \
-            "${GITHUB_SHA}" origin/main; then
+          git fetch origin main --tags
 
-            echo "Tagged commit ${GITHUB_SHA} is not contained in origin/main."
+          SCRIPT_VERSION="$(
+            node scripts/validate-userscript.mjs --print-version
+          )"
+          EXPECTED_TAG="v${SCRIPT_VERSION}"
+
+          if [[ "${EVENT_NAME}" == "workflow_dispatch" ]]; then
+            RELEASE_TAG="${REQUESTED_TAG#refs/tags/}"
+
+            if [[ -z "${RELEASE_TAG}" ]]; then
+              RELEASE_TAG="${EXPECTED_TAG}"
+            elif [[ "${RELEASE_TAG}" != v* ]]; then
+              RELEASE_TAG="v${RELEASE_TAG}"
+            fi
+
+            RELEASE_SHA="$(git rev-parse origin/main)"
+            git checkout --detach "${RELEASE_SHA}"
+
+            if git show-ref --tags --verify --quiet \
+              "refs/tags/${RELEASE_TAG}"; then
+
+              TAG_SHA="$(git rev-list -n 1 "${RELEASE_TAG}")"
+
+              if [[ "${TAG_SHA}" != "${RELEASE_SHA}" ]]; then
+                echo "Existing tag ${RELEASE_TAG} points to ${TAG_SHA}."
+                echo "Current main is ${RELEASE_SHA}; refusing to move the tag."
+                exit 1
+              fi
+            else
+              git config user.name "github-actions[bot]"
+              git config user.email \
+                "41898282+github-actions[bot]@users.noreply.github.com"
+
+              git tag -a "${RELEASE_TAG}" "${RELEASE_SHA}" \
+                -m "MissionChief Command Nexus ${SCRIPT_VERSION}"
+
+              git push origin "refs/tags/${RELEASE_TAG}"
+            fi
+          else
+            RELEASE_TAG="${GITHUB_REF_NAME}"
+            RELEASE_SHA="${GITHUB_SHA}"
+          fi
+
+          if [[ "${RELEASE_TAG}" != "${EXPECTED_TAG}" ]]; then
+            echo "Tag ${RELEASE_TAG} does not match @version ${SCRIPT_VERSION}."
+            echo "Expected tag: ${EXPECTED_TAG}"
             exit 1
           fi
+
+          if ! git merge-base --is-ancestor \
+            "${RELEASE_SHA}" origin/main; then
+
+            echo "Release commit ${RELEASE_SHA} is not contained in origin/main."
+            exit 1
+          fi
+
+          echo "RELEASE_TAG=${RELEASE_TAG}" >> "${GITHUB_ENV}"
+          echo "RELEASE_SHA=${RELEASE_SHA}" >> "${GITHUB_ENV}"
+
+          {
+            echo "### Release context"
+            echo "- Event: ${EVENT_NAME}"
+            echo "- Tag: \`${RELEASE_TAG}\`"
+            echo "- Version: \`${SCRIPT_VERSION}\`"
+            echo "- Commit: \`${RELEASE_SHA}\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
 
       - name: Validate repository and userscript
         run: |
@@ -47,21 +118,6 @@ jobs:
           node --check src/missionchief-command-nexus.user.js
           node scripts/validate-userscript.mjs
           node --check scripts/release-notify.mjs
-
-      - name: Confirm tag matches userscript version
-        shell: bash
-        run: |
-          SCRIPT_VERSION="$(
-            node scripts/validate-userscript.mjs --print-version
-          )"
-
-          EXPECTED_TAG="v${SCRIPT_VERSION}"
-
-          if [[ "${GITHUB_REF_NAME}" != "${EXPECTED_TAG}" ]]; then
-            echo "Tag ${GITHUB_REF_NAME} does not match @version ${SCRIPT_VERSION}."
-            echo "Expected tag: ${EXPECTED_TAG}"
-            exit 1
-          fi
 
       - name: Confirm changelog contains mission brief
         shell: bash
@@ -109,7 +165,10 @@ jobs:
           cp src/missionchief-command-nexus.user.js "${ASSET}"
           sha256sum "${ASSET}" > "${ASSET}.sha256"
 
-          python3 - "${SCRIPT_VERSION}" "${GITHUB_SHA}" "${ASSET}.sha256" <<'PY'
+          python3 - \
+            "${SCRIPT_VERSION}" \
+            "${RELEASE_SHA}" \
+            "${ASSET}.sha256" <<'PY'
           import re
           import sys
           from pathlib import Path
@@ -168,18 +227,18 @@ jobs:
           ASSET="MissionChief-Command-Nexus-${SCRIPT_VERSION}.user.js"
           TITLE="MissionChief Command Nexus ${SCRIPT_VERSION}"
 
-          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
-            gh release upload "${GITHUB_REF_NAME}" \
+          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+            gh release upload "${RELEASE_TAG}" \
               "${ASSET}" \
               "${ASSET}.sha256" \
               --clobber
 
-            gh release edit "${GITHUB_REF_NAME}" \
+            gh release edit "${RELEASE_TAG}" \
               --title "${TITLE}" \
               --notes-file release-notes.md \
               --verify-tag
           else
-            gh release create "${GITHUB_REF_NAME}" \
+            gh release create "${RELEASE_TAG}" \
               "${ASSET}" \
               "${ASSET}.sha256" \
               --title "${TITLE}" \
@@ -199,11 +258,11 @@ jobs:
           ASSET="MissionChief-Command-Nexus-${SCRIPT_VERSION}.user.js"
           mkdir -p release-check
 
-          gh release view "${GITHUB_REF_NAME}" \
+          gh release view "${RELEASE_TAG}" \
             --json url \
             --jq '.url'
 
-          gh release download "${GITHUB_REF_NAME}" \
+          gh release download "${RELEASE_TAG}" \
             --pattern "${ASSET}" \
             --pattern "${ASSET}.sha256" \
             --dir release-check \
@@ -218,8 +277,6 @@ jobs:
           GREASYFORK_INSTALL_URL: ${{ vars.GREASYFORK_INSTALL_URL }}
           GREASYFORK_PAGE_URL: ${{ vars.GREASYFORK_PAGE_URL }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          RELEASE_TAG: ${{ github.ref_name }}
-          RELEASE_SHA: ${{ github.sha }}
           SOURCE_PATH: src/missionchief-command-nexus.user.js
           CHANGELOG_PATH: CHANGELOG.md
           PRODUCT_NAME: MissionChief Command Nexus
