@@ -8,18 +8,19 @@
 
 Mission intelligence · Automated vehicle selection · Patient demand · Trained-personnel matching · Unit and station naming · Personnel assignment
 
-[![Install current build](https://img.shields.io/badge/INSTALL%20CURRENT%20BUILD-GITHUB-00A8E8?style=for-the-badge&logo=tampermonkey&logoColor=white)](https://raw.githubusercontent.com/Team-Killing-Bastards/MissionChief-Command-Nexus/main/src/missionchief-command-nexus.user.js)
-[![View source](https://img.shields.io/badge/VIEW-CANONICAL%20SOURCE-6D28D9?style=for-the-badge&logo=github&logoColor=white)](src/missionchief-command-nexus.user.js)
-[![Open releases](https://img.shields.io/badge/OPEN-GITHUB%20RELEASES-DC3158?style=for-the-badge&logo=githubactions&logoColor=white)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases)
-[![Report a bug](https://img.shields.io/badge/REPORT-A%20BUG-D73A4A?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/new/choose)
+<table>
+<tr>
+<td width="25%" align="center"><a href="https://raw.githubusercontent.com/Team-Killing-Bastards/MissionChief-Command-Nexus/main/src/missionchief-command-nexus.user.js"><strong>⬇ INSTALL CURRENT BUILD</strong><br><sub>Canonical userscript</sub></a></td>
+<td width="25%" align="center"><a href="src/missionchief-command-nexus.user.js"><strong>⌘ VIEW SOURCE</strong><br><sub>Inspect the live code</sub></a></td>
+<td width="25%" align="center"><a href="https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases"><strong>◈ OPEN RELEASES</strong><br><sub>Versioned archives</sub></a></td>
+<td width="25%" align="center"><a href="https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/new/choose"><strong>⚠ REPORT A BUG</strong><br><sub>Structured issue form</sub></a></td>
+</tr>
+</table>
 
-[![Version](https://img.shields.io/badge/version-1.0.1-2563EB)](src/missionchief-command-nexus.user.js)
-[![Developer](https://img.shields.io/badge/developer-MartyBlyth-111827)](https://github.com/Martyblyth)
-[![Platform](https://img.shields.io/badge/platform-MissionChief%20UK-8B0000)](https://www.missionchief.co.uk/)
+**Current version:** `1.0.1` · **Developer:** [MartyBlyth](https://github.com/Martyblyth) · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE) · [⭐ Star the repository](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/stargazers)
+
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)
-[![Licence](https://img.shields.io/badge/licence-MIT-198754)](LICENSE)
-[![GitHub stars](https://img.shields.io/github/stars/Team-Killing-Bastards/MissionChief-Command-Nexus?style=flat&color=ca8a04)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/stargazers)
 
 [Why it exists](#why-command-nexus-exists) · [Install](#install-in-under-a-minute) · [Mission operations](#mission-intelligence-and-dispatch) · [Resource administration](#resource-administration) · [Training intelligence](#trained-personnel-intelligence) · [Release confidence](#release-confidence) · [Support](#support-and-development)
 
@@ -49,7 +50,7 @@ Stations → Vehicles → Trained Personnel → Mission Requirements → Dispatc
 ```
 
 > [!IMPORTANT]
-> **MissionChief Command Nexus is developed by MartyBlyth.** Conroy1988 assists with repository setup, documentation and general project support only; he is not a userscript developer.
+> **MissionChief Command Nexus is developed by MartyBlyth.** Conroy1988 assists as a project helper with repository setup, documentation and general support only; he is not a userscript developer.
 
 ## Install in under a minute
 
@@ -394,14 +395,14 @@ src/
 
 Use the route that matches the request. Reproducible defects belong in Issues; source changes should follow the repository contribution and validation controls.
 
-<div align="center">
-
-[![View active work](https://img.shields.io/badge/VIEW-ACTIVE%20WORK-1D76DB?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues)
-[![Report a bug](https://img.shields.io/badge/REPORT-A%20BUG-D73A4A?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/new?template=bug_report.yml)
-[![Request a feature](https://img.shields.io/badge/REQUEST-A%20FEATURE-7C3AED?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/new?template=feature_request.yml)
-[![Read support policy](https://img.shields.io/badge/READ-SUPPORT%20POLICY-0F766E?style=for-the-badge&logo=readthedocs&logoColor=white)](SUPPORT.md)
-
-</div>
+<table>
+<tr>
+<td width="25%" align="center"><a href="https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues"><strong>📋 ACTIVE WORK</strong><br><sub>Open issues and delivery queue</sub></a></td>
+<td width="25%" align="center"><a href="https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/new?template=bug_report.yml"><strong>🐞 REPORT A BUG</strong><br><sub>Reproducible defects</sub></a></td>
+<td width="25%" align="center"><a href="https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/new?template=feature_request.yml"><strong>💡 REQUEST A FEATURE</strong><br><sub>Scoped product proposals</sub></a></td>
+<td width="25%" align="center"><a href="SUPPORT.md"><strong>🛟 SUPPORT POLICY</strong><br><sub>Help and support boundaries</sub></a></td>
+</tr>
+</table>
 
 | Resource | Purpose |
 |---|---|
