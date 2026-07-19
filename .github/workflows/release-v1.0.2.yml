@@ -1,5 +1,6 @@
 name: Publish Command Nexus v1.0.2
 
+# One-shot trigger after the workflow was installed on main.
 on:
   push:
     branches:
