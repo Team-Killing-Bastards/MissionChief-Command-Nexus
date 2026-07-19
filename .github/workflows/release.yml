@@ -6,21 +6,286 @@ on:
       - 'v*.*.*'
   workflow_dispatch:
     inputs:
+      operation:
+        description: 'Choose prepare-version first, then publish-release after the version PR is merged.'
+        required: true
+        default: prepare-version
+        type: choice
+        options:
+          - prepare-version
+          - publish-release
       release_tag:
-        description: 'Release tag, for example v1.0.2. Leave blank to use the current @version on main.'
+        description: 'Release tag, for example v1.0.2. Publish may be left blank to use the current @version on main.'
         required: false
+        type: string
+      release_notes:
+        description: 'Short changelog summary used when preparing a new version.'
+        required: false
+        default: 'Release preparation and verified deployment notification updates.'
         type: string
 
 permissions:
   contents: write
+  pull-requests: write
 
 concurrency:
-  group: create-release-${{ github.event_name }}-${{ inputs.release_tag || github.ref }}
+  group: create-release-${{ github.event_name }}-${{ inputs.operation || 'tag' }}-${{ inputs.release_tag || github.ref }}
   cancel-in-progress: false
 
 jobs:
+  prepare:
+    name: Prepare release version pull request
+    if: github.event_name == 'workflow_dispatch' && inputs.operation == 'prepare-version'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Prepare version branch and pull request
+        id: prepare_release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_TAG: ${{ inputs.release_tag }}
+          RELEASE_NOTES: ${{ inputs.release_notes }}
+        run: |
+          set -euo pipefail
+
+          git fetch origin main --tags
+          git checkout -B main origin/main
+
+          RELEASE_TAG="${REQUESTED_TAG#refs/tags/}"
+
+          if [[ -z "${RELEASE_TAG}" ]]; then
+            echo "A release tag is required in prepare-version mode."
+            echo "Example: v1.0.2"
+            exit 1
+          fi
+
+          if [[ "${RELEASE_TAG}" != v* ]]; then
+            RELEASE_TAG="v${RELEASE_TAG}"
+          fi
+
+          RELEASE_VERSION="${RELEASE_TAG#v}"
+
+          if [[ ! "${RELEASE_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid release version: ${RELEASE_VERSION}"
+            exit 1
+          fi
+
+          CURRENT_VERSION="$(
+            node scripts/validate-userscript.mjs --print-version
+          )"
+
+          if [[ "${CURRENT_VERSION}" == "${RELEASE_VERSION}" ]]; then
+            {
+              echo "### Release version already prepared"
+              echo "- Current version: \`${CURRENT_VERSION}\`"
+              echo "- Next action: run this workflow using \`publish-release\`."
+            } >> "${GITHUB_STEP_SUMMARY}"
+            exit 0
+          fi
+
+          if git show-ref --tags --verify --quiet \
+            "refs/tags/${RELEASE_TAG}"; then
+
+            TAG_SHA="$(git rev-list -n 1 "${RELEASE_TAG}")"
+            TAG_VERSION="$(
+              git show "${TAG_SHA}:src/missionchief-command-nexus.user.js" |
+                sed -n 's#^//[[:space:]]*@version[[:space:]]*##p' |
+                head -n 1 |
+                xargs
+            )"
+
+            if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+              echo "Tag ${RELEASE_TAG} already has a GitHub Release; refusing to delete it."
+              exit 1
+            fi
+
+            if [[ "${TAG_VERSION}" == "${RELEASE_VERSION}" ]]; then
+              echo "Tag ${RELEASE_TAG} already points to matching version ${TAG_VERSION}."
+              echo "Prepare the version from that tagged commit or choose a new version."
+              exit 1
+            fi
+
+            echo "Removing stale tag ${RELEASE_TAG}, which points to source version ${TAG_VERSION}."
+            git tag -d "${RELEASE_TAG}"
+            git push origin ":refs/tags/${RELEASE_TAG}"
+          fi
+
+          export RELEASE_VERSION CURRENT_VERSION RELEASE_NOTES
+
+          python3 <<'PY'
+          from __future__ import annotations
+
+          import datetime as dt
+          import os
+          import re
+          from pathlib import Path
+
+          version = os.environ["RELEASE_VERSION"].strip()
+          current = os.environ["CURRENT_VERSION"].strip()
+          notes = os.environ.get("RELEASE_NOTES", "").strip()
+          if not notes:
+              notes = "Release preparation and verified deployment updates."
+
+          source_path = Path("src/missionchief-command-nexus.user.js")
+          source = source_path.read_text(encoding="utf-8")
+          source, count = re.subn(
+              r"^(//\s*@version\s+)\S+(\s*)$",
+              rf"\g<1>{version}\g<2>",
+              source,
+              count=1,
+              flags=re.MULTILINE,
+          )
+          if count != 1:
+              raise SystemExit("Could not update canonical userscript @version")
+          source_path.write_text(source, encoding="utf-8")
+
+          readme_path = Path("README.md")
+          readme = readme_path.read_text(encoding="utf-8")
+          readme, count = re.subn(
+              r"(\*\*Current version:\*\*\s*`)[^`]+(`)",
+              rf"\g<1>{version}\g<2>",
+              readme,
+              count=1,
+          )
+          if count != 1:
+              raise SystemExit("Could not update README current version")
+          readme = re.sub(
+              r"Command Nexus v\S+ is a single userscript",
+              f"Command Nexus v{version} is a single userscript",
+              readme,
+              count=1,
+          )
+          readme_path.write_text(readme, encoding="utf-8")
+
+          source_readme_path = Path("src/README.md")
+          source_readme = source_readme_path.read_text(encoding="utf-8")
+          source_readme, count = re.subn(
+              r"(\|\s*Command Nexus version\s*\|\s*`)[^`]+(`\s*\|)",
+              rf"\g<1>{version}\g<2>",
+              source_readme,
+              count=1,
+          )
+          if count != 1:
+              raise SystemExit("Could not update src/README.md version")
+          source_readme_path.write_text(source_readme, encoding="utf-8")
+
+          changelog_path = Path("CHANGELOG.md")
+          changelog = changelog_path.read_text(encoding="utf-8")
+          release_heading = re.compile(
+              rf"^## \[{re.escape(version)}\](?:\s+-.*)?\s*$",
+              re.MULTILINE,
+          )
+
+          if not release_heading.search(changelog):
+              current_heading = re.search(
+                  rf"^## \[{re.escape(current)}\](?:\s+-.*)?\s*$",
+                  changelog,
+                  re.MULTILINE,
+              )
+              if not current_heading:
+                  raise SystemExit(
+                      f"Could not find changelog section for current version {current}"
+                  )
+
+              bullet_lines = []
+              for line in notes.splitlines():
+                  cleaned = line.strip().removeprefix("-").strip()
+                  if cleaned:
+                      bullet_lines.append(f"- {cleaned}")
+              if not bullet_lines:
+                  bullet_lines = ["- Release preparation and verified deployment updates."]
+
+              section = (
+                  f"## [{version}] - {dt.date.today().isoformat()}\n\n"
+                  "### Changed\n\n"
+                  + "\n".join(bullet_lines)
+                  + "\n"
+                  + f"- Increased the unified userscript version from `{current}` to `{version}`.\n\n"
+              )
+              changelog = (
+                  changelog[: current_heading.start()]
+                  + section
+                  + changelog[current_heading.start() :]
+              )
+              changelog_path.write_text(changelog, encoding="utf-8")
+          PY
+
+          node --check src/missionchief-command-nexus.user.js
+          node --check scripts/release-notify.mjs
+          node scripts/validate-userscript.mjs
+          python3 scripts/check_repository.py
+          git diff --check
+
+          RELEASE_BRANCH="release/${RELEASE_TAG}"
+          git checkout -B "${RELEASE_BRANCH}"
+          git config user.name "github-actions[bot]"
+          git config user.email \
+            "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add \
+            src/missionchief-command-nexus.user.js \
+            README.md \
+            src/README.md \
+            CHANGELOG.md
+
+          git commit -m "Prepare ${RELEASE_TAG}"
+          git push --force origin \
+            "HEAD:refs/heads/${RELEASE_BRANCH}"
+
+          PR_URL="$(
+            gh pr list \
+              --head "${RELEASE_BRANCH}" \
+              --base main \
+              --state open \
+              --json url \
+              --jq '.[0].url // empty'
+          )"
+
+          if [[ -z "${PR_URL}" ]]; then
+            cat > release-pr-body.md <<EOF
+          ## Release preparation
+
+          - Updates the canonical userscript and documentation to \`${RELEASE_VERSION}\`.
+          - Adds the matching changelog section.
+          - Runs userscript syntax, metadata and repository integrity checks before opening this PR.
+
+          After merging, run **Create GitHub release** again using **publish-release** and \`${RELEASE_TAG}\`.
+          EOF
+
+            PR_URL="$(
+              gh pr create \
+                --base main \
+                --head "${RELEASE_BRANCH}" \
+                --title "Prepare ${RELEASE_TAG}" \
+                --body-file release-pr-body.md
+            )"
+          fi
+
+          {
+            echo "### Release preparation complete"
+            echo "- Version: \`${RELEASE_VERSION}\`"
+            echo "- Tag reserved for publication: \`${RELEASE_TAG}\`"
+            echo "- Pull request: ${PR_URL}"
+            echo "- Next action: merge the PR, then run \`publish-release\`."
+          } >> "${GITHUB_STEP_SUMMARY}"
+
   release:
     name: Package, verify and announce userscript release
+    if: github.event_name == 'push' || inputs.operation == 'publish-release'
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -32,9 +297,10 @@ jobs:
           ref: ${{ github.event_name == 'workflow_dispatch' && 'main' || github.ref }}
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version: '24'
+          package-manager-cache: false
 
       - name: Resolve and verify release context
         shell: bash
@@ -62,7 +328,26 @@ jobs:
 
             RELEASE_SHA="$(git rev-parse origin/main)"
             git checkout --detach "${RELEASE_SHA}"
+          else
+            RELEASE_TAG="${GITHUB_REF_NAME}"
+            RELEASE_SHA="${GITHUB_SHA}"
+          fi
 
+          if [[ "${RELEASE_TAG}" != "${EXPECTED_TAG}" ]]; then
+            echo "Tag ${RELEASE_TAG} does not match @version ${SCRIPT_VERSION}."
+            echo "Expected tag: ${EXPECTED_TAG}"
+            echo "Use prepare-version first when publishing a new version."
+            exit 1
+          fi
+
+          if ! git merge-base --is-ancestor \
+            "${RELEASE_SHA}" origin/main; then
+
+            echo "Release commit ${RELEASE_SHA} is not contained in origin/main."
+            exit 1
+          fi
+
+          if [[ "${EVENT_NAME}" == "workflow_dispatch" ]]; then
             if git show-ref --tags --verify --quiet \
               "refs/tags/${RELEASE_TAG}"; then
 
@@ -83,22 +368,6 @@ jobs:
 
               git push origin "refs/tags/${RELEASE_TAG}"
             fi
-          else
-            RELEASE_TAG="${GITHUB_REF_NAME}"
-            RELEASE_SHA="${GITHUB_SHA}"
-          fi
-
-          if [[ "${RELEASE_TAG}" != "${EXPECTED_TAG}" ]]; then
-            echo "Tag ${RELEASE_TAG} does not match @version ${SCRIPT_VERSION}."
-            echo "Expected tag: ${EXPECTED_TAG}"
-            exit 1
-          fi
-
-          if ! git merge-base --is-ancestor \
-            "${RELEASE_SHA}" origin/main; then
-
-            echo "Release commit ${RELEASE_SHA} is not contained in origin/main."
-            exit 1
           fi
 
           echo "RELEASE_TAG=${RELEASE_TAG}" >> "${GITHUB_ENV}"
