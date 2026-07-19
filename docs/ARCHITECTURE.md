@@ -1,127 +1,178 @@
-# Architecture Direction
+# Architecture
 
-This document defines the intended structure of MissionChief Command Nexus before the two source userscripts are merged.
+This document describes the architecture that exists in the merged MissionChief Command Nexus v1.0.1 source and the direction for future consolidation.
 
-> The final implementation is controlled by **MartyBlyth**, the project developer. This document is a repository-planning aid and does not override his technical decisions.
+> Source-code direction and final technical decisions remain with **MartyBlyth**, the project developer. Conroy1988 provides repository and documentation support only.
 
-## Primary objective
+## Current architecture
 
-Combine mission dispatch intelligence and resource administration into one userscript without simply concatenating two independent scripts.
-
-The unified runtime should provide:
-
-- One userscript metadata block.
-- One initialization entry point.
-- One shared configuration layer.
-- One controlled lifecycle for observers, timers and event listeners.
-- One coherent interface.
-- Shared capability and training data between administrative and dispatch modules.
-
-## Proposed module boundaries
+The canonical distributable is a single userscript:
 
 ```text
-src/
-├── CommandNexus.user.js          # distributable userscript entry
-├── core/
-│   ├── bootstrap.js              # startup, page detection and shutdown
-│   ├── lifecycle.js              # observers, listeners, timers and cleanup
-│   ├── storage.js                # versioned settings and migration
-│   ├── logger.js                 # controlled diagnostics
-│   └── constants.js              # stable keys and selectors
-├── mission/
-│   ├── requirements.js           # mission and live requirement parsing
-│   ├── patients.js               # patient and ambulance demand
-│   ├── capabilities.js           # vehicle/personnel capability mapping
-│   ├── selector.js               # candidate selection
-│   ├── dispatch.js               # dispatch/share submission
-│   └── automation.js             # queue, upgrades and continuation
-├── resources/
-│   ├── stations.js               # station scanning and naming
-│   ├── vehicles.js               # vehicle scanning and naming
-│   ├── personnel.js              # assignment and verification
-│   └── training-registry.js      # shared qualification intelligence
-├── ui/
-│   ├── shell.js                  # unified navigation and panel container
-│   ├── mission-panel.js
-│   ├── resource-panel.js
-│   ├── progress.js
-│   └── notifications.js
-└── reporting/
-    ├── run-report.js
-    └── diagnostics.js
+src/missionchief-command-nexus.user.js
 ```
 
-The actual repository may retain a single-file userscript for distribution while keeping the source logically separated during development.
+It contains one userscript metadata block, one outer installation guard and two retained runtime engines:
 
-## Shared state
+```text
+MissionChief Command Nexus
+│
+├── Metadata and combined installation guard
+│
+├── Resource Administration Engine
+│   ├── Unit naming
+│   ├── Station naming
+│   ├── Personnel assignment
+│   ├── Training profiles
+│   ├── Shared vehicle-training registry
+│   ├── Reports and bounded logs
+│   └── Registered lifecycle cleanup
+│
+└── Mission Operations Engine
+    ├── Mission requirement parsing
+    ├── Live Mission Update parsing
+    ├── Patient and specialist-resource demand
+    ├── Vehicle and trained-personnel matching
+    ├── Unit Finder and manual controls
+    ├── Auto Mode and dispatch
+    ├── Queue continuation
+    ├── Transport processing
+    └── Mission logging and diagnostics
+```
 
-Shared state should be explicit rather than distributed through unrelated globals.
+The source intentionally retains the established module guards and startup isolation. A startup failure in one engine is reported without automatically preventing the other engine from loading.
 
-Recommended domains:
+## What is genuinely shared
 
-- Runtime state: current page, active operation and cancellation state.
-- User settings: preferences, naming rules and automation options.
-- Mission state: requirements, selected units, patients and dispatch status.
-- Resource state: station, vehicle, personnel and training information.
-- UI state: active panel, progress and transient notifications.
+The most important current integration point is the vehicle-training registry. Personnel administration can record verified training capability against vehicle identity, and mission selection can use that information for qualification-sensitive requirements.
 
-## Lifecycle rules
+Shared operational concerns also include:
 
-Every module that registers an observer, timer or event listener should also provide deterministic cleanup.
+- One public userscript name and version.
+- One installation and distribution file.
+- One outer duplicate-initialisation guard.
+- Common MissionChief UK domain matching.
+- Compatible local and session storage in the same browser context.
+- Coordinated repository validation, release and documentation controls.
 
-Required safeguards:
+## What remains separate
 
-- Prevent duplicate initialization after partial page updates.
-- Disconnect observers when their target is removed or the operation ends.
-- Clear intervals and timeouts on cancellation.
-- Namespace or centrally register event listeners.
-- Avoid repeated full-page DOM scans when scoped observation is possible.
-- Debounce high-frequency mutation handling.
+The current merge is not yet a complete architectural rewrite. The retained engines still contain substantial independent state, UI, lifecycle and helper logic.
+
+Known consolidation targets include:
+
+- Launcher and navigation shell.
+- Settings and storage schema.
+- Observer, listener, interval and timeout registration.
+- Page and mission execution ownership.
+- Logging and diagnostics presentation.
+- Reusable DOM utilities and visibility checks.
+- Version and migration bookkeeping.
+- Error and cancellation reporting.
+
+These areas should not be unified through broad refactoring until existing behaviour is protected by repeatable tests.
+
+## Runtime and lifecycle rules
+
+Every new or modified subsystem should follow these rules:
+
+1. Claim ownership of the relevant page or mission instance before acting.
+2. Prevent duplicate initialization after MissionChief partial-page updates.
+3. Scope DOM queries to the current visible mission or administration context.
+4. Register deterministic cleanup for observers, listeners, intervals and timeouts.
+5. Stop long-running work when navigation, cancellation or ownership changes occur.
+6. Debounce or cache high-frequency DOM work.
+7. Bound diagnostic output and persistent registries.
+8. Avoid full-page polling where an event or scoped observer can provide the same signal.
 
 ## Storage and migration
 
-Existing users may have settings or training-registry data saved under keys from either source script.
+The source currently retains versioned keys inherited from the established engines. Before changing storage behaviour:
 
-The unified script should:
+- Inventory every localStorage and sessionStorage key.
+- Record the owning engine and expected data shape.
+- Identify keys that must remain backward compatible.
+- Validate data before migration.
+- Define precedence where both legacy scripts stored overlapping preferences.
+- Keep recoverable legacy data through the first stable release cycle.
+- Never silently delete unknown or malformed user data.
+- Increase the Command Nexus version when a migration ships.
 
-1. Detect legacy storage keys.
-2. Validate their shape.
-3. Migrate once into versioned Command Nexus storage.
-4. Preserve unknown data until migration is confirmed.
-5. Record the completed migration version.
-6. Avoid destructive deletion in the first release.
+The migration state is tracked in [MIGRATION.md](MIGRATION.md).
 
 ## Mission selection model
 
-Mission selection should evaluate capability, not only vehicle labels.
-
-A candidate vehicle may need to satisfy:
+Mission selection must evaluate operational capability rather than vehicle labels alone. A candidate may need to satisfy:
 
 - Required vehicle type or accepted substitute.
-- Availability and current status.
-- Distance or configured selection order.
+- Live availability and selection state.
+- Required quantity after selected or responding units are reconciled.
 - Required trained personnel.
-- Required equipment or specialist capability.
-- Patient transport or critical-care demand.
-- Existing selected and en-route counts.
+- Specialist medical, police, railway, aviation or EOD capability.
+- Patient count and transport demand.
+- Current mission ownership and freshness.
+- Queue and continuation state.
 
-## Administrative safety
+The live Mission Requirements panel should be treated as authoritative when present. Legacy alerts are fallback inputs and must not override a confirmed live still-needed value.
+
+## Administrative safety model
 
 Bulk station naming, unit naming and personnel assignment must retain:
 
-- Preview mode.
-- Clear scope disclosure.
-- Progress reporting.
+- A disclosed and bounded scope.
+- Preview where the workflow supports writes.
+- Progress and active-operation state.
 - Pause, resume and stop controls where applicable.
-- Per-item success, skip and failure records.
-- Final verification after write operations.
+- Per-item success, skip and failure reporting.
+- Verification after submitted changes.
+- Separation of genuine training shortages from technical failures.
 
-## Distribution
+## Target architecture
 
-The published userscript should have:
+The long-term target is logical modularity without sacrificing a single-file userscript distribution:
 
-- Stable `@name`, `@namespace`, `@version`, `@description` and `@license` metadata.
-- Explicit MissionChief domain matches.
-- Controlled update and download URLs.
-- A reproducible release artefact matching the tagged source.
-- A checksum recorded in the release notes where practical.
+```text
+Source modules or clearly bounded sections
+        ↓
+Shared lifecycle, storage and diagnostics contracts
+        ↓
+One coherent Command Nexus interface
+        ↓
+Validated single-file userscript build
+```
+
+Potential source boundaries are:
+
+```text
+core/          bootstrap, ownership, lifecycle, storage, logging
+mission/       requirements, patients, capabilities, selection, dispatch
+resources/     stations, vehicles, personnel, training registry
+ui/            shell, mission controls, administration controls, progress
+reporting/     run reports, diagnostics, compatibility evidence
+```
+
+The repository may continue to publish one generated or maintained `.user.js` file. Splitting source files is not itself a goal; safer maintenance and verifiable behaviour are the goals.
+
+## Distribution architecture
+
+The authoritative source is the raw `main` file. Approved publication follows:
+
+```text
+Focused source change
+        ↓
+Version increase and changelog
+        ↓
+Automated validation
+        ↓
+Live regression evidence
+        ↓
+MartyBlyth approval
+        ↓
+Approved main source
+        ↓
+External synchronization
+        ↓
+Matching version tag and GitHub Release checksum
+```
+
+See [Developer Handoff](DEVELOPER_HANDOFF.md), [Testing Strategy](TESTING.md) and [Release Process](RELEASE_PROCESS.md).
