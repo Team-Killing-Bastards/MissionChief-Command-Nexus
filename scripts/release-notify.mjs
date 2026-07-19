@@ -19,6 +19,12 @@ const MAX_MISSION_BRIEF_LENGTH = 1400;
 const GREASY_FORK_ATTEMPTS = 60;
 const GREASY_FORK_WAIT_MS = 5_000;
 
+const COLOURS = Object.freeze({
+  command: 0x22d3ee,
+  mission: 0x8b5cf6,
+  verified: 0x22c55e,
+});
+
 function requireEnv(name) {
   const value = process.env[name]?.trim();
 
@@ -100,21 +106,35 @@ function extractReleaseSection(changelog, version) {
 }
 
 function formatMissionBrief(section) {
-  const formattedLines = section
+  const lines = section
     .split('\n')
-    .map((line) => line.trimEnd())
+    .map((line) => line.trimEnd());
+
+  const subheadings = lines.filter((line) => /^###\s+/.test(line));
+  const omitSingleGenericHeading =
+    subheadings.length === 1 &&
+    /^###\s+(Changed|Added|Fixed|Removed|Security)\s*$/i.test(
+      subheadings[0]
+    );
+
+  const formattedLines = lines
     .filter(
-      (line, index, lines) =>
+      (line, index, allLines) =>
         line.trim() ||
-        (index > 0 && lines[index - 1].trim())
+        (index > 0 && allLines[index - 1].trim())
     )
     .map((line) => {
       const subheading = line.match(/^###\s+(.+)$/);
 
-      return subheading
-        ? `**${subheading[1]}**`
-        : line;
-    });
+      if (!subheading) {
+        return line;
+      }
+
+      return omitSingleGenericHeading
+        ? ''
+        : `**${subheading[1]}**`;
+    })
+    .filter(Boolean);
 
   let result = '';
 
@@ -125,7 +145,7 @@ function formatMissionBrief(section) {
 
     if (candidate.length > MAX_MISSION_BRIEF_LENGTH) {
       const suffix =
-        '\n\n…Full details are available in the release patch log.';
+        '\n\n…Read the complete patch log from the release link below.';
 
       return `${result
         .slice(
@@ -139,6 +159,20 @@ function formatMissionBrief(section) {
   }
 
   return result;
+}
+
+function formatSeconds(milliseconds) {
+  const seconds = Math.max(0, milliseconds / 1000);
+
+  if (seconds < 1) {
+    return '<1 second';
+  }
+
+  if (seconds < 10) {
+    return `${seconds.toFixed(1)} seconds`;
+  }
+
+  return `${Math.round(seconds)} seconds`;
 }
 
 async function fetchText(url, label) {
@@ -155,7 +189,7 @@ async function fetchText(url, label) {
       Accept:
         'text/plain, application/javascript, */*',
       'User-Agent':
-        'MissionChief-Command-Nexus-Release-Validator/1.0',
+        'MissionChief-Command-Nexus-Release-Validator/2.0',
     },
   });
 
@@ -173,6 +207,7 @@ async function verifyGreasyFork({
   expectedVersion,
   expectedNormalisedSource,
 }) {
+  const startedAt = Date.now();
   let lastStatus = 'No response received';
 
   for (
@@ -205,12 +240,18 @@ async function verifyGreasyFork({
           'but its code does not match the tagged GitHub source'
         );
       } else {
+        const elapsedMs = Date.now() - startedAt;
+
         console.log(
           `Greasy Fork verified on attempt ${attempt}: ` +
-          `version ${expectedVersion}`
+          `version ${expectedVersion} after ` +
+          `${formatSeconds(elapsedMs)}`
         );
 
-        return;
+        return {
+          attempt,
+          elapsedMs,
+        };
       }
     } catch (error) {
       lastStatus =
@@ -261,6 +302,111 @@ async function postDiscord(webhookUrl, payload) {
       responseBody.slice(0, 500)
     );
   }
+}
+
+function buildDiscordPayload({
+  version,
+  releaseTag,
+  releaseSha,
+  releaseUrl,
+  greasyForkInstallUrl,
+  greasyForkPageUrl,
+  missionBrief,
+  recordedChecksum,
+  greasyForkElapsedMs,
+}) {
+  const shortCommit = releaseSha.slice(0, 12);
+  const detectionTime = formatSeconds(greasyForkElapsedMs);
+
+  return {
+    username: 'Command Nexus Release Control',
+
+    allowed_mentions: {
+      parse: [],
+    },
+
+    embeds: [
+      {
+        color: COLOURS.command,
+        title: `🚨 ${PRODUCT_NAME} ${releaseTag} is live`,
+        url: releaseUrl,
+        description:
+          'The latest production build has cleared every release gate ' +
+          'and is now available through **Greasy Fork** and **GitHub**.',
+        fields: [
+          {
+            name: 'Release',
+            value: `\`${version}\``,
+            inline: true,
+          },
+          {
+            name: 'Channel',
+            value: '**Production**',
+            inline: true,
+          },
+          {
+            name: 'Status',
+            value: '🟢 **LIVE**',
+            inline: true,
+          },
+        ],
+      },
+      {
+        color: COLOURS.mission,
+        title: '🧭 Mission Brief',
+        description: missionBrief,
+      },
+      {
+        color: COLOURS.verified,
+        title: '✅ Deployment verified',
+        description:
+          `Greasy Fork recognised the verified build in **${detectionTime}**. ` +
+          'The notification was dispatched immediately after exact source parity was confirmed.',
+        fields: [
+          {
+            name: 'GitHub',
+            value:
+              '✅ Release published\n' +
+              '✅ Tag and source verified',
+            inline: true,
+          },
+          {
+            name: 'Greasy Fork',
+            value:
+              `✅ Version \`${version}\` live\n` +
+              '✅ Served code matched',
+            inline: true,
+          },
+          {
+            name: 'Integrity',
+            value:
+              '✅ Asset parity confirmed\n' +
+              '✅ SHA-256 validated',
+            inline: true,
+          },
+          {
+            name: 'Get the release',
+            value:
+              `[Install / Update](${greasyForkInstallUrl})  •  ` +
+              `[Release Notes](${releaseUrl})  •  ` +
+              `[Greasy Fork Page](${greasyForkPageUrl})`,
+            inline: false,
+          },
+          {
+            name: 'Build signature',
+            value: `\`${recordedChecksum}\``,
+            inline: false,
+          },
+        ],
+        footer: {
+          text:
+            `Commit ${shortCommit} • ` +
+            'Verified before notification',
+        },
+        timestamp: new Date().toISOString(),
+      },
+    ],
+  };
 }
 
 async function main() {
@@ -400,89 +546,24 @@ async function main() {
     `https://github.com/${repository}` +
     `/releases/tag/${encodeURIComponent(releaseTag)}`;
 
-  const payload = {
-    username: 'Command Nexus Release Control',
+  const greasyForkVerification =
+    await verifyGreasyFork({
+      installUrl: greasyForkInstallUrl,
+      expectedVersion: version,
+      expectedNormalisedSource,
+    });
 
-    allowed_mentions: {
-      parse: [],
-    },
-
-    embeds: [
-      {
-        title:
-          `${PRODUCT_NAME} ${releaseTag} deployed`,
-
-        url: releaseUrl,
-
-        description:
-          `**Mission Brief — What Changed**\n` +
-          missionBrief,
-
-        color: 0x2ecc71,
-
-        fields: [
-          {
-            name: 'Deployment Version',
-            value: `\`${version}\``,
-            inline: true,
-          },
-          {
-            name: 'GitHub Updated',
-            value:
-              '✅ Release published\n' +
-              '✅ Tagged source verified',
-            inline: true,
-          },
-          {
-            name: 'Greasy Fork Updated',
-            value:
-              `✅ Version \`${version}\` verified\n` +
-              '✅ Served code matched',
-            inline: true,
-          },
-          {
-            name: 'Validation',
-            value:
-              '✅ Repository checks\n' +
-              '✅ Userscript metadata and version\n' +
-              '✅ Release asset parity\n' +
-              '✅ GitHub and Greasy Fork source parity',
-            inline: false,
-          },
-          {
-            name:
-              'Build Signature (SHA-256 checksum)',
-            value: `\`${recordedChecksum}\``,
-            inline: false,
-          },
-          {
-            name: 'Install and Release Links',
-            value:
-              `[Quick Install / Update]` +
-              `(${greasyForkInstallUrl})\n` +
-              `[Full Release Patch Log]` +
-              `(${releaseUrl})\n` +
-              `[General Greasy Fork Page]` +
-              `(${greasyForkPageUrl})`,
-            inline: false,
-          },
-        ],
-
-        footer: {
-          text:
-            `Commit ${releaseSha.slice(0, 12)} • ` +
-            'Deployment verified before notification',
-        },
-
-        timestamp: new Date().toISOString(),
-      },
-    ],
-  };
-
-  await verifyGreasyFork({
-    installUrl: greasyForkInstallUrl,
-    expectedVersion: version,
-    expectedNormalisedSource,
+  const payload = buildDiscordPayload({
+    version,
+    releaseTag,
+    releaseSha,
+    releaseUrl,
+    greasyForkInstallUrl,
+    greasyForkPageUrl,
+    missionBrief,
+    recordedChecksum,
+    greasyForkElapsedMs:
+      greasyForkVerification.elapsedMs,
   });
 
   await postDiscord(
