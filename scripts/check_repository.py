@@ -25,6 +25,8 @@ REQUIRED_FILES = (
     ".github/workflows/repository-quality.yml",
     ".github/workflows/validate-userscript.yml",
     ".github/workflows/release.yml",
+    "docs/README.md",
+    "docs/DEVELOPER_HANDOFF.md",
     "docs/ARCHITECTURE.md",
     "docs/ROADMAP.md",
     "docs/TESTING.md",
@@ -33,6 +35,7 @@ REQUIRED_FILES = (
     "docs/GREASY_FORK_SETUP.md",
     "docs/media/readme-hero.svg",
     "scripts/validate-userscript.mjs",
+    "src/README.md",
     "src/missionchief-command-nexus.user.js",
 )
 
@@ -45,6 +48,8 @@ HEADING = re.compile(r"^(#{1,6})\s+(.+?)\s*#*\s*$", re.MULTILINE)
 HTML_TAG = re.compile(r"<[^>]+>")
 USERSCRIPT_VERSION = re.compile(r"^//\s*@version\s+(\S+)\s*$", re.MULTILINE)
 README_VERSION = re.compile(r"\*\*Current version:\*\*\s*`([^`]+)`")
+SOURCE_README_VERSION = re.compile(r"\|\s*Command Nexus version\s*\|\s*`([^`]+)`\s*\|")
+CHANGELOG_VERSION = re.compile(r"^##\s+\[([^\]]+)\]", re.MULTILINE)
 
 
 def fail(message: str) -> None:
@@ -104,7 +109,6 @@ def normalise_target(raw_target: str) -> str:
     target = raw_target.strip().strip("<>")
     if target.startswith(("http://", "https://", "mailto:", "#")):
         return target
-    # Markdown links can optionally contain a quoted title after the target.
     return target.split(maxsplit=1)[0]
 
 
@@ -189,6 +193,16 @@ def check_readme_presentation() -> None:
         fail("README must display the GitHub-native repository quality badge")
 
 
+def read_canonical_version() -> str:
+    canonical = (ROOT / "src/missionchief-command-nexus.user.js").read_text(
+        encoding="utf-8"
+    )
+    match = USERSCRIPT_VERSION.search(canonical)
+    if not match:
+        fail("Canonical userscript has no readable @version")
+    return match.group(1)
+
+
 def check_userscript_metadata_and_version() -> None:
     scripts = sorted(ROOT.rglob("*.user.js"))
     if not scripts:
@@ -207,22 +221,80 @@ def check_userscript_metadata_and_version() -> None:
             if field not in text:
                 fail(f"{relative} is missing required metadata field {field}")
 
-    canonical = (ROOT / "src/missionchief-command-nexus.user.js").read_text(
-        encoding="utf-8"
-    )
+    canonical_version = read_canonical_version()
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    source_readme = (ROOT / "src/README.md").read_text(encoding="utf-8")
+    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
 
-    script_match = USERSCRIPT_VERSION.search(canonical)
     readme_match = README_VERSION.search(readme)
-    if not script_match:
-        fail("Canonical userscript has no readable @version")
+    source_match = SOURCE_README_VERSION.search(source_readme)
+    released_versions = {
+        version for version in CHANGELOG_VERSION.findall(changelog) if version != "Unreleased"
+    }
+
     if not readme_match:
         fail("README has no Current version field")
-    if script_match.group(1) != readme_match.group(1):
+    if not source_match:
+        fail("src/README.md has no Command Nexus version field")
+    if readme_match.group(1) != canonical_version:
         fail(
             "README version does not match canonical userscript: "
-            f"{readme_match.group(1)} != {script_match.group(1)}"
+            f"{readme_match.group(1)} != {canonical_version}"
         )
+    if source_match.group(1) != canonical_version:
+        fail(
+            "Source directory version does not match canonical userscript: "
+            f"{source_match.group(1)} != {canonical_version}"
+        )
+    if canonical_version not in released_versions:
+        fail(f"CHANGELOG.md has no release section for canonical version {canonical_version}")
+
+
+def check_current_documentation() -> None:
+    required_phrases = {
+        "docs/DEVELOPER_HANDOFF.md": (
+            "Current verified baseline",
+            "What is not yet proven complete",
+            "Safe first development workflow",
+        ),
+        "docs/ARCHITECTURE.md": (
+            "Current architecture",
+            "What remains separate",
+            "Target architecture",
+        ),
+        "docs/ROADMAP.md": (
+            "Current baseline — merged v1.0.1",
+            "Phase 7 — First formal release",
+        ),
+        "docs/MIGRATION.md": (
+            "Migration test matrix",
+            "Rollback",
+        ),
+        "docs/TESTING.md": (
+            "Automated validation",
+            "Compatibility matrix",
+            "Release-blocking failures",
+        ),
+    }
+
+    for relative, phrases in required_phrases.items():
+        text = (ROOT / relative).read_text(encoding="utf-8")
+        for phrase in phrases:
+            if phrase not in text:
+                fail(f"{relative} is missing current-state section: {phrase!r}")
+
+    stale_claims = (
+        "unified codebase exists",
+        "There is no unified installation package yet",
+        "unified userscript has not yet been published from this repository",
+    )
+    documentation = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in (ROOT / "docs").rglob("*.md")
+    )
+    for claim in stale_claims:
+        if claim.lower() in documentation.lower():
+            fail(f"Documentation still contains stale planning claim: {claim!r}")
 
 
 def main() -> None:
@@ -232,6 +304,7 @@ def main() -> None:
     check_readme_anchors()
     check_readme_presentation()
     check_userscript_metadata_and_version()
+    check_current_documentation()
     print("Repository integrity checks passed.")
 
 
