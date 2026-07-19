@@ -30,8 +30,16 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ### Changed
 
-- Adds verified GitHub, Greasy Fork and Discord deployment notifications. This release tests the complete automated publication and validation process without changing MissionChief runtime behaviour.
+- Normal Police Car and Police Officer attendance now uses only exact-ID IRVs live-verified with assigned staff and no protected specialist Police training.
+- Auto Mode and the manual Unit Finder/Mission Update paths now wait for a complete, non-zero, ID-stable vehicle list after loading finishes before selecting units.
+- Adds verified GitHub, Greasy Fork and Discord deployment notifications.
 - Increased the unified userscript version from `1.0.1` to `1.0.2`.
+
+### Fixed
+
+- Prevented Level 1, Level 2, Sergeant, Medic, Inspector and other specialist-trained Police IRVs from satisfying ordinary Police attendance requirements.
+- Prevented an ordinary Police group-button fallback from bypassing exact vehicle training protection.
+- Prevented Auto Mode from continuing to selection or dispatch when the vehicle list times out, remains empty or is still changing.
 
 ## [1.0.1] - 2026-07-19
 
