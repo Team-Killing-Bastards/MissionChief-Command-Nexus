@@ -1,79 +1,127 @@
 # Project Roadmap
 
-MissionChief Command Nexus is in pre-release planning. Dates are intentionally omitted until the unified codebase exists and can be tested.
+MissionChief Command Nexus has moved beyond repository planning. The canonical `main` branch now contains the merged v1.0.1 userscript, validation automation and distribution workflow.
 
-**Developer:** MartyBlyth  
-**Project helper:** Conroy1988
+**Developer and technical owner:** MartyBlyth  
+**Repository and documentation support:** Conroy1988
 
-## Phase 0 — Repository foundation
+Progress markers in this document distinguish **implemented code** from **fully validated release readiness**. A feature being present in the merged file does not prove every live workflow, migration path or long-session condition has passed.
 
-- [x] Establish the Team Killing Bastards organisation.
-- [x] Create the Command Nexus repository.
-- [x] Define project identity and purpose.
-- [x] Add licensing and community documentation.
-- [x] Add issue and pull-request structure.
-- [x] Document initial architecture and release expectations.
+## Current baseline — merged v1.0.1
 
-## Phase 1 — Source intake and baseline
+- [x] Establish the Team Killing Bastards organisation and repository.
+- [x] Add licensing, governance, issue forms and pull-request guidance.
+- [x] Import Mission Finder `V10.6.69`.
+- [x] Import Unit, Station & Personnel Tools `V4.2.8`.
+- [x] Publish one canonical userscript metadata block.
+- [x] Publish one installable `.user.js` file on `main`.
+- [x] Retain duplicate-initialisation protection and module startup isolation.
+- [x] Retain unit naming, station naming and personnel-assignment capabilities.
+- [x] Retain mission parsing, patient handling, selection, dispatch and queue capabilities.
+- [x] Connect personnel-training intelligence to qualification-aware mission selection.
+- [x] Add repository and userscript validation workflows.
+- [x] Add Greasy Fork synchronization and GitHub Release packaging guidance.
+- [x] Confirm the v1.0.1 canonical synchronization path without functional change.
 
-- [ ] Import the latest verified versions of both source userscripts.
-- [ ] Record source versions and checksums.
-- [ ] Document existing storage keys, global variables and interfaces.
-- [ ] Identify duplicated observers, timers, listeners and page hooks.
-- [ ] Establish a reproducible pre-merge test baseline.
+## Phase 1 — Baseline evidence
 
-## Phase 2 — Unified core
+Goal: turn the imported code baseline into a repeatable engineering baseline.
 
-- [ ] Create one userscript metadata block and bootstrap path.
-- [ ] Establish shared storage with versioned migration.
-- [ ] Establish lifecycle and cleanup management.
-- [ ] Introduce controlled logging and diagnostics.
-- [ ] Prevent duplicate initialization across MissionChief page updates.
+- [ ] Record sanitized test evidence for the imported Mission Finder behaviour.
+- [ ] Record sanitized test evidence for the imported administration behaviour.
+- [ ] Record the exact browser, userscript manager, domain and interacting-script environment.
+- [ ] Record a source checksum for the first formal release candidate.
+- [ ] Identify the smallest safe fixtures or harnesses for requirement and naming logic.
+- [ ] Document known defects separately from untested behaviour.
 
-## Phase 3 — Resource administration
+## Phase 2 — Lifecycle and storage assurance
 
-- [ ] Integrate station naming.
-- [ ] Integrate vehicle naming.
-- [ ] Integrate personnel assignment and verification.
-- [ ] Preserve preview, pause, resume and stop behaviour.
-- [ ] Build the shared training and capability registry.
+Goal: prove the merged installation does not duplicate work or damage stored state.
 
-## Phase 4 — Mission intelligence
+- [x] One outer Command Nexus installation guard exists.
+- [x] Each retained engine keeps its original startup protection.
+- [x] Resource-administration lifecycle cleanup exists for registered handlers.
+- [ ] Inventory all persistent and session storage keys used by both engines.
+- [ ] Define the migration and precedence rules for conflicting legacy values.
+- [ ] Prove navigation and partial-page updates do not duplicate panels or execution ownership.
+- [ ] Prove observers, listeners, intervals and timeouts stop when their operation ends.
+- [ ] Record long-session memory and CPU observations.
 
-- [ ] Integrate mission requirement parsing.
-- [ ] Integrate live mission-update parsing.
-- [ ] Account for patients and ambulance demand.
-- [ ] Match vehicles against training and capability requirements.
-- [ ] Track selected and en-route counts.
-- [ ] Preserve manual dispatch and alliance workflows.
+## Phase 3 — Resource administration validation
 
-## Phase 5 — Automation and interface
+Goal: prove resource changes are bounded, previewable and verifiable.
 
-- [ ] Integrate queue processing and mission continuation.
-- [ ] Re-check upgraded missions safely.
-- [ ] Consolidate both interfaces into one navigation system.
-- [ ] Add clear run state, cancellation and diagnostics.
-- [ ] Test long sessions for duplicate work and memory growth.
+- [x] Unit naming code is present.
+- [x] Station naming code is present.
+- [x] Personnel assignment and verification code is present.
+- [x] Training-profile and shared-registry code is present.
+- [ ] Validate preview behaviour on representative station types.
+- [ ] Validate pause, resume and stop paths during longer runs.
+- [ ] Validate before/after, skipped and failure reporting.
+- [ ] Prove writes remain inside the disclosed station and vehicle scope.
+- [ ] Prove training shortages are distinguished from load, assignment and verification failures.
 
-## Phase 6 — Compatibility and migration
+## Phase 4 — Mission intelligence validation
 
-- [ ] Migrate legacy preferences without destructive deletion.
-- [ ] Migrate training-registry data.
-- [ ] Test MissionChief UK and Police MissionChief UK domains.
-- [ ] Test supported desktop browsers and userscript managers.
-- [ ] Define mobile and Safari support based on evidence.
-- [ ] Document conflicts with other common userscripts.
+Goal: prove the mission engine selects capability correctly under live conditions.
 
-## Phase 7 — First release
+- [x] Static mission requirement parsing is present.
+- [x] Live Mission Update parsing is present.
+- [x] Patient and ambulance demand handling is present.
+- [x] Critical Care and specialist medical handling is present.
+- [x] Qualification-sensitive vehicle selection is present.
+- [x] Queue continuation and transport handling are present.
+- [ ] Validate simple vehicle-only missions.
+- [ ] Validate patient missions where ambulances are omitted from the displayed vehicle list.
+- [ ] Validate specialist medical missions.
+- [ ] Validate Public Order, Railway Police, aviation and EOD profiles.
+- [ ] Validate selected, responding and still-needed reconciliation where live data is available.
+- [ ] Validate mission upgrades after initial dispatch.
+- [ ] Prove stale mission state cannot trigger repeated or cross-mission dispatch.
 
-- [ ] Freeze the first release candidate.
-- [ ] Complete the release checklist.
-- [ ] Publish a tagged GitHub pre-release.
-- [ ] Record the release checksum.
-- [ ] Test installation and update behaviour from a clean profile.
-- [ ] Publish the unified Greasy Fork listing when approved by MartyBlyth.
-- [ ] Publish migration guidance for users of both original scripts.
+## Phase 5 — Interface consolidation
+
+Goal: move from one installation containing two retained engines to one coherent Command Nexus control surface.
+
+- [ ] Define one launcher and navigation model.
+- [ ] Separate routine mission controls from resource-administration controls.
+- [ ] Preserve advanced controls and diagnostics without overwhelming normal use.
+- [ ] Expose clear active-operation, cancellation and failure state.
+- [ ] Prevent duplicate interface elements after MissionChief DOM replacement.
+- [ ] Validate supported desktop resolutions.
+- [ ] Claim tablet, mobile or Safari support only after evidence-based testing.
+
+## Phase 6 — Migration and compatibility
+
+Goal: replace the two legacy installations safely.
+
+- [ ] Test users migrating from Mission Finder only.
+- [ ] Test users migrating from Unit, Station & Personnel Tools only.
+- [ ] Test users with both legacy scripts and stored data.
+- [ ] Confirm legacy storage remains recoverable during the first release cycle.
+- [ ] Test `www.missionchief.co.uk`.
+- [ ] Test `police.missionchief.co.uk`.
+- [ ] Record supported browser and userscript-manager combinations.
+- [ ] Record known conflicts with other MissionChief userscripts.
+- [ ] Publish a completed compatibility matrix.
+
+## Phase 7 — First formal release
+
+Goal: publish a controlled, evidence-backed release approved by MartyBlyth.
+
+- [ ] Freeze a release candidate.
+- [ ] Complete the release checklist and changelog entry.
+- [ ] Confirm all automated checks pass.
+- [ ] Complete required live regression tests.
+- [ ] Verify clean installation and update behaviour.
+- [ ] Obtain MartyBlyth's technical approval.
+- [ ] Verify the approved source through the configured external synchronization path.
+- [ ] Create the matching version tag.
+- [ ] Verify the GitHub Release userscript asset and SHA-256 checksum.
+- [ ] Publish tested environments, known limitations and migration instructions.
 
 ## Beyond the first release
 
-Potential future work should be evaluated against real operational value, performance cost and maintenance burden. The project will not accumulate features merely to appear larger.
+Future work should be judged by operational value, safety, performance and maintenance cost. Deep refactoring should follow protected behaviour and evidence, not precede it.
+
+Start with the [Developer Handoff](DEVELOPER_HANDOFF.md) when resuming work.
