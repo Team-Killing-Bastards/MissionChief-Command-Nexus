@@ -4,13 +4,19 @@ on:
   issues:
     types:
       - opened
+  pull_request_target:
+    types:
+      - ready_for_review
 
 permissions:
   contents: write
+  pull-requests: read
 
 jobs:
   build:
-    if: github.event.issue.title == '[automation] Build v1.0.3 trained IRV and Auto Mode safety'
+    if: >-
+      (github.event_name == 'issues' && github.event.issue.title == '[automation] Build v1.0.3 trained IRV and Auto Mode safety') ||
+      (github.event_name == 'pull_request_target' && github.event.pull_request.number == 27 && github.event.pull_request.head.ref == 'agent/protect-trained-irvs-auto-readiness-v1.0.3-final')
     runs-on: ubuntu-latest
 
     steps:
