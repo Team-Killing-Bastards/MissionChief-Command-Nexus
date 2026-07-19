@@ -9,7 +9,9 @@ MissionChief Command Nexus is a planned unified userscript for the UK version of
 ![Development Status](https://img.shields.io/badge/status-pre--release-orange)
 ![Platform](https://img.shields.io/badge/platform-MissionChief%20UK-dc3545)
 ![Type](https://img.shields.io/badge/type-userscript-6f42c1)
-![License](https://img.shields.io/badge/license-MIT-198754)
+[![License](https://img.shields.io/badge/license-MIT-198754)](LICENSE)
+
+[Roadmap](docs/ROADMAP.md) • [Architecture](docs/ARCHITECTURE.md) • [Testing](docs/TESTING.md) • [Migration](docs/MIGRATION.md) • [Contributing](CONTRIBUTING.md) • [Support](SUPPORT.md)
 
 </div>
 
@@ -122,9 +124,9 @@ Dispatch the right capability—not merely the right vehicle label
 | Component | Status |
 |---|---|
 | GitHub organisation and repository | ✅ Established |
-| Initial project documentation | ✅ Established |
+| Project documentation and governance | ✅ Established |
 | Source-script analysis | ✅ Complete |
-| Unified userscript architecture | 🚧 Planned |
+| Architecture direction | ✅ Documented |
 | Script merge and compatibility work | 🚧 Pending |
 | Integrated testing | ⏳ Pending |
 | First GitHub release | ⏳ Pending |
@@ -155,6 +157,8 @@ MissionChief Command Nexus
 
 The merge should preserve the proven behaviour of both source scripts while eliminating duplicated interfaces, global state, observers, timers and storage handling wherever possible.
 
+See the full [Architecture Direction](docs/ARCHITECTURE.md).
+
 ---
 
 ## Merge Priorities
@@ -169,6 +173,55 @@ The merge should preserve the proven behaviour of both source scripts while elim
 8. Test extended sessions for memory growth and repeated-render issues.
 9. Introduce consistent versioning, changelogs and release packaging.
 10. Publish a controlled GitHub release before replacing the separate installations.
+
+The phased plan is maintained in the [Project Roadmap](docs/ROADMAP.md).
+
+---
+
+## Project Resources
+
+| Resource | Purpose |
+|---|---|
+| [Documentation index](docs/README.md) | Central navigation for project documentation |
+| [Architecture](docs/ARCHITECTURE.md) | Proposed modules, lifecycle, shared state and storage design |
+| [Roadmap](docs/ROADMAP.md) | Phased development path to the first release |
+| [Testing strategy](docs/TESTING.md) | Safety, correctness, compatibility and stability checks |
+| [Migration plan](docs/MIGRATION.md) | Transition from the two separate scripts |
+| [Release process](docs/RELEASE_PROCESS.md) | Versioning, approval, packaging and publication |
+| [Changelog](CHANGELOG.md) | User-visible project and release history |
+| [Contributing](CONTRIBUTING.md) | Standards for issues and pull requests |
+| [Support](SUPPORT.md) | Required information and support boundaries |
+| [Security](SECURITY.md) | Sensitive-reporting policy |
+| [Code of Conduct](CODE_OF_CONDUCT.md) | Community participation standards |
+
+---
+
+## Repository Structure
+
+```text
+MissionChief-Command-Nexus/
+├── .github/
+│   ├── ISSUE_TEMPLATE/
+│   ├── CODEOWNERS
+│   └── pull_request_template.md
+├── docs/
+│   ├── ARCHITECTURE.md
+│   ├── MIGRATION.md
+│   ├── RELEASE_PROCESS.md
+│   ├── ROADMAP.md
+│   └── TESTING.md
+├── src/
+│   └── README.md
+├── CHANGELOG.md
+├── CODE_OF_CONDUCT.md
+├── CONTRIBUTING.md
+├── LICENSE
+├── SECURITY.md
+├── SUPPORT.md
+└── README.md
+```
+
+The `src` directory is reserved for the unified userscript developed by MartyBlyth.
 
 ---
 
@@ -202,7 +255,7 @@ When the first release is ready, this section will provide:
 - Upgrade guidance for users of the two original scripts.
 - Migration notes for saved settings and personnel-training data.
 
-Do not install incomplete development files unless they are explicitly marked as a test build.
+Do not install incomplete development files unless they are explicitly marked as a test build. See the [Migration Plan](docs/MIGRATION.md) before replacing either original script.
 
 ---
 
@@ -223,18 +276,14 @@ Command Nexus can eventually perform actions that alter MissionChief data or ini
 
 ## Contributing
 
-Development discussions, reproducible bug reports and targeted pull requests will be welcomed as the repository structure is established.
+Development discussions, reproducible bug reports and targeted pull requests are welcome.
 
-Useful reports should include:
+- Read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting work.
+- Use the structured [issue forms](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/new/choose).
+- Review the [testing strategy](docs/TESTING.md) for validation expectations.
+- Discuss large architectural changes before implementation.
 
-- The affected MissionChief domain.
-- The mission, station, vehicle or training profile involved.
-- Expected behaviour.
-- Actual behaviour.
-- Reproduction steps.
-- Relevant screenshots or console output with private information removed.
-
-Large changes should be discussed in an issue before implementation so the unified architecture remains coherent.
+MartyBlyth remains the final technical authority for source-code decisions and releases.
 
 ---
 
@@ -248,7 +297,9 @@ Large changes should be discussed in an issue before implementation so the unifi
 
 ## Licence
 
-The source userscripts are published under the **MIT Licence**. The unified project is intended to retain MIT licensing, with the final licence file to be included alongside the merged source.
+MissionChief Command Nexus is licensed under the [MIT Licence](LICENSE).
+
+Copyright © 2026 **MartyBlyth**.
 
 ---
 
