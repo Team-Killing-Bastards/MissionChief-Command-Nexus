@@ -34,7 +34,7 @@ concurrency:
 
 jobs:
   prepare:
-    name: Prepare release version pull request
+    name: Prepare release version
     if: github.event_name == 'workflow_dispatch' && inputs.operation == 'prepare-version'
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -52,7 +52,7 @@ jobs:
           node-version: '24'
           package-manager-cache: false
 
-      - name: Prepare version branch and pull request
+      - name: Prepare version branch
         id: prepare_release
         shell: bash
         env:
@@ -124,107 +124,12 @@ jobs:
             git push origin ":refs/tags/${RELEASE_TAG}"
           fi
 
-          export RELEASE_VERSION CURRENT_VERSION RELEASE_NOTES
-
-          python3 <<'PY'
-          from __future__ import annotations
-
-          import datetime as dt
-          import os
-          import re
-          from pathlib import Path
-
-          version = os.environ["RELEASE_VERSION"].strip()
-          current = os.environ["CURRENT_VERSION"].strip()
-          notes = os.environ.get("RELEASE_NOTES", "").strip()
-          if not notes:
-              notes = "Release preparation and verified deployment updates."
-
-          source_path = Path("src/missionchief-command-nexus.user.js")
-          source = source_path.read_text(encoding="utf-8")
-          source, count = re.subn(
-              r"^(//\s*@version\s+)\S+(\s*)$",
-              rf"\g<1>{version}\g<2>",
-              source,
-              count=1,
-              flags=re.MULTILINE,
-          )
-          if count != 1:
-              raise SystemExit("Could not update canonical userscript @version")
-          source_path.write_text(source, encoding="utf-8")
-
-          readme_path = Path("README.md")
-          readme = readme_path.read_text(encoding="utf-8")
-          readme, count = re.subn(
-              r"(\*\*Current version:\*\*\s*`)[^`]+(`)",
-              rf"\g<1>{version}\g<2>",
-              readme,
-              count=1,
-          )
-          if count != 1:
-              raise SystemExit("Could not update README current version")
-          readme = re.sub(
-              r"Command Nexus v\S+ is a single userscript",
-              f"Command Nexus v{version} is a single userscript",
-              readme,
-              count=1,
-          )
-          readme_path.write_text(readme, encoding="utf-8")
-
-          source_readme_path = Path("src/README.md")
-          source_readme = source_readme_path.read_text(encoding="utf-8")
-          source_readme, count = re.subn(
-              r"(\|\s*Command Nexus version\s*\|\s*`)[^`]+(`\s*\|)",
-              rf"\g<1>{version}\g<2>",
-              source_readme,
-              count=1,
-          )
-          if count != 1:
-              raise SystemExit("Could not update src/README.md version")
-          source_readme_path.write_text(source_readme, encoding="utf-8")
-
-          changelog_path = Path("CHANGELOG.md")
-          changelog = changelog_path.read_text(encoding="utf-8")
-          release_heading = re.compile(
-              rf"^## \[{re.escape(version)}\](?:\s+-.*)?\s*$",
-              re.MULTILINE,
-          )
-
-          if not release_heading.search(changelog):
-              current_heading = re.search(
-                  rf"^## \[{re.escape(current)}\](?:\s+-.*)?\s*$",
-                  changelog,
-                  re.MULTILINE,
-              )
-              if not current_heading:
-                  raise SystemExit(
-                      f"Could not find changelog section for current version {current}"
-                  )
-
-              bullet_lines = []
-              for line in notes.splitlines():
-                  cleaned = line.strip().removeprefix("-").strip()
-                  if cleaned:
-                      bullet_lines.append(f"- {cleaned}")
-              if not bullet_lines:
-                  bullet_lines = ["- Release preparation and verified deployment updates."]
-
-              section = (
-                  f"## [{version}] - {dt.date.today().isoformat()}\n\n"
-                  "### Changed\n\n"
-                  + "\n".join(bullet_lines)
-                  + "\n"
-                  + f"- Increased the unified userscript version from `{current}` to `{version}`.\n\n"
-              )
-              changelog = (
-                  changelog[: current_heading.start()]
-                  + section
-                  + changelog[current_heading.start() :]
-              )
-              changelog_path.write_text(changelog, encoding="utf-8")
-          PY
+          node scripts/prepare-release.mjs \
+            --version "${RELEASE_VERSION}" \
+            --notes "${RELEASE_NOTES}"
 
           node --check src/missionchief-command-nexus.user.js
+          node --check scripts/prepare-release.mjs
           node --check scripts/release-notify.mjs
           node scripts/validate-userscript.mjs
           python3 scripts/check_repository.py
@@ -254,6 +159,7 @@ jobs:
               --json url \
               --jq '.[0].url // empty'
           )"
+          PR_RESULT="existing"
 
           if [[ -z "${PR_URL}" ]]; then
             cat > release-pr-body.md <<EOF
@@ -266,22 +172,53 @@ jobs:
           After merging, run **Create GitHub release** again using **publish-release** and \`${RELEASE_TAG}\`.
           EOF
 
-            PR_URL="$(
+            PR_ERROR_FILE="$(mktemp)"
+
+            if PR_URL="$(
               gh pr create \
                 --base main \
                 --head "${RELEASE_BRANCH}" \
                 --title "Prepare ${RELEASE_TAG}" \
-                --body-file release-pr-body.md
-            )"
+                --body-file release-pr-body.md \
+                2>"${PR_ERROR_FILE}"
+            )"; then
+              PR_RESULT="created"
+            else
+              PR_ERROR="$(
+                tr '\n' ' ' < "${PR_ERROR_FILE}" |
+                  sed -E 's/[[:space:]]+/ /g; s/^ //; s/ $//'
+              )"
+              PR_URL="https://github.com/${GITHUB_REPOSITORY}/compare/main...${RELEASE_BRANCH}?expand=1"
+              PR_RESULT="manual"
+
+              echo "::warning title=Automatic pull request creation unavailable::${PR_ERROR}"
+              {
+                echo "### Automatic pull request creation was unavailable"
+                echo
+                echo "GitHub accepted and validated the release branch, but repository or organisation policy prevented \`GITHUB_TOKEN\` from creating the PR."
+                echo
+                echo "- Manual PR link: ${PR_URL}"
+                echo "- GitHub response: \`${PR_ERROR}\`"
+                echo
+                echo "The workflow remains successful because the prepared branch is complete and recoverable."
+              } >> "${GITHUB_STEP_SUMMARY}"
+            fi
+
+            rm -f "${PR_ERROR_FILE}"
           fi
 
           {
             echo "### Release preparation complete"
             echo "- Version: \`${RELEASE_VERSION}\`"
             echo "- Tag reserved for publication: \`${RELEASE_TAG}\`"
+            echo "- Pull request mode: \`${PR_RESULT}\`"
             echo "- Pull request: ${PR_URL}"
             echo "- Next action: merge the PR, then run \`publish-release\`."
           } >> "${GITHUB_STEP_SUMMARY}"
+
+          echo "release_tag=${RELEASE_TAG}" >> "${GITHUB_OUTPUT}"
+          echo "release_branch=${RELEASE_BRANCH}" >> "${GITHUB_OUTPUT}"
+          echo "pull_request_url=${PR_URL}" >> "${GITHUB_OUTPUT}"
 
   release:
     name: Package, verify and announce userscript release
@@ -303,6 +240,7 @@ jobs:
           package-manager-cache: false
 
       - name: Resolve and verify release context
+        id: release_context
         shell: bash
         env:
           EVENT_NAME: ${{ github.event_name }}
@@ -372,6 +310,8 @@ jobs:
 
           echo "RELEASE_TAG=${RELEASE_TAG}" >> "${GITHUB_ENV}"
           echo "RELEASE_SHA=${RELEASE_SHA}" >> "${GITHUB_ENV}"
+          echo "release_tag=${RELEASE_TAG}" >> "${GITHUB_OUTPUT}"
+          echo "release_sha=${RELEASE_SHA}" >> "${GITHUB_OUTPUT}"
 
           {
             echo "### Release context"
@@ -386,6 +326,7 @@ jobs:
           python3 scripts/check_repository.py
           node --check src/missionchief-command-nexus.user.js
           node scripts/validate-userscript.mjs
+          node --check scripts/prepare-release.mjs
           node --check scripts/release-notify.mjs
 
       - name: Confirm changelog contains mission brief
@@ -546,6 +487,8 @@ jobs:
           GREASYFORK_INSTALL_URL: ${{ vars.GREASYFORK_INSTALL_URL }}
           GREASYFORK_PAGE_URL: ${{ vars.GREASYFORK_PAGE_URL }}
           GITHUB_REPOSITORY: ${{ github.repository }}
+          RELEASE_TAG: ${{ steps.release_context.outputs.release_tag }}
+          RELEASE_SHA: ${{ steps.release_context.outputs.release_sha }}
           SOURCE_PATH: src/missionchief-command-nexus.user.js
           CHANGELOG_PATH: CHANGELOG.md
           PRODUCT_NAME: MissionChief Command Nexus
