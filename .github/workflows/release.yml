@@ -14,9 +14,9 @@ concurrency:
 
 jobs:
   release:
-    name: Package userscript release
+    name: Package, verify and announce userscript release
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - name: Check out repository
@@ -33,7 +33,10 @@ jobs:
         shell: bash
         run: |
           git fetch origin main --no-tags
-          if ! git merge-base --is-ancestor "${GITHUB_SHA}" origin/main; then
+
+          if ! git merge-base --is-ancestor \
+            "${GITHUB_SHA}" origin/main; then
+
             echo "Tagged commit ${GITHUB_SHA} is not contained in origin/main."
             exit 1
           fi
@@ -43,35 +46,182 @@ jobs:
           python3 scripts/check_repository.py
           node --check src/missionchief-command-nexus.user.js
           node scripts/validate-userscript.mjs
+          node --check scripts/release-notify.mjs
 
       - name: Confirm tag matches userscript version
         shell: bash
         run: |
-          SCRIPT_VERSION="$(node scripts/validate-userscript.mjs --print-version)"
+          SCRIPT_VERSION="$(
+            node scripts/validate-userscript.mjs --print-version
+          )"
+
           EXPECTED_TAG="v${SCRIPT_VERSION}"
+
           if [[ "${GITHUB_REF_NAME}" != "${EXPECTED_TAG}" ]]; then
-            echo "Tag ${GITHUB_REF_NAME} does not match @version ${SCRIPT_VERSION}. Expected ${EXPECTED_TAG}."
+            echo "Tag ${GITHUB_REF_NAME} does not match @version ${SCRIPT_VERSION}."
+            echo "Expected tag: ${EXPECTED_TAG}"
             exit 1
           fi
 
-      - name: Prepare release asset and checksum
+      - name: Confirm changelog contains mission brief
         shell: bash
         run: |
-          SCRIPT_VERSION="$(node scripts/validate-userscript.mjs --print-version)"
+          SCRIPT_VERSION="$(
+            node scripts/validate-userscript.mjs --print-version
+          )"
+
+          if ! grep -Fq "## [${SCRIPT_VERSION}]" CHANGELOG.md; then
+            echo "CHANGELOG.md does not contain a release section for ${SCRIPT_VERSION}."
+            exit 1
+          fi
+
+      - name: Confirm deployment configuration
+        shell: bash
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
+          GREASYFORK_INSTALL_URL: ${{ vars.GREASYFORK_INSTALL_URL }}
+          GREASYFORK_PAGE_URL: ${{ vars.GREASYFORK_PAGE_URL }}
+        run: |
+          if [[ -z "${DISCORD_WEBHOOK_URL}" ]]; then
+            echo "Missing DISCORD_RELEASE_WEBHOOK repository secret."
+            exit 1
+          fi
+
+          if [[ -z "${GREASYFORK_INSTALL_URL}" ]]; then
+            echo "Missing GREASYFORK_INSTALL_URL repository variable."
+            exit 1
+          fi
+
+          if [[ -z "${GREASYFORK_PAGE_URL}" ]]; then
+            echo "Missing GREASYFORK_PAGE_URL repository variable."
+            exit 1
+          fi
+
+      - name: Prepare release asset, checksum and patch log
+        shell: bash
+        run: |
+          SCRIPT_VERSION="$(
+            node scripts/validate-userscript.mjs --print-version
+          )"
+
           ASSET="MissionChief-Command-Nexus-${SCRIPT_VERSION}.user.js"
+
           cp src/missionchief-command-nexus.user.js "${ASSET}"
           sha256sum "${ASSET}" > "${ASSET}.sha256"
 
-      - name: Create GitHub release
+          python3 - "${SCRIPT_VERSION}" "${GITHUB_SHA}" "${ASSET}.sha256" <<'PY'
+          import re
+          import sys
+          from pathlib import Path
+
+          version, commit_sha, checksum_path = sys.argv[1:]
+          changelog = Path("CHANGELOG.md").read_text(encoding="utf-8")
+
+          heading = re.search(
+              rf"^## \[{re.escape(version)}\](?:\s+-.*)?\s*$",
+              changelog,
+              re.MULTILINE,
+          )
+          if not heading:
+              raise SystemExit(
+                  f"CHANGELOG.md has no release section for {version}"
+              )
+
+          remaining = changelog[heading.end():]
+          next_heading = re.search(r"^##\s+", remaining, re.MULTILINE)
+          section = (
+              remaining[:next_heading.start()]
+              if next_heading
+              else remaining
+          ).strip()
+          if not section:
+              raise SystemExit(
+                  f"CHANGELOG.md release section for {version} is empty"
+              )
+
+          checksum = Path(checksum_path).read_text(
+              encoding="utf-8"
+          ).split()[0]
+
+          notes = (
+              f"## Mission Brief\n\n{section}\n\n"
+              f"## Build Verification\n\n"
+              f"- Source commit: `{commit_sha}`\n"
+              f"- SHA-256: `{checksum}`\n"
+          )
+
+          Path("release-notes.md").write_text(
+              notes,
+              encoding="utf-8",
+          )
+          PY
+
+      - name: Create or refresh GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          SCRIPT_VERSION="$(node scripts/validate-userscript.mjs --print-version)"
+          SCRIPT_VERSION="$(
+            node scripts/validate-userscript.mjs --print-version
+          )"
+
           ASSET="MissionChief-Command-Nexus-${SCRIPT_VERSION}.user.js"
-          gh release create "${GITHUB_REF_NAME}" \
-            "${ASSET}" \
-            "${ASSET}.sha256" \
-            --title "MissionChief Command Nexus ${SCRIPT_VERSION}" \
-            --generate-notes \
-            --verify-tag
+          TITLE="MissionChief Command Nexus ${SCRIPT_VERSION}"
+
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            gh release upload "${GITHUB_REF_NAME}" \
+              "${ASSET}" \
+              "${ASSET}.sha256" \
+              --clobber
+
+            gh release edit "${GITHUB_REF_NAME}" \
+              --title "${TITLE}" \
+              --notes-file release-notes.md \
+              --verify-tag
+          else
+            gh release create "${GITHUB_REF_NAME}" \
+              "${ASSET}" \
+              "${ASSET}.sha256" \
+              --title "${TITLE}" \
+              --notes-file release-notes.md \
+              --verify-tag
+          fi
+
+      - name: Verify published GitHub release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          SCRIPT_VERSION="$(
+            node scripts/validate-userscript.mjs --print-version
+          )"
+
+          ASSET="MissionChief-Command-Nexus-${SCRIPT_VERSION}.user.js"
+          mkdir -p release-check
+
+          gh release view "${GITHUB_REF_NAME}" \
+            --json url \
+            --jq '.url'
+
+          gh release download "${GITHUB_REF_NAME}" \
+            --pattern "${ASSET}" \
+            --pattern "${ASSET}.sha256" \
+            --dir release-check \
+            --clobber
+
+          cmp --silent "${ASSET}" "release-check/${ASSET}"
+          cmp --silent "${ASSET}.sha256" "release-check/${ASSET}.sha256"
+
+      - name: Verify deployment and notify Discord
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
+          GREASYFORK_INSTALL_URL: ${{ vars.GREASYFORK_INSTALL_URL }}
+          GREASYFORK_PAGE_URL: ${{ vars.GREASYFORK_PAGE_URL }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_SHA: ${{ github.sha }}
+          SOURCE_PATH: src/missionchief-command-nexus.user.js
+          CHANGELOG_PATH: CHANGELOG.md
+          PRODUCT_NAME: MissionChief Command Nexus
+        run: |
+          node scripts/release-notify.mjs
