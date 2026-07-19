@@ -6,6 +6,11 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
+### Changed
+
+- Published version `1.0.1` as a no-functional-change Greasy Fork synchronization test.
+- Confirmed the canonical update path from approved `main` to the Greasy Fork listing.
+
 ### Added
 
 - Initial GitHub repository and project identity.
