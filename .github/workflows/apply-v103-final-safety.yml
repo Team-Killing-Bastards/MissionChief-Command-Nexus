@@ -6,6 +6,13 @@ on:
       - agent/protect-trained-irvs-auto-readiness-v1.0.3-final
     paths:
       - .github/workflows/apply-v103-final-safety.yml
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
 
 permissions:
   contents: write
