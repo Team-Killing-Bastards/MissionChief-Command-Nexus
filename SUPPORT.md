@@ -1,36 +1,65 @@
 # Support
 
-MissionChief Command Nexus is currently in pre-release development. There is no unified installable build yet.
+MissionChief Command Nexus currently provides one merged v1.0.1 userscript from the canonical `main` source. It remains a development baseline until the compatibility, migration and release gates are completed and approved by MartyBlyth.
 
-## Where to ask
+## Supported support routes
 
-- Use the **Bug report** issue form for reproducible defects.
-- Use the **Feature request** issue form for proposed improvements.
-- Use repository discussions only if they are enabled later.
-- Do not use security reports for ordinary support requests.
+- Use the **Bug report** issue form for one reproducible defect.
+- Use the **Feature request** issue form for one coherent improvement proposal.
+- Use [SECURITY.md](SECURITY.md) for sensitive vulnerabilities, credentials, private data exposure or exploitable unsafe automation.
+- Do not post webhook URLs, session cookies, account IDs or private alliance information publicly.
 
-## Before opening an issue
+## Before opening a bug report
 
-1. Confirm which script or development build you are using.
-2. Refresh MissionChief and reproduce the problem.
-3. Test with unrelated userscripts disabled where practical.
-4. Check existing issues for the same behaviour.
-5. Remove private account and alliance information from evidence.
+1. Confirm the Command Nexus version and, for a development build, the commit SHA.
+2. Confirm both legacy standalone scripts are disabled.
+3. Stop automation or batch work before repeating a potentially unsafe defect.
+4. Reload MissionChief and reproduce the problem on the smallest safe scope.
+5. Test with unrelated userscripts disabled where practical.
+6. Search existing issues for the same behaviour.
+7. Remove private information from screenshots and logs.
 
 ## Information required
 
 Support requests should include:
 
-- Script version.
-- Browser and operating system.
-- Userscript manager and version.
+- Command Nexus version and commit.
 - MissionChief domain.
-- Relevant mission, station, vehicle or training type.
-- Clear reproduction steps.
-- Screenshots or console output where useful.
+- Browser, operating system and userscript manager versions.
+- Other enabled userscripts.
+- Relevant mission, station, vehicle, personnel or training type.
+- Starting state, including selected resources, active automation and migration state where relevant.
+- Exact reproduction steps.
+- Expected and actual behaviour.
+- Whether Stop worked and whether the action repeated.
+- Sanitized screenshots, requirement rows or console output where useful.
 
-## Limits
+## High-risk reports
 
-The project cannot provide guaranteed response times, account recovery, MissionChief support, alliance administration or advice on actions taken by the game operator.
+Clearly identify defects that could:
 
-Development and technical decisions are handled by **MartyBlyth**. **Conroy1988 assists with repository administration and documentation only.**
+- Dispatch or submit the wrong mission action.
+- Repeat dispatch, rename or personnel-assignment actions.
+- Ignore patient or trained-personnel demand.
+- Act against a previous or different mission instance.
+- Rename or assign outside the disclosed scope.
+- Continue after Stop.
+- Corrupt or lose stored settings or training data.
+- Create duplicate interfaces or growing background work.
+
+Do not repeatedly reproduce a destructive defect merely to gather more evidence.
+
+## Current support boundaries
+
+- Current `main` and the latest publicly synchronized build receive best-effort support.
+- Compatibility is claimed only for environments with recorded evidence.
+- Mobile, Safari and interacting-script combinations remain unsupported until validated.
+- Older versions may be investigated when the issue remains reproducible on the current baseline.
+- The project cannot provide MissionChief account recovery, official game support, alliance administration or guarantees about actions taken by the game operator.
+- No response-time guarantee is offered.
+
+## Authority
+
+Development and technical decisions are handled by **MartyBlyth**. **Conroy1988 assists with repository administration, documentation and general project support only; he is not a userscript developer.**
+
+Start with [Developer Handoff](docs/DEVELOPER_HANDOFF.md) for development context and [Testing Strategy](docs/TESTING.md) for evidence requirements.
