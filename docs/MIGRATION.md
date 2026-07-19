@@ -1,56 +1,98 @@
-# Migration Plan
+# Migration Guide
 
-This document defines the expected migration path from the two separate MartyBlyth userscripts to MissionChief Command Nexus.
+This document covers the transition from the two legacy MartyBlyth userscripts to the merged MissionChief Command Nexus installation.
 
-## Existing installations
+## Legacy installations
 
-The source implementations are currently distributed separately:
+The previous tools were distributed separately:
 
-1. Mission Finder 2026 Trained Personal Update.
-2. MissionChief Unit, Station & Personnel Tools.
+1. **Mission Finder 2026 Trained Personal Update**
+2. **MissionChief Unit, Station & Personnel Tools**
 
-The unified release must not assume that every user has both scripts installed or that every user has identical saved data.
+Command Nexus now contains both systems in one `.user.js` file. The supported operating state is one enabled Command Nexus installation, not three scripts running together.
 
-## Migration objectives
+## Before installing Command Nexus
 
-- Preserve valid preferences where their meaning remains unchanged.
-- Preserve personnel and training-registry data.
-- Avoid running both legacy interfaces after Command Nexus takes control.
-- Avoid destructive deletion during the first migration.
-- Provide a clear rollback path during pre-release testing.
-
-## Required implementation steps
-
-1. Inventory all legacy storage keys and data shapes.
-2. Define a versioned Command Nexus settings schema.
-3. Detect each source script independently.
-4. Validate legacy values before importing them.
-5. Resolve conflicting values with documented precedence.
-6. Record migration completion and source versions.
-7. Retain a backup copy of legacy data for at least the first stable release cycle.
-8. Present migration results or warnings to the user.
+1. Record the versions of both legacy scripts.
+2. Export or record important settings where the legacy interface provides an export.
+3. Keep a temporary backup of the legacy scripts or their source links.
+4. Do not delete browser storage manually.
+5. Choose a low-risk MissionChief session for the first test.
 
 ## Installation transition
 
-The final migration guide should instruct users to:
+1. Disable both legacy standalone scripts.
+2. Install the canonical Command Nexus source:
 
-1. Export or record important settings where export is supported.
-2. Disable both legacy scripts rather than immediately deleting them.
-3. Install the Command Nexus release.
-4. Confirm imported preferences and training data.
-5. Test a small administrative preview and a simple mission.
-6. Remove the legacy scripts only after successful validation.
+   ```text
+   https://raw.githubusercontent.com/Team-Killing-Bastards/MissionChief-Command-Nexus/main/src/missionchief-command-nexus.user.js
+   ```
+
+3. Reload MissionChief.
+4. Confirm the Command Nexus administration controls appear only once.
+5. Open one simple mission and confirm the Mission Operations controls appear only once.
+6. Run an administrative preview on the smallest practical scope.
+7. Run Unit Finder on a simple mission without dispatching automatically.
+8. Confirm expected settings and training intelligence remain available.
+9. Keep the legacy scripts disabled until several normal sessions complete successfully.
+
+> [!WARNING]
+> Do not enable Command Nexus alongside either legacy script. Duplicate panels, observers, timers, vehicle selection or submissions may occur.
+
+## Current storage position
+
+The merged v1.0.1 source retains versioned keys from both established engines. This preserves existing behaviour, but a complete formal migration matrix has not yet been proven for every combination of stored data.
+
+Development must therefore distinguish between:
+
+- Legacy settings that remain directly readable.
+- Shared training-registry data already used by both engines.
+- Conflicting preferences that need explicit precedence rules.
+- Unknown or malformed data that must not be deleted silently.
+
+## Migration test matrix
+
+Each row requires evidence before the first formal release:
+
+| Starting state | Required result | Status |
+|---|---|---|
+| Mission Finder only | Mission controls and saved preferences remain usable | Not fully evidenced |
+| Unit, Station & Personnel Tools only | Administration and training data remain usable | Not fully evidenced |
+| Both legacy scripts | One Command Nexus installation replaces both without duplicate behaviour | Not fully evidenced |
+| Clean browser profile | Command Nexus initializes with safe defaults | Not fully evidenced |
+| Existing shared training registry | Qualification-aware mission selection can consume valid records | Implemented; live matrix pending |
+| Malformed or old storage | Script fails safely without deleting unrelated data | Pending |
+
+Test evidence should record the exact Command Nexus commit, legacy versions, domain, browser, userscript manager and outcome.
 
 ## Rollback
 
-During pre-release testing, rollback should consist of:
+During pre-release development:
 
-- Disabling Command Nexus.
-- Re-enabling the original scripts.
-- Restoring legacy storage only when necessary and documented.
+1. Stop any active automation or batch process.
+2. Disable Command Nexus.
+3. Re-enable the previous legacy scripts.
+4. Reload MissionChief and confirm each legacy interface appears once.
+5. Restore exported settings only when necessary and documented.
+6. Preserve the failed Command Nexus version, console output and reproduction steps for investigation.
 
-Command Nexus should not modify legacy storage after migration unless a later, explicit cleanup process is introduced.
+Command Nexus should not destructively rewrite or remove legacy data merely because the user rolls back.
 
-## Compatibility warning
+## Developer requirements for storage changes
 
-Running Command Nexus and either source script simultaneously may create duplicate panels, observers, timers or submissions. The first release must detect or clearly warn about simultaneous activation where practical.
+Any pull request that changes storage keys, data shape or migration behaviour must include:
+
+- Old and new key names.
+- Expected old and new data shapes.
+- Validation and fallback behaviour.
+- Conflict-resolution precedence.
+- Rollback behaviour.
+- A version increase.
+- Tests for clean, valid legacy, conflicting and malformed states.
+- Changelog and migration-document updates.
+
+## Completion gate
+
+Migration cannot be marked complete until all supported starting states have documented evidence and no known path can corrupt settings, lose training intelligence or create duplicate execution.
+
+See [Developer Handoff](DEVELOPER_HANDOFF.md) and [Testing Strategy](TESTING.md).
