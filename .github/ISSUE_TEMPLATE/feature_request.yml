@@ -1,0 +1,79 @@
+name: Feature request
+description: Propose a focused improvement to MissionChief Command Nexus
+title: "[Feature]: "
+labels:
+  - enhancement
+assignees:
+  - MartyBlyth
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Proposals should solve a real operational problem without adding unnecessary complexity or background work.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Operational problem
+      description: Describe the gameplay or administration problem, not only the requested interface element.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Explain the behaviour you would expect from Command Nexus.
+    validations:
+      required: true
+
+  - type: textarea
+    id: benefit
+    attributes:
+      label: Practical benefit
+      description: Explain who benefits and how often the feature would be used.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Project area
+      options:
+        - Mission requirements and dispatch
+        - Patients and medical resources
+        - Trained personnel and capabilities
+        - Station administration
+        - Vehicle administration
+        - Personnel assignment
+        - Automation and queues
+        - Interface and accessibility
+        - Performance and lifecycle
+        - Documentation or release process
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks or edge cases
+      description: Consider incorrect dispatch, bulk changes, performance, migration and compatibility.
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Describe any current workaround or simpler alternative.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Validation
+      options:
+        - label: I searched existing issues for a similar proposal.
+          required: true
+        - label: This request describes one coherent feature.
+          required: true
+        - label: I understand MartyBlyth is the developer and final technical decision-maker.
+          required: true
