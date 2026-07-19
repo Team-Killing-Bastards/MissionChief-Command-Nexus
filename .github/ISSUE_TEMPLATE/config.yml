@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Support guidance
+    url: https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/blob/main/SUPPORT.md
+    about: Read the support requirements before opening an issue.
+  - name: Security policy
+    url: https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/security/policy
+    about: Use the security policy for sensitive vulnerability reports.
