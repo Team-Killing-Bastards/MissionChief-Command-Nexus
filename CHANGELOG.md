@@ -1,41 +1,62 @@
 # Changelog
 
-All notable changes to MissionChief Command Nexus will be documented in this file.
+All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
+### Added
+
+- Current-state developer handoff for resuming source work.
+- Evidence-driven roadmap, architecture, migration and testing documentation.
+- Expanded repository integrity checks for required development and release files.
+
 ### Changed
 
-- Published version `1.0.1` as a no-functional-change Greasy Fork synchronization test.
-- Confirmed the canonical update path from approved `main` to the Greasy Fork listing.
+- Replaced planning-era documentation with the actual merged v1.0.1 baseline.
+- Rebuilt the repository README and Command Nexus hero presentation.
+- Clarified the difference between implemented code and fully validated release readiness.
+
+### Pending
+
+- Complete live regression testing across both supported MissionChief UK domains.
+- Complete migration evidence for each legacy installation state.
+- Complete long-session lifecycle and stability evidence.
+- Consolidate the two retained control surfaces into one coherent interface.
+- Create the first formal tagged GitHub release after MartyBlyth approval.
+
+## [1.0.1] - 2026-07-19
+
+### Changed
+
+- Increased the unified userscript version from `1.0.0` to `1.0.1` without functional changes.
+- Confirmed the canonical `main`-branch source synchronization path used for external distribution.
+
+## [1.0.0] - 2026-07-19
 
 ### Added
 
-- Initial GitHub repository and project identity.
-- Comprehensive project README.
-- MIT Licence attributed to MartyBlyth.
+- First canonical MissionChief Command Nexus userscript.
+- One standardized userscript metadata block naming MartyBlyth as author.
+- Mission Finder `V10.6.69` baseline.
+- Unit, Station & Personnel Tools `V4.2.8` baseline.
+- One combined installation guard with retained module startup isolation.
+- Unit and station naming workflows.
+- Personnel assignment, verification and reporting workflows.
+- Shared vehicle-training registry.
+- Mission requirement, patient and specialist-resource handling.
+- Qualification-aware vehicle selection.
+- Unit Finder, Mission Update, dispatch and Auto Mode workflows.
+- Queue continuation and transport handling.
+- JavaScript, metadata, file-size and version-increase validation.
+- Tag-driven GitHub Release packaging with a userscript asset and SHA-256 checksum.
+- Greasy Fork synchronization, rollback and troubleshooting guidance.
 - Contribution, support, security and community policies.
-- Structured issue forms and pull-request guidance.
-- Architecture, testing, migration and release-planning documentation.
-- Unified MissionChief Command Nexus userscript intake for the `1.0.x` release line.
-- Greasy Fork-compatible metadata and authoritative raw `main` source path.
-- Automated JavaScript, metadata, file-size and version-increase validation.
-- Tag-driven GitHub Release packaging with SHA-256 checksums.
-- Detailed Greasy Fork synchronization, webhook, rollback and troubleshooting guide.
-
-### Pending before first publication
-
-- Add the prepared `src/missionchief-command-nexus.user.js` source file to the release branch.
-- Complete integrated MissionChief regression testing.
-- Create or configure the unified Greasy Fork listing.
-- Add the Greasy Fork webhook to the GitHub repository.
-- Verify the first clean installation and update path.
 
 ## Release format
 
-Future entries will use:
+Future entries use:
 
 ```text
 ## [x.y.z] - YYYY-MM-DD
@@ -46,4 +67,4 @@ Future entries will use:
 ### Security
 ```
 
-Release notes should describe user-visible behaviour rather than commit history alone.
+Release notes should describe user-visible behaviour, migration impact, tested environments and known limitations rather than commit history alone.
