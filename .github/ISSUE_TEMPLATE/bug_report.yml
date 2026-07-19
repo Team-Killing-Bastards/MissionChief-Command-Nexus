@@ -9,14 +9,14 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thank you for reporting a problem. Remove private account, alliance and session information before submitting.
+        Report one reproducible problem. Remove account IDs, tokens, webhook URLs, private alliance information and personal data before submitting. For sensitive security issues, use the private security policy instead.
 
   - type: input
     id: version
     attributes:
-      label: Script version
-      description: Enter the Command Nexus version, development commit, or original source-script version.
-      placeholder: e.g. 1.0.0-alpha.1 or commit SHA
+      label: Command Nexus version and commit
+      description: Enter the userscript version and, for development builds, the commit SHA.
+      placeholder: e.g. 1.0.1 / abc1234
     validations:
       required: true
 
@@ -25,7 +25,7 @@ body:
     attributes:
       label: MissionChief domain
       options:
-        - missionchief.co.uk
+        - www.missionchief.co.uk
         - police.missionchief.co.uk
         - Other or unknown
     validations:
@@ -40,10 +40,42 @@ body:
       required: true
 
   - type: textarea
+    id: other_scripts
+    attributes:
+      label: Other enabled userscripts
+      description: List scripts that may interact with the same mission, vehicle or interface elements. State whether the defect remains with unrelated scripts disabled.
+      placeholder: Script name and version, or None
+    validations:
+      required: true
+
+  - type: dropdown
+    id: risk
+    attributes:
+      label: Potential impact
+      options:
+        - Display or documentation only
+        - Selection is incorrect but nothing was submitted
+        - Could dispatch or submit the wrong mission action
+        - Could rename, assign or modify the wrong resource
+        - Could corrupt or lose stored settings or training data
+        - Performance, duplicate UI or background-work growth
+        - Unknown
+    validations:
+      required: true
+
+  - type: textarea
     id: context
     attributes:
       label: Affected workflow
-      description: Identify the mission, station, vehicle, personnel/training type, or automation workflow involved.
+      description: Identify the mission, station, vehicle, training profile, automation mode, queue or transport workflow involved.
+    validations:
+      required: true
+
+  - type: textarea
+    id: starting_state
+    attributes:
+      label: Starting state
+      description: Record relevant selected vehicles, patient count, stored-data/migration state, active automation and whether legacy scripts were disabled.
     validations:
       required: true
 
@@ -51,7 +83,7 @@ body:
     id: steps
     attributes:
       label: Reproduction steps
-      description: Provide exact, numbered steps that reproduce the problem.
+      description: Provide exact numbered steps that reproduce the problem on the smallest safe scope.
       placeholder: |
         1. Open ...
         2. Select ...
@@ -74,10 +106,16 @@ body:
       required: true
 
   - type: textarea
+    id: stop_recovery
+    attributes:
+      label: Stop, recovery and repeatability
+      description: State whether Stop worked, whether reloading changed the result, whether the action repeated, and how you recovered safely.
+
+  - type: textarea
     id: evidence
     attributes:
-      label: Logs or screenshots
-      description: Add sanitized console output, screenshots or other evidence where useful.
+      label: Sanitized logs or screenshots
+      description: Add console output, screenshots, mission requirement rows or other evidence. Remove private information first.
       render: shell
 
   - type: checkboxes
@@ -87,7 +125,11 @@ body:
       options:
         - label: I searched existing issues for the same problem.
           required: true
-        - label: I removed private account, alliance and session information.
+        - label: I removed private account, alliance, token, webhook and session information.
+          required: true
+        - label: Both legacy standalone scripts were disabled while testing Command Nexus.
           required: true
         - label: I tested with unrelated userscripts disabled where practical.
           required: false
+        - label: I did not repeat a potentially destructive test beyond the minimum needed to reproduce it.
+          required: true
