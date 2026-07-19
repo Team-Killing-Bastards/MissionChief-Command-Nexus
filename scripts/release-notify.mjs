@@ -16,8 +16,8 @@ const PRODUCT_NAME =
   'MissionChief Command Nexus';
 
 const MAX_MISSION_BRIEF_LENGTH = 1400;
-const GREASY_FORK_ATTEMPTS = 20;
-const GREASY_FORK_WAIT_MS = 15_000;
+const GREASY_FORK_ATTEMPTS = 60;
+const GREASY_FORK_WAIT_MS = 5_000;
 
 function requireEnv(name) {
   const value = process.env[name]?.trim();
@@ -389,12 +389,6 @@ async function main() {
     `GitHub source verified: ${releaseSha}`
   );
 
-  await verifyGreasyFork({
-    installUrl: greasyForkInstallUrl,
-    expectedVersion: version,
-    expectedNormalisedSource,
-  });
-
   const changelog =
     await readFile(CHANGELOG_PATH, 'utf8');
 
@@ -484,6 +478,12 @@ async function main() {
       },
     ],
   };
+
+  await verifyGreasyFork({
+    installUrl: greasyForkInstallUrl,
+    expectedVersion: version,
+    expectedNormalisedSource,
+  });
 
   await postDiscord(
     discordWebhookUrl,
