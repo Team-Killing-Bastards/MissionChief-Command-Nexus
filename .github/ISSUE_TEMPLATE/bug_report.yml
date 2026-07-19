@@ -1,0 +1,93 @@
+name: Bug report
+description: Report a reproducible defect in MissionChief Command Nexus
+title: "[Bug]: "
+labels:
+  - bug
+assignees:
+  - MartyBlyth
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a problem. Remove private account, alliance and session information before submitting.
+
+  - type: input
+    id: version
+    attributes:
+      label: Script version
+      description: Enter the Command Nexus version, development commit, or original source-script version.
+      placeholder: e.g. 1.0.0-alpha.1 or commit SHA
+    validations:
+      required: true
+
+  - type: dropdown
+    id: domain
+    attributes:
+      label: MissionChief domain
+      options:
+        - missionchief.co.uk
+        - police.missionchief.co.uk
+        - Other or unknown
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Browser, operating system and userscript manager
+      placeholder: e.g. Chrome 150, Windows 11, Tampermonkey 5.x
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Affected workflow
+      description: Identify the mission, station, vehicle, personnel/training type, or automation workflow involved.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reproduction steps
+      description: Provide exact, numbered steps that reproduce the problem.
+      placeholder: |
+        1. Open ...
+        2. Select ...
+        3. Observe ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Logs or screenshots
+      description: Add sanitized console output, screenshots or other evidence where useful.
+      render: shell
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Validation
+      options:
+        - label: I searched existing issues for the same problem.
+          required: true
+        - label: I removed private account, alliance and session information.
+          required: true
+        - label: I tested with unrelated userscripts disabled where practical.
+          required: false
