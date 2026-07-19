@@ -1,2 +1,0 @@
-Temporary direct-main write test for Conroy1988.
-This file will be removed immediately after verification.
