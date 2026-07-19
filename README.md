@@ -32,16 +32,16 @@ One MissionChief UK userscript for mission intelligence, vehicle selection, trai
 
 <table>
 <tr>
-<td width="25%" align="center"><strong>VERSION</strong><br><code>1.0.2</code><br><sub>Published 19 July 2026</sub></td>
+<td width="25%" align="center"><strong>PRODUCTION</strong><br><code>1.0.2</code><br><sub>Published 19 July 2026</sub></td>
 <td width="25%" align="center"><strong>GITHUB</strong><br>✅ Release live<br><sub>Userscript + SHA-256 asset</sub></td>
 <td width="25%" align="center"><strong>GREASY FORK</strong><br>✅ Source verified<br><sub>Exact normalized code parity</sub></td>
-<td width="25%" align="center"><strong>NOTIFICATIONS</strong><br>✅ Discord verified<br><sub>Posted after deployment confirmation</sub></td>
+<td width="25%" align="center"><strong>DEVELOPMENT</strong><br><code>1.0.3</code><br><sub>Unreleased safety candidate</sub></td>
 </tr>
 </table>
 
 **v1.0.2 is the current verified production release.** It validated the complete GitHub → Greasy Fork → Discord deployment chain and increased the unified userscript version from `1.0.1` to `1.0.2` without changing MissionChief runtime behaviour.
 
-The release was verified end to end:
+The production release was verified end to end:
 
 - The `v1.0.2` tag points to the published source.
 - The GitHub Release contains the installable `.user.js` asset and its SHA-256 checksum.
@@ -53,8 +53,26 @@ The release was verified end to end:
 |---|---|
 | Recommended installer | [MissionChief Command Nexus on Greasy Fork](https://greasyfork.org/en/scripts/587702-missionchief-command-nexus) |
 | GitHub Release | [MissionChief Command Nexus v1.0.2](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/tag/v1.0.2) |
-| Canonical source | [`src/missionchief-command-nexus.user.js`](src/missionchief-command-nexus.user.js) |
+| Canonical production source | [`src/missionchief-command-nexus.user.js`](src/missionchief-command-nexus.user.js) |
 | Version history | [CHANGELOG.md](CHANGELOG.md) |
+
+### Unreleased development candidate — v1.0.3
+
+MartyBlyth has generated an active `v1.0.3` safety candidate on the branch [`agent/v1.0.3-trained-irv-auto-safety-auto`](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/tree/agent/v1.0.3-trained-irv-auto-safety-auto).
+
+The candidate is focused on two safety-critical areas:
+
+1. **Protect specialist-trained Police IRVs**
+   - Ordinary Police Car and Police Officer attendance should use only exact-ID IRVs that are live-verified as staffed and do not carry protected specialist Police training.
+   - Level 1, Level 2, Sergeant, Medic, Inspector and other specialist-trained Police IRVs should not be consumed by ordinary Police attendance.
+   - The ordinary Police group-button fallback should not bypass exact vehicle-training protection.
+
+2. **Stabilize Auto Mode and manual selection**
+   - Auto Mode, Unit Finder and Mission Update should wait for a complete, non-zero, ID-stable vehicle list after loading finishes.
+   - Selection and dispatch should stop safely when the vehicle list times out, remains empty or is still changing.
+
+> [!WARNING]
+> `v1.0.3` is **not a production release** and is not the recommended install route. Its branch must be reconciled with current `main`, reviewed, validated and released through the controlled publication process before users should install it.
 
 > [!IMPORTANT]
 > **MissionChief Command Nexus is developed by MartyBlyth.** Conroy1988 assists as a project helper with repository setup, documentation and general support only; he is not a userscript developer.
@@ -99,7 +117,7 @@ The main-branch source remains available for review and controlled installation:
 
 **[Install the canonical GitHub build](https://raw.githubusercontent.com/Team-Killing-Bastards/MissionChief-Command-Nexus/main/src/missionchief-command-nexus.user.js)**
 
-Greasy Fork is the recommended user-facing route because it provides the managed update channel. GitHub `main` remains the authoritative development source from which Greasy Fork synchronizes.
+Greasy Fork is the recommended user-facing route because it provides the managed update channel. GitHub `main` remains the authoritative production-development source from which Greasy Fork synchronizes.
 
 ## Architecture
 
@@ -165,7 +183,7 @@ MissionChief Command Nexus
 
 ## Implemented capabilities
 
-The following capability exists in the current source. Individual missions, account configurations and training profiles still require live validation; implemented does not mean every possible MissionChief requirement is already mapped.
+The following capability exists in the current production source. Individual missions, account configurations and training profiles still require live validation; implemented does not mean every possible MissionChief requirement is already mapped.
 
 ### Mission intelligence and response
 
@@ -231,7 +249,13 @@ A profile existing in Personnel Assignment does not automatically mean Unit Sele
 
 ## Current development queue
 
-The current active development work is deliberately narrow and evidence-backed.
+### Active release candidate
+
+| Candidate | State | Scope |
+|---|---|---|
+| [`v1.0.3` trained-IRV and Auto Mode safety branch](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/tree/agent/v1.0.3-trained-irv-auto-safety-auto) | **Unreleased / requires reconciliation and review** | Protect specialist-trained Police IRVs from ordinary attendance and require a complete, stable vehicle list before selection or dispatch. |
+
+### Tracked issues
 
 | Issue | Status | Development scope |
 |---|---|---|
@@ -241,11 +265,13 @@ The current active development work is deliberately narrow and evidence-backed.
 | [#19 — Complete remaining SAR, Mountain Rescue and Coastguard profiles](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/19) | **Backlog** | Complete the remaining specialist profile mappings and representative live validation. |
 | [#20 — Map Water Carrier, HazMat and ICCU requirements](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/20) | **Blocked high-priority bug** | Await stable output from the external Mission Requirements box before implementing reliable specialist Fire mappings. |
 
+The `v1.0.3` candidate protects specialist-trained IRVs from being used for ordinary Police attendance; it does **not** by itself complete the missing Police Medic mission-requirement mapping tracked in Issue #16.
+
 Issue #20 is intentionally blocked. A fragile hard-coded workaround should not be introduced until the external Mission Requirements output exposes stable requirement wording or identifiers.
 
 ## Compatibility and safety
 
-The current userscript metadata targets:
+The current production userscript metadata targets:
 
 - `https://www.missionchief.co.uk/*`
 - `https://police.missionchief.co.uk/*`
@@ -265,13 +291,14 @@ The current userscript metadata targets:
 - Keep only one Command Nexus installation active.
 - Treat Auto Mode as operational automation: observe it on representative missions before unattended use.
 - Do not rely on unsupported requirement substitution when the script reports a mapping or staffing gap.
+- Do not install unreleased candidate branches as though they were Greasy Fork production updates.
 
 ## Release and deployment
 
 Command Nexus has a verified controlled release system rather than a simple tag-and-upload process.
 
 ```text
-Source change
+Source change or reviewed candidate
     ↓
 Version and changelog preparation
     ↓
@@ -339,12 +366,13 @@ The Discord announcement is presented as three focused cards:
 
 ```text
 .github/
-├── ISSUE_TEMPLATE/              Structured bug and feature forms
+├── ISSUE_TEMPLATE/                         Structured bug and feature forms
 ├── workflows/
-│   ├── repository-quality.yml   Documentation and repository integrity
-│   ├── validate-userscript.yml  Source, metadata and version validation
-│   └── release.yml              Prepare and publish release workflow
-└── CODEOWNERS                   Technical ownership rules
+│   ├── repository-quality.yml              Documentation and repository integrity
+│   ├── validate-userscript.yml             Source, metadata and version validation
+│   ├── release.yml                         Prepare and publish release workflow
+│   └── temporary-build-v103-safety-pr.yml  One-time v1.0.3 candidate builder
+└── CODEOWNERS                              Technical ownership rules
 
 docs/
 ├── README.md                    Documentation index
@@ -368,6 +396,8 @@ src/
 └── missionchief-command-nexus.user.js
                                 Installable production source
 ```
+
+The temporary `v1.0.3` builder is development infrastructure, not part of the permanent release architecture. It should be removed when the candidate branch has completed its review/merge lifecycle.
 
 ### Documentation index
 
@@ -435,6 +465,6 @@ Automation and bulk account changes remain the operator's responsibility. Use co
 <strong>MissionChief Command Nexus</strong><br>
 <sub>One installation. Every step from resource preparation to live dispatch.</sub>
 
-[Install on Greasy Fork](https://greasyfork.org/en/scripts/587702-missionchief-command-nexus) · [Source](src/missionchief-command-nexus.user.js) · [v1.0.2 Release](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/tag/v1.0.2) · [Changelog](CHANGELOG.md) · [Issues](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues)
+[Install production on Greasy Fork](https://greasyfork.org/en/scripts/587702-missionchief-command-nexus) · [Production source](src/missionchief-command-nexus.user.js) · [v1.0.2 Release](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/tag/v1.0.2) · [v1.0.3 Candidate](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/tree/agent/v1.0.3-trained-irv-auto-safety-auto) · [Issues](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues)
 
 </div>
