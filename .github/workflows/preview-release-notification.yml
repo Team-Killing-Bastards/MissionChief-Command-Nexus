@@ -1,0 +1,63 @@
+name: Preview redesigned release notification
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/release-triggers/preview-release-notification'
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  preview:
+    name: Send redesigned v1.0.2 release card
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out current main
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Prepare verified v1.0.2 assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --tags
+          RELEASE_SHA="$(git rev-list -n 1 v1.0.2)"
+          echo "RELEASE_SHA=${RELEASE_SHA}" >> "${GITHUB_ENV}"
+          cp src/missionchief-command-nexus.user.js MissionChief-Command-Nexus-1.0.2.user.js
+          sha256sum MissionChief-Command-Nexus-1.0.2.user.js > MissionChief-Command-Nexus-1.0.2.user.js.sha256
+          node --check scripts/release-notify.mjs
+          node scripts/validate-userscript.mjs
+
+      - name: Send redesigned Discord card
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
+          GREASYFORK_INSTALL_URL: ${{ vars.GREASYFORK_INSTALL_URL }}
+          GREASYFORK_PAGE_URL: ${{ vars.GREASYFORK_PAGE_URL }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          RELEASE_TAG: v1.0.2
+          RELEASE_SHA: ${{ env.RELEASE_SHA }}
+          SOURCE_PATH: src/missionchief-command-nexus.user.js
+          CHANGELOG_PATH: CHANGELOG.md
+          PRODUCT_NAME: MissionChief Command Nexus
+        run: node scripts/release-notify.mjs
+
+      - name: Record preview success
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue comment 26 --body "Redesigned Discord release notification preview sent successfully from Actions run https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}."
