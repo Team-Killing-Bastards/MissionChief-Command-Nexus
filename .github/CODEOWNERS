@@ -1,0 +1,12 @@
+# MartyBlyth is the project developer and owns all source-code review.
+* @MartyBlyth
+
+# Conroy1988 may assist with documentation and repository presentation.
+*.md @MartyBlyth @Conroy1988
+docs/** @MartyBlyth @Conroy1988
+.github/ISSUE_TEMPLATE/** @MartyBlyth @Conroy1988
+.github/pull_request_template.md @MartyBlyth @Conroy1988
+
+# Source and release automation remain under MartyBlyth's technical ownership.
+src/** @MartyBlyth
+.github/workflows/** @MartyBlyth
