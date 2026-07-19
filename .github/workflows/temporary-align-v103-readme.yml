@@ -1,0 +1,58 @@
+name: Temporary align v1.0.3 README
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - synchronize
+
+permissions:
+  contents: write
+
+jobs:
+  align-readme:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'agent/v1.0.3-trained-irv-auto-safety-auto'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out PR branch
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Align candidate version field
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('README.md')
+          text = path.read_text(encoding='utf-8')
+          old = '**Current version:** `1.0.2`'
+          new = '**Current version:** `1.0.3`'
+          if text.count(old) != 1:
+              raise RuntimeError(f'Expected README candidate version marker once, found {text.count(old)}')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8', newline='\n')
+          PY
+
+      - name: Remove trigger and validate
+        shell: bash
+        run: |
+          git rm -f automation/trigger-v103-readme.txt
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          python3 scripts/check_repository.py
+
+      - name: Commit aligned README
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Align README with v1.0.3 candidate"
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
