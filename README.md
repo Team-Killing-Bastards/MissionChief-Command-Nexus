@@ -17,12 +17,15 @@ MissionChief Command Nexus is a planned unified userscript for the UK version of
 
 ## Overview
 
-MissionChief Command Nexus is being created by merging two established userscripts by **Martyblyth** into one coordinated operational toolkit:
+MissionChief Command Nexus is being created by merging two established userscripts developed by **MartyBlyth** into one coordinated operational toolkit:
 
 | Existing userscript | Primary role |
 |---|---|
 | [Mission Finder 2026 Trained Personal Update](https://greasyfork.org/en/scripts/587607-mission-finder-2026-trained-personal-update/code) | Mission requirements, vehicle selection, staffing awareness, dispatch and mission automation |
 | [MissionChief Unit, Station & Personnel Tools](https://greasyfork.org/en/scripts/587606-missionchief-unit-station-personnel-tools/code) | Unit naming, station naming, trained-personnel assignment, verification and reporting |
+
+> [!NOTE]
+> **Development attribution:** MissionChief Command Nexus is developed by **MartyBlyth**. **Conroy1988 is a project helper only**, assisting with repository setup, documentation and general support; he is not a developer of the userscript.
 
 The merged project is intended to connect the full operational chain:
 
@@ -237,8 +240,8 @@ Large changes should be discussed in an issue before implementation so the unifi
 
 ## Project Team
 
-- **Martyblyth** — original userscript author and lead developer.
-- **Conroy1988** — repository creation, project presentation, documentation and release coordination.
+- **MartyBlyth** — project creator, original userscript author and developer.
+- **Conroy1988** — project helper, assisting with repository setup, documentation and general support. He is not a developer of the userscript.
 - **Team Killing Bastards** — GitHub organisation and project home.
 
 ---
