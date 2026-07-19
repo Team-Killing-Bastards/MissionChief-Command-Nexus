@@ -1,79 +1,124 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="520" viewBox="0 0 1600 520" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="600" viewBox="0 0 1600 600" role="img" aria-labelledby="title desc">
   <title id="title">MissionChief Command Nexus</title>
-  <desc id="desc">A dark operational command banner connecting stations, vehicles, trained personnel, mission intelligence and dispatch.</desc>
+  <desc id="desc">A dark operational command banner connecting stations, vehicles, trained personnel, missions, intelligence and dispatch.</desc>
+
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#070b16"/>
-      <stop offset="0.46" stop-color="#111a31"/>
+      <stop offset="0" stop-color="#060a14"/>
+      <stop offset="0.48" stop-color="#121b34"/>
       <stop offset="1" stop-color="#050812"/>
     </linearGradient>
-    <radialGradient id="core" cx="50%" cy="50%" r="58%">
-      <stop offset="0" stop-color="#13b8ff" stop-opacity="0.36"/>
-      <stop offset="0.5" stop-color="#6d28d9" stop-opacity="0.14"/>
-      <stop offset="1" stop-color="#000" stop-opacity="0"/>
+    <radialGradient id="coreGlow" cx="50%" cy="52%" r="56%">
+      <stop offset="0" stop-color="#17bfff" stop-opacity="0.34"/>
+      <stop offset="0.48" stop-color="#7c3aed" stop-opacity="0.14"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0"/>
     </radialGradient>
     <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0" stop-color="#00d4ff"/>
-      <stop offset="0.48" stop-color="#8b5cf6"/>
+      <stop offset="0.50" stop-color="#8b5cf6"/>
       <stop offset="1" stop-color="#ff3158"/>
     </linearGradient>
+    <linearGradient id="titleRule" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#00d4ff" stop-opacity="0"/>
+      <stop offset="0.25" stop-color="#00d4ff" stop-opacity="0.9"/>
+      <stop offset="0.50" stop-color="#8b5cf6" stop-opacity="1"/>
+      <stop offset="0.75" stop-color="#ff3158" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#ff3158" stop-opacity="0"/>
+    </linearGradient>
     <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
-      <feGaussianBlur stdDeviation="8" result="blur"/>
-      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+      <feGaussianBlur stdDeviation="7" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
     </filter>
     <pattern id="grid" width="44" height="44" patternUnits="userSpaceOnUse">
-      <path d="M44 0H0V44" fill="none" stroke="#86a5c7" stroke-opacity="0.06" stroke-width="1"/>
+      <path d="M44 0H0V44" fill="none" stroke="#9ab4d2" stroke-opacity="0.055" stroke-width="1"/>
     </pattern>
   </defs>
 
-  <rect width="1600" height="520" rx="28" fill="url(#bg)"/>
-  <rect width="1600" height="520" rx="28" fill="url(#grid)"/>
-  <ellipse cx="800" cy="255" rx="610" ry="310" fill="url(#core)"/>
+  <rect width="1600" height="600" rx="30" fill="url(#bg)"/>
+  <rect width="1600" height="600" rx="30" fill="url(#grid)"/>
+  <ellipse cx="800" cy="320" rx="630" ry="340" fill="url(#coreGlow)"/>
+  <rect x="24" y="24" width="1552" height="552" rx="22" fill="none" stroke="#c7ddf7" stroke-opacity="0.12"/>
 
+  <!-- Dedicated title zone: no connector lines or nodes enter this area. -->
+  <g>
+    <rect x="320" y="28" width="960" height="100" rx="20" fill="#060b18" fill-opacity="0.84" stroke="#9fc5eb" stroke-opacity="0.14"/>
+    <text x="800" y="75" text-anchor="middle" fill="#f8fbff" font-family="Segoe UI,Arial,sans-serif" font-size="46" font-weight="800" letter-spacing="1.5">MISSIONCHIEF COMMAND NEXUS</text>
+    <rect x="500" y="91" width="600" height="2" rx="1" fill="url(#titleRule)"/>
+    <text x="800" y="116" text-anchor="middle" fill="#9fb7d2" font-family="Segoe UI,Arial,sans-serif" font-size="15" font-weight="700" letter-spacing="4">RESOURCE INTELLIGENCE · MISSION CONTROL · AUTOMATED DISPATCH</text>
+  </g>
+
+  <!-- Connection architecture begins below the title zone. -->
   <g fill="none" stroke-linecap="round">
-    <path d="M120 135C330 120 415 198 575 226" stroke="#00d4ff" stroke-opacity="0.35" stroke-width="2"/>
-    <path d="M95 260C290 255 420 250 575 250" stroke="#8b5cf6" stroke-opacity="0.45" stroke-width="2"/>
-    <path d="M135 390C320 380 430 312 575 278" stroke="#ff3158" stroke-opacity="0.32" stroke-width="2"/>
-    <path d="M1480 135C1270 120 1185 198 1025 226" stroke="#ff3158" stroke-opacity="0.35" stroke-width="2"/>
-    <path d="M1505 260C1310 255 1180 250 1025 250" stroke="#8b5cf6" stroke-opacity="0.45" stroke-width="2"/>
-    <path d="M1465 390C1280 380 1170 312 1025 278" stroke="#00d4ff" stroke-opacity="0.32" stroke-width="2"/>
+    <path d="M116 190H342C430 190 500 226 590 258" stroke="#00d4ff" stroke-opacity="0.42" stroke-width="2"/>
+    <path d="M92 315H350C455 315 515 315 590 315" stroke="#8b5cf6" stroke-opacity="0.5" stroke-width="2"/>
+    <path d="M132 440H360C445 440 512 402 590 372" stroke="#ff3158" stroke-opacity="0.40" stroke-width="2"/>
+
+    <path d="M1484 190H1258C1170 190 1100 226 1010 258" stroke="#ff3158" stroke-opacity="0.42" stroke-width="2"/>
+    <path d="M1508 315H1250C1145 315 1085 315 1010 315" stroke="#8b5cf6" stroke-opacity="0.5" stroke-width="2"/>
+    <path d="M1468 440H1240C1155 440 1088 402 1010 372" stroke="#00d4ff" stroke-opacity="0.40" stroke-width="2"/>
   </g>
 
   <g filter="url(#glow)">
-    <circle cx="116" cy="135" r="8" fill="#00d4ff"/>
-    <circle cx="92" cy="260" r="8" fill="#8b5cf6"/>
-    <circle cx="132" cy="390" r="8" fill="#ff3158"/>
-    <circle cx="1484" cy="135" r="8" fill="#ff3158"/>
-    <circle cx="1508" cy="260" r="8" fill="#8b5cf6"/>
-    <circle cx="1468" cy="390" r="8" fill="#00d4ff"/>
+    <circle cx="116" cy="190" r="8" fill="#00d4ff"/>
+    <circle cx="92" cy="315" r="8" fill="#8b5cf6"/>
+    <circle cx="132" cy="440" r="8" fill="#ff3158"/>
+    <circle cx="1484" cy="190" r="8" fill="#ff3158"/>
+    <circle cx="1508" cy="315" r="8" fill="#8b5cf6"/>
+    <circle cx="1468" cy="440" r="8" fill="#00d4ff"/>
   </g>
 
-  <g font-family="Inter,Segoe UI,Arial,sans-serif" font-size="21" font-weight="700" letter-spacing="2.2">
-    <g transform="translate(155 102)"><rect width="205" height="56" rx="14" fill="#091827" stroke="#00d4ff" stroke-opacity="0.55"/><text x="102.5" y="35" text-anchor="middle" fill="#bceeff">STATIONS</text></g>
-    <g transform="translate(135 232)"><rect width="225" height="56" rx="14" fill="#15102b" stroke="#8b5cf6" stroke-opacity="0.62"/><text x="112.5" y="35" text-anchor="middle" fill="#ddd0ff">VEHICLES</text></g>
-    <g transform="translate(165 362)"><rect width="255" height="56" rx="14" fill="#2b0d1a" stroke="#ff3158" stroke-opacity="0.55"/><text x="127.5" y="35" text-anchor="middle" fill="#ffd0d9">PERSONNEL</text></g>
-    <g transform="translate(1240 102)"><rect width="205" height="56" rx="14" fill="#2b0d1a" stroke="#ff3158" stroke-opacity="0.55"/><text x="102.5" y="35" text-anchor="middle" fill="#ffd0d9">MISSIONS</text></g>
-    <g transform="translate(1240 232)"><rect width="225" height="56" rx="14" fill="#15102b" stroke="#8b5cf6" stroke-opacity="0.62"/><text x="112.5" y="35" text-anchor="middle" fill="#ddd0ff">INTELLIGENCE</text></g>
-    <g transform="translate(1180 362)"><rect width="255" height="56" rx="14" fill="#091827" stroke="#00d4ff" stroke-opacity="0.55"/><text x="127.5" y="35" text-anchor="middle" fill="#bceeff">DISPATCH</text></g>
+  <!-- Side labels occupy fixed-height containers with vertically centred text. -->
+  <g font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="800" letter-spacing="2">
+    <g transform="translate(155 160)">
+      <rect width="220" height="60" rx="14" fill="#091827" stroke="#00d4ff" stroke-opacity="0.62"/>
+      <text x="110" y="38" text-anchor="middle" fill="#bceeff">STATIONS</text>
+    </g>
+    <g transform="translate(135 285)">
+      <rect width="240" height="60" rx="14" fill="#15102b" stroke="#8b5cf6" stroke-opacity="0.68"/>
+      <text x="120" y="38" text-anchor="middle" fill="#ddd0ff">VEHICLES</text>
+    </g>
+    <g transform="translate(165 410)">
+      <rect width="270" height="60" rx="14" fill="#2b0d1a" stroke="#ff3158" stroke-opacity="0.62"/>
+      <text x="135" y="38" text-anchor="middle" fill="#ffd0d9">PERSONNEL</text>
+    </g>
+
+    <g transform="translate(1225 160)">
+      <rect width="220" height="60" rx="14" fill="#2b0d1a" stroke="#ff3158" stroke-opacity="0.62"/>
+      <text x="110" y="38" text-anchor="middle" fill="#ffd0d9">MISSIONS</text>
+    </g>
+    <g transform="translate(1205 285)">
+      <rect width="260" height="60" rx="14" fill="#15102b" stroke="#8b5cf6" stroke-opacity="0.68"/>
+      <text x="130" y="38" text-anchor="middle" fill="#ddd0ff">INTELLIGENCE</text>
+    </g>
+    <g transform="translate(1165 410)">
+      <rect width="270" height="60" rx="14" fill="#091827" stroke="#00d4ff" stroke-opacity="0.62"/>
+      <text x="135" y="38" text-anchor="middle" fill="#bceeff">DISPATCH</text>
+    </g>
   </g>
 
-  <g transform="translate(800 252)">
-    <circle r="154" fill="#090d1b" stroke="url(#accent)" stroke-width="3"/>
-    <circle r="132" fill="none" stroke="#a8c4e4" stroke-opacity="0.16" stroke-width="1" stroke-dasharray="8 12"/>
-    <path d="M-73-18L-23-68H50L92-25V42L43 90H-41L-91 39Z" fill="none" stroke="url(#accent)" stroke-width="5" filter="url(#glow)"/>
-    <circle cx="-73" cy="-18" r="7" fill="#00d4ff"/><circle cx="-23" cy="-68" r="7" fill="#52e3ff"/>
-    <circle cx="50" cy="-68" r="7" fill="#8b5cf6"/><circle cx="92" cy="-25" r="7" fill="#b55cff"/>
-    <circle cx="92" cy="42" r="7" fill="#ff3158"/><circle cx="43" cy="90" r="7" fill="#ff687f"/>
-    <circle cx="-41" cy="90" r="7" fill="#8b5cf6"/><circle cx="-91" cy="39" r="7" fill="#00d4ff"/>
+  <g transform="translate(800 320)">
+    <circle r="150" fill="#080d1b" stroke="url(#accent)" stroke-width="3"/>
+    <circle r="129" fill="none" stroke="#a8c4e4" stroke-opacity="0.17" stroke-width="1" stroke-dasharray="8 12"/>
+    <circle r="108" fill="#07101f" fill-opacity="0.72" stroke="#9dc7ed" stroke-opacity="0.08"/>
+    <path d="M-72-18L-24-68H48L91-26V40L44 88H-40L-90 38Z" fill="none" stroke="url(#accent)" stroke-width="5" filter="url(#glow)"/>
+    <circle cx="-72" cy="-18" r="7" fill="#00d4ff"/>
+    <circle cx="-24" cy="-68" r="7" fill="#52e3ff"/>
+    <circle cx="48" cy="-68" r="7" fill="#8b5cf6"/>
+    <circle cx="91" cy="-26" r="7" fill="#b55cff"/>
+    <circle cx="91" cy="40" r="7" fill="#ff3158"/>
+    <circle cx="44" cy="88" r="7" fill="#ff687f"/>
+    <circle cx="-40" cy="88" r="7" fill="#8b5cf6"/>
+    <circle cx="-90" cy="38" r="7" fill="#00d4ff"/>
     <circle r="18" fill="#f8fbff" filter="url(#glow)"/>
   </g>
 
-  <g font-family="Inter,Segoe UI,Arial,sans-serif" text-anchor="middle">
-    <text x="800" y="70" fill="#f8fbff" font-size="48" font-weight="800" letter-spacing="1.2">MISSIONCHIEF COMMAND NEXUS</text>
-    <text x="800" y="112" fill="#9fb7d2" font-size="20" font-weight="600" letter-spacing="4.4">RESOURCE INTELLIGENCE · MISSION CONTROL · AUTOMATED DISPATCH</text>
-    <text x="800" y="464" fill="#d7e8fa" font-size="22" font-weight="700" letter-spacing="2.8">ONE USERSCRIPT · FULL OPERATIONAL CHAIN</text>
-    <text x="800" y="495" fill="#7188a3" font-size="16" font-weight="600" letter-spacing="2">DEVELOPED BY MARTYBLYTH · TEAM KILLING BASTARDS</text>
+  <!-- Dedicated footer zone. -->
+  <g font-family="Segoe UI,Arial,sans-serif" text-anchor="middle">
+    <rect x="390" y="500" width="820" height="48" rx="16" fill="#060b18" fill-opacity="0.76" stroke="#9fc5eb" stroke-opacity="0.12"/>
+    <text x="800" y="530" fill="#e3f0ff" font-size="21" font-weight="800" letter-spacing="2.6">ONE USERSCRIPT · FULL OPERATIONAL CHAIN</text>
+    <text x="800" y="562" fill="#7188a3" font-size="14" font-weight="700" letter-spacing="2.2">DEVELOPED BY MARTYBLYTH · TEAM KILLING BASTARDS</text>
   </g>
-
-  <rect x="24" y="24" width="1552" height="472" rx="22" fill="none" stroke="#c7ddf7" stroke-opacity="0.12"/>
 </svg>
