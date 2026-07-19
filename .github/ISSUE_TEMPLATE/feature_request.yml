@@ -1,5 +1,5 @@
 name: Feature request
-description: Propose a focused improvement to MissionChief Command Nexus
+description: Propose a focused operational improvement to MissionChief Command Nexus
 title: "[Feature]: "
 labels:
   - enhancement
@@ -9,21 +9,37 @@ body:
   - type: markdown
     attributes:
       value: |
-        Proposals should solve a real operational problem without adding unnecessary complexity or background work.
+        Proposals should solve a real gameplay or administration problem without adding unnecessary complexity, unsafe automation or unbounded background work. Check the roadmap and existing issues first.
+
+  - type: input
+    id: version
+    attributes:
+      label: Current Command Nexus version
+      placeholder: e.g. 1.0.1
+    validations:
+      required: true
 
   - type: textarea
     id: problem
     attributes:
       label: Operational problem
-      description: Describe the gameplay or administration problem, not only the requested interface element.
+      description: Describe the mission, fleet, station, personnel or workflow problem—not only the requested button or panel.
+    validations:
+      required: true
+
+  - type: textarea
+    id: current_workflow
+    attributes:
+      label: Current workflow or workaround
+      description: Explain how the task is handled today and where time, accuracy or safety is lost.
     validations:
       required: true
 
   - type: textarea
     id: proposal
     attributes:
-      label: Proposed solution
-      description: Explain the behaviour you would expect from Command Nexus.
+      label: Proposed behaviour
+      description: Explain the user-visible behaviour you would expect from Command Nexus.
     validations:
       required: true
 
@@ -31,7 +47,7 @@ body:
     id: benefit
     attributes:
       label: Practical benefit
-      description: Explain who benefits and how often the feature would be used.
+      description: Explain who benefits, how often it would be used and what measurable improvement it provides.
     validations:
       required: true
 
@@ -40,40 +56,77 @@ body:
     attributes:
       label: Project area
       options:
+        - Core runtime, lifecycle or storage
         - Mission requirements and dispatch
-        - Patients and medical resources
-        - Trained personnel and capabilities
+        - Patients and specialist medical resources
+        - Trained personnel and vehicle capability
         - Station administration
         - Vehicle administration
         - Personnel assignment
-        - Automation and queues
+        - Automation, queues or transport
         - Interface and accessibility
-        - Performance and lifecycle
-        - Documentation or release process
+        - Performance and long-session stability
+        - Migration and compatibility
+        - Documentation, automation or release process
         - Other
     validations:
       required: true
 
-  - type: textarea
-    id: risks
+  - type: dropdown
+    id: action_level
     attributes:
-      label: Risks or edge cases
-      description: Consider incorrect dispatch, bulk changes, performance, migration and compatibility.
+      label: Highest action level
+      description: Select the most powerful action the feature would perform.
+      options:
+        - Read or display information only
+        - Select or prepare resources without submission
+        - Dispatch or submit a mission action
+        - Rename a station or vehicle
+        - Assign or modify personnel
+        - Change or migrate stored data
+        - Background monitoring or automation
+        - Other or unknown
+    validations:
+      required: true
+
+  - type: textarea
+    id: data_sources
+    attributes:
+      label: MissionChief data and interface sources
+      description: Identify known DOM elements, live panels, pages, IDs, attributes or APIs that expose the required information. Leave unknown where research is needed.
+
+  - type: textarea
+    id: safety
+    attributes:
+      label: Safety, cancellation and rollback
+      description: Explain preview needs, scope limits, stop behaviour, repeated-action risks, stored-data impact and recovery from failure.
+    validations:
+      required: true
+
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibility and performance considerations
+      description: Consider both MissionChief UK domains, other userscripts, browsers, mobile layouts, observers, timers and DOM scanning.
 
   - type: textarea
     id: alternatives
     attributes:
       label: Alternatives considered
-      description: Describe any current workaround or simpler alternative.
+      description: Describe simpler options, existing MissionChief features or manual workarounds.
 
   - type: checkboxes
     id: checks
     attributes:
       label: Validation
       options:
-        - label: I searched existing issues for a similar proposal.
+        - label: I searched existing issues and the roadmap for a similar proposal.
           required: true
-        - label: This request describes one coherent feature.
+        - label: This request describes one coherent feature or engineering outcome.
+          required: true
+        - label: I considered whether the feature could dispatch, rename, assign, migrate data or continue after Stop.
+          required: true
+        - label: I understand compatibility and release claims require evidence.
           required: true
         - label: I understand MartyBlyth is the developer and final technical decision-maker.
           required: true
