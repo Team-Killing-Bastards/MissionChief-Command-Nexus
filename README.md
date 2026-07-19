@@ -71,6 +71,8 @@ The candidate is focused on two safety-critical areas:
    - Auto Mode, Unit Finder and Mission Update should wait for a complete, non-zero, ID-stable vehicle list after loading finishes.
    - Selection and dispatch should stop safely when the vehicle list times out, remains empty or is still changing.
 
+The one-time workflow used to generate the branch has already been removed from `main`; only the resulting candidate branch remains for reconciliation, review and validation.
+
 > [!WARNING]
 > `v1.0.3` is **not a production release** and is not the recommended install route. Its branch must be reconciled with current `main`, reviewed, validated and released through the controlled publication process before users should install it.
 
@@ -366,13 +368,12 @@ The Discord announcement is presented as three focused cards:
 
 ```text
 .github/
-├── ISSUE_TEMPLATE/                         Structured bug and feature forms
+├── ISSUE_TEMPLATE/              Structured bug and feature forms
 ├── workflows/
-│   ├── repository-quality.yml              Documentation and repository integrity
-│   ├── validate-userscript.yml             Source, metadata and version validation
-│   ├── release.yml                         Prepare and publish release workflow
-│   └── temporary-build-v103-safety-pr.yml  One-time v1.0.3 candidate builder
-└── CODEOWNERS                              Technical ownership rules
+│   ├── repository-quality.yml   Documentation and repository integrity
+│   ├── validate-userscript.yml  Source, metadata and version validation
+│   └── release.yml              Prepare and publish release workflow
+└── CODEOWNERS                   Technical ownership rules
 
 docs/
 ├── README.md                    Documentation index
@@ -396,8 +397,6 @@ src/
 └── missionchief-command-nexus.user.js
                                 Installable production source
 ```
-
-The temporary `v1.0.3` builder is development infrastructure, not part of the permanent release architecture. It should be removed when the candidate branch has completed its review/merge lifecycle.
 
 ### Documentation index
 
