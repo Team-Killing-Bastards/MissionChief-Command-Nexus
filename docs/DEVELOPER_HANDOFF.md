@@ -117,7 +117,16 @@ Treat changes in these areas as release-sensitive:
 3. **Confirm long-session lifecycle safety** before deeper refactoring.
 4. **Consolidate the interface deliberately**, without removing advanced controls.
 5. **Separate logical modules safely** only after behaviour is protected by tests.
-6. **Create the first formal release candidate** once the compatibility and stability gates pass.
+6. **Create the first formal release** once the compatibility and stability gates pass.
+
+## Active development queue
+
+- [#3 — Core runtime, lifecycle, storage and source traceability](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/3)
+- [#4 — Resource administration](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/4)
+- [#5 — Mission operations](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/5)
+- [#6 — Interface consolidation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/6)
+- [#7 — Migration, compatibility and long-session stability](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/7)
+- [#8 — First formal release](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/8)
 
 ## Release authority
 
@@ -132,4 +141,4 @@ MartyBlyth controls source-code direction and final release approval. Repository
 - [Migration guide](MIGRATION.md)
 - [Release process](RELEASE_PROCESS.md)
 - [Greasy Fork setup](GREASY_FORK_SETUP.md)
-- [Master release tracker](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/10)
+- [First formal release issue](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/8)
