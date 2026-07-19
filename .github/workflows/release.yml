@@ -1,0 +1,59 @@
+name: Create GitHub release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Package userscript release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Validate userscript
+        run: |
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+
+      - name: Confirm tag matches userscript version
+        shell: bash
+        run: |
+          SCRIPT_VERSION="$(node scripts/validate-userscript.mjs --print-version)"
+          EXPECTED_TAG="v${SCRIPT_VERSION}"
+          if [[ "${GITHUB_REF_NAME}" != "${EXPECTED_TAG}" ]]; then
+            echo "Tag ${GITHUB_REF_NAME} does not match @version ${SCRIPT_VERSION}. Expected ${EXPECTED_TAG}."
+            exit 1
+          fi
+
+      - name: Prepare release asset and checksum
+        shell: bash
+        run: |
+          SCRIPT_VERSION="$(node scripts/validate-userscript.mjs --print-version)"
+          ASSET="MissionChief-Command-Nexus-${SCRIPT_VERSION}.user.js"
+          cp src/missionchief-command-nexus.user.js "${ASSET}"
+          sha256sum "${ASSET}" > "${ASSET}.sha256"
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          SCRIPT_VERSION="$(node scripts/validate-userscript.mjs --print-version)"
+          ASSET="MissionChief-Command-Nexus-${SCRIPT_VERSION}.user.js"
+          gh release create "${GITHUB_REF_NAME}" \
+            "${ASSET}" \
+            "${ASSET}.sha256" \
+            --title "MissionChief Command Nexus ${SCRIPT_VERSION}" \
+            --generate-notes

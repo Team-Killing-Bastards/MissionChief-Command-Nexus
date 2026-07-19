@@ -2,7 +2,7 @@
 
 All notable changes to MissionChief Command Nexus will be documented in this file.
 
-The project intends to use [Semantic Versioning](https://semver.org/) once the unified userscript enters release development.
+The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
@@ -14,13 +14,19 @@ The project intends to use [Semantic Versioning](https://semver.org/) once the u
 - Contribution, support, security and community policies.
 - Structured issue forms and pull-request guidance.
 - Architecture, testing, migration and release-planning documentation.
+- Unified MissionChief Command Nexus userscript intake for the `1.0.x` release line.
+- Greasy Fork-compatible metadata and authoritative raw `main` source path.
+- Automated JavaScript, metadata, file-size and version-increase validation.
+- Tag-driven GitHub Release packaging with SHA-256 checksums.
+- Detailed Greasy Fork synchronization, webhook, rollback and troubleshooting guide.
 
-### Planned
+### Pending before first publication
 
-- Merge the two existing MartyBlyth userscripts into one coordinated codebase.
-- Establish shared configuration, lifecycle and training-registry modules.
-- Validate mission, patient, vehicle and personnel requirements.
-- Publish the first controlled pre-release build.
+- Add the prepared `src/missionchief-command-nexus.user.js` source file to the release branch.
+- Complete integrated MissionChief regression testing.
+- Create or configure the unified Greasy Fork listing.
+- Add the Greasy Fork webhook to the GitHub repository.
+- Verify the first clean installation and update path.
 
 ## Release format
 
