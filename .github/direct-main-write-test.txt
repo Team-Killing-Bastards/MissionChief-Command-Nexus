@@ -1,0 +1,2 @@
+Temporary verification that the connected ChatGPT GitHub integration can write directly to the protected main branch.
+This file will be removed immediately after verification.
