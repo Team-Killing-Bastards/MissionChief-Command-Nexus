@@ -72,8 +72,7 @@ jobs:
             ASSET_COUNT="$(
               gh release view "${RELEASE_TAG}" \
                 --json assets \
-                --jq --arg asset "${ASSET}" --arg checksum "${CHECKSUM}" \
-                '[.assets[].name | select(. == $asset or . == $checksum)] | unique | length'
+                --jq ".assets | map(select(.name == \"${ASSET}\" or .name == \"${CHECKSUM}\")) | unique_by(.name) | length"
             )"
 
             if [[ "${ASSET_COUNT}" == "2" ]]; then
