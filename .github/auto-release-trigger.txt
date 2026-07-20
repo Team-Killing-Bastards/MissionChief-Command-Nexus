@@ -1,1 +1,0 @@
-Trigger the automatic verified release workflow for the current canonical version.
