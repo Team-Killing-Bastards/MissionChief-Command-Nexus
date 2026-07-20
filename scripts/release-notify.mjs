@@ -7,6 +7,10 @@ const SOURCE_PATH =
   process.env.SOURCE_PATH ||
   'src/missionchief-command-nexus.user.js';
 
+const REPOSITORY_SOURCE_PATH =
+  process.env.REPOSITORY_SOURCE_PATH ||
+  'src/missionchief-command-nexus.user.js';
+
 const CHANGELOG_PATH =
   process.env.CHANGELOG_PATH ||
   'CHANGELOG.md';
@@ -16,8 +20,8 @@ const PRODUCT_NAME =
   'MissionChief Command Nexus';
 
 const MAX_MISSION_BRIEF_LENGTH = 1400;
-const GITHUB_SOURCE_ATTEMPTS = 60;
-const GITHUB_SOURCE_WAIT_MS = 5_000;
+const GITHUB_SOURCE_ATTEMPTS = 12;
+const GITHUB_SOURCE_WAIT_MS = 2_500;
 const GREASY_FORK_ATTEMPTS = 60;
 const GREASY_FORK_WAIT_MS = 5_000;
 
@@ -216,9 +220,11 @@ async function verifyGitHubSource({
     .split('/')
     .map(encodeURIComponent)
     .join('/');
-  const githubRawUrl =
-    `https://raw.githubusercontent.com/` +
-    `${repository}/${releaseSha}/${encodedSourcePath}`;
+  const sourceUrl = new URL(
+    `https://api.github.com/repos/${repository}` +
+    `/contents/${encodedSourcePath}`
+  );
+  sourceUrl.searchParams.set('ref', releaseSha);
   let lastStatus = 'No response received';
 
   for (
@@ -227,58 +233,88 @@ async function verifyGitHubSource({
     attempt += 1
   ) {
     try {
-      const githubSource = await fetchText(
-        githubRawUrl,
-        'GitHub raw source'
-      );
-      const githubVersion = extractUserscriptVersion(
-        githubSource,
-        'GitHub raw source'
-      );
+      const response = await fetch(sourceUrl, {
+        redirect: 'follow',
+        headers: {
+          Accept: 'application/vnd.github.raw+json',
+          'X-GitHub-Api-Version': '2022-11-28',
+          'User-Agent':
+            'MissionChief-Command-Nexus-Release-Validator/2.1',
+        },
+      });
 
-      if (githubVersion !== expectedVersion) {
-        throw new Error(
-          `GitHub raw source serves version ` +
-          `${githubVersion}, expected ${expectedVersion}`
+      if (!response.ok) {
+        const transient =
+          response.status === 404 ||
+          response.status === 408 ||
+          response.status === 429 ||
+          response.status >= 500;
+
+        if (!transient) {
+          throw new Error(
+            `GitHub Contents API returned HTTP ${response.status}`
+          );
+        }
+
+        lastStatus =
+          `GitHub Contents API returned HTTP ${response.status}`;
+      } else {
+        const githubSource = await response.text();
+        const githubVersion = extractUserscriptVersion(
+          githubSource,
+          'GitHub immutable source'
         );
-      }
 
-      if (
-        normaliseUserscript(githubSource) !==
-        expectedNormalisedSource
-      ) {
-        throw new Error(
-          'GitHub raw source does not match ' +
-          'the tagged local source'
+        if (githubVersion !== expectedVersion) {
+          throw new Error(
+            `GitHub immutable source serves version ` +
+            `${githubVersion}, expected ${expectedVersion}`
+          );
+        }
+
+        if (
+          normaliseUserscript(githubSource) !==
+          expectedNormalisedSource
+        ) {
+          throw new Error(
+            'GitHub immutable source does not match ' +
+            'the tagged local source'
+          );
+        }
+
+        const elapsedMs = Date.now() - startedAt;
+        console.log(
+          `GitHub immutable source verified on attempt ${attempt}: ` +
+          `${releaseSha} after ${formatSeconds(elapsedMs)}`
         );
+
+        return {
+          attempt,
+          elapsedMs,
+        };
       }
-
-      const elapsedMs = Date.now() - startedAt;
-      console.log(
-        `GitHub source verified on attempt ${attempt}: ` +
-        `${releaseSha} after ${formatSeconds(elapsedMs)}`
-      );
-
-      return {
-        attempt,
-        elapsedMs,
-      };
     } catch (error) {
-      lastStatus =
+      const message =
         error instanceof Error
           ? error.message
           : String(error);
 
       if (
-        lastStatus.includes('serves version') ||
-        lastStatus.includes('does not match')
+        message.includes('serves version') ||
+        message.includes('does not match') ||
+        (message.includes('returned HTTP 4') &&
+          !message.includes('HTTP 404') &&
+          !message.includes('HTTP 408') &&
+          !message.includes('HTTP 429'))
       ) {
         throw error;
       }
+
+      lastStatus = message;
     }
 
     console.log(
-      `GitHub source not ready ` +
+      `GitHub immutable source not ready ` +
       `(${attempt}/${GITHUB_SOURCE_ATTEMPTS}): ` +
       lastStatus
     );
@@ -289,7 +325,7 @@ async function verifyGitHubSource({
   }
 
   throw new Error(
-    `GitHub source verification timed out: ${lastStatus}`
+    `GitHub immutable source verification timed out: ${lastStatus}`
   );
 }
 
@@ -599,7 +635,7 @@ async function main() {
       verifyGitHubSource({
         repository,
         releaseSha,
-        sourcePath: SOURCE_PATH,
+        sourcePath: REPOSITORY_SOURCE_PATH,
         expectedVersion: version,
         expectedNormalisedSource,
       }),
