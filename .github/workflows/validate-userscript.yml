@@ -1,4 +1,4 @@
-name: Locate issue 57 legacy references
+name: Extract issue 57 legacy blocks
 
 on:
   pull_request:
@@ -9,19 +9,26 @@ permissions:
   contents: write
 
 jobs:
-  locate:
+  extract:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
         with:
           ref: ${{ github.head_ref }}
-      - name: Record all bundled-profile references
+      - name: Record exact legacy blocks
         shell: bash
         run: |
-          grep -n -C 8 'public_order_combined_vehicle' src/missionchief-command-nexus.user.js > COMBINED_CONTEXT.txt || true
+          {
+            echo '===== HINT SCORING 16945-17035 ====='
+            sed -n '16945,17035p' src/missionchief-command-nexus.user.js
+            echo '===== UPDATE DEBUG 23565-23640 ====='
+            sed -n '23565,23640p' src/missionchief-command-nexus.user.js
+            echo '===== ROUTE AND SHORTFALL 24625-24785 ====='
+            sed -n '24625,24785p' src/missionchief-command-nexus.user.js
+          } > ISSUE_57_REMAINING.txt
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add COMBINED_CONTEXT.txt
-          git commit -m 'Record legacy bundled-profile references'
+          git add ISSUE_57_REMAINING.txt
+          git commit -m 'Record remaining issue 57 legacy blocks'
           git push origin HEAD:${{ github.head_ref }}
