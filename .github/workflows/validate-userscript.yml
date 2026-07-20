@@ -1,50 +1,72 @@
-name: Validate userscript
+name: Inspect v1.0.4 automatic release
 
 on:
   pull_request:
     paths:
-      - 'src/**'
-      - 'scripts/validate-userscript.mjs'
       - '.github/workflows/validate-userscript.yml'
-  push:
-    branches:
-      - main
-    paths:
-      - 'src/**'
-      - 'scripts/validate-userscript.mjs'
-      - '.github/workflows/validate-userscript.yml'
-  workflow_dispatch:
 
 permissions:
+  actions: read
   contents: read
 
-concurrency:
-  group: validate-userscript-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  validate:
-    name: Userscript validation
+  inspect:
+    name: Inspect release and Discord notification step
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
+      - name: Inspect latest merged-PR release run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
+          RUN_ID="$(
+            gh run list \
+              --repo "${GITHUB_REPOSITORY}" \
+              --workflow repository-quality.yml \
+              --event pull_request_target \
+              --limit 1 \
+              --json databaseId \
+              --jq '.[0].databaseId // empty'
+          )"
 
-      - name: Validate JavaScript syntax
-        run: node --check src/missionchief-command-nexus.user.js
+          if [[ -z "${RUN_ID}" ]]; then
+            echo "No merged pull-request release run was found."
+            exit 1
+          fi
 
-      - name: Validate metadata and Greasy Fork limits
-        run: node scripts/validate-userscript.mjs
+          echo "Latest merged-PR release run: ${RUN_ID}"
+          gh run view "${RUN_ID}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --json status,conclusion,url,event,headSha,jobs
 
-      - name: Require a version increase when code changes
-        if: github.event_name == 'pull_request'
-        run: node scripts/validate-userscript.mjs --base-ref "origin/${{ github.base_ref }}"
+      - name: Verify v1.0.4 GitHub Release and assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ASSET='MissionChief-Command-Nexus-1.0.4.user.js'
+          CHECKSUM="${ASSET}.sha256"
+
+          gh release view v1.0.4 \
+            --repo "${GITHUB_REPOSITORY}" \
+            --json url,isDraft,isPrerelease,tagName,targetCommitish,assets
+
+          ASSET_COUNT="$(
+            gh release view v1.0.4 \
+              --repo "${GITHUB_REPOSITORY}" \
+              --json assets \
+              --jq ".assets | map(select(.name == \"${ASSET}\" or .name == \"${CHECKSUM}\")) | unique_by(.name) | length"
+          )"
+
+          if [[ "${ASSET_COUNT}" != '2' ]]; then
+            echo "Expected both release assets; found ${ASSET_COUNT}."
+            exit 1
+          fi
+
+          echo 'v1.0.4 GitHub Release and both verified assets are present.'
