@@ -26,6 +26,19 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Consolidate the two retained control surfaces into one coherent interface.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
+## [1.0.7] - 2026-07-20
+
+### Fixed
+
+- Fixed Mission Update treating bounded unresolved requirement ranges such as `0-3` and `0-1` as zero by reading only the first number.
+- Mission Update now uses the upper bound of an explicit range, allowing Fire Engine, ICCU/ACU, Police Car, PRV and SRV shortages from the live panel to reach the normal selector.
+- Kept the existing safety behaviour for a completely unknown naked `?`, so unsupported unresolved rows still cannot resend an entire original mission load.
+- Applied the corrected live-range interpretation to manual Mission Update and the shared Auto Mode update path.
+
+### Changed
+
+- Mission Finder baseline increased from `V10.6.73` to `V10.6.74`.
+
 ## [1.0.6] - 2026-07-20
 
 ### Added

@@ -1,79 +1,50 @@
-name: Build v1.0.7 candidate
+name: Validate userscript
 
 on:
   pull_request:
     paths:
-      - 'scripts/apply-v1.0.7-live-range-fix.py'
+      - 'src/**'
+      - 'scripts/validate-userscript.mjs'
       - '.github/workflows/validate-userscript.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'scripts/validate-userscript.mjs'
+      - '.github/workflows/validate-userscript.yml'
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: validate-userscript-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build:
+  validate:
+    name: Userscript validation
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
+
     steps:
-      - uses: actions/checkout@v6
+      - name: Check out repository
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          ref: ${{ github.head_ref }}
 
-      - uses: actions/setup-node@v6
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: '22'
 
-      - name: Apply live-range fix
-        run: python3 scripts/apply-v1.0.7-live-range-fix.py
+      - name: Validate JavaScript syntax
+        run: node --check src/missionchief-command-nexus.user.js
 
-      - name: Test bounded requirement ranges
-        run: |
-          node <<'NODE'
-          const fs = require('node:fs');
-          const source = fs.readFileSync('src/missionchief-command-nexus.user.js', 'utf8');
-          const start = source.indexOf('function parseMissionRequirementRangeUpperBound(');
-          const end = source.indexOf('function getLiveRequirementCellText(', start);
-          if (start < 0 || end < 0) throw new Error('Range helper could not be extracted');
-          const functionSource = source.slice(start, end).trim();
-          const parseRange = new Function(`${functionSource}; return parseMissionRequirementRangeUpperBound;`)();
-          const cases = new Map([
-            ['0-3', 3],
-            ['0–1', 1],
-            ['2 — 5', 5],
-            ['1 to 4', 4],
-            ['?', null],
-            ['3', null],
-          ]);
-          for (const [input, expected] of cases) {
-            const actual = parseRange(input);
-            if (actual !== expected) {
-              throw new Error(`${input}: expected ${expected}, received ${actual}`);
-            }
-          }
-          if (!source.includes('explicitStillNeededRange !== null')) {
-            throw new Error('Range confirmation guard is missing');
-          }
-          console.log('Bounded live requirement range tests passed');
-          NODE
+      - name: Validate metadata and Greasy Fork limits
+        run: node scripts/validate-userscript.mjs
 
-      - name: Restore permanent files
-        run: |
-          git fetch origin main --force
-          git checkout origin/main -- .github/workflows/validate-userscript.yml
-          rm scripts/apply-v1.0.7-live-range-fix.py
-
-      - name: Validate release candidate
-        run: |
-          node --check src/missionchief-command-nexus.user.js
-          node scripts/validate-userscript.mjs
-          node scripts/validate-userscript.mjs --base-ref origin/main
-          python3 scripts/check_repository.py
-          git diff --check
-
-      - name: Commit candidate
-        run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add -A
-          git commit -m 'Fix bounded Mission Update requirement ranges'
-          git push origin HEAD:${{ github.head_ref }}
+      - name: Require a version increase when code changes
+        if: github.event_name == 'pull_request'
+        run: node scripts/validate-userscript.mjs --base-ref "origin/${{ github.base_ref }}"
