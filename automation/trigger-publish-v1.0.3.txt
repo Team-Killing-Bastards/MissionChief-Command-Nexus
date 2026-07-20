@@ -4,3 +4,4 @@ Inspect the failed release-creation step.
 Run clean release repair from final main.
 Inspect the failed clean repair step.
 Tail the exact repair job log.
+Print the final 35 repair-log lines.
