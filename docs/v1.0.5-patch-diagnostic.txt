@@ -2,6 +2,6 @@
   """            {
 /home/runner/work/MissionChief-Command-Nexus/MissionChief-Command-Nexus/scripts/apply-v1.0.5-police-register-atv-fixes.py:663: SyntaxWarning: invalid escape sequence '\d'
   """            {
-strict requirement detection: expected exactly one match, found 2
+Applied v1.0.5 Police, Personnel Register and ATV fixes.
 
-exit_status=1
+exit_status=0
