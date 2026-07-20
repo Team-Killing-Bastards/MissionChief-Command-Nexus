@@ -42,12 +42,15 @@ jobs:
           git rm -f "${PATCH}"
 
           node --check scripts/release-notify.mjs
+          node --check scripts/publish-release.mjs
           node scripts/validate-userscript.mjs
           python3 scripts/check_repository.py
           git diff --check
 
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add scripts/release-notify.mjs
-          git commit -m 'Retry GitHub source propagation before release notification'
+          git add \
+            scripts/release-notify.mjs \
+            .github/workflows/release.yml
+          git commit -m 'Use authenticated immutable source verification for releases'
           git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
