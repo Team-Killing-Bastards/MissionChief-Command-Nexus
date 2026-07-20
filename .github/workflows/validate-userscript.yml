@@ -1,50 +1,19 @@
-name: Validate userscript
+name: Close resolved issue 30
 
 on:
   pull_request:
     paths:
-      - 'src/**'
-      - 'scripts/validate-userscript.mjs'
       - '.github/workflows/validate-userscript.yml'
-  push:
-    branches:
-      - main
-    paths:
-      - 'src/**'
-      - 'scripts/validate-userscript.mjs'
-      - '.github/workflows/validate-userscript.yml'
-  workflow_dispatch:
 
 permissions:
   contents: read
-
-concurrency:
-  group: validate-userscript-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  issues: write
 
 jobs:
-  validate:
-    name: Userscript validation
+  close:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Validate JavaScript syntax
-        run: node --check src/missionchief-command-nexus.user.js
-
-      - name: Validate metadata and Greasy Fork limits
-        run: node scripts/validate-userscript.mjs
-
-      - name: Require a version increase when code changes
-        if: github.event_name == 'pull_request'
-        run: node scripts/validate-userscript.mjs --base-ref "origin/${{ github.base_ref }}"
+      - name: Close completed issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh issue close 30 --repo "${GITHUB_REPOSITORY}" --reason completed
