@@ -1,0 +1,129 @@
+name: Temporary build v1.0.3 safety release
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-v103:
+    if: github.repository == 'Team-Killing-Bastards/MissionChief-Command-Nexus'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out current main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Stop when the release branch already exists
+        id: branch_check
+        shell: bash
+        run: |
+          if git ls-remote --exit-code --heads origin agent/v1.0.3-trained-irv-auto-safety >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Node.js
+        if: steps.branch_check.outputs.exists == 'false'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Recover the audited patch payload
+        if: steps.branch_check.outputs.exists == 'false'
+        shell: bash
+        run: |
+          git fetch origin agent/protect-trained-irvs-auto-readiness-v1.0.3-final
+          git show FETCH_HEAD:.github/workflows/apply-v102-police-auto-safety.yml > /tmp/source-workflow.yml
+          awk '
+            /cat > \/tmp\/patch\.b64/ { capture=1; next }
+            capture && /^[[:space:]]*PATCH_B64[[:space:]]*$/ { capture=0; exit }
+            capture { print }
+          ' /tmp/source-workflow.yml \
+            | tr -d '[:space:]' \
+            | base64 --decode > /tmp/patch_v103.py
+          python3 -m py_compile /tmp/patch_v103.py
+
+      - name: Create branch and apply runtime safety changes
+        if: steps.branch_check.outputs.exists == 'false'
+        shell: bash
+        run: |
+          git switch -c agent/v1.0.3-trained-irv-auto-safety origin/main
+          python3 /tmp/patch_v103.py
+
+      - name: Bump version and update release documentation
+        if: steps.branch_check.outputs.exists == 'false'
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          userscript = Path('src/missionchief-command-nexus.user.js')
+          text = userscript.read_text(encoding='utf-8')
+          old_version = '// @version      1.0.2'
+          new_version = '// @version      1.0.3'
+          if text.count(old_version) != 1:
+              raise RuntimeError('Expected userscript version 1.0.2 exactly once after patch')
+          userscript.write_text(text.replace(old_version, new_version, 1), encoding='utf-8', newline='\n')
+
+          changelog = Path('CHANGELOG.md')
+          text = changelog.read_text(encoding='utf-8')
+          v103 = '''## [1.0.3] - 2026-07-20
+
+          ### Changed
+
+          - Normal Police Car and Police Officer attendance now uses only exact-ID IRVs live-verified with assigned staff and no protected specialist Police training.
+          - Auto Mode and the manual Unit Finder/Mission Update paths now wait for a complete, non-zero, ID-stable vehicle list after loading finishes before selecting units.
+          - Increased the unified userscript version from `1.0.2` to `1.0.3`.
+
+          ### Fixed
+
+          - Prevented Level 1, Level 2, Sergeant, Medic, Inspector and other specialist-trained Police IRVs from satisfying ordinary Police attendance requirements.
+          - Prevented an ordinary Police group-button fallback from bypassing exact vehicle training protection.
+          - Prevented Auto Mode from continuing to selection or dispatch when the vehicle list times out, remains empty or is still changing.
+
+          '''
+          marker = '## [1.0.2] - 2026-07-19\n'
+          if v103 not in text:
+              if text.count(marker) != 1:
+                  raise RuntimeError('Expected v1.0.2 changelog marker exactly once')
+              text = text.replace(marker, v103 + marker, 1)
+          changelog.write_text(text, encoding='utf-8', newline='\n')
+
+          readme = Path('README.md')
+          text = readme.read_text(encoding='utf-8')
+          text = text.replace('`1.0.2`', '`1.0.3`')
+          text = text.replace('Command Nexus v1.0.2', 'Command Nexus v1.0.3')
+          readme.write_text(text, encoding='utf-8', newline='\n')
+
+          source_readme = Path('src/README.md')
+          text = source_readme.read_text(encoding='utf-8')
+          text = text.replace('| Command Nexus version | `1.0.2` |', '| Command Nexus version | `1.0.3` |', 1)
+          text = text.replace('| Mission Finder baseline | `V10.6.69` |', '| Mission Finder baseline | `V10.6.70` |', 1)
+          source_readme.write_text(text, encoding='utf-8', newline='\n')
+          PY
+
+      - name: Validate userscript and repository
+        if: steps.branch_check.outputs.exists == 'false'
+        shell: bash
+        run: |
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          python3 scripts/check_repository.py
+
+      - name: Commit and push release branch
+        if: steps.branch_check.outputs.exists == 'false'
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/missionchief-command-nexus.user.js CHANGELOG.md README.md src/README.md
+          git commit -m "Protect trained IRVs and stabilise Auto Mode"
+          git push -u origin agent/v1.0.3-trained-irv-auto-safety
