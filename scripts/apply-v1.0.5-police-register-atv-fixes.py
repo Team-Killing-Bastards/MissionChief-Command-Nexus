@@ -1122,13 +1122,21 @@ replace_once(
 )
 
 replace_once(
-    """                requirement?.requirementType ===
+    """            return (
+                requirement?.requirementType ===
+                    'police_inspector_vehicle' ||
+                requirement?.requirementType ===
                     'public_order_combined_vehicle'
+            );
 """,
-    """                requirement?.requirementType ===
+    """            return (
+                requirement?.requirementType ===
+                    'police_inspector_vehicle' ||
+                requirement?.requirementType ===
                     'public_order_combined_vehicle' ||
                 requirement?.requirementType ===
                     'police_trained_irv_vehicle'
+            );
 """,
     "strict requirement detection",
 )
