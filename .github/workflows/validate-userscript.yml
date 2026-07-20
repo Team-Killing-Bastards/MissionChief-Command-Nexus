@@ -44,59 +44,22 @@ jobs:
 
           insertion_anchor = "if 'public_order_combined_vehicle' in source:"
           extra = r'''
-          hint_start = """            if (
-                          requirement?.requirementType ===
-                              'public_order_combined_vehicle'
-                      ) {"""
-          hint_end = """            return score;"""
-          replace_between(
-              hint_start,
-              hint_end,
-              '',
-              'legacy combined hint scoring',
-          )
+          hint_start = "            if (\n                requirement?.requirementType ===\n                    'public_order_combined_vehicle'\n            ) {"
+          hint_end = "            return score;"
+          replace_between(hint_start, hint_end, '', 'legacy combined hint scoring')
 
-          debug_start = """                const publicOrderRequirement ="""
-          debug_end = """                debugLog(
-                          'TRAINED PERSONNEL UPDATE',"""
-          replace_between(
-              debug_start,
-              debug_end,
-              '',
-              'legacy combined update debug',
-          )
+          debug_start = "                const publicOrderRequirement ="
+          debug_end = "                debugLog(\n                    'TRAINED PERSONNEL UPDATE',"
+          replace_between(debug_start, debug_end, '', 'legacy combined update debug')
 
-          route_start = """                    const combinedRequirement ="""
-          route_end = """                }
+          route_start = "                    const combinedRequirement ="
+          route_end = "                }\n\n                const requirements ="
+          route_replacement = "                    debugLog(\n                        'TRAINED UPDATE ROUTE',\n                        `Entering independent trained-vehicle selector for ${formatTrainedPersonnelRequirements(item.personnelTrainingRequirements)}`\n                    );\n"
+          replace_between(route_start, route_end, route_replacement, 'legacy combined route debug')
 
-                          const requirements ="""
-          route_replacement = """                    debugLog(
-                              'TRAINED UPDATE ROUTE',
-                              `Entering independent trained-vehicle selector for ${formatTrainedPersonnelRequirements(item.personnelTrainingRequirements)}`
-                          );
-          """
-          replace_between(
-              route_start,
-              route_end,
-              route_replacement,
-              'legacy combined route debug',
-          )
-
-          shortfall_start = """                                    if (
-                                          requirement
-                                              .requirementType ===
-                                          'public_order_combined_vehicle'
-                                      ) {"""
-          shortfall_end = """                                    if (
-                                          requirement.requirementType ===
-                                          'police_inspector_vehicle'
-                                      ) {"""
-          replace_between(
-              shortfall_start,
-              shortfall_end,
-              '',
-              'legacy combined shortfall formatter',
-          )
+          shortfall_start = "                                    if (\n                                        requirement\n                                            .requirementType ===\n                                        'public_order_combined_vehicle'\n                                    ) {"
+          shortfall_end = "                                    if (\n                                        requirement.requirementType ===\n                                        'police_inspector_vehicle'\n                                    ) {"
+          replace_between(shortfall_start, shortfall_end, '', 'legacy combined shortfall formatter')
 
           replace_once(
               'the single combined trained IRV target owns it.',
