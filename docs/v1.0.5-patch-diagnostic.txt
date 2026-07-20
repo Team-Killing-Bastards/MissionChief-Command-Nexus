@@ -1,0 +1,7 @@
+/home/runner/work/MissionChief-Command-Nexus/MissionChief-Command-Nexus/scripts/apply-v1.0.5-police-register-atv-fixes.py:652: SyntaxWarning: invalid escape sequence '\d'
+  """            {
+/home/runner/work/MissionChief-Command-Nexus/MissionChief-Command-Nexus/scripts/apply-v1.0.5-police-register-atv-fixes.py:663: SyntaxWarning: invalid escape sequence '\d'
+  """            {
+strict requirement detection: expected exactly one match, found 2
+
+exit_status=1
