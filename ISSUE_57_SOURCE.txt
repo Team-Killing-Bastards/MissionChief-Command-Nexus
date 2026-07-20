@@ -1,0 +1,2191 @@
+===== SOURCE 15420-15720 =====
+15420:         } catch (_error) {
+15421:             return {
+15422:                 updatedAt:
+15423:                     0,
+15424:                 vehicles:
+15425:                     {}
+15426:             };
+15427:         }
+15428:     }
+15429: 
+15430:     function getMissionVehicleId(
+15431:         input
+15432:     ) {
+15433:         if (!input) return '';
+15434: 
+15435:         const row =
+15436:             input.closest &&
+15437:             input.closest(
+15438:                 'tr[vehicle_id], tr[data-vehicle-id], tr.vehicle_select_table_tr'
+15439:             );
+15440: 
+15441:         const idMatches = [
+15442:             String(input.id || '').match(/(?:vehicle_checkbox_|vehicle_)(\d+)/i)?.[1],
+15443:             String(row?.id || '').match(/(?:vehicle_|vehicle_row_)(\d+)/i)?.[1],
+15444:             input.getAttribute('vehicle_id'),
+15445:             input.getAttribute('data-vehicle-id'),
+15446:             row?.getAttribute('vehicle_id'),
+15447:             row?.getAttribute('data-vehicle-id'),
+15448:             input.value
+15449:         ]
+15450:             .map(value => String(value || '').trim())
+15451:             .filter(value => /^\d+$/.test(value));
+15452: 
+15453:         // Real MissionChief vehicle IDs are long numeric identifiers. Reject
+15454:         // short values such as the vehicle type ID "8" rather than matching a
+15455:         // registry entry for the wrong vehicle.
+15456:         return idMatches.find(value => value.length >= 4) || '';
+15457:     }
+15458: 
+15459: 
+15460: 
+15461:     function getPublicOrderPersonnelLevel(
+15462:         value
+15463:     ) {
+15464:         const cleaned =
+15465:             String(
+15466:                 value ||
+15467:                 ''
+15468:             )
+15469:                 .replace(
+15470:                     /\s+/g,
+15471:                     ' '
+15472:                 )
+15473:                 .trim();
+15474: 
+15475:         if (
+15476:             /^(?:Required\s+)?(?:Level\s*1\s+Public\s+Order|Public\s+Order\s+Level\s*1)\s+Officer(?:s)?$/i
+15477:                 .test(
+15478:                     cleaned
+15479:                 )
+15480:         ) {
+15481:             return 1;
+15482:         }
+15483: 
+15484:         if (
+15485:             /^(?:Required\s+)?(?:Level\s*2\s+Public\s+Order|Public\s+Order\s+Level\s*2)\s+Officer(?:s)?$/i
+15486:                 .test(
+15487:                     cleaned
+15488:                 )
+15489:         ) {
+15490:             return 2;
+15491:         }
+15492: 
+15493:         return 0;
+15494:     }
+15495: 
+15496:     function isPublicOrderPersonnelRequirementName(
+15497:         value
+15498:     ) {
+15499:         return (
+15500:             getPublicOrderPersonnelLevel(
+15501:                 value
+15502:             ) >
+15503:             0
+15504:         );
+15505:     }
+15506: 
+15507:     function isPoliceSergeantPersonnelRequirementName(
+15508:         value
+15509:     ) {
+15510:         const cleaned =
+15511:             String(
+15512:                 value ||
+15513:                 ''
+15514:             )
+15515:                 .replace(
+15516:                     /\s+/g,
+15517:                     ' '
+15518:                 )
+15519:                 .trim();
+15520: 
+15521:         return /^(?:Required\s+)?Police\s+Sergeant(?:s)?$/i
+15522:             .test(
+15523:                 cleaned
+15524:             );
+15525:     }
+15526: 
+15527:     function isPoliceInspectorPersonnelRequirementName(
+15528:         value
+15529:     ) {
+15530:         const cleaned =
+15531:             String(
+15532:                 value ||
+15533:                 ''
+15534:             )
+15535:                 .replace(
+15536:                     /\s+/g,
+15537:                     ' '
+15538:                 )
+15539:                 .trim();
+15540: 
+15541:         return /^(?:Required\s+)?Police\s+Inspector(?:s)?$/i
+15542:             .test(
+15543:                 cleaned
+15544:             );
+15545:     }
+15546: 
+15547: 
+15548:     function isPoliceMedicPersonnelRequirementName(
+15549:         value
+15550:     ) {
+15551:         const cleaned =
+15552:             String(
+15553:                 value ||
+15554:                 ''
+15555:             )
+15556:                 .replace(
+15557:                     /\s+/g,
+15558:                     ' '
+15559:                 )
+15560:                 .trim();
+15561: 
+15562:         return /^(?:Required\s+)?Police\s+Medic(?:s)?$/i
+15563:             .test(
+15564:                 cleaned
+15565:             );
+15566:     }
+15567: 
+15568:     function isRailwayPolicePersonnelRequirementName(
+15569:         value
+15570:     ) {
+15571:         const cleaned =
+15572:             String(
+15573:                 value ||
+15574:                 ''
+15575:             )
+15576:                 .replace(
+15577:                     /\s+/g,
+15578:                     ' '
+15579:                 )
+15580:                 .trim();
+15581: 
+15582:         return /^(?:Required\s+)?Railway\s+Police\s+Officer(?:s)?$/i
+15583:             .test(
+15584:                 cleaned
+15585:             );
+15586:     }
+15587: 
+15588: 
+15589:     function isArmedResponsePersonnelRequirementName(value) {
+15590:         const cleaned = String(value || '')
+15591:             .replace(/\s+/g, ' ')
+15592:             .trim();
+15593: 
+15594:         return /^(?:Required\s+)?Armed\s+Response\s+Personnel(?:\s*\(\s*In\s+Armed\s+Vehicles\s*\))?$/i
+15595:             .test(cleaned);
+15596:     }
+15597: 
+15598:     function getSupportedTrainedPersonnelRequirementsFromText(
+15599:         text
+15600:     ) {
+15601:         const input =
+15602:             String(
+15603:                 text ||
+15604:                 ''
+15605:             )
+15606:                 .replace(
+15607:                     /\s+/g,
+15608:                     ' '
+15609:                 )
+15610:                 .trim();
+15611: 
+15612:         if (
+15613:             !input ||
+15614:             !/Missing\s+Personnel:/i.test(
+15615:                 input
+15616:             )
+15617:         ) {
+15618:             return [];
+15619:         }
+15620: 
+15621:         const requirements =
+15622:             new Map();
+15623: 
+15624:         MF_TRAINED_PERSONNEL_PATTERNS
+15625:             .forEach(definition => {
+15626:                 let maximumRequired = 0;
+15627: 
+15628:                 definition.patterns
+15629:                     .forEach(pattern => {
+15630:                         pattern.lastIndex = 0;
+15631: 
+15632:                         let match;
+15633: 
+15634:                         while (
+15635:                             (
+15636:                                 match =
+15637:                                     pattern.exec(
+15638:                                         input
+15639:                                     )
+15640:                             )
+15641:                         ) {
+15642:                             const required =
+15643:                                 Math.max(
+15644:                                     0,
+15645:                                     parseInt(
+15646:                                         match[1],
+15647:                                         10
+15648:                                     ) || 0
+15649:                                 );
+15650: 
+15651:                             maximumRequired =
+15652:                                 Math.max(
+15653:                                     maximumRequired,
+15654:                                     required
+15655:                                 );
+15656:                         }
+15657:                     });
+15658: 
+15659:                 if (
+15660:                     maximumRequired > 0
+15661:                 ) {
+15662:                     requirements.set(
+15663:                         definition.code,
+15664:                         {
+15665:                             code:
+15666:                                 definition.code,
+15667:                             label:
+15668:                                 definition.label,
+15669:                             required:
+15670:                                 maximumRequired
+15671:                         }
+15672:                     );
+15673:                 }
+15674:             });
+15675: 
+15676:         return normalisePublicOrderTrainedRequirements(
+15677:             Array.from(
+15678:                 requirements.values()
+15679:             )
+15680:         );
+15681:     }
+15682: 
+15683:     function normalisePublicOrderTrainedRequirements(
+15684:         requirements
+15685:     ) {
+15686:         const source =
+15687:             Array.isArray(requirements)
+15688:                 ? requirements
+15689:                 : [];
+15690: 
+15691:         const findRequired = code => {
+15692:             const item = source.find(
+15693:                 requirement => requirement.code === code
+15694:             );
+15695: 
+15696:             return Math.max(
+15697:                 0,
+15698:                 parseInt(item?.required, 10) || 0
+15699:             );
+15700:         };
+15701: 
+15702:         const level1Required =
+15703:             findRequired('level_1_public_order');
+15704: 
+15705:         const level2Required =
+15706:             findRequired('level_2_public_order');
+15707: 
+15708:         const policeSergeantRequired =
+15709:             findRequired('police_sergeant');
+15710: 
+15711:         const policeInspectorRequired =
+15712:             findRequired('police_inspector');
+15713: 
+15714:         const policeMedicRequired =
+15715:             findRequired('police_medic');
+15716: 
+15717:         const railwayPoliceRequired =
+15718:             findRequired('railway_police');
+15719: 
+15720:         const armedResponseRequired =
+
+===== SOURCE 15900-16680 =====
+15900: 
+15901:         if (armedResponseRequired > 0) {
+15902:             const requiredArmedTrafficCars = Math.ceil(
+15903:                 armedResponseRequired / 2
+15904:             );
+15905: 
+15906:             normalised.push({
+15907:                 code: 'armed_response_atc_vehicle',
+15908:                 label: 'Armed Response Personnel in Armed Traffic Cars',
+15909:                 requirementType: 'armed_response_atc_vehicle',
+15910:                 required: requiredArmedTrafficCars,
+15911:                 personnelRequired: armedResponseRequired,
+15912:                 personnelPerVehicle: 2,
+15913:                 requiredTrainingCodes: [
+15914:                     'traffic_police',
+15915:                     'swat'
+15916:                 ],
+15917:                 eligibleVehicleTypeIds: [
+15918:                     '25'
+15919:                 ]
+15920:             });
+15921:         }
+15922: 
+15923:         return normalised;
+15924:     }
+15925: 
+15926: 
+15927:     function isStrictLiveVerifiedTrainingEntry(
+15928:         registryEntry
+15929:     ) {
+15930:         if (!registryEntry) return false;
+15931: 
+15932:         const source =
+15933:             String(registryEntry.source || '');
+15934: 
+15935:         const updatedAt =
+15936:             Number(registryEntry.updatedAt || 0);
+15937: 
+15938:         return (
+15939:             source.startsWith(
+15940:                 MF_STRICT_TRAINING_SOURCE_PREFIX
+15941:             ) &&
+15942:             updatedAt > 0 &&
+15943:             Date.now() - updatedAt <=
+15944:                 MF_LIVE_TRAINING_VERIFY_CACHE_MS
+15945:         );
+15946:     }
+15947: 
+15948: 
+15949:     function isAuthoritativeLivePoliceTrainingEntry(
+15950:         registryEntry
+15951:     ) {
+15952:         return !!(
+15953:             isStrictLiveVerifiedTrainingEntry(
+15954:                 registryEntry
+15955:             ) &&
+15956:             registryEntry
+15957:                 .assignmentScanComplete ===
+15958:                 true
+15959:         );
+15960:     }
+15961: 
+15962: 
+15963:     function getProtectedOrdinaryIrvTrainingCount(
+15964:         registryEntry
+15965:     ) {
+15966:         if (!registryEntry) return 0;
+15967: 
+15968:         const trainingCounts =
+15969:             registryEntry.trainingCounts &&
+15970:             typeof registryEntry.trainingCounts === 'object'
+15971:                 ? registryEntry.trainingCounts
+15972:                 : {};
+15973: 
+15974:         return MF_PROTECTED_ORDINARY_IRV_TRAINING_CODES
+15975:             .reduce((total, code) => {
+15976:                 return total + Math.max(
+15977:                     0,
+15978:                     parseInt(trainingCounts[code], 10) || 0
+15979:                 );
+15980:             }, 0);
+15981:     }
+15982: 
+15983:     function isKnownProtectedTrainedPoliceIrvEntry(
+15984:         registryEntry
+15985:     ) {
+15986:         if (!registryEntry) return false;
+15987: 
+15988:         const vehicleTypeId =
+15989:             String(registryEntry.vehicleTypeId || '');
+15990: 
+15991:         // Exact MissionChief vehicle IDs are authoritative here. Older shared
+15992:         // registry records may pre-date vehicle-type capture, so a missing type
+15993:         // must not weaken a positive specialist-training signal.
+15994:         return !!(
+15995:             (!vehicleTypeId || vehicleTypeId === '8') &&
+15996:             getProtectedOrdinaryIrvTrainingCount(
+15997:                 registryEntry
+15998:             ) > 0
+15999:         );
+16000:     }
+16001: 
+16002:     function isVerifiedOrdinaryPoliceIrvEntry(
+16003:         registryEntry
+16004:     ) {
+16005:         if (!registryEntry) return false;
+16006: 
+16007:         const vehicleTypeId =
+16008:             String(registryEntry.vehicleTypeId || '');
+16009: 
+16010:         return !!(
+16011:             (!vehicleTypeId || vehicleTypeId === '8') &&
+16012:             isAuthoritativeLivePoliceTrainingEntry(registryEntry) &&
+16013:             getProtectedOrdinaryIrvTrainingCount(
+16014:                 registryEntry
+16015:             ) === 0
+16016:         );
+16017:     }
+16018: 
+16019:     function isOrdinaryPoliceIrvCheckboxEligible(
+16020:         checkbox,
+16021:         registry,
+16022:         options = {}
+16023:     ) {
+16024:         if (!isPoliceCarVehicleCheckbox(checkbox)) {
+16025:             return false;
+16026:         }
+16027: 
+16028:         const allowUnknown =
+16029:             options.allowUnknown === true;
+16030: 
+16031:         const registryMatch =
+16032:             getRegistryEntryForMissionCheckbox(
+16033:                 checkbox,
+16034:                 registry
+16035:             );
+16036: 
+16037:         if (!registryMatch.entry) {
+16038:             return allowUnknown;
+16039:         }
+16040: 
+16041:         // A known specialist crew is always protected, even when the registry
+16042:         // entry is older than the live-verification cache window.
+16043:         if (
+16044:             isKnownProtectedTrainedPoliceIrvEntry(
+16045:                 registryMatch.entry
+16046:             )
+16047:         ) {
+16048:             return false;
+16049:         }
+16050: 
+16051:         if (
+16052:             isVerifiedOrdinaryPoliceIrvEntry(
+16053:                 registryMatch.entry
+16054:             )
+16055:         ) {
+16056:             return true;
+16057:         }
+16058: 
+16059:         return allowUnknown;
+16060:     }
+16061: 
+16062:     function orderOrdinaryPoliceIrvCandidates(
+16063:         candidates,
+16064:         registry
+16065:     ) {
+16066:         const verifiedOrdinary = [];
+16067:         const unknownOrStale = [];
+16068: 
+16069:         (Array.isArray(candidates) ? candidates : [])
+16070:             .forEach(checkbox => {
+16071:                 const registryMatch =
+16072:                     getRegistryEntryForMissionCheckbox(
+16073:                         checkbox,
+16074:                         registry
+16075:                     );
+16076: 
+16077:                 if (
+16078:                     isKnownProtectedTrainedPoliceIrvEntry(
+16079:                         registryMatch.entry
+16080:                     )
+16081:                 ) {
+16082:                     return;
+16083:                 }
+16084: 
+16085:                 if (
+16086:                     isVerifiedOrdinaryPoliceIrvEntry(
+16087:                         registryMatch.entry
+16088:                     )
+16089:                 ) {
+16090:                     verifiedOrdinary.push(checkbox);
+16091:                     return;
+16092:                 }
+16093: 
+16094:                 unknownOrStale.push(checkbox);
+16095:             });
+16096: 
+16097:         return [
+16098:             ...verifiedOrdinary,
+16099:             ...unknownOrStale
+16100:         ];
+16101:     }
+16102: 
+16103: 
+16104:     function getMissionTrainingCombinationKey(trainingCodes) {
+16105:         return Array.from(
+16106:             new Set(
+16107:                 (Array.isArray(trainingCodes) ? trainingCodes : [])
+16108:                     .map(String)
+16109:                     .filter(Boolean)
+16110:             )
+16111:         )
+16112:             .sort()
+16113:             .join('+');
+16114:     }
+16115: 
+16116:     function getTrainingRequirementContribution(
+16117:         requirement,
+16118:         registryEntry
+16119:     ) {
+16120:         if (
+16121:             !requirement ||
+16122:             !registryEntry
+16123:         ) {
+16124:             return 0;
+16125:         }
+16126: 
+16127:         const trainingCounts =
+16128:             registryEntry.trainingCounts &&
+16129:             typeof registryEntry.trainingCounts ===
+16130:                 'object'
+16131:                 ? registryEntry.trainingCounts
+16132:                 : {};
+16133: 
+16134:         const trainingCombinationCounts =
+16135:             registryEntry.trainingCombinationCounts &&
+16136:             typeof registryEntry.trainingCombinationCounts === 'object'
+16137:                 ? registryEntry.trainingCombinationCounts
+16138:                 : {};
+16139: 
+16140:         const allowedTypes =
+16141:             new Set(
+16142:                 (
+16143:                     requirement
+16144:                         .eligibleVehicleTypeIds ||
+16145:                     []
+16146:                 ).map(String)
+16147:             );
+16148: 
+16149:         if (
+16150:             allowedTypes.size > 0 &&
+16151:             !allowedTypes.has(
+16152:                 String(
+16153:                     registryEntry.vehicleTypeId ||
+16154:                     ''
+16155:                 )
+16156:             )
+16157:         ) {
+16158:             return 0;
+16159:         }
+16160: 
+16161: 
+16162:         if (
+16163:             requirement.requirementType ===
+16164:                 'armed_response_atc_vehicle'
+16165:         ) {
+16166:             if (
+16167:                 !isAuthoritativeLivePoliceTrainingEntry(
+16168:                     registryEntry
+16169:                 )
+16170:             ) {
+16171:                 return 0;
+16172:             }
+16173: 
+16174:             const combinationKey =
+16175:                 getMissionTrainingCombinationKey(
+16176:                     requirement.requiredTrainingCodes
+16177:                 );
+16178: 
+16179:             const qualifiedDualTrainedCount =
+16180:                 parseInt(
+16181:                     trainingCombinationCounts[combinationKey],
+16182:                     10
+16183:                 ) || 0;
+16184: 
+16185:             return qualifiedDualTrainedCount >= 2
+16186:                 ? 1
+16187:                 : 0;
+16188:         }
+16189: 
+16190:         if (
+16191:             requirement.requirementType ===
+16192:                 'police_inspector_vehicle'
+16193:         ) {
+16194:             // Never trust the shared name-derived registry for this sensitive
+16195:             // rule. The exact IRV must have been checked live and must contain
+16196:             // two Police Inspector-trained personnel.
+16197:             if (
+16198:                 !isAuthoritativeLivePoliceTrainingEntry(
+16199:                     registryEntry
+16200:                 )
+16201:             ) {
+16202:                 return 0;
+16203:             }
+16204: 
+16205:             const policeInspectorCount =
+16206:                 parseInt(
+16207:                     trainingCounts
+16208:                         .police_inspector,
+16209:                     10
+16210:                 ) || 0;
+16211: 
+16212:             return policeInspectorCount >= 2
+16213:                 ? 1
+16214:                 : 0;
+16215:         }
+16216: 
+16217: 
+16218:         if (
+16219:             requirement.requirementType ===
+16220:                 'police_trained_irv_vehicle'
+16221:         ) {
+16222:             if (
+16223:                 !isAuthoritativeLivePoliceTrainingEntry(
+16224:                     registryEntry
+16225:                 )
+16226:             ) {
+16227:                 return 0;
+16228:             }
+16229: 
+16230:             const requiredCodes =
+16231:                 Array.isArray(
+16232:                     requirement.requiredTrainingCodes
+16233:                 )
+16234:                     ? requirement.requiredTrainingCodes
+16235:                     : [];
+16236: 
+16237:             if (requiredCodes.length !== 1) {
+16238:                 return 0;
+16239:             }
+16240: 
+16241:             const qualifiedCount =
+16242:                 parseInt(
+16243:                     trainingCounts[
+16244:                         requiredCodes[0]
+16245:                     ],
+16246:                     10
+16247:                 ) || 0;
+16248: 
+16249:             return qualifiedCount >= 2
+16250:                 ? 1
+16251:                 : 0;
+16252:         }
+16253: 
+16254:         if (
+16255:             requirement.requirementType ===
+16256:                 'public_order_combined_vehicle'
+16257:         ) {
+16258:             if (
+16259:                 !isAuthoritativeLivePoliceTrainingEntry(
+16260:                     registryEntry
+16261:                 )
+16262:             ) {
+16263:                 return 0;
+16264:             }
+16265: 
+16266:             const requiredCodes =
+16267:                 Array.isArray(
+16268:                     requirement.requiredTrainingCodes
+16269:                 )
+16270:                     ? requirement.requiredTrainingCodes
+16271:                     : [];
+16272: 
+16273:             if (requiredCodes.length === 0) {
+16274:                 return 0;
+16275:             }
+16276: 
+16277:             return requiredCodes.every(code => {
+16278:                 return (
+16279:                     parseInt(
+16280:                         trainingCounts[code],
+16281:                         10
+16282:                     ) || 0
+16283:                 ) >= 2;
+16284:             })
+16285:                 ? 1
+16286:                 : 0;
+16287:         }
+16288: 
+16289:         return (
+16290:             parseInt(
+16291:                 trainingCounts[
+16292:                     requirement.code
+16293:                 ],
+16294:                 10
+16295:             ) || 0
+16296:         );
+16297:     }
+16298: 
+16299: 
+16300:     function getTrainedPersonnelVehicleTarget(
+16301:         requirements
+16302:     ) {
+16303:         const targets =
+16304:             (
+16305:                 Array.isArray(requirements)
+16306:                     ? requirements
+16307:                     : []
+16308:             )
+16309:                 .map(requirement => {
+16310:                     return Math.max(
+16311:                         0,
+16312:                         parseInt(
+16313:                             requirement?.required,
+16314:                             10
+16315:                         ) || 0
+16316:                     );
+16317:                 })
+16318:                 .filter(
+16319:                     target =>
+16320:                         target > 0
+16321:                 );
+16322: 
+16323:         return targets.length
+16324:             ? Math.max(...targets)
+16325:             : 1;
+16326:     }
+16327: 
+16328:     function mergeTrainedPersonnelRequirements(
+16329:         target,
+16330:         requirements
+16331:     ) {
+16332:         (
+16333:             Array.isArray(requirements)
+16334:                 ? requirements
+16335:                 : []
+16336:         ).forEach(requirement => {
+16337:             const code =
+16338:                 String(
+16339:                     requirement?.code ||
+16340:                     ''
+16341:                 );
+16342: 
+16343:             const required =
+16344:                 Math.max(
+16345:                     0,
+16346:                     parseInt(
+16347:                         requirement?.required,
+16348:                         10
+16349:                     ) || 0
+16350:                 );
+16351: 
+16352:             if (
+16353:                 !code ||
+16354:                 required <= 0
+16355:             ) {
+16356:                 return;
+16357:             }
+16358: 
+16359:             const existing =
+16360:                 target.get(code);
+16361: 
+16362:             if (
+16363:                 !existing ||
+16364:                 required >
+16365:                     existing.required
+16366:             ) {
+16367:                 target.set(
+16368:                     code,
+16369:                     {
+16370:                         ...requirement,
+16371:                         code,
+16372:                         label:
+16373:                             String(
+16374:                                 requirement?.label ||
+16375:                                 code
+16376:                             ),
+16377:                         required
+16378:                     }
+16379:                 );
+16380:             }
+16381:         });
+16382:     }
+16383: 
+16384:     function getTrainedPersonnelRequirementsSignature(
+16385:         requirements
+16386:     ) {
+16387:         return (
+16388:             Array.isArray(requirements)
+16389:                 ? requirements
+16390:                 : []
+16391:         )
+16392:             .map(requirement => {
+16393:                 return [
+16394:                     String(
+16395:                         requirement?.code ||
+16396:                         ''
+16397:                     ),
+16398:                     Math.max(
+16399:                         0,
+16400:                         parseInt(
+16401:                             requirement?.required,
+16402:                             10
+16403:                         ) || 0
+16404:                     )
+16405:                 ].join(':');
+16406:             })
+16407:             .filter(Boolean)
+16408:             .sort()
+16409:             .join(',');
+16410:     }
+16411: 
+16412:     function formatTrainedPersonnelRequirements(
+16413:         requirements
+16414:     ) {
+16415:         return (
+16416:             Array.isArray(requirements)
+16417:                 ? requirements
+16418:                 : []
+16419:         )
+16420:             .map(requirement => {
+16421: 
+16422:                 if (
+16423:                     requirement.requirementType ===
+16424:                     'armed_response_atc_vehicle'
+16425:                 ) {
+16426:                     return (
+16427:                         `${requirement.label} x${requirement.required} ` +
+16428:                         `(${requirement.personnelRequired} required; ` +
+16429:                         `2 personnel who each hold Roads Policing + Firearms on every exact type-25 ATC)`
+16430:                     );
+16431:                 }
+16432: 
+16433:                 if (
+16434:                     requirement
+16435:                         .requirementType ===
+16436:                     'public_order_combined_vehicle'
+16437:                 ) {
+16438:                     const codes =
+16439:                         (
+16440:                             requirement.requiredTrainingCodes ||
+16441:                             []
+16442:                         )
+16443:                             .map(code => {
+16444:                                 if (code === 'level_1_public_order') return 'L1';
+16445:                                 if (code === 'level_2_public_order') return 'L2';
+16446:                                 if (code === 'police_sergeant') return 'Sergeant';
+16447:                                 return code;
+16448:                             })
+16449:                             .join('/');
+16450: 
+16451:                     return (
+16452:                         `${requirement.label} x${requirement.required} ` +
+16453:                         `(requires 2 ${codes || 'requested Public Order'}-trained personnel per IRV; ` +
+16454:                         `MAX count ${requirement.officersRequired})`
+16455:                     );
+16456:                 }
+16457: 
+16458:                 if (
+16459:                     requirement
+16460:                         .requirementType ===
+16461:                     'police_inspector_vehicle'
+16462:                 ) {
+16463:                     return (
+16464:                         `${requirement.label} x${requirement.required} ` +
+16465:                         `(${requirement.inspectorsRequired} Inspector` +
+16466:                         `${requirement.inspectorsRequired === 1 ? '' : 's'}; ` +
+16467:                         `2 Inspector-trained personnel on that exact IRV)`
+16468:                     );
+16469:                 }
+16470: 
+16471: 
+16472:                 if (
+16473:                     requirement
+16474:                         .requirementType ===
+16475:                     'police_trained_irv_vehicle'
+16476:                 ) {
+16477:                     return (
+16478:                         `${requirement.label} x${requirement.required} ` +
+16479:                         `(${requirement.personnelRequired} required; ` +
+16480:                         `2 ${requirement.requiredTrainingCodes?.[0] || 'trained'} personnel on each exact IRV)`
+16481:                     );
+16482:                 }
+16483: 
+16484:                 return `${requirement.label} x${requirement.required}`;
+16485:             })
+16486:             .join(', ');
+16487:     }
+16488: 
+16489: 
+16490:     function hasPoliceInspectorVehicleRequirement(requirements) {
+16491:         return (
+16492:             Array.isArray(requirements)
+16493:                 ? requirements
+16494:                 : []
+16495:         ).some(requirement => {
+16496:             return (
+16497:                 requirement?.requirementType ===
+16498:                     'police_inspector_vehicle' ||
+16499:                 requirement?.code ===
+16500:                     'police_inspector_vehicle'
+16501:             );
+16502:         });
+16503:     }
+16504: 
+16505:     function getNormalisedRegistryVehicleName(value) {
+16506:         return String(value || '')
+16507:             .replace(/&amp;/gi, '&')
+16508:             .replace(/[^a-z0-9]+/gi, ' ')
+16509:             .replace(/\s+/g, ' ')
+16510:             .trim()
+16511:             .toLowerCase();
+16512:     }
+16513: 
+16514:     function hasStrictPoliceTrainingRequirement(
+16515:         requirements
+16516:     ) {
+16517:         return (
+16518:             Array.isArray(requirements)
+16519:                 ? requirements
+16520:                 : []
+16521:         ).some(requirement => {
+16522:             return (
+16523:                 requirement?.requirementType ===
+16524:                     'police_inspector_vehicle' ||
+16525:                 requirement?.requirementType ===
+16526:                     'public_order_combined_vehicle' ||
+16527:                 requirement?.requirementType ===
+16528:                     'police_trained_irv_vehicle'
+16529:             );
+16530:         });
+16531:     }
+16532: 
+16533:     function getRegistryEntryForMissionCheckbox(
+16534:         checkbox,
+16535:         registry
+16536:     ) {
+16537:         const vehicleId =
+16538:             getMissionVehicleId(checkbox);
+16539: 
+16540:         if (!vehicleId) {
+16541:             return {
+16542:                 vehicleId: '',
+16543:                 entry: null,
+16544:                 matchMode: 'no-exact-vehicle-id'
+16545:             };
+16546:         }
+16547: 
+16548:         const directEntry =
+16549:             registry?.vehicles?.[vehicleId];
+16550: 
+16551:         if (!directEntry) {
+16552:             return {
+16553:                 vehicleId,
+16554:                 entry: null,
+16555:                 matchMode: 'none'
+16556:             };
+16557:         }
+16558: 
+16559:         const checkboxTypeIds =
+16560:             new Set(
+16561:                 getVehicleTypeIdentifiers(
+16562:                     checkbox
+16563:                 ).map(String)
+16564:             );
+16565: 
+16566:         const entryTypeId =
+16567:             String(
+16568:                 directEntry.vehicleTypeId ||
+16569:                 ''
+16570:             );
+16571: 
+16572:         if (
+16573:             entryTypeId &&
+16574:             checkboxTypeIds.size > 0 &&
+16575:             !checkboxTypeIds.has(entryTypeId)
+16576:         ) {
+16577:             return {
+16578:                 vehicleId,
+16579:                 entry: null,
+16580:                 matchMode: 'vehicle-type-mismatch'
+16581:             };
+16582:         }
+16583: 
+16584:         return {
+16585:             vehicleId,
+16586:             entry: directEntry,
+16587:             matchMode: 'exact-vehicle-id'
+16588:         };
+16589:     }
+16590: 
+16591: 
+16592:     function parseVehicleIdFromAssignmentLink(value) {
+16593:         const match = String(value || '')
+16594:             .match(/\/vehicles\/(\d+)(?:\/|$|[?#])/i);
+16595: 
+16596:         return match
+16597:             ? String(match[1])
+16598:             : '';
+16599:     }
+16600: 
+16601:     function parseLivePoliceTrainingAssignments(
+16602:         html,
+16603:         currentVehicleId
+16604:     ) {
+16605:         const doc = new DOMParser()
+16606:             .parseFromString(
+16607:                 String(html || ''),
+16608:                 'text/html'
+16609:             );
+16610: 
+16611:         const currentId =
+16612:             String(currentVehicleId || '');
+16613: 
+16614:         const supportedCodes =
+16615:             new Set(
+16616:                 MF_PROTECTED_ORDINARY_IRV_TRAINING_CODES
+16617:             );
+16618: 
+16619:         const trainingCounts = {};
+16620:         const trainingCombinationCounts = {};
+16621:         let assignedPersonnelCount = 0;
+16622: 
+16623:         const personnelTable =
+16624:             doc.querySelector(
+16625:                 '#personal_table'
+16626:             );
+16627: 
+16628:         const personnelRows =
+16629:             personnelTable
+16630:                 ? Array.from(
+16631:                     personnelTable.querySelectorAll(
+16632:                         'tbody tr[data-filterable-by], tbody tr'
+16633:                     )
+16634:                 )
+16635:                 : [];
+16636: 
+16637:         const detectedVehicleTypeId =
+16638:             String(
+16639:                 doc.querySelector(
+16640:                     '.vehicle_image_reload[vehicle_type_id]'
+16641:                 )?.getAttribute('vehicle_type_id') ||
+16642:                 ''
+16643:             );
+16644: 
+16645:         personnelRows.forEach(row => {
+16646:             const assignmentActions =
+16647:                 Array.from(
+16648:                     row.querySelectorAll(
+16649:                         'a[href*="/zuweisungDo/"], button, input[type="submit"], input[type="button"]'
+16650:                     )
+16651:                 );
+16652: 
+16653:             const assignedAction =
+16654:                 assignmentActions.find(action => {
+16655:                     const actionText =
+16656:                         String(
+16657:                             action?.innerText ||
+16658:                             action?.textContent ||
+16659:                             action?.value ||
+16660:                             ''
+16661:                         )
+16662:                             .replace(/\s+/g, ' ')
+16663:                             .trim();
+16664: 
+16665:                     return !!(
+16666:                         action?.classList?.contains(
+16667:                             'btn-assigned'
+16668:                         ) ||
+16669:                         /remove\s+binding/i.test(
+16670:                             actionText
+16671:                         )
+16672:                     );
+16673:                 }) || null;
+16674: 
+16675:             const assignedText =
+16676:                 String(
+16677:                     assignedAction?.innerText ||
+16678:                     assignedAction?.textContent ||
+16679:                     assignedAction?.value ||
+16680:                     ''
+
+===== SOURCE 16680-17480 =====
+16680:                     ''
+16681:                 )
+16682:                     .replace(/\s+/g, ' ')
+16683:                     .trim();
+16684: 
+16685:             const assignedHere = !!(
+16686:                 assignedAction &&
+16687:                 (
+16688:                     assignedAction.classList?.contains(
+16689:                         'btn-assigned'
+16690:                     ) ||
+16691:                     /remove\s+binding/i.test(
+16692:                         assignedText
+16693:                     )
+16694:                 )
+16695:             );
+16696: 
+16697:             if (!assignedHere) return;
+16698: 
+16699:             // On /vehicles/{id}/zuweisung a btn-assigned row belongs to the
+16700:             // current vehicle. Do not infer ownership from the displayed name.
+16701:             const actionVehicleId =
+16702:                 parseVehicleIdFromAssignmentLink(
+16703:                     assignedAction.getAttribute('href') ||
+16704:                     assignedAction.href ||
+16705:                     ''
+16706:                 );
+16707: 
+16708:             if (
+16709:                 currentId &&
+16710:                 actionVehicleId &&
+16711:                 actionVehicleId !== currentId
+16712:             ) {
+16713:                 return;
+16714:             }
+16715: 
+16716:             assignedPersonnelCount += 1;
+16717: 
+16718:             const filterText = String(
+16719:                 row.getAttribute('data-filterable-by') ||
+16720:                 ''
+16721:             );
+16722: 
+16723:             const rowText = String(
+16724:                 row.innerText ||
+16725:                 row.textContent ||
+16726:                 ''
+16727:             )
+16728:                 .replace(/\s+/g, ' ')
+16729:                 .trim();
+16730: 
+16731:             const rowCodes = new Set(
+16732:                 (
+16733:                     filterText.match(
+16734:                         /[a-z][a-z0-9_]+/gi
+16735:                     ) ||
+16736:                     []
+16737:                 )
+16738:                     .map(code => code.toLowerCase())
+16739:                     .filter(code => supportedCodes.has(code))
+16740:             );
+16741: 
+16742:             if (/Level\s*1\s+Public\s+Order/i.test(rowText)) {
+16743:                 rowCodes.add('level_1_public_order');
+16744:             }
+16745: 
+16746:             if (/Level\s*2\s+Public\s+Order/i.test(rowText)) {
+16747:                 rowCodes.add('level_2_public_order');
+16748:             }
+16749: 
+16750:             if (/\bPolice\s+Sergeant\b/i.test(rowText)) {
+16751:                 rowCodes.add('police_sergeant');
+16752:             }
+16753: 
+16754:             if (/\bPolice\s+Medic\b/i.test(rowText)) {
+16755:                 rowCodes.add('police_medic');
+16756:             }
+16757: 
+16758:             if (/\bPolice\s+Inspector\b/i.test(rowText)) {
+16759:                 rowCodes.add('police_inspector');
+16760:             }
+16761: 
+16762:             if (
+16763:                 /\bRailway\s+Police\s+Officer\b/i.test(
+16764:                     rowText
+16765:                 ) ||
+16766:                 /\bRailway\s+Policing\b/i.test(
+16767:                     rowText
+16768:                 )
+16769:             ) {
+16770:                 rowCodes.add('railway_police');
+16771:             }
+16772: 
+16773:             rowCodes.forEach(code => {
+16774:                 trainingCounts[code] =
+16775:                     Number(
+16776:                         trainingCounts[code] ||
+16777:                         0
+16778:                     ) + 1;
+16779:             });
+16780: 
+16781:             const roadsFirearmsKey =
+16782:                 getMissionTrainingCombinationKey([
+16783:                     'traffic_police',
+16784:                     'swat'
+16785:                 ]);
+16786: 
+16787:             if (
+16788:                 rowCodes.has('traffic_police') &&
+16789:                 rowCodes.has('swat')
+16790:             ) {
+16791:                 trainingCombinationCounts[roadsFirearmsKey] =
+16792:                     Number(
+16793:                         trainingCombinationCounts[roadsFirearmsKey] ||
+16794:                         0
+16795:                     ) + 1;
+16796:             }
+16797:         });
+16798: 
+16799:         supportedCodes.forEach(code => {
+16800:             if (
+16801:                 !Object.prototype.hasOwnProperty.call(
+16802:                     trainingCounts,
+16803:                     code
+16804:                 )
+16805:             ) {
+16806:                 trainingCounts[code] = 0;
+16807:             }
+16808:         });
+16809: 
+16810:         return {
+16811:             vehicleId: currentId,
+16812:             trainingCounts,
+16813:             trainingCombinationCounts,
+16814:             assignedPersonnelCount,
+16815:             assignmentScanComplete:
+16816:                 Boolean(personnelTable),
+16817:             personnelRowsSeen:
+16818:                 personnelRows.length,
+16819:             detectedVehicleTypeId,
+16820:             document: doc
+16821:         };
+16822:     }
+16823: 
+16824: 
+16825:     // Compatibility wrapper retained for older guarded call paths. The strict
+16826:     // parser now returns exact current-vehicle counts for all supported Police
+16827:     // training codes, including Police Inspector.
+16828:     function parseLivePoliceInspectorAssignments(
+16829:         html,
+16830:         currentVehicleId
+16831:     ) {
+16832:         const parsed =
+16833:             parseLivePoliceTrainingAssignments(
+16834:                 html,
+16835:                 currentVehicleId
+16836:             );
+16837: 
+16838:         return {
+16839:             countsByVehicleId: {
+16840:                 [String(currentVehicleId || '')]:
+16841:                     Number(
+16842:                         parsed.trainingCounts
+16843:                             ?.police_inspector ||
+16844:                         0
+16845:                     )
+16846:             },
+16847:             detectedVehicleTypeId:
+16848:                 parsed.detectedVehicleTypeId,
+16849:             document:
+16850:                 parsed.document
+16851:         };
+16852:     }
+16853: 
+16854:     function savePersonnelTrainingRegistry(registry) {
+16855:         if (!registry || typeof registry !== 'object') {
+16856:             return false;
+16857:         }
+16858: 
+16859:         try {
+16860:             registry.updatedAt = Date.now();
+16861:             localStorage.setItem(
+16862:                 MF_PERSONNEL_TRAINING_REGISTRY_KEY,
+16863:                 JSON.stringify(registry)
+16864:             );
+16865:             return true;
+16866:         } catch (_error) {
+16867:             return false;
+16868:         }
+16869:     }
+16870: 
+16871:     function getUnverifiedRegistryTrainingHintScore(
+16872:         requirements,
+16873:         registryEntry
+16874:     ) {
+16875:         if (!registryEntry) return 0;
+16876: 
+16877:         const trainingCounts =
+16878:             registryEntry.trainingCounts &&
+16879:             typeof registryEntry.trainingCounts ===
+16880:                 'object'
+16881:                 ? registryEntry.trainingCounts
+16882:                 : {};
+16883: 
+16884:         const trainingCombinationCounts =
+16885:             registryEntry.trainingCombinationCounts &&
+16886:             typeof registryEntry.trainingCombinationCounts === 'object'
+16887:                 ? registryEntry.trainingCombinationCounts
+16888:                 : {};
+16889: 
+16890:         const entryTypeId =
+16891:             String(
+16892:                 registryEntry.vehicleTypeId ||
+16893:                 ''
+16894:             );
+16895: 
+16896:         return (
+16897:             Array.isArray(requirements)
+16898:                 ? requirements
+16899:                 : []
+16900:         ).reduce((score, requirement) => {
+16901:             const allowedTypes =
+16902:                 new Set(
+16903:                     (
+16904:                         requirement?.eligibleVehicleTypeIds ||
+16905:                         []
+16906:                     ).map(String)
+16907:                 );
+16908: 
+16909:             if (
+16910:                 allowedTypes.size > 0 &&
+16911:                 !allowedTypes.has(entryTypeId)
+16912:             ) {
+16913:                 return score;
+16914:             }
+16915: 
+16916: 
+16917:             if (
+16918:                 requirement?.requirementType ===
+16919:                     'armed_response_atc_vehicle'
+16920:             ) {
+16921:                 const combinationKey =
+16922:                     getMissionTrainingCombinationKey(
+16923:                         requirement.requiredTrainingCodes
+16924:                     );
+16925: 
+16926:                 const qualifiedDualTrainedCount =
+16927:                     parseInt(
+16928:                         trainingCombinationCounts[combinationKey],
+16929:                         10
+16930:                     ) || 0;
+16931: 
+16932:                 if (qualifiedDualTrainedCount >= 2) {
+16933:                     return score + 1000 + qualifiedDualTrainedCount;
+16934:                 }
+16935:             }
+16936: 
+16937:             if (
+16938:                 requirement?.requirementType ===
+16939:                     'police_inspector_vehicle'
+16940:             ) {
+16941:                 const inspectorCount =
+16942:                     parseInt(
+16943:                         trainingCounts.police_inspector,
+16944:                         10
+16945:                     ) || 0;
+16946: 
+16947:                 return score +
+16948:                     (
+16949:                         inspectorCount >= 2
+16950:                             ? 1000 + inspectorCount
+16951:                             : 0
+16952:                     );
+16953:             }
+16954: 
+16955: 
+16956:             if (
+16957:                 requirement?.requirementType ===
+16958:                     'police_trained_irv_vehicle'
+16959:             ) {
+16960:                 const requiredCodes =
+16961:                     Array.isArray(
+16962:                         requirement.requiredTrainingCodes
+16963:                     )
+16964:                         ? requirement.requiredTrainingCodes
+16965:                         : [];
+16966: 
+16967:                 if (
+16968:                     requiredCodes.length === 1 &&
+16969:                     (
+16970:                         parseInt(
+16971:                             trainingCounts[
+16972:                                 requiredCodes[0]
+16973:                             ],
+16974:                             10
+16975:                         ) || 0
+16976:                     ) >= 2
+16977:                 ) {
+16978:                     return score + 1000;
+16979:                 }
+16980:             }
+16981: 
+16982:             if (
+16983:                 requirement?.requirementType ===
+16984:                     'public_order_combined_vehicle'
+16985:             ) {
+16986:                 const requiredCodes =
+16987:                     Array.isArray(
+16988:                         requirement.requiredTrainingCodes
+16989:                     )
+16990:                         ? requirement.requiredTrainingCodes
+16991:                         : [];
+16992: 
+16993:                 if (
+16994:                     requiredCodes.length > 0 &&
+16995:                     requiredCodes.every(code => {
+16996:                         return (
+16997:                             parseInt(
+16998:                                 trainingCounts[code],
+16999:                                 10
+17000:                             ) || 0
+17001:                         ) >= 2;
+17002:                     })
+17003:                 ) {
+17004:                     return score + 1000 +
+17005:                         requiredCodes.length;
+17006:                 }
+17007:             }
+17008: 
+17009:             return score;
+17010:         }, 0);
+17011:     }
+17012: 
+17013:     function orderStrictPoliceTrainingCandidates(
+17014:         candidates,
+17015:         requirements,
+17016:         registry
+17017:     ) {
+17018:         const source =
+17019:             Array.isArray(candidates)
+17020:                 ? candidates
+17021:                 : [];
+17022: 
+17023:         const arrivalIndex =
+17024:             new Map(
+17025:                 source.map((checkbox, index) => [
+17026:                     checkbox,
+17027:                     index
+17028:                 ])
+17029:             );
+17030: 
+17031:         const checked =
+17032:             source.filter(checkbox => checkbox.checked);
+17033: 
+17034:         const unchecked =
+17035:             source.filter(checkbox => !checkbox.checked);
+17036: 
+17037:         const hinted =
+17038:             unchecked
+17039:                 .map(checkbox => {
+17040:                     const registryMatch =
+17041:                         getRegistryEntryForMissionCheckbox(
+17042:                             checkbox,
+17043:                             registry
+17044:                         );
+17045: 
+17046:                     return {
+17047:                         checkbox,
+17048:                         score:
+17049:                             getUnverifiedRegistryTrainingHintScore(
+17050:                                 requirements,
+17051:                                 registryMatch.entry
+17052:                             )
+17053:                     };
+17054:                 })
+17055:                 .filter(item => item.score > 0)
+17056:                 .sort((left, right) => {
+17057:                     if (left.score !== right.score) {
+17058:                         return right.score - left.score;
+17059:                     }
+17060: 
+17061:                     return (
+17062:                         arrivalIndex.get(left.checkbox) -
+17063:                         arrivalIndex.get(right.checkbox)
+17064:                     );
+17065:                 })
+17066:                 .map(item => item.checkbox);
+17067: 
+17068:         const hintedSet = new Set(hinted);
+17069: 
+17070:         const remaining =
+17071:             unchecked.filter(
+17072:                 checkbox => !hintedSet.has(checkbox)
+17073:             );
+17074: 
+17075:         return [
+17076:             ...checked,
+17077:             ...hinted,
+17078:             ...remaining
+17079:         ].filter((checkbox, index, array) => {
+17080:             return array.indexOf(checkbox) === index;
+17081:         });
+17082:     }
+17083: 
+17084:     async function refreshPoliceInspectorRegistryFromLiveVehicles(
+17085:         requirements,
+17086:         source = 'UPDATE'
+17087:     ) {
+17088:         if (
+17089:             !hasStrictPoliceTrainingRequirement(
+17090:                 requirements
+17091:             )
+17092:         ) {
+17093:             return {
+17094:                 refreshed: false,
+17095:                 pagesRead: 0,
+17096:                 qualifyingVehicles: 0
+17097:             };
+17098:         }
+17099: 
+17100:         let registry =
+17101:             readPersonnelTrainingRegistry();
+17102: 
+17103:         if (!registry.vehicles) {
+17104:             registry.vehicles = {};
+17105:         }
+17106: 
+17107:         const allIrvCandidates =
+17108:             sortVehicleCheckboxesByBestArrival(
+17109:                 getVehicleCheckboxSnapshot().filter(checkbox => {
+17110:                     return (
+17111:                         (!checkbox.disabled || checkbox.checked) &&
+17112:                         isPoliceCarVehicleCheckbox(checkbox) &&
+17113:                         !!getMissionVehicleId(checkbox)
+17114:                     );
+17115:                 })
+17116:             );
+17117: 
+17118:         // The Personnel Assignment registry is an exact-ID hint only.
+17119:         // It is never trusted as final proof, but it places known Inspector or
+17120:         // requested Public Order IRVs at the front of the live verification
+17121:         // queue. The exact /vehicles/{id}/zuweisung page is still authoritative.
+17122:         const orderedCandidates =
+17123:             orderStrictPoliceTrainingCandidates(
+17124:                 allIrvCandidates,
+17125:                 requirements,
+17126:                 registry
+17127:             );
+17128: 
+17129:         const verifiedIds = new Set();
+17130:         const now = Date.now();
+17131: 
+17132:         orderedCandidates.forEach(checkbox => {
+17133:             const vehicleId =
+17134:                 getMissionVehicleId(checkbox);
+17135: 
+17136:             const entry =
+17137:                 registry.vehicles?.[vehicleId];
+17138: 
+17139:             const cachedAt =
+17140:                 Number(
+17141:                     mfLiveTrainingVerifyCache.get(
+17142:                         vehicleId
+17143:                     ) ||
+17144:                     0
+17145:                 );
+17146: 
+17147:             if (
+17148:                 vehicleId &&
+17149:                 isAuthoritativeLivePoliceTrainingEntry(entry) &&
+17150:                 now - cachedAt <=
+17151:                     MF_LIVE_TRAINING_VERIFY_CACHE_MS
+17152:             ) {
+17153:                 verifiedIds.add(vehicleId);
+17154:             }
+17155:         });
+17156: 
+17157:         const requirementsSatisfiedByVerified = () => {
+17158:             const verifiedCheckboxes =
+17159:                 orderedCandidates.filter(checkbox => {
+17160:                     return verifiedIds.has(
+17161:                         getMissionVehicleId(checkbox)
+17162:                     );
+17163:                 });
+17164: 
+17165:             return getRemainingTrainedPersonnelRequirements(
+17166:                 requirements,
+17167:                 verifiedCheckboxes,
+17168:                 registry
+17169:             ).every(requirement => {
+17170:                 return requirement.remaining <= 0;
+17171:             });
+17172:         };
+17173: 
+17174:         if (requirementsSatisfiedByVerified()) {
+17175:             return {
+17176:                 refreshed: false,
+17177:                 pagesRead: 0,
+17178:                 qualifyingVehicles:
+17179:                     verifiedIds.size
+17180:             };
+17181:         }
+17182: 
+17183:         const unverifiedCandidates =
+17184:             orderedCandidates.filter(checkbox => {
+17185:                 const vehicleId =
+17186:                     getMissionVehicleId(checkbox);
+17187: 
+17188:                 return (
+17189:                     vehicleId &&
+17190:                     !verifiedIds.has(vehicleId)
+17191:                 );
+17192:             });
+17193: 
+17194:         const registryHintedCandidates =
+17195:             unverifiedCandidates.filter(checkbox => {
+17196:                 const registryMatch =
+17197:                     getRegistryEntryForMissionCheckbox(
+17198:                         checkbox,
+17199:                         registry
+17200:                     );
+17201: 
+17202:                 return (
+17203:                     getUnverifiedRegistryTrainingHintScore(
+17204:                         requirements,
+17205:                         registryMatch.entry
+17206:                     ) > 0
+17207:                 );
+17208:             });
+17209: 
+17210:         const registryHintedSet =
+17211:             new Set(registryHintedCandidates);
+17212: 
+17213:         const ordinaryCandidates =
+17214:             unverifiedCandidates.filter(
+17215:                 checkbox =>
+17216:                     !registryHintedSet.has(checkbox)
+17217:             );
+17218: 
+17219:         // Always verify the exact registry-hinted IRVs first. Then use the
+17220:         // established arrival-sorted cap for ordinary candidates. This fixes
+17221:         // trained station vehicles being missed simply because they sit beyond
+17222:         // the first 48 normal IRVs in a large mission vehicle list.
+17223:         const pagesToRead = [
+17224:             ...registryHintedCandidates,
+17225:             ...ordinaryCandidates.slice(
+17226:                 0,
+17227:                 Math.max(
+17228:                     0,
+17229:                     MF_LIVE_TRAINING_VERIFY_MAX_PAGES -
+17230:                     registryHintedCandidates.length
+17231:                 )
+17232:             )
+17233:         ];
+17234: 
+17235:         let pagesRead = 0;
+17236:         let changed = false;
+17237: 
+17238:         for (
+17239:             let offset = 0;
+17240:             offset < pagesToRead.length;
+17241:             offset += MF_LIVE_TRAINING_VERIFY_BATCH_SIZE
+17242:         ) {
+17243:             const batch = pagesToRead.slice(
+17244:                 offset,
+17245:                 offset + MF_LIVE_TRAINING_VERIFY_BATCH_SIZE
+17246:             );
+17247: 
+17248:             const results = await Promise.all(
+17249:                 batch.map(async checkbox => {
+17250:                     const vehicleId =
+17251:                         getMissionVehicleId(checkbox);
+17252: 
+17253:                     try {
+17254:                         const response = await fetch(
+17255:                             `/vehicles/${vehicleId}/zuweisung`,
+17256:                             {
+17257:                                 credentials: 'include',
+17258:                                 cache: 'no-store',
+17259:                                 headers: {
+17260:                                     Accept: 'text/html,application/xhtml+xml'
+17261:                                 }
+17262:                             }
+17263:                         );
+17264: 
+17265:                         if (!response.ok) {
+17266:                             return null;
+17267:                         }
+17268: 
+17269:                         const html = await response.text();
+17270: 
+17271:                         return {
+17272:                             checkbox,
+17273:                             vehicleId,
+17274:                             parsed:
+17275:                                 parseLivePoliceTrainingAssignments(
+17276:                                     html,
+17277:                                     vehicleId
+17278:                                 )
+17279:                         };
+17280:                     } catch (_error) {
+17281:                         return null;
+17282:                     }
+17283:                 })
+17284:             );
+17285: 
+17286:             results.filter(result => result?.parsed?.assignmentScanComplete).forEach(result => {
+17287:                 const {
+17288:                     checkbox,
+17289:                     vehicleId,
+17290:                     parsed
+17291:                 } = result;
+17292: 
+17293:                 const existing =
+17294:                     registry.vehicles?.[vehicleId] ||
+17295:                     {};
+17296: 
+17297:                 registry.vehicles[vehicleId] = {
+17298:                     ...existing,
+17299:                     vehicleId,
+17300:                     vehicleName:
+17301:                         existing.vehicleName ||
+17302:                         getVehicleDebugName(checkbox),
+17303:                     vehicleTypeId:
+17304:                         String(
+17305:                             getVehicleTypeIdentifiers(checkbox)[0] ||
+17306:                             parsed.detectedVehicleTypeId ||
+17307:                             existing.vehicleTypeId ||
+17308:                             '8'
+17309:                         ),
+17310:                     assignedPersonnelCount:
+17311:                         parsed.assignedPersonnelCount,
+17312:                     assignmentScanComplete:
+17313:                         parsed.assignmentScanComplete,
+17314:                     personnelRowsSeen:
+17315:                         parsed.personnelRowsSeen,
+17316:                     trainingCounts: {
+17317:                         ...(
+17318:                             existing.trainingCounts &&
+17319:                             typeof existing.trainingCounts === 'object'
+17320:                                 ? existing.trainingCounts
+17321:                                 : {}
+17322:                         ),
+17323:                         ...parsed.trainingCounts
+17324:                     },
+17325:                     trainingCombinationCounts: {
+17326:                         ...(
+17327:                             existing.trainingCombinationCounts &&
+17328:                             typeof existing.trainingCombinationCounts === 'object'
+17329:                                 ? existing.trainingCombinationCounts
+17330:                                 : {}
+17331:                         ),
+17332:                         ...parsed.trainingCombinationCounts
+17333:                     },
+17334:                     updatedAt:
+17335:                         Date.now(),
+17336:                     source:
+17337:                         `${MF_STRICT_TRAINING_SOURCE_PREFIX}${String(source || 'update').toLowerCase()}-v10674`
+17338:                 };
+17339: 
+17340:                 mfLiveTrainingVerifyCache.set(
+17341:                     vehicleId,
+17342:                     Date.now()
+17343:                 );
+17344: 
+17345:                 verifiedIds.add(vehicleId);
+17346:                 pagesRead += 1;
+17347:                 changed = true;
+17348:             });
+17349: 
+17350:             if (changed) {
+17351:                 savePersonnelTrainingRegistry(
+17352:                     registry
+17353:                 );
+17354:             }
+17355: 
+17356:             if (requirementsSatisfiedByVerified()) {
+17357:                 break;
+17358:             }
+17359:         }
+17360: 
+17361:         return {
+17362:             refreshed: changed,
+17363:             pagesRead,
+17364:             qualifyingVehicles:
+17365:                 verifiedIds.size
+17366:         };
+17367:     }
+17368: 
+17369: 
+17370: 
+17371:     async function refreshArmedResponseRegistryFromLiveVehicles(
+17372:         requirements,
+17373:         source = 'UPDATE'
+17374:     ) {
+17375:         const armedRequirements = (
+17376:             Array.isArray(requirements) ? requirements : []
+17377:         ).filter(requirement => {
+17378:             return requirement?.requirementType ===
+17379:                 'armed_response_atc_vehicle';
+17380:         });
+17381: 
+17382:         if (!armedRequirements.length) {
+17383:             return {
+17384:                 refreshed: false,
+17385:                 pagesRead: 0,
+17386:                 qualifyingVehicles: 0
+17387:             };
+17388:         }
+17389: 
+17390:         let registry = readPersonnelTrainingRegistry();
+17391:         if (!registry.vehicles) registry.vehicles = {};
+17392: 
+17393:         const candidates = sortVehicleCheckboxesByBestArrival(
+17394:             getVehicleCheckboxSnapshot().filter(checkbox => {
+17395:                 return (
+17396:                     (!checkbox.disabled || checkbox.checked) &&
+17397:                     isArmedTrafficCarVehicleCheckbox(checkbox) &&
+17398:                     !!getMissionVehicleId(checkbox)
+17399:                 );
+17400:             })
+17401:         );
+17402: 
+17403:         const orderedCandidates = orderStrictPoliceTrainingCandidates(
+17404:             candidates,
+17405:             armedRequirements,
+17406:             registry
+17407:         );
+17408:         const verifiedIds = new Set();
+17409:         const now = Date.now();
+17410: 
+17411:         orderedCandidates.forEach(checkbox => {
+17412:             const vehicleId = getMissionVehicleId(checkbox);
+17413:             const entry = registry.vehicles?.[vehicleId];
+17414:             const cachedAt = Number(
+17415:                 mfLiveTrainingVerifyCache.get(vehicleId) || 0
+17416:             );
+17417: 
+17418:             if (
+17419:                 vehicleId &&
+17420:                 String(entry?.vehicleTypeId || '') === '25' &&
+17421:                 isAuthoritativeLivePoliceTrainingEntry(entry) &&
+17422:                 now - cachedAt <= MF_LIVE_TRAINING_VERIFY_CACHE_MS
+17423:             ) {
+17424:                 verifiedIds.add(vehicleId);
+17425:             }
+17426:         });
+17427: 
+17428:         const requirementsSatisfiedByVerified = () => {
+17429:             const verifiedCheckboxes = orderedCandidates.filter(checkbox => {
+17430:                 return verifiedIds.has(getMissionVehicleId(checkbox));
+17431:             });
+17432: 
+17433:             return getRemainingTrainedPersonnelRequirements(
+17434:                 armedRequirements,
+17435:                 verifiedCheckboxes,
+17436:                 registry
+17437:             ).every(requirement => requirement.remaining <= 0);
+17438:         };
+17439: 
+17440:         if (requirementsSatisfiedByVerified()) {
+17441:             return {
+17442:                 refreshed: false,
+17443:                 pagesRead: 0,
+17444:                 qualifyingVehicles: verifiedIds.size
+17445:             };
+17446:         }
+17447: 
+17448:         const unverified = orderedCandidates.filter(checkbox => {
+17449:             const vehicleId = getMissionVehicleId(checkbox);
+17450:             return vehicleId && !verifiedIds.has(vehicleId);
+17451:         });
+17452: 
+17453:         const hinted = unverified.filter(checkbox => {
+17454:             const entry = getRegistryEntryForMissionCheckbox(
+17455:                 checkbox,
+17456:                 registry
+17457:             ).entry;
+17458:             return getUnverifiedRegistryTrainingHintScore(
+17459:                 armedRequirements,
+17460:                 entry
+17461:             ) > 0;
+17462:         });
+17463:         const hintedSet = new Set(hinted);
+17464:         const pagesToRead = [
+17465:             ...hinted,
+17466:             ...unverified.filter(checkbox => !hintedSet.has(checkbox))
+17467:         ].slice(0, MF_LIVE_TRAINING_VERIFY_MAX_PAGES);
+17468: 
+17469:         let pagesRead = 0;
+17470:         let changed = false;
+17471: 
+17472:         for (
+17473:             let offset = 0;
+17474:             offset < pagesToRead.length;
+17475:             offset += MF_LIVE_TRAINING_VERIFY_BATCH_SIZE
+17476:         ) {
+17477:             const batch = pagesToRead.slice(
+17478:                 offset,
+17479:                 offset + MF_LIVE_TRAINING_VERIFY_BATCH_SIZE
+17480:             );
+
+===== SOURCE 17880-18180 =====
+17880:             ) {
+17881:                 break;
+17882:             }
+17883:         }
+17884: 
+17885:         return {
+17886:             refreshed: changed,
+17887:             pagesRead,
+17888:             verifiedOrdinaryVehicles:
+17889:                 countVerifiedOrdinary(),
+17890:             required:
+17891:                 ordinaryVehiclesRequired
+17892:         };
+17893:     }
+17894: 
+17895:     async function prepareTrainedPersonnelRegistryForRows(
+17896:         rows,
+17897:         source = 'UPDATE'
+17898:     ) {
+17899:         const requirements = [];
+17900: 
+17901:         (Array.isArray(rows) ? rows : []).forEach(row => {
+17902:             if (!row?.isTrainedPersonnelRequirement) return;
+17903:             (row.personnelTrainingRequirements || []).forEach(requirement => {
+17904:                 requirements.push(requirement);
+17905:             });
+17906:         });
+17907: 
+17908:         const irvRequirements = requirements.filter(requirement => {
+17909:             return requirement?.requirementType !==
+17910:                 'armed_response_atc_vehicle';
+17911:         });
+17912: 
+17913:         const armedResponseRequirements = requirements.filter(requirement => {
+17914:             return requirement?.requirementType ===
+17915:                 'armed_response_atc_vehicle';
+17916:         });
+17917: 
+17918:         const irv = await refreshPoliceInspectorRegistryFromLiveVehicles(
+17919:             irvRequirements,
+17920:             source
+17921:         );
+17922:         const armedResponse = await refreshArmedResponseRegistryFromLiveVehicles(
+17923:             armedResponseRequirements,
+17924:             source
+17925:         );
+17926: 
+17927:         return {
+17928:             irv,
+17929:             armedResponse
+17930:         };
+17931:     }
+17932: 
+17933:     async function preparePoliceVehicleSafetyForRows(
+17934:         rows,
+17935:         source = 'UPDATE'
+17936:     ) {
+17937:         const trained =
+17938:             await prepareTrainedPersonnelRegistryForRows(
+17939:                 rows,
+17940:                 source
+17941:             );
+17942: 
+17943:         const ordinary =
+17944:             await refreshOrdinaryPoliceRegistryFromLiveVehicles(
+17945:                 rows,
+17946:                 source
+17947:             );
+17948: 
+17949:         return {
+17950:             trained,
+17951:             ordinary
+17952:         };
+17953:     }
+17954: 
+17955:     function getRegistryTrainingCountsForCheckbox(
+17956:         checkbox,
+17957:         registry
+17958:     ) {
+17959:         const vehicleId =
+17960:             getMissionVehicleId(
+17961:                 checkbox
+17962:             );
+17963: 
+17964:         const registryMatch =
+17965:             getRegistryEntryForMissionCheckbox(
+17966:                 checkbox,
+17967:                 registry
+17968:             );
+17969: 
+17970:         const entry =
+17971:             registryMatch.entry;
+17972: 
+17973:         return {
+17974:             vehicleId,
+17975:             entry:
+17976:                 entry ||
+17977:                 null,
+17978:             trainingCounts:
+17979:                 entry &&
+17980:                 typeof entry.trainingCounts ===
+17981:                     'object'
+17982:                     ? entry.trainingCounts
+17983:                     : {}
+17984:         };
+17985:     }
+17986: 
+17987:     function getRemainingTrainedPersonnelRequirements(
+17988:         requirements,
+17989:         selectedCheckboxes,
+17990:         registry
+17991:     ) {
+17992:         const remaining =
+17993:             new Map();
+17994: 
+17995:         (
+17996:             Array.isArray(requirements)
+17997:                 ? requirements
+17998:                 : []
+17999:         ).forEach(requirement => {
+18000:             remaining.set(
+18001:                 requirement.code,
+18002:                 {
+18003:                     ...requirement,
+18004:                     remaining:
+18005:                         Math.max(
+18006:                             0,
+18007:                             parseInt(
+18008:                                 requirement.required,
+18009:                                 10
+18010:                             ) || 0
+18011:                         )
+18012:                 }
+18013:             );
+18014:         });
+18015: 
+18016:         (
+18017:             Array.isArray(
+18018:                 selectedCheckboxes
+18019:             )
+18020:                 ? selectedCheckboxes
+18021:                 : []
+18022:         ).forEach(checkbox => {
+18023:             const {
+18024:                 entry
+18025:             } =
+18026:                 getRegistryTrainingCountsForCheckbox(
+18027:                     checkbox,
+18028:                     registry
+18029:                 );
+18030: 
+18031:             remaining.forEach(
+18032:                 requirement => {
+18033:                     requirement.remaining =
+18034:                         Math.max(
+18035:                             0,
+18036:                             requirement.remaining -
+18037:                             getTrainingRequirementContribution(
+18038:                                 requirement,
+18039:                                 entry
+18040:                             )
+18041:                         );
+18042:                 }
+18043:             );
+18044:         });
+18045: 
+18046:         return Array.from(
+18047:             remaining.values()
+18048:         );
+18049:     }
+18050: 
+18051:     function areTrainedPersonnelRequirementsSatisfied(
+18052:         requirements
+18053:     ) {
+18054:         const registry =
+18055:             readPersonnelTrainingRegistry();
+18056: 
+18057:         const selected =
+18058:             getVehicleCheckboxSnapshot().filter(
+18059:                 checkbox => checkbox.checked
+18060:             );
+18061: 
+18062:         return getRemainingTrainedPersonnelRequirements(
+18063:             requirements,
+18064:             selected,
+18065:             registry
+18066:         ).every(
+18067:             requirement =>
+18068:                 requirement.remaining <= 0
+18069:         );
+18070:     }
+18071: 
+18072:     function selectVehiclesForTrainedPersonnelRequirements(
+18073:         requirements,
+18074:         source = 'UPDATE'
+18075:     ) {
+18076:         const registry =
+18077:             readPersonnelTrainingRegistry();
+18078: 
+18079:         const registryVehicleCount =
+18080:             Object.keys(
+18081:                 registry.vehicles ||
+18082:                 {}
+18083:             ).length;
+18084: 
+18085:         const selected =
+18086:             getVehicleCheckboxSnapshot().filter(
+18087:                 checkbox => checkbox.checked
+18088:             );
+18089: 
+18090:         let remaining =
+18091:             getRemainingTrainedPersonnelRequirements(
+18092:                 requirements,
+18093:                 selected,
+18094:                 registry
+18095:             );
+18096: 
+18097:         const initiallySatisfied =
+18098:             remaining.every(
+18099:                 requirement =>
+18100:                     requirement.remaining <= 0
+18101:             );
+18102: 
+18103:         if (initiallySatisfied) {
+18104:             return {
+18105:                 satisfied:
+18106:                     true,
+18107:                 selectedVehicles:
+18108:                     0,
+18109:                 remaining,
+18110:                 registryVehicleCount
+18111:             };
+18112:         }
+18113: 
+18114:         const readyCandidates =
+18115:             sortVehicleCheckboxesByBestArrival(
+18116:                 getVehicleCheckboxSnapshot().filter(checkbox => {
+18117:                     if (
+18118:                         checkbox.disabled ||
+18119:                         checkbox.checked
+18120:                     ) {
+18121:                         return false;
+18122:                     }
+18123: 
+18124:                     const {
+18125:                         entry
+18126:                     } =
+18127:                         getRegistryTrainingCountsForCheckbox(
+18128:                             checkbox,
+18129:                             registry
+18130:                         );
+18131: 
+18132:                     return !!entry;
+18133:                 })
+18134:             );
+18135: 
+18136:         let selectedVehicles = 0;
+18137:         const used =
+18138:             new Set();
+18139: 
+18140:         while (
+18141:             remaining.some(
+18142:                 requirement =>
+18143:                     requirement.remaining > 0
+18144:             )
+18145:         ) {
+18146:             let bestCheckbox = null;
+18147:             let bestScore = 0;
+18148: 
+18149:             readyCandidates.forEach(
+18150:                 checkbox => {
+18151:                     if (
+18152:                         used.has(checkbox)
+18153:                     ) {
+18154:                         return;
+18155:                     }
+18156: 
+18157:                     const {
+18158:                         entry
+18159:                     } =
+18160:                         getRegistryTrainingCountsForCheckbox(
+18161:                             checkbox,
+18162:                             registry
+18163:                         );
+18164: 
+18165:                     const score =
+18166:                         remaining.reduce(
+18167:                             (
+18168:                                 total,
+18169:                                 requirement
+18170:                             ) => {
+18171:                                 if (
+18172:                                     requirement.remaining <=
+18173:                                     0
+18174:                                 ) {
+18175:                                     return total;
+18176:                                 }
+18177: 
+18178:                                 return total +
+18179:                                     Math.min(
+18180:                                         requirement.remaining,
