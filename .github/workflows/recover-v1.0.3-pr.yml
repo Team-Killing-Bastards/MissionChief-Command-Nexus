@@ -13,10 +13,91 @@ permissions:
   issues: write
 
 jobs:
+  repair_tag:
+    name: Recreate v1.0.3 at clean main
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'docs/issue-33-validation'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out clean main
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Verify clean release target and recreate tag
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git fetch origin main --tags --force
+          git checkout -B main origin/main
+
+          VERSION="$(
+            node scripts/validate-userscript.mjs --print-version
+          )"
+
+          if [[ "${VERSION}" != '1.0.3' ]]; then
+            echo "Current main reports ${VERSION}, expected 1.0.3."
+            exit 1
+          fi
+
+          BLOCKED_FILES="$(
+            {
+              find .github/workflows \
+                -maxdepth 1 \
+                -type f \
+                \( -name 'temporary-*.yml' -o -name 'temporary-*.yaml' \) \
+                -print 2>/dev/null || true
+              find .github/workflows \
+                -maxdepth 1 \
+                -type f \
+                \( -name 'recover-v1.0.3-*.yml' -o -name 'recover-v1.0.3-*.yaml' \) \
+                -print 2>/dev/null || true
+              find .github/release-triggers \
+                -maxdepth 1 \
+                -type f \
+                -name '*v1.0.3*' \
+                -print 2>/dev/null || true
+            } | sort -u
+          )"
+
+          if [[ -n "${BLOCKED_FILES}" ]]; then
+            echo "Main still contains one-time recovery files:"
+            echo "${BLOCKED_FILES}"
+            exit 1
+          fi
+
+          TARGET_SHA="$(git rev-parse HEAD)"
+
+          if git show-ref --tags --verify --quiet refs/tags/v1.0.3; then
+            git tag -d v1.0.3
+            git push origin ':refs/tags/v1.0.3'
+          fi
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -a v1.0.3 "${TARGET_SHA}" \
+            -m 'MissionChief Command Nexus 1.0.3 clean release target'
+          git push origin refs/tags/v1.0.3
+
+          {
+            echo '### Clean v1.0.3 tag recreated'
+            echo "- Commit: \`${TARGET_SHA}\`"
+            echo '- Version: `1.0.3`'
+            echo '- One-time recovery files: none'
+          } >> "${GITHUB_STEP_SUMMARY}"
+
   publish:
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.head.ref == 'docs/issue-33-validation'
+    needs:
+      - repair_tag
     uses: ./.github/workflows/release.yml
     with:
       operation: publish-release
@@ -30,6 +111,7 @@ jobs:
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.head.ref == 'docs/issue-33-validation'
     needs:
+      - repair_tag
       - publish
     runs-on: ubuntu-latest
     permissions:
@@ -39,19 +121,20 @@ jobs:
       - name: Comment on Issue #33
         env:
           GH_TOKEN: ${{ github.token }}
-          RESULT: ${{ needs.publish.result }}
+          REPAIR_RESULT: ${{ needs.repair_tag.result }}
+          PUBLISH_RESULT: ${{ needs.publish.result }}
           RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
         shell: bash
         run: |
           set -euo pipefail
 
-          if [[ "${RESULT}" == 'success' ]]; then
+          if [[ "${REPAIR_RESULT}" == 'success' && "${PUBLISH_RESULT}" == 'success' ]]; then
             cat > report.md <<EOF
           ## Permanent v1.0.3 recovery workflow passed
 
-          The repaired permanent release workflow completed all mandatory stages:
+          The clean tag repair and repaired permanent release workflow completed all mandatory stages:
 
-          - release context and immutable tag-source validation;
+          - contaminated tag replaced with a clean \`main\` release target;
           - repository and userscript validation;
           - partial-asset reconciliation and GitHub Release publication;
           - published asset download and SHA-256 verification;
@@ -64,14 +147,16 @@ jobs:
             cat > report.md <<EOF
           ## Permanent v1.0.3 recovery workflow failed
 
-          Result: \`${RESULT}\`
-
-          Actions evidence: ${RUN_URL}
+          - Clean-tag repair: \`${REPAIR_RESULT}\`
+          - Permanent publication workflow: \`${PUBLISH_RESULT}\`
+          - Actions evidence: ${RUN_URL}
           EOF
           fi
 
-          gh issue comment 33 --body-file report.md
+          gh issue comment 33 \
+            --repo "${GITHUB_REPOSITORY}" \
+            --body-file report.md
 
-      - name: Fail when publication failed
-        if: needs.publish.result != 'success'
+      - name: Fail when recovery failed
+        if: needs.repair_tag.result != 'success' || needs.publish.result != 'success'
         run: exit 1
