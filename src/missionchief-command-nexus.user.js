@@ -29401,16 +29401,9 @@ let sessionRuntimeTicker = null;
 
                 if (
                     rowProgressSeen &&
-                    signatureStableFor >= 700 &&
-                    !loadingIndicatorVisible
-                ) {
-                    pageCompleted = true;
-                    break;
-                }
-
-                if (
                     controlTransitionSeen &&
                     pageElapsed >= 800 &&
+                    signatureStableFor >= 700 &&
                     !loadingIndicatorVisible
                 ) {
                     pageCompleted = true;
