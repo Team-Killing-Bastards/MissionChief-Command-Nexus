@@ -1,0 +1,591 @@
+06880:         registerToolLifecycleCleanup(() => {
+06881:             dragging = false;
+06882:             handle.removeEventListener('mousedown', onMouseDown);
+06883:             removeDocumentListeners();
+06884:         });
+06885:     }
+06886: 
+06887:     function cleanText(text) {
+06888:         return String(text || '')
+06889:             .replace(/🚑|🚒|🚓|🚁|🚤|🏥|🔥|🚨|☢️|🤿|🦺|🎖️|🚔|🚛|🧯|🚐|🚚|🚙|🚗|🚜|🚢|🛟|🎯|🏣|🧑‍🚒|🚌|🚒🪜|🚔🔫|🚔🥅|🚔🐎|⚠️|🛻|🟤|🛥️|✈️|🪜|📡|🛠️|🌊|🟡|🏔️|🐕|💣|❤️|💧|👷|🫧|1️⃣|2️⃣/g, '')
+06890:             .replace(/\s+/g, ' ')
+06891:             .trim();
+06892:     }
+06893: 
+06894:     function createCallsignBase(stationName) {
+06895:         return cleanText(stationName)
+06896:             .replace(/\s+AO Station$/i, '')
+06897:             .replace(/\s+Ambulance Station$/i, '')
+06898:             .replace(/\s+Fire Station$/i, '')
+06899:             .replace(/\s+Police Station$/i, '')
+06900:             .replace(/\s+Station$/i, '')
+06901:             .trim();
+06902:     }
+06903: 
+06904:     function detectStationType(name) {
+06905:         const n = cleanText(name).toUpperCase();
+06906: 
+06907:         if (n.includes('AIRMED') || n.includes('AIR AMB')) return 'AIR';
+06908:         if (n.includes('AIRPORT')) return 'AIRFIELD';
+06909:         if (n.includes('BOMB') || n.includes('EOD')) return 'EOD';
+06910:         if (n.includes('RECOVERY')) return 'RECOVERY';
+06911:         if (n.includes('SAR')) return 'SAR';
+06912:         if (n.includes('RNLI') || n.includes('-LB') || n.includes('LIFEBOAT')) return 'RNLI';
+06913:         if (n.includes('-CG') || n.includes('COASTGUARD')) return 'COASTGUARD';
+06914:         if (n.includes('-PS') || n.includes('POLICE')) return 'POLICE';
+06915:         if (n.includes('-AS') || n.includes('AO STATION') || n.includes('AMBULANCE')) return 'AMBULANCE';
+06916:         if (n.includes('-FS') || n.includes('FIRE')) return 'FIRE';
+06917: 
+06918:         return 'OTHER';
+06919:     }
+06920: 
+06921:     function getVehicleIdFromHref(href) {
+06922:         const match = String(href || '').match(/\/vehicles\/(\d+)/);
+06923:         return match ? match[1] : '';
+06924:     }
+06925: 
+06926:     function makeVehicleName(station, vehicleType, count) {
+06927:         const info = VEHICLE_INFO[vehicleType];
+06928:         if (!info) return null;
+06929:         return `${info.icon ? info.icon + ' ' : ''}${station.callsignBase}-${info.code}-${count}`;
+06930:     }
+06931: 
+06932:     function refreshStations() {
+06933:         if (PERSONNEL_STATE.running) {
+06934:             log('Personnel Assignment is currently running. Stop it before refreshing Unit Naming.', 'error');
+06935:             return;
+06936:         }
+06937: 
+06938:         if (STATE.running) {
+06939:             log('Cannot refresh while running. Stop first.', 'error');
+06940:             return;
+06941:         }
+06942: 
+06943:         setStatus('Refreshing stations...');
+06944:         log('Refreshing station list...', 'info');
+06945: 
+06946:         const stationLinks = [...document.querySelectorAll('a.lightbox-open.list-group-item.active[href^="/buildings/"]')];
+06947: 
+06948:         STATE.stations = stationLinks.map((link, index) => {
+06949:             const displayName = cleanText(link.textContent);
+06950:             return {
+06951:                 index,
+06952:                 href: link.getAttribute('href'),
+06953:                 displayName,
+06954:                 callsignBase: createCallsignBase(link.textContent),
+06955:                 stationType: detectStationType(displayName)
+06956:             };
+06957:         });
+06958: 
+06959:         populateStartDropdown();
+06960: 
+06961:         setStatus('Ready');
+06962:         setProgress(0, STATE.filteredStations.length);
+06963: 
+06964:         log(`Stations found: ${STATE.stations.length}`, 'info');
+06965:         log(`Matching filter: ${STATE.filteredStations.length}`, 'info');
+06966: 
+06967:         if (STATE.filteredStations.length) {
+06968:             log(`First match: ${STATE.filteredStations[0].displayName}`, 'info');
+06969:             log(`Last match : ${STATE.filteredStations[STATE.filteredStations.length - 1].displayName}`, 'info');
+06970:         }
+06971:     }
+06972: 
+06973:     function populateStartDropdown() {
+06974:         const select = document.querySelector('#mc-namer-startfrom');
+06975:         if (!select) return;
+06976: 
+06977:         const selectedType = document.querySelector('#mc-namer-station-type')?.value || 'ALL';
+06978: 
+06979:         STATE.filteredStations = STATE.stations.filter(station => {
+06980:             return selectedType === 'ALL' || station.stationType === selectedType;
+06981:         });
+06982: 
+06983:         select.innerHTML = '';
+06984: 
+06985:         if (!STATE.filteredStations.length) {
+06986:             select.innerHTML = `<option value="">No matching stations found</option>`;
+06987:             setProgress(0, 0);
+06988:             return;
+06989:         }
+06990: 
+06991:         const firstOption = document.createElement('option');
+06992:         firstOption.value = STATE.filteredStations[0].href;
+06993:         firstOption.textContent = 'Start from first matching station';
+06994:         select.appendChild(firstOption);
+06995: 
+06996:         STATE.filteredStations.forEach(station => {
+06997:             const option = document.createElement('option');
+06998:             option.value = station.href;
+06999:             option.textContent = `${station.displayName} [${STATION_TYPES[station.stationType] || station.stationType}]`;
+07000:             select.appendChild(option);
+07001:         });
+07002: 
+07003:         setProgress(0, STATE.filteredStations.length);
+07004:     }
+07005: 
+07006:     function startRun() {
+07007:         if (PERSONNEL_STATE.running) {
+07008:             log('Personnel Assignment is currently running. Stop it before starting Unit Naming.', 'error');
+07009:             return;
+07010:         }
+07011: 
+07012:         if (STATION_STATE.running) {
+07013:             log('Station Naming is currently running. Stop it before starting Unit Naming.', 'error');
+07014:             return;
+07015:         }
+07016: 
+07017:         if (STATE.running) {
+07018:             log('Already running.', 'debug');
+07019:             return;
+07020:         }
+07021: 
+07022:         if (!STATE.filteredStations.length) {
+07023:             log('No matching stations loaded. Press Refresh Stations first.', 'error');
+07024:             return;
+07025:         }
+07026: 
+07027:         const selectedHref = document.querySelector('#mc-namer-startfrom').value;
+07028:         const startIndex = STATE.filteredStations.findIndex(station => station.href === selectedHref);
+07029: 
+07030:         if (startIndex < 0) {
+07031:             log(`Selected start station not found: ${selectedHref}`, 'error');
+07032:             return;
+07033:         }
+07034: 
+07035:         STATE.mode = document.querySelector('#mc-namer-mode')?.value || 'all';
+07036:         STATE.running = true;
+07037:         STATE.paused = false;
+07038:         STATE.stopped = false;
+07039:         STATE.stationIndex = startIndex;
+07040:         STATE.renamedCount = 0;
+07041:         STATE.skippedCount = 0;
+07042:         const runId = ++STATE.runId;
+07043: 
+07044:         updateCounters();
+07045:         document.querySelector('#mc-namer-pause').textContent = 'Pause';
+07046: 
+07047:         log(`Mode: ${STATE.mode === 'single' ? 'Selected station only' : 'All matching stations'}`, 'info');
+07048:         log(`Station type: ${STATION_TYPES[document.querySelector('#mc-namer-station-type').value]}`, 'info');
+07049:         log(`Starting from: ${STATE.filteredStations[startIndex].displayName}`, 'info');
+07050: 
+07051:         processStations(runId).catch(error => {
+07052:             if (runId !== STATE.runId) return;
+07053:             log(`Unit Naming stopped after an unexpected error: ${error?.message || error}`, 'error');
+07054:             debug(error?.stack || String(error));
+07055:             STATE.stopped = true;
+07056:             setStatus('Error');
+07057:         });
+07058:     }
+07059: 
+07060:     function togglePause() {
+07061:         if (!STATE.running) return;
+07062: 
+07063:         STATE.paused = !STATE.paused;
+07064:         document.querySelector('#mc-namer-pause').textContent = STATE.paused ? 'Resume' : 'Pause';
+07065:         setStatus(STATE.paused ? 'Paused' : 'Running');
+07066:         log(STATE.paused ? 'Paused.' : 'Resumed.', 'debug');
+07067:     }
+07068: 
+07069:     function stopRun() {
+07070:         if (!STATE.running) return;
+07071: 
+07072:         STATE.stopped = true;
+07073:         STATE.paused = false;
+07074:         document.querySelector('#mc-namer-pause').textContent = 'Pause';
+07075:         setStatus('Stopping...');
+07076:         log('Stop requested. The current safe step will finish, then the run will close.', 'error');
+07077:     }
+07078: 
+07079:     function toggleDebug() {
+07080:         STATE.debug = !STATE.debug;
+07081: 
+07082:         document.querySelector('#mc-namer-debug').textContent = STATE.debug ? 'Debug: ON' : 'Debug: OFF';
+07083:         log(`Debug ${STATE.debug ? 'enabled' : 'disabled'}.`, 'debug');
+07084:     }
+07085: 
+07086:     function clearLog() {
+07087:         clearBoundedToolLog(getToolElementById('mc-namer-log'));
+07088:     }
+07089: 
+07090:     async function processStations(runId) {
+07091:         try {
+07092:             while (STATE.stationIndex < STATE.filteredStations.length) {
+07093:                 if (STATE.stopped || runId !== STATE.runId) break;
+07094: 
+07095:                 await waitIfPaused(runId);
+07096:                 if (STATE.stopped || runId !== STATE.runId) break;
+07097: 
+07098:                 const station = STATE.filteredStations[STATE.stationIndex];
+07099: 
+07100:                 setStatus('Opening station');
+07101:                 setStation(station.displayName);
+07102:                 setVehicle('None');
+07103:                 setProgress(STATE.stationIndex, STATE.filteredStations.length);
+07104: 
+07105:                 log(`Station: ${station.displayName}`, 'station');
+07106: 
+07107:                 const stationLink = document.querySelector(`a.lightbox-open.list-group-item.active[href="${station.href}"]`);
+07108: 
+07109:                 if (!stationLink) {
+07110:                     log(`Station link not found, skipped: ${station.displayName}`, 'error');
+07111:                     STATE.stationIndex++;
+07112:                     continue;
+07113:                 }
+07114: 
+07115:                 stationLink.click();
+07116:                 const iframe = await waitForStationIframe(station.href);
+07117: 
+07118:                 if (!iframe) {
+07119:                     log(`Station iframe not found, skipped: ${station.displayName}`, 'error');
+07120:                     STATE.skippedCount++;
+07121:                     updateCounters();
+07122:                     await closeStationModal();
+07123:                     STATE.stationIndex++;
+07124:                     continue;
+07125:                 }
+07126: 
+07127:                 const vehicleTableReady = await waitForVehicleTable(iframe);
+07128: 
+07129:                 if (!vehicleTableReady) {
+07130:                     log(`Vehicle table did not load, skipped: ${station.displayName}`, 'error');
+07131:                     STATE.skippedCount++;
+07132:                     updateCounters();
+07133:                     await closeStationModal();
+07134:                     STATE.stationIndex++;
+07135:                     continue;
+07136:                 }
+07137: 
+07138:                 await processStationVehicleQueue(iframe, station);
+07139:                 await closeStationModal();
+07140: 
+07141:                 if (STATE.mode === 'single') {
+07142:                     log('Single station mode complete.', 'done');
+07143:                     break;
+07144:                 }
+07145: 
+07146:                 STATE.stationIndex++;
+07147:             }
+07148:         } finally {
+07149:             if (runId !== STATE.runId) return;
+07150: 
+07151:             STATE.running = false;
+07152:             STATE.paused = false;
+07153:             document.querySelector('#mc-namer-pause').textContent = 'Pause';
+07154: 
+07155:             if (STATE.stopped) {
+07156:                 setStatus('Stopped');
+07157:                 log(`Stopped. Renamed ${STATE.renamedCount}. Skipped ${STATE.skippedCount}.`, 'error');
+07158:             } else {
+07159:                 setStatus('Finished');
+07160:                 setStation('None');
+07161:                 setVehicle('None');
+07162:                 setProgress(
+07163:                     STATE.mode === 'single' ? 1 : STATE.filteredStations.length,
+07164:                     STATE.mode === 'single' ? 1 : STATE.filteredStations.length
+07165:                 );
+07166:                 log(`Finished. Renamed ${STATE.renamedCount}. Skipped ${STATE.skippedCount}.`, 'done');
+07167:             }
+07168:         }
+07169:     }
+07170: 
+07171:     async function waitForStationIframe(stationHref) {
+07172:         const expectedHref = String(stationHref || '');
+07173:         const expectedBuildingId = getBuildingIdFromHref(expectedHref);
+07174: 
+07175:         for (let i = 0; i < 80; i++) {
+07176:             if (STATE.stopped) return null;
+07177: 
+07178:             const candidates = [
+07179:                 ...document.querySelectorAll(
+07180:                     'iframe.lightbox_iframe, iframe#lssmv4-redesign-lightbox-iframe, .vm--modal iframe[src*="/buildings/"]'
+07181:                 )
+07182:             ];
+07183: 
+07184:             for (const iframe of candidates.reverse()) {
+07185:                 try {
+07186:                     const doc = iframe.contentDocument;
+07187:                     if (!doc) continue;
+07188: 
+07189:                     const currentPath = iframe.contentWindow?.location?.pathname || '';
+07190:                     const sourcePath = iframe.getAttribute('src') || '';
+07191:                     const currentBuildingId = getBuildingIdFromHref(currentPath || sourcePath);
+07192: 
+07193:                     const exactStationMatch = Boolean(
+07194:                         expectedHref && (
+07195:                             currentPath.startsWith(expectedHref) ||
+07196:                             sourcePath.startsWith(expectedHref) ||
+07197:                             sourcePath.includes(expectedHref)
+07198:                         )
+07199:                     );
+07200: 
+07201:                     const buildingIdMatch = Boolean(
+07202:                         expectedBuildingId && currentBuildingId === expectedBuildingId
+07203:                     );
+07204: 
+07205:                     const documentMatch = Boolean(
+07206:                         expectedHref && (
+07207:                             doc.querySelector(`#vehicle_table`) ||
+07208:                             doc.querySelector(`a[href="${expectedHref}/edit"]`) ||
+07209:                             doc.querySelector(`a[href="${expectedHref}/move"]`) ||
+07210:                             doc.querySelector(`form[action="${expectedHref}"]`)
+07211:                         )
+07212:                     );
+07213: 
+07214:                     if (exactStationMatch || buildingIdMatch || documentMatch) {
+07215:                         debug(`Station iframe found: ${currentPath || sourcePath || 'unknown path'}`);
+07216:                         return iframe;
+07217:                     }
+07218:                 } catch (error) {
+07219:                     debug(`Station iframe access retry: ${error?.message || error}`);
+07220:                 }
+07221:             }
+07222: 
+07223:             await sleep(250);
+07224:         }
+07225: 
+07226:         return null;
+07227:     }
+07228: 
+07229:     async function waitForVehicleTable(iframe) {
+07230:         for (let i = 0; i < 80; i++) {
+07231:             if (STATE.stopped) return false;
+07232: 
+07233:             try {
+07234:                 const doc = iframe.contentDocument;
+07235:                 if (doc && doc.querySelector('#vehicle_table tbody tr')) {
+07236:                     await sleep(300);
+07237:                     return true;
+07238:                 }
+07239:             } catch (e) {}
+07240: 
+07241:             await sleep(250);
+07242:         }
+07243:         return false;
+07244:     }
+07245: 
+07246:     async function waitForEditPage(iframe) {
+07247:         for (let i = 0; i < 80; i++) {
+07248:             if (STATE.stopped) return false;
+07249: 
+07250:             try {
+07251:                 const doc = iframe.contentDocument;
+07252:                 if (doc && doc.querySelector('#vehicle_caption')) {
+07253:                     await sleep(300);
+07254:                     return true;
+07255:                 }
+07256:             } catch (e) {}
+07257: 
+07258:             await sleep(250);
+07259:         }
+07260:         return false;
+07261:     }
+07262: 
+07263:     function getVehicleQueueFromTable(doc) {
+07264:         return [...doc.querySelectorAll('#vehicle_table tbody tr')]
+07265:             .map((row, index) => {
+07266:                 const img = row.querySelector('img[vehicle_type_id]');
+07267:                 const vehicleTypeId = img?.getAttribute('vehicle_type_id') || '';
+07268:                 const vehicleType = TYPE_ID_TO_VEHICLE_TYPE[vehicleTypeId] || '';
+07269: 
+07270:                 const allLinks = [...row.querySelectorAll('a[href^="/vehicles/"]')];
+07271: 
+07272:                 const editLink = allLinks.find(a => {
+07273:                     const href = a.getAttribute('href') || '';
+07274:                     return href.endsWith('/edit');
+07275:                 });
+07276: 
+07277:                 const vehicleLink = allLinks.find(a => {
+07278:                     const href = a.getAttribute('href') || '';
+07279:                     return !href.endsWith('/edit') && !href.includes('/zuweisung');
+07280:                 });
+07281: 
+07282:                 const vehicleHref = vehicleLink?.getAttribute('href') || '';
+07283:                 const editHref = editLink?.getAttribute('href') || '';
+07284:                 const vehicleId = getVehicleIdFromHref(editHref || vehicleHref);
+07285:                 const currentName = cleanText(vehicleLink?.textContent || '');
+07286: 
+07287:                 return {
+07288:                     tableIndex: index,
+07289:                     vehicleId,
+07290:                     vehicleTypeId,
+07291:                     vehicleType,
+07292:                     currentName,
+07293:                     vehicleHref,
+07294:                     editHref
+07295:                 };
+07296:             })
+07297:             .filter(v => v.editHref && v.vehicleId);
+07298:     }
+07299: 
+07300:     async function processStationVehicleQueue(iframe, station) {
+07301:         setStatus('Building vehicle queue');
+07302: 
+07303:         const doc = iframe.contentDocument;
+07304:         const queue = getVehicleQueueFromTable(doc);
+07305: 
+07306:         debug(`Vehicle queue built for ${station.displayName}: ${queue.length}`);
+07307: 
+07308:         if (!queue.length) {
+07309:             log(`No vehicles found in ${station.displayName}.`, 'debug');
+07310:             return;
+07311:         }
+07312: 
+07313:         const counts = {};
+07314: 
+07315:         for (const item of queue) {
+07316:             if (STATE.stopped) return;
+07317: 
+07318:             await waitIfPaused();
+07319: 
+07320:             if (!item.vehicleType) {
+07321:                 log(`Unknown vehicle_type_id skipped: ${item.vehicleTypeId} | ${item.editHref}`, 'error');
+07322:                 STATE.skippedCount++;
+07323:                 updateCounters();
+07324:                 continue;
+07325:             }
+07326: 
+07327:             const info = VEHICLE_INFO[item.vehicleType];
+07328: 
+07329:             if (!info) {
+07330:                 log(`No naming rule skipped: "${item.vehicleType}"`, 'error');
+07331:                 STATE.skippedCount++;
+07332:                 updateCounters();
+07333:                 continue;
+07334:             }
+07335: 
+07336:             counts[item.vehicleType] = (counts[item.vehicleType] || 0) + 1;
+07337: 
+07338:             const newName = makeVehicleName(station, item.vehicleType, counts[item.vehicleType]);
+07339: 
+07340:             setStatus('Opening edit page');
+07341:             setVehicle(item.editHref);
+07342: 
+07343:             iframe.contentWindow.location.href = item.editHref;
+07344: 
+07345:             await waitForEditPage(iframe);
+07346: 
+07347:             const editDoc = iframe.contentDocument;
+07348:             const captionInput = editDoc.querySelector('#vehicle_caption');
+07349:             const saveBtn = editDoc.querySelector('input[type="submit"][value="Save"], button[type="submit"]');
+07350: 
+07351:             if (!captionInput || !saveBtn) {
+07352:                 log(`Caption or Save missing: ${item.editHref}`, 'error');
+07353:                 STATE.skippedCount++;
+07354:                 updateCounters();
+07355:                 continue;
+07356:             }
+07357: 
+07358:             const before = captionInput.value;
+07359: 
+07360:             setStatus('Saving vehicle');
+07361:             setVehicle(newName);
+07362: 
+07363:             captionInput.value = newName;
+07364:             captionInput.dispatchEvent(new Event('input', { bubbles: true }));
+07365:             captionInput.dispatchEvent(new Event('change', { bubbles: true }));
+07366: 
+07367:             log(`BEFORE: ${before}`, 'before');
+07368:             log(`AFTER : ${newName}`, 'after');
+07369: 
+07370:             saveBtn.click();
+07371: 
+07372:             STATE.renamedCount++;
+07373:             updateCounters();
+07374: 
+07375:             await sleep(700);
+07376:         }
+07377: 
+07378:         iframe.contentWindow.location.href = station.href;
+07379:         await waitForVehicleTable(iframe);
+07380:         await sleep(300);
+07381:     }
+07382: 
+07383:     async function closeStationModal() {
+07384:         setStatus('Closing station');
+07385: 
+07386:         const closeBtn = document.querySelector('span.lightbox-close');
+07387: 
+07388:         if (closeBtn) {
+07389:             closeBtn.click();
+07390:             await sleep(800);
+07391:         } else {
+07392:             log('Close button not found.', 'error');
+07393:         }
+07394:     }
+07395: 
+07396:     async function waitIfPaused(runId = STATE.runId) {
+07397:         while (STATE.paused && !STATE.stopped && runId === STATE.runId) {
+07398:             await sleep(300);
+07399:         }
+07400:     }
+07401: 
+07402:     function setStatus(text) {
+07403:         const el = getToolElementById('mc-namer-status');
+07404:         if (el) el.textContent = text;
+07405:     }
+07406: 
+07407:     function setStation(text) {
+07408:         const el = getToolElementById('mc-namer-station');
+07409:         if (el) el.textContent = text;
+07410:     }
+07411: 
+07412:     function setVehicle(text) {
+07413:         const el = getToolElementById('mc-namer-vehicle');
+07414:         if (el) el.textContent = text;
+07415:     }
+07416: 
+07417:     function setProgress(done, total) {
+07418:         const el = getToolElementById('mc-namer-progress');
+07419:         if (el) el.textContent = `${done} / ${total}`;
+07420:     }
+07421: 
+07422:     function updateCounters() {
+07423:         const renamed = getToolElementById('mc-namer-renamed');
+07424:         const skipped = getToolElementById('mc-namer-skipped');
+07425: 
+07426:         if (renamed) renamed.textContent = String(STATE.renamedCount);
+07427:         if (skipped) skipped.textContent = String(STATE.skippedCount);
+07428:     }
+07429: 
+07430:     function log(message, type = 'info') {
+07431:         const logBox = getToolElementById('mc-namer-log');
+07432:         if (!logBox) return;
+07433: 
+07434:         const line = document.createElement('div');
+07435:         line.className = `mc-log-${type}`;
+07436:         line.textContent = message;
+07437:         appendBoundedToolLog(logBox, line);
+07438:     }
+07439: 
+07440:     function debug(message) {
+07441:         if (!STATE.debug) return;
+07442:         log(`[DEBUG] ${message}`, 'debug');
+07443:     }
+07444: 
+07445:     const handlePersonnelRegistryStorage = event => {
+07446:         if (event?.key !== PERSONNEL_TRAINING_REGISTRY_STORAGE_KEY) return;
+07447:         if (PERSONNEL_TRAINING_REGISTRY_DIRTY) return;
+07448:         PERSONNEL_TRAINING_REGISTRY_CACHE = null;
+07449:     };
+07450: 
+07451:     const handleToolPageHide = event => {
+07452:         flushPersonnelTrainingRegistry(true);
+07453:         if (event?.persisted) return;
+07454:         runToolLifecycleCleanup();
+07455:     };
+07456: 
+07457:     window.addEventListener('storage', handlePersonnelRegistryStorage);
+07458:     window.addEventListener('pagehide', handleToolPageHide);
+07459:     registerToolLifecycleCleanup(() => {
+07460:         window.removeEventListener('storage', handlePersonnelRegistryStorage);
+07461:         window.removeEventListener('pagehide', handleToolPageHide);
+07462:     });
+07463: 
+07464:     initWhenReady();
+07465: 
+07466: })();
+07467:     } catch (error) {
+07468:         console.error('[MissionChief Complete Tools] Naming/Personnel module startup failed:', error);
+07469:     }
+07470: 
