@@ -6,28 +6,29 @@ on:
       - '.github/workflows/validate-userscript.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   inspect:
-    name: Inspect current userscript paths
+    name: Build targeted source inspection report
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
-      - name: Check out repository
+      - name: Check out inspection branch
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          ref: ${{ github.head_ref }}
 
-      - name: Print targeted source contexts
+      - name: Build targeted report
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
 
-          path = Path('src/missionchief-command-nexus.user.js')
-          lines = path.read_text(encoding='utf-8').splitlines()
+          source = Path('src/missionchief-command-nexus.user.js')
+          lines = source.read_text(encoding='utf-8').splitlines()
 
           groups = {
               'ORDINARY POLICE': [
@@ -49,29 +50,48 @@ jobs:
               ],
           }
 
+          report = []
           for title, terms in groups.items():
-              print(f'\n===== {title} =====')
+              report.append(f'===== {title} =====')
               hits = []
               for idx, line in enumerate(lines):
                   lowered = line.lower()
                   if any(term.lower() in lowered for term in terms):
                       hits.append(idx)
 
-              # Merge nearby windows and keep the output focused.
               windows = []
               for idx in hits:
-                  start = max(0, idx - 10)
-                  end = min(len(lines), idx + 11)
-                  if windows and start <= windows[-1][1] + 3:
+                  start = max(0, idx - 14)
+                  end = min(len(lines), idx + 15)
+                  if windows and start <= windows[-1][1] + 4:
                       windows[-1] = (windows[-1][0], max(windows[-1][1], end))
                   else:
                       windows.append((start, end))
 
-              for number, (start, end) in enumerate(windows[:24], 1):
-                  print(f'\n--- context {number}: lines {start + 1}-{end} ---')
+              for number, (start, end) in enumerate(windows[:40], 1):
+                  report.append(f'\n--- context {number}: lines {start + 1}-{end} ---')
                   for line_no in range(start, end):
-                      print(f'{line_no + 1:05d}: {lines[line_no]}')
+                      report.append(f'{line_no + 1:05d}: {lines[line_no]}')
 
-              if len(windows) > 24:
-                  print(f'... {len(windows) - 24} additional context windows omitted ...')
+              if len(windows) > 40:
+                  report.append(f'... {len(windows) - 40} additional context windows omitted ...')
+              report.append('')
+
+          out = Path('docs/inspection-police-personnel-atv.txt')
+          out.parent.mkdir(parents=True, exist_ok=True)
+          out.write_text('\n'.join(report) + '\n', encoding='utf-8')
           PY
+
+      - name: Commit inspection report to branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/inspection-police-personnel-atv.txt
+          if git diff --cached --quiet; then
+            echo 'Inspection report is unchanged.'
+            exit 0
+          fi
+          git commit -m 'Add police and personnel source inspection report'
+          git push origin "HEAD:${{ github.head_ref }}"
