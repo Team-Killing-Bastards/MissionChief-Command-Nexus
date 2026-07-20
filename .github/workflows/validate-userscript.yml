@@ -1,66 +1,50 @@
-name: Build and validate v1.0.5
+name: Validate userscript
 
 on:
   pull_request:
     paths:
-      - 'scripts/apply-v1.0.5-police-register-atv-fixes.py'
+      - 'src/**'
+      - 'scripts/validate-userscript.mjs'
       - '.github/workflows/validate-userscript.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'scripts/validate-userscript.mjs'
+      - '.github/workflows/validate-userscript.yml'
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: build-v1-0-5-${{ github.ref }}
-  cancel-in-progress: false
+  group: validate-userscript-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build:
-    name: Apply, validate and commit v1.0.5
+  validate:
+    name: Userscript validation
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
 
     steps:
-      - name: Check out feature branch
+      - name: Check out repository
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          ref: ${{ github.head_ref }}
 
       - name: Set up Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
-          node-version: '24'
-          package-manager-cache: false
+          node-version: '22'
 
-      - name: Apply deterministic patch
-        run: python3 scripts/apply-v1.0.5-police-register-atv-fixes.py
+      - name: Validate JavaScript syntax
+        run: node --check src/missionchief-command-nexus.user.js
 
-      - name: Restore permanent workflow and remove builder files
-        shell: bash
-        run: |
-          set -euo pipefail
-          git fetch origin main --force
-          git checkout origin/main -- .github/workflows/validate-userscript.yml
-          rm -f scripts/apply-v1.0.5-police-register-atv-fixes.py
-          rm -f docs/v1.0.5-patch-diagnostic.txt
+      - name: Validate metadata and Greasy Fork limits
+        run: node scripts/validate-userscript.mjs
 
-      - name: Validate generated release candidate
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 -m py_compile scripts/check_repository.py
-          node --check src/missionchief-command-nexus.user.js
-          node scripts/validate-userscript.mjs
-          node scripts/validate-userscript.mjs --base-ref origin/main
-          python3 scripts/check_repository.py
-          git diff --check
-
-      - name: Commit validated release candidate
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
-          git commit -m 'Fix Police dispatch, register build and ATV selection'
-          git push origin "HEAD:${{ github.head_ref }}"
+      - name: Require a version increase when code changes
+        if: github.event_name == 'pull_request'
+        run: node scripts/validate-userscript.mjs --base-ref "origin/${{ github.base_ref }}"
