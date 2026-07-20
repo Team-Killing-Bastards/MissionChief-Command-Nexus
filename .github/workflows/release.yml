@@ -15,7 +15,7 @@ on:
           - prepare-version
           - publish-release
       release_tag:
-        description: 'Release tag, for example v1.0.2. Publish may be left blank to use the current @version on main.'
+        description: 'Release tag, for example v1.0.3. Publish may be left blank to use the current @version on main.'
         required: false
         type: string
       release_notes:
@@ -23,19 +23,40 @@ on:
         required: false
         default: 'Release preparation and verified deployment notification updates.'
         type: string
+  workflow_call:
+    inputs:
+      operation:
+        description: 'prepare-version or publish-release'
+        required: true
+        type: string
+      release_tag:
+        description: 'Release tag, for example v1.0.3.'
+        required: false
+        default: ''
+        type: string
+      release_notes:
+        description: 'Short changelog summary used when preparing a new version.'
+        required: false
+        default: 'Release preparation and verified deployment notification updates.'
+        type: string
+    secrets:
+      DISCORD_RELEASE_WEBHOOK:
+        required: true
 
 permissions:
   contents: write
   pull-requests: write
 
 concurrency:
-  group: create-release-${{ github.event_name }}-${{ inputs.operation || 'tag' }}-${{ inputs.release_tag || github.ref }}
+  group: command-nexus-release-${{ inputs.release_tag || github.ref_name || github.run_id }}
   cancel-in-progress: false
 
 jobs:
   prepare:
     name: Prepare release version
-    if: github.event_name == 'workflow_dispatch' && inputs.operation == 'prepare-version'
+    if: >-
+      (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call') &&
+      inputs.operation == 'prepare-version'
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -62,14 +83,14 @@ jobs:
         run: |
           set -euo pipefail
 
-          git fetch origin main --tags
+          git fetch origin main --tags --force
           git checkout -B main origin/main
 
           RELEASE_TAG="${REQUESTED_TAG#refs/tags/}"
 
           if [[ -z "${RELEASE_TAG}" ]]; then
             echo "A release tag is required in prepare-version mode."
-            echo "Example: v1.0.2"
+            echo "Example: v1.0.3"
             exit 1
           fi
 
@@ -84,9 +105,7 @@ jobs:
             exit 1
           fi
 
-          CURRENT_VERSION="$(
-            node scripts/validate-userscript.mjs --print-version
-          )"
+          CURRENT_VERSION="$(node scripts/validate-userscript.mjs --print-version)"
 
           if [[ "${CURRENT_VERSION}" == "${RELEASE_VERSION}" ]]; then
             {
@@ -97,9 +116,7 @@ jobs:
             exit 0
           fi
 
-          if git show-ref --tags --verify --quiet \
-            "refs/tags/${RELEASE_TAG}"; then
-
+          if git show-ref --tags --verify --quiet "refs/tags/${RELEASE_TAG}"; then
             TAG_SHA="$(git rev-list -n 1 "${RELEASE_TAG}")"
             TAG_VERSION="$(
               git show "${TAG_SHA}:src/missionchief-command-nexus.user.js" |
@@ -115,7 +132,7 @@ jobs:
 
             if [[ "${TAG_VERSION}" == "${RELEASE_VERSION}" ]]; then
               echo "Tag ${RELEASE_TAG} already points to matching version ${TAG_VERSION}."
-              echo "Prepare the version from that tagged commit or choose a new version."
+              echo "Use publish-release to recover or complete that release."
               exit 1
             fi
 
@@ -130,6 +147,7 @@ jobs:
 
           node --check src/missionchief-command-nexus.user.js
           node --check scripts/prepare-release.mjs
+          node --check scripts/publish-release.mjs
           node --check scripts/release-notify.mjs
           node scripts/validate-userscript.mjs
           python3 scripts/check_repository.py
@@ -138,8 +156,7 @@ jobs:
           RELEASE_BRANCH="release/${RELEASE_TAG}"
           git checkout -B "${RELEASE_BRANCH}"
           git config user.name "github-actions[bot]"
-          git config user.email \
-            "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           git add \
             src/missionchief-command-nexus.user.js \
@@ -148,8 +165,7 @@ jobs:
             CHANGELOG.md
 
           git commit -m "Prepare ${RELEASE_TAG}"
-          git push --force origin \
-            "HEAD:refs/heads/${RELEASE_BRANCH}"
+          git push --force origin "HEAD:refs/heads/${RELEASE_BRANCH}"
 
           PR_URL="$(
             gh pr list \
@@ -162,7 +178,7 @@ jobs:
           PR_RESULT="existing"
 
           if [[ -z "${PR_URL}" ]]; then
-            cat > release-pr-body.md <<EOF
+            cat > release-pr-body.md <<PRBODY
           ## Release preparation
 
           - Updates the canonical userscript and documentation to \`${RELEASE_VERSION}\`.
@@ -170,7 +186,7 @@ jobs:
           - Runs userscript syntax, metadata and repository integrity checks before opening this PR.
 
           After merging, run **Create GitHub release** again using **publish-release** and \`${RELEASE_TAG}\`.
-          EOF
+          PRBODY
 
             PR_ERROR_FILE="$(mktemp)"
 
@@ -221,17 +237,17 @@ jobs:
           echo "pull_request_url=${PR_URL}" >> "${GITHUB_OUTPUT}"
 
   release:
-    name: Package, verify and announce userscript release
+    name: Package, reconcile, verify and announce userscript release
     if: github.event_name == 'push' || inputs.operation == 'publish-release'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
 
     steps:
-      - name: Check out release source
+      - name: Check out current release automation
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          ref: ${{ github.event_name == 'workflow_dispatch' && 'main' || github.ref }}
+          ref: main
 
       - name: Set up Node.js
         uses: actions/setup-node@v6
@@ -239,7 +255,7 @@ jobs:
           node-version: '24'
           package-manager-cache: false
 
-      - name: Resolve and verify release context
+      - name: Resolve immutable release source
         id: release_context
         shell: bash
         env:
@@ -248,101 +264,128 @@ jobs:
         run: |
           set -euo pipefail
 
-          git fetch origin main --tags
+          git fetch origin main --tags --force
+          MAIN_SHA="$(git rev-parse origin/main)"
 
-          SCRIPT_VERSION="$(
-            node scripts/validate-userscript.mjs --print-version
-          )"
-          EXPECTED_TAG="v${SCRIPT_VERSION}"
-
-          if [[ "${EVENT_NAME}" == "workflow_dispatch" ]]; then
+          if [[ "${EVENT_NAME}" == "push" ]]; then
+            RELEASE_TAG="${GITHUB_REF_NAME}"
+          else
             RELEASE_TAG="${REQUESTED_TAG#refs/tags/}"
 
-            if [[ -z "${RELEASE_TAG}" ]]; then
-              RELEASE_TAG="${EXPECTED_TAG}"
-            elif [[ "${RELEASE_TAG}" != v* ]]; then
+            if [[ -n "${RELEASE_TAG}" && "${RELEASE_TAG}" != v* ]]; then
               RELEASE_TAG="v${RELEASE_TAG}"
             fi
 
-            RELEASE_SHA="$(git rev-parse origin/main)"
-            git checkout --detach "${RELEASE_SHA}"
+            if [[ -z "${RELEASE_TAG}" ]]; then
+              MAIN_VERSION="$(
+                git show "${MAIN_SHA}:src/missionchief-command-nexus.user.js" |
+                  sed -n 's#^//[[:space:]]*@version[[:space:]]*##p' |
+                  head -n 1 |
+                  xargs
+              )"
+              RELEASE_TAG="v${MAIN_VERSION}"
+            fi
+          fi
+
+          if git show-ref --tags --verify --quiet "refs/tags/${RELEASE_TAG}"; then
+            RELEASE_SHA="$(git rev-list -n 1 "${RELEASE_TAG}")"
           else
-            RELEASE_TAG="${GITHUB_REF_NAME}"
-            RELEASE_SHA="${GITHUB_SHA}"
+            if [[ "${EVENT_NAME}" == "push" ]]; then
+              echo "Tag event ${RELEASE_TAG} could not be resolved locally."
+              exit 1
+            fi
+
+            MAIN_VERSION="$(
+              git show "${MAIN_SHA}:src/missionchief-command-nexus.user.js" |
+                sed -n 's#^//[[:space:]]*@version[[:space:]]*##p' |
+                head -n 1 |
+                xargs
+            )"
+
+            if [[ "${RELEASE_TAG}" != "v${MAIN_VERSION}" ]]; then
+              echo "Missing tag ${RELEASE_TAG} does not match main @version ${MAIN_VERSION}."
+              echo "Use prepare-version first."
+              exit 1
+            fi
+
+            RELEASE_SHA="${MAIN_SHA}"
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag -a "${RELEASE_TAG}" "${RELEASE_SHA}" \
+              -m "MissionChief Command Nexus ${MAIN_VERSION}"
+            git push origin "refs/tags/${RELEASE_TAG}"
           fi
 
-          if [[ "${RELEASE_TAG}" != "${EXPECTED_TAG}" ]]; then
-            echo "Tag ${RELEASE_TAG} does not match @version ${SCRIPT_VERSION}."
-            echo "Expected tag: ${EXPECTED_TAG}"
-            echo "Use prepare-version first when publishing a new version."
-            exit 1
-          fi
-
-          if ! git merge-base --is-ancestor \
-            "${RELEASE_SHA}" origin/main; then
-
+          if ! git merge-base --is-ancestor "${RELEASE_SHA}" origin/main; then
             echo "Release commit ${RELEASE_SHA} is not contained in origin/main."
             exit 1
           fi
 
-          if [[ "${EVENT_NAME}" == "workflow_dispatch" ]]; then
-            if git show-ref --tags --verify --quiet \
-              "refs/tags/${RELEASE_TAG}"; then
+          rm -rf release-source
+          git worktree add --force --detach release-source "${RELEASE_SHA}"
 
-              TAG_SHA="$(git rev-list -n 1 "${RELEASE_TAG}")"
+          SCRIPT_VERSION="$(
+            cd release-source
+            node scripts/validate-userscript.mjs --print-version
+          )"
+          EXPECTED_TAG="v${SCRIPT_VERSION}"
 
-              if [[ "${TAG_SHA}" != "${RELEASE_SHA}" ]]; then
-                echo "Existing tag ${RELEASE_TAG} points to ${TAG_SHA}."
-                echo "Current main is ${RELEASE_SHA}; refusing to move the tag."
-                exit 1
-              fi
-            else
-              git config user.name "github-actions[bot]"
-              git config user.email \
-                "41898282+github-actions[bot]@users.noreply.github.com"
+          if [[ "${RELEASE_TAG}" != "${EXPECTED_TAG}" ]]; then
+            echo "Tag ${RELEASE_TAG} does not match tagged @version ${SCRIPT_VERSION}."
+            exit 1
+          fi
 
-              git tag -a "${RELEASE_TAG}" "${RELEASE_SHA}" \
-                -m "MissionChief Command Nexus ${SCRIPT_VERSION}"
+          TEMPORARY_WORKFLOWS="$(
+            find release-source/.github/workflows \
+              -maxdepth 1 \
+              -type f \
+              \( -name 'temporary-*.yml' -o -name 'temporary-*.yaml' \) \
+              -print 2>/dev/null || true
+          )"
 
-              git push origin "refs/tags/${RELEASE_TAG}"
-            fi
+          if [[ -n "${TEMPORARY_WORKFLOWS}" ]]; then
+            echo "Release commit contains temporary workflows:"
+            echo "${TEMPORARY_WORKFLOWS}"
+            exit 1
           fi
 
           echo "RELEASE_TAG=${RELEASE_TAG}" >> "${GITHUB_ENV}"
           echo "RELEASE_SHA=${RELEASE_SHA}" >> "${GITHUB_ENV}"
+          echo "SCRIPT_VERSION=${SCRIPT_VERSION}" >> "${GITHUB_ENV}"
           echo "release_tag=${RELEASE_TAG}" >> "${GITHUB_OUTPUT}"
           echo "release_sha=${RELEASE_SHA}" >> "${GITHUB_OUTPUT}"
+          echo "script_version=${SCRIPT_VERSION}" >> "${GITHUB_OUTPUT}"
 
           {
             echo "### Release context"
             echo "- Event: ${EVENT_NAME}"
             echo "- Tag: \`${RELEASE_TAG}\`"
             echo "- Version: \`${SCRIPT_VERSION}\`"
-            echo "- Commit: \`${RELEASE_SHA}\`"
+            echo "- Immutable source commit: \`${RELEASE_SHA}\`"
+            echo "- Current main: \`${MAIN_SHA}\`"
           } >> "${GITHUB_STEP_SUMMARY}"
 
-      - name: Validate repository and userscript
+      - name: Validate tagged repository and current publisher
         run: |
-          python3 scripts/check_repository.py
-          node --check src/missionchief-command-nexus.user.js
-          node scripts/validate-userscript.mjs
+          set -euo pipefail
+          (
+            cd release-source
+            python3 scripts/check_repository.py
+            node --check src/missionchief-command-nexus.user.js
+            node scripts/validate-userscript.mjs
+          )
           node --check scripts/prepare-release.mjs
+          node --check scripts/publish-release.mjs
           node --check scripts/release-notify.mjs
 
       - name: Confirm changelog contains mission brief
-        shell: bash
         run: |
-          SCRIPT_VERSION="$(
-            node scripts/validate-userscript.mjs --print-version
-          )"
-
-          if ! grep -Fq "## [${SCRIPT_VERSION}]" CHANGELOG.md; then
-            echo "CHANGELOG.md does not contain a release section for ${SCRIPT_VERSION}."
+          if ! grep -Fq "## [${SCRIPT_VERSION}]" release-source/CHANGELOG.md; then
+            echo "Tagged CHANGELOG.md does not contain a release section for ${SCRIPT_VERSION}."
             exit 1
           fi
 
       - name: Confirm deployment configuration
-        shell: bash
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
           GREASYFORK_INSTALL_URL: ${{ vars.GREASYFORK_INSTALL_URL }}
@@ -352,12 +395,10 @@ jobs:
             echo "Missing DISCORD_RELEASE_WEBHOOK repository secret."
             exit 1
           fi
-
           if [[ -z "${GREASYFORK_INSTALL_URL}" ]]; then
             echo "Missing GREASYFORK_INSTALL_URL repository variable."
             exit 1
           fi
-
           if [[ -z "${GREASYFORK_PAGE_URL}" ]]; then
             echo "Missing GREASYFORK_PAGE_URL repository variable."
             exit 1
@@ -366,25 +407,24 @@ jobs:
       - name: Prepare release asset, checksum and patch log
         shell: bash
         run: |
-          SCRIPT_VERSION="$(
-            node scripts/validate-userscript.mjs --print-version
-          )"
-
+          set -euo pipefail
           ASSET="MissionChief-Command-Nexus-${SCRIPT_VERSION}.user.js"
 
-          cp src/missionchief-command-nexus.user.js "${ASSET}"
+          rm -f "${ASSET}" "${ASSET}.sha256" release-notes.md
+          cp release-source/src/missionchief-command-nexus.user.js "${ASSET}"
           sha256sum "${ASSET}" > "${ASSET}.sha256"
 
           python3 - \
             "${SCRIPT_VERSION}" \
             "${RELEASE_SHA}" \
-            "${ASSET}.sha256" <<'PY'
+            "${ASSET}.sha256" \
+            "release-source/CHANGELOG.md" <<'PY'
           import re
           import sys
           from pathlib import Path
 
-          version, commit_sha, checksum_path = sys.argv[1:]
-          changelog = Path("CHANGELOG.md").read_text(encoding="utf-8")
+          version, commit_sha, checksum_path, changelog_path = sys.argv[1:]
+          changelog = Path(changelog_path).read_text(encoding="utf-8")
 
           heading = re.search(
               rf"^## \[{re.escape(version)}\](?:\s+-.*)?\s*$",
@@ -425,52 +465,35 @@ jobs:
           )
           PY
 
-      - name: Create or refresh GitHub release
+      - name: Reconcile and publish GitHub release
+        id: publish_release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          ASSET="MissionChief-Command-Nexus-${SCRIPT_VERSION}.user.js"
+
+          node scripts/publish-release.mjs \
+            --tag "${RELEASE_TAG}" \
+            --target "${RELEASE_SHA}" \
+            --title "MissionChief Command Nexus ${SCRIPT_VERSION}" \
+            --notes release-notes.md \
+            --asset "${ASSET}" \
+            --asset "${ASSET}.sha256"
+
+      - name: Independently verify published assets
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          SCRIPT_VERSION="$(
-            node scripts/validate-userscript.mjs --print-version
-          )"
-
+          set -euo pipefail
           ASSET="MissionChief-Command-Nexus-${SCRIPT_VERSION}.user.js"
-          TITLE="MissionChief Command Nexus ${SCRIPT_VERSION}"
-
-          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
-            gh release upload "${RELEASE_TAG}" \
-              "${ASSET}" \
-              "${ASSET}.sha256" \
-              --clobber
-
-            gh release edit "${RELEASE_TAG}" \
-              --title "${TITLE}" \
-              --notes-file release-notes.md \
-              --verify-tag
-          else
-            gh release create "${RELEASE_TAG}" \
-              "${ASSET}" \
-              "${ASSET}.sha256" \
-              --title "${TITLE}" \
-              --notes-file release-notes.md \
-              --verify-tag
-          fi
-
-      - name: Verify published GitHub release assets
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          SCRIPT_VERSION="$(
-            node scripts/validate-userscript.mjs --print-version
-          )"
-
-          ASSET="MissionChief-Command-Nexus-${SCRIPT_VERSION}.user.js"
-          mkdir -p release-check
+          rm -rf release-check
+          mkdir release-check
 
           gh release view "${RELEASE_TAG}" \
-            --json url \
-            --jq '.url'
+            --json url,isDraft,isPrerelease \
+            --jq 'select(.isDraft == false and .isPrerelease == false) | .url'
 
           gh release download "${RELEASE_TAG}" \
             --pattern "${ASSET}" \
@@ -480,6 +503,10 @@ jobs:
 
           cmp --silent "${ASSET}" "release-check/${ASSET}"
           cmp --silent "${ASSET}.sha256" "release-check/${ASSET}.sha256"
+          (
+            cd release-check
+            sha256sum -c "${ASSET}.sha256"
+          )
 
       - name: Verify deployment and notify Discord
         env:
@@ -489,8 +516,8 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           RELEASE_TAG: ${{ steps.release_context.outputs.release_tag }}
           RELEASE_SHA: ${{ steps.release_context.outputs.release_sha }}
-          SOURCE_PATH: src/missionchief-command-nexus.user.js
-          CHANGELOG_PATH: CHANGELOG.md
+          SOURCE_PATH: release-source/src/missionchief-command-nexus.user.js
+          CHANGELOG_PATH: release-source/CHANGELOG.md
           PRODUCT_NAME: MissionChief Command Nexus
         run: |
           node scripts/release-notify.mjs
