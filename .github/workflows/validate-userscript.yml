@@ -1,4 +1,4 @@
-name: Build v1.0.8 candidate
+name: Diagnose v1.0.8 patch
 
 on:
   pull_request:
@@ -10,35 +10,21 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  diagnose:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v6
         with:
-          fetch-depth: 0
           ref: ${{ github.head_ref }}
-      - uses: actions/setup-node@v6
-        with:
-          node-version: '24'
-      - name: Apply patch
-        run: python3 scripts/apply-v1.0.8-unit-memory.py
-      - name: Restore permanent files
+      - name: Capture patch result
+        shell: bash
         run: |
-          git fetch origin main --force
-          git checkout origin/main -- .github/workflows/validate-userscript.yml
-          rm scripts/apply-v1.0.8-unit-memory.py
-      - name: Validate
-        run: |
-          node --check src/missionchief-command-nexus.user.js
-          node scripts/validate-userscript.mjs
-          node scripts/validate-userscript.mjs --base-ref origin/main
-          python3 scripts/check_repository.py
-          git diff --check
-      - name: Commit candidate
-        run: |
+          set +e
+          python3 scripts/apply-v1.0.8-unit-memory.py > PATCH_ERROR.txt 2>&1
+          status=$?
+          echo "exit_status=${status}" >> PATCH_ERROR.txt
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add -A
-          git commit -m 'Prevent Unit Renamer page retention'
+          git add PATCH_ERROR.txt
+          git commit -m 'Record v1.0.8 patch diagnostic'
           git push origin HEAD:${{ github.head_ref }}
