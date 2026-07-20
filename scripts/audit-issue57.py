@@ -54,8 +54,8 @@ for start, end in windows:
 Path('ISSUE_57_AUDIT.txt').write_text('\n'.join(report), encoding='utf-8')
 
 segment_ranges = [
-    (15420, 15720),
-    (15900, 16680),
+    (15420, 15940),
+    (15940, 16680),
     (16680, 17480),
     (17880, 18180),
 ]
