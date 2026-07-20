@@ -26,6 +26,21 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Consolidate the two retained control surfaces into one coherent interface.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
+## [1.0.4] - 2026-07-20
+
+### Changed
+
+- Auto Mode now activates every visible MissionChief `missing_vehicles_load` control before Unit Finder begins selecting vehicles.
+- Increased the unified userscript version from `1.0.3` to `1.0.4` and the Mission Finder baseline from `V10.6.70` to `V10.6.71`.
+
+### Fixed
+
+- Fixed Auto Mode waiting on the `Vehicle display limited! Load more vehicles!` bar without clicking it.
+- Added sequential `offset_page` loading so every additional vehicle page is requested, not only the first page.
+- Added per-page progress checks using the vehicle ID and row-count signature, control replacement and loading-indicator state.
+- Unit selection now starts only after the final load control has disappeared and the complete vehicle list remains stable.
+- Loading fails closed when the mission changes, the control cannot be clicked, no progress occurs or the bounded timeout is reached.
+
 ## [1.0.3] - 2026-07-20
 
 ### Changed
