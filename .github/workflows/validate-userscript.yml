@@ -1,4 +1,4 @@
-name: Inspect police, personnel register and ATV mappings
+name: Inspect selector and personnel-register functions
 
 on:
   pull_request:
@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   inspect:
-    name: Build targeted source inspection report
+    name: Build focused source inspection report
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -21,77 +21,103 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.head_ref }}
 
-      - name: Build targeted report
+      - name: Build focused report
         shell: bash
         run: |
           python3 - <<'PY'
+          import re
           from pathlib import Path
 
           source = Path('src/missionchief-command-nexus.user.js')
           lines = source.read_text(encoding='utf-8').splitlines()
 
-          groups = {
-              'ORDINARY POLICE': [
-                  'Police Car', 'Police Cars', 'Police Officer', 'Police Officers',
-                  'ordinary police', 'normal police', 'protected specialist'
+          patterns = {
+              'ORDINARY POLICE ENGINE': [
+                  r'MF_PROTECTED_ORDINARY_IRV_TRAINING_CODES',
+                  r'ordinary[^\n]{0,40}IRV',
+                  r'IRV[^\n]{0,40}ordinary',
+                  r'normal[^\n]{0,40}Police',
+                  r'protected[^\n]{0,40}specialist',
+                  r'trainedPersonnelRequirements',
+                  r'tablePolice(?:Cars?|Officers?)',
               ],
-              'POLICE MEDIC': [
-                  'Police Medic', 'police_medic', 'publicOrderMedic'
+              'TRAINED MISSION REQUIREMENTS': [
+                  r'tableLevel1PublicOrderRequired',
+                  r'tableLevel2PublicOrderRequired',
+                  r'tablePoliceSergeantRequired',
+                  r'tablePoliceMedicRequired',
+                  r'tablePoliceInspectorRequired',
+                  r'police_medic',
+                  r'railway_police',
+                  r'Railway Police Officer',
+                  r'Police Medic',
               ],
-              'RAILWAY POLICE': [
-                  'Railway Police Officer', 'railway_police', 'publicOrderLevel1'
+              'ATV AND ATC MAPPING': [
+                  r'ATV Carrier',
+                  r'ATC Carrier',
+                  r'ATV',
+                  r'Armed Traffic Car',
               ],
-              'ATV / ATC': [
-                  'ATV Carrier', 'ATC Carrier', 'ATC carrier', 'atv carrier', 'atc carrier'
-              ],
-              'PERSONNEL REGISTER UI': [
-                  'training registry', 'Training Registry', 'personnel register',
-                  'Preview', 'Live', 'registry'
+              'PERSONNEL REGISTRY ENGINE': [
+                  r'PERSONNEL_TRAINING_REGISTRY',
+                  r'PersonnelTrainingRegistry',
+                  r'personnel.*registry',
+                  r'registry.*personnel',
+                  r'startPersonnelRun',
+                  r'refreshPersonnelStations',
+                  r'PERSONNEL_STATE\.action',
+                  r'preview',
               ],
           }
 
           report = []
-          for title, terms in groups.items():
-              report.append(f'===== {title} =====')
-              hits = []
-              for idx, line in enumerate(lines):
-                  lowered = line.lower()
-                  if any(term.lower() in lowered for term in terms):
-                      hits.append(idx)
+          report.append('SOURCE FUNCTION INDEX')
+          report.append('=====================')
 
+          for title, raw_patterns in patterns.items():
+              regexes = [re.compile(p, re.I) for p in raw_patterns]
+              hits = [
+                  i for i, line in enumerate(lines)
+                  if any(rx.search(line) for rx in regexes)
+              ]
+
+              report.append(f'\n===== {title} =====')
+              for i in hits:
+                  report.append(f'{i + 1:05d}: {lines[i]}')
+
+              # Merge 45-line contexts around hits, allowing enough code to see
+              # the containing function without producing the full userscript.
               windows = []
-              for idx in hits:
-                  start = max(0, idx - 14)
-                  end = min(len(lines), idx + 15)
-                  if windows and start <= windows[-1][1] + 4:
+              for i in hits:
+                  start = max(0, i - 45)
+                  end = min(len(lines), i + 46)
+                  if windows and start <= windows[-1][1] + 8:
                       windows[-1] = (windows[-1][0], max(windows[-1][1], end))
                   else:
                       windows.append((start, end))
 
-              for number, (start, end) in enumerate(windows[:40], 1):
-                  report.append(f'\n--- context {number}: lines {start + 1}-{end} ---')
+              report.append(f'\nCONTEXT WINDOWS: {len(windows)}')
+              for number, (start, end) in enumerate(windows[:30], 1):
+                  report.append(f'\n--- {title} context {number}: lines {start + 1}-{end} ---')
                   for line_no in range(start, end):
                       report.append(f'{line_no + 1:05d}: {lines[line_no]}')
+              if len(windows) > 30:
+                  report.append(f'... {len(windows) - 30} additional windows omitted ...')
 
-              if len(windows) > 40:
-                  report.append(f'... {len(windows) - 40} additional context windows omitted ...')
-              report.append('')
-
-          out = Path('docs/inspection-police-personnel-atv.txt')
-          out.parent.mkdir(parents=True, exist_ok=True)
+          out = Path('docs/inspection-police-personnel-atv-focused.txt')
           out.write_text('\n'.join(report) + '\n', encoding='utf-8')
           PY
 
-      - name: Commit inspection report to branch
+      - name: Commit focused report to branch
         shell: bash
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add docs/inspection-police-personnel-atv.txt
+          git add docs/inspection-police-personnel-atv-focused.txt
           if git diff --cached --quiet; then
-            echo 'Inspection report is unchanged.'
+            echo 'Focused inspection report is unchanged.'
             exit 0
           fi
-          git commit -m 'Add police and personnel source inspection report'
+          git commit -m 'Add focused selector inspection report'
           git push origin "HEAD:${{ github.head_ref }}"
