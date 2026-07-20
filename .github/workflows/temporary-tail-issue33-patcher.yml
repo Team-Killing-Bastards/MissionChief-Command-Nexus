@@ -1,0 +1,37 @@
+name: Tail Issue 33 patcher failure
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - synchronize
+
+permissions:
+  actions: read
+
+jobs:
+  tail:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'fix/issue-33-notifier-propagation'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Print patcher failure markers
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          gh api \
+            -H 'Accept: application/vnd.github+json' \
+            "/repos/${GITHUB_REPOSITORY}/actions/jobs/88311600333/logs" \
+            > /tmp/patcher.log
+
+          echo '===== PATCHER DIAGNOSTIC ====='
+          grep -n -E -i \
+            'Could not|Traceback|SyntaxError|Error:|ERROR:|failed|missing|invalid|Process completed' \
+            /tmp/patcher.log \
+            | tail -n 80
