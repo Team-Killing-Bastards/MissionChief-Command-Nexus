@@ -1,0 +1,77 @@
+name: Run v1.0.3 release recovery from PR
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - synchronize
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  publish:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'docs/issue-33-validation'
+    uses: ./.github/workflows/release.yml
+    with:
+      operation: publish-release
+      release_tag: v1.0.3
+    secrets: inherit
+
+  report:
+    name: Record recovery workflow result
+    if: >-
+      always() &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'docs/issue-33-validation'
+    needs:
+      - publish
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+
+    steps:
+      - name: Comment on Issue #33
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RESULT: ${{ needs.publish.result }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${RESULT}" == 'success' ]]; then
+            cat > report.md <<EOF
+          ## Permanent v1.0.3 recovery workflow passed
+
+          The repaired permanent release workflow completed all mandatory stages:
+
+          - release context and immutable tag-source validation;
+          - repository and userscript validation;
+          - partial-asset reconciliation and GitHub Release publication;
+          - published asset download and SHA-256 verification;
+          - Greasy Fork version and exact source-parity verification;
+          - Discord deployment notification.
+
+          Actions evidence: ${RUN_URL}
+          EOF
+          else
+            cat > report.md <<EOF
+          ## Permanent v1.0.3 recovery workflow failed
+
+          Result: \`${RESULT}\`
+
+          Actions evidence: ${RUN_URL}
+          EOF
+          fi
+
+          gh issue comment 33 --body-file report.md
+
+      - name: Fail when publication failed
+        if: needs.publish.result != 'success'
+        run: exit 1
