@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.8
+// @version      1.0.9
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -7602,7 +7602,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.74
+         * MODULE 2: MISSION FINDER V10.6.75
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -7852,7 +7852,7 @@
     // before an untrained IRV may satisfy ordinary Police attendance. Police Medic
     // and Railway Police Officer requirements now use exact trained IRVs with two
     // qualified personnel, and ATV Carrier uses an authoritative type-30 matcher.
-    // V10.6.74: Critical Care Ambulances now require one trained person per vehicle.
+    // V10.6.75: Critical Care Ambulances now require one trained person per vehicle.
     // Armed Response personnel use exact type-25 ATCs with two officers who each hold
     // both Roads Policing and Firearms. Police Officer and Seagoing Vessel upgrade
     // rows now use shared strict conversions across Unit Finder, Update and Auto.
@@ -15720,47 +15720,6 @@ let sessionRuntimeTicker = null;
         const armedResponseRequired =
             findRequired('armed_response_personnel');
 
-        const activePublicOrderTrainingCodes = [];
-        const activePublicOrderLabels = [];
-
-        if (level1Required > 0) {
-            activePublicOrderTrainingCodes.push(
-                'level_1_public_order'
-            );
-            activePublicOrderLabels.push('L1');
-        }
-
-        if (level2Required > 0) {
-            activePublicOrderTrainingCodes.push(
-                'level_2_public_order'
-            );
-            activePublicOrderLabels.push('L2');
-        }
-
-        if (policeSergeantRequired > 0) {
-            activePublicOrderTrainingCodes.push(
-                'police_sergeant'
-            );
-            activePublicOrderLabels.push('Sergeant');
-        }
-
-        // A shared Public Order IRV carries two personnel. Use the highest
-        // active personnel requirement for the vehicle count, but require only
-        // the training codes actually requested by this mission. A mission that
-        // asks for L1 + L2 must not silently require Sergeant as well.
-        const highestOfficerRequirement =
-            Math.max(
-                level1Required,
-                level2Required,
-                policeSergeantRequired
-            );
-
-        const requiredVehicleCount =
-            Math.ceil(
-                highestOfficerRequirement /
-                2
-            );
-
         const normalised =
             source.filter(requirement => {
                 return (
@@ -15780,73 +15739,6 @@ let sessionRuntimeTicker = null;
                         'armed_response_personnel'
                 );
             });
-
-        if (
-            highestOfficerRequirement > 0 &&
-            activePublicOrderTrainingCodes.length > 0
-        ) {
-            normalised.unshift({
-                code:
-                    'public_order_combined_vehicle',
-                label:
-                    `${activePublicOrderLabels.join('/')} Trained Police IRV`,
-                requirementType:
-                    'public_order_combined_vehicle',
-                required:
-                    requiredVehicleCount,
-                officersRequired:
-                    highestOfficerRequirement,
-                calculationMode:
-                    'highest-only',
-                calculationText:
-                    `max(${level1Required}, ${level2Required}, ${policeSergeantRequired}) = ${highestOfficerRequirement}; ceil(${highestOfficerRequirement} / 2) = ${requiredVehicleCount}`,
-                level1Required,
-                level2Required,
-                policeSergeantRequired,
-                personnelPerVehicle:
-                    2,
-                requiredTrainingCodes:
-                    activePublicOrderTrainingCodes,
-                eligibleVehicleTypeIds: [
-                    '8'
-                ]
-            });
-        }
-
-        if (
-            policeInspectorRequired > 0
-        ) {
-            // Inspector IRVs are a separate trained pool. Each selected IRV
-            // must itself contain two Police Inspector-trained personnel; a
-            // Public Order/Medic/Sergeant crew cannot substitute for it.
-            const requiredInspectorVehicles =
-                Math.ceil(
-                    policeInspectorRequired /
-                    2
-                );
-
-            normalised.push({
-                code:
-                    'police_inspector_vehicle',
-                label:
-                    'Police Inspector Trained Police IRV',
-                requirementType:
-                    'police_inspector_vehicle',
-                required:
-                    requiredInspectorVehicles,
-                inspectorsRequired:
-                    policeInspectorRequired,
-                personnelPerVehicle:
-                    2,
-                requiredTrainingCodes: [
-                    'police_inspector'
-                ],
-                eligibleVehicleTypeIds: [
-                    '8'
-                ]
-            });
-        }
-
 
         const addStrictTrainedIrvRequirement =
             (
@@ -15885,6 +15777,59 @@ let sessionRuntimeTicker = null;
                 });
             };
 
+        // Public Order levels and Sergeant are independent mission profiles.
+        // Each exact IRV needs two personnel holding the specific requested
+        // profile. A person with multiple profiles is counted for every code
+        // they actually hold, but unrelated profiles are never prerequisites.
+        addStrictTrainedIrvRequirement(
+            'level_1_public_order',
+            'Level 1 Public Order',
+            level1Required
+        );
+
+        addStrictTrainedIrvRequirement(
+            'level_2_public_order',
+            'Level 2 Public Order',
+            level2Required
+        );
+
+        addStrictTrainedIrvRequirement(
+            'police_sergeant',
+            'Police Sergeant',
+            policeSergeantRequired
+        );
+
+        if (
+            policeInspectorRequired > 0
+        ) {
+            const requiredInspectorVehicles =
+                Math.ceil(
+                    policeInspectorRequired /
+                    2
+                );
+
+            normalised.push({
+                code:
+                    'police_inspector_vehicle',
+                label:
+                    'Police Inspector Trained Police IRV',
+                requirementType:
+                    'police_inspector_vehicle',
+                required:
+                    requiredInspectorVehicles,
+                inspectorsRequired:
+                    policeInspectorRequired,
+                personnelPerVehicle:
+                    2,
+                requiredTrainingCodes: [
+                    'police_inspector'
+                ],
+                eligibleVehicleTypeIds: [
+                    '8'
+                ]
+            });
+        }
+
         addStrictTrainedIrvRequirement(
             'police_medic',
             'Police Medic',
@@ -15896,7 +15841,6 @@ let sessionRuntimeTicker = null;
             'Railway Police Officer',
             railwayPoliceRequired
         );
-
 
         if (armedResponseRequired > 0) {
             const requiredArmedTrafficCars = Math.ceil(
@@ -15922,7 +15866,6 @@ let sessionRuntimeTicker = null;
 
         return normalised;
     }
-
 
     function isStrictLiveVerifiedTrainingEntry(
         registryEntry
@@ -16251,41 +16194,6 @@ let sessionRuntimeTicker = null;
                 : 0;
         }
 
-        if (
-            requirement.requirementType ===
-                'public_order_combined_vehicle'
-        ) {
-            if (
-                !isAuthoritativeLivePoliceTrainingEntry(
-                    registryEntry
-                )
-            ) {
-                return 0;
-            }
-
-            const requiredCodes =
-                Array.isArray(
-                    requirement.requiredTrainingCodes
-                )
-                    ? requirement.requiredTrainingCodes
-                    : [];
-
-            if (requiredCodes.length === 0) {
-                return 0;
-            }
-
-            return requiredCodes.every(code => {
-                return (
-                    parseInt(
-                        trainingCounts[code],
-                        10
-                    ) || 0
-                ) >= 2;
-            })
-                ? 1
-                : 0;
-        }
-
         return (
             parseInt(
                 trainingCounts[
@@ -16433,31 +16341,6 @@ let sessionRuntimeTicker = null;
                 if (
                     requirement
                         .requirementType ===
-                    'public_order_combined_vehicle'
-                ) {
-                    const codes =
-                        (
-                            requirement.requiredTrainingCodes ||
-                            []
-                        )
-                            .map(code => {
-                                if (code === 'level_1_public_order') return 'L1';
-                                if (code === 'level_2_public_order') return 'L2';
-                                if (code === 'police_sergeant') return 'Sergeant';
-                                return code;
-                            })
-                            .join('/');
-
-                    return (
-                        `${requirement.label} x${requirement.required} ` +
-                        `(requires 2 ${codes || 'requested Public Order'}-trained personnel per IRV; ` +
-                        `MAX count ${requirement.officersRequired})`
-                    );
-                }
-
-                if (
-                    requirement
-                        .requirementType ===
                     'police_inspector_vehicle'
                 ) {
                     return (
@@ -16522,8 +16405,6 @@ let sessionRuntimeTicker = null;
             return (
                 requirement?.requirementType ===
                     'police_inspector_vehicle' ||
-                requirement?.requirementType ===
-                    'public_order_combined_vehicle' ||
                 requirement?.requirementType ===
                     'police_trained_irv_vehicle'
             );
@@ -16979,33 +16860,6 @@ let sessionRuntimeTicker = null;
                 }
             }
 
-            if (
-                requirement?.requirementType ===
-                    'public_order_combined_vehicle'
-            ) {
-                const requiredCodes =
-                    Array.isArray(
-                        requirement.requiredTrainingCodes
-                    )
-                        ? requirement.requiredTrainingCodes
-                        : [];
-
-                if (
-                    requiredCodes.length > 0 &&
-                    requiredCodes.every(code => {
-                        return (
-                            parseInt(
-                                trainingCounts[code],
-                                10
-                            ) || 0
-                        ) >= 2;
-                    })
-                ) {
-                    return score + 1000 +
-                        requiredCodes.length;
-                }
-            }
-
             return score;
         }, 0);
     }
@@ -17334,7 +17188,7 @@ let sessionRuntimeTicker = null;
                     updatedAt:
                         Date.now(),
                     source:
-                        `${MF_STRICT_TRAINING_SOURCE_PREFIX}${String(source || 'update').toLowerCase()}-v10674`
+                        `${MF_STRICT_TRAINING_SOURCE_PREFIX}${String(source || 'update').toLowerCase()}-v10675`
                 };
 
                 mfLiveTrainingVerifyCache.set(
@@ -17545,7 +17399,7 @@ let sessionRuntimeTicker = null;
                         },
                         updatedAt: Date.now(),
                         source:
-                            `${MF_STRICT_TRAINING_SOURCE_PREFIX}armed-response-${String(source || 'update').toLowerCase()}-v10674`
+                            `${MF_STRICT_TRAINING_SOURCE_PREFIX}armed-response-${String(source || 'update').toLowerCase()}-v10675`
                     };
 
                     mfLiveTrainingVerifyCache.set(
@@ -17857,7 +17711,7 @@ let sessionRuntimeTicker = null;
                     updatedAt:
                         Date.now(),
                     source:
-                        `${MF_STRICT_TRAINING_SOURCE_PREFIX}ordinary-${String(source || 'update').toLowerCase()}-v10674`
+                        `${MF_STRICT_TRAINING_SOURCE_PREFIX}ordinary-${String(source || 'update').toLowerCase()}-v10675`
                 };
 
                 mfLiveTrainingVerifyCache.set(
@@ -23591,29 +23445,6 @@ let sessionRuntimeTicker = null;
                 mfDebugEnabled &&
                 !silent
             ) {
-                const publicOrderRequirement =
-                    requirements.find(
-                        requirement =>
-                            requirement
-                                .requirementType ===
-                            'public_order_combined_vehicle'
-                    );
-
-                if (
-                    publicOrderRequirement
-                ) {
-                    debugLog(
-                        'PUBLIC ORDER MAX RULE',
-                        `L1=${publicOrderRequirement.level1Required} | ` +
-                        `L2=${publicOrderRequirement.level2Required} | ` +
-                        `Sergeant=${publicOrderRequirement.policeSergeantRequired} | ` +
-                        `highest=${publicOrderRequirement.officersRequired} | ` +
-                        `2 fully L1/L2/Sergeant-trained personnel per IRV | ` +
-                        `send=${publicOrderRequirement.required} IRV(s) | ` +
-                        `L1+L2+Sergeant is NOT used`
-                    );
-                }
-
                 debugLog(
                     'TRAINED PERSONNEL UPDATE',
                     formatTrainedPersonnelRequirements(
@@ -24634,7 +24465,7 @@ let sessionRuntimeTicker = null;
                 ) {
                     debugLog(
                         'PUBLIC ORDER UPDATE GUARD',
-                        `${item.unitName} skipped as a standalone row; the single combined trained IRV target owns it.`
+                        `${item.unitName} skipped as a standalone row; the independent trained IRV requirements own it.`
                     );
                 }
 
@@ -24648,31 +24479,9 @@ let sessionRuntimeTicker = null;
                 if (
                     mfDebugEnabled
                 ) {
-                    const combinedRequirement =
-                        (
-                            item
-                                .personnelTrainingRequirements ||
-                            []
-                        ).find(
-                            requirement =>
-                                requirement
-                                    .requirementType ===
-                                'public_order_combined_vehicle'
-                        );
-
                     debugLog(
                         'TRAINED UPDATE ROUTE',
-                        combinedRequirement
-                            ? (
-                                `Single combined target: ` +
-                                `max(L1=${combinedRequirement.level1Required}, ` +
-                                `L2=${combinedRequirement.level2Required}, ` +
-                                `Sergeant=${combinedRequirement.policeSergeantRequired})=` +
-                                `${combinedRequirement.officersRequired}; ` +
-                                `/2 rounded up = ` +
-                                `${combinedRequirement.required} IRVs`
-                            )
-                            : `Entering trained-vehicle selector for ${formatTrainedPersonnelRequirements(item.personnelTrainingRequirements)}`
+                        `Entering independent trained-vehicle selector for ${formatTrainedPersonnelRequirements(item.personnelTrainingRequirements)}`
                     );
                 }
 
@@ -24736,17 +24545,6 @@ let sessionRuntimeTicker = null;
                             )
                             .map(
                                 requirement => {
-                                    if (
-                                        requirement
-                                            .requirementType ===
-                                        'public_order_combined_vehicle'
-                                    ) {
-                                        return (
-                                            `${requirement.label} x${requirement.remaining} ` +
-                                            `(2 personnel per required Public Order training code on the exact IRV)`
-                                        );
-                                    }
-
                                     if (
                                         requirement.requirementType ===
                                         'police_inspector_vehicle'
