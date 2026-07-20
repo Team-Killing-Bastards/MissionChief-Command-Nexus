@@ -1,0 +1,142 @@
+name: Temporary direct publish v1.0.3
+
+on:
+  pull_request:
+    branches: [main]
+    types: [synchronize]
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'agent/trigger-publish-v1.0.3'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Allow workflow cleanup
+        run: sleep 120
+
+      - name: Validate clean main
+        id: ctx
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --tags --force
+          SHA="$(git rev-parse origin/main)"
+          git checkout --detach "${SHA}"
+          VERSION="$(node scripts/validate-userscript.mjs --print-version)"
+          test "${VERSION}" = '1.0.3'
+          python3 scripts/check_repository.py
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          node --check scripts/release-notify.mjs
+          echo "sha=${SHA}" >> "${GITHUB_OUTPUT}"
+
+      - name: Confirm deployment configuration
+        env:
+          DISCORD: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
+          INSTALL: ${{ vars.GREASYFORK_INSTALL_URL }}
+          PAGE: ${{ vars.GREASYFORK_PAGE_URL }}
+        run: |
+          test -n "${DISCORD}"
+          test -n "${INSTALL}"
+          test -n "${PAGE}"
+
+      - name: Recreate clean tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ steps.ctx.outputs.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release delete v1.0.3 --repo "${GITHUB_REPOSITORY}" --yes --cleanup-tag || true
+          git push origin ':refs/tags/v1.0.3' || true
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -a v1.0.3 "${SHA}" -m 'MissionChief Command Nexus 1.0.3'
+          git push origin refs/tags/v1.0.3
+
+      - name: Prepare assets
+        env:
+          SHA: ${{ steps.ctx.outputs.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ASSET='MissionChief-Command-Nexus-1.0.3.user.js'
+          cp src/missionchief-command-nexus.user.js "${ASSET}"
+          sha256sum "${ASSET}" > "${ASSET}.sha256"
+          awk '/^## \[1.0.3\]/{found=1;next} /^## /{if(found)exit} found{print}' CHANGELOG.md > mission-brief.md
+          test -s mission-brief.md
+          CHECKSUM="$(cut -d' ' -f1 "${ASSET}.sha256")"
+          {
+            echo '## Mission Brief'
+            cat mission-brief.md
+            echo
+            echo '## Build Verification'
+            echo
+            echo "- Source commit: \`${SHA}\`"
+            echo "- SHA-256: \`${CHECKSUM}\`"
+          } > release-notes.md
+
+      - name: Publish release with retries
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ASSET='MissionChief-Command-Nexus-1.0.3.user.js'
+          OK=false
+          for attempt in $(seq 1 15); do
+            echo "Publication attempt ${attempt}/15"
+            if gh release view v1.0.3 --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+              gh release upload v1.0.3 "${ASSET}" "${ASSET}.sha256" --repo "${GITHUB_REPOSITORY}" --clobber && \
+              gh release edit v1.0.3 --repo "${GITHUB_REPOSITORY}" --title 'MissionChief Command Nexus 1.0.3' --notes-file release-notes.md --verify-tag && OK=true
+            else
+              gh release create v1.0.3 "${ASSET}" "${ASSET}.sha256" --repo "${GITHUB_REPOSITORY}" --title 'MissionChief Command Nexus 1.0.3' --notes-file release-notes.md --verify-tag && OK=true
+            fi
+            [[ "${OK}" == true ]] && break
+            sleep 15
+          done
+          [[ "${OK}" == true ]]
+
+      - name: Verify release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ steps.ctx.outputs.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG_SHA="$(git ls-remote origin 'refs/tags/v1.0.3^{}' | awk '{print $1}')"
+          test "${TAG_SHA}" = "${SHA}"
+          ASSETS="$(gh release view v1.0.3 --repo "${GITHUB_REPOSITORY}" --json assets --jq '.assets[].name')"
+          grep -Fxq 'MissionChief-Command-Nexus-1.0.3.user.js' <<<"${ASSETS}"
+          grep -Fxq 'MissionChief-Command-Nexus-1.0.3.user.js.sha256' <<<"${ASSETS}"
+          mkdir -p check
+          gh release download v1.0.3 --repo "${GITHUB_REPOSITORY}" --pattern 'MissionChief-Command-Nexus-1.0.3.user.js' --pattern 'MissionChief-Command-Nexus-1.0.3.user.js.sha256' --dir check --clobber
+          cmp MissionChief-Command-Nexus-1.0.3.user.js check/MissionChief-Command-Nexus-1.0.3.user.js
+          cmp MissionChief-Command-Nexus-1.0.3.user.js.sha256 check/MissionChief-Command-Nexus-1.0.3.user.js.sha256
+
+      - name: Verify deployment and notify Discord
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
+          GREASYFORK_INSTALL_URL: ${{ vars.GREASYFORK_INSTALL_URL }}
+          GREASYFORK_PAGE_URL: ${{ vars.GREASYFORK_PAGE_URL }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          RELEASE_TAG: v1.0.3
+          RELEASE_SHA: ${{ steps.ctx.outputs.sha }}
+          SOURCE_PATH: src/missionchief-command-nexus.user.js
+          CHANGELOG_PATH: CHANGELOG.md
+          PRODUCT_NAME: MissionChief Command Nexus
+        run: node scripts/release-notify.mjs
