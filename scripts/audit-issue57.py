@@ -52,4 +52,20 @@ for start, end in windows:
     report.append('')
 
 Path('ISSUE_57_AUDIT.txt').write_text('\n'.join(report), encoding='utf-8')
+
+segment_ranges = [
+    (15420, 15720),
+    (15900, 16680),
+    (16680, 17480),
+    (17880, 18180),
+]
+segment = []
+for start, end in segment_ranges:
+    segment.append(f'===== SOURCE {start}-{end} =====')
+    for n in range(start, min(end, len(lines)) + 1):
+        segment.append(f'{n:05d}: {lines[n-1]}')
+    segment.append('')
+Path('ISSUE_57_SOURCE.txt').write_text('\n'.join(segment), encoding='utf-8')
+
 print(f'Wrote ISSUE_57_AUDIT.txt ({len(report)} lines)')
+print(f'Wrote ISSUE_57_SOURCE.txt ({len(segment)} lines)')
