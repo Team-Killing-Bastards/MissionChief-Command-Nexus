@@ -9,7 +9,6 @@ on:
 
 permissions:
   actions: read
-  issues: write
 
 jobs:
   tail:
@@ -19,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Post notifier failure tail to Issue #33
+      - name: Print final notifier failure lines
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -31,14 +30,5 @@ jobs:
             "/repos/${GITHUB_REPOSITORY}/actions/jobs/88307768420/logs" \
             > /tmp/notifier.log
 
-          {
-            echo '## Issue #33 notifier diagnostic'
-            echo
-            echo '```text'
-            tail -n 120 /tmp/notifier.log
-            echo '```'
-          } > /tmp/comment.md
-
-          gh issue comment 33 \
-            --repo "${GITHUB_REPOSITORY}" \
-            --body-file /tmp/comment.md
+          echo '===== FINAL NOTIFIER LINES ====='
+          tail -n 25 /tmp/notifier.log
