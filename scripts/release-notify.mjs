@@ -7,6 +7,10 @@ const SOURCE_PATH =
   process.env.SOURCE_PATH ||
   'src/missionchief-command-nexus.user.js';
 
+const REPOSITORY_SOURCE_PATH =
+  process.env.REPOSITORY_SOURCE_PATH ||
+  'src/missionchief-command-nexus.user.js';
+
 const CHANGELOG_PATH =
   process.env.CHANGELOG_PATH ||
   'CHANGELOG.md';
@@ -16,6 +20,8 @@ const PRODUCT_NAME =
   'MissionChief Command Nexus';
 
 const MAX_MISSION_BRIEF_LENGTH = 1400;
+const GITHUB_SOURCE_ATTEMPTS = 12;
+const GITHUB_SOURCE_WAIT_MS = 2_500;
 const GREASY_FORK_ATTEMPTS = 60;
 const GREASY_FORK_WAIT_MS = 5_000;
 
@@ -200,6 +206,127 @@ async function fetchText(url, label) {
   }
 
   return response.text();
+}
+
+async function verifyGitHubSource({
+  repository,
+  releaseSha,
+  sourcePath,
+  expectedVersion,
+  expectedNormalisedSource,
+}) {
+  const startedAt = Date.now();
+  const encodedSourcePath = sourcePath
+    .split('/')
+    .map(encodeURIComponent)
+    .join('/');
+  const sourceUrl = new URL(
+    `https://api.github.com/repos/${repository}` +
+    `/contents/${encodedSourcePath}`
+  );
+  sourceUrl.searchParams.set('ref', releaseSha);
+  let lastStatus = 'No response received';
+
+  for (
+    let attempt = 1;
+    attempt <= GITHUB_SOURCE_ATTEMPTS;
+    attempt += 1
+  ) {
+    try {
+      const response = await fetch(sourceUrl, {
+        redirect: 'follow',
+        headers: {
+          Accept: 'application/vnd.github.raw+json',
+          'X-GitHub-Api-Version': '2022-11-28',
+          'User-Agent':
+            'MissionChief-Command-Nexus-Release-Validator/2.1',
+        },
+      });
+
+      if (!response.ok) {
+        const transient =
+          response.status === 404 ||
+          response.status === 408 ||
+          response.status === 429 ||
+          response.status >= 500;
+
+        if (!transient) {
+          throw new Error(
+            `GitHub Contents API returned HTTP ${response.status}`
+          );
+        }
+
+        lastStatus =
+          `GitHub Contents API returned HTTP ${response.status}`;
+      } else {
+        const githubSource = await response.text();
+        const githubVersion = extractUserscriptVersion(
+          githubSource,
+          'GitHub immutable source'
+        );
+
+        if (githubVersion !== expectedVersion) {
+          throw new Error(
+            `GitHub immutable source serves version ` +
+            `${githubVersion}, expected ${expectedVersion}`
+          );
+        }
+
+        if (
+          normaliseUserscript(githubSource) !==
+          expectedNormalisedSource
+        ) {
+          throw new Error(
+            'GitHub immutable source does not match ' +
+            'the tagged local source'
+          );
+        }
+
+        const elapsedMs = Date.now() - startedAt;
+        console.log(
+          `GitHub immutable source verified on attempt ${attempt}: ` +
+          `${releaseSha} after ${formatSeconds(elapsedMs)}`
+        );
+
+        return {
+          attempt,
+          elapsedMs,
+        };
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : String(error);
+
+      if (
+        message.includes('serves version') ||
+        message.includes('does not match') ||
+        (message.includes('returned HTTP 4') &&
+          !message.includes('HTTP 404') &&
+          !message.includes('HTTP 408') &&
+          !message.includes('HTTP 429'))
+      ) {
+        throw error;
+      }
+
+      lastStatus = message;
+    }
+
+    console.log(
+      `GitHub immutable source not ready ` +
+      `(${attempt}/${GITHUB_SOURCE_ATTEMPTS}): ` +
+      lastStatus
+    );
+
+    if (attempt < GITHUB_SOURCE_ATTEMPTS) {
+      await sleep(GITHUB_SOURCE_WAIT_MS);
+    }
+  }
+
+  throw new Error(
+    `GitHub immutable source verification timed out: ${lastStatus}`
+  );
 }
 
 async function verifyGreasyFork({
@@ -492,49 +619,6 @@ async function main() {
   const expectedNormalisedSource =
     normaliseUserscript(sourceText);
 
-  const encodedSourcePath =
-    SOURCE_PATH
-      .split('/')
-      .map(encodeURIComponent)
-      .join('/');
-
-  const githubRawUrl =
-    `https://raw.githubusercontent.com/` +
-    `${repository}/${releaseSha}/${encodedSourcePath}`;
-
-  const githubSource =
-    await fetchText(
-      githubRawUrl,
-      'GitHub raw source'
-    );
-
-  const githubVersion =
-    extractUserscriptVersion(
-      githubSource,
-      'GitHub raw source'
-    );
-
-  if (githubVersion !== version) {
-    throw new Error(
-      `GitHub raw source serves version ` +
-      `${githubVersion}, expected ${version}`
-    );
-  }
-
-  if (
-    normaliseUserscript(githubSource) !==
-    expectedNormalisedSource
-  ) {
-    throw new Error(
-      'GitHub raw source does not match ' +
-      'the tagged local source'
-    );
-  }
-
-  console.log(
-    `GitHub source verified: ${releaseSha}`
-  );
-
   const changelog =
     await readFile(CHANGELOG_PATH, 'utf8');
 
@@ -546,12 +630,21 @@ async function main() {
     `https://github.com/${repository}` +
     `/releases/tag/${encodeURIComponent(releaseTag)}`;
 
-  const greasyForkVerification =
-    await verifyGreasyFork({
-      installUrl: greasyForkInstallUrl,
-      expectedVersion: version,
-      expectedNormalisedSource,
-    });
+  const [, greasyForkVerification] =
+    await Promise.all([
+      verifyGitHubSource({
+        repository,
+        releaseSha,
+        sourcePath: REPOSITORY_SOURCE_PATH,
+        expectedVersion: version,
+        expectedNormalisedSource,
+      }),
+      verifyGreasyFork({
+        installUrl: greasyForkInstallUrl,
+        expectedVersion: version,
+        expectedNormalisedSource,
+      }),
+    ]);
 
   const payload = buildDiscordPayload({
     version,
