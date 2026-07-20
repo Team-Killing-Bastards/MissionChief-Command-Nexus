@@ -1,4 +1,4 @@
-name: Diagnose v1.0.6 patch
+name: Build v1.0.6 candidate
 
 on:
   pull_request:
@@ -10,21 +10,58 @@ permissions:
   contents: write
 
 jobs:
-  diagnose:
+  build:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v6
         with:
+          fetch-depth: 0
           ref: ${{ github.head_ref }}
-      - name: Capture patch result
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - name: Narrow Seagoing patch anchor
         shell: bash
         run: |
-          set +e
-          python3 scripts/apply-v1.0.6-minor-fixes.py > PATCH_ERROR.txt 2>&1
-          status=$?
-          echo "exit_status=${status}" >> PATCH_ERROR.txt
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('scripts/apply-v1.0.6-minor-fixes.py')
+          text = path.read_text(encoding='utf-8')
+          old = '''replace_once(
+              "        if (atvCarrierOnly) {\\n",
+              seagoing_all_branch + "        if (atvCarrierOnly) {\\n",
+              'Seagoing strict selection branch',
+          )'''
+          new = '''if source.count("        if (atvCarrierOnly) {\\n") != 2:
+              raise SystemExit('Seagoing strict selection branch: expected two ATV branch anchors')
+          source = source.replace(
+              "        if (atvCarrierOnly) {\\n",
+              seagoing_all_branch + "        if (atvCarrierOnly) {\\n",
+              1
+          )'''
+          if text.count(old) != 1:
+              raise SystemExit('Seagoing patch-script anchor changed')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+      - name: Apply patch
+        run: python3 scripts/apply-v1.0.6-minor-fixes.py
+      - name: Restore permanent files
+        run: |
+          git fetch origin main --force
+          git checkout origin/main -- .github/workflows/validate-userscript.yml
+          rm -f scripts/apply-v1.0.6-minor-fixes.py PATCH_ERROR.txt
+      - name: Validate
+        run: |
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          node scripts/validate-userscript.mjs --base-ref origin/main
+          python3 scripts/check_repository.py
+          git diff --check
+      - name: Commit candidate
+        run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add PATCH_ERROR.txt
-          git commit -m 'Record v1.0.6 patch diagnostic'
+          git add -A
+          git commit -m 'Fix ambulance staffing and mission upgrade selection'
           git push origin HEAD:${{ github.head_ref }}
