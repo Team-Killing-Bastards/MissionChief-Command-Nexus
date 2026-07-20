@@ -6,6 +6,13 @@ on:
       - main
     paths:
       - '.github/release-triggers/recover-v1.0.3'
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
 
 permissions:
   contents: write
@@ -14,6 +21,10 @@ permissions:
 
 jobs:
   publish:
+    if: >-
+      github.event_name == 'push' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+       github.event.pull_request.head.ref == 'agent/recover-v1.0.3-release')
     uses: ./.github/workflows/release.yml
     with:
       operation: publish-release
@@ -22,7 +33,11 @@ jobs:
 
   report:
     name: Record v1.0.3 recovery result
-    if: always()
+    if: >-
+      always() &&
+      (github.event_name == 'push' ||
+       (github.event.pull_request.head.repo.full_name == github.repository &&
+        github.event.pull_request.head.ref == 'agent/recover-v1.0.3-release'))
     needs:
       - publish
     runs-on: ubuntu-latest
