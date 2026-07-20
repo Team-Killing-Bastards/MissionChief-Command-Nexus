@@ -1,1 +1,1 @@
-Trigger the one-time patcher diagnostic after the refined patch validation failure.
+Trigger the exact latest patcher diagnostic with no concurrent branch writes.
