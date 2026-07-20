@@ -3,69 +3,25 @@ name: Validate userscript
 on:
   pull_request:
     paths:
-      - 'src/**'
-      - 'scripts/validate-userscript.mjs'
       - '.github/workflows/validate-userscript.yml'
-      - '.automation/**'
 
 permissions:
-  contents: write
-
-concurrency:
-  group: validate-userscript-v1-0-4-${{ github.ref }}
-  cancel-in-progress: false
+  actions: read
+  contents: read
 
 jobs:
-  build-v1-0-4:
-    if: >-
-      github.event_name == 'pull_request' &&
-      github.head_ref == 'agent/v1.0.4-auto-load-limited-vehicles'
-    name: Build v1.0.4 candidate
+  inspect-v1-0-4:
+    name: Inspect failed v1.0.4 build
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 5
 
     steps:
-      - name: Check out candidate branch
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ github.head_ref }}
-          fetch-depth: 0
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '24'
-          package-manager-cache: false
-
-      - name: Apply deterministic patch
+      - name: Print failed builder tail
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-
-          node scripts/prepare-release.mjs \
-            --version 1.0.4 \
-            --notes "Auto Mode now activates every MissionChief limited-vehicle loader and waits for all additional vehicle pages and the final vehicle list to stabilise before selecting units."
-
-          python3 .automation/build_v1_0_4.py
-          rm -rf .automation
-
-          git fetch origin main
-          git checkout origin/main -- .github/workflows/validate-userscript.yml
-
-          node --check src/missionchief-command-nexus.user.js
-          node scripts/validate-userscript.mjs
-          python3 scripts/check_repository.py
-          git diff --check
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "Load all limited vehicle pages before selection"
-
-      - name: Rebase and publish completed candidate
-        shell: bash
-        run: |
-          set -euo pipefail
-          git fetch origin main
-          git rebase origin/main
-          git push --force-with-lease origin HEAD:refs/heads/${{ github.head_ref }}
+          gh run view 29760759357 \
+            --repo "${GITHUB_REPOSITORY}" \
+            --log-failed | tail -n 90
