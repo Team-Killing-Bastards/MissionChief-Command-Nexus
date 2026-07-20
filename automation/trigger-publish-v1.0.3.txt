@@ -3,3 +3,4 @@ Verify the completed release and required assets.
 Inspect the failed release-creation step.
 Run clean release repair from final main.
 Inspect the failed clean repair step.
+Tail the exact repair job log.
