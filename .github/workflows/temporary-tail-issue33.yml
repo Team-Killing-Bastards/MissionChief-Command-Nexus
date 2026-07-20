@@ -42,4 +42,6 @@ jobs:
             echo '```'
           } > /tmp/comment.md
 
-          gh issue comment 33 --body-file /tmp/comment.md
+          gh issue comment 33 \
+            --repo "${GITHUB_REPOSITORY}" \
+            --body-file /tmp/comment.md
