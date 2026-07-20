@@ -1,0 +1,44 @@
+name: Tail Issue 33 notifier failure
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - synchronize
+
+permissions:
+  actions: read
+  issues: write
+
+jobs:
+  tail:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'docs/issue-33-validation'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Post notifier failure tail to Issue #33
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          gh api \
+            -H 'Accept: application/vnd.github+json' \
+            "/repos/${GITHUB_REPOSITORY}/actions/jobs/88307768420/logs" \
+            > /tmp/notifier.log
+
+          {
+            echo '## Issue #33 notifier diagnostic'
+            echo
+            echo '```text'
+            tail -n 120 /tmp/notifier.log
+            echo '```'
+          } > /tmp/comment.md
+
+          gh issue comment 33 \
+            --repo "${GITHUB_REPOSITORY}" \
+            --body-file /tmp/comment.md
