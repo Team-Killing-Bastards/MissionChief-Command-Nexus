@@ -1,31 +1,62 @@
-name: Diagnose issue 57 patch
+name: Build v1.0.9 issue 57 fix
 
 on:
   pull_request:
     paths:
       - 'scripts/apply-v1.0.9-issue57.py'
+      - 'scripts/test-issue57.mjs'
       - '.github/workflows/validate-userscript.yml'
 
 permissions:
   contents: write
 
 jobs:
-  diagnose:
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v6
         with:
+          fetch-depth: 0
           ref: ${{ github.head_ref }}
-      - name: Capture patch result
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - name: Apply fix
         shell: bash
         run: |
-          set +e
-          python3 scripts/apply-v1.0.9-issue57.py > PATCH_ERROR.txt 2>&1
-          status=$?
-          echo "exit_status=${status}" >> PATCH_ERROR.txt
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('scripts/apply-v1.0.9-issue57.py')
+          text = path.read_text(encoding='utf-8')
+          old = "replace_once(\"V10.6.74\", \"V10.6.75\", 'Mission Finder version')"
+          new = "if source.count('V10.6.74') != 2:\n    raise SystemExit(f\"Mission Finder version count: {source.count('V10.6.74')}\")\nsource = source.replace('V10.6.74', 'V10.6.75')"
+          if text.count(old) != 1:
+              raise SystemExit(f'Patch-script version anchor count: {text.count(old)}')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8', newline='\n')
+          PY
+          python3 scripts/apply-v1.0.9-issue57.py
+      - name: Test independent profiles
+        run: node scripts/test-issue57.mjs
+      - name: Restore permanent workflow and remove builders
+        run: |
+          git fetch origin main --force
+          git checkout origin/main -- .github/workflows/validate-userscript.yml
+          rm -f scripts/apply-v1.0.9-issue57.py scripts/test-issue57.mjs scripts/audit-issue57.py ISSUE_57_AUDIT.txt ISSUE_57_SOURCE.txt PATCH_ERROR.txt
+      - name: Validate candidate
+        run: |
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          node scripts/validate-userscript.mjs --base-ref origin/main
+          python3 scripts/check_repository.py
+          git diff --check
+          grep -q '^// @version      1.0.9$' src/missionchief-command-nexus.user.js
+          grep -q 'V10.6.75' src/missionchief-command-nexus.user.js
+          ! grep -q 'public_order_combined_vehicle' src/missionchief-command-nexus.user.js
+      - name: Commit candidate
+        run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add PATCH_ERROR.txt
-          git commit -m 'Record issue 57 patch diagnostic'
+          git add -A
+          git commit -m 'Fix issue 57 independent profiles'
           git push origin HEAD:${{ github.head_ref }}
