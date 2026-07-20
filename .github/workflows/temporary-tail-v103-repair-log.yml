@@ -31,7 +31,7 @@ jobs:
               -H 'Accept: application/vnd.github+json' \
               "/repos/${GITHUB_REPOSITORY}/actions/jobs/88250908418/logs" \
               > /tmp/repair.log; then
-              tail -n 80 /tmp/repair.log
+              tail -n 35 /tmp/repair.log
               exit 0
             fi
             sleep 10
