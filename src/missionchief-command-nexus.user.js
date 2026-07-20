@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.6
+// @version      1.0.7
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -7470,7 +7470,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.73
+         * MODULE 2: MISSION FINDER V10.6.74
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -7720,7 +7720,7 @@
     // before an untrained IRV may satisfy ordinary Police attendance. Police Medic
     // and Railway Police Officer requirements now use exact trained IRVs with two
     // qualified personnel, and ATV Carrier uses an authoritative type-30 matcher.
-    // V10.6.73: Critical Care Ambulances now require one trained person per vehicle.
+    // V10.6.74: Critical Care Ambulances now require one trained person per vehicle.
     // Armed Response personnel use exact type-25 ATCs with two officers who each hold
     // both Roads Policing and Firearms. Police Officer and Seagoing Vessel upgrade
     // rows now use shared strict conversions across Unit Finder, Update and Auto.
@@ -17202,7 +17202,7 @@ let sessionRuntimeTicker = null;
                     updatedAt:
                         Date.now(),
                     source:
-                        `${MF_STRICT_TRAINING_SOURCE_PREFIX}${String(source || 'update').toLowerCase()}-v10673`
+                        `${MF_STRICT_TRAINING_SOURCE_PREFIX}${String(source || 'update').toLowerCase()}-v10674`
                 };
 
                 mfLiveTrainingVerifyCache.set(
@@ -17413,7 +17413,7 @@ let sessionRuntimeTicker = null;
                         },
                         updatedAt: Date.now(),
                         source:
-                            `${MF_STRICT_TRAINING_SOURCE_PREFIX}armed-response-${String(source || 'update').toLowerCase()}-v10673`
+                            `${MF_STRICT_TRAINING_SOURCE_PREFIX}armed-response-${String(source || 'update').toLowerCase()}-v10674`
                     };
 
                     mfLiveTrainingVerifyCache.set(
@@ -17725,7 +17725,7 @@ let sessionRuntimeTicker = null;
                     updatedAt:
                         Date.now(),
                     source:
-                        `${MF_STRICT_TRAINING_SOURCE_PREFIX}ordinary-${String(source || 'update').toLowerCase()}-v10673`
+                        `${MF_STRICT_TRAINING_SOURCE_PREFIX}ordinary-${String(source || 'update').toLowerCase()}-v10674`
                 };
 
                 mfLiveTrainingVerifyCache.set(
@@ -21483,6 +21483,40 @@ let sessionRuntimeTicker = null;
             : null;
     }
 
+    function parseMissionRequirementRangeUpperBound(
+        value
+    ) {
+        const cleaned = String(
+            value ?? ''
+        )
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        const match = cleaned.match(
+            /^(\d+)\s*(?:-|–|—|to)\s*(\d+)$/i
+        );
+
+        if (!match) {
+            return null;
+        }
+
+        const lower = parseInt(match[1], 10);
+        const upper = parseInt(match[2], 10);
+
+        if (
+            !Number.isFinite(lower) ||
+            !Number.isFinite(upper)
+        ) {
+            return null;
+        }
+
+        return Math.max(
+            0,
+            lower,
+            upper
+        );
+    }
+
     function getLiveRequirementCellText(
         row,
         selectors,
@@ -21616,6 +21650,11 @@ let sessionRuntimeTicker = null;
                 stillNeededText
             );
 
+        const explicitStillNeededRange =
+            parseMissionRequirementRangeUpperBound(
+                stillNeededText
+            );
+
         const rowState =
             String(
                 row.getAttribute(
@@ -21647,10 +21686,18 @@ let sessionRuntimeTicker = null;
                     title
                 ) ||
             stillNeededText ===
-                '?';
+                '?' ||
+            explicitStillNeededRange !==
+                null;
 
+        // A bounded unresolved value such as 0-3 is actionable. Use the
+        // upper bound so Mission Update covers the worst-case shortage,
+        // while a completely unknown naked '?' continues through the
+        // existing trusted-row safety rules below.
         let stillNeeded =
-            explicitStillNeeded;
+            explicitStillNeededRange !== null
+                ? explicitStillNeededRange
+                : explicitStillNeeded;
 
         if (
             stillNeeded ===
