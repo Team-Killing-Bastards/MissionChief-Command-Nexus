@@ -29,3 +29,5 @@ jobs:
 
           echo '===== LATEST PATCHER FAILURE ====='
           tail -n 70 /tmp/patcher.log
+
+          echo 'Diagnostic completed.'
