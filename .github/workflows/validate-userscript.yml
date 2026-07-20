@@ -23,10 +23,11 @@ jobs:
           node-version: '24'
       - name: Apply receipt patch
         run: python3 scripts/apply-release-delivery-receipt.py
-      - name: Restore permanent validation workflow
+      - name: Restore workflow files for connector-managed update
         run: |
           git fetch origin main --force
-          git checkout origin/main -- .github/workflows/validate-userscript.yml
+          git checkout origin/main -- .github/workflows/validate-userscript.yml .github/workflows/release.yml
+          rm -f .github/workflows/release-delivery-repair.yml
           rm scripts/apply-release-delivery-receipt.py
       - name: Validate automation
         run: |
@@ -36,7 +37,6 @@ jobs:
           python3 scripts/check_repository.py
           git diff --check
           grep -q 'Discord delivery receipt' scripts/release-notify.mjs
-          grep -q 'Resend release and require Discord delivery receipt' .github/workflows/release-delivery-repair.yml
       - name: Commit validated automation
         run: |
           git config user.name github-actions[bot]
