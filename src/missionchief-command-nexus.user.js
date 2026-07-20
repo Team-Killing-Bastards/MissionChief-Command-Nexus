@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.7
+// @version      1.0.8
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -36,7 +36,7 @@
     if (window.__MC_NAMING_TOOLS_V428__) return;
     window.__MC_NAMING_TOOLS_V428__ = true;
 
-    const UNIT_VERSION = '3.3.3';
+    const UNIT_VERSION = '3.3.4';
     const STATION_VERSION = '1.3.1';
     const PERSONNEL_VERSION = '1.2.9';
     const PERSONNEL_TRAINING_CODE = 'critical_care';
@@ -862,7 +862,8 @@
         renamedCount: 0,
         skippedCount: 0,
         mode: "all",
-        runId: 0
+        runId: 0,
+        activeIframe: null
     };
 
     const STATION_STATE = {
@@ -937,6 +938,12 @@
 
         STATE.stopped = true;
         STATE.paused = false;
+
+        const activeUnitIframe = STATE.activeIframe;
+        STATE.activeIframe = null;
+        releaseUnitIframeDocument(activeUnitIframe);
+        STATE.stations = [];
+        STATE.filteredStations = [];
         STATION_STATE.stopped = true;
         STATION_STATE.paused = false;
         PERSONNEL_STATE.stopped = true;
@@ -6929,6 +6936,56 @@
         return `${info.icon ? info.icon + ' ' : ''}${station.callsignBase}-${info.code}-${count}`;
     }
 
+    function navigateUnitIframe(iframe, href) {
+        if (!iframe || !href) return false;
+
+        try {
+            iframe.contentWindow.location.replace(href);
+            return true;
+        } catch (_error) {
+            try {
+                iframe.setAttribute('src', href);
+                return true;
+            } catch (_fallbackError) {
+                return false;
+            }
+        }
+    }
+
+    function releaseUnitIframeDocument(iframe) {
+        if (!iframe) return;
+
+        try {
+            iframe.contentWindow.location.replace('about:blank');
+        } catch (_error) {
+            try {
+                iframe.setAttribute('src', 'about:blank');
+            } catch (_fallbackError) {}
+        }
+    }
+
+    function getUnitModalCloseButton(iframe) {
+        const modal = iframe?.closest?.(
+            '.vm--modal, [role="dialog"], .lightbox, .modal'
+        );
+
+        const scoped = modal?.querySelector?.(
+            'span.lightbox-close, button.lightbox-close, .vm--modal-close, button.close'
+        );
+
+        if (scoped) return scoped;
+
+        const candidates = [
+            ...document.querySelectorAll(
+                'span.lightbox-close, button.lightbox-close, .vm--modal-close, button.close'
+            )
+        ];
+
+        return candidates.reverse().find(button => {
+            return button.offsetParent !== null;
+        }) || candidates[0] || null;
+    }
+
     function refreshStations() {
         if (PERSONNEL_STATE.running) {
             log('Personnel Assignment is currently running. Stop it before refreshing Unit Naming.', 'error');
@@ -7017,6 +7074,11 @@
         if (STATE.running) {
             log('Already running.', 'debug');
             return;
+        }
+
+        if (STATE.activeIframe) {
+            releaseUnitIframeDocument(STATE.activeIframe);
+            STATE.activeIframe = null;
         }
 
         if (!STATE.filteredStations.length) {
@@ -7115,11 +7177,15 @@
                 stationLink.click();
                 const iframe = await waitForStationIframe(station.href);
 
+                if (iframe) {
+                    STATE.activeIframe = iframe;
+                }
+
                 if (!iframe) {
                     log(`Station iframe not found, skipped: ${station.displayName}`, 'error');
                     STATE.skippedCount++;
                     updateCounters();
-                    await closeStationModal();
+                    await closeStationModal(iframe);
                     STATE.stationIndex++;
                     continue;
                 }
@@ -7130,13 +7196,13 @@
                     log(`Vehicle table did not load, skipped: ${station.displayName}`, 'error');
                     STATE.skippedCount++;
                     updateCounters();
-                    await closeStationModal();
+                    await closeStationModal(iframe);
                     STATE.stationIndex++;
                     continue;
                 }
 
                 await processStationVehicleQueue(iframe, station);
-                await closeStationModal();
+                await closeStationModal(iframe);
 
                 if (STATE.mode === 'single') {
                     log('Single station mode complete.', 'done');
@@ -7146,6 +7212,10 @@
                 STATE.stationIndex++;
             }
         } finally {
+            if (STATE.activeIframe) {
+                await closeStationModal(STATE.activeIframe);
+            }
+
             if (runId !== STATE.runId) return;
 
             STATE.running = false;
@@ -7300,8 +7370,12 @@
     async function processStationVehicleQueue(iframe, station) {
         setStatus('Building vehicle queue');
 
-        const doc = iframe.contentDocument;
-        const queue = getVehicleQueueFromTable(doc);
+        // Build a lightweight string-only queue and release the station document
+        // before the first navigation. Holding the original document across every
+        // awaited edit page kept the full station DOM alive for the whole run.
+        const queue = getVehicleQueueFromTable(
+            iframe.contentDocument
+        );
 
         debug(`Vehicle queue built for ${station.displayName}: ${queue.length}`);
 
@@ -7316,6 +7390,7 @@
             if (STATE.stopped) return;
 
             await waitIfPaused();
+            if (STATE.stopped) return;
 
             if (!item.vehicleType) {
                 log(`Unknown vehicle_type_id skipped: ${item.vehicleTypeId} | ${item.editHref}`, 'error');
@@ -7335,23 +7410,47 @@
 
             counts[item.vehicleType] = (counts[item.vehicleType] || 0) + 1;
 
-            const newName = makeVehicleName(station, item.vehicleType, counts[item.vehicleType]);
+            const newName = makeVehicleName(
+                station,
+                item.vehicleType,
+                counts[item.vehicleType]
+            );
 
             setStatus('Opening edit page');
             setVehicle(item.editHref);
 
-            iframe.contentWindow.location.href = item.editHref;
+            // Replace rather than append to the iframe history. This prevents a
+            // long rename run from retaining one browsing-history document for
+            // every vehicle edit page.
+            if (!navigateUnitIframe(iframe, item.editHref)) {
+                log(`Could not navigate to vehicle edit page: ${item.editHref}`, 'error');
+                STATE.skippedCount++;
+                updateCounters();
+                continue;
+            }
 
-            await waitForEditPage(iframe);
+            const editPageReady = await waitForEditPage(iframe);
 
-            const editDoc = iframe.contentDocument;
-            const captionInput = editDoc.querySelector('#vehicle_caption');
-            const saveBtn = editDoc.querySelector('input[type="submit"][value="Save"], button[type="submit"]');
+            if (!editPageReady) {
+                log(`Vehicle edit page did not load: ${item.editHref}`, 'error');
+                STATE.skippedCount++;
+                updateCounters();
+                continue;
+            }
+
+            let editDoc = iframe.contentDocument;
+            let captionInput = editDoc?.querySelector('#vehicle_caption') || null;
+            let saveBtn = editDoc?.querySelector(
+                'input[type="submit"][value="Save"], button[type="submit"]'
+            ) || null;
 
             if (!captionInput || !saveBtn) {
                 log(`Caption or Save missing: ${item.editHref}`, 'error');
                 STATE.skippedCount++;
                 updateCounters();
+                editDoc = null;
+                captionInput = null;
+                saveBtn = null;
                 continue;
             }
 
@@ -7372,25 +7471,58 @@
             STATE.renamedCount++;
             updateCounters();
 
+            // Do not retain the completed edit document or its form controls
+            // during the post-save wait.
+            editDoc = null;
+            captionInput = null;
+            saveBtn = null;
+
             await sleep(700);
         }
 
-        iframe.contentWindow.location.href = station.href;
+        navigateUnitIframe(iframe, station.href);
         await waitForVehicleTable(iframe);
         await sleep(300);
     }
 
-    async function closeStationModal() {
+    async function closeStationModal(iframe = STATE.activeIframe) {
         setStatus('Closing station');
 
-        const closeBtn = document.querySelector('span.lightbox-close');
+        const activeIframe = iframe || STATE.activeIframe;
+        if (STATE.activeIframe === activeIframe) {
+            STATE.activeIframe = null;
+        }
+
+        const closeBtn = getUnitModalCloseButton(activeIframe);
 
         if (closeBtn) {
             closeBtn.click();
-            await sleep(800);
+
+            // Give the framework a short opportunity to detach or hide the
+            // correct modal before its iframe document is cleared.
+            for (let attempt = 0; attempt < 15; attempt++) {
+                const modal = activeIframe?.closest?.(
+                    '.vm--modal, [role="dialog"], .lightbox, .modal'
+                );
+
+                if (
+                    !activeIframe?.isConnected ||
+                    (modal && modal.offsetParent === null)
+                ) {
+                    break;
+                }
+
+                await sleep(100);
+            }
         } else {
             log('Close button not found.', 'error');
         }
+
+        // MissionChief may hide and reuse the modal instead of removing it.
+        // Blank the associated iframe so its station/edit documents and history
+        // become collectible before the next station is opened.
+        releaseUnitIframeDocument(activeIframe);
+        await sleep(150);
     }
 
     async function waitIfPaused(runId = STATE.runId) {

@@ -1,56 +1,50 @@
-name: Build v1.0.8 candidate
+name: Validate userscript
 
 on:
   pull_request:
     paths:
-      - 'scripts/apply-v1.0.8-unit-memory.py'
+      - 'src/**'
+      - 'scripts/validate-userscript.mjs'
       - '.github/workflows/validate-userscript.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'scripts/validate-userscript.mjs'
+      - '.github/workflows/validate-userscript.yml'
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: validate-userscript-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build:
+  validate:
+    name: Userscript validation
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 10
+
     steps:
-      - uses: actions/checkout@v6
+      - name: Check out repository
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          ref: ${{ github.head_ref }}
-      - uses: actions/setup-node@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: '24'
-      - name: Narrow lifecycle assertion and apply patch
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          path = Path('scripts/apply-v1.0.8-unit-memory.py')
-          text = path.read_text(encoding='utf-8')
-          old = "    '        STATE.stopped = true;\\n        STATE.paused = false;',\n    '        STATE.stopped = true;\\n        STATE.paused = false;\\n\\n'"
-          new = "    '        TOOL_LIFECYCLE_CLEANED = true;\\n\\n        STATE.stopped = true;\\n        STATE.paused = false;',\n    '        TOOL_LIFECYCLE_CLEANED = true;\\n\\n        STATE.stopped = true;\\n        STATE.paused = false;\\n\\n'"
-          if text.count(old) != 1:
-              raise SystemExit(f'Lifecycle patch anchor count: {text.count(old)}')
-          path.write_text(text.replace(old, new, 1), encoding='utf-8', newline='\n')
-          PY
-          python3 scripts/apply-v1.0.8-unit-memory.py
-      - name: Restore permanent files
-        run: |
-          git fetch origin main --force
-          git checkout origin/main -- .github/workflows/validate-userscript.yml
-          rm scripts/apply-v1.0.8-unit-memory.py PATCH_ERROR.txt
-      - name: Validate
-        run: |
-          node --check src/missionchief-command-nexus.user.js
-          node scripts/validate-userscript.mjs
-          node scripts/validate-userscript.mjs --base-ref origin/main
-          python3 scripts/check_repository.py
-          git diff --check
-      - name: Commit candidate
-        run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add -A
-          git commit -m 'Prevent Unit Renamer page retention'
-          git push origin HEAD:${{ github.head_ref }}
+          node-version: '22'
+
+      - name: Validate JavaScript syntax
+        run: node --check src/missionchief-command-nexus.user.js
+
+      - name: Validate metadata and Greasy Fork limits
+        run: node scripts/validate-userscript.mjs
+
+      - name: Require a version increase when code changes
+        if: github.event_name == 'pull_request'
+        run: node scripts/validate-userscript.mjs --base-ref "origin/${{ github.base_ref }}"
