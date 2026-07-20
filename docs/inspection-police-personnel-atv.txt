@@ -1,0 +1,3628 @@
+===== ORDINARY POLICE =====
+
+--- context 1: lines 131-159 ---
+00131:                 'Firearms',
+00132:             police_horse:
+00133:                 'Mounted Officer',
+00134:             k9:
+00135:                 'Dog Handler',
+00136:             drone:
+00137:                 'Drone Operator',
+00138:             search_and_rescue:
+00139:                 'Police Search Advisor',
+00140:             polizeihubschrauber:
+00141:                 'Police Aviation',
+00142:             railway_police_command:
+00143:                 'Mobile Operations Management',
+00144:             railway_police:
+00145:                 'Railway Police Officer',
+00146:             bomb_disposal_command:
+00147:                 'EOD Commander',
+00148:             bomb_disposal:
+00149:                 'Bomb Disposal',
+00150:             bomb_disposal_diver:
+00151:                 'Marine Bomb Disposal'
+00152:         });
+00153: 
+00154:     const POLICE_RULES = Object.freeze({
+00155:         publicOrderLevel1: makePoliceRule({
+00156:             id:
+00157:                 'police_public_order_level_1',
+00158:             label:
+00159:                 'Level 1 Public Order',
+
+--- context 2: lines 319-352 ---
+00319:             trainingAll: ['polizeihubschrauber'],
+00320:             trainingLabel: 'Police aviation'
+00321:         }),
+00322:         mobileOperations: makePoliceRule({
+00323:             id: 'police_mobile_operations',
+00324:             label: 'Mobile Operations Management',
+00325:             vehicleTypeIds: ['108'],
+00326:             vehicleLabel: 'EIU',
+00327:             target: 2,
+00328:             trainingAll: ['railway_police_command'],
+00329:             trainingLabel: 'Mobile Operations Manager'
+00330:         }),
+00331:         railway: makePoliceRule({
+00332:             id: 'police_railway',
+00333:             label: 'Railway Police Officer',
+00334:             vehicleTypeIds: ['8'],
+00335:             vehicleLabel: 'Railway Policing IRV',
+00336:             target: 2,
+00337:             trainingAll: ['railway_police'],
+00338:             trainingLabel: 'Railway Police Officer',
+00339:             preferWithout: ['railway_police_command'],
+00340:             sharedVehiclePool: true
+00341:         }),
+00342:         eodCommander: makePoliceRule({
+00343:             id: 'police_eod_commander',
+00344:             label: 'EOD Commander',
+00345:             vehicleTypeIds: ['109'],
+00346:             vehicleLabel: 'EOD Commander Vehicle',
+00347:             target: 2,
+00348:             trainingAll: ['bomb_disposal_command'],
+00349:             trainingLabel: 'EOD Commander'
+00350:         }),
+00351:         eodResponse: makePoliceRule({
+00352:             id: 'police_eod_response',
+
+--- context 3: lines 537-612 ---
+00537:             ]
+00538:         },
+00539:         police: {
+00540:             label: 'Police',
+00541:             icon: '🚓',
+00542:             profiles: [
+00543:                 livePoliceProfile('police_bomb_disposal', 'Bomb Disposal', 'EOD Response, Medium and Heavy vehicles', 'Fill each mapped EOD vehicle to its verified maximum with Bomb Disposal personnel', 'LIVE: EOD Commander vehicles are processed first by Run all Police, then Response 4/4, Medium 3/3 and Heavy 2/2. Existing assignments are preserved.', [POLICE_RULES.eodResponse, POLICE_RULES.eodMedium, POLICE_RULES.eodHeavy], ['EOD']),
+00544:                 livePoliceProfile('police_dog_handling', 'Dog handling', 'Dog Support Unit', 'At least 1 Dog Handler per DSU', 'LIVE: safely meets the game-confirmed minimum of one Dog Handler per DSU without moving existing staff.', [POLICE_RULES.dog]),
+00545:                 livePoliceProfile('police_drone_operator', 'Drone Operator Training', 'Police Drone Vehicle', '2 Drone Operators per Police Drone Vehicle', 'LIVE: fills Police Drone Vehicles to 2/2. Search Advisor dual-trained personnel are preserved where possible.', [POLICE_RULES.drone]),
+00546:                 livePoliceProfile('police_eod_commander', 'EOD Commander', 'EOD Commander Vehicle', '2 EOD Commanders per vehicle', 'LIVE: fills EOD Commander vehicles to 2/2 before general Bomb Disposal vehicles in the full Police run.', [POLICE_RULES.eodCommander], ['EOD']),
+00547:                 livePoliceProfile('police_firearms', 'Firearms training', 'Multi-Role Armoured Vehicle', '6 Firearms-trained officers per MRAV', 'LIVE: fills every MRAV to 6/6 with Firearms-trained personnel and preserves Roads Policing dual-trained officers where possible.', [POLICE_RULES.firearms]),
+00548:                 livePoliceProfile(
+00549:                     'police_public_order_1',
+00550:                     'Level 1 Public Order Training',
+00551:                     'Normal Police IRV',
+00552:                     '2 Level 1 Public Order officers per IRV',
+00553:                     'LIVE INDIVIDUAL PROFILE: checks and assigns Level 1 Public Order training only. Other Police qualifications do not affect this result.',
+00554:                     [
+00555:                         POLICE_RULES
+00556:                             .publicOrderLevel1
+00557:                     ]
+00558:                 ),
+00559:                 livePoliceProfile(
+00560:                     'police_public_order_2',
+00561:                     'Level 2 Public Order Training',
+00562:                     'Normal Police IRV',
+00563:                     '2 Level 2 Public Order officers per IRV',
+00564:                     'LIVE INDIVIDUAL PROFILE: checks and assigns Level 2 Public Order training only. Other Police qualifications do not affect this result.',
+00565:                     [
+00566:                         POLICE_RULES
+00567:                             .publicOrderLevel2
+00568:                     ]
+00569:                 ),
+00570:                 livePoliceProfile('police_marine_bomb_disposal', 'Marine Bomb Disposal', 'Marine EOD Response and Equipment vehicles', 'Response 4/4; Equipment Van 3/3', 'LIVE: fills Marine EOD Response vehicles to 4/4 and Equipment Vans to 3/3 with Marine Bomb Disposal personnel.', [POLICE_RULES.marineResponse, POLICE_RULES.marineEquipment], ['EOD']),
+00571:                 livePoliceProfile('police_mobile_operations_management', 'Mobile Operations Management', 'EIU', '2 Mobile Operations Managers per EIU', 'LIVE: fills each EIU to 2/2 with railway_police_command-trained personnel.', [POLICE_RULES.mobileOperations]),
+00572:                 livePoliceProfile('police_mounted', 'Mounted Training', 'Mounted Unit', 'At least 1 Mounted Officer per vehicle', 'LIVE: meets the verified native minimum of one Mounted Officer per Mounted Unit. It does not fill the remaining passenger seats.', [POLICE_RULES.mounted]),
+00573:                 livePoliceProfile('police_inspector', 'Police Inspector Training', 'Normal Police IRV', '2 Police Inspectors per allocated IRV', 'LIVE: uses normal IRVs and fills allocated vehicles to 2/2 with police_inspector-trained officers.', [POLICE_RULES.inspector]),
+00574:                 livePoliceProfile(
+00575:                     'police_medic',
+00576:                     'Police Medic Training',
+00577:                     'Normal Police IRV',
+00578:                     '2 Police Medics per IRV',
+00579:                     'LIVE INDIVIDUAL PROFILE: checks and assigns Police Medic training only. Run all Police profiles retains the combined four-course crew rule.',
+00580:                     [
+00581:                         POLICE_RULES
+00582:                             .publicOrderMedic
+00583:                     ]
+00584:                 ),
+00585:                 livePoliceProfile('police_search_advisor', 'Police Search Advisor Training', 'Police Drone Vehicle', '2 dual-trained Drone/Search Advisor personnel', 'LIVE: both personnel must hold drone and search_and_rescue training.', [POLICE_RULES.searchAdvisor]),
+00586:                 livePoliceProfile(
+00587:                     'police_sergeant',
+00588:                     'Police Sergeant Training',
+00589:                     'Normal Police IRV',
+00590:                     '2 Police Sergeants per IRV',
+00591:                     'LIVE INDIVIDUAL PROFILE: checks and assigns Police Sergeant training only. Run all Police profiles retains the combined four-course crew rule.',
+00592:                     [
+00593:                         POLICE_RULES
+00594:                             .publicOrderSergeant
+00595:                     ]
+00596:                 ),
+00597:                 livePoliceProfile('police_aviation', 'Police aviation', 'Police Helicopter', '3 Police Aviation personnel per helicopter', 'LIVE: fills each Police Helicopter to 3/3 with polizeihubschrauber-trained personnel.', [POLICE_RULES.aviation], ['AIR']),
+00598:                 livePoliceProfile('police_railway', 'Railway Policing', 'Railway Policing IRV', '2 Railway Police Officers per IRV', 'LIVE: fills Railway Unit IRVs to 2/2 with railway_police-trained personnel and preserves Mobile Operations Managers where possible.', [POLICE_RULES.railway]),
+00599:                 livePoliceProfile('police_roads', 'Roads Policing Officer Training', 'Armed Traffic Car', '2 dual-trained Roads Policing + Firearms officers', 'LIVE: both officers must hold traffic_police and swat.', [POLICE_RULES.roads]),
+00600:                 {
+00601:                     id: 'all_police',
+00602:                     label: 'Run all Police profiles',
+00603:                     vehicle: 'All verified Police, Aviation and EOD vehicle groups',
+00604:                     requirement: 'Process verified profiles in safe reservation order',
+00605:                     policy: 'LIVE BATCH: preserves current assignments, assigns specialist and dual-trained roles first, allocates shared IRV/Drone pools safely, then verifies the station-wide result.',
+00606:                     live: true,
+00607:                     engine: 'police',
+00608:                     stationTypes: ['POLICE', 'AIR', 'EOD'],
+00609:                     rules: POLICE_ALL_RULES,
+00610:                     batch: true
+00611:                 }
+00612:             ]
+
+--- context 4: lines 650-678 ---
+00650:                 requirement: 'Process services and profiles in safe priority order',
+00651:                 policy: 'This future option will only be enabled after each individual service is fully tested and live.',
+00652:                 live: false,
+00653:                 stationTypes: []
+00654:             }]
+00655:         }
+00656:     };
+00657: 
+00658:     const TYPE_ID_TO_VEHICLE_TYPE = {
+00659:         "3": "Fire Officer",
+00660:         "4": "Rescue Support Unit (RSU)",
+00661:         "5": "Ambulance",
+00662:         "6": "Water Carrier",
+00663:         "7": "HazMat Unit",
+00664:         "8": "Police Car",
+00665:         "9": "Air Ambulance",
+00666:         "10": "RRV",
+00667:         "11": "Police Helicopter",
+00668:         "12": "DSU",
+00669:         "15": "Incident Command and Control Unit",
+00670:         "16": "Rescue Pump",
+00671:         "17": "Combined Aerial Rescue Pump",
+00672:         "20": "OTL",
+00673:         "25": "Armed Traffic Car",
+00674:         "26": "Heavy 4x4 Tanker",
+00675:         "27": "PRV",
+00676:         "28": "SRV",
+00677:         "29": "Welfare Vehicle",
+00678:         "30": "ATV",
+
+--- context 5: lines 733-761 ---
+00733:         "113": "Marine EOD Response Vehicle",
+00734:         "114": "Marine EOD Equipment Van",
+00735:         "115": "Welfare Vehicle",
+00736:         "116": "Cell Van"
+00737:     };
+00738: 
+00739:     const VEHICLE_INFO = {
+00740:         "Ambulance": { code: "AB", icon: "🚑" },
+00741:         "Ambulance Officer": { code: "AO", icon: "🚑🎖️" },
+00742:         "Ambulance Control Unit": { code: "ACU", icon: "🚑📡" },
+00743:         "Air Ambulance": { code: "AA", icon: "🚁" },
+00744:         "Rescue Pump": { code: "RP", icon: "🚒" },
+00745:         "Combined Aerial Rescue Pump": { code: "CARP", icon: "🚒🪜" },
+00746:         "Fire Officer": { code: "FO", icon: "🧑‍🚒" },
+00747:         "Police Car": { code: "PC", icon: "🚔" },
+00748:         "Armed Traffic Car": { code: "ATC", icon: "🚔🔫" },
+00749:         "Operational Support Unit": { code: "OSU", icon: "☢️🤿🦺" },
+00750:         "Mass Casualty Equipment": { code: "MCE", icon: "🏥" },
+00751:         "Welfare Vehicle": { code: "WV", icon: "🚌" },
+00752:         "HazMat Unit": { code: "HMAT", icon: "☢️" },
+00753:         "Water Carrier": { code: "WrC", icon: "🚒💦" },
+00754:         "Incident Command and Control Unit": { code: "ICCU", icon: "🔥🚒🔥" },
+00755:         "Heavy 4x4 Tanker": { code: "H4x4T", icon: "🚒💦" },
+00756:         "Police Helicopter": { code: "POLHELI", icon: "🚔🚁" },
+00757:         "Police Drone Vehicle": { code: "PDV", icon: "🚔🚁" },
+00758:         "EIU": { code: "EIU", icon: "🚔📡" },
+00759:         "PSU Carrier": { code: "PSU", icon: "🚔🚌" },
+00760:         "Detention Van": { code: "DV", icon: "🚔🥅" },
+00761:         "Mounted Unit": { code: "MU", icon: "🚔🐎" },
+
+--- context 6: lines 7386-7414 ---
+07386:     // Requirements remain exclusive to the Mission Update workflow.
+07387:     // V10.6.63: Mission Update now converts Cars to tow in pairs (1-2 cars =
+07388:     // one Flatbed Recovery Vehicle, 3-4 = two) and current linked patient-card
+07389:     // We need alerts override a stale/zero live-panel patient row for that patient.
+07390:     // V10.6.67: Inspector and Public Order IRVs are now matched by exact
+07391:     // vehicle ID and current per-vehicle assignment-page training only. This
+07392:     // blocks duplicate generic names such as "IRV" from copying one vehicle's
+07393:     // training to another and prevents an untrained IRV from being selected.
+07394:     // Public Order qualification now requires only the L1/L2/Sergeant codes
+07395:     // actually requested by the current mission.
+07396:     // V10.6.69: Strict Inspector/Public Order verification now uses the exact
+07397:     // Personnel Assignment registry vehicle IDs as priority hints, then rechecks
+07398:     // those precise /zuweisung pages before selection. This prevents trained
+07399:     // IRVs being missed when they are outside the first arrival-sorted scan batch.
+07400:     // V10.6.71: Normal Police Car/Police Officer requirements now protect
+07401:     // exact-ID IRVs carrying specialist-trained staff, live-verify ordinary IRVs
+07402:     // before selection, and exclude known trained IRVs from ordinary attendance.
+07403:     // Auto Mode now waits for a complete, non-zero, ID-stable vehicle list with
+07404:     // no remaining load control or spinner before Unit Finder may select units.
+07405:     // V10.6.54: Auto Mode no longer waits for post-dispatch upgrades. It now
+07406:     // dispatches and advances immediately, including exact-next continuation
+07407:     // after high-value Dispatch & Share missions.
+07408:     // V10.6.53: ICCU-or-ACU requirements now select an ICCU first and use
+07409:     // Ambulance Control Unit vehicle type 31 only when no ICCU is available.
+07410:     // V10.6.52: Debug, High Debug and the Issue Recorder have been removed.
+07411:     // Clear legacy settings/data so they cannot be restored by an older saved preference.
+07412:     let mfDebugEnabled = false;
+07413:     let mfHighDebugEnabled = false;
+07414: 
+
+--- context 7: lines 7431-7461 ---
+07431:     const MF_PERSONNEL_TRAINING_REGISTRY_KEY =
+07432:         'mcPersonnelVehicleTrainingRegistry_v1';
+07433: 
+07434:     // V10.6.67: The Personnel Tool registry can be contaminated when several
+07435:     // vehicles share the same displayed name (for example many vehicles named
+07436:     // simply "IRV"). Inspector and Public Order selection therefore trusts only
+07437:     // an exact vehicle ID that has been verified from that vehicle's current
+07438:     // /zuweisung page. Unsafe name-based registry matching is never used.
+07439:     const MF_LIVE_TRAINING_VERIFY_CACHE_MS = 10 * 60 * 1000;
+07440:     const MF_LIVE_TRAINING_VERIFY_MAX_PAGES = 48;
+07441:     const MF_LIVE_TRAINING_VERIFY_BATCH_SIZE = 6;
+07442:     const MF_STRICT_TRAINING_SOURCE_PREFIX =
+07443:         'mission-finder-live-strict-';
+07444: 
+07445:     // V10.6.71: ordinary Police attendance must preserve specialist IRVs.
+07446:     // Exact vehicle IDs carrying any protected Police qualification are never
+07447:     // used to satisfy a normal Police Car / Police Officer requirement.
+07448:     const MF_PROTECTED_ORDINARY_IRV_TRAINING_CODES =
+07449:         Object.freeze([
+07450:             'level_1_public_order',
+07451:             'level_2_public_order',
+07452:             'police_sergeant',
+07453:             'police_medic',
+07454:             'police_inspector',
+07455:             'traffic_police',
+07456:             'swat',
+07457:             'police_horse',
+07458:             'k9',
+07459:             'drone',
+07460:             'search_and_rescue',
+07461:             'polizeihubschrauber',
+
+--- context 8: lines 8113-8149 ---
+08113:         "Rescue Support Units or Rescue Pumps": "Fire Engine R/PUMP x 1",
+08114:         "Fire Engines or Rescue Support Vehicles": "Fire Engine R/PUMP x 1",
+08115:         "Fire Engines, Rescue Support Vehicles or Aerial Appliance Trucks": "Fire Engine R/PUMP x 1",
+08116:         "Foam Unit": "RP CAFS",
+08117:         "Foam Units": "RP CAFS",
+08118:         "Water Carrier": "Water Carrier",
+08119:         "Water Carriers": "Water Carrier",
+08120:         "Welfare Vehicle": "Welfare Vehicle",
+08121:         "Welfare Vehicles": "Welfare Vehicle",
+08122:         "Welfare Vehicles x1": "Welfare Vehicle",
+08123: 
+08124:         /*************************************************
+08125:          * POLICE
+08126:          *************************************************/
+08127:         "Police Car": "Police Car",
+08128:         "Police Cars": "Police Car",
+08129:         "Police car": "Police Car",
+08130:         "Police cars": "Police Car",
+08131:         "Police Officer": "Police Car",
+08132:         "Police Officers": "Police Car",
+08133:         "Traffic Car": "Police ATC",
+08134:         "Traffic Cars": "Police ATC",
+08135:         "Police Cars or Armed Response Vehicles (ARVs)": "Police ATC",
+08136:         "Armed Response Personnel (In Armed Vehicles)": "Police ATC",
+08137:         "Dog Support Unit (DSU)": "Police DSU",
+08138:         "Dog Support Units (DSU)": "Police DSU",
+08139:         "Dog Support Units (DSUs)": "Police DSU",
+08140:         "Mounted Unit": "Mounted Unit",
+08141:         "Mounted Units": "Mounted Unit",
+08142:         "Police Inspector": "Police Inspector",
+08143:         "Police Sergeant": "Police Sergeant",
+08144:         "Cell Van": "Cell Van",
+08145:         "Police Helicopter": "Police Helicopter",
+08146:         "Police Helicopters": "Police Helicopter",
+08147:         "Police Helicopter or Drone": "Police Helicopter",
+08148:         "Police Helicopter or Drones": "Police Helicopter",
+08149:         "Police Helicopters or Drone": "Police Helicopter",
+
+--- context 9: lines 8984-9022 ---
+08984:         mappedName
+08985:     ) {
+08986:         const raw =
+08987:             normaliseVehicleText(
+08988:                 originalName
+08989:             );
+08990: 
+08991:         const mapped =
+08992:             normaliseVehicleText(
+08993:                 mappedName
+08994:             );
+08995: 
+08996:         return (
+08997:             raw ===
+08998:                 'police car' ||
+08999:             raw ===
+09000:                 'police cars' ||
+09001:             raw ===
+09002:                 'police officer' ||
+09003:             raw ===
+09004:                 'police officers' ||
+09005:             mapped ===
+09006:                 'police car' ||
+09007:             mapped ===
+09008:                 'police cars'
+09009:         );
+09010:     }
+09011: 
+09012:     function getVehicleTypeIdentifiers(input) {
+09013:         if (!input) return [];
+09014: 
+09015:         const cached = mfVehicleTypeIdentifierCache.get(input);
+09016:         if (cached) return cached;
+09017: 
+09018:         const row = input.closest?.('tr');
+09019:         const typeCell = row?.querySelector?.(
+09020:             '[vehicle_type_id], [data-vehicle-type-id]'
+09021:         );
+09022: 
+
+--- context 10: lines 9040-9093 ---
+09040:     }
+09041: 
+09042:     function isPoliceCarVehicleCheckbox(
+09043:         input
+09044:     ) {
+09045:         if (!input) {
+09046:             return false;
+09047:         }
+09048: 
+09049:         const typeIdentifiers =
+09050:             getVehicleTypeIdentifiers(
+09051:                 input
+09052:             );
+09053: 
+09054:         // MissionChief UK normal Police Car / IRV vehicle type.
+09055:         if (
+09056:             typeIdentifiers
+09057:                 .includes(
+09058:                     '8'
+09059:                 )
+09060:         ) {
+09061:             return true;
+09062:         }
+09063: 
+09064:         const values =
+09065:             getCheckboxVehicleValues(
+09066:                 input
+09067:             );
+09068: 
+09069:         return values.some(value => {
+09070:             const cleaned =
+09071:                 normaliseVehicleText(
+09072:                     value
+09073:                 );
+09074: 
+09075:             return (
+09076:                 cleaned ===
+09077:                     'police car' ||
+09078:                 cleaned ===
+09079:                     'police cars' ||
+09080:                 cleaned ===
+09081:                     'incident response vehicle' ||
+09082:                 cleaned ===
+09083:                     'incident response vehicles' ||
+09084:                 cleaned ===
+09085:                     'irv'
+09086:             );
+09087:         });
+09088:     }
+09089: 
+09090:     function isDogSupportUnitRequirement(
+09091:         originalName,
+09092:         mappedName
+09093:     ) {
+
+--- context 11: lines 9178-9208 ---
+09178:             add('Fire Engine');
+09179:             add('Pump');
+09180:             add('Pumps');
+09181:             add('Rescue Pump');
+09182:             add('Rescue Support Unit');
+09183:             add('Rescue Support Vehicle');
+09184:         }
+09185: 
+09186:         if (lowerMapped === 'police atc' || lowerRaw.includes('traffic car')) {
+09187:             add('Traffic Car');
+09188:             add('Traffic Cars');
+09189:             add('Police ATC');
+09190:         }
+09191: 
+09192:         if (lowerMapped === 'police car' || lowerRaw.includes('police car')) {
+09193:             add('Police Car');
+09194:             add('Police Cars');
+09195:         }
+09196: 
+09197:         if (lowerMapped === 'police dsu' || lowerRaw.includes('dog support')) {
+09198:             add('Dog Support Unit (DSU)');
+09199:             add('Dog Support Units (DSU)');
+09200:             add('Dog Support Units (DSUs)');
+09201:             add('Police DSU');
+09202:             add('DSU');
+09203:         }
+09204: 
+09205:         const policeAirMode =
+09206:             getPoliceAirRequirementMode(
+09207:                 originalName,
+09208:                 mappedName
+
+--- context 12: lines 9833-9862 ---
+09833:             mfDebugEnabled &&
+09834:             rivTypeOnly
+09835:         ) {
+09836:             debugLog(
+09837:                 'RIV STRICT',
+09838:                 `${originalName} -> ${mappedName} | RIV type boxes=${matches.length}`
+09839:             );
+09840:         }
+09841: 
+09842:         if (
+09843:             mfDebugEnabled &&
+09844:             policeCarOnly
+09845:         ) {
+09846:             debugLog(
+09847:                 'POLICE CAR STRICT',
+09848:                 `${originalName} -> ${mappedName} | Police Car/IRV type boxes=${matches.length}`
+09849:             );
+09850:         }
+09851: 
+09852:         return sortVehicleCheckboxesByBestArrival(matches);
+09853:     }
+09854: 
+09855:     function getMatchingVehicleCheckboxes(originalName, mappedName) {
+09856:         return getAllMatchingVehicleCheckboxes(originalName, mappedName, false);
+09857:     }
+09858: 
+09859:     function countSelectedMatchingVehicles(originalName, mappedName) {
+09860:         const candidates = getVehicleMatchCandidates(originalName, mappedName);
+09861:         const strictExactOnly = isAmbulanceTransportRequest(originalName, mappedName);
+09862:         const sartecPrefixOnly = isSartecRequirement(originalName, mappedName);
+
+--- context 13: lines 17055-17112 ---
+17055:                 });
+17056: 
+17057:                 if (
+17058:                     mfDebugEnabled &&
+17059:                     !silent
+17060:                 ) {
+17061:                     debugLog(
+17062:                         'UPDATE PERSONNEL',
+17063:                         `${conversion.personnelRequirement} -> select ${conversion.unitName} x${conversion.stillNeeded} (${conversion.personnelPerVehicle} personnel per vehicle)`
+17064:                     );
+17065:                 }
+17066:             }
+17067:         );
+17068: 
+17069:         // Police Cars normally carry 2 Police Officers.
+17070:         const policeOfficersNeeded =
+17071:             getNamedPersonnelCount(
+17072:                 personnelSegment,
+17073:                 'police\\s+officer(?:s)?'
+17074:             );
+17075: 
+17076:         if (policeOfficersNeeded > 0) {
+17077:             const policeCarsNeeded =
+17078:                 Math.ceil(
+17079:                     policeOfficersNeeded /
+17080:                     2
+17081:                 );
+17082: 
+17083:             rows.push({
+17084:                 unitName:
+17085:                     'Police Car',
+17086:                 stillNeeded:
+17087:                     policeCarsNeeded,
+17088:                 personnelRequirement:
+17089:                     `${policeOfficersNeeded} Police Officer${policeOfficersNeeded === 1 ? '' : 's'}`
+17090:             });
+17091: 
+17092:             if (
+17093:                 mfDebugEnabled &&
+17094:                 !silent
+17095:             ) {
+17096:                 debugLog(
+17097:                     'UPDATE PERSONNEL',
+17098:                     `${policeOfficersNeeded} Police Officer${policeOfficersNeeded === 1 ? '' : 's'} -> select Police Car x${policeCarsNeeded}`
+17099:                 );
+17100:             }
+17101:         }
+17102: 
+17103:         // Coastguard Mud Rescue Units carry 5 Mud Rescue Operators each.
+17104:         const mudRescueOperatorsNeeded =
+17105:             getNamedPersonnelCount(
+17106:                 personnelSegment,
+17107:                 'mud\\s+rescue\\s+operator(?:s)?'
+17108:             );
+17109: 
+17110:         if (mudRescueOperatorsNeeded > 0) {
+17111:             const mudRescueUnitsNeeded =
+17112:                 Math.ceil(
+
+--- context 14: lines 21952-21980 ---
+21952:                 if (mfDebugEnabled && !silent) {
+21953:                     debugLog(
+21954:                         'UPDATE SEAGOING',
+21955:                         `Missing Vehicles text -> ALB x${amount}`
+21956:                     );
+21957:                 }
+21958:             });
+21959:         });
+21960: 
+21961:         // Missing Personnel is an actionable mission update, not a
+21962:         // vehicle staffing fault. Supported personnel conversions include:
+21963:         // Search Technicians = 4 per displayed-name-prefix SARTEC vehicle
+21964:         // Search Advisors = 2 per displayed-name-prefix SARTEC vehicle
+21965:         // SAR Commanders = 2 per Control Van
+21966:         // 3 Police Officers = 2 Police Cars
+21967:         // 6 Mud Rescue Operators = 2 Coastguard Mud Rescue Units
+21968:         // Normal update-table vehicle requirements are selected as well.
+21969:         let maximumSartecUnitsFromPersonnel = 0;
+21970: 
+21971:         const trainedPersonnelRequirements =
+21972:             new Map();
+21973: 
+21974:         if (
+21975:             tableLevel1PublicOrderRequired >
+21976:                 0 ||
+21977:             tableLevel2PublicOrderRequired >
+21978:                 0 ||
+21979:             tablePoliceSergeantRequired >
+21980:                 0 ||
+
+--- context 15: lines 28590-28618 ---
+28590: 
+28591:                     break;
+28592:                 }
+28593:             }
+28594: 
+28595:             // V10.6.50 source parity: Auto Mode now follows the same
+28596:             // sequence as pressing the manual buttons:
+28597:             //   1. Unit Finder reads the mission-help attachment table named
+28598:             //      "Vehicle and Personnel Requirements".
+28599:             //   2. Mission Update then reads the visible Live Mission
+28600:             //      Requirements/patient update source.
+28601:             //
+28602:             // The previous update-first branch could see a patient alert,
+28603:             // skip Unit Finder completely, and therefore send only Ambulances
+28604:             // while ignoring attachment requirements such as Police Cars x5.
+28605:             let autoMissionUpdateRowsHandled = 0;
+28606: 
+28607:             if (
+28608:                 earlyUpdateRows.length > 0 &&
+28609:                 mfDebugEnabled
+28610:             ) {
+28611:                 debugLog(
+28612:                     'AUTO SOURCE PARITY',
+28613:                     `Early Mission Update snapshot detected (${earlyUpdateRows.length} row(s)); Unit Finder attachment will still run first, then the update snapshot will be re-read.`
+28614:                 );
+28615:             }
+28616: 
+28617:             if (mfStaffingBlockActive) {
+28618:                 updateStatusBox(
+
+===== POLICE MEDIC =====
+
+--- context 1: lines 110-139 ---
+00110:         trainingAll: trainingAll.map(String),
+00111:         trainingLabel,
+00112:         preferWithout: preferWithout.map(String),
+00113:         sharedVehiclePool: Boolean(sharedVehiclePool)
+00114:     });
+00115: 
+00116:     const POLICE_TRAINING_LABELS =
+00117:         Object.freeze({
+00118:             level_1_public_order:
+00119:                 'Level 1 Public Order',
+00120:             level_2_public_order:
+00121:                 'Level 2 Public Order',
+00122:             police_sergeant:
+00123:                 'Police Sergeant',
+00124:             police_medic:
+00125:                 'Police Medic',
+00126:             police_inspector:
+00127:                 'Police Inspector',
+00128:             traffic_police:
+00129:                 'Roads Policing',
+00130:             swat:
+00131:                 'Firearms',
+00132:             police_horse:
+00133:                 'Mounted Officer',
+00134:             k9:
+00135:                 'Dog Handler',
+00136:             drone:
+00137:                 'Drone Operator',
+00138:             search_and_rescue:
+00139:                 'Police Search Advisor',
+
+--- context 2: lines 201-256 ---
+00201:                 '8'
+00202:             ],
+00203:             vehicleLabel:
+00204:                 'Incident Response Vehicle',
+00205:             target:
+00206:                 2,
+00207:             trainingAll: [
+00208:                 'police_sergeant'
+00209:             ],
+00210:             trainingLabel:
+00211:                 'Police Sergeant',
+00212:             sharedVehiclePool:
+00213:                 true
+00214:         }),
+00215:         publicOrderMedic: makePoliceRule({
+00216:             id:
+00217:                 'police_public_order_medic',
+00218:             label:
+00219:                 'Police Medic',
+00220:             vehicleTypeIds: [
+00221:                 '8'
+00222:             ],
+00223:             vehicleLabel:
+00224:                 'Incident Response Vehicle',
+00225:             target:
+00226:                 2,
+00227:             trainingAll: [
+00228:                 'police_medic'
+00229:             ],
+00230:             trainingLabel:
+00231:                 'Police Medic',
+00232:             sharedVehiclePool:
+00233:                 true
+00234:         }),
+00235:         publicOrderCombined: makePoliceRule({
+00236:             id: 'police_public_order_combined',
+00237:             label: 'Public Order L1 + L2 + Sergeant + Police Medic',
+00238:             vehicleTypeIds: ['8'],
+00239:             vehicleLabel: 'Incident Response Vehicle',
+00240:             target: 2,
+00241:             trainingAll: ['level_1_public_order', 'level_2_public_order', 'police_sergeant', 'police_medic'],
+00242:             trainingLabel: 'Level 1 + Level 2 + Sergeant + Police Medic',
+00243:             sharedVehiclePool: true
+00244:         }),
+00245:         inspector: makePoliceRule({
+00246:             id: 'police_inspector',
+00247:             label: 'Police Inspector',
+00248:             vehicleTypeIds: ['8'],
+00249:             vehicleLabel: 'Incident Response Vehicle',
+00250:             target: 2,
+00251:             trainingAll: ['police_inspector'],
+00252:             trainingLabel: 'Police Inspector',
+00253:             sharedVehiclePool: true
+00254:         }),
+00255:         roads: makePoliceRule({
+00256:             id: 'police_roads_firearms',
+
+--- context 3: lines 561-596 ---
+00561:                     'Level 2 Public Order Training',
+00562:                     'Normal Police IRV',
+00563:                     '2 Level 2 Public Order officers per IRV',
+00564:                     'LIVE INDIVIDUAL PROFILE: checks and assigns Level 2 Public Order training only. Other Police qualifications do not affect this result.',
+00565:                     [
+00566:                         POLICE_RULES
+00567:                             .publicOrderLevel2
+00568:                     ]
+00569:                 ),
+00570:                 livePoliceProfile('police_marine_bomb_disposal', 'Marine Bomb Disposal', 'Marine EOD Response and Equipment vehicles', 'Response 4/4; Equipment Van 3/3', 'LIVE: fills Marine EOD Response vehicles to 4/4 and Equipment Vans to 3/3 with Marine Bomb Disposal personnel.', [POLICE_RULES.marineResponse, POLICE_RULES.marineEquipment], ['EOD']),
+00571:                 livePoliceProfile('police_mobile_operations_management', 'Mobile Operations Management', 'EIU', '2 Mobile Operations Managers per EIU', 'LIVE: fills each EIU to 2/2 with railway_police_command-trained personnel.', [POLICE_RULES.mobileOperations]),
+00572:                 livePoliceProfile('police_mounted', 'Mounted Training', 'Mounted Unit', 'At least 1 Mounted Officer per vehicle', 'LIVE: meets the verified native minimum of one Mounted Officer per Mounted Unit. It does not fill the remaining passenger seats.', [POLICE_RULES.mounted]),
+00573:                 livePoliceProfile('police_inspector', 'Police Inspector Training', 'Normal Police IRV', '2 Police Inspectors per allocated IRV', 'LIVE: uses normal IRVs and fills allocated vehicles to 2/2 with police_inspector-trained officers.', [POLICE_RULES.inspector]),
+00574:                 livePoliceProfile(
+00575:                     'police_medic',
+00576:                     'Police Medic Training',
+00577:                     'Normal Police IRV',
+00578:                     '2 Police Medics per IRV',
+00579:                     'LIVE INDIVIDUAL PROFILE: checks and assigns Police Medic training only. Run all Police profiles retains the combined four-course crew rule.',
+00580:                     [
+00581:                         POLICE_RULES
+00582:                             .publicOrderMedic
+00583:                     ]
+00584:                 ),
+00585:                 livePoliceProfile('police_search_advisor', 'Police Search Advisor Training', 'Police Drone Vehicle', '2 dual-trained Drone/Search Advisor personnel', 'LIVE: both personnel must hold drone and search_and_rescue training.', [POLICE_RULES.searchAdvisor]),
+00586:                 livePoliceProfile(
+00587:                     'police_sergeant',
+00588:                     'Police Sergeant Training',
+00589:                     'Normal Police IRV',
+00590:                     '2 Police Sergeants per IRV',
+00591:                     'LIVE INDIVIDUAL PROFILE: checks and assigns Police Sergeant training only. Run all Police profiles retains the combined four-course crew rule.',
+00592:                     [
+00593:                         POLICE_RULES
+00594:                             .publicOrderSergeant
+00595:                     ]
+00596:                 ),
+
+--- context 4: lines 7439-7467 ---
+07439:     const MF_LIVE_TRAINING_VERIFY_CACHE_MS = 10 * 60 * 1000;
+07440:     const MF_LIVE_TRAINING_VERIFY_MAX_PAGES = 48;
+07441:     const MF_LIVE_TRAINING_VERIFY_BATCH_SIZE = 6;
+07442:     const MF_STRICT_TRAINING_SOURCE_PREFIX =
+07443:         'mission-finder-live-strict-';
+07444: 
+07445:     // V10.6.71: ordinary Police attendance must preserve specialist IRVs.
+07446:     // Exact vehicle IDs carrying any protected Police qualification are never
+07447:     // used to satisfy a normal Police Car / Police Officer requirement.
+07448:     const MF_PROTECTED_ORDINARY_IRV_TRAINING_CODES =
+07449:         Object.freeze([
+07450:             'level_1_public_order',
+07451:             'level_2_public_order',
+07452:             'police_sergeant',
+07453:             'police_medic',
+07454:             'police_inspector',
+07455:             'traffic_police',
+07456:             'swat',
+07457:             'police_horse',
+07458:             'k9',
+07459:             'drone',
+07460:             'search_and_rescue',
+07461:             'polizeihubschrauber',
+07462:             'railway_police_command',
+07463:             'railway_police',
+07464:             'bomb_disposal_command',
+07465:             'bomb_disposal',
+07466:             'bomb_disposal_diver'
+07467:         ]);
+
+--- context 5: lines 7524-7554 ---
+07524:                 ]
+07525:             },
+07526:             {
+07527:                 code:
+07528:                     'police_inspector',
+07529:                 label:
+07530:                     'Police Inspector',
+07531:                 patterns: [
+07532:                     /(\d+)\s*(?:x\s*)?Police\s+Inspector(?:s)?/gi,
+07533:                     /Police\s+Inspector(?:s)?\s*(?:x\s*)?(\d+)/gi
+07534:                 ]
+07535:             },
+07536:             {
+07537:                 code:
+07538:                     'police_medic',
+07539:                 label:
+07540:                     'Police Medic',
+07541:                 patterns: [
+07542:                     /(\d+)\s*(?:x\s*)?Police\s+Medic(?:s)?/gi
+07543:                 ]
+07544:             }
+07545:         ]);
+07546: 
+07547:     let mfKeepPanelPosition =
+07548:         localStorage.getItem(MF_KEEP_PANEL_POSITION_KEY) === 'true';
+07549: 
+07550:     let mfStaffingBlockActive = false;
+07551:     let mfStaffingBlockText = '';
+07552:     let mfStaffingBlockMissionKey = '';
+07553:     const mfDebugRows = [];
+07554: 
+
+--- context 6: lines 15782-15810 ---
+15782: 
+15783:             if (/Level\s*1\s+Public\s+Order/i.test(rowText)) {
+15784:                 rowCodes.add('level_1_public_order');
+15785:             }
+15786: 
+15787:             if (/Level\s*2\s+Public\s+Order/i.test(rowText)) {
+15788:                 rowCodes.add('level_2_public_order');
+15789:             }
+15790: 
+15791:             if (/\bPolice\s+Sergeant\b/i.test(rowText)) {
+15792:                 rowCodes.add('police_sergeant');
+15793:             }
+15794: 
+15795:             if (/\bPolice\s+Medic\b/i.test(rowText)) {
+15796:                 rowCodes.add('police_medic');
+15797:             }
+15798: 
+15799:             if (/\bPolice\s+Inspector\b/i.test(rowText)) {
+15800:                 rowCodes.add('police_inspector');
+15801:             }
+15802: 
+15803:             rowCodes.forEach(code => {
+15804:                 trainingCounts[code] =
+15805:                     Number(
+15806:                         trainingCounts[code] ||
+15807:                         0
+15808:                     ) + 1;
+15809:             });
+15810:         });
+
+===== RAILWAY POLICE =====
+
+--- context 1: lines 128-169 ---
+00128:             traffic_police:
+00129:                 'Roads Policing',
+00130:             swat:
+00131:                 'Firearms',
+00132:             police_horse:
+00133:                 'Mounted Officer',
+00134:             k9:
+00135:                 'Dog Handler',
+00136:             drone:
+00137:                 'Drone Operator',
+00138:             search_and_rescue:
+00139:                 'Police Search Advisor',
+00140:             polizeihubschrauber:
+00141:                 'Police Aviation',
+00142:             railway_police_command:
+00143:                 'Mobile Operations Management',
+00144:             railway_police:
+00145:                 'Railway Police Officer',
+00146:             bomb_disposal_command:
+00147:                 'EOD Commander',
+00148:             bomb_disposal:
+00149:                 'Bomb Disposal',
+00150:             bomb_disposal_diver:
+00151:                 'Marine Bomb Disposal'
+00152:         });
+00153: 
+00154:     const POLICE_RULES = Object.freeze({
+00155:         publicOrderLevel1: makePoliceRule({
+00156:             id:
+00157:                 'police_public_order_level_1',
+00158:             label:
+00159:                 'Level 1 Public Order',
+00160:             vehicleTypeIds: [
+00161:                 '8'
+00162:             ],
+00163:             vehicleLabel:
+00164:                 'Incident Response Vehicle',
+00165:             target:
+00166:                 2,
+00167:             trainingAll: [
+00168:                 'level_1_public_order'
+00169:             ],
+
+--- context 2: lines 314-353 ---
+00314:             id: 'police_aviation',
+00315:             label: 'Police aviation',
+00316:             vehicleTypeIds: ['11'],
+00317:             vehicleLabel: 'Police Helicopter',
+00318:             target: 3,
+00319:             trainingAll: ['polizeihubschrauber'],
+00320:             trainingLabel: 'Police aviation'
+00321:         }),
+00322:         mobileOperations: makePoliceRule({
+00323:             id: 'police_mobile_operations',
+00324:             label: 'Mobile Operations Management',
+00325:             vehicleTypeIds: ['108'],
+00326:             vehicleLabel: 'EIU',
+00327:             target: 2,
+00328:             trainingAll: ['railway_police_command'],
+00329:             trainingLabel: 'Mobile Operations Manager'
+00330:         }),
+00331:         railway: makePoliceRule({
+00332:             id: 'police_railway',
+00333:             label: 'Railway Police Officer',
+00334:             vehicleTypeIds: ['8'],
+00335:             vehicleLabel: 'Railway Policing IRV',
+00336:             target: 2,
+00337:             trainingAll: ['railway_police'],
+00338:             trainingLabel: 'Railway Police Officer',
+00339:             preferWithout: ['railway_police_command'],
+00340:             sharedVehiclePool: true
+00341:         }),
+00342:         eodCommander: makePoliceRule({
+00343:             id: 'police_eod_commander',
+00344:             label: 'EOD Commander',
+00345:             vehicleTypeIds: ['109'],
+00346:             vehicleLabel: 'EOD Commander Vehicle',
+00347:             target: 2,
+00348:             trainingAll: ['bomb_disposal_command'],
+00349:             trainingLabel: 'EOD Commander'
+00350:         }),
+00351:         eodResponse: makePoliceRule({
+00352:             id: 'police_eod_response',
+00353:             label: 'Bomb Disposal',
+
+--- context 3: lines 542-612 ---
+00542:             profiles: [
+00543:                 livePoliceProfile('police_bomb_disposal', 'Bomb Disposal', 'EOD Response, Medium and Heavy vehicles', 'Fill each mapped EOD vehicle to its verified maximum with Bomb Disposal personnel', 'LIVE: EOD Commander vehicles are processed first by Run all Police, then Response 4/4, Medium 3/3 and Heavy 2/2. Existing assignments are preserved.', [POLICE_RULES.eodResponse, POLICE_RULES.eodMedium, POLICE_RULES.eodHeavy], ['EOD']),
+00544:                 livePoliceProfile('police_dog_handling', 'Dog handling', 'Dog Support Unit', 'At least 1 Dog Handler per DSU', 'LIVE: safely meets the game-confirmed minimum of one Dog Handler per DSU without moving existing staff.', [POLICE_RULES.dog]),
+00545:                 livePoliceProfile('police_drone_operator', 'Drone Operator Training', 'Police Drone Vehicle', '2 Drone Operators per Police Drone Vehicle', 'LIVE: fills Police Drone Vehicles to 2/2. Search Advisor dual-trained personnel are preserved where possible.', [POLICE_RULES.drone]),
+00546:                 livePoliceProfile('police_eod_commander', 'EOD Commander', 'EOD Commander Vehicle', '2 EOD Commanders per vehicle', 'LIVE: fills EOD Commander vehicles to 2/2 before general Bomb Disposal vehicles in the full Police run.', [POLICE_RULES.eodCommander], ['EOD']),
+00547:                 livePoliceProfile('police_firearms', 'Firearms training', 'Multi-Role Armoured Vehicle', '6 Firearms-trained officers per MRAV', 'LIVE: fills every MRAV to 6/6 with Firearms-trained personnel and preserves Roads Policing dual-trained officers where possible.', [POLICE_RULES.firearms]),
+00548:                 livePoliceProfile(
+00549:                     'police_public_order_1',
+00550:                     'Level 1 Public Order Training',
+00551:                     'Normal Police IRV',
+00552:                     '2 Level 1 Public Order officers per IRV',
+00553:                     'LIVE INDIVIDUAL PROFILE: checks and assigns Level 1 Public Order training only. Other Police qualifications do not affect this result.',
+00554:                     [
+00555:                         POLICE_RULES
+00556:                             .publicOrderLevel1
+00557:                     ]
+00558:                 ),
+00559:                 livePoliceProfile(
+00560:                     'police_public_order_2',
+00561:                     'Level 2 Public Order Training',
+00562:                     'Normal Police IRV',
+00563:                     '2 Level 2 Public Order officers per IRV',
+00564:                     'LIVE INDIVIDUAL PROFILE: checks and assigns Level 2 Public Order training only. Other Police qualifications do not affect this result.',
+00565:                     [
+00566:                         POLICE_RULES
+00567:                             .publicOrderLevel2
+00568:                     ]
+00569:                 ),
+00570:                 livePoliceProfile('police_marine_bomb_disposal', 'Marine Bomb Disposal', 'Marine EOD Response and Equipment vehicles', 'Response 4/4; Equipment Van 3/3', 'LIVE: fills Marine EOD Response vehicles to 4/4 and Equipment Vans to 3/3 with Marine Bomb Disposal personnel.', [POLICE_RULES.marineResponse, POLICE_RULES.marineEquipment], ['EOD']),
+00571:                 livePoliceProfile('police_mobile_operations_management', 'Mobile Operations Management', 'EIU', '2 Mobile Operations Managers per EIU', 'LIVE: fills each EIU to 2/2 with railway_police_command-trained personnel.', [POLICE_RULES.mobileOperations]),
+00572:                 livePoliceProfile('police_mounted', 'Mounted Training', 'Mounted Unit', 'At least 1 Mounted Officer per vehicle', 'LIVE: meets the verified native minimum of one Mounted Officer per Mounted Unit. It does not fill the remaining passenger seats.', [POLICE_RULES.mounted]),
+00573:                 livePoliceProfile('police_inspector', 'Police Inspector Training', 'Normal Police IRV', '2 Police Inspectors per allocated IRV', 'LIVE: uses normal IRVs and fills allocated vehicles to 2/2 with police_inspector-trained officers.', [POLICE_RULES.inspector]),
+00574:                 livePoliceProfile(
+00575:                     'police_medic',
+00576:                     'Police Medic Training',
+00577:                     'Normal Police IRV',
+00578:                     '2 Police Medics per IRV',
+00579:                     'LIVE INDIVIDUAL PROFILE: checks and assigns Police Medic training only. Run all Police profiles retains the combined four-course crew rule.',
+00580:                     [
+00581:                         POLICE_RULES
+00582:                             .publicOrderMedic
+00583:                     ]
+00584:                 ),
+00585:                 livePoliceProfile('police_search_advisor', 'Police Search Advisor Training', 'Police Drone Vehicle', '2 dual-trained Drone/Search Advisor personnel', 'LIVE: both personnel must hold drone and search_and_rescue training.', [POLICE_RULES.searchAdvisor]),
+00586:                 livePoliceProfile(
+00587:                     'police_sergeant',
+00588:                     'Police Sergeant Training',
+00589:                     'Normal Police IRV',
+00590:                     '2 Police Sergeants per IRV',
+00591:                     'LIVE INDIVIDUAL PROFILE: checks and assigns Police Sergeant training only. Run all Police profiles retains the combined four-course crew rule.',
+00592:                     [
+00593:                         POLICE_RULES
+00594:                             .publicOrderSergeant
+00595:                     ]
+00596:                 ),
+00597:                 livePoliceProfile('police_aviation', 'Police aviation', 'Police Helicopter', '3 Police Aviation personnel per helicopter', 'LIVE: fills each Police Helicopter to 3/3 with polizeihubschrauber-trained personnel.', [POLICE_RULES.aviation], ['AIR']),
+00598:                 livePoliceProfile('police_railway', 'Railway Policing', 'Railway Policing IRV', '2 Railway Police Officers per IRV', 'LIVE: fills Railway Unit IRVs to 2/2 with railway_police-trained personnel and preserves Mobile Operations Managers where possible.', [POLICE_RULES.railway]),
+00599:                 livePoliceProfile('police_roads', 'Roads Policing Officer Training', 'Armed Traffic Car', '2 dual-trained Roads Policing + Firearms officers', 'LIVE: both officers must hold traffic_police and swat.', [POLICE_RULES.roads]),
+00600:                 {
+00601:                     id: 'all_police',
+00602:                     label: 'Run all Police profiles',
+00603:                     vehicle: 'All verified Police, Aviation and EOD vehicle groups',
+00604:                     requirement: 'Process verified profiles in safe reservation order',
+00605:                     policy: 'LIVE BATCH: preserves current assignments, assigns specialist and dual-trained roles first, allocates shared IRV/Drone pools safely, then verifies the station-wide result.',
+00606:                     live: true,
+00607:                     engine: 'police',
+00608:                     stationTypes: ['POLICE', 'AIR', 'EOD'],
+00609:                     rules: POLICE_ALL_RULES,
+00610:                     batch: true
+00611:                 }
+00612:             ]
+
+--- context 4: lines 7448-7477 ---
+07448:     const MF_PROTECTED_ORDINARY_IRV_TRAINING_CODES =
+07449:         Object.freeze([
+07450:             'level_1_public_order',
+07451:             'level_2_public_order',
+07452:             'police_sergeant',
+07453:             'police_medic',
+07454:             'police_inspector',
+07455:             'traffic_police',
+07456:             'swat',
+07457:             'police_horse',
+07458:             'k9',
+07459:             'drone',
+07460:             'search_and_rescue',
+07461:             'polizeihubschrauber',
+07462:             'railway_police_command',
+07463:             'railway_police',
+07464:             'bomb_disposal_command',
+07465:             'bomb_disposal',
+07466:             'bomb_disposal_diver'
+07467:         ]);
+07468: 
+07469:     const MF_ORDINARY_IRV_VERIFY_MAX_PAGES = 64;
+07470:     const MF_ORDINARY_IRV_VERIFY_BATCH_SIZE = 6;
+07471:     const MF_AUTO_VEHICLE_LIST_STABLE_TIMEOUT_MS = 9000;
+07472:     const MF_AUTO_VEHICLE_LIST_STABLE_FOR_MS = 1200;
+07473:     const MF_AUTO_VEHICLE_LIST_MIN_SETTLE_MS = 1000;
+07474:     const MF_AUTO_VEHICLE_LIST_LOAD_TIMEOUT_MS = 20000;
+07475: 
+07476:     const mfLiveTrainingVerifyCache = new Map();
+07477: 
+
+--- context 5: lines 8145-8175 ---
+08145:         "Police Helicopter": "Police Helicopter",
+08146:         "Police Helicopters": "Police Helicopter",
+08147:         "Police Helicopter or Drone": "Police Helicopter",
+08148:         "Police Helicopter or Drones": "Police Helicopter",
+08149:         "Police Helicopters or Drone": "Police Helicopter",
+08150:         "Police Helicopters or Drones": "Police Helicopter",
+08151:         "Required Police Helicopter or Drone": "Police Helicopter",
+08152:         "Required Police Helicopter or Drones": "Police Helicopter",
+08153:         "Required Police Helicopters or Drone": "Police Helicopter",
+08154:         "Required Police Helicopters or Drones": "Police Helicopter",
+08155:         "Police Drone": "Police Helicopter",
+08156:         "Police Drones": "Police Helicopter",
+08157:         "Policehelicopter": "Police Helicopter",
+08158:         "Policehelicopters": "Police Helicopter",
+08159:         "modules.missionHelper.vehicles.captions.railway_police": "railway police",
+08160:         "modules.missionHelper.prerequisites.railway_police": "EIU",
+08161:         "modules.missionHelper.prerequisites.railway_police_command": "EIU",
+08162: 
+08163:         /*************************************************
+08164:          * AMBULANCE
+08165:          *************************************************/
+08166:         "Ambulance": "Ambulance",
+08167:         "Ambulances": "Ambulance",
+08168:         "Ambulance Officer": "Ambulance Officer",
+08169:         "Ambulance Officers": "Ambulance Officer",
+08170:         "Required Ambulance Officer": "Ambulance Officer",
+08171:         "Required Ambulance Officers": "Ambulance Officer",
+08172:         "Primary Response Vehicle": "PRV",
+08173:         "Primary Response Vehicles": "PRV",
+08174:         "PRVs": "PRV",
+08175:         "Secondary Response Vehicle": "SRV",
+
+===== ATV / ATC =====
+
+--- context 1: lines 8175-8203 ---
+08175:         "Secondary Response Vehicle": "SRV",
+08176:         "Secondary Response Vehicles": "SRV",
+08177:         "SRVs": "SRV",
+08178:         "Operational Team Leader": "OTL",
+08179:         "Operational Team Leaders": "OTL",
+08180:         "Mass Casualty Equipment": "Mass Casualty Equipment",
+08181:         "Mass Casualty Equipment Unit": "Mass Casualty Equipment",
+08182:         "Mass Casualty Equipment Units": "Mass Casualty Equipment",
+08183:         "Critical Care": "Critical Care",
+08184:         "Critical Care Team": "Critical Care",
+08185:         "Critical Care Teams": "Critical Care",
+08186:         "Required Critical Care": "Critical Care",
+08187:         "Required Critical Care Team": "Critical Care",
+08188:         "Required Critical Care Teams": "Critical Care",
+08189:         "ATV Carrier": "ATV Carrier",
+08190:         "RRV": "RRV",
+08191:         "RRVs": "RRV",
+08192:         "Required RRV": "RRV",
+08193:         "Required RRVs": "RRV",
+08194:         "Specialist Paramedic RRV": "RRV",
+08195:         "Specialist Paramedic RRVs": "RRV",
+08196:         "Required Specialist Paramedic RRV": "RRV",
+08197:         "Required Specialist Paramedic RRVs": "RRV",
+08198:         "RRV or Specialist Paramedic RRV": "RRV",
+08199:         "RRVs or Specialist Paramedic RRVs": "RRV",
+08200:         "Required RRV or Specialist Paramedic RRV": "RRV",
+08201:         "Required RRVs or Specialist Paramedic RRVs": "RRV",
+08202:         "Community Midwife": "Community Midwife",
+08203:         "Community Midwifes": "Community Midwife",
+
+===== PERSONNEL REGISTER UI =====
+
+--- context 1: lines 42-104 ---
+00042:     const PERSONNEL_TRAINING_CODE = 'critical_care';
+00043:     const PERSONNEL_TRAINING_LABEL = 'Critical Care';
+00044:     const PERSONNEL_TARGET_VEHICLE_TYPE_ID = '5';
+00045:     const PERSONNEL_TARGET_VEHICLE_LABEL = 'Ambulance';
+00046:     const PERSONNEL_TARGET_PER_VEHICLE = 2;
+00047:     const PERSONNEL_REQUEST_GAP_MS = 650;
+00048:     const PERSONNEL_STATION_GAP_MS = 900;
+00049:     const ACTIVE_TAB_STORAGE_KEY = 'mcNamingToolsActiveTab_v32';
+00050:     const COLLAPSED_STORAGE_KEY = 'mcNamingToolsCollapsed_v36';
+00051:     const PERSONNEL_STATION_REPORT_VISIBLE_KEY = 'mcPersonnelStationReportVisible_v407';
+00052:     const PERSONNEL_OVERALL_REPORT_VISIBLE_KEY = 'mcPersonnelOverallReportVisible_v407';
+00053:     const PERSONNEL_SERVICE_STORAGE_KEY = 'mcPersonnelService_v410';
+00054:     const PERSONNEL_PROFILE_STORAGE_KEY = 'mcPersonnelProfile_v410';
+00055:     const PERSONNEL_UNITS_REQUIRED_STORAGE_KEY = 'mcPersonnelUnitsRequired_v423';
+00056:     const PERSONNEL_TRAINING_REGISTRY_STORAGE_KEY =
+00057:         'mcPersonnelVehicleTrainingRegistry_v1';
+00058:     const PERSONNEL_TRAINING_REGISTRY_SCHEMA_VERSION = 1;
+00059:     const TOOL_LOG_MAX_LINES = 400;
+00060:     const TOOL_LOG_TRIM_BUFFER = 40;
+00061:     const PERSONNEL_TRAINING_REGISTRY_MAX_VEHICLES = 5000;
+00062:     const PERSONNEL_TRAINING_REGISTRY_MAX_AGE_MS = 180 * 24 * 60 * 60 * 1000;
+00063:     const PERSONNEL_TRAINING_REGISTRY_QUOTA_RETRY_MAX_VEHICLES = 2500;
+00064:     const PERSONNEL_TRAINING_REGISTRY_FLUSH_DELAY_MS = 1400;
+00065:     const PERSONNEL_TRAINING_REGISTRY_PRUNE_INTERVAL_MS = 6 * 60 * 60 * 1000;
+00066:     const TOOL_LIFECYCLE_CLEANUPS = new Set();
+00067:     const TOOL_LOG_SCROLL_FRAMES = new Map();
+00068:     const TOOL_UI_ELEMENT_CACHE = new Map();
+00069:     const PERSONNEL_ASSIGNMENT_INDEX_CACHE = new WeakMap();
+00070:     const PERSONNEL_TRAINING_SET_CACHE = new WeakMap();
+00071:     const PERSONNEL_VISIBLE_TRAINING_COUNTS_CACHE = new WeakMap();
+00072:     const PERSONNEL_REPORT_BLOCK_CACHE = new WeakMap();
+00073:     const PERSONNEL_STATION_LINK_BY_HREF = new Map();
+00074:     const PERSONNEL_START_OPTION_BY_HREF = new Map();
+00075:     const PERSONNEL_HIGHLIGHTED_STATION_LINKS = new Set();
+00076:     let TOOL_LIFECYCLE_CLEANED = false;
+00077:     let PERSONNEL_TRAINING_REGISTRY_CACHE = null;
+00078:     let PERSONNEL_TRAINING_REGISTRY_DIRTY = false;
+00079:     let PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER = null;
+00080:     let PERSONNEL_TRAINING_REGISTRY_PENDING_EVENT = null;
+00081:     let PERSONNEL_SHORTFALL_CACHE_SIZE = -1;
+00082:     let PERSONNEL_SHORTFALL_CACHE = [];
+00083: 
+00084:     const makeServicePreviewProfile = (id, label, serviceLabel) => ({
+00085:         id,
+00086:         label,
+00087:         vehicle: `Mapped ${serviceLabel} vehicle(s)`,
+00088:         requirement: `${label} on mapped vehicle seats`,
+00089:         policy: `UI preview: ${label} has been added from the supplied ${serviceLabel} training list. Vehicle mapping and required seat counts still need confirmation before assignment can be enabled.`,
+00090:         live: false,
+00091:         stationTypes: []
+00092:     });
+00093: 
+00094:     const makePoliceRule = ({
+00095:         id,
+00096:         label,
+00097:         vehicleTypeIds,
+00098:         vehicleLabel,
+00099:         target,
+00100:         trainingAll,
+00101:         trainingLabel,
+00102:         preferWithout = [],
+00103:         sharedVehiclePool = false
+00104:     }) => Object.freeze({
+
+--- context 2: lines 407-666 ---
+00407:         POLICE_RULES.railway,
+00408:         POLICE_RULES.publicOrderCombined,
+00409:         POLICE_RULES.aviation,
+00410:         POLICE_RULES.marineResponse,
+00411:         POLICE_RULES.marineEquipment,
+00412:         POLICE_RULES.eodResponse,
+00413:         POLICE_RULES.eodMedium,
+00414:         POLICE_RULES.eodHeavy,
+00415:         POLICE_RULES.firearms,
+00416:         POLICE_RULES.mounted,
+00417:         POLICE_RULES.dog,
+00418:         POLICE_RULES.drone
+00419:     ]);
+00420: 
+00421:     const livePoliceProfile = (id, label, vehicle, requirement, policy, rules, stationTypes = ['POLICE']) => ({
+00422:         id,
+00423:         label,
+00424:         vehicle,
+00425:         requirement,
+00426:         policy,
+00427:         live: true,
+00428:         engine: 'police',
+00429:         stationTypes,
+00430:         rules
+00431:     });
+00432: 
+00433:     // Medical specialist profiles stay in UI preview until their exact vehicle,
+00434:     // capacity and training-code mappings have been captured and verified. Critical
+00435:     // Care remains the proven Medical live engine and is exclusive to normal Ambulances.
+00436:     const PERSONNEL_SERVICE_DEFINITIONS = {
+00437:         medical: {
+00438:             label: 'Medical',
+00439:             icon: '🚑',
+00440:             profiles: [
+00441:                 {
+00442:                     id: 'critical_care',
+00443:                     label: 'Critical Care',
+00444:                     vehicle: 'Normal Ambulance',
+00445:                     requirement: '2 Critical Care-trained staff per Ambulance',
+00446:                     policy: 'LIVE ENGINE: Critical Care is used only for normal Ambulances. Existing assignments are preserved and vehicles are safely topped up to 2 trained staff.',
+00447:                     live: true,
+00448:                     engine: 'medical-critical-care',
+00449:                     stationTypes: ['AMBULANCE']
+00450:                 },
+00451:                 {
+00452:                     id: 'ambulance_officer',
+00453:                     label: 'Ambulance Officer',
+00454:                     vehicle: 'Ambulance Officer vehicle',
+00455:                     requirement: 'Ambulance Officer-trained staff',
+00456:                     policy: 'UI preview: the exact vehicle capacity and training mapping still require a verified assignment-page capture before this profile can safely go live.',
+00457:                     live: false,
+00458:                     stationTypes: ['AMBULANCE']
+00459:                 },
+00460:                 {
+00461:                     id: 'hart',
+00462:                     label: 'HART Training',
+00463:                     vehicle: 'PRV / SRV and mapped HART vehicles',
+00464:                     requirement: 'HART-trained staff',
+00465:                     policy: 'UI preview: HART vehicle-by-vehicle staffing rules still require verified assignment-page captures.',
+00466:                     live: false,
+00467:                     stationTypes: ['AMBULANCE']
+00468:                 },
+00469:                 {
+00470:                     id: 'midwifery',
+00471:                     label: 'Midwifery Training',
+00472:                     vehicle: 'Community Midwife vehicle',
+00473:                     requirement: 'Midwifery-trained staff',
+00474:                     policy: 'UI preview: the Community Midwife vehicle type, capacity and exact training code are not yet verified.',
+00475:                     live: false,
+00476:                     stationTypes: ['AMBULANCE']
+00477:                 },
+00478:                 {
+00479:                     id: 'sort',
+00480:                     label: 'SORT Training',
+00481:                     vehicle: 'Mass Casualty / CBRN medical vehicles',
+00482:                     requirement: 'SORT-trained staff',
+00483:                     policy: 'UI preview: the exact SORT vehicle family, capacities and training code still need verified assignment pages.',
+00484:                     live: false,
+00485:                     stationTypes: ['AMBULANCE']
+00486:                 },
+00487:                 {
+00488:                     id: 'specialist_paramedic',
+00489:                     label: 'Specialist Paramedic Training',
+00490:                     vehicle: 'Specialist Paramedic RRV',
+00491:                     requirement: 'Specialist Paramedic-trained staff',
+00492:                     policy: 'UI preview: the Specialist Paramedic RRV vehicle capacity and exact training code still need verification.',
+00493:                     live: false,
+00494:                     stationTypes: ['AMBULANCE']
+00495:                 },
+00496:                 {
+00497:                     id: 'tactical_command',
+00498:                     label: 'Tactical Command Course',
+00499:                     vehicle: 'Ambulance command vehicles',
+00500:                     requirement: 'Tactical Command-trained staff',
+00501:                     policy: 'UI preview: command vehicle mappings, capacities and exact training code still need verification.',
+00502:                     live: false,
+00503:                     stationTypes: ['AMBULANCE']
+00504:                 },
+00505:                 {
+00506:                     id: 'all_medical',
+00507:                     label: 'Run all Medical profiles',
+00508:                     vehicle: 'All mapped medical vehicle groups',
+00509:                     requirement: 'Specialist profiles first; Critical Care Ambulances last',
+00510:                     policy: 'UI preview: this batch option will be enabled only after every Medical specialist profile is individually verified and live.',
+00511:                     live: false,
+00512:                     stationTypes: ['AMBULANCE']
+00513:                 }
+00514:             ]
+00515:         },
+00516:         fire: {
+00517:             label: 'Fire / Airfield',
+00518:             icon: '🚒✈️',
+00519:             profiles: [
+00520:                 makeServicePreviewProfile('fire_aircraft_rescue', 'Aircraft Rescue and Firefighting', 'Fire'),
+00521:                 makeServicePreviewProfile('fire_co_responder', 'Co-Responder Training', 'Fire'),
+00522:                 makeServicePreviewProfile('fire_drone_operator', 'Drone Operator Training', 'Fire'),
+00523:                 makeServicePreviewProfile('fire_hazmat', 'HazMat', 'Fire'),
+00524:                 makeServicePreviewProfile('fire_high_volume_pump', 'High Volume Pump Training', 'Fire'),
+00525:                 makeServicePreviewProfile('fire_lifeguard', 'Lifeguard Training', 'Fire'),
+00526:                 makeServicePreviewProfile('fire_mobile_command', 'Mobile command', 'Fire'),
+00527:                 makeServicePreviewProfile('fire_railway', 'Railway Fire', 'Fire'),
+00528:                 {
+00529:                     id: 'all_fire',
+00530:                     label: 'Run all Fire / Airfield profiles',
+00531:                     vehicle: 'All mapped Fire and Airfield vehicle groups',
+00532:                     requirement: 'Process enabled Fire and Airfield profiles in priority order',
+00533:                     policy: 'Future batch option. Airfield training and vehicles are handled within Fire. It remains disabled until every Fire and Airfield profile has confirmed mappings.',
+00534:                     live: false,
+00535:                     stationTypes: ['FIRE', 'AIRFIELD']
+00536:                 }
+00537:             ]
+00538:         },
+00539:         police: {
+00540:             label: 'Police',
+00541:             icon: '🚓',
+00542:             profiles: [
+00543:                 livePoliceProfile('police_bomb_disposal', 'Bomb Disposal', 'EOD Response, Medium and Heavy vehicles', 'Fill each mapped EOD vehicle to its verified maximum with Bomb Disposal personnel', 'LIVE: EOD Commander vehicles are processed first by Run all Police, then Response 4/4, Medium 3/3 and Heavy 2/2. Existing assignments are preserved.', [POLICE_RULES.eodResponse, POLICE_RULES.eodMedium, POLICE_RULES.eodHeavy], ['EOD']),
+00544:                 livePoliceProfile('police_dog_handling', 'Dog handling', 'Dog Support Unit', 'At least 1 Dog Handler per DSU', 'LIVE: safely meets the game-confirmed minimum of one Dog Handler per DSU without moving existing staff.', [POLICE_RULES.dog]),
+00545:                 livePoliceProfile('police_drone_operator', 'Drone Operator Training', 'Police Drone Vehicle', '2 Drone Operators per Police Drone Vehicle', 'LIVE: fills Police Drone Vehicles to 2/2. Search Advisor dual-trained personnel are preserved where possible.', [POLICE_RULES.drone]),
+00546:                 livePoliceProfile('police_eod_commander', 'EOD Commander', 'EOD Commander Vehicle', '2 EOD Commanders per vehicle', 'LIVE: fills EOD Commander vehicles to 2/2 before general Bomb Disposal vehicles in the full Police run.', [POLICE_RULES.eodCommander], ['EOD']),
+00547:                 livePoliceProfile('police_firearms', 'Firearms training', 'Multi-Role Armoured Vehicle', '6 Firearms-trained officers per MRAV', 'LIVE: fills every MRAV to 6/6 with Firearms-trained personnel and preserves Roads Policing dual-trained officers where possible.', [POLICE_RULES.firearms]),
+00548:                 livePoliceProfile(
+00549:                     'police_public_order_1',
+00550:                     'Level 1 Public Order Training',
+00551:                     'Normal Police IRV',
+00552:                     '2 Level 1 Public Order officers per IRV',
+00553:                     'LIVE INDIVIDUAL PROFILE: checks and assigns Level 1 Public Order training only. Other Police qualifications do not affect this result.',
+00554:                     [
+00555:                         POLICE_RULES
+00556:                             .publicOrderLevel1
+00557:                     ]
+00558:                 ),
+00559:                 livePoliceProfile(
+00560:                     'police_public_order_2',
+00561:                     'Level 2 Public Order Training',
+00562:                     'Normal Police IRV',
+00563:                     '2 Level 2 Public Order officers per IRV',
+00564:                     'LIVE INDIVIDUAL PROFILE: checks and assigns Level 2 Public Order training only. Other Police qualifications do not affect this result.',
+00565:                     [
+00566:                         POLICE_RULES
+00567:                             .publicOrderLevel2
+00568:                     ]
+00569:                 ),
+00570:                 livePoliceProfile('police_marine_bomb_disposal', 'Marine Bomb Disposal', 'Marine EOD Response and Equipment vehicles', 'Response 4/4; Equipment Van 3/3', 'LIVE: fills Marine EOD Response vehicles to 4/4 and Equipment Vans to 3/3 with Marine Bomb Disposal personnel.', [POLICE_RULES.marineResponse, POLICE_RULES.marineEquipment], ['EOD']),
+00571:                 livePoliceProfile('police_mobile_operations_management', 'Mobile Operations Management', 'EIU', '2 Mobile Operations Managers per EIU', 'LIVE: fills each EIU to 2/2 with railway_police_command-trained personnel.', [POLICE_RULES.mobileOperations]),
+00572:                 livePoliceProfile('police_mounted', 'Mounted Training', 'Mounted Unit', 'At least 1 Mounted Officer per vehicle', 'LIVE: meets the verified native minimum of one Mounted Officer per Mounted Unit. It does not fill the remaining passenger seats.', [POLICE_RULES.mounted]),
+00573:                 livePoliceProfile('police_inspector', 'Police Inspector Training', 'Normal Police IRV', '2 Police Inspectors per allocated IRV', 'LIVE: uses normal IRVs and fills allocated vehicles to 2/2 with police_inspector-trained officers.', [POLICE_RULES.inspector]),
+00574:                 livePoliceProfile(
+00575:                     'police_medic',
+00576:                     'Police Medic Training',
+00577:                     'Normal Police IRV',
+00578:                     '2 Police Medics per IRV',
+00579:                     'LIVE INDIVIDUAL PROFILE: checks and assigns Police Medic training only. Run all Police profiles retains the combined four-course crew rule.',
+00580:                     [
+00581:                         POLICE_RULES
+00582:                             .publicOrderMedic
+00583:                     ]
+00584:                 ),
+00585:                 livePoliceProfile('police_search_advisor', 'Police Search Advisor Training', 'Police Drone Vehicle', '2 dual-trained Drone/Search Advisor personnel', 'LIVE: both personnel must hold drone and search_and_rescue training.', [POLICE_RULES.searchAdvisor]),
+00586:                 livePoliceProfile(
+00587:                     'police_sergeant',
+00588:                     'Police Sergeant Training',
+00589:                     'Normal Police IRV',
+00590:                     '2 Police Sergeants per IRV',
+00591:                     'LIVE INDIVIDUAL PROFILE: checks and assigns Police Sergeant training only. Run all Police profiles retains the combined four-course crew rule.',
+00592:                     [
+00593:                         POLICE_RULES
+00594:                             .publicOrderSergeant
+00595:                     ]
+00596:                 ),
+00597:                 livePoliceProfile('police_aviation', 'Police aviation', 'Police Helicopter', '3 Police Aviation personnel per helicopter', 'LIVE: fills each Police Helicopter to 3/3 with polizeihubschrauber-trained personnel.', [POLICE_RULES.aviation], ['AIR']),
+00598:                 livePoliceProfile('police_railway', 'Railway Policing', 'Railway Policing IRV', '2 Railway Police Officers per IRV', 'LIVE: fills Railway Unit IRVs to 2/2 with railway_police-trained personnel and preserves Mobile Operations Managers where possible.', [POLICE_RULES.railway]),
+00599:                 livePoliceProfile('police_roads', 'Roads Policing Officer Training', 'Armed Traffic Car', '2 dual-trained Roads Policing + Firearms officers', 'LIVE: both officers must hold traffic_police and swat.', [POLICE_RULES.roads]),
+00600:                 {
+00601:                     id: 'all_police',
+00602:                     label: 'Run all Police profiles',
+00603:                     vehicle: 'All verified Police, Aviation and EOD vehicle groups',
+00604:                     requirement: 'Process verified profiles in safe reservation order',
+00605:                     policy: 'LIVE BATCH: preserves current assignments, assigns specialist and dual-trained roles first, allocates shared IRV/Drone pools safely, then verifies the station-wide result.',
+00606:                     live: true,
+00607:                     engine: 'police',
+00608:                     stationTypes: ['POLICE', 'AIR', 'EOD'],
+00609:                     rules: POLICE_ALL_RULES,
+00610:                     batch: true
+00611:                 }
+00612:             ]
+00613:         },
+00614:         coastguard: {
+00615:             label: 'SAR / Mountain Rescue / Coastguard',
+00616:             icon: '🌊⛰️',
+00617:             profiles: [
+00618:                 makeServicePreviewProfile('sar_cave_rescue', 'Cave Rescue Training', 'SAR'),
+00619:                 makeServicePreviewProfile('sar_coastal_air_rescue', 'Coastal Air Rescue Operations Training', 'SAR'),
+00620:                 makeServicePreviewProfile('sar_coastal_command', 'Coastal Command Training', 'SAR'),
+00621:                 makeServicePreviewProfile('sar_search_advisor', 'Coastguard Search Advisor Training', 'SAR'),
+00622:                 makeServicePreviewProfile('sar_dog_handling', 'Dog handling', 'SAR'),
+00623:                 makeServicePreviewProfile('sar_drone_operator', 'Drone Operator Training', 'SAR'),
+00624:                 makeServicePreviewProfile('sar_flood_first_responder', 'Flood First Responder Training', 'SAR'),
+00625:                 makeServicePreviewProfile('sar_hovercraft_commander', 'Hovercraft Commander Training', 'SAR'),
+00626:                 makeServicePreviewProfile('sar_jet_ski', 'Jet Ski Handling', 'SAR'),
+00627:                 makeServicePreviewProfile('sar_lifeboat_operations', 'Lifeboat Operations Training', 'SAR'),
+00628:                 makeServicePreviewProfile('sar_lifeguard', 'Lifeguard Training', 'SAR'),
+00629:                 makeServicePreviewProfile('sar_mud_rescue', 'Mud Rescue Training', 'SAR'),
+00630:                 makeServicePreviewProfile('sar_rope_rescue', 'Rope Rescue Training', 'SAR'),
+00631:                 makeServicePreviewProfile('sar_search_management', 'Search Management Training', 'SAR'),
+00632:                 {
+00633:                     id: 'all_sar',
+00634:                     label: 'Run all SAR / Mountain Rescue profiles',
+00635:                     vehicle: 'All mapped SAR, Mountain Rescue, Coastguard and Water Rescue vehicle groups',
+00636:                     requirement: 'Process enabled SAR and Mountain Rescue profiles in priority order',
+00637:                     policy: 'Future batch option. It remains disabled until every SAR profile has confirmed mappings.',
+00638:                     live: false,
+00639:                     stationTypes: ['SAR', 'COASTGUARD', 'RNLI']
+00640:                 }
+00641:             ]
+00642:         },
+00643:         all_services: {
+00644:             label: 'All Services',
+00645:             icon: '🧭',
+00646:             profiles: [{
+00647:                 id: 'all_services_profiles',
+00648:                 label: 'Run all service profiles — future option',
+00649:                 vehicle: 'All supported service vehicles',
+00650:                 requirement: 'Process services and profiles in safe priority order',
+00651:                 policy: 'This future option will only be enabled after each individual service is fully tested and live.',
+00652:                 live: false,
+00653:                 stationTypes: []
+00654:             }]
+00655:         }
+00656:     };
+00657: 
+00658:     const TYPE_ID_TO_VEHICLE_TYPE = {
+00659:         "3": "Fire Officer",
+00660:         "4": "Rescue Support Unit (RSU)",
+00661:         "5": "Ambulance",
+00662:         "6": "Water Carrier",
+00663:         "7": "HazMat Unit",
+00664:         "8": "Police Car",
+00665:         "9": "Air Ambulance",
+00666:         "10": "RRV",
+
+--- context 3: lines 864-915 ---
+00864:         mode: "all",
+00865:         runId: 0
+00866:     };
+00867: 
+00868:     const STATION_STATE = {
+00869:         running: false,
+00870:         paused: false,
+00871:         stopped: false,
+00872:         debug: false,
+00873:         stations: [],
+00874:         filteredStations: [],
+00875:         queue: [],
+00876:         selectedHref: '',
+00877:         mode: 'all',
+00878:         action: 'preview',
+00879:         stationIndex: 0,
+00880:         renamedCount: 0,
+00881:         skippedCount: 0,
+00882:         previewedCount: 0,
+00883:         activeIframe: null,
+00884:         buildingCoordinateCache: new Map(),
+00885:         buildingDataPromise: null,
+00886:         activeControllers: new Set()
+00887:     };
+00888: 
+00889:     const PERSONNEL_STATE = {
+00890:         running: false,
+00891:         paused: false,
+00892:         stopped: false,
+00893:         debug: false,
+00894:         stations: [],
+00895:         filteredStations: [],
+00896:         queue: [],
+00897:         selectedHref: '',
+00898:         service: 'medical',
+00899:         profile: 'critical_care',
+00900:         mode: 'all',
+00901:         action: 'preview',
+00902:         configuredUnitsRequired: 0,
+00903:         unitsRequired: 0,
+00904:         unitsFulfilled: 0,
+00905:         unitTargetReached: false,
+00906:         stationsTargetMet: 0,
+00907:         stationsTargetShort: 0,
+00908:         stationIndex: 0,
+00909:         completedStations: 0,
+00910:         skippedStations: 0,
+00911:         checkedVehicles: 0,
+00912:         plannedCount: 0,
+00913:         assignedCount: 0,
+00914:         trainingShortfall: 0,
+00915:         assignmentShortfall: 0,
+
+--- context 4: lines 930-958 ---
+00930:         return cleanup;
+00931:     }
+00932: 
+00933:     function runToolLifecycleCleanup() {
+00934:         if (TOOL_LIFECYCLE_CLEANED) return;
+00935:         TOOL_LIFECYCLE_CLEANED = true;
+00936: 
+00937:         STATE.stopped = true;
+00938:         STATE.paused = false;
+00939:         STATION_STATE.stopped = true;
+00940:         STATION_STATE.paused = false;
+00941:         PERSONNEL_STATE.stopped = true;
+00942:         PERSONNEL_STATE.paused = false;
+00943: 
+00944:         flushPersonnelTrainingRegistry(true);
+00945: 
+00946:         if (PERSONNEL_STATE.activeController) {
+00947:             try {
+00948:                 PERSONNEL_STATE.activeController.abort();
+00949:             } catch (_error) {}
+00950:             PERSONNEL_STATE.activeController = null;
+00951:         }
+00952: 
+00953:         for (const controller of STATION_STATE.activeControllers) {
+00954:             try {
+00955:                 controller.abort();
+00956:             } catch (_error) {}
+00957:         }
+00958:         STATION_STATE.activeControllers.clear();
+
+--- context 5: lines 971-999 ---
+00971:         }
+00972:         TOOL_LOG_SCROLL_FRAMES.clear();
+00973:         TOOL_UI_ELEMENT_CACHE.clear();
+00974:         PERSONNEL_STATION_LINK_BY_HREF.clear();
+00975:         PERSONNEL_START_OPTION_BY_HREF.clear();
+00976:         PERSONNEL_HIGHLIGHTED_STATION_LINKS.clear();
+00977: 
+00978:         STATION_STATE.activeIframe = null;
+00979:         STATION_STATE.buildingCoordinateCache.clear();
+00980:         STATION_STATE.buildingDataPromise = null;
+00981:         PERSONNEL_STATE.reports = [];
+00982:         PERSONNEL_STATE.lastStationReport = null;
+00983:         PERSONNEL_STATE.currentReport = '';
+00984:         PERSONNEL_STATE.currentStationReport = '';
+00985:         PERSONNEL_TRAINING_REGISTRY_CACHE = null;
+00986:         PERSONNEL_SHORTFALL_CACHE = [];
+00987:         PERSONNEL_SHORTFALL_CACHE_SIZE = -1;
+00988:     }
+00989: 
+00990:     function getToolElementById(id) {
+00991:         const key = String(id || '');
+00992:         if (!key) return null;
+00993: 
+00994:         const cached = TOOL_UI_ELEMENT_CACHE.get(key);
+00995:         if (cached?.isConnected) return cached;
+00996: 
+00997:         const element = document.getElementById(key);
+00998:         if (element) TOOL_UI_ELEMENT_CACHE.set(key, element);
+00999:         else TOOL_UI_ELEMENT_CACHE.delete(key);
+
+--- context 6: lines 1052-1081 ---
+01052:             }
+01053:         }, 500);
+01054: 
+01055:         const clearInitTimer = () => clearInterval(timer);
+01056:         registerToolLifecycleCleanup(clearInitTimer);
+01057:     }
+01058: 
+01059:     function isStationOverviewScreen() {
+01060:         return Boolean(document.querySelector('a.lightbox-open.list-group-item.active[href^="/buildings/"]'));
+01061:     }
+01062: 
+01063:     function init() {
+01064:         addPanel();
+01065:         log(`Unit Naming Tool v${UNIT_VERSION} loaded. Press Refresh Stations first.`, 'info');
+01066:         stationLog(`Station Naming Tool v${STATION_VERSION} loaded. Refresh stations, choose Preview or Rename and Save, then press Start.`, 'info');
+01067:         personnelLog(`Personnel Assignment v${PERSONNEL_VERSION} loaded. Medical Critical Care and the verified Police profiles are live; other services remain in safe UI preview.`, 'info');
+01068:     }
+01069: 
+01070:     function addPanel() {
+01071:         if (document.querySelector('#mc-namer-panel')) return;
+01072: 
+01073:         const panel = document.createElement('div');
+01074:         panel.id = 'mc-namer-panel';
+01075: 
+01076:         panel.innerHTML = `
+01077:             <div id="mc-namer-header">
+01078:                 <span id="mc-namer-header-title">🚒 Unit Naming Tool v${UNIT_VERSION}</span>
+01079:                 <button id="mc-namer-collapse" type="button" aria-expanded="true" title="Collapse naming tools">−</button>
+01080:             </div>
+01081: 
+
+--- context 7: lines 1136-1164 ---
+01136:                 <div class="mc-namer-section">
+01137:                     <label><b>Station Type:</b></label>
+01138:                     <select id="mc-station-type">
+01139:                         ${Object.entries(STATION_TYPES).map(([key, label]) => `<option value="${key}">${label}</option>`).join('')}
+01140:                     </select>
+01141: 
+01142:                     <label style="margin-top:6px; display:block;"><b>Mode:</b></label>
+01143:                     <select id="mc-station-mode">
+01144:                         <option value="all">All matching stations from selected start point</option>
+01145:                         <option value="single">Selected station only</option>
+01146:                     </select>
+01147: 
+01148:                     <label style="margin-top:6px; display:block;"><b>Action:</b></label>
+01149:                     <select id="mc-station-action">
+01150:                         <option value="preview">Preview only - do not save</option>
+01151:                         <option value="save">Rename and save</option>
+01152:                     </select>
+01153: 
+01154:                     <label style="margin-top:6px; display:block;"><b>Start From:</b></label>
+01155:                     <select id="mc-station-startfrom">
+01156:                         <option value="">Refresh stations first</option>
+01157:                     </select>
+01158:                 </div>
+01159: 
+01160:                 <div class="mc-namer-buttons">
+01161:                     <button id="mc-station-refresh">Refresh Stations</button>
+01162:                     <button id="mc-station-start">Start</button>
+01163:                     <button id="mc-station-pause">Pause</button>
+01164:                     <button id="mc-station-stop">Stop</button>
+
+--- context 8: lines 1201-1229 ---
+01201:                         <div><b>Required:</b><br><span id="mc-personnel-profile-requirement">${PERSONNEL_TARGET_PER_VEHICLE} trained staff per vehicle</span></div>
+01202:                     </div>
+01203: 
+01204:                     <div id="mc-personnel-policy-summary" class="mc-personnel-policy-summary"></div>
+01205: 
+01206:                     <label style="margin-top:8px; display:block;"><b>Mode:</b></label>
+01207:                     <select id="mc-personnel-mode">
+01208:                         <option id="mc-personnel-mode-all-option" value="all">All relevant stations from selected start point — scan every station</option>
+01209:                         <option value="target">Ensure each relevant station has Units required</option>
+01210:                         <option value="single">Selected station only</option>
+01211:                     </select>
+01212: 
+01213:                     <label style="margin-top:6px; display:block;"><b>Action:</b></label>
+01214:                     <select id="mc-personnel-action">
+01215:                         <option value="preview">Preview only - do not change assignments</option>
+01216:                         <option value="assign">Assign and verify</option>
+01217:                     </select>
+01218: 
+01219:                     <label style="margin-top:6px; display:block;"><b>Units required:</b></label>
+01220:                     <input id="mc-personnel-units-required" type="number" min="0" step="1" value="0" inputmode="numeric">
+01221:                     <div id="mc-personnel-units-required-note" class="mc-personnel-input-note">Disabled in All Stations mode. Select the target-units mode to enter a stopping target.</div>
+01222: 
+01223:                     <label style="margin-top:6px; display:block;"><b>Start From:</b></label>
+01224:                     <select id="mc-personnel-startfrom">
+01225:                         <option value="">Refresh stations first</option>
+01226:                     </select>
+01227:                 </div>
+01228: 
+01229:                 <div class="mc-namer-buttons">
+
+--- context 9: lines 1268-1304 ---
+01268:                         <label class="mc-personnel-report-toggle">
+01269:                             <input id="mc-personnel-show-station-report" type="checkbox" checked>
+01270:                             <span>Latest station report</span>
+01271:                         </label>
+01272:                         <label class="mc-personnel-report-toggle">
+01273:                             <input id="mc-personnel-show-overall-report" type="checkbox" checked>
+01274:                             <span>Overall run report</span>
+01275:                         </label>
+01276:                     </div>
+01277:                     <div class="mc-personnel-report-note">The short status and shortfall figures above always remain visible.</div>
+01278:                 </div>
+01279: 
+01280:                 <div id="mc-personnel-after-action-section" class="mc-namer-section mc-personnel-report-section">
+01281:                     <b>Latest Station After-Action Report</b>
+01282:                     <pre id="mc-personnel-after-action">Run a station preview or assignment to create the station report.</pre>
+01283:                 </div>
+01284: 
+01285:                 <div id="mc-personnel-overall-report-section" class="mc-namer-section mc-personnel-report-section">
+01286:                     <b>Overall Run Report</b>
+01287:                     <pre id="mc-personnel-report">Run a preview or assignment to create the overall report.</pre>
+01288:                 </div>
+01289: 
+01290:                 <div class="mc-personnel-log-heading">Live Activity Log</div>
+01291:                 <div id="mc-personnel-log"></div>
+01292:             </div>
+01293:             </div>
+01294:         `;
+01295: 
+01296:         document.body.appendChild(panel);
+01297: 
+01298:         const style = document.createElement('style');
+01299:         style.textContent = `
+01300:             #mc-namer-panel {
+01301:                 position: fixed;
+01302:                 top: 90px;
+01303:                 right: 20px;
+01304:                 width: 470px;
+
+--- context 10: lines 1521-1555 ---
+01521:                 font-weight: bold;
+01522:                 letter-spacing: 0.2px;
+01523:             }
+01524: 
+01525:             .mc-personnel-profile-banner {
+01526:                 margin: 7px 0;
+01527:                 padding: 6px 8px;
+01528:                 border: 1px solid #374151;
+01529:                 border-radius: 5px;
+01530:                 background: #0b1220;
+01531:                 font-weight: bold;
+01532:                 line-height: 1.3;
+01533:             }
+01534: 
+01535:             .mc-personnel-profile-banner.is-live {
+01536:                 border-color: #22c55e;
+01537:                 background: rgba(20,83,45,0.32);
+01538:                 color: #bbf7d0;
+01539:             }
+01540: 
+01541:             .mc-personnel-profile-banner.is-preview {
+01542:                 border-color: #f59e0b;
+01543:                 background: rgba(120,53,15,0.28);
+01544:                 color: #fde68a;
+01545:             }
+01546: 
+01547:             .mc-personnel-policy-summary {
+01548:                 margin-top: 7px;
+01549:                 padding: 7px 8px;
+01550:                 border-left: 4px solid #3b82f6;
+01551:                 border-radius: 4px;
+01552:                 background: rgba(30,64,175,0.16);
+01553:                 color: #dbeafe;
+01554:                 font-size: 11px;
+01555:                 line-height: 1.35;
+
+--- context 11: lines 1759-1843 ---
+01759:         document.querySelector('#mc-namer-start').onclick = startRun;
+01760:         document.querySelector('#mc-namer-pause').onclick = togglePause;
+01761:         document.querySelector('#mc-namer-stop').onclick = stopRun;
+01762:         document.querySelector('#mc-namer-debug').onclick = toggleDebug;
+01763:         document.querySelector('#mc-namer-clear').onclick = clearLog;
+01764:         document.querySelector('#mc-namer-station-type').onchange = populateStartDropdown;
+01765: 
+01766:         document.querySelector('#mc-station-refresh').onclick = refreshStationNamingStations;
+01767:         document.querySelector('#mc-station-start').onclick = startStationNamingRun;
+01768:         document.querySelector('#mc-station-pause').onclick = toggleStationNamingPause;
+01769:         document.querySelector('#mc-station-stop').onclick = stopStationNamingRun;
+01770:         document.querySelector('#mc-station-debug').onclick = toggleStationDebug;
+01771:         document.querySelector('#mc-station-clear').onclick = clearStationLog;
+01772:         document.querySelector('#mc-station-type').onchange = populateStationNamingStartDropdown;
+01773:         document.querySelector('#mc-station-startfrom').onchange = updateStationNamingSelectionPreview;
+01774:         document.querySelector('#mc-station-mode').onchange = () => {
+01775:             STATION_STATE.mode = document.querySelector('#mc-station-mode')?.value || 'all';
+01776:         };
+01777:         document.querySelector('#mc-station-action').onchange = () => {
+01778:             STATION_STATE.action = document.querySelector('#mc-station-action')?.value || 'preview';
+01779:         };
+01780: 
+01781:         document.querySelector('#mc-personnel-service').onchange = handlePersonnelServiceChange;
+01782:         document.querySelector('#mc-personnel-profile').onchange = handlePersonnelProfileChange;
+01783:         document.querySelector('#mc-personnel-units-required').onchange = handlePersonnelUnitsRequiredChange;
+01784:         document.querySelector('#mc-personnel-refresh').onclick = refreshPersonnelStations;
+01785:         document.querySelector('#mc-personnel-start').onclick = startPersonnelRun;
+01786:         document.querySelector('#mc-personnel-pause').onclick = togglePersonnelPause;
+01787:         document.querySelector('#mc-personnel-stop').onclick = stopPersonnelRun;
+01788:         document.querySelector('#mc-personnel-view-station-report').onclick = showAndViewPersonnelStationReport;
+01789:         document.querySelector('#mc-personnel-copy-station').onclick = copyPersonnelStationReport;
+01790:         document.querySelector('#mc-personnel-copy').onclick = copyPersonnelReport;
+01791:         document.querySelector('#mc-personnel-debug').onclick = togglePersonnelDebug;
+01792:         document.querySelector('#mc-personnel-clear').onclick = clearPersonnelLog;
+01793:         document.querySelector('#mc-personnel-startfrom').onchange = updatePersonnelSelectionPreview;
+01794:         document.querySelector('#mc-personnel-mode').onchange =
+01795:             handlePersonnelModeChange;
+01796:         document.querySelector('#mc-personnel-action').onchange = () => {
+01797:             PERSONNEL_STATE.action = document.querySelector('#mc-personnel-action')?.value || 'preview';
+01798:         };
+01799:         document.querySelector('#mc-personnel-show-station-report').onchange = () => updatePersonnelReportVisibility(true);
+01800:         document.querySelector('#mc-personnel-show-overall-report').onchange = () => updatePersonnelReportVisibility(true);
+01801: 
+01802:         initialisePersonnelProfileNavigation();
+01803:         initialisePersonnelReportVisibility();
+01804:         makePanelDraggable(panel, document.querySelector('#mc-namer-header'));
+01805: 
+01806:         let savedTab = 'unit';
+01807:         let savedCollapsed = false;
+01808:         try {
+01809:             savedTab = localStorage.getItem(ACTIVE_TAB_STORAGE_KEY) || 'unit';
+01810:             savedCollapsed = localStorage.getItem(COLLAPSED_STORAGE_KEY) === 'true';
+01811:         } catch (e) {}
+01812: 
+01813:         switchToolTab(savedTab === 'station' ? 'station' : savedTab === 'personnel' ? 'personnel' : 'unit', true);
+01814:         setPanelCollapsed(savedCollapsed, false);
+01815:     }
+01816: 
+01817:     function getPersonnelServiceDefinition(serviceId = PERSONNEL_STATE.service) {
+01818:         return PERSONNEL_SERVICE_DEFINITIONS[serviceId]
+01819:             || PERSONNEL_SERVICE_DEFINITIONS.medical;
+01820:     }
+01821: 
+01822:     function getPersonnelProfileDefinition(serviceId = PERSONNEL_STATE.service, profileId = PERSONNEL_STATE.profile) {
+01823:         const service = getPersonnelServiceDefinition(serviceId);
+01824:         return service.profiles.find(profile => profile.id === profileId)
+01825:             || service.profiles[0];
+01826:     }
+01827: 
+01828:     function isLivePersonnelProfile() {
+01829:         return getPersonnelProfileDefinition()?.live === true;
+01830:     }
+01831: 
+01832:     function normalisePersonnelUnitsRequired(value) {
+01833:         const parsed = Number.parseInt(String(value ?? '').trim(), 10);
+01834:         if (!Number.isFinite(parsed) || parsed < 0) return 0;
+01835:         return Math.min(9999, parsed);
+01836:     }
+01837: 
+01838:     function isPersonnelPerStationTargetMode() {
+01839:         return (
+01840:             PERSONNEL_STATE.mode === 'target'
+01841:             && PERSONNEL_STATE.unitsRequired > 0
+01842:         );
+01843:     }
+
+--- context 12: lines 1941-1997 ---
+01941:             document.querySelector(
+01942:                 '#mc-personnel-mode'
+01943:             );
+01944: 
+01945:         const input =
+01946:             document.querySelector(
+01947:                 '#mc-personnel-units-required'
+01948:             );
+01949: 
+01950:         const note =
+01951:             document.querySelector(
+01952:                 '#mc-personnel-units-required-note'
+01953:             );
+01954: 
+01955:         const live =
+01956:             isLivePersonnelProfile();
+01957: 
+01958:         const mode =
+01959:             modeSelect?.value ||
+01960:             PERSONNEL_STATE.mode ||
+01961:             'all';
+01962: 
+01963:         PERSONNEL_STATE.mode =
+01964:             mode;
+01965: 
+01966:         const targetMode =
+01967:             mode === 'target';
+01968: 
+01969:         const fulfilledLabel =
+01970:             document.querySelector(
+01971:                 '#mc-personnel-units-fulfilled-label'
+01972:             );
+01973: 
+01974:         if (fulfilledLabel) {
+01975:             fulfilledLabel.textContent =
+01976:                 targetMode
+01977:                     ? 'Station targets met:'
+01978:                     : 'Units fulfilled:';
+01979:         }
+01980: 
+01981:         if (input) {
+01982:             input.disabled =
+01983:                 !live ||
+01984:                 !targetMode;
+01985: 
+01986:             input.value =
+01987:                 targetMode
+01988:                     ? String(
+01989:                         PERSONNEL_STATE
+01990:                             .configuredUnitsRequired ||
+01991:                         0
+01992:                     )
+01993:                     : '0';
+01994:         }
+01995: 
+01996:         if (note) {
+01997:             note.textContent =
+
+--- context 13: lines 2122-2150 ---
+02122: 
+02123:         updatePersonnelModeUi();
+02124:     }
+02125: 
+02126:     function populatePersonnelProfileSelect(preferredProfileId = '') {
+02127:         const select = document.querySelector('#mc-personnel-profile');
+02128:         if (!select) return;
+02129: 
+02130:         const service = getPersonnelServiceDefinition();
+02131:         select.innerHTML = '';
+02132: 
+02133:         service.profiles.forEach(profile => {
+02134:             const option = document.createElement('option');
+02135:             option.value = profile.id;
+02136:             option.textContent = `${profile.label}${profile.live ? ' — LIVE' : ' — UI preview'}`;
+02137:             select.appendChild(option);
+02138:         });
+02139: 
+02140:         const validPreferred = service.profiles.some(profile => profile.id === preferredProfileId)
+02141:             ? preferredProfileId
+02142:             : service.profiles[0]?.id || '';
+02143: 
+02144:         PERSONNEL_STATE.profile = validPreferred;
+02145:         select.value = validPreferred;
+02146:     }
+02147: 
+02148:     function handlePersonnelServiceChange() {
+02149:         if (PERSONNEL_STATE.running) {
+02150:             personnelLog('Stop Personnel Assignment before changing Service.', 'error');
+
+--- context 14: lines 2162-2271 ---
+02162:         if (PERSONNEL_STATE.running) {
+02163:             personnelLog('Stop Personnel Assignment before changing Training profile.', 'error');
+02164:             const select = document.querySelector('#mc-personnel-profile');
+02165:             if (select) select.value = PERSONNEL_STATE.profile;
+02166:             return;
+02167:         }
+02168: 
+02169:         PERSONNEL_STATE.profile = document.querySelector('#mc-personnel-profile')?.value || 'critical_care';
+02170:         updatePersonnelProfileUi(true);
+02171:     }
+02172: 
+02173:     function updatePersonnelProfileUi(save = true) {
+02174:         const service = getPersonnelServiceDefinition();
+02175:         const profile = getPersonnelProfileDefinition();
+02176:         const live = isLivePersonnelProfile();
+02177: 
+02178:         const training = document.querySelector('#mc-personnel-profile-training');
+02179:         const vehicle = document.querySelector('#mc-personnel-profile-vehicle');
+02180:         const requirement = document.querySelector('#mc-personnel-profile-requirement');
+02181:         const policy = document.querySelector('#mc-personnel-policy-summary');
+02182:         const banner = document.querySelector('#mc-personnel-profile-banner');
+02183:         const modeAll = document.querySelector('#mc-personnel-mode-all-option');
+02184:         const start = document.querySelector('#mc-personnel-start');
+02185:         const refresh = document.querySelector('#mc-personnel-refresh');
+02186:         const mode = document.querySelector('#mc-personnel-mode');
+02187:         const action = document.querySelector('#mc-personnel-action');
+02188:         const unitsRequired = document.querySelector('#mc-personnel-units-required');
+02189:         const startFrom = document.querySelector('#mc-personnel-startfrom');
+02190: 
+02191:         if (training) training.textContent = profile.label;
+02192:         if (vehicle) vehicle.textContent = profile.vehicle;
+02193:         if (requirement) requirement.textContent = profile.requirement;
+02194:         if (policy) {
+02195:             policy.innerHTML = `<strong>${service.icon} ${service.label} policy:</strong> ${profile.policy}`;
+02196:         }
+02197: 
+02198:         if (banner) {
+02199:             banner.classList.toggle('is-live', live);
+02200:             banner.classList.toggle('is-preview', !live);
+02201:             banner.textContent = live
+02202:                 ? '● LIVE PROFILE — the selected assignment engine is enabled.'
+02203:                 : '◐ UI PREVIEW ONLY — assignment controls are safely disabled for this profile.';
+02204:         }
+02205: 
+02206:         if (modeAll) {
+02207:             modeAll.textContent = live
+02208:                 ? `All ${getPersonnelStationScopeLabel()} from selected start point`
+02209:                 : `All relevant ${service.label} stations from selected start point`;
+02210:         }
+02211: 
+02212:         [start, refresh, mode, action, startFrom].forEach(control => {
+02213:             if (control) control.disabled = !live;
+02214:         });
+02215: 
+02216:         if (unitsRequired) {
+02217:             unitsRequired.disabled =
+02218:                 !live ||
+02219:                 (
+02220:                     document.querySelector(
+02221:                         '#mc-personnel-mode'
+02222:                     )?.value ||
+02223:                     'all'
+02224:                 ) !== 'target';
+02225:         }
+02226: 
+02227:         if (start) {
+02228:             start.title = live
+02229:                 ? 'Start the selected Personnel Assignment profile'
+02230:                 : 'This profile is a UI preview and cannot make assignments yet';
+02231:         }
+02232: 
+02233:         if (live) {
+02234:             setPersonnelUiValue('status', PERSONNEL_STATE.filteredStations.length ? 'Ready' : 'Refresh required');
+02235:         } else {
+02236:             setPersonnelUiValue('status', 'Profile UI preview');
+02237:             setPersonnelUiValue('vehicle', 'Not enabled');
+02238:         }
+02239: 
+02240:         if (save) {
+02241:             PERSONNEL_STATE.stations = [];
+02242:             PERSONNEL_STATE.filteredStations = [];
+02243:             PERSONNEL_STATE.queue = [];
+02244:             PERSONNEL_STATE.selectedHref = '';
+02245:             PERSONNEL_STATE.unitsFulfilled = 0;
+02246:             PERSONNEL_STATE.unitTargetReached = false;
+02247:             setPersonnelUiValue('unitsFulfilled', PERSONNEL_STATE.unitsRequired > 0 ? `0 / ${PERSONNEL_STATE.unitsRequired}` : '0 / All');
+02248:             populatePersonnelStartDropdown();
+02249:             setPersonnelUiValue('status', live ? 'Refresh required' : 'Profile UI preview');
+02250:             setPersonnelUiValue('vehicle', live ? 'None' : 'Not enabled');
+02251: 
+02252:             try {
+02253:                 localStorage.setItem(PERSONNEL_SERVICE_STORAGE_KEY, PERSONNEL_STATE.service);
+02254:                 localStorage.setItem(PERSONNEL_PROFILE_STORAGE_KEY, PERSONNEL_STATE.profile);
+02255:             } catch (_error) {}
+02256: 
+02257:             personnelLog(`${service.icon} Service: ${service.label} | Training profile: ${profile.label}${live ? ' (LIVE)' : ' (UI preview only)'}`, live ? 'info' : 'debug');
+02258:         }
+02259: 
+02260:         updatePersonnelModeUi();
+02261:     }
+02262: 
+02263:     function initialisePersonnelReportVisibility() {
+02264:         const stationCheckbox = document.querySelector('#mc-personnel-show-station-report');
+02265:         const overallCheckbox = document.querySelector('#mc-personnel-show-overall-report');
+02266:         if (!stationCheckbox || !overallCheckbox) return;
+02267: 
+02268:         let showStation = true;
+02269:         let showOverall = true;
+02270: 
+02271:         try {
+
+--- context 15: lines 2483-2514 ---
+02483:         const firstOption = document.createElement('option');
+02484:         firstOption.value = STATION_STATE.filteredStations[0].href;
+02485:         firstOption.textContent = 'Start from first matching station';
+02486:         select.appendChild(firstOption);
+02487: 
+02488:         STATION_STATE.filteredStations.forEach(station => {
+02489:             const option = document.createElement('option');
+02490:             option.value = station.href;
+02491:             option.textContent = `${station.displayName} [${STATION_TYPES[station.stationType] || station.stationType} | type ${station.buildingTypeId ?? '?'}]`;
+02492:             select.appendChild(option);
+02493:         });
+02494: 
+02495:         STATION_STATE.selectedHref = select.value;
+02496:         setStationUiValue('progress', `0 / ${STATION_STATE.filteredStations.length}`);
+02497:         updateStationNamingSelectionPreview();
+02498:     }
+02499: 
+02500:     function updateStationNamingSelectionPreview() {
+02501:         const select = document.querySelector('#mc-station-startfrom');
+02502:         const selectedHref = select?.value || '';
+02503:         const station = STATION_STATE.filteredStations.find(item => item.href === selectedHref);
+02504: 
+02505:         STATION_STATE.selectedHref = selectedHref;
+02506:         setStationUiValue('current', station?.displayName || 'None');
+02507:         setStationUiValue('address', 'Not read yet');
+02508:         setStationUiValue('town', 'Not extracted yet');
+02509:         setStationUiValue('before', station?.displayName || 'None');
+02510:         setStationUiValue('after', 'Not generated yet');
+02511: 
+02512:         if (station) {
+02513:             stationDebug(`Selected: ${station.displayName} | href=${selectedHref} | building_type_id=${station.buildingTypeId} | rule=${station.typeLabel} ${station.suffix}`);
+02514:         }
+
+--- context 16: lines 2537-2584 ---
+02537:             setStationUiValue('status', 'Refresh required');
+02538:             return;
+02539:         }
+02540: 
+02541:         const selectedHref = document.querySelector('#mc-station-startfrom')?.value || '';
+02542:         const startIndex = STATION_STATE.filteredStations.findIndex(station => station.href === selectedHref);
+02543: 
+02544:         if (startIndex < 0) {
+02545:             stationLog(`Selected start station not found: ${selectedHref || 'none'}`, 'error');
+02546:             setStationUiValue('status', 'Invalid start station');
+02547:             return;
+02548:         }
+02549: 
+02550:         STATION_STATE.mode = document.querySelector('#mc-station-mode')?.value || 'all';
+02551:         STATION_STATE.action = document.querySelector('#mc-station-action')?.value || 'preview';
+02552:         STATION_STATE.queue = STATION_STATE.mode === 'single'
+02553:             ? [STATION_STATE.filteredStations[startIndex]]
+02554:             : STATION_STATE.filteredStations.slice(startIndex);
+02555:         STATION_STATE.running = true;
+02556:         STATION_STATE.paused = false;
+02557:         STATION_STATE.stopped = false;
+02558:         STATION_STATE.stationIndex = 0;
+02559:         STATION_STATE.renamedCount = 0;
+02560:         STATION_STATE.skippedCount = 0;
+02561:         STATION_STATE.previewedCount = 0;
+02562:         STATION_STATE.activeIframe = null;
+02563: 
+02564:         document.querySelector('#mc-station-pause').textContent = 'Pause';
+02565:         updateStationCounters();
+02566:         setStationUiValue('progress', `0 / ${STATION_STATE.queue.length}`);
+02567:         setStationUiValue('status', STATION_STATE.action === 'save' ? 'Starting rename run' : 'Starting preview');
+02568: 
+02569:         stationLog(`Mode: ${STATION_STATE.mode === 'single' ? 'Selected station only' : 'All matching stations from selected start point'}`, 'info');
+02570:         stationLog(`Action: ${STATION_STATE.action === 'save' ? 'RENAME AND SAVE' : 'PREVIEW ONLY - no names will be saved'}`, STATION_STATE.action === 'save' ? 'after' : 'info');
+02571:         stationLog(`Starting from: ${STATION_STATE.queue[0]?.displayName || 'None'}`, 'info');
+02572: 
+02573:         processStationNamingQueue().catch(error => {
+02574:             stationLog(`Station Naming stopped after an unexpected error: ${error?.message || error}`, 'error');
+02575:             stationDebug(error?.stack || String(error));
+02576:             STATION_STATE.stopped = true;
+02577:             STATION_STATE.running = false;
+02578:             setStationUiValue('status', 'Error');
+02579:         });
+02580:     }
+02581: 
+02582:     function toggleStationNamingPause() {
+02583:         if (!STATION_STATE.running) {
+02584:             stationLog('Nothing is currently running.', 'debug');
+
+--- context 17: lines 2627-2679 ---
+02627:                 setStationUiValue('current', station.displayName);
+02628:                 setStationUiValue('address', 'Opening station...');
+02629:                 setStationUiValue('town', 'Waiting...');
+02630:                 setStationUiValue('before', station.displayName);
+02631:                 setStationUiValue('after', 'Waiting...');
+02632:                 setStationUiValue('status', 'Opening station');
+02633: 
+02634:                 stationLog(`Station ${displayPosition}/${STATION_STATE.queue.length}: ${station.displayName}`, 'station');
+02635:                 stationLog(`Type: ${station.typeLabel} | building_type_id=${station.buildingTypeId ?? 'unknown'} | suffix=${station.suffix || 'none'}`, 'info');
+02636: 
+02637:                 const result = await processOneStationName(station);
+02638: 
+02639:                 if (result === 'renamed') {
+02640:                     STATION_STATE.renamedCount++;
+02641:                 } else if (result === 'previewed') {
+02642:                     STATION_STATE.previewedCount++;
+02643:                 } else {
+02644:                     STATION_STATE.skippedCount++;
+02645:                 }
+02646: 
+02647:                 updateStationCounters();
+02648:                 STATION_STATE.stationIndex++;
+02649: 
+02650:                 if (!STATION_STATE.stopped) await sleep(350);
+02651:             }
+02652:         } finally {
+02653:             await closeStationNamingModal();
+02654:             STATION_STATE.activeIframe = null;
+02655:             STATION_STATE.running = false;
+02656:             STATION_STATE.paused = false;
+02657:             document.querySelector('#mc-station-pause').textContent = 'Pause';
+02658: 
+02659:             if (STATION_STATE.stopped) {
+02660:                 setStationUiValue('status', 'Stopped');
+02661:                 stationLog(`Stopped. Renamed ${STATION_STATE.renamedCount}, previewed ${STATION_STATE.previewedCount}, skipped ${STATION_STATE.skippedCount}.`, 'error');
+02662:             } else {
+02663:                 setStationUiValue('status', 'Finished');
+02664:                 setStationUiValue('progress', `${STATION_STATE.queue.length} / ${STATION_STATE.queue.length}`);
+02665:                 stationLog(`Finished. Renamed ${STATION_STATE.renamedCount}, previewed ${STATION_STATE.previewedCount}, skipped ${STATION_STATE.skippedCount}.`, 'done');
+02666:             }
+02667:         }
+02668:     }
+02669: 
+02670:     async function processOneStationName(station) {
+02671:         if (!station.suffix) {
+02672:             stationLog(`Skipped: no safe naming rule exists for building_type_id=${station.buildingTypeId ?? 'unknown'}.`, 'error');
+02673:             return 'skipped';
+02674:         }
+02675: 
+02676:         const stationLink = document.querySelector(`a.lightbox-open.list-group-item.active[href="${station.href}"]`);
+02677:         if (!stationLink) {
+02678:             stationLog(`Skipped: station link no longer exists for ${station.href}.`, 'error');
+02679:             return 'skipped';
+
+--- context 18: lines 2721-2751 ---
+02721: 
+02722:             const formattedArea = formatStationArea(parsed.area);
+02723:             if (!formattedArea) throw new Error('The detected local area became empty after formatting.');
+02724: 
+02725:             setStationUiValue('town', formattedArea);
+02726:             stationLog(`Postcode: ${parsed.postcode}`, 'info');
+02727:             stationLog(`Detected area: ${formattedArea}`, 'after');
+02728: 
+02729:             let proposedName = buildStationName(formattedArea, station.suffix, station.displayName);
+02730:             setStationUiValue('after', proposedName);
+02731:             stationLog(`BEFORE: ${station.displayName}`, 'before');
+02732:             stationLog(`AFTER : ${proposedName}`, 'after');
+02733: 
+02734:             if (STATION_STATE.action !== 'save') {
+02735:                 setStationUiValue('status', 'Preview complete');
+02736:                 stationLog('Preview only: nothing was saved.', 'info');
+02737:                 return 'previewed';
+02738:             }
+02739: 
+02740:             if (STATION_STATE.stopped) return 'skipped';
+02741:             await waitIfStationNamingPaused();
+02742: 
+02743:             // The iframe is still on the normal station page because address reading
+02744:             // now happens in the background. Open Edit directly from this page.
+02745:             if (STATION_STATE.stopped) return 'skipped';
+02746: 
+02747:             setStationUiValue('status', 'Opening Edit');
+02748:             const editLink = doc.querySelector(`a[href="${station.href}/edit"]`);
+02749:             if (!editLink) throw new Error('Edit button was not found.');
+02750: 
+02751:             stationDebug(`Clicking Edit: ${editLink.getAttribute('href')}`);
+
+--- context 19: lines 3361-3393 ---
+03361:     }
+03362: 
+03363:     function getPersonnelStationScopeLabel() {
+03364:         const service = getPersonnelServiceDefinition();
+03365:         const stationTypes = getPersonnelProfileStationTypes();
+03366: 
+03367:         if (service === PERSONNEL_SERVICE_DEFINITIONS.medical) return 'ambulance stations';
+03368:         if (stationTypes.length === 1 && stationTypes[0] === 'AIR') return 'police aviation stations';
+03369:         if (stationTypes.length === 1 && stationTypes[0] === 'EOD') return 'EOD / bomb disposal stations';
+03370:         if (service === PERSONNEL_SERVICE_DEFINITIONS.police) return 'relevant Police stations';
+03371:         return `relevant ${service.label} stations`;
+03372:     }
+03373: 
+03374:     function refreshPersonnelStations() {
+03375:         if (!isLivePersonnelProfile()) {
+03376:             const service = getPersonnelServiceDefinition();
+03377:             const profile = getPersonnelProfileDefinition();
+03378:             personnelLog(`${service.label} > ${profile.label} is currently a UI preview only. No station scan was started.`, 'error');
+03379:             setPersonnelUiValue('status', 'Profile UI preview');
+03380:             return;
+03381:         }
+03382: 
+03383:         if (STATE.running || STATION_STATE.running) {
+03384:             personnelLog('A naming tool is currently running. Stop it before refreshing Personnel Assignment.', 'error');
+03385:             setPersonnelUiValue('status', 'Blocked by naming tool');
+03386:             return;
+03387:         }
+03388: 
+03389:         if (PERSONNEL_STATE.running) {
+03390:             personnelLog('Stop Personnel Assignment before refreshing the station list.', 'error');
+03391:             return;
+03392:         }
+03393: 
+
+--- context 20: lines 3461-3507 ---
+03461:         fragment.appendChild(firstOption);
+03462: 
+03463:         PERSONNEL_STATE.filteredStations.forEach(station => {
+03464:             const option = document.createElement('option');
+03465:             option.value = station.href;
+03466:             option.dataset.personnelStationOption = 'true';
+03467:             option.textContent = `${station.displayName} [building type ${station.buildingTypeId ?? '?'}]`;
+03468:             PERSONNEL_START_OPTION_BY_HREF.set(String(station.href), option);
+03469:             fragment.appendChild(option);
+03470:         });
+03471: 
+03472:         select.appendChild(fragment);
+03473:         PERSONNEL_STATE.selectedHref = select.value;
+03474:         setPersonnelUiValue('progress', `0 / ${PERSONNEL_STATE.filteredStations.length}`);
+03475:         updatePersonnelSelectionPreview();
+03476:     }
+03477: 
+03478:     function updatePersonnelSelectionPreview() {
+03479:         const selectedHref = document.querySelector('#mc-personnel-startfrom')?.value || '';
+03480:         const station = PERSONNEL_STATE.filteredStations.find(item => item.href === selectedHref);
+03481: 
+03482:         PERSONNEL_STATE.selectedHref = selectedHref;
+03483:         setPersonnelUiValue('current', station?.displayName || 'None');
+03484:         setPersonnelUiValue('vehicle', 'None');
+03485:         personnelDebug(`Selected station: ${station?.displayName || 'none'} | href=${selectedHref}`);
+03486:     }
+03487: 
+03488:     function startPersonnelRun() {
+03489:         if (!isLivePersonnelProfile()) {
+03490:             const service = getPersonnelServiceDefinition();
+03491:             const profile = getPersonnelProfileDefinition();
+03492:             personnelLog(`${service.label} > ${profile.label} is shown for UI review only. Assignment has been safely blocked until that profile is implemented and tested.`, 'error');
+03493:             setPersonnelUiValue('status', 'Profile UI preview');
+03494:             return;
+03495:         }
+03496: 
+03497:         if (STATE.running || STATION_STATE.running) {
+03498:             personnelLog('A naming tool is currently running. Stop it before starting Personnel Assignment.', 'error');
+03499:             setPersonnelUiValue('status', 'Blocked by naming tool');
+03500:             return;
+03501:         }
+03502: 
+03503:         if (PERSONNEL_STATE.running) {
+03504:             personnelLog('Personnel Assignment is already running.', 'debug');
+03505:             return;
+03506:         }
+03507: 
+
+--- context 21: lines 3519-3547 ---
+03519:             setPersonnelUiValue('status', 'Invalid start station');
+03520:             return;
+03521:         }
+03522: 
+03523:         PERSONNEL_STATE.mode =
+03524:             document.querySelector(
+03525:                 '#mc-personnel-mode'
+03526:             )?.value ||
+03527:             'all';
+03528: 
+03529:         PERSONNEL_STATE.action =
+03530:             document.querySelector(
+03531:                 '#mc-personnel-action'
+03532:             )?.value ||
+03533:             'preview';
+03534: 
+03535:         const unitsInput =
+03536:             document.querySelector(
+03537:                 '#mc-personnel-units-required'
+03538:             );
+03539: 
+03540:         if (
+03541:             PERSONNEL_STATE.mode ===
+03542:             'target'
+03543:         ) {
+03544:             const configuredTarget =
+03545:                 normalisePersonnelUnitsRequired(
+03546:                     unitsInput?.value ||
+03547:                     PERSONNEL_STATE
+
+--- context 22: lines 3619-3662 ---
+03619:         PERSONNEL_STATE.currentReport = '';
+03620:         PERSONNEL_STATE.currentStationReport = '';
+03621:         PERSONNEL_STATE.lastStationReport = null;
+03622:         PERSONNEL_STATE.activeController = null;
+03623:         PERSONNEL_STATE.lastRequestAt = 0;
+03624:         PERSONNEL_SHORTFALL_CACHE = [];
+03625:         PERSONNEL_SHORTFALL_CACHE_SIZE = -1;
+03626: 
+03627:         document.querySelector('#mc-personnel-pause').textContent = 'Pause';
+03628:         updatePersonnelCounters();
+03629:         renderPersonnelAfterActionText('The latest completed station report will appear here.');
+03630:         renderPersonnelReport('Scanning has started. The completed overall report will appear here.');
+03631:         updatePersonnelTrainingShortfallHighlights();
+03632:         setPersonnelUiValue('progress', `0 / ${PERSONNEL_STATE.queue.length}`);
+03633:         setPersonnelUiValue('status', PERSONNEL_STATE.action === 'assign' ? 'Starting assignment run' : 'Starting preview');
+03634: 
+03635:         personnelLog(`Service/Profile: ${getPersonnelServiceDefinition().label} > ${getPersonnelProfileDefinition().label}`, 'info');
+03636:         personnelLog(
+03637:             `Mode: ${
+03638:                 PERSONNEL_STATE.mode ===
+03639:                     'single'
+03640:                     ? 'Selected station only — scan the entire selected station'
+03641:                     : PERSONNEL_STATE.mode ===
+03642:                         'target'
+03643:                         ? `Ensure each ${getPersonnelStationScopeLabel().replace(/s$/, '')} has ${PERSONNEL_STATE.unitsRequired} fully staffed unit(s)`
+03644:                         : `All ${getPersonnelStationScopeLabel()} from selected start point — scan every station`
+03645:             }`,
+03646:             'info'
+03647:         );
+03648:         personnelLog(`Action: ${PERSONNEL_STATE.action === 'assign' ? 'ASSIGN AND VERIFY' : 'PREVIEW ONLY - no assignments will change'}`, PERSONNEL_STATE.action === 'assign' ? 'after' : 'info');
+03649:         personnelLog(
+03650:             PERSONNEL_STATE.mode ===
+03651:                 'target'
+03652:                 ? `Units required at every station: ${PERSONNEL_STATE.unitsRequired}. Existing fully covered units count first; only the station's remaining target will be planned or assigned before moving to the next station.`
+03653:                 : PERSONNEL_STATE.mode ===
+03654:                     'single'
+03655:                     ? 'Units required: not used. Every matching unit at the selected station will be processed.'
+03656:                     : 'Units required: not used. Every relevant station and matching unit from the selected start point will be processed.',
+03657:             'info'
+03658:         );
+03659:         personnelLog(`Rule: ${getPersonnelProfileDefinition().requirement}.`, 'info');
+03660: 
+03661:         processPersonnelQueue().catch(error => {
+03662:             personnelLog(`Personnel Assignment stopped after an unexpected error: ${error?.message || error}`, 'error');
+
+--- context 23: lines 3881-3941 ---
+03881:                     );
+03882: 
+03883:                     personnelLog(
+03884:                         `Skipped ${station.displayName}: ${error?.message || error}`,
+03885:                         'error'
+03886:                     );
+03887:                     personnelDebug(
+03888:                         error?.stack || String(error)
+03889:                     );
+03890:                 }
+03891: 
+03892:                 PERSONNEL_STATE.lastStationReport =
+03893:                     completedReport;
+03894: 
+03895:                 flushPersonnelTrainingRegistry(true);
+03896: 
+03897:                 renderPersonnelAfterAction(
+03898:                     completedReport
+03899:                 );
+03900: 
+03901:                 PERSONNEL_STATE.stationIndex++;
+03902:                 updatePersonnelCounters();
+03903:                 buildAndRenderPersonnelReport();
+03904: 
+03905:                 if (PERSONNEL_STATE.mode === 'single') {
+03906:                     scrollPersonnelTo(
+03907:                         'mc-personnel-after-action-section'
+03908:                     );
+03909:                 }
+03910: 
+03911:                 if (!PERSONNEL_STATE.stopped) {
+03912:                     await waitPersonnelDelay(
+03913:                         PERSONNEL_STATION_GAP_MS
+03914:                     );
+03915:                 }
+03916:             }
+03917:         } finally {
+03918:             PERSONNEL_STATE.running = false;
+03919:             PERSONNEL_STATE.paused = false;
+03920: 
+03921:             document.querySelector(
+03922:                 '#mc-personnel-pause'
+03923:             ).textContent = 'Pause';
+03924: 
+03925:             buildAndRenderPersonnelReport();
+03926:             flushPersonnelTrainingRegistry(true);
+03927:             PERSONNEL_TRAINING_REGISTRY_CACHE = null;
+03928: 
+03929:             if (PERSONNEL_STATE.stopped) {
+03930:                 setPersonnelUiValue(
+03931:                     'status',
+03932:                     'Stopped'
+03933:                 );
+03934:                 personnelLog(
+03935:                     'Stopped. The reports contain all stations completed before the stop request.',
+03936:                     'error'
+03937:                 );
+03938:                 return;
+03939:             }
+03940: 
+03941:             const targetMode =
+
+--- context 24: lines 3981-4202 ---
+03981:                     : 'done'
+03982:             );
+03983: 
+03984:             if (
+03985:                 PERSONNEL_STATE.mode === 'single'
+03986:                 && PERSONNEL_STATE.lastStationReport
+03987:             ) {
+03988:                 scrollPersonnelTo(
+03989:                     'mc-personnel-after-action-section'
+03990:                 );
+03991:             }
+03992:         }
+03993:     }
+03994: 
+03995:     function prunePersonnelTrainingRegistry(
+03996:         registry,
+03997:         now = Date.now(),
+03998:         maximumVehicles = PERSONNEL_TRAINING_REGISTRY_MAX_VEHICLES
+03999:     ) {
+04000:         const sourceVehicles = registry?.vehicles && typeof registry.vehicles === 'object'
+04001:             ? registry.vehicles
+04002:             : {};
+04003:         const cutoff = now - PERSONNEL_TRAINING_REGISTRY_MAX_AGE_MS;
+04004:         const validEntries = Object.entries(sourceVehicles)
+04005:             .filter(([vehicleId, entry]) => {
+04006:                 const updatedAt = Number(entry?.updatedAt || 0);
+04007:                 return Boolean(
+04008:                     vehicleId
+04009:                     && entry
+04010:                     && typeof entry === 'object'
+04011:                     && Number.isFinite(updatedAt)
+04012:                     && updatedAt >= cutoff
+04013:                 );
+04014:             })
+04015:             .sort((left, right) => Number(right[1]?.updatedAt || 0) - Number(left[1]?.updatedAt || 0));
+04016: 
+04017:         const retainedEntries = validEntries.slice(0, Math.max(0, Number(maximumVehicles) || 0));
+04018:         const vehicles = Object.fromEntries(retainedEntries);
+04019:         const originalCount = Object.keys(sourceVehicles).length;
+04020:         const retainedCount = retainedEntries.length;
+04021: 
+04022:         registry.vehicles = vehicles;
+04023: 
+04024:         return {
+04025:             originalCount,
+04026:             retainedCount,
+04027:             removedCount: Math.max(0, originalCount - retainedCount)
+04028:         };
+04029:     }
+04030: 
+04031:     function savePersonnelTrainingRegistry(registry) {
+04032:         const now = Date.now();
+04033:         const sourceVehicles = registry?.vehicles && typeof registry.vehicles === 'object'
+04034:             ? registry.vehicles
+04035:             : {};
+04036:         const sourceCount = Object.keys(sourceVehicles).length;
+04037:         const lastPrunedAt = Number(registry?.lastPrunedAt || 0);
+04038:         const shouldPrune = sourceCount > PERSONNEL_TRAINING_REGISTRY_MAX_VEHICLES
+04039:             || !Number.isFinite(lastPrunedAt)
+04040:             || now - lastPrunedAt >= PERSONNEL_TRAINING_REGISTRY_PRUNE_INTERVAL_MS;
+04041:         const primaryPrune = shouldPrune
+04042:             ? prunePersonnelTrainingRegistry(
+04043:                 registry,
+04044:                 now,
+04045:                 PERSONNEL_TRAINING_REGISTRY_MAX_VEHICLES
+04046:             )
+04047:             : {
+04048:                 originalCount: sourceCount,
+04049:                 retainedCount: sourceCount,
+04050:                 removedCount: 0
+04051:             };
+04052: 
+04053:         if (shouldPrune) registry.lastPrunedAt = now;
+04054: 
+04055:         try {
+04056:             localStorage.setItem(
+04057:                 PERSONNEL_TRAINING_REGISTRY_STORAGE_KEY,
+04058:                 JSON.stringify(registry)
+04059:             );
+04060: 
+04061:             return {
+04062:                 saved: true,
+04063:                 pruned: primaryPrune.removedCount,
+04064:                 retained: primaryPrune.retainedCount,
+04065:                 quotaRetry: false
+04066:             };
+04067:         } catch (error) {
+04068:             const isQuotaError = error?.name === 'QuotaExceededError'
+04069:                 || error?.name === 'NS_ERROR_DOM_QUOTA_REACHED'
+04070:                 || Number(error?.code) === 22
+04071:                 || Number(error?.code) === 1014;
+04072: 
+04073:             if (!isQuotaError) throw error;
+04074: 
+04075:             const retryPrune = prunePersonnelTrainingRegistry(
+04076:                 registry,
+04077:                 now,
+04078:                 PERSONNEL_TRAINING_REGISTRY_QUOTA_RETRY_MAX_VEHICLES
+04079:             );
+04080:             registry.lastPrunedAt = now;
+04081: 
+04082:             localStorage.setItem(
+04083:                 PERSONNEL_TRAINING_REGISTRY_STORAGE_KEY,
+04084:                 JSON.stringify(registry)
+04085:             );
+04086: 
+04087:             return {
+04088:                 saved: true,
+04089:                 pruned: Math.max(primaryPrune.removedCount, retryPrune.removedCount),
+04090:                 retained: retryPrune.retainedCount,
+04091:                 quotaRetry: true
+04092:             };
+04093:         }
+04094:     }
+04095: 
+04096:     function createEmptyPersonnelTrainingRegistry() {
+04097:         return {
+04098:             schemaVersion: PERSONNEL_TRAINING_REGISTRY_SCHEMA_VERSION,
+04099:             sourceVersion: PERSONNEL_VERSION,
+04100:             updatedAt: 0,
+04101:             lastPrunedAt: 0,
+04102:             vehicles: {}
+04103:         };
+04104:     }
+04105: 
+04106:     function readPersonnelTrainingRegistry() {
+04107:         if (PERSONNEL_TRAINING_REGISTRY_CACHE) {
+04108:             return PERSONNEL_TRAINING_REGISTRY_CACHE;
+04109:         }
+04110: 
+04111:         const emptyRegistry = createEmptyPersonnelTrainingRegistry();
+04112: 
+04113:         try {
+04114:             const parsed = JSON.parse(
+04115:                 localStorage.getItem(PERSONNEL_TRAINING_REGISTRY_STORAGE_KEY) || 'null'
+04116:             );
+04117: 
+04118:             if (!parsed || typeof parsed !== 'object' || typeof parsed.vehicles !== 'object') {
+04119:                 PERSONNEL_TRAINING_REGISTRY_CACHE = emptyRegistry;
+04120:                 return PERSONNEL_TRAINING_REGISTRY_CACHE;
+04121:             }
+04122: 
+04123:             PERSONNEL_TRAINING_REGISTRY_CACHE = {
+04124:                 ...emptyRegistry,
+04125:                 ...parsed,
+04126:                 vehicles: { ...parsed.vehicles }
+04127:             };
+04128: 
+04129:             prunePersonnelTrainingRegistry(PERSONNEL_TRAINING_REGISTRY_CACHE);
+04130:             PERSONNEL_TRAINING_REGISTRY_CACHE.lastPrunedAt = Date.now();
+04131:             return PERSONNEL_TRAINING_REGISTRY_CACHE;
+04132:         } catch (_error) {
+04133:             PERSONNEL_TRAINING_REGISTRY_CACHE = emptyRegistry;
+04134:             return PERSONNEL_TRAINING_REGISTRY_CACHE;
+04135:         }
+04136:     }
+04137: 
+04138:     function dispatchPersonnelTrainingRegistryUpdate(eventDetail) {
+04139:         if (!eventDetail) return;
+04140: 
+04141:         try {
+04142:             window.dispatchEvent(new CustomEvent(
+04143:                 'mc-personnel-training-registry-updated',
+04144:                 { detail: eventDetail }
+04145:             ));
+04146:         } catch (_eventError) {}
+04147:     }
+04148: 
+04149:     function flushPersonnelTrainingRegistry(silent = false) {
+04150:         if (PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER != null) {
+04151:             clearTimeout(PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER);
+04152:             PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER = null;
+04153:         }
+04154: 
+04155:         if (!PERSONNEL_TRAINING_REGISTRY_DIRTY || !PERSONNEL_TRAINING_REGISTRY_CACHE) {
+04156:             return { saved: false, pruned: 0, retained: 0, quotaRetry: false };
+04157:         }
+04158: 
+04159:         try {
+04160:             const registrySave = savePersonnelTrainingRegistry(PERSONNEL_TRAINING_REGISTRY_CACHE);
+04161:             PERSONNEL_TRAINING_REGISTRY_DIRTY = false;
+04162: 
+04163:             const pendingEvent = PERSONNEL_TRAINING_REGISTRY_PENDING_EVENT;
+04164:             PERSONNEL_TRAINING_REGISTRY_PENDING_EVENT = null;
+04165:             dispatchPersonnelTrainingRegistryUpdate(pendingEvent);
+04166: 
+04167:             if (!silent) {
+04168:                 personnelDebug(
+04169:                     `Shared training register saved: retained=${registrySave.retained} | pruned=${registrySave.pruned}${registrySave.quotaRetry ? ' | quota retry used' : ''}`
+04170:                 );
+04171:             }
+04172: 
+04173:             return registrySave;
+04174:         } catch (error) {
+04175:             if (!silent) {
+04176:                 personnelLog(`Shared training register could not be saved: ${error?.message || error}`, 'error');
+04177:             }
+04178:             return { saved: false, pruned: 0, retained: 0, quotaRetry: false, error };
+04179:         }
+04180:     }
+04181: 
+04182:     function schedulePersonnelTrainingRegistryFlush() {
+04183:         if (PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER != null) return;
+04184: 
+04185:         PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER = setTimeout(() => {
+04186:             PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER = null;
+04187:             flushPersonnelTrainingRegistry(false);
+04188:         }, PERSONNEL_TRAINING_REGISTRY_FLUSH_DELAY_MS);
+04189:     }
+04190: 
+04191:     function countPersonnelTrainingCodes(
+04192:         assignedPersonnel
+04193:     ) {
+04194:         const counts = {};
+04195: 
+04196:         (
+04197:             Array.isArray(
+04198:                 assignedPersonnel
+04199:             )
+04200:                 ? assignedPersonnel
+04201:                 : []
+04202:         ).forEach(person => {
+
+--- context 25: lines 4214-4298 ---
+04214:                 );
+04215: 
+04216:             uniqueCodes.forEach(code => {
+04217:                 counts[code] =
+04218:                     Number(
+04219:                         counts[code] ||
+04220:                         0
+04221:                     ) + 1;
+04222:             });
+04223:         });
+04224: 
+04225:         return counts;
+04226:     }
+04227: 
+04228:     function publishPersonnelVehicleTrainingRegistry({
+04229:         station,
+04230:         vehicles,
+04231:         personnel,
+04232:         source = 'scan'
+04233:     }) {
+04234:         const stationVehicles = Array.isArray(vehicles)
+04235:             ? vehicles.filter(vehicle => vehicle?.vehicleId)
+04236:             : [];
+04237: 
+04238:         if (!stationVehicles.length) return 0;
+04239: 
+04240:         const registry = readPersonnelTrainingRegistry();
+04241:         const now = Date.now();
+04242:         const currentVehicleIds = new Set(
+04243:             stationVehicles.map(vehicle => String(vehicle.vehicleId))
+04244:         );
+04245:         const processedTypeIds = new Set(
+04246:             stationVehicles.map(vehicle => String(vehicle.vehicleTypeId || ''))
+04247:         );
+04248: 
+04249:         Object.entries(registry.vehicles).forEach(([vehicleId, entry]) => {
+04250:             if (String(entry?.stationHref || '') !== String(station?.href || '')) return;
+04251:             if (!processedTypeIds.has(String(entry?.vehicleTypeId || ''))) return;
+04252:             if (!currentVehicleIds.has(String(vehicleId))) delete registry.vehicles[vehicleId];
+04253:         });
+04254: 
+04255:         stationVehicles.forEach(vehicle => {
+04256:             const assignedPersonnel = getPersonnelAssignedToVehicle(personnel, vehicle);
+04257:             const vehicleId = String(vehicle.vehicleId);
+04258: 
+04259:             registry.vehicles[vehicleId] = {
+04260:                 vehicleId,
+04261:                 vehicleName: String(vehicle.name || ''),
+04262:                 vehicleTypeId: String(vehicle.vehicleTypeId || ''),
+04263:                 stationName: String(station?.displayName || station?.stationName || ''),
+04264:                 stationHref: String(station?.href || ''),
+04265:                 assignedPersonnelCount: assignedPersonnel.length,
+04266:                 trainingCounts: countPersonnelTrainingCodes(assignedPersonnel),
+04267:                 updatedAt: now,
+04268:                 source: String(source)
+04269:             };
+04270:         });
+04271: 
+04272:         registry.schemaVersion = PERSONNEL_TRAINING_REGISTRY_SCHEMA_VERSION;
+04273:         registry.sourceVersion = PERSONNEL_VERSION;
+04274:         registry.updatedAt = now;
+04275:         PERSONNEL_TRAINING_REGISTRY_DIRTY = true;
+04276:         PERSONNEL_TRAINING_REGISTRY_PENDING_EVENT = {
+04277:             stationName: station?.displayName || '',
+04278:             vehicleCount: stationVehicles.length,
+04279:             updatedAt: now
+04280:         };
+04281: 
+04282:         const finalSnapshot = /final-verification|station-complete/i.test(String(source));
+04283:         if (finalSnapshot) flushPersonnelTrainingRegistry(false);
+04284:         else schedulePersonnelTrainingRegistryFlush();
+04285: 
+04286:         personnelDebug(
+04287:             `Shared training register cache updated: ${stationVehicles.length} vehicle(s) at ${station?.displayName || 'station'} | source=${source}${finalSnapshot ? ' | flushed' : ' | write queued'}`
+04288:         );
+04289: 
+04290:         return stationVehicles.length;
+04291:     }
+04292:     function getPersonnelAssignmentIndex(personnel) {
+04293:         if (!Array.isArray(personnel)) {
+04294:             return { byVehicleId: new Map(), byVehicleName: new Map() };
+04295:         }
+04296: 
+04297:         const cached = PERSONNEL_ASSIGNMENT_INDEX_CACHE.get(personnel);
+04298:         if (cached) return cached;
+
+--- context 26: lines 4760-4788 ---
+04760:                 assigned: 0,
+04761:                 fulfilledUnits: 0,
+04762:                 vehiclesChecked: 0,
+04763:                 afterActionVerified: true,
+04764:                 verificationError: '',
+04765:                 rules: [],
+04766:                 vehicles: []
+04767:             };
+04768:         }
+04769: 
+04770:         const baselinePage = await personnelFetchDocument(allVehicles[0].assignmentHref, 14000);
+04771:         const baselineAssignment = parseVehicleAssignmentPage(baselinePage.doc, allVehicles[0].vehicleId);
+04772:         const personnel = baselineAssignment.rows;
+04773: 
+04774:         publishPersonnelVehicleTrainingRegistry({
+04775:             station,
+04776:             vehicles:
+04777:                 allVehicles,
+04778:             personnel,
+04779:             source:
+04780:                 'police-station-scan'
+04781:         });
+04782: 
+04783:         const reservedPersonnelIds = new Set();
+04784:         const claimedVehicleIds = new Set();
+04785:         const vehicleReports = [];
+04786:         const ruleReports = [];
+04787:         let required = 0;
+04788:         let trainingShortfall = 0;
+
+--- context 27: lines 4852-4880 ---
+04852: 
+04853:             for (let vehicleIndex = 0; vehicleIndex < ruleVehicles.length; vehicleIndex++) {
+04854:                 if (PERSONNEL_STATE.stopped || stationUnitTargetReached()) break;
+04855:                 await waitIfPersonnelPaused();
+04856:                 if (PERSONNEL_STATE.stopped || stationUnitTargetReached()) break;
+04857: 
+04858:                 const vehicle = ruleVehicles[vehicleIndex];
+04859:                 claimedVehicleIds.add(vehicle.vehicleId);
+04860:                 ruleReport.vehicleCount++;
+04861:                 ruleReport.required += rule.target;
+04862:                 required += rule.target;
+04863:                 for (let slotIndex = 0; slotIndex < rule.target; slotIndex++) qualificationSlots.push(rule);
+04864: 
+04865:                 setPersonnelUiValue('vehicle', vehicle.name || vehicle.vehicleId);
+04866:                 setPersonnelUiValue('status', PERSONNEL_STATE.action === 'assign' ? 'Checking Police vehicle' : 'Building Police preview');
+04867:                 personnelLog(`${rule.label} vehicle ${vehicleIndex + 1}/${ruleVehicles.length}: ${vehicle.name}`, 'station');
+04868: 
+04869:                 const baselineAssigned =
+04870:                     getPersonnelAssignedToVehicle(
+04871:                         personnel,
+04872:                         vehicle
+04873:                     );
+04874: 
+04875:                 let beforeTotal =
+04876:                     baselineAssigned.length;
+04877: 
+04878:                 let beforeQualified =
+04879:                     baselineAssigned.filter(
+04880:                         person =>
+
+--- context 28: lines 4900-5078 ---
+04900:                                         rule
+04901:                                     )
+04902:                             };
+04903:                         })
+04904:                         .filter(
+04905:                             entry =>
+04906:                                 entry
+04907:                                     .missingTraining
+04908:                                     .length >
+04909:                                 0
+04910:                         );
+04911: 
+04912:                 const plannedNames = [];
+04913:                 const assignedNames = [];
+04914:                 let liveAssignment = null;
+04915: 
+04916:                 if (PERSONNEL_STATE.action === 'assign' && beforeQualified < rule.target) {
+04917:                     const livePage = await personnelFetchDocument(vehicle.assignmentHref, 14000);
+04918:                     liveAssignment = parseVehicleAssignmentPage(livePage.doc, vehicle.vehicleId);
+04919: 
+04920:                     if (!rule.vehicleTypeIds.includes(liveAssignment.vehicleTypeId)) {
+04921:                         personnelLog(`Skipped unexpected vehicle_type_id=${liveAssignment.vehicleTypeId || 'unknown'} for ${rule.label}.`, 'error');
+04922:                         const unfilled = Math.max(0, rule.target - beforeQualified);
+04923:                         stationAssignmentShortfall += unfilled;
+04924:                         vehicleReports.push({
+04925:                             vehicleId: vehicle.vehicleId,
+04926:                             vehicleTypeId: vehicle.vehicleTypeId,
+04927:                             name: vehicle.name,
+04928:                             ruleId: rule.id,
+04929:                             ruleLabel: rule.label,
+04930:                             trainingLabel: rule.trainingLabel,
+04931:                             target: rule.target,
+04932:                             beforeQualified,
+04933:                             beforeCritical: beforeQualified,
+04934:                             beforeTotal,
+04935:                             afterQualified: beforeQualified,
+04936:                             afterCritical: beforeQualified,
+04937:                             afterTotal: beforeTotal,
+04938:                             finalQualified: beforeQualified,
+04939:                             finalCritical: beforeQualified,
+04940:                             finalTotal: beforeTotal,
+04941:                             plannedNames,
+04942:                             assignedNames,
+04943:                             unfilled,
+04944:                             occupiedSeatBlock: 0,
+04945:                             verificationStatus: 'skipped'
+04946:                         });
+04947:                         continue;
+04948:                     }
+04949: 
+04950:                     beforeTotal = liveAssignment.totalAssigned.length;
+04951:                     beforeQualified = liveAssignment.totalAssigned.filter(person => personnelMatchesRule(person, rule)).length;
+04952:                 }
+04953: 
+04954:                 if (beforeQualified >= rule.target) {
+04955:                     personnelLog(`Already covered: ${beforeQualified}/${rule.target} ${rule.trainingLabel}.`, 'done');
+04956:                 } else {
+04957:                     const seatCapacity = Math.max(rule.target, Number(vehicle.maxCount) || rule.target);
+04958:                     const seatsAvailable = Math.max(0, seatCapacity - beforeTotal);
+04959:                     const targetGap = Math.max(0, rule.target - beforeQualified);
+04960:                     const attemptCount = Math.min(targetGap, seatsAvailable);
+04961: 
+04962:                     if (!attemptCount && targetGap) {
+04963:                         personnelLog(`Cannot top up safely: ${beforeTotal}/${seatCapacity} seats are occupied and ${targetGap} qualified position(s) remain. Existing staff were preserved.`, 'error');
+04964:                     }
+04965: 
+04966:                     const sourceRows = PERSONNEL_STATE.action === 'assign' ? (liveAssignment?.rows || []) : personnel;
+04967:                     const candidates = sortPersonnelCandidatesForRule(
+04968:                         sourceRows.filter(person =>
+04969:                             person.available
+04970:                             && !reservedPersonnelIds.has(person.personnelId)
+04971:                             && personnelMatchesRule(person, rule)
+04972:                         ),
+04973:                         rule
+04974:                     ).slice(0, attemptCount);
+04975: 
+04976:                     candidates.forEach(person => reservedPersonnelIds.add(person.personnelId));
+04977: 
+04978:                     if (PERSONNEL_STATE.action === 'preview') {
+04979:                         candidates.forEach(person => plannedNames.push(person.name));
+04980:                         stationPlanned += candidates.length;
+04981:                         if (candidates.length) personnelLog(`Would assign: ${candidates.map(person => person.name).join(', ')}`, 'after');
+04982:                     } else {
+04983:                         const submittedCandidates = [];
+04984:                         for (const candidate of candidates) {
+04985:                             if (PERSONNEL_STATE.stopped) break;
+04986:                             await waitIfPersonnelPaused();
+04987:                             if (PERSONNEL_STATE.stopped) break;
+04988: 
+04989:                             personnelLog(`Assigning ${candidate.name} to ${vehicle.name}...`, 'after');
+04990:                             if (await submitPersonnelAssignment(candidate)) {
+04991:                                 submittedCandidates.push(candidate);
+04992:                                 personnelLog(`Assignment submitted: ${candidate.name}`, 'info');
+04993:                             } else {
+04994:                                 personnelLog(`Assignment request failed: ${candidate.name}`, 'error');
+04995:                             }
+04996:                         }
+04997: 
+04998:                         if (submittedCandidates.length && !PERSONNEL_STATE.stopped) {
+04999:                             await waitPersonnelDelay(250);
+05000:                             const verificationPage = await personnelFetchDocument(vehicle.assignmentHref, 14000);
+05001:                             const verification = parseVehicleAssignmentPage(verificationPage.doc, vehicle.vehicleId);
+05002: 
+05003:                             publishPersonnelVehicleTrainingRegistry({
+05004:                                 station,
+05005:                                 vehicles:
+05006:                                     allVehicles,
+05007:                                 personnel:
+05008:                                     verification.rows,
+05009:                                 source:
+05010:                                     'police-vehicle-verification'
+05011:                             });
+05012: 
+05013:                             const verifiedIds = new Set(
+05014:                                 verification.rows
+05015:                                     .filter(person => person.assignedHere && personnelMatchesRule(person, rule))
+05016:                                     .map(person => person.personnelId)
+05017:                             );
+05018: 
+05019:                             submittedCandidates.forEach(candidate => {
+05020:                                 if (verifiedIds.has(candidate.personnelId)) {
+05021:                                     assignedNames.push(candidate.name);
+05022:                                     stationAssigned++;
+05023:                                     personnelLog(`Assigned and verified: ${candidate.name}`, 'done');
+05024:                                 } else {
+05025:                                     personnelLog(`Assignment could not be verified: ${candidate.name}`, 'error');
+05026:                                 }
+05027:                             });
+05028:                         }
+05029:                     }
+05030:                 }
+05031: 
+05032:                 const addedCount = PERSONNEL_STATE.action === 'preview' ? plannedNames.length : assignedNames.length;
+05033:                 const afterQualified = Math.min(rule.target, beforeQualified + addedCount);
+05034:                 const afterTotal = beforeTotal + addedCount;
+05035:                 const unfilled = Math.max(0, rule.target - afterQualified);
+05036:                 const seatCapacity = Math.max(rule.target, Number(vehicle.maxCount) || rule.target);
+05037:                 const occupiedSeatBlock = Math.max(0, Math.min(rule.target - beforeQualified, Math.max(0, beforeTotal - beforeQualified) - Math.max(0, seatCapacity - rule.target)));
+05038:                 stationAssignmentShortfall += unfilled;
+05039: 
+05040:                 personnelLog(unfilled ? `Unfilled ${rule.trainingLabel} positions: ${unfilled}` : `Coverage complete: ${afterQualified}/${rule.target}`, unfilled ? 'error' : 'done');
+05041: 
+05042:                 vehicleReports.push({
+05043:                     vehicleId: vehicle.vehicleId,
+05044:                     vehicleTypeId: vehicle.vehicleTypeId,
+05045:                     name: vehicle.name,
+05046:                     ruleId: rule.id,
+05047:                     ruleLabel: rule.label,
+05048:                     trainingLabel: rule.trainingLabel,
+05049:                     target: rule.target,
+05050:                     beforeQualified,
+05051:                     beforeCritical: beforeQualified,
+05052:                     beforeTotal,
+05053:                     afterQualified,
+05054:                     afterCritical: afterQualified,
+05055:                     afterTotal,
+05056:                     finalQualified: afterQualified,
+05057:                     finalCritical: afterQualified,
+05058:                     finalTotal: afterTotal,
+05059:                     plannedNames,
+05060:                     assignedNames,
+05061:                     unfilled,
+05062:                     occupiedSeatBlock,
+05063:                     occupantTrainingGaps,
+05064:                     verificationStatus: PERSONNEL_STATE.action === 'preview' ? 'projected' : 'individually-verified'
+05065:                 });
+05066: 
+05067:                 if (unfilled === 0) {
+05068:                     projectedFulfilledUnits++;
+05069:                     personnelLog(
+05070:                         Number.isFinite(stationUnitsNeeded)
+05071:                             ? `Unit target progress at this station: ${projectedFulfilledUnits}/${stationUnitsNeeded}.`
+05072:                             : `Fully covered units at this station: ${projectedFulfilledUnits}.`,
+05073:                         'done'
+05074:                     );
+05075:                 }
+05076:             }
+05077: 
+05078:             if (ruleReport.vehicleCount) {
+
+--- context 29: lines 5091-5133 ---
+05091:                     );
+05092: 
+05093:                 ruleReports.push(
+05094:                     ruleReport
+05095:                 );
+05096:                 if (ruleReport.trainingShortfall) {
+05097:                     personnelLog(
+05098:                         `${rule.label} training shortfall estimate for processed units: ${ruleReport.trainingShortfall}. Missing: ${formatPoliceTrainingGapSummary(ruleReport.trainingGaps)}.`,
+05099:                         'error'
+05100:                     );
+05101:                 }
+05102:             }
+05103:         }
+05104: 
+05105:         let afterActionVerified = PERSONNEL_STATE.action === 'preview';
+05106:         let verificationError = '';
+05107:         let availableAtEnd = Math.max(0, availableAtScan - (PERSONNEL_STATE.action === 'preview' ? stationPlanned : stationAssigned));
+05108: 
+05109:         if (PERSONNEL_STATE.action === 'assign' && !PERSONNEL_STATE.stopped && vehicleReports.length) {
+05110:             setPersonnelUiValue('status', 'Final Police station verification');
+05111:             setPersonnelUiValue('vehicle', 'All mapped Police vehicles');
+05112:             personnelLog('Running final station-wide Police verification...', 'info');
+05113: 
+05114:             try {
+05115:                 await waitPersonnelDelay(900);
+05116:                 const finalPage = await personnelFetchDocument(allVehicles[0].assignmentHref, 14000);
+05117:                 const finalAssignment = parseVehicleAssignmentPage(finalPage.doc, allVehicles[0].vehicleId);
+05118: 
+05119:                 publishPersonnelVehicleTrainingRegistry({
+05120:                     station,
+05121:                     vehicles:
+05122:                         allVehicles,
+05123:                     personnel:
+05124:                         finalAssignment.rows,
+05125:                     source:
+05126:                         'police-final-verification'
+05127:                 });
+05128: 
+05129:                 availableAtEnd = finalAssignment.rows.filter(person => person.available && rules.some(rule => personnelMatchesRule(person, rule))).length;
+05130:                 stationAssignmentShortfall = 0;
+05131: 
+05132:                 vehicleReports.forEach(vehicleReport => {
+05133:                     const rule = rules.find(item => item.id === vehicleReport.ruleId);
+
+--- context 30: lines 5410-5539 ---
+05410:         let stationAssignmentShortfall = 0;
+05411:         let projectedFulfilledUnits = 0;
+05412: 
+05413:         const stationUnitsNeeded = getPersonnelUnitsRemaining();
+05414:         const stationUnitTargetReached = () =>
+05415:             Number.isFinite(stationUnitsNeeded)
+05416:             && projectedFulfilledUnits >= stationUnitsNeeded;
+05417: 
+05418:         personnelLog(`Ambulances available: ${vehicles.length}`, 'info');
+05419:         personnelLog(`${PERSONNEL_TRAINING_LABEL} trained: ${trained.length} | Available at scan: ${availableAtScan}`, 'info');
+05420:         if (Number.isFinite(stationUnitsNeeded)) {
+05421:             personnelLog(`Units still required before this station: ${stationUnitsNeeded}. Only Ambulances reaching 2/2 Critical Care count.`, 'info');
+05422:         }
+05423:         personnelLog(
+05424:             PERSONNEL_STATE.action === 'preview'
+05425:                 ? 'Low-impact preview: station occupancy is cross-checked against one Ambulance personnel page.'
+05426:                 : 'Fast safe assignment: each Ambulance is read once, assignments are submitted in a small batch, then verified with one vehicle check and one final station-wide check.',
+05427:             'debug'
+05428:         );
+05429: 
+05430:         for (let vehicleIndex = 0; vehicleIndex < processingVehicles.length; vehicleIndex++) {
+05431:             if (PERSONNEL_STATE.stopped || stationUnitTargetReached()) break;
+05432:             await waitIfPersonnelPaused();
+05433:             if (PERSONNEL_STATE.stopped || stationUnitTargetReached()) break;
+05434: 
+05435:             const vehicle = processingVehicles[vehicleIndex];
+05436:             required += PERSONNEL_TARGET_PER_VEHICLE;
+05437: 
+05438:             setPersonnelUiValue('vehicle', vehicle.name || vehicle.vehicleId);
+05439:             setPersonnelUiValue('status', PERSONNEL_STATE.action === 'assign' ? 'Checking vehicle' : 'Building station preview');
+05440:             personnelLog(`Vehicle ${vehicleIndex + 1}/${processingVehicles.length}: ${vehicle.name || vehicle.vehicleId}`, 'station');
+05441: 
+05442:             const stationAssignedPeople = getPersonnelAssignedToVehicle(personnel, vehicle);
+05443:             const mappedTotal = stationAssignedPeople.length;
+05444:             const mappedCritical = stationAssignedPeople.filter(person => person.trainingCodes.includes(PERSONNEL_TRAINING_CODE)).length;
+05445:             const hasTableOccupancy = Number.isInteger(vehicle.assignedCount) && vehicle.assignedCount >= 0;
+05446: 
+05447:             let beforeTotal = hasTableOccupancy
+05448:                 ? Math.min(vehicle.assignedCount, mappedTotal)
+05449:                 : mappedTotal;
+05450:             let beforeCritical = Math.min(mappedCritical, beforeTotal);
+05451:             const plannedNames = [];
+05452:             const assignedNames = [];
+05453: 
+05454:             if (hasTableOccupancy && mappedTotal !== beforeTotal) {
+05455:                 personnelDebug(
+05456:                     `${vehicle.name}: station table occupancy=${vehicle.assignedCount}, `
+05457:                     + `personnel snapshot mapped=${mappedTotal}. Initial count set to ${beforeTotal}.`
+05458:                 );
+05459:             }
+05460: 
+05461:             if (beforeTotal === 0) beforeCritical = 0;
+05462: 
+05463:             // In live mode, read the specific Ambulance immediately before changing it.
+05464:             let liveAssignment = null;
+05465:             if (PERSONNEL_STATE.action === 'assign' && beforeCritical < PERSONNEL_TARGET_PER_VEHICLE && beforeTotal < PERSONNEL_TARGET_PER_VEHICLE) {
+05466:                 const livePage = await personnelFetchDocument(vehicle.assignmentHref, 14000);
+05467:                 liveAssignment = parseVehicleAssignmentPage(livePage.doc, vehicle.vehicleId);
+05468: 
+05469:                 if (liveAssignment.vehicleTypeId !== PERSONNEL_TARGET_VEHICLE_TYPE_ID) {
+05470:                     personnelLog(`Skipped non-Ambulance assignment page: vehicle_type_id=${liveAssignment.vehicleTypeId || 'unknown'}`, 'error');
+05471:                     const skippedUnfilled = Math.max(0, PERSONNEL_TARGET_PER_VEHICLE - beforeCritical);
+05472:                     stationAssignmentShortfall += skippedUnfilled;
+05473:                     vehicleReports.push({
+05474:                         vehicleId: vehicle.vehicleId,
+05475:                         name: vehicle.name || `Vehicle ${vehicle.vehicleId}`,
+05476:                         beforeCritical,
+05477:                         beforeTotal,
+05478:                         finalCritical: beforeCritical,
+05479:                         finalTotal: beforeTotal,
+05480:                         afterCritical: beforeCritical,
+05481:                         afterTotal: beforeTotal,
+05482:                         plannedNames,
+05483:                         assignedNames,
+05484:                         unfilled: skippedUnfilled,
+05485:                         occupiedSeatBlock: 0,
+05486:                         verificationStatus: 'skipped'
+05487:                     });
+05488:                     continue;
+05489:                 }
+05490: 
+05491:                 beforeCritical = liveAssignment.criticalAssigned.length;
+05492:                 beforeTotal = liveAssignment.totalAssigned.length;
+05493:             }
+05494: 
+05495:             if (beforeCritical >= PERSONNEL_TARGET_PER_VEHICLE) {
+05496:                 personnelLog(`Already covered: ${beforeCritical}/${PERSONNEL_TARGET_PER_VEHICLE} Critical Care staff.`, 'done');
+05497:             } else {
+05498:                 const seatsAvailable = Math.max(0, PERSONNEL_TARGET_PER_VEHICLE - beforeTotal);
+05499:                 const targetGap = Math.max(0, PERSONNEL_TARGET_PER_VEHICLE - beforeCritical);
+05500:                 const attemptCount = Math.min(targetGap, seatsAvailable);
+05501: 
+05502:                 if (seatsAvailable === 0) {
+05503:                     personnelLog(`Cannot top up safely: ${beforeTotal}/${PERSONNEL_TARGET_PER_VEHICLE} seats are occupied, but only ${beforeCritical} occupant(s) have Critical Care. Existing staff were preserved.`, 'error');
+05504:                 }
+05505: 
+05506:                 if (PERSONNEL_STATE.action === 'preview') {
+05507:                     const candidates = trained
+05508:                         .filter(person => person.available && !reservedPersonnelIds.has(person.personnelId))
+05509:                         .slice(0, attemptCount);
+05510: 
+05511:                     candidates.forEach(person => {
+05512:                         reservedPersonnelIds.add(person.personnelId);
+05513:                         plannedNames.push(person.name);
+05514:                     });
+05515:                     stationPlanned += candidates.length;
+05516: 
+05517:                     if (candidates.length) {
+05518:                         personnelLog(`Would assign: ${candidates.map(person => person.name).join(', ')}`, 'after');
+05519:                     }
+05520:                 } else {
+05521:                     // Use the live page already loaded for this Ambulance to select all
+05522:                     // required candidates. Submit them sequentially, then verify the whole
+05523:                     // batch with one fresh page request instead of reloading after every
+05524:                     // individual person.
+05525:                     const candidates = (liveAssignment?.availableCritical || [])
+05526:                         .filter(person => !reservedPersonnelIds.has(person.personnelId))
+05527:                         .slice(0, attemptCount);
+05528:                     const submittedCandidates = [];
+05529: 
+05530:                     candidates.forEach(person => reservedPersonnelIds.add(person.personnelId));
+05531: 
+05532:                     for (const candidate of candidates) {
+05533:                         if (PERSONNEL_STATE.stopped) break;
+05534:                         await waitIfPersonnelPaused();
+05535:                         if (PERSONNEL_STATE.stopped) break;
+05536: 
+05537:                         personnelLog(`Assigning ${candidate.name} to ${vehicle.name || vehicle.vehicleId}...`, 'after');
+05538:                         const submitted = await submitPersonnelAssignment(candidate);
+05539: 
+
+--- context 31: lines 5557-5634 ---
+05557: 
+05558:                         submittedCandidates.forEach(candidate => {
+05559:                             if (verifiedIds.has(candidate.personnelId)) {
+05560:                                 assignedNames.push(candidate.name);
+05561:                                 stationAssigned++;
+05562:                                 personnelLog(`Assigned and verified: ${candidate.name}`, 'done');
+05563:                             } else {
+05564:                                 personnelLog(`Assignment could not be verified: ${candidate.name}`, 'error');
+05565:                             }
+05566:                         });
+05567:                     }
+05568:                 }
+05569:             }
+05570: 
+05571:             const calculatedAfterCritical = PERSONNEL_STATE.action === 'preview'
+05572:                 ? Math.min(PERSONNEL_TARGET_PER_VEHICLE, beforeCritical + plannedNames.length)
+05573:                 : Math.min(PERSONNEL_TARGET_PER_VEHICLE, beforeCritical + assignedNames.length);
+05574:             const calculatedAfterTotal = PERSONNEL_STATE.action === 'preview'
+05575:                 ? beforeTotal + plannedNames.length
+05576:                 : beforeTotal + assignedNames.length;
+05577:             const calculatedUnfilled = Math.max(0, PERSONNEL_TARGET_PER_VEHICLE - calculatedAfterCritical);
+05578:             stationAssignmentShortfall += calculatedUnfilled;
+05579: 
+05580:             if (calculatedUnfilled) {
+05581:                 personnelLog(`Unfilled Critical Care positions: ${calculatedUnfilled}`, 'error');
+05582:             } else {
+05583:                 personnelLog(`Coverage complete: ${calculatedAfterCritical}/${PERSONNEL_TARGET_PER_VEHICLE}`, 'done');
+05584:             }
+05585: 
+05586:             vehicleReports.push({
+05587:                 vehicleId: vehicle.vehicleId,
+05588:                 name: vehicle.name || `Vehicle ${vehicle.vehicleId}`,
+05589:                 beforeCritical,
+05590:                 beforeTotal,
+05591:                 finalCritical: calculatedAfterCritical,
+05592:                 finalTotal: calculatedAfterTotal,
+05593:                 afterCritical: calculatedAfterCritical,
+05594:                 afterTotal: calculatedAfterTotal,
+05595:                 plannedNames,
+05596:                 assignedNames,
+05597:                 unfilled: calculatedUnfilled,
+05598:                 occupiedSeatBlock: Math.max(0, (PERSONNEL_TARGET_PER_VEHICLE - beforeCritical) - Math.max(0, PERSONNEL_TARGET_PER_VEHICLE - beforeTotal)),
+05599:                 verificationStatus: PERSONNEL_STATE.action === 'preview' ? 'projected' : 'individually-verified'
+05600:             });
+05601: 
+05602:             if (calculatedUnfilled === 0) {
+05603:                 projectedFulfilledUnits++;
+05604:                 personnelLog(
+05605:                     Number.isFinite(stationUnitsNeeded)
+05606:                         ? `Unit target progress at this station: ${projectedFulfilledUnits}/${stationUnitsNeeded}.`
+05607:                         : `Fully covered Ambulances at this station: ${projectedFulfilledUnits}.`,
+05608:                     'done'
+05609:                 );
+05610:             }
+05611:         }
+05612: 
+05613:         trainingShortfall = Math.max(0, required - trained.length);
+05614:         if (trainingShortfall) {
+05615:             personnelLog(`Training shortfall for processed Ambulances: ${trainingShortfall} additional personnel need ${PERSONNEL_TRAINING_LABEL} training.`, 'error');
+05616:         }
+05617: 
+05618:         let afterActionVerified = PERSONNEL_STATE.action === 'preview';
+05619:         let verificationError = '';
+05620:         let availableAtEnd = Math.max(0, availableAtScan - (PERSONNEL_STATE.action === 'preview' ? stationPlanned : stationAssigned));
+05621: 
+05622:         // Final station-wide verification. This is one additional request after the
+05623:         // station is complete and produces the actual after-action figures rather than
+05624:         // merely trusting the number of successful POSTs.
+05625:         if (PERSONNEL_STATE.action === 'assign' && !PERSONNEL_STATE.stopped && vehicleReports.length) {
+05626:             setPersonnelUiValue('status', 'Final station verification');
+05627:             setPersonnelUiValue('vehicle', 'Processed Ambulances');
+05628:             personnelLog('Running final station-wide after-action verification...', 'info');
+05629: 
+05630:             try {
+05631:                 await waitPersonnelDelay(900);
+05632:                 const finalPage = await personnelFetchDocument(vehicles[0].assignmentHref, 14000);
+05633:                 const finalAssignment = parseVehicleAssignmentPage(finalPage.doc, vehicles[0].vehicleId);
+05634: 
+
+--- context 32: lines 6058-6105 ---
+06058: 
+06059:     function getPersonnelReportFinalFilled(report) {
+06060:         return Number(report?.finalQualifiedFilled ?? report?.finalCriticalFilled ?? 0);
+06061:     }
+06062: 
+06063:     function buildStationAfterActionText(report) {
+06064:         if (!report) return 'No station report is available yet.';
+06065: 
+06066:         const isAssign = PERSONNEL_STATE.action === 'assign';
+06067:         const service = getPersonnelServiceDefinition();
+06068:         const profile = getPersonnelProfileDefinition();
+06069:         const result = getPersonnelReportResult(report);
+06070:         const qualificationLabel = getPersonnelReportQualificationLabel(report);
+06071:         const lines = [
+06072:             `${service.label.toUpperCase()} — ${profile.label.toUpperCase()} ${isAssign ? 'STATION AFTER-ACTION REPORT' : 'STATION PREVIEW REPORT'}`,
+06073:             `Station: ${report.stationName || 'Unknown'}`,
+06074:             `Result: ${result}`,
+06075:             `Generated: ${new Date().toLocaleString('en-GB')}`,
+06076:             ''
+06077:         ];
+06078: 
+06079:         if (report.error) {
+06080:             lines.push(`ERROR: ${report.error}`);
+06081:             return lines.join('\n');
+06082:         }
+06083: 
+06084:         if (report.noTargetVehicles) {
+06085:             lines.push('No vehicles mapped to this profile were found at the station. No assignments were changed.');
+06086:             return lines.join('\n');
+06087:         }
+06088: 
+06089:         const verificationText = isAssign
+06090:             ? (report.afterActionVerified ? 'PASSED - final station state re-read' : `PARTIAL - ${report.verificationError || 'final station re-read was not verified'}`)
+06091:             : 'PREVIEW PROJECTION - no assignments changed';
+06092: 
+06093:         lines.push(
+06094:             `Final verification: ${verificationText}`,
+06095:             `Mapped vehicles checked: ${getPersonnelReportVehicleCount(report)}`,
+06096:             ...(
+06097:                 Number(report.stationTarget || 0) > 0
+06098:                     ? [
+06099:                         `Station unit target: ${report.stationTarget}`,
+06100:                         `Station target result: ${report.stationTargetMet ? 'PASSED' : 'SHORT'} — ${Number(report.stationTargetFulfilled || 0)}/${report.stationTarget}`,
+06101:                         `Additional fully staffed units needed: ${Number(report.stationTargetShortfallUnits || 0)}`
+06102:                     ]
+06103:                     : []
+06104:             ),
+06105:             `Units fully covered at this station: ${Number(report.fulfilledUnits || 0)}`,
+
+--- context 33: lines 6186-6214 ---
+06186: 
+06187:         const lines = [];
+06188:         const stationHeading = Number(report.trainingShortfall || 0) > 0
+06189:             ? `⚠ ${report.stationName.toUpperCase()} — ESTIMATED TRAINING SHORTFALL ${report.trainingShortfall} ⚠`
+06190:             : report.stationName.toUpperCase();
+06191:         lines.push(stationHeading);
+06192: 
+06193:         if (report.error) {
+06194:             lines.push('  Result: ERROR', `  ERROR: ${report.error}`);
+06195:         } else if (report.noTargetVehicles) {
+06196:             lines.push('  Result: NO TARGET VEHICLES');
+06197:         } else {
+06198:             lines.push(
+06199:                 `  Result: ${getPersonnelReportResult(report)}`,
+06200:                 `  Final verification: ${isAssign ? (report.afterActionVerified ? 'PASSED' : 'PARTIAL / FAILED') : 'PREVIEW PROJECTION'}`,
+06201:                 `  Mapped vehicles: ${getPersonnelReportVehicleCount(report)}`,
+06202:                 ...(
+06203:                     Number(report.stationTarget || 0) > 0
+06204:                         ? [
+06205:                             `  Station target: ${report.stationTarget}`,
+06206:                             `  Station target result: ${report.stationTargetMet ? 'PASSED' : 'SHORT'} (${Number(report.stationTargetFulfilled || 0)}/${report.stationTarget})`,
+06207:                             `  Additional units required: ${Number(report.stationTargetShortfallUnits || 0)}`
+06208:                         ]
+06209:                         : []
+06210:                 ),
+06211:                 `  Units fully covered: ${Number(report.fulfilledUnits || 0)}`,
+06212:                 `  Required qualified positions: ${Number(report.required || 0)}`,
+06213:                 `  Qualified personnel visible: ${Number(report.trained || 0)}`,
+06214:                 `  Available qualified before: ${Number(report.availableAtScan || 0)}`,
+
+--- context 34: lines 6253-6286 ---
+06253: 
+06254:                 lines.push(
+06255:                     `    - ${vehicle.name}${ruleText}: before ${beforeQualified}/${target} -> ${afterLabel} ${afterQualified}/${target} | unfilled ${Number(vehicle.unfilled || 0)}${actionText}${seatText}${missingTrainingText}`
+06256:                 );
+06257:             });
+06258:         }
+06259: 
+06260:         const text = lines.join('\n');
+06261:         PERSONNEL_REPORT_BLOCK_CACHE.set(report, { isAssign, text });
+06262:         return text;
+06263:     }
+06264: 
+06265:     function buildAndRenderPersonnelReport() {
+06266:         const isAssign = PERSONNEL_STATE.action === 'assign';
+06267:         const actionLabel = isAssign ? 'ASSIGN AND VERIFY' : 'PREVIEW ONLY';
+06268:         const actionCount = isAssign ? PERSONNEL_STATE.assignedCount : PERSONNEL_STATE.plannedCount;
+06269:         const service = getPersonnelServiceDefinition();
+06270:         const profile = getPersonnelProfileDefinition();
+06271:         const lines = [
+06272:             `${service.label.toUpperCase()} — ${profile.label.toUpperCase()} ${isAssign ? 'PERSONNEL AFTER-ACTION REPORT' : 'PERSONNEL PREVIEW REPORT'}`,
+06273:             `Action: ${actionLabel}`,
+06274:             `Generated: ${new Date().toLocaleString('en-GB')}`,
+06275:             `Rule: ${profile.requirement}`,
+06276:             `${isPersonnelPerStationTargetMode() ? 'Units requested at every station' : 'Units requested'}: ${isPersonnelPerStationTargetMode() ? PERSONNEL_STATE.unitsRequired : 'ALL MATCHING UNITS'}`,
+06277:             `${isPersonnelPerStationTargetMode() ? 'Station targets' : 'Units fulfilled'}: ${formatPersonnelUnitsFulfilled()}`,
+06278:             ''
+06279:         ];
+06280: 
+06281:         const trainingShortfallReports = getPersonnelTrainingShortfallReports();
+06282: 
+06283:         if (trainingShortfallReports.length) {
+06284:             lines.push(`⚠ QUALIFICATION SHORTFALL STATIONS (${trainingShortfallReports.length}) ⚠`);
+06285:             trainingShortfallReports.forEach(report => {
+06286:                 lines.push(
+
+--- context 35: lines 7117-7160 ---
+07117:         const logBox = getToolElementById('mc-namer-log');
+07118:         if (!logBox) return;
+07119: 
+07120:         const line = document.createElement('div');
+07121:         line.className = `mc-log-${type}`;
+07122:         line.textContent = message;
+07123:         appendBoundedToolLog(logBox, line);
+07124:     }
+07125: 
+07126:     function debug(message) {
+07127:         if (!STATE.debug) return;
+07128:         log(`[DEBUG] ${message}`, 'debug');
+07129:     }
+07130: 
+07131:     const handlePersonnelRegistryStorage = event => {
+07132:         if (event?.key !== PERSONNEL_TRAINING_REGISTRY_STORAGE_KEY) return;
+07133:         if (PERSONNEL_TRAINING_REGISTRY_DIRTY) return;
+07134:         PERSONNEL_TRAINING_REGISTRY_CACHE = null;
+07135:     };
+07136: 
+07137:     const handleToolPageHide = event => {
+07138:         flushPersonnelTrainingRegistry(true);
+07139:         if (event?.persisted) return;
+07140:         runToolLifecycleCleanup();
+07141:     };
+07142: 
+07143:     window.addEventListener('storage', handlePersonnelRegistryStorage);
+07144:     window.addEventListener('pagehide', handleToolPageHide);
+07145:     registerToolLifecycleCleanup(() => {
+07146:         window.removeEventListener('storage', handlePersonnelRegistryStorage);
+07147:         window.removeEventListener('pagehide', handleToolPageHide);
+07148:     });
+07149: 
+07150:     initWhenReady();
+07151: 
+07152: })();
+07153:     } catch (error) {
+07154:         console.error('[MissionChief Complete Tools] Naming/Personnel module startup failed:', error);
+07155:     }
+07156: 
+07157:     try {
+07158:         /* ==================================================================
+07159:          * MODULE 2: MISSION FINDER V10.6.71
+07160:          * Original source retained below, excluding only its metadata block.
+
+--- context 36: lines 7371-7496 ---
+07371:         );
+07372: 
+07373:     }
+07374: 
+07375: 
+07376:     // V10.6.58: Auto Mode speed optimisation. Attachment fetching now overlaps
+07377:     // vehicle-list stabilisation, Unit Finder no longer repeats that same load
+07378:     // pass, readiness gates are shorter and state-driven, and mission-resume
+07379:     // polling is faster. Manual sources and all selection rules are unchanged.
+07380:     // V10.6.59: Police Helicopter-only requirements now select only type 11;
+07381:     // only explicit Helicopter-or-Drone rows prefer type 91 Drone first. Generic
+07382:     // 4x4 Vehicle(s) rows now use the same type 99 Mountain Rescue / type 93 SAR
+07383:     // 4x4 matcher for selection and final verification, removing false popups.
+07384:     // V10.6.62: Unit Finder now combines the mission-help attachment with
+07385:     // visible current-patient "We need:" requirements. General Live Mission
+07386:     // Requirements remain exclusive to the Mission Update workflow.
+07387:     // V10.6.63: Mission Update now converts Cars to tow in pairs (1-2 cars =
+07388:     // one Flatbed Recovery Vehicle, 3-4 = two) and current linked patient-card
+07389:     // We need alerts override a stale/zero live-panel patient row for that patient.
+07390:     // V10.6.67: Inspector and Public Order IRVs are now matched by exact
+07391:     // vehicle ID and current per-vehicle assignment-page training only. This
+07392:     // blocks duplicate generic names such as "IRV" from copying one vehicle's
+07393:     // training to another and prevents an untrained IRV from being selected.
+07394:     // Public Order qualification now requires only the L1/L2/Sergeant codes
+07395:     // actually requested by the current mission.
+07396:     // V10.6.69: Strict Inspector/Public Order verification now uses the exact
+07397:     // Personnel Assignment registry vehicle IDs as priority hints, then rechecks
+07398:     // those precise /zuweisung pages before selection. This prevents trained
+07399:     // IRVs being missed when they are outside the first arrival-sorted scan batch.
+07400:     // V10.6.71: Normal Police Car/Police Officer requirements now protect
+07401:     // exact-ID IRVs carrying specialist-trained staff, live-verify ordinary IRVs
+07402:     // before selection, and exclude known trained IRVs from ordinary attendance.
+07403:     // Auto Mode now waits for a complete, non-zero, ID-stable vehicle list with
+07404:     // no remaining load control or spinner before Unit Finder may select units.
+07405:     // V10.6.54: Auto Mode no longer waits for post-dispatch upgrades. It now
+07406:     // dispatches and advances immediately, including exact-next continuation
+07407:     // after high-value Dispatch & Share missions.
+07408:     // V10.6.53: ICCU-or-ACU requirements now select an ICCU first and use
+07409:     // Ambulance Control Unit vehicle type 31 only when no ICCU is available.
+07410:     // V10.6.52: Debug, High Debug and the Issue Recorder have been removed.
+07411:     // Clear legacy settings/data so they cannot be restored by an older saved preference.
+07412:     let mfDebugEnabled = false;
+07413:     let mfHighDebugEnabled = false;
+07414: 
+07415:     try {
+07416:         localStorage.removeItem('mf_debug_enabled_v9');
+07417:         localStorage.removeItem('mf_high_debug_enabled_v9');
+07418:         localStorage.removeItem('mf_debug_collapsed_v9');
+07419:         localStorage.removeItem('mf_issue_recorder_v1');
+07420:         localStorage.removeItem('mf_issue_recorder_enabled_v1');
+07421:     } catch (_error) {}
+07422: 
+07423:     let mfVehicleLoadCollapsed = localStorage.getItem('mf_vehicle_load_collapsed_v9') === 'true';
+07424:     let mfMissionControlCollapsed = localStorage.getItem('mf_control_collapsed_v9') === 'true';
+07425: 
+07426:     const MF_KEEP_PANEL_POSITION_KEY = 'mf_keep_panel_position_v10_4_0';
+07427:     const MF_PANEL_LEFT_KEY = 'mf_panel_left_v10_4_0';
+07428:     const MF_PANEL_TOP_KEY = 'mf_panel_top_v10_4_0';
+07429:     const MF_SHARE_CREDIT_THRESHOLD = 15000;
+07430: 
+07431:     const MF_PERSONNEL_TRAINING_REGISTRY_KEY =
+07432:         'mcPersonnelVehicleTrainingRegistry_v1';
+07433: 
+07434:     // V10.6.67: The Personnel Tool registry can be contaminated when several
+07435:     // vehicles share the same displayed name (for example many vehicles named
+07436:     // simply "IRV"). Inspector and Public Order selection therefore trusts only
+07437:     // an exact vehicle ID that has been verified from that vehicle's current
+07438:     // /zuweisung page. Unsafe name-based registry matching is never used.
+07439:     const MF_LIVE_TRAINING_VERIFY_CACHE_MS = 10 * 60 * 1000;
+07440:     const MF_LIVE_TRAINING_VERIFY_MAX_PAGES = 48;
+07441:     const MF_LIVE_TRAINING_VERIFY_BATCH_SIZE = 6;
+07442:     const MF_STRICT_TRAINING_SOURCE_PREFIX =
+07443:         'mission-finder-live-strict-';
+07444: 
+07445:     // V10.6.71: ordinary Police attendance must preserve specialist IRVs.
+07446:     // Exact vehicle IDs carrying any protected Police qualification are never
+07447:     // used to satisfy a normal Police Car / Police Officer requirement.
+07448:     const MF_PROTECTED_ORDINARY_IRV_TRAINING_CODES =
+07449:         Object.freeze([
+07450:             'level_1_public_order',
+07451:             'level_2_public_order',
+07452:             'police_sergeant',
+07453:             'police_medic',
+07454:             'police_inspector',
+07455:             'traffic_police',
+07456:             'swat',
+07457:             'police_horse',
+07458:             'k9',
+07459:             'drone',
+07460:             'search_and_rescue',
+07461:             'polizeihubschrauber',
+07462:             'railway_police_command',
+07463:             'railway_police',
+07464:             'bomb_disposal_command',
+07465:             'bomb_disposal',
+07466:             'bomb_disposal_diver'
+07467:         ]);
+07468: 
+07469:     const MF_ORDINARY_IRV_VERIFY_MAX_PAGES = 64;
+07470:     const MF_ORDINARY_IRV_VERIFY_BATCH_SIZE = 6;
+07471:     const MF_AUTO_VEHICLE_LIST_STABLE_TIMEOUT_MS = 9000;
+07472:     const MF_AUTO_VEHICLE_LIST_STABLE_FOR_MS = 1200;
+07473:     const MF_AUTO_VEHICLE_LIST_MIN_SETTLE_MS = 1000;
+07474:     const MF_AUTO_VEHICLE_LIST_LOAD_TIMEOUT_MS = 20000;
+07475: 
+07476:     const mfLiveTrainingVerifyCache = new Map();
+07477: 
+07478:     try {
+07479:         window.addEventListener(
+07480:             'mc-personnel-training-registry-updated',
+07481:             () => {
+07482:                 mfLiveTrainingVerifyCache.clear();
+07483:             }
+07484:         );
+07485:     } catch (_error) {}
+07486: 
+07487:     const MF_TRAINED_PERSONNEL_ROW_NAME =
+07488:         'Assigned Trained Police Vehicles';
+07489: 
+07490:     const MF_TRAINED_PERSONNEL_PATTERNS =
+07491:         Object.freeze([
+07492:             {
+07493:                 code:
+07494:                     'level_1_public_order',
+07495:                 label:
+07496:                     'Level 1 Public Order Officer',
+
+--- context 37: lines 7693-7721 ---
+07693:     // V10.6.57 current-mission isolation. Every shared requirement reader is
+07694:     // bound to one mission instance so a still-connected previous mission
+07695:     // iframe/modal cannot contribute requirements to the current mission.
+07696:     let mfCurrentMissionInstanceKey = '';
+07697: 
+07698:     const MF_INSTANCE_TOKEN =
+07699:         `mf-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+07700: 
+07701:     const MF_SHARED_ACTIVE_INSTANCE_KEY =
+07702:         '__missionFinderActiveMissionInstanceV10_6_57';
+07703: 
+07704:     // V10.6.50 patient-selection ledger.
+07705:     // Patient "We need" alerts describe the total current patient demand, not
+07706:     // an additional amount to add on top of Unit Finder. MissionChief can also
+07707:     // rebuild selected vehicle rows, so the live checkbox count alone is not a
+07708:     // reliable cross-pass total. This small mission-scoped ledger prevents a
+07709:     // second Mission Update pass from doubling Ambulances/Critical Care.
+07710:     const MF_PATIENT_SELECTION_LEDGER_KEY =
+07711:         'mf_patient_selection_ledger_v10_6_50';
+07712: 
+07713:     let mfPatientSelectionLedgerCache = null;
+07714: 
+07715:     let mfMainMutationFlags = {
+07716:         relevant: false,
+07717:         vehicleListChanged: false,
+07718:         missionContextChanged: false,
+07719:         patientChanged: false,
+07720:         panelChanged: false,
+07721:         transportChanged: false
+
+--- context 38: lines 9742-9789 ---
+09742:                 sortVehicleCheckboxesByBestArrival(
+09743:                     eligible.filter(
+09744:                         isPoliceHelicopterCheckbox
+09745:                     )
+09746:                 );
+09747: 
+09748:             // Flexible wording only: Drone first, Police Helicopter fallback.
+09749:             return [
+09750:                 ...sortedDroneMatches,
+09751:                 ...sortedHelicopterMatches
+09752:             ];
+09753:         }
+09754: 
+09755:         if (policeCarOnly) {
+09756:             const registry =
+09757:                 readPersonnelTrainingRegistry();
+09758: 
+09759:             const ordinaryCandidates =
+09760:                 sortVehicleCheckboxesByBestArrival(
+09761:                     getVehicleCheckboxSnapshot().filter(input => {
+09762:                         if (input.disabled) return false;
+09763:                         if (!includeChecked && input.checked) return false;
+09764: 
+09765:                         return isOrdinaryPoliceIrvCheckboxEligible(
+09766:                             input,
+09767:                             registry,
+09768:                             { allowUnknown: false }
+09769:                         );
+09770:                     })
+09771:                 );
+09772: 
+09773:             return orderOrdinaryPoliceIrvCandidates(
+09774:                 ordinaryCandidates,
+09775:                 registry
+09776:             );
+09777:         }
+09778: 
+09779:         const matches = getVehicleCheckboxSnapshot().filter(input => {
+09780:             if (input.disabled) return false;
+09781:             if (!includeChecked && input.checked) return false;
+09782: 
+09783:             if (sartecPrefixOnly) {
+09784:                 return isSartecVehicleCheckbox(
+09785:                     input
+09786:                 );
+09787:             }
+09788: 
+09789:             if (rrvTypeOnly) {
+
+--- context 39: lines 9865-9895 ---
+09865:         const policeAirMode = getPoliceAirRequirementMode(originalName, mappedName);
+09866:         const policeCarOnly = isPoliceCarRequirement(originalName, mappedName);
+09867:         const dogSupportOnly = isDogSupportUnitRequirement(originalName, mappedName);
+09868:         const mountainRescue4x4Preferred =
+09869:             isMountainRescueOrSar4x4Requirement(
+09870:                 originalName,
+09871:                 mappedName
+09872:             );
+09873:         const iccuPreferred =
+09874:             isIccuOrAmbulanceControlRequirement(
+09875:                 originalName,
+09876:                 mappedName
+09877:             );
+09878: 
+09879:         const ordinaryPoliceRegistry =
+09880:             policeCarOnly
+09881:                 ? readPersonnelTrainingRegistry()
+09882:                 : null;
+09883: 
+09884:         let count = 0;
+09885: 
+09886:         for (const input of getVehicleCheckboxSnapshot()) {
+09887:             // A vehicle that is already checked still counts toward the
+09888:             // requirement even when MissionChief disables its checkbox after
+09889:             // selection. V10.6.48 skipped disabled checked boxes, which made a
+09890:             // successfully selected vehicle look missing during verification.
+09891:             if (!input.checked) continue;
+09892: 
+09893:             let matches = false;
+09894: 
+09895:             if (dogSupportOnly) {
+
+--- context 40: lines 9911-9939 ---
+09911:             } else if (policeAirMode === 'flexible') {
+09912:                 matches =
+09913:                     isPoliceHelicopterCheckbox(input) ||
+09914:                     isPoliceDroneCheckbox(input);
+09915:             } else if (sartecPrefixOnly) {
+09916:                 matches = isSartecVehicleCheckbox(input);
+09917:             } else if (rrvTypeOnly) {
+09918:                 matches = isRrvVehicleCheckbox(input);
+09919:             } else if (rivTypeOnly) {
+09920:                 matches = isRivVehicleCheckbox(input);
+09921:             } else if (policeCarOnly) {
+09922:                 matches =
+09923:                     isOrdinaryPoliceIrvCheckboxEligible(
+09924:                         input,
+09925:                         ordinaryPoliceRegistry,
+09926:                         { allowUnknown: false }
+09927:                     );
+09928:             } else {
+09929:                 matches = vehicleValuesMatchCandidates(
+09930:                     getCheckboxVehicleValues(input),
+09931:                     candidates,
+09932:                     strictExactOnly
+09933:                 );
+09934:             }
+09935: 
+09936:             if (matches) count += 1;
+09937:         }
+09938: 
+09939:         return count;
+... 54 additional context windows omitted ...
+
