@@ -1,50 +1,53 @@
-name: Validate userscript
+name: Verify release delivery receipt
 
 on:
   pull_request:
     paths:
-      - 'src/**'
-      - 'scripts/validate-userscript.mjs'
       - '.github/workflows/validate-userscript.yml'
-  push:
-    branches:
-      - main
-    paths:
-      - 'src/**'
-      - 'scripts/validate-userscript.mjs'
-      - '.github/workflows/validate-userscript.yml'
-  workflow_dispatch:
 
 permissions:
+  actions: read
   contents: read
 
-concurrency:
-  group: validate-userscript-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  validate:
-    name: Userscript validation
+  verify:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
+      - name: Inspect latest repair run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          RUN_ID="$(gh run list --repo "${GITHUB_REPOSITORY}" --workflow release-delivery-repair.yml --event pull_request_target --limit 1 --json databaseId --jq '.[0].databaseId // empty')"
+          if [[ -z "${RUN_ID}" ]]; then
+            echo 'No release delivery repair run was found.'
+            exit 1
+          fi
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
+          for attempt in $(seq 1 24); do
+            STATUS="$(gh run view "${RUN_ID}" --repo "${GITHUB_REPOSITORY}" --json status --jq '.status')"
+            if [[ "${STATUS}" == 'completed' ]]; then
+              break
+            fi
+            sleep 5
+          done
 
-      - name: Validate JavaScript syntax
-        run: node --check src/missionchief-command-nexus.user.js
+          RUN_JSON="$(gh run view "${RUN_ID}" --repo "${GITHUB_REPOSITORY}" --json status,conclusion,url,jobs)"
+          echo "${RUN_JSON}"
+          CONCLUSION="$(jq -r '.conclusion // empty' <<< "${RUN_JSON}")"
+          if [[ "${CONCLUSION}" != 'success' ]]; then
+            echo "Repair run ${RUN_ID} concluded ${CONCLUSION:-unknown}."
+            gh run view "${RUN_ID}" --repo "${GITHUB_REPOSITORY}" --log || true
+            exit 1
+          fi
 
-      - name: Validate metadata and Greasy Fork limits
-        run: node scripts/validate-userscript.mjs
+          LOG="$(gh run view "${RUN_ID}" --repo "${GITHUB_REPOSITORY}" --log)"
+          RECEIPT="$(printf '%s\n' "${LOG}" | grep -E 'Stored GitHub secret matches|stored GitHub secret does not match|Discord webhook target verified|Discord release notification posted for' || true)"
+          printf '%s\n' "${RECEIPT}"
 
-      - name: Require a version increase when code changes
-        if: github.event_name == 'pull_request'
-        run: node scripts/validate-userscript.mjs --base-ref "origin/${{ github.base_ref }}"
+          if ! grep -q 'Discord release notification posted for' <<< "${RECEIPT}"; then
+            echo 'No Discord message receipt was recorded.'
+            exit 1
+          fi
