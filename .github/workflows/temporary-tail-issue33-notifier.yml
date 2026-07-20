@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Print final notifier failure lines
+      - name: Print notifier-specific failure lines
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -30,5 +30,8 @@ jobs:
             "/repos/${GITHUB_REPOSITORY}/actions/jobs/88307768420/logs" \
             > /tmp/notifier.log
 
-          echo '===== FINAL NOTIFIER LINES ====='
-          tail -n 25 /tmp/notifier.log
+          echo '===== NOTIFIER DIAGNOSTIC MATCHES ====='
+          grep -n -E -i \
+            'Greasy Fork|Discord|HTTP|mismatch|does not match|timed out|timeout|ENOENT|missing|required environment|error|failed|verified' \
+            /tmp/notifier.log \
+            | tail -n 80
