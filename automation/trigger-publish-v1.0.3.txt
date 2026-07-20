@@ -6,3 +6,4 @@ Inspect the failed clean repair step.
 Tail the exact repair job log.
 Print the final 35 repair-log lines.
 Run the direct clean v1.0.3 publisher.
+Inspect the final direct-publisher retry output.
