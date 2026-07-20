@@ -1,50 +1,44 @@
-name: Validate userscript
+name: Build v1.0.8 candidate
 
 on:
   pull_request:
     paths:
-      - 'src/**'
-      - 'scripts/validate-userscript.mjs'
+      - 'scripts/apply-v1.0.8-unit-memory.py'
       - '.github/workflows/validate-userscript.yml'
-  push:
-    branches:
-      - main
-    paths:
-      - 'src/**'
-      - 'scripts/validate-userscript.mjs'
-      - '.github/workflows/validate-userscript.yml'
-  workflow_dispatch:
 
 permissions:
-  contents: read
-
-concurrency:
-  group: validate-userscript-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  contents: write
 
 jobs:
-  validate:
-    name: Userscript validation
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-
+    timeout-minutes: 25
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+          ref: ${{ github.head_ref }}
+      - uses: actions/setup-node@v6
         with:
-          node-version: '22'
-
-      - name: Validate JavaScript syntax
-        run: node --check src/missionchief-command-nexus.user.js
-
-      - name: Validate metadata and Greasy Fork limits
-        run: node scripts/validate-userscript.mjs
-
-      - name: Require a version increase when code changes
-        if: github.event_name == 'pull_request'
-        run: node scripts/validate-userscript.mjs --base-ref "origin/${{ github.base_ref }}"
+          node-version: '24'
+      - name: Apply patch
+        run: python3 scripts/apply-v1.0.8-unit-memory.py
+      - name: Restore permanent files
+        run: |
+          git fetch origin main --force
+          git checkout origin/main -- .github/workflows/validate-userscript.yml
+          rm scripts/apply-v1.0.8-unit-memory.py
+      - name: Validate
+        run: |
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          node scripts/validate-userscript.mjs --base-ref origin/main
+          python3 scripts/check_repository.py
+          git diff --check
+      - name: Commit candidate
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m 'Prevent Unit Renamer page retention'
+          git push origin HEAD:${{ github.head_ref }}
