@@ -1,4 +1,4 @@
-name: Build and validate v1.0.5
+name: Diagnose v1.0.5 patch
 
 on:
   pull_request:
@@ -9,15 +9,11 @@ on:
 permissions:
   contents: write
 
-concurrency:
-  group: build-v1-0-5-${{ github.ref }}
-  cancel-in-progress: false
-
 jobs:
-  build:
-    name: Apply, validate and commit v1.0.5
+  diagnose:
+    name: Capture deterministic patch failure
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
 
     steps:
       - name: Check out feature branch
@@ -26,40 +22,19 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.head_ref }}
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '24'
-          package-manager-cache: false
-
-      - name: Apply deterministic patch
-        run: python3 scripts/apply-v1.0.5-police-register-atv-fixes.py
-
-      - name: Restore permanent workflow and remove builder
+      - name: Capture patch output without retaining partial changes
         shell: bash
         run: |
-          set -euo pipefail
-          git fetch origin main --force
-          git checkout origin/main -- .github/workflows/validate-userscript.yml
-          rm -f scripts/apply-v1.0.5-police-register-atv-fixes.py
-
-      - name: Validate generated release candidate
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 -m py_compile scripts/check_repository.py
-          node --check src/missionchief-command-nexus.user.js
-          node scripts/validate-userscript.mjs
-          node scripts/validate-userscript.mjs --base-ref origin/main
-          python3 scripts/check_repository.py
-          git diff --check
-
-      - name: Commit validated release candidate
-        shell: bash
-        run: |
-          set -euo pipefail
+          set -uo pipefail
+          mkdir -p docs
+          set +e
+          python3 scripts/apply-v1.0.5-police-register-atv-fixes.py > docs/v1.0.5-patch-diagnostic.txt 2>&1
+          STATUS=$?
+          set -e
+          printf '\nexit_status=%s\n' "${STATUS}" >> docs/v1.0.5-patch-diagnostic.txt
+          git restore src/missionchief-command-nexus.user.js README.md src/README.md CHANGELOG.md || true
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
-          git commit -m 'Fix Police dispatch, register build and ATV selection'
+          git add docs/v1.0.5-patch-diagnostic.txt
+          git commit -m 'Capture v1.0.5 patch diagnostic'
           git push origin "HEAD:${{ github.head_ref }}"
