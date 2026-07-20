@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { createHash } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { appendFile, readFile } from 'node:fs/promises';
 
 const SOURCE_PATH =
   process.env.SOURCE_PATH ||
@@ -407,6 +407,52 @@ async function verifyGreasyFork({
   );
 }
 
+async function inspectDiscordWebhook(webhookUrl) {
+  const response = await fetch(webhookUrl, {
+    redirect: 'follow',
+    headers: {
+      Accept: 'application/json',
+      'User-Agent':
+        'MissionChief-Command-Nexus-Release-Validator/2.2',
+    },
+  });
+
+  const responseBody = await response.text();
+
+  if (!response.ok) {
+    throw new Error(
+      `Discord webhook inspection failed with HTTP ` +
+      `${response.status}: ` +
+      responseBody.slice(0, 500)
+    );
+  }
+
+  let webhook;
+
+  try {
+    webhook = JSON.parse(responseBody);
+  } catch (_error) {
+    throw new Error(
+      'Discord webhook inspection did not return valid JSON'
+    );
+  }
+
+  if (!webhook?.id || !webhook?.channel_id) {
+    throw new Error(
+      'Discord webhook inspection did not identify a webhook and channel'
+    );
+  }
+
+  return {
+    webhookId: String(webhook.id),
+    channelId: String(webhook.channel_id),
+    guildId: webhook.guild_id
+      ? String(webhook.guild_id)
+      : '',
+    name: String(webhook.name || 'Unnamed webhook'),
+  };
+}
+
 async function postDiscord(webhookUrl, payload) {
   const target = new URL(webhookUrl);
 
@@ -420,13 +466,83 @@ async function postDiscord(webhookUrl, payload) {
     body: JSON.stringify(payload),
   });
 
-  if (!response.ok) {
-    const responseBody = await response.text();
+  const responseBody = await response.text();
 
+  if (!response.ok) {
     throw new Error(
       `Discord webhook failed with HTTP ` +
       `${response.status}: ` +
       responseBody.slice(0, 500)
+    );
+  }
+
+  let message;
+
+  try {
+    message = JSON.parse(responseBody);
+  } catch (_error) {
+    throw new Error(
+      'Discord accepted the webhook request but did not return a valid message receipt'
+    );
+  }
+
+  if (!message?.id || !message?.channel_id) {
+    throw new Error(
+      'Discord accepted the webhook request but did not return a message ID and channel ID'
+    );
+  }
+
+  return {
+    messageId: String(message.id),
+    channelId: String(message.channel_id),
+    guildId: message.guild_id
+      ? String(message.guild_id)
+      : '',
+  };
+}
+
+async function recordDiscordReceipt({
+  releaseTag,
+  webhook,
+  message,
+}) {
+  if (webhook.channelId !== message.channelId) {
+    throw new Error(
+      `Discord receipt channel ${message.channelId} does not match ` +
+      `webhook channel ${webhook.channelId}`
+    );
+  }
+
+  const receiptLines = [
+    `Discord webhook target verified: ` +
+      `name="${webhook.name}" ` +
+      `webhook_id=${webhook.webhookId} ` +
+      `channel_id=${webhook.channelId}` +
+      (webhook.guildId
+        ? ` guild_id=${webhook.guildId}`
+        : ''),
+    `Discord release notification posted for ${releaseTag}: ` +
+      `message_id=${message.messageId} ` +
+      `channel_id=${message.channelId}`,
+  ];
+
+  receiptLines.forEach((line) => console.log(line));
+
+  const summaryPath = process.env.GITHUB_STEP_SUMMARY?.trim();
+
+  if (summaryPath) {
+    await appendFile(
+      summaryPath,
+      [
+        '### Discord delivery receipt',
+        `- Release: \`${releaseTag}\``,
+        `- Webhook name: ${webhook.name}`,
+        `- Guild ID: \`${webhook.guildId || 'not returned'}\``,
+        `- Channel ID: \`${message.channelId}\``,
+        `- Message ID: \`${message.messageId}\``,
+        '',
+      ].join('\n'),
+      'utf8'
     );
   }
 }
@@ -659,15 +775,20 @@ async function main() {
       greasyForkVerification.elapsedMs,
   });
 
-  await postDiscord(
+  const webhook = await inspectDiscordWebhook(
+    discordWebhookUrl
+  );
+
+  const message = await postDiscord(
     discordWebhookUrl,
     payload
   );
 
-  console.log(
-    `Discord release notification posted ` +
-    `for ${releaseTag}`
-  );
+  await recordDiscordReceipt({
+    releaseTag,
+    webhook,
+    message,
+  });
 }
 
 main().catch((error) => {
