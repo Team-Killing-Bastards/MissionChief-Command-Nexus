@@ -1,5 +1,7 @@
 name: Automatic verified release
 
+# A successful merge that changes the canonical userscript automatically
+# publishes the matching GitHub Release and sends the verified Discord update.
 on:
   push:
     branches:
