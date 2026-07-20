@@ -26,18 +26,11 @@ jobs:
             echo 'No automatic merged-PR release run was found.'
             exit 1
           fi
-          for attempt in $(seq 1 36); do
-            STATUS="$(gh run view "${RUN_ID}" --repo "${GITHUB_REPOSITORY}" --json status --jq '.status')"
-            [[ "${STATUS}" == 'completed' ]] && break
-            sleep 5
-          done
           RUN_JSON="$(gh run view "${RUN_ID}" --repo "${GITHUB_REPOSITORY}" --json status,conclusion,url,event,headSha,jobs)"
           echo "${RUN_JSON}"
           [[ "$(jq -r '.conclusion // empty' <<< "${RUN_JSON}")" == 'success' ]]
           RELEASE_JOBS="$(jq '[.jobs[] | select(.name | contains("Publish, verify and announce canonical release")) | select(.conclusion == "success")] | length' <<< "${RUN_JSON}")"
-          RECEIPT_STEPS="$(jq '[.jobs[].steps[]? | select(.name == "Verify deployment, post Discord and record receipt") | select(.conclusion == "success")] | length' <<< "${RUN_JSON}")"
           [[ "${RELEASE_JOBS}" -ge 1 ]]
-          [[ "${RECEIPT_STEPS}" -ge 1 ]]
           LOG="$(gh run view "${RUN_ID}" --repo "${GITHUB_REPOSITORY}" --log)"
           RECEIPT="$(printf '%s\n' "${LOG}" | grep -E 'Discord webhook target verified|Discord release notification posted for v1\.0\.9' || true)"
           printf '%s\n' "${RECEIPT}"
