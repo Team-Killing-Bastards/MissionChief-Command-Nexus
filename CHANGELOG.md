@@ -26,6 +26,20 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Consolidate the two retained control surfaces into one coherent interface.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
+## [1.0.8] - 2026-07-20
+
+### Fixed
+
+- Fixed Unit Naming long runs retaining the full original station document while navigating through every vehicle edit page.
+- Replaced Unit Naming iframe navigation history entries instead of continually appending edit-page history.
+- Closed the modal associated with the active Unit Naming iframe rather than the first close control in the document.
+- Cleared hidden or reused station iframes after each station so old station and vehicle documents can be garbage collected.
+- Released edit-document and form-control references before each post-save delay and guaranteed iframe cleanup after stop, error or page exit.
+
+### Changed
+
+- Unit Naming increased from `3.3.3` to `3.3.4`; naming rules, vehicle order, numbering and save behaviour are unchanged.
+
 ## [1.0.7] - 2026-07-20
 
 ### Fixed
