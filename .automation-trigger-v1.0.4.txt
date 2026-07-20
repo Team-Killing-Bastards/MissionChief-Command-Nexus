@@ -1,1 +1,0 @@
-Build agent/v1.0.4-auto-load-limited-vehicles from the deterministic branch patch and clean this trigger afterward.
