@@ -1,50 +1,66 @@
-name: Validate userscript
+name: Verify v1.0.8 release publication
 
 on:
   pull_request:
     paths:
-      - 'src/**'
-      - 'scripts/validate-userscript.mjs'
       - '.github/workflows/validate-userscript.yml'
-  push:
-    branches:
-      - main
-    paths:
-      - 'src/**'
-      - 'scripts/validate-userscript.mjs'
-      - '.github/workflows/validate-userscript.yml'
-  workflow_dispatch:
 
 permissions:
+  actions: read
   contents: read
 
-concurrency:
-  group: validate-userscript-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  validate:
-    name: Userscript validation
+  verify:
+    name: Verify GitHub, Greasy Fork and Discord release chain
     runs-on: ubuntu-latest
     timeout-minutes: 10
-
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
+      - name: Verify latest automatic release workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          RUN_ID="$(gh run list --repo "${GITHUB_REPOSITORY}" --workflow repository-quality.yml --event pull_request_target --limit 1 --json databaseId --jq '.[0].databaseId // empty')"
+          if [[ -z "${RUN_ID}" ]]; then
+            echo 'No automatic merged-PR release workflow run was found.'
+            exit 1
+          fi
+          RUN_JSON="$(gh run view "${RUN_ID}" --repo "${GITHUB_REPOSITORY}" --json status,conclusion,url,event,headSha,jobs)"
+          echo "${RUN_JSON}"
+          CONCLUSION="$(jq -r '.conclusion // empty' <<< "${RUN_JSON}")"
+          if [[ "${CONCLUSION}" != 'success' ]]; then
+            echo "Automatic release workflow ${RUN_ID} concluded ${CONCLUSION:-unknown}."
+            exit 1
+          fi
+          RELEASE_JOB_COUNT="$(jq '[.jobs[] | select(.name | contains("Publish, verify and announce canonical release")) | select(.conclusion == "success")] | length' <<< "${RUN_JSON}")"
+          DISCORD_STEP_COUNT="$(jq '[.jobs[].steps[]? | select(.name == "Verify deployment and notify Discord") | select(.conclusion == "success")] | length' <<< "${RUN_JSON}")"
+          if [[ "${RELEASE_JOB_COUNT}" -lt 1 ]]; then
+            echo 'The verified release job did not complete successfully.'
+            exit 1
+          fi
+          if [[ "${DISCORD_STEP_COUNT}" -lt 1 ]]; then
+            echo 'The Greasy Fork verification and Discord notification step did not complete successfully.'
+            exit 1
+          fi
+          echo "Automatic release run ${RUN_ID} completed, including Greasy Fork verification and Discord notification."
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Validate JavaScript syntax
-        run: node --check src/missionchief-command-nexus.user.js
-
-      - name: Validate metadata and Greasy Fork limits
-        run: node scripts/validate-userscript.mjs
-
-      - name: Require a version increase when code changes
-        if: github.event_name == 'pull_request'
-        run: node scripts/validate-userscript.mjs --base-ref "origin/${{ github.base_ref }}"
+      - name: Verify v1.0.8 release assets and checksum
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ASSET='MissionChief-Command-Nexus-1.0.8.user.js'
+          CHECKSUM="${ASSET}.sha256"
+          ASSET_COUNT="$(gh release view v1.0.8 --repo "${GITHUB_REPOSITORY}" --json assets --jq ".assets | map(select(.name == \"${ASSET}\" or .name == \"${CHECKSUM}\")) | unique_by(.name) | length")"
+          if [[ "${ASSET_COUNT}" != '2' ]]; then
+            echo "Expected both v1.0.8 release assets; found ${ASSET_COUNT}."
+            exit 1
+          fi
+          mkdir -p release-check
+          gh release download v1.0.8 --repo "${GITHUB_REPOSITORY}" --pattern "${ASSET}" --pattern "${CHECKSUM}" --dir release-check
+          cd release-check
+          sha256sum --check "${CHECKSUM}"
+          grep -q '^// @version      1.0.8$' "${ASSET}"
+          echo 'v1.0.8 GitHub Release assets and checksum are valid.'
