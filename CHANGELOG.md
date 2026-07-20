@@ -26,6 +26,19 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Consolidate the two retained control surfaces into one coherent interface.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
+## [1.0.9] - 2026-07-20
+
+### Fixed
+
+- Fixed urgent issue #57: Level 1 Public Order, Level 2 Public Order and Police Sergeant requirements are now matched independently instead of being collapsed into one mandatory combined profile bundle.
+- Sergeant-only, Level 1-only, Level 2-only and Police Medic-only personnel now qualify for missions requesting their exact training profile.
+- Multi-trained personnel continue to qualify for every requested profile they actually hold without unrelated training becoming a prerequisite.
+- Preserved exact type-8 IRV verification, two trained personnel per selected IRV, capacity controls and genuine missing-training shortfall warnings across Unit Finder, Mission Update and Auto Mode.
+
+### Changed
+
+- Mission Finder increased from `V10.6.74` to `V10.6.75`.
+
 ## [1.0.8] - 2026-07-20
 
 ### Fixed

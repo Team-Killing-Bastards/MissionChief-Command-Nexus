@@ -1,100 +1,50 @@
-name: Build v1.0.9 issue 57 fix
+name: Validate userscript
 
 on:
   pull_request:
     paths:
-      - 'scripts/apply-v1.0.9-issue57.py'
-      - 'scripts/test-issue57.mjs'
+      - 'src/**'
+      - 'scripts/validate-userscript.mjs'
       - '.github/workflows/validate-userscript.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'scripts/validate-userscript.mjs'
+      - '.github/workflows/validate-userscript.yml'
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: validate-userscript-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build:
+  validate:
+    name: Userscript validation
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 10
+
     steps:
-      - uses: actions/checkout@v6
+      - name: Check out repository
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          ref: ${{ github.head_ref }}
-      - uses: actions/setup-node@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: '24'
-      - name: Complete and apply issue 57 patch
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          path = Path('scripts/apply-v1.0.9-issue57.py')
-          text = path.read_text(encoding='utf-8')
+          node-version: '22'
 
-          old_version = "replace_once(\"V10.6.74\", \"V10.6.75\", 'Mission Finder version')"
-          new_version = "if source.count('V10.6.74') != 2:\n    raise SystemExit(f\"Mission Finder version count: {source.count('V10.6.74')}\")\nsource = source.replace('V10.6.74', 'V10.6.75')"
-          if text.count(old_version) != 1:
-              raise SystemExit(f'Version patch anchor count: {text.count(old_version)}')
-          text = text.replace(old_version, new_version, 1)
+      - name: Validate JavaScript syntax
+        run: node --check src/missionchief-command-nexus.user.js
 
-          old_format = "    combined_format_end,\n    'combined display branch',"
-          new_format = "    '',\n    'combined display branch',"
-          if text.count(old_format) != 1:
-              raise SystemExit(f'Format patch anchor count: {text.count(old_format)}')
-          text = text.replace(old_format, new_format, 1)
+      - name: Validate metadata and Greasy Fork limits
+        run: node scripts/validate-userscript.mjs
 
-          insertion_anchor = "if 'public_order_combined_vehicle' in source:"
-          extra = r'''
-          hint_start = "            if (\n                requirement?.requirementType ===\n                    'public_order_combined_vehicle'\n            ) {"
-          hint_end = "            return score;"
-          replace_between(hint_start, hint_end, '', 'legacy combined hint scoring')
-
-          debug_start = "                const publicOrderRequirement ="
-          debug_end = "                debugLog(\n                    'TRAINED PERSONNEL UPDATE',"
-          replace_between(debug_start, debug_end, '', 'legacy combined update debug')
-
-          route_start = "                    const combinedRequirement ="
-          route_end = "                }\n\n                const requirements ="
-          route_replacement = "                    debugLog(\n                        'TRAINED UPDATE ROUTE',\n                        `Entering independent trained-vehicle selector for ${formatTrainedPersonnelRequirements(item.personnelTrainingRequirements)}`\n                    );\n"
-          replace_between(route_start, route_end, route_replacement, 'legacy combined route debug')
-
-          shortfall_start = "                                    if (\n                                        requirement\n                                            .requirementType ===\n                                        'public_order_combined_vehicle'\n                                    ) {"
-          shortfall_end = "                                    if (\n                                        requirement.requirementType ===\n                                        'police_inspector_vehicle'\n                                    ) {"
-          replace_between(shortfall_start, shortfall_end, '', 'legacy combined shortfall formatter')
-
-          replace_once(
-              'the single combined trained IRV target owns it.',
-              'the independent trained IRV requirements own it.',
-              'Public Order update guard message',
-          )
-
-          '''
-          if text.count(insertion_anchor) != 1:
-              raise SystemExit(f'Insertion anchor count: {text.count(insertion_anchor)}')
-          text = text.replace(insertion_anchor, extra + insertion_anchor, 1)
-          path.write_text(text, encoding='utf-8', newline='\n')
-          PY
-          python3 scripts/apply-v1.0.9-issue57.py
-      - name: Test independent profiles
-        run: node scripts/test-issue57.mjs
-      - name: Restore permanent workflow and remove temporary files
-        run: |
-          git fetch origin main --force
-          git checkout origin/main -- .github/workflows/validate-userscript.yml
-          rm -f scripts/apply-v1.0.9-issue57.py scripts/test-issue57.mjs scripts/audit-issue57.py ISSUE_57_AUDIT.txt ISSUE_57_SOURCE.txt ISSUE_57_REMAINING.txt COMBINED_CONTEXT.txt PATCH_ERROR.txt
-      - name: Validate candidate
-        run: |
-          node --check src/missionchief-command-nexus.user.js
-          node scripts/validate-userscript.mjs
-          node scripts/validate-userscript.mjs --base-ref origin/main
-          python3 scripts/check_repository.py
-          git diff --check
-          grep -q '^// @version      1.0.9$' src/missionchief-command-nexus.user.js
-          grep -q 'V10.6.75' src/missionchief-command-nexus.user.js
-          ! grep -q 'public_order_combined_vehicle' src/missionchief-command-nexus.user.js
-      - name: Commit candidate
-        run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add -A
-          git commit -m 'Fix issue 57 independent police profiles'
-          git push origin HEAD:${{ github.head_ref }}
+      - name: Require a version increase when code changes
+        if: github.event_name == 'pull_request'
+        run: node scripts/validate-userscript.mjs --base-ref "origin/${{ github.base_ref }}"

@@ -1,2 +1,0 @@
-Combined Public Order requirement remains in generated source
-exit_status=1
