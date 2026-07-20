@@ -1,0 +1,3238 @@
+UNIT NAMING STATIC MEMORY AUDIT
+Module lines scanned: 7473
+Context windows: 159
+
+FUNCTION INDEX
+927: registerToolLifecycleCleanup
+934: runToolLifecycleCleanup
+991: getToolElementById
+1004: clearBoundedToolLog
+1018: appendBoundedToolLog
+1060: isStationOverviewScreen
+1835: normalisePersonnelUnitsRequired
+1841: isPersonnelPerStationTargetMode
+1848: getPersonnelUnitsRemaining
+1855: formatPersonnelUnitsFulfilled
+1875: handlePersonnelUnitsRequiredChange
+2308: showAndViewPersonnelStationReport
+2342: switchToolTab
+2395: refreshStationNamingStations
+2452: getStationNamingTypeInfo
+2466: populateStationNamingStartDropdown
+2503: updateStationNamingSelectionPreview
+2520: startStationNamingRun
+2585: toggleStationNamingPause
+2597: stopStationNamingRun
+2618: processStationNamingQueue
+2673: processOneStationName
+2813: resolveStationAddress
+2847: fetchStationMoveAddress
+2902: getStationCoordinates
+2916: extractCoordinatesFromStationDocument
+2952: findBuildingCoordinatesInPageCaches
+2978: getBuildingRecordFromCache
+3074: fetchMissionChiefReverseAddress
+3132: stationFetchWithTimeout
+3148: extractStationArea
+3178: formatStationArea
+3188: buildStationName
+3193: getExistingStationSequence
+3205: waitForStationNamingIframe
+3231: waitForStationNamingDocument
+3251: verifyStationNameSaved
+3282: updateStationListName
+3297: closeStationNamingModal
+3307: waitIfStationNamingPaused
+3313: updateStationCounters
+3318: toggleStationDebug
+3324: clearStationLog
+3328: setStationUiValue
+3345: stationLog
+3355: stationDebug
+3361: getPersonnelProfileStationTypes
+3366: getPersonnelStationScopeLabel
+3377: refreshPersonnelStations
+3749: startPersonnelRun
+3931: togglePersonnelPause
+3943: stopPersonnelRun
+4256: prunePersonnelTrainingRegistry
+4527: publishPersonnelVehicleTrainingRegistry
+4628: getPersonnelAssignedToVehicle
+4652: processOnePersonnelStation
+4768: formatVehicleOccupantTrainingGaps
+4844: getPersonnelVehicleQueue
+4882: sortPersonnelVehiclesForStationTarget
+4974: selectPoliceRuleVehicles
+5040: processOnePoliceStation
+5598: sortMedicalVehiclesForStationTarget
+5680: processOneMedicalCriticalCareStation
+6102: personnelFetchResponse
+6127: personnelFetchDocument
+6141: parsePersonnelVehicleOccupancy
+6156: normalizePersonnelVehicleName
+6250: parseVehicleAssignmentPage
+6365: getPersonnelReportVehicleCount
+6377: buildStationAfterActionText
+6495: buildPersonnelOverallStationBlock
+6753: copyPersonnelStationReport
+6777: waitIfPersonnelPaused
+6816: clearPersonnelLog
+6820: personnelLog
+6904: detectStationType
+6921: getVehicleIdFromHref
+6926: makeVehicleName
+6932: refreshStations
+7006: startRun
+7060: togglePause
+7069: stopRun
+7086: clearLog
+7090: processStations
+7171: waitForStationIframe
+7229: waitForVehicleTable
+7263: getVehicleQueueFromTable
+7300: processStationVehicleQueue
+7383: closeStationModal
+7396: waitIfPaused
+7407: setStation
+7412: setVehicle
+7430: log
+
+CONTEXT
+--- lines 36-44 ---
+00036:     if (window.__MC_NAMING_TOOLS_V428__) return;
+00037:     window.__MC_NAMING_TOOLS_V428__ = true;
+00038: 
+00039:     const UNIT_VERSION = '3.3.3';
+00040:     const STATION_VERSION = '1.3.1';
+00041:     const PERSONNEL_VERSION = '1.2.9';
+00042:     const PERSONNEL_TRAINING_CODE = 'critical_care';
+00043:     const PERSONNEL_TRAINING_LABEL = 'Critical Care';
+00044:     const PERSONNEL_TARGET_VEHICLE_TYPE_ID = '5';
+
+--- lines 56-80 ---
+00056:     const PERSONNEL_TRAINING_REGISTRY_STORAGE_KEY =
+00057:         'mcPersonnelVehicleTrainingRegistry_v1';
+00058:     const PERSONNEL_TRAINING_REGISTRY_SCHEMA_VERSION = 1;
+00059:     const TOOL_LOG_MAX_LINES = 400;
+00060:     const TOOL_LOG_TRIM_BUFFER = 40;
+00061:     const PERSONNEL_TRAINING_REGISTRY_MAX_VEHICLES = 5000;
+00062:     const PERSONNEL_TRAINING_REGISTRY_MAX_AGE_MS = 180 * 24 * 60 * 60 * 1000;
+00063:     const PERSONNEL_TRAINING_REGISTRY_QUOTA_RETRY_MAX_VEHICLES = 2500;
+00064:     const PERSONNEL_TRAINING_REGISTRY_FLUSH_DELAY_MS = 1400;
+00065:     const PERSONNEL_TRAINING_REGISTRY_PRUNE_INTERVAL_MS = 6 * 60 * 60 * 1000;
+00066:     const TOOL_LIFECYCLE_CLEANUPS = new Set();
+00067:     const TOOL_LOG_SCROLL_FRAMES = new Map();
+00068:     const TOOL_UI_ELEMENT_CACHE = new Map();
+00069:     const PERSONNEL_ASSIGNMENT_INDEX_CACHE = new WeakMap();
+00070:     const PERSONNEL_TRAINING_SET_CACHE = new WeakMap();
+00071:     const PERSONNEL_VISIBLE_TRAINING_COUNTS_CACHE = new WeakMap();
+00072:     const PERSONNEL_REPORT_BLOCK_CACHE = new WeakMap();
+00073:     const PERSONNEL_STATION_LINK_BY_HREF = new Map();
+00074:     const PERSONNEL_START_OPTION_BY_HREF = new Map();
+00075:     const PERSONNEL_HIGHLIGHTED_STATION_LINKS = new Set();
+00076:     let TOOL_LIFECYCLE_CLEANED = false;
+00077:     let PERSONNEL_TRAINING_REGISTRY_CACHE = null;
+00078:     let PERSONNEL_TRAINING_REGISTRY_DIRTY = false;
+00079:     let PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER = null;
+00080:     let PERSONNEL_TRAINING_REGISTRY_PENDING_EVENT = null;
+
+--- lines 94-113 ---
+00094:     const makePoliceRule = ({
+00095:         id,
+00096:         label,
+00097:         vehicleTypeIds,
+00098:         vehicleLabel,
+00099:         target,
+00100:         trainingAll,
+00101:         trainingLabel,
+00102:         preferWithout = [],
+00103:         sharedVehiclePool = false
+00104:     }) => Object.freeze({
+00105:         id,
+00106:         label,
+00107:         vehicleTypeIds: vehicleTypeIds.map(String),
+00108:         vehicleLabel,
+00109:         target: Number(target),
+00110:         trainingAll: trainingAll.map(String),
+00111:         trainingLabel,
+00112:         preferWithout: preferWithout.map(String),
+00113:         sharedVehiclePool: Boolean(sharedVehiclePool)
+
+--- lines 157-168 ---
+00157:                 'police_public_order_level_1',
+00158:             label:
+00159:                 'Level 1 Public Order',
+00160:             vehicleTypeIds: [
+00161:                 '8'
+00162:             ],
+00163:             vehicleLabel:
+00164:                 'Incident Response Vehicle',
+00165:             target:
+00166:                 2,
+00167:             trainingAll: [
+00168:                 'level_1_public_order'
+
+--- lines 177-188 ---
+00177:                 'police_public_order_level_2',
+00178:             label:
+00179:                 'Level 2 Public Order',
+00180:             vehicleTypeIds: [
+00181:                 '8'
+00182:             ],
+00183:             vehicleLabel:
+00184:                 'Incident Response Vehicle',
+00185:             target:
+00186:                 2,
+00187:             trainingAll: [
+00188:                 'level_2_public_order'
+
+--- lines 197-208 ---
+00197:                 'police_public_order_sergeant',
+00198:             label:
+00199:                 'Police Sergeant',
+00200:             vehicleTypeIds: [
+00201:                 '8'
+00202:             ],
+00203:             vehicleLabel:
+00204:                 'Incident Response Vehicle',
+00205:             target:
+00206:                 2,
+00207:             trainingAll: [
+00208:                 'police_sergeant'
+
+--- lines 217-228 ---
+00217:                 'police_public_order_medic',
+00218:             label:
+00219:                 'Police Medic',
+00220:             vehicleTypeIds: [
+00221:                 '8'
+00222:             ],
+00223:             vehicleLabel:
+00224:                 'Incident Response Vehicle',
+00225:             target:
+00226:                 2,
+00227:             trainingAll: [
+00228:                 'police_medic'
+
+--- lines 235-399 ---
+00235:         publicOrderCombined: makePoliceRule({
+00236:             id: 'police_public_order_combined',
+00237:             label: 'Public Order L1 + L2 + Sergeant + Police Medic',
+00238:             vehicleTypeIds: ['8'],
+00239:             vehicleLabel: 'Incident Response Vehicle',
+00240:             target: 2,
+00241:             trainingAll: ['level_1_public_order', 'level_2_public_order', 'police_sergeant', 'police_medic'],
+00242:             trainingLabel: 'Level 1 + Level 2 + Sergeant + Police Medic',
+00243:             sharedVehiclePool: true
+00244:         }),
+00245:         inspector: makePoliceRule({
+00246:             id: 'police_inspector',
+00247:             label: 'Police Inspector',
+00248:             vehicleTypeIds: ['8'],
+00249:             vehicleLabel: 'Incident Response Vehicle',
+00250:             target: 2,
+00251:             trainingAll: ['police_inspector'],
+00252:             trainingLabel: 'Police Inspector',
+00253:             sharedVehiclePool: true
+00254:         }),
+00255:         roads: makePoliceRule({
+00256:             id: 'police_roads_firearms',
+00257:             label: 'Roads Policing + Firearms',
+00258:             vehicleTypeIds: ['25'],
+00259:             vehicleLabel: 'Armed Traffic Car',
+00260:             target: 2,
+00261:             trainingAll: ['traffic_police', 'swat'],
+00262:             trainingLabel: 'Roads Policing + Firearms'
+00263:         }),
+00264:         firearms: makePoliceRule({
+00265:             id: 'police_mrav_firearms',
+00266:             label: 'Firearms',
+00267:             vehicleTypeIds: ['56'],
+00268:             vehicleLabel: 'Multi-Role Armoured Vehicle',
+00269:             target: 6,
+00270:             trainingAll: ['swat'],
+00271:             trainingLabel: 'Firearms',
+00272:             preferWithout: ['traffic_police']
+00273:         }),
+00274:         mounted: makePoliceRule({
+00275:             id: 'police_mounted',
+00276:             label: 'Mounted Officers',
+00277:             vehicleTypeIds: ['55'],
+00278:             vehicleLabel: 'Mounted Unit',
+00279:             target: 1,
+00280:             trainingAll: ['police_horse'],
+00281:             trainingLabel: 'Mounted Officers'
+00282:         }),
+00283:         dog: makePoliceRule({
+00284:             id: 'police_dog',
+00285:             label: 'Dog handling',
+00286:             vehicleTypeIds: ['12'],
+00287:             vehicleLabel: 'Dog Support Unit',
+00288:             target: 1,
+00289:             trainingAll: ['k9'],
+00290:             trainingLabel: 'Dog handling'
+00291:         }),
+00292:         searchAdvisor: makePoliceRule({
+00293:             id: 'police_drone_search_advisor',
+00294:             label: 'Drone Operator + Police Search Advisor',
+00295:             vehicleTypeIds: ['91'],
+00296:             vehicleLabel: 'Police Drone Vehicle',
+00297:             target: 2,
+00298:             trainingAll: ['drone', 'search_and_rescue'],
+00299:             trainingLabel: 'Drone Operator + Police Search Advisor',
+00300:             sharedVehiclePool: true
+00301:         }),
+00302:         drone: makePoliceRule({
+00303:             id: 'police_drone',
+00304:             label: 'Drone Operator',
+00305:             vehicleTypeIds: ['91'],
+00306:             vehicleLabel: 'Police Drone Vehicle',
+00307:             target: 2,
+00308:             trainingAll: ['drone'],
+00309:             trainingLabel: 'Drone Operator',
+00310:             preferWithout: ['search_and_rescue'],
+00311:             sharedVehiclePool: true
+00312:         }),
+00313:         aviation: makePoliceRule({
+00314:             id: 'police_aviation',
+00315:             label: 'Police aviation',
+00316:             vehicleTypeIds: ['11'],
+00317:             vehicleLabel: 'Police Helicopter',
+00318:             target: 3,
+00319:             trainingAll: ['polizeihubschrauber'],
+00320:             trainingLabel: 'Police aviation'
+00321:         }),
+00322:         mobileOperations: makePoliceRule({
+00323:             id: 'police_mobile_operations',
+00324:             label: 'Mobile Operations Management',
+00325:             vehicleTypeIds: ['108'],
+00326:             vehicleLabel: 'EIU',
+00327:             target: 2,
+00328:             trainingAll: ['railway_police_command'],
+00329:             trainingLabel: 'Mobile Operations Manager'
+00330:         }),
+00331:         railway: makePoliceRule({
+00332:             id: 'police_railway',
+00333:             label: 'Railway Police Officer',
+00334:             vehicleTypeIds: ['8'],
+00335:             vehicleLabel: 'Railway Policing IRV',
+00336:             target: 2,
+00337:             trainingAll: ['railway_police'],
+00338:             trainingLabel: 'Railway Police Officer',
+00339:             preferWithout: ['railway_police_command'],
+00340:             sharedVehiclePool: true
+00341:         }),
+00342:         eodCommander: makePoliceRule({
+00343:             id: 'police_eod_commander',
+00344:             label: 'EOD Commander',
+00345:             vehicleTypeIds: ['109'],
+00346:             vehicleLabel: 'EOD Commander Vehicle',
+00347:             target: 2,
+00348:             trainingAll: ['bomb_disposal_command'],
+00349:             trainingLabel: 'EOD Commander'
+00350:         }),
+00351:         eodResponse: makePoliceRule({
+00352:             id: 'police_eod_response',
+00353:             label: 'Bomb Disposal',
+00354:             vehicleTypeIds: ['110'],
+00355:             vehicleLabel: 'EOD Response Vehicle',
+00356:             target: 4,
+00357:             trainingAll: ['bomb_disposal'],
+00358:             trainingLabel: 'Bomb Disposal',
+00359:             preferWithout: ['bomb_disposal_command']
+00360:         }),
+00361:         eodMedium: makePoliceRule({
+00362:             id: 'police_eod_medium',
+00363:             label: 'Bomb Disposal',
+00364:             vehicleTypeIds: ['111'],
+00365:             vehicleLabel: 'EOD Medium Equipment Van',
+00366:             target: 3,
+00367:             trainingAll: ['bomb_disposal'],
+00368:             trainingLabel: 'Bomb Disposal',
+00369:             preferWithout: ['bomb_disposal_command']
+00370:         }),
+00371:         eodHeavy: makePoliceRule({
+00372:             id: 'police_eod_heavy',
+00373:             label: 'Bomb Disposal',
+00374:             vehicleTypeIds: ['112'],
+00375:             vehicleLabel: 'EOD Heavy Equipment Vehicle',
+00376:             target: 2,
+00377:             trainingAll: ['bomb_disposal'],
+00378:             trainingLabel: 'Bomb Disposal',
+00379:             preferWithout: ['bomb_disposal_command']
+00380:         }),
+00381:         marineResponse: makePoliceRule({
+00382:             id: 'police_marine_eod_response',
+00383:             label: 'Marine Bomb Disposal',
+00384:             vehicleTypeIds: ['113'],
+00385:             vehicleLabel: 'Marine EOD Response Vehicle',
+00386:             target: 4,
+00387:             trainingAll: ['bomb_disposal_diver'],
+00388:             trainingLabel: 'Marine Bomb Disposal'
+00389:         }),
+00390:         marineEquipment: makePoliceRule({
+00391:             id: 'police_marine_eod_equipment',
+00392:             label: 'Marine Bomb Disposal',
+00393:             vehicleTypeIds: ['114'],
+00394:             vehicleLabel: 'Marine EOD Equipment Van',
+00395:             target: 3,
+00396:             trainingAll: ['bomb_disposal_diver'],
+00397:             trainingLabel: 'Marine Bomb Disposal'
+00398:         })
+00399:     });
+
+--- lines 443-451 ---
+00443:                     label: 'Critical Care',
+00444:                     vehicle: 'Normal Ambulance',
+00445:                     requirement: '1 Critical Care-trained staff per Ambulance',
+00446:                     policy: 'LIVE ENGINE: Critical Care is used only for normal Ambulances. Existing assignments are preserved and vehicles are safely topped up to 1 trained staff.',
+00447:                     live: true,
+00448:                     engine: 'medical-critical-care',
+00449:                     stationTypes: ['AMBULANCE']
+00450:                 },
+00451:                 {
+
+--- lines 460-468 ---
+00460:                 {
+00461:                     id: 'hart',
+00462:                     label: 'HART Training',
+00463:                     vehicle: 'PRV / SRV and mapped HART vehicles',
+00464:                     requirement: 'HART-trained staff',
+00465:                     policy: 'UI preview: HART vehicle-by-vehicle staffing rules still require verified assignment-page captures.',
+00466:                     live: false,
+00467:                     stationTypes: ['AMBULANCE']
+00468:                 },
+
+--- lines 478-486 ---
+00478:                 {
+00479:                     id: 'sort',
+00480:                     label: 'SORT Training',
+00481:                     vehicle: 'Mass Casualty / CBRN medical vehicles',
+00482:                     requirement: 'SORT-trained staff',
+00483:                     policy: 'UI preview: the exact SORT vehicle family, capacities and training code still need verified assignment pages.',
+00484:                     live: false,
+00485:                     stationTypes: ['AMBULANCE']
+00486:                 },
+
+--- lines 496-504 ---
+00496:                 {
+00497:                     id: 'tactical_command',
+00498:                     label: 'Tactical Command Course',
+00499:                     vehicle: 'Ambulance command vehicles',
+00500:                     requirement: 'Tactical Command-trained staff',
+00501:                     policy: 'UI preview: command vehicle mappings, capacities and exact training code still need verification.',
+00502:                     live: false,
+00503:                     stationTypes: ['AMBULANCE']
+00504:                 },
+
+--- lines 530-551 ---
+00530:                     label: 'Run all Fire / Airfield profiles',
+00531:                     vehicle: 'All mapped Fire and Airfield vehicle groups',
+00532:                     requirement: 'Process enabled Fire and Airfield profiles in priority order',
+00533:                     policy: 'Future batch option. Airfield training and vehicles are handled within Fire. It remains disabled until every Fire and Airfield profile has confirmed mappings.',
+00534:                     live: false,
+00535:                     stationTypes: ['FIRE', 'AIRFIELD']
+00536:                 }
+00537:             ]
+00538:         },
+00539:         police: {
+00540:             label: 'Police',
+00541:             icon: '🚓',
+00542:             profiles: [
+00543:                 livePoliceProfile('police_bomb_disposal', 'Bomb Disposal', 'EOD Response, Medium and Heavy vehicles', 'Fill each mapped EOD vehicle to its verified maximum with Bomb Disposal personnel', 'LIVE: EOD Commander vehicles are processed first by Run all Police, then Response 4/4, Medium 3/3 and Heavy 2/2. Existing assignments are preserved.', [POLICE_RULES.eodResponse, POLICE_RULES.eodMedium, POLICE_RULES.eodHeavy], ['EOD']),
+00544:                 livePoliceProfile('police_dog_handling', 'Dog handling', 'Dog Support Unit', 'At least 1 Dog Handler per DSU', 'LIVE: safely meets the game-confirmed minimum of one Dog Handler per DSU without moving existing staff.', [POLICE_RULES.dog]),
+00545:                 livePoliceProfile('police_drone_operator', 'Drone Operator Training', 'Police Drone Vehicle', '2 Drone Operators per Police Drone Vehicle', 'LIVE: fills Police Drone Vehicles to 2/2. Search Advisor dual-trained personnel are preserved where possible.', [POLICE_RULES.drone]),
+00546:                 livePoliceProfile('police_eod_commander', 'EOD Commander', 'EOD Commander Vehicle', '2 EOD Commanders per vehicle', 'LIVE: fills EOD Commander vehicles to 2/2 before general Bomb Disposal vehicles in the full Police run.', [POLICE_RULES.eodCommander], ['EOD']),
+00547:                 livePoliceProfile('police_firearms', 'Firearms training', 'Multi-Role Armoured Vehicle', '6 Firearms-trained officers per MRAV', 'LIVE: fills every MRAV to 6/6 with Firearms-trained personnel and preserves Roads Policing dual-trained officers where possible.', [POLICE_RULES.firearms]),
+00548:                 livePoliceProfile(
+00549:                     'police_public_order_1',
+00550:                     'Level 1 Public Order Training',
+00551:                     'Normal Police IRV',
+
+--- lines 567-578 ---
+00567:                             .publicOrderLevel2
+00568:                     ]
+00569:                 ),
+00570:                 livePoliceProfile('police_marine_bomb_disposal', 'Marine Bomb Disposal', 'Marine EOD Response and Equipment vehicles', 'Response 4/4; Equipment Van 3/3', 'LIVE: fills Marine EOD Response vehicles to 4/4 and Equipment Vans to 3/3 with Marine Bomb Disposal personnel.', [POLICE_RULES.marineResponse, POLICE_RULES.marineEquipment], ['EOD']),
+00571:                 livePoliceProfile('police_mobile_operations_management', 'Mobile Operations Management', 'EIU', '2 Mobile Operations Managers per EIU', 'LIVE: fills each EIU to 2/2 with railway_police_command-trained personnel.', [POLICE_RULES.mobileOperations]),
+00572:                 livePoliceProfile('police_mounted', 'Mounted Training', 'Mounted Unit', 'At least 1 Mounted Officer per vehicle', 'LIVE: meets the verified native minimum of one Mounted Officer per Mounted Unit. It does not fill the remaining passenger seats.', [POLICE_RULES.mounted]),
+00573:                 livePoliceProfile('police_inspector', 'Police Inspector Training', 'Normal Police IRV', '2 Police Inspectors per allocated IRV', 'LIVE: uses normal IRVs and fills allocated vehicles to 2/2 with police_inspector-trained officers.', [POLICE_RULES.inspector]),
+00574:                 livePoliceProfile(
+00575:                     'police_medic',
+00576:                     'Police Medic Training',
+00577:                     'Normal Police IRV',
+00578:                     '2 Police Medics per IRV',
+
+--- lines 646-654 ---
+00646:             profiles: [{
+00647:                 id: 'all_services_profiles',
+00648:                 label: 'Run all service profiles — future option',
+00649:                 vehicle: 'All supported service vehicles',
+00650:                 requirement: 'Process services and profiles in safe priority order',
+00651:                 policy: 'This future option will only be enabled after each individual service is fully tested and live.',
+00652:                 live: false,
+00653:                 stationTypes: []
+00654:             }]
+
+--- lines 859-867 ---
+00859:         stations: [],
+00860:         filteredStations: [],
+00861:         stationIndex: 0,
+00862:         renamedCount: 0,
+00863:         skippedCount: 0,
+00864:         mode: "all",
+00865:         runId: 0
+00866:     };
+00867: 
+
+--- lines 877-891 ---
+00877:         mode: 'all',
+00878:         action: 'preview',
+00879:         stationIndex: 0,
+00880:         renamedCount: 0,
+00881:         skippedCount: 0,
+00882:         previewedCount: 0,
+00883:         activeIframe: null,
+00884:         buildingCoordinateCache: new Map(),
+00885:         buildingDataPromise: null,
+00886:         activeControllers: new Set()
+00887:     };
+00888: 
+00889:     const PERSONNEL_STATE = {
+00890:         running: false,
+00891:         paused: false,
+
+--- lines 901-911 ---
+00901:         action: 'preview',
+00902:         registerBuilding: false,
+00903:         configuredUnitsRequired: 0,
+00904:         unitsRequired: 0,
+00905:         unitsFulfilled: 0,
+00906:         unitTargetReached: false,
+00907:         stationsTargetMet: 0,
+00908:         stationsTargetShort: 0,
+00909:         stationIndex: 0,
+00910:         completedStations: 0,
+00911:         skippedStations: 0,
+
+--- lines 922-939 ---
+00922:         lastRequestAt: 0
+00923:     };
+00924: 
+00925:     const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+00926: 
+00927:     function registerToolLifecycleCleanup(cleanup) {
+00928:         if (typeof cleanup === 'function') {
+00929:             TOOL_LIFECYCLE_CLEANUPS.add(cleanup);
+00930:         }
+00931:         return cleanup;
+00932:     }
+00933: 
+00934:     function runToolLifecycleCleanup() {
+00935:         if (TOOL_LIFECYCLE_CLEANED) return;
+00936:         TOOL_LIFECYCLE_CLEANED = true;
+00937: 
+00938:         STATE.stopped = true;
+00939:         STATE.paused = false;
+
+--- lines 958-984 ---
+00958:         }
+00959:         STATION_STATE.activeControllers.clear();
+00960: 
+00961:         for (const cleanup of [...TOOL_LIFECYCLE_CLEANUPS]) {
+00962:             try {
+00963:                 cleanup();
+00964:             } catch (_error) {}
+00965:         }
+00966:         TOOL_LIFECYCLE_CLEANUPS.clear();
+00967: 
+00968:         for (const frameId of TOOL_LOG_SCROLL_FRAMES.values()) {
+00969:             try {
+00970:                 cancelAnimationFrame(frameId);
+00971:             } catch (_error) {}
+00972:         }
+00973:         TOOL_LOG_SCROLL_FRAMES.clear();
+00974:         TOOL_UI_ELEMENT_CACHE.clear();
+00975:         PERSONNEL_STATION_LINK_BY_HREF.clear();
+00976:         PERSONNEL_START_OPTION_BY_HREF.clear();
+00977:         PERSONNEL_HIGHLIGHTED_STATION_LINKS.clear();
+00978: 
+00979:         STATION_STATE.activeIframe = null;
+00980:         STATION_STATE.buildingCoordinateCache.clear();
+00981:         STATION_STATE.buildingDataPromise = null;
+00982:         PERSONNEL_STATE.reports = [];
+00983:         PERSONNEL_STATE.lastStationReport = null;
+00984:         PERSONNEL_STATE.currentReport = '';
+
+--- lines 1004-1017 ---
+01004:     function clearBoundedToolLog(logBox) {
+01005:         if (!logBox) return;
+01006: 
+01007:         const frameId = TOOL_LOG_SCROLL_FRAMES.get(logBox);
+01008:         if (frameId != null) {
+01009:             try {
+01010:                 cancelAnimationFrame(frameId);
+01011:             } catch (_error) {}
+01012:             TOOL_LOG_SCROLL_FRAMES.delete(logBox);
+01013:         }
+01014: 
+01015:         logBox.replaceChildren();
+01016:     }
+01017: 
+
+--- lines 1020-1071 ---
+01020: 
+01021:         logBox.appendChild(line);
+01022: 
+01023:         if (logBox.childElementCount > TOOL_LOG_MAX_LINES + TOOL_LOG_TRIM_BUFFER) {
+01024:             const removeCount = logBox.childElementCount - TOOL_LOG_MAX_LINES;
+01025:             for (let index = 0; index < removeCount; index++) {
+01026:                 logBox.firstElementChild?.remove();
+01027:             }
+01028:         }
+01029: 
+01030:         if (!TOOL_LOG_SCROLL_FRAMES.has(logBox)) {
+01031:             const frameId = requestAnimationFrame(() => {
+01032:                 TOOL_LOG_SCROLL_FRAMES.delete(logBox);
+01033:                 if (logBox.isConnected) logBox.scrollTop = logBox.scrollHeight;
+01034:             });
+01035:             TOOL_LOG_SCROLL_FRAMES.set(logBox, frameId);
+01036:         }
+01037:     }
+01038: 
+01039:     function initWhenReady() {
+01040:         let tries = 0;
+01041:         const timer = setInterval(() => {
+01042:             tries++;
+01043: 
+01044:             if (isStationOverviewScreen()) {
+01045:                 clearInterval(timer);
+01046:                 TOOL_LIFECYCLE_CLEANUPS.delete(clearInitTimer);
+01047:                 init();
+01048:             }
+01049: 
+01050:             if (tries >= 40) {
+01051:                 clearInterval(timer);
+01052:                 TOOL_LIFECYCLE_CLEANUPS.delete(clearInitTimer);
+01053:             }
+01054:         }, 500);
+01055: 
+01056:         const clearInitTimer = () => clearInterval(timer);
+01057:         registerToolLifecycleCleanup(clearInitTimer);
+01058:     }
+01059: 
+01060:     function isStationOverviewScreen() {
+01061:         return Boolean(document.querySelector('a.lightbox-open.list-group-item.active[href^="/buildings/"]'));
+01062:     }
+01063: 
+01064:     function init() {
+01065:         addPanel();
+01066:         log(`Unit Naming Tool v${UNIT_VERSION} loaded. Press Refresh Stations first.`, 'info');
+01067:         stationLog(`Station Naming Tool v${STATION_VERSION} loaded. Refresh stations, choose Preview or Rename and Save, then press Start.`, 'info');
+01068:         personnelLog(`Personnel Assignment v${PERSONNEL_VERSION} loaded. Medical Critical Care and the verified Police profiles are live; other services remain in safe UI preview.`, 'info');
+01069:     }
+01070: 
+01071:     function addPanel() {
+
+--- lines 1074-1084 ---
+01074:         const panel = document.createElement('div');
+01075:         panel.id = 'mc-namer-panel';
+01076: 
+01077:         panel.innerHTML = `
+01078:             <div id="mc-namer-header">
+01079:                 <span id="mc-namer-header-title">🚒 Unit Naming Tool v${UNIT_VERSION}</span>
+01080:                 <button id="mc-namer-collapse" type="button" aria-expanded="true" title="Collapse naming tools">−</button>
+01081:             </div>
+01082: 
+01083:             <div id="mc-namer-body">
+01084:             <div class="mc-namer-tabs" role="tablist" aria-label="Naming tools">
+
+--- lines 1126-1134 ---
+01126:                     <div><b>Station:</b> <span id="mc-namer-station">None</span></div>
+01127:                     <div><b>Vehicle:</b> <span id="mc-namer-vehicle">None</span></div>
+01128:                     <div><b>Progress:</b> <span id="mc-namer-progress">0 / 0</span></div>
+01129:                     <div><b>Renamed:</b> <span id="mc-namer-renamed">0</span></div>
+01130:                     <div><b>Skipped:</b> <span id="mc-namer-skipped">0</span></div>
+01131:                 </div>
+01132: 
+01133:                 <div id="mc-namer-log"></div>
+01134:             </div>
+
+--- lines 1175-1183 ---
+01175:                     <div><b>Before:</b> <span id="mc-station-before">None</span></div>
+01176:                     <div><b>After:</b> <span id="mc-station-after">None</span></div>
+01177:                     <div><b>Progress:</b> <span id="mc-station-progress">0 / 0</span></div>
+01178:                     <div><b>Renamed:</b> <span id="mc-station-renamed">0</span></div>
+01179:                     <div><b>Skipped:</b> <span id="mc-station-skipped">0</span></div>
+01180:                 </div>
+01181: 
+01182:                 <div id="mc-station-log"></div>
+01183:             </div>
+
+--- lines 1207-1227 ---
+01207:                     <label style="margin-top:8px; display:block;"><b>Mode:</b></label>
+01208:                     <select id="mc-personnel-mode">
+01209:                         <option id="mc-personnel-mode-all-option" value="all">All relevant stations from selected start point — scan every station</option>
+01210:                         <option value="target">Ensure each relevant station has Units required</option>
+01211:                         <option value="single">Selected station only</option>
+01212:                     </select>
+01213: 
+01214:                     <label style="margin-top:6px; display:block;"><b>Action:</b></label>
+01215:                     <select id="mc-personnel-action">
+01216:                         <option value="preview">Preview only - do not change assignments</option>
+01217:                         <option value="assign">Assign and verify</option>
+01218:                     </select>
+01219: 
+01220:                     <label style="margin-top:6px; display:block;"><b>Units required:</b></label>
+01221:                     <input id="mc-personnel-units-required" type="number" min="0" step="1" value="0" inputmode="numeric">
+01222:                     <div id="mc-personnel-units-required-note" class="mc-personnel-input-note">Disabled in All Stations mode. Select the target-units mode to enter a stopping target.</div>
+01223: 
+01224:                     <label style="margin-top:6px; display:block;"><b>Start From:</b></label>
+01225:                     <select id="mc-personnel-startfrom">
+01226:                         <option value="">Refresh stations first</option>
+01227:                     </select>
+
+--- lines 1246-1255 ---
+01246:                     <div><b>Vehicle:</b> <span id="mc-personnel-vehicle">None</span></div>
+01247:                     <div><b>Station progress:</b> <span id="mc-personnel-progress">0 / 0</span></div>
+01248:                     <div><b>Stations completed:</b> <span id="mc-personnel-completed">0</span></div>
+01249:                     <div><b>Vehicles checked:</b> <span id="mc-personnel-vehicles">0</span></div>
+01250:                     <div><b id="mc-personnel-units-fulfilled-label">Units fulfilled:</b> <span id="mc-personnel-units-fulfilled">0 / All</span></div>
+01251:                     <div><b>Planned / assigned:</b> <span id="mc-personnel-assigned">0</span></div>
+01252:                     <div><b>Need training:</b> <span id="mc-personnel-training-shortfall">0</span></div>
+01253:                     <div><b>Unfilled positions:</b> <span id="mc-personnel-assignment-shortfall">0</span></div>
+01254:                 </div>
+01255: 
+
+--- lines 1438-1446 ---
+01438:             #mc-personnel-startfrom,
+01439:             #mc-personnel-mode,
+01440:             #mc-personnel-action,
+01441:             #mc-personnel-units-required {
+01442:                 width: 100%;
+01443:                 margin-top: 4px;
+01444:                 padding: 5px;
+01445:                 color: #111;
+01446:                 border-radius: 4px;
+
+--- lines 1782-1790 ---
+01782: 
+01783:         document.querySelector('#mc-personnel-service').onchange = handlePersonnelServiceChange;
+01784:         document.querySelector('#mc-personnel-profile').onchange = handlePersonnelProfileChange;
+01785:         document.querySelector('#mc-personnel-units-required').onchange = handlePersonnelUnitsRequiredChange;
+01786:         document.querySelector('#mc-personnel-refresh').onclick = refreshPersonnelStations;
+01787:         document.querySelector('#mc-personnel-build-register').onclick = buildPersonnelTrainingRegisterOneClick;
+01788:         document.querySelector('#mc-personnel-start').onclick = startPersonnelRun;
+01789:         document.querySelector('#mc-personnel-pause').onclick = togglePersonnelPause;
+01790:         document.querySelector('#mc-personnel-stop').onclick = stopPersonnelRun;
+
+--- lines 1841-1862 ---
+01841:     function isPersonnelPerStationTargetMode() {
+01842:         return (
+01843:             PERSONNEL_STATE.mode === 'target'
+01844:             && PERSONNEL_STATE.unitsRequired > 0
+01845:         );
+01846:     }
+01847: 
+01848:     function getPersonnelUnitsRemaining() {
+01849:         return isPersonnelPerStationTargetMode()
+01850:             ? PERSONNEL_STATE.unitsRequired
+01851:             : Number.POSITIVE_INFINITY;
+01852:     }
+01853: 
+01854: 
+01855:     function formatPersonnelUnitsFulfilled() {
+01856:         if (isPersonnelPerStationTargetMode()) {
+01857:             const target = PERSONNEL_STATE.unitsRequired;
+01858:             const latestFulfilled = PERSONNEL_STATE.lastStationReport
+01859:                 && !PERSONNEL_STATE.lastStationReport.error
+01860:                     ? Math.min(
+01861:                         target,
+01862:                         Number(
+
+--- lines 1869-1883 ---
+01869:             return `${PERSONNEL_STATE.stationsTargetMet} / ${PERSONNEL_STATE.completedStations} stations met | latest ${latestFulfilled}/${target}`;
+01870:         }
+01871: 
+01872:         return `${PERSONNEL_STATE.unitsFulfilled} / All`;
+01873:     }
+01874: 
+01875:     function handlePersonnelUnitsRequiredChange() {
+01876:         const input =
+01877:             document.querySelector(
+01878:                 '#mc-personnel-units-required'
+01879:             );
+01880: 
+01881:         if (!input) return;
+01882: 
+01883:         if (PERSONNEL_STATE.running) {
+
+--- lines 1889-1897 ---
+01889:                 );
+01890: 
+01891:             personnelLog(
+01892:                 'Stop Personnel Assignment before changing Units required.',
+01893:                 'error'
+01894:             );
+01895: 
+01896:             return;
+01897:         }
+
+--- lines 1905-1919 ---
+01905:             .configuredUnitsRequired =
+01906:                 configuredTarget;
+01907: 
+01908:         PERSONNEL_STATE.unitsRequired =
+01909:             0;
+01910: 
+01911:         PERSONNEL_STATE.unitsFulfilled =
+01912:             0;
+01913: 
+01914:         PERSONNEL_STATE.unitTargetReached =
+01915:             false;
+01916: 
+01917:         input.value =
+01918:             String(configuredTarget);
+01919: 
+
+--- lines 1925-1933 ---
+01925:         } catch (_error) {}
+01926: 
+01927:         setPersonnelUiValue(
+01928:             'unitsFulfilled',
+01929:             configuredTarget > 0
+01930:                 ? `0 / ${configuredTarget}`
+01931:                 : '0 / target not set'
+01932:         );
+01933: 
+
+--- lines 1947-1960 ---
+01947: 
+01948:         const input =
+01949:             document.querySelector(
+01950:                 '#mc-personnel-units-required'
+01951:             );
+01952: 
+01953:         const note =
+01954:             document.querySelector(
+01955:                 '#mc-personnel-units-required-note'
+01956:             );
+01957: 
+01958:         const live =
+01959:             isLivePersonnelProfile();
+01960: 
+
+--- lines 1971-1986 ---
+01971: 
+01972:         const fulfilledLabel =
+01973:             document.querySelector(
+01974:                 '#mc-personnel-units-fulfilled-label'
+01975:             );
+01976: 
+01977:         if (fulfilledLabel) {
+01978:             fulfilledLabel.textContent =
+01979:                 targetMode
+01980:                     ? 'Station targets met:'
+01981:                     : 'Units fulfilled:';
+01982:         }
+01983: 
+01984:         if (input) {
+01985:             input.disabled =
+01986:                 !live ||
+
+--- lines 1999-2017 ---
+01999:         if (note) {
+02000:             note.textContent =
+02001:                 targetMode
+02002:                     ? 'Enter the number of fully staffed units required at every station. Existing covered units count first; only the missing units are topped up.'
+02003:                     : mode === 'single'
+02004:                         ? 'Selected Station mode scans every matching unit at that one station. Units required is not used.'
+02005:                         : 'All Stations mode always scans every relevant station from the selected start point. Units required is not used.';
+02006:         }
+02007: 
+02008:         if (
+02009:             !PERSONNEL_STATE.running
+02010:         ) {
+02011:             setPersonnelUiValue(
+02012:                 'unitsFulfilled',
+02013:                 targetMode &&
+02014:                 PERSONNEL_STATE
+02015:                     .configuredUnitsRequired >
+02016:                     0
+02017:                     ? `0 / ${PERSONNEL_STATE.configuredUnitsRequired}`
+
+--- lines 2047-2069 ---
+02047:             )?.value ||
+02048:             'all';
+02049: 
+02050:         PERSONNEL_STATE.unitsRequired =
+02051:             0;
+02052: 
+02053:         PERSONNEL_STATE.unitsFulfilled =
+02054:             0;
+02055: 
+02056:         PERSONNEL_STATE.unitTargetReached =
+02057:             false;
+02058: 
+02059:         updatePersonnelModeUi();
+02060: 
+02061:         const modeMessage =
+02062:             PERSONNEL_STATE.mode ===
+02063:                 'target'
+02064:                 ? 'Mode set to enforce the Units required target independently at every station.'
+02065:                 : PERSONNEL_STATE.mode ===
+02066:                     'single'
+02067:                     ? 'Mode set to Selected station only.'
+02068:                     : 'Mode set to All relevant stations. Every station in scope will be scanned.';
+02069: 
+
+--- lines 2100-2111 ---
+02100:             .configuredUnitsRequired =
+02101:                 savedUnitsRequired;
+02102: 
+02103:         PERSONNEL_STATE.unitsRequired =
+02104:             0;
+02105: 
+02106:         PERSONNEL_STATE.unitsFulfilled =
+02107:             0;
+02108: 
+02109:         PERSONNEL_STATE.mode =
+02110:             document.querySelector(
+02111:                 '#mc-personnel-mode'
+
+--- lines 2131-2139 ---
+02131:         if (!select) return;
+02132: 
+02133:         const service = getPersonnelServiceDefinition();
+02134:         select.innerHTML = '';
+02135: 
+02136:         service.profiles.forEach(profile => {
+02137:             const option = document.createElement('option');
+02138:             option.value = profile.id;
+02139:             option.textContent = `${profile.label}${profile.live ? ' — LIVE' : ' — UI preview'}`;
+
+--- lines 2188-2203 ---
+02188:         const refresh = document.querySelector('#mc-personnel-refresh');
+02189:         const mode = document.querySelector('#mc-personnel-mode');
+02190:         const action = document.querySelector('#mc-personnel-action');
+02191:         const unitsRequired = document.querySelector('#mc-personnel-units-required');
+02192:         const startFrom = document.querySelector('#mc-personnel-startfrom');
+02193: 
+02194:         if (training) training.textContent = profile.label;
+02195:         if (vehicle) vehicle.textContent = profile.vehicle;
+02196:         if (requirement) requirement.textContent = profile.requirement;
+02197:         if (policy) {
+02198:             policy.innerHTML = `<strong>${service.icon} ${service.label} policy:</strong> ${profile.policy}`;
+02199:         }
+02200: 
+02201:         if (banner) {
+02202:             banner.classList.toggle('is-live', live);
+02203:             banner.classList.toggle('is-preview', !live);
+
+--- lines 2216-2225 ---
+02216:             if (control) control.disabled = !live;
+02217:         });
+02218: 
+02219:         if (unitsRequired) {
+02220:             unitsRequired.disabled =
+02221:                 !live ||
+02222:                 (
+02223:                     document.querySelector(
+02224:                         '#mc-personnel-mode'
+02225:                     )?.value ||
+
+--- lines 2245-2255 ---
+02245:             PERSONNEL_STATE.filteredStations = [];
+02246:             PERSONNEL_STATE.queue = [];
+02247:             PERSONNEL_STATE.selectedHref = '';
+02248:             PERSONNEL_STATE.unitsFulfilled = 0;
+02249:             PERSONNEL_STATE.unitTargetReached = false;
+02250:             setPersonnelUiValue('unitsFulfilled', PERSONNEL_STATE.unitsRequired > 0 ? `0 / ${PERSONNEL_STATE.unitsRequired}` : '0 / All');
+02251:             populatePersonnelStartDropdown();
+02252:             setPersonnelUiValue('status', live ? 'Refresh required' : 'Profile UI preview');
+02253:             setPersonnelUiValue('vehicle', live ? 'None' : 'Not enabled');
+02254: 
+02255:             try {
+
+--- lines 2341-2357 ---
+02341: 
+02342:     function switchToolTab(tabName, force = false) {
+02343:         const targetTab = ['unit', 'station', 'personnel'].includes(tabName) ? tabName : 'unit';
+02344:         const unitView = document.querySelector('#mc-unit-view');
+02345:         const stationView = document.querySelector('#mc-station-view');
+02346:         const personnelView = document.querySelector('#mc-personnel-view');
+02347:         const unitTab = document.querySelector('#mc-tab-unit');
+02348:         const stationTab = document.querySelector('#mc-tab-station');
+02349:         const personnelTab = document.querySelector('#mc-tab-personnel');
+02350:         const headerTitle = document.querySelector('#mc-namer-header-title');
+02351: 
+02352:         if (!unitView || !stationView || !personnelView || !unitTab || !stationTab || !personnelTab || !headerTitle) return;
+02353: 
+02354:         if (!force && STATE.running && targetTab !== 'unit') {
+02355:             log('Stop the Unit Naming Tool before switching tabs.', 'error');
+02356:             return;
+02357:         }
+
+--- lines 2370-2390 ---
+02370:         const showStation = targetTab === 'station';
+02371:         const showPersonnel = targetTab === 'personnel';
+02372: 
+02373:         unitView.style.display = showUnit ? 'block' : 'none';
+02374:         stationView.style.display = showStation ? 'block' : 'none';
+02375:         personnelView.style.display = showPersonnel ? 'block' : 'none';
+02376: 
+02377:         unitTab.classList.toggle('active', showUnit);
+02378:         stationTab.classList.toggle('active', showStation);
+02379:         personnelTab.classList.toggle('active', showPersonnel);
+02380:         unitTab.setAttribute('aria-selected', showUnit ? 'true' : 'false');
+02381:         stationTab.setAttribute('aria-selected', showStation ? 'true' : 'false');
+02382:         personnelTab.setAttribute('aria-selected', showPersonnel ? 'true' : 'false');
+02383: 
+02384:         headerTitle.textContent = showUnit
+02385:             ? `🚒 Unit Naming Tool v${UNIT_VERSION}`
+02386:             : showStation
+02387:                 ? `🏢 Station Naming Tool v${STATION_VERSION}`
+02388:                 : `👥 Personnel Assignment v${PERSONNEL_VERSION}`;
+02389: 
+02390:         try {
+
+--- lines 2413-2421 ---
+02413:         setStationUiValue('status', 'Refreshing stations...');
+02414:         stationLog('Refreshing station list and reading MissionChief building type IDs...', 'info');
+02415: 
+02416:         const stationLinks = [...document.querySelectorAll('a.lightbox-open.list-group-item.active[href^="/buildings/"]')];
+02417: 
+02418:         STATION_STATE.stations = stationLinks
+02419:             .map((link, index) => {
+02420:                 const displayName = cleanText(link.textContent);
+02421:                 const href = link.getAttribute('href') || '';
+
+--- lines 2473-2484 ---
+02473:             return selectedType === 'ALL' || station.stationType === selectedType;
+02474:         });
+02475: 
+02476:         select.innerHTML = '';
+02477: 
+02478:         if (!STATION_STATE.filteredStations.length) {
+02479:             select.innerHTML = '<option value="">No matching stations found</option>';
+02480:             STATION_STATE.selectedHref = '';
+02481:             setStationUiValue('current', 'None');
+02482:             setStationUiValue('progress', '0 / 0');
+02483:             return;
+02484:         }
+
+--- lines 2559-2570 ---
+02559:         STATION_STATE.paused = false;
+02560:         STATION_STATE.stopped = false;
+02561:         STATION_STATE.stationIndex = 0;
+02562:         STATION_STATE.renamedCount = 0;
+02563:         STATION_STATE.skippedCount = 0;
+02564:         STATION_STATE.previewedCount = 0;
+02565:         STATION_STATE.activeIframe = null;
+02566: 
+02567:         document.querySelector('#mc-station-pause').textContent = 'Pause';
+02568:         updateStationCounters();
+02569:         setStationUiValue('progress', `0 / ${STATION_STATE.queue.length}`);
+02570:         setStationUiValue('status', STATION_STATE.action === 'save' ? 'Starting rename run' : 'Starting preview');
+
+--- lines 2639-2648 ---
+02639: 
+02640:                 const result = await processOneStationName(station);
+02641: 
+02642:                 if (result === 'renamed') {
+02643:                     STATION_STATE.renamedCount++;
+02644:                 } else if (result === 'previewed') {
+02645:                     STATION_STATE.previewedCount++;
+02646:                 } else {
+02647:                     STATION_STATE.skippedCount++;
+02648:                 }
+
+--- lines 2654-2673 ---
+02654:             }
+02655:         } finally {
+02656:             await closeStationNamingModal();
+02657:             STATION_STATE.activeIframe = null;
+02658:             STATION_STATE.running = false;
+02659:             STATION_STATE.paused = false;
+02660:             document.querySelector('#mc-station-pause').textContent = 'Pause';
+02661: 
+02662:             if (STATION_STATE.stopped) {
+02663:                 setStationUiValue('status', 'Stopped');
+02664:                 stationLog(`Stopped. Renamed ${STATION_STATE.renamedCount}, previewed ${STATION_STATE.previewedCount}, skipped ${STATION_STATE.skippedCount}.`, 'error');
+02665:             } else {
+02666:                 setStationUiValue('status', 'Finished');
+02667:                 setStationUiValue('progress', `${STATION_STATE.queue.length} / ${STATION_STATE.queue.length}`);
+02668:                 stationLog(`Finished. Renamed ${STATION_STATE.renamedCount}, previewed ${STATION_STATE.previewedCount}, skipped ${STATION_STATE.skippedCount}.`, 'done');
+02669:             }
+02670:         }
+02671:     }
+02672: 
+02673:     async function processOneStationName(station) {
+
+--- lines 2676-2700 ---
+02676:             return 'skipped';
+02677:         }
+02678: 
+02679:         const stationLink = document.querySelector(`a.lightbox-open.list-group-item.active[href="${station.href}"]`);
+02680:         if (!stationLink) {
+02681:             stationLog(`Skipped: station link no longer exists for ${station.href}.`, 'error');
+02682:             return 'skipped';
+02683:         }
+02684: 
+02685:         let iframe = null;
+02686: 
+02687:         try {
+02688:             stationLink.click();
+02689:             iframe = await waitForStationNamingIframe(station.href);
+02690:             STATION_STATE.activeIframe = iframe;
+02691: 
+02692:             if (!iframe) throw new Error('Station lightbox iframe did not open.');
+02693: 
+02694:             let doc = await waitForStationNamingDocument(
+02695:                 iframe,
+02696:                 currentDoc => currentDoc.querySelector(`a[href="${station.href}/edit"]`),
+02697:                 'normal station page'
+02698:             );
+02699: 
+02700:             if (!doc) throw new Error('Normal station page did not finish loading.');
+
+--- lines 2704-2712 ---
+02704:             setStationUiValue('status', 'Reading station address');
+02705: 
+02706:             // Do not depend on clicking Move building. MissionChief can block that page
+02707:             // while vehicles are away. First try a read-only background request; when
+02708:             // that is unavailable, use the station coordinates and MissionChief's own
+02709:             // /reverse_address endpoint. The Move form is never submitted.
+02710:             const addressResult = await resolveStationAddress(station, doc);
+02711:             const address = String(addressResult.address || '').trim();
+02712: 
+
+--- lines 2743-2751 ---
+02743:             if (STATION_STATE.stopped) return 'skipped';
+02744:             await waitIfStationNamingPaused();
+02745: 
+02746:             // The iframe is still on the normal station page because address reading
+02747:             // now happens in the background. Open Edit directly from this page.
+02748:             if (STATION_STATE.stopped) return 'skipped';
+02749: 
+02750:             setStationUiValue('status', 'Opening Edit');
+02751:             const editLink = doc.querySelector(`a[href="${station.href}/edit"]`);
+
+--- lines 2755-2763 ---
+02755:             editLink.click();
+02756: 
+02757:             doc = await waitForStationNamingDocument(
+02758:                 iframe,
+02759:                 currentDoc => currentDoc.querySelector('#building_name')
+02760:                     && currentDoc.querySelector(`form[action="${station.href}"] input[name="_method"][value="patch"]`),
+02761:                 'Edit station page'
+02762:             );
+02763: 
+
+--- lines 2793-2814 ---
+02793:             saveButton.click();
+02794: 
+02795:             const saved = await verifyStationNameSaved(station.href, proposedName);
+02796:             if (!saved) throw new Error('Save could not be verified. The script did not count this station as renamed.');
+02797: 
+02798:             station.displayName = proposedName;
+02799:             updateStationListName(station.href, proposedName);
+02800:             setStationUiValue('status', 'Saved');
+02801:             stationLog(`Saved and verified: ${proposedName}`, 'done');
+02802:             return 'renamed';
+02803:         } catch (error) {
+02804:             stationLog(`Skipped ${station.displayName}: ${error?.message || error}`, 'error');
+02805:             stationDebug(error?.stack || String(error));
+02806:             return 'skipped';
+02807:         } finally {
+02808:             await closeStationNamingModal();
+02809:             STATION_STATE.activeIframe = null;
+02810:         }
+02811:     }
+02812: 
+02813:     async function resolveStationAddress(station, stationDoc) {
+02814:         const movePageResult = await fetchStationMoveAddress(station);
+
+--- lines 2862-2870 ---
+02862:             }
+02863: 
+02864:             const html = await response.text();
+02865:             const doc = new DOMParser().parseFromString(html, 'text/html');
+02866:             const address = String(doc.querySelector('#building_address')?.value || '').trim();
+02867: 
+02868:             if (address) {
+02869:                 return {
+02870:                     address,
+
+--- lines 3023-3031 ---
+03023: 
+03024:                 const payload = await response.json();
+03025:                 const records = extractBuildingRecords(payload);
+03026:                 const wantedIds = new Set(
+03027:                     STATION_STATE.stations
+03028:                         .map(station => String(station?.buildingId || ''))
+03029:                         .filter(Boolean)
+03030:                 );
+03031:                 const restrictToVisibleStations = wantedIds.size > 0;
+
+--- lines 3130-3143 ---
+03130:     }
+03131: 
+03132:     async function stationFetchWithTimeout(url, options = {}, timeoutMs = 10000) {
+03133:         const controller = new AbortController();
+03134:         STATION_STATE.activeControllers.add(controller);
+03135:         const timer = setTimeout(() => controller.abort(), timeoutMs);
+03136: 
+03137:         try {
+03138:             return await fetch(url, {
+03139:                 ...options,
+03140:                 signal: controller.signal
+03141:             });
+03142:         } finally {
+03143:             clearTimeout(timer);
+
+--- lines 3165-3173 ---
+03165:             .map(part => part.trim())
+03166:             .filter(Boolean);
+03167: 
+03168:         const countryOnly = /^(UNITED KINGDOM|UK|SCOTLAND|ENGLAND|WALES|NORTHERN IRELAND)$/i;
+03169:         while (parts.length > 1 && countryOnly.test(parts[parts.length - 1])) parts.pop();
+03170: 
+03171:         return {
+03172:             postcode,
+03173:             afterPostcode,
+
+--- lines 3202-3243 ---
+03202:         return match ? match[1] : '';
+03203:     }
+03204: 
+03205:     async function waitForStationNamingIframe(stationHref) {
+03206:         for (let i = 0; i < 80; i++) {
+03207:             if (STATION_STATE.stopped) return null;
+03208: 
+03209:             const candidates = [
+03210:                 ...document.querySelectorAll('iframe.lightbox_iframe[src^="/buildings/"], iframe#lssmv4-redesign-lightbox-iframe')
+03211:             ];
+03212: 
+03213:             for (const iframe of candidates.reverse()) {
+03214:                 try {
+03215:                     const doc = iframe.contentDocument;
+03216:                     const currentPath = iframe.contentWindow?.location?.pathname || iframe.getAttribute('src') || '';
+03217:                     if (doc && (currentPath.startsWith(stationHref) || doc.querySelector(`a[href="${stationHref}/move"], form[action="${stationHref}"], form[action="${stationHref}/move_do"]`))) {
+03218:                         return iframe;
+03219:                     }
+03220:                 } catch (error) {
+03221:                     stationDebug(`Iframe access retry: ${error?.message || error}`);
+03222:                 }
+03223:             }
+03224: 
+03225:             await sleep(250);
+03226:         }
+03227: 
+03228:         return null;
+03229:     }
+03230: 
+03231:     async function waitForStationNamingDocument(iframe, predicate, label) {
+03232:         for (let i = 0; i < 100; i++) {
+03233:             if (STATION_STATE.stopped) return null;
+03234: 
+03235:             try {
+03236:                 const doc = iframe?.contentDocument;
+03237:                 if (doc && doc.readyState !== 'loading' && predicate(doc)) {
+03238:                     stationDebug(`${label} ready at ${iframe.contentWindow?.location?.pathname || iframe.getAttribute('src') || 'unknown path'}`);
+03239:                     return doc;
+03240:                 }
+03241:             } catch (error) {
+03242:                 stationDebug(`${label} wait retry: ${error?.message || error}`);
+03243:             }
+
+--- lines 3266-3274 ---
+03266:                 }
+03267: 
+03268:                 const html = await response.text();
+03269:                 const doc = new DOMParser().parseFromString(html, 'text/html');
+03270:                 const savedName = String(doc.querySelector('#building_name')?.value || '').trim();
+03271:                 stationDebug(`Save verification attempt ${attempt}: "${savedName}"`);
+03272: 
+03273:                 if (savedName === expectedName) return true;
+03274:             } catch (error) {
+
+--- lines 3280-3288 ---
+03280:     }
+03281: 
+03282:     function updateStationListName(href, newName) {
+03283:         const link = document.querySelector(`a.lightbox-open.list-group-item.active[href="${href}"]`);
+03284:         if (!link) return;
+03285: 
+03286:         const textNode = [...link.childNodes].find(node => node.nodeType === Node.TEXT_NODE);
+03287:         if (textNode) {
+03288:             textNode.textContent = ` ${newName}`;
+
+--- lines 3295-3303 ---
+03295:     }
+03296: 
+03297:     async function closeStationNamingModal() {
+03298:         const closeButtons = [...document.querySelectorAll('span.lightbox-close')];
+03299:         const closeButton = closeButtons.reverse().find(button => button.offsetParent !== null) || closeButtons[0];
+03300: 
+03301:         if (closeButton) {
+03302:             closeButton.click();
+03303:             await sleep(450);
+
+--- lines 3311-3319 ---
+03311:     }
+03312: 
+03313:     function updateStationCounters() {
+03314:         setStationUiValue('renamed', STATION_STATE.renamedCount);
+03315:         setStationUiValue('skipped', STATION_STATE.skippedCount);
+03316:     }
+03317: 
+03318:     function toggleStationDebug() {
+03319:         STATION_STATE.debug = !STATION_STATE.debug;
+
+--- lines 3334-3342 ---
+03334:             before: 'mc-station-before',
+03335:             after: 'mc-station-after',
+03336:             progress: 'mc-station-progress',
+03337:             renamed: 'mc-station-renamed',
+03338:             skipped: 'mc-station-skipped'
+03339:         };
+03340: 
+03341:         const el = getToolElementById(map[field]);
+03342:         if (el) el.textContent = String(value);
+
+--- lines 3394-3407 ---
+03394:             return;
+03395:         }
+03396: 
+03397:         const allowedStationTypes = new Set(getPersonnelProfileStationTypes());
+03398:         const scopeLabel = getPersonnelStationScopeLabel();
+03399:         setPersonnelUiValue('status', `Refreshing ${scopeLabel}...`);
+03400:         personnelLog(`Refreshing ${scopeLabel}...`, 'info');
+03401: 
+03402:         const stationLinks = [...document.querySelectorAll('a.lightbox-open.list-group-item.active[href^="/buildings/"]')];
+03403: 
+03404:         PERSONNEL_STATION_LINK_BY_HREF.clear();
+03405:         stationLinks.forEach(link => {
+03406:             const href = link.getAttribute('href') || '';
+03407:             if (href) PERSONNEL_STATION_LINK_BY_HREF.set(href, link);
+
+--- lines 3510-3518 ---
+03510:         const stations =
+03511:             Array.from(
+03512:                 document.querySelectorAll(
+03513:                     'a.lightbox-open.list-group-item.active[href^="/buildings/"]'
+03514:                 )
+03515:             )
+03516:                 .map((link, index) => {
+03517:                     const displayName = cleanText(link.textContent);
+03518:                     const href = link.getAttribute('href') || '';
+
+--- lines 3587-3623 ---
+03587:                 const station = stations[stationIndex];
+03588:                 setPersonnelUiValue('progress', `${stationIndex + 1} / ${stations.length}`);
+03589:                 setPersonnelUiValue('current', station.displayName);
+03590:                 setPersonnelUiValue('vehicle', 'Reading station vehicles');
+03591:                 setPersonnelUiValue('status', 'Scanning station vehicle table');
+03592:                 personnelLog(
+03593:                     `Register station ${stationIndex + 1}/${stations.length}: ${station.displayName}`,
+03594:                     'station'
+03595:                 );
+03596: 
+03597:                 try {
+03598:                     const stationPage = await personnelFetchDocument(station.href, 14000);
+03599:                     const vehicles = getPersonnelVehicleQueue(stationPage.doc, []);
+03600: 
+03601:                     if (!vehicles.length) {
+03602:                         skippedStations++;
+03603:                         personnelLog('No vehicles found at this station.', 'debug');
+03604:                         continue;
+03605:                     }
+03606: 
+03607:                     const mergedPersonnel = new Map();
+03608:                     const verifiedVehicles = [];
+03609: 
+03610:                     for (let vehicleIndex = 0; vehicleIndex < vehicles.length; vehicleIndex++) {
+03611:                         if (PERSONNEL_STATE.stopped) break;
+03612:                         await waitIfPersonnelPaused();
+03613:                         if (PERSONNEL_STATE.stopped) break;
+03614: 
+03615:                         const vehicle = vehicles[vehicleIndex];
+03616:                         setPersonnelUiValue(
+03617:                             'vehicle',
+03618:                             `${vehicle.name || vehicle.vehicleId} (${vehicleIndex + 1}/${vehicles.length})`
+03619:                         );
+03620:                         setPersonnelUiValue('status', 'Reading exact vehicle assignments');
+03621: 
+03622:                         try {
+03623:                             const assignmentPage = await personnelFetchDocument(
+
+--- lines 3631-3639 ---
+03631: 
+03632:                             const assignment = parseVehicleAssignmentPage(
+03633:                                 assignmentPage.doc,
+03634:                                 vehicle.vehicleId
+03635:                             );
+03636: 
+03637:                             assignment.rows.forEach(person => {
+03638:                                 const personnelId = String(person?.personnelId || '');
+03639:                                 if (!personnelId) return;
+
+--- lines 3656-3664 ---
+03656:                         } catch (error) {
+03657:                             failedVehicles++;
+03658:                             personnelLog(
+03659:                                 `Exact vehicle scan failed for ${vehicle.name || vehicle.vehicleId}: ${error?.message || error}`,
+03660:                                 'error'
+03661:                             );
+03662:                         }
+03663:                     }
+03664: 
+
+--- lines 3673-3681 ---
+03673: 
+03674:                     const published = publishPersonnelVehicleTrainingRegistry({
+03675:                         station,
+03676:                         vehicles: verifiedVehicles,
+03677:                         personnel: Array.from(mergedPersonnel.values()),
+03678:                         source: 'one-click-all-station-exact-register-scan',
+03679:                         pruneMissingVehicles: false
+03680:                     });
+03681: 
+
+--- lines 3702-3713 ---
+03702:                 `Status: ${stopped ? 'STOPPED' : 'COMPLETE'}`,
+03703:                 `All station types considered: ${stations.length}`,
+03704:                 `Stations scanned: ${completedStations}`,
+03705:                 `Stations without vehicles: ${skippedStations}`,
+03706:                 `Stations failed: ${failedStations}`,
+03707:                 `Exact vehicle pages read: ${exactVehiclePagesRead}`,
+03708:                 `Exact vehicles registered: ${scannedVehicles}`,
+03709:                 `Vehicle pages failed: ${failedVehicles}`,
+03710:                 `Registry retained: ${Number(saveResult?.retained || 0)}`,
+03711:                 '',
+03712:                 'Only personnel already assigned to each exact vehicle were recorded.',
+03713:                 'No personnel assignments were changed.'
+
+--- lines 3716-3724 ---
+03716:             PERSONNEL_STATE.currentReport = summary;
+03717:             renderPersonnelReport(summary);
+03718:             setPersonnelUiValue('completed', completedStations);
+03719:             setPersonnelUiValue('vehicles', scannedVehicles);
+03720:             setPersonnelUiValue('assigned', 0);
+03721:             setPersonnelUiValue(
+03722:                 'status',
+03723:                 stopped ? 'Register build stopped' : 'All-station personnel register ready'
+03724:             );
+
+--- lines 3793-3812 ---
+03793:             )?.value ||
+03794:             'preview';
+03795: 
+03796:         const unitsInput =
+03797:             document.querySelector(
+03798:                 '#mc-personnel-units-required'
+03799:             );
+03800: 
+03801:         if (
+03802:             PERSONNEL_STATE.mode ===
+03803:             'target'
+03804:         ) {
+03805:             const configuredTarget =
+03806:                 normalisePersonnelUnitsRequired(
+03807:                     unitsInput?.value ||
+03808:                     PERSONNEL_STATE
+03809:                         .configuredUnitsRequired ||
+03810:                     0
+03811:                 );
+03812: 
+
+--- lines 3815-3844 ---
+03815:                 0
+03816:             ) {
+03817:                 personnelLog(
+03818:                     'Target-units mode requires a Units required value greater than 0.',
+03819:                     'error'
+03820:                 );
+03821: 
+03822:                 setPersonnelUiValue(
+03823:                     'status',
+03824:                     'Enter a units target'
+03825:                 );
+03826: 
+03827:                 unitsInput?.focus();
+03828:                 return;
+03829:             }
+03830: 
+03831:             PERSONNEL_STATE
+03832:                 .configuredUnitsRequired =
+03833:                     configuredTarget;
+03834: 
+03835:             PERSONNEL_STATE.unitsRequired =
+03836:                 configuredTarget;
+03837: 
+03838:             if (unitsInput) {
+03839:                 unitsInput.value =
+03840:                     String(configuredTarget);
+03841:             }
+03842: 
+03843:             try {
+03844:                 localStorage.setItem(
+
+--- lines 3849-3861 ---
+03849:         } else {
+03850:             // All Stations and Selected Station modes always process their
+03851:             // complete station scope. A saved target cannot stop them.
+03852:             PERSONNEL_STATE.unitsRequired =
+03853:                 0;
+03854: 
+03855:             if (unitsInput) {
+03856:                 unitsInput.value =
+03857:                     '0';
+03858:             }
+03859:         }
+03860: 
+03861:         PERSONNEL_STATE.queue = PERSONNEL_STATE.mode === 'single'
+
+--- lines 3864-3873 ---
+03864:         PERSONNEL_STATE.running = true;
+03865:         PERSONNEL_STATE.paused = false;
+03866:         PERSONNEL_STATE.stopped = false;
+03867:         PERSONNEL_STATE.unitsFulfilled = 0;
+03868:         PERSONNEL_STATE.unitTargetReached = false;
+03869:         PERSONNEL_STATE.stationsTargetMet = 0;
+03870:         PERSONNEL_STATE.stationsTargetShort = 0;
+03871:         PERSONNEL_STATE.stationIndex = 0;
+03872:         PERSONNEL_STATE.completedStations = 0;
+03873:         PERSONNEL_STATE.skippedStations = 0;
+
+--- lines 3901-3922 ---
+03901:                     ? 'Selected station only — scan the entire selected station'
+03902:                     : PERSONNEL_STATE.mode ===
+03903:                         'target'
+03904:                         ? `Ensure each ${getPersonnelStationScopeLabel().replace(/s$/, '')} has ${PERSONNEL_STATE.unitsRequired} fully staffed unit(s)`
+03905:                         : `All ${getPersonnelStationScopeLabel()} from selected start point — scan every station`
+03906:             }`,
+03907:             'info'
+03908:         );
+03909:         personnelLog(`Action: ${PERSONNEL_STATE.action === 'assign' ? 'ASSIGN AND VERIFY' : 'PREVIEW ONLY - no assignments will change'}`, PERSONNEL_STATE.action === 'assign' ? 'after' : 'info');
+03910:         personnelLog(
+03911:             PERSONNEL_STATE.mode ===
+03912:                 'target'
+03913:                 ? `Units required at every station: ${PERSONNEL_STATE.unitsRequired}. Existing fully covered units count first; only the station's remaining target will be planned or assigned before moving to the next station.`
+03914:                 : PERSONNEL_STATE.mode ===
+03915:                     'single'
+03916:                     ? 'Units required: not used. Every matching unit at the selected station will be processed.'
+03917:                     : 'Units required: not used. Every relevant station and matching unit from the selected start point will be processed.',
+03918:             'info'
+03919:         );
+03920:         personnelLog(`Rule: ${getPersonnelProfileDefinition().requirement}.`, 'info');
+03921: 
+03922:         processPersonnelQueue().catch(error => {
+
+--- lines 4012-4020 ---
+04012: 
+04013:                     if (isPersonnelPerStationTargetMode()) {
+04014:                         const stationTarget =
+04015:                             PERSONNEL_STATE.unitsRequired;
+04016: 
+04017:                         const stationFulfilled =
+04018:                             Math.min(
+04019:                                 stationTarget,
+04020:                                 Number(
+
+--- lines 4041-4052 ---
+04041:                             PERSONNEL_STATE.stationsTargetShort++;
+04042:                         }
+04043: 
+04044:                         PERSONNEL_STATE.unitsFulfilled +=
+04045:                             stationFulfilled;
+04046:                     } else {
+04047:                         PERSONNEL_STATE.unitsFulfilled +=
+04048:                             Number(
+04049:                                 completedReport.fulfilledUnits
+04050:                                 || 0
+04051:                             );
+04052:                     }
+
+--- lines 4056-4064 ---
+04056:                     );
+04057:                     PERSONNEL_STATE.completedStations++;
+04058:                     PERSONNEL_STATE.checkedVehicles +=
+04059:                         completedReport.vehiclesChecked;
+04060:                     PERSONNEL_STATE.plannedCount +=
+04061:                         completedReport.planned;
+04062:                     PERSONNEL_STATE.assignedCount +=
+04063:                         completedReport.assigned;
+04064:                     PERSONNEL_STATE.trainingShortfall +=
+
+--- lines 4076-4084 ---
+04076:                             : '';
+04077: 
+04078:                     personnelLog(
+04079:                         `${station.displayName}: vehicles=${completedReport.vehicleCount ?? completedReport.ambulances ?? 0}, units fulfilled=${Number(completedReport.fulfilledUnits || 0)}, qualified=${completedReport.trained}, need training=${completedReport.trainingShortfall}, unfilled=${completedReport.assignmentShortfall}${targetText}.`,
+04080:                         (
+04081:                             completedReport.trainingShortfall
+04082:                             || completedReport.assignmentShortfall
+04083:                             || (
+04084:                                 isPersonnelPerStationTargetMode()
+
+--- lines 4105-4113 ---
+04105:                     completedReport = {
+04106:                         stationName: station.displayName,
+04107:                         error: error?.message || String(error),
+04108:                         vehicleCount: 0,
+04109:                         ambulances: 0,
+04110:                         required: 0,
+04111:                         trained: 0,
+04112:                         availableAtScan: 0,
+04113:                         availableAtEnd: 0,
+
+--- lines 4120-4141 ---
+04120:                         planned: 0,
+04121:                         assigned: 0,
+04122:                         fulfilledUnits: 0,
+04123:                         vehiclesChecked: 0,
+04124:                         afterActionVerified: false,
+04125:                         verificationError:
+04126:                             error?.message || String(error),
+04127:                         vehicles: []
+04128:                     };
+04129: 
+04130:                     if (isPersonnelPerStationTargetMode()) {
+04131:                         completedReport.stationTarget =
+04132:                             PERSONNEL_STATE.unitsRequired;
+04133:                         completedReport.stationTargetFulfilled = 0;
+04134:                         completedReport.stationTargetMet = false;
+04135:                         completedReport.stationTargetShortfallUnits =
+04136:                             PERSONNEL_STATE.unitsRequired;
+04137:                         PERSONNEL_STATE.stationsTargetShort++;
+04138:                     }
+04139: 
+04140:                     PERSONNEL_STATE.reports.push(
+04141:                         completedReport
+
+--- lines 4224-4240 ---
+04224: 
+04225:             if (targetMode) {
+04226:                 personnelLog(
+04227:                     `Finished. Target ${PERSONNEL_STATE.unitsRequired} per station: ${PERSONNEL_STATE.stationsTargetMet}/${PERSONNEL_STATE.completedStations} station(s) met; ${PERSONNEL_STATE.stationsTargetShort} short.`,
+04228:                     hasTargetShortfall
+04229:                         ? 'error'
+04230:                         : 'done'
+04231:                 );
+04232:             }
+04233: 
+04234:             personnelLog(
+04235:                 `Finished. Stations ${PERSONNEL_STATE.completedStations}, vehicles ${PERSONNEL_STATE.checkedVehicles}, units fulfilled ${PERSONNEL_STATE.unitsFulfilled}, ${PERSONNEL_STATE.action === 'assign' ? 'assigned' : 'planned'} ${PERSONNEL_STATE.action === 'assign' ? PERSONNEL_STATE.assignedCount : PERSONNEL_STATE.plannedCount}, need training ${PERSONNEL_STATE.trainingShortfall}, unfilled ${PERSONNEL_STATE.assignmentShortfall}.`,
+04236:                 (
+04237:                     hasTargetShortfall
+04238:                     || PERSONNEL_STATE.trainingShortfall
+04239:                     || PERSONNEL_STATE.assignmentShortfall
+04240:                 )
+
+--- lines 4258-4288 ---
+04258:         now = Date.now(),
+04259:         maximumVehicles = PERSONNEL_TRAINING_REGISTRY_MAX_VEHICLES
+04260:     ) {
+04261:         const sourceVehicles = registry?.vehicles && typeof registry.vehicles === 'object'
+04262:             ? registry.vehicles
+04263:             : {};
+04264:         const cutoff = now - PERSONNEL_TRAINING_REGISTRY_MAX_AGE_MS;
+04265:         const validEntries = Object.entries(sourceVehicles)
+04266:             .filter(([vehicleId, entry]) => {
+04267:                 const updatedAt = Number(entry?.updatedAt || 0);
+04268:                 return Boolean(
+04269:                     vehicleId
+04270:                     && entry
+04271:                     && typeof entry === 'object'
+04272:                     && Number.isFinite(updatedAt)
+04273:                     && updatedAt >= cutoff
+04274:                 );
+04275:             })
+04276:             .sort((left, right) => Number(right[1]?.updatedAt || 0) - Number(left[1]?.updatedAt || 0));
+04277: 
+04278:         const retainedEntries = validEntries.slice(0, Math.max(0, Number(maximumVehicles) || 0));
+04279:         const vehicles = Object.fromEntries(retainedEntries);
+04280:         const originalCount = Object.keys(sourceVehicles).length;
+04281:         const retainedCount = retainedEntries.length;
+04282: 
+04283:         registry.vehicles = vehicles;
+04284: 
+04285:         return {
+04286:             originalCount,
+04287:             retainedCount,
+04288:             removedCount: Math.max(0, originalCount - retainedCount)
+
+--- lines 4291-4300 ---
+04291: 
+04292:     function savePersonnelTrainingRegistry(registry) {
+04293:         const now = Date.now();
+04294:         const sourceVehicles = registry?.vehicles && typeof registry.vehicles === 'object'
+04295:             ? registry.vehicles
+04296:             : {};
+04297:         const sourceCount = Object.keys(sourceVehicles).length;
+04298:         const lastPrunedAt = Number(registry?.lastPrunedAt || 0);
+04299:         const shouldPrune = sourceCount > PERSONNEL_TRAINING_REGISTRY_MAX_VEHICLES
+04300:             || !Number.isFinite(lastPrunedAt)
+
+--- lines 4360-4368 ---
+04360:             sourceVersion: PERSONNEL_VERSION,
+04361:             updatedAt: 0,
+04362:             lastPrunedAt: 0,
+04363:             vehicles: {}
+04364:         };
+04365:     }
+04366: 
+04367:     function readPersonnelTrainingRegistry() {
+04368:         if (PERSONNEL_TRAINING_REGISTRY_CACHE) {
+
+--- lines 4376-4392 ---
+04376:                 localStorage.getItem(PERSONNEL_TRAINING_REGISTRY_STORAGE_KEY) || 'null'
+04377:             );
+04378: 
+04379:             if (!parsed || typeof parsed !== 'object' || typeof parsed.vehicles !== 'object') {
+04380:                 PERSONNEL_TRAINING_REGISTRY_CACHE = emptyRegistry;
+04381:                 return PERSONNEL_TRAINING_REGISTRY_CACHE;
+04382:             }
+04383: 
+04384:             PERSONNEL_TRAINING_REGISTRY_CACHE = {
+04385:                 ...emptyRegistry,
+04386:                 ...parsed,
+04387:                 vehicles: { ...parsed.vehicles }
+04388:             };
+04389: 
+04390:             prunePersonnelTrainingRegistry(PERSONNEL_TRAINING_REGISTRY_CACHE);
+04391:             PERSONNEL_TRAINING_REGISTRY_CACHE.lastPrunedAt = Date.now();
+04392:             return PERSONNEL_TRAINING_REGISTRY_CACHE;
+
+--- lines 4443-4451 ---
+04443:     function schedulePersonnelTrainingRegistryFlush() {
+04444:         if (PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER != null) return;
+04445: 
+04446:         PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER = setTimeout(() => {
+04447:             PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER = null;
+04448:             flushPersonnelTrainingRegistry(false);
+04449:         }, PERSONNEL_TRAINING_REGISTRY_FLUSH_DELAY_MS);
+04450:     }
+04451: 
+
+--- lines 4462-4470 ---
+04462:                 : []
+04463:         ).forEach(person => {
+04464:             const uniqueCodes =
+04465:                 new Set(
+04466:                     (
+04467:                         Array.isArray(
+04468:                             person?.trainingCodes
+04469:                         )
+04470:                             ? person.trainingCodes
+
+--- lines 4489-4497 ---
+04489: 
+04490:     function getPersonnelTrainingCombinationKey(trainingCodes) {
+04491:         return Array.from(
+04492:             new Set(
+04493:                 (Array.isArray(trainingCodes) ? trainingCodes : [])
+04494:                     .map(String)
+04495:                     .filter(Boolean)
+04496:             )
+04497:         )
+
+--- lines 4512-4520 ---
+04512:                     ? assignedPersonnel
+04513:                     : []
+04514:             ).filter(person => {
+04515:                 const trainingSet = new Set(
+04516:                     Array.isArray(person?.trainingCodes)
+04517:                         ? person.trainingCodes.map(String)
+04518:                         : []
+04519:                 );
+04520:                 return requiredCodes.every(code => trainingSet.has(code));
+
+--- lines 4526-4569 ---
+04526: 
+04527:     function publishPersonnelVehicleTrainingRegistry({
+04528:         station,
+04529:         vehicles,
+04530:         personnel,
+04531:         source = 'scan',
+04532:         pruneMissingVehicles = true
+04533:     }) {
+04534:         const stationVehicles = Array.isArray(vehicles)
+04535:             ? vehicles.filter(vehicle => vehicle?.vehicleId)
+04536:             : [];
+04537: 
+04538:         if (!stationVehicles.length) return 0;
+04539: 
+04540:         const registry = readPersonnelTrainingRegistry();
+04541:         const now = Date.now();
+04542:         const currentVehicleIds = new Set(
+04543:             stationVehicles.map(vehicle => String(vehicle.vehicleId))
+04544:         );
+04545:         const processedTypeIds = new Set(
+04546:             stationVehicles.map(vehicle => String(vehicle.vehicleTypeId || ''))
+04547:         );
+04548: 
+04549:         if (pruneMissingVehicles) {
+04550:             Object.entries(registry.vehicles).forEach(([vehicleId, entry]) => {
+04551:                 if (String(entry?.stationHref || '') !== String(station?.href || '')) return;
+04552:                 if (!processedTypeIds.has(String(entry?.vehicleTypeId || ''))) return;
+04553:                 if (!currentVehicleIds.has(String(vehicleId))) delete registry.vehicles[vehicleId];
+04554:             });
+04555:         }
+04556: 
+04557:         stationVehicles.forEach(vehicle => {
+04558:             const assignedPersonnel = getPersonnelAssignedToVehicle(personnel, vehicle);
+04559:             const vehicleId = String(vehicle.vehicleId);
+04560: 
+04561:             registry.vehicles[vehicleId] = {
+04562:                 vehicleId,
+04563:                 vehicleName: String(vehicle.name || ''),
+04564:                 vehicleTypeId: String(vehicle.vehicleTypeId || ''),
+04565:                 stationName: String(station?.displayName || station?.stationName || ''),
+04566:                 stationHref: String(station?.href || ''),
+04567:                 assignedPersonnelCount: assignedPersonnel.length,
+04568:                 assignmentScanComplete: true,
+04569:                 personnelRowsSeen: Array.isArray(personnel) ? personnel.length : 0,
+
+--- lines 4580-4588 ---
+04580:         PERSONNEL_TRAINING_REGISTRY_DIRTY = true;
+04581:         PERSONNEL_TRAINING_REGISTRY_PENDING_EVENT = {
+04582:             stationName: station?.displayName || '',
+04583:             vehicleCount: stationVehicles.length,
+04584:             updatedAt: now
+04585:         };
+04586: 
+04587:         const finalSnapshot = /final-verification|station-complete/i.test(String(source));
+04588:         if (finalSnapshot) flushPersonnelTrainingRegistry(false);
+
+--- lines 4596-4624 ---
+04596:     }
+04597:     function getPersonnelAssignmentIndex(personnel) {
+04598:         if (!Array.isArray(personnel)) {
+04599:             return { byVehicleId: new Map(), byVehicleName: new Map() };
+04600:         }
+04601: 
+04602:         const cached = PERSONNEL_ASSIGNMENT_INDEX_CACHE.get(personnel);
+04603:         if (cached) return cached;
+04604: 
+04605:         const byVehicleId = new Map();
+04606:         const byVehicleName = new Map();
+04607: 
+04608:         personnel.forEach(person => {
+04609:             const vehicleId = String(person?.assignedVehicleId || '');
+04610:             const vehicleName = normalizePersonnelVehicleName(person?.assignedVehicleName || '');
+04611: 
+04612:             if (vehicleId) {
+04613:                 if (!byVehicleId.has(vehicleId)) byVehicleId.set(vehicleId, []);
+04614:                 byVehicleId.get(vehicleId).push(person);
+04615:             }
+04616: 
+04617:             if (vehicleName) {
+04618:                 if (!byVehicleName.has(vehicleName)) byVehicleName.set(vehicleName, []);
+04619:                 byVehicleName.get(vehicleName).push(person);
+04620:             }
+04621:         });
+04622: 
+04623:         const index = { byVehicleId, byVehicleName };
+04624:         PERSONNEL_ASSIGNMENT_INDEX_CACHE.set(personnel, index);
+
+--- lines 4629-4646 ---
+04629:         if (!Array.isArray(personnel) || !vehicle) return [];
+04630: 
+04631:         const index = getPersonnelAssignmentIndex(personnel);
+04632:         const vehicleId = String(vehicle.vehicleId || '');
+04633:         const vehicleNameKey = normalizePersonnelVehicleName(vehicle.name || '');
+04634:         const byId = vehicleId ? (index.byVehicleId.get(vehicleId) || []) : [];
+04635:         const byName = vehicleNameKey ? (index.byVehicleName.get(vehicleNameKey) || []) : [];
+04636: 
+04637:         if (!byId.length) return byName;
+04638:         if (!byName.length || byName === byId) return byId;
+04639: 
+04640:         const result = byId.slice();
+04641:         const seen = new Set(result.map(person => String(person.personnelId || '')));
+04642:         byName.forEach(person => {
+04643:             const personnelId = String(person.personnelId || '');
+04644:             if (!seen.has(personnelId)) {
+04645:                 seen.add(personnelId);
+04646:                 result.push(person);
+
+--- lines 4690-4698 ---
+04690:         rule
+04691:     ) {
+04692:         const codes =
+04693:             new Set(
+04694:                 Array.isArray(
+04695:                     person?.trainingCodes
+04696:                 )
+04697:                     ? person.trainingCodes
+04698:                     : []
+
+--- lines 4790-4818 ---
+04790:     }
+04791: 
+04792:     function getPersonnelTrainingSet(person) {
+04793:         if (!person || typeof person !== 'object') return new Set();
+04794: 
+04795:         const cached = PERSONNEL_TRAINING_SET_CACHE.get(person);
+04796:         if (cached) return cached;
+04797: 
+04798:         const trainingSet = new Set(
+04799:             Array.isArray(person.trainingCodes)
+04800:                 ? person.trainingCodes.map(String)
+04801:                 : []
+04802:         );
+04803:         PERSONNEL_TRAINING_SET_CACHE.set(person, trainingSet);
+04804:         return trainingSet;
+04805:     }
+04806: 
+04807:     function getVisiblePersonnelTrainingCounts(personnel) {
+04808:         if (!Array.isArray(personnel)) return new Map();
+04809: 
+04810:         const cached = PERSONNEL_VISIBLE_TRAINING_COUNTS_CACHE.get(personnel);
+04811:         if (cached) return cached;
+04812: 
+04813:         const counts = new Map();
+04814:         personnel.forEach(person => {
+04815:             getPersonnelTrainingSet(person).forEach(code => {
+04816:                 counts.set(code, Number(counts.get(code) || 0) + 1);
+04817:             });
+04818:         });
+
+--- lines 4842-4877 ---
+04842:     }
+04843: 
+04844:     function getPersonnelVehicleQueue(doc, allowedTypeIds) {
+04845:         const allowed = new Set((allowedTypeIds || []).map(String));
+04846:         const allowAllVehicleTypes = allowed.size === 0;
+04847:         const seen = new Set();
+04848:         const queue = [];
+04849: 
+04850:         for (const row of [...doc.querySelectorAll('#vehicle_table tr')]) {
+04851:             const image = row.querySelector('img[vehicle_type_id]');
+04852:             const vehicleTypeId = image?.getAttribute('vehicle_type_id') || '';
+04853:             if (!allowAllVehicleTypes && !allowed.has(vehicleTypeId)) continue;
+04854: 
+04855:             const vehicleLinks = [...row.querySelectorAll('a[href*="/vehicles/"]')];
+04856:             const plainVehicleLink = vehicleLinks.find(link => /^\/vehicles\/\d+\/?(?:[?#].*)?$/.test(link.getAttribute('href') || ''));
+04857:             const editLink = vehicleLinks.find(link => /\/vehicles\/\d+\/edit(?:[/?#]|$)/.test(link.getAttribute('href') || ''));
+04858:             const directAssignmentLink = vehicleLinks.find(link => /\/vehicles\/\d+\/zuweisung(?:[/?#]|$)/.test(link.getAttribute('href') || ''));
+04859:             const vehicleId = [plainVehicleLink, editLink, directAssignmentLink]
+04860:                 .map(link => getVehicleIdFromHref(link?.getAttribute('href') || ''))
+04861:                 .find(Boolean) || '';
+04862: 
+04863:             if (!vehicleId || seen.has(vehicleId)) continue;
+04864:             seen.add(vehicleId);
+04865: 
+04866:             const occupancy = parsePersonnelVehicleOccupancy(row);
+04867:             const nameSource = plainVehicleLink || vehicleLinks.find(link => cleanText(link.textContent || ''));
+04868:             queue.push({
+04869:                 vehicleId,
+04870:                 vehicleTypeId,
+04871:                 name: cleanText(nameSource?.textContent || row.textContent || '') || `${TYPE_ID_TO_VEHICLE_TYPE[vehicleTypeId] || 'Vehicle'} ${vehicleId}`,
+04872:                 assignmentHref: directAssignmentLink?.getAttribute('href') || `/vehicles/${vehicleId}/zuweisung`,
+04873:                 assignedCount: occupancy.assignedCount,
+04874:                 maxCount: occupancy.maxCount
+04875:             });
+04876:         }
+04877: 
+
+--- lines 4880-4894 ---
+04880:     }
+04881: 
+04882:     function sortPersonnelVehiclesForStationTarget(
+04883:         vehicles,
+04884:         personnel,
+04885:         rule
+04886:     ) {
+04887:         return (
+04888:             Array.isArray(vehicles)
+04889:                 ? vehicles.slice()
+04890:                 : []
+04891:         ).sort((left, right) => {
+04892:             const getState = vehicle => {
+04893:                 const assigned =
+04894:                     getPersonnelAssignedToVehicle(
+
+--- lines 4972-4994 ---
+04972:     }
+04973: 
+04974:     function selectPoliceRuleVehicles({ rule, allVehicles, personnel, reservedPersonnelIds, claimedVehicleIds, batch }) {
+04975:         const matchingVehicles = allVehicles.filter(vehicle => rule.vehicleTypeIds.includes(vehicle.vehicleTypeId) && !claimedVehicleIds.has(vehicle.vehicleId));
+04976:         if (!batch || !rule.sharedVehiclePool) return matchingVehicles;
+04977: 
+04978:         const existing = matchingVehicles.filter(vehicle =>
+04979:             getPersonnelAssignedToVehicle(personnel, vehicle).some(person => personnelMatchesRule(person, rule))
+04980:         );
+04981:         const existingIds = new Set(existing.map(vehicle => vehicle.vehicleId));
+04982:         const availableCount = personnel.filter(person =>
+04983:             person.available
+04984:             && !reservedPersonnelIds.has(person.personnelId)
+04985:             && personnelMatchesRule(person, rule)
+04986:         ).length;
+04987:         const additionalVehicleCount = Math.ceil(availableCount / Math.max(1, rule.target));
+04988:         const additional = matchingVehicles
+04989:             .filter(vehicle => !existingIds.has(vehicle.vehicleId))
+04990:             .sort((left, right) => {
+04991:                 const leftOccupied = Number.isInteger(left.assignedCount) ? left.assignedCount : 0;
+04992:                 const rightOccupied = Number.isInteger(right.assignedCount) ? right.assignedCount : 0;
+04993:                 if (leftOccupied !== rightOccupied) return leftOccupied - rightOccupied;
+04994:                 return left.name.localeCompare(right.name, 'en-GB', { numeric: true });
+
+--- lines 5001-5010 ---
+05001:     function calculatePersonnelQualificationShortfall(personnel, slotRules) {
+05002:         const people = (personnel || []).filter(person => person?.personnelId);
+05003:         const slots = Array.isArray(slotRules) ? slotRules : [];
+05004:         const personToSlot = new Map();
+05005:         const candidatesByRule = new Map();
+05006: 
+05007:         const getCandidates = rule => {
+05008:             if (!candidatesByRule.has(rule)) {
+05009:                 candidatesByRule.set(
+05010:                     rule,
+
+--- lines 5031-5058 ---
+05031: 
+05032:         let matched = 0;
+05033:         for (let slotIndex = 0; slotIndex < slots.length; slotIndex++) {
+05034:             if (tryFillSlot(slotIndex, new Set())) matched++;
+05035:         }
+05036: 
+05037:         return Math.max(0, slots.length - matched);
+05038:     }
+05039: 
+05040:     async function processOnePoliceStation(station, profile) {
+05041:         const stationPage = await personnelFetchDocument(station.href, 14000);
+05042:         const rules = Array.isArray(profile.rules) ? profile.rules : [];
+05043:         const targetTypeIds = [...new Set(rules.flatMap(rule => rule.vehicleTypeIds))];
+05044:         const allVehicles = getPersonnelVehicleQueue(stationPage.doc, targetTypeIds);
+05045: 
+05046:         if (!allVehicles.length) {
+05047:             personnelLog('No vehicles mapped to the selected Police profile were found at this station.', 'debug');
+05048:             return {
+05049:                 stationName: station.displayName,
+05050:                 stationHref: station.href,
+05051:                 profileLabel: profile.label,
+05052:                 noTargetVehicles: true,
+05053:                 vehicleCount: 0,
+05054:                 ambulances: 0,
+05055:                 required: 0,
+05056:                 trained: 0,
+05057:                 availableAtScan: 0,
+05058:                 availableAtEnd: 0,
+
+--- lines 5065-5096 ---
+05065:                 planned: 0,
+05066:                 assigned: 0,
+05067:                 fulfilledUnits: 0,
+05068:                 vehiclesChecked: 0,
+05069:                 afterActionVerified: true,
+05070:                 verificationError: '',
+05071:                 rules: [],
+05072:                 vehicles: []
+05073:             };
+05074:         }
+05075: 
+05076:         const baselinePage = await personnelFetchDocument(allVehicles[0].assignmentHref, 14000);
+05077:         const baselineAssignment = parseVehicleAssignmentPage(baselinePage.doc, allVehicles[0].vehicleId);
+05078:         const personnel = baselineAssignment.rows;
+05079: 
+05080:         publishPersonnelVehicleTrainingRegistry({
+05081:             station,
+05082:             vehicles:
+05083:                 allVehicles,
+05084:             personnel,
+05085:             source:
+05086:                 'police-station-scan'
+05087:         });
+05088: 
+05089:         const reservedPersonnelIds = new Set();
+05090:         const claimedVehicleIds = new Set();
+05091:         const vehicleReports = [];
+05092:         const ruleReports = [];
+05093:         let required = 0;
+05094:         let trainingShortfall = 0;
+05095:         const qualificationSlots = [];
+05096:         let stationPlanned = 0;
+
+--- lines 5106-5117 ---
+05106:         const unionQualified = personnel.filter(person => rules.some(rule => personnelMatchesRule(person, rule)));
+05107:         const availableAtScan = unionQualified.filter(person => person.available).length;
+05108: 
+05109:         personnelLog(`Mapped Police vehicles at station: ${allVehicles.length}`, 'info');
+05110:         personnelLog(`Profile rule groups: ${rules.length} | Qualified personnel visible: ${unionQualified.length}`, 'info');
+05111:         if (Number.isFinite(stationUnitsNeeded)) {
+05112:             personnelLog(`Units still required before this station: ${stationUnitsNeeded}. Only fully covered vehicles count.`, 'info');
+05113:         }
+05114: 
+05115:         for (const rule of rules) {
+05116:             if (PERSONNEL_STATE.stopped || stationUnitTargetReached()) break;
+05117:             await waitIfPersonnelPaused();
+
+--- lines 5136-5178 ---
+05136:             }
+05137: 
+05138:             if (!ruleVehicles.length) {
+05139:                 personnelDebug(`${rule.label}: no allocated ${rule.vehicleLabel} vehicles at ${station.displayName}.`);
+05140:                 continue;
+05141:             }
+05142: 
+05143:             const ruleTrained = personnel.filter(person => personnelMatchesRule(person, rule)).length;
+05144:             const ruleReport = {
+05145:                 ruleId: rule.id,
+05146:                 label: rule.label,
+05147:                 vehicleLabel: rule.vehicleLabel,
+05148:                 target: rule.target,
+05149:                 trainingLabel: rule.trainingLabel,
+05150:                 vehicleCount: 0,
+05151:                 required: 0,
+05152:                 trained: ruleTrained,
+05153:                 trainingShortfall: 0,
+05154:                 trainingGaps: []
+05155:             };
+05156: 
+05157:             personnelLog(`${rule.label}: ${ruleVehicles.length} available ${rule.vehicleLabel}(s), target ${rule.target} per vehicle.`, 'station');
+05158: 
+05159:             for (let vehicleIndex = 0; vehicleIndex < ruleVehicles.length; vehicleIndex++) {
+05160:                 if (PERSONNEL_STATE.stopped || stationUnitTargetReached()) break;
+05161:                 await waitIfPersonnelPaused();
+05162:                 if (PERSONNEL_STATE.stopped || stationUnitTargetReached()) break;
+05163: 
+05164:                 const vehicle = ruleVehicles[vehicleIndex];
+05165:                 claimedVehicleIds.add(vehicle.vehicleId);
+05166:                 ruleReport.vehicleCount++;
+05167:                 ruleReport.required += rule.target;
+05168:                 required += rule.target;
+05169:                 for (let slotIndex = 0; slotIndex < rule.target; slotIndex++) qualificationSlots.push(rule);
+05170: 
+05171:                 setPersonnelUiValue('vehicle', vehicle.name || vehicle.vehicleId);
+05172:                 setPersonnelUiValue('status', PERSONNEL_STATE.action === 'assign' ? 'Checking Police vehicle' : 'Building Police preview');
+05173:                 personnelLog(`${rule.label} vehicle ${vehicleIndex + 1}/${ruleVehicles.length}: ${vehicle.name}`, 'station');
+05174: 
+05175:                 const baselineAssigned =
+05176:                     getPersonnelAssignedToVehicle(
+05177:                         personnel,
+05178:                         vehicle
+
+--- lines 5221-5237 ---
+05221: 
+05222:                 if (PERSONNEL_STATE.action === 'assign' && beforeQualified < rule.target) {
+05223:                     const livePage = await personnelFetchDocument(vehicle.assignmentHref, 14000);
+05224:                     liveAssignment = parseVehicleAssignmentPage(livePage.doc, vehicle.vehicleId);
+05225: 
+05226:                     if (!rule.vehicleTypeIds.includes(liveAssignment.vehicleTypeId)) {
+05227:                         personnelLog(`Skipped unexpected vehicle_type_id=${liveAssignment.vehicleTypeId || 'unknown'} for ${rule.label}.`, 'error');
+05228:                         const unfilled = Math.max(0, rule.target - beforeQualified);
+05229:                         stationAssignmentShortfall += unfilled;
+05230:                         vehicleReports.push({
+05231:                             vehicleId: vehicle.vehicleId,
+05232:                             vehicleTypeId: vehicle.vehicleTypeId,
+05233:                             name: vehicle.name,
+05234:                             ruleId: rule.id,
+05235:                             ruleLabel: rule.label,
+05236:                             trainingLabel: rule.trainingLabel,
+05237:                             target: rule.target,
+
+--- lines 5304-5324 ---
+05304:                         if (submittedCandidates.length && !PERSONNEL_STATE.stopped) {
+05305:                             await waitPersonnelDelay(250);
+05306:                             const verificationPage = await personnelFetchDocument(vehicle.assignmentHref, 14000);
+05307:                             const verification = parseVehicleAssignmentPage(verificationPage.doc, vehicle.vehicleId);
+05308: 
+05309:                             publishPersonnelVehicleTrainingRegistry({
+05310:                                 station,
+05311:                                 vehicles:
+05312:                                     allVehicles,
+05313:                                 personnel:
+05314:                                     verification.rows,
+05315:                                 source:
+05316:                                     'police-vehicle-verification'
+05317:                             });
+05318: 
+05319:                             const verifiedIds = new Set(
+05320:                                 verification.rows
+05321:                                     .filter(person => person.assignedHere && personnelMatchesRule(person, rule))
+05322:                                     .map(person => person.personnelId)
+05323:                             );
+05324: 
+
+--- lines 5345-5355 ---
+05345: 
+05346:                 personnelLog(unfilled ? `Unfilled ${rule.trainingLabel} positions: ${unfilled}` : `Coverage complete: ${afterQualified}/${rule.target}`, unfilled ? 'error' : 'done');
+05347: 
+05348:                 vehicleReports.push({
+05349:                     vehicleId: vehicle.vehicleId,
+05350:                     vehicleTypeId: vehicle.vehicleTypeId,
+05351:                     name: vehicle.name,
+05352:                     ruleId: rule.id,
+05353:                     ruleLabel: rule.label,
+05354:                     trainingLabel: rule.trainingLabel,
+05355:                     target: rule.target,
+
+--- lines 5375-5389 ---
+05375:                     personnelLog(
+05376:                         Number.isFinite(stationUnitsNeeded)
+05377:                             ? `Unit target progress at this station: ${projectedFulfilledUnits}/${stationUnitsNeeded}.`
+05378:                             : `Fully covered units at this station: ${projectedFulfilledUnits}.`,
+05379:                         'done'
+05380:                     );
+05381:                 }
+05382:             }
+05383: 
+05384:             if (ruleReport.vehicleCount) {
+05385:                 ruleReport.trainingShortfall =
+05386:                     Math.max(
+05387:                         0,
+05388:                         ruleReport.required -
+05389:                         ruleTrained
+
+--- lines 5401-5409 ---
+05401:                 );
+05402:                 if (ruleReport.trainingShortfall) {
+05403:                     personnelLog(
+05404:                         `${rule.label} training shortfall estimate for processed units: ${ruleReport.trainingShortfall}. Missing: ${formatPoliceTrainingGapSummary(ruleReport.trainingGaps)}.`,
+05405:                         'error'
+05406:                     );
+05407:                 }
+05408:             }
+05409:         }
+
+--- lines 5412-5432 ---
+05412:         let verificationError = '';
+05413:         let availableAtEnd = Math.max(0, availableAtScan - (PERSONNEL_STATE.action === 'preview' ? stationPlanned : stationAssigned));
+05414: 
+05415:         if (PERSONNEL_STATE.action === 'assign' && !PERSONNEL_STATE.stopped && vehicleReports.length) {
+05416:             setPersonnelUiValue('status', 'Final Police station verification');
+05417:             setPersonnelUiValue('vehicle', 'All mapped Police vehicles');
+05418:             personnelLog('Running final station-wide Police verification...', 'info');
+05419: 
+05420:             try {
+05421:                 await waitPersonnelDelay(900);
+05422:                 const finalPage = await personnelFetchDocument(allVehicles[0].assignmentHref, 14000);
+05423:                 const finalAssignment = parseVehicleAssignmentPage(finalPage.doc, allVehicles[0].vehicleId);
+05424: 
+05425:                 publishPersonnelVehicleTrainingRegistry({
+05426:                     station,
+05427:                     vehicles:
+05428:                         allVehicles,
+05429:                     personnel:
+05430:                         finalAssignment.rows,
+05431:                     source:
+05432:                         'police-final-verification'
+
+--- lines 5435-5460 ---
+05435:                 availableAtEnd = finalAssignment.rows.filter(person => person.available && rules.some(rule => personnelMatchesRule(person, rule))).length;
+05436:                 stationAssignmentShortfall = 0;
+05437: 
+05438:                 vehicleReports.forEach(vehicleReport => {
+05439:                     const rule = rules.find(item => item.id === vehicleReport.ruleId);
+05440:                     const actualAssigned = getPersonnelAssignedToVehicle(finalAssignment.rows, vehicleReport);
+05441:                     const actualQualified = rule ? actualAssigned.filter(person => personnelMatchesRule(person, rule)).length : 0;
+05442:                     vehicleReport.afterQualified = actualQualified;
+05443:                     vehicleReport.afterCritical = actualQualified;
+05444:                     vehicleReport.finalQualified = actualQualified;
+05445:                     vehicleReport.finalCritical = actualQualified;
+05446:                     vehicleReport.afterTotal = actualAssigned.length;
+05447:                     vehicleReport.finalTotal = actualAssigned.length;
+05448:                     vehicleReport.unfilled =
+05449:                         Math.max(
+05450:                             0,
+05451:                             vehicleReport.target -
+05452:                             actualQualified
+05453:                         );
+05454: 
+05455:                     vehicleReport.occupantTrainingGaps =
+05456:                         rule
+05457:                             ? actualAssigned
+05458:                                 .map(person => {
+05459:                                     return {
+05460:                                         name:
+
+--- lines 5479-5510 ---
+05479:                                 )
+05480:                             : [];
+05481: 
+05482:                     vehicleReport.verificationStatus = 'final-verified';
+05483:                     stationAssignmentShortfall += vehicleReport.unfilled;
+05484:                 });
+05485: 
+05486:                 afterActionVerified = true;
+05487:                 personnelLog(`Final Police station verification passed. Unfilled positions: ${stationAssignmentShortfall}.`, stationAssignmentShortfall ? 'error' : 'done');
+05488:             } catch (error) {
+05489:                 verificationError = error?.message || String(error);
+05490:                 vehicleReports.forEach(vehicleReport => {
+05491:                     if (vehicleReport.verificationStatus !== 'skipped') vehicleReport.verificationStatus = 'individual-verification-only';
+05492:                 });
+05493:                 personnelLog(`Final Police station verification failed: ${verificationError}`, 'error');
+05494:             }
+05495:         }
+05496: 
+05497:         trainingShortfall = calculatePersonnelQualificationShortfall(personnel, qualificationSlots);
+05498: 
+05499:         let initialQualifiedFilled = vehicleReports.reduce((sum, vehicle) => sum + Number(vehicle.beforeQualified || 0), 0);
+05500:         let finalQualifiedFilled = vehicleReports.reduce((sum, vehicle) => sum + Number(vehicle.afterQualified || 0), 0);
+05501:         let fulfilledUnits = vehicleReports.filter(vehicle => Number(vehicle.unfilled || 0) === 0).length;
+05502: 
+05503:         const stationTarget =
+05504:             isPersonnelPerStationTargetMode()
+05505:                 ? PERSONNEL_STATE.unitsRequired
+05506:                 : 0;
+05507: 
+05508:         if (stationTarget > 0) {
+05509:             fulfilledUnits =
+05510:                 Math.min(
+
+--- lines 5548-5557 ---
+05548:             personnelPageHref: baselinePage.href,
+05549:             profileLabel: profile.label,
+05550:             qualificationLabel: profile.batch ? 'Mapped Police qualifications' : (rules[0]?.trainingLabel || profile.label),
+05551:             vehicleCount: vehicleReports.length,
+05552:             ambulances: vehicleReports.length,
+05553:             required,
+05554:             trained: unionQualified.length,
+05555:             availableAtScan,
+05556:             availableAtEnd,
+05557:             initialQualifiedFilled,
+
+--- lines 5579-5587 ---
+05579:                         stationTarget - fulfilledUnits
+05580:                     )
+05581:                     : 0,
+05582:             vehiclesChecked: vehicleReports.length,
+05583:             afterActionVerified,
+05584:             verificationError,
+05585:             missingTrainingSummary:
+05586:                 ruleReports
+05587:                     .flatMap(
+
+--- lines 5591-5609 ---
+05591:                             []
+05592:                     ),
+05593:             rules: ruleReports,
+05594:             vehicles: vehicleReports
+05595:         };
+05596:     }
+05597: 
+05598:     function sortMedicalVehiclesForStationTarget(
+05599:         vehicles,
+05600:         personnel
+05601:     ) {
+05602:         return (
+05603:             Array.isArray(vehicles)
+05604:                 ? vehicles.slice()
+05605:                 : []
+05606:         ).sort((left, right) => {
+05607:             const getState = vehicle => {
+05608:                 const assigned =
+05609:                     getPersonnelAssignedToVehicle(
+
+--- lines 5679-5716 ---
+05679: 
+05680:     async function processOneMedicalCriticalCareStation(station) {
+05681:         const stationPage = await personnelFetchDocument(station.href, 14000);
+05682:         const vehicles = getPersonnelAmbulanceQueue(stationPage.doc);
+05683: 
+05684:         if (!vehicles.length) {
+05685:             throw new Error('No Ambulance vehicles were found in the station vehicle table.');
+05686:         }
+05687: 
+05688:         // One Ambulance assignment page supplies the station-wide personnel snapshot.
+05689:         // Button state is the authoritative binding signal; the station vehicle table
+05690:         // supplies the initial occupied/max cross-check.
+05691:         const baselinePage = await personnelFetchDocument(vehicles[0].assignmentHref, 14000);
+05692:         const baselineAssignment = parseVehicleAssignmentPage(baselinePage.doc, vehicles[0].vehicleId);
+05693: 
+05694:         if (baselineAssignment.vehicleTypeId !== PERSONNEL_TARGET_VEHICLE_TYPE_ID) {
+05695:             throw new Error(`The personnel assignment page was not an Ambulance page (vehicle_type_id=${baselineAssignment.vehicleTypeId || 'unknown'}).`);
+05696:         }
+05697: 
+05698:         const personnel = baselineAssignment.rows;
+05699:         const trained = personnel.filter(person => person.trainingCodes.includes(PERSONNEL_TRAINING_CODE));
+05700:         const availableAtScan = trained.filter(person => person.available).length;
+05701: 
+05702:         const processingVehicles =
+05703:             isPersonnelPerStationTargetMode()
+05704:                 ? sortMedicalVehiclesForStationTarget(
+05705:                     vehicles,
+05706:                     personnel
+05707:                 )
+05708:                 : vehicles;
+05709: 
+05710:         const reservedPersonnelIds = new Set();
+05711:         const vehicleReports = [];
+05712:         let required = 0;
+05713:         let trainingShortfall = 0;
+05714:         let stationPlanned = 0;
+05715:         let stationAssigned = 0;
+05716:         let stationAssignmentShortfall = 0;
+
+--- lines 5721-5751 ---
+05721:             Number.isFinite(stationUnitsNeeded)
+05722:             && projectedFulfilledUnits >= stationUnitsNeeded;
+05723: 
+05724:         personnelLog(`Ambulances available: ${vehicles.length}`, 'info');
+05725:         personnelLog(`${PERSONNEL_TRAINING_LABEL} trained: ${trained.length} | Available at scan: ${availableAtScan}`, 'info');
+05726:         if (Number.isFinite(stationUnitsNeeded)) {
+05727:             personnelLog(`Units still required before this station: ${stationUnitsNeeded}. Only Ambulances reaching 2/2 Critical Care count.`, 'info');
+05728:         }
+05729:         personnelLog(
+05730:             PERSONNEL_STATE.action === 'preview'
+05731:                 ? 'Low-impact preview: station occupancy is cross-checked against one Ambulance personnel page.'
+05732:                 : 'Fast safe assignment: each Ambulance is read once, assignments are submitted in a small batch, then verified with one vehicle check and one final station-wide check.',
+05733:             'debug'
+05734:         );
+05735: 
+05736:         for (let vehicleIndex = 0; vehicleIndex < processingVehicles.length; vehicleIndex++) {
+05737:             if (PERSONNEL_STATE.stopped || stationUnitTargetReached()) break;
+05738:             await waitIfPersonnelPaused();
+05739:             if (PERSONNEL_STATE.stopped || stationUnitTargetReached()) break;
+05740: 
+05741:             const vehicle = processingVehicles[vehicleIndex];
+05742:             required += PERSONNEL_TARGET_PER_VEHICLE;
+05743: 
+05744:             setPersonnelUiValue('vehicle', vehicle.name || vehicle.vehicleId);
+05745:             setPersonnelUiValue('status', PERSONNEL_STATE.action === 'assign' ? 'Checking vehicle' : 'Building station preview');
+05746:             personnelLog(`Vehicle ${vehicleIndex + 1}/${processingVehicles.length}: ${vehicle.name || vehicle.vehicleId}`, 'station');
+05747: 
+05748:             const stationAssignedPeople = getPersonnelAssignedToVehicle(personnel, vehicle);
+05749:             const mappedTotal = stationAssignedPeople.length;
+05750:             const mappedCritical = stationAssignedPeople.filter(person => person.trainingCodes.includes(PERSONNEL_TRAINING_CODE)).length;
+05751:             const hasTableOccupancy = Number.isInteger(vehicle.assignedCount) && vehicle.assignedCount >= 0;
+
+--- lines 5770-5786 ---
+05770:             let liveAssignment = null;
+05771:             if (PERSONNEL_STATE.action === 'assign' && beforeCritical < PERSONNEL_TARGET_PER_VEHICLE && beforeTotal < PERSONNEL_TARGET_PER_VEHICLE) {
+05772:                 const livePage = await personnelFetchDocument(vehicle.assignmentHref, 14000);
+05773:                 liveAssignment = parseVehicleAssignmentPage(livePage.doc, vehicle.vehicleId);
+05774: 
+05775:                 if (liveAssignment.vehicleTypeId !== PERSONNEL_TARGET_VEHICLE_TYPE_ID) {
+05776:                     personnelLog(`Skipped non-Ambulance assignment page: vehicle_type_id=${liveAssignment.vehicleTypeId || 'unknown'}`, 'error');
+05777:                     const skippedUnfilled = Math.max(0, PERSONNEL_TARGET_PER_VEHICLE - beforeCritical);
+05778:                     stationAssignmentShortfall += skippedUnfilled;
+05779:                     vehicleReports.push({
+05780:                         vehicleId: vehicle.vehicleId,
+05781:                         name: vehicle.name || `Vehicle ${vehicle.vehicleId}`,
+05782:                         beforeCritical,
+05783:                         beforeTotal,
+05784:                         finalCritical: beforeCritical,
+05785:                         finalTotal: beforeTotal,
+05786:                         afterCritical: beforeCritical,
+
+--- lines 5840-5848 ---
+05840:                         await waitIfPersonnelPaused();
+05841:                         if (PERSONNEL_STATE.stopped) break;
+05842: 
+05843:                         personnelLog(`Assigning ${candidate.name} to ${vehicle.name || vehicle.vehicleId}...`, 'after');
+05844:                         const submitted = await submitPersonnelAssignment(candidate);
+05845: 
+05846:                         if (submitted) {
+05847:                             submittedCandidates.push(candidate);
+05848:                             personnelLog(`Assignment submitted: ${candidate.name}`, 'info');
+
+--- lines 5854-5863 ---
+05854:                     if (submittedCandidates.length && !PERSONNEL_STATE.stopped) {
+05855:                         await waitPersonnelDelay(250);
+05856:                         const verificationPage = await personnelFetchDocument(vehicle.assignmentHref, 14000);
+05857:                         const verification = parseVehicleAssignmentPage(verificationPage.doc, vehicle.vehicleId);
+05858:                         const verifiedIds = new Set(
+05859:                             verification.rows
+05860:                                 .filter(person => person.assignedHere)
+05861:                                 .map(person => person.personnelId)
+05862:                         );
+05863: 
+
+--- lines 5889-5899 ---
+05889:                 personnelLog(`Coverage complete: ${calculatedAfterCritical}/${PERSONNEL_TARGET_PER_VEHICLE}`, 'done');
+05890:             }
+05891: 
+05892:             vehicleReports.push({
+05893:                 vehicleId: vehicle.vehicleId,
+05894:                 name: vehicle.name || `Vehicle ${vehicle.vehicleId}`,
+05895:                 beforeCritical,
+05896:                 beforeTotal,
+05897:                 finalCritical: calculatedAfterCritical,
+05898:                 finalTotal: calculatedAfterTotal,
+05899:                 afterCritical: calculatedAfterCritical,
+
+--- lines 5928-5987 ---
+05928:         // Final station-wide verification. This is one additional request after the
+05929:         // station is complete and produces the actual after-action figures rather than
+05930:         // merely trusting the number of successful POSTs.
+05931:         if (PERSONNEL_STATE.action === 'assign' && !PERSONNEL_STATE.stopped && vehicleReports.length) {
+05932:             setPersonnelUiValue('status', 'Final station verification');
+05933:             setPersonnelUiValue('vehicle', 'Processed Ambulances');
+05934:             personnelLog('Running final station-wide after-action verification...', 'info');
+05935: 
+05936:             try {
+05937:                 await waitPersonnelDelay(900);
+05938:                 const finalPage = await personnelFetchDocument(vehicles[0].assignmentHref, 14000);
+05939:                 const finalAssignment = parseVehicleAssignmentPage(finalPage.doc, vehicles[0].vehicleId);
+05940: 
+05941:                 if (finalAssignment.vehicleTypeId !== PERSONNEL_TARGET_VEHICLE_TYPE_ID) {
+05942:                     throw new Error(`Final verification returned vehicle_type_id=${finalAssignment.vehicleTypeId || 'unknown'}.`);
+05943:                 }
+05944: 
+05945:                 availableAtEnd = finalAssignment.availableCritical.length;
+05946:                 stationAssignmentShortfall = 0;
+05947: 
+05948:                 vehicleReports.forEach(vehicleReport => {
+05949:                     const actualAssigned = getPersonnelAssignedToVehicle(finalAssignment.rows, vehicleReport);
+05950:                     const actualCritical = actualAssigned.filter(person => person.trainingCodes.includes(PERSONNEL_TRAINING_CODE)).length;
+05951:                     const actualTotal = actualAssigned.length;
+05952: 
+05953:                     vehicleReport.afterCritical = actualCritical;
+05954:                     vehicleReport.afterTotal = actualTotal;
+05955:                     vehicleReport.finalCritical = actualCritical;
+05956:                     vehicleReport.finalTotal = actualTotal;
+05957:                     vehicleReport.unfilled = Math.max(0, PERSONNEL_TARGET_PER_VEHICLE - actualCritical);
+05958:                     vehicleReport.verificationStatus = 'final-verified';
+05959:                     stationAssignmentShortfall += vehicleReport.unfilled;
+05960:                 });
+05961: 
+05962:                 afterActionVerified = true;
+05963:                 personnelLog(`Final station verification passed. Unfilled positions: ${stationAssignmentShortfall}.`, stationAssignmentShortfall ? 'error' : 'done');
+05964:             } catch (error) {
+05965:                 verificationError = error?.message || String(error);
+05966:                 afterActionVerified = false;
+05967:                 vehicleReports.forEach(vehicleReport => {
+05968:                     if (vehicleReport.verificationStatus !== 'skipped') {
+05969:                         vehicleReport.verificationStatus = 'individual-verification-only';
+05970:                     }
+05971:                 });
+05972:                 personnelLog(`Final station verification failed: ${verificationError}`, 'error');
+05973:             }
+05974:         }
+05975: 
+05976:         let initialCriticalFilled = vehicleReports.reduce((sum, vehicle) => sum + Number(vehicle.beforeCritical || 0), 0);
+05977:         let finalCriticalFilled = vehicleReports.reduce((sum, vehicle) => sum + Number(vehicle.afterCritical || 0), 0);
+05978:         let fulfilledUnits = vehicleReports.filter(vehicle => Number(vehicle.unfilled || 0) === 0).length;
+05979: 
+05980:         const stationTarget =
+05981:             isPersonnelPerStationTargetMode()
+05982:                 ? PERSONNEL_STATE.unitsRequired
+05983:                 : 0;
+05984: 
+05985:         if (stationTarget > 0) {
+05986:             fulfilledUnits =
+05987:                 Math.min(
+
+--- lines 6026-6035 ---
+06026:             personnelPageHref: baselinePage.href,
+06027:             profileLabel: 'Critical Care',
+06028:             qualificationLabel: PERSONNEL_TRAINING_LABEL,
+06029:             vehicleCount: vehicleReports.length,
+06030:             ambulances: vehicleReports.length,
+06031:             required,
+06032:             trained: trained.length,
+06033:             availableAtScan,
+06034:             availableAtEnd,
+06035:             initialQualifiedFilled: initialCriticalFilled,
+
+--- lines 6057-6079 ---
+06057:                         stationTarget - fulfilledUnits
+06058:                     )
+06059:                     : 0,
+06060:             vehiclesChecked: vehicleReports.length,
+06061:             afterActionVerified,
+06062:             verificationError,
+06063:             rules: [{
+06064:                 ruleId: 'critical_care',
+06065:                 label: 'Critical Care',
+06066:                 vehicleLabel: PERSONNEL_TARGET_VEHICLE_LABEL,
+06067:                 target: PERSONNEL_TARGET_PER_VEHICLE,
+06068:                 trainingLabel: PERSONNEL_TRAINING_LABEL,
+06069:                 vehicleCount: vehicleReports.length,
+06070:                 required,
+06071:                 trained: trained.length,
+06072:                 trainingShortfall
+06073:             }],
+06074:             vehicles: vehicleReports.map(vehicle => ({
+06075:                 ...vehicle,
+06076:                 ruleId: 'critical_care',
+06077:                 ruleLabel: 'Critical Care',
+06078:                 trainingLabel: PERSONNEL_TRAINING_LABEL,
+06079:                 target: PERSONNEL_TARGET_PER_VEHICLE,
+
+--- lines 6102-6115 ---
+06102:     async function personnelFetchResponse(url, options = {}, timeoutMs = 12000) {
+06103:         await waitForPersonnelRequestSlot();
+06104: 
+06105:         const controller = new AbortController();
+06106:         PERSONNEL_STATE.activeController = controller;
+06107:         const timer = setTimeout(() => controller.abort(), timeoutMs);
+06108: 
+06109:         try {
+06110:             const response = await fetch(url, {
+06111:                 credentials: 'same-origin',
+06112:                 cache: 'no-store',
+06113:                 redirect: 'follow',
+06114:                 ...options,
+06115:                 signal: controller.signal
+
+--- lines 6134-6142 ---
+06134:         if (!response.ok) throw new Error(`Request returned HTTP ${response.status}: ${url}`);
+06135: 
+06136:         const html = await response.text();
+06137:         const doc = new DOMParser().parseFromString(html, 'text/html');
+06138:         return { response, doc, href: new URL(response.url || url, location.origin).pathname };
+06139:     }
+06140: 
+06141:     function parsePersonnelVehicleOccupancy(row) {
+06142:         const text = String(row?.textContent || '');
+
+--- lines 6161-6218 ---
+06161:     }
+06162: 
+06163:     function getPersonnelAmbulanceQueue(doc) {
+06164:         const seen = new Set();
+06165:         const queue = [];
+06166:         const rows = [...doc.querySelectorAll('#vehicle_table tr')];
+06167:         let ambulanceRows = 0;
+06168: 
+06169:         for (const row of rows) {
+06170:             const image = row.querySelector('img[vehicle_type_id]');
+06171:             const vehicleTypeId = image?.getAttribute('vehicle_type_id') || '';
+06172:             if (vehicleTypeId !== PERSONNEL_TARGET_VEHICLE_TYPE_ID) continue;
+06173: 
+06174:             ambulanceRows++;
+06175: 
+06176:             const vehicleLinks = [...row.querySelectorAll('a[href*="/vehicles/"]')];
+06177:             const plainVehicleLink = vehicleLinks.find(link => {
+06178:                 const href = link.getAttribute('href') || '';
+06179:                 return /^\/vehicles\/\d+\/?(?:[?#].*)?$/.test(href);
+06180:             });
+06181:             const editLink = vehicleLinks.find(link => {
+06182:                 const href = link.getAttribute('href') || '';
+06183:                 return /\/vehicles\/\d+\/edit(?:[/?#]|$)/.test(href);
+06184:             });
+06185:             const directAssignmentLink = vehicleLinks.find(link => {
+06186:                 const href = link.getAttribute('href') || '';
+06187:                 return /\/vehicles\/\d+\/zuweisung(?:[/?#]|$)/.test(href);
+06188:             });
+06189: 
+06190:             // Prefer the normal vehicle-name link because it is tied directly to the
+06191:             // displayed row. Edit and personnel links are safe fallbacks.
+06192:             const idCandidates = [plainVehicleLink, editLink, directAssignmentLink]
+06193:                 .map(link => getVehicleIdFromHref(link?.getAttribute('href') || ''))
+06194:                 .filter(Boolean);
+06195:             const vehicleId = idCandidates[0] || '';
+06196: 
+06197:             if (!vehicleId || seen.has(vehicleId)) continue;
+06198:             seen.add(vehicleId);
+06199: 
+06200:             const distinctIds = [...new Set(idCandidates)];
+06201:             if (distinctIds.length > 1) {
+06202:                 personnelDebug(`Ambulance row contains conflicting vehicle IDs (${distinctIds.join(', ')}). Using ${vehicleId}.`);
+06203:             }
+06204: 
+06205:             const assignmentHref = directAssignmentLink?.getAttribute('href') || `/vehicles/${vehicleId}/zuweisung`;
+06206:             const nameSource = plainVehicleLink
+06207:                 || vehicleLinks.find(link => cleanText(link.textContent || ''))
+06208:                 || null;
+06209:             const name = cleanText(nameSource?.textContent || row.textContent || '') || `Ambulance ${vehicleId}`;
+06210:             const occupancy = parsePersonnelVehicleOccupancy(row);
+06211: 
+06212:             queue.push({
+06213:                 vehicleId,
+06214:                 name,
+06215:                 assignmentHref,
+06216:                 assignedCount: occupancy.assignedCount,
+06217:                 maxCount: occupancy.maxCount
+06218:             });
+
+--- lines 6225-6233 ---
+06225: 
+06226:         personnelDebug(`Vehicle table scan: ${rows.length} row(s), ${ambulanceRows} Ambulance row(s), ${queue.length} usable assignment route(s).`);
+06227:         queue.forEach(vehicle => {
+06228:             personnelDebug(`Ambulance detected: ${vehicle.name} | ID=${vehicle.vehicleId} | table occupancy=${vehicle.assignedCount ?? '?'} / ${vehicle.maxCount ?? '?'}`);
+06229:         });
+06230: 
+06231:         return queue;
+06232:     }
+06233: 
+
+--- lines 6247-6272 ---
+06247:     }
+06248: 
+06249: 
+06250:     function parseVehicleAssignmentPage(doc, vehicleId) {
+06251:         const currentVehicleId = String(vehicleId || '');
+06252:         const vehicleTypeId = doc.querySelector('.vehicle_image_reload[vehicle_type_id]')?.getAttribute('vehicle_type_id') || '';
+06253:         const rows = [...doc.querySelectorAll('#personal_table tbody tr[data-filterable-by]')]
+06254:             .map(row => {
+06255:                 const cells = [...row.children];
+06256:                 const actionLink = row.querySelector(`a[href*="/vehicles/${currentVehicleId}/zuweisungDo/"]`)
+06257:                     || row.querySelector('a[href*="/zuweisungDo/"]');
+06258:                 const personnelId = String(
+06259:                     actionLink?.getAttribute('personal_id') ||
+06260:                     row.id?.match(/personal_(\d+)/)?.[1] ||
+06261:                     actionLink?.getAttribute('href')?.match(/\/zuweisungDo\/(\d+)/)?.[1] ||
+06262:                     ''
+06263:                 );
+06264:                 const classes = actionLink ? [...actionLink.classList] : [];
+06265:                 const assignedVehicleLink = [...row.querySelectorAll('a[href^="/vehicles/"]')].find(link => {
+06266:                     const href = link.getAttribute('href') || '';
+06267:                     return /^\/vehicles\/\d+\/?(?:[?#].*)?$/.test(href);
+06268:                 });
+06269:                 const detectedAssignedVehicleId = getVehicleIdFromHref(assignedVehicleLink?.getAttribute('href') || '');
+06270:                 const actionText = cleanText(
+06271:                     actionLink?.innerText ||
+06272:                     actionLink?.textContent ||
+
+--- lines 6306-6314 ---
+06306:             .filter(person => person.personnelId);
+06307: 
+06308:         return {
+06309:             vehicleTypeId,
+06310:             rows,
+06311:             totalAssigned: rows.filter(person => person.assignedVehicleId === currentVehicleId),
+06312:             criticalAssigned: rows.filter(person => person.assignedVehicleId === currentVehicleId && person.trainingCodes.includes(PERSONNEL_TRAINING_CODE)),
+06313:             availableCritical: rows.filter(person => person.available && person.trainingCodes.includes(PERSONNEL_TRAINING_CODE))
+06314:         };
+
+--- lines 6353-6371 ---
+06353:                 : 'TARGET SHORTFALL';
+06354:         }
+06355: 
+06356:         if (report?.noTargetVehicles) return 'NO TARGET VEHICLES';
+06357:         if (Number(report?.assignmentShortfall || 0) > 0) return 'SHORTFALL';
+06358:         return 'COMPLETE';
+06359:     }
+06360: 
+06361:     function getPersonnelReportQualificationLabel(report) {
+06362:         return report?.qualificationLabel || getPersonnelProfileDefinition()?.label || 'Required qualification';
+06363:     }
+06364: 
+06365:     function getPersonnelReportVehicleCount(report) {
+06366:         return Number(report?.vehicleCount ?? report?.ambulances ?? report?.vehiclesChecked ?? 0);
+06367:     }
+06368: 
+06369:     function getPersonnelReportInitialFilled(report) {
+06370:         return Number(report?.initialQualifiedFilled ?? report?.initialCriticalFilled ?? 0);
+06371:     }
+
+--- lines 6396-6424 ---
+06396:         }
+06397: 
+06398:         if (report.noTargetVehicles) {
+06399:             lines.push('No vehicles mapped to this profile were found at the station. No assignments were changed.');
+06400:             return lines.join('\n');
+06401:         }
+06402: 
+06403:         const verificationText = isAssign
+06404:             ? (report.afterActionVerified ? 'PASSED - final station state re-read' : `PARTIAL - ${report.verificationError || 'final station re-read was not verified'}`)
+06405:             : 'PREVIEW PROJECTION - no assignments changed';
+06406: 
+06407:         lines.push(
+06408:             `Final verification: ${verificationText}`,
+06409:             `Mapped vehicles checked: ${getPersonnelReportVehicleCount(report)}`,
+06410:             ...(
+06411:                 Number(report.stationTarget || 0) > 0
+06412:                     ? [
+06413:                         `Station unit target: ${report.stationTarget}`,
+06414:                         `Station target result: ${report.stationTargetMet ? 'PASSED' : 'SHORT'} — ${Number(report.stationTargetFulfilled || 0)}/${report.stationTarget}`,
+06415:                         `Additional fully staffed units needed: ${Number(report.stationTargetShortfallUnits || 0)}`
+06416:                     ]
+06417:                     : []
+06418:             ),
+06419:             `Units fully covered at this station: ${Number(report.fulfilledUnits || 0)}`,
+06420:             `Required qualified positions: ${Number(report.required || 0)}`,
+06421:             `${qualificationLabel} personnel visible: ${Number(report.trained || 0)}`,
+06422:             `Available qualified before action: ${Number(report.availableAtScan || 0)}`,
+06423:             `Available qualified after action: ${Number(report.availableAtEnd || 0)}`,
+06424:             `Qualified positions before: ${getPersonnelReportInitialFilled(report)}/${Number(report.required || 0)}`,
+
+--- lines 6433-6456 ---
+06433:             lines.push('', 'RULE GROUPS');
+06434:             report.rules.forEach(rule => {
+06435:                 lines.push(
+06436:                     `  - ${rule.label}: ${rule.vehicleCount} ${rule.vehicleLabel}(s) | target ${rule.target} each | required ${rule.required} | trained ${rule.trained} | training shortfall ${rule.trainingShortfall} | missing ${formatPoliceTrainingGapSummary(rule.trainingGaps)}`
+06437:                 );
+06438:             });
+06439:         }
+06440: 
+06441:         lines.push('', 'VEHICLE RESULTS');
+06442: 
+06443:         report.vehicles.forEach(vehicle => {
+06444:             const names = isAssign ? vehicle.assignedNames : vehicle.plannedNames;
+06445:             const afterLabel = isAssign
+06446:                 ? (vehicle.verificationStatus === 'final-verified' ? 'final verified' : 'after action')
+06447:                 : 'projected';
+06448:             const target = Number(vehicle.target || PERSONNEL_TARGET_PER_VEHICLE);
+06449:             const beforeQualified = Number(vehicle.beforeQualified ?? vehicle.beforeCritical ?? 0);
+06450:             const afterQualified = Number(vehicle.afterQualified ?? vehicle.afterCritical ?? 0);
+06451:             const vehicleResult = Number(vehicle.unfilled || 0) ? `SHORTFALL ${vehicle.unfilled}` : 'COMPLETE';
+06452:             const nameText = names?.length
+06453:                 ? ` | ${isAssign ? 'assigned' : 'planned'}: ${names.join(', ')}`
+06454:                 : '';
+06455:             const blockText = vehicle.occupiedSeatBlock
+06456:                 ? ` | ${vehicle.occupiedSeatBlock} required position(s) blocked by existing occupants`
+
+--- lines 6469-6477 ---
+06469:                     : '';
+06470: 
+06471:             lines.push(
+06472:                 `  - ${vehicle.name}${ruleText}: before ${beforeQualified}/${target} -> ${afterLabel} ${afterQualified}/${target} ${vehicle.trainingLabel || qualificationLabel} | ${vehicleResult}${nameText}${blockText}${missingTrainingText}`
+06473:             );
+06474:         });
+06475: 
+06476:         return lines.join('\n');
+06477:     }
+
+--- lines 6507-6530 ---
+06507:         if (report.error) {
+06508:             lines.push('  Result: ERROR', `  ERROR: ${report.error}`);
+06509:         } else if (report.noTargetVehicles) {
+06510:             lines.push('  Result: NO TARGET VEHICLES');
+06511:         } else {
+06512:             lines.push(
+06513:                 `  Result: ${getPersonnelReportResult(report)}`,
+06514:                 `  Final verification: ${isAssign ? (report.afterActionVerified ? 'PASSED' : 'PARTIAL / FAILED') : 'PREVIEW PROJECTION'}`,
+06515:                 `  Mapped vehicles: ${getPersonnelReportVehicleCount(report)}`,
+06516:                 ...(
+06517:                     Number(report.stationTarget || 0) > 0
+06518:                         ? [
+06519:                             `  Station target: ${report.stationTarget}`,
+06520:                             `  Station target result: ${report.stationTargetMet ? 'PASSED' : 'SHORT'} (${Number(report.stationTargetFulfilled || 0)}/${report.stationTarget})`,
+06521:                             `  Additional units required: ${Number(report.stationTargetShortfallUnits || 0)}`
+06522:                         ]
+06523:                         : []
+06524:                 ),
+06525:                 `  Units fully covered: ${Number(report.fulfilledUnits || 0)}`,
+06526:                 `  Required qualified positions: ${Number(report.required || 0)}`,
+06527:                 `  Qualified personnel visible: ${Number(report.trained || 0)}`,
+06528:                 `  Available qualified before: ${Number(report.availableAtScan || 0)}`,
+06529:                 `  Available qualified after: ${Number(report.availableAtEnd || 0)}`,
+06530:                 `  Qualified positions before: ${getPersonnelReportInitialFilled(report)}/${Number(report.required || 0)}`,
+
+--- lines 6540-6553 ---
+06540:             if (Array.isArray(report.rules) && report.rules.length > 1) {
+06541:                 report.rules.forEach(rule => {
+06542:                     lines.push(
+06543:                         `    Rule: ${rule.label} | vehicles ${rule.vehicleCount} | target ${rule.target} | required ${rule.required} | trained ${rule.trained} | shortfall ${rule.trainingShortfall} | missing ${formatPoliceTrainingGapSummary(rule.trainingGaps)}`
+06544:                     );
+06545:                 });
+06546:             }
+06547: 
+06548:             report.vehicles.forEach(vehicle => {
+06549:                 const actionNames = isAssign ? vehicle.assignedNames : vehicle.plannedNames;
+06550:                 const actionText = actionNames?.length
+06551:                     ? ` | ${isAssign ? 'assigned' : 'planned'}: ${actionNames.join(', ')}`
+06552:                     : '';
+06553:                 const seatText = vehicle.occupiedSeatBlock
+
+--- lines 6587-6596 ---
+06587:             `Action: ${actionLabel}`,
+06588:             `Generated: ${new Date().toLocaleString('en-GB')}`,
+06589:             `Rule: ${profile.requirement}`,
+06590:             `${isPersonnelPerStationTargetMode() ? 'Units requested at every station' : 'Units requested'}: ${isPersonnelPerStationTargetMode() ? PERSONNEL_STATE.unitsRequired : 'ALL MATCHING UNITS'}`,
+06591:             `${isPersonnelPerStationTargetMode() ? 'Station targets' : 'Units fulfilled'}: ${formatPersonnelUnitsFulfilled()}`,
+06592:             ''
+06593:         ];
+06594: 
+06595:         const trainingShortfallReports = getPersonnelTrainingShortfallReports();
+06596: 
+
+--- lines 6614-6624 ---
+06614:             'TOTALS',
+06615:             `  Stations completed: ${PERSONNEL_STATE.completedStations}`,
+06616:             `  Stations skipped: ${PERSONNEL_STATE.skippedStations}`,
+06617:             `  Vehicles checked: ${PERSONNEL_STATE.checkedVehicles}`,
+06618:             `  ${isPersonnelPerStationTargetMode() ? 'Units required at every station' : 'Units requested'}: ${isPersonnelPerStationTargetMode() ? PERSONNEL_STATE.unitsRequired : 'ALL'}`,
+06619:             `  ${isPersonnelPerStationTargetMode() ? 'Station targets' : 'Units fulfilled'}: ${formatPersonnelUnitsFulfilled()}`,
+06620:             ...(
+06621:                 isPersonnelPerStationTargetMode()
+06622:                     ? [
+06623:                         `  Stations meeting target: ${PERSONNEL_STATE.stationsTargetMet}`,
+06624:                         `  Stations below target: ${PERSONNEL_STATE.stationsTargetShort}`
+
+--- lines 6682-6690 ---
+06682:             list.replaceChildren(fragment);
+06683:         }
+06684: 
+06685:         const shortageByHref = new Map(
+06686:             shortages
+06687:                 .filter(report => report.stationHref)
+06688:                 .map(report => [String(report.stationHref), Number(report.trainingShortfall || 0)])
+06689:         );
+06690: 
+
+--- lines 6782-6791 ---
+06782: 
+06783:     function updatePersonnelCounters() {
+06784:         setPersonnelUiValue('completed', PERSONNEL_STATE.completedStations);
+06785:         setPersonnelUiValue('vehicles', PERSONNEL_STATE.checkedVehicles);
+06786:         setPersonnelUiValue('unitsFulfilled', formatPersonnelUnitsFulfilled());
+06787:         setPersonnelUiValue('assigned', PERSONNEL_STATE.action === 'assign' ? PERSONNEL_STATE.assignedCount : PERSONNEL_STATE.plannedCount);
+06788:         setPersonnelUiValue('trainingShortfall', PERSONNEL_STATE.trainingShortfall);
+06789:         setPersonnelUiValue('assignmentShortfall', PERSONNEL_STATE.assignmentShortfall);
+06790:     }
+06791: 
+
+--- lines 6796-6805 ---
+06796:             vehicle: 'mc-personnel-vehicle',
+06797:             progress: 'mc-personnel-progress',
+06798:             completed: 'mc-personnel-completed',
+06799:             vehicles: 'mc-personnel-vehicles',
+06800:             unitsFulfilled: 'mc-personnel-units-fulfilled',
+06801:             assigned: 'mc-personnel-assigned',
+06802:             trainingShortfall: 'mc-personnel-training-shortfall',
+06803:             assignmentShortfall: 'mc-personnel-assignment-shortfall'
+06804:         };
+06805: 
+
+--- lines 6859-6868 ---
+06859:             panel.style.right = 'auto';
+06860: 
+06861:             removeDocumentListeners();
+06862:             document.addEventListener('mousemove', onMouseMove);
+06863:             document.addEventListener('mouseup', onMouseUp, { once: true });
+06864:             event.preventDefault();
+06865:         };
+06866: 
+06867:         const onMouseMove = event => {
+06868:             if (!dragging) return;
+
+--- lines 6875-6885 ---
+06875:             removeDocumentListeners();
+06876:         };
+06877: 
+06878:         handle.addEventListener('mousedown', onMouseDown);
+06879: 
+06880:         registerToolLifecycleCleanup(() => {
+06881:             dragging = false;
+06882:             handle.removeEventListener('mousedown', onMouseDown);
+06883:             removeDocumentListeners();
+06884:         });
+06885:     }
+
+--- lines 6919-6932 ---
+06919:     }
+06920: 
+06921:     function getVehicleIdFromHref(href) {
+06922:         const match = String(href || '').match(/\/vehicles\/(\d+)/);
+06923:         return match ? match[1] : '';
+06924:     }
+06925: 
+06926:     function makeVehicleName(station, vehicleType, count) {
+06927:         const info = VEHICLE_INFO[vehicleType];
+06928:         if (!info) return null;
+06929:         return `${info.icon ? info.icon + ' ' : ''}${station.callsignBase}-${info.code}-${count}`;
+06930:     }
+06931: 
+06932:     function refreshStations() {
+
+--- lines 6943-6951 ---
+06943:         setStatus('Refreshing stations...');
+06944:         log('Refreshing station list...', 'info');
+06945: 
+06946:         const stationLinks = [...document.querySelectorAll('a.lightbox-open.list-group-item.active[href^="/buildings/"]')];
+06947: 
+06948:         STATE.stations = stationLinks.map((link, index) => {
+06949:             const displayName = cleanText(link.textContent);
+06950:             return {
+06951:                 index,
+
+--- lines 6980-6991 ---
+06980:             return selectedType === 'ALL' || station.stationType === selectedType;
+06981:         });
+06982: 
+06983:         select.innerHTML = '';
+06984: 
+06985:         if (!STATE.filteredStations.length) {
+06986:             select.innerHTML = `<option value="">No matching stations found</option>`;
+06987:             setProgress(0, 0);
+06988:             return;
+06989:         }
+06990: 
+06991:         const firstOption = document.createElement('option');
+
+--- lines 7037-7045 ---
+07037:         STATE.paused = false;
+07038:         STATE.stopped = false;
+07039:         STATE.stationIndex = startIndex;
+07040:         STATE.renamedCount = 0;
+07041:         STATE.skippedCount = 0;
+07042:         const runId = ++STATE.runId;
+07043: 
+07044:         updateCounters();
+07045:         document.querySelector('#mc-namer-pause').textContent = 'Pause';
+
+--- lines 7104-7143 ---
+07104: 
+07105:                 log(`Station: ${station.displayName}`, 'station');
+07106: 
+07107:                 const stationLink = document.querySelector(`a.lightbox-open.list-group-item.active[href="${station.href}"]`);
+07108: 
+07109:                 if (!stationLink) {
+07110:                     log(`Station link not found, skipped: ${station.displayName}`, 'error');
+07111:                     STATE.stationIndex++;
+07112:                     continue;
+07113:                 }
+07114: 
+07115:                 stationLink.click();
+07116:                 const iframe = await waitForStationIframe(station.href);
+07117: 
+07118:                 if (!iframe) {
+07119:                     log(`Station iframe not found, skipped: ${station.displayName}`, 'error');
+07120:                     STATE.skippedCount++;
+07121:                     updateCounters();
+07122:                     await closeStationModal();
+07123:                     STATE.stationIndex++;
+07124:                     continue;
+07125:                 }
+07126: 
+07127:                 const vehicleTableReady = await waitForVehicleTable(iframe);
+07128: 
+07129:                 if (!vehicleTableReady) {
+07130:                     log(`Vehicle table did not load, skipped: ${station.displayName}`, 'error');
+07131:                     STATE.skippedCount++;
+07132:                     updateCounters();
+07133:                     await closeStationModal();
+07134:                     STATE.stationIndex++;
+07135:                     continue;
+07136:                 }
+07137: 
+07138:                 await processStationVehicleQueue(iframe, station);
+07139:                 await closeStationModal();
+07140: 
+07141:                 if (STATE.mode === 'single') {
+07142:                     log('Single station mode complete.', 'done');
+07143:                     break;
+
+--- lines 7154-7195 ---
+07154: 
+07155:             if (STATE.stopped) {
+07156:                 setStatus('Stopped');
+07157:                 log(`Stopped. Renamed ${STATE.renamedCount}. Skipped ${STATE.skippedCount}.`, 'error');
+07158:             } else {
+07159:                 setStatus('Finished');
+07160:                 setStation('None');
+07161:                 setVehicle('None');
+07162:                 setProgress(
+07163:                     STATE.mode === 'single' ? 1 : STATE.filteredStations.length,
+07164:                     STATE.mode === 'single' ? 1 : STATE.filteredStations.length
+07165:                 );
+07166:                 log(`Finished. Renamed ${STATE.renamedCount}. Skipped ${STATE.skippedCount}.`, 'done');
+07167:             }
+07168:         }
+07169:     }
+07170: 
+07171:     async function waitForStationIframe(stationHref) {
+07172:         const expectedHref = String(stationHref || '');
+07173:         const expectedBuildingId = getBuildingIdFromHref(expectedHref);
+07174: 
+07175:         for (let i = 0; i < 80; i++) {
+07176:             if (STATE.stopped) return null;
+07177: 
+07178:             const candidates = [
+07179:                 ...document.querySelectorAll(
+07180:                     'iframe.lightbox_iframe, iframe#lssmv4-redesign-lightbox-iframe, .vm--modal iframe[src*="/buildings/"]'
+07181:                 )
+07182:             ];
+07183: 
+07184:             for (const iframe of candidates.reverse()) {
+07185:                 try {
+07186:                     const doc = iframe.contentDocument;
+07187:                     if (!doc) continue;
+07188: 
+07189:                     const currentPath = iframe.contentWindow?.location?.pathname || '';
+07190:                     const sourcePath = iframe.getAttribute('src') || '';
+07191:                     const currentBuildingId = getBuildingIdFromHref(currentPath || sourcePath);
+07192: 
+07193:                     const exactStationMatch = Boolean(
+07194:                         expectedHref && (
+07195:                             currentPath.startsWith(expectedHref) ||
+
+--- lines 7212-7239 ---
+07212:                     );
+07213: 
+07214:                     if (exactStationMatch || buildingIdMatch || documentMatch) {
+07215:                         debug(`Station iframe found: ${currentPath || sourcePath || 'unknown path'}`);
+07216:                         return iframe;
+07217:                     }
+07218:                 } catch (error) {
+07219:                     debug(`Station iframe access retry: ${error?.message || error}`);
+07220:                 }
+07221:             }
+07222: 
+07223:             await sleep(250);
+07224:         }
+07225: 
+07226:         return null;
+07227:     }
+07228: 
+07229:     async function waitForVehicleTable(iframe) {
+07230:         for (let i = 0; i < 80; i++) {
+07231:             if (STATE.stopped) return false;
+07232: 
+07233:             try {
+07234:                 const doc = iframe.contentDocument;
+07235:                 if (doc && doc.querySelector('#vehicle_table tbody tr')) {
+07236:                     await sleep(300);
+07237:                     return true;
+07238:                 }
+07239:             } catch (e) {}
+
+--- lines 7243-7256 ---
+07243:         return false;
+07244:     }
+07245: 
+07246:     async function waitForEditPage(iframe) {
+07247:         for (let i = 0; i < 80; i++) {
+07248:             if (STATE.stopped) return false;
+07249: 
+07250:             try {
+07251:                 const doc = iframe.contentDocument;
+07252:                 if (doc && doc.querySelector('#vehicle_caption')) {
+07253:                     await sleep(300);
+07254:                     return true;
+07255:                 }
+07256:             } catch (e) {}
+
+--- lines 7264-7314 ---
+07264:         return [...doc.querySelectorAll('#vehicle_table tbody tr')]
+07265:             .map((row, index) => {
+07266:                 const img = row.querySelector('img[vehicle_type_id]');
+07267:                 const vehicleTypeId = img?.getAttribute('vehicle_type_id') || '';
+07268:                 const vehicleType = TYPE_ID_TO_VEHICLE_TYPE[vehicleTypeId] || '';
+07269: 
+07270:                 const allLinks = [...row.querySelectorAll('a[href^="/vehicles/"]')];
+07271: 
+07272:                 const editLink = allLinks.find(a => {
+07273:                     const href = a.getAttribute('href') || '';
+07274:                     return href.endsWith('/edit');
+07275:                 });
+07276: 
+07277:                 const vehicleLink = allLinks.find(a => {
+07278:                     const href = a.getAttribute('href') || '';
+07279:                     return !href.endsWith('/edit') && !href.includes('/zuweisung');
+07280:                 });
+07281: 
+07282:                 const vehicleHref = vehicleLink?.getAttribute('href') || '';
+07283:                 const editHref = editLink?.getAttribute('href') || '';
+07284:                 const vehicleId = getVehicleIdFromHref(editHref || vehicleHref);
+07285:                 const currentName = cleanText(vehicleLink?.textContent || '');
+07286: 
+07287:                 return {
+07288:                     tableIndex: index,
+07289:                     vehicleId,
+07290:                     vehicleTypeId,
+07291:                     vehicleType,
+07292:                     currentName,
+07293:                     vehicleHref,
+07294:                     editHref
+07295:                 };
+07296:             })
+07297:             .filter(v => v.editHref && v.vehicleId);
+07298:     }
+07299: 
+07300:     async function processStationVehicleQueue(iframe, station) {
+07301:         setStatus('Building vehicle queue');
+07302: 
+07303:         const doc = iframe.contentDocument;
+07304:         const queue = getVehicleQueueFromTable(doc);
+07305: 
+07306:         debug(`Vehicle queue built for ${station.displayName}: ${queue.length}`);
+07307: 
+07308:         if (!queue.length) {
+07309:             log(`No vehicles found in ${station.displayName}.`, 'debug');
+07310:             return;
+07311:         }
+07312: 
+07313:         const counts = {};
+07314: 
+
+--- lines 7317-7352 ---
+07317: 
+07318:             await waitIfPaused();
+07319: 
+07320:             if (!item.vehicleType) {
+07321:                 log(`Unknown vehicle_type_id skipped: ${item.vehicleTypeId} | ${item.editHref}`, 'error');
+07322:                 STATE.skippedCount++;
+07323:                 updateCounters();
+07324:                 continue;
+07325:             }
+07326: 
+07327:             const info = VEHICLE_INFO[item.vehicleType];
+07328: 
+07329:             if (!info) {
+07330:                 log(`No naming rule skipped: "${item.vehicleType}"`, 'error');
+07331:                 STATE.skippedCount++;
+07332:                 updateCounters();
+07333:                 continue;
+07334:             }
+07335: 
+07336:             counts[item.vehicleType] = (counts[item.vehicleType] || 0) + 1;
+07337: 
+07338:             const newName = makeVehicleName(station, item.vehicleType, counts[item.vehicleType]);
+07339: 
+07340:             setStatus('Opening edit page');
+07341:             setVehicle(item.editHref);
+07342: 
+07343:             iframe.contentWindow.location.href = item.editHref;
+07344: 
+07345:             await waitForEditPage(iframe);
+07346: 
+07347:             const editDoc = iframe.contentDocument;
+07348:             const captionInput = editDoc.querySelector('#vehicle_caption');
+07349:             const saveBtn = editDoc.querySelector('input[type="submit"][value="Save"], button[type="submit"]');
+07350: 
+07351:             if (!captionInput || !saveBtn) {
+07352:                 log(`Caption or Save missing: ${item.editHref}`, 'error');
+
+--- lines 7369-7391 ---
+07369: 
+07370:             saveBtn.click();
+07371: 
+07372:             STATE.renamedCount++;
+07373:             updateCounters();
+07374: 
+07375:             await sleep(700);
+07376:         }
+07377: 
+07378:         iframe.contentWindow.location.href = station.href;
+07379:         await waitForVehicleTable(iframe);
+07380:         await sleep(300);
+07381:     }
+07382: 
+07383:     async function closeStationModal() {
+07384:         setStatus('Closing station');
+07385: 
+07386:         const closeBtn = document.querySelector('span.lightbox-close');
+07387: 
+07388:         if (closeBtn) {
+07389:             closeBtn.click();
+07390:             await sleep(800);
+07391:         } else {
+
+--- lines 7420-7431 ---
+07420:     }
+07421: 
+07422:     function updateCounters() {
+07423:         const renamed = getToolElementById('mc-namer-renamed');
+07424:         const skipped = getToolElementById('mc-namer-skipped');
+07425: 
+07426:         if (renamed) renamed.textContent = String(STATE.renamedCount);
+07427:         if (skipped) skipped.textContent = String(STATE.skippedCount);
+07428:     }
+07429: 
+07430:     function log(message, type = 'info') {
+07431:         const logBox = getToolElementById('mc-namer-log');
+
+--- lines 7451-7464 ---
+07451:     const handleToolPageHide = event => {
+07452:         flushPersonnelTrainingRegistry(true);
+07453:         if (event?.persisted) return;
+07454:         runToolLifecycleCleanup();
+07455:     };
+07456: 
+07457:     window.addEventListener('storage', handlePersonnelRegistryStorage);
+07458:     window.addEventListener('pagehide', handleToolPageHide);
+07459:     registerToolLifecycleCleanup(() => {
+07460:         window.removeEventListener('storage', handlePersonnelRegistryStorage);
+07461:         window.removeEventListener('pagehide', handleToolPageHide);
+07462:     });
+07463: 
+07464:     initWhenReady();
