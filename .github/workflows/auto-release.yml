@@ -1,0 +1,139 @@
+name: Automatic verified release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/missionchief-command-nexus.user.js'
+      - '.github/workflows/auto-release.yml'
+      - '.github/auto-release-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: command-nexus-auto-release
+  cancel-in-progress: false
+
+jobs:
+  detect:
+    name: Detect unpublished Command Nexus version
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      should_publish: ${{ steps.release_state.outputs.should_publish }}
+      release_tag: ${{ steps.release_state.outputs.release_tag }}
+      script_version: ${{ steps.release_state.outputs.script_version }}
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Validate source and detect release state
+        id: release_state
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          git fetch origin main --tags --force
+          git checkout -B main origin/main
+
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          python3 scripts/check_repository.py
+
+          SCRIPT_VERSION="$(node scripts/validate-userscript.mjs --print-version)"
+          RELEASE_TAG="v${SCRIPT_VERSION}"
+          ASSET="MissionChief-Command-Nexus-${SCRIPT_VERSION}.user.js"
+          CHECKSUM="${ASSET}.sha256"
+
+          if ! grep -Fq "## [${SCRIPT_VERSION}]" CHANGELOG.md; then
+            echo "CHANGELOG.md does not contain a release section for ${SCRIPT_VERSION}."
+            exit 1
+          fi
+
+          SHOULD_PUBLISH=true
+          REASON="release or verified assets are missing"
+
+          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+            ASSET_COUNT="$(
+              gh release view "${RELEASE_TAG}" \
+                --json assets \
+                --jq --arg asset "${ASSET}" --arg checksum "${CHECKSUM}" \
+                '[.assets[].name | select(. == $asset or . == $checksum)] | unique | length'
+            )"
+
+            if [[ "${ASSET_COUNT}" == "2" ]]; then
+              SHOULD_PUBLISH=false
+              REASON="GitHub Release and both verified assets already exist"
+            else
+              REASON="GitHub Release exists but one or more verified assets are missing"
+            fi
+          elif git show-ref --tags --verify --quiet "refs/tags/${RELEASE_TAG}"; then
+            REASON="release tag exists but the GitHub Release is incomplete or missing"
+          fi
+
+          echo "should_publish=${SHOULD_PUBLISH}" >> "${GITHUB_OUTPUT}"
+          echo "release_tag=${RELEASE_TAG}" >> "${GITHUB_OUTPUT}"
+          echo "script_version=${SCRIPT_VERSION}" >> "${GITHUB_OUTPUT}"
+
+          {
+            echo "### Automatic release decision"
+            echo "- Version: \`${SCRIPT_VERSION}\`"
+            echo "- Tag: \`${RELEASE_TAG}\`"
+            echo "- Publish required: \`${SHOULD_PUBLISH}\`"
+            echo "- Reason: ${REASON}"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+  publish:
+    name: Publish, verify and announce release
+    needs: detect
+    if: needs.detect.outputs.should_publish == 'true'
+    uses: ./.github/workflows/release.yml
+    with:
+      operation: publish-release
+      release_tag: ${{ needs.detect.outputs.release_tag }}
+      release_notes: Automatic verified release after merge to main.
+    secrets:
+      DISCORD_RELEASE_WEBHOOK: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
+
+  complete:
+    name: Confirm automatic release state
+    needs:
+      - detect
+      - publish
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report result
+        shell: bash
+        env:
+          SHOULD_PUBLISH: ${{ needs.detect.outputs.should_publish }}
+          RELEASE_TAG: ${{ needs.detect.outputs.release_tag }}
+          PUBLISH_RESULT: ${{ needs.publish.result }}
+        run: |
+          set -euo pipefail
+
+          if [[ "${SHOULD_PUBLISH}" == "true" && "${PUBLISH_RESULT}" != "success" ]]; then
+            echo "Automatic publication for ${RELEASE_TAG} did not complete successfully."
+            exit 1
+          fi
+
+          if [[ "${SHOULD_PUBLISH}" == "true" ]]; then
+            echo "${RELEASE_TAG} was published, verified and announced to Discord."
+          else
+            echo "${RELEASE_TAG} was already fully published; no duplicate Discord announcement was sent."
+          fi
