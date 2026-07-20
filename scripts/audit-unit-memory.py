@@ -3,6 +3,7 @@ import re
 
 source_path = Path('src/missionchief-command-nexus.user.js')
 report_path = Path('UNIT_MEMORY_AUDIT.txt')
+source_segment_path = Path('UNIT_RENAMER_SOURCE.txt')
 source = source_path.read_text(encoding='utf-8')
 module = source.split('MODULE 2: MISSION FINDER', 1)[0]
 lines = module.splitlines()
@@ -33,7 +34,6 @@ for index, line in enumerate(lines, start=1):
     if combined.search(line):
         interesting.append(index)
 
-# Collapse nearby hits into compact context windows.
 windows = []
 for line_no in interesting:
     start = max(1, line_no - 3)
@@ -49,7 +49,6 @@ out.append(f'Module lines scanned: {len(lines)}')
 out.append(f'Context windows: {len(windows)}')
 out.append('')
 
-# Inventory function declarations with likely unit-renamer relevance.
 function_re = re.compile(r'^\s*(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(')
 out.append('FUNCTION INDEX')
 for index, line in enumerate(lines, start=1):
@@ -66,4 +65,14 @@ for start, end in windows:
     out.append('')
 
 report_path.write_text('\n'.join(out), encoding='utf-8')
+
+segment_start = 6880
+segment_end = min(len(lines), 7470)
+segment = [
+    f'{number:05d}: {lines[number - 1]}'
+    for number in range(segment_start, segment_end + 1)
+]
+source_segment_path.write_text('\n'.join(segment), encoding='utf-8')
+
 print(f'Wrote {report_path} with {len(out)} lines')
+print(f'Wrote {source_segment_path} for source lines {segment_start}-{segment_end}')
