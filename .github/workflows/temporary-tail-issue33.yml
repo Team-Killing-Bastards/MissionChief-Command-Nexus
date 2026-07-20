@@ -1,0 +1,45 @@
+name: Tail Issue 33 release recovery log
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - synchronize
+
+permissions:
+  actions: read
+  issues: write
+
+jobs:
+  tail:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'docs/issue-33-validation'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Retrieve failed release job log tail
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          JOB_ID='88305460109'
+          LOG='/tmp/issue33-release.log'
+
+          gh api \
+            -H 'Accept: application/vnd.github+json' \
+            "/repos/${GITHUB_REPOSITORY}/actions/jobs/${JOB_ID}/logs" \
+            > "${LOG}"
+
+          {
+            echo '## Issue #33 release-context diagnostic'
+            echo
+            echo '```text'
+            tail -n 90 "${LOG}"
+            echo '```'
+          } > /tmp/comment.md
+
+          gh issue comment 33 --body-file /tmp/comment.md
