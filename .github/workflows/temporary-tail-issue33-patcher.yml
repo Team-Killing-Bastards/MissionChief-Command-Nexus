@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - '.github/workflows/temporary-tail-issue33-patcher.yml'
+      - '.github/release-triggers/diagnose-issue33-patcher'
 
 permissions:
   actions: read
@@ -29,5 +29,3 @@ jobs:
 
           echo '===== LATEST PATCHER FAILURE ====='
           tail -n 70 /tmp/patcher.log
-
-          echo 'Diagnostic completed.'
