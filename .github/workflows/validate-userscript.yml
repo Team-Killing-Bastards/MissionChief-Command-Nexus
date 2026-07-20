@@ -1,41 +1,27 @@
-name: Diagnose issue 57 patch
+name: Locate issue 57 legacy references
 
 on:
   pull_request:
     paths:
-      - 'scripts/apply-v1.0.9-issue57.py'
       - '.github/workflows/validate-userscript.yml'
 
 permissions:
   contents: write
 
 jobs:
-  diagnose:
+  locate:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v6
         with:
           ref: ${{ github.head_ref }}
-      - name: Capture exact patch result
+      - name: Record all bundled-profile references
         shell: bash
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          path = Path('scripts/apply-v1.0.9-issue57.py')
-          text = path.read_text(encoding='utf-8')
-          old = "replace_once(\"V10.6.74\", \"V10.6.75\", 'Mission Finder version')"
-          new = "if source.count('V10.6.74') != 2:\n    raise SystemExit(f\"Mission Finder version count: {source.count('V10.6.74')}\")\nsource = source.replace('V10.6.74', 'V10.6.75')"
-          if text.count(old) != 1:
-              raise SystemExit(f'Patch-script version anchor count: {text.count(old)}')
-          path.write_text(text.replace(old, new, 1), encoding='utf-8', newline='\n')
-          PY
-          set +e
-          python3 scripts/apply-v1.0.9-issue57.py > PATCH_ERROR.txt 2>&1
-          status=$?
-          echo "exit_status=${status}" >> PATCH_ERROR.txt
+          grep -n -C 8 'public_order_combined_vehicle' src/missionchief-command-nexus.user.js > COMBINED_CONTEXT.txt || true
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add PATCH_ERROR.txt
-          git commit -m 'Record issue 57 patch diagnostic'
+          git add COMBINED_CONTEXT.txt
+          git commit -m 'Record legacy bundled-profile references'
           git push origin HEAD:${{ github.head_ref }}
