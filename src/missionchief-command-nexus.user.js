@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.3
+// @version      1.0.4
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -7156,7 +7156,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.70
+         * MODULE 2: MISSION FINDER V10.6.71
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -7397,7 +7397,7 @@
     // Personnel Assignment registry vehicle IDs as priority hints, then rechecks
     // those precise /zuweisung pages before selection. This prevents trained
     // IRVs being missed when they are outside the first arrival-sorted scan batch.
-    // V10.6.70: Normal Police Car/Police Officer requirements now protect
+    // V10.6.71: Normal Police Car/Police Officer requirements now protect
     // exact-ID IRVs carrying specialist-trained staff, live-verify ordinary IRVs
     // before selection, and exclude known trained IRVs from ordinary attendance.
     // Auto Mode now waits for a complete, non-zero, ID-stable vehicle list with
@@ -7442,7 +7442,7 @@
     const MF_STRICT_TRAINING_SOURCE_PREFIX =
         'mission-finder-live-strict-';
 
-    // V10.6.70: ordinary Police attendance must preserve specialist IRVs.
+    // V10.6.71: ordinary Police attendance must preserve specialist IRVs.
     // Exact vehicle IDs carrying any protected Police qualification are never
     // used to satisfy a normal Police Car / Police Officer requirement.
     const MF_PROTECTED_ORDINARY_IRV_TRAINING_CODES =
@@ -29086,20 +29086,56 @@ let sessionRuntimeTicker = null;
         };
     }
 
-    function isVehicleListLoadControlVisible() {
-        const loadControl =
-            document.querySelector(
+    function getVisibleVehicleListLoadControl() {
+        return Array.from(
+            document.querySelectorAll(
                 'a.btn-warning.missing_vehicles_load, a.missing_vehicles_load'
-            );
+            )
+        ).find(loadControl => {
+            if (!loadControl || !loadControl.isConnected) {
+                return false;
+            }
 
-        if (!loadControl) return false;
+            const disabled =
+                loadControl.hasAttribute('disabled') ||
+                loadControl.getAttribute('aria-disabled') === 'true' ||
+                loadControl.classList.contains('disabled');
 
-        try {
-            return getComputedStyle(loadControl).display !== 'none' &&
-                loadControl.getClientRects().length > 0;
-        } catch (_error) {
-            return true;
-        }
+            if (disabled) return false;
+
+            try {
+                return isElementVisible(loadControl);
+            } catch (_error) {
+                try {
+                    return getComputedStyle(loadControl).display !== 'none' &&
+                        loadControl.getClientRects().length > 0;
+                } catch (_innerError) {
+                    return true;
+                }
+            }
+        }) || null;
+    }
+
+    function getVehicleListLoadControlToken(loadControl) {
+        if (!loadControl) return '';
+
+        const href = String(
+            loadControl.getAttribute('href') ||
+            loadControl.href ||
+            ''
+        ).trim();
+
+        const text = String(
+            loadControl.textContent ||
+            loadControl.innerText ||
+            ''
+        ).replace(/\s+/g, ' ').trim();
+
+        return `${href}|${text}`;
+    }
+
+    function isVehicleListLoadControlVisible() {
+        return !!getVisibleVehicleListLoadControl();
     }
 
     function isVehicleListLoadingIndicatorVisible() {
@@ -29202,62 +29238,255 @@ let sessionRuntimeTicker = null;
     async function ensureVehicleListLoaded(options = {}) {
         const stableTimeoutMs = Number.isFinite(options.stableTimeoutMs)
             ? Math.max(1500, options.stableTimeoutMs)
-            : 7000;
+            : 10000;
 
         const stableForMs = Number.isFinite(options.stableForMs)
             ? Math.max(400, options.stableForMs)
-            : 900;
+            : 1200;
 
         const loadTimeoutMs = Number.isFinite(options.loadTimeoutMs)
             ? Math.max(5000, options.loadTimeoutMs)
-            : 18000;
+            : 60000;
+
+        const pageProgressTimeoutMs = Number.isFinite(
+            options.pageProgressTimeoutMs
+        )
+            ? Math.max(3000, options.pageProgressTimeoutMs)
+            : 15000;
 
         const minimumSettleMs = Number.isFinite(options.minimumSettleMs)
             ? Math.max(0, options.minimumSettleMs)
-            : 700;
+            : 800;
 
-        const requireNonZero =
-            options.requireNonZero !== false;
-
-        const vehicleDisplayBar =
-            document.querySelector(
-                'a.btn-warning.missing_vehicles_load, a.missing_vehicles_load'
-            );
+        const requireNonZero = options.requireNonZero !== false;
+        const missionKeyAtStart = getLocalMissionInstanceKey();
+        const loadingStartedAt = Date.now();
 
         let loadClicked = false;
+        let clickedPages = 0;
+        let lastCompletedControlToken = '';
+        let lastCompletedVehicleSignature = '';
+        let loadFailureReason = '';
 
-        if (
-            vehicleDisplayBar &&
-            isVehicleListLoadControlVisible()
-        ) {
+        while (Date.now() - loadingStartedAt < loadTimeoutMs) {
+            const currentMissionKey = getLocalMissionInstanceKey();
+
+            if (
+                missionKeyAtStart &&
+                currentMissionKey &&
+                currentMissionKey !== missionKeyAtStart
+            ) {
+                loadFailureReason =
+                    'mission changed while loading vehicles';
+                break;
+            }
+
+            const vehicleDisplayBar =
+                getVisibleVehicleListLoadControl();
+
+            if (!vehicleDisplayBar) break;
+
+            const beforeSnapshot =
+                getVehicleCheckboxListSignature();
+
+            const controlToken =
+                getVehicleListLoadControlToken(vehicleDisplayBar);
+
+            // Never fire the same AJAX page twice while MissionChief is still
+            // replacing the control. A new href/text token or changed vehicle
+            // signature must appear before another click is permitted.
+            if (
+                controlToken === lastCompletedControlToken &&
+                beforeSnapshot.signature ===
+                    lastCompletedVehicleSignature
+            ) {
+                await wait(150);
+                continue;
+            }
+
             updateStatusBox(
-                'Loading full vehicle list...'
+                `Vehicle display limited. Loading additional vehicle page ${clickedPages + 1}...`
             );
 
-            invalidateVehicleCheckboxCache();
-            vehicleDisplayBar.click();
-            loadClicked = true;
+            if (mfDebugEnabled) {
+                debugLog(
+                    'VEHICLE PAGE LOAD',
+                    `Click ${clickedPages + 1} | control=${controlToken || 'unknown'} | before=${beforeSnapshot.signature}`
+                );
+            }
 
-            const started =
-                Date.now();
+            invalidateVehicleCheckboxCache();
+
+            let clickIssued = false;
+
+            try {
+                vehicleDisplayBar.click();
+                clickIssued = true;
+            } catch (_error) {}
+
+            if (!clickIssued) {
+                clickIssued = realClickForQueueRestart(vehicleDisplayBar);
+            }
+
+            if (!clickIssued) {
+                loadFailureReason =
+                    'limited vehicle control could not be clicked';
+                break;
+            }
+
+            loadClicked = true;
+            clickedPages += 1;
+
+            const pageStartedAt = Date.now();
+            let rowProgressSeen = false;
+            let controlTransitionSeen = false;
+            let lastPageSignature = beforeSnapshot.signature;
+            let signatureStableSince = Date.now();
+            let pageCompleted = false;
 
             while (
-                Date.now() - started <
-                loadTimeoutMs
+                Date.now() - pageStartedAt <
+                pageProgressTimeoutMs
             ) {
+                const pageMissionKey =
+                    getLocalMissionInstanceKey();
+
                 if (
-                    !isVehicleListLoadControlVisible()
+                    missionKeyAtStart &&
+                    pageMissionKey &&
+                    pageMissionKey !== missionKeyAtStart
                 ) {
+                    loadFailureReason =
+                        'mission changed while an additional vehicle page was loading';
+                    break;
+                }
+
+                invalidateVehicleCheckboxCache();
+
+                const currentSnapshot =
+                    getVehicleCheckboxListSignature();
+
+                const currentControl =
+                    getVisibleVehicleListLoadControl();
+
+                const currentControlToken =
+                    getVehicleListLoadControlToken(currentControl);
+
+                if (
+                    currentSnapshot.signature !==
+                    lastPageSignature
+                ) {
+                    lastPageSignature = currentSnapshot.signature;
+                    signatureStableSince = Date.now();
+                }
+
+                rowProgressSeen =
+                    rowProgressSeen ||
+                    currentSnapshot.signature !==
+                        beforeSnapshot.signature;
+
+                controlTransitionSeen =
+                    controlTransitionSeen ||
+                    !vehicleDisplayBar.isConnected ||
+                    !currentControl ||
+                    currentControl !== vehicleDisplayBar ||
+                    currentControlToken !== controlToken;
+
+                const pageElapsed = Date.now() - pageStartedAt;
+                const signatureStableFor =
+                    Date.now() - signatureStableSince;
+
+                const loadingIndicatorVisible =
+                    isVehicleListLoadingIndicatorVisible();
+
+                if (
+                    rowProgressSeen &&
+                    signatureStableFor >= 700 &&
+                    !loadingIndicatorVisible
+                ) {
+                    pageCompleted = true;
+                    break;
+                }
+
+                if (
+                    controlTransitionSeen &&
+                    pageElapsed >= 800 &&
+                    !loadingIndicatorVisible
+                ) {
+                    pageCompleted = true;
                     break;
                 }
 
                 await wait(150);
             }
+
+            if (loadFailureReason) break;
+
+            if (!pageCompleted) {
+                loadFailureReason =
+                    `additional vehicle page ${clickedPages} made no confirmed progress`;
+                break;
+            }
+
+            invalidateVehicleCheckboxCache();
+
+            const completedSnapshot =
+                getVehicleCheckboxListSignature();
+
+            lastCompletedControlToken = controlToken;
+            lastCompletedVehicleSignature =
+                completedSnapshot.signature;
+
+            if (mfDebugEnabled) {
+                debugLog(
+                    'VEHICLE PAGE LOAD',
+                    `Completed page ${clickedPages} | after=${completedSnapshot.signature} | next=${getVehicleListLoadControlToken(getVisibleVehicleListLoadControl()) || 'none'}`
+                );
+            }
+
+            // Allow MissionChief to install the next offset_page link or remove
+            // the final limited-display control before the next loop pass.
+            await wait(300);
         }
 
-        // The Load Missing control can disappear before the final row batch is
-        // inserted. Wait for the complete ID signature and table-row count to
-        // remain unchanged, with no loading control or spinner still visible.
+        const remainingLoadControl =
+            getVisibleVehicleListLoadControl();
+
+        if (!loadFailureReason && remainingLoadControl) {
+            loadFailureReason =
+                'additional vehicle page loading timed out';
+        }
+
+        if (loadFailureReason) {
+            const failedSnapshot =
+                getVehicleCheckboxListSignature();
+
+            updateStatusBox(
+                `Vehicle list did not finish loading safely: ${loadFailureReason}.`
+            );
+
+            if (mfDebugEnabled) {
+                debugLog(
+                    'VEHICLE PAGE LOAD',
+                    `FAILED | ${loadFailureReason} | pages=${clickedPages} | ${failedSnapshot.signature}`
+                );
+            }
+
+            return {
+                ready: false,
+                count: failedSnapshot.boxes.length,
+                signature: failedSnapshot.signature,
+                elapsed: Date.now() - loadingStartedAt,
+                timedOut: true,
+                loadClicked,
+                clickedPages,
+                reason: loadFailureReason
+            };
+        }
+
+        // The final Load More control can disappear before the last row batch
+        // is inserted. Require the full ID signature and table row count to
+        // remain unchanged after every offset_page control has gone.
         const stability =
             await waitForVehicleCheckboxListStable(
                 stableTimeoutMs,
@@ -29266,10 +29495,7 @@ let sessionRuntimeTicker = null;
                     minimumWaitMs:
                         loadClicked
                             ? minimumSettleMs
-                            : Math.min(
-                                minimumSettleMs,
-                                350
-                            ),
+                            : Math.min(minimumSettleMs, 350),
                     requireNonZero
                 }
             );
@@ -29283,17 +29509,28 @@ let sessionRuntimeTicker = null;
 
             return {
                 ...stability,
-                loadClicked
+                loadClicked,
+                clickedPages
             };
         }
 
         updateStatusBox(
-            `Vehicle list loaded and stable (${stability.count} vehicles).`
+            clickedPages > 0
+                ? `All additional vehicle pages loaded and stable (${stability.count} vehicles across ${clickedPages} load${clickedPages === 1 ? '' : 's'}).`
+                : `Vehicle list loaded and stable (${stability.count} vehicles).`
         );
+
+        if (mfDebugEnabled) {
+            debugLog(
+                'VEHICLE PAGE LOAD',
+                `READY | pages=${clickedPages} | vehicles=${stability.count} | elapsed=${Date.now() - loadingStartedAt}ms`
+            );
+        }
 
         return {
             ...stability,
-            loadClicked
+            loadClicked,
+            clickedPages
         };
     }
 

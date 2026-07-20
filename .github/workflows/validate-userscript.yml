@@ -6,64 +6,45 @@ on:
       - 'src/**'
       - 'scripts/validate-userscript.mjs'
       - '.github/workflows/validate-userscript.yml'
-      - '.automation/**'
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'scripts/validate-userscript.mjs'
+      - '.github/workflows/validate-userscript.yml'
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: validate-userscript-v1-0-4-${{ github.ref }}
-  cancel-in-progress: false
+  group: validate-userscript-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build-v1-0-4:
-    if: >-
-      github.event_name == 'pull_request' &&
-      github.head_ref == 'agent/v1.0.4-auto-load-limited-vehicles'
-    name: Build v1.0.4 candidate
+  validate:
+    name: Userscript validation
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
 
     steps:
-      - name: Check out candidate branch
+      - name: Check out repository
         uses: actions/checkout@v6
         with:
-          ref: ${{ github.head_ref }}
           fetch-depth: 0
 
       - name: Set up Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
-          node-version: '24'
-          package-manager-cache: false
+          node-version: '22'
 
-      - name: Apply deterministic patch
-        shell: bash
-        run: |
-          set -euo pipefail
+      - name: Validate JavaScript syntax
+        run: node --check src/missionchief-command-nexus.user.js
 
-          python3 .automation/fix_builder_replacements.py
-          python3 .automation/version_v1_0_4.py
-          python3 .automation/build_v1_0_4.py
-          rm -rf .automation
+      - name: Validate metadata and Greasy Fork limits
+        run: node scripts/validate-userscript.mjs
 
-          git fetch origin main
-          git checkout origin/main -- .github/workflows/validate-userscript.yml
-
-          node --check src/missionchief-command-nexus.user.js
-          node scripts/validate-userscript.mjs
-          python3 scripts/check_repository.py
-          git diff --check
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "Load all limited vehicle pages before selection"
-
-      - name: Rebase and publish completed candidate
-        shell: bash
-        run: |
-          set -euo pipefail
-          git fetch origin main
-          git rebase origin/main
-          git push --force-with-lease origin HEAD:refs/heads/${{ github.head_ref }}
+      - name: Require a version increase when code changes
+        if: github.event_name == 'pull_request'
+        run: node scripts/validate-userscript.mjs --base-ref "origin/${{ github.base_ref }}"
