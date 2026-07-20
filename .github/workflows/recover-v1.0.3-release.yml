@@ -4,8 +4,11 @@ on:
   push:
     branches:
       - main
+      - agent/recover-v1.0.3-release
     paths:
       - '.github/release-triggers/recover-v1.0.3'
+      - '.github/release-triggers/pr-recover-v1.0.3'
+      - '.github/release-triggers/branch-recover-v1.0.3'
   pull_request:
     branches:
       - main
