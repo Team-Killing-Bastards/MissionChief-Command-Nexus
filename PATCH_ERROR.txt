@@ -1,2 +1,2 @@
-Mission Finder version: expected exactly one match, found 2
+Combined Public Order requirement remains in generated source
 exit_status=1
