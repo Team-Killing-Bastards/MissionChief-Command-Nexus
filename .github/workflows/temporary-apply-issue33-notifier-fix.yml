@@ -41,6 +41,10 @@ jobs:
           python3 "${PATCH}"
           git rm -f "${PATCH}"
 
+          if [[ -f automation/issue33_diagnostic_trigger.txt ]]; then
+            git rm -f automation/issue33_diagnostic_trigger.txt
+          fi
+
           node --check scripts/release-notify.mjs
           node --check scripts/publish-release.mjs
           node scripts/validate-userscript.mjs
@@ -49,8 +53,6 @@ jobs:
 
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add \
-            scripts/release-notify.mjs \
-            .github/workflows/release.yml
-          git commit -m 'Use authenticated immutable source verification for releases'
+          git add scripts/release-notify.mjs
+          git commit -m 'Use immutable GitHub source verification for releases'
           git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
