@@ -4,6 +4,7 @@ This directory contains the current engineering, validation, migration and relea
 
 ## Start here
 
+- [v1.0.3 Release Handover](HANDOVER_V1_0_3_RELEASE.md) — urgent publication status, GitHub service blocker, recovery procedure and acceptance checklist tracked in issue #33.
 - [Developer Handoff](DEVELOPER_HANDOFF.md) — current v1.0.1 baseline, implementation shape, risks and safe resume workflow.
 - [Project Roadmap](ROADMAP.md) — implemented baseline, validation gaps and phased path to the first formal release.
 
