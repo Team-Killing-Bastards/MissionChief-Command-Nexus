@@ -17,7 +17,7 @@ One MissionChief UK userscript for mission intelligence, vehicle selection, trai
 </tr>
 </table>
 
-**Current version:** `1.0.4` · **Developer:** [MartyBlyth](https://github.com/Martyblyth) · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE) · [⭐ Star the repository](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/stargazers)
+**Current version:** `1.0.5` · **Developer:** [MartyBlyth](https://github.com/Martyblyth) · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE) · [⭐ Star the repository](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/stargazers)
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)
