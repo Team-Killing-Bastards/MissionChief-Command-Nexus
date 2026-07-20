@@ -1,17 +1,20 @@
 name: Tail Issue 33 patcher failure
 
 on:
-  push:
+  pull_request:
     branches:
       - main
-    paths:
-      - '.github/release-triggers/diagnose-issue33-patcher'
+    types:
+      - synchronize
 
 permissions:
   actions: read
 
 jobs:
   tail:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'fix/issue-33-notifier-propagation'
     runs-on: ubuntu-latest
 
     steps:
