@@ -4,23 +4,24 @@
 
 # MissionChief Command Nexus
 
-### Resource preparation, trained-personnel intelligence, mission matching and dispatch — in one MissionChief UK userscript.
+### Resource preparation, trained-personnel intelligence, live mission matching, and dispatch—in one MissionChief UK userscript
 
 <table>
 <tr>
 <td width="25%" align="center"><a href="https://greasyfork.org/en/scripts/587702-missionchief-command-nexus"><strong>⬇ INSTALL / UPDATE</strong><br><sub>Recommended Greasy Fork route</sub></a></td>
 <td width="25%" align="center"><a href="src/missionchief-command-nexus.user.js"><strong>⌘ VIEW SOURCE</strong><br><sub>Canonical userscript</sub></a></td>
-<td width="25%" align="center"><a href="https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/latest"><strong>◈ LATEST RELEASE</strong><br><sub>Verified assets and checksum</sub></a></td>
-<td width="25%" align="center"><a href="https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues"><strong>⚠ ISSUES</strong><br><sub>Bugs, limitations and planned work</sub></a></td>
+<td width="25%" align="center"><a href="https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/latest"><strong>◈ LATEST RELEASE</strong><br><sub>Verified source and assets</sub></a></td>
+<td width="25%" align="center"><a href="https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues"><strong>⚠ ISSUES</strong><br><sub>Confirmed gaps and roadmap</sub></a></td>
 </tr>
 </table>
 
-**Current version:** `1.0.14` · **Release status:** Production · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
+**Current version:** `1.0.14` · **Mission Finder engine:** `V10.6.80` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)
+[![Release](https://img.shields.io/github/v/release/Team-Killing-Bastards/MissionChief-Command-Nexus?label=release&color=7b6cf6)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/latest)
 
-[What it is](#what-it-is) · [Install](#install) · [Workflows](#operational-workflows) · [Current capabilities](#current-v106-capabilities) · [Limitations](#known-limitations) · [Safety](#operational-safety) · [Release system](#release-and-quality-system) · [Development](#development-and-support)
+[**What it is**](#what-it-is) · [**Install**](#install) · [**Workflows**](#operational-workflows) · [**v1.0.14**](#current-v1014-behaviour) · [**Safety**](#operational-safety) · [**Architecture**](#architecture) · [**Release system**](#release-and-quality-system)
 
 </div>
 
@@ -28,30 +29,26 @@
 
 ## What it is
 
-MissionChief Command Nexus combines two established MartyBlyth systems into one installable userscript:
+MissionChief Command Nexus unifies two established MartyBlyth systems into one maintained installation:
 
-- **Mission Finder** — mission requirements, trained-personnel matching, vehicle selection, Mission Update, Auto Mode, dispatch and continuation.
-- **Unit, Station & Personnel Tools** — station naming, vehicle naming, personnel assignment, training intelligence and reporting.
-
-The operational chain is:
+- **Mission Finder** — mission requirements, trained-personnel matching, vehicle selection, Mission Update, Auto Mode, dispatch, upgrades, and continuation.
+- **Unit, Station & Personnel Tools** — station naming, vehicle naming, personnel assignment, training intelligence, and operational reporting.
 
 ```text
-Stations → Vehicles → Personnel → Training Capability → Mission Requirements → Selection → Dispatch
+Stations → Vehicles → Personnel → Training Capability → Live Mission Demand → Selection → Dispatch
 ```
 
-Command Nexus is one distributed `.user.js` file with one metadata block and one outer installation guard. Internally, it deliberately retains two established runtime engines so resource administration and mission operations can start, fail and clean up independently.
+The distributed product is one `.user.js` file with one metadata block and one installation guard. Internally, the two mature runtime engines remain deliberately separated so resource administration and mission operations can initialise, fail, and clean up independently.
 
-The primary integration between those engines is the **vehicle-training register**. Personnel workflows can verify who is assigned to each vehicle and record that capability; mission selection can then use exact vehicle identity and training evidence instead of relying on a vehicle label alone.
+Their primary shared contract is the **vehicle-training register**. The administration engine can verify exactly which personnel are assigned to each vehicle; the mission engine can then select specialist capability using vehicle identity and evidence rather than a display name alone.
 
 > [!IMPORTANT]
-> MissionChief Command Nexus is developed by **MartyBlyth**, the project creator, userscript author and technical owner. **Conroy1988 is the project helper** for repository setup, documentation and general support; he is **not a userscript developer**.
+> **MartyBlyth is the creator, userscript author, technical owner, and release authority.** Conroy1988 supports repository infrastructure, documentation, validation, and general project operations; he is not presented as the userscript developer.
 
 ## Install
 
-### Recommended — Greasy Fork
-
-1. Install a userscript manager such as **Tampermonkey** or **Violentmonkey**.
-2. Open **[MissionChief Command Nexus on Greasy Fork](https://greasyfork.org/en/scripts/587702-missionchief-command-nexus)**.
+1. Install **Tampermonkey** or **Violentmonkey**.
+2. Open [MissionChief Command Nexus on Greasy Fork](https://greasyfork.org/en/scripts/587702-missionchief-command-nexus).
 3. Select **Install this script** or **Update**.
 4. Disable both legacy standalone scripts:
    - Mission Finder 2026 Trained Personal Update
@@ -59,129 +56,120 @@ The primary integration between those engines is the **vehicle-training register
 5. Reload MissionChief.
 
 > [!WARNING]
-> Keep **one active Command Nexus installation only**. The two legacy scripts are already included and must not remain enabled beside Command Nexus.
+> Keep **one active Command Nexus installation only**. Both legacy engines are already included and must not run beside the combined userscript.
 
-### Canonical GitHub source
-
-The authoritative repository source is:
-
-**[Install or inspect the canonical `main` build](https://raw.githubusercontent.com/Team-Killing-Bastards/MissionChief-Command-Nexus/main/src/missionchief-command-nexus.user.js)**
-
-Greasy Fork is the recommended update channel for normal users. The `main` branch file remains the project source of truth used for validation and release publication.
+The canonical source is [`src/missionchief-command-nexus.user.js`](src/missionchief-command-nexus.user.js) on `main`. Greasy Fork remains the supported public update channel.
 
 ## Operational workflows
 
-### 1. Resource administration
-
-Command Nexus provides controlled administration workflows for stations, vehicles and personnel.
+### Resource administration
 
 | Area | Current behaviour |
 |---|---|
-| **Station naming** | Generates and previews structured station names from available station and location data. |
-| **Vehicle naming** | Applies repeatable captions and numbering across supported station and vehicle types. |
-| **Scoped batch processing** | Processes a chosen station scope with progress, pause, resume and stop controls where supported. |
-| **Personnel Assignment** | Finds trained personnel, plans eligible vehicle assignments, supports Preview and Live modes, then verifies submitted changes. |
-| **Build Personnel Register** | Scans every discovered station type and each vehicle's own assignment page without changing assignments. |
-| **Training register** | Stores verified vehicle/personnel capability for exact qualification-aware mission selection. |
-| **Reporting** | Separates changed, skipped, failed, unfilled and genuine training-shortage outcomes. |
+| **Station naming** | Generates and previews structured station names from available station and location data |
+| **Vehicle naming** | Applies repeatable captions and numbering across supported station and vehicle types |
+| **Scoped batch processing** | Operates on a chosen station scope with progress, pause, resume, and stop controls where supported |
+| **Personnel Assignment** | Finds trained personnel, plans eligible assignments, supports Preview and Live modes, and verifies submitted changes |
+| **Build Personnel Register** | Reads each discovered vehicle's assignment page without changing assignments |
+| **Training register** | Stores exact verified vehicle/personnel capability for specialist mission matching |
+| **Reporting** | Separates changed, skipped, failed, unfilled, and genuine training-shortage outcomes |
 
-### 2. Mission operations
-
-The mission engine reads the current mission state and attempts to select the capability still required.
+### Mission operations
 
 | Area | Current behaviour |
 |---|---|
-| **Unit Finder** | Parses requirements and selects mapped vehicles and trained personnel. |
-| **Mission Update** | Re-reads a mission after requirements change and adds newly required capability. |
-| **Auto Mode** | Loads the complete vehicle list, evaluates requirements, selects resources, checks readiness and dispatches as a managed cycle. |
-| **Live requirement preference** | Uses the live Mission Requirements table when available; older alert text is treated as fallback evidence. |
-| **Patient demand** | Accounts for visible patients and ambulance demand when mission text alone is incomplete. |
-| **Exact trained-vehicle matching** | Uses vehicle IDs and verified assignment/training data for specialist capability. |
-| **Mission continuation** | Handles mission upgrades, queue continuation, unattended-mission recovery and visible patient or prisoner transport controls. |
-| **Session diagnostics** | Records completed, skipped and blocked outcomes while guarding against stale missions and repeated dispatch. |
+| **Unit Finder** | Reads current mission demand and selects mapped vehicles and trained personnel |
+| **Mission Update / Upgrade** | Re-reads live requirements and adds only the remaining actionable shortage |
+| **Auto Mode** | Loads the complete vehicle list, evaluates demand, selects resources, validates readiness, and dispatches as a managed cycle |
+| **Patient demand** | Reconciles visible patients and ambulance demand when static mission text is incomplete |
+| **Exact specialist matching** | Uses vehicle IDs, assignment-page evidence, and required qualifications |
+| **Continuation** | Handles upgrades, queue progression, unattended recovery, and patient/prisoner transport controls |
+| **Diagnostics** | Records completed, skipped, blocked, and failed outcomes while guarding against stale missions and repeated dispatch |
 
-### 3. Complete vehicle-list loading
+### Complete vehicle-list loading
 
-MissionChief can initially show only part of the available vehicle table. Before Unit Finder, Mission Update or Auto Mode selects anything, Command Nexus now:
+Before Unit Finder, Mission Update, or Auto Mode selects resources, Command Nexus:
 
-1. Detects every visible `Load more vehicles` / `missing_vehicles_load` control.
-2. Loads each `offset_page` sequentially.
-3. Confirms that the vehicle IDs or row count actually changed.
-4. Waits for loading controls and indicators to settle.
-5. Requires the final non-zero vehicle list to remain ID-stable.
-6. Fails closed when the mission changes, loading stalls or the bounded timeout is reached.
+1. detects every visible `Load more vehicles` / `missing_vehicles_load` control;
+2. loads each `offset_page` sequentially;
+3. confirms that vehicle IDs or row count changed;
+4. waits for controls and loading indicators to settle;
+5. requires the final non-zero list to remain ID-stable; and
+6. fails closed when the mission changes, loading stalls, or the bounded timeout is reached.
 
-This prevents selection or dispatch from running against an incomplete vehicle list.
+This prevents selection against a partial MissionChief vehicle table.
 
-## Current v1.0.6 capabilities
+## Current v1.0.14 behaviour
 
-Version `1.0.6` is the current canonical and tagged production build.
+### Live requirements are authoritative
 
-### Police
+When MissionChief exposes the visible Live Mission Requirements panel, Unit Finder and Mission Update treat it as the current authority instead of allowing stale mission-help rows to override the live mission state.
 
-- Ordinary Police attendance is protected from consuming IRVs carrying specialist-trained officers.
-- Police Officer upgrade rows convert at **two officers per normal Police IRV**.
-- **Police Medic** requirements use exact IRVs containing two Police Medic-trained personnel.
-- **Railway Police Officer** requirements use exact IRVs containing two Railway Police-trained personnel.
-- **Armed Response Personnel (In Armed Vehicles)** uses type-25 Armed Traffic Cars with two personnel who each hold both Roads Policing and Firearms training.
-- Exact assignment-page evidence is preferred; incomplete or structurally invalid scans fail closed rather than authorising a specialist decision.
+- Numeric `Still Needed` values are direct shortages.
+- Bounded values such as `0-3` use their upper actionable bound.
+- A literal unknown `?` falls back to `Required` as a total target and deducts existing matching selections.
+- Numeric shortages are **not** reduced a second time by vehicles already selected.
+- Successful selection clicks are included in final confirmation.
+- Static mission-help remains a fallback only when no usable live requirements panel exists.
 
-### Medical
+This prevents cases such as an old Major Foam Tender row replacing a current Rescue Support Vehicle demand, or a one-unit shortage producing a false two-unit warning.
 
+### Police and trained-personnel matching
+
+- Ordinary Police attendance is protected from unnecessarily consuming specialist IRVs.
+- Police Officer upgrade rows convert at two officers per normal Police IRV.
+- Police Medic and Railway Police requirements use exact trained personnel where mapped.
+- Armed Personnel and Armed Response Personnel route to exact type-25 Armed Traffic Cars.
+- Armed Traffic Car selection verifies Roads Policing plus Firearms capability.
+- The preferred policy is two qualifying personnel, with the implemented bounded fallback preserved where applicable.
+
+### Fire, rescue, maritime, and medical handling
+
+- Generic type-66 `4x4 Vehicle` matching is restored.
+- SAR Commander demand converts to Control Van capability.
+- Seagoing Vessel requirements recognise supported ALB / ABL / All-weather Lifeboat variants.
+- ATV Carrier matching uses authoritative vehicle type `30` without confusing it with Armed Traffic Cars.
 - Patient and ambulance demand is reconciled across repeated selection passes.
-- Normal Ambulances require **one Critical Care-trained person** for Medical Critical Care assignment planning.
-- Specialist medical capability is selected only where an explicit mapping and verified personnel evidence exist.
-
-### Fire, rescue and specialist vehicles
-
-- Seagoing Vessel requirements match exact **ALB / ABL / All-weather Lifeboat** display variants.
-- ATV Carrier matching targets authoritative vehicle type `30`, including supported ATV and ATC Carrier display aliases without confusing it with Armed Traffic Cars.
-- Live mission upgrades are re-read before additional selection.
+- Live mission upgrades are re-read before additional vehicles are selected.
 
 ### Personnel intelligence
 
-- **Build Personnel Register** scans every station type and each discovered vehicle individually.
+- Build Personnel Register scans every discovered station type and vehicle individually.
 - Each vehicle's own assignment page is read before capability is recorded.
-- The register builder is read-only: it does not rename vehicles or change personnel assignments.
-- Personnel Assignment still supports Preview and Live workflows for implemented training profiles.
+- Register building is read-only.
+- Personnel Assignment retains controlled Preview and Live workflows for implemented profiles.
+- Structurally incomplete specialist evidence fails closed rather than authorising a guessed selection.
 
 ## Known limitations
 
-Command Nexus is operational software, but it is not a claim that every MissionChief vehicle, training course or mission requirement has been mapped.
+Command Nexus is operational software, not a claim that every MissionChief UK vehicle, training course, mission, or markup variant is fully mapped.
 
 | Limitation | Current position |
 |---|---|
-| **Country coverage** | UK-specific. Other MissionChief country versions are not supported. |
-| **Primary environment** | MissionChief UK desktop is the primary development and operational environment. |
-| **Training-profile coverage** | Medical, Fire, Airfield, SAR, Mountain Rescue and Coastguard profile coverage is not yet complete. |
-| **Fire specialist requirements** | Water Carrier, HazMat and ICCU matching remains blocked until the external Mission Requirements panel exposes stable usable requirement data. |
-| **PSU personnel priority** | Personnel Assignment does not yet prioritise nine-seat Police Support Units before IRV fallback. |
-| **Interface consolidation** | Command Nexus is one installation, but the two retained engines do not yet share one fully consolidated control surface, storage model or lifecycle framework. |
-| **Mobile and Safari** | No broad support claim is made without device-specific testing evidence. |
-| **Live-game variability** | MissionChief markup, labels and available controls can change independently of this project. |
+| **Country coverage** | MissionChief UK only |
+| **Primary environment** | Desktop browser is the principal development and operating target |
+| **Training profiles** | Remaining Medical, Fire, Airfield, SAR, Mountain Rescue, and Coastguard profiles are tracked through issues |
+| **External requirements data** | Some Fire specialist logic remains dependent on stable requirement data exposed by MissionChief or compatible panels |
+| **PSU assignment priority** | Nine-seat Police Support Unit preference remains tracked work |
+| **Interface consolidation** | One installation still contains two retained operational control surfaces |
+| **Mobile and Safari** | No broad support claim without device-specific evidence |
+| **Live-game variability** | MissionChief markup and labels can change independently of this repository |
 
-Track confirmed gaps and planned work in:
-
-- [Issue #17 — remaining medical training profiles](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/17)
-- [Issue #18 — remaining Fire and Airfield profiles](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/18)
-- [Issue #19 — remaining SAR, Mountain Rescue and Coastguard profiles](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/19)
-- [Issue #20 — Water Carrier, HazMat and ICCU requirements](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/20)
-- [Issue #43 — PSU-first trained-personnel assignment](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/43)
+Use the [issue tracker](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues) as the authoritative development queue.
 
 ## Operational safety
 
-Command Nexus can select and dispatch vehicles and can make bulk account changes through its administration tools. Use it as controlled automation, not as an infallible authority.
+Command Nexus can make bulk account changes and can select and dispatch vehicles. Use it as controlled automation.
 
 - Use **Preview** before naming or personnel-assignment writes.
-- Test one small station scope before a large batch.
-- Keep only one Command Nexus installation active.
-- Build or refresh the Personnel Register before relying on exact specialist matching.
+- Test a small station scope before a large batch.
+- Refresh the Personnel Register before relying on specialist matching.
 - Observe Auto Mode on representative missions before unattended use.
-- Treat unsupported requirements and staffing shortages as blocking conditions.
-- Review the [changelog](CHANGELOG.md) and [open issues](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues) before a large deployment.
-- Stop and report any cross-mission selection, repeated dispatch or incorrect personnel assignment.
+- Treat unsupported demand and staffing shortages as blocking conditions.
+- Stop and report cross-mission selection, repeated dispatch, or incorrect personnel assignment.
+- Review the [changelog](CHANGELOG.md) and open issues before major operational use.
 
-Supported URL patterns:
+Supported domains:
 
 ```text
 https://www.missionchief.co.uk/*
@@ -199,173 +187,72 @@ MissionChief Command Nexus
 │   ├── Station and vehicle naming
 │   ├── Personnel Assignment
 │   ├── Build Personnel Register
-│   ├── Training profiles and exact assignment scans
-│   └── Reports, persistence and cleanup
+│   ├── Training profiles and assignment scans
+│   └── Reports, persistence, and cleanup
 │
-├── Shared vehicle-training register
+├── Shared verified vehicle-training register
 │
 └── Mission Operations Engine
-    ├── Requirement and patient parsing
+    ├── Live requirement and patient parsing
     ├── Complete vehicle-list loading
     ├── Exact vehicle and trained-personnel matching
     ├── Unit Finder and Mission Update
-    ├── Auto Mode, dispatch and sharing
-    └── Mission upgrades, queue and transport continuation
+    ├── Auto Mode, dispatch, and sharing
+    └── Upgrades, queue, and transport continuation
 ```
 
-The project intentionally remains a single-file userscript distribution. Future consolidation is about safer shared contracts and a clearer interface—not splitting files merely for appearance.
-
-See [Architecture](docs/ARCHITECTURE.md) and [Developer Handoff](docs/DEVELOPER_HANDOFF.md) for engineering detail.
+See [Architecture](docs/ARCHITECTURE.md) and [Developer Handoff](docs/DEVELOPER_HANDOFF.md) for deeper engineering detail.
 
 ## Release and quality system
-
-`src/missionchief-command-nexus.user.js` on `main` is the authoritative source.
 
 ```text
 Focused source change
         ↓
-Version + changelog update
+Version and changelog update
         ↓
-Pull request validation and review
+Pull request validation
         ↓
-Merge into trusted main
+Merge to canonical main
         ↓
-Automatic unpublished-version detection
+Unpublished-version detection
         ↓
-Idempotent GitHub Release publication
+Recoverable GitHub Release publication
         ↓
-Asset download + SHA-256 verification
+Asset download and SHA-256 verification
         ↓
-Immutable GitHub source + Greasy Fork parity
+GitHub source / release / Greasy Fork parity
         ↓
 Discord release announcement
 ```
 
-### Validation
+Repository validation covers:
 
-The repository checks:
+- JavaScript syntax;
+- userscript metadata and version consistency;
+- required repository and policy files;
+- README links, anchors, artwork, and badges;
+- ownership and attribution requirements;
+- release assets and checksum verification; and
+- recovery from partial, empty, starter, or mismatched release assets.
 
-- JavaScript syntax.
-- Required userscript metadata.
-- Version consistency between source, README, source guide and changelog.
-- Repository structure and required policy files.
-- README links, anchors, hero artwork and GitHub-native badges.
-- Sensitive attribution and source ownership requirements.
-
-### Release publication
-
-After a pull request is merged, the repository-quality workflow inspects the canonical version. When the matching release or required assets are missing, it invokes the permanent release workflow.
-
-Publication is designed to be recoverable:
-
-- Existing correct assets are recognised and retained.
-- Partial, zero-byte, `starter` or checksum-mismatched assets are removed.
-- Transient GitHub upload failures are retried with bounded backoff.
-- Assets are uploaded serially and downloaded again for verification.
-- The release remains a recoverable draft until every required asset is valid.
-- Discord is notified only after the release, immutable GitHub source and Greasy Fork source all match.
-
-| Release resource | Open |
-|---|---|
-| Latest GitHub Release | [Releases](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/latest) |
-| Version history | [CHANGELOG.md](CHANGELOG.md) |
-| Automatic release detection | [`.github/workflows/repository-quality.yml`](.github/workflows/repository-quality.yml) |
-| Release workflow | [`.github/workflows/release.yml`](.github/workflows/release.yml) |
-| Idempotent publisher | [`scripts/publish-release.mjs`](scripts/publish-release.mjs) |
-| Deployment verifier and notifier | [`scripts/release-notify.mjs`](scripts/release-notify.mjs) |
-| Full release procedure | [`docs/RELEASE_PROCESS.md`](docs/RELEASE_PROCESS.md) |
-
-> [!CAUTION]
-> Automated validation proves repository, metadata, packaging and deployment contracts. It does not replace live MissionChief testing for selection, dispatch, transport, naming or personnel assignment.
-
-## Repository map
-
-```text
-.github/
-├── CODEOWNERS
-├── ISSUE_TEMPLATE/
-└── workflows/
-    ├── repository-quality.yml
-    ├── validate-userscript.yml
-    └── release.yml
-
-docs/
-├── README.md
-├── DEVELOPER_HANDOFF.md
-├── ARCHITECTURE.md
-├── ROADMAP.md
-├── TESTING.md
-├── MIGRATION.md
-├── RELEASE_PROCESS.md
-├── GREASY_FORK_SETUP.md
-└── media/readme-hero.svg
-
-scripts/
-├── check_repository.py
-├── validate-userscript.mjs
-├── prepare-release.mjs
-├── publish-release.mjs
-└── release-notify.mjs
-
-src/
-├── README.md
-└── missionchief-command-nexus.user.js
-```
+Discord is notified only after the release, immutable GitHub source, and Greasy Fork source satisfy the release contract.
 
 ## Development and support
 
-**GitHub Issues is the authoritative development queue.** Active bugs, enhancements, priorities and acceptance criteria are deliberately kept out of static roadmap claims in this README.
-
-<table>
-<tr>
-<td width="33%" align="center"><a href="https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues"><strong>📋 VIEW ISSUES</strong><br><sub>Authoritative work queue</sub></a></td>
-<td width="33%" align="center"><a href="https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/new?template=bug_report.yml"><strong>🐞 REPORT A BUG</strong><br><sub>Include reproducible evidence</sub></a></td>
-<td width="33%" align="center"><a href="https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/new?template=feature_request.yml"><strong>💡 REQUEST A FEATURE</strong><br><sub>Propose a scoped operational change</sub></a></td>
-</tr>
-</table>
-
-| Resource | Purpose |
+| Destination | Purpose |
 |---|---|
-| [Documentation index](docs/README.md) | Engineering, migration, testing and release material |
-| [Contributing guide](CONTRIBUTING.md) | Branch, evidence, validation and pull-request standards |
-| [Testing strategy](docs/TESTING.md) | Automated checks and live regression expectations |
-| [Migration guide](docs/MIGRATION.md) | Transition from the two legacy scripts |
-| [Support policy](SUPPORT.md) | Correct support route |
-| [Security policy](SECURITY.md) | Private reporting of sensitive vulnerabilities and credentials |
-| [Code of Conduct](CODE_OF_CONDUCT.md) | Community participation standards |
-
-## Ownership and attribution
-
-| Person / group | Responsibility |
-|---|---|
-| **MartyBlyth** | Project creator, original userscript author, developer, technical owner and final source-code authority |
-| **Conroy1988** | Project helper for repository setup, documentation and general support; not a userscript developer |
-| **Team Killing Bastards** | GitHub organisation and project home |
-
-The unified userscript originates from:
-
-- Mission Finder 2026 Trained Personal Update
-- MissionChief Unit, Station & Personnel Tools
-
-They are now distributed together as **MissionChief Command Nexus** and should not be installed as companion scripts.
-
-## Licence and disclaimer
-
-MissionChief Command Nexus is distributed under the [MIT Licence](LICENSE).
-
-Copyright © 2026 **MartyBlyth**.
-
-MissionChief trademarks, game content and related material remain the property of their respective owners. MissionChief Command Nexus is an independent community userscript and is not affiliated with, endorsed by or officially supported by MissionChief or its operators.
-
-Automation and bulk account changes remain the operator's responsibility.
-
----
+| [Greasy Fork](https://greasyfork.org/en/scripts/587702-missionchief-command-nexus) | Supported installation and updates |
+| [Latest release](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/latest) | Verified release assets |
+| [Issues](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues) | Bugs, limitations, and planned work |
+| [Changelog](CHANGELOG.md) | Version history |
+| [Architecture](docs/ARCHITECTURE.md) | Runtime and integration design |
+| [Developer Handoff](docs/DEVELOPER_HANDOFF.md) | Current source-development context |
 
 <div align="center">
 
-<strong>MissionChief Command Nexus</strong><br>
-<sub>Prepare the capability. Read the mission. Dispatch with evidence.</sub>
+### One installation. Two proven engines. One operational chain.
 
-[Install on Greasy Fork](https://greasyfork.org/en/scripts/587702-missionchief-command-nexus) · [Source](src/missionchief-command-nexus.user.js) · [Latest Release](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/latest) · [Changelog](CHANGELOG.md) · [Issues](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues)
+**Created and technically owned by [MartyBlyth](https://github.com/Martyblyth).**  
+Repository and documentation support by [Conroy1988](https://github.com/Conroy1988).
 
 </div>
