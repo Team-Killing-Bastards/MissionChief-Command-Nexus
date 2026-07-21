@@ -11,6 +11,12 @@ terms = [
     'countSelectedMatchingVehicles',
     'missingAfterAttempt',
     'selectVehicleUnits',
+    'Final missing units',
+    'processMissionRequirements',
+    'processRequirementRows',
+    'readMissionUpdateRows',
+    'mission help',
+    'sourceLabel',
 ]
 
 hits = []
@@ -27,12 +33,22 @@ for line_no in hits:
     else:
         windows.append((start, end))
 
+# Always include the complete shared requirement-processing and retry block.
+windows.append((18600, 19520))
+windows = sorted(windows)
+merged = []
+for start, end in windows:
+    if merged and start <= merged[-1][1] + 3:
+        merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+    else:
+        merged.append((start, end))
+
 out = []
 out.append('RESCUE SUPPORT / FIRE ENGINE UPDATE AUDIT')
 out.append(f'Total lines: {len(lines)}')
-out.append(f'Windows: {len(windows)}')
+out.append(f'Windows: {len(merged)}')
 out.append('')
-for start, end in windows:
+for start, end in merged:
     out.append(f'===== {start}-{end} =====')
     for n in range(start, end + 1):
         out.append(f'{n:05d}: {lines[n-1]}')
