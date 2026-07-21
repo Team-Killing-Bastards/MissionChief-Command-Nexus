@@ -1,0 +1,2 @@
+makePanelDraggable: duplicate function declaration
+exit_status=1
