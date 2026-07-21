@@ -1,0 +1,94 @@
+name: Temporary audit v1.0.13 publication
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  audit:
+    if: ${{ github.head_ref == 'agent/audit-v1.0.13-publication' && github.actor != 'github-actions[bot]' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/audit-v1.0.13-publication
+          fetch-depth: 0
+
+      - name: Audit release workflow and receipts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: v1.0.13
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          OUT=tmp-v1.0.13-publication-audit.txt
+          LOG=tmp-v1.0.13-release-run.log
+          : > "$OUT"
+
+          {
+            echo "Publication audit for ${TAG}"
+            echo "Generated: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            echo
+            echo "=== GITHUB RELEASE ==="
+          } >> "$OUT"
+
+          if gh release view "$TAG" \
+            --json tagName,name,isDraft,isPrerelease,publishedAt,url,targetCommitish,assets \
+            >> "$OUT" 2>&1; then
+            echo "release_view=success" >> "$OUT"
+          else
+            echo "release_view=failure" >> "$OUT"
+          fi
+
+          echo >> "$OUT"
+          echo "=== RELEASE WORKFLOW RUNS ===" >> "$OUT"
+          RUNS_JSON="$(gh run list \
+            --workflow release.yml \
+            --limit 20 \
+            --json databaseId,headBranch,status,conclusion,event,createdAt,updatedAt,displayTitle,url)"
+          echo "$RUNS_JSON" >> "$OUT"
+
+          RUN_ID="$(
+            printf '%s' "$RUNS_JSON" |
+              jq -r --arg tag "$TAG" \
+                '[.[] | select((.headBranch == $tag) or (((.displayTitle // "") | contains($tag))))][0].databaseId // empty'
+          )"
+
+          echo >> "$OUT"
+          echo "matched_run_id=${RUN_ID:-none}" >> "$OUT"
+
+          if [[ -n "$RUN_ID" ]]; then
+            echo >> "$OUT"
+            echo "=== MATCHED RUN DETAILS ===" >> "$OUT"
+            gh run view "$RUN_ID" \
+              --json databaseId,status,conclusion,event,headBranch,createdAt,updatedAt,url,jobs \
+              >> "$OUT" 2>&1 || true
+
+            gh run view "$RUN_ID" --log > "$LOG" 2>&1 || true
+
+            echo >> "$OUT"
+            echo "=== PUBLICATION RECEIPT LINES ===" >> "$OUT"
+            grep -E -i \
+              'greasy|discord|message id|message_id|receipt|release asset|sha-256|checksum|deploy|deployment|webhook|published|verified|verification' \
+              "$LOG" >> "$OUT" || true
+
+            echo >> "$OUT"
+            echo "=== FINAL RUN LOG TAIL ===" >> "$OUT"
+            tail -n 180 "$LOG" >> "$OUT" || true
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f "$OUT"
+          git commit -m "Record v1.0.13 publication audit receipt"
+          git push origin HEAD:agent/audit-v1.0.13-publication
