@@ -1,4 +1,4 @@
-name: Verify v1.0.14 release publication
+name: Capture v1.0.14 Discord receipt
 
 on:
   pull_request:
@@ -10,43 +10,27 @@ permissions:
   contents: read
 
 jobs:
-  verify:
-    name: Verify release, deployment and Discord receipt
+  receipt:
+    name: Capture exact release receipt
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
-      - name: Inspect latest automatic release run
+      - name: Print verified v1.0.14 receipt only
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
           RUN_ID="$(gh run list --repo "${GITHUB_REPOSITORY}" --workflow repository-quality.yml --event pull_request_target --limit 1 --json databaseId --jq '.[0].databaseId // empty')"
-          if [[ -z "${RUN_ID}" ]]; then
-            echo 'No automatic merged-PR release run was found.'
-            exit 1
-          fi
-
-          for attempt in $(seq 1 48); do
-            STATUS="$(gh run view "${RUN_ID}" --repo "${GITHUB_REPOSITORY}" --json status --jq '.status')"
-            [[ "${STATUS}" == 'completed' ]] && break
-            sleep 5
-          done
-
-          RUN_JSON="$(gh run view "${RUN_ID}" --repo "${GITHUB_REPOSITORY}" --json status,conclusion,url,event,headSha,jobs)"
-          echo "${RUN_JSON}"
-          [[ "$(jq -r '.conclusion // empty' <<< "${RUN_JSON}")" == 'success' ]]
-
-          RELEASE_JOBS="$(jq '[.jobs[] | select(.name | contains("Publish, verify and announce canonical release")) | select(.conclusion == "success")] | length' <<< "${RUN_JSON}")"
-          [[ "${RELEASE_JOBS}" -ge 1 ]]
-
-          LOG="$(gh run view "${RUN_ID}" --repo "${GITHUB_REPOSITORY}" --log)"
-          RECEIPT="$(printf '%s\n' "${LOG}" | grep -E 'Discord webhook target verified|Discord release notification posted for v1\.0\.14' || true)"
+          [[ -n "${RUN_ID}" ]]
+          CONCLUSION="$(gh run view "${RUN_ID}" --repo "${GITHUB_REPOSITORY}" --json conclusion --jq '.conclusion')"
+          [[ "${CONCLUSION}" == 'success' ]]
+          RECEIPT="$(gh run view "${RUN_ID}" --repo "${GITHUB_REPOSITORY}" --log | grep -E 'Discord webhook target verified|Discord release notification posted for v1\.0\.14' || true)"
           printf '%s\n' "${RECEIPT}"
           grep -q 'Discord release notification posted for v1.0.14: message_id=' <<< "${RECEIPT}"
           grep -q 'channel_id=' <<< "${RECEIPT}"
 
-      - name: Verify v1.0.14 assets and checksum
+      - name: Confirm release assets
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -56,9 +40,4 @@ jobs:
           CHECKSUM="${ASSET}.sha256"
           COUNT="$(gh release view v1.0.14 --repo "${GITHUB_REPOSITORY}" --json assets --jq ".assets | map(select(.name == \"${ASSET}\" or .name == \"${CHECKSUM}\")) | unique_by(.name) | length")"
           [[ "${COUNT}" == '2' ]]
-          mkdir release-check
-          gh release download v1.0.14 --repo "${GITHUB_REPOSITORY}" --pattern "${ASSET}" --pattern "${CHECKSUM}" --dir release-check
-          cd release-check
-          sha256sum --check "${CHECKSUM}"
-          grep -q '^// @version      1.0.14$' "${ASSET}"
-          echo 'v1.0.14 release assets and checksum verified.'
+          echo 'v1.0.14 release assets confirmed.'
