@@ -1,4 +1,4 @@
-name: Build v1.0.15 iOS Safari menu
+name: Diagnose v1.0.15 validation
 
 on:
   pull_request:
@@ -10,9 +10,9 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  diagnose:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
         with:
@@ -22,7 +22,7 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Scope patcher to the naming and personnel module
+      - name: Apply candidate and capture validation
         shell: bash
         run: |
           python3 - <<'PY'
@@ -53,91 +53,29 @@ jobs:
           path.write_text(text.replace(old, new, 1), encoding='utf-8', newline='\n')
           PY
 
-      - name: Apply iOS Safari menu patch
-        run: python3 scripts/apply-v1.0.15-ios-menu.py
+          python3 scripts/apply-v1.0.15-ios-menu.py
 
-      - name: Run focused iOS Safari regressions
-        shell: bash
-        run: |
-          node <<'NODE'
-          const fs = require('fs');
-          const vm = require('vm');
-          const assert = require('assert');
-          const source = fs.readFileSync('src/missionchief-command-nexus.user.js', 'utf8');
+          set +e
+          {
+            echo '=== NODE CHECK ==='
+            node --check src/missionchief-command-nexus.user.js
+            echo "node_check_exit=$?"
+            echo '=== USERSCRIPT VALIDATION ==='
+            node scripts/validate-userscript.mjs
+            echo "userscript_exit=$?"
+            echo '=== VERSION INCREASE ==='
+            node scripts/validate-userscript.mjs --base-ref origin/main
+            echo "version_exit=$?"
+            echo '=== REPOSITORY CHECK ==='
+            python3 scripts/check_repository.py
+            echo "repository_exit=$?"
+            echo '=== DIFF CHECK ==='
+            git diff --check
+            echo "diff_exit=$?"
+          } > IOS_VALIDATION_ERROR.txt 2>&1
 
-          function extractFunction(name) {
-            const moduleEnd = source.indexOf('MODULE 2: MISSION FINDER');
-            const marker = `function ${name}(`;
-            const start = source.indexOf(marker);
-            assert(start >= 0 && start < moduleEnd, `${name} missing from Module 1`);
-            const braceStart = source.indexOf('{', start);
-            let depth = 0, quote = '', escaped = false, lineComment = false, blockComment = false;
-            for (let i = braceStart; i < moduleEnd; i++) {
-              const ch = source[i], next = source[i + 1] || '';
-              if (lineComment) { if (ch === '\n') lineComment = false; continue; }
-              if (blockComment) { if (ch === '*' && next === '/') { blockComment = false; i++; } continue; }
-              if (quote) { if (escaped) escaped = false; else if (ch === '\\') escaped = true; else if (ch === quote) quote = ''; continue; }
-              if (ch === '/' && next === '/') { lineComment = true; i++; continue; }
-              if (ch === '/' && next === '*') { blockComment = true; i++; continue; }
-              if (ch === '"' || ch === "'" || ch === '`') { quote = ch; continue; }
-              if (ch === '{') depth++;
-              if (ch === '}' && --depth === 0) return source.slice(start, i + 1);
-            }
-            throw new Error(`Could not extract ${name}`);
-          }
-
-          const iosSource = extractFunction('isIosSafariWebsite');
-          function detect(ua, platform, touches, protocol = 'https:') {
-            return vm.runInNewContext(`(${iosSource})()`, {
-              navigator: { userAgent: ua, platform, maxTouchPoints: touches },
-              location: { protocol }
-            });
-          }
-
-          const iphoneSafari = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
-          const ipadDesktopSafari = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15';
-          const chromeIos = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/126.0 Mobile/15E148 Safari/604.1';
-          const nativeWebView = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148';
-
-          assert.strictEqual(detect(iphoneSafari, 'iPhone', 5), true);
-          assert.strictEqual(detect(ipadDesktopSafari, 'MacIntel', 5), true);
-          assert.strictEqual(detect(chromeIos, 'iPhone', 5), false);
-          assert.strictEqual(detect(nativeWebView, 'iPhone', 5), false);
-          assert.strictEqual(detect(ipadDesktopSafari, 'MacIntel', 0), false);
-          assert.strictEqual(detect(iphoneSafari, 'iPhone', 5, 'file:'), false);
-
-          assert(source.includes("panel.classList.toggle('mc-ios-safari'"));
-          assert(source.includes('env(safe-area-inset-top, 0px)'));
-          assert(source.includes('100dvh'));
-          assert(source.includes("handle.addEventListener('pointerdown'"));
-          assert(source.includes("window.visualViewport?.addEventListener('resize'"));
-          assert(source.includes("window.addEventListener('orientationchange'"));
-          assert(source.includes("'a.lightbox-open[href*=\"/buildings/\"]'"));
-          assert(source.includes('width: 470px;'), 'desktop width changed');
-          assert(source.includes("const UNIT_VERSION = '3.3.6';"));
-          assert(source.includes("const STATION_VERSION = '1.3.2';"));
-          assert(source.includes("const PERSONNEL_VERSION = '1.3.0';"));
-          console.log('Focused iOS Safari menu regressions passed.');
-          NODE
-
-      - name: Restore permanent workflow and remove temporary files
-        run: |
-          git fetch origin main --force
-          git checkout origin/main -- .github/workflows/validate-userscript.yml
-          rm -f scripts/apply-v1.0.15-ios-menu.py scripts/audit-ios-menu.py IOS_MENU_AUDIT.txt IOS_MENU_FUNCTIONS.txt IOS_PATCH_ERROR.txt
-
-      - name: Validate release candidate
-        run: |
-          node --check src/missionchief-command-nexus.user.js
-          node scripts/validate-userscript.mjs
-          node scripts/validate-userscript.mjs --base-ref origin/main
-          python3 scripts/check_repository.py
-          git diff --check
-
-      - name: Commit validated candidate
-        run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add -A
-          git commit -m 'Add iOS Safari tools menu support'
+          git add IOS_VALIDATION_ERROR.txt
+          git commit -m 'Record v1.0.15 validation diagnostic'
           git push origin HEAD:${{ github.head_ref }}
