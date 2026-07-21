@@ -112,7 +112,7 @@ regex_replace_once(
                                         parsed.stillNeededText
                                             ? 'reported-still-needed'
                                             : 'required-fallback-for-missing-cell'
-                                    ) ''',
+                                    )''',
     'dispatch target source metadata',
 )
 
