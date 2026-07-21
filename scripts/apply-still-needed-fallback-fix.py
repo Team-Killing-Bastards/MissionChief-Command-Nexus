@@ -104,7 +104,7 @@ replace_once(
 )
 
 regex_replace_once(
-    r'''                            dispatchTargetSource:\n                                parsed\.required > 0\n                                    \? 'required'\n                                    : 'reported-still-needed' ''',
+    r"""                            dispatchTargetSource:\n                                parsed\.required > 0\n                                    \? 'required'\n                                    : 'reported-still-needed'\n""",
     '''                            dispatchTargetSource:
                                 parsed.stillNeededText === '?'
                                     ? 'required-fallback-for-unknown'
@@ -112,7 +112,8 @@ regex_replace_once(
                                         parsed.stillNeededText
                                             ? 'reported-still-needed'
                                             : 'required-fallback-for-missing-cell'
-                                    )''',
+                                    )
+''',
     'dispatch target source metadata',
 )
 
