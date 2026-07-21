@@ -26,6 +26,23 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Consolidate the two retained control surfaces into one coherent interface.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
+## [1.0.11] - 2026-07-21
+
+### Fixed
+
+- Restored the live `4x4 Vehicle` requirement link in Unit Finder and Mission Update/Upgrade by matching the exact MissionChief type-66 4x4 Vehicle.
+- Kept the explicit `Mountain Rescue 4x4 or SAR 4x4` requirement on its separate type-99/type-93 specialist pool.
+- Restored raw live-table `SAR Commander` conversion at both shared processing entry points: two SAR Commanders are covered by one Control Van.
+- Added direct SAR Commander aliases so singular, plural and `Required` labels resolve consistently.
+
+### Changed
+
+- Mission Finder increased from `V10.6.76` to `V10.6.77`.
+
+### Preserved
+
+- Existing SARTEC, Search Advisor, Mountain Rescue, SAR 4x4, Control Van, trained-personnel, patient and vehicle verification rules remain enabled.
+
 ## [1.0.10] - 2026-07-21
 
 ### Added

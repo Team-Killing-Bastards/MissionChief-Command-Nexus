@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.10
+// @version      1.0.11
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -7777,7 +7777,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.76
+         * MODULE 2: MISSION FINDER V10.6.77
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -8027,7 +8027,7 @@
     // before an untrained IRV may satisfy ordinary Police attendance. Police Medic
     // and Railway Police Officer requirements now use exact trained IRVs with two
     // qualified personnel, and ATV Carrier uses an authoritative type-30 matcher.
-    // V10.6.76: Critical Care Ambulances now require one trained person per vehicle.
+    // V10.6.77: Critical Care Ambulances now require one trained person per vehicle.
     // Armed Response personnel use exact type-25 ATCs with two officers who each hold
     // both Roads Policing and Firearms. Police Officer and Seagoing Vessel upgrade
     // rows now use shared strict conversions across Unit Finder, Update and Auto.
@@ -8874,6 +8874,10 @@
         "ILB": "ILB",
         "Control Van": "Control Van",
         "Control Vans": "Control Van",
+        "SAR Commander": "Control Van",
+        "SAR Commanders": "Control Van",
+        "Required SAR Commander": "Control Van",
+        "Required SAR Commanders": "Control Van",
         "Search Advisor": "SARTEC",
         "Search Advisors": "SARTEC",
         "Operational Support Van": "Operational Support Van",
@@ -9159,7 +9163,7 @@
         });
     }
 
-    function isMountainRescueOrSar4x4Requirement(
+    function get4x4RequirementMode(
         originalName,
         mappedName
     ) {
@@ -9173,27 +9177,96 @@
                 mappedName
             );
 
-        // MissionChief uses both the explicit combined wording and the shorter
-        // "4x4 Vehicle(s)" wording for the same selectable Mountain Rescue /
-        // SAR 4x4 pool. Treat every form as one dedicated requirement so the
-        // initial selection and the final verification use the same matcher.
-        const supported = new Set([
-            '4x4 vehicle',
-            '4x4 vehicles',
-            '4x4 unit',
-            '4x4 units',
-            'required 4x4 vehicle',
-            'required 4x4 vehicles',
+        const specialistRequirements = new Set([
             'mountain rescue 4x4 or sar 4x4',
             'mountain rescue 4x4s or sar 4x4s',
             'required mountain rescue 4x4 or sar 4x4',
             'required mountain rescue 4x4s or sar 4x4s'
         ]);
 
-        return (
-            supported.has(raw) ||
-            supported.has(mapped)
-        );
+        // Check the explicit specialist wording first. Its mapped display name
+        // is also "4x4 Units", but it must continue to use only Mountain Rescue
+        // 4x4 / SAR 4x4 vehicles rather than the normal type-66 4x4 Vehicle.
+        if (
+            specialistRequirements.has(raw) ||
+            specialistRequirements.has(mapped)
+        ) {
+            return 'mountain-or-sar';
+        }
+
+        const genericRequirements = new Set([
+            '4x4 vehicle',
+            '4x4 vehicles',
+            '4x4 unit',
+            '4x4 units',
+            'required 4x4 vehicle',
+            'required 4x4 vehicles',
+            'required 4x4 unit',
+            'required 4x4 units'
+        ]);
+
+        if (
+            genericRequirements.has(raw) ||
+            genericRequirements.has(mapped)
+        ) {
+            return 'generic';
+        }
+
+        return '';
+    }
+
+    function isGeneric4x4VehicleRequirement(
+        originalName,
+        mappedName
+    ) {
+        return get4x4RequirementMode(
+            originalName,
+            mappedName
+        ) === 'generic';
+    }
+
+    function isMountainRescueOrSar4x4Requirement(
+        originalName,
+        mappedName
+    ) {
+        return get4x4RequirementMode(
+            originalName,
+            mappedName
+        ) === 'mountain-or-sar';
+    }
+
+    function isGeneric4x4VehicleCheckbox(
+        input
+    ) {
+        if (!input) return false;
+
+        // MissionChief UK normal 4x4 Vehicle. Type 66 is authoritative and
+        // keeps custom-named vehicles linked to the generic requirement row.
+        if (
+            getVehicleTypeIdentifiers(
+                input
+            ).includes('66')
+        ) {
+            return true;
+        }
+
+        return getExtendedVehicleValues(
+            input
+        ).some(value => {
+            const cleaned =
+                normaliseSartecDisplayedName(
+                    value
+                );
+
+            return (
+                value === '4x4 vehicle' ||
+                value === '4x4 vehicles' ||
+                /^(?:Required\s+)?4x4\s+Vehicle(?:s)?$/i
+                    .test(
+                        cleaned
+                    )
+            );
+        });
     }
 
     function isMountainRescue4x4Checkbox(
@@ -10355,6 +10428,12 @@
                 mappedName
             );
 
+        const generic4x4Only =
+            isGeneric4x4VehicleRequirement(
+                originalName,
+                mappedName
+            );
+
         const mountainRescue4x4Preferred =
             isMountainRescueOrSar4x4Requirement(
                 originalName,
@@ -10464,6 +10543,27 @@
                 ...iccuMatches,
                 ...ambulanceControlFallbackMatches
             ];
+        }
+
+        if (generic4x4Only) {
+            return sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) {
+                        return false;
+                    }
+
+                    if (
+                        !includeChecked &&
+                        input.checked
+                    ) {
+                        return false;
+                    }
+
+                    return isGeneric4x4VehicleCheckbox(
+                        input
+                    );
+                })
+            );
         }
 
         if (mountainRescue4x4Preferred) {
@@ -10699,6 +10799,12 @@
         const atvCarrierOnly = isAtvCarrierRequirement(originalName, mappedName);
         const seagoingVesselOnly = isSeagoingVesselRequirement(originalName, mappedName);
         const dogSupportOnly = isDogSupportUnitRequirement(originalName, mappedName);
+        const generic4x4Only =
+            isGeneric4x4VehicleRequirement(
+                originalName,
+                mappedName
+            );
+
         const mountainRescue4x4Preferred =
             isMountainRescueOrSar4x4Requirement(
                 originalName,
@@ -10742,6 +10848,8 @@
                 matches =
                     isIccuVehicleCheckbox(input) ||
                     isAmbulanceControlUnitCheckbox(input);
+            } else if (generic4x4Only) {
+                matches = isGeneric4x4VehicleCheckbox(input);
             } else if (mountainRescue4x4Preferred) {
                 matches =
                     isMountainRescue4x4Checkbox(input) ||
@@ -10915,6 +11023,25 @@
                     /(?:^|\b)acu(?:s)?(?:\b|$)/i.test(value)
                 );
             }) || null;
+        }
+
+        if (
+            isGeneric4x4VehicleRequirement(
+                requestedName,
+                mappedName
+            )
+        ) {
+            return sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(input => {
+                    return (
+                        !input.disabled &&
+                        !input.checked &&
+                        isGeneric4x4VehicleCheckbox(
+                            input
+                        )
+                    );
+                })
+            )[0] || null;
         }
 
         if (
@@ -18373,6 +18500,30 @@ let sessionRuntimeTicker = null;
         return (Array.isArray(rows) ? rows : []).map(row => {
             if (!row || row.isTrainedPersonnelRequirement) return row;
 
+            const sarConversion =
+                getSarPersonnelVehicleRequirement(
+                    row.unitName,
+                    row.stillNeeded
+                );
+
+            if (sarConversion) {
+                return {
+                    ...row,
+                    unitName:
+                        sarConversion.unitName,
+                    stillNeeded:
+                        sarConversion.stillNeeded,
+                    personnelRequirement:
+                        sarConversion.personnelRequirement,
+                    personnelPerVehicle:
+                        sarConversion.personnelPerVehicle,
+                    sarPersonnelConversion:
+                        sarConversion,
+                    convertedFromPersonnelRequirement:
+                        true
+                };
+            }
+
             const conversion = getPoliceOfficerVehicleRequirement(
                 row.unitName,
                 row.stillNeeded
@@ -24651,12 +24802,20 @@ let sessionRuntimeTicker = null;
             return false;
         }
 
-        const missingRows =
+        const rawMissingRows =
             Array.isArray(
                 suppliedRows
             )
                 ? suppliedRows
                 : readMissionUpdateRows();
+
+        // Supplied live-table rows can bypass readMissionUpdateRows(), so run
+        // the same personnel-to-vehicle conversion at the Upgrade entry point.
+        // This restores SAR Commander -> Control Van parity with Unit Finder.
+        const missingRows =
+            normaliseOperationalRequirementRows(
+                rawMissingRows
+            );
 
         if (mfDebugEnabled) {
             debugLog(
