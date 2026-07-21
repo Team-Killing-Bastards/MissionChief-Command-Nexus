@@ -26,6 +26,25 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Consolidate the two retained control surfaces into one coherent interface.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
+## [1.0.14] - 2026-07-21
+
+### Fixed
+
+- Unit Finder now uses the visible Live Mission Requirements panel as the authoritative source whenever it exists, preventing stale mission-help rows from requesting outdated units.
+- A current `Rescue Support Vehicles` live row can no longer be replaced by an outdated `Major Foam Tender` mission-help requirement.
+- Numeric or bounded `Still Needed` values are now treated as shortages and are no longer reduced by already-selected units a second time.
+- `Still Needed = ?` continues to use `Required` as a total target and deducts existing matching selections.
+- Successful selection clicks are included in final confirmation, preventing a false `Fire Engines or RIVs x2` warning when the live shortage was one.
+
+### Preserved
+
+- Static mission-help remains the fallback when no live requirements panel exists.
+- Armed Personnel exact type-25 Armed Traffic Car selection remains enabled.
+
+### Changed
+
+- Mission Finder increased from `V10.6.79` to `V10.6.80`.
+
 ## [1.0.13] - 2026-07-21
 
 ### Fixed
