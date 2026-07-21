@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.9
+// @version      1.0.10
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -36,7 +36,7 @@
     if (window.__MC_NAMING_TOOLS_V428__) return;
     window.__MC_NAMING_TOOLS_V428__ = true;
 
-    const UNIT_VERSION = '3.3.4';
+    const UNIT_VERSION = '3.3.5';
     const STATION_VERSION = '1.3.1';
     const PERSONNEL_VERSION = '1.2.9';
     const PERSONNEL_TRAINING_CODE = 'critical_care';
@@ -816,6 +816,40 @@
         "Cell Van": { code: "CVAN", icon: "🚔🚐" }
     };
 
+    const UNIT_CLASS_ALL = 'ALL';
+    const UNIT_CLASS_TYPE_IDS_BY_STATION_TYPE = Object.freeze({
+        AMBULANCE: Object.freeze([
+            '5', '10', '27', '28', '30', '31', '33', '34', '96', '97', '98'
+        ]),
+        FIRE: Object.freeze([
+            '3', '4', '6', '7', '15', '16', '17', '26', '29', '35', '36', '38', '39'
+        ]),
+        POLICE: Object.freeze([
+            '8', '11', '12', '20', '25', '51', '54', '55', '56', '91', '108', '115', '116'
+        ]),
+        AIR: Object.freeze([
+            '9', '11', '65'
+        ]),
+        AIRFIELD: Object.freeze([
+            '73', '75', '76', '77', '78', '79', '80', '81', '107'
+        ]),
+        COASTGUARD: Object.freeze([
+            '57', '58', '59', '60', '61', '62', '63', '65', '66', '70', '71', '72'
+        ]),
+        RNLI: Object.freeze([
+            '67', '68', '69', '70', '74'
+        ]),
+        SAR: Object.freeze([
+            '61', '62', '63', '66', '70', '71', '72', '85', '86', '87', '88', '89', '93', '99', '102'
+        ]),
+        EOD: Object.freeze([
+            '109', '110', '111', '112', '113', '114'
+        ]),
+        RECOVERY: Object.freeze([
+            '105'
+        ])
+    });
+
     const STATION_TYPES = {
         ALL: "All station types",
         AMBULANCE: "Ambulance",
@@ -862,6 +896,7 @@
         renamedCount: 0,
         skippedCount: 0,
         mode: "all",
+        selectedUnitClass: UNIT_CLASS_ALL,
         runId: 0,
         activeIframe: null
     };
@@ -1105,6 +1140,11 @@
                     <label><b>Station Type:</b></label>
                     <select id="mc-namer-station-type">
                         ${Object.entries(STATION_TYPES).map(([key, label]) => `<option value="${key}">${label}</option>`).join('')}
+                    </select>
+
+                    <label style="margin-top:6px; display:block;"><b>Unit Class:</b></label>
+                    <select id="mc-namer-unit-class">
+                        <option value="ALL">All classes</option>
                     </select>
 
                     <label style="margin-top:6px; display:block;"><b>Mode:</b></label>
@@ -1435,6 +1475,7 @@
 
             #mc-namer-startfrom,
             #mc-namer-station-type,
+            #mc-namer-unit-class,
             #mc-namer-mode,
             #mc-station-startfrom,
             #mc-station-type,
@@ -1770,7 +1811,9 @@
         document.querySelector('#mc-namer-stop').onclick = stopRun;
         document.querySelector('#mc-namer-debug').onclick = toggleDebug;
         document.querySelector('#mc-namer-clear').onclick = clearLog;
-        document.querySelector('#mc-namer-station-type').onchange = populateStartDropdown;
+        document.querySelector('#mc-namer-station-type').onchange = handleUnitStationTypeChange;
+        document.querySelector('#mc-namer-unit-class').onchange = handleUnitClassChange;
+        populateUnitClassDropdown();
 
         document.querySelector('#mc-station-refresh').onclick = refreshStationNamingStations;
         document.querySelector('#mc-station-start').onclick = startStationNamingRun;
@@ -6986,6 +7029,132 @@
         }) || candidates[0] || null;
     }
 
+    function getUnitClassOptionsForStationType(stationType) {
+        const selectedStationType = String(stationType || 'ALL');
+        const configuredTypeIds =
+            UNIT_CLASS_TYPE_IDS_BY_STATION_TYPE[selectedStationType];
+
+        const typeIds =
+            Array.isArray(configuredTypeIds)
+                ? configuredTypeIds
+                : Object.keys(TYPE_ID_TO_VEHICLE_TYPE);
+
+        const byVehicleType = new Map();
+
+        typeIds.forEach(vehicleTypeId => {
+            const vehicleType =
+                TYPE_ID_TO_VEHICLE_TYPE[String(vehicleTypeId)] || '';
+            const info = VEHICLE_INFO[vehicleType];
+
+            if (!vehicleType || !info || byVehicleType.has(vehicleType)) {
+                return;
+            }
+
+            byVehicleType.set(vehicleType, {
+                vehicleType,
+                vehicleTypeId: String(vehicleTypeId),
+                label:
+                    `${info.icon ? `${info.icon} ` : ''}${vehicleType} (${info.code})`
+            });
+        });
+
+        return Array.from(byVehicleType.values()).sort((left, right) => {
+            return left.vehicleType.localeCompare(
+                right.vehicleType,
+                'en-GB',
+                {
+                    numeric: true,
+                    sensitivity: 'base'
+                }
+            );
+        });
+    }
+
+    function getSelectedUnitClass() {
+        return document.querySelector('#mc-namer-unit-class')?.value ||
+            STATE.selectedUnitClass ||
+            UNIT_CLASS_ALL;
+    }
+
+    function getUnitClassDisplayLabel(value = getSelectedUnitClass()) {
+        const selected = String(value || UNIT_CLASS_ALL);
+        if (selected === UNIT_CLASS_ALL) return 'All classes';
+
+        const info = VEHICLE_INFO[selected];
+        return info
+            ? `${selected} (${info.code})`
+            : selected;
+    }
+
+    function populateUnitClassDropdown() {
+        const select = document.querySelector('#mc-namer-unit-class');
+        if (!select) return;
+
+        const selectedStationType =
+            document.querySelector('#mc-namer-station-type')?.value ||
+            'ALL';
+
+        const previous =
+            select.value ||
+            STATE.selectedUnitClass ||
+            UNIT_CLASS_ALL;
+
+        const options =
+            getUnitClassOptionsForStationType(selectedStationType);
+
+        select.innerHTML = '';
+
+        const allOption = document.createElement('option');
+        allOption.value = UNIT_CLASS_ALL;
+        allOption.textContent = 'All classes';
+        select.appendChild(allOption);
+
+        options.forEach(item => {
+            const option = document.createElement('option');
+            option.value = item.vehicleType;
+            option.textContent = item.label;
+            option.dataset.vehicleTypeId = item.vehicleTypeId;
+            select.appendChild(option);
+        });
+
+        const available = new Set([
+            UNIT_CLASS_ALL,
+            ...options.map(item => item.vehicleType)
+        ]);
+
+        select.value = available.has(previous)
+            ? previous
+            : UNIT_CLASS_ALL;
+
+        STATE.selectedUnitClass = select.value;
+        select.title =
+            `${options.length} naming classes available for ` +
+            `${STATION_TYPES[selectedStationType] || selectedStationType}`;
+    }
+
+    function handleUnitStationTypeChange() {
+        populateUnitClassDropdown();
+        populateStartDropdown();
+    }
+
+    function handleUnitClassChange() {
+        STATE.selectedUnitClass = getSelectedUnitClass();
+        populateStartDropdown();
+        setStatus('Class filter updated');
+        log(`Unit class: ${getUnitClassDisplayLabel()}`, 'info');
+    }
+
+    function vehicleMatchesSelectedUnitClass(vehicle) {
+        const selected =
+            STATE.selectedUnitClass ||
+            getSelectedUnitClass();
+
+        return (
+            selected === UNIT_CLASS_ALL ||
+            vehicle?.vehicleType === selected
+        );
+    }
+
     function refreshStations() {
         if (PERSONNEL_STATE.running) {
             log('Personnel Assignment is currently running. Stop it before refreshing Unit Naming.', 'error');
@@ -6997,8 +7166,11 @@
             return;
         }
 
+        populateUnitClassDropdown();
+        STATE.selectedUnitClass = getSelectedUnitClass();
         setStatus('Refreshing stations...');
         log('Refreshing station list...', 'info');
+        log(`Unit class filter: ${getUnitClassDisplayLabel()}`, 'info');
 
         const stationLinks = [...document.querySelectorAll('a.lightbox-open.list-group-item.active[href^="/buildings/"]')];
 
@@ -7095,6 +7267,7 @@
         }
 
         STATE.mode = document.querySelector('#mc-namer-mode')?.value || 'all';
+        STATE.selectedUnitClass = getSelectedUnitClass();
         STATE.running = true;
         STATE.paused = false;
         STATE.stopped = false;
@@ -7108,6 +7281,7 @@
 
         log(`Mode: ${STATE.mode === 'single' ? 'Selected station only' : 'All matching stations'}`, 'info');
         log(`Station type: ${STATION_TYPES[document.querySelector('#mc-namer-station-type').value]}`, 'info');
+        log(`Unit class: ${getUnitClassDisplayLabel(STATE.selectedUnitClass)}`, 'info');
         log(`Starting from: ${STATE.filteredStations[startIndex].displayName}`, 'info');
 
         processStations(runId).catch(error => {
@@ -7364,7 +7538,8 @@
                     editHref
                 };
             })
-            .filter(v => v.editHref && v.vehicleId);
+            .filter(v => v.editHref && v.vehicleId)
+            .filter(vehicleMatchesSelectedUnitClass);
     }
 
     async function processStationVehicleQueue(iframe, station) {
@@ -7380,7 +7555,7 @@
         debug(`Vehicle queue built for ${station.displayName}: ${queue.length}`);
 
         if (!queue.length) {
-            log(`No vehicles found in ${station.displayName}.`, 'debug');
+            log(`No ${getUnitClassDisplayLabel(STATE.selectedUnitClass)} vehicles found in ${station.displayName}.`, 'debug');
             return;
         }
 
@@ -7602,7 +7777,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.75
+         * MODULE 2: MISSION FINDER V10.6.76
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -7852,7 +8027,7 @@
     // before an untrained IRV may satisfy ordinary Police attendance. Police Medic
     // and Railway Police Officer requirements now use exact trained IRVs with two
     // qualified personnel, and ATV Carrier uses an authoritative type-30 matcher.
-    // V10.6.75: Critical Care Ambulances now require one trained person per vehicle.
+    // V10.6.76: Critical Care Ambulances now require one trained person per vehicle.
     // Armed Response personnel use exact type-25 ATCs with two officers who each hold
     // both Roads Policing and Firearms. Police Officer and Seagoing Vessel upgrade
     // rows now use shared strict conversions across Unit Finder, Update and Auto.
@@ -15778,9 +15953,9 @@ let sessionRuntimeTicker = null;
             };
 
         // Public Order levels and Sergeant are independent mission profiles.
-        // Each exact IRV needs two personnel holding the specific requested
-        // profile. A person with multiple profiles is counted for every code
-        // they actually hold, but unrelated profiles are never prerequisites.
+        // Prefer exact IRVs carrying two personnel with the requested profile,
+        // then allow one-person trained IRVs as a fallback until the complete
+        // personnel demand is covered. Unrelated profiles are never prerequisites.
         addStrictTrainedIrvRequirement(
             'level_1_public_order',
             'Level 1 Public Order',
@@ -16056,6 +16231,56 @@ let sessionRuntimeTicker = null;
             .join('+');
     }
 
+    function getTrainingRequirementPersonnelTarget(requirement) {
+        if (!requirement) return 0;
+
+        const explicitPersonnelTargets = [
+            requirement.personnelRequired,
+            requirement.inspectorsRequired
+        ]
+            .map(value => Math.max(0, parseInt(value, 10) || 0))
+            .filter(value => value > 0);
+
+        if (explicitPersonnelTargets.length > 0) {
+            return Math.max(...explicitPersonnelTargets);
+        }
+
+        const requiredVehicles =
+            Math.max(0, parseInt(requirement.required, 10) || 0);
+
+        if (
+            requirement.requirementType === 'armed_response_atc_vehicle' ||
+            requirement.requirementType === 'police_inspector_vehicle' ||
+            requirement.requirementType === 'police_trained_irv_vehicle'
+        ) {
+            const personnelPerVehicle =
+                Math.max(
+                    1,
+                    parseInt(requirement.personnelPerVehicle, 10) || 2
+                );
+
+            return requiredVehicles * personnelPerVehicle;
+        }
+
+        return requiredVehicles;
+    }
+
+    function getStrictTrainingVehicleContribution(
+        requirement,
+        qualifiedCount
+    ) {
+        const personnelPerVehicle =
+            Math.max(
+                1,
+                parseInt(requirement?.personnelPerVehicle, 10) || 2
+            );
+
+        return Math.min(
+            personnelPerVehicle,
+            Math.max(0, parseInt(qualifiedCount, 10) || 0)
+        );
+    }
+
     function getTrainingRequirementContribution(
         requirement,
         registryEntry
@@ -16101,7 +16326,6 @@ let sessionRuntimeTicker = null;
             return 0;
         }
 
-
         if (
             requirement.requirementType ===
                 'armed_response_atc_vehicle'
@@ -16125,18 +16349,16 @@ let sessionRuntimeTicker = null;
                     10
                 ) || 0;
 
-            return qualifiedDualTrainedCount >= 2
-                ? 1
-                : 0;
+            return getStrictTrainingVehicleContribution(
+                requirement,
+                qualifiedDualTrainedCount
+            );
         }
 
         if (
             requirement.requirementType ===
                 'police_inspector_vehicle'
         ) {
-            // Never trust the shared name-derived registry for this sensitive
-            // rule. The exact IRV must have been checked live and must contain
-            // two Police Inspector-trained personnel.
             if (
                 !isAuthoritativeLivePoliceTrainingEntry(
                     registryEntry
@@ -16145,18 +16367,11 @@ let sessionRuntimeTicker = null;
                 return 0;
             }
 
-            const policeInspectorCount =
-                parseInt(
-                    trainingCounts
-                        .police_inspector,
-                    10
-                ) || 0;
-
-            return policeInspectorCount >= 2
-                ? 1
-                : 0;
+            return getStrictTrainingVehicleContribution(
+                requirement,
+                trainingCounts.police_inspector
+            );
         }
-
 
         if (
             requirement.requirementType ===
@@ -16181,17 +16396,10 @@ let sessionRuntimeTicker = null;
                 return 0;
             }
 
-            const qualifiedCount =
-                parseInt(
-                    trainingCounts[
-                        requiredCodes[0]
-                    ],
-                    10
-                ) || 0;
-
-            return qualifiedCount >= 2
-                ? 1
-                : 0;
+            return getStrictTrainingVehicleContribution(
+                requirement,
+                trainingCounts[requiredCodes[0]]
+            );
         }
 
         return (
@@ -16203,7 +16411,6 @@ let sessionRuntimeTicker = null;
             ) || 0
         );
     }
-
 
     function getTrainedPersonnelVehicleTarget(
         requirements
@@ -16334,7 +16541,7 @@ let sessionRuntimeTicker = null;
                     return (
                         `${requirement.label} x${requirement.required} ` +
                         `(${requirement.personnelRequired} required; ` +
-                        `2 personnel who each hold Roads Policing + Firearms on every exact type-25 ATC)`
+                        `prefer 2 personnel who each hold Roads Policing + Firearms per exact type-25 ATC; fallback accepts 1 until the full personnel demand is covered)`
                     );
                 }
 
@@ -16347,7 +16554,7 @@ let sessionRuntimeTicker = null;
                         `${requirement.label} x${requirement.required} ` +
                         `(${requirement.inspectorsRequired} Inspector` +
                         `${requirement.inspectorsRequired === 1 ? '' : 's'}; ` +
-                        `2 Inspector-trained personnel on that exact IRV)`
+                        `prefer 2 Inspector-trained personnel per exact IRV; fallback accepts 1 until the full Inspector demand is covered)`
                     );
                 }
 
@@ -16360,7 +16567,7 @@ let sessionRuntimeTicker = null;
                     return (
                         `${requirement.label} x${requirement.required} ` +
                         `(${requirement.personnelRequired} required; ` +
-                        `2 ${requirement.requiredTrainingCodes?.[0] || 'trained'} personnel on each exact IRV)`
+                        `prefer 2 ${requirement.requiredTrainingCodes?.[0] || 'trained'} personnel per exact IRV; fallback accepts 1 until the full personnel demand is covered)`
                     );
                 }
 
@@ -16757,8 +16964,7 @@ let sessionRuntimeTicker = null;
 
         const trainingCounts =
             registryEntry.trainingCounts &&
-            typeof registryEntry.trainingCounts ===
-                'object'
+            typeof registryEntry.trainingCounts === 'object'
                 ? registryEntry.trainingCounts
                 : {};
 
@@ -16773,6 +16979,19 @@ let sessionRuntimeTicker = null;
                 registryEntry.vehicleTypeId ||
                 ''
             );
+
+        const getPreferenceScore = qualifiedCount => {
+            const count =
+                Math.max(0, parseInt(qualifiedCount, 10) || 0);
+
+            if (count >= 2) {
+                return 2000 + Math.min(count, 2);
+            }
+
+            return count === 1
+                ? 1001
+                : 0;
+        };
 
         return (
             Array.isArray(requirements)
@@ -16794,7 +17013,6 @@ let sessionRuntimeTicker = null;
                 return score;
             }
 
-
             if (
                 requirement?.requirementType ===
                     'armed_response_atc_vehicle'
@@ -16804,35 +17022,19 @@ let sessionRuntimeTicker = null;
                         requirement.requiredTrainingCodes
                     );
 
-                const qualifiedDualTrainedCount =
-                    parseInt(
-                        trainingCombinationCounts[combinationKey],
-                        10
-                    ) || 0;
-
-                if (qualifiedDualTrainedCount >= 2) {
-                    return score + 1000 + qualifiedDualTrainedCount;
-                }
+                return score + getPreferenceScore(
+                    trainingCombinationCounts[combinationKey]
+                );
             }
 
             if (
                 requirement?.requirementType ===
                     'police_inspector_vehicle'
             ) {
-                const inspectorCount =
-                    parseInt(
-                        trainingCounts.police_inspector,
-                        10
-                    ) || 0;
-
-                return score +
-                    (
-                        inspectorCount >= 2
-                            ? 1000 + inspectorCount
-                            : 0
-                    );
+                return score + getPreferenceScore(
+                    trainingCounts.police_inspector
+                );
             }
-
 
             if (
                 requirement?.requirementType ===
@@ -16845,18 +17047,10 @@ let sessionRuntimeTicker = null;
                         ? requirement.requiredTrainingCodes
                         : [];
 
-                if (
-                    requiredCodes.length === 1 &&
-                    (
-                        parseInt(
-                            trainingCounts[
-                                requiredCodes[0]
-                            ],
-                            10
-                        ) || 0
-                    ) >= 2
-                ) {
-                    return score + 1000;
+                if (requiredCodes.length === 1) {
+                    return score + getPreferenceScore(
+                        trainingCounts[requiredCodes[0]]
+                    );
                 }
             }
 
@@ -17188,7 +17382,7 @@ let sessionRuntimeTicker = null;
                     updatedAt:
                         Date.now(),
                     source:
-                        `${MF_STRICT_TRAINING_SOURCE_PREFIX}${String(source || 'update').toLowerCase()}-v10675`
+                        `${MF_STRICT_TRAINING_SOURCE_PREFIX}${String(source || 'update').toLowerCase()}-v10676`
                 };
 
                 mfLiveTrainingVerifyCache.set(
@@ -17399,7 +17593,7 @@ let sessionRuntimeTicker = null;
                         },
                         updatedAt: Date.now(),
                         source:
-                            `${MF_STRICT_TRAINING_SOURCE_PREFIX}armed-response-${String(source || 'update').toLowerCase()}-v10675`
+                            `${MF_STRICT_TRAINING_SOURCE_PREFIX}armed-response-${String(source || 'update').toLowerCase()}-v10676`
                     };
 
                     mfLiveTrainingVerifyCache.set(
@@ -17711,7 +17905,7 @@ let sessionRuntimeTicker = null;
                     updatedAt:
                         Date.now(),
                     source:
-                        `${MF_STRICT_TRAINING_SOURCE_PREFIX}ordinary-${String(source || 'update').toLowerCase()}-v10675`
+                        `${MF_STRICT_TRAINING_SOURCE_PREFIX}ordinary-${String(source || 'update').toLowerCase()}-v10676`
                 };
 
                 mfLiveTrainingVerifyCache.set(
@@ -17856,12 +18050,8 @@ let sessionRuntimeTicker = null;
                 {
                     ...requirement,
                     remaining:
-                        Math.max(
-                            0,
-                            parseInt(
-                                requirement.required,
-                                10
-                            ) || 0
+                        getTrainingRequirementPersonnelTarget(
+                            requirement
                         )
                 }
             );
@@ -17920,6 +18110,55 @@ let sessionRuntimeTicker = null;
         ).every(
             requirement =>
                 requirement.remaining <= 0
+        );
+    }
+
+    function getTrainedVehicleSelectionScore(
+        remaining,
+        registryEntry
+    ) {
+        let usefulCoverage = 0;
+        let twoPersonProfileMatches = 0;
+        let rawContribution = 0;
+
+        (Array.isArray(remaining) ? remaining : [])
+            .forEach(requirement => {
+                if (
+                    !requirement ||
+                    requirement.remaining <= 0
+                ) {
+                    return;
+                }
+
+                const contribution =
+                    getTrainingRequirementContribution(
+                        requirement,
+                        registryEntry
+                    );
+
+                usefulCoverage += Math.min(
+                    requirement.remaining,
+                    contribution
+                );
+
+                rawContribution += contribution;
+
+                if (contribution >= 2) {
+                    twoPersonProfileMatches++;
+                }
+            });
+
+        if (usefulCoverage <= 0) {
+            return 0;
+        }
+
+        // Coverage remains the primary goal. For otherwise equal candidates,
+        // a vehicle carrying two qualified personnel always ranks above a
+        // one-person fallback, including when only one person remains needed.
+        return (
+            usefulCoverage * 10000 +
+            twoPersonProfileMatches * 100 +
+            Math.min(rawContribution, 99)
         );
     }
 
@@ -18017,28 +18256,9 @@ let sessionRuntimeTicker = null;
                         );
 
                     const score =
-                        remaining.reduce(
-                            (
-                                total,
-                                requirement
-                            ) => {
-                                if (
-                                    requirement.remaining <=
-                                    0
-                                ) {
-                                    return total;
-                                }
-
-                                return total +
-                                    Math.min(
-                                        requirement.remaining,
-                                        getTrainingRequirementContribution(
-                                            requirement,
-                                            entry
-                                        )
-                                    );
-                            },
-                            0
+                        getTrainedVehicleSelectionScore(
+                            remaining,
+                            entry
                         );
 
                     if (
@@ -24547,11 +24767,31 @@ let sessionRuntimeTicker = null;
                                 requirement => {
                                     if (
                                         requirement.requirementType ===
+                                        'armed_response_atc_vehicle'
+                                    ) {
+                                        return (
+                                            `${requirement.label}: ${requirement.remaining} ` +
+                                            `dual-trained personnel still needed (2 per ATC preferred; 1 allowed as fallback)`
+                                        );
+                                    }
+
+                                    if (
+                                        requirement.requirementType ===
                                         'police_inspector_vehicle'
                                     ) {
                                         return (
-                                            `${requirement.label} x${requirement.remaining} ` +
-                                            `(2 Inspector-trained personnel on the exact IRV)`
+                                            `${requirement.label}: ${requirement.remaining} ` +
+                                            `Inspector-trained personnel still needed (2 per IRV preferred; 1 allowed as fallback)`
+                                        );
+                                    }
+
+                                    if (
+                                        requirement.requirementType ===
+                                        'police_trained_irv_vehicle'
+                                    ) {
+                                        return (
+                                            `${requirement.label}: ${requirement.remaining} ` +
+                                            `trained personnel still needed (2 per IRV preferred; 1 allowed as fallback)`
                                         );
                                     }
 

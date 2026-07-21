@@ -26,6 +26,27 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Consolidate the two retained control surfaces into one coherent interface.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
+## [1.0.10] - 2026-07-21
+
+### Added
+
+- Added issue #63 Unit Class filtering directly below Station Type in the Unit Naming Tool.
+- Unit Class options are generated from the vehicle classes valid for the selected station type, with All classes preserving the existing broad rename behaviour.
+- Selected-station and all-matching-stations runs now filter the lightweight vehicle queue before opening any vehicle edit page, preventing unrelated classes from being renamed.
+
+### Changed
+
+- Trained Police vehicle selection now prefers exact vehicles carrying two correctly trained personnel, then falls back to exact vehicles carrying one correctly trained person when no two-person option remains.
+- Trained mission fulfilment is now measured against the complete qualified-personnel demand, so one-person fallback vehicles continue to be selected until the requirement is genuinely covered.
+- One-person registry hints are prioritised after two-person hints and before ordinary arrival-limited candidates.
+- Unit Naming Tool increased from `3.3.4` to `3.3.5`.
+- Mission Finder increased from `V10.6.75` to `V10.6.76`.
+
+### Preserved
+
+- Critical Care Ambulances remain one Critical Care-trained person per ambulance.
+- Exact vehicle-ID assignment-page verification, vehicle-type restrictions, multi-profile matching, ordinary IRV protection and genuine shortfall warnings remain enabled.
+
 ## [1.0.9] - 2026-07-20
 
 ### Fixed
