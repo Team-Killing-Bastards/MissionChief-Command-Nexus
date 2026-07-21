@@ -1,0 +1,87 @@
+name: Build Still Needed fallback fix
+
+on:
+  push:
+    branches:
+      - agent/use-still-needed-unless-unknown
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    if: ${{ !contains(github.event.head_commit.message, '[still-needed-fix]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/use-still-needed-unless-unknown
+          fetch-depth: 0
+
+      - name: Apply controlled source update
+        run: python3 scripts/apply-still-needed-fallback-fix.py
+
+      - name: Focused updater target regressions
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const vm = require('vm');
+          const assert = require('assert');
+          const source = fs.readFileSync('src/missionchief-command-nexus.user.js', 'utf8');
+
+          function extractFunction(name) {
+            const marker = `function ${name}(`;
+            const start = source.indexOf(marker);
+            assert.notStrictEqual(start, -1, `${name} is missing`);
+            const braceStart = source.indexOf('{', start);
+            let depth = 0;
+            let quote = '';
+            let escaped = false;
+            for (let i = braceStart; i < source.length; i++) {
+              const ch = source[i];
+              if (quote) {
+                if (escaped) escaped = false;
+                else if (ch === '\\') escaped = true;
+                else if (ch === quote) quote = '';
+                continue;
+              }
+              if (ch === '"' || ch === "'" || ch === '`') {
+                quote = ch;
+                continue;
+              }
+              if (ch === '{') depth++;
+              if (ch === '}') {
+                depth--;
+                if (depth === 0) return source.slice(start, i + 1);
+              }
+            }
+            throw new Error(`Could not extract ${name}`);
+          }
+
+          const helper = vm.runInNewContext(`(${extractFunction('getLiveRequirementDispatchTarget')})`);
+          assert.strictEqual(helper({ required: 5, stillNeeded: 2, stillNeededText: '2' }), 2);
+          assert.strictEqual(helper({ required: 5, stillNeeded: 0, stillNeededText: '0' }), 0);
+          assert.strictEqual(helper({ required: 5, stillNeeded: 3, stillNeededText: '0-3', requiresConfirmation: true }), 3);
+          assert.strictEqual(helper({ required: 5, stillNeeded: 0, stillNeededText: '?', requiresConfirmation: true }), 5);
+          assert.strictEqual(helper({ required: 0, stillNeeded: 2, stillNeededText: '?' }), 2);
+          assert.strictEqual(helper({ required: 4, stillNeeded: 0, stillNeededText: '' }), 4);
+
+          assert(source.includes('needed -\n                    selectedBefore'), 'existing selected subtraction missing');
+          assert(source.includes('UNIT FINDER ARMED PERSONNEL'), 'Armed Traffic Car Unit Finder route missing');
+          assert(source.includes("requirementType: 'armed_response_atc_vehicle'"), 'exact ATC trained route missing');
+          console.log('Focused Still Needed / Required fallback regressions passed.');
+          NODE
+
+      - name: Validate source and repository
+        run: |
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          python3 scripts/check_repository.py
+
+      - name: Commit clean release files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/missionchief-command-nexus.user.js CHANGELOG.md README.md src/README.md
+          git commit -m "Correct Mission Update unknown shortage fallback [still-needed-fix]"
+          git push origin HEAD:agent/use-still-needed-unless-unknown
