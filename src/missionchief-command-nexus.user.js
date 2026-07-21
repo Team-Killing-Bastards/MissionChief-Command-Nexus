@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.13
+// @version      1.0.14
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -7777,7 +7777,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.79
+         * MODULE 2: MISSION FINDER V10.6.80
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -8027,7 +8027,7 @@
     // before an untrained IRV may satisfy ordinary Police attendance. Police Medic
     // and Railway Police Officer requirements now use exact trained IRVs with two
     // qualified personnel, and ATV Carrier uses an authoritative type-30 matcher.
-    // V10.6.79: Critical Care Ambulances now require one trained person per vehicle.
+    // V10.6.80: Critical Care Ambulances now require one trained person per vehicle.
     // Armed Response personnel use exact type-25 ATCs with two officers who each hold
     // both Roads Policing and Firearms. Police Officer and Seagoing Vessel upgrade
     // rows now use shared strict conversions across Unit Finder, Update and Auto.
@@ -18996,9 +18996,52 @@ let sessionRuntimeTicker = null;
         };
     }
 
+    function hasAuthoritativeLiveMissionRequirementsPanel() {
+        return getMissionAccessibleDocuments().some(
+            candidateDocument => {
+                try {
+                    return Array.from(
+                        candidateDocument.querySelectorAll(
+                            'table[aria-label="Live mission requirements"], ' +
+                            '#mc-map-command-toolkit-mission-requirements[data-mcms-requirements-panel="1"] table'
+                        )
+                    ).some(table => {
+                        return (
+                            isLiveMissionRequirementsTable(table) &&
+                            isMissionElementVisible(table)
+                        );
+                    });
+                } catch (_error) {
+                    return false;
+                }
+            }
+        );
+    }
+
+    function getOperationalRequirementTargetMode(item) {
+        return item?.liveRequirementDetails?.dispatchTargetMode === 'shortage'
+            ? 'shortage'
+            : 'total';
+    }
+
     async function processRequirementRows(requirementRows, sourceLabel) {
         let missingUnits = [];
         const trainedPersonnelMissing = [];
+
+        if (
+            hasAuthoritativeLiveMissionRequirementsPanel() &&
+            sourceLabel !== 'live mission requirements'
+        ) {
+            requirementRows = readMissionUpdateRows();
+            sourceLabel = 'live mission requirements';
+
+            if (mfDebugEnabled) {
+                debugLog(
+                    'UNIT FINDER LIVE AUTHORITY',
+                    `Using ${requirementRows.length} current live requirement row(s); static mission-help rows were ignored.`
+                );
+            }
+        }
 
         requirementRows = normaliseOperationalRequirementRows(
             requirementRows
@@ -19121,46 +19164,45 @@ let sessionRuntimeTicker = null;
 
             const parsedAmount = parseInt(item.stillNeeded, 10);
             const replacedItemText = resolveUnitName(unitText);
-
-            if (mfDebugEnabled) debugLog('PROCESS ROW', `${unitText} -> ${replacedItemText} x${parsedAmount}`);
-
-            const selectedBefore =
-                Math.min(
-                    countSelectedMatchingVehicles(
-                        unitText,
-                        replacedItemText
-                    ),
-                    parsedAmount
+            const targetMode = getOperationalRequirementTargetMode(item);
+            const matchingSelectedAtStart =
+                countSelectedMatchingVehicles(
+                    unitText,
+                    replacedItemText
                 );
+            const effectiveRequired =
+                targetMode === 'shortage'
+                    ? matchingSelectedAtStart + parsedAmount
+                    : parsedAmount;
 
-            const remainingToSelect =
-                Math.max(
-                    0,
-                    parsedAmount -
-                    selectedBefore
+            if (mfDebugEnabled) {
+                debugLog(
+                    'PROCESS ROW',
+                    `${unitText} -> ${replacedItemText} | target=${parsedAmount} | mode=${targetMode} | effective total=${effectiveRequired}`
                 );
+            }
+
+            const selectedBefore = Math.min(
+                matchingSelectedAtStart,
+                effectiveRequired
+            );
+            const remainingToSelect = Math.max(
+                0,
+                effectiveRequired - selectedBefore
+            );
 
             addOrUpdateVehicleRow(
                 unitText,
                 replacedItemText,
-                parsedAmount,
-                remainingToSelect > 0
-                    ? 'pending'
-                    : 'assigned',
+                effectiveRequired,
+                remainingToSelect > 0 ? 'pending' : 'assigned',
                 selectedBefore
             );
-
             renderVehicleLoadList();
 
-            if (mfDebugEnabled) {
-                debugLog(
-                    'REQUIREMENT CAP',
-                    `${unitText} -> ${replacedItemText} | required=${parsedAmount} | already selected=${selectedBefore} | selecting at most=${remainingToSelect}`
-                );
-            }
-
+            let selectionResult = null;
             if (remainingToSelect > 0) {
-                selectVehicleUnits(
+                selectionResult = selectVehicleUnits(
                     unitText,
                     replacedItemText,
                     remainingToSelect,
@@ -19168,44 +19210,44 @@ let sessionRuntimeTicker = null;
                 );
             }
 
-            const visualSelected =
-                Math.min(
-                    countSelectedMatchingVehicles(
-                        unitText,
-                        replacedItemText
-                    ),
-                    parsedAmount
-                );
-
-            const status =
-                visualSelected >= parsedAmount
-                    ? 'assigned'
-                    : visualSelected > 0
-                        ? 'retrying'
-                        : 'missing';
+            const selectedFromDom = Math.min(
+                countSelectedMatchingVehicles(
+                    unitText,
+                    replacedItemText
+                ),
+                effectiveRequired
+            );
+            const selectedFromClicks = Math.min(
+                effectiveRequired,
+                selectedBefore + Math.max(
+                    0,
+                    parseInt(selectionResult?.assigned, 10) || 0
+                )
+            );
+            const visualSelected = Math.max(
+                selectedFromDom,
+                selectedFromClicks
+            );
+            const status = visualSelected >= effectiveRequired
+                ? 'assigned'
+                : visualSelected > 0
+                    ? 'retrying'
+                    : 'missing';
 
             addOrUpdateVehicleRow(
                 unitText,
                 replacedItemText,
-                parsedAmount,
+                effectiveRequired,
                 status,
                 visualSelected
             );
-
             renderVehicleLoadList();
 
-            if (
-                visualSelected <
-                parsedAmount
-            ) {
+            if (visualSelected < effectiveRequired) {
                 missingUnits.push({
-                    unitName:
-                        unitText,
-                    stillNeeded:
-                        parsedAmount -
-                        visualSelected,
-                    requiredTotal:
-                        parsedAmount
+                    unitName: unitText,
+                    stillNeeded: effectiveRequired - visualSelected,
+                    requiredTotal: effectiveRequired
                 });
             }
         }
@@ -23375,6 +23417,12 @@ let sessionRuntimeTicker = null;
                             parsed
                         );
 
+                    const liveDispatchTargetMode =
+                        parsed.stillNeededText &&
+                        parsed.stillNeededText !== '?'
+                            ? 'shortage'
+                            : 'total';
+
                     if (
                         mfDebugEnabled &&
                         !silent
@@ -23387,7 +23435,7 @@ let sessionRuntimeTicker = null;
                             `state=${parsed.rowState || 'none'} | ` +
                             `confirmation=${parsed.requiresConfirmation ? 'yes' : 'no'} | ` +
                             `using-update-target=${liveDispatchTarget} | ` +
-                            `target-source=${parsed.stillNeededText === '?' ? 'required-fallback' : 'still-needed'} | ` +
+                            `target-mode=${liveDispatchTargetMode} | ` +
                             `panel-still=${parsed.stillNeeded}`
                         );
                     }
@@ -23476,13 +23524,11 @@ let sessionRuntimeTicker = null;
                             dispatchTarget:
                                 liveDispatchTarget,
                             dispatchTargetSource:
-                                parsed.stillNeededText === '?'
-                                    ? 'required-fallback-for-unknown'
-                                    : (
-                                        parsed.stillNeededText
-                                            ? 'reported-still-needed'
-                                            : 'required-fallback-for-missing-cell'
-                                    )
+                                liveDispatchTargetMode === 'shortage'
+                                    ? 'reported-still-needed'
+                                    : 'required-fallback-for-unknown',
+                            dispatchTargetMode:
+                                liveDispatchTargetMode
                         }
                     );
 
@@ -25114,6 +25160,7 @@ let sessionRuntimeTicker = null;
 
             const mappedName = resolveUnitName(item.unitName);
             const needed = parseInt(item.stillNeeded, 10);
+            const targetMode = getOperationalRequirementTargetMode(item);
 
             if (!Number.isFinite(needed) || needed <= 0) return;
 
@@ -25153,23 +25200,28 @@ let sessionRuntimeTicker = null;
                     trackedPatientSelected
                 );
 
+            const effectiveRequired =
+                targetMode === 'shortage'
+                    ? matchingSelectedTotal + needed
+                    : needed;
+
             const selectedBefore =
                 Math.min(
                     matchingSelectedTotal,
-                    needed
+                    effectiveRequired
                 );
 
             const remainingToSelect =
                 Math.max(
                     0,
-                    needed -
+                    effectiveRequired -
                     selectedBefore
                 );
 
             addOrUpdateVehicleRow(
                 item.unitName,
                 mappedName,
-                needed,
+                effectiveRequired,
                 remainingToSelect > 0
                     ? 'pending'
                     : 'assigned',
@@ -25181,7 +25233,7 @@ let sessionRuntimeTicker = null;
             if (mfDebugEnabled) {
                 debugLog(
                     'UPDATE CAP',
-                    `${item.unitName} -> ${mappedName} | required=${needed} | DOM selected=${matchingSelectedFromDom} | tracked patient selected=${trackedPatientSelected} | matching selected total=${matchingSelectedTotal} | counted toward requirement=${selectedBefore} | selecting at most=${remainingToSelect}`
+                    `${item.unitName} -> ${mappedName} | mode=${targetMode} | panel target=${needed} | effective total=${effectiveRequired} | DOM selected=${matchingSelectedFromDom} | tracked patient selected=${trackedPatientSelected} | matching selected total=${matchingSelectedTotal} | counted toward requirement=${selectedBefore} | selecting at most=${remainingToSelect}`
                 );
             }
 
@@ -25203,7 +25255,7 @@ let sessionRuntimeTicker = null;
                         item.unitName,
                         mappedName
                     ),
-                    needed
+                    effectiveRequired
                 );
 
             // MissionChief can disable or replace a vehicle row immediately
@@ -25214,7 +25266,7 @@ let sessionRuntimeTicker = null;
             // Mission Update attempt.
             const selectedFromThisAttempt =
                 Math.min(
-                    needed,
+                    effectiveRequired,
                     selectedBefore +
                     Math.max(
                         0,
@@ -25276,7 +25328,7 @@ let sessionRuntimeTicker = null;
             }
 
             const status =
-                visualSelected >= needed
+                visualSelected >= effectiveRequired
                     ? 'assigned'
                     : visualSelected > 0
                         ? 'retrying'
@@ -25285,7 +25337,7 @@ let sessionRuntimeTicker = null;
             addOrUpdateVehicleRow(
                 item.unitName,
                 mappedName,
-                needed,
+                effectiveRequired,
                 status,
                 visualSelected
             );
@@ -25294,10 +25346,10 @@ let sessionRuntimeTicker = null;
 
             if (
                 visualSelected <
-                needed
+                effectiveRequired
             ) {
                 const remaining =
-                    needed -
+                    effectiveRequired -
                     visualSelected;
 
                 missingAfterAttempt.push(
