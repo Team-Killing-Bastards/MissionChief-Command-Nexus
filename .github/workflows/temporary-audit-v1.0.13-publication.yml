@@ -23,19 +23,17 @@ jobs:
           ref: agent/audit-v1.0.13-publication
           fetch-depth: 0
 
-      - name: Audit release workflow and receipts
+      - name: Extract concise publication receipt
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: v1.0.13
-          RELEASE_SHA: d833c2c8a59016a754a5549484f0ec2cdc116907
+          RELEASE_RUN_ID: '29859843691'
         shell: bash
         run: |
           set -euo pipefail
 
           OUT=tmp-v1.0.13-publication-audit.txt
-          LOG_DIR=tmp-v1.0.13-run-logs
-          rm -rf "$LOG_DIR"
-          mkdir -p "$LOG_DIR"
+          LOG=tmp-v1.0.13-release-run.log
           : > "$OUT"
 
           {
@@ -47,63 +45,28 @@ jobs:
 
           gh release view "$TAG" \
             --json tagName,name,isDraft,isPrerelease,publishedAt,url,targetCommitish,assets \
-            >> "$OUT" 2>&1
-          echo "release_view=success" >> "$OUT"
+            >> "$OUT"
 
           echo >> "$OUT"
-          echo "=== ALL RECENT WORKFLOW RUNS ===" >> "$OUT"
-          RUNS_JSON="$(gh run list \
-            --limit 100 \
-            --json databaseId,workflowName,headBranch,headSha,status,conclusion,event,createdAt,updatedAt,displayTitle,url)"
-          echo "$RUNS_JSON" >> "$OUT"
+          echo "=== PUBLISHING RUN AND JOB RESULTS ===" >> "$OUT"
+          gh run view "$RELEASE_RUN_ID" \
+            --json databaseId,name,displayTitle,workflowName,status,conclusion,event,headBranch,headSha,createdAt,updatedAt,url,jobs \
+            >> "$OUT"
 
-          CANDIDATES="$({
-            printf '%s' "$RUNS_JSON" |
-              jq -r --arg sha "$RELEASE_SHA" '
-                .[] |
-                select(
-                  .headSha == $sha or
-                  (
-                    .createdAt >= "2026-07-21T19:00:00Z" and
-                    .createdAt <= "2026-07-21T19:08:00Z" and
-                    (
-                      ((.workflowName // "") | test("release|publish|quality|deploy"; "i")) or
-                      ((.displayTitle // "") | test("release|publish|quality|deploy"; "i"))
-                    )
-                  )
-                ) |
-                .databaseId
-              '
-          } | sort -u)"
+          gh run view "$RELEASE_RUN_ID" --log > "$LOG"
 
           echo >> "$OUT"
-          echo "candidate_run_ids=$(echo "$CANDIDATES" | tr '\n' ',' | sed 's/,$//')" >> "$OUT"
+          echo "=== VERIFY DEPLOYMENT AND NOTIFY DISCORD STEP ===" >> "$OUT"
+          grep -F "Verify deployment and notify Discord" "$LOG" >> "$OUT" || true
 
-          for RUN_ID in $CANDIDATES; do
-            [[ -n "$RUN_ID" ]] || continue
-            LOG="$LOG_DIR/${RUN_ID}.log"
-
-            echo >> "$OUT"
-            echo "=== RUN ${RUN_ID} DETAILS ===" >> "$OUT"
-            gh run view "$RUN_ID" \
-              --json databaseId,name,displayTitle,workflowName,status,conclusion,event,headBranch,headSha,createdAt,updatedAt,url,jobs \
-              >> "$OUT" 2>&1 || true
-
-            gh run view "$RUN_ID" --log > "$LOG" 2>&1 || true
-
-            echo >> "$OUT"
-            echo "=== RUN ${RUN_ID} PUBLICATION RECEIPT LINES ===" >> "$OUT"
-            grep -E -i \
-              'greasy|discord|message id|message_id|receipt|release asset|sha-256|checksum|deploy|deployment|webhook|published|verified|verification|MissionChief-Command-Nexus-1\.0\.13' \
-              "$LOG" >> "$OUT" || true
-
-            echo >> "$OUT"
-            echo "=== RUN ${RUN_ID} FINAL LOG TAIL ===" >> "$OUT"
-            tail -n 120 "$LOG" >> "$OUT" || true
-          done
+          echo >> "$OUT"
+          echo "=== GREASY FORK / DISCORD / CHECKSUM RECEIPTS ===" >> "$OUT"
+          grep -E -i \
+            'greasy fork|greasyfork|discord|message id|message_id|sha-256|checksum|deployment verified|verified deployment|release published|release asset' \
+            "$LOG" >> "$OUT" || true
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -f "$OUT"
-          git commit -m "Expand v1.0.13 publication audit receipt"
+          git commit -m "Record concise v1.0.13 publication receipt"
           git push origin HEAD:agent/audit-v1.0.13-publication
