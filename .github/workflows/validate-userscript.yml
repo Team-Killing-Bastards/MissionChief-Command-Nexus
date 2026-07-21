@@ -27,13 +27,7 @@ jobs:
             echo 'No automatic v1.0.10 release run was found.'
             exit 1
           fi
-          for attempt in $(seq 1 36); do
-            STATUS="$(gh run view "${RUN_ID}" --repo "${GITHUB_REPOSITORY}" --json status --jq '.status')"
-            [[ "${STATUS}" == 'completed' ]] && break
-            sleep 5
-          done
           RUN_JSON="$(gh run view "${RUN_ID}" --repo "${GITHUB_REPOSITORY}" --json status,conclusion,url,event,headSha,jobs)"
-          echo "${RUN_JSON}"
           [[ "$(jq -r '.conclusion // empty' <<< "${RUN_JSON}")" == 'success' ]]
           RELEASE_JOBS="$(jq '[.jobs[] | select(.name | contains("Publish, verify and announce canonical release")) | select(.conclusion == "success")] | length' <<< "${RUN_JSON}")"
           DEPLOY_STEPS="$(jq '[.jobs[].steps[]? | select(.name == "Verify deployment and notify Discord") | select(.conclusion == "success")] | length' <<< "${RUN_JSON}")"
