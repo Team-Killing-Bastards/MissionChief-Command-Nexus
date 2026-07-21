@@ -26,6 +26,23 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Consolidate the two retained control surfaces into one coherent interface.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
+## [1.0.13] - 2026-07-21
+
+### Fixed
+
+- Mission Update/Upgrade now uses a numeric `Still Needed` value as the dispatch shortage instead of replacing it with the full `Required` total.
+- A bounded `Still Needed` range such as `0-3` continues to use its upper bound.
+- A literal `Still Needed` value of `?` now falls back to the row's `Required` value.
+- Existing matching selections are still deducted before additional vehicles are selected.
+
+### Preserved
+
+- The v1.0.12 Armed Personnel to exact type-25 Armed Traffic Car route remains enabled, including Roads Policing plus Firearms live verification and the two-person-first/one-person-fallback policy.
+
+### Changed
+
+- Mission Finder increased from `V10.6.78` to `V10.6.79`.
+
 ## [1.0.12] - 2026-07-21
 
 ### Fixed
