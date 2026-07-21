@@ -27,12 +27,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: v1.0.13
+          RELEASE_SHA: d833c2c8a59016a754a5549484f0ec2cdc116907
         shell: bash
         run: |
           set -euo pipefail
 
           OUT=tmp-v1.0.13-publication-audit.txt
-          LOG=tmp-v1.0.13-release-run.log
+          LOG_DIR=tmp-v1.0.13-run-logs
+          rm -rf "$LOG_DIR"
+          mkdir -p "$LOG_DIR"
           : > "$OUT"
 
           {
@@ -42,53 +45,65 @@ jobs:
             echo "=== GITHUB RELEASE ==="
           } >> "$OUT"
 
-          if gh release view "$TAG" \
+          gh release view "$TAG" \
             --json tagName,name,isDraft,isPrerelease,publishedAt,url,targetCommitish,assets \
-            >> "$OUT" 2>&1; then
-            echo "release_view=success" >> "$OUT"
-          else
-            echo "release_view=failure" >> "$OUT"
-          fi
+            >> "$OUT" 2>&1
+          echo "release_view=success" >> "$OUT"
 
           echo >> "$OUT"
-          echo "=== RELEASE WORKFLOW RUNS ===" >> "$OUT"
+          echo "=== ALL RECENT WORKFLOW RUNS ===" >> "$OUT"
           RUNS_JSON="$(gh run list \
-            --workflow release.yml \
-            --limit 20 \
-            --json databaseId,headBranch,status,conclusion,event,createdAt,updatedAt,displayTitle,url)"
+            --limit 100 \
+            --json databaseId,workflowName,headBranch,headSha,status,conclusion,event,createdAt,updatedAt,displayTitle,url)"
           echo "$RUNS_JSON" >> "$OUT"
 
-          RUN_ID="$(
+          CANDIDATES="$({
             printf '%s' "$RUNS_JSON" |
-              jq -r --arg tag "$TAG" \
-                '[.[] | select((.headBranch == $tag) or (((.displayTitle // "") | contains($tag))))][0].databaseId // empty'
-          )"
+              jq -r --arg sha "$RELEASE_SHA" '
+                .[] |
+                select(
+                  .headSha == $sha or
+                  (
+                    .createdAt >= "2026-07-21T19:00:00Z" and
+                    .createdAt <= "2026-07-21T19:08:00Z" and
+                    (
+                      ((.workflowName // "") | test("release|publish|quality|deploy"; "i")) or
+                      ((.displayTitle // "") | test("release|publish|quality|deploy"; "i"))
+                    )
+                  )
+                ) |
+                .databaseId
+              '
+          } | sort -u)"
 
           echo >> "$OUT"
-          echo "matched_run_id=${RUN_ID:-none}" >> "$OUT"
+          echo "candidate_run_ids=$(echo "$CANDIDATES" | tr '\n' ',' | sed 's/,$//')" >> "$OUT"
 
-          if [[ -n "$RUN_ID" ]]; then
+          for RUN_ID in $CANDIDATES; do
+            [[ -n "$RUN_ID" ]] || continue
+            LOG="$LOG_DIR/${RUN_ID}.log"
+
             echo >> "$OUT"
-            echo "=== MATCHED RUN DETAILS ===" >> "$OUT"
+            echo "=== RUN ${RUN_ID} DETAILS ===" >> "$OUT"
             gh run view "$RUN_ID" \
-              --json databaseId,status,conclusion,event,headBranch,createdAt,updatedAt,url,jobs \
+              --json databaseId,name,displayTitle,workflowName,status,conclusion,event,headBranch,headSha,createdAt,updatedAt,url,jobs \
               >> "$OUT" 2>&1 || true
 
             gh run view "$RUN_ID" --log > "$LOG" 2>&1 || true
 
             echo >> "$OUT"
-            echo "=== PUBLICATION RECEIPT LINES ===" >> "$OUT"
+            echo "=== RUN ${RUN_ID} PUBLICATION RECEIPT LINES ===" >> "$OUT"
             grep -E -i \
-              'greasy|discord|message id|message_id|receipt|release asset|sha-256|checksum|deploy|deployment|webhook|published|verified|verification' \
+              'greasy|discord|message id|message_id|receipt|release asset|sha-256|checksum|deploy|deployment|webhook|published|verified|verification|MissionChief-Command-Nexus-1\.0\.13' \
               "$LOG" >> "$OUT" || true
 
             echo >> "$OUT"
-            echo "=== FINAL RUN LOG TAIL ===" >> "$OUT"
-            tail -n 180 "$LOG" >> "$OUT" || true
-          fi
+            echo "=== RUN ${RUN_ID} FINAL LOG TAIL ===" >> "$OUT"
+            tail -n 120 "$LOG" >> "$OUT" || true
+          done
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -f "$OUT"
-          git commit -m "Record v1.0.13 publication audit receipt"
+          git commit -m "Expand v1.0.13 publication audit receipt"
           git push origin HEAD:agent/audit-v1.0.13-publication
