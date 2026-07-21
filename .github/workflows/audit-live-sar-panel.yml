@@ -1,0 +1,62 @@
+name: Audit live SAR panel contribution
+
+on:
+  push:
+    branches:
+      - agent/audit-live-sar-panel
+    paths:
+      - '.github/workflows/audit-live-sar-panel.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: agent/audit-live-sar-panel
+      - name: Extract live requirements panel logic
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          lines = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8').splitlines()
+          rx = re.compile(
+              r'mcms-req|Live mission requirements|data-mcms-requirements|'
+              r'On Site|Responding|Still Needed|Still needed|'
+              r'getSarPersonnelVehicleRequirement|SAR Commander|'
+              r'requirement.*selected|selected.*requirement|contribution',
+              re.I,
+          )
+          hits = [i for i, line in enumerate(lines, 1) if rx.search(line)]
+          windows = []
+          for hit in hits:
+              start = max(1, hit - 45)
+              end = min(len(lines), hit + 75)
+              if windows and start <= windows[-1][1] + 10:
+                  windows[-1] = (windows[-1][0], max(windows[-1][1], end))
+              else:
+                  windows.append((start, end))
+
+          out = []
+          for start, end in windows:
+              out.append(f'===== SOURCE {start}-{end} =====')
+              for n in range(start, end + 1):
+                  out.append(f'{n:05d}: {lines[n-1]}')
+              out.append('')
+
+          Path('AUDIT_LIVE_SAR_PANEL.txt').write_text('\n'.join(out) + '\n', encoding='utf-8')
+          print(f'Extracted {len(hits)} hits in {len(windows)} windows')
+          PY
+      - name: Commit audit
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add AUDIT_LIVE_SAR_PANEL.txt
+          git commit -m 'Record live SAR panel audit'
+          git push origin HEAD:agent/audit-live-sar-panel
