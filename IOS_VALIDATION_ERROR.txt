@@ -1,0 +1,13 @@
+=== NODE CHECK ===
+node_check_exit=0
+=== USERSCRIPT VALIDATION ===
+Userscript validation passed: version 1.0.15, 1096265 bytes.
+userscript_exit=0
+=== VERSION INCREASE ===
+Userscript validation passed: version 1.0.15, 1096265 bytes.
+version_exit=0
+=== REPOSITORY CHECK ===
+ERROR: README must identify MartyBlyth as the developer
+repository_exit=1
+=== DIFF CHECK ===
+diff_exit=0
