@@ -1,16 +1,2 @@
 === APPLY PATCH ===
-Traceback (most recent call last):
-  File "/home/runner/work/MissionChief-Command-Nexus/MissionChief-Command-Nexus/scripts/apply-still-needed-fallback-fix.py", line 85, in <module>
-    regex_replace_once(
-  File "/home/runner/work/MissionChief-Command-Nexus/MissionChief-Command-Nexus/scripts/apply-still-needed-fallback-fix.py", line 22, in regex_replace_once
-    source, count = re.subn(pattern, replacement, source, count=1, flags=re.S)
-                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.12/re/__init__.py", line 197, in subn
-    return _compile(pattern, flags).subn(repl, string, count)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.12/re/__init__.py", line 334, in _compile_template
-    return _sre.template(pattern, _parser.parse_template(repl, pattern))
-                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.12/re/_parser.py", line 1075, in parse_template
-    raise s.error('bad escape %s' % this, len(this)) from None
-re.error: bad escape \s at position 522 (line 23, column 23)
+dispatch target source metadata: expected exactly one regex match, found 0
