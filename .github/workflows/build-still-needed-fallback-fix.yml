@@ -101,7 +101,7 @@ jobs:
           fi
 
           if [ "$FAILED" -ne 0 ]; then
-            git add "$LOG"
+            git add -f "$LOG"
             git commit -m "Capture updater correction build failure [still-needed-fix]"
             git push origin HEAD:agent/use-still-needed-unless-unknown
             cat "$LOG"
