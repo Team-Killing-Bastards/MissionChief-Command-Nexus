@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.12
+// @version      1.0.13
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -7777,7 +7777,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.78
+         * MODULE 2: MISSION FINDER V10.6.79
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -8027,7 +8027,7 @@
     // before an untrained IRV may satisfy ordinary Police attendance. Police Medic
     // and Railway Police Officer requirements now use exact trained IRVs with two
     // qualified personnel, and ATV Carrier uses an authoritative type-30 matcher.
-    // V10.6.78: Critical Care Ambulances now require one trained person per vehicle.
+    // V10.6.79: Critical Care Ambulances now require one trained person per vehicle.
     // Armed Response personnel use exact type-25 ATCs with two officers who each hold
     // both Roads Policing and Firearms. Police Officer and Seagoing Vessel upgrade
     // rows now use shared strict conversions across Unit Finder, Update and Auto.
@@ -22020,17 +22020,28 @@ let sessionRuntimeTicker = null;
             ) || 0
         );
 
-        // Keep the existing unresolved-row safety guard. A naked unknown "?"
-        // must not cause the updater to resend the full mission requirement.
-        // Confirmed rows use Required as the total target; the selection layer
-        // then subtracts exact vehicles that are already selected.
-        if (
-            parsedRow?.requiresConfirmation &&
-            reportedStillNeeded <= 0
-        ) {
-            return 0;
+        const stillNeededText = String(
+            parsedRow?.stillNeededText ?? ''
+        )
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        // The live shortage remains authoritative whenever MissionChief gives
+        // a number or bounded range. Only a literal unknown "?" falls back to
+        // the Required total. The selection layer still subtracts matching
+        // vehicles already selected before it clicks any additional units.
+        if (stillNeededText === '?') {
+            return required > 0
+                ? required
+                : reportedStillNeeded;
         }
 
+        if (stillNeededText) {
+            return reportedStillNeeded;
+        }
+
+        // Defensive fallback for a legacy or partial live row where the
+        // Still Needed cell is absent rather than explicitly zero.
         return required > 0
             ? required
             : reportedStillNeeded;
@@ -23375,7 +23386,8 @@ let sessionRuntimeTicker = null;
                             `still=${parsed.stillNeededText || '?'} | ` +
                             `state=${parsed.rowState || 'none'} | ` +
                             `confirmation=${parsed.requiresConfirmation ? 'yes' : 'no'} | ` +
-                            `using-required-target=${liveDispatchTarget} | ` +
+                            `using-update-target=${liveDispatchTarget} | ` +
+                            `target-source=${parsed.stillNeededText === '?' ? 'required-fallback' : 'still-needed'} | ` +
                             `panel-still=${parsed.stillNeeded}`
                         );
                     }
@@ -23464,9 +23476,13 @@ let sessionRuntimeTicker = null;
                             dispatchTarget:
                                 liveDispatchTarget,
                             dispatchTargetSource:
-                                parsed.required > 0
-                                    ? 'required'
-                                    : 'reported-still-needed'
+                                parsed.stillNeededText === '?'
+                                    ? 'required-fallback-for-unknown'
+                                    : (
+                                        parsed.stillNeededText
+                                            ? 'reported-still-needed'
+                                            : 'required-fallback-for-missing-cell'
+                                    )
                         }
                     );
 
