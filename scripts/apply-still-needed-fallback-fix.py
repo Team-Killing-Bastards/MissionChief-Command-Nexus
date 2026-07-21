@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 SOURCE_PATH = Path('src/missionchief-command-nexus.user.js')
@@ -16,6 +17,13 @@ def replace_once(old: str, new: str, label: str) -> None:
     source = source.replace(old, new, 1)
 
 
+def regex_replace_once(pattern: str, replacement: str, label: str) -> None:
+    global source
+    source, count = re.subn(pattern, replacement, source, count=1, flags=re.S)
+    if count != 1:
+        raise SystemExit(f'{label}: expected exactly one regex match, found {count}')
+
+
 replace_once(
     '// @version      1.0.12',
     '// @version      1.0.13',
@@ -25,42 +33,6 @@ replace_once(
 if 'V10.6.78' not in source:
     raise SystemExit('Mission Finder V10.6.78 marker missing')
 source = source.replace('V10.6.78', 'V10.6.79')
-
-old_helper = '''    function getLiveRequirementDispatchTarget(
-        parsedRow
-    ) {
-        const required = Math.max(
-            0,
-            parseInt(
-                parsedRow?.required,
-                10
-            ) || 0
-        );
-
-        const reportedStillNeeded = Math.max(
-            0,
-            parseInt(
-                parsedRow?.stillNeeded,
-                10
-            ) || 0
-        );
-
-        // Keep the existing unresolved-row safety guard. A naked unknown "?"
-        // must not cause the updater to resend the full mission requirement.
-        // Confirmed rows use Required as the total target; the selection layer
-        // then subtracts exact vehicles that are already selected.
-        if (
-            parsedRow?.requiresConfirmation &&
-            reportedStillNeeded <= 0
-        ) {
-            return 0;
-        }
-
-        return required > 0
-            ? required
-            : reportedStillNeeded;
-    }
-'''
 
 new_helper = '''    function getLiveRequirementDispatchTarget(
         parsedRow
@@ -101,16 +73,17 @@ new_helper = '''    function getLiveRequirementDispatchTarget(
             return reportedStillNeeded;
         }
 
-        // Defensive fallback for legacy/partial live rows with no readable
-        // Still Needed cell at all.
+        // Defensive fallback for a legacy or partial live row where the
+        // Still Needed cell is absent rather than explicitly zero.
         return required > 0
             ? required
             : reportedStillNeeded;
     }
-'''
 
-replace_once(
-    old_helper,
+    function readLiveMissionRequirementRow('''
+
+regex_replace_once(
+    r'''    function getLiveRequirementDispatchTarget\(\n        parsedRow\n    \) \{.*?\n    \}\n\n    function readLiveMissionRequirementRow\(''',
     new_helper,
     'live requirement dispatch target helper',
 )
@@ -124,11 +97,8 @@ replace_once(
     'live row target debug output',
 )
 
-replace_once(
-    '''                            dispatchTargetSource:
-                                parsed.required > 0
-                                    ? 'required'
-                                    : 'reported-still-needed' ''',
+regex_replace_once(
+    r'''                            dispatchTargetSource:\n                                parsed\.required > 0\n                                    \? 'required'\n                                    : 'reported-still-needed' ''',
     '''                            dispatchTargetSource:
                                 parsed.stillNeededText === '?'
                                     ? 'required-fallback-for-unknown'
