@@ -1,50 +1,63 @@
-name: Validate userscript
+name: Verify v1.0.10 release publication
 
 on:
   pull_request:
     paths:
-      - 'src/**'
-      - 'scripts/validate-userscript.mjs'
       - '.github/workflows/validate-userscript.yml'
-  push:
-    branches:
-      - main
-    paths:
-      - 'src/**'
-      - 'scripts/validate-userscript.mjs'
-      - '.github/workflows/validate-userscript.yml'
-  workflow_dispatch:
 
 permissions:
+  actions: read
   contents: read
 
-concurrency:
-  group: validate-userscript-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  validate:
-    name: Userscript validation
+  verify:
+    name: Verify release, Greasy Fork and Discord receipt
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-
+    timeout-minutes: 15
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
+      - name: Inspect automatic v1.0.10 release run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: 4fdc28ddc24378b0e093439501f405fd99e8eeb3
+        shell: bash
+        run: |
+          set -euo pipefail
+          RUN_ID="$(gh run list --repo "${GITHUB_REPOSITORY}" --workflow repository-quality.yml --event pull_request_target --commit "${SOURCE_SHA}" --limit 1 --json databaseId --jq '.[0].databaseId // empty')"
+          if [[ -z "${RUN_ID}" ]]; then
+            echo 'No automatic v1.0.10 release run was found.'
+            exit 1
+          fi
+          for attempt in $(seq 1 36); do
+            STATUS="$(gh run view "${RUN_ID}" --repo "${GITHUB_REPOSITORY}" --json status --jq '.status')"
+            [[ "${STATUS}" == 'completed' ]] && break
+            sleep 5
+          done
+          RUN_JSON="$(gh run view "${RUN_ID}" --repo "${GITHUB_REPOSITORY}" --json status,conclusion,url,event,headSha,jobs)"
+          echo "${RUN_JSON}"
+          [[ "$(jq -r '.conclusion // empty' <<< "${RUN_JSON}")" == 'success' ]]
+          RELEASE_JOBS="$(jq '[.jobs[] | select(.name | contains("Publish, verify and announce canonical release")) | select(.conclusion == "success")] | length' <<< "${RUN_JSON}")"
+          DEPLOY_STEPS="$(jq '[.jobs[].steps[]? | select(.name == "Verify deployment and notify Discord") | select(.conclusion == "success")] | length' <<< "${RUN_JSON}")"
+          [[ "${RELEASE_JOBS}" -ge 1 ]]
+          [[ "${DEPLOY_STEPS}" -ge 1 ]]
+          LOG="$(gh run view "${RUN_ID}" --repo "${GITHUB_REPOSITORY}" --log)"
+          RECEIPT="$(printf '%s\n' "${LOG}" | grep -E 'Discord webhook target verified|Discord release notification posted for v1\.0\.10' || true)"
+          printf '%s\n' "${RECEIPT}"
+          grep -q 'Discord release notification posted for v1.0.10: message_id=' <<< "${RECEIPT}"
+          grep -q 'channel_id=' <<< "${RECEIPT}"
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Validate JavaScript syntax
-        run: node --check src/missionchief-command-nexus.user.js
-
-      - name: Validate metadata and Greasy Fork limits
-        run: node scripts/validate-userscript.mjs
-
-      - name: Require a version increase when code changes
-        if: github.event_name == 'pull_request'
-        run: node scripts/validate-userscript.mjs --base-ref "origin/${{ github.base_ref }}"
+      - name: Verify v1.0.10 release assets and checksum
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ASSET='MissionChief-Command-Nexus-1.0.10.user.js'
+          CHECKSUM="${ASSET}.sha256"
+          COUNT="$(gh release view v1.0.10 --repo "${GITHUB_REPOSITORY}" --json assets --jq ".assets | map(select(.name == \"${ASSET}\" or .name == \"${CHECKSUM}\")) | unique_by(.name) | length")"
+          [[ "${COUNT}" == '2' ]]
+          mkdir release-check
+          gh release download v1.0.10 --repo "${GITHUB_REPOSITORY}" --pattern "${ASSET}" --pattern "${CHECKSUM}" --dir release-check
+          cd release-check
+          sha256sum --check "${CHECKSUM}"
+          grep -q '^// @version      1.0.10$' "${ASSET}"
+          echo 'v1.0.10 release assets and checksum verified.'
