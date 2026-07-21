@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.11
+// @version      1.0.12
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -7777,7 +7777,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.77
+         * MODULE 2: MISSION FINDER V10.6.78
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -8027,7 +8027,7 @@
     // before an untrained IRV may satisfy ordinary Police attendance. Police Medic
     // and Railway Police Officer requirements now use exact trained IRVs with two
     // qualified personnel, and ATV Carrier uses an authoritative type-30 matcher.
-    // V10.6.77: Critical Care Ambulances now require one trained person per vehicle.
+    // V10.6.78: Critical Care Ambulances now require one trained person per vehicle.
     // Armed Response personnel use exact type-25 ATCs with two officers who each hold
     // both Roads Policing and Firearms. Police Officer and Seagoing Vessel upgrade
     // rows now use shared strict conversions across Unit Finder, Update and Auto.
@@ -8188,8 +8188,8 @@
                 label:
                     'Armed Response Personnel',
                 patterns: [
-                    /(\d+)\s*(?:x\s*)?(?:Required\s+)?Armed\s+Response\s+Personnel(?:\s*\(\s*In\s+Armed\s+Vehicles\s*\))?/gi,
-                    /(?:Required\s+)?Armed\s+Response\s+Personnel(?:\s*\(\s*In\s+Armed\s+Vehicles\s*\))?\s*(?:x\s*)?(\d+)/gi
+                    /(\d+)\s*(?:x\s*)?(?:Required\s+)?Armed(?:\s+Response)?\s+Personnel(?:\s*\(\s*In\s+Armed\s+Vehicles\s*\))?/gi,
+                    /(?:Required\s+)?Armed(?:\s+Response)?\s+Personnel(?:\s*\(\s*In\s+Armed\s+Vehicles\s*\))?\s*(?:x\s*)?(\d+)/gi
                 ]
             }
         ]);
@@ -15316,6 +15316,39 @@ let sessionRuntimeTicker = null;
                     return;
                 }
 
+                const armedResponseRequirements =
+                    getArmedResponsePersonnelRequirements(
+                        originalName,
+                        amountText
+                    );
+
+                if (
+                    armedResponseRequirements.length >
+                    0
+                ) {
+                    rows.push({
+                        unitName:
+                            MF_TRAINED_PERSONNEL_ROW_NAME,
+                        stillNeeded:
+                            getTrainedPersonnelVehicleTarget(
+                                armedResponseRequirements
+                            ),
+                        isTrainedPersonnelRequirement:
+                            true,
+                        personnelTrainingRequirements:
+                            armedResponseRequirements
+                    });
+
+                    if (mfDebugEnabled) {
+                        debugLog(
+                            'UNIT FINDER ARMED PERSONNEL',
+                            `${originalName} x${amountText} -> exact type-25 Armed Traffic Car selection | ${formatTrainedPersonnelRequirements(armedResponseRequirements)}`
+                        );
+                    }
+
+                    return;
+                }
+
                 const sarPersonnelConversion =
                     getSarPersonnelVehicleRequirement(
                         originalName,
@@ -15893,8 +15926,52 @@ let sessionRuntimeTicker = null;
             .replace(/\s+/g, ' ')
             .trim();
 
-        return /^(?:Required\s+)?Armed\s+Response\s+Personnel(?:\s*\(\s*In\s+Armed\s+Vehicles\s*\))?$/i
+        return /^(?:Required\s+)?Armed(?:\s+Response)?\s+Personnel(?:\s*\(\s*In\s+Armed\s+Vehicles\s*\))?$/i
             .test(cleaned);
+    }
+
+    function getArmedResponsePersonnelRequirements(
+        requirementName,
+        personnelAmount
+    ) {
+        if (
+            !isArmedResponsePersonnelRequirementName(
+                requirementName
+            )
+        ) {
+            return [];
+        }
+
+        const amountMatch = String(
+            personnelAmount ?? ''
+        )
+            .replace(/,/g, '')
+            .match(/\d+/);
+
+        const personnelRequired = amountMatch
+            ? Math.max(
+                0,
+                parseInt(
+                    amountMatch[0],
+                    10
+                ) || 0
+            )
+            : 0;
+
+        if (personnelRequired <= 0) {
+            return [];
+        }
+
+        return normalisePublicOrderTrainedRequirements([
+            {
+                code:
+                    'armed_response_personnel',
+                label:
+                    'Armed Response Personnel',
+                required:
+                    personnelRequired
+            }
+        ]);
     }
 
     function getSupportedTrainedPersonnelRequirementsFromText(
@@ -21924,6 +22001,41 @@ let sessionRuntimeTicker = null;
             .trim();
     }
 
+    function getLiveRequirementDispatchTarget(
+        parsedRow
+    ) {
+        const required = Math.max(
+            0,
+            parseInt(
+                parsedRow?.required,
+                10
+            ) || 0
+        );
+
+        const reportedStillNeeded = Math.max(
+            0,
+            parseInt(
+                parsedRow?.stillNeeded,
+                10
+            ) || 0
+        );
+
+        // Keep the existing unresolved-row safety guard. A naked unknown "?"
+        // must not cause the updater to resend the full mission requirement.
+        // Confirmed rows use Required as the total target; the selection layer
+        // then subtracts exact vehicles that are already selected.
+        if (
+            parsedRow?.requiresConfirmation &&
+            reportedStillNeeded <= 0
+        ) {
+            return 0;
+        }
+
+        return required > 0
+            ? required
+            : reportedStillNeeded;
+    }
+
     function readLiveMissionRequirementRow(
         row
     ) {
@@ -23247,6 +23359,11 @@ let sessionRuntimeTicker = null;
                         return;
                     }
 
+                    const liveDispatchTarget =
+                        getLiveRequirementDispatchTarget(
+                            parsed
+                        );
+
                     if (
                         mfDebugEnabled &&
                         !silent
@@ -23258,7 +23375,8 @@ let sessionRuntimeTicker = null;
                             `still=${parsed.stillNeededText || '?'} | ` +
                             `state=${parsed.rowState || 'none'} | ` +
                             `confirmation=${parsed.requiresConfirmation ? 'yes' : 'no'} | ` +
-                            `using=${parsed.stillNeeded}`
+                            `using-required-target=${liveDispatchTarget} | ` +
+                            `panel-still=${parsed.stillNeeded}`
                         );
                     }
 
@@ -23339,9 +23457,17 @@ let sessionRuntimeTicker = null;
 
                     recordUpdateRequirement(
                         parsed.unitName,
-                        parsed.stillNeeded,
+                        liveDispatchTarget,
                         'live-requirements-panel',
-                        parsed
+                        {
+                            ...parsed,
+                            dispatchTarget:
+                                liveDispatchTarget,
+                            dispatchTargetSource:
+                                parsed.required > 0
+                                    ? 'required'
+                                    : 'reported-still-needed'
+                        }
                     );
 
                     return;
