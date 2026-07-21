@@ -1,6 +1,6 @@
 RESCUE SUPPORT / FIRE ENGINE UPDATE AUDIT
 Total lines: 31931
-Windows: 30
+Windows: 42
 
 ===== 693-735 =====
 00693:         "60": "Coastguard Commander",
@@ -376,7 +376,7 @@ Windows: 30
 10818: 
 10819:         const ordinaryPoliceRegistry =
 
-===== 10883-10925 =====
+===== 10883-10960 =====
 10883:                 );
 10884:             }
 10885: 
@@ -420,6 +420,221 @@ Windows: 30
 10923:         if (
 10924:             isDogSupportUnitRequirement(
 10925:                 requestedName,
+10926:                 mappedName
+10927:             )
+10928:         ) {
+10929:             // Never use the AAO/ARR group button as proof of a DSU selection.
+10930:             // It previously returned a successful click while no matching
+10931:             // vehicle checkbox was checked, causing the repeated false
+10932:             // "Final missing units: Dog Support Units" popup.
+10933:             return getVehicleCheckboxSnapshot(
+10934:                 true
+10935:             ).find(input => {
+10936:                 return (
+10937:                     !input.disabled &&
+10938:                     !input.checked &&
+10939:                     isDogSupportUnitCheckbox(
+10940:                         input
+10941:                     )
+10942:                 );
+10943:             }) || null;
+10944:         }
+10945: 
+10946:         if (
+10947:             isIccuOrAmbulanceControlRequirement(
+10948:                 requestedName,
+10949:                 mappedName
+10950:             )
+10951:         ) {
+10952:             const available =
+10953:                 getVehicleCheckboxSnapshot().filter(input => {
+10954:                     return (
+10955:                         !input.disabled &&
+10956:                         !input.checked
+10957:                     );
+10958:                 });
+10959: 
+10960:             const iccuCheckbox =
+
+===== 11067-11109 =====
+11067: 
+11068:             if (mountainRescueMatches.length > 0) {
+11069:                 return mountainRescueMatches[0];
+11070:             }
+11071: 
+11072:             const sarMatches =
+11073:                 sortVehicleCheckboxesByBestArrival(
+11074:                     available.filter(
+11075:                         isSar4x4Checkbox
+11076:                     )
+11077:                 );
+11078: 
+11079:             // Do not fall back to an AAO/ARR group button. A group-button click
+11080:             // cannot be verified as a selected vehicle and caused the false
+11081:             // "Final missing units: 4x4 Vehicles" popup.
+11082:             return sarMatches[0] || null;
+11083:         }
+11084: 
+11085:         if (
+11086:             isSartecRequirement(
+11087:                 requestedName,
+11088:                 mappedName
+11089:             )
+11090:         ) {
+11091:             // SARTEC must only come from the actual available-vehicle
+11092:             // checkbox list and must begin the displayed vehicle name.
+11093:             return getVehicleCheckboxSnapshot().find(input => {
+11094:                 return (
+11095:                     !input.disabled &&
+11096:                     !input.checked &&
+11097:                     isSartecVehicleCheckbox(
+11098:                         input
+11099:                     )
+11100:                 );
+11101:             }) || null;
+11102:         }
+11103: 
+11104:         if (
+11105:             isRrvRequirement(
+11106:                 requestedName,
+11107:                 mappedName
+11108:             )
+11109:         ) {
+
+===== 11757-11799 =====
+11757:                         changeDispatchBoxColor(false);
+11758:                         updateStatusBox(
+11759:                             'Mission Update stopped: the complete vehicle list did not become stable.'
+11760:                         );
+11761:                         return;
+11762:                     }
+11763: 
+11764:                     // A mission refresh can leave the previous UPDATE
+11765:                     // selection key in memory. Start this manual update as
+11766:                     // a fresh pass so Fire Engine and other repeated update
+11767:                     // requirements are actually searched again.
+11768:                     clearSelectionGuards();
+11769: 
+11770:                     const manualUpdateRows =
+11771:                         readMissionUpdateRows();
+11772: 
+11773:                     await preparePoliceVehicleSafetyForRows(
+11774:                         manualUpdateRows,
+11775:                         'MANUAL UPDATE'
+11776:                     );
+11777: 
+11778:                     handleMissionUpdateUnits(
+11779:                         true,
+11780:                         manualUpdateRows
+11781:                     );
+11782:                 } finally {
+11783:                     missionUpdateBtn.disabled =
+11784:                         false;
+11785: 
+11786:                     missionUpdateBtn.textContent =
+11787:                         originalText;
+11788:                 }
+11789:             }
+11790:         );
+11791: 
+11792:         const dispatchBtn = document.createElement('button');
+11793:         dispatchBtn.id = 'dispatch-box';
+11794:         dispatchBtn.textContent = 'Dispatch';
+11795:         dispatchBtn.className = 'mf2026-button';
+11796:         dispatchBtn.style.backgroundColor = 'grey';
+11797:         dispatchBtn.style.color = 'white';
+11798:         dispatchBtn.addEventListener('click', function() {
+11799:             triggerDispatchClick();
+
+===== 12307-12349 =====
+12307:         return Number.isFinite(value) ? Math.max(500, Math.min(15000, value)) : DEFAULT_MISSION_READY_DELAY;
+12308:     }
+12309: 
+12310:     function getDispatchReadinessSignature() {
+12311:         const selectedCount = document.querySelectorAll(
+12312:             'input[type="checkbox"]:checked, input.vehicle_checkbox:checked'
+12313:         ).length;
+12314: 
+12315:         const now = Date.now();
+12316: 
+12317:         if (now >= mfDispatchReadinessExpensiveCache.expiresAt) {
+12318:             mfDispatchReadinessExpensiveCache = {
+12319:                 expiresAt: now + 200,
+12320:                 updateRowsSignature: getMissionUpdateRowsSignature(
+12321:                     readMissionUpdateRows({
+12322:                         silent: true
+12323:                     })
+12324:                 ),
+12325:                 staffingText: getVisibleStaffingShortageText()
+12326:             };
+12327:         }
+12328: 
+12329:         const rowState = vehicleLoadState.rows
+12330:             .map(row => [
+12331:                 row.originalName,
+12332:                 row.mappedName,
+12333:                 row.required,
+12334:                 row.found,
+12335:                 row.status
+12336:             ].join(':'))
+12337:             .sort()
+12338:             .join('|');
+12339: 
+12340:         return [
+12341:             selectedCount,
+12342:             mfDispatchReadinessExpensiveCache.updateRowsSignature,
+12343:             rowState,
+12344:             vehicleLoadState.ready ? 'ready' : 'not-ready',
+12345:             isLoadingBarVisible() ? 'loading' : 'idle',
+12346:             mfDispatchReadinessExpensiveCache.staffingText
+12347:         ].join('||');
+12348:     }
+12349: 
+
+===== 12706-12748 =====
+12706:         while (Date.now() - started < timeoutMs) {
+12707:             const hasMission = isMissionPage();
+12708:             const hasUnits = !!document.querySelector('a[search_attribute]');
+12709:             const hasMissionHelp = !!document.querySelector('#mission_help');
+12710:             const hasBasicMissionUi = hasMission && hasUnits && hasMissionHelp;
+12711: 
+12712:             if (hasBasicMissionUi) {
+12713:                 if (!stableSince) stableSince = Date.now();
+12714: 
+12715:                 const now = Date.now();
+12716: 
+12717:                 if (now - lastDeepProbeAt >= 300) {
+12718:                     lastDeepProbeAt = now;
+12719:                     hasPatientData = findPatientCount(true) > 0;
+12720:                     hasUpdateRows = readMissionUpdateRows({
+12721:                         silent: true
+12722:                     }).length > 0;
+12723:                 }
+12724: 
+12725:                 // Give dynamic patient cards at least 1.5 seconds after the
+12726:                 // basic mission controls appear. They often render later.
+12727:                 if (
+12728:                     hasPatientData ||
+12729:                     hasUpdateRows ||
+12730:                     Date.now() - stableSince >= 650
+12731:                 ) {
+12732:                     break;
+12733:                 }
+12734:             } else {
+12735:                 stableSince = 0;
+12736:                 hasPatientData = false;
+12737:                 hasUpdateRows = false;
+12738:             }
+12739: 
+12740:             await wait(150);
+12741:         }
+12742: 
+12743:         const configuredDelay = getMissionReadyDelay();
+12744:         const finalReadyDelay =
+12745:             hasPatientData || hasUpdateRows
+12746:                 ? Math.min(configuredDelay, 350)
+12747:                 : configuredDelay;
+12748: 
 
 ===== 12807-12873 =====
 12807:     function resetVehicleLoadState() {
@@ -639,7 +854,52 @@ Windows: 30
 13385:             'ambulance',
 13386:             selectedNow
 
-===== 15112-15154 =====
+===== 14875-14917 =====
+14875:             '';
+14876: 
+14877:         if (
+14878:             !href ||
+14879:             /^javascript:/i.test(
+14880:                 href
+14881:             )
+14882:         ) {
+14883:             return null;
+14884:         }
+14885: 
+14886:         if (mfDebugEnabled) {
+14887:             debugLog(
+14888:                 'LIVE HELP GUARD',
+14889:                 `Using active visible mission help: ${href}`
+14890:             );
+14891:         }
+14892: 
+14893:         return href;
+14894:     }
+14895: 
+14896:     function cleanRequirementName(value) {
+14897:         return String(value || '')
+14898:             .replace(/\s+/g, ' ')
+14899:             .replace(/^Required\s+/i, '')
+14900:             .replace(/\s+only required.*$/i, '')
+14901:             .replace(/\s*\(\s*\d+\s*%\s*\)\s*$/i, '')
+14902:             .trim();
+14903:     }
+14904: 
+14905:     // V10.6.56: MissionChief help/update tables can contain threshold or
+14906:     // prerequisite statistics such as "Required minimum policemen 10".
+14907:     // These describe the mission generation/minimum staffing threshold; they
+14908:     // are not a vehicle or live shortage to dispatch. Keep this as one shared
+14909:     // guard so Unit Finder, Mission Update, visible fallback and Auto Mode all
+14910:     // ignore the same rows.
+14911:     function shouldIgnoreRequiredMinimumRequirement(value) {
+14912:         const raw = String(value || '')
+14913:             .replace(/\s+/g, ' ')
+14914:             .trim();
+14915: 
+14916:         if (!raw) return false;
+14917: 
+
+===== 15112-15161 =====
 15112:                         match[1] ||
 15113:                         match[2],
 15114:                         10
@@ -683,6 +943,13 @@ Windows: 30
 15152:         if (/prisoners?/.test(text)) return true;
 15153:         if (/transport request/.test(text)) return true;
 15154:         if (/chance/.test(text)) return true;
+15155: 
+15156:         return false;
+15157:     }
+15158: 
+15159:     function extractLiveMissionRequirementRows(html) {
+15160:         const doc = new DOMParser().parseFromString(html, 'text/html');
+15161: 
 
 ===== 15387-15429 =====
 15387:                     return;
@@ -774,6 +1041,51 @@ Windows: 30
 15606:                         stillNeeded:
 15607:                             amount
 
+===== 15622-15664 =====
+15622: 
+15623:     async function readLiveMissionRequirements() {
+15624:         if (!isCurrentMissionExecutionOwner('attachment requirement read')) {
+15625:             return [];
+15626:         }
+15627: 
+15628:         synchroniseMissionInstanceState('Unit Finder attachment read');
+15629: 
+15630:         const missionKeyAtFetchStart =
+15631:             getLocalMissionInstanceKey();
+15632: 
+15633:         const url = getMissionHelpUrl();
+15634: 
+15635:         if (!url) {
+15636:             updateStatusBox('Mission help link not found. Falling back to old vehicle list.');
+15637:             return [];
+15638:         }
+15639: 
+15640:         try {
+15641:             updateStatusBox(
+15642:                 'Reading the mission-help attachment: Vehicle and Personnel Requirements...'
+15643:             );
+15644: 
+15645:             if (
+15646:                 mfDebugEnabled
+15647:             ) {
+15648:                 debugLog(
+15649:                     'UNIT FINDER ATTACHMENT FETCH',
+15650:                     url
+15651:                 );
+15652:             }
+15653:             const response = await fetch(url, { credentials: 'include', cache: 'no-store' });
+15654: 
+15655:             if (!response.ok) {
+15656:                 throw new Error(`${response.status} ${response.statusText}`);
+15657:             }
+15658: 
+15659:             const html = await response.text();
+15660: 
+15661:             if (
+15662:                 missionKeyAtFetchStart !==
+15663:                 getLocalMissionInstanceKey()
+15664:             ) {
+
 ===== 17822-17864 =====
 17822: 
 17823:     function getOrdinaryPoliceVehicleRequirementCount(
@@ -819,7 +1131,271 @@ Windows: 30
 17863:         if (ordinaryVehiclesRequired <= 0) {
 17864:             return {
 
-===== 18864-18906 =====
+===== 18600-19617 =====
+18600:                         true
+18601:                 };
+18602:             }
+18603: 
+18604:             const conversion = getPoliceOfficerVehicleRequirement(
+18605:                 row.unitName,
+18606:                 row.stillNeeded
+18607:             );
+18608: 
+18609:             if (!conversion) return row;
+18610: 
+18611:             return {
+18612:                 ...row,
+18613:                 unitName: conversion.unitName,
+18614:                 stillNeeded: conversion.stillNeeded,
+18615:                 personnelRequirement:
+18616:                     `${conversion.personnelRequired} Police Officer${conversion.personnelRequired === 1 ? '' : 's'}`,
+18617:                 personnelPerVehicle: conversion.personnelPerVehicle,
+18618:                 convertedFromPersonnelRequirement: true
+18619:             };
+18620:         });
+18621:     }
+18622: 
+18623:     function getSupportedMissingPersonnelRowsFromText(
+18624:         text,
+18625:         options = {}
+18626:     ) {
+18627:         const silent = !!(options && options.silent);
+18628: 
+18629:         const personnelSegment =
+18630:             getMissingPersonnelSegment(
+18631:                 text
+18632:             );
+18633: 
+18634:         if (!personnelSegment) {
+18635:             return [];
+18636:         }
+18637: 
+18638:         const rows = [];
+18639: 
+18640:         const sarPersonnelDefinitions = [
+18641:             {
+18642:                 displayName:
+18643:                     'Search Technicians',
+18644:                 namePattern:
+18645:                     'search\\s+technician(?:s)?'
+18646:             },
+18647:             {
+18648:                 displayName:
+18649:                     'Search Advisors',
+18650:                 namePattern:
+18651:                     'search\\s+advisor(?:s)?'
+18652:             },
+18653:             {
+18654:                 displayName:
+18655:                     'SAR Commanders',
+18656:                 namePattern:
+18657:                     'sar\\s+commander(?:s)?'
+18658:             }
+18659:         ];
+18660: 
+18661:         sarPersonnelDefinitions.forEach(
+18662:             definition => {
+18663:                 const personnelRequired =
+18664:                     getNamedPersonnelCount(
+18665:                         personnelSegment,
+18666:                         definition.namePattern
+18667:                     );
+18668: 
+18669:                 if (personnelRequired <= 0) {
+18670:                     return;
+18671:                 }
+18672: 
+18673:                 const conversion =
+18674:                     getSarPersonnelVehicleRequirement(
+18675:                         definition.displayName,
+18676:                         personnelRequired
+18677:                     );
+18678: 
+18679:                 if (!conversion) {
+18680:                     return;
+18681:                 }
+18682: 
+18683:                 rows.push({
+18684:                     unitName:
+18685:                         conversion.unitName,
+18686:                     stillNeeded:
+18687:                         conversion.stillNeeded,
+18688:                     personnelRequirement:
+18689:                         conversion.personnelRequirement
+18690:                 });
+18691: 
+18692:                 if (
+18693:                     mfDebugEnabled &&
+18694:                     !silent
+18695:                 ) {
+18696:                     debugLog(
+18697:                         'UPDATE PERSONNEL',
+18698:                         `${conversion.personnelRequirement} -> select ${conversion.unitName} x${conversion.stillNeeded} (${conversion.personnelPerVehicle} personnel per vehicle)`
+18699:                     );
+18700:                 }
+18701:             }
+18702:         );
+18703: 
+18704:         // Police Cars normally carry 2 Police Officers.
+18705:         const policeOfficersNeeded =
+18706:             getNamedPersonnelCount(
+18707:                 personnelSegment,
+18708:                 'police\\s+officer(?:s)?'
+18709:             );
+18710: 
+18711:         if (policeOfficersNeeded > 0) {
+18712:             const policeCarsNeeded =
+18713:                 Math.ceil(
+18714:                     policeOfficersNeeded /
+18715:                     2
+18716:                 );
+18717: 
+18718:             rows.push({
+18719:                 unitName:
+18720:                     'Police Car',
+18721:                 stillNeeded:
+18722:                     policeCarsNeeded,
+18723:                 personnelRequirement:
+18724:                     `${policeOfficersNeeded} Police Officer${policeOfficersNeeded === 1 ? '' : 's'}`
+18725:             });
+18726: 
+18727:             if (
+18728:                 mfDebugEnabled &&
+18729:                 !silent
+18730:             ) {
+18731:                 debugLog(
+18732:                     'UPDATE PERSONNEL',
+18733:                     `${policeOfficersNeeded} Police Officer${policeOfficersNeeded === 1 ? '' : 's'} -> select Police Car x${policeCarsNeeded}`
+18734:                 );
+18735:             }
+18736:         }
+18737: 
+18738:         // Coastguard Mud Rescue Units carry 5 Mud Rescue Operators each.
+18739:         const mudRescueOperatorsNeeded =
+18740:             getNamedPersonnelCount(
+18741:                 personnelSegment,
+18742:                 'mud\\s+rescue\\s+operator(?:s)?'
+18743:             );
+18744: 
+18745:         if (mudRescueOperatorsNeeded > 0) {
+18746:             const mudRescueUnitsNeeded =
+18747:                 Math.ceil(
+18748:                     mudRescueOperatorsNeeded /
+18749:                     5
+18750:                 );
+18751: 
+18752:             rows.push({
+18753:                 unitName:
+18754:                     'Coastguard Mud Rescue Unit',
+18755:                 stillNeeded:
+18756:                     mudRescueUnitsNeeded,
+18757:                 personnelRequirement:
+18758:                     `${mudRescueOperatorsNeeded} Mud Rescue Operator${mudRescueOperatorsNeeded === 1 ? '' : 's'}`
+18759:             });
+18760: 
+18761:             if (
+18762:                 mfDebugEnabled &&
+18763:                 !silent
+18764:             ) {
+18765:                 debugLog(
+18766:                     'UPDATE PERSONNEL',
+18767:                     `${mudRescueOperatorsNeeded} Mud Rescue Operator${mudRescueOperatorsNeeded === 1 ? '' : 's'} -> select Coastguard Mud Rescue Unit x${mudRescueUnitsNeeded}`
+18768:                 );
+18769:             }
+18770:         }
+18771: 
+18772:         return rows;
+18773:     }
+18774: 
+18775:     function hasSupportedMissingPersonnelUpdate(text) {
+18776:         return (
+18777:             getSupportedMissingPersonnelRowsFromText(
+18778:                 text,
+18779:                 { silent: true }
+18780:             ).length > 0 ||
+18781:             getSupportedTrainedPersonnelRequirementsFromText(
+18782:                 text
+18783:             ).length > 0
+18784:         );
+18785:     }
+18786: 
+18787: 
+18788:     function getVisibleStaffingShortageText() {
+18789:         const scopes = getCurrentMissionAlertScopes();
+18790: 
+18791:         for (const scope of scopes) {
+18792:             const alerts = Array.from(
+18793:                 scope.querySelectorAll(
+18794:                     '.alert-danger, div[id^="alert_danger_"], #missing_text'
+18795:                 )
+18796:             );
+18797: 
+18798:             for (const alert of alerts) {
+18799:                 try {
+18800:                     if (!isElementVisible(alert)) continue;
+18801:                 } catch (error) {}
+18802: 
+18803:                 const text = (
+18804:                     alert.innerText ||
+18805:                     alert.textContent ||
+18806:                     ''
+18807:                 ).replace(/\s+/g, ' ').trim();
+18808: 
+18809:                 if (!text) continue;
+18810: 
+18811:                 const lower = text.toLowerCase();
+18812: 
+18813:                 if (
+18814:                     lower.includes('not enough personnel') ||
+18815:                     lower.includes('not enough personal') ||
+18816:                     lower.includes('not enough staff') ||
+18817:                     lower.includes('insufficient personnel') ||
+18818:                     lower.includes('insufficient staff') ||
+18819:                     lower.includes('lacks personnel') ||
+18820:                     lower.includes('lacks staff') ||
+18821:                     lower.includes("doesn't have the right qualification") ||
+18822:                     lower.includes('does not have the right qualification') ||
+18823:                     lower.includes('right qualification')
+18824:                 ) {
+18825:                     return text;
+18826:                 }
+18827:             }
+18828:         }
+18829: 
+18830:         return '';
+18831:     }
+18832: 
+18833:     function detectAndLatchStaffingBlock(reason) {
+18834:         resetStaffingBlockForCurrentMission(reason);
+18835: 
+18836:         if (mfStaffingBlockActive) {
+18837:             return true;
+18838:         }
+18839: 
+18840:         const text =
+18841:             getVisibleStaffingShortageText() ||
+18842:             getInlinePersonnelQualificationAlertText();
+18843: 
+18844:         if (!text) return false;
+18845: 
+18846:         mfStaffingBlockActive = true;
+18847:         mfStaffingBlockText = text;
+18848: 
+18849:         vehicleLoadState.ready = false;
+18850:         changeDispatchBoxColor(false);
+18851: 
+18852:         updateStatusBox(
+18853:             'Staffing/qualification shortage detected. No more vehicles will be selected.'
+18854:         );
+18855: 
+18856:         if (mfDebugEnabled) {
+18857:             debugLog(
+18858:                 'STAFFING GUARD',
+18859:                 `BLOCKED | reason=${reason || 'unknown'} | ${text.slice(0, 350)}`
+18860:             );
+18861:         }
+18862: 
+18863:         try {
 18864:             recordIssueEvent(
 18865:                 'STAFFING GUARD BLOCKED',
 18866:                 {
@@ -863,8 +1439,70 @@ Windows: 30
 18904:                 ),
 18905:                 missing: Math.max(
 18906:                     0,
-
-===== 18971-19013 =====
+18907:                     parseInt(amount, 10) || 0
+18908:                 ),
+18909:                 skipped: true,
+18910:                 staffingBlocked: true
+18911:             };
+18912:         }
+18913: 
+18914:         const required = Math.max(0, parseInt(amount, 10) || 0);
+18915:         const selectionSource = String(source || 'UNKNOWN').toUpperCase();
+18916:         const key = buildSelectionKey(selectionSource, originalName, mappedName, required);
+18917: 
+18918:         if (required <= 0) {
+18919:             return { assigned: 0, required, missing: 0, skipped: true };
+18920:         }
+18921: 
+18922:         if (processedSelectionKeys.has(key)) {
+18923:             if (mfDebugEnabled) {
+18924:                 debugLog('SELECT SKIP', `${selectionSource} already processed ${originalName} -> ${mappedName} x${required}`);
+18925:             }
+18926:             return { assigned: 0, required, missing: 0, skipped: true };
+18927:         }
+18928: 
+18929:         processedSelectionKeys.add(key);
+18930: 
+18931:         const checkboxes = getMatchingVehicleCheckboxes(originalName, mappedName);
+18932:         let assigned = 0;
+18933: 
+18934:         if (mfDebugEnabled) {
+18935:             debugLog('SELECT START', `${selectionSource} | ${originalName} -> ${mappedName} | required=${required} | matching unchecked boxes=${checkboxes.length}`);
+18936:         }
+18937:         highDebugLog('SELECT DETAIL', `${selectionSource} | ${originalName} -> ${mappedName} | required=${required} | first=${checkboxes[0] ? getVehicleDebugName(checkboxes[0]) : 'none'}`);
+18938: 
+18939:         // V9.2.1: The requirement quantity decides dispatch. The visual counter never controls this loop.
+18940:         for (const checkbox of checkboxes.slice(0, required)) {
+18941:             if (
+18942:                 detectAndLatchStaffingBlock(
+18943:                     `selection-loop-${selectionSource}`
+18944:                 )
+18945:             ) {
+18946:                 break;
+18947:             }
+18948: 
+18949:             if (mfDebugEnabled) debugLog('SELECT CLICK', `${selectionSource} | ${mappedName} | ${getVehicleDebugName(checkbox)}`);
+18950:             if (clickVehicleElement(checkbox)) {
+18951:                 assigned += 1;
+18952:                 const row = vehicleLoadState.rows.find(r => r.originalName === originalName && r.mappedName === mappedName);
+18953:                 if (row) {
+18954:                     row.status = assigned >= required ? 'assigned' : 'retrying';
+18955:                     renderVehicleLoadList();
+18956:                 }
+18957:             }
+18958:         }
+18959: 
+18960:         if (
+18961:             assigned < required &&
+18962:             !detectAndLatchStaffingBlock(
+18963:                 `before-fallback-${selectionSource}`
+18964:             )
+18965:         ) {
+18966:             const fallback = findUnitButton(mappedName, originalName);
+18967: 
+18968:             if (fallback && !isVehicleElementAlreadySelected(fallback)) {
+18969:                 if (mfDebugEnabled) debugLog('SELECT FALLBACK', `${selectionSource} | ${mappedName} | ${getVehicleDebugName(fallback)}`);
+18970:                 if (fallback.matches && fallback.matches('input.vehicle_checkbox')) {
 18971:                     if (clickVehicleElement(fallback)) assigned += 1;
 18972:                     renderVehicleLoadList();
 18973:                 } else {
@@ -908,8 +1546,101 @@ Windows: 30
 19011:             sourceLabel
 19012:         );
 19013: 
-
-===== 19109-19201 =====
+19014:         for (const item of requirementRows) {
+19015:             if (
+19016:                 detectAndLatchStaffingBlock(
+19017:                     `process-${sourceLabel}`
+19018:                 )
+19019:             ) {
+19020:                 break;
+19021:             }
+19022: 
+19023:             const unitText = item.unitName;
+19024: 
+19025:             if (
+19026:                 item
+19027:                     .isTrainedPersonnelRequirement
+19028:             ) {
+19029:                 const requirements =
+19030:                     item
+19031:                         .personnelTrainingRequirements ||
+19032:                     [];
+19033: 
+19034:                 const trainedVehicleTarget =
+19035:                     getTrainedPersonnelVehicleTarget(
+19036:                         requirements
+19037:                     );
+19038: 
+19039:                 addOrUpdateVehicleRow(
+19040:                     unitText,
+19041:                     'Assigned trained vehicles',
+19042:                     trainedVehicleTarget,
+19043:                     'pending',
+19044:                     0
+19045:                 );
+19046: 
+19047:                 renderVehicleLoadList();
+19048: 
+19049:                 await refreshPoliceInspectorRegistryFromLiveVehicles(
+19050:                     requirements,
+19051:                     sourceLabel
+19052:                 );
+19053: 
+19054:                 const result =
+19055:                     selectVehiclesForTrainedPersonnelRequirements(
+19056:                         requirements,
+19057:                         sourceLabel
+19058:                     );
+19059: 
+19060:                 const largestRemaining =
+19061:                     result.remaining.reduce(
+19062:                         (
+19063:                             maximum,
+19064:                             requirement
+19065:                         ) => Math.max(
+19066:                             maximum,
+19067:                             Math.max(
+19068:                                 0,
+19069:                                 parseInt(
+19070:                                     requirement.remaining,
+19071:                                     10
+19072:                                 ) || 0
+19073:                             )
+19074:                         ),
+19075:                         0
+19076:                     );
+19077: 
+19078:                 const selectedCount =
+19079:                     Math.max(
+19080:                         0,
+19081:                         trainedVehicleTarget -
+19082:                         largestRemaining
+19083:                     );
+19084: 
+19085:                 addOrUpdateVehicleRow(
+19086:                     unitText,
+19087:                     'Assigned trained vehicles',
+19088:                     trainedVehicleTarget,
+19089:                     result.satisfied
+19090:                         ? 'assigned'
+19091:                         : (
+19092:                             selectedCount > 0
+19093:                                 ? 'retrying'
+19094:                                 : 'missing'
+19095:                         ),
+19096:                     selectedCount
+19097:                 );
+19098: 
+19099:                 renderVehicleLoadList();
+19100: 
+19101:                 if (!result.satisfied) {
+19102:                     trainedPersonnelMissing.push(
+19103:                         result.registryVehicleCount > 0
+19104:                             ? result.remaining
+19105:                                 .filter(requirement => requirement.remaining > 0)
+19106:                                 .map(requirement => `${requirement.label} x${requirement.remaining}`)
+19107:                                 .join(', ')
+19108:                             : 'No trained-vehicle register was found. Run Personnel Assignment in Preview or Assign mode to build it.'
 19109:                     );
 19110:                 }
 19111: 
@@ -1003,8 +1734,224 @@ Windows: 30
 19199:                 parsedAmount
 19200:             ) {
 19201:                 missingUnits.push({
-
-===== 19420-19499 =====
+19202:                     unitName:
+19203:                         unitText,
+19204:                     stillNeeded:
+19205:                         parsedAmount -
+19206:                         visualSelected,
+19207:                     requiredTotal:
+19208:                         parsedAmount
+19209:                 });
+19210:             }
+19211:         }
+19212: 
+19213:         renderVehicleLoadList();
+19214: 
+19215:         if (mfStaffingBlockActive) {
+19216:             changeDispatchBoxColor(false);
+19217:             return false;
+19218:         }
+19219: 
+19220:         if (trainedPersonnelMissing.length > 0) {
+19221:             changeDispatchBoxColor(false);
+19222:             updateStatusBox(
+19223:                 'A required trained Police IRV is still missing.'
+19224:             );
+19225: 
+19226:             originalAlert.call(
+19227:                 window,
+19228:                 `Final missing units:\n\n${trainedPersonnelMissing.join('\n')}`
+19229:             );
+19230: 
+19231:             return false;
+19232:         }
+19233: 
+19234:         if (missingUnits.length > 0) {
+19235:             // V10.6.48 parity guard:
+19236:             // Manual Unit Finder naturally waits while MissionChief loads the
+19237:             // missing-vehicle list. Auto Mode must wait for the same bounded
+19238:             // retry before it is allowed to run Mission Update or Dispatch.
+19239:             return await retryMissingUnits(
+19240:                 missingUnits
+19241:             );
+19242:         }
+19243: 
+19244:         changeDispatchBoxColor(true);
+19245:         return true;
+19246:     }
+19247: 
+19248:     async function processVehicles(vehicleList) {
+19249:         const listItems = vehicleList.querySelectorAll('li.class-x');
+19250:         const requirementRows = [];
+19251: 
+19252:         listItems.forEach(item => {
+19253:             const unitText = [...item.childNodes]
+19254:                 .filter(node => node.nodeType === Node.TEXT_NODE)
+19255:                 .map(node => node.textContent.trim())[0];
+19256: 
+19257:             if (!unitText) return;
+19258: 
+19259:             const requiredAmount = parseInt(item.getAttribute('data-amount'), 10);
+19260:             if (!Number.isFinite(requiredAmount) || requiredAmount <= 0) return;
+19261: 
+19262:             requirementRows.push({
+19263:                 unitName: unitText,
+19264:                 stillNeeded: requiredAmount
+19265:             });
+19266:         });
+19267: 
+19268:         return processRequirementRows(requirementRows, 'fallback vehicle list');
+19269:     }
+19270: 
+19271:     async function retryMissingUnits(missingUnits) {
+19272:         if (!isCurrentMissionExecutionOwner('missing-unit retry')) {
+19273:             return false;
+19274:         }
+19275: 
+19276:         if (
+19277:             detectAndLatchStaffingBlock(
+19278:                 'before-missing-unit-retry'
+19279:             )
+19280:         ) {
+19281:             updateStatusBox(
+19282:                 'Staffing shortage detected. Missing-unit retry cancelled.'
+19283:             );
+19284:             changeDispatchBoxColor(false);
+19285:             return false;
+19286:         }
+19287: 
+19288:         const retryMissionId =
+19289:             getCurrentMissionIdForQueueRestart();
+19290: 
+19291:         const missingRows = missingUnits.map(unit => {
+19292:             if (typeof unit === 'string') {
+19293:                 return {
+19294:                     unitName: unit,
+19295:                     stillNeeded: 1,
+19296:                     requiredTotal: 1
+19297:                 };
+19298:             }
+19299: 
+19300:             const stillNeeded =
+19301:                 Math.max(
+19302:                     1,
+19303:                     parseInt(
+19304:                         unit.stillNeeded,
+19305:                         10
+19306:                     ) || 1
+19307:                 );
+19308: 
+19309:             const requiredTotal =
+19310:                 Math.max(
+19311:                     stillNeeded,
+19312:                     parseInt(
+19313:                         unit.requiredTotal,
+19314:                         10
+19315:                     ) || stillNeeded
+19316:                 );
+19317: 
+19318:             return {
+19319:                 unitName: unit.unitName,
+19320:                 stillNeeded,
+19321:                 requiredTotal
+19322:             };
+19323:         });
+19324: 
+19325:         updateStatusBox('Retrying missing units...');
+19326: 
+19327:         missingRows.forEach(
+19328:             unit =>
+19329:                 setVehicleStatus(
+19330:                     unit.unitName,
+19331:                     'retrying'
+19332:                 )
+19333:         );
+19334: 
+19335:         renderVehicleLoadList();
+19336: 
+19337:         const loadingBar =
+19338:             document.querySelector(
+19339:                 'a.btn-warning.missing_vehicles_load'
+19340:             );
+19341: 
+19342:         let timedOut = false;
+19343: 
+19344:         if (loadingBar) {
+19345:             try {
+19346:                 loadingBar.click();
+19347:             } catch (_error) {}
+19348: 
+19349:             const retryStartedAt =
+19350:                 Date.now();
+19351: 
+19352:             const retryTimeoutMs =
+19353:                 20000;
+19354: 
+19355:             while (
+19356:                 isLoadingBarVisible() &&
+19357:                 Date.now() - retryStartedAt <
+19358:                     retryTimeoutMs
+19359:             ) {
+19360:                 if (
+19361:                     autoModeRunning &&
+19362:                     isManualAutoStopActive()
+19363:                 ) {
+19364:                     updateStatusBox(
+19365:                         'Missing-unit retry stopped.'
+19366:                     );
+19367:                     changeDispatchBoxColor(false);
+19368:                     return false;
+19369:                 }
+19370: 
+19371:                 const currentMissionId =
+19372:                     getCurrentMissionIdForQueueRestart();
+19373: 
+19374:                 if (
+19375:                     retryMissionId &&
+19376:                     currentMissionId &&
+19377:                     currentMissionId !==
+19378:                         retryMissionId
+19379:                 ) {
+19380:                     updateStatusBox(
+19381:                         'Mission changed during missing-unit retry. Selection cancelled.'
+19382:                     );
+19383: 
+19384:                     changeDispatchBoxColor(false);
+19385:                     return false;
+19386:                 }
+19387: 
+19388:                 await wait(250);
+19389:             }
+19390: 
+19391:             timedOut =
+19392:                 isLoadingBarVisible();
+19393: 
+19394:             updateStatusBox(
+19395:                 timedOut
+19396:                     ? 'Vehicle-list loading timed out. Running one final bounded retry...'
+19397:                     : 'Loading completed. Retrying missing units...'
+19398:             );
+19399:         }
+19400: 
+19401:         const stillMissing = [];
+19402: 
+19403:         for (
+19404:             const unit of
+19405:             missingRows
+19406:         ) {
+19407:             if (
+19408:                 detectAndLatchStaffingBlock(
+19409:                     'during-missing-unit-retry'
+19410:                 )
+19411:             ) {
+19412:                 changeDispatchBoxColor(false);
+19413:                 return false;
+19414:             }
+19415: 
+19416:             const currentMissionId =
+19417:                 getCurrentMissionIdForQueueRestart();
+19418: 
+19419:             if (
 19420:                 retryMissionId &&
 19421:                 currentMissionId &&
 19422:                 currentMissionId !==
@@ -1085,8 +2032,59 @@ Windows: 30
 19497:                 );
 19498:             }
 19499: 
-
-===== 19553-19617 =====
+19500:             if (mfDebugEnabled) {
+19501:                 debugLog(
+19502:                     'RETRY CAP',
+19503:                     `${unit.unitName} -> ${mappedName} | required total=${unit.requiredTotal} | selected before=${selectedBefore} | remaining now=${remainingNow} | selected after=${selectedAfter}`
+19504:                 );
+19505:             }
+19506:         }
+19507: 
+19508:         renderVehicleLoadList();
+19509: 
+19510:         if (
+19511:             stillMissing.length ===
+19512:             0
+19513:         ) {
+19514:             changeDispatchBoxColor(true);
+19515:             return true;
+19516:         }
+19517: 
+19518:         changeDispatchBoxColor(false);
+19519: 
+19520:         if (!autoModeRunning) {
+19521:             alert(
+19522:                 `${
+19523:                     timedOut
+19524:                         ? 'Final missing units after vehicle-list timeout'
+19525:                         : 'Final missing units'
+19526:                 }:\n\n${stillMissing.join('\n')}`
+19527:             );
+19528:         } else {
+19529:             updateStatusBox(
+19530:                 'Auto Mode: missing units. Will dispatch to skip.'
+19531:             );
+19532:         }
+19533: 
+19534:         return false;
+19535:     }
+19536: 
+19537:     function isLoadingBarVisible() {
+19538:         const loadingBar = document.querySelector('a.missing_vehicles_load');
+19539:         return loadingBar && getComputedStyle(loadingBar).display !== 'none';
+19540:     }
+19541: 
+19542:     function findLegacyVehicleRequirementList() {
+19543:         const vehicleHeadings = document.querySelectorAll('h4');
+19544: 
+19545:         for (const heading of vehicleHeadings) {
+19546:             if (heading.textContent.trim() !== 'Vehicles') continue;
+19547: 
+19548:             let nextElem = heading.nextElementSibling;
+19549: 
+19550:             while (nextElem && nextElem.tagName !== 'UL') {
+19551:                 nextElem = nextElem.nextElementSibling;
+19552:             }
 19553: 
 19554:             if (nextElem && nextElem.tagName === 'UL') {
 19555:                 return nextElem;
@@ -1152,6 +2150,72 @@ Windows: 30
 19615: 
 19616:     async function recoverLateMissionRequirements(initialPatientCount) {
 19617:         const delays = [1200, 1500, 1800, 2200];
+
+===== 19632-19695 =====
+19632:                 debugLog(
+19633:                     'ZERO LIVE RETRY',
+19634:                     `Attempt ${attempt}/${delays.length} | patients=${patientCount} | previous=${lastPatientCount}`
+19635:                 );
+19636:             }
+19637: 
+19638:             if (patientCount > 0) {
+19639:                 return applyLatePatientCount(patientCount, `attempt ${attempt}`);
+19640:             }
+19641: 
+19642:             const visibleFallbackRows = parseVisibleMissionRequirementRows();
+19643: 
+19644:             if (visibleFallbackRows.length > 0) {
+19645:                 updateStatusBox(`Late visible requirements found: ${visibleFallbackRows.length} row(s).`);
+19646:                 await processRequirementRows(visibleFallbackRows, 'late visible fallback');
+19647:                 return true;
+19648:             }
+19649: 
+19650:             const legacyVehicleList = findLegacyVehicleRequirementList();
+19651: 
+19652:             if (legacyVehicleList) {
+19653:                 updateStatusBox('Late fallback vehicle list found. Processing...');
+19654:                 await processVehicles(legacyVehicleList);
+19655:                 return true;
+19656:             }
+19657: 
+19658:             // Re-fetch the mission help once after the page has had time to settle.
+19659:             if (attempt === 3) {
+19660:                 const retryLiveRows = await readLiveMissionRequirements();
+19661: 
+19662:                 if (retryLiveRows.length > 0) {
+19663:                     if (mfDebugEnabled) {
+19664:                         debugLog('ZERO LIVE RETRY', `Retry fetch found ${retryLiveRows.length} live requirement row(s).`);
+19665:                     }
+19666: 
+19667:                     await processRequirementRows(retryLiveRows, 'retry live mission help');
+19668:                     return true;
+19669:                 }
+19670:             }
+19671: 
+19672:             lastPatientCount = patientCount;
+19673:         }
+19674: 
+19675:         if (mfDebugEnabled) {
+19676:             debugLog('ZERO LIVE RETRY', 'No patient or vehicle requirements appeared after all retries.');
+19677:         }
+19678: 
+19679:         return false;
+19680:     }
+19681: 
+19682:     const MF_ALLY_PENDING_KEY =
+19683:         'mf_ally_steal_pending_v10_5_8';
+19684: 
+19685:     const MF_ALLY_PENDING_MAX_AGE_MS =
+19686:         45000;
+19687: 
+19688:     let mfAllyResumeActive = false;
+19689: 
+19690:     // Remove temporary diagnostic data from the test builds.
+19691:     try {
+19692:         localStorage.removeItem(
+19693:             'mf_ally_steal_targeted_debug_v10_5_7'
+19694:         );
+19695:         localStorage.removeItem(
 
 ===== 20395-20487 =====
 20395:             'Ally Steal: loading available Fire Officers...'
@@ -1248,6 +2312,209 @@ Windows: 30
 20486:         renderVehicleLoadList();
 20487: 
 
+===== 20652-20694 =====
+20652:             2200
+20653:         );
+20654: 
+20655:         // A full document refresh normally happens immediately after this
+20656:         // return. The pending state is then resumed by initialize().
+20657:         return true;
+20658:     }
+20659: 
+20660:     function readUnitFinderPatientRequirementRows() {
+20661:         // Unit Finder owns the initial mission-help attachment requirements,
+20662:         // but it must also honour the current patient cards. Reuse the proven
+20663:         // patient alert parser from Mission Update, then keep only rows that
+20664:         // came from visible current-mission "We need:" patient alerts. This
+20665:         // deliberately excludes the general Live Mission Requirements rows.
+20666:         return readMissionUpdateRows({
+20667:             silent: true
+20668:         }).filter(row => {
+20669:             return !!(
+20670:                 row &&
+20671:                 row.isPatientAlertFallback &&
+20672:                 row.patientRequirementType &&
+20673:                 Math.max(
+20674:                     0,
+20675:                     parseInt(
+20676:                         row.stillNeeded,
+20677:                         10
+20678:                     ) || 0
+20679:                 ) > 0
+20680:             );
+20681:         });
+20682:     }
+20683: 
+20684:     function handleUnitFinderPatientRequirements() {
+20685:         const patientRows =
+20686:             readUnitFinderPatientRequirementRows();
+20687: 
+20688:         if (patientRows.length === 0) {
+20689:             return {
+20690:                 found: false,
+20691:                 satisfied: true,
+20692:                 rows: []
+20693:             };
+20694:         }
+
+===== 20825-20890 =====
+20825:         const preservePatientFailure = result => {
+20826:             if (
+20827:                 patientRequirementResult.found &&
+20828:                 !patientRequirementResult.satisfied
+20829:             ) {
+20830:                 changeDispatchBoxColor(false);
+20831:                 return false;
+20832:             }
+20833: 
+20834:             return result;
+20835:         };
+20836: 
+20837:         if (attachmentRows.length > 0) {
+20838:             const missionRequirementsSatisfied =
+20839:                 await processRequirementRows(
+20840:                     attachmentRows,
+20841:                     'MISSION HELP ATTACHMENT'
+20842:                 );
+20843: 
+20844:             return preservePatientFailure(
+20845:                 missionRequirementsSatisfied
+20846:             );
+20847:         }
+20848: 
+20849:         const visibleFallbackRows = parseVisibleMissionRequirementRows();
+20850: 
+20851:         if (visibleFallbackRows.length > 0) {
+20852:             updateStatusBox(`Visible fallback requirements found: ${visibleFallbackRows.length} row(s).`);
+20853: 
+20854:             if (mfDebugEnabled) {
+20855:                 debugLog(
+20856:                     'UNIT FINDER ATTACHMENT FALLBACK',
+20857:                     'Mission-help attachment returned 0 rows, using visible mission requirements instead.'
+20858:                 );
+20859:             }
+20860: 
+20861:             const missionRequirementsSatisfied =
+20862:                 await processRequirementRows(
+20863:                     visibleFallbackRows,
+20864:                     'VISIBLE FALLBACK'
+20865:                 );
+20866: 
+20867:             return preservePatientFailure(
+20868:                 missionRequirementsSatisfied
+20869:             );
+20870:         }
+20871: 
+20872:         const vehicleList = findLegacyVehicleRequirementList();
+20873: 
+20874:         if (vehicleList) {
+20875:             updateStatusBox('Fallback vehicle list found. Processing...');
+20876: 
+20877:             const missionRequirementsSatisfied =
+20878:                 await processVehicles(vehicleList);
+20879: 
+20880:             return preservePatientFailure(
+20881:                 missionRequirementsSatisfied
+20882:             );
+20883:         }
+20884: 
+20885:         if (
+20886:             patientCount > 0 ||
+20887:             patientRequirementResult.found
+20888:         ) {
+20889:             if (patientRequirementResult.satisfied) {
+20890:                 updateStatusBox(
+
+===== 22294-22336 =====
+22294: 
+22295:         if (
+22296:             isLiveMissionRequirementsTable(
+22297:                 table
+22298:             )
+22299:         ) {
+22300:             return true;
+22301:         }
+22302: 
+22303:         const text = (table.textContent || '')
+22304:             .replace(/\s+/g, ' ')
+22305:             .trim()
+22306:             .toLowerCase();
+22307: 
+22308:         // Hard block the official mission help / full requirement table.
+22309:         // Mission Update must only read the live missing-units table on the mission page.
+22310:         if (text.includes('vehicle and personnel requirements')) return false;
+22311:         if (text.includes('average credits')) return false;
+22312:         if (text.includes('possible missions')) return false;
+22313: 
+22314:         // The update table contains a Still Needed / Still required style column.
+22315:         return text.includes('still needed')
+22316:             || text.includes('still required')
+22317:             || text.includes('needed') && text.includes('required');
+22318:     }
+22319: 
+22320: 
+22321:     function normaliseMissionAlertText(
+22322:         value
+22323:     ) {
+22324:         return String(
+22325:             value ||
+22326:             ''
+22327:         )
+22328:             .replace(
+22329:                 /[\u200B-\u200D\uFEFF]/g,
+22330:                 ''
+22331:             )
+22332:             .replace(
+22333:                 /\u00A0/g,
+22334:                 ' '
+22335:             )
+22336:             .replace(
+
+===== 22836-22878 =====
+22836:         // container also has a visible positive Patients badge. A leftover
+22837:         // patient alert from a previous mission cannot then add an ambulance
+22838:         // to a Police-only Mission Update.
+22839:         return (
+22840:             Math.max(
+22841:                 0,
+22842:                 parseInt(
+22843:                     visiblePatientBadgeCount,
+22844:                     10
+22845:                 ) || 0
+22846:             ) > 0
+22847:         );
+22848:     }
+22849: 
+22850:     function readMissionUpdateRows(options = {}) {
+22851:         if (!isCurrentMissionExecutionOwner('Mission Update requirement read')) {
+22852:             return [];
+22853:         }
+22854: 
+22855:         synchroniseMissionInstanceState('Mission Update read');
+22856: 
+22857:         const silent = !!(options && options.silent);
+22858:         const now = Date.now();
+22859:         const missionKey = getLocalMissionInstanceKey();
+22860: 
+22861:         if (
+22862:             silent &&
+22863:             missionKey === mfMissionUpdateRowsCache.missionKey &&
+22864:             now < mfMissionUpdateRowsCache.expiresAt
+22865:         ) {
+22866:             return mfMissionUpdateRowsCache.rows;
+22867:         }
+22868: 
+22869:         const missingRows = [];
+22870: 
+22871:         const missionUpdateContexts =
+22872:             getActiveMissionRequirementContexts();
+22873: 
+22874:         const missionUpdateRoots =
+22875:             Array.from(
+22876:                 new Set(
+22877:                     missionUpdateContexts
+22878:                         .map(
+
 ===== 24416-24458 =====
 24416:                 return;
 24417:             }
@@ -1293,7 +2560,165 @@ Windows: 30
 24457:                 amount >
 24458:                     existing.stillNeeded
 
-===== 24962-25004 =====
+===== 24744-24786 =====
+24744: 
+24745:     async function waitForMissionUpdateBeforeUnitFinder(reason) {
+24746:         const initialKey = getMissionUpdateFirstPassKey();
+24747: 
+24748:         if (
+24749:             initialKey &&
+24750:             initialKey !== mfMissionUpdateFirstPassMissionKey
+24751:         ) {
+24752:             mfMissionUpdateFirstPassMissionKey = initialKey;
+24753:             mfMissionUpdateFirstPassRequired = true;
+24754:             mfMissionUpdateFirstPassCompletedAt = 0;
+24755:         }
+24756: 
+24757:         if (!mfMissionUpdateFirstPassRequired) {
+24758:             return readMissionUpdateRows({ silent: true });
+24759:         }
+24760: 
+24761:         updateStatusBox(
+24762:             'Waiting for mission update data before Unit Finder...'
+24763:         );
+24764: 
+24765:         if (mfDebugEnabled) {
+24766:             debugLog(
+24767:                 'UPDATE FIRST GATE',
+24768:                 `Started | reason=${reason || 'unknown'} | mission=${initialKey || 'unknown'}`
+24769:             );
+24770:         }
+24771: 
+24772:         let gateStartedAt = Date.now();
+24773:         let basicReadyAt = 0;
+24774:         let lastSignature = '';
+24775:         let signatureStableAt = 0;
+24776:         let lastRowsSignature = '';
+24777:         let rowsStableAt = 0;
+24778:         let latestRows = [];
+24779: 
+24780:         while (
+24781:             Date.now() - gateStartedAt <
+24782:             MF_UPDATE_FIRST_MAX_WAIT_MS
+24783:         ) {
+24784:             if (
+24785:                 isManualAutoStopActive() ||
+24786:                 !autoModeRunning
+
+===== 24835-24877 =====
+24835:                 if (!basicReadyAt) {
+24836:                     basicReadyAt = Date.now();
+24837:                 }
+24838:             } else {
+24839:                 basicReadyAt = 0;
+24840:             }
+24841: 
+24842:             const signature = getMissionUpdateRenderSignature();
+24843: 
+24844:             if (signature !== lastSignature) {
+24845:                 lastSignature = signature;
+24846:                 signatureStableAt = Date.now();
+24847:             }
+24848: 
+24849:             latestRows = readMissionUpdateRows({
+24850:                 silent: true
+24851:             });
+24852: 
+24853:             const rowsSignature =
+24854:                 getMissionUpdateRowsSignature(
+24855:                     latestRows
+24856:                 );
+24857: 
+24858:             if (rowsSignature !== lastRowsSignature) {
+24859:                 lastRowsSignature = rowsSignature;
+24860:                 rowsStableAt = Date.now();
+24861:             }
+24862: 
+24863:             if (
+24864:                 latestRows.length > 0 &&
+24865:                 Date.now() - rowsStableAt >=
+24866:                     MF_UPDATE_FIRST_STABLE_MS
+24867:             ) {
+24868:                 mfMissionUpdateFirstPassRequired = false;
+24869:                 mfMissionUpdateFirstPassCompletedAt = Date.now();
+24870: 
+24871:                 updateStatusBox(
+24872:                     `Mission update detected before Unit Finder (${latestRows.length} row(s)).`
+24873:                 );
+24874: 
+24875:                 if (mfDebugEnabled) {
+24876:                     debugLog(
+24877:                         'UPDATE FIRST GATE',
+
+===== 24894-25004 =====
+24894: 
+24895:                 if (mfDebugEnabled) {
+24896:                     debugLog(
+24897:                         'UPDATE FIRST GATE',
+24898:                         `Normal Unit Finder route released after ${Date.now() - gateStartedAt}ms gate time; no update rows appeared.`
+24899:                     );
+24900:                 }
+24901: 
+24902:                 return [];
+24903:             }
+24904: 
+24905:             await wait(150);
+24906:         }
+24907: 
+24908:         latestRows = readMissionUpdateRows({
+24909:             silent: true
+24910:         });
+24911: 
+24912:         mfMissionUpdateFirstPassRequired = false;
+24913:         mfMissionUpdateFirstPassCompletedAt = Date.now();
+24914: 
+24915:         if (mfDebugEnabled) {
+24916:             debugLog(
+24917:                 'UPDATE FIRST GATE',
+24918:                 `Timed out after ${MF_UPDATE_FIRST_MAX_WAIT_MS}ms | rows=${latestRows.length}. Unit Finder permitted only after final update check.`
+24919:             );
+24920:         }
+24921: 
+24922:         return latestRows;
+24923:     }
+24924: 
+24925: 
+24926:     function handleMissionUpdateUnits(showAlerts, suppliedRows = null, options = {}) {
+24927:         if (!isCurrentMissionExecutionOwner('Mission Update')) {
+24928:             return false;
+24929:         }
+24930: 
+24931:         synchroniseMissionInstanceState('Mission Update start');
+24932: 
+24933:         updateStatusBox("Checking mission update requirements...");
+24934: 
+24935:         if (
+24936:             detectAndLatchStaffingBlock(
+24937:                 'before-mission-update-selection'
+24938:             )
+24939:         ) {
+24940:             updateStatusBox(
+24941:                 'Mission update is a staffing/qualification shortage. No extra vehicles selected.'
+24942:             );
+24943:             changeDispatchBoxColor(false);
+24944:             return false;
+24945:         }
+24946: 
+24947:         const rawMissingRows =
+24948:             Array.isArray(
+24949:                 suppliedRows
+24950:             )
+24951:                 ? suppliedRows
+24952:                 : readMissionUpdateRows();
+24953: 
+24954:         // Supplied live-table rows can bypass readMissionUpdateRows(), so run
+24955:         // the same personnel-to-vehicle conversion at the Upgrade entry point.
+24956:         // This restores SAR Commander -> Control Van parity with Unit Finder.
+24957:         const missingRows =
+24958:             normaliseOperationalRequirementRows(
+24959:                 rawMissingRows
+24960:             );
+24961: 
 24962:         if (mfDebugEnabled) {
 24963:             debugLog(
 24964:                 'UPDATE ONLY',
@@ -1472,7 +2897,7 @@ Windows: 30
 25229:                 Math.max(
 25230:                     selectedFromCurrentDom,
 
-===== 25289-25345 =====
+===== 25289-25374 =====
 25289:                 status,
 25290:                 visualSelected
 25291:             );
@@ -1530,8 +2955,72 @@ Windows: 30
 25343:     }
 25344: 
 25345:     async function autoHandleMissionUpdateAfterDispatch() {
+25346:         const rows = readMissionUpdateRows();
+25347: 
+25348:         if (rows.length === 0) {
+25349:             updateStatusBox("No mission update found after dispatch.");
+25350:             return;
+25351:         }
+25352: 
+25353:         updateStatusBox("Mission update found. Assigning new units...");
+25354: 
+25355:         await preparePoliceVehicleSafetyForRows(
+25356:             rows,
+25357:             'AUTO POST-DISPATCH UPDATE'
+25358:         );
+25359: 
+25360:         const assigned = handleMissionUpdateUnits(false, rows);
+25361: 
+25362:         if (assigned) {
+25363:             setTimeout(() => {
+25364:                 updateStatusBox("Mission update assigned. Ready to dispatch again.");
+25365:                 changeDispatchBoxColor(true);
+25366:             }, 1000);
+25367:         }
+25368:     }
+25369: 
+25370: 
+25371: 
+25372:     function parseMissionIdFromHrefForQueueRestart(href) {
+25373:         const value = String(href || '');
+25374: 
 
-===== 26094-26141 =====
+===== 26059-26141 =====
+26059:     function getCurrentMissionAlertScopes() {
+26060:         return Array.from(
+26061:             new Set(
+26062:                 getActiveMissionRequirementContexts()
+26063:                     .map(
+26064:                         context =>
+26065:                             context.root
+26066:                     )
+26067:             )
+26068:         );
+26069:     }
+26070: 
+26071:     function areCurrentMissionUpdateRowsFullySelected() {
+26072:         const rows =
+26073:             readMissionUpdateRows({
+26074:                 silent: true
+26075:             });
+26076: 
+26077:         if (
+26078:             !Array.isArray(rows) ||
+26079:             rows.length === 0
+26080:         ) {
+26081:             return false;
+26082:         }
+26083: 
+26084:         return rows.every(row => {
+26085:             if (
+26086:                 row
+26087:                     .isTrainedPersonnelRequirement
+26088:             ) {
+26089:                 return areTrainedPersonnelRequirementsSatisfied(
+26090:                     row.personnelTrainingRequirements
+26091:                 );
+26092:             }
+26093: 
 26094:             const needed =
 26095:                 Math.max(
 26096:                     0,
@@ -1670,3 +3159,171 @@ Windows: 30
 29676:             canonicalRows.entries()
 29677:         )
 29678:             .map(
+
+===== 29929-29971 =====
+29929:             if (
+29930:                 state.missionId &&
+29931:                 currentMissionId &&
+29932:                 currentMissionId !==
+29933:                     state.missionId
+29934:             ) {
+29935:                 return {
+29936:                     stopped: false,
+29937:                     movedMission: true,
+29938:                     rows: []
+29939:                 };
+29940:             }
+29941: 
+29942:             latestRows =
+29943:                 readMissionUpdateRows({
+29944:                     silent: true
+29945:                 });
+29946: 
+29947:             const signature =
+29948:                 getMissionUpdateRowsSignature(
+29949:                     latestRows
+29950:                 );
+29951: 
+29952:             if (!staleBaselineReleased) {
+29953:                 if (!signature) {
+29954:                     // The old update rows have cleared. A later row is a
+29955:                     // genuine post-dispatch upgrade.
+29956:                     staleBaselineReleased =
+29957:                         true;
+29958: 
+29959:                     lastSignature = '';
+29960:                     stableSince =
+29961:                         Date.now();
+29962: 
+29963:                     await wait(200);
+29964:                     continue;
+29965:                 }
+29966: 
+29967:                 if (
+29968:                     signature ===
+29969:                     beforeRowsSignature
+29970:                 ) {
+29971:                     // Still seeing the exact rows that existed before
+
+===== 30203-30278 =====
+30203: 
+30204:         await waitForVehicleCheckboxListStable(
+30205:             6000,
+30206:             900,
+30207:             {
+30208:                 minimumWaitMs: 700,
+30209:                 requireNonZero: true
+30210:             }
+30211:         );
+30212: 
+30213:         resetVehicleLoadState();
+30214:         changeDispatchBoxColor(false);
+30215: 
+30216:         const updateRows =
+30217:             readMissionUpdateRows({
+30218:                 silent: true
+30219:             });
+30220: 
+30221:         if (updateRows.length > 0) {
+30222:             clearSelectionGuards();
+30223: 
+30224:             await preparePoliceVehicleSafetyForRows(
+30225:                 updateRows,
+30226:                 'AUTO ZERO-SELECTION UPDATE'
+30227:             );
+30228: 
+30229:             handleMissionUpdateUnits(
+30230:                 false,
+30231:                 updateRows
+30232:             );
+30233:         } else {
+30234:             try {
+30235:                 await withTimeout(
+30236:                     handleCombinedLogic(),
+30237:                     45000,
+30238:                     'Auto Mode zero-selection retry'
+30239:                 );
+30240:             } catch (error) {
+30241:                 console.warn(
+30242:                     'Mission Finder zero-selection retry failed:',
+30243:                     error
+30244:                 );
+30245:             }
+30246: 
+30247:             // Catch an update that appeared while the normal requirements
+30248:             // were being retried.
+30249:             const lateUpdateRows =
+30250:                 readMissionUpdateRows({
+30251:                     silent: true
+30252:                 });
+30253: 
+30254:             if (
+30255:                 lateUpdateRows.length > 0
+30256:             ) {
+30257:                 clearSelectionGuards();
+30258: 
+30259:                 await preparePoliceVehicleSafetyForRows(
+30260:                     lateUpdateRows,
+30261:                     'AUTO LATE UPDATE'
+30262:                 );
+30263: 
+30264:                 handleMissionUpdateUnits(
+30265:                     false,
+30266:                     lateUpdateRows
+30267:                 );
+30268:             }
+30269:         }
+30270: 
+30271:         await waitForFastDispatchReadiness(
+30272:             'zero-selection recovery',
+30273:             {
+30274:                 minimumWait: 200,
+30275:                 stableFor: 350,
+30276:                 timeout: 1600
+30277:             }
+30278:         );
+
+===== 30485-30527 =====
+30485:                         stableFor: 300,
+30486:                         timeout: 1200
+30487:                     }
+30488:                 );
+30489: 
+30490:                 if (!autoModeRunning) break;
+30491: 
+30492:                 updateStatusBox(
+30493:                     'Auto Mode checking the manual Mission Update source...'
+30494:                 );
+30495: 
+30496:                 // Use one fixed snapshot, exactly as the manual Mission Update
+30497:                 // button does when clicked.
+30498:                 const postUnitFinderUpdateRows =
+30499:                     readMissionUpdateRows();
+30500: 
+30501:                 autoMissionUpdateRowsHandled =
+30502:                     postUnitFinderUpdateRows.length;
+30503: 
+30504:                 clearSelectionGuards();
+30505: 
+30506:                 await preparePoliceVehicleSafetyForRows(
+30507:                     postUnitFinderUpdateRows,
+30508:                     'AUTO MISSION UPDATE'
+30509:                 );
+30510: 
+30511:                 const updated =
+30512:                     handleMissionUpdateUnits(
+30513:                         false,
+30514:                         postUnitFinderUpdateRows
+30515:                     );
+30516: 
+30517:                 if (updated) {
+30518:                     await waitForFastDispatchReadiness(
+30519:                         'mission update fix',
+30520:                         {
+30521:                             minimumWait: 100,
+30522:                             stableFor: 250,
+30523:                             timeout: 900
+30524:                         }
+30525:                     );
+30526:                 }
+30527:             }
