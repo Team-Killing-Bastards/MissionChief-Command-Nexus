@@ -1,0 +1,25 @@
+name: Audit rescue support updater
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/audit-rescue-support-update.py'
+      - '.github/workflows/audit-rescue-support-update.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+      - run: python3 scripts/audit-rescue-support-update.py
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add RESCUE_SUPPORT_UPDATE_AUDIT.txt
+          git commit -m "Record rescue support updater audit"
+          git push origin HEAD:${{ github.head_ref }}
