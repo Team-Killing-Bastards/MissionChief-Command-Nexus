@@ -1,0 +1,1752 @@
+IOS MENU FUNCTION INDEX
+
+1080: initWhenReady
+1105: init
+1112: addPanel
+1869: getPersonnelServiceDefinition
+1874: getPersonnelProfileDefinition
+2125: initialisePersonnelProfileNavigation
+2315: initialisePersonnelReportVisibility
+2367: togglePanelCollapsed
+2374: setPanelCollapsed
+4406: createEmptyPersonnelTrainingRegistry
+6418: getPersonnelReportInitialFilled
+6884: makePanelDraggable
+6943: createCallsignBase
+
+===== initWhenReady @ line 1080 =====
+
+    function initWhenReady() {
+        let tries = 0;
+        const timer = setInterval(() => {
+            tries++;
+
+            if (isStationOverviewScreen()) {
+                clearInterval(timer);
+                TOOL_LIFECYCLE_CLEANUPS.delete(clearInitTimer);
+                init();
+            }
+
+            if (tries >= 40) {
+                clearInterval(timer);
+                TOOL_LIFECYCLE_CLEANUPS.delete(clearInitTimer);
+            }
+        }, 500);
+
+        const clearInitTimer = () => clearInterval(timer);
+        registerToolLifecycleCleanup(clearInitTimer);
+    }
+
+===== init @ line 1105 =====
+
+    function init() {
+        addPanel();
+        log(`Unit Naming Tool v${UNIT_VERSION} loaded. Press Refresh Stations first.`, 'info');
+        stationLog(`Station Naming Tool v${STATION_VERSION} loaded. Refresh stations, choose Preview or Rename and Save, then press Start.`, 'info');
+        personnelLog(`Personnel Assignment v${PERSONNEL_VERSION} loaded. Medical Critical Care and the verified Police profiles are live; other services remain in safe UI preview.`, 'info');
+    }
+
+===== addPanel @ line 1112 =====
+
+    function addPanel() {
+        if (document.querySelector('#mc-namer-panel')) return;
+
+        const panel = document.createElement('div');
+        panel.id = 'mc-namer-panel';
+
+        panel.innerHTML = `
+            <div id="mc-namer-header">
+                <span id="mc-namer-header-title">🚒 Unit Naming Tool v${UNIT_VERSION}</span>
+                <button id="mc-namer-collapse" type="button" aria-expanded="true" title="Collapse naming tools">−</button>
+            </div>
+
+            <div id="mc-namer-body">
+            <div class="mc-namer-tabs" role="tablist" aria-label="Naming tools">
+                <button id="mc-tab-unit" class="mc-namer-tab active" type="button" role="tab" aria-selected="true">
+                    🚒 Unit Naming Tool
+                </button>
+                <button id="mc-tab-station" class="mc-namer-tab" type="button" role="tab" aria-selected="false">
+                    🏢 Station Naming Tool
+                </button>
+                <button id="mc-tab-personnel" class="mc-namer-tab" type="button" role="tab" aria-selected="false">
+                    👥 Personnel Assignment
+                </button>
+            </div>
+
+            <div id="mc-unit-view" class="mc-tool-view">
+                <div class="mc-namer-section">
+                    <label><b>Station Type:</b></label>
+                    <select id="mc-namer-station-type">
+                        ${Object.entries(STATION_TYPES).map(([key, label]) => `<option value="${key}">${label}</option>`).join('')}
+                    </select>
+
+                    <label style="margin-top:6px; display:block;"><b>Unit Class:</b></label>
+                    <select id="mc-namer-unit-class">
+                        <option value="ALL">All classes</option>
+                    </select>
+
+                    <label style="margin-top:6px; display:block;"><b>Mode:</b></label>
+                    <select id="mc-namer-mode">
+                        <option value="all">All matching stations from selected start point</option>
+                        <option value="single">Selected station only</option>
+                    </select>
+
+                    <label style="margin-top:6px; display:block;"><b>Start From:</b></label>
+                    <select id="mc-namer-startfrom">
+                        <option value="">Refresh stations first</option>
+                    </select>
+                </div>
+
+                <div class="mc-namer-buttons">
+                    <button id="mc-namer-refresh">Refresh Stations</button>
+                    <button id="mc-namer-start">Start</button>
+                    <button id="mc-namer-pause">Pause</button>
+                    <button id="mc-namer-stop">Stop</button>
+                    <button id="mc-namer-debug">Debug: OFF</button>
+                    <button id="mc-namer-clear">Clear Log</button>
+                </div>
+
+                <div class="mc-namer-section">
+                    <div><b>Status:</b> <span id="mc-namer-status">Idle</span></div>
+                    <div><b>Station:</b> <span id="mc-namer-station">None</span></div>
+                    <div><b>Vehicle:</b> <span id="mc-namer-vehicle">None</span></div>
+                    <div><b>Progress:</b> <span id="mc-namer-progress">0 / 0</span></div>
+                    <div><b>Renamed:</b> <span id="mc-namer-renamed">0</span></div>
+                    <div><b>Skipped:</b> <span id="mc-namer-skipped">0</span></div>
+                </div>
+
+                <div id="mc-namer-log"></div>
+            </div>
+
+            <div id="mc-station-view" class="mc-tool-view" style="display:none;">
+                <div class="mc-namer-section">
+                    <label><b>Station Type:</b></label>
+                    <select id="mc-station-type">
+                        ${Object.entries(STATION_TYPES).map(([key, label]) => `<option value="${key}">${label}</option>`).join('')}
+                    </select>
+
+                    <label style="margin-top:6px; display:block;"><b>Mode:</b></label>
+                    <select id="mc-station-mode">
+                        <option value="all">All matching stations from selected start point</option>
+                        <option value="single">Selected station only</option>
+                    </select>
+
+                    <label style="margin-top:6px; display:block;"><b>Action:</b></label>
+                    <select id="mc-station-action">
+                        <option value="preview">Preview only - do not save</option>
+                        <option value="save">Rename and save</option>
+                    </select>
+
+                    <label style="margin-top:6px; display:block;"><b>Start From:</b></label>
+                    <select id="mc-station-startfrom">
+                        <option value="">Refresh stations first</option>
+                    </select>
+                </div>
+
+                <div class="mc-namer-buttons">
+                    <button id="mc-station-refresh">Refresh Stations</button>
+                    <button id="mc-station-start">Start</button>
+                    <button id="mc-station-pause">Pause</button>
+                    <button id="mc-station-stop">Stop</button>
+                    <button id="mc-station-debug">Debug: OFF</button>
+                    <button id="mc-station-clear">Clear Log</button>
+                </div>
+
+                <div class="mc-namer-section">
+                    <div><b>Status:</b> <span id="mc-station-status">Idle</span></div>
+                    <div><b>Station:</b> <span id="mc-station-current">None</span></div>
+                    <div><b>Address:</b> <span id="mc-station-address">None</span></div>
+                    <div><b>Town:</b> <span id="mc-station-town">None</span></div>
+                    <div><b>Before:</b> <span id="mc-station-before">None</span></div>
+                    <div><b>After:</b> <span id="mc-station-after">None</span></div>
+                    <div><b>Progress:</b> <span id="mc-station-progress">0 / 0</span></div>
+                    <div><b>Renamed:</b> <span id="mc-station-renamed">0</span></div>
+                    <div><b>Skipped:</b> <span id="mc-station-skipped">0</span></div>
+                </div>
+
+                <div id="mc-station-log"></div>
+            </div>
+
+            <div id="mc-personnel-view" class="mc-tool-view" style="display:none;">
+                <div class="mc-namer-section mc-personnel-navigation-section">
+                    <div class="mc-personnel-navigation-title">Assignment Navigator</div>
+
+                    <label style="display:block;"><b>Service:</b></label>
+                    <select id="mc-personnel-service">
+                        ${Object.entries(PERSONNEL_SERVICE_DEFINITIONS).map(([key, service]) => `<option value="${key}">${service.icon} ${service.label}</option>`).join('')}
+                    </select>
+
+                    <label style="margin-top:6px; display:block;"><b>Training profile:</b></label>
+                    <select id="mc-personnel-profile"></select>
+
+                    <div id="mc-personnel-profile-banner" class="mc-personnel-profile-banner"></div>
+
+                    <div class="mc-personnel-fixed-grid">
+                        <div><b>Training:</b><br><span id="mc-personnel-profile-training">${PERSONNEL_TRAINING_LABEL}</span></div>
+                        <div><b>Vehicle:</b><br><span id="mc-personnel-profile-vehicle">${PERSONNEL_TARGET_VEHICLE_LABEL}</span></div>
+                        <div><b>Required:</b><br><span id="mc-personnel-profile-requirement">${PERSONNEL_TARGET_PER_VEHICLE} trained staff per vehicle</span></div>
+                    </div>
+
+                    <div id="mc-personnel-policy-summary" class="mc-personnel-policy-summary"></div>
+
+                    <label style="margin-top:8px; display:block;"><b>Mode:</b></label>
+                    <select id="mc-personnel-mode">
+                        <option id="mc-personnel-mode-all-option" value="all">All relevant stations from selected start point — scan every station</option>
+                        <option value="target">Ensure each relevant station has Units required</option>
+                        <option value="single">Selected station only</option>
+                    </select>
+
+                    <label style="margin-top:6px; display:block;"><b>Action:</b></label>
+                    <select id="mc-personnel-action">
+                        <option value="preview">Preview only - do not change assignments</option>
+                        <option value="assign">Assign and verify</option>
+                    </select>
+
+                    <label style="margin-top:6px; display:block;"><b>Units required:</b></label>
+                    <input id="mc-personnel-units-required" type="number" min="0" step="1" value="0" inputmode="numeric">
+                    <div id="mc-personnel-units-required-note" class="mc-personnel-input-note">Disabled in All Stations mode. Select the target-units mode to enter a stopping target.</div>
+
+                    <label style="margin-top:6px; display:block;"><b>Start From:</b></label>
+                    <select id="mc-personnel-startfrom">
+                        <option value="">Refresh stations first</option>
+                    </select>
+                </div>
+
+                <div class="mc-namer-buttons">
+                    <button id="mc-personnel-refresh">Refresh Stations</button>
+                    <button id="mc-personnel-build-register" title="Scan every Police, Aviation and EOD station and rebuild the exact vehicle training register without changing any personnel assignments.">Build Personnel Register</button>
+                    <button id="mc-personnel-start">Start</button>
+                    <button id="mc-personnel-pause">Pause</button>
+                    <button id="mc-personnel-stop">Stop</button>
+                    <button id="mc-personnel-view-station-report">View Station Report</button>
+                    <button id="mc-personnel-copy-station">Copy Station Report</button>
+                    <button id="mc-personnel-copy">Copy Overall Report</button>
+                    <button id="mc-personnel-debug">Debug: OFF</button>
+                    <button id="mc-personnel-clear">Clear Log</button>
+                </div>
+
+                <div class="mc-namer-section">
+                    <div><b>Status:</b> <span id="mc-personnel-status">Idle</span></div>
+                    <div><b>Station:</b> <span id="mc-personnel-current">None</span></div>
+                    <div><b>Vehicle:</b> <span id="mc-personnel-vehicle">None</span></div>
+                    <div><b>Station progress:</b> <span id="mc-personnel-progress">0 / 0</span></div>
+                    <div><b>Stations completed:</b> <span id="mc-personnel-completed">0</span></div>
+                    <div><b>Vehicles checked:</b> <span id="mc-personnel-vehicles">0</span></div>
+                    <div><b id="mc-personnel-units-fulfilled-label">Units fulfilled:</b> <span id="mc-personnel-units-fulfilled">0 / All</span></div>
+                    <div><b>Planned / assigned:</b> <span id="mc-personnel-assigned">0</span></div>
+                    <div><b>Need training:</b> <span id="mc-personnel-training-shortfall">0</span></div>
+                    <div><b>Unfilled positions:</b> <span id="mc-personnel-assignment-shortfall">0</span></div>
+                </div>
+
+                <div id="mc-personnel-training-shortfall-section" class="mc-namer-section mc-personnel-training-shortfall-section" hidden>
+                    <div class="mc-personnel-training-shortfall-heading">
+                        ⚠ Stations needing additional qualified personnel:
+                        <span id="mc-personnel-training-shortfall-station-count">0</span>
+                    </div>
+                    <div class="mc-personnel-training-shortfall-note">
+                        This only shows genuine training shortages. Assignment or verification problems are kept separate.
+                    </div>
+                    <div id="mc-personnel-training-shortfall-list" class="mc-personnel-training-shortfall-list"></div>
+                </div>
+
+                <div class="mc-namer-section mc-personnel-report-options">
+                    <b>Report display:</b>
+                    <div class="mc-personnel-report-toggle-grid">
+                        <label class="mc-personnel-report-toggle">
+                            <input id="mc-personnel-show-station-report" type="checkbox" checked>
+                            <span>Latest station report</span>
+                        </label>
+                        <label class="mc-personnel-report-toggle">
+                            <input id="mc-personnel-show-overall-report" type="checkbox" checked>
+                            <span>Overall run report</span>
+                        </label>
+                    </div>
+                    <div class="mc-personnel-report-note">The short status and shortfall figures above always remain visible.</div>
+                </div>
+
+                <div id="mc-personnel-after-action-section" class="mc-namer-section mc-personnel-report-section">
+                    <b>Latest Station After-Action Report</b>
+                    <pre id="mc-personnel-after-action">Run a station preview or assignment to create the station report.</pre>
+                </div>
+
+                <div id="mc-personnel-overall-report-section" class="mc-namer-section mc-personnel-report-section">
+                    <b>Overall Run Report</b>
+                    <pre id="mc-personnel-report">Run a preview or assignment to create the overall report.</pre>
+                </div>
+
+                <div class="mc-personnel-log-heading">Live Activity Log</div>
+                <div id="mc-personnel-log"></div>
+            </div>
+            </div>
+        `;
+
+        document.body.appendChild(panel);
+
+        const style = document.createElement('style');
+        style.textContent = `
+            #mc-namer-panel {
+                position: fixed;
+                top: 90px;
+                right: 20px;
+                width: 470px;
+                max-height: 760px;
+                background: #1f2933;
+                color: #f5f5f5;
+                z-index: 999999;
+                border-radius: 8px;
+                box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+                font-family: Arial, sans-serif;
+                font-size: 12px;
+                overflow: hidden;
+                display: flex;
+                flex-direction: column;
+                max-height: min(760px, calc(100vh - 20px));
+            }
+
+            #mc-namer-body {
+                min-height: 0;
+                overflow-y: auto;
+                overflow-x: hidden;
+                overscroll-behavior: contain;
+                scrollbar-gutter: stable;
+            }
+
+            #mc-namer-header {
+                background: #0d6efd;
+                padding: 7px 8px 7px 10px;
+                font-weight: bold;
+                font-size: 14px;
+                cursor: move;
+                user-select: none;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+                min-height: 34px;
+            }
+
+            #mc-namer-header-title {
+                min-width: 0;
+                overflow: hidden;
+                white-space: nowrap;
+                text-overflow: ellipsis;
+            }
+
+            #mc-namer-collapse {
+                flex: 0 0 26px;
+                width: 26px;
+                height: 24px;
+                padding: 0;
+                border: 1px solid rgba(255,255,255,0.45);
+                border-radius: 5px;
+                background: rgba(0,0,0,0.18);
+                color: #ffffff;
+                font-size: 18px;
+                font-weight: bold;
+                line-height: 20px;
+                cursor: pointer;
+            }
+
+            #mc-namer-collapse:hover,
+            #mc-namer-collapse:focus-visible {
+                background: rgba(255,255,255,0.20);
+                outline: none;
+            }
+
+            #mc-namer-panel.mc-namer-collapsed {
+                width: 290px;
+                max-height: none;
+            }
+
+            #mc-namer-panel.mc-namer-collapsed #mc-namer-body {
+                display: none;
+            }
+
+            .mc-namer-tabs {
+                display: flex;
+                gap: 0;
+                background: #0b1220;
+                border-bottom: 1px solid #374151;
+                position: sticky;
+                top: 0;
+                z-index: 20;
+            }
+
+            .mc-namer-tab {
+                flex: 1;
+                border: 0;
+                border-right: 1px solid #374151;
+                border-radius: 0;
+                padding: 8px 6px;
+                background: #1f2937;
+                color: #cbd5e1;
+                cursor: pointer;
+                font-size: 12px;
+                font-weight: bold;
+            }
+
+            .mc-namer-tab:last-child {
+                border-right: 0;
+            }
+
+            .mc-namer-tab:hover {
+                background: #273449;
+                color: #ffffff;
+            }
+
+            .mc-namer-tab.active {
+                background: #0d6efd;
+                color: #ffffff;
+                box-shadow: inset 0 -3px 0 #93c5fd;
+            }
+
+            .mc-tool-view {
+                background: #111827;
+            }
+
+            .mc-namer-section {
+                padding: 8px 10px;
+                background: #111827;
+                border-bottom: 1px solid #374151;
+                line-height: 1.5;
+            }
+
+            #mc-namer-startfrom,
+            #mc-namer-station-type,
+            #mc-namer-unit-class,
+            #mc-namer-mode,
+            #mc-station-startfrom,
+            #mc-station-type,
+            #mc-station-mode,
+            #mc-station-action,
+            #mc-personnel-service,
+            #mc-personnel-profile,
+            #mc-personnel-startfrom,
+            #mc-personnel-mode,
+            #mc-personnel-action,
+            #mc-personnel-units-required {
+                width: 100%;
+                margin-top: 4px;
+                padding: 5px;
+                color: #111;
+                border-radius: 4px;
+                border: 1px solid #555;
+            }
+
+            .mc-personnel-input-note {
+                margin-top: 4px;
+                color: #9ca3af;
+                font-size: 10px;
+                line-height: 1.3;
+            }
+
+            .mc-namer-buttons {
+                padding: 8px;
+                display: flex;
+                gap: 5px;
+                flex-wrap: wrap;
+                background: #111827;
+                border-bottom: 1px solid #374151;
+            }
+
+            .mc-namer-buttons button {
+                border: 0;
+                border-radius: 4px;
+                padding: 5px 8px;
+                cursor: pointer;
+                font-size: 12px;
+            }
+
+            #mc-namer-refresh,
+            #mc-station-refresh,
+            #mc-personnel-refresh { background: #6c757d; color: white; }
+
+            #mc-namer-start,
+            #mc-station-start,
+            #mc-personnel-start { background: #198754; color: white; }
+
+            #mc-namer-pause,
+            #mc-station-pause,
+            #mc-personnel-pause { background: #ffc107; color: #111; }
+
+            #mc-namer-stop,
+            #mc-station-stop,
+            #mc-personnel-stop { background: #dc3545; color: white; }
+
+            #mc-personnel-copy,
+            #mc-personnel-copy-station { background: #7c3aed; color: white; }
+
+            #mc-personnel-view-station-report { background: #2563eb; color: white; }
+
+            #mc-namer-debug,
+            #mc-station-debug,
+            #mc-personnel-debug { background: #0dcaf0; color: #111; }
+
+            #mc-namer-clear,
+            #mc-station-clear,
+            #mc-personnel-clear { background: #f8f9fa; color: #111; }
+
+            #mc-namer-log,
+            #mc-station-log,
+            #mc-personnel-log {
+                padding: 8px 10px;
+                max-height: 350px;
+                overflow-y: auto;
+                background: #0b1220;
+                font-family: Consolas, monospace;
+                white-space: pre-wrap;
+                line-height: 1.4;
+            }
+
+            .mc-personnel-navigation-section {
+                background: linear-gradient(180deg, #111827 0%, #0f172a 100%);
+            }
+
+            .mc-personnel-navigation-title {
+                margin-bottom: 7px;
+                color: #bfdbfe;
+                font-size: 12px;
+                font-weight: bold;
+                letter-spacing: 0.2px;
+            }
+
+            .mc-personnel-profile-banner {
+                margin: 7px 0;
+                padding: 6px 8px;
+                border: 1px solid #374151;
+                border-radius: 5px;
+                background: #0b1220;
+                font-weight: bold;
+                line-height: 1.3;
+            }
+
+            .mc-personnel-profile-banner.is-live {
+                border-color: #22c55e;
+                background: rgba(20,83,45,0.32);
+                color: #bbf7d0;
+            }
+
+            .mc-personnel-profile-banner.is-preview {
+                border-color: #f59e0b;
+                background: rgba(120,53,15,0.28);
+                color: #fde68a;
+            }
+
+            .mc-personnel-policy-summary {
+                margin-top: 7px;
+                padding: 7px 8px;
+                border-left: 4px solid #3b82f6;
+                border-radius: 4px;
+                background: rgba(30,64,175,0.16);
+                color: #dbeafe;
+                font-size: 11px;
+                line-height: 1.35;
+            }
+
+            .mc-personnel-policy-summary strong {
+                color: #ffffff;
+            }
+
+            #mc-personnel-start:disabled,
+            #mc-personnel-refresh:disabled,
+            #mc-personnel-mode:disabled,
+            #mc-personnel-action:disabled,
+            #mc-personnel-startfrom:disabled {
+                cursor: not-allowed;
+                opacity: 0.45;
+                filter: grayscale(0.35);
+            }
+
+            .mc-personnel-fixed-grid {
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 6px;
+            }
+
+            .mc-personnel-fixed-grid > div {
+                padding: 6px;
+                border: 1px solid #374151;
+                border-radius: 5px;
+                background: #0b1220;
+                text-align: center;
+            }
+
+            .mc-personnel-training-shortfall-section {
+                border-left: 5px solid #ef4444;
+                background: #2b1015;
+                box-shadow: inset 0 0 0 1px rgba(239,68,68,0.28);
+            }
+
+            .mc-personnel-training-shortfall-heading {
+                color: #fecaca;
+                font-weight: bold;
+                font-size: 12px;
+            }
+
+            .mc-personnel-training-shortfall-note {
+                margin-top: 3px;
+                color: #fca5a5;
+                font-size: 10px;
+                line-height: 1.3;
+            }
+
+            .mc-personnel-training-shortfall-list {
+                display: grid;
+                gap: 5px;
+                max-height: 145px;
+                margin-top: 7px;
+                overflow-y: auto;
+                overscroll-behavior: contain;
+                scrollbar-gutter: stable;
+            }
+
+            .mc-personnel-training-shortfall-row {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) auto;
+                gap: 8px;
+                align-items: center;
+                padding: 6px 7px;
+                border: 1px solid rgba(248,113,113,0.45);
+                border-radius: 5px;
+                background: rgba(127,29,29,0.34);
+            }
+
+            .mc-personnel-training-shortfall-name {
+                min-width: 0;
+                color: #fee2e2;
+                font-weight: bold;
+                overflow-wrap: anywhere;
+            }
+
+            .mc-personnel-training-shortfall-value {
+                color: #ffffff;
+                font-weight: bold;
+                white-space: nowrap;
+            }
+
+            a.mc-personnel-training-shortfall-station {
+                border-left: 5px solid #ef4444 !important;
+                box-shadow: inset 0 0 0 1px rgba(239,68,68,0.42) !important;
+                background-color: rgba(127,29,29,0.24) !important;
+            }
+
+            .mc-personnel-report-options {
+                padding-top: 7px;
+                padding-bottom: 7px;
+            }
+
+            .mc-personnel-report-toggle-grid {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 6px;
+                margin-top: 6px;
+            }
+
+            .mc-personnel-report-toggle {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                min-width: 0;
+                padding: 6px 7px;
+                border: 1px solid #374151;
+                border-radius: 5px;
+                background: #0b1220;
+                cursor: pointer;
+                user-select: none;
+            }
+
+            .mc-personnel-report-toggle input {
+                flex: 0 0 auto;
+                margin: 0;
+                cursor: pointer;
+            }
+
+            .mc-personnel-report-toggle span {
+                min-width: 0;
+                line-height: 1.25;
+            }
+
+            .mc-personnel-report-note {
+                margin-top: 5px;
+                color: #9ca3af;
+                font-size: 11px;
+            }
+
+            .mc-personnel-report-section {
+                padding-bottom: 8px;
+                scroll-margin-top: 42px;
+            }
+
+            .mc-personnel-report-section[hidden] {
+                display: none !important;
+            }
+
+            #mc-personnel-report,
+            #mc-personnel-after-action {
+                margin: 6px 0 0;
+                min-height: 130px;
+                max-height: 280px;
+                overflow-y: scroll;
+                overflow-x: auto;
+                overscroll-behavior: contain;
+                scrollbar-gutter: stable both-edges;
+                padding: 8px;
+                border: 1px solid #374151;
+                border-radius: 5px;
+                background: #070d18;
+                color: #d1fae5;
+                font: 11px/1.4 Consolas, monospace;
+                white-space: pre-wrap;
+                overflow-wrap: anywhere;
+                user-select: text;
+            }
+
+            #mc-personnel-after-action {
+                color: #e0f2fe;
+                border-color: #2563eb;
+            }
+
+            #mc-personnel-log {
+                max-height: 220px;
+                overflow-y: scroll;
+                overscroll-behavior: contain;
+                scrollbar-gutter: stable;
+            }
+
+            .mc-personnel-log-heading {
+                padding: 7px 10px;
+                background: #111827;
+                border-bottom: 1px solid #374151;
+                font-weight: bold;
+            }
+
+            .mc-log-info { color: #93c5fd; }
+            .mc-log-station { color: #bfdbfe; font-weight: bold; margin-top: 8px; }
+            .mc-log-before { color: #fca5a5; }
+            .mc-log-after { color: #86efac; }
+            .mc-log-debug { color: #facc15; }
+            .mc-log-error { color: #f87171; font-weight: bold; }
+            .mc-log-done { color: #22c55e; font-weight: bold; }
+        `;
+
+        document.head.appendChild(style);
+
+        document.querySelector('#mc-tab-unit').onclick = () => switchToolTab('unit');
+        document.querySelector('#mc-tab-station').onclick = () => switchToolTab('station');
+        document.querySelector('#mc-tab-personnel').onclick = () => switchToolTab('personnel');
+        document.querySelector('#mc-namer-collapse').onclick = event => {
+            event.preventDefault();
+            event.stopPropagation();
+            togglePanelCollapsed();
+        };
+        document.querySelector('#mc-namer-collapse').onmousedown = event => {
+            event.stopPropagation();
+        };
+
+        document.querySelector('#mc-namer-refresh').onclick = refreshStations;
+        document.querySelector('#mc-namer-start').onclick = startRun;
+        document.querySelector('#mc-namer-pause').onclick = togglePause;
+        document.querySelector('#mc-namer-stop').onclick = stopRun;
+        document.querySelector('#mc-namer-debug').onclick = toggleDebug;
+        document.querySelector('#mc-namer-clear').onclick = clearLog;
+        document.querySelector('#mc-namer-station-type').onchange = handleUnitStationTypeChange;
+        document.querySelector('#mc-namer-unit-class').onchange = handleUnitClassChange;
+        populateUnitClassDropdown();
+
+        document.querySelector('#mc-station-refresh').onclick = refreshStationNamingStations;
+        document.querySelector('#mc-station-start').onclick = startStationNamingRun;
+        document.querySelector('#mc-station-pause').onclick = toggleStationNamingPause;
+        document.querySelector('#mc-station-stop').onclick = stopStationNamingRun;
+        document.querySelector('#mc-station-debug').onclick = toggleStationDebug;
+        document.querySelector('#mc-station-clear').onclick = clearStationLog;
+        document.querySelector('#mc-station-type').onchange = populateStationNamingStartDropdown;
+        document.querySelector('#mc-station-startfrom').onchange = updateStationNamingSelectionPreview;
+        document.querySelector('#mc-station-mode').onchange = () => {
+            STATION_STATE.mode = document.querySelector('#mc-station-mode')?.value || 'all';
+        };
+        document.querySelector('#mc-station-action').onchange = () => {
+            STATION_STATE.action = document.querySelector('#mc-station-action')?.value || 'preview';
+        };
+
+        document.querySelector('#mc-personnel-service').onchange = handlePersonnelServiceChange;
+        document.querySelector('#mc-personnel-profile').onchange = handlePersonnelProfileChange;
+        document.querySelector('#mc-personnel-units-required').onchange = handlePersonnelUnitsRequiredChange;
+        document.querySelector('#mc-personnel-refresh').onclick = refreshPersonnelStations;
+        document.querySelector('#mc-personnel-build-register').onclick = buildPersonnelTrainingRegisterOneClick;
+        document.querySelector('#mc-personnel-start').onclick = startPersonnelRun;
+        document.querySelector('#mc-personnel-pause').onclick = togglePersonnelPause;
+        document.querySelector('#mc-personnel-stop').onclick = stopPersonnelRun;
+        document.querySelector('#mc-personnel-view-station-report').onclick = showAndViewPersonnelStationReport;
+        document.querySelector('#mc-personnel-copy-station').onclick = copyPersonnelStationReport;
+        document.querySelector('#mc-personnel-copy').onclick = copyPersonnelReport;
+        document.querySelector('#mc-personnel-debug').onclick = togglePersonnelDebug;
+        document.querySelector('#mc-personnel-clear').onclick = clearPersonnelLog;
+        document.querySelector('#mc-personnel-startfrom').onchange = updatePersonnelSelectionPreview;
+        document.querySelector('#mc-personnel-mode').onchange =
+            handlePersonnelModeChange;
+        document.querySelector('#mc-personnel-action').onchange = () => {
+            PERSONNEL_STATE.action = document.querySelector('#mc-personnel-action')?.value || 'preview';
+        };
+        document.querySelector('#mc-personnel-show-station-report').onchange = () => updatePersonnelReportVisibility(true);
+        document.querySelector('#mc-personnel-show-overall-report').onchange = () => updatePersonnelReportVisibility(true);
+
+        initialisePersonnelProfileNavigation();
+        initialisePersonnelReportVisibility();
+        makePanelDraggable(panel, document.querySelector('#mc-namer-header'));
+
+        let savedTab = 'unit';
+        let savedCollapsed = false;
+        try {
+            savedTab = localStorage.getItem(ACTIVE_TAB_STORAGE_KEY) || 'unit';
+            savedCollapsed = localStorage.getItem(COLLAPSED_STORAGE_KEY) === 'true';
+        } catch (e) {}
+
+        switchToolTab(savedTab === 'station' ? 'station' : savedTab === 'personnel' ? 'personnel' : 'unit', true);
+        setPanelCollapsed(savedCollapsed, false);
+    }
+
+===== getPersonnelServiceDefinition @ line 1869 =====
+
+    function getPersonnelServiceDefinition(serviceId = PERSONNEL_STATE.service) {
+        return PERSONNEL_SERVICE_DEFINITIONS[serviceId]
+            || PERSONNEL_SERVICE_DEFINITIONS.medical;
+    }
+
+===== getPersonnelProfileDefinition @ line 1874 =====
+
+    function getPersonnelProfileDefinition(serviceId = PERSONNEL_STATE.service, profileId = PERSONNEL_STATE.profile) {
+        const service = getPersonnelServiceDefinition(serviceId);
+        return service.profiles.find(profile => profile.id === profileId)
+            || service.profiles[0];
+    }
+
+===== initialisePersonnelProfileNavigation @ line 2125 =====
+
+    function initialisePersonnelProfileNavigation() {
+        const serviceSelect = document.querySelector('#mc-personnel-service');
+        if (!serviceSelect) return;
+
+        let savedService = 'medical';
+        let savedProfile = 'critical_care';
+        let savedUnitsRequired = 0;
+
+        try {
+            savedService = localStorage.getItem(PERSONNEL_SERVICE_STORAGE_KEY) || 'medical';
+            savedProfile = localStorage.getItem(PERSONNEL_PROFILE_STORAGE_KEY) || 'critical_care';
+            savedUnitsRequired = normalisePersonnelUnitsRequired(localStorage.getItem(PERSONNEL_UNITS_REQUIRED_STORAGE_KEY) || 0);
+        } catch (_error) {}
+
+        // Migrate the two service options that were combined in v4.1.2.
+        if (savedService === 'mountain') savedService = 'coastguard';
+        if (savedService === 'airport') savedService = 'fire';
+        if (!PERSONNEL_SERVICE_DEFINITIONS[savedService]) savedService = 'medical';
+
+        PERSONNEL_STATE.service = savedService;
+        PERSONNEL_STATE.profile =
+            savedProfile;
+
+        PERSONNEL_STATE
+            .configuredUnitsRequired =
+                savedUnitsRequired;
+
+        PERSONNEL_STATE.unitsRequired =
+            0;
+
+        PERSONNEL_STATE.unitsFulfilled =
+            0;
+
+        PERSONNEL_STATE.mode =
+            document.querySelector(
+                '#mc-personnel-mode'
+            )?.value ||
+            'all';
+
+        serviceSelect.value =
+            savedService;
+
+        populatePersonnelProfileSelect(
+            savedProfile
+        );
+
+        updatePersonnelProfileUi(
+            false
+        );
+
+        updatePersonnelModeUi();
+    }
+
+===== initialisePersonnelReportVisibility @ line 2315 =====
+
+    function initialisePersonnelReportVisibility() {
+        const stationCheckbox = document.querySelector('#mc-personnel-show-station-report');
+        const overallCheckbox = document.querySelector('#mc-personnel-show-overall-report');
+        if (!stationCheckbox || !overallCheckbox) return;
+
+        let showStation = true;
+        let showOverall = true;
+
+        try {
+            showStation = localStorage.getItem(PERSONNEL_STATION_REPORT_VISIBLE_KEY) !== 'false';
+            showOverall = localStorage.getItem(PERSONNEL_OVERALL_REPORT_VISIBLE_KEY) !== 'false';
+        } catch (_error) {}
+
+        stationCheckbox.checked = showStation;
+        overallCheckbox.checked = showOverall;
+        updatePersonnelReportVisibility(false);
+    }
+
+===== togglePanelCollapsed @ line 2367 =====
+
+
+    function togglePanelCollapsed() {
+        const panel = document.querySelector('#mc-namer-panel');
+        if (!panel) return;
+        setPanelCollapsed(!panel.classList.contains('mc-namer-collapsed'));
+    }
+
+===== setPanelCollapsed @ line 2374 =====
+
+    function setPanelCollapsed(collapsed, save = true) {
+        const panel = document.querySelector('#mc-namer-panel');
+        const button = document.querySelector('#mc-namer-collapse');
+        if (!panel || !button) return;
+
+        panel.classList.toggle('mc-namer-collapsed', Boolean(collapsed));
+        button.textContent = collapsed ? '+' : '−';
+        button.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        button.title = collapsed ? 'Expand naming tools' : 'Collapse naming tools';
+
+        if (save) {
+            try {
+                localStorage.setItem(COLLAPSED_STORAGE_KEY, collapsed ? 'true' : 'false');
+            } catch (e) {}
+        }
+    }
+
+===== createEmptyPersonnelTrainingRegistry @ line 4406 =====
+
+    function createEmptyPersonnelTrainingRegistry() {
+        return {
+            schemaVersion: PERSONNEL_TRAINING_REGISTRY_SCHEMA_VERSION,
+            sourceVersion: PERSONNEL_VERSION,
+            updatedAt: 0,
+            lastPrunedAt: 0,
+            vehicles: {}
+        };
+    }
+
+===== getPersonnelReportInitialFilled @ line 6418 =====
+
+    function getPersonnelReportInitialFilled(report) {
+        return Number(report?.initialQualifiedFilled ?? report?.initialCriticalFilled ?? 0);
+    }
+
+===== makePanelDraggable @ line 6884 =====
+
+    function makePanelDraggable(panel, handle) {
+        let dragging = false;
+        let startX = 0;
+        let startY = 0;
+        let startLeft = 0;
+        let startTop = 0;
+
+        const removeDocumentListeners = () => {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+        };
+
+        const onMouseDown = event => {
+            if (event.target.closest('#mc-namer-collapse')) return;
+
+            dragging = true;
+            const rect = panel.getBoundingClientRect();
+            startX = event.clientX;
+            startY = event.clientY;
+            startLeft = rect.left;
+            startTop = rect.top;
+
+            panel.style.left = `${startLeft}px`;
+            panel.style.top = `${startTop}px`;
+            panel.style.right = 'auto';
+
+            removeDocumentListeners();
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp, { once: true });
+            event.preventDefault();
+        };
+
+        const onMouseMove = event => {
+            if (!dragging) return;
+            panel.style.left = `${Math.max(0, startLeft + event.clientX - startX)}px`;
+            panel.style.top = `${Math.max(0, startTop + event.clientY - startY)}px`;
+        };
+
+        const onMouseUp = () => {
+            dragging = false;
+            removeDocumentListeners();
+        };
+
+        handle.addEventListener('mousedown', onMouseDown);
+
+        registerToolLifecycleCleanup(() => {
+            dragging = false;
+            handle.removeEventListener('mousedown', onMouseDown);
+            removeDocumentListeners();
+        });
+    }
+
+===== createCallsignBase @ line 6943 =====
+
+    function createCallsignBase(stationName) {
+        return cleanText(stationName)
+            .replace(/\s+AO Station$/i, '')
+            .replace(/\s+Ambulance Station$/i, '')
+            .replace(/\s+Fire Station$/i, '')
+            .replace(/\s+Police Station$/i, '')
+            .replace(/\s+Station$/i, '')
+            .trim();
+    }
+
+===== STARTUP source lines 1075-1165 =====
+01075:                 if (logBox.isConnected) logBox.scrollTop = logBox.scrollHeight;
+01076:             });
+01077:             TOOL_LOG_SCROLL_FRAMES.set(logBox, frameId);
+01078:         }
+01079:     }
+01080: 
+01081:     function initWhenReady() {
+01082:         let tries = 0;
+01083:         const timer = setInterval(() => {
+01084:             tries++;
+01085: 
+01086:             if (isStationOverviewScreen()) {
+01087:                 clearInterval(timer);
+01088:                 TOOL_LIFECYCLE_CLEANUPS.delete(clearInitTimer);
+01089:                 init();
+01090:             }
+01091: 
+01092:             if (tries >= 40) {
+01093:                 clearInterval(timer);
+01094:                 TOOL_LIFECYCLE_CLEANUPS.delete(clearInitTimer);
+01095:             }
+01096:         }, 500);
+01097: 
+01098:         const clearInitTimer = () => clearInterval(timer);
+01099:         registerToolLifecycleCleanup(clearInitTimer);
+01100:     }
+01101: 
+01102:     function isStationOverviewScreen() {
+01103:         return Boolean(document.querySelector('a.lightbox-open.list-group-item.active[href^="/buildings/"]'));
+01104:     }
+01105: 
+01106:     function init() {
+01107:         addPanel();
+01108:         log(`Unit Naming Tool v${UNIT_VERSION} loaded. Press Refresh Stations first.`, 'info');
+01109:         stationLog(`Station Naming Tool v${STATION_VERSION} loaded. Refresh stations, choose Preview or Rename and Save, then press Start.`, 'info');
+01110:         personnelLog(`Personnel Assignment v${PERSONNEL_VERSION} loaded. Medical Critical Care and the verified Police profiles are live; other services remain in safe UI preview.`, 'info');
+01111:     }
+01112: 
+01113:     function addPanel() {
+01114:         if (document.querySelector('#mc-namer-panel')) return;
+01115: 
+01116:         const panel = document.createElement('div');
+01117:         panel.id = 'mc-namer-panel';
+01118: 
+01119:         panel.innerHTML = `
+01120:             <div id="mc-namer-header">
+01121:                 <span id="mc-namer-header-title">🚒 Unit Naming Tool v${UNIT_VERSION}</span>
+01122:                 <button id="mc-namer-collapse" type="button" aria-expanded="true" title="Collapse naming tools">−</button>
+01123:             </div>
+01124: 
+01125:             <div id="mc-namer-body">
+01126:             <div class="mc-namer-tabs" role="tablist" aria-label="Naming tools">
+01127:                 <button id="mc-tab-unit" class="mc-namer-tab active" type="button" role="tab" aria-selected="true">
+01128:                     🚒 Unit Naming Tool
+01129:                 </button>
+01130:                 <button id="mc-tab-station" class="mc-namer-tab" type="button" role="tab" aria-selected="false">
+01131:                     🏢 Station Naming Tool
+01132:                 </button>
+01133:                 <button id="mc-tab-personnel" class="mc-namer-tab" type="button" role="tab" aria-selected="false">
+01134:                     👥 Personnel Assignment
+01135:                 </button>
+01136:             </div>
+01137: 
+01138:             <div id="mc-unit-view" class="mc-tool-view">
+01139:                 <div class="mc-namer-section">
+01140:                     <label><b>Station Type:</b></label>
+01141:                     <select id="mc-namer-station-type">
+01142:                         ${Object.entries(STATION_TYPES).map(([key, label]) => `<option value="${key}">${label}</option>`).join('')}
+01143:                     </select>
+01144: 
+01145:                     <label style="margin-top:6px; display:block;"><b>Unit Class:</b></label>
+01146:                     <select id="mc-namer-unit-class">
+01147:                         <option value="ALL">All classes</option>
+01148:                     </select>
+01149: 
+01150:                     <label style="margin-top:6px; display:block;"><b>Mode:</b></label>
+01151:                     <select id="mc-namer-mode">
+01152:                         <option value="all">All matching stations from selected start point</option>
+01153:                         <option value="single">Selected station only</option>
+01154:                     </select>
+01155: 
+01156:                     <label style="margin-top:6px; display:block;"><b>Start From:</b></label>
+01157:                     <select id="mc-namer-startfrom">
+01158:                         <option value="">Refresh stations first</option>
+01159:                     </select>
+01160:                 </div>
+01161: 
+01162:                 <div class="mc-namer-buttons">
+01163:                     <button id="mc-namer-refresh">Refresh Stations</button>
+01164:                     <button id="mc-namer-start">Start</button>
+01165:                     <button id="mc-namer-pause">Pause</button>
+
+===== PANEL_AND_CSS source lines 1325-1875 =====
+01325:                     </div>
+01326:                     <div class="mc-personnel-report-note">The short status and shortfall figures above always remain visible.</div>
+01327:                 </div>
+01328: 
+01329:                 <div id="mc-personnel-after-action-section" class="mc-namer-section mc-personnel-report-section">
+01330:                     <b>Latest Station After-Action Report</b>
+01331:                     <pre id="mc-personnel-after-action">Run a station preview or assignment to create the station report.</pre>
+01332:                 </div>
+01333: 
+01334:                 <div id="mc-personnel-overall-report-section" class="mc-namer-section mc-personnel-report-section">
+01335:                     <b>Overall Run Report</b>
+01336:                     <pre id="mc-personnel-report">Run a preview or assignment to create the overall report.</pre>
+01337:                 </div>
+01338: 
+01339:                 <div class="mc-personnel-log-heading">Live Activity Log</div>
+01340:                 <div id="mc-personnel-log"></div>
+01341:             </div>
+01342:             </div>
+01343:         `;
+01344: 
+01345:         document.body.appendChild(panel);
+01346: 
+01347:         const style = document.createElement('style');
+01348:         style.textContent = `
+01349:             #mc-namer-panel {
+01350:                 position: fixed;
+01351:                 top: 90px;
+01352:                 right: 20px;
+01353:                 width: 470px;
+01354:                 max-height: 760px;
+01355:                 background: #1f2933;
+01356:                 color: #f5f5f5;
+01357:                 z-index: 999999;
+01358:                 border-radius: 8px;
+01359:                 box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+01360:                 font-family: Arial, sans-serif;
+01361:                 font-size: 12px;
+01362:                 overflow: hidden;
+01363:                 display: flex;
+01364:                 flex-direction: column;
+01365:                 max-height: min(760px, calc(100vh - 20px));
+01366:             }
+01367: 
+01368:             #mc-namer-body {
+01369:                 min-height: 0;
+01370:                 overflow-y: auto;
+01371:                 overflow-x: hidden;
+01372:                 overscroll-behavior: contain;
+01373:                 scrollbar-gutter: stable;
+01374:             }
+01375: 
+01376:             #mc-namer-header {
+01377:                 background: #0d6efd;
+01378:                 padding: 7px 8px 7px 10px;
+01379:                 font-weight: bold;
+01380:                 font-size: 14px;
+01381:                 cursor: move;
+01382:                 user-select: none;
+01383:                 display: flex;
+01384:                 align-items: center;
+01385:                 justify-content: space-between;
+01386:                 gap: 8px;
+01387:                 min-height: 34px;
+01388:             }
+01389: 
+01390:             #mc-namer-header-title {
+01391:                 min-width: 0;
+01392:                 overflow: hidden;
+01393:                 white-space: nowrap;
+01394:                 text-overflow: ellipsis;
+01395:             }
+01396: 
+01397:             #mc-namer-collapse {
+01398:                 flex: 0 0 26px;
+01399:                 width: 26px;
+01400:                 height: 24px;
+01401:                 padding: 0;
+01402:                 border: 1px solid rgba(255,255,255,0.45);
+01403:                 border-radius: 5px;
+01404:                 background: rgba(0,0,0,0.18);
+01405:                 color: #ffffff;
+01406:                 font-size: 18px;
+01407:                 font-weight: bold;
+01408:                 line-height: 20px;
+01409:                 cursor: pointer;
+01410:             }
+01411: 
+01412:             #mc-namer-collapse:hover,
+01413:             #mc-namer-collapse:focus-visible {
+01414:                 background: rgba(255,255,255,0.20);
+01415:                 outline: none;
+01416:             }
+01417: 
+01418:             #mc-namer-panel.mc-namer-collapsed {
+01419:                 width: 290px;
+01420:                 max-height: none;
+01421:             }
+01422: 
+01423:             #mc-namer-panel.mc-namer-collapsed #mc-namer-body {
+01424:                 display: none;
+01425:             }
+01426: 
+01427:             .mc-namer-tabs {
+01428:                 display: flex;
+01429:                 gap: 0;
+01430:                 background: #0b1220;
+01431:                 border-bottom: 1px solid #374151;
+01432:                 position: sticky;
+01433:                 top: 0;
+01434:                 z-index: 20;
+01435:             }
+01436: 
+01437:             .mc-namer-tab {
+01438:                 flex: 1;
+01439:                 border: 0;
+01440:                 border-right: 1px solid #374151;
+01441:                 border-radius: 0;
+01442:                 padding: 8px 6px;
+01443:                 background: #1f2937;
+01444:                 color: #cbd5e1;
+01445:                 cursor: pointer;
+01446:                 font-size: 12px;
+01447:                 font-weight: bold;
+01448:             }
+01449: 
+01450:             .mc-namer-tab:last-child {
+01451:                 border-right: 0;
+01452:             }
+01453: 
+01454:             .mc-namer-tab:hover {
+01455:                 background: #273449;
+01456:                 color: #ffffff;
+01457:             }
+01458: 
+01459:             .mc-namer-tab.active {
+01460:                 background: #0d6efd;
+01461:                 color: #ffffff;
+01462:                 box-shadow: inset 0 -3px 0 #93c5fd;
+01463:             }
+01464: 
+01465:             .mc-tool-view {
+01466:                 background: #111827;
+01467:             }
+01468: 
+01469:             .mc-namer-section {
+01470:                 padding: 8px 10px;
+01471:                 background: #111827;
+01472:                 border-bottom: 1px solid #374151;
+01473:                 line-height: 1.5;
+01474:             }
+01475: 
+01476:             #mc-namer-startfrom,
+01477:             #mc-namer-station-type,
+01478:             #mc-namer-unit-class,
+01479:             #mc-namer-mode,
+01480:             #mc-station-startfrom,
+01481:             #mc-station-type,
+01482:             #mc-station-mode,
+01483:             #mc-station-action,
+01484:             #mc-personnel-service,
+01485:             #mc-personnel-profile,
+01486:             #mc-personnel-startfrom,
+01487:             #mc-personnel-mode,
+01488:             #mc-personnel-action,
+01489:             #mc-personnel-units-required {
+01490:                 width: 100%;
+01491:                 margin-top: 4px;
+01492:                 padding: 5px;
+01493:                 color: #111;
+01494:                 border-radius: 4px;
+01495:                 border: 1px solid #555;
+01496:             }
+01497: 
+01498:             .mc-personnel-input-note {
+01499:                 margin-top: 4px;
+01500:                 color: #9ca3af;
+01501:                 font-size: 10px;
+01502:                 line-height: 1.3;
+01503:             }
+01504: 
+01505:             .mc-namer-buttons {
+01506:                 padding: 8px;
+01507:                 display: flex;
+01508:                 gap: 5px;
+01509:                 flex-wrap: wrap;
+01510:                 background: #111827;
+01511:                 border-bottom: 1px solid #374151;
+01512:             }
+01513: 
+01514:             .mc-namer-buttons button {
+01515:                 border: 0;
+01516:                 border-radius: 4px;
+01517:                 padding: 5px 8px;
+01518:                 cursor: pointer;
+01519:                 font-size: 12px;
+01520:             }
+01521: 
+01522:             #mc-namer-refresh,
+01523:             #mc-station-refresh,
+01524:             #mc-personnel-refresh { background: #6c757d; color: white; }
+01525: 
+01526:             #mc-namer-start,
+01527:             #mc-station-start,
+01528:             #mc-personnel-start { background: #198754; color: white; }
+01529: 
+01530:             #mc-namer-pause,
+01531:             #mc-station-pause,
+01532:             #mc-personnel-pause { background: #ffc107; color: #111; }
+01533: 
+01534:             #mc-namer-stop,
+01535:             #mc-station-stop,
+01536:             #mc-personnel-stop { background: #dc3545; color: white; }
+01537: 
+01538:             #mc-personnel-copy,
+01539:             #mc-personnel-copy-station { background: #7c3aed; color: white; }
+01540: 
+01541:             #mc-personnel-view-station-report { background: #2563eb; color: white; }
+01542: 
+01543:             #mc-namer-debug,
+01544:             #mc-station-debug,
+01545:             #mc-personnel-debug { background: #0dcaf0; color: #111; }
+01546: 
+01547:             #mc-namer-clear,
+01548:             #mc-station-clear,
+01549:             #mc-personnel-clear { background: #f8f9fa; color: #111; }
+01550: 
+01551:             #mc-namer-log,
+01552:             #mc-station-log,
+01553:             #mc-personnel-log {
+01554:                 padding: 8px 10px;
+01555:                 max-height: 350px;
+01556:                 overflow-y: auto;
+01557:                 background: #0b1220;
+01558:                 font-family: Consolas, monospace;
+01559:                 white-space: pre-wrap;
+01560:                 line-height: 1.4;
+01561:             }
+01562: 
+01563:             .mc-personnel-navigation-section {
+01564:                 background: linear-gradient(180deg, #111827 0%, #0f172a 100%);
+01565:             }
+01566: 
+01567:             .mc-personnel-navigation-title {
+01568:                 margin-bottom: 7px;
+01569:                 color: #bfdbfe;
+01570:                 font-size: 12px;
+01571:                 font-weight: bold;
+01572:                 letter-spacing: 0.2px;
+01573:             }
+01574: 
+01575:             .mc-personnel-profile-banner {
+01576:                 margin: 7px 0;
+01577:                 padding: 6px 8px;
+01578:                 border: 1px solid #374151;
+01579:                 border-radius: 5px;
+01580:                 background: #0b1220;
+01581:                 font-weight: bold;
+01582:                 line-height: 1.3;
+01583:             }
+01584: 
+01585:             .mc-personnel-profile-banner.is-live {
+01586:                 border-color: #22c55e;
+01587:                 background: rgba(20,83,45,0.32);
+01588:                 color: #bbf7d0;
+01589:             }
+01590: 
+01591:             .mc-personnel-profile-banner.is-preview {
+01592:                 border-color: #f59e0b;
+01593:                 background: rgba(120,53,15,0.28);
+01594:                 color: #fde68a;
+01595:             }
+01596: 
+01597:             .mc-personnel-policy-summary {
+01598:                 margin-top: 7px;
+01599:                 padding: 7px 8px;
+01600:                 border-left: 4px solid #3b82f6;
+01601:                 border-radius: 4px;
+01602:                 background: rgba(30,64,175,0.16);
+01603:                 color: #dbeafe;
+01604:                 font-size: 11px;
+01605:                 line-height: 1.35;
+01606:             }
+01607: 
+01608:             .mc-personnel-policy-summary strong {
+01609:                 color: #ffffff;
+01610:             }
+01611: 
+01612:             #mc-personnel-start:disabled,
+01613:             #mc-personnel-refresh:disabled,
+01614:             #mc-personnel-mode:disabled,
+01615:             #mc-personnel-action:disabled,
+01616:             #mc-personnel-startfrom:disabled {
+01617:                 cursor: not-allowed;
+01618:                 opacity: 0.45;
+01619:                 filter: grayscale(0.35);
+01620:             }
+01621: 
+01622:             .mc-personnel-fixed-grid {
+01623:                 display: grid;
+01624:                 grid-template-columns: repeat(3, minmax(0, 1fr));
+01625:                 gap: 6px;
+01626:             }
+01627: 
+01628:             .mc-personnel-fixed-grid > div {
+01629:                 padding: 6px;
+01630:                 border: 1px solid #374151;
+01631:                 border-radius: 5px;
+01632:                 background: #0b1220;
+01633:                 text-align: center;
+01634:             }
+01635: 
+01636:             .mc-personnel-training-shortfall-section {
+01637:                 border-left: 5px solid #ef4444;
+01638:                 background: #2b1015;
+01639:                 box-shadow: inset 0 0 0 1px rgba(239,68,68,0.28);
+01640:             }
+01641: 
+01642:             .mc-personnel-training-shortfall-heading {
+01643:                 color: #fecaca;
+01644:                 font-weight: bold;
+01645:                 font-size: 12px;
+01646:             }
+01647: 
+01648:             .mc-personnel-training-shortfall-note {
+01649:                 margin-top: 3px;
+01650:                 color: #fca5a5;
+01651:                 font-size: 10px;
+01652:                 line-height: 1.3;
+01653:             }
+01654: 
+01655:             .mc-personnel-training-shortfall-list {
+01656:                 display: grid;
+01657:                 gap: 5px;
+01658:                 max-height: 145px;
+01659:                 margin-top: 7px;
+01660:                 overflow-y: auto;
+01661:                 overscroll-behavior: contain;
+01662:                 scrollbar-gutter: stable;
+01663:             }
+01664: 
+01665:             .mc-personnel-training-shortfall-row {
+01666:                 display: grid;
+01667:                 grid-template-columns: minmax(0, 1fr) auto;
+01668:                 gap: 8px;
+01669:                 align-items: center;
+01670:                 padding: 6px 7px;
+01671:                 border: 1px solid rgba(248,113,113,0.45);
+01672:                 border-radius: 5px;
+01673:                 background: rgba(127,29,29,0.34);
+01674:             }
+01675: 
+01676:             .mc-personnel-training-shortfall-name {
+01677:                 min-width: 0;
+01678:                 color: #fee2e2;
+01679:                 font-weight: bold;
+01680:                 overflow-wrap: anywhere;
+01681:             }
+01682: 
+01683:             .mc-personnel-training-shortfall-value {
+01684:                 color: #ffffff;
+01685:                 font-weight: bold;
+01686:                 white-space: nowrap;
+01687:             }
+01688: 
+01689:             a.mc-personnel-training-shortfall-station {
+01690:                 border-left: 5px solid #ef4444 !important;
+01691:                 box-shadow: inset 0 0 0 1px rgba(239,68,68,0.42) !important;
+01692:                 background-color: rgba(127,29,29,0.24) !important;
+01693:             }
+01694: 
+01695:             .mc-personnel-report-options {
+01696:                 padding-top: 7px;
+01697:                 padding-bottom: 7px;
+01698:             }
+01699: 
+01700:             .mc-personnel-report-toggle-grid {
+01701:                 display: grid;
+01702:                 grid-template-columns: repeat(2, minmax(0, 1fr));
+01703:                 gap: 6px;
+01704:                 margin-top: 6px;
+01705:             }
+01706: 
+01707:             .mc-personnel-report-toggle {
+01708:                 display: flex;
+01709:                 align-items: center;
+01710:                 gap: 6px;
+01711:                 min-width: 0;
+01712:                 padding: 6px 7px;
+01713:                 border: 1px solid #374151;
+01714:                 border-radius: 5px;
+01715:                 background: #0b1220;
+01716:                 cursor: pointer;
+01717:                 user-select: none;
+01718:             }
+01719: 
+01720:             .mc-personnel-report-toggle input {
+01721:                 flex: 0 0 auto;
+01722:                 margin: 0;
+01723:                 cursor: pointer;
+01724:             }
+01725: 
+01726:             .mc-personnel-report-toggle span {
+01727:                 min-width: 0;
+01728:                 line-height: 1.25;
+01729:             }
+01730: 
+01731:             .mc-personnel-report-note {
+01732:                 margin-top: 5px;
+01733:                 color: #9ca3af;
+01734:                 font-size: 11px;
+01735:             }
+01736: 
+01737:             .mc-personnel-report-section {
+01738:                 padding-bottom: 8px;
+01739:                 scroll-margin-top: 42px;
+01740:             }
+01741: 
+01742:             .mc-personnel-report-section[hidden] {
+01743:                 display: none !important;
+01744:             }
+01745: 
+01746:             #mc-personnel-report,
+01747:             #mc-personnel-after-action {
+01748:                 margin: 6px 0 0;
+01749:                 min-height: 130px;
+01750:                 max-height: 280px;
+01751:                 overflow-y: scroll;
+01752:                 overflow-x: auto;
+01753:                 overscroll-behavior: contain;
+01754:                 scrollbar-gutter: stable both-edges;
+01755:                 padding: 8px;
+01756:                 border: 1px solid #374151;
+01757:                 border-radius: 5px;
+01758:                 background: #070d18;
+01759:                 color: #d1fae5;
+01760:                 font: 11px/1.4 Consolas, monospace;
+01761:                 white-space: pre-wrap;
+01762:                 overflow-wrap: anywhere;
+01763:                 user-select: text;
+01764:             }
+01765: 
+01766:             #mc-personnel-after-action {
+01767:                 color: #e0f2fe;
+01768:                 border-color: #2563eb;
+01769:             }
+01770: 
+01771:             #mc-personnel-log {
+01772:                 max-height: 220px;
+01773:                 overflow-y: scroll;
+01774:                 overscroll-behavior: contain;
+01775:                 scrollbar-gutter: stable;
+01776:             }
+01777: 
+01778:             .mc-personnel-log-heading {
+01779:                 padding: 7px 10px;
+01780:                 background: #111827;
+01781:                 border-bottom: 1px solid #374151;
+01782:                 font-weight: bold;
+01783:             }
+01784: 
+01785:             .mc-log-info { color: #93c5fd; }
+01786:             .mc-log-station { color: #bfdbfe; font-weight: bold; margin-top: 8px; }
+01787:             .mc-log-before { color: #fca5a5; }
+01788:             .mc-log-after { color: #86efac; }
+01789:             .mc-log-debug { color: #facc15; }
+01790:             .mc-log-error { color: #f87171; font-weight: bold; }
+01791:             .mc-log-done { color: #22c55e; font-weight: bold; }
+01792:         `;
+01793: 
+01794:         document.head.appendChild(style);
+01795: 
+01796:         document.querySelector('#mc-tab-unit').onclick = () => switchToolTab('unit');
+01797:         document.querySelector('#mc-tab-station').onclick = () => switchToolTab('station');
+01798:         document.querySelector('#mc-tab-personnel').onclick = () => switchToolTab('personnel');
+01799:         document.querySelector('#mc-namer-collapse').onclick = event => {
+01800:             event.preventDefault();
+01801:             event.stopPropagation();
+01802:             togglePanelCollapsed();
+01803:         };
+01804:         document.querySelector('#mc-namer-collapse').onmousedown = event => {
+01805:             event.stopPropagation();
+01806:         };
+01807: 
+01808:         document.querySelector('#mc-namer-refresh').onclick = refreshStations;
+01809:         document.querySelector('#mc-namer-start').onclick = startRun;
+01810:         document.querySelector('#mc-namer-pause').onclick = togglePause;
+01811:         document.querySelector('#mc-namer-stop').onclick = stopRun;
+01812:         document.querySelector('#mc-namer-debug').onclick = toggleDebug;
+01813:         document.querySelector('#mc-namer-clear').onclick = clearLog;
+01814:         document.querySelector('#mc-namer-station-type').onchange = handleUnitStationTypeChange;
+01815:         document.querySelector('#mc-namer-unit-class').onchange = handleUnitClassChange;
+01816:         populateUnitClassDropdown();
+01817: 
+01818:         document.querySelector('#mc-station-refresh').onclick = refreshStationNamingStations;
+01819:         document.querySelector('#mc-station-start').onclick = startStationNamingRun;
+01820:         document.querySelector('#mc-station-pause').onclick = toggleStationNamingPause;
+01821:         document.querySelector('#mc-station-stop').onclick = stopStationNamingRun;
+01822:         document.querySelector('#mc-station-debug').onclick = toggleStationDebug;
+01823:         document.querySelector('#mc-station-clear').onclick = clearStationLog;
+01824:         document.querySelector('#mc-station-type').onchange = populateStationNamingStartDropdown;
+01825:         document.querySelector('#mc-station-startfrom').onchange = updateStationNamingSelectionPreview;
+01826:         document.querySelector('#mc-station-mode').onchange = () => {
+01827:             STATION_STATE.mode = document.querySelector('#mc-station-mode')?.value || 'all';
+01828:         };
+01829:         document.querySelector('#mc-station-action').onchange = () => {
+01830:             STATION_STATE.action = document.querySelector('#mc-station-action')?.value || 'preview';
+01831:         };
+01832: 
+01833:         document.querySelector('#mc-personnel-service').onchange = handlePersonnelServiceChange;
+01834:         document.querySelector('#mc-personnel-profile').onchange = handlePersonnelProfileChange;
+01835:         document.querySelector('#mc-personnel-units-required').onchange = handlePersonnelUnitsRequiredChange;
+01836:         document.querySelector('#mc-personnel-refresh').onclick = refreshPersonnelStations;
+01837:         document.querySelector('#mc-personnel-build-register').onclick = buildPersonnelTrainingRegisterOneClick;
+01838:         document.querySelector('#mc-personnel-start').onclick = startPersonnelRun;
+01839:         document.querySelector('#mc-personnel-pause').onclick = togglePersonnelPause;
+01840:         document.querySelector('#mc-personnel-stop').onclick = stopPersonnelRun;
+01841:         document.querySelector('#mc-personnel-view-station-report').onclick = showAndViewPersonnelStationReport;
+01842:         document.querySelector('#mc-personnel-copy-station').onclick = copyPersonnelStationReport;
+01843:         document.querySelector('#mc-personnel-copy').onclick = copyPersonnelReport;
+01844:         document.querySelector('#mc-personnel-debug').onclick = togglePersonnelDebug;
+01845:         document.querySelector('#mc-personnel-clear').onclick = clearPersonnelLog;
+01846:         document.querySelector('#mc-personnel-startfrom').onchange = updatePersonnelSelectionPreview;
+01847:         document.querySelector('#mc-personnel-mode').onchange =
+01848:             handlePersonnelModeChange;
+01849:         document.querySelector('#mc-personnel-action').onchange = () => {
+01850:             PERSONNEL_STATE.action = document.querySelector('#mc-personnel-action')?.value || 'preview';
+01851:         };
+01852:         document.querySelector('#mc-personnel-show-station-report').onchange = () => updatePersonnelReportVisibility(true);
+01853:         document.querySelector('#mc-personnel-show-overall-report').onchange = () => updatePersonnelReportVisibility(true);
+01854: 
+01855:         initialisePersonnelProfileNavigation();
+01856:         initialisePersonnelReportVisibility();
+01857:         makePanelDraggable(panel, document.querySelector('#mc-namer-header'));
+01858: 
+01859:         let savedTab = 'unit';
+01860:         let savedCollapsed = false;
+01861:         try {
+01862:             savedTab = localStorage.getItem(ACTIVE_TAB_STORAGE_KEY) || 'unit';
+01863:             savedCollapsed = localStorage.getItem(COLLAPSED_STORAGE_KEY) === 'true';
+01864:         } catch (e) {}
+01865: 
+01866:         switchToolTab(savedTab === 'station' ? 'station' : savedTab === 'personnel' ? 'personnel' : 'unit', true);
+01867:         setPanelCollapsed(savedCollapsed, false);
+01868:     }
+01869: 
+01870:     function getPersonnelServiceDefinition(serviceId = PERSONNEL_STATE.service) {
+01871:         return PERSONNEL_SERVICE_DEFINITIONS[serviceId]
+01872:             || PERSONNEL_SERVICE_DEFINITIONS.medical;
+01873:     }
+01874: 
+01875:     function getPersonnelProfileDefinition(serviceId = PERSONNEL_STATE.service, profileId = PERSONNEL_STATE.profile) {
+
+===== COLLAPSE_AND_TAB source lines 2350-2445 =====
+02350:         if (save) {
+02351:             try {
+02352:                 localStorage.setItem(PERSONNEL_STATION_REPORT_VISIBLE_KEY, showStation ? 'true' : 'false');
+02353:                 localStorage.setItem(PERSONNEL_OVERALL_REPORT_VISIBLE_KEY, showOverall ? 'true' : 'false');
+02354:             } catch (_error) {}
+02355:         }
+02356:     }
+02357: 
+02358:     function showAndViewPersonnelStationReport() {
+02359:         const checkbox = document.querySelector('#mc-personnel-show-station-report');
+02360:         if (checkbox && !checkbox.checked) {
+02361:             checkbox.checked = true;
+02362:             updatePersonnelReportVisibility(true);
+02363:         }
+02364: 
+02365:         requestAnimationFrame(() => scrollPersonnelTo('mc-personnel-after-action-section'));
+02366:     }
+02367: 
+02368: 
+02369:     function togglePanelCollapsed() {
+02370:         const panel = document.querySelector('#mc-namer-panel');
+02371:         if (!panel) return;
+02372:         setPanelCollapsed(!panel.classList.contains('mc-namer-collapsed'));
+02373:     }
+02374: 
+02375:     function setPanelCollapsed(collapsed, save = true) {
+02376:         const panel = document.querySelector('#mc-namer-panel');
+02377:         const button = document.querySelector('#mc-namer-collapse');
+02378:         if (!panel || !button) return;
+02379: 
+02380:         panel.classList.toggle('mc-namer-collapsed', Boolean(collapsed));
+02381:         button.textContent = collapsed ? '+' : '−';
+02382:         button.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+02383:         button.title = collapsed ? 'Expand naming tools' : 'Collapse naming tools';
+02384: 
+02385:         if (save) {
+02386:             try {
+02387:                 localStorage.setItem(COLLAPSED_STORAGE_KEY, collapsed ? 'true' : 'false');
+02388:             } catch (e) {}
+02389:         }
+02390:     }
+02391: 
+02392:     function switchToolTab(tabName, force = false) {
+02393:         const targetTab = ['unit', 'station', 'personnel'].includes(tabName) ? tabName : 'unit';
+02394:         const unitView = document.querySelector('#mc-unit-view');
+02395:         const stationView = document.querySelector('#mc-station-view');
+02396:         const personnelView = document.querySelector('#mc-personnel-view');
+02397:         const unitTab = document.querySelector('#mc-tab-unit');
+02398:         const stationTab = document.querySelector('#mc-tab-station');
+02399:         const personnelTab = document.querySelector('#mc-tab-personnel');
+02400:         const headerTitle = document.querySelector('#mc-namer-header-title');
+02401: 
+02402:         if (!unitView || !stationView || !personnelView || !unitTab || !stationTab || !personnelTab || !headerTitle) return;
+02403: 
+02404:         if (!force && STATE.running && targetTab !== 'unit') {
+02405:             log('Stop the Unit Naming Tool before switching tabs.', 'error');
+02406:             return;
+02407:         }
+02408: 
+02409:         if (!force && STATION_STATE.running && targetTab !== 'station') {
+02410:             stationLog('Stop the Station Naming Tool before switching tabs.', 'error');
+02411:             return;
+02412:         }
+02413: 
+02414:         if (!force && PERSONNEL_STATE.running && targetTab !== 'personnel') {
+02415:             personnelLog('Stop Personnel Assignment before switching tabs.', 'error');
+02416:             return;
+02417:         }
+02418: 
+02419:         const showUnit = targetTab === 'unit';
+02420:         const showStation = targetTab === 'station';
+02421:         const showPersonnel = targetTab === 'personnel';
+02422: 
+02423:         unitView.style.display = showUnit ? 'block' : 'none';
+02424:         stationView.style.display = showStation ? 'block' : 'none';
+02425:         personnelView.style.display = showPersonnel ? 'block' : 'none';
+02426: 
+02427:         unitTab.classList.toggle('active', showUnit);
+02428:         stationTab.classList.toggle('active', showStation);
+02429:         personnelTab.classList.toggle('active', showPersonnel);
+02430:         unitTab.setAttribute('aria-selected', showUnit ? 'true' : 'false');
+02431:         stationTab.setAttribute('aria-selected', showStation ? 'true' : 'false');
+02432:         personnelTab.setAttribute('aria-selected', showPersonnel ? 'true' : 'false');
+02433: 
+02434:         headerTitle.textContent = showUnit
+02435:             ? `🚒 Unit Naming Tool v${UNIT_VERSION}`
+02436:             : showStation
+02437:                 ? `🏢 Station Naming Tool v${STATION_VERSION}`
+02438:                 : `👥 Personnel Assignment v${PERSONNEL_VERSION}`;
+02439: 
+02440:         try {
+02441:             localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, targetTab);
+02442:         } catch (e) {}
+02443:     }
+02444: 
+02445:     function refreshStationNamingStations() {
