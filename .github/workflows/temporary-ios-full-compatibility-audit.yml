@@ -1,27 +1,43 @@
-name: Audit iOS Safari feature compatibility
+name: Apply and validate iOS Safari compatibility
 
 on:
   pull_request:
     branches:
       - main
+    types:
+      - opened
+      - reopened
+      - synchronize
     paths:
       - '.github/workflows/temporary-ios-full-compatibility-audit.yml'
+      - 'automation/ios-full-compatibility/**'
       - 'src/missionchief-command-nexus.user.js'
-      - 'scripts/check-ios-compatibility.mjs'
+      - 'README.md'
+      - 'src/README.md'
+      - 'CHANGELOG.md'
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: ios-full-compatibility-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
 
 jobs:
-  audit:
-    name: Export source and audit browser-sensitive paths
+  patch:
+    name: Build and validate v1.0.16 compatibility fix
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'audit/ios-full-compatibility'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
-      - name: Check out audit branch
+      - name: Check out the exact PR branch
         uses: actions/checkout@v6
         with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
 
       - name: Set up Node.js
@@ -30,53 +46,93 @@ jobs:
           node-version: '24'
           package-manager-cache: false
 
-      - name: Validate source syntax
-        run: node --check src/missionchief-command-nexus.user.js
-
-      - name: Generate static compatibility inventory
+      - name: Assemble, apply and validate the compatibility patch
         shell: bash
         run: |
           set -euo pipefail
-          SOURCE='src/missionchief-command-nexus.user.js'
-          REPORT='ios-compatibility-audit.md'
 
-          {
-            echo '# iOS Safari compatibility audit inventory'
-            echo
-            echo 'Generated from the exact pull-request source. Matches are evidence for review, not automatic defects.'
-            echo
-            echo '## Desktop/responsive DOM selectors'
-            echo '```text'
-            grep -nE 'lightbox-open|list-group-item|building_list|building_list_li|data-building-id|href\^="/buildings/"|href\*="/buildings/"' "${SOURCE}" || true
-            echo '```'
-            echo
-            echo '## Frames, dialogs and navigation'
-            echo '```text'
-            grep -nE 'iframe|contentDocument|contentWindow|window\.open|location\.(href|assign|replace)|history\.|\.click\(\)|dispatchEvent|alert\(|confirm\(|prompt\(' "${SOURCE}" || true
-            echo '```'
-            echo
-            echo '## Pointer, touch, scroll and focus'
-            echo '```text'
-            grep -nE 'pointer|touch|visualViewport|scrollIntoView|scrollTo|focus\(|blur\(|preventDefault|setPointerCapture|releasePointerCapture' "${SOURCE}" || true
-            echo '```'
-            echo
-            echo '## Storage and downloads'
-            echo '```text'
-            grep -nE 'localStorage|sessionStorage|Blob\(|URL\.createObjectURL|download\s*=|FileReader|navigator\.clipboard' "${SOURCE}" || true
-            echo '```'
-            echo
-            echo '## Network and page parsing'
-            echo '```text'
-            grep -nE 'fetch\(|XMLHttpRequest|DOMParser|FormData|URLSearchParams|response\.text|response\.json' "${SOURCE}" || true
-            echo '```'
-          } > "${REPORT}"
+          PAYLOAD_DIR='automation/ios-full-compatibility'
+          PATCH='/tmp/ios-full-compatibility.patch'
+          EXPECTED_PATCH_SHA='f7fbbdb3273c253c525cc55c359e9124fa03c975a5c74cd8365878eb3df4fe33'
 
-      - name: Upload exact source and audit inventory
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-full-compatibility-audit
-          path: |
-            src/missionchief-command-nexus.user.js
-            ios-compatibility-audit.md
-          if-no-files-found: error
-          retention-days: 3
+          if [[ ! -d "${PAYLOAD_DIR}" ]]; then
+            echo 'Patch payload already consumed; running validation only.'
+          else
+            cat "${PAYLOAD_DIR}"/patch.b64.part* |
+              tr -d '\r\n' |
+              base64 --decode > "${PATCH}"
+
+            ACTUAL_PATCH_SHA="$(sha256sum "${PATCH}" | awk '{print $1}')"
+            if [[ "${ACTUAL_PATCH_SHA}" != "${EXPECTED_PATCH_SHA}" ]]; then
+              echo "Patch checksum mismatch: ${ACTUAL_PATCH_SHA}"
+              exit 1
+            fi
+
+            git fetch origin main --force
+
+            node scripts/prepare-release.mjs \
+              --version '1.0.16' \
+              --notes $'Restore Unit Naming, Station Naming, Personnel Assignment and Personnel Register station discovery on the responsive iOS Stations tab.\nEnforce exactly one Command Nexus tools menu after Safari bfcache restoration or duplicate injection.\nAdd a same-origin iOS station iframe fallback when responsive Details links do not activate MissionChief lightboxes.'
+
+            git apply --check "${PATCH}"
+            git apply "${PATCH}"
+
+            git rm -r "${PAYLOAD_DIR}"
+          fi
+
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs --base-ref origin/main
+          python3 scripts/check_repository.py
+          git diff --check
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8')
+
+          required = {
+              'responsive station discovery': 'function getStationOverviewEntries(',
+              'canonical station lookup': 'function findStationOverviewEntry(',
+              'single-panel enforcement': 'function ensureSingleNamingToolsPanel(',
+              'continuous single-panel guard': 'function installSingleNamingToolsPanelGuard(',
+              'iOS station iframe fallback': 'function createManagedStationIframe(',
+              'shared station workflow opener': 'async function openStationWorkflowIframe(',
+          }
+
+          missing = [label for label, token in required.items() if token not in source]
+          if missing:
+              raise SystemExit('Missing compatibility contracts: ' + ', '.join(missing))
+
+          legacy = 'querySelectorAll(\'a.lightbox-open.list-group-item.active[href^="/buildings/"]\')'
+          if legacy in source:
+              raise SystemExit('Desktop-only station discovery still exists in a feature engine')
+
+          if source.count('getStationOverviewEntries()') < 5:
+              raise SystemExit('Not every station-dependent feature uses shared responsive discovery')
+
+          if source.count("document.querySelectorAll('#mc-namer-panel')") < 1:
+              raise SystemExit('Single-panel deduplication contract is absent')
+
+          print('iOS compatibility contracts verified.')
+          PY
+
+      - name: Commit generated product changes
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if git diff --quiet && git diff --cached --quiet; then
+            echo 'No generated changes remain to commit.'
+            exit 0
+          fi
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            src/missionchief-command-nexus.user.js \
+            README.md \
+            src/README.md \
+            CHANGELOG.md \
+            automation/ios-full-compatibility
+          git commit -m 'Complete iOS Safari Stations tool compatibility'
+          git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
