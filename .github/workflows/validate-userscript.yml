@@ -1,193 +1,50 @@
-name: Build v1.0.15 iOS Safari menu
+name: Validate userscript
 
 on:
   pull_request:
     paths:
-      - 'scripts/apply-v1.0.15-ios-menu.py'
-      - 'scripts/ios-menu-build-trigger.txt'
+      - 'src/**'
+      - 'scripts/validate-userscript.mjs'
       - '.github/workflows/validate-userscript.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'scripts/validate-userscript.mjs'
+      - '.github/workflows/validate-userscript.yml'
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: validate-userscript-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build:
+  validate:
+    name: Userscript validation
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 10
+
     steps:
-      - uses: actions/checkout@v6
+      - name: Check out repository
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          ref: ${{ github.head_ref }}
-      - uses: actions/setup-node@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: '22'
 
-      - name: Scope patcher and apply candidate
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          path = Path('scripts/apply-v1.0.15-ios-menu.py')
-          text = path.read_text(encoding='utf-8')
-          old = """    marker = f'    function {name}('
-              start = source.find(marker)
-              if start < 0:
-                  raise SystemExit(f'{name}: function start not found')
-              if source.find(marker, start + 1) >= 0:
-                  raise SystemExit(f'{name}: duplicate function declaration')
-              brace = source.find('{', start)
-          """
-          new = """    marker = f'    function {name}('
-              scope_end = source.find('MODULE 2: MISSION FINDER')
-              if scope_end < 0:
-                  raise SystemExit('Module 2 boundary not found')
-              start = source.find(marker, 0, scope_end)
-              if start < 0:
-                  raise SystemExit(f'{name}: Module 1 function start not found')
-              if source.find(marker, start + 1, scope_end) >= 0:
-                  raise SystemExit(f'{name}: duplicate Module 1 function declaration')
-              brace = source.find('{', start, scope_end)
-          """
-          if text.count(old) != 1:
-              raise SystemExit(f'Patcher scope anchor count: {text.count(old)}')
-          path.write_text(text.replace(old, new, 1), encoding='utf-8', newline='\n')
-          PY
+      - name: Validate JavaScript syntax
+        run: node --check src/missionchief-command-nexus.user.js
 
-          python3 scripts/apply-v1.0.15-ios-menu.py
+      - name: Validate metadata and Greasy Fork limits
+        run: node scripts/validate-userscript.mjs
 
-      - name: Align README with repository rules and iOS scope
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          path = Path('README.md')
-          text = path.read_text(encoding='utf-8')
-
-          replacements = {
-              '[**v1.0.14**](#current-v1014-behaviour)': '[**v1.0.15**](#current-v1015-behaviour)',
-              '## Current v1.0.14 behaviour': '## Current v1.0.15 behaviour',
-              '> **MartyBlyth is the creator, userscript author, technical owner, and release authority.** Conroy1988 supports repository infrastructure, documentation, validation, and general project operations; he is not presented as the userscript developer.': '> **Developed by MartyBlyth**, the creator, userscript author, technical owner, and release authority. **Conroy1988 is the project helper** for repository infrastructure, documentation, validation, and general project operations. He is not a userscript developer.',
-              '| **Primary environment** | Desktop browser is the principal development and operating target |': '| **Primary environment** | Desktop remains the principal operating target; the shared Unit, Station and Personnel menu now supports the MissionChief website in Safari on iPhone and iPad |',
-              '| **Mobile and Safari** | No broad support claim without device-specific evidence |': '| **Mobile and Safari** | iOS Safari website support covers the shared Unit Naming, Station Naming and Personnel Assignment menu; broader Mission Finder mobile support is not claimed |',
-          }
-
-          for old, new in replacements.items():
-              if text.count(old) != 1:
-                  raise SystemExit(f'README anchor count for {old!r}: {text.count(old)}')
-              text = text.replace(old, new, 1)
-
-          release_badge = '[![Release](https://img.shields.io/github/v/release/Team-Killing-Bastards/MissionChief-Command-Nexus?label=release&color=7b6cf6)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/latest)\n'
-          if text.count(release_badge) != 1:
-              raise SystemExit(f'External release badge count: {text.count(release_badge)}')
-          text = text.replace(release_badge, '', 1)
-
-          ios_section = '''## Current v1.0.15 behaviour
-
-### iOS Safari website menu
-
-The shared Unit Naming, Station Naming and Personnel Assignment panel now appears on the MissionChief website in Safari on iPhone and iPad.
-
-- Responsive station-list markup is recognised without weakening the desktop station-page guard.
-- The panel uses Safari safe-area insets and the visual viewport, including address-bar changes and device rotation.
-- The header supports touch/pointer dragging while the panel body and reports retain touch scrolling.
-- iPad desktop-site mode is recognised through touch-capable `MacIntel` detection.
-- Chrome, Firefox, Edge and native iOS webview/app wrappers are not treated as Safari website sessions.
-
-'''
-          heading = '## Current v1.0.15 behaviour\n\n'
-          if text.count(heading) != 1:
-              raise SystemExit(f'v1.0.15 heading count: {text.count(heading)}')
-          text = text.replace(heading, ios_section, 1)
-
-          path.write_text(text, encoding='utf-8', newline='\n')
-          PY
-
-      - name: Run focused iOS Safari regressions
-        shell: bash
-        run: |
-          node <<'NODE'
-          const fs = require('fs');
-          const vm = require('vm');
-          const assert = require('assert');
-          const source = fs.readFileSync('src/missionchief-command-nexus.user.js', 'utf8');
-
-          function extractFunction(name) {
-            const moduleEnd = source.indexOf('MODULE 2: MISSION FINDER');
-            const marker = `function ${name}(`;
-            const start = source.indexOf(marker);
-            assert(start >= 0 && start < moduleEnd, `${name} missing from Module 1`);
-            const braceStart = source.indexOf('{', start);
-            let depth = 0, quote = '', escaped = false, lineComment = false, blockComment = false;
-            for (let i = braceStart; i < moduleEnd; i++) {
-              const ch = source[i], next = source[i + 1] || '';
-              if (lineComment) { if (ch === '\n') lineComment = false; continue; }
-              if (blockComment) { if (ch === '*' && next === '/') { blockComment = false; i++; } continue; }
-              if (quote) { if (escaped) escaped = false; else if (ch === '\\') escaped = true; else if (ch === quote) quote = ''; continue; }
-              if (ch === '/' && next === '/') { lineComment = true; i++; continue; }
-              if (ch === '/' && next === '*') { blockComment = true; i++; continue; }
-              if (ch === '"' || ch === "'" || ch === '`') { quote = ch; continue; }
-              if (ch === '{') depth++;
-              if (ch === '}' && --depth === 0) return source.slice(start, i + 1);
-            }
-            throw new Error(`Could not extract ${name}`);
-          }
-
-          const iosSource = extractFunction('isIosSafariWebsite');
-          function detect(ua, platform, touches, protocol = 'https:') {
-            return vm.runInNewContext(`(${iosSource})()`, {
-              navigator: { userAgent: ua, platform, maxTouchPoints: touches },
-              location: { protocol }
-            });
-          }
-
-          const iphoneSafari = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1';
-          const ipadDesktopSafari = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15';
-          const chromeIos = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/126.0 Mobile/15E148 Safari/604.1';
-          const nativeWebView = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148';
-
-          assert.strictEqual(detect(iphoneSafari, 'iPhone', 5), true);
-          assert.strictEqual(detect(ipadDesktopSafari, 'MacIntel', 5), true);
-          assert.strictEqual(detect(chromeIos, 'iPhone', 5), false);
-          assert.strictEqual(detect(nativeWebView, 'iPhone', 5), false);
-          assert.strictEqual(detect(ipadDesktopSafari, 'MacIntel', 0), false);
-          assert.strictEqual(detect(iphoneSafari, 'iPhone', 5, 'file:'), false);
-
-          for (const marker of [
-            "panel.classList.toggle('mc-ios-safari'",
-            'env(safe-area-inset-top, 0px)',
-            '100dvh',
-            "handle.addEventListener('pointerdown'",
-            "window.visualViewport?.addEventListener('resize'",
-            "window.addEventListener('orientationchange'",
-            "'a.lightbox-open[href*=\"/buildings/\"]'",
-            'width: 470px;',
-            "const UNIT_VERSION = '3.3.6';",
-            "const STATION_VERSION = '1.3.2';",
-            "const PERSONNEL_VERSION = '1.3.0';"
-          ]) assert(source.includes(marker), `Missing marker: ${marker}`);
-
-          console.log('Focused iOS Safari menu regressions passed.');
-          NODE
-
-      - name: Restore permanent workflow and remove temporary files
-        run: |
-          git fetch origin main --force
-          git checkout origin/main -- .github/workflows/validate-userscript.yml
-          rm -f scripts/apply-v1.0.15-ios-menu.py scripts/audit-ios-menu.py scripts/ios-menu-build-trigger.txt IOS_MENU_AUDIT.txt IOS_MENU_FUNCTIONS.txt IOS_PATCH_ERROR.txt IOS_VALIDATION_ERROR.txt
-
-      - name: Validate release candidate
-        run: |
-          node --check src/missionchief-command-nexus.user.js
-          node scripts/validate-userscript.mjs
-          node scripts/validate-userscript.mjs --base-ref origin/main
-          python3 scripts/check_repository.py
-          git diff --check
-
-      - name: Commit validated candidate
-        run: |
-          git config user.name github-actions[bot]
-          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add -A
-          git commit -m 'Add iOS Safari tools menu support'
-          git push origin HEAD:${{ github.head_ref }}
+      - name: Require a version increase when code changes
+        if: github.event_name == 'pull_request'
+        run: node scripts/validate-userscript.mjs --base-ref "origin/${{ github.base_ref }}"

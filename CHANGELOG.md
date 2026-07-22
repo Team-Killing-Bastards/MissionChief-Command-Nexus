@@ -26,6 +26,30 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Consolidate the two retained control surfaces into one coherent interface.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
+## [1.0.15] - 2026-07-22
+
+### Added
+
+- Added Safari website support on iPhone and iPad for the shared Unit Naming, Station Naming and Personnel Assignment menu.
+- Added iPad desktop-site detection through `MacIntel` plus touch capability while excluding Chrome, Firefox, Edge and native iOS webview wrappers.
+- Added touch/pointer dragging and visual-viewport clamping for the shared tools panel.
+
+### Fixed
+
+- Fixed the shared tools menu not appearing when MissionChief uses the responsive iOS station-list markup.
+- Fixed the 470px desktop panel width placing the menu partly or completely outside an iPhone viewport.
+- Fixed panel positioning after Safari address-bar changes, bfcache restoration and device rotation.
+
+### Changed
+
+- Unit Naming increased from `3.3.5` to `3.3.6`.
+- Station Naming increased from `1.3.1` to `1.3.2`.
+- Personnel Assignment increased from `1.2.9` to `1.3.0`.
+
+### Preserved
+
+- Desktop layout, station and vehicle filtering, naming rules, personnel assignment rules, logs, reports, pause/stop controls and saved active-tab/collapse state remain unchanged.
+
 ## [1.0.14] - 2026-07-21
 
 ### Fixed
