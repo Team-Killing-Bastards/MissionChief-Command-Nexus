@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'scripts/apply-v1.0.15-ios-menu.py'
+      - 'scripts/ios-menu-build-trigger.txt'
       - '.github/workflows/validate-userscript.yml'
 
 permissions:
@@ -173,7 +174,7 @@ The shared Unit Naming, Station Naming and Personnel Assignment panel now appear
         run: |
           git fetch origin main --force
           git checkout origin/main -- .github/workflows/validate-userscript.yml
-          rm -f scripts/apply-v1.0.15-ios-menu.py scripts/audit-ios-menu.py IOS_MENU_AUDIT.txt IOS_MENU_FUNCTIONS.txt IOS_PATCH_ERROR.txt IOS_VALIDATION_ERROR.txt
+          rm -f scripts/apply-v1.0.15-ios-menu.py scripts/audit-ios-menu.py scripts/ios-menu-build-trigger.txt IOS_MENU_AUDIT.txt IOS_MENU_FUNCTIONS.txt IOS_PATCH_ERROR.txt IOS_VALIDATION_ERROR.txt
 
       - name: Validate release candidate
         run: |
