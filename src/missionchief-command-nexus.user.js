@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.17
+// @version      1.0.18
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -38,7 +38,7 @@
 
     const UNIT_VERSION = '3.3.7';
     const STATION_VERSION = '1.3.3';
-    const PERSONNEL_VERSION = '1.3.1';
+    const PERSONNEL_VERSION = '1.3.2';
     const PERSONNEL_TRAINING_CODE = 'critical_care';
     const PERSONNEL_TRAINING_LABEL = 'Critical Care';
     const PERSONNEL_TARGET_VEHICLE_TYPE_ID = '5';
@@ -148,7 +148,13 @@
             bomb_disposal:
                 'Bomb Disposal',
             bomb_disposal_diver:
-                'Marine Bomb Disposal'
+                'Marine Bomb Disposal',
+            elw2:
+                'Level 1 Incident Commander Training',
+            gw_gefahrgut:
+                'HazMat Unit',
+            railway_fire:
+                'Railway Fire'
         });
 
     const POLICE_RULES = Object.freeze({
@@ -398,6 +404,24 @@
         })
     });
 
+    const FIRE_RULES = Object.freeze({
+        incidentCommand: makePoliceRule({
+            id: 'fire_level_1_incident_command', label: 'Level 1 Incident Commander Training',
+            vehicleTypeIds: ['15'], vehicleLabel: 'Incident Command and Control Unit', target: 3,
+            trainingAll: ['elw2'], trainingLabel: 'Level 1 Incident Commander Training'
+        }),
+        hazmatOsu: makePoliceRule({
+            id: 'fire_hazmat_osu', label: 'HazMat Unit',
+            vehicleTypeIds: ['39'], vehicleLabel: 'Operational Support Unit', target: 3,
+            trainingAll: ['gw_gefahrgut'], trainingLabel: 'HazMat Unit'
+        }),
+        railway: makePoliceRule({
+            id: 'fire_railway', label: 'Railway Fire',
+            vehicleTypeIds: ['107'], vehicleLabel: 'RRU', target: 2,
+            trainingAll: ['railway_fire'], trainingLabel: 'Railway Fire'
+        })
+    });
+
     const POLICE_ALL_RULES = Object.freeze([
         POLICE_RULES.eodCommander,
         POLICE_RULES.searchAdvisor,
@@ -428,6 +452,11 @@
         engine: 'police',
         stationTypes,
         rules
+    });
+
+    const liveFireProfile = (id, label, vehicle, requirement, policy, rules) => ({
+        id, label, vehicle, requirement, policy, live: true,
+        engine: 'police', stationTypes: ['FIRE'], rules
     });
 
     // Medical specialist profiles stay in UI preview until their exact vehicle,
@@ -520,11 +549,11 @@
                 makeServicePreviewProfile('fire_aircraft_rescue', 'Aircraft Rescue and Firefighting', 'Fire'),
                 makeServicePreviewProfile('fire_co_responder', 'Co-Responder Training', 'Fire'),
                 makeServicePreviewProfile('fire_drone_operator', 'Drone Operator Training', 'Fire'),
-                makeServicePreviewProfile('fire_hazmat', 'HazMat', 'Fire'),
+                liveFireProfile('fire_hazmat', 'HazMat Unit', 'Operational Support Unit (OSU)', '3 HazMat-trained personnel per OSU', 'LIVE: fills each exact type-39 Fire OSU with 3 gw_gefahrgut-trained personnel. Type-7 HazMat Units are excluded.', [FIRE_RULES.hazmatOsu]),
                 makeServicePreviewProfile('fire_high_volume_pump', 'High Volume Pump Training', 'Fire'),
                 makeServicePreviewProfile('fire_lifeguard', 'Lifeguard Training', 'Fire'),
-                makeServicePreviewProfile('fire_mobile_command', 'Mobile command', 'Fire'),
-                makeServicePreviewProfile('fire_railway', 'Railway Fire', 'Fire'),
+                liveFireProfile('fire_mobile_command', 'Level 1 Incident Commander Training', 'Incident Command and Control Unit (ICCU)', '3 Level 1 Incident Commanders per ICCU', "LIVE: fills each exact type-15 ICCU with 3 elw2-trained personnel while preserving its remaining seats.", [FIRE_RULES.incidentCommand]),
+                liveFireProfile('fire_railway', 'Railway Fire', 'RRU', '2 Railway Fire-trained personnel per RRU', 'LIVE: fills each exact type-107 RRU to 2/2 with railway_fire-trained personnel.', [FIRE_RULES.railway]),
                 {
                     id: 'all_fire',
                     label: 'Run all Fire / Airfield profiles',
@@ -8410,7 +8439,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.81
+         * MODULE 2: MISSION FINDER V10.6.82
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -8660,6 +8689,9 @@
     // before an untrained IRV may satisfy ordinary Police attendance. Police Medic
     // and Railway Police Officer requirements now use exact trained IRVs with two
     // qualified personnel, and ATV Carrier uses an authoritative type-30 matcher.
+    // V10.6.82: verified Fire profiles staff type-107 RRUs with two Railway Fire
+    // personnel, type-15 ICCUs with three Level 1 Incident Commanders and type-39
+    // Fire OSUs with three HazMat personnel. BASU, Welfare and HazMat share one OSU.
     // V10.6.81: Operational Support or SAR Vehicle requirements now select and
     // verify the exact type-86 Operational Support Van. Fire type-39 Operational
     // Support Units remain excluded from this SAR requirement.
@@ -9380,12 +9412,6 @@
         "Aerial Appliances": "CARP",
         "Aerial Appliance Truck": "CARP",
         "Aerial Appliance Trucks": "CARP",
-        "Breathing Apparatus Support Unit": "OSU",
-        "Breathing Apparatus Support Units": "OSU",
-        "BASU": "OSU",
-        "BASUs": "OSU",
-        "HazMat Unit or CBRN Vehicle": "OSU",
-        "HazMat Units or CBRN Vehicles": "OSU",
         "ICCU or Ambulance Control Unit": "ICCU/ACU",
         "ICCU or Ambulance Control Units": "ICCU/ACU",
         "ICCUs or Ambulance Control Units": "ICCU/ACU",
@@ -9403,8 +9429,6 @@
         "Foam Units": "RP CAFS",
         "Water Carrier": "Water Carrier",
         "Water Carriers": "Water Carrier",
-        "Welfare Vehicle": "Welfare Vehicle",
-        "Welfare Vehicles": "Welfare Vehicle",
         "Welfare Vehicles x1": "Welfare Vehicle",
 
         /*************************************************
@@ -9592,6 +9616,43 @@
         "Flatbed Recovery Vehicles": "Flatbed Recovery Vehicle",
         "modules.missionHelper.vehicles.captions.bomb_disposal_crew": "Bomb Disposal crew x1",
         "Support Units": "Support Unit",
+        "Breathing Apparatus Support Unit": "OSU",
+        "Breathing Apparatus Support Units": "OSU",
+        "Breathing Apparatus Support Vehicle": "OSU",
+        "Breathing Apparatus Support Vehicles": "OSU",
+        "BASU": "OSU",
+        "BASUs": "OSU",
+        "Welfare": "OSU",
+        "Welfare Unit": "OSU",
+        "Welfare Units": "OSU",
+        "Welfare Vehicle": "OSU",
+        "Welfare Vehicles": "OSU",
+        "HazMat": "OSU",
+        "Hazmat": "OSU",
+        "HazMat Unit": "OSU",
+        "HazMat Units": "OSU",
+        "Hazmat Unit": "OSU",
+        "Hazmat Units": "OSU",
+        "HazMat Unit or CBRN Vehicle": "OSU",
+        "HazMat Units or CBRN Vehicles": "OSU",
+        "Hazmat Unit or CBRN Vehicle": "OSU",
+        "Hazmat Units or CBRN Vehicles": "OSU",
+        "CBRN Vehicle": "OSU",
+        "CBRN Vehicles": "OSU",
+        "Operational Support Unit": "OSU",
+        "Operational Support Units": "OSU",
+        "Fire Operational Support Unit": "OSU",
+        "Fire Operational Support Units": "OSU",
+        "Breathing Apparatus Support Unit x1": "OSU",
+        "Breathing Apparatus Support Units x1": "OSU",
+        "BASU x1": "OSU",
+        "BASUs x1": "OSU",
+        "Welfare Vehicle x1": "OSU",
+        "Welfare Vehicles x1": "OSU",
+        "HazMat Unit or CBRN Vehicle x1": "OSU",
+        "HazMat Units or CBRN Vehicles x1": "OSU",
+        "Operational Support Unit x1": "OSU",
+        "Operational Support Units x1": "OSU",
     };
 
     const crossReferenceNormalisedLookup = new Map(
@@ -10652,6 +10713,28 @@
         });
     }
 
+    function isFireOperationalSupportRequirement(originalName, mappedName) {
+        const raw = normaliseVehicleText(originalName);
+        const mapped = normaliseVehicleText(mappedName);
+        return mapped === 'osu' || mapped === 'operational support unit' ||
+            /\b(?:basus?|breathing apparatus support (?:units?|vehicles?)|welfare(?: units?| vehicles?)?|hazmat(?: units?)?|cbrn vehicles?|fire operational support units?)\b/i.test(raw);
+    }
+
+    function isFireOperationalSupportUnitCheckbox(input) {
+        if (!input) return false;
+        const ids = getVehicleTypeIdentifiers(input);
+        if (ids.length > 0) return ids.includes('39');
+
+        // Name fallback is used only when MissionChief exposes no type ID.
+        // Any known non-39 type, including type-7 HazMat Units, type-29/115
+        // Welfare Vehicles and type-86 SAR Operational Support Vans, fails closed.
+        return getExtendedVehicleValues(input).some(value => {
+            const cleaned = normaliseVehicleText(value);
+            return cleaned === 'operational support unit' || cleaned === 'operational support units' ||
+                cleaned === 'osu' || cleaned === 'osus' || /\bosu\b/i.test(cleaned);
+        });
+    }
+
     function isOperationalSupportOrSarVehicleRequirement(
         originalName,
         mappedName
@@ -11068,6 +11151,14 @@
     }
 
     function getAllMatchingVehicleCheckboxes(originalName, mappedName, includeChecked) {
+        // BASU, Welfare and HazMat share the same selected exact type-39 Fire OSU.
+        if (isFireOperationalSupportRequirement(originalName, mappedName)) {
+            return sortVehicleCheckboxesByBestArrival(getVehicleCheckboxSnapshot().filter(input => {
+                if (input.disabled) return false;
+                if (!includeChecked && input.checked) return false;
+                return isFireOperationalSupportUnitCheckbox(input);
+            }));
+        }
         const candidates = getVehicleMatchCandidates(originalName, mappedName);
         const strictExactOnly = isAmbulanceTransportRequest(originalName, mappedName);
         const sartecPrefixOnly = isSartecRequirement(
@@ -11494,6 +11585,10 @@
     }
 
     function countSelectedMatchingVehicles(originalName, mappedName) {
+        if (isFireOperationalSupportRequirement(originalName, mappedName)) {
+            return getVehicleCheckboxSnapshot().filter(input =>
+                input.checked && isFireOperationalSupportUnitCheckbox(input)).length;
+        }
         const candidates = getVehicleMatchCandidates(originalName, mappedName);
         const strictExactOnly = isAmbulanceTransportRequest(originalName, mappedName);
         const sartecPrefixOnly = isSartecRequirement(originalName, mappedName);
@@ -11613,6 +11708,10 @@
     }
 
     function findUnitButton(mappedName, originalName) {
+        if (isFireOperationalSupportRequirement(originalName, mappedName)) {
+            return sortVehicleCheckboxesByBestArrival(getVehicleCheckboxSnapshot().filter(input =>
+                !input.disabled && !input.checked && isFireOperationalSupportUnitCheckbox(input)))[0] || null;
+        }
         const requestedName =
             originalName ||
             mappedName;

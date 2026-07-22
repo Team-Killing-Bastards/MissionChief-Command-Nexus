@@ -15,12 +15,12 @@
 </tr>
 </table>
 
-**Current version:** `1.0.17` · **Mission Finder engine:** `V10.6.81` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
+**Current version:** `1.0.18` · **Mission Finder engine:** `V10.6.82` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)
 
-[**What it is**](#what-it-is) · [**Install**](#install) · [**Workflows**](#operational-workflows) · [**v1.0.17**](#current-v1017-behaviour) · [**Safety**](#operational-safety) · [**Architecture**](#architecture) · [**Ownership**](#ownership-and-contributions) · [**Release system**](#release-and-quality-system)
+[**What it is**](#what-it-is) · [**Install**](#install) · [**Workflows**](#operational-workflows) · [**v1.0.18**](#current-v1018-behaviour) · [**Safety**](#operational-safety) · [**Architecture**](#architecture) · [**Ownership**](#ownership-and-contributions) · [**Release system**](#release-and-quality-system)
 
 </div>
 
@@ -98,7 +98,16 @@ Before Unit Finder, Mission Update, or Auto Mode selects resources, Command Nexu
 
 This prevents selection against a partial MissionChief vehicle table.
 
-## Current v1.0.17 behaviour
+## Current v1.0.18 behaviour
+
+### Verified Fire training profiles
+
+- Railway Fire: 2 trained personnel per exact type-107 RRU.
+- Level 1 Incident Commander: 3 trained personnel per exact type-15 ICCU.
+- HazMat Unit: 3 trained personnel per exact type-39 Fire OSU.
+- BASU, Welfare and HazMat reuse one selected Fire OSU; type-86 SAR vans remain separate.
+
+High Volume Pump, Drone Operator, Co-Responder and Lifeguard remain disabled pending later evidence.
 
 ### iOS Safari website menu
 
