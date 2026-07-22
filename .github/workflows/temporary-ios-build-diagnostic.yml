@@ -27,7 +27,7 @@ jobs:
           set -euo pipefail
           gh api \
             -H 'Accept: application/vnd.github+json' \
-            "/repos/${GITHUB_REPOSITORY}/actions/jobs/88809931705/logs" \
+            "/repos/${GITHUB_REPOSITORY}/actions/jobs/88810732654/logs" \
             > /tmp/ios-build.log
 
           echo '===== FINAL COMPATIBILITY BUILD LINES ====='
