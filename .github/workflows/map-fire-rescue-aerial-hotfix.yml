@@ -1,9 +1,13 @@
 name: Apply Rescue Pump mapping hotfix
 
 on:
-  schedule:
-    - cron: '23 * * * *'
-  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
 
 permissions:
   contents: write
@@ -11,6 +15,7 @@ permissions:
 
 jobs:
   apply-hotfix:
+    if: github.head_ref == 'agent/map-fire-rescue-aerial-to-rescue-pump'
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
