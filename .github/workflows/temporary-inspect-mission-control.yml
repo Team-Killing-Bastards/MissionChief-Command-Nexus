@@ -1,4 +1,4 @@
-name: Inspect Mission Control for iOS Safari optimisation
+name: Apply Mission Control iOS Safari optimisation
 
 on:
   pull_request:
@@ -10,72 +10,103 @@ on:
       - synchronize
     paths:
       - '.github/workflows/temporary-inspect-mission-control.yml'
+      - 'automation/mission-control-ios/**'
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: mission-control-ios-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
 
 jobs:
-  inspect:
+  apply:
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.head.ref == 'agent/add-fire-iccu-osu-profiles'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
 
     steps:
-      - name: Check out PR branch
+      - name: Check out Marty's exact PR branch
         uses: actions/checkout@v6
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
 
-      - name: Build inspection report
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Apply source and documentation changes
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p /tmp/mission-control-inspection
-          cp src/missionchief-command-nexus.user.js /tmp/mission-control-inspection/
+
+          cat automation/mission-control-ios/patch.part* | tr -d '\r\n' > /tmp/mission-control.patch.gz.b64
+          test "$(sha256sum /tmp/mission-control.patch.gz.b64 | awk '{print $1}')" = '67dce5a4766d22296b85a6c72f3aa1c672d82b1c1eab13439b389dcc93e60567'
+          base64 --decode < /tmp/mission-control.patch.gz.b64 > /tmp/mission-control.patch.gz
+          gzip --decompress --stdout /tmp/mission-control.patch.gz > /tmp/mission-control.patch
+          test "$(sha256sum /tmp/mission-control.patch | awk '{print $1}')" = 'a2120efa26200358d1413157eb63b44b193b46aec7cfe44386273f10f29d72de'
+
+          git apply --check /tmp/mission-control.patch
+          git apply /tmp/mission-control.patch
+          python3 automation/mission-control-ios/apply.py
+
+          git rm -r automation/mission-control-ios
+          git rm .github/workflows/temporary-inspect-mission-control.yml
+          git rm .github/workflows/temporary-apply-mission-control-ios.yml
+
+      - name: Validate combined v1.0.18 candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --force
+          node --check src/missionchief-command-nexus.user.js
+          node --check scripts/check-ios-compatibility.mjs
+          node scripts/validate-userscript.mjs --base-ref origin/main
+          node scripts/check-ios-compatibility.mjs
+          python3 scripts/check_repository.py
+          git diff --check
 
           python3 - <<'PY'
           from pathlib import Path
-          import re
-
-          path = Path('src/missionchief-command-nexus.user.js')
-          lines = path.read_text(encoding='utf-8').splitlines()
-          patterns = [
-              r'Mission Control', r'mission control', r'mission[-_ ]?control',
-              r'Unit Finder', r'Mission Update', r'Auto Mode',
-              r'control panel', r'control-panel', r'control_panel',
-              r'floating', r'draggable', r'collapse', r'collapsed',
-              r'visualViewport', r'isIosSafariWebsite', r'isIOS', r'iPhone', r'iPad'
-          ]
-          regex = re.compile('|'.join(patterns), re.IGNORECASE)
-          matches = [i for i, line in enumerate(lines) if regex.search(line)]
-
-          merged = []
-          for index in matches:
-              start = max(0, index - 24)
-              end = min(len(lines), index + 25)
-              if merged and start <= merged[-1][1] + 1:
-                  merged[-1] = (merged[-1][0], max(merged[-1][1], end))
-              else:
-                  merged.append((start, end))
-
-          report = []
-          report.append(f'Source lines: {len(lines)}')
-          report.append(f'Matched lines: {len(matches)}')
-          report.append('')
-          for start, end in merged:
-              report.append(f'===== lines {start + 1}-{end} =====')
-              for i in range(start, end):
-                  report.append(f'{i + 1:06d}: {lines[i]}')
-              report.append('')
-
-          Path('/tmp/mission-control-inspection/report.txt').write_text(
-              '\n'.join(report), encoding='utf-8'
-          )
+          source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8')
+          required = {
+              'Safari detector': 'function isMissionFinderIosSafariWebsite(',
+              'mobile wrapper class': 'mf2026-ios-safari',
+              'viewport bounds': 'function getMissionFinderViewportBounds(',
+              'safe-area reset': 'function resetMissionFinderIosPosition(',
+              'control collapse key': 'MF_CONTROL_COLLAPSED_KEY',
+              'load-list collapse key': 'MF_VEHICLE_LOAD_COLLAPSED_KEY',
+              'pointer drag': "dragHandle.addEventListener('pointerdown'",
+              'chevron collapse': "collapseButton.textContent = missionFinderIosSafari ? (collapsed ? '▾' : '▴')",
+          }
+          missing = [label for label, token in required.items() if token not in source]
+          if missing:
+              raise SystemExit('Missing Mission Control iOS contracts: ' + ', '.join(missing))
+          if '#control-panel {\n                width: 260px;' not in source:
+              raise SystemExit('Desktop Mission Control width changed unexpectedly')
+          if '#vehicle-load-list-box {\n                width: 300px;' not in source:
+              raise SystemExit('Desktop Vehicle Load List width changed unexpectedly')
+          if "if (!missionFinderIosSafari) {\n        centreMissionFinderWindow();" not in source:
+              raise SystemExit('Desktop initial centring path is no longer isolated')
+          print('Mission Control iOS Safari focused checks passed.')
           PY
 
-      - name: Upload exact source and report
-        uses: actions/upload-artifact@v4
-        with:
-          name: mission-control-inspection
-          path: /tmp/mission-control-inspection
-          retention-days: 1
+      - name: Commit finished changes to PR 82
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            src/missionchief-command-nexus.user.js \
+            README.md \
+            CHANGELOG.md \
+            src/README.md \
+            scripts/check-ios-compatibility.mjs
+          git commit -m 'Optimise Mission Control for iOS Safari'
+          git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
