@@ -1,0 +1,84 @@
+name: Apply final iOS compatibility hardening
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+    paths:
+      - '.github/workflows/temporary-final-ios-hardening.yml'
+      - 'automation/final-ios-hardening.py'
+      - 'src/missionchief-command-nexus.user.js'
+      - 'README.md'
+      - 'scripts/check_repository.py'
+      - 'scripts/check-ios-compatibility.mjs'
+      - '.github/workflows/validate-userscript.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: final-ios-hardening-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  harden:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'audit/ios-full-compatibility'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Apply and validate hardening
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -f automation/final-ios-hardening.py ]]; then
+            python3 automation/final-ios-hardening.py
+            git rm automation/final-ios-hardening.py
+          fi
+
+          python3 -m py_compile scripts/check_repository.py
+          node --check scripts/check-ios-compatibility.mjs
+          node --check scripts/prepare-release.mjs
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs --base-ref origin/main
+          node scripts/check-ios-compatibility.mjs
+          python3 scripts/check_repository.py
+          git diff --check
+
+      - name: Commit hardening changes
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if git diff --quiet && git diff --cached --quiet; then
+            echo 'No hardening changes remain to commit.'
+            exit 0
+          fi
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            src/missionchief-command-nexus.user.js \
+            README.md \
+            scripts/check_repository.py
+          git commit -m 'Harden iOS station loader and compatibility regression checks'
+          git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
