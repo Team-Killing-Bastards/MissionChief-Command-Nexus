@@ -1,0 +1,37 @@
+name: Diagnose final iOS hardening failure
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+    paths:
+      - '.github/workflows/temporary-final-ios-diagnostic.yml'
+
+permissions:
+  actions: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Print exact hardening failure
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api \
+            -H 'Accept: application/vnd.github+json' \
+            "/repos/${GITHUB_REPOSITORY}/actions/jobs/88814741422/logs" \
+            > /tmp/final-ios-hardening.log
+
+          echo '===== FINAL IOS HARDENING FAILURE ====='
+          grep -n -E -i \
+            'expected exactly|ERROR:|failed|missing|Process completed|Traceback|SyntaxError' \
+            /tmp/final-ios-hardening.log \
+            | tail -n 80 || true
