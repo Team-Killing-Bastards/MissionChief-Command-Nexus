@@ -1,4 +1,4 @@
-name: Apply iOS Safari stations menu patch
+name: Apply iOS Safari release documentation
 
 on:
   pull_request:
@@ -24,16 +24,16 @@ jobs:
           ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
 
-      - name: Apply and validate source patch
+      - name: Apply, validate and commit documentation
         shell: bash
         run: |
           set -euo pipefail
 
-          PAYLOAD='automation/ios-safari-stations-menu.patch.gz.b64'
-          PATCH='/tmp/ios-safari-stations-menu.patch'
+          PAYLOAD='automation/ios-safari-stations-docs.patch.gz.b64'
+          PATCH='/tmp/ios-safari-stations-docs.patch'
 
           if [[ ! -f "${PAYLOAD}" ]]; then
-            echo 'Patch payload already consumed.'
+            echo 'Documentation patch payload already consumed.'
             exit 0
           fi
 
@@ -44,16 +44,12 @@ jobs:
 
           node --check src/missionchief-command-nexus.user.js
           node scripts/validate-userscript.mjs
+          node scripts/check-ios-stations-menu.mjs
+          python3 scripts/check_repository.py
           git diff --check
-
-          grep -Fq 'function isIosSafariBrowser()' src/missionchief-command-nexus.user.js
-          grep -Fq 'function isIosStationsListScreen()' src/missionchief-command-nexus.user.js
-          grep -Fq "panel.classList.add('mc-namer-ios-safari')" src/missionchief-command-nexus.user.js
-          grep -Fq 'function makeIosPanelDraggable(panel, handle)' src/missionchief-command-nexus.user.js
-          grep -Fq "if (isIosSafariBrowser()) return isIosStationsListScreen();" src/missionchief-command-nexus.user.js
 
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add src/missionchief-command-nexus.user.js
-          git commit -m 'Add iOS Safari stations menu support'
+          git add README.md src/README.md CHANGELOG.md
+          git commit -m 'Document iOS Safari stations menu release'
           git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
