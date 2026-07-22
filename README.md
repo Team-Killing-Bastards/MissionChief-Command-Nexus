@@ -15,12 +15,12 @@
 </tr>
 </table>
 
-**Current version:** `1.0.15` · **Mission Finder engine:** `V10.6.80` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
+**Current version:** `1.0.16` · **Mission Finder engine:** `V10.6.80` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)
 
-[**What it is**](#what-it-is) · [**Install**](#install) · [**Workflows**](#operational-workflows) · [**v1.0.15**](#current-v1015-behaviour) · [**Safety**](#operational-safety) · [**Architecture**](#architecture) · [**Ownership**](#ownership-and-contributions) · [**Release system**](#release-and-quality-system)
+[**What it is**](#what-it-is) · [**Install**](#install) · [**Workflows**](#operational-workflows) · [**v1.0.16**](#current-v1016-behaviour) · [**Safety**](#operational-safety) · [**Architecture**](#architecture) · [**Ownership**](#ownership-and-contributions) · [**Release system**](#release-and-quality-system)
 
 </div>
 
@@ -42,7 +42,7 @@ The distributed product is one `.user.js` file with one metadata block and one i
 Their primary shared contract is the **vehicle-training register**. The administration engine can verify exactly which personnel are assigned to each vehicle; the mission engine can then select specialist capability using vehicle identity and evidence rather than a display name alone.
 
 > [!IMPORTANT]
-> **MartyBlyth remains the creator, principal userscript author, technical owner, and release authority.** **Conroy1988 supports repository infrastructure, documentation, validation, and general project operations. After identifying the Safari compatibility gap on the iPhone and iPad devices he uses, Conroy asked Marty for permission to contribute, then initiated, designed, and implemented the v1.0.15 iOS Safari compatibility layer for the shared Unit, Station and Personnel menu.** This scoped contribution does not change the project's overall ownership or release authority.
+> **MartyBlyth remains the creator, principal userscript author, technical owner, and release authority.** **Conroy1988 supports repository infrastructure, documentation, validation, and general project operations. After identifying the Safari compatibility gap on the iPhone and iPad devices he uses, Conroy asked Marty for permission to contribute, then initiated, designed, and implemented the v1.0.15 iOS Safari compatibility layer and the v1.0.16 station-workflow hardening for the shared Unit, Station and Personnel menu.** This scoped contribution does not change the project's overall ownership or release authority.
 
 ## Install
 
@@ -98,13 +98,16 @@ Before Unit Finder, Mission Update, or Auto Mode selects resources, Command Nexu
 
 This prevents selection against a partial MissionChief vehicle table.
 
-## Current v1.0.15 behaviour
+## Current v1.0.16 behaviour
 
 ### iOS Safari website menu
 
 The shared Unit Naming, Station Naming and Personnel Assignment panel now appears on the MissionChief website in Safari on iPhone and iPad.
 
 - Responsive station-list markup is recognised without weakening the desktop station-page guard.
+- Unit Naming, Station Naming, Personnel Assignment and Build Personnel Register all use the same responsive station discovery layer.
+- Exactly one Command Nexus administration menu is retained after duplicate injection, Safari bfcache restoration or page-fragment replacement.
+- Responsive `Details` links fall back to a hidden same-origin station iframe when MissionChief's desktop lightbox binding is unavailable, preventing navigation away from the Stations tab.
 - The panel uses Safari safe-area insets and the visual viewport, including address-bar changes and device rotation.
 - The header supports touch/pointer dragging while the panel body and reports retain touch scrolling.
 - iPad desktop-site mode is recognised through touch-capable `MacIntel` detection.
@@ -222,7 +225,7 @@ Command Nexus remains **MartyBlyth's project**. Contributions are attributed at 
 | Contributor | Role and responsibility |
 |---|---|
 | **[MartyBlyth](https://github.com/Martyblyth)** | Creator and technical owner; original author of Mission Finder and the Unit, Station & Personnel systems; principal userscript development, technical direction, release decisions, and ongoing feature authority |
-| **[Conroy1988](https://github.com/Conroy1988)** | Project helper for repository infrastructure, documentation, validation, and general operations; independently initiated the iOS Safari compatibility work, obtained Marty's permission to contribute, and designed and implemented the scoped v1.0.15 compatibility layer for the shared administration menu |
+| **[Conroy1988](https://github.com/Conroy1988)** | Project helper for repository infrastructure, documentation, validation, and general operations; independently initiated the iOS Safari compatibility work, obtained Marty's permission to contribute, and designed and implemented the scoped v1.0.15 compatibility layer plus the v1.0.16 station-workflow hardening for the shared administration menu |
 
 ## Release and quality system
 

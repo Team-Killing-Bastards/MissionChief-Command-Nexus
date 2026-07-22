@@ -58,6 +58,24 @@ function replaceExactlyOnce(text, pattern, replacement, label) {
   return updated;
 }
 
+function replaceIfPresentExactlyOnce(
+  text,
+  pattern,
+  replacement,
+  label
+) {
+  if (!pattern.test(text)) {
+    return text;
+  }
+
+  return replaceExactlyOnce(
+    text,
+    pattern,
+    replacement,
+    label
+  );
+}
+
 function extractCurrentVersion(source) {
   const match = source.match(
     /^\/\/\s*@version\s+(\S+)\s*$/m
@@ -146,11 +164,21 @@ async function main() {
     'README current version'
   );
 
-  updatedReadme = replaceExactlyOnce(
+  const behaviourAnchor =
+    `current-v${version.replace(/[^0-9A-Za-z-]/g, '')}-behaviour`;
+
+  updatedReadme = replaceIfPresentExactlyOnce(
     updatedReadme,
-    /Command Nexus v\S+ is a single userscript/,
-    `Command Nexus v${version} is a single userscript`,
-    'README version description'
+    /\[\*\*v[^*]+\*\*\]\(#current-v[^)]+-behaviour\)/,
+    `[**v${version}**](#${behaviourAnchor})`,
+    'README current-behaviour navigation link'
+  );
+
+  updatedReadme = replaceIfPresentExactlyOnce(
+    updatedReadme,
+    /^## Current v\S+ behaviour$/m,
+    `## Current v${version} behaviour`,
+    'README current-behaviour heading'
   );
 
   const updatedSourceReadme = replaceExactlyOnce(
