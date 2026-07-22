@@ -1,18 +1,20 @@
 name: Apply Rescue Pump mapping hotfix
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/map-fire-rescue-aerial-hotfix.yml'
+  issue_comment:
+    types:
+      - created
 
 permissions:
   contents: write
   pull-requests: write
+  issues: write
 
 jobs:
   apply-hotfix:
+    if: >-
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '/apply-rescue-pump-hotfix')
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -100,6 +102,8 @@ jobs:
           git diff --check
 
       - name: Commit validated hotfix to main
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
@@ -113,5 +117,3 @@ jobs:
           gh pr close 83 \
             --repo "${GITHUB_REPOSITORY}" \
             --comment 'Superseded by the validated direct-main v1.0.19 hotfix.' || true
-        env:
-          GH_TOKEN: ${{ github.token }}
