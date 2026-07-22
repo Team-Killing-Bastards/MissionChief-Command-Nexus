@@ -1,0 +1,82 @@
+name: Audit iOS Safari feature compatibility
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/temporary-ios-full-compatibility-audit.yml'
+      - 'src/missionchief-command-nexus.user.js'
+      - 'scripts/check-ios-compatibility.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: Export source and audit browser-sensitive paths
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out audit branch
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Validate source syntax
+        run: node --check src/missionchief-command-nexus.user.js
+
+      - name: Generate static compatibility inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOURCE='src/missionchief-command-nexus.user.js'
+          REPORT='ios-compatibility-audit.md'
+
+          {
+            echo '# iOS Safari compatibility audit inventory'
+            echo
+            echo 'Generated from the exact pull-request source. Matches are evidence for review, not automatic defects.'
+            echo
+            echo '## Desktop/responsive DOM selectors'
+            echo '```text'
+            grep -nE 'lightbox-open|list-group-item|building_list|building_list_li|data-building-id|href\^="/buildings/"|href\*="/buildings/"' "${SOURCE}" || true
+            echo '```'
+            echo
+            echo '## Frames, dialogs and navigation'
+            echo '```text'
+            grep -nE 'iframe|contentDocument|contentWindow|window\.open|location\.(href|assign|replace)|history\.|\.click\(\)|dispatchEvent|alert\(|confirm\(|prompt\(' "${SOURCE}" || true
+            echo '```'
+            echo
+            echo '## Pointer, touch, scroll and focus'
+            echo '```text'
+            grep -nE 'pointer|touch|visualViewport|scrollIntoView|scrollTo|focus\(|blur\(|preventDefault|setPointerCapture|releasePointerCapture' "${SOURCE}" || true
+            echo '```'
+            echo
+            echo '## Storage and downloads'
+            echo '```text'
+            grep -nE 'localStorage|sessionStorage|Blob\(|URL\.createObjectURL|download\s*=|FileReader|navigator\.clipboard' "${SOURCE}" || true
+            echo '```'
+            echo
+            echo '## Network and page parsing'
+            echo '```text'
+            grep -nE 'fetch\(|XMLHttpRequest|DOMParser|FormData|URLSearchParams|response\.text|response\.json' "${SOURCE}" || true
+            echo '```'
+          } > "${REPORT}"
+
+      - name: Upload exact source and audit inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-full-compatibility-audit
+          path: |
+            src/missionchief-command-nexus.user.js
+            ios-compatibility-audit.md
+          if-no-files-found: error
+          retention-days: 3
