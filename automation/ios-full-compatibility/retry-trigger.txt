@@ -1,0 +1,1 @@
+Retry the iOS Safari compatibility build after aligning release preparation with the current README.
