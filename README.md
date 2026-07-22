@@ -20,7 +20,7 @@
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)
 
-[**What it is**](#what-it-is) · [**Install**](#install) · [**Workflows**](#operational-workflows) · [**v1.0.15**](#current-v1015-behaviour) · [**Safety**](#operational-safety) · [**Architecture**](#architecture) · [**Release system**](#release-and-quality-system)
+[**What it is**](#what-it-is) · [**Install**](#install) · [**Workflows**](#operational-workflows) · [**v1.0.15**](#current-v1015-behaviour) · [**Safety**](#operational-safety) · [**Architecture**](#architecture) · [**Ownership**](#ownership-and-contributions) · [**Release system**](#release-and-quality-system)
 
 </div>
 
@@ -42,7 +42,7 @@ The distributed product is one `.user.js` file with one metadata block and one i
 Their primary shared contract is the **vehicle-training register**. The administration engine can verify exactly which personnel are assigned to each vehicle; the mission engine can then select specialist capability using vehicle identity and evidence rather than a display name alone.
 
 > [!IMPORTANT]
-> **Developed by MartyBlyth**, the creator, userscript author, technical owner, and release authority. **Conroy1988 is the project helper** for repository infrastructure, documentation, validation, and general project operations. He is not a userscript developer.
+> **MartyBlyth remains the creator, principal userscript author, technical owner, and release authority.** **Conroy1988 supports repository infrastructure, documentation, validation, and general project operations, and designed and implemented the v1.0.15 iOS Safari compatibility layer for the shared Unit, Station and Personnel menu at Marty's request.** This scoped contribution does not change the project's overall ownership or release authority.
 
 ## Install
 
@@ -109,6 +109,9 @@ The shared Unit Naming, Station Naming and Personnel Assignment panel now appear
 - The header supports touch/pointer dragging while the panel body and reports retain touch scrolling.
 - iPad desktop-site mode is recognised through touch-capable `MacIntel` detection.
 - Chrome, Firefox, Edge and native iOS webview/app wrappers are not treated as Safari website sessions.
+
+> [!NOTE]
+> This compatibility layer was designed and implemented by **[Conroy1988](https://github.com/Conroy1988)** at **[MartyBlyth](https://github.com/Martyblyth)**'s request, specifically to make the shared administration menu usable on the iPhone and iPad Safari devices Conroy uses. It is a focused compatibility contribution; the underlying Unit, Station and Personnel system remains Marty's work.
 
 ### Live requirements are authoritative
 
@@ -212,6 +215,15 @@ MissionChief Command Nexus
 
 See [Architecture](docs/ARCHITECTURE.md) and [Developer Handoff](docs/DEVELOPER_HANDOFF.md) for deeper engineering detail.
 
+## Ownership and contributions
+
+Command Nexus remains **MartyBlyth's project**. Contributions are attributed at feature level so the repository records who delivered each piece of work without collapsing the project's ownership boundary.
+
+| Contributor | Role and responsibility |
+|---|---|
+| **[MartyBlyth](https://github.com/Martyblyth)** | Creator and technical owner; original author of Mission Finder and the Unit, Station & Personnel systems; principal userscript development, technical direction, release decisions, and ongoing feature authority |
+| **[Conroy1988](https://github.com/Conroy1988)** | Project helper for repository infrastructure, documentation, validation, and general operations; designer and implementer of the scoped v1.0.15 iOS Safari compatibility layer for the shared administration menu |
+
 ## Release and quality system
 
 ```text
@@ -262,6 +274,6 @@ Discord is notified only after the release, immutable GitHub source, and Greasy 
 ### One installation. Two proven engines. One operational chain.
 
 **Created and technically owned by [MartyBlyth](https://github.com/Martyblyth).**  
-Repository and documentation support by [Conroy1988](https://github.com/Conroy1988).
+Repository infrastructure, documentation, validation, and v1.0.15 iOS Safari compatibility by [Conroy1988](https://github.com/Conroy1988).
 
 </div>
