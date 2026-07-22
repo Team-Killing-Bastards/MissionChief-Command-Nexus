@@ -19,7 +19,7 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - name: Print final compatibility build lines
+      - name: Print exact git failure
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -27,8 +27,11 @@ jobs:
           set -euo pipefail
           gh api \
             -H 'Accept: application/vnd.github+json' \
-            "/repos/${GITHUB_REPOSITORY}/actions/jobs/88812796265/logs" \
+            "/repos/${GITHUB_REPOSITORY}/actions/jobs/88812965548/logs" \
             > /tmp/ios-build.log
 
-          echo '===== FINAL COMPATIBILITY COMMIT FAILURE ====='
-          tail -n 100 /tmp/ios-build.log
+          echo '===== EXACT GIT FAILURE ====='
+          grep -n -E -i \
+            'fatal:|error:|pathspec|rejected|failed to push|nothing added|did not match|git commit|git push|Process completed' \
+            /tmp/ios-build.log \
+            | tail -n 60 || true
