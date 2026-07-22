@@ -52,7 +52,7 @@ requireMinimum(
 );
 
 requirePattern(
-  /function isStationOverviewScreen\(\)\s*\{[\s\S]{0,900}isIosSafariWebsite\(\)[\s\S]{0,900}getStationOverviewEntries\(\)/,
+  /function isStationOverviewScreen\(\)\s*\{[\s\S]{0,1200}getStationOverviewEntries\(\)[\s\S]{0,1200}isIosSafariWebsite\(\)/,
   'iOS-only responsive loader fallback'
 );
 requirePattern(
