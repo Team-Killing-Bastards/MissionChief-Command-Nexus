@@ -1,0 +1,37 @@
+name: Diagnose iOS compatibility build failure
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+    paths:
+      - '.github/workflows/temporary-ios-build-diagnostic.yml'
+
+permissions:
+  actions: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Print exact compatibility build failure
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api \
+            -H 'Accept: application/vnd.github+json' \
+            "/repos/${GITHUB_REPOSITORY}/actions/jobs/88809931705/logs" \
+            > /tmp/ios-build.log
+
+          echo '===== EXACT COMPATIBILITY BUILD FAILURE ====='
+          grep -n -E -i \
+            'checksum mismatch|git apply|error|failed|missing|expected|Process completed' \
+            /tmp/ios-build.log \
+            | tail -n 80 || true
