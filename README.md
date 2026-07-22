@@ -15,12 +15,12 @@
 </tr>
 </table>
 
-**Current version:** `1.0.16` · **Mission Finder engine:** `V10.6.80` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
+**Current version:** `1.0.17` · **Mission Finder engine:** `V10.6.81` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)
 
-[**What it is**](#what-it-is) · [**Install**](#install) · [**Workflows**](#operational-workflows) · [**v1.0.16**](#current-v1016-behaviour) · [**Safety**](#operational-safety) · [**Architecture**](#architecture) · [**Ownership**](#ownership-and-contributions) · [**Release system**](#release-and-quality-system)
+[**What it is**](#what-it-is) · [**Install**](#install) · [**Workflows**](#operational-workflows) · [**v1.0.17**](#current-v1017-behaviour) · [**Safety**](#operational-safety) · [**Architecture**](#architecture) · [**Ownership**](#ownership-and-contributions) · [**Release system**](#release-and-quality-system)
 
 </div>
 
@@ -98,7 +98,7 @@ Before Unit Finder, Mission Update, or Auto Mode selects resources, Command Nexu
 
 This prevents selection against a partial MissionChief vehicle table.
 
-## Current v1.0.16 behaviour
+## Current v1.0.17 behaviour
 
 ### iOS Safari website menu
 
@@ -142,6 +142,7 @@ This prevents cases such as an old Major Foam Tender row replacing a current Res
 
 - Generic type-66 `4x4 Vehicle` matching is restored.
 - SAR Commander demand converts to Control Van capability.
+- `Operational Support or SAR Vehicle` selects and verifies the exact type-86 Operational Support Van.
 - Seagoing Vessel requirements recognise supported ALB / ABL / All-weather Lifeboat variants.
 - ATV Carrier matching uses authoritative vehicle type `30` without confusing it with Armed Traffic Cars.
 - Patient and ambulance demand is reconciled across repeated selection passes.
