@@ -1,6 +1,6 @@
 name: Temporary Operational Support SAR diagnostic builder
 
-# Diagnostic v4: exact selected-count anchor, including no blank line.
+# Diagnostic v5: literal scoped patcher correction with no indentation rewriting.
 on:
   push:
     branches:
@@ -43,25 +43,15 @@ jobs:
               dog_flag,
               dog_flag_with_operational,
               "verification strict flag",
-          )'''.replace('          ', '')
-          new = '''count_dog_flag = """        const dogSupportOnly = isDogSupportUnitRequirement(originalName, mappedName);
-              const generic4x4Only ="""
-          count_dog_flag_with_operational = """        const dogSupportOnly = isDogSupportUnitRequirement(originalName, mappedName);
-              const operationalSupportOnly =
-                  isOperationalSupportOrSarVehicleRequirement(
-                      originalName,
-                      mappedName
-                  );
-
-              const generic4x4Only ="""
-          source = replace_in_segment(
+          )'''
+          new = r'''source = replace_in_segment(
               source,
               "    function countSelectedMatchingVehicles(originalName, mappedName) {",
               "    function refreshVehicleRequirementCounters() {",
-              count_dog_flag,
-              count_dog_flag_with_operational,
+              "        const dogSupportOnly = isDogSupportUnitRequirement(originalName, mappedName);\n        const generic4x4Only =",
+              "        const dogSupportOnly = isDogSupportUnitRequirement(originalName, mappedName);\n        const operationalSupportOnly =\n            isOperationalSupportOrSarVehicleRequirement(\n                originalName,\n                mappedName\n            );\n\n        const generic4x4Only =",
               "verification strict flag",
-          )'''.replace('          ', '')
+          )'''
           if text.count(old) != 1:
               raise SystemExit(f'Patcher correction anchor count: {text.count(old)}')
           path.write_text(text.replace(old, new, 1), encoding='utf-8', newline='\n')
@@ -69,7 +59,7 @@ jobs:
           python3 /tmp/operational-support-sar-patch.py > /tmp/patch-result.log 2>&1
           status=$?
           {
-            echo "Operational Support SAR exact-anchor diagnostic status: ${status}."
+            echo "Operational Support SAR literal-anchor diagnostic status: ${status}."
             echo
             echo '```text'
             cat /tmp/patch-result.log
