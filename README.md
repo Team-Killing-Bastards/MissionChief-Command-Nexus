@@ -15,13 +15,13 @@
 </tr>
 </table>
 
-**Current version:** `1.0.14` · **Mission Finder engine:** `V10.6.80` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
+**Current version:** `1.0.15` · **Mission Finder engine:** `V10.6.80` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)
 [![Release](https://img.shields.io/github/v/release/Team-Killing-Bastards/MissionChief-Command-Nexus?label=release&color=7b6cf6)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/latest)
 
-[**What it is**](#what-it-is) · [**Install**](#install) · [**Workflows**](#operational-workflows) · [**v1.0.14**](#current-v1014-behaviour) · [**Safety**](#operational-safety) · [**Architecture**](#architecture) · [**Release system**](#release-and-quality-system)
+[**What it is**](#what-it-is) · [**Install**](#install) · [**Workflows**](#operational-workflows) · [**v1.0.15**](#current-v1015-behaviour) · [**Safety**](#operational-safety) · [**Architecture**](#architecture) · [**Release system**](#release-and-quality-system)
 
 </div>
 
@@ -99,7 +99,22 @@ Before Unit Finder, Mission Update, or Auto Mode selects resources, Command Nexu
 
 This prevents selection against a partial MissionChief vehicle table.
 
-## Current v1.0.14 behaviour
+## Current v1.0.15 behaviour
+
+### iOS Safari Stations menu
+
+Command Nexus now exposes the Resource Administration menu on the MissionChief **Stations** list when genuine iOS or iPadOS Safari is detected.
+
+- The mobile surface activates only on the `/buildings` Stations-list context.
+- It does not replace or modify the existing desktop panel path.
+- The panel uses a responsive floating layout with iPhone and iPad safe-area support.
+- The header can be dragged with touch or pointer input and is clamped inside the visible viewport.
+- The minimise button collapses the panel into a compact header for easier station-list scrolling.
+- The collapsed state and last safe position are stored separately from desktop preferences.
+- Form controls retain mobile-friendly touch targets and 16px input text to avoid Safari focus zoom.
+- Chrome, Firefox, Edge and other alternative iOS browsers do not enter the Safari-specific path.
+
+The mobile implementation is intentionally limited to the Stations list. Other MissionChief mobile pages remain on their existing behaviour until separately designed and validated.
 
 ### Live requirements are authoritative
 
@@ -147,12 +162,12 @@ Command Nexus is operational software, not a claim that every MissionChief UK ve
 | Limitation | Current position |
 |---|---|
 | **Country coverage** | MissionChief UK only |
-| **Primary environment** | Desktop browser is the principal development and operating target |
+| **Primary environment** | Desktop remains the principal development target; the Stations list now has a dedicated iOS/iPadOS Safari surface |
 | **Training profiles** | Remaining Medical, Fire, Airfield, SAR, Mountain Rescue, and Coastguard profiles are tracked through issues |
 | **External requirements data** | Some Fire specialist logic remains dependent on stable requirement data exposed by MissionChief or compatible panels |
 | **PSU assignment priority** | Nine-seat Police Support Unit preference remains tracked work |
 | **Interface consolidation** | One installation still contains two retained operational control surfaces |
-| **Mobile and Safari** | No broad support claim without device-specific evidence |
+| **Mobile and Safari** | iOS/iPadOS Safari Stations-list menu implemented; other mobile pages, devices and browsers remain unvalidated |
 | **Live-game variability** | MissionChief markup and labels can change independently of this repository |
 
 Use the [issue tracker](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues) as the authoritative development queue.
