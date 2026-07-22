@@ -1,6 +1,6 @@
-name: Temporary Operational Support SAR diagnostic builder
+name: Temporary Operational Support SAR final builder
 
-# Diagnostic v6: exact selected-count anchor and current findUnitButton boundary.
+# Final builder v7: validated patch, explicit type-39 rejection and clean PR commit.
 on:
   push:
     branches:
@@ -9,13 +9,13 @@ on:
       - '.github/workflows/temporary-operational-support-sar-diagnostic-builder.yml'
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
 
 jobs:
-  diagnose:
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
 
     steps:
       - name: Check out target branch
@@ -24,19 +24,30 @@ jobs:
           fetch-depth: 0
           ref: agent/fix-operational-support-sar-vehicle
 
-      - name: Run corrected patcher and report exact result
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - name: Build, validate and publish candidate
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          set +e
-          git fetch origin main --force
-          git show origin/main:scripts/temporary-operational-support-sar-patch.py > /tmp/operational-support-sar-patch.py
-          python3 - <<'PY'
+          set -uo pipefail
+          LOG_FILE="/tmp/operational-support-sar-final.log"
+
+          run_build() {
+            set -euo pipefail
+            git fetch origin main --force
+            git show origin/main:scripts/temporary-operational-support-sar-patch.py > /tmp/operational-support-sar-patch.py
+
+            python3 - <<'PY'
           from pathlib import Path
           path = Path('/tmp/operational-support-sar-patch.py')
           text = path.read_text(encoding='utf-8')
-          old = '''source = replace_in_segment(
+
+          old_verification = '''source = replace_in_segment(
               source,
               "    function countSelectedMatchingVehicles(originalName, mappedName) {",
               "    function refreshVehicleRequirementCounters() {",
@@ -44,7 +55,7 @@ jobs:
               dog_flag_with_operational,
               "verification strict flag",
           )'''
-          new = r'''source = replace_in_segment(
+          new_verification = r'''source = replace_in_segment(
               source,
               "    function countSelectedMatchingVehicles(originalName, mappedName) {",
               "    function refreshVehicleRequirementCounters() {",
@@ -52,26 +63,112 @@ jobs:
               "        const dogSupportOnly = isDogSupportUnitRequirement(originalName, mappedName);\n        const operationalSupportOnly =\n            isOperationalSupportOrSarVehicleRequirement(\n                originalName,\n                mappedName\n            );\n\n        const generic4x4Only =",
               "verification strict flag",
           )'''
-          if text.count(old) != 1:
-              raise SystemExit(f'Verification correction anchor count: {text.count(old)}')
-          text = text.replace(old, new, 1)
+          if text.count(old_verification) != 1:
+              raise SystemExit(f'Verification correction anchor count: {text.count(old_verification)}')
+          text = text.replace(old_verification, new_verification, 1)
 
           old_boundary = '"    async function clickUnitButton"'
           new_boundary = '"    function injectStyles() {"'
           if text.count(old_boundary) != 1:
               raise SystemExit(f'findUnitButton boundary anchor count: {text.count(old_boundary)}')
           text = text.replace(old_boundary, new_boundary, 1)
-
           path.write_text(text, encoding='utf-8', newline='\n')
           PY
-          python3 /tmp/operational-support-sar-patch.py > /tmp/patch-result.log 2>&1
+
+            python3 /tmp/operational-support-sar-patch.py
+
+            python3 - <<'PY'
+          from pathlib import Path
+          path = Path('src/missionchief-command-nexus.user.js')
+          source = path.read_text(encoding='utf-8')
+          old = '''        if (getVehicleTypeIdentifiers(input).includes('86')) {
+              return true;
+          }
+
+          return getExtendedVehicleValues(input).some(value => {'''.replace('          ', '')
+          new = '''        const typeIdentifiers = getVehicleTypeIdentifiers(input);
+          if (typeIdentifiers.includes('86')) {
+              return true;
+          }
+          if (typeIdentifiers.includes('39')) {
+              return false;
+          }
+
+          return getExtendedVehicleValues(input).some(value => {'''.replace('          ', '')
+          if source.count(old) != 1:
+              raise SystemExit(f'Type-39 exclusion anchor count: {source.count(old)}')
+          path.write_text(source.replace(old, new, 1), encoding='utf-8', newline='\n')
+          PY
+
+            python3 - <<'PY'
+          from pathlib import Path
+          source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8')
+          markers = [
+              '// @version      1.0.17',
+              'MODULE 2: MISSION FINDER V10.6.81',
+              '"Operational Support or SAR Vehicle": "Operational Support Van"',
+              '"Operational Support or SAR Vehicle x1": "Operational Support Van"',
+              'function isOperationalSupportOrSarVehicleRequirement(',
+              'function isOperationalSupportVanCheckbox(',
+              "typeIdentifiers.includes('86')",
+              "typeIdentifiers.includes('39')",
+              "!raw.includes('operational support unit')",
+              'matches = isOperationalSupportVanCheckbox(input);',
+          ]
+          missing = [marker for marker in markers if marker not in source]
+          if missing:
+              raise SystemExit('Missing focused regression markers: ' + ', '.join(missing))
+          if source.count('const operationalSupportOnly =') != 2:
+              raise SystemExit('Expected exactly two Operational Support strict flags')
+          if source.count('isOperationalSupportVanCheckbox(') < 4:
+              raise SystemExit('Type-86 matcher is not connected to selection, verification and fallback')
+          print('Focused Operational Support SAR checks passed.')
+          PY
+
+            node --check src/missionchief-command-nexus.user.js
+            node scripts/validate-userscript.mjs
+            node scripts/validate-userscript.mjs --base-ref origin/main
+            node scripts/check-ios-compatibility.mjs
+            python3 scripts/check_repository.py
+            git diff --check
+
+            git config user.name MartyBlyth
+            git config user.email 32400596+Martyblyth@users.noreply.github.com
+            git rm -f .github/workflows/build-operational-support-sar-fix.yml
+            git add CHANGELOG.md README.md src/README.md src/missionchief-command-nexus.user.js
+            git reset --soft origin/main
+            git restore --staged \
+              .github/workflows/temporary-operational-support-sar-builder.yml \
+              .github/workflows/temporary-operational-support-sar-push-builder.yml \
+              .github/workflows/temporary-operational-support-sar-diagnostic-builder.yml \
+              .github/workflows/temporary-command-nexus-action-probe.yml \
+              scripts/temporary-operational-support-sar-patch.py 2>/dev/null || true
+            git restore \
+              .github/workflows/temporary-operational-support-sar-builder.yml \
+              .github/workflows/temporary-operational-support-sar-push-builder.yml \
+              .github/workflows/temporary-operational-support-sar-diagnostic-builder.yml \
+              .github/workflows/temporary-command-nexus-action-probe.yml \
+              scripts/temporary-operational-support-sar-patch.py 2>/dev/null || true
+            git commit -m 'Restore Operational Support SAR selection'
+            git push --force origin HEAD:agent/fix-operational-support-sar-vehicle
+          }
+
+          set +e
+          run_build > >(tee "${LOG_FILE}") 2>&1
           status=$?
+          set -e
+
+          if [[ "${status}" -eq 0 ]]; then
+            gh pr comment 80 --repo "${GITHUB_REPOSITORY}" --body "Operational Support SAR final build passed. The PR branch now contains one validated v1.0.17 release commit with Mission Finder V10.6.81."
+            exit 0
+          fi
+
           {
-            echo "Operational Support SAR current-boundary diagnostic status: ${status}."
+            echo "Operational Support SAR final build failed with status ${status}."
             echo
             echo '```text'
-            cat /tmp/patch-result.log
+            tail -n 100 "${LOG_FILE}"
             echo '```'
-          } > /tmp/patch-result.md
-          gh pr comment 80 --repo "${GITHUB_REPOSITORY}" --body-file /tmp/patch-result.md
+          } > /tmp/operational-support-sar-final-failure.md
+          gh pr comment 80 --repo "${GITHUB_REPOSITORY}" --body-file /tmp/operational-support-sar-final-failure.md
           exit "${status}"
