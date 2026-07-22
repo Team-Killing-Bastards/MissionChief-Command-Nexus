@@ -144,7 +144,6 @@ jobs:
             src/missionchief-command-nexus.user.js \
             README.md \
             src/README.md \
-            CHANGELOG.md \
-            automation/ios-full-compatibility
+            CHANGELOG.md
           git commit -m 'Complete iOS Safari Stations tool compatibility'
           git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
