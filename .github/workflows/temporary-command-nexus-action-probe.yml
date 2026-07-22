@@ -1,5 +1,6 @@
 name: Temporary Command Nexus action probe
 
+# Trigger v2 after the workflow existed on main.
 on:
   push:
     branches:
