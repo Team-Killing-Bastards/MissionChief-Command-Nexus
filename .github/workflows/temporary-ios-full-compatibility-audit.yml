@@ -17,6 +17,7 @@ on:
       - 'CHANGELOG.md'
 
 permissions:
+  actions: read
   contents: write
 
 concurrency:
@@ -45,6 +46,22 @@ jobs:
         with:
           node-version: '24'
           package-manager-cache: false
+
+      - name: Print previous build failure markers
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh api \
+            -H 'Accept: application/vnd.github+json' \
+            "/repos/${GITHUB_REPOSITORY}/actions/jobs/88809032249/logs" \
+            > /tmp/previous-ios-build.log
+          echo '===== PREVIOUS BUILD FAILURE ====='
+          grep -n -E -i \
+            'checksum mismatch|git apply|error|failed|missing|expected|Process completed' \
+            /tmp/previous-ios-build.log \
+            | tail -n 60 || true
 
       - name: Assemble, apply and validate the compatibility patch
         shell: bash
