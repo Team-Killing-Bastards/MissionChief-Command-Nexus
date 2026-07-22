@@ -17,7 +17,6 @@ on:
       - 'CHANGELOG.md'
 
 permissions:
-  actions: read
   contents: write
 
 concurrency:
@@ -47,38 +46,30 @@ jobs:
           node-version: '24'
           package-manager-cache: false
 
-      - name: Print previous build failure markers
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          gh api \
-            -H 'Accept: application/vnd.github+json' \
-            "/repos/${GITHUB_REPOSITORY}/actions/jobs/88809032249/logs" \
-            > /tmp/previous-ios-build.log
-          echo '===== PREVIOUS BUILD FAILURE ====='
-          grep -n -E -i \
-            'checksum mismatch|git apply|error|failed|missing|expected|Process completed' \
-            /tmp/previous-ios-build.log \
-            | tail -n 60 || true
-
       - name: Assemble, apply and validate the compatibility patch
         shell: bash
         run: |
           set -euo pipefail
 
           PAYLOAD_DIR='automation/ios-full-compatibility'
+          ARCHIVE='/tmp/ios-full-compatibility.patch.gz'
           PATCH='/tmp/ios-full-compatibility.patch'
+          EXPECTED_ARCHIVE_SHA='e3e7dbe99c634dea7d9c8a55504c25b1672a4c358cdb1174238f86cffcb2837d'
           EXPECTED_PATCH_SHA='f7fbbdb3273c253c525cc55c359e9124fa03c975a5c74cd8365878eb3df4fe33'
 
           if [[ ! -d "${PAYLOAD_DIR}" ]]; then
             echo 'Patch payload already consumed; running validation only.'
           else
-            cat "${PAYLOAD_DIR}"/patch.b64.part* |
-              tr -d '\r\n' |
-              base64 --decode > "${PATCH}"
+            tr -d '\r\n' < "${PAYLOAD_DIR}/patch.gz.b64" |
+              base64 --decode > "${ARCHIVE}"
 
+            ACTUAL_ARCHIVE_SHA="$(sha256sum "${ARCHIVE}" | awk '{print $1}')"
+            if [[ "${ACTUAL_ARCHIVE_SHA}" != "${EXPECTED_ARCHIVE_SHA}" ]]; then
+              echo "Compressed patch checksum mismatch: ${ACTUAL_ARCHIVE_SHA}"
+              exit 1
+            fi
+
+            gzip --decompress --stdout "${ARCHIVE}" > "${PATCH}"
             ACTUAL_PATCH_SHA="$(sha256sum "${PATCH}" | awk '{print $1}')"
             if [[ "${ACTUAL_PATCH_SHA}" != "${EXPECTED_PATCH_SHA}" ]]; then
               echo "Patch checksum mismatch: ${ACTUAL_PATCH_SHA}"
