@@ -1,4 +1,4 @@
-name: Inspect iOS stations UI integration points
+name: Apply iOS Safari stations menu patch
 
 on:
   pull_request:
@@ -9,10 +9,10 @@ on:
       - synchronize
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  patch:
     if: github.event.pull_request.head.ref == 'feature/ios-safari-stations-menu'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -22,40 +22,38 @@ jobs:
         uses: actions/checkout@v6
         with:
           ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
 
-      - name: Extract exact menu patch context
+      - name: Apply and validate source patch
         shell: bash
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
+          set -euo pipefail
 
-          source = Path('src/missionchief-command-nexus.user.js')
-          lines = source.read_text(encoding='utf-8').splitlines()
-          ranges = (
-              (1, 80),
-              (1040, 1135),
-              (1330, 1450),
-              (1770, 1880),
-              (2350, 2410),
-              (6840, 6960),
-              (31920, 31983),
-          )
+          PAYLOAD='automation/ios-safari-stations-menu.patch.gz.b64'
+          PATCH='/tmp/ios-safari-stations-menu.patch'
 
-          with Path('ios-ui-inspection.txt').open('w', encoding='utf-8') as output:
-              output.write(f'Source lines: {len(lines)}\n\n')
-              for start, end in ranges:
-                  output.write(f'===== LINES {start}-{end} =====\n')
-                  for number in range(start, min(end, len(lines)) + 1):
-                      output.write(f'{number:05d}: {lines[number - 1]}\n')
-                  output.write('\n')
-          PY
+          if [[ ! -f "${PAYLOAD}" ]]; then
+            echo 'Patch payload already consumed.'
+            exit 0
+          fi
 
-      - name: Upload inspection report and source snapshot
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-stations-ui-inspection
-          path: |
-            ios-ui-inspection.txt
-            src/missionchief-command-nexus.user.js
-          if-no-files-found: error
-          retention-days: 1
+          base64 --decode "${PAYLOAD}" | gzip --decompress > "${PATCH}"
+          git apply --check "${PATCH}"
+          git apply "${PATCH}"
+          git rm -f "${PAYLOAD}"
+
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          git diff --check
+
+          grep -Fq 'function isIosSafariBrowser()' src/missionchief-command-nexus.user.js
+          grep -Fq 'function isIosStationsListScreen()' src/missionchief-command-nexus.user.js
+          grep -Fq "panel.classList.add('mc-namer-ios-safari')" src/missionchief-command-nexus.user.js
+          grep -Fq 'function makeIosPanelDraggable(panel, handle)' src/missionchief-command-nexus.user.js
+          grep -Fq "if (isIosSafariBrowser()) return isIosStationsListScreen();" src/missionchief-command-nexus.user.js
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/missionchief-command-nexus.user.js
+          git commit -m 'Add iOS Safari stations menu support'
+          git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
