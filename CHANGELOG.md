@@ -41,6 +41,7 @@ The project uses Semantic Versioning for the unified userscript release line.
 ### Changed
 
 - BASU, Welfare and HazMat mission wording now shares one exact type-39 Fire OSU; type-86 SAR Operational Support Vans remain separate.
+- `Fire, rescue or aerial appliance` mission wording now maps to `Rescue Pump`.
 - High Volume Pump, Drone Operator, Co-Responder and Lifeguard remain disabled pending later evidence.
 - Desktop Mission Control sizing, saved positioning, centring and mouse dragging remain unchanged.
 - Personnel Assignment increased to `1.3.2`; Mission Finder increased to `V10.6.83`.

@@ -9451,6 +9451,7 @@
         "Aerial Appliances": "CARP",
         "Aerial Appliance Truck": "CARP",
         "Aerial Appliance Trucks": "CARP",
+        "Fire, rescue or aerial appliance": "Rescue Pump",
         "ICCU or Ambulance Control Unit": "ICCU/ACU",
         "ICCU or Ambulance Control Units": "ICCU/ACU",
         "ICCUs or Ambulance Control Units": "ICCU/ACU",
