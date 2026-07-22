@@ -15,13 +15,12 @@
 </tr>
 </table>
 
-**Current version:** `1.0.14` · **Mission Finder engine:** `V10.6.80` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
+**Current version:** `1.0.15` · **Mission Finder engine:** `V10.6.80` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)
-[![Release](https://img.shields.io/github/v/release/Team-Killing-Bastards/MissionChief-Command-Nexus?label=release&color=7b6cf6)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/latest)
 
-[**What it is**](#what-it-is) · [**Install**](#install) · [**Workflows**](#operational-workflows) · [**v1.0.14**](#current-v1014-behaviour) · [**Safety**](#operational-safety) · [**Architecture**](#architecture) · [**Release system**](#release-and-quality-system)
+[**What it is**](#what-it-is) · [**Install**](#install) · [**Workflows**](#operational-workflows) · [**v1.0.15**](#current-v1015-behaviour) · [**Safety**](#operational-safety) · [**Architecture**](#architecture) · [**Release system**](#release-and-quality-system)
 
 </div>
 
@@ -43,7 +42,7 @@ The distributed product is one `.user.js` file with one metadata block and one i
 Their primary shared contract is the **vehicle-training register**. The administration engine can verify exactly which personnel are assigned to each vehicle; the mission engine can then select specialist capability using vehicle identity and evidence rather than a display name alone.
 
 > [!IMPORTANT]
-> **MartyBlyth is the creator, userscript author, technical owner, and release authority.** Conroy1988 supports repository infrastructure, documentation, validation, and general project operations; he is not presented as the userscript developer.
+> **Developed by MartyBlyth**, the creator, userscript author, technical owner, and release authority. **Conroy1988 is the project helper** for repository infrastructure, documentation, validation, and general project operations. He is not a userscript developer.
 
 ## Install
 
@@ -99,7 +98,17 @@ Before Unit Finder, Mission Update, or Auto Mode selects resources, Command Nexu
 
 This prevents selection against a partial MissionChief vehicle table.
 
-## Current v1.0.14 behaviour
+## Current v1.0.15 behaviour
+
+### iOS Safari website menu
+
+The shared Unit Naming, Station Naming and Personnel Assignment panel now appears on the MissionChief website in Safari on iPhone and iPad.
+
+- Responsive station-list markup is recognised without weakening the desktop station-page guard.
+- The panel uses Safari safe-area insets and the visual viewport, including address-bar changes and device rotation.
+- The header supports touch/pointer dragging while the panel body and reports retain touch scrolling.
+- iPad desktop-site mode is recognised through touch-capable `MacIntel` detection.
+- Chrome, Firefox, Edge and native iOS webview/app wrappers are not treated as Safari website sessions.
 
 ### Live requirements are authoritative
 
@@ -147,12 +156,12 @@ Command Nexus is operational software, not a claim that every MissionChief UK ve
 | Limitation | Current position |
 |---|---|
 | **Country coverage** | MissionChief UK only |
-| **Primary environment** | Desktop browser is the principal development and operating target |
+| **Primary environment** | Desktop remains the principal operating target; the shared Unit, Station and Personnel menu now supports the MissionChief website in Safari on iPhone and iPad |
 | **Training profiles** | Remaining Medical, Fire, Airfield, SAR, Mountain Rescue, and Coastguard profiles are tracked through issues |
 | **External requirements data** | Some Fire specialist logic remains dependent on stable requirement data exposed by MissionChief or compatible panels |
 | **PSU assignment priority** | Nine-seat Police Support Unit preference remains tracked work |
 | **Interface consolidation** | One installation still contains two retained operational control surfaces |
-| **Mobile and Safari** | No broad support claim without device-specific evidence |
+| **Mobile and Safari** | iOS Safari website support covers the shared Unit Naming, Station Naming and Personnel Assignment menu; broader Mission Finder mobile support is not claimed |
 | **Live-game variability** | MissionChief markup and labels can change independently of this repository |
 
 Use the [issue tracker](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues) as the authoritative development queue.

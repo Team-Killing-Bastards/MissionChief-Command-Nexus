@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.14
+// @version      1.0.15
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -36,9 +36,9 @@
     if (window.__MC_NAMING_TOOLS_V428__) return;
     window.__MC_NAMING_TOOLS_V428__ = true;
 
-    const UNIT_VERSION = '3.3.5';
-    const STATION_VERSION = '1.3.1';
-    const PERSONNEL_VERSION = '1.2.9';
+    const UNIT_VERSION = '3.3.6';
+    const STATION_VERSION = '1.3.2';
+    const PERSONNEL_VERSION = '1.3.0';
     const PERSONNEL_TRAINING_CODE = 'critical_care';
     const PERSONNEL_TRAINING_LABEL = 'Critical Care';
     const PERSONNEL_TARGET_VEHICLE_TYPE_ID = '5';
@@ -1078,30 +1078,214 @@
         }
     }
 
+    function isIosSafariWebsite() {
+        const userAgent = String(navigator.userAgent || '');
+        const platform = String(navigator.platform || '');
+        const isIosDevice = /iP(?:ad|hone|od)/i.test(userAgent)
+            || (
+                platform === 'MacIntel'
+                && Number(navigator.maxTouchPoints || 0) > 1
+            );
+        const isSafariBrowser = /Safari/i.test(userAgent)
+            && !/(?:CriOS|FxiOS|EdgiOS|OPiOS|DuckDuckGo)/i.test(userAgent);
+
+        // Native WKWebView/app wrappers normally omit the Safari token. This
+        // deliberately targets the MissionChief website opened in Safari.
+        return isIosDevice
+            && isSafariBrowser
+            && /^https?:$/i.test(String(location.protocol || ''));
+    }
+
+    function getToolViewportBounds() {
+        const viewport = window.visualViewport;
+        const left = Math.max(0, Number(viewport?.offsetLeft || 0));
+        const top = Math.max(0, Number(viewport?.offsetTop || 0));
+        const width = Math.max(1, Number(viewport?.width || window.innerWidth || 1));
+        const height = Math.max(1, Number(viewport?.height || window.innerHeight || 1));
+
+        return {
+            left,
+            top,
+            width,
+            height,
+            right: left + width,
+            bottom: top + height
+        };
+    }
+
+    function clampToolPanelToViewport(panel) {
+        if (!panel?.isConnected) return;
+
+        // Before the first drag, iOS Safari is positioned entirely by the
+        // safe-area CSS below. Only clamp an explicitly dragged mobile panel.
+        if (
+            panel.classList.contains('mc-ios-safari')
+            && !panel.style.left
+        ) {
+            return;
+        }
+
+        const bounds = getToolViewportBounds();
+        let rect = panel.getBoundingClientRect();
+        const maximumWidth = Math.max(260, bounds.width - 16);
+
+        if (rect.width > maximumWidth) {
+            panel.style.width = `${maximumWidth}px`;
+            rect = panel.getBoundingClientRect();
+        }
+
+        const maximumLeft = Math.max(
+            bounds.left,
+            bounds.right - rect.width
+        );
+        const maximumTop = Math.max(
+            bounds.top,
+            bounds.bottom - rect.height
+        );
+        const nextLeft = Math.min(
+            maximumLeft,
+            Math.max(bounds.left, rect.left)
+        );
+        const nextTop = Math.min(
+            maximumTop,
+            Math.max(bounds.top, rect.top)
+        );
+
+        panel.style.left = `${nextLeft}px`;
+        panel.style.top = `${nextTop}px`;
+        panel.style.right = 'auto';
+    }
+
+    function installToolViewportGuard(panel) {
+        let pendingFrame = null;
+
+        const requestClamp = () => {
+            if (pendingFrame != null) return;
+            pendingFrame = requestAnimationFrame(() => {
+                pendingFrame = null;
+                clampToolPanelToViewport(panel);
+            });
+        };
+
+        const resetIosPosition = () => {
+            if (panel.classList.contains('mc-ios-safari')) {
+                panel.style.left = '';
+                panel.style.top = '';
+                panel.style.right = '';
+                panel.style.width = '';
+            }
+            requestClamp();
+        };
+
+        window.addEventListener('resize', requestClamp, { passive: true });
+        window.addEventListener('orientationchange', resetIosPosition, { passive: true });
+        window.addEventListener('pageshow', requestClamp, { passive: true });
+        window.visualViewport?.addEventListener('resize', requestClamp, { passive: true });
+        window.visualViewport?.addEventListener('scroll', requestClamp, { passive: true });
+
+        registerToolLifecycleCleanup(() => {
+            if (pendingFrame != null) {
+                cancelAnimationFrame(pendingFrame);
+                pendingFrame = null;
+            }
+            window.removeEventListener('resize', requestClamp);
+            window.removeEventListener('orientationchange', resetIosPosition);
+            window.removeEventListener('pageshow', requestClamp);
+            window.visualViewport?.removeEventListener('resize', requestClamp);
+            window.visualViewport?.removeEventListener('scroll', requestClamp);
+        });
+
+        requestClamp();
+    }
+
     function initWhenReady() {
         let tries = 0;
-        const timer = setInterval(() => {
-            tries++;
+        let timer = null;
+        let observer = null;
+        const maximumTries = isIosSafariWebsite()
+            ? 120
+            : 40;
 
-            if (isStationOverviewScreen()) {
+        const removeReadinessListeners = () => {
+            if (timer != null) {
                 clearInterval(timer);
-                TOOL_LIFECYCLE_CLEANUPS.delete(clearInitTimer);
-                init();
+                timer = null;
+            }
+            observer?.disconnect();
+            observer = null;
+            window.removeEventListener('pageshow', tryInitialise);
+            document.removeEventListener('visibilitychange', tryInitialise);
+            TOOL_LIFECYCLE_CLEANUPS.delete(removeReadinessListeners);
+        };
+
+        function tryInitialise() {
+            if (document.querySelector('#mc-namer-panel')) {
+                removeReadinessListeners();
+                return true;
             }
 
-            if (tries >= 40) {
+            if (!isStationOverviewScreen()) return false;
+
+            removeReadinessListeners();
+            init();
+            return true;
+        }
+
+        if (tryInitialise()) return;
+
+        timer = setInterval(() => {
+            tries++;
+            if (tryInitialise()) return;
+            if (tries >= maximumTries) {
                 clearInterval(timer);
-                TOOL_LIFECYCLE_CLEANUPS.delete(clearInitTimer);
+                timer = null;
             }
         }, 500);
 
-        const clearInitTimer = () => clearInterval(timer);
-        registerToolLifecycleCleanup(clearInitTimer);
+        // Mobile Safari can restore the page from bfcache or populate the
+        // responsive building list after the userscript has already started.
+        if (isIosSafariWebsite()) {
+            observer = new MutationObserver(() => {
+                tryInitialise();
+            });
+            observer.observe(
+                document.documentElement,
+                {
+                    childList: true,
+                    subtree: true
+                }
+            );
+            window.addEventListener('pageshow', tryInitialise, { passive: true });
+            document.addEventListener('visibilitychange', tryInitialise, { passive: true });
+        }
+
+        registerToolLifecycleCleanup(removeReadinessListeners);
     }
 
+
     function isStationOverviewScreen() {
-        return Boolean(document.querySelector('a.lightbox-open.list-group-item.active[href^="/buildings/"]'));
+        if (
+            document.querySelector(
+                'a.lightbox-open.list-group-item.active[href^="/buildings/"]'
+            )
+        ) {
+            return true;
+        }
+
+        if (!isIosSafariWebsite()) return false;
+
+        return Boolean(
+            document.querySelector(
+                [
+                    'a.lightbox-open[href*="/buildings/"]',
+                    '.building_list a[href*="/buildings/"]',
+                    '.building_list_li a[href*="/buildings/"]',
+                    '[data-building-id] a[href*="/buildings/"]'
+                ].join(',')
+            )
+        );
     }
+
 
     function init() {
         addPanel();
@@ -1115,6 +1299,7 @@
 
         const panel = document.createElement('div');
         panel.id = 'mc-namer-panel';
+        panel.classList.toggle('mc-ios-safari', isIosSafariWebsite());
 
         panel.innerHTML = `
             <div id="mc-namer-header">
@@ -1789,6 +1974,70 @@
             .mc-log-debug { color: #facc15; }
             .mc-log-error { color: #f87171; font-weight: bold; }
             .mc-log-done { color: #22c55e; font-weight: bold; }
+
+            #mc-namer-panel.mc-ios-safari {
+                top: calc(8px + env(safe-area-inset-top, 0px));
+                right: calc(8px + env(safe-area-inset-right, 0px));
+                left: calc(8px + env(safe-area-inset-left, 0px));
+                width: auto;
+                max-width: none;
+                max-height: calc(
+                    100vh
+                    - 16px
+                    - env(safe-area-inset-top, 0px)
+                    - env(safe-area-inset-bottom, 0px)
+                );
+                -webkit-transform: translateZ(0);
+            }
+
+            @supports (height: 100dvh) {
+                #mc-namer-panel.mc-ios-safari {
+                    max-height: calc(
+                        100dvh
+                        - 16px
+                        - env(safe-area-inset-top, 0px)
+                        - env(safe-area-inset-bottom, 0px)
+                    );
+                }
+            }
+
+            #mc-namer-panel.mc-ios-safari.mc-namer-collapsed {
+                width: auto;
+            }
+
+            #mc-namer-panel.mc-ios-safari #mc-namer-header {
+                cursor: grab;
+                touch-action: none;
+                -webkit-user-select: none;
+            }
+
+            #mc-namer-panel.mc-ios-safari #mc-namer-header:active {
+                cursor: grabbing;
+            }
+
+            #mc-namer-panel.mc-ios-safari #mc-namer-body,
+            #mc-namer-panel.mc-ios-safari #mc-namer-log,
+            #mc-namer-panel.mc-ios-safari #mc-station-log,
+            #mc-namer-panel.mc-ios-safari #mc-personnel-log,
+            #mc-namer-panel.mc-ios-safari #mc-personnel-report,
+            #mc-namer-panel.mc-ios-safari #mc-personnel-after-action {
+                -webkit-overflow-scrolling: touch;
+            }
+
+            #mc-namer-panel.mc-ios-safari .mc-namer-tab {
+                min-height: 42px;
+                padding: 7px 4px;
+                font-size: 11px;
+                line-height: 1.2;
+            }
+
+            #mc-namer-panel.mc-ios-safari .mc-namer-buttons button,
+            #mc-namer-panel.mc-ios-safari select,
+            #mc-namer-panel.mc-ios-safari input {
+                min-height: 36px;
+                font-size: 16px;
+            }
+
         `;
 
         document.head.appendChild(style);
@@ -1855,6 +2104,7 @@
         initialisePersonnelProfileNavigation();
         initialisePersonnelReportVisibility();
         makePanelDraggable(panel, document.querySelector('#mc-namer-header'));
+        installToolViewportGuard(panel);
 
         let savedTab = 'unit';
         let savedCollapsed = false;
@@ -6884,55 +7134,115 @@
 
     function makePanelDraggable(panel, handle) {
         let dragging = false;
+        let activePointerId = null;
         let startX = 0;
         let startY = 0;
         let startLeft = 0;
         let startTop = 0;
 
-        const removeDocumentListeners = () => {
-            document.removeEventListener('mousemove', onMouseMove);
-            document.removeEventListener('mouseup', onMouseUp);
+        const endDrag = event => {
+            if (
+                activePointerId != null
+                && event?.pointerId != null
+                && event.pointerId !== activePointerId
+            ) {
+                return;
+            }
+
+            dragging = false;
+            if (
+                activePointerId != null
+                && handle.hasPointerCapture?.(activePointerId)
+            ) {
+                try {
+                    handle.releasePointerCapture(activePointerId);
+                } catch (_error) {}
+            }
+            activePointerId = null;
+            clampToolPanelToViewport(panel);
         };
 
-        const onMouseDown = event => {
+        const onPointerDown = event => {
             if (event.target.closest('#mc-namer-collapse')) return;
+            if (event.button != null && event.button !== 0) return;
 
-            dragging = true;
             const rect = panel.getBoundingClientRect();
+            const bounds = getToolViewportBounds();
+            dragging = true;
+            activePointerId = event.pointerId;
             startX = event.clientX;
             startY = event.clientY;
             startLeft = rect.left;
             startTop = rect.top;
 
+            panel.style.width = `${Math.min(rect.width, Math.max(260, bounds.width - 16))}px`;
             panel.style.left = `${startLeft}px`;
             panel.style.top = `${startTop}px`;
             panel.style.right = 'auto';
 
-            removeDocumentListeners();
-            document.addEventListener('mousemove', onMouseMove);
-            document.addEventListener('mouseup', onMouseUp, { once: true });
+            try {
+                handle.setPointerCapture?.(event.pointerId);
+            } catch (_error) {}
+
             event.preventDefault();
         };
 
-        const onMouseMove = event => {
-            if (!dragging) return;
-            panel.style.left = `${Math.max(0, startLeft + event.clientX - startX)}px`;
-            panel.style.top = `${Math.max(0, startTop + event.clientY - startY)}px`;
+        const onPointerMove = event => {
+            if (
+                !dragging
+                || (
+                    activePointerId != null
+                    && event.pointerId !== activePointerId
+                )
+            ) {
+                return;
+            }
+
+            const bounds = getToolViewportBounds();
+            const rect = panel.getBoundingClientRect();
+            const maximumLeft = Math.max(
+                bounds.left,
+                bounds.right - rect.width
+            );
+            const maximumTop = Math.max(
+                bounds.top,
+                bounds.bottom - rect.height
+            );
+            const nextLeft = Math.min(
+                maximumLeft,
+                Math.max(
+                    bounds.left,
+                    startLeft + event.clientX - startX
+                )
+            );
+            const nextTop = Math.min(
+                maximumTop,
+                Math.max(
+                    bounds.top,
+                    startTop + event.clientY - startY
+                )
+            );
+
+            panel.style.left = `${nextLeft}px`;
+            panel.style.top = `${nextTop}px`;
+            event.preventDefault();
         };
 
-        const onMouseUp = () => {
-            dragging = false;
-            removeDocumentListeners();
-        };
-
-        handle.addEventListener('mousedown', onMouseDown);
+        handle.addEventListener('pointerdown', onPointerDown);
+        handle.addEventListener('pointermove', onPointerMove);
+        handle.addEventListener('pointerup', endDrag);
+        handle.addEventListener('pointercancel', endDrag);
 
         registerToolLifecycleCleanup(() => {
             dragging = false;
-            handle.removeEventListener('mousedown', onMouseDown);
-            removeDocumentListeners();
+            activePointerId = null;
+            handle.removeEventListener('pointerdown', onPointerDown);
+            handle.removeEventListener('pointermove', onPointerMove);
+            handle.removeEventListener('pointerup', endDrag);
+            handle.removeEventListener('pointercancel', endDrag);
         });
     }
+
 
     function cleanText(text) {
         return String(text || '')
