@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - name: Print failed validation tail
+      - name: Print exact validation error
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -33,5 +33,7 @@ jobs:
             -H 'Accept: application/vnd.github+json' \
             "/repos/${GITHUB_REPOSITORY}/actions/jobs/89031766550/logs" \
             > /tmp/mission-control-ios.log
-          echo '===== MISSION CONTROL IOS VALIDATION FAILURE ====='
-          tail -n 100 /tmp/mission-control-ios.log
+          echo '===== EXACT ERROR LINES ====='
+          grep -n -E 'ERROR:|Missing Mission|unexpectedly|no longer isolated|failed|Process completed|expected at least|compatibility contract' /tmp/mission-control-ios.log || true
+          echo '===== FINAL 30 LINES ====='
+          tail -n 30 /tmp/mission-control-ios.log
