@@ -50,10 +50,12 @@ jobs:
                   output.write('\n')
           PY
 
-      - name: Upload inspection report
+      - name: Upload inspection report and source snapshot
         uses: actions/upload-artifact@v4
         with:
           name: ios-stations-ui-inspection
-          path: ios-ui-inspection.txt
+          path: |
+            ios-ui-inspection.txt
+            src/missionchief-command-nexus.user.js
           if-no-files-found: error
           retention-days: 1
