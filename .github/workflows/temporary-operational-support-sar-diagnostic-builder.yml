@@ -1,6 +1,6 @@
 name: Temporary Operational Support SAR diagnostic builder
 
-# Diagnostic v5: literal scoped patcher correction with no indentation rewriting.
+# Diagnostic v6: exact selected-count anchor and current findUnitButton boundary.
 on:
   push:
     branches:
@@ -53,13 +53,21 @@ jobs:
               "verification strict flag",
           )'''
           if text.count(old) != 1:
-              raise SystemExit(f'Patcher correction anchor count: {text.count(old)}')
-          path.write_text(text.replace(old, new, 1), encoding='utf-8', newline='\n')
+              raise SystemExit(f'Verification correction anchor count: {text.count(old)}')
+          text = text.replace(old, new, 1)
+
+          old_boundary = '"    async function clickUnitButton"'
+          new_boundary = '"    function injectStyles() {"'
+          if text.count(old_boundary) != 1:
+              raise SystemExit(f'findUnitButton boundary anchor count: {text.count(old_boundary)}')
+          text = text.replace(old_boundary, new_boundary, 1)
+
+          path.write_text(text, encoding='utf-8', newline='\n')
           PY
           python3 /tmp/operational-support-sar-patch.py > /tmp/patch-result.log 2>&1
           status=$?
           {
-            echo "Operational Support SAR literal-anchor diagnostic status: ${status}."
+            echo "Operational Support SAR current-boundary diagnostic status: ${status}."
             echo
             echo '```text'
             cat /tmp/patch-result.log
