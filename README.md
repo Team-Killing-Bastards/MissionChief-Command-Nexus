@@ -42,7 +42,7 @@ The distributed product is one `.user.js` file with one metadata block and one i
 Their primary shared contract is the **vehicle-training register**. The administration engine can verify exactly which personnel are assigned to each vehicle; the mission engine can then select specialist capability using vehicle identity and evidence rather than a display name alone.
 
 > [!IMPORTANT]
-> **MartyBlyth remains the creator, principal userscript author, technical owner, and release authority.** **Conroy1988 supports repository infrastructure, documentation, validation, and general project operations, and designed and implemented the v1.0.15 iOS Safari compatibility layer for the shared Unit, Station and Personnel menu at Marty's request.** This scoped contribution does not change the project's overall ownership or release authority.
+> **MartyBlyth remains the creator, principal userscript author, technical owner, and release authority.** **Conroy1988 supports repository infrastructure, documentation, validation, and general project operations. After identifying the Safari compatibility gap on the iPhone and iPad devices he uses, Conroy asked Marty for permission to contribute, then initiated, designed, and implemented the v1.0.15 iOS Safari compatibility layer for the shared Unit, Station and Personnel menu.** This scoped contribution does not change the project's overall ownership or release authority.
 
 ## Install
 
@@ -111,7 +111,7 @@ The shared Unit Naming, Station Naming and Personnel Assignment panel now appear
 - Chrome, Firefox, Edge and native iOS webview/app wrappers are not treated as Safari website sessions.
 
 > [!NOTE]
-> This compatibility layer was designed and implemented by **[Conroy1988](https://github.com/Conroy1988)** at **[MartyBlyth](https://github.com/Martyblyth)**'s request, specifically to make the shared administration menu usable on the iPhone and iPad Safari devices Conroy uses. It is a focused compatibility contribution; the underlying Unit, Station and Personnel system remains Marty's work.
+> This compatibility work was initiated, designed, and implemented by **[Conroy1988](https://github.com/Conroy1988)** after he identified the need in his own iPhone and iPad Safari workflow. Conroy requested permission to contribute and **[MartyBlyth](https://github.com/Martyblyth)** approved the contribution. The underlying Unit, Station and Personnel system remains Marty's work.
 
 ### Live requirements are authoritative
 
@@ -222,7 +222,7 @@ Command Nexus remains **MartyBlyth's project**. Contributions are attributed at 
 | Contributor | Role and responsibility |
 |---|---|
 | **[MartyBlyth](https://github.com/Martyblyth)** | Creator and technical owner; original author of Mission Finder and the Unit, Station & Personnel systems; principal userscript development, technical direction, release decisions, and ongoing feature authority |
-| **[Conroy1988](https://github.com/Conroy1988)** | Project helper for repository infrastructure, documentation, validation, and general operations; designer and implementer of the scoped v1.0.15 iOS Safari compatibility layer for the shared administration menu |
+| **[Conroy1988](https://github.com/Conroy1988)** | Project helper for repository infrastructure, documentation, validation, and general operations; independently initiated the iOS Safari compatibility work, obtained Marty's permission to contribute, and designed and implemented the scoped v1.0.15 compatibility layer for the shared administration menu |
 
 ## Release and quality system
 
@@ -274,6 +274,6 @@ Discord is notified only after the release, immutable GitHub source, and Greasy 
 ### One installation. Two proven engines. One operational chain.
 
 **Created and technically owned by [MartyBlyth](https://github.com/Martyblyth).**  
-Repository infrastructure, documentation, validation, and v1.0.15 iOS Safari compatibility by [Conroy1988](https://github.com/Conroy1988).
+Repository infrastructure, documentation, validation, and independently initiated v1.0.15 iOS Safari compatibility by [Conroy1988](https://github.com/Conroy1988), contributed with Marty's permission.
 
 </div>
