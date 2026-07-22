@@ -19,7 +19,7 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - name: Print exact compatibility build failure
+      - name: Print final compatibility build lines
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -30,8 +30,5 @@ jobs:
             "/repos/${GITHUB_REPOSITORY}/actions/jobs/88809931705/logs" \
             > /tmp/ios-build.log
 
-          echo '===== EXACT COMPATIBILITY BUILD FAILURE ====='
-          grep -n -E -i \
-            'checksum mismatch|git apply|error|failed|missing|expected|Process completed' \
-            /tmp/ios-build.log \
-            | tail -n 80 || true
+          echo '===== FINAL COMPATIBILITY BUILD LINES ====='
+          tail -n 50 /tmp/ios-build.log
