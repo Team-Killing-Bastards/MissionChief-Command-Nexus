@@ -1,5 +1,6 @@
 name: Temporary Operational Support SAR push builder
 
+# Trigger v2: workflow now existed on main before this controlled push.
 on:
   push:
     branches:
