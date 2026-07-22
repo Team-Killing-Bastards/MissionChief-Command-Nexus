@@ -1,0 +1,83 @@
+name: Map fire rescue aerial requirement
+
+on:
+  push:
+    branches:
+      - agent/add-fire-iccu-osu-profiles
+    paths:
+      - '.github/workflows/temporary-map-fire-rescue-aerial.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out candidate branch
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: agent/add-fire-iccu-osu-profiles
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Add exact Rescue Pump requirement alias
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          source_path = Path('src/missionchief-command-nexus.user.js')
+          source = source_path.read_text(encoding='utf-8')
+
+          alias = '        "Fire, rescue or aerial appliance": "Rescue Pump",\n'
+          anchor = '        "Aerial Appliance Trucks": "CARP",\n'
+
+          if alias not in source:
+              if source.count(anchor) != 1:
+                  raise SystemExit(f'Alias anchor count was {source.count(anchor)}, expected 1')
+              source = source.replace(anchor, anchor + alias, 1)
+
+          if source.count(alias) != 1:
+              raise SystemExit(f'Exact requirement alias count was {source.count(alias)}, expected 1')
+
+          source_path.write_text(source, encoding='utf-8', newline='\n')
+
+          changelog_path = Path('CHANGELOG.md')
+          changelog = changelog_path.read_text(encoding='utf-8')
+          note = '- `Fire, rescue or aerial appliance` mission wording now maps to `Rescue Pump`.\n'
+          changelog_anchor = '- BASU, Welfare and HazMat mission wording now shares one exact type-39 Fire OSU; type-86 SAR Operational Support Vans remain separate.\n'
+
+          if note not in changelog:
+              if changelog.count(changelog_anchor) != 1:
+                  raise SystemExit(f'Changelog anchor count was {changelog.count(changelog_anchor)}, expected 1')
+              changelog = changelog.replace(changelog_anchor, changelog_anchor + note, 1)
+
+          changelog_path.write_text(changelog, encoding='utf-8', newline='\n')
+          print('Exact Fire/rescue/aerial requirement alias added.')
+          PY
+
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          node scripts/validate-userscript.mjs --base-ref origin/main
+          node scripts/check-ios-compatibility.mjs
+          python3 scripts/check_repository.py
+          git diff --check
+
+      - name: Commit validated source change
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name MartyBlyth
+          git config user.email 32400596+Martyblyth@users.noreply.github.com
+          git rm -f .github/workflows/temporary-map-fire-rescue-aerial.yml
+          git add src/missionchief-command-nexus.user.js CHANGELOG.md
+          git commit -m 'Map fire rescue aerial requirement to Rescue Pump'
+          git push origin HEAD:agent/add-fire-iccu-osu-profiles
