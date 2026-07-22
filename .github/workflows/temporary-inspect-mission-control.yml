@@ -1,9 +1,13 @@
 name: Inspect Mission Control for iOS Safari optimisation
 
 on:
-  push:
+  pull_request:
     branches:
-      - agent/add-fire-iccu-osu-profiles
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
     paths:
       - '.github/workflows/temporary-inspect-mission-control.yml'
 
@@ -12,6 +16,9 @@ permissions:
 
 jobs:
   inspect:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'agent/add-fire-iccu-osu-profiles'
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
