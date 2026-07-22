@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.16
+// @version      1.0.17
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -8410,7 +8410,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.80
+         * MODULE 2: MISSION FINDER V10.6.81
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -8660,6 +8660,9 @@
     // before an untrained IRV may satisfy ordinary Police attendance. Police Medic
     // and Railway Police Officer requirements now use exact trained IRVs with two
     // qualified personnel, and ATV Carrier uses an authoritative type-30 matcher.
+    // V10.6.81: Operational Support or SAR Vehicle requirements now select and
+    // verify the exact type-86 Operational Support Van. Fire type-39 Operational
+    // Support Units remain excluded from this SAR requirement.
     // V10.6.80: Critical Care Ambulances now require one trained person per vehicle.
     // Armed Response personnel use exact type-25 ATCs with two officers who each hold
     // both Roads Policing and Firearms. Police Officer and Seagoing Vessel upgrade
@@ -9515,6 +9518,17 @@
         "Search Advisors": "SARTEC",
         "Operational Support Van": "Operational Support Van",
         "Operational Support Vans": "Operational Support Van",
+        "Operational Support or SAR Vehicle": "Operational Support Van",
+        "Operational Support or SAR Vehicles": "Operational Support Van",
+        "Operational Support or SAR Vehicle x1": "Operational Support Van",
+        "Operational Support Van or SAR Vehicle": "Operational Support Van",
+        "Operational Support Vans or SAR Vehicles": "Operational Support Van",
+        "Operational Support Vehicle or SAR Vehicle": "Operational Support Van",
+        "Operational Support Vehicles or SAR Vehicles": "Operational Support Van",
+        "Operational Support or Personal SAR Vehicle": "Operational Support Van",
+        "Operational Support or Personal SAR Vehicles": "Operational Support Van",
+        "Required Operational Support or SAR Vehicle": "Operational Support Van",
+        "Required Operational Support or SAR Vehicles": "Operational Support Van",
         "Operational Support Van, Trailer or Personal SAR Vehicle": "Operational Support Van",
         "Operational Support Vans, Trailers or Personal SAR Vehicles": "Operational Support Van",
         "Operational Support Van Trailer or Personal SAR Vehicle": "Operational Support Van",
@@ -10638,6 +10652,48 @@
         });
     }
 
+    function isOperationalSupportOrSarVehicleRequirement(
+        originalName,
+        mappedName
+    ) {
+        const raw = normaliseVehicleText(originalName);
+        const mapped = normaliseVehicleText(mappedName);
+
+        return (
+            mapped === 'operational support van' ||
+            raw === 'operational support van' ||
+            raw === 'operational support vans' ||
+            (
+                !raw.includes('operational support unit') &&
+                /\boperational support(?: vans?| vehicles?)?\b.*\bor\b.*\b(?:personal )?sar vehicles?\b/i.test(raw)
+            )
+        );
+    }
+
+    function isOperationalSupportVanCheckbox(input) {
+        if (!input) return false;
+
+        // MissionChief UK Operational Support Van type 86. This cannot collide
+        // with the Fire Operational Support Unit, which is type 39.
+        const typeIdentifiers = getVehicleTypeIdentifiers(input);
+        if (typeIdentifiers.includes('86')) {
+            return true;
+        }
+        if (typeIdentifiers.includes('39')) {
+            return false;
+        }
+
+        return getExtendedVehicleValues(input).some(value => {
+            const cleaned = normaliseVehicleText(value);
+            return (
+                cleaned === 'operational support van' ||
+                cleaned === 'operational support vans' ||
+                cleaned === 'osv' ||
+                cleaned === 'osvs'
+            );
+        });
+    }
+
     function getVehicleMatchCandidates(originalName, mappedName) {
         const raw = String(originalName || '').replace(/\s+/g, ' ').trim();
         const mapped = String(mappedName || '').replace(/\s+/g, ' ').trim();
@@ -11061,6 +11117,12 @@
                 mappedName
             );
 
+        const operationalSupportOnly =
+            isOperationalSupportOrSarVehicleRequirement(
+                originalName,
+                mappedName
+            );
+
         const generic4x4Only =
             isGeneric4x4VehicleRequirement(
                 originalName,
@@ -11128,6 +11190,16 @@
                     return isDogSupportUnitCheckbox(
                         input
                     );
+                })
+            );
+        }
+
+        if (operationalSupportOnly) {
+            return sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) return false;
+                    if (!includeChecked && input.checked) return false;
+                    return isOperationalSupportVanCheckbox(input);
                 })
             );
         }
@@ -11432,6 +11504,12 @@
         const atvCarrierOnly = isAtvCarrierRequirement(originalName, mappedName);
         const seagoingVesselOnly = isSeagoingVesselRequirement(originalName, mappedName);
         const dogSupportOnly = isDogSupportUnitRequirement(originalName, mappedName);
+        const operationalSupportOnly =
+            isOperationalSupportOrSarVehicleRequirement(
+                originalName,
+                mappedName
+            );
+
         const generic4x4Only =
             isGeneric4x4VehicleRequirement(
                 originalName,
@@ -11477,6 +11555,8 @@
                 matches = isDogSupportUnitCheckbox(
                     input
                 );
+            } else if (operationalSupportOnly) {
+                matches = isOperationalSupportVanCheckbox(input);
             } else if (iccuPreferred) {
                 matches =
                     isIccuVehicleCheckbox(input) ||
@@ -11574,6 +11654,21 @@
                     )
                 );
             }) || null;
+        }
+
+        if (
+            isOperationalSupportOrSarVehicleRequirement(
+                requestedName,
+                mappedName
+            )
+        ) {
+            return sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(input => (
+                    !input.disabled &&
+                    !input.checked &&
+                    isOperationalSupportVanCheckbox(input)
+                ))
+            )[0] || null;
         }
 
         if (

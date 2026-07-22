@@ -26,6 +26,19 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Consolidate the two retained control surfaces into one coherent interface.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
+## [1.0.17] - 2026-07-22
+
+### Fixed
+
+- Restored the `Operational Support or SAR Vehicle` requirement mapping to `Operational Support Van`.
+- Unit Finder, Mission Update/Upgrade and final selected-unit verification now use the exact MissionChief type-86 Operational Support Van.
+- Fire Operational Support Units using type 39 are explicitly excluded from satisfying the SAR requirement.
+- Added current, legacy, singular, plural, `Required` and `x1` wording aliases for the same requirement.
+
+### Changed
+
+- Mission Finder increased from `V10.6.80` to `V10.6.81`.
+
 ## [1.0.16] - 2026-07-22
 
 ### Changed
