@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.15
+// @version      1.0.16
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -36,9 +36,9 @@
     if (window.__MC_NAMING_TOOLS_V428__) return;
     window.__MC_NAMING_TOOLS_V428__ = true;
 
-    const UNIT_VERSION = '3.3.6';
-    const STATION_VERSION = '1.3.2';
-    const PERSONNEL_VERSION = '1.3.0';
+    const UNIT_VERSION = '3.3.7';
+    const STATION_VERSION = '1.3.3';
+    const PERSONNEL_VERSION = '1.3.1';
     const PERSONNEL_TRAINING_CODE = 'critical_care';
     const PERSONNEL_TRAINING_LABEL = 'Critical Care';
     const PERSONNEL_TARGET_VEHICLE_TYPE_ID = '5';
@@ -1096,6 +1096,296 @@
             && /^https?:$/i.test(String(location.protocol || ''));
     }
 
+    const STATION_OVERVIEW_LINK_SELECTOR = [
+        'a.lightbox-open.list-group-item.active[href*="/buildings/"]',
+        'a.lightbox-open[href*="/buildings/"]',
+        '.building_list_li a[href*="/buildings/"]',
+        '.building_list a[href*="/buildings/"]',
+        '[data-building-id] a[href*="/buildings/"]'
+    ].join(',');
+
+    function normaliseStationOverviewHref(value) {
+        try {
+            const url = new URL(String(value || ''), location.origin);
+            if (url.origin !== location.origin) return '';
+            const match = url.pathname.match(/^\/buildings\/(\d+)\/?$/);
+            return match ? `/buildings/${match[1]}` : '';
+        } catch (_error) {
+            return '';
+        }
+    }
+
+    function isGenericStationActionText(value) {
+        return /^(?:details?|open|show|view|edit|move|vehicles?|personnel|education|extensions?)$/i
+            .test(cleanText(value));
+    }
+
+    function getStationOverviewContainer(link) {
+        return link?.closest?.(
+            '.building_list_li, .building_list, [building_type_id], ' +
+            '[data-building-type-id], [data-building-id], [id^="building_"]'
+        ) || link?.closest?.('li, .panel, .card, .well') || link?.parentElement || null;
+    }
+
+    function readStationBuildingTypeId(link, container = getStationOverviewContainer(link)) {
+        const candidates = [
+            link?.closest?.('[building_type_id], [data-building-type-id]'),
+            container,
+            container?.querySelector?.('[building_type_id], [data-building-type-id]')
+        ].filter(Boolean);
+
+        for (const candidate of candidates) {
+            const raw =
+                candidate.getAttribute?.('building_type_id') ??
+                candidate.getAttribute?.('data-building-type-id') ??
+                candidate.dataset?.buildingTypeId ??
+                '';
+            if (raw !== '' && Number.isFinite(Number(raw))) return Number(raw);
+        }
+
+        return null;
+    }
+
+    function scoreStationOverviewLink(link, href) {
+        let score = 0;
+        if (link.classList?.contains('lightbox-open')) score += 100;
+        if (link.matches?.('.list-group-item.active')) score += 70;
+        if (normaliseStationOverviewHref(link.getAttribute?.('href')) === href) score += 40;
+        const label = cleanText(link.textContent || link.getAttribute?.('aria-label') || '');
+        if (label && !isGenericStationActionText(label)) score += 35;
+        if (link.offsetParent !== null) score += 10;
+        return score;
+    }
+
+    function readStationOverviewName(link, container, href) {
+        const values = [];
+        const add = value => {
+            const cleaned = cleanText(value);
+            if (!cleaned || isGenericStationActionText(cleaned)) return;
+            if (!values.includes(cleaned)) values.push(cleaned);
+        };
+
+        add(container?.getAttribute?.('search_attribute'));
+        add(container?.getAttribute?.('data-building-name'));
+        add(container?.dataset?.buildingName);
+
+        const sameBuildingLinks = container
+            ? [...container.querySelectorAll('a[href]')]
+                .filter(candidate => normaliseStationOverviewHref(candidate.getAttribute('href')) === href)
+                .sort((a, b) => scoreStationOverviewLink(b, href) - scoreStationOverviewLink(a, href))
+            : [link];
+
+        sameBuildingLinks.forEach(candidate => {
+            add(candidate.getAttribute?.('aria-label'));
+            add(candidate.getAttribute?.('title'));
+            add(candidate.textContent);
+        });
+
+        const nameSelectors = [
+            '[data-building-name]',
+            '.building_list_title',
+            '.building-list-title',
+            '.building_name',
+            '.building-name',
+            '.panel-heading',
+            '.card-title',
+            'h1', 'h2', 'h3', 'h4'
+        ];
+
+        for (const selector of nameSelectors) {
+            container?.querySelectorAll?.(selector).forEach(node => {
+                add(node.getAttribute?.('data-building-name'));
+                add(node.textContent);
+            });
+        }
+
+        if (!values.length && container) {
+            const clone = container.cloneNode(true);
+            clone.querySelectorAll(
+                'button, .btn, table, tbody, .vehicle, .vehicle_list, ' +
+                '[vehicle_id], [data-vehicle-id], a[href*="/vehicles/"]'
+            ).forEach(node => node.remove());
+            String(clone.textContent || '')
+                .split(/[\r\n]+/)
+                .map(value => cleanText(value))
+                .filter(Boolean)
+                .forEach(add);
+        }
+
+        return values[0] || `Building ${getBuildingIdFromHref(href) || ''}`.trim();
+    }
+
+    function getStationOverviewEntries(root = document) {
+        const groups = new Map();
+
+        root.querySelectorAll(STATION_OVERVIEW_LINK_SELECTOR).forEach(link => {
+            if (link.closest?.('#mc-namer-panel')) return;
+            const href = normaliseStationOverviewHref(link.getAttribute?.('href'));
+            if (!href) return;
+
+            const container = getStationOverviewContainer(link);
+            if (!container && !link.matches?.('.lightbox-open.list-group-item.active')) return;
+
+            const candidates = groups.get(href) || [];
+            candidates.push({ link, container });
+            groups.set(href, candidates);
+        });
+
+        return [...groups.entries()].map(([href, candidates], index) => {
+            candidates.sort((a, b) =>
+                scoreStationOverviewLink(b.link, href) -
+                scoreStationOverviewLink(a.link, href)
+            );
+            const selected = candidates[0];
+            const container = selected.container || getStationOverviewContainer(selected.link);
+            return {
+                index,
+                href,
+                buildingId: getBuildingIdFromHref(href),
+                displayName: readStationOverviewName(selected.link, container, href),
+                buildingTypeId: readStationBuildingTypeId(selected.link, container),
+                link: selected.link,
+                container
+            };
+        });
+    }
+
+    function findStationOverviewEntry(href) {
+        const expected = normaliseStationOverviewHref(href);
+        if (!expected) return null;
+        return getStationOverviewEntries().find(entry => entry.href === expected) || null;
+    }
+
+    function activateStationOverviewEntry(entry) {
+        const link = entry?.link;
+        if (!link?.isConnected) return false;
+
+        if (!isIosSafariWebsite() || link.classList.contains('lightbox-open')) {
+            link.click();
+            return true;
+        }
+
+        // Responsive iOS markup may expose a normal Details link without the
+        // desktop lightbox class. Temporarily opt that exact building link into
+        // MissionChief's delegated lightbox handler while preventing navigation.
+        link.classList.add('lightbox-open');
+        const preventNavigation = event => event.preventDefault();
+        link.addEventListener('click', preventNavigation, { capture: true, once: true });
+        link.click();
+        setTimeout(() => link.classList.remove('lightbox-open'), 0);
+        return true;
+    }
+
+    function createManagedStationIframe(stationHref, purpose = 'station') {
+        const href = normaliseStationOverviewHref(stationHref);
+        if (!href) return null;
+
+        document.querySelectorAll(
+            `iframe.mc-namer-managed-station-iframe[data-mc-purpose="${purpose}"]`
+        ).forEach(frame => frame.remove());
+
+        const iframe = document.createElement('iframe');
+        iframe.className = 'mc-namer-managed-station-iframe';
+        iframe.dataset.mcPurpose = purpose;
+        iframe.src = href;
+        iframe.setAttribute('aria-hidden', 'true');
+        iframe.tabIndex = -1;
+        Object.assign(iframe.style, {
+            position: 'fixed',
+            left: '-10000px',
+            top: '0',
+            width: '2px',
+            height: '2px',
+            opacity: '0.01',
+            pointerEvents: 'none',
+            border: '0'
+        });
+        document.body.appendChild(iframe);
+        return iframe;
+    }
+
+    function removeManagedStationIframe(iframe) {
+        if (!iframe?.classList?.contains('mc-namer-managed-station-iframe')) {
+            return false;
+        }
+        try {
+            iframe.src = 'about:blank';
+        } catch (_error) {}
+        iframe.remove();
+        return true;
+    }
+
+    async function openStationWorkflowIframe(entry, purpose, waitForIframe) {
+        if (!entry?.link?.isConnected) return null;
+
+        if (isIosSafariWebsite() && !entry.link.classList.contains('lightbox-open')) {
+            const managed = createManagedStationIframe(entry.href, purpose);
+            return managed ? await waitForIframe(entry.href, managed) : null;
+        }
+
+        activateStationOverviewEntry(entry);
+        const normal = await waitForIframe(entry.href, null, 24);
+        if (normal || !isIosSafariWebsite()) return normal;
+
+        // Safari can render a responsive Details link while MissionChief's
+        // lightbox binding is unavailable. Fall back to a same-origin managed
+        // iframe so naming and personnel-safe station reads still work without
+        // navigating away from the Stations tab.
+        const managed = createManagedStationIframe(entry.href, purpose);
+        return managed ? await waitForIframe(entry.href, managed) : null;
+    }
+
+    function ensureSingleNamingToolsPanel(preferredPanel = null) {
+        const panels = [...document.querySelectorAll('#mc-namer-panel')];
+        const keeper = preferredPanel?.isConnected
+            ? preferredPanel
+            : panels[0] || null;
+
+        panels.forEach(panel => {
+            if (panel !== keeper) panel.remove();
+        });
+
+        const styles = [...document.querySelectorAll('style[data-mc-namer-style="true"]')];
+        styles.forEach((style, index) => {
+            if (index > 0) style.remove();
+        });
+
+        return keeper;
+    }
+
+    function installSingleNamingToolsPanelGuard(panel) {
+        let pending = false;
+        const enforce = () => {
+            if (pending) return;
+            pending = true;
+            requestAnimationFrame(() => {
+                pending = false;
+                ensureSingleNamingToolsPanel(panel?.isConnected ? panel : null);
+            });
+        };
+
+        const observer = new MutationObserver(records => {
+            const panelMutation = records.some(record =>
+                [...record.addedNodes].some(node =>
+                    node?.nodeType === Node.ELEMENT_NODE && (
+                        node.matches?.('#mc-namer-panel') ||
+                        node.querySelector?.('#mc-namer-panel')
+                    )
+                )
+            );
+            if (panelMutation) enforce();
+        });
+        observer.observe(document.documentElement, { childList: true, subtree: true });
+        window.addEventListener('pageshow', enforce, { passive: true });
+
+        registerToolLifecycleCleanup(() => {
+            observer.disconnect();
+            window.removeEventListener('pageshow', enforce);
+        });
+
+        enforce();
+    }
+
     function getToolViewportBounds() {
         const viewport = window.visualViewport;
         const left = Math.max(0, Number(viewport?.offsetLeft || 0));
@@ -1219,7 +1509,7 @@
         };
 
         function tryInitialise() {
-            if (document.querySelector('#mc-namer-panel')) {
+            if (ensureSingleNamingToolsPanel()) {
                 removeReadinessListeners();
                 return true;
             }
@@ -1264,26 +1554,7 @@
 
 
     function isStationOverviewScreen() {
-        if (
-            document.querySelector(
-                'a.lightbox-open.list-group-item.active[href^="/buildings/"]'
-            )
-        ) {
-            return true;
-        }
-
-        if (!isIosSafariWebsite()) return false;
-
-        return Boolean(
-            document.querySelector(
-                [
-                    'a.lightbox-open[href*="/buildings/"]',
-                    '.building_list a[href*="/buildings/"]',
-                    '.building_list_li a[href*="/buildings/"]',
-                    '[data-building-id] a[href*="/buildings/"]'
-                ].join(',')
-            )
-        );
+        return getStationOverviewEntries().length > 0;
     }
 
 
@@ -1295,7 +1566,7 @@
     }
 
     function addPanel() {
-        if (document.querySelector('#mc-namer-panel')) return;
+        if (ensureSingleNamingToolsPanel()) return;
 
         const panel = document.createElement('div');
         panel.id = 'mc-namer-panel';
@@ -1528,8 +1799,10 @@
         `;
 
         document.body.appendChild(panel);
+        ensureSingleNamingToolsPanel(panel);
 
         const style = document.createElement('style');
+        style.dataset.mcNamerStyle = 'true';
         style.textContent = `
             #mc-namer-panel {
                 position: fixed;
@@ -2105,6 +2378,7 @@
         initialisePersonnelReportVisibility();
         makePanelDraggable(panel, document.querySelector('#mc-namer-header'));
         installToolViewportGuard(panel);
+        installSingleNamingToolsPanelGuard(panel);
 
         let savedTab = 'unit';
         let savedCollapsed = false;
@@ -2713,23 +2987,21 @@
         setStationUiValue('status', 'Refreshing stations...');
         stationLog('Refreshing station list and reading MissionChief building type IDs...', 'info');
 
-        const stationLinks = [...document.querySelectorAll('a.lightbox-open.list-group-item.active[href^="/buildings/"]')];
+        const stationEntries = getStationOverviewEntries();
 
-        STATION_STATE.stations = stationLinks
-            .map((link, index) => {
-                const displayName = cleanText(link.textContent);
-                const href = link.getAttribute('href') || '';
-                const container = link.closest('.building_list_li[building_type_id], .building_list[building_type_id]');
-                const rawTypeId = container?.getAttribute('building_type_id') ?? '';
-                const buildingTypeId = rawTypeId === '' ? null : Number(rawTypeId);
-                const typeInfo = getStationNamingTypeInfo(buildingTypeId, displayName);
+        STATION_STATE.stations = stationEntries
+            .map((entry, index) => {
+                const typeInfo = getStationNamingTypeInfo(
+                    entry.buildingTypeId,
+                    entry.displayName
+                );
 
                 return {
                     index,
-                    href,
-                    buildingId: getBuildingIdFromHref(href),
-                    displayName,
-                    buildingTypeId,
+                    href: entry.href,
+                    buildingId: entry.buildingId,
+                    displayName: entry.displayName,
+                    buildingTypeId: entry.buildingTypeId,
                     stationType: typeInfo.stationType,
                     suffix: typeInfo.suffix,
                     typeLabel: typeInfo.label
@@ -2759,7 +3031,29 @@
             return { stationType: 'AIRFIELD', suffix: '-AF', label: 'Airfield station' };
         }
 
-        return STATION_BUILDING_TYPE_INFO[buildingTypeId]
+        const mapped = STATION_BUILDING_TYPE_INFO[buildingTypeId];
+        if (mapped) return mapped;
+
+        const detectedType = detectStationType(displayName);
+        const fallbackByType = {
+            FIRE: { stationType: 'FIRE', suffix: '-FS', label: 'Fire station' },
+            AMBULANCE: { stationType: 'AMBULANCE', suffix: '-AS', label: 'Ambulance station' },
+            POLICE: { stationType: 'POLICE', suffix: '-PS', label: 'Police station' },
+            RNLI: { stationType: 'RNLI', suffix: '-RNLI', label: 'RNLI / lifeboat station' },
+            COASTGUARD: { stationType: 'COASTGUARD', suffix: '-CG', label: 'Coastguard station' },
+            SAR: { stationType: 'SAR', suffix: '-SAR', label: 'Search and rescue station' },
+            AIRFIELD: { stationType: 'AIRFIELD', suffix: '-AF', label: 'Airfield station' },
+            EOD: { stationType: 'EOD', suffix: '-EOD', label: 'EOD / bomb disposal station' },
+            RECOVERY: { stationType: 'RECOVERY', suffix: '-REC', label: 'Recovery station' }
+        };
+
+        if (detectedType === 'AIR') {
+            return /POLICE/i.test(name)
+                ? { stationType: 'AIR', suffix: '-PH', label: 'Police helicopter station' }
+                : { stationType: 'AIR', suffix: '-AA', label: 'Air ambulance station' };
+        }
+
+        return fallbackByType[detectedType]
             || { stationType: 'OTHER', suffix: '', label: `Unsupported building type ${buildingTypeId ?? 'unknown'}` };
     }
 
@@ -2976,7 +3270,8 @@
             return 'skipped';
         }
 
-        const stationLink = document.querySelector(`a.lightbox-open.list-group-item.active[href="${station.href}"]`);
+        const stationEntry = findStationOverviewEntry(station.href);
+        const stationLink = stationEntry?.link || null;
         if (!stationLink) {
             stationLog(`Skipped: station link no longer exists for ${station.href}.`, 'error');
             return 'skipped';
@@ -2985,8 +3280,11 @@
         let iframe = null;
 
         try {
-            stationLink.click();
-            iframe = await waitForStationNamingIframe(station.href);
+            iframe = await openStationWorkflowIframe(
+                stationEntry,
+                'station-naming',
+                waitForStationNamingIframe
+            );
             STATION_STATE.activeIframe = iframe;
 
             if (!iframe) throw new Error('Station lightbox iframe did not open.');
@@ -3502,13 +3800,18 @@
         return match ? match[1] : '';
     }
 
-    async function waitForStationNamingIframe(stationHref) {
-        for (let i = 0; i < 80; i++) {
+    async function waitForStationNamingIframe(stationHref, preferredIframe = null, maximumAttempts = 80) {
+        for (let i = 0; i < maximumAttempts; i++) {
             if (STATION_STATE.stopped) return null;
 
             const candidates = [
-                ...document.querySelectorAll('iframe.lightbox_iframe[src^="/buildings/"], iframe#lssmv4-redesign-lightbox-iframe')
-            ];
+                preferredIframe,
+                ...document.querySelectorAll(
+                    'iframe.lightbox_iframe[src^="/buildings/"], ' +
+                    'iframe#lssmv4-redesign-lightbox-iframe, ' +
+                    'iframe.mc-namer-managed-station-iframe'
+                )
+            ].filter(Boolean);
 
             for (const iframe of candidates.reverse()) {
                 try {
@@ -3580,21 +3883,38 @@
     }
 
     function updateStationListName(href, newName) {
-        const link = document.querySelector(`a.lightbox-open.list-group-item.active[href="${href}"]`);
+        const entry = findStationOverviewEntry(href);
+        const link = entry?.link;
+        const container = entry?.container || getStationOverviewContainer(link);
         if (!link) return;
 
-        const textNode = [...link.childNodes].find(node => node.nodeType === Node.TEXT_NODE);
-        if (textNode) {
-            textNode.textContent = ` ${newName}`;
-        } else {
-            link.appendChild(document.createTextNode(` ${newName}`));
-        }
+        const sameBuildingLinks = container
+            ? [...container.querySelectorAll('a[href]')]
+                .filter(candidate => normaliseStationOverviewHref(candidate.getAttribute('href')) === entry.href)
+            : [link];
+        const nameLink = sameBuildingLinks.find(candidate => {
+            const label = cleanText(candidate.textContent);
+            return label && !isGenericStationActionText(label);
+        });
+        const nameNode = nameLink || container?.querySelector(
+            '[data-building-name], .building_list_title, .building-list-title, ' +
+            '.building_name, .building-name, .panel-heading, .card-title'
+        );
 
-        const container = link.closest('.building_list_li, .building_list');
+        if (nameNode) {
+            nameNode.textContent = newName;
+            nameNode.setAttribute?.('data-building-name', newName);
+        }
         if (container) container.setAttribute('search_attribute', newName);
     }
 
-    async function closeStationNamingModal() {
+    async function closeStationNamingModal(iframe = STATION_STATE.activeIframe) {
+        if (removeManagedStationIframe(iframe)) {
+            if (STATION_STATE.activeIframe === iframe) STATION_STATE.activeIframe = null;
+            await sleep(50);
+            return;
+        }
+
         const closeButtons = [...document.querySelectorAll('span.lightbox-close')];
         const closeButton = closeButtons.reverse().find(button => button.offsetParent !== null) || closeButtons[0];
 
@@ -3699,32 +4019,24 @@
         setPersonnelUiValue('status', `Refreshing ${scopeLabel}...`);
         personnelLog(`Refreshing ${scopeLabel}...`, 'info');
 
-        const stationLinks = [...document.querySelectorAll('a.lightbox-open.list-group-item.active[href^="/buildings/"]')];
+        const stationEntries = getStationOverviewEntries();
 
         PERSONNEL_STATION_LINK_BY_HREF.clear();
-        stationLinks.forEach(link => {
-            const href = link.getAttribute('href') || '';
-            if (href) PERSONNEL_STATION_LINK_BY_HREF.set(href, link);
+        stationEntries.forEach(entry => {
+            if (entry.href) PERSONNEL_STATION_LINK_BY_HREF.set(entry.href, entry.link);
         });
 
-        PERSONNEL_STATE.stations = stationLinks
-            .map((link, index) => {
-                const displayName = cleanText(link.textContent);
-                const href = link.getAttribute('href') || '';
-                const container = link.closest('.building_list_li[building_type_id], .building_list[building_type_id]');
-                const rawTypeId = container?.getAttribute('building_type_id') ?? '';
-                const buildingTypeId = rawTypeId === '' ? null : Number(rawTypeId);
-                const mappedType = STATION_BUILDING_TYPE_INFO[buildingTypeId]?.stationType || detectStationType(displayName);
-
-                return {
-                    index,
-                    href,
-                    buildingId: getBuildingIdFromHref(href),
-                    displayName,
-                    buildingTypeId,
-                    stationType: mappedType
-                };
-            })
+        PERSONNEL_STATE.stations = stationEntries
+            .map((entry, index) => ({
+                index,
+                href: entry.href,
+                buildingId: entry.buildingId,
+                displayName: entry.displayName,
+                buildingTypeId: entry.buildingTypeId,
+                stationType:
+                    STATION_BUILDING_TYPE_INFO[entry.buildingTypeId]?.stationType ||
+                    detectStationType(entry.displayName)
+            }))
             .filter(station => station.href && station.buildingId && allowedStationTypes.has(station.stationType));
 
         PERSONNEL_STATE.filteredStations = [...PERSONNEL_STATE.stations];
@@ -3807,34 +4119,18 @@
             return;
         }
 
-        const stations =
-            Array.from(
-                document.querySelectorAll(
-                    'a.lightbox-open.list-group-item.active[href^="/buildings/"]'
-                )
-            )
-                .map((link, index) => {
-                    const displayName = cleanText(link.textContent);
-                    const href = link.getAttribute('href') || '';
-                    const container = link.closest(
-                        '.building_list_li[building_type_id], .building_list[building_type_id]'
-                    );
-                    const rawTypeId = container?.getAttribute('building_type_id') ?? '';
-                    const buildingTypeId = rawTypeId === '' ? null : Number(rawTypeId);
-                    const stationType =
-                        STATION_BUILDING_TYPE_INFO[buildingTypeId]?.stationType ||
-                        detectStationType(displayName);
-
-                    return {
-                        index,
-                        href,
-                        buildingId: getBuildingIdFromHref(href),
-                        displayName,
-                        buildingTypeId,
-                        stationType
-                    };
-                })
-                .filter(station => station.href && station.buildingId);
+        const stations = getStationOverviewEntries()
+            .map((entry, index) => ({
+                index,
+                href: entry.href,
+                buildingId: entry.buildingId,
+                displayName: entry.displayName,
+                buildingTypeId: entry.buildingTypeId,
+                stationType:
+                    STATION_BUILDING_TYPE_INFO[entry.buildingTypeId]?.stationType ||
+                    detectStationType(entry.displayName)
+            }))
+            .filter(station => station.href && station.buildingId);
 
         if (!stations.length) {
             personnelLog(
@@ -7482,18 +7778,17 @@
         log('Refreshing station list...', 'info');
         log(`Unit class filter: ${getUnitClassDisplayLabel()}`, 'info');
 
-        const stationLinks = [...document.querySelectorAll('a.lightbox-open.list-group-item.active[href^="/buildings/"]')];
+        const stationEntries = getStationOverviewEntries();
 
-        STATE.stations = stationLinks.map((link, index) => {
-            const displayName = cleanText(link.textContent);
-            return {
-                index,
-                href: link.getAttribute('href'),
-                displayName,
-                callsignBase: createCallsignBase(link.textContent),
-                stationType: detectStationType(displayName)
-            };
-        });
+        STATE.stations = stationEntries.map((entry, index) => ({
+            index,
+            href: entry.href,
+            displayName: entry.displayName,
+            callsignBase: createCallsignBase(entry.displayName),
+            stationType:
+                STATION_BUILDING_TYPE_INFO[entry.buildingTypeId]?.stationType ||
+                detectStationType(entry.displayName)
+        }));
 
         populateStartDropdown();
 
@@ -7650,7 +7945,8 @@
 
                 log(`Station: ${station.displayName}`, 'station');
 
-                const stationLink = document.querySelector(`a.lightbox-open.list-group-item.active[href="${station.href}"]`);
+                const stationEntry = findStationOverviewEntry(station.href);
+                const stationLink = stationEntry?.link || null;
 
                 if (!stationLink) {
                     log(`Station link not found, skipped: ${station.displayName}`, 'error');
@@ -7658,8 +7954,11 @@
                     continue;
                 }
 
-                stationLink.click();
-                const iframe = await waitForStationIframe(station.href);
+                const iframe = await openStationWorkflowIframe(
+                    stationEntry,
+                    'unit-naming',
+                    waitForStationIframe
+                );
 
                 if (iframe) {
                     STATE.activeIframe = iframe;
@@ -7722,18 +8021,21 @@
         }
     }
 
-    async function waitForStationIframe(stationHref) {
+    async function waitForStationIframe(stationHref, preferredIframe = null, maximumAttempts = 80) {
         const expectedHref = String(stationHref || '');
         const expectedBuildingId = getBuildingIdFromHref(expectedHref);
 
-        for (let i = 0; i < 80; i++) {
+        for (let i = 0; i < maximumAttempts; i++) {
             if (STATE.stopped) return null;
 
             const candidates = [
+                preferredIframe,
                 ...document.querySelectorAll(
-                    'iframe.lightbox_iframe, iframe#lssmv4-redesign-lightbox-iframe, .vm--modal iframe[src*="/buildings/"]'
+                    'iframe.lightbox_iframe, iframe#lssmv4-redesign-lightbox-iframe, ' +
+                    '.vm--modal iframe[src*="/buildings/"], ' +
+                    'iframe.mc-namer-managed-station-iframe'
                 )
-            ];
+            ].filter(Boolean);
 
             for (const iframe of candidates.reverse()) {
                 try {
@@ -7976,6 +8278,11 @@
         const activeIframe = iframe || STATE.activeIframe;
         if (STATE.activeIframe === activeIframe) {
             STATE.activeIframe = null;
+        }
+
+        if (removeManagedStationIframe(activeIframe)) {
+            await sleep(50);
+            return;
         }
 
         const closeBtn = getUnitModalCloseButton(activeIframe);

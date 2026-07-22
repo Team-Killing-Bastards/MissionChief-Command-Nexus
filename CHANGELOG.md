@@ -26,6 +26,15 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Consolidate the two retained control surfaces into one coherent interface.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
+## [1.0.16] - 2026-07-22
+
+### Changed
+
+- Restore Unit Naming, Station Naming, Personnel Assignment and Personnel Register station discovery on the responsive iOS Stations tab.
+- Enforce exactly one Command Nexus tools menu after Safari bfcache restoration or duplicate injection.
+- Add a same-origin iOS station iframe fallback when responsive Details links do not activate MissionChief lightboxes.
+- Increased the unified userscript version from `1.0.15` to `1.0.16`.
+
 ## [1.0.15] - 2026-07-22
 
 ### Added
