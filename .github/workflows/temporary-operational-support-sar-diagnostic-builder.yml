@@ -1,6 +1,6 @@
 name: Temporary Operational Support SAR diagnostic builder
 
-# Diagnostic v3: correct the one-line selected-count anchor before execution.
+# Diagnostic v4: exact selected-count anchor, including no blank line.
 on:
   push:
     branches:
@@ -45,10 +45,8 @@ jobs:
               "verification strict flag",
           )'''.replace('          ', '')
           new = '''count_dog_flag = """        const dogSupportOnly = isDogSupportUnitRequirement(originalName, mappedName);
-
               const generic4x4Only ="""
           count_dog_flag_with_operational = """        const dogSupportOnly = isDogSupportUnitRequirement(originalName, mappedName);
-
               const operationalSupportOnly =
                   isOperationalSupportOrSarVehicleRequirement(
                       originalName,
@@ -71,7 +69,7 @@ jobs:
           python3 /tmp/operational-support-sar-patch.py > /tmp/patch-result.log 2>&1
           status=$?
           {
-            echo "Operational Support SAR corrected patcher diagnostic status: ${status}."
+            echo "Operational Support SAR exact-anchor diagnostic status: ${status}."
             echo
             echo '```text'
             cat /tmp/patch-result.log
