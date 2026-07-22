@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.14
+// @version      1.0.15
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -48,6 +48,9 @@
     const PERSONNEL_STATION_GAP_MS = 900;
     const ACTIVE_TAB_STORAGE_KEY = 'mcNamingToolsActiveTab_v32';
     const COLLAPSED_STORAGE_KEY = 'mcNamingToolsCollapsed_v36';
+    const IOS_COLLAPSED_STORAGE_KEY = 'mcNamingToolsIosCollapsed_v1';
+    const IOS_POSITION_STORAGE_KEY = 'mcNamingToolsIosPosition_v1';
+    const IOS_PANEL_VIEWPORT_MARGIN = 12;
     const PERSONNEL_STATION_REPORT_VISIBLE_KEY = 'mcPersonnelStationReportVisible_v407';
     const PERSONNEL_OVERALL_REPORT_VISIBLE_KEY = 'mcPersonnelOverallReportVisible_v407';
     const PERSONNEL_SERVICE_STORAGE_KEY = 'mcPersonnelService_v410';
@@ -1099,8 +1102,47 @@
         registerToolLifecycleCleanup(clearInitTimer);
     }
 
+    function isIosSafariBrowser() {
+        const userAgent = String(navigator.userAgent || '');
+        const platform = String(navigator.platform || '');
+        const isAppleTouchDevice =
+            /iP(?:hone|ad|od)/i.test(userAgent)
+            || (platform === 'MacIntel' && Number(navigator.maxTouchPoints) > 1);
+        const isWebKit = /WebKit/i.test(userAgent);
+        const isAlternativeIosBrowser =
+            /(CriOS|FxiOS|EdgiOS|OPiOS|DuckDuckGo|Ddg|GSA|YaBrowser)/i.test(userAgent);
+
+        return isAppleTouchDevice && isWebKit && !isAlternativeIosBrowser;
+    }
+
+    function isIosStationsListScreen() {
+        if (!isIosSafariBrowser()) return false;
+
+        const path = (window.location.pathname || '/')
+            .replace(/\/+$/, '') || '/';
+        if (path !== '/buildings') return false;
+
+        const hasStationRows = Boolean(document.querySelector(
+            '.building_list_li, #building_list, .building-list, [data-building-type]'
+        ));
+        const hasActiveStationsNavigation = Array.from(
+            document.querySelectorAll('a, button')
+        ).some(element => {
+            const label = String(element.textContent || '').trim();
+            if (!/^Stations$/i.test(label)) return false;
+            return element.classList.contains('active')
+                || element.getAttribute('aria-current') === 'page';
+        });
+
+        return hasStationRows || hasActiveStationsNavigation;
+    }
+
     function isStationOverviewScreen() {
-        return Boolean(document.querySelector('a.lightbox-open.list-group-item.active[href^="/buildings/"]'));
+        if (isIosSafariBrowser()) return isIosStationsListScreen();
+
+        return Boolean(document.querySelector(
+            'a.lightbox-open.list-group-item.active[href^="/buildings/"]'
+        ));
     }
 
     function init() {
@@ -1113,8 +1155,15 @@
     function addPanel() {
         if (document.querySelector('#mc-namer-panel')) return;
 
+        const iosSafariStations = isIosStationsListScreen();
         const panel = document.createElement('div');
         panel.id = 'mc-namer-panel';
+        panel.setAttribute('role', 'dialog');
+        panel.setAttribute('aria-label', 'MissionChief Command Nexus tools');
+        if (iosSafariStations) {
+            panel.classList.add('mc-namer-ios-safari');
+            panel.dataset.mcMobileSurface = 'ios-safari-stations';
+        }
 
         panel.innerHTML = `
             <div id="mc-namer-header">
@@ -1782,6 +1831,91 @@
                 font-weight: bold;
             }
 
+
+
+            #mc-namer-panel.mc-namer-ios-safari {
+                top: calc(env(safe-area-inset-top, 0px) + 140px);
+                right: calc(env(safe-area-inset-right, 0px) + 12px);
+                left: auto;
+                width: min(420px, calc(100vw - 24px));
+                max-width: calc(100vw - 24px);
+                max-height: calc(100vh - 164px);
+                max-height: min(
+                    72dvh,
+                    calc(
+                        100dvh
+                        - env(safe-area-inset-top, 0px)
+                        - env(safe-area-inset-bottom, 0px)
+                        - 24px
+                    )
+                );
+                border-radius: 14px;
+                box-shadow: 0 10px 32px rgba(0,0,0,0.48);
+                font-size: 14px;
+                transform: translateZ(0);
+                -webkit-tap-highlight-color: transparent;
+            }
+
+            #mc-namer-panel.mc-namer-ios-safari #mc-namer-header {
+                min-height: 50px;
+                padding: 6px 8px 6px 12px;
+                cursor: grab;
+                touch-action: none;
+            }
+
+            #mc-namer-panel.mc-namer-ios-safari.mc-namer-ios-dragging #mc-namer-header {
+                cursor: grabbing;
+            }
+
+            #mc-namer-panel.mc-namer-ios-safari #mc-namer-header-title {
+                font-size: 15px;
+            }
+
+            #mc-namer-panel.mc-namer-ios-safari #mc-namer-collapse {
+                flex-basis: 44px;
+                width: 44px;
+                height: 44px;
+                border-radius: 10px;
+                font-size: 24px;
+                line-height: 40px;
+                touch-action: manipulation;
+            }
+
+            #mc-namer-panel.mc-namer-ios-safari #mc-namer-body {
+                -webkit-overflow-scrolling: touch;
+                padding-bottom: env(safe-area-inset-bottom, 0px);
+            }
+
+            #mc-namer-panel.mc-namer-ios-safari .mc-namer-tabs {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            #mc-namer-panel.mc-namer-ios-safari .mc-namer-tab {
+                min-width: 0;
+                padding: 10px 5px;
+                font-size: 11px;
+                line-height: 1.25;
+                white-space: normal;
+            }
+
+            #mc-namer-panel.mc-namer-ios-safari button,
+            #mc-namer-panel.mc-namer-ios-safari select,
+            #mc-namer-panel.mc-namer-ios-safari input:not([type="checkbox"]):not([type="radio"]) {
+                min-height: 42px;
+            }
+
+            #mc-namer-panel.mc-namer-ios-safari select,
+            #mc-namer-panel.mc-namer-ios-safari input,
+            #mc-namer-panel.mc-namer-ios-safari textarea {
+                font-size: 16px;
+            }
+
+            #mc-namer-panel.mc-namer-ios-safari.mc-namer-collapsed {
+                width: min(270px, calc(100vw - 24px));
+                max-height: none;
+            }
+
             .mc-log-info { color: #93c5fd; }
             .mc-log-station { color: #bfdbfe; font-weight: bold; margin-top: 8px; }
             .mc-log-before { color: #fca5a5; }
@@ -1854,17 +1988,33 @@
 
         initialisePersonnelProfileNavigation();
         initialisePersonnelReportVisibility();
-        makePanelDraggable(panel, document.querySelector('#mc-namer-header'));
+
+        const panelHeader = document.querySelector('#mc-namer-header');
+        if (iosSafariStations) {
+            makeIosPanelDraggable(panel, panelHeader);
+        } else {
+            makePanelDraggable(panel, panelHeader);
+        }
 
         let savedTab = 'unit';
         let savedCollapsed = false;
         try {
             savedTab = localStorage.getItem(ACTIVE_TAB_STORAGE_KEY) || 'unit';
-            savedCollapsed = localStorage.getItem(COLLAPSED_STORAGE_KEY) === 'true';
+            const collapseStorageKey = iosSafariStations
+                ? IOS_COLLAPSED_STORAGE_KEY
+                : COLLAPSED_STORAGE_KEY;
+            savedCollapsed = localStorage.getItem(collapseStorageKey) === 'true';
         } catch (e) {}
 
         switchToolTab(savedTab === 'station' ? 'station' : savedTab === 'personnel' ? 'personnel' : 'unit', true);
         setPanelCollapsed(savedCollapsed, false);
+
+        if (iosSafariStations) {
+            requestAnimationFrame(() => {
+                restoreIosPanelPosition(panel);
+                clampIosPanelToViewport(panel);
+            });
+        }
     }
 
     function getPersonnelServiceDefinition(serviceId = PERSONNEL_STATE.service) {
@@ -2384,8 +2534,15 @@
 
         if (save) {
             try {
-                localStorage.setItem(COLLAPSED_STORAGE_KEY, collapsed ? 'true' : 'false');
+                const collapseStorageKey = panel.classList.contains('mc-namer-ios-safari')
+                    ? IOS_COLLAPSED_STORAGE_KEY
+                    : COLLAPSED_STORAGE_KEY;
+                localStorage.setItem(collapseStorageKey, collapsed ? 'true' : 'false');
             } catch (e) {}
+        }
+
+        if (panel.classList.contains('mc-namer-ios-safari')) {
+            requestAnimationFrame(() => clampIosPanelToViewport(panel, save));
         }
     }
 
@@ -6880,6 +7037,217 @@
     function personnelDebug(message) {
         if (!PERSONNEL_STATE.debug) return;
         personnelLog(`[DEBUG] ${message}`, 'debug');
+    }
+
+
+    function getIosPanelViewport() {
+        const viewport = window.visualViewport;
+        return {
+            left: Number(viewport?.offsetLeft || 0),
+            top: Number(viewport?.offsetTop || 0),
+            width: Number(
+                viewport?.width
+                || document.documentElement.clientWidth
+                || window.innerWidth
+                || 0
+            ),
+            height: Number(
+                viewport?.height
+                || document.documentElement.clientHeight
+                || window.innerHeight
+                || 0
+            )
+        };
+    }
+
+    function setIosPanelPosition(panel, requestedLeft, requestedTop, save = false) {
+        if (!panel?.classList.contains('mc-namer-ios-safari')) return;
+
+        const viewport = getIosPanelViewport();
+        const rect = panel.getBoundingClientRect();
+        const minLeft = viewport.left + IOS_PANEL_VIEWPORT_MARGIN;
+        const minTop = viewport.top + IOS_PANEL_VIEWPORT_MARGIN;
+        const maxLeft = Math.max(
+            minLeft,
+            viewport.left + viewport.width - rect.width - IOS_PANEL_VIEWPORT_MARGIN
+        );
+        const maxTop = Math.max(
+            minTop,
+            viewport.top + viewport.height - rect.height - IOS_PANEL_VIEWPORT_MARGIN
+        );
+        const left = Math.min(maxLeft, Math.max(minLeft, Number(requestedLeft) || minLeft));
+        const top = Math.min(maxTop, Math.max(minTop, Number(requestedTop) || minTop));
+
+        panel.style.left = `${Math.round(left)}px`;
+        panel.style.top = `${Math.round(top)}px`;
+        panel.style.right = 'auto';
+
+        if (save) {
+            try {
+                localStorage.setItem(
+                    IOS_POSITION_STORAGE_KEY,
+                    JSON.stringify({ left: Math.round(left), top: Math.round(top) })
+                );
+            } catch (_error) {}
+        }
+    }
+
+    function clampIosPanelToViewport(panel, save = false) {
+        if (!panel?.classList.contains('mc-namer-ios-safari')) return;
+        const rect = panel.getBoundingClientRect();
+        setIosPanelPosition(panel, rect.left, rect.top, save);
+    }
+
+    function restoreIosPanelPosition(panel) {
+        if (!panel?.classList.contains('mc-namer-ios-safari')) return;
+
+        let savedPosition = null;
+        try {
+            savedPosition = JSON.parse(
+                localStorage.getItem(IOS_POSITION_STORAGE_KEY) || 'null'
+            );
+        } catch (_error) {}
+
+        if (
+            savedPosition
+            && Number.isFinite(Number(savedPosition.left))
+            && Number.isFinite(Number(savedPosition.top))
+        ) {
+            setIosPanelPosition(
+                panel,
+                Number(savedPosition.left),
+                Number(savedPosition.top)
+            );
+            return;
+        }
+
+        clampIosPanelToViewport(panel);
+    }
+
+    function makeIosPanelDraggable(panel, handle) {
+        if (!panel || !handle) return;
+
+        let dragging = false;
+        let activePointerId = null;
+        let startX = 0;
+        let startY = 0;
+        let startLeft = 0;
+        let startTop = 0;
+
+        const isCollapseTarget = target =>
+            target instanceof Element
+            && Boolean(target.closest('#mc-namer-collapse'));
+
+        const startDrag = (clientX, clientY) => {
+            const rect = panel.getBoundingClientRect();
+            dragging = true;
+            startX = clientX;
+            startY = clientY;
+            startLeft = rect.left;
+            startTop = rect.top;
+            panel.classList.add('mc-namer-ios-dragging');
+            panel.style.left = `${Math.round(startLeft)}px`;
+            panel.style.top = `${Math.round(startTop)}px`;
+            panel.style.right = 'auto';
+        };
+
+        const moveDrag = (clientX, clientY) => {
+            if (!dragging) return;
+            setIosPanelPosition(
+                panel,
+                startLeft + clientX - startX,
+                startTop + clientY - startY
+            );
+        };
+
+        const finishDrag = () => {
+            if (!dragging) return;
+            dragging = false;
+            activePointerId = null;
+            panel.classList.remove('mc-namer-ios-dragging');
+            clampIosPanelToViewport(panel, true);
+        };
+
+        const onPointerDown = event => {
+            if (isCollapseTarget(event.target)) return;
+            if (event.isPrimary === false) return;
+            if (typeof event.button === 'number' && event.button !== 0) return;
+
+            activePointerId = event.pointerId;
+            startDrag(event.clientX, event.clientY);
+            try {
+                handle.setPointerCapture(event.pointerId);
+            } catch (_error) {}
+            event.preventDefault();
+        };
+
+        const onPointerMove = event => {
+            if (!dragging || event.pointerId !== activePointerId) return;
+            moveDrag(event.clientX, event.clientY);
+            event.preventDefault();
+        };
+
+        const onPointerEnd = event => {
+            if (activePointerId != null && event.pointerId !== activePointerId) return;
+            try {
+                if (handle.hasPointerCapture?.(event.pointerId)) {
+                    handle.releasePointerCapture(event.pointerId);
+                }
+            } catch (_error) {}
+            finishDrag();
+        };
+
+        const onTouchStart = event => {
+            if (isCollapseTarget(event.target)) return;
+            const touch = event.touches?.[0];
+            if (!touch) return;
+            startDrag(touch.clientX, touch.clientY);
+            event.preventDefault();
+        };
+
+        const onTouchMove = event => {
+            const touch = event.touches?.[0];
+            if (!dragging || !touch) return;
+            moveDrag(touch.clientX, touch.clientY);
+            event.preventDefault();
+        };
+
+        const onTouchEnd = () => finishDrag();
+        const onViewportChange = () => {
+            requestAnimationFrame(() => clampIosPanelToViewport(panel, true));
+        };
+
+        if ('PointerEvent' in window) {
+            handle.addEventListener('pointerdown', onPointerDown, { passive: false });
+            handle.addEventListener('pointermove', onPointerMove, { passive: false });
+            handle.addEventListener('pointerup', onPointerEnd);
+            handle.addEventListener('pointercancel', onPointerEnd);
+        } else {
+            handle.addEventListener('touchstart', onTouchStart, { passive: false });
+            document.addEventListener('touchmove', onTouchMove, { passive: false });
+            document.addEventListener('touchend', onTouchEnd);
+            document.addEventListener('touchcancel', onTouchEnd);
+        }
+
+        window.addEventListener('resize', onViewportChange);
+        window.addEventListener('orientationchange', onViewportChange);
+        window.visualViewport?.addEventListener('resize', onViewportChange);
+
+        registerToolLifecycleCleanup(() => {
+            dragging = false;
+            panel.classList.remove('mc-namer-ios-dragging');
+            handle.removeEventListener('pointerdown', onPointerDown);
+            handle.removeEventListener('pointermove', onPointerMove);
+            handle.removeEventListener('pointerup', onPointerEnd);
+            handle.removeEventListener('pointercancel', onPointerEnd);
+            handle.removeEventListener('touchstart', onTouchStart);
+            document.removeEventListener('touchmove', onTouchMove);
+            document.removeEventListener('touchend', onTouchEnd);
+            document.removeEventListener('touchcancel', onTouchEnd);
+            window.removeEventListener('resize', onViewportChange);
+            window.removeEventListener('orientationchange', onViewportChange);
+            window.visualViewport?.removeEventListener('resize', onViewportChange);
+        });
     }
 
     function makePanelDraggable(panel, handle) {
