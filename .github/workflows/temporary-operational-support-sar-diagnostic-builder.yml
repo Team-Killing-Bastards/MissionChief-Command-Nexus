@@ -1,6 +1,6 @@
 name: Temporary Operational Support SAR diagnostic builder
 
-# Diagnostic v2: isolate the patcher result before validation or publishing.
+# Diagnostic v3: correct the one-line selected-count anchor before execution.
 on:
   push:
     branches:
@@ -24,7 +24,7 @@ jobs:
           fetch-depth: 0
           ref: agent/fix-operational-support-sar-vehicle
 
-      - name: Run patcher and report exact result
+      - name: Run corrected patcher and report exact result
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -32,10 +32,46 @@ jobs:
           set +e
           git fetch origin main --force
           git show origin/main:scripts/temporary-operational-support-sar-patch.py > /tmp/operational-support-sar-patch.py
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('/tmp/operational-support-sar-patch.py')
+          text = path.read_text(encoding='utf-8')
+          old = '''source = replace_in_segment(
+              source,
+              "    function countSelectedMatchingVehicles(originalName, mappedName) {",
+              "    function refreshVehicleRequirementCounters() {",
+              dog_flag,
+              dog_flag_with_operational,
+              "verification strict flag",
+          )'''.replace('          ', '')
+          new = '''count_dog_flag = """        const dogSupportOnly = isDogSupportUnitRequirement(originalName, mappedName);
+
+              const generic4x4Only ="""
+          count_dog_flag_with_operational = """        const dogSupportOnly = isDogSupportUnitRequirement(originalName, mappedName);
+
+              const operationalSupportOnly =
+                  isOperationalSupportOrSarVehicleRequirement(
+                      originalName,
+                      mappedName
+                  );
+
+              const generic4x4Only ="""
+          source = replace_in_segment(
+              source,
+              "    function countSelectedMatchingVehicles(originalName, mappedName) {",
+              "    function refreshVehicleRequirementCounters() {",
+              count_dog_flag,
+              count_dog_flag_with_operational,
+              "verification strict flag",
+          )'''.replace('          ', '')
+          if text.count(old) != 1:
+              raise SystemExit(f'Patcher correction anchor count: {text.count(old)}')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8', newline='\n')
+          PY
           python3 /tmp/operational-support-sar-patch.py > /tmp/patch-result.log 2>&1
           status=$?
           {
-            echo "Operational Support SAR patcher diagnostic status: ${status}."
+            echo "Operational Support SAR corrected patcher diagnostic status: ${status}."
             echo
             echo '```text'
             cat /tmp/patch-result.log
