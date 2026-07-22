@@ -1,0 +1,52 @@
+name: Release v1.0.19 now
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+jobs:
+  publish:
+    if: github.event.pull_request.head.ref == 'agent/release-v1019-trigger'
+    uses: ./.github/workflows/release.yml
+    with:
+      operation: publish-release
+      release_tag: v1.0.19
+      release_notes: 'Map the exact Fire, rescue or aerial appliance mission requirement to Rescue Pump.'
+    secrets: inherit
+
+  cleanup:
+    needs: publish
+    if: always() && needs.publish.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Remove one-time release launcher
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          TRIGGER_BRANCH: ${{ github.event.pull_request.head.ref }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name MartyBlyth
+          git config user.email 32400596+Martyblyth@users.noreply.github.com
+          git rm -f .github/workflows/release-v1019-now.yml
+          git commit -m 'Remove completed v1.0.19 release launcher'
+          git push origin HEAD:main
+          gh pr close "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --comment 'v1.0.19 release pipeline completed successfully.' || true
+          git push origin --delete "${TRIGGER_BRANCH}" || true
