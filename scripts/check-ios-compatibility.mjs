@@ -114,4 +114,57 @@ if (panelIdAssignments.length !== 1) {
   fail(`Expected exactly one menu creation site; found ${panelIdAssignments.length}`);
 }
 
+requireText(
+  'function isMissionFinderIosSafariWebsite(',
+  'Mission Control iOS Safari detector'
+);
+requireText(
+  'mf2026-ios-safari',
+  'Mission Control iOS Safari wrapper class'
+);
+requireText(
+  '#mission-finder-wrapper.mf2026-ios-safari',
+  'Mission Control mobile layout'
+);
+requireText(
+  'function getMissionFinderViewportBounds(',
+  'Mission Control visual viewport bounds'
+);
+requireText(
+  'function resetMissionFinderIosPosition(',
+  'Mission Control safe-area reset'
+);
+requireText(
+  'MF_CONTROL_COLLAPSED_KEY',
+  'Mission Control iOS collapse storage isolation'
+);
+requireText(
+  'MF_VEHICLE_LOAD_COLLAPSED_KEY',
+  'Vehicle Load List iOS collapse storage isolation'
+);
+requirePattern(
+  /function makePanelDraggable\(panel, dragHandle\)[\s\S]{0,16000}isMissionFinderIosSafariWebsite\(\)[\s\S]{0,16000}pointerdown/,
+  'Mission Control pointer dragging'
+);
+requirePattern(
+  /if \(!missionFinderIosSafari\)[\s\S]{0,1200}wrapper\.style\.left/,
+  'desktop Mission Control positioning isolation'
+);
+requirePattern(
+  /if \(missionFinderIosSafari\)[\s\S]{0,1000}resetMissionFinderIosPosition/,
+  'iOS Mission Control top placement'
+);
+requireText(
+  '#control-panel {\n                width: 260px;',
+  'desktop Mission Control width preservation'
+);
+requireText(
+  '#vehicle-load-list-box {\n                width: 300px;',
+  'desktop Vehicle Load List width preservation'
+);
+requireText(
+  "!/(?:CriOS|FxiOS|EdgiOS|OPiOS|DuckDuckGo)/i.test(userAgent)",
+  'Mission Control non-Safari browser exclusion'
+);
+
 console.log('iOS Safari compatibility regression checks passed.');
