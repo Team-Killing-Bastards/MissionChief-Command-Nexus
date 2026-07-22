@@ -32,11 +32,18 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 - Enabled Railway Fire (2 `railway_fire` per type-107 RRU), Level 1 Incident Commander (3 `elw2` per type-15 ICCU) and HazMat (3 `gw_gefahrgut` per type-39 Fire OSU) personnel profiles.
 
+### Fixed
+
+- Mission Control now uses an iOS Safari-only safe-area top layout instead of opening as the centred 560px desktop interface over the dispatch screen.
+- Added a horizontal chevron collapse control, pointer dragging and visual-viewport recovery for Safari address-bar changes, rotation and bfcache restoration.
+- The Vehicle Load List defaults collapsed on first iOS Safari use and uses mobile-specific collapse storage without changing desktop preferences.
+
 ### Changed
 
 - BASU, Welfare and HazMat mission wording now shares one exact type-39 Fire OSU; type-86 SAR Operational Support Vans remain separate.
 - High Volume Pump, Drone Operator, Co-Responder and Lifeguard remain disabled pending later evidence.
-- Personnel Assignment increased to `1.3.2`; Mission Finder increased to `V10.6.82`.
+- Desktop Mission Control sizing, saved positioning, centring and mouse dragging remain unchanged.
+- Personnel Assignment increased to `1.3.2`; Mission Finder increased to `V10.6.83`.
 
 ## [1.0.17] - 2026-07-22
 

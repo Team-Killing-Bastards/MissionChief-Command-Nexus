@@ -11,7 +11,7 @@ src/missionchief-command-nexus.user.js
 | Item | Value |
 |---|---|
 | Command Nexus version | `1.0.18` |
-| Mission Finder baseline | `V10.6.82` |
+| Mission Finder baseline | `V10.6.83` |
 | Unit, Station & Personnel baseline | `V4.2.8` |
 | Licence | MIT |
 | Developer and source-code owner | **MartyBlyth** |
@@ -28,7 +28,7 @@ The file contains:
 3. The Mission Operations Engine.
 4. A shared vehicle-training registry used for qualification-aware selection.
 
-The source is merged and installable, but deeper interface, lifecycle and storage consolidation remains subject to testing and MartyBlyth's technical direction.
+The source is merged and installable. Mission Control uses a dedicated iOS Safari-only safe-area layout while the established desktop dimensions, saved positioning and mouse interaction remain unchanged. Deeper interface, lifecycle and storage consolidation remains subject to testing and MartyBlyth's technical direction.
 
 ## Distribution rule
 
