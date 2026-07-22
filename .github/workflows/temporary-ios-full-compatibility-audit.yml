@@ -80,62 +80,6 @@ jobs:
 
             git fetch origin main --force
 
-            python3 - <<'PY'
-            from pathlib import Path
-
-            path = Path('scripts/check_repository.py')
-            text = path.read_text(encoding='utf-8')
-
-            old = '''    required_patterns = (
-                (
-                    r"developed by\\s+\\*{0,2}MartyBlyth\\*{0,2}",
-                    "README must identify MartyBlyth as the developer",
-                ),
-                (
-                    r"Conroy1988.{0,180}project helper",
-                    "README must identify Conroy1988 as a project helper",
-                ),
-                (
-                    r"(?:Conroy1988|he).{0,220}not a userscript developer",
-                    "README must state that Conroy1988 is not a userscript developer",
-                ),
-            )
-'''
-
-            new = '''    required_patterns = (
-                (
-                    r"MartyBlyth.{0,220}creator",
-                    "README must identify MartyBlyth as the project creator",
-                ),
-                (
-                    r"MartyBlyth.{0,220}technical owner",
-                    "README must identify MartyBlyth as the technical owner",
-                ),
-                (
-                    r"MartyBlyth.{0,220}release authority",
-                    "README must identify MartyBlyth as the release authority",
-                ),
-                (
-                    r"Conroy1988.{0,220}project helper",
-                    "README must identify Conroy1988 as a project helper",
-                ),
-                (
-                    r"Conroy1988.{0,420}iOS Safari compatibility",
-                    "README must attribute the scoped iOS Safari contribution to Conroy1988",
-                ),
-                (
-                    r"(?:MartyBlyth's project|does not change the project's overall ownership)",
-                    "README must preserve MartyBlyth's overall project ownership",
-                ),
-            )
-'''
-
-            if old not in text:
-                raise SystemExit('Could not locate the obsolete attribution contract')
-
-            path.write_text(text.replace(old, new, 1), encoding='utf-8')
-            PY
-
             node scripts/prepare-release.mjs \
               --version '1.0.16' \
               --notes $'Restore Unit Naming, Station Naming, Personnel Assignment and Personnel Register station discovery on the responsive iOS Stations tab.\nEnforce exactly one Command Nexus tools menu after Safari bfcache restoration or duplicate injection.\nAdd a same-origin iOS station iframe fallback when responsive Details links do not activate MissionChief lightboxes.'
@@ -201,8 +145,6 @@ jobs:
             README.md \
             src/README.md \
             CHANGELOG.md \
-            scripts/check_repository.py \
-            scripts/prepare-release.mjs \
             automation/ios-full-compatibility
           git commit -m 'Complete iOS Safari Stations tool compatibility'
           git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
