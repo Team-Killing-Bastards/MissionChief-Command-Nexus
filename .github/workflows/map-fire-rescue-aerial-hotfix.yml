@@ -2,7 +2,7 @@ name: Apply Rescue Pump mapping hotfix
 
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '23 * * * *'
   workflow_dispatch:
 
 permissions:
