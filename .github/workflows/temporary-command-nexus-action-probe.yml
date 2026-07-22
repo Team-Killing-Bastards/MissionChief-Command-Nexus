@@ -1,0 +1,26 @@
+name: Temporary Command Nexus action probe
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/temporary-command-nexus-action-probe.yml'
+  pull_request_target:
+    types:
+      - edited
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  probe:
+    if: github.event_name == 'push' || github.event.pull_request.number == 80
+    runs-on: ubuntu-latest
+    steps:
+      - name: Record trigger receipt
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr comment 80 --repo "${GITHUB_REPOSITORY}" --body "Command Nexus trusted-action probe received event **${GITHUB_EVENT_NAME}** at commit \`${GITHUB_SHA}\`."
