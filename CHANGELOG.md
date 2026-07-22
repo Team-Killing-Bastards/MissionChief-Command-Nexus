@@ -26,6 +26,16 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Consolidate the two retained control surfaces into one coherent interface.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
+## [1.0.19] - 2026-07-22
+
+### Fixed
+
+- Mapped the exact `Fire, rescue or aerial appliance` mission requirement to `Rescue Pump`.
+
+### Changed
+
+- Mission Finder increased from `V10.6.83` to `V10.6.84`.
+
 ## [1.0.18] - 2026-07-22
 
 ### Added
