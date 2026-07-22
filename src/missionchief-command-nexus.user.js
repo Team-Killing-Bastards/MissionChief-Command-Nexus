@@ -1554,7 +1554,23 @@
 
 
     function isStationOverviewScreen() {
-        return getStationOverviewEntries().length > 0;
+        const entries = getStationOverviewEntries();
+        if (!entries.length) return false;
+
+        const hasDesktopStationEntry = entries.some(entry =>
+            entry.link?.matches?.(
+                'a.lightbox-open.list-group-item.active[href*="/buildings/"]'
+            )
+        );
+        if (hasDesktopStationEntry) return true;
+
+        if (!isIosSafariWebsite()) return false;
+
+        return entries.some(entry =>
+            entry.container?.matches?.(
+                '.building_list_li, .building_list, [data-building-id], [id^="building_"]'
+            )
+        );
     }
 
 

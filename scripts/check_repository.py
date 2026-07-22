@@ -35,6 +35,7 @@ REQUIRED_FILES = (
     "docs/GREASY_FORK_SETUP.md",
     "docs/media/readme-hero.svg",
     "scripts/validate-userscript.mjs",
+    "scripts/check-ios-compatibility.mjs",
     "src/README.md",
     "src/missionchief-command-nexus.user.js",
 )
