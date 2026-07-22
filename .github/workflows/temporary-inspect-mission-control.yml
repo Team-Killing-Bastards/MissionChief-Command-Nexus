@@ -1,0 +1,74 @@
+name: Inspect Mission Control for iOS Safari optimisation
+
+on:
+  push:
+    branches:
+      - agent/add-fire-iccu-osu-profiles
+    paths:
+      - '.github/workflows/temporary-inspect-mission-control.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out PR branch
+        uses: actions/checkout@v6
+
+      - name: Build inspection report
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/mission-control-inspection
+          cp src/missionchief-command-nexus.user.js /tmp/mission-control-inspection/
+
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path('src/missionchief-command-nexus.user.js')
+          lines = path.read_text(encoding='utf-8').splitlines()
+          patterns = [
+              r'Mission Control', r'mission control', r'mission[-_ ]?control',
+              r'Unit Finder', r'Mission Update', r'Auto Mode',
+              r'control panel', r'control-panel', r'control_panel',
+              r'floating', r'draggable', r'collapse', r'collapsed',
+              r'visualViewport', r'isIosSafariWebsite', r'isIOS', r'iPhone', r'iPad'
+          ]
+          regex = re.compile('|'.join(patterns), re.IGNORECASE)
+          matches = [i for i, line in enumerate(lines) if regex.search(line)]
+
+          merged = []
+          for index in matches:
+              start = max(0, index - 24)
+              end = min(len(lines), index + 25)
+              if merged and start <= merged[-1][1] + 1:
+                  merged[-1] = (merged[-1][0], max(merged[-1][1], end))
+              else:
+                  merged.append((start, end))
+
+          report = []
+          report.append(f'Source lines: {len(lines)}')
+          report.append(f'Matched lines: {len(matches)}')
+          report.append('')
+          for start, end in merged:
+              report.append(f'===== lines {start + 1}-{end} =====')
+              for i in range(start, end):
+                  report.append(f'{i + 1:06d}: {lines[i]}')
+              report.append('')
+
+          Path('/tmp/mission-control-inspection/report.txt').write_text(
+              '\n'.join(report), encoding='utf-8'
+          )
+          PY
+
+      - name: Upload exact source and report
+        uses: actions/upload-artifact@v4
+        with:
+          name: mission-control-inspection
+          path: /tmp/mission-control-inspection
+          retention-days: 1
