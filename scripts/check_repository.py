@@ -72,16 +72,28 @@ def check_attribution() -> None:
 
     required_patterns = (
         (
-            r"developed by\s+\*{0,2}MartyBlyth\*{0,2}",
-            "README must identify MartyBlyth as the developer",
+            r"MartyBlyth.{0,220}creator",
+            "README must identify MartyBlyth as the project creator",
         ),
         (
-            r"Conroy1988.{0,180}project helper",
+            r"MartyBlyth.{0,220}technical owner",
+            "README must identify MartyBlyth as the technical owner",
+        ),
+        (
+            r"MartyBlyth.{0,220}release authority",
+            "README must identify MartyBlyth as the release authority",
+        ),
+        (
+            r"Conroy1988.{0,220}project helper",
             "README must identify Conroy1988 as a project helper",
         ),
         (
-            r"(?:Conroy1988|he).{0,220}not a userscript developer",
-            "README must state that Conroy1988 is not a userscript developer",
+            r"Conroy1988.{0,420}iOS Safari compatibility",
+            "README must attribute the scoped iOS Safari contribution to Conroy1988",
+        ),
+        (
+            r"(?:MartyBlyth's project|does not change the project's overall ownership)",
+            "README must preserve MartyBlyth's overall project ownership",
         ),
     )
     for pattern, message in required_patterns:
