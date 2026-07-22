@@ -1109,10 +1109,14 @@
             /iP(?:hone|ad|od)/i.test(userAgent)
             || (platform === 'MacIntel' && Number(navigator.maxTouchPoints) > 1);
         const isWebKit = /WebKit/i.test(userAgent);
+        const hasSafariSignature = /Version\/[\d.]+.*Safari\//i.test(userAgent);
         const isAlternativeIosBrowser =
-            /(CriOS|FxiOS|EdgiOS|OPiOS|DuckDuckGo|Ddg|GSA|YaBrowser)/i.test(userAgent);
+            /(CriOS|FxiOS|EdgiOS|OPiOS|DuckDuckGo|Ddg|GSA|YaBrowser|Brave|Focus|FBAN|FBAV|Instagram)/i.test(userAgent);
 
-        return isAppleTouchDevice && isWebKit && !isAlternativeIosBrowser;
+        return isAppleTouchDevice
+            && isWebKit
+            && hasSafariSignature
+            && !isAlternativeIosBrowser;
     }
 
     function isIosStationsListScreen() {
