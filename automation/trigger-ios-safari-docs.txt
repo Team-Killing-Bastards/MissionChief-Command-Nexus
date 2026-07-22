@@ -1,0 +1,1 @@
+Apply the prepared v1.0.15 documentation patch, validate the repository, then remove this marker before review.
