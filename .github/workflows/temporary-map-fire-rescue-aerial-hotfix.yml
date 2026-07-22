@@ -1,5 +1,6 @@
 name: Map fire rescue aerial requirement hotfix
 
+# Retry 2: execute the validated v1.0.19 Rescue Pump patch.
 on:
   push:
     branches:
