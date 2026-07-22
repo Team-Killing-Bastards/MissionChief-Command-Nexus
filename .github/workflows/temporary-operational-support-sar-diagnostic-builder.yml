@@ -1,5 +1,6 @@
 name: Temporary Operational Support SAR diagnostic builder
 
+# Diagnostic v2: isolate the patcher result before validation or publishing.
 on:
   push:
     branches:
@@ -8,13 +9,13 @@ on:
       - '.github/workflows/temporary-operational-support-sar-diagnostic-builder.yml'
 
 permissions:
-  contents: write
+  contents: read
   pull-requests: write
 
 jobs:
-  build:
+  diagnose:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
 
     steps:
       - name: Check out target branch
@@ -23,99 +24,22 @@ jobs:
           fetch-depth: 0
           ref: agent/fix-operational-support-sar-vehicle
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '24'
-
-      - name: Build, validate and report
+      - name: Run patcher and report exact result
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          set -uo pipefail
-          LOG_FILE="/tmp/operational-support-sar-build.log"
-
-          run_build() {
-            set -euo pipefail
-            echo "Fetching trusted main baseline..."
-            git fetch origin main --force
-            git show origin/main:scripts/temporary-operational-support-sar-patch.py > /tmp/operational-support-sar-patch.py
-
-            echo "Applying source and documentation patch..."
-            python3 /tmp/operational-support-sar-patch.py
-
-            echo "Running focused Operational Support checks..."
-            python3 - <<'PY'
-          from pathlib import Path
-          source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8')
-          markers = [
-              '// @version      1.0.17',
-              'MODULE 2: MISSION FINDER V10.6.81',
-              '"Operational Support or SAR Vehicle": "Operational Support Van"',
-              '"Operational Support or SAR Vehicle x1": "Operational Support Van"',
-              'function isOperationalSupportOrSarVehicleRequirement(',
-              'function isOperationalSupportVanCheckbox(',
-              ").includes('86')",
-              "!raw.includes('operational support unit')",
-              'matches = isOperationalSupportVanCheckbox(input);',
-          ]
-          missing = [marker for marker in markers if marker not in source]
-          if missing:
-              raise SystemExit('Missing regression markers: ' + ', '.join(missing))
-          if source.count('const operationalSupportOnly =') != 2:
-              raise SystemExit('Expected exactly two Operational Support strict flags')
-          if source.count('isOperationalSupportVanCheckbox(') < 5:
-              raise SystemExit('Type-86 matcher is not connected to all routes')
-          print('Focused Operational Support checks passed.')
-          PY
-
-            echo "Running repository validation..."
-            node --check src/missionchief-command-nexus.user.js
-            node scripts/validate-userscript.mjs
-            node scripts/validate-userscript.mjs --base-ref origin/main
-            node scripts/check-ios-compatibility.mjs
-            python3 scripts/check_repository.py
-            git diff --check
-
-            echo "Flattening PR branch..."
-            git config user.name MartyBlyth
-            git config user.email 32400596+Martyblyth@users.noreply.github.com
-            git rm -f .github/workflows/build-operational-support-sar-fix.yml
-            git add CHANGELOG.md README.md src/README.md src/missionchief-command-nexus.user.js
-            git reset --soft origin/main
-            git restore --staged \
-              .github/workflows/temporary-operational-support-sar-builder.yml \
-              .github/workflows/temporary-operational-support-sar-push-builder.yml \
-              .github/workflows/temporary-operational-support-sar-diagnostic-builder.yml \
-              .github/workflows/temporary-command-nexus-action-probe.yml \
-              scripts/temporary-operational-support-sar-patch.py 2>/dev/null || true
-            git restore \
-              .github/workflows/temporary-operational-support-sar-builder.yml \
-              .github/workflows/temporary-operational-support-sar-push-builder.yml \
-              .github/workflows/temporary-operational-support-sar-diagnostic-builder.yml \
-              .github/workflows/temporary-command-nexus-action-probe.yml \
-              scripts/temporary-operational-support-sar-patch.py 2>/dev/null || true
-            git commit -m 'Restore Operational Support SAR selection'
-            git push --force origin HEAD:agent/fix-operational-support-sar-vehicle
-          }
-
           set +e
-          run_build > >(tee "${LOG_FILE}") 2>&1
-          STATUS=$?
-          set -e
-
-          if [[ "${STATUS}" -eq 0 ]]; then
-            gh pr comment 80 --repo "${GITHUB_REPOSITORY}" --body "Operational Support SAR trusted build completed successfully. The PR branch now contains the validated v1.0.17 candidate."
-            exit 0
-          fi
-
+          git fetch origin main --force
+          git show origin/main:scripts/temporary-operational-support-sar-patch.py > /tmp/operational-support-sar-patch.py
+          python3 /tmp/operational-support-sar-patch.py > /tmp/patch-result.log 2>&1
+          status=$?
           {
-            echo "Operational Support SAR trusted build failed with status ${STATUS}."
+            echo "Operational Support SAR patcher diagnostic status: ${status}."
             echo
             echo '```text'
-            tail -n 80 "${LOG_FILE}"
+            cat /tmp/patch-result.log
             echo '```'
-          } > /tmp/operational-support-sar-failure.md
-          gh pr comment 80 --repo "${GITHUB_REPOSITORY}" --body-file /tmp/operational-support-sar-failure.md
-          exit "${STATUS}"
+          } > /tmp/patch-result.md
+          gh pr comment 80 --repo "${GITHUB_REPOSITORY}" --body-file /tmp/patch-result.md
+          exit "${status}"
