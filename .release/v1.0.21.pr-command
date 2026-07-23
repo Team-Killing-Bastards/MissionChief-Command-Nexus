@@ -7,3 +7,4 @@ Inspect current mergeRequirementRows structure.
 Apply against the current mergeRequirementRows structure.
 Synchronise after current-source workflow registration.
 Run current-source patch through registered workflow ID.
+Execute current-source patch in original registered dispatcher.
