@@ -3,3 +3,4 @@ Synchronise after direct builder registration.
 Run diagnostic after embedded-builder failure.
 Run corrected fixed-indentation builder.
 Report corrected embedded-builder error.
+Inspect current mergeRequirementRows structure.
