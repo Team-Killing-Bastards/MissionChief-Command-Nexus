@@ -6,6 +6,11 @@ on:
       - agent/fix-issue-95-stations-panel-lifecycle
     paths:
       - '.github/workflows/issue-95-inspect.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/issue-95-inspect.yml'
 
 permissions:
   contents: write
