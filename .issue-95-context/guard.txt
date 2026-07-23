@@ -1,0 +1,214 @@
+# guard
+# marker line: 1367
+
+01337:         if (!iframe?.classList?.contains('mc-namer-managed-station-iframe')) {
+01338:             return false;
+01339:         }
+01340:         try {
+01341:             iframe.src = 'about:blank';
+01342:         } catch (_error) {}
+01343:         iframe.remove();
+01344:         return true;
+01345:     }
+01346: 
+01347:     async function openStationWorkflowIframe(entry, purpose, waitForIframe) {
+01348:         if (!entry?.link?.isConnected) return null;
+01349: 
+01350:         if (isIosSafariWebsite() && !entry.link.classList.contains('lightbox-open')) {
+01351:             const managed = createManagedStationIframe(entry.href, purpose);
+01352:             return managed ? await waitForIframe(entry.href, managed) : null;
+01353:         }
+01354: 
+01355:         activateStationOverviewEntry(entry);
+01356:         const normal = await waitForIframe(entry.href, null, 24);
+01357:         if (normal || !isIosSafariWebsite()) return normal;
+01358: 
+01359:         // Safari can render a responsive Details link while MissionChief's
+01360:         // lightbox binding is unavailable. Fall back to a same-origin managed
+01361:         // iframe so naming and personnel-safe station reads still work without
+01362:         // navigating away from the Stations tab.
+01363:         const managed = createManagedStationIframe(entry.href, purpose);
+01364:         return managed ? await waitForIframe(entry.href, managed) : null;
+01365:     }
+01366: 
+01367:     function ensureSingleNamingToolsPanel(preferredPanel = null) {
+01368:         const panels = [...document.querySelectorAll('#mc-namer-panel')];
+01369:         const keeper = preferredPanel?.isConnected
+01370:             ? preferredPanel
+01371:             : panels[0] || null;
+01372: 
+01373:         panels.forEach(panel => {
+01374:             if (panel !== keeper) panel.remove();
+01375:         });
+01376: 
+01377:         const styles = [...document.querySelectorAll('style[data-mc-namer-style="true"]')];
+01378:         styles.forEach((style, index) => {
+01379:             if (index > 0) style.remove();
+01380:         });
+01381: 
+01382:         return keeper;
+01383:     }
+01384: 
+01385:     function installSingleNamingToolsPanelGuard(panel) {
+01386:         let pending = false;
+01387:         const enforce = () => {
+01388:             if (pending) return;
+01389:             pending = true;
+01390:             requestAnimationFrame(() => {
+01391:                 pending = false;
+01392:                 ensureSingleNamingToolsPanel(panel?.isConnected ? panel : null);
+01393:             });
+01394:         };
+01395: 
+01396:         const observer = new MutationObserver(records => {
+01397:             const panelMutation = records.some(record =>
+01398:                 [...record.addedNodes].some(node =>
+01399:                     node?.nodeType === Node.ELEMENT_NODE && (
+01400:                         node.matches?.('#mc-namer-panel') ||
+01401:                         node.querySelector?.('#mc-namer-panel')
+01402:                     )
+01403:                 )
+01404:             );
+01405:             if (panelMutation) enforce();
+01406:         });
+01407:         observer.observe(document.documentElement, { childList: true, subtree: true });
+01408:         window.addEventListener('pageshow', enforce, { passive: true });
+01409: 
+01410:         registerToolLifecycleCleanup(() => {
+01411:             observer.disconnect();
+01412:             window.removeEventListener('pageshow', enforce);
+01413:         });
+01414: 
+01415:         enforce();
+01416:     }
+01417: 
+01418:     function getToolViewportBounds() {
+01419:         const viewport = window.visualViewport;
+01420:         const left = Math.max(0, Number(viewport?.offsetLeft || 0));
+01421:         const top = Math.max(0, Number(viewport?.offsetTop || 0));
+01422:         const width = Math.max(1, Number(viewport?.width || window.innerWidth || 1));
+01423:         const height = Math.max(1, Number(viewport?.height || window.innerHeight || 1));
+01424: 
+01425:         return {
+01426:             left,
+01427:             top,
+01428:             width,
+01429:             height,
+01430:             right: left + width,
+01431:             bottom: top + height
+01432:         };
+01433:     }
+01434: 
+01435:     function clampToolPanelToViewport(panel) {
+01436:         if (!panel?.isConnected) return;
+01437: 
+01438:         // Before the first drag, iOS Safari is positioned entirely by the
+01439:         // safe-area CSS below. Only clamp an explicitly dragged mobile panel.
+01440:         if (
+01441:             panel.classList.contains('mc-ios-safari')
+01442:             && !panel.style.left
+01443:         ) {
+01444:             return;
+01445:         }
+01446: 
+01447:         const bounds = getToolViewportBounds();
+01448:         let rect = panel.getBoundingClientRect();
+01449:         const maximumWidth = Math.max(260, bounds.width - 16);
+01450: 
+01451:         if (rect.width > maximumWidth) {
+01452:             panel.style.width = `${maximumWidth}px`;
+01453:             rect = panel.getBoundingClientRect();
+01454:         }
+01455: 
+01456:         const maximumLeft = Math.max(
+01457:             bounds.left,
+01458:             bounds.right - rect.width
+01459:         );
+01460:         const maximumTop = Math.max(
+01461:             bounds.top,
+01462:             bounds.bottom - rect.height
+01463:         );
+01464:         const nextLeft = Math.min(
+01465:             maximumLeft,
+01466:             Math.max(bounds.left, rect.left)
+01467:         );
+01468:         const nextTop = Math.min(
+01469:             maximumTop,
+01470:             Math.max(bounds.top, rect.top)
+01471:         );
+01472: 
+01473:         panel.style.left = `${nextLeft}px`;
+01474:         panel.style.top = `${nextTop}px`;
+01475:         panel.style.right = 'auto';
+01476:     }
+01477: 
+01478:     function installToolViewportGuard(panel) {
+01479:         let pendingFrame = null;
+01480: 
+01481:         const requestClamp = () => {
+01482:             if (pendingFrame != null) return;
+01483:             pendingFrame = requestAnimationFrame(() => {
+01484:                 pendingFrame = null;
+01485:                 clampToolPanelToViewport(panel);
+01486:             });
+01487:         };
+01488: 
+01489:         const resetIosPosition = () => {
+01490:             if (panel.classList.contains('mc-ios-safari')) {
+01491:                 panel.style.left = '';
+01492:                 panel.style.top = '';
+01493:                 panel.style.right = '';
+01494:                 panel.style.width = '';
+01495:             }
+01496:             requestClamp();
+01497:         };
+01498: 
+01499:         window.addEventListener('resize', requestClamp, { passive: true });
+01500:         window.addEventListener('orientationchange', resetIosPosition, { passive: true });
+01501:         window.addEventListener('pageshow', requestClamp, { passive: true });
+01502:         window.visualViewport?.addEventListener('resize', requestClamp, { passive: true });
+01503:         window.visualViewport?.addEventListener('scroll', requestClamp, { passive: true });
+01504: 
+01505:         registerToolLifecycleCleanup(() => {
+01506:             if (pendingFrame != null) {
+01507:                 cancelAnimationFrame(pendingFrame);
+01508:                 pendingFrame = null;
+01509:             }
+01510:             window.removeEventListener('resize', requestClamp);
+01511:             window.removeEventListener('orientationchange', resetIosPosition);
+01512:             window.removeEventListener('pageshow', requestClamp);
+01513:             window.visualViewport?.removeEventListener('resize', requestClamp);
+01514:             window.visualViewport?.removeEventListener('scroll', requestClamp);
+01515:         });
+01516: 
+01517:         requestClamp();
+01518:     }
+01519: 
+01520:     function initWhenReady() {
+01521:         let tries = 0;
+01522:         let timer = null;
+01523:         let observer = null;
+01524:         const maximumTries = isIosSafariWebsite()
+01525:             ? 120
+01526:             : 40;
+01527: 
+01528:         const removeReadinessListeners = () => {
+01529:             if (timer != null) {
+01530:                 clearInterval(timer);
+01531:                 timer = null;
+01532:             }
+01533:             observer?.disconnect();
+01534:             observer = null;
+01535:             window.removeEventListener('pageshow', tryInitialise);
+01536:             document.removeEventListener('visibilitychange', tryInitialise);
+01537:             TOOL_LIFECYCLE_CLEANUPS.delete(removeReadinessListeners);
+01538:         };
+01539: 
+01540:         function tryInitialise() {
+01541:             if (ensureSingleNamingToolsPanel()) {
+01542:                 removeReadinessListeners();
+01543:                 return true;
+01544:             }
+01545: 
+01546:             if (!isStationOverviewScreen()) return false;
+01547: 
