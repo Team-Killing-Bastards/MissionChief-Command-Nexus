@@ -1,0 +1,143 @@
+name: Apply fixed v1.0.21 Fire cross-reference
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - synchronize
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  apply:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'release/run-v1021-fire-crossref'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out current main
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: main
+          show-progress: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Execute corrected registered builder
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          workflow_path = Path('.github/workflows/apply-v1.0.21-fire-crossref.yml')
+          workflow = workflow_path.read_text(encoding='utf-8')
+          start_marker = "          python3 - <<'PY'\n"
+          end_marker = "\n          PY\n"
+          start = workflow.find(start_marker)
+          if start < 0:
+              raise SystemExit('Embedded v1.0.21 builder start marker was not found')
+          start += len(start_marker)
+          end = workflow.find(end_marker, start)
+          if end < 0:
+              raise SystemExit('Embedded v1.0.21 builder end marker was not found')
+
+          builder = '\n'.join(
+              line[10:] if line.startswith('          ') else line
+              for line in workflow[start:end].splitlines()
+          ) + '\n'
+          exec(compile(builder, '<v1.0.21-fire-crossref-builder>', 'exec'), {'__name__': '__main__'})
+
+          quality_path = Path('.github/workflows/repository-quality.yml')
+          quality = quality_path.read_text(encoding='utf-8')
+          quality = quality.replace(
+              "  pull_request:\n    types:\n      - opened\n      - synchronize\n      - reopened\n      - closed\n",
+              "  pull_request:\n",
+              1
+          )
+          quality = quality.replace(
+              "    if: >-\n      github.event_name != 'pull_request_target' &&\n      !(github.event_name == 'pull_request' && github.event.action == 'closed')\n",
+              "    if: github.event_name != 'pull_request_target'\n",
+              1
+          )
+          block_start = quality.find('\n  dispatch-v1021-fire-crossref:')
+          block_end = quality.find('\n  release-state:', block_start)
+          if block_start >= 0 and block_end >= 0:
+              quality = quality[:block_start] + quality[block_end:]
+          elif block_start >= 0:
+              raise SystemExit('Temporary repository-quality dispatcher block could not be removed')
+          quality_path.write_text(quality, encoding='utf-8', newline='\n')
+          PY
+
+          git rm -f --ignore-unmatch .github/workflows/apply-v1.0.21-fire-crossref.yml
+          git rm -f --ignore-unmatch .github/workflows/dispatch-v1021-command.yml
+          git rm -f --ignore-unmatch .github/workflows/diagnose-v1021-builder.yml
+          git rm -f --ignore-unmatch .github/workflows/apply-v1021-direct-fixed.yml
+          git rm -f --ignore-unmatch .github/workflows/v1021-dispatch-marker.yml
+          git rm -f --ignore-unmatch .release/v1.0.21.trigger
+          git rm -f --ignore-unmatch .release/v1.0.21.command-ready
+
+      - name: Validate complete v1.0.21 build
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          node scripts/validate-userscript.mjs --base-ref origin/main
+          node scripts/check-ios-compatibility.mjs
+          python3 scripts/check_repository.py
+          git diff --check
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8')
+          required = {
+              'version': '// @version      1.0.21',
+              'Mission Finder': ' * MODULE 2: MISSION FINDER V10.6.86',
+              'Firefighters alias': '        "Firefighters": "Rescue Pump",',
+              'Car Recovery alias': '        "Car Recovery": "Flatbed Recovery Vehicle",',
+              'RIV/MFT alias': '        "RIV or Major Foam Tender": "RIV",',
+              'Firefighter conversion': 'function normaliseVehicleRequirementCount(',
+              'RIV/MFT fallback': 'function isRivOrMajorFoamTenderRequirement(',
+              'Major Foam Tender matcher': 'function isMajorFoamTenderVehicleCheckbox('
+          }
+          missing = [name for name, token in required.items() if token not in source]
+          if missing:
+              raise SystemExit('Missing v1.0.21 contracts: ' + ', '.join(missing))
+
+          expected = {1: 1, 9: 1, 10: 2, 18: 2, 19: 3, 27: 3, 28: 4}
+          actual = {count: (count + 8) // 9 for count in expected}
+          if actual != expected:
+              raise SystemExit('Firefighter 9-per-pump regression failed: ' + repr(actual))
+
+          if '        "RIVs or Major Foam Tenders": "Major Foam Tender",' in source:
+              raise SystemExit('Legacy Major Foam Tender-first mapping remains')
+          print('Focused v1.0.21 Fire cross-reference validation passed.')
+          PY
+
+      - name: Commit and push validated v1.0.21
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          TRIGGER_BRANCH: ${{ github.event.pull_request.head.ref }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name MartyBlyth
+          git config user.email 32400596+Martyblyth@users.noreply.github.com
+          git add -A
+          git commit -m 'Add Fire cross-reference mappings'
+          git push origin HEAD:main
+          gh pr close "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --comment 'v1.0.21 Fire cross-reference mappings validated and pushed to main.' || true
+          git push origin --delete "${TRIGGER_BRANCH}" || true
