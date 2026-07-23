@@ -1,0 +1,33 @@
+name: Inspect issue 95 panel cache lifecycle
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/issue-95-cache-inspect.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: agent/fix-issue-95-stations-panel-lifecycle
+      - name: Print UI cache and lifecycle helpers
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOURCE=src/missionchief-command-nexus.user.js
+          echo '=== TOOL_UI_ELEMENT_CACHE ==='
+          grep -n -C 16 'TOOL_UI_ELEMENT_CACHE' "$SOURCE" || true
+          echo '=== TOOL_LOG_SCROLL_FRAMES ==='
+          grep -n -C 16 'TOOL_LOG_SCROLL_FRAMES' "$SOURCE" || true
+          echo '=== registerToolLifecycleCleanup ==='
+          grep -n -C 24 'function registerToolLifecycleCleanup' "$SOURCE" || true
+          echo '=== cleanupToolLifecycle ==='
+          grep -n -C 24 'TOOL_LIFECYCLE_CLEANED' "$SOURCE" || true
