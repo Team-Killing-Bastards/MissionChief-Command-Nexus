@@ -10,3 +10,4 @@ Run current-source patch through registered workflow ID.
 Execute current-source patch in original registered dispatcher.
 Final synchronization after workflow refresh.
 Run from registered repository-quality build job.
+Synchronise after repository-quality workflow registration.
