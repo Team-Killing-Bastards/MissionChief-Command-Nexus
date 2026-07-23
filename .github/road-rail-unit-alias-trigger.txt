@@ -3,3 +3,4 @@ Synchronise the v1.0.20 builder.
 Run through trusted repository-quality workflow.
 Execute the registered conditional validation job.
 Final delayed trigger after workflow registration.
+Delayed merged-event trigger after registration confirmation.
