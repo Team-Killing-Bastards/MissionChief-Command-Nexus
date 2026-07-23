@@ -36,6 +36,32 @@ jobs:
       - name: Run repository checks
         run: python3 scripts/check_repository.py
 
+  dispatch-v1021-fire-crossref:
+    name: Dispatch validated v1.0.21 Fire cross-reference finalizer
+    if: >-
+      github.event_name == 'pull_request_target' &&
+      github.event.action == 'closed' &&
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'release/v1.0.21-fire-crossref-dispatch'
+    permissions:
+      actions: write
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Dispatch registered one-use finalizer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh workflow view apply-v1.0.21-fire-crossref.yml --repo "${GITHUB_REPOSITORY}"
+          gh workflow run apply-v1.0.21-fire-crossref.yml \
+            --repo "${GITHUB_REPOSITORY}" \
+            --ref main
+
   release-state:
     name: Detect unpublished canonical version
     if: >-
