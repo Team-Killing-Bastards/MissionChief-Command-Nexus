@@ -134,3 +134,144 @@ jobs:
       release_notes: Automatic verified release after merge to main.
     secrets:
       DISCORD_RELEASE_WEBHOOK: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
+
+  build-v1020:
+    name: Build and validate Road Rail Unit v1.0.20
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'release/v1.0.20-road-rail-unit'
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out exact release branch
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Apply Marty’s staged Road Rail Unit patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --force
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(text, old, new, label):
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected 1 match, found {count}')
+              return text.replace(old, new, 1)
+
+          source_path = Path('src/missionchief-command-nexus.user.js')
+          source = source_path.read_text(encoding='utf-8')
+          source = replace_once(source, '// @version      1.0.19', '// @version      1.0.20', 'userscript version')
+          source = replace_once(source, ' * MODULE 2: MISSION FINDER V10.6.84', ' * MODULE 2: MISSION FINDER V10.6.85', 'Mission Finder version')
+
+          release_anchor = '    // V10.6.84: the exact mission wording "Fire, rescue or aerial appliance"\n'
+          release_note = (
+              '    // V10.6.85: Fire cross-reference now maps the exact "Road Rail Unit"\n'
+              '    // wording to the established RRU route.\n'
+          )
+          source = replace_once(source, release_anchor, release_note + release_anchor, 'Mission Finder release note')
+
+          alias = '        "Road Rail Unit": "RRU",\n'
+          alias_anchor = '        "Fire, rescue or aerial appliance": "Rescue Pump",\n'
+          source = replace_once(source, alias_anchor, alias_anchor + alias, 'Road Rail Unit alias')
+          if source.count(alias) != 1:
+              raise SystemExit(f'Road Rail Unit alias count was {source.count(alias)}, expected 1')
+
+          source_path.write_text(source, encoding='utf-8', newline='\n')
+
+          changelog_path = Path('CHANGELOG.md')
+          changelog = changelog_path.read_text(encoding='utf-8')
+          release = '''## [1.0.20] - 2026-07-23
+
+### Fixed
+
+- Added the exact Fire cross-reference `Road Rail Unit` → `RRU`.
+
+### Verified
+
+- Police Medic personnel counts continue to use two `police_medic`-trained personnel per exact type-8 IRV: 1 → 1 IRV, 2 → 1 IRV and 3 → 2 IRVs.
+
+### Changed
+
+- Mission Finder increased from `V10.6.84` to `V10.6.85`.
+
+'''
+          changelog = replace_once(changelog, '## [1.0.19] - 2026-07-22', release + '## [1.0.19] - 2026-07-22', 'changelog release')
+          changelog_path.write_text(changelog, encoding='utf-8', newline='\n')
+
+          readme_path = Path('README.md')
+          readme = readme_path.read_text(encoding='utf-8')
+          readme = replace_once(readme, '**Current version:** `1.0.19` · **Mission Finder engine:** `V10.6.84`', '**Current version:** `1.0.20` · **Mission Finder engine:** `V10.6.85`', 'README version')
+          readme = replace_once(readme, '[**v1.0.19**](#current-v1019-behaviour)', '[**v1.0.20**](#current-v1020-behaviour)', 'README navigation')
+          readme = replace_once(readme, '## Current v1.0.19 behaviour', '## Current v1.0.20 behaviour', 'README heading')
+          bullet_anchor = '- `Fire, rescue or aerial appliance` requirements map to `Rescue Pump`.\n'
+          readme = replace_once(readme, bullet_anchor, bullet_anchor + '- `Road Rail Unit` requirements map to `RRU`.\n', 'README RRU bullet')
+          readme_path.write_text(readme, encoding='utf-8', newline='\n')
+
+          source_readme_path = Path('src/README.md')
+          source_readme = source_readme_path.read_text(encoding='utf-8')
+          source_readme = replace_once(source_readme, '| Command Nexus version | `1.0.19` |', '| Command Nexus version | `1.0.20` |', 'source README version')
+          source_readme = replace_once(source_readme, '| Mission Finder baseline | `V10.6.84` |', '| Mission Finder baseline | `V10.6.85` |', 'source README Mission Finder')
+          source_readme_path.write_text(source_readme, encoding='utf-8', newline='\n')
+          PY
+
+          git rm -f .github/workflows/manual-road-rail-unit-v1020.yml
+          git rm -f .release/v1.0.20.trigger
+          git checkout origin/main -- .github/workflows/repository-quality.yml
+
+      - name: Run complete release validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          node scripts/validate-userscript.mjs --base-ref origin/main
+          node scripts/check-ios-compatibility.mjs
+          python3 scripts/check_repository.py
+          git diff --check
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8')
+          checks = {
+              'unified version': '// @version      1.0.20',
+              'Mission Finder version': ' * MODULE 2: MISSION FINDER V10.6.85',
+              'Road Rail Unit alias': '        "Road Rail Unit": "RRU",',
+          }
+          missing = [label for label, token in checks.items() if token not in source]
+          if missing:
+              raise SystemExit('Missing v1.0.20 contracts: ' + ', '.join(missing))
+
+          if source.count('        "Road Rail Unit": "RRU",') != 1:
+              raise SystemExit('Road Rail Unit alias must exist exactly once')
+
+          print('Focused v1.0.20 Road Rail Unit contracts passed.')
+          PY
+
+      - name: Commit validated release candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name MartyBlyth
+          git config user.email 32400596+Martyblyth@users.noreply.github.com
+          git add -A
+          git commit -m 'Map Road Rail Unit to RRU'
+          git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
