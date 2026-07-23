@@ -4,6 +4,13 @@ on:
   issue_comment:
     types:
       - created
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
 
 permissions:
   actions: write
@@ -12,8 +19,12 @@ permissions:
 jobs:
   dispatch:
     if: >-
-      github.event.issue.pull_request != null &&
-      github.event.comment.body == '/run-v1021-fire-crossref'
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request != null &&
+       github.event.comment.body == '/run-v1021-fire-crossref') ||
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.head.repo.full_name == github.repository &&
+       github.event.pull_request.head.ref == 'release/run-v1021-fire-crossref')
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
