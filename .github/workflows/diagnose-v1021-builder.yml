@@ -27,7 +27,7 @@ jobs:
           ref: main
           show-progress: false
 
-      - name: Execute embedded builder and report result
+      - name: Execute corrected embedded builder and report result
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -36,7 +36,6 @@ jobs:
           set +e
           python3 - <<'PY' > /tmp/v1021-builder.log 2>&1
           from pathlib import Path
-          import textwrap
 
           workflow = Path('.github/workflows/apply-v1.0.21-fire-crossref.yml').read_text(encoding='utf-8')
           start_marker = "          python3 - <<'PY'\n"
@@ -48,19 +47,22 @@ jobs:
           end = workflow.find(end_marker, start)
           if end < 0:
               raise SystemExit('Embedded builder end marker not found')
-          builder = textwrap.dedent(workflow[start:end])
+          builder = '\n'.join(
+              line[10:] if line.startswith('          ') else line
+              for line in workflow[start:end].splitlines()
+          ) + '\n'
           exec(compile(builder, '<v1.0.21-fire-crossref-builder>', 'exec'), {'__name__': '__main__'})
           PY
           status=$?
 
           if [[ ${status} -eq 0 ]]; then
-            gh pr comment "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --body 'Embedded v1.0.21 builder completed successfully; the prior failure is in cleanup or validation.'
+            gh pr comment "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --body 'Corrected embedded v1.0.21 builder completed successfully; any remaining failure is in cleanup or validation.'
             exit 0
           fi
 
-          tail -n 60 /tmp/v1021-builder.log > /tmp/v1021-builder-tail.log
+          tail -n 80 /tmp/v1021-builder.log > /tmp/v1021-builder-tail.log
           {
-            echo 'Embedded v1.0.21 builder failed:'
+            echo 'Corrected embedded v1.0.21 builder failed:'
             echo '```text'
             cat /tmp/v1021-builder-tail.log
             echo '```'
