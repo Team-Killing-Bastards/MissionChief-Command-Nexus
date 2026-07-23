@@ -30,24 +30,29 @@ jobs:
           ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
 
-      - name: Export exact lifecycle blocks
+      - name: Export lifecycle and cleanup blocks
         shell: bash
         run: |
           set -euo pipefail
           SOURCE='src/missionchief-command-nexus.user.js'
           {
-            echo '===== SHARED DISCOVERY AND SINGLE PANEL GUARD ====='
-            nl -ba "$SOURCE" | sed -n '1110,1435p'
+            echo '===== CLEANUP REGISTRY ====='
+            grep -n -E 'function (registerToolLifecycleCleanup|runToolLifecycleCleanups|cleanupToolLifecycle)|TOOL_LIFECYCLE_CLEANUP|TOOL_LIFECYCLE_CLEANED' "$SOURCE"
+            echo '===== CLEANUP SUPPORT SOURCE ====='
+            first="$(grep -n 'function registerToolLifecycleCleanup' "$SOURCE" | head -n1 | cut -d: -f1)"
+            nl -ba "$SOURCE" | sed -n "$((first-40)),$((first+120))p"
+            echo '===== SINGLE PANEL GUARD ====='
+            nl -ba "$SOURCE" | sed -n '1350,1425p'
             echo '===== INITIALISATION AND STATION DETECTION ====='
-            nl -ba "$SOURCE" | sed -n '1500,1645p'
+            nl -ba "$SOURCE" | sed -n '1515,1618p'
             echo '===== PANEL FINALISATION ====='
-            nl -ba "$SOURCE" | sed -n '2390,2445p'
-          } > lifecycle-blocks.txt
+            nl -ba "$SOURCE" | sed -n '2415,2445p'
+          } > lifecycle-cleanup-blocks.txt
 
       - name: Upload lifecycle evidence
         uses: actions/upload-artifact@v4
         with:
-          name: issue-95-lifecycle-blocks
-          path: lifecycle-blocks.txt
+          name: issue-95-lifecycle-cleanup-blocks
+          path: lifecycle-cleanup-blocks.txt
           if-no-files-found: error
           retention-days: 2
