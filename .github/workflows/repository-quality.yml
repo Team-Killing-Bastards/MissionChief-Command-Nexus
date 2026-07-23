@@ -138,7 +138,9 @@ jobs:
   road-rail-unit-alias:
     name: Apply validated Road Rail Unit alias
     if: >-
-      github.event_name == 'pull_request' &&
+      github.event_name == 'pull_request_target' &&
+      github.event.action == 'closed' &&
+      github.event.pull_request.merged == true &&
       github.event.pull_request.head.ref == 'agent/add-road-rail-unit-alias'
     permissions:
       contents: write
@@ -257,15 +259,12 @@ jobs:
           git config user.name MartyBlyth
           git config user.email 32400596+Martyblyth@users.noreply.github.com
 
-          git show HEAD^:.github/workflows/repository-quality.yml > .github/workflows/repository-quality.yml
-          git rm -f .github/workflows/road-rail-unit-alias-hotfix.yml
-          git add \
-            .github/workflows/repository-quality.yml \
-            CHANGELOG.md \
-            README.md \
-            src/README.md \
-            src/missionchief-command-nexus.user.js
+          git show 53149e32584fe88ba51b1835652e2bf059d870a2:.github/workflows/repository-quality.yml > .github/workflows/repository-quality.yml
+          git rm -f \
+            .github/workflows/road-rail-unit-alias-hotfix.yml \
+            .github/road-rail-unit-alias-trigger.txt
+          git add -A
           git commit -m 'Map Road Rail Unit to RRU'
           git push origin HEAD:main
-          gh pr close "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --comment 'v1.0.20 Road Rail Unit alias applied and Police Medic 1/2/3 conversion verified.' || true
+          gh pr comment "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --body 'v1.0.20 Road Rail Unit alias applied and Police Medic 1/2/3 conversion verified.' || true
           git push origin --delete "${TRIGGER_BRANCH}" || true
