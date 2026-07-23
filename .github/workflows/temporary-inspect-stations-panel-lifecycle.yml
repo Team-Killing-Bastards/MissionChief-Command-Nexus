@@ -23,25 +23,26 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - name: Print exact lifecycle blocks from prior inspection
+      - name: Print exact lifecycle functions
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          set -euo pipefail
+          set -eu
           gh api \
             -H 'Accept: application/vnd.github+json' \
             "/repos/${GITHUB_REPOSITORY}/actions/jobs/89257965659/logs" \
             > /tmp/lifecycle.log
 
-          echo '===== IDENTIFIERS ====='
-          awk '/===== IDENTIFIERS =====/{show=1; next} /===== STATION SCREEN DETECTION =====/{show=0} show' /tmp/lifecycle.log
+          print_context() {
+            pattern="$1"
+            label="$2"
+            before="$3"
+            after="$4"
+            line="$(grep -n "$pattern" /tmp/lifecycle.log | tail -n 1 | cut -d: -f1)"
+            echo "===== ${label} ====="
+            sed -n "$((line-before)),$((line+after))p" /tmp/lifecycle.log
+          }
 
-          echo '===== STATION SCREEN DETECTION ====='
-          awk '/===== STATION SCREEN DETECTION =====/{show=1; next} /===== PANEL CREATION AND SINGLE INSTANCE =====/{show=0} show' /tmp/lifecycle.log
-
-          echo '===== PANEL CREATION AND SINGLE INSTANCE ====='
-          awk '/===== PANEL CREATION AND SINGLE INSTANCE =====/{show=1; next} /===== LOADER \/ OBSERVER TAIL =====/{show=0} show' /tmp/lifecycle.log
-
-          echo '===== LOADER / OBSERVER TAIL ====='
-          awk '/===== LOADER \/ OBSERVER TAIL =====/{show=1; next} show' /tmp/lifecycle.log | head -n 160
+          print_context 'function ensureSingleNamingToolsPanel' 'SINGLE PANEL FUNCTIONS' 8 70
+          print_context 'function isStationOverviewScreen' 'STATION SCREEN AND LOADER' 35 70
