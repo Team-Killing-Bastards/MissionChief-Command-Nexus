@@ -32,6 +32,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('.github/issue-95-patch.py')
+          text = path.read_text(encoding='utf-8')
+          old = 'lifecycle_behaviour = """const lifecycleFunctionMatch'
+          new = 'lifecycle_behaviour = r"""const lifecycleFunctionMatch'
+          if text.count(old) != 1:
+              raise SystemExit('Unable to locate lifecycle behaviour generator')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8', newline='\n')
+          PY
           python3 -m py_compile .github/issue-95-patch.py
           python3 .github/issue-95-patch.py
 
@@ -40,7 +51,9 @@ jobs:
         run: |
           set -euo pipefail
           rm -rf .issue-95-context .issue-95-cache-context
+          rm -f .issue-95-ios-validation.txt
           rm -f .github/workflows/issue-95-cache-inspect.yml
+          rm -f .github/workflows/issue-95-ios-diagnostic.yml
           git rm -f .github/workflows/issue-95-builder.yml .github/issue-95-patch.py
 
       - name: Validate JavaScript syntax
@@ -93,8 +106,10 @@ jobs:
           temporary_paths = [
               Path('.issue-95-context'),
               Path('.issue-95-cache-context'),
+              Path('.issue-95-ios-validation.txt'),
               Path('.github/workflows/issue-95-builder.yml'),
               Path('.github/workflows/issue-95-cache-inspect.yml'),
+              Path('.github/workflows/issue-95-ios-diagnostic.yml'),
               Path('.github/issue-95-patch.py'),
           ]
           leftovers = [str(path) for path in temporary_paths if path.exists()]
