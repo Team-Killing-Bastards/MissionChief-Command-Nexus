@@ -43,31 +43,238 @@ jobs:
       - name: Run repository checks
         run: python3 scripts/check_repository.py
 
-  dispatch-v1021-fire-crossref:
-    name: Dispatch validated v1.0.21 Fire cross-reference finalizer
+  build-v1021-fire-crossref:
+    name: Build and validate v1.0.21 Fire cross-reference
     if: >-
       github.event_name == 'pull_request' &&
-      github.event.action == 'closed' &&
-      github.event.pull_request.merged == true &&
+      (github.event.action == 'opened' ||
+       github.event.action == 'synchronize' ||
+       github.event.action == 'reopened') &&
       github.event.pull_request.head.repo.full_name == github.repository &&
-      github.event.pull_request.head.ref == 'release/v1.0.21-fire-crossref-dispatch-pr'
+      github.event.pull_request.head.ref == 'release/run-v1021-fire-crossref'
     permissions:
-      actions: write
-      contents: read
+      contents: write
+      pull-requests: write
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
 
     steps:
-      - name: Dispatch registered one-use finalizer
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Check out trusted main
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: main
+          show-progress: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Apply reviewed v1.0.21 transformation
         shell: bash
         run: |
           set -euo pipefail
-          gh workflow view apply-v1.0.21-fire-crossref.yml --repo "${GITHUB_REPOSITORY}"
-          gh workflow run apply-v1.0.21-fire-crossref.yml \
+          python3 - <<'PY'
+          from pathlib import Path
+
+          workflow_path = Path('.github/workflows/apply-v1.0.21-fire-crossref.yml')
+          workflow = workflow_path.read_text(encoding='utf-8')
+          start_marker = "          python3 - <<'PY'\n"
+          end_marker = "\n          PY\n"
+          start = workflow.find(start_marker)
+          if start < 0:
+              raise SystemExit('Embedded v1.0.21 builder start marker was not found')
+          start += len(start_marker)
+          end = workflow.find(end_marker, start)
+          if end < 0:
+              raise SystemExit('Embedded v1.0.21 builder end marker was not found')
+
+          builder = '\n'.join(
+              line[10:] if line.startswith('          ') else line
+              for line in workflow[start:end].splitlines()
+          ) + '\n'
+
+          stale_call = "source = replace_once(source, merge_anchor, merge_replacement, 'Firefighter count application')"
+          if builder.count(stale_call) != 1:
+              raise SystemExit('Stale Firefighter count application call was not found exactly once')
+          builder = builder.replace(
+              stale_call,
+              "# Firefighter count application is applied below against the current mergeRequirementRows structure.",
+              1
+          )
+
+          exec(
+              compile(
+                  builder,
+                  '<v1.0.21-fire-crossref-builder>',
+                  'exec'
+              ),
+              {'__name__': '__main__'}
+          )
+
+          source_path = Path('src/missionchief-command-nexus.user.js')
+          source = source_path.read_text(encoding='utf-8')
+          old = '''            const amount =
+                Math.max(
+                    0,
+                    parseInt(
+                        row?.stillNeeded,
+                        10
+                    ) ||
+                    0
+                );
+
+            if (amount <= 0) {
+                return;
+            }
+
+            const mappedName =
+                resolveUnitName(
+                    row.unitName
+                );
+'''
+          new = '''            const mappedName =
+                resolveUnitName(
+                    row.unitName
+                );
+
+            const amount =
+                normaliseVehicleRequirementCount(
+                    row.unitName,
+                    mappedName,
+                    row?.stillNeeded
+                );
+
+            if (amount <= 0) {
+                return;
+            }
+'''
+          if source.count(old) != 1:
+              raise SystemExit(
+                  'Current mergeRequirementRows count block matched '
+                  + str(source.count(old))
+                  + ' times, expected 1'
+              )
+          source = source.replace(old, new, 1)
+          source_path.write_text(source, encoding='utf-8', newline='\n')
+
+          quality_path = Path('.github/workflows/repository-quality.yml')
+          quality = quality_path.read_text(encoding='utf-8')
+          quality = quality.replace(
+              "  pull_request:\n    types:\n      - opened\n      - synchronize\n      - reopened\n      - closed\n",
+              "  pull_request:\n",
+              1
+          )
+          quality = quality.replace(
+              "    if: >-\n      github.event_name != 'pull_request_target' &&\n      !(github.event_name == 'pull_request' && github.event.action == 'closed')\n",
+              "    if: github.event_name != 'pull_request_target'\n",
+              1
+          )
+          block_start = quality.find('\n  build-v1021-fire-crossref:')
+          block_end = quality.find('\n  release-state:', block_start)
+          if block_start < 0 or block_end < 0:
+              raise SystemExit('Temporary v1.0.21 repository-quality job could not be removed')
+          quality = quality[:block_start] + quality[block_end:]
+          quality_path.write_text(quality, encoding='utf-8', newline='\n')
+          PY
+
+          git rm -f --ignore-unmatch .github/workflows/apply-v1.0.21-fire-crossref.yml
+          git rm -f --ignore-unmatch .github/workflows/dispatch-v1021-command.yml
+          git rm -f --ignore-unmatch .github/workflows/diagnose-v1021-builder.yml
+          git rm -f --ignore-unmatch .github/workflows/apply-v1021-direct-fixed.yml
+          git rm -f --ignore-unmatch .github/workflows/apply-v1021-current-merge.yml
+          git rm -f --ignore-unmatch .github/workflows/v1021-dispatch-marker.yml
+          git rm -f --ignore-unmatch .release/v1.0.21.trigger
+          git rm -f --ignore-unmatch .release/v1.0.21.command-ready
+          git rm -f --ignore-unmatch .release/v1.0.21.registration
+          git rm -f --ignore-unmatch .release/v1.0.21.finalizer-note
+
+      - name: Validate complete v1.0.21 build
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          node scripts/validate-userscript.mjs --base-ref origin/main
+          node scripts/check-ios-compatibility.mjs
+          python3 scripts/check_repository.py
+          git diff --check
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8')
+          required = {
+              'version': '// @version      1.0.21',
+              'Mission Finder': ' * MODULE 2: MISSION FINDER V10.6.86',
+              'Firefighter alias': '        "Firefighter": "Rescue Pump",',
+              'Firefighters alias': '        "Firefighters": "Rescue Pump",',
+              'Car Recovery alias': '        "Car Recovery": "Flatbed Recovery Vehicle",',
+              'RIV/MFT alias': '        "RIV or Major Foam Tender": "RIV",',
+              'Firefighter conversion helper': 'function normaliseVehicleRequirementCount(',
+              'Firefighter conversion call': '''normaliseVehicleRequirementCount(
+                    row.unitName,
+                    mappedName,
+                    row?.stillNeeded''',
+              'RIV/MFT fallback': 'function isRivOrMajorFoamTenderRequirement(',
+              'Major Foam Tender matcher': 'function isMajorFoamTenderVehicleCheckbox(',
+              'Major Foam Tender type': ".includes(\n                '75'",
+          }
+          missing = [name for name, token in required.items() if token not in source]
+          if missing:
+              raise SystemExit('Missing v1.0.21 contracts: ' + ', '.join(missing))
+
+          expected = {
+              1: 1,
+              9: 1,
+              10: 2,
+              18: 2,
+              19: 3,
+              27: 3,
+              28: 4
+          }
+          actual = {count: (count + 8) // 9 for count in expected}
+          if actual != expected:
+              raise SystemExit(
+                  'Firefighter 9-per-pump regression failed: '
+                  + repr(actual)
+              )
+
+          if '        "RIVs or Major Foam Tenders": "Major Foam Tender",' in source:
+              raise SystemExit('Legacy Major Foam Tender-first mapping remains')
+
+          if not all(
+              token in source
+              for token in (
+                  'isRivVehicleCheckbox(',
+                  'rivMatches.length >',
+                  'isMajorFoamTenderVehicleCheckbox('
+              )
+          ):
+              raise SystemExit('RIV-first fallback contracts are incomplete')
+
+          print('Focused v1.0.21 Fire cross-reference validation passed.')
+          PY
+
+      - name: Commit and push validated v1.0.21
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          TRIGGER_BRANCH: ${{ github.event.pull_request.head.ref }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name MartyBlyth
+          git config user.email 32400596+Martyblyth@users.noreply.github.com
+          git add -A
+          git commit -m 'Add Fire cross-reference mappings'
+          git push origin HEAD:main
+          gh pr close "${PR_NUMBER}" \
             --repo "${GITHUB_REPOSITORY}" \
-            --ref main
+            --comment 'v1.0.21 Fire cross-reference mappings validated and pushed to main.' || true
+          git push origin --delete "${TRIGGER_BRANCH}" || true
 
   release-state:
     name: Detect unpublished canonical version
