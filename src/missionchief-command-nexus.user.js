@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.19
+// @version      1.0.20
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -8439,7 +8439,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.84
+         * MODULE 2: MISSION FINDER V10.6.85
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -8692,6 +8692,8 @@
     // V10.6.83: Mission Control now uses an iOS Safari-only safe-area layout,
     // horizontal collapse state, visual-viewport placement and pointer dragging.
     // Desktop positioning, sizing and mouse dragging remain unchanged.
+    // V10.6.85: Fire cross-reference now maps the exact "Road Rail Unit"
+    // wording to the established RRU route.
     // V10.6.84: the exact mission wording "Fire, rescue or aerial appliance"
     // now maps to the existing Rescue Pump route.
     // V10.6.82: verified Fire profiles staff type-107 RRUs with two Railway Fire
@@ -9454,6 +9456,7 @@
         "Aerial Appliance Truck": "CARP",
         "Aerial Appliance Trucks": "CARP",
         "Fire, rescue or aerial appliance": "Rescue Pump",
+        "Road Rail Unit": "RRU",
         "ICCU or Ambulance Control Unit": "ICCU/ACU",
         "ICCU or Ambulance Control Units": "ICCU/ACU",
         "ICCUs or Ambulance Control Units": "ICCU/ACU",

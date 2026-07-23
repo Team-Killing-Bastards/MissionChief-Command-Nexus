@@ -15,12 +15,12 @@
 </tr>
 </table>
 
-**Current version:** `1.0.19` · **Mission Finder engine:** `V10.6.84` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
+**Current version:** `1.0.20` · **Mission Finder engine:** `V10.6.85` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)
 
-[**What it is**](#what-it-is) · [**Install**](#install) · [**Workflows**](#operational-workflows) · [**v1.0.19**](#current-v1019-behaviour) · [**Safety**](#operational-safety) · [**Architecture**](#architecture) · [**Ownership**](#ownership-and-contributions) · [**Release system**](#release-and-quality-system)
+[**What it is**](#what-it-is) · [**Install**](#install) · [**Workflows**](#operational-workflows) · [**v1.0.20**](#current-v1020-behaviour) · [**Safety**](#operational-safety) · [**Architecture**](#architecture) · [**Ownership**](#ownership-and-contributions) · [**Release system**](#release-and-quality-system)
 
 </div>
 
@@ -98,7 +98,7 @@ Before Unit Finder, Mission Update, or Auto Mode selects resources, Command Nexu
 
 This prevents selection against a partial MissionChief vehicle table.
 
-## Current v1.0.19 behaviour
+## Current v1.0.20 behaviour
 
 ### Verified Fire training profiles
 
@@ -107,6 +107,7 @@ This prevents selection against a partial MissionChief vehicle table.
 - HazMat Unit: 3 trained personnel per exact type-39 Fire OSU.
 - BASU, Welfare and HazMat reuse one selected Fire OSU; type-86 SAR vans remain separate.
 - `Fire, rescue or aerial appliance` requirements map to `Rescue Pump`.
+- `Road Rail Unit` requirements map to `RRU`.
 
 High Volume Pump, Drone Operator, Co-Responder and Lifeguard remain disabled pending later evidence.
 

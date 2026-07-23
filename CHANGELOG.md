@@ -26,6 +26,20 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Consolidate the two retained control surfaces into one coherent interface.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
+## [1.0.20] - 2026-07-23
+
+### Fixed
+
+- Added the exact Fire cross-reference `Road Rail Unit` → `RRU`.
+
+### Verified
+
+- Police Medic personnel counts continue to use two `police_medic`-trained personnel per exact type-8 IRV: 1 → 1 IRV, 2 → 1 IRV and 3 → 2 IRVs.
+
+### Changed
+
+- Mission Finder increased from `V10.6.84` to `V10.6.85`.
+
 ## [1.0.19] - 2026-07-22
 
 ### Fixed
