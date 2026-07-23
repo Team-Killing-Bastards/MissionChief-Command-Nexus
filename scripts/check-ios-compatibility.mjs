@@ -101,6 +101,10 @@ requireText(
   "document.addEventListener('click', handleNavigationClick, true);",
   'responsive navigation lifecycle check'
 );
+requireText(
+  "node.matches?.('.building_list, .building_list_li')",
+  'targeted Stations-list lifecycle observation'
+);
 requirePattern(
   /function isStationOverviewScreen\(\)[\s\S]{0,1800}getClientRects\(\)\.length > 0/,
   'visible responsive Stations-list requirement'

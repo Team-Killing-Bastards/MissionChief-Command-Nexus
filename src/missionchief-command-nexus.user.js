@@ -1449,7 +1449,13 @@
                     ? record.target
                     : record.target?.parentElement;
                 if (target?.closest?.('#mc-namer-panel')) return false;
-                return record.addedNodes.length > 0 || record.removedNodes.length > 0;
+
+                return [...record.addedNodes, ...record.removedNodes].some(node =>
+                    node?.nodeType === Node.ELEMENT_NODE && (
+                        node.matches?.('.building_list, .building_list_li') ||
+                        node.querySelector?.('.building_list, .building_list_li')
+                    )
+                );
             });
             if (panelMutation || pageMutation) enforce();
         });
