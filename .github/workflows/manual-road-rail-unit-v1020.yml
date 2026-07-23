@@ -6,7 +6,7 @@ on:
     branches:
       - main
     paths:
-      - '.github/workflows/manual-road-rail-unit-v1020.yml'
+      - '.release/v1.0.20.trigger'
 
 permissions:
   contents: write
@@ -112,6 +112,7 @@ jobs:
           git config user.name MartyBlyth
           git config user.email 32400596+Martyblyth@users.noreply.github.com
           git rm -f .github/workflows/manual-road-rail-unit-v1020.yml
+          git rm -f .release/v1.0.20.trigger
           git add CHANGELOG.md README.md src/README.md src/missionchief-command-nexus.user.js
           git commit -m 'Map Road Rail Unit to RRU'
           git push origin HEAD:main
