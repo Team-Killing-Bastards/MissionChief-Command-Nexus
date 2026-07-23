@@ -82,6 +82,46 @@ requireText(
 );
 
 requireText(
+  'function isRenderedStationOverviewEntry(',
+  'rendered Stations-view detection'
+);
+requireText(
+  'function removeNamingToolsPanelFromOffPage(',
+  'off-page Resource Administration removal'
+);
+requireText(
+  'function decideNamingToolsPanelLifecycle(',
+  'panel lifecycle decision contract'
+);
+requireText(
+  'function reconcileNamingToolsPanelLifecycle(',
+  'persistent panel lifecycle reconciliation'
+);
+requireText(
+  'TOOL_PANEL_VIEWPORT_CLEANUPS',
+  'removed-panel viewport cleanup isolation'
+);
+requirePattern(
+  /function isStationOverviewScreen\(\)[\s\S]{0,2200}isIosSafariWebsite\(\)[\s\S]{0,2200}isRenderedStationOverviewEntry\(/,
+  'iOS rendered Stations-view visibility gate'
+);
+requirePattern(
+  /function reconcileNamingToolsPanelLifecycle\(\)[\s\S]{0,2200}removeNamingToolsPanelFromOffPage\(\)[\s\S]{0,2200}init\(\)/,
+  'off-page removal and Stations-view recreation'
+);
+requirePattern(
+  /function initWhenReady\(\)\s*\{[\s\S]{0,500}installSingleNamingToolsPanelGuard\(\);[\s\S]{0,500}if \(isIosSafariWebsite\(\)\) return;/,
+  'persistent iOS lifecycle guard installation'
+);
+requirePattern(
+  /function installSingleNamingToolsPanelGuard\(\)[\s\S]{0,6500}observer\.observe\([\s\S]{0,1800}attributes:\s*true[\s\S]{0,1800}aria-hidden/,
+  'responsive navigation DOM and visibility observation'
+);
+if (source.includes('installSingleNamingToolsPanelGuard(panel)')) {
+  fail('Panel recreation must not install another global lifecycle guard');
+}
+
+requireText(
   'function createManagedStationIframe(',
   'same-origin station iframe fallback'
 );
@@ -112,6 +152,40 @@ if (source.includes(forbiddenDesktopOnlySelector)) {
 const panelIdAssignments = source.match(/\.id\s*=\s*['"]mc-namer-panel['"]/g) || [];
 if (panelIdAssignments.length !== 1) {
   fail(`Expected exactly one menu creation site; found ${panelIdAssignments.length}`);
+}
+
+const lifecycleFunctionMatch = source.match(
+  /function decideNamingToolsPanelLifecycle\([^)]*\)\s*\{[\s\S]*?\n    \}/
+);
+if (!lifecycleFunctionMatch) {
+  fail('Unable to extract the panel lifecycle decision function');
+}
+
+let decideNamingToolsPanelLifecycle;
+try {
+  decideNamingToolsPanelLifecycle = Function(
+    `"use strict"; ${lifecycleFunctionMatch[0]}; return decideNamingToolsPanelLifecycle;`
+  )();
+} catch (error) {
+  fail(`Unable to evaluate the panel lifecycle decision function: ${error.message}`);
+}
+
+const lifecycleCases = [
+  { input: [false, false, false], expected: 'dedupe', label: 'desktop outside Stations' },
+  { input: [false, true, false], expected: 'dedupe', label: 'desktop Stations without panel' },
+  { input: [true, false, false], expected: 'remove', label: 'iOS outside Stations without panel' },
+  { input: [true, false, true], expected: 'remove', label: 'iOS outside Stations with panel' },
+  { input: [true, true, false], expected: 'create', label: 'iOS Stations without panel' },
+  { input: [true, true, true], expected: 'dedupe', label: 'iOS Stations with panel' }
+];
+
+for (const testCase of lifecycleCases) {
+  const actual = decideNamingToolsPanelLifecycle(...testCase.input);
+  if (actual !== testCase.expected) {
+    fail(
+      `Panel lifecycle ${testCase.label} expected ${testCase.expected}; found ${actual}`
+    );
+  }
 }
 
 requireText(

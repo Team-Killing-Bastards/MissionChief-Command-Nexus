@@ -15,12 +15,12 @@
 </tr>
 </table>
 
-**Current version:** `1.0.20` · **Mission Finder engine:** `V10.6.85` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
+**Current version:** `1.0.21` · **Mission Finder engine:** `V10.6.85` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)
 
-[**What it is**](#what-it-is) · [**Install**](#install) · [**Workflows**](#operational-workflows) · [**v1.0.20**](#current-v1020-behaviour) · [**Safety**](#operational-safety) · [**Architecture**](#architecture) · [**Ownership**](#ownership-and-contributions) · [**Release system**](#release-and-quality-system)
+[**What it is**](#what-it-is) · [**Install**](#install) · [**Workflows**](#operational-workflows) · [**v1.0.21**](#current-v1021-behaviour) · [**Safety**](#operational-safety) · [**Architecture**](#architecture) · [**Ownership**](#ownership-and-contributions) · [**Release system**](#release-and-quality-system)
 
 </div>
 
@@ -98,7 +98,7 @@ Before Unit Finder, Mission Update, or Auto Mode selects resources, Command Nexu
 
 This prevents selection against a partial MissionChief vehicle table.
 
-## Current v1.0.20 behaviour
+## Current v1.0.21 behaviour
 
 ### Verified Fire training profiles
 
@@ -118,6 +118,7 @@ The shared Resource Administration panel and the Mission Control dispatch panel 
 - Responsive station-list markup is recognised without weakening the desktop station-page guard.
 - Unit Naming, Station Naming, Personnel Assignment and Build Personnel Register all use the same responsive station discovery layer.
 - Exactly one Command Nexus administration menu is retained after duplicate injection, Safari bfcache restoration or page-fragment replacement.
+- On iOS Safari, Resource Administration exists only while a rendered personal Stations list is active; Map, Missions, Chat, Radio and other views remove it, and returning to Stations recreates one instance.
 - Responsive `Details` links fall back to a hidden same-origin station iframe when MissionChief's desktop lightbox binding is unavailable, preventing navigation away from the Stations tab.
 - The Resource Administration panel uses Safari safe-area insets, touch scrolling and pointer dragging.
 - Mission Control opens at the safe-area top instead of the centre of the dispatch screen, stacks its panels to the mobile viewport width and keeps long content internally scrollable.

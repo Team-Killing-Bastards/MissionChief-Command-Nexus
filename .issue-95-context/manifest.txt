@@ -1,5 +1,0 @@
-source_lines=33385
-panel_id_occurrences=25
-guard_install_occurrences=2
-overview_occurrences=2
-add_panel_occurrences=2

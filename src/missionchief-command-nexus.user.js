@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.20
+// @version      1.0.21
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -36,7 +36,7 @@
     if (window.__MC_NAMING_TOOLS_V428__) return;
     window.__MC_NAMING_TOOLS_V428__ = true;
 
-    const UNIT_VERSION = '3.3.7';
+    const UNIT_VERSION = '3.3.8';
     const STATION_VERSION = '1.3.3';
     const PERSONNEL_VERSION = '1.3.2';
     const PERSONNEL_TRAINING_CODE = 'critical_care';
@@ -66,6 +66,7 @@
     const TOOL_LIFECYCLE_CLEANUPS = new Set();
     const TOOL_LOG_SCROLL_FRAMES = new Map();
     const TOOL_UI_ELEMENT_CACHE = new Map();
+    const TOOL_PANEL_VIEWPORT_CLEANUPS = new WeakMap();
     const PERSONNEL_ASSIGNMENT_INDEX_CACHE = new WeakMap();
     const PERSONNEL_TRAINING_SET_CACHE = new WeakMap();
     const PERSONNEL_VISIBLE_TRAINING_COUNTS_CACHE = new WeakMap();
@@ -74,6 +75,7 @@
     const PERSONNEL_START_OPTION_BY_HREF = new Map();
     const PERSONNEL_HIGHLIGHTED_STATION_LINKS = new Set();
     let TOOL_LIFECYCLE_CLEANED = false;
+    let NAMING_TOOLS_PANEL_GUARD_INSTALLED = false;
     let PERSONNEL_TRAINING_REGISTRY_CACHE = null;
     let PERSONNEL_TRAINING_REGISTRY_DIRTY = false;
     let PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER = null;
@@ -1364,6 +1366,29 @@
         return managed ? await waitForIframe(entry.href, managed) : null;
     }
 
+    function removeNamingToolsPanelElement(panel) {
+        if (!panel) return false;
+
+        const viewportCleanup =
+            TOOL_PANEL_VIEWPORT_CLEANUPS.get(panel);
+        if (typeof viewportCleanup === 'function') {
+            viewportCleanup();
+        }
+        TOOL_PANEL_VIEWPORT_CLEANUPS.delete(panel);
+
+        for (const [logBox, frameId] of [...TOOL_LOG_SCROLL_FRAMES.entries()]) {
+            if (!panel.contains(logBox)) continue;
+            try {
+                cancelAnimationFrame(frameId);
+            } catch (_error) {}
+            TOOL_LOG_SCROLL_FRAMES.delete(logBox);
+        }
+
+        TOOL_UI_ELEMENT_CACHE.clear();
+        panel.remove();
+        return true;
+    }
+
     function ensureSingleNamingToolsPanel(preferredPanel = null) {
         const panels = [...document.querySelectorAll('#mc-namer-panel')];
         const keeper = preferredPanel?.isConnected
@@ -1371,7 +1396,7 @@
             : panels[0] || null;
 
         panels.forEach(panel => {
-            if (panel !== keeper) panel.remove();
+            if (panel !== keeper) removeNamingToolsPanelElement(panel);
         });
 
         const styles = [...document.querySelectorAll('style[data-mc-namer-style="true"]')];
@@ -1382,36 +1407,128 @@
         return keeper;
     }
 
-    function installSingleNamingToolsPanelGuard(panel) {
-        let pending = false;
+    function removeNamingToolsPanelFromOffPage() {
+        document.querySelectorAll('#mc-namer-panel').forEach(panel => {
+            removeNamingToolsPanelElement(panel);
+        });
+        document.querySelectorAll('style[data-mc-namer-style="true"]').forEach(style => {
+            style.remove();
+        });
+        return document.querySelector('#mc-namer-panel') == null;
+    }
+
+    function decideNamingToolsPanelLifecycle(
+        iosSafari,
+        stationOverview,
+        hasPanel
+    ) {
+        if (!iosSafari) return 'dedupe';
+        if (!stationOverview) return 'remove';
+        return hasPanel ? 'dedupe' : 'create';
+    }
+
+    function reconcileNamingToolsPanelLifecycle() {
+        const iosSafari = isIosSafariWebsite();
+        const panel = ensureSingleNamingToolsPanel();
+        if (!iosSafari) return panel;
+
+        const action = decideNamingToolsPanelLifecycle(
+            iosSafari,
+            isStationOverviewScreen(),
+            Boolean(panel)
+        );
+
+        if (action === 'remove') {
+            removeNamingToolsPanelFromOffPage();
+            return null;
+        }
+
+        if (action === 'create') {
+            init();
+            return ensureSingleNamingToolsPanel();
+        }
+
+        return panel;
+    }
+
+    function installSingleNamingToolsPanelGuard() {
+        if (NAMING_TOOLS_PANEL_GUARD_INSTALLED) return;
+        NAMING_TOOLS_PANEL_GUARD_INSTALLED = true;
+
+        const iosSafari = isIosSafariWebsite();
+        let pendingFrame = null;
         const enforce = () => {
-            if (pending) return;
-            pending = true;
-            requestAnimationFrame(() => {
-                pending = false;
-                ensureSingleNamingToolsPanel(panel?.isConnected ? panel : null);
+            if (pendingFrame != null) return;
+            pendingFrame = requestAnimationFrame(() => {
+                pendingFrame = null;
+                reconcileNamingToolsPanelLifecycle();
             });
+        };
+        const handleVisibilityChange = () => {
+            if (!document.hidden) enforce();
         };
 
         const observer = new MutationObserver(records => {
-            const panelMutation = records.some(record =>
-                [...record.addedNodes].some(node =>
-                    node?.nodeType === Node.ELEMENT_NODE && (
-                        node.matches?.('#mc-namer-panel') ||
-                        node.querySelector?.('#mc-namer-panel')
+            const relevantMutation = iosSafari
+                ? records.some(record => {
+                    const targetElement =
+                        record.target?.nodeType === Node.ELEMENT_NODE
+                            ? record.target
+                            : record.target?.parentElement;
+                    return !targetElement?.closest?.('#mc-namer-panel');
+                })
+                : records.some(record =>
+                    [...record.addedNodes].some(node =>
+                        node?.nodeType === Node.ELEMENT_NODE && (
+                            node.matches?.('#mc-namer-panel') ||
+                            node.querySelector?.('#mc-namer-panel')
+                        )
                     )
-                )
-            );
-            if (panelMutation) enforce();
+                );
+            if (relevantMutation) enforce();
         });
-        observer.observe(document.documentElement, { childList: true, subtree: true });
+        observer.observe(
+            document.documentElement,
+            iosSafari
+                ? {
+                    childList: true,
+                    subtree: true,
+                    attributes: true,
+                    attributeFilter: [
+                        'class',
+                        'style',
+                        'hidden',
+                        'aria-hidden'
+                    ]
+                }
+                : {
+                    childList: true,
+                    subtree: true
+                }
+        );
         window.addEventListener('pageshow', enforce, { passive: true });
+        document.addEventListener(
+            'visibilitychange',
+            handleVisibilityChange,
+            { passive: true }
+        );
 
-        registerToolLifecycleCleanup(() => {
+        const cleanup = () => {
+            if (pendingFrame != null) {
+                cancelAnimationFrame(pendingFrame);
+                pendingFrame = null;
+            }
             observer.disconnect();
             window.removeEventListener('pageshow', enforce);
-        });
+            document.removeEventListener(
+                'visibilitychange',
+                handleVisibilityChange
+            );
+            NAMING_TOOLS_PANEL_GUARD_INSTALLED = false;
+            TOOL_LIFECYCLE_CLEANUPS.delete(cleanup);
+        };
 
+        registerToolLifecycleCleanup(cleanup);
         enforce();
     }
 
@@ -1477,6 +1594,7 @@
 
     function installToolViewportGuard(panel) {
         let pendingFrame = null;
+        let cleaned = false;
 
         const requestClamp = () => {
             if (pendingFrame != null) return;
@@ -1496,13 +1614,9 @@
             requestClamp();
         };
 
-        window.addEventListener('resize', requestClamp, { passive: true });
-        window.addEventListener('orientationchange', resetIosPosition, { passive: true });
-        window.addEventListener('pageshow', requestClamp, { passive: true });
-        window.visualViewport?.addEventListener('resize', requestClamp, { passive: true });
-        window.visualViewport?.addEventListener('scroll', requestClamp, { passive: true });
-
-        registerToolLifecycleCleanup(() => {
+        const cleanup = () => {
+            if (cleaned) return;
+            cleaned = true;
             if (pendingFrame != null) {
                 cancelAnimationFrame(pendingFrame);
                 pendingFrame = null;
@@ -1512,28 +1626,34 @@
             window.removeEventListener('pageshow', requestClamp);
             window.visualViewport?.removeEventListener('resize', requestClamp);
             window.visualViewport?.removeEventListener('scroll', requestClamp);
-        });
+            TOOL_PANEL_VIEWPORT_CLEANUPS.delete(panel);
+            TOOL_LIFECYCLE_CLEANUPS.delete(cleanup);
+        };
 
+        window.addEventListener('resize', requestClamp, { passive: true });
+        window.addEventListener('orientationchange', resetIosPosition, { passive: true });
+        window.addEventListener('pageshow', requestClamp, { passive: true });
+        window.visualViewport?.addEventListener('resize', requestClamp, { passive: true });
+        window.visualViewport?.addEventListener('scroll', requestClamp, { passive: true });
+
+        registerToolLifecycleCleanup(cleanup);
         requestClamp();
+        return cleanup;
     }
 
     function initWhenReady() {
+        installSingleNamingToolsPanelGuard();
+        if (isIosSafariWebsite()) return;
+
         let tries = 0;
         let timer = null;
-        let observer = null;
-        const maximumTries = isIosSafariWebsite()
-            ? 120
-            : 40;
+        const maximumTries = 40;
 
         const removeReadinessListeners = () => {
             if (timer != null) {
                 clearInterval(timer);
                 timer = null;
             }
-            observer?.disconnect();
-            observer = null;
-            window.removeEventListener('pageshow', tryInitialise);
-            document.removeEventListener('visibilitychange', tryInitialise);
             TOOL_LIFECYCLE_CLEANUPS.delete(removeReadinessListeners);
         };
 
@@ -1561,43 +1681,54 @@
             }
         }, 500);
 
-        // Mobile Safari can restore the page from bfcache or populate the
-        // responsive building list after the userscript has already started.
-        if (isIosSafariWebsite()) {
-            observer = new MutationObserver(() => {
-                tryInitialise();
-            });
-            observer.observe(
-                document.documentElement,
-                {
-                    childList: true,
-                    subtree: true
-                }
-            );
-            window.addEventListener('pageshow', tryInitialise, { passive: true });
-            document.addEventListener('visibilitychange', tryInitialise, { passive: true });
-        }
-
         registerToolLifecycleCleanup(removeReadinessListeners);
     }
 
+
+    function isRenderedStationOverviewEntry(entry) {
+        const candidates = [
+            entry?.container,
+            entry?.link
+        ].filter(Boolean);
+
+        return candidates.some(node => {
+            if (!node.isConnected) return false;
+            if (node.closest?.('[hidden], [aria-hidden="true"]')) return false;
+
+            const style = window.getComputedStyle?.(node);
+            if (
+                style && (
+                    style.display === 'none' ||
+                    style.visibility === 'hidden' ||
+                    style.visibility === 'collapse'
+                )
+            ) {
+                return false;
+            }
+
+            const rectangles = node.getClientRects?.();
+            return !rectangles || rectangles.length > 0;
+        });
+    }
 
     function isStationOverviewScreen() {
         const entries = getStationOverviewEntries();
         if (!entries.length) return false;
 
-        const hasDesktopStationEntry = entries.some(entry =>
-            entry.link?.matches?.(
-                'a.lightbox-open.list-group-item.active[href*="/buildings/"]'
-            )
-        );
-        if (hasDesktopStationEntry) return true;
-
-        if (!isIosSafariWebsite()) return false;
+        const desktopStationSelector =
+            'a.lightbox-open.list-group-item.active[href*="/buildings/"]';
+        if (!isIosSafariWebsite()) {
+            return entries.some(entry =>
+                entry.link?.matches?.(desktopStationSelector)
+            );
+        }
 
         return entries.some(entry =>
-            entry.container?.matches?.(
-                '.building_list_li, .building_list, [data-building-id], [id^="building_"]'
+            isRenderedStationOverviewEntry(entry) && (
+                entry.link?.matches?.(desktopStationSelector) ||
+                entry.container?.matches?.(
+                    '.building_list_li, .building_list, [data-building-id], [id^="building_"]'
+                )
             )
         );
     }
@@ -2422,8 +2553,10 @@
         initialisePersonnelProfileNavigation();
         initialisePersonnelReportVisibility();
         makePanelDraggable(panel, document.querySelector('#mc-namer-header'));
-        installToolViewportGuard(panel);
-        installSingleNamingToolsPanelGuard(panel);
+        TOOL_PANEL_VIEWPORT_CLEANUPS.set(
+            panel,
+            installToolViewportGuard(panel)
+        );
 
         let savedTab = 'unit';
         let savedCollapsed = false;

@@ -26,6 +26,18 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Consolidate the two retained control surfaces into one coherent interface.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
+## [1.0.21] - 2026-07-23
+
+### Fixed
+
+- The Resource Administration panel on iOS Safari now exists only while a rendered personal Stations list is active.
+- Switching to Map, Missions, Chat, Radio or another responsive view removes the stale panel; returning to Stations recreates exactly one instance.
+- Persistent DOM, visibility and bfcache reconciliation now survives repeated responsive navigation without accumulating detached panel viewport listeners.
+
+### Changed
+
+- Unit Naming increased from `3.3.7` to `3.3.8`; desktop Resource Administration and Mission Control behaviour remain unchanged.
+
 ## [1.0.20] - 2026-07-23
 
 ### Fixed
