@@ -12,7 +12,7 @@ on:
       - '.github/workflows/temporary-inspect-stations-panel-lifecycle.yml'
 
 permissions:
-  actions: read
+  contents: read
 
 jobs:
   inspect:
@@ -23,26 +23,31 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - name: Print exact lifecycle functions
-        env:
-          GH_TOKEN: ${{ github.token }}
+      - name: Check out exact issue branch
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Export exact lifecycle blocks
         shell: bash
         run: |
-          set -eu
-          gh api \
-            -H 'Accept: application/vnd.github+json' \
-            "/repos/${GITHUB_REPOSITORY}/actions/jobs/89257965659/logs" \
-            > /tmp/lifecycle.log
+          set -euo pipefail
+          SOURCE='src/missionchief-command-nexus.user.js'
+          {
+            echo '===== SHARED DISCOVERY AND SINGLE PANEL GUARD ====='
+            nl -ba "$SOURCE" | sed -n '1110,1435p'
+            echo '===== INITIALISATION AND STATION DETECTION ====='
+            nl -ba "$SOURCE" | sed -n '1500,1645p'
+            echo '===== PANEL FINALISATION ====='
+            nl -ba "$SOURCE" | sed -n '2390,2445p'
+          } > lifecycle-blocks.txt
 
-          print_context() {
-            pattern="$1"
-            label="$2"
-            before="$3"
-            after="$4"
-            line="$(grep -n "$pattern" /tmp/lifecycle.log | tail -n 1 | cut -d: -f1)"
-            echo "===== ${label} ====="
-            sed -n "$((line-before)),$((line+after))p" /tmp/lifecycle.log
-          }
-
-          print_context 'function ensureSingleNamingToolsPanel' 'SINGLE PANEL FUNCTIONS' 8 70
-          print_context 'function isStationOverviewScreen' 'STATION SCREEN AND LOADER' 35 70
+      - name: Upload lifecycle evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue-95-lifecycle-blocks
+          path: lifecycle-blocks.txt
+          if-no-files-found: error
+          retention-days: 2
