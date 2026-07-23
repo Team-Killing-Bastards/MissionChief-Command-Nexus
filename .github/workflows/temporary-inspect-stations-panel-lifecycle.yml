@@ -1,0 +1,51 @@
+name: Inspect Stations panel lifecycle
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+    paths:
+      - '.github/workflows/temporary-inspect-stations-panel-lifecycle.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'fix/ios-stations-only-tools-menu'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out exact issue branch
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Print panel lifecycle source
+        shell: bash
+        run: |
+          set -euo pipefail
+          SOURCE='src/missionchief-command-nexus.user.js'
+
+          echo '===== IDENTIFIERS ====='
+          grep -n -E 'function (isStationOverviewScreen|ensureSingleNamingToolsPanel|installSingleNamingToolsPanelGuard|createNamingToolsPanel)|mc-namer-panel|STATION_OVERVIEW_LINK_SELECTOR|pageshow' "$SOURCE" | head -n 120
+
+          echo '===== STATION SCREEN DETECTION ====='
+          line="$(grep -n 'function isStationOverviewScreen' "$SOURCE" | head -n1 | cut -d: -f1)"
+          sed -n "$((line-40)),$((line+100))p" "$SOURCE"
+
+          echo '===== PANEL CREATION AND SINGLE INSTANCE ====='
+          line="$(grep -n 'function ensureSingleNamingToolsPanel' "$SOURCE" | head -n1 | cut -d: -f1)"
+          sed -n "$((line-80)),$((line+180))p" "$SOURCE"
+
+          echo '===== LOADER / OBSERVER TAIL ====='
+          grep -n -E 'isStationOverviewScreen\(|ensureSingleNamingToolsPanel\(|installSingleNamingToolsPanelGuard\(' "$SOURCE" | tail -n 80
