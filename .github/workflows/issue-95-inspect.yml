@@ -1,0 +1,71 @@
+name: Inspect issue 95 panel lifecycle
+
+on:
+  push:
+    branches:
+      - agent/fix-issue-95-stations-panel-lifecycle
+    paths:
+      - '.github/workflows/issue-95-inspect.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out issue branch
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: agent/fix-issue-95-stations-panel-lifecycle
+
+      - name: Extract current lifecycle context
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          source_path = Path('src/missionchief-command-nexus.user.js')
+          lines = source_path.read_text(encoding='utf-8').splitlines()
+          output_dir = Path('.issue-95-context')
+          output_dir.mkdir(exist_ok=True)
+
+          def extract(name, marker, before, after, occurrence=0):
+              matches = [index for index, line in enumerate(lines) if marker in line]
+              if len(matches) <= occurrence:
+                  raise SystemExit(f'{name}: marker {marker!r} occurrence {occurrence} not found; matches={len(matches)}')
+              index = matches[occurrence]
+              start = max(0, index - before)
+              end = min(len(lines), index + after + 1)
+              payload = [f'# {name}', f'# marker line: {index + 1}', '']
+              payload.extend(f'{line_no + 1:05d}: {lines[line_no]}' for line_no in range(start, end))
+              (output_dir / f'{name}.txt').write_text('\n'.join(payload) + '\n', encoding='utf-8')
+
+          extract('state', 'const TOOL_LIFECYCLE_CLEANUPS', 25, 85)
+          extract('loader', 'function schedulePanelInitialisation', 25, 190)
+          extract('guard', 'function ensureSingleNamingToolsPanel', 30, 180)
+          extract('overview', 'function isStationOverviewScreen', 35, 150)
+          extract('guard-install', 'installSingleNamingToolsPanelGuard(panel)', 80, 100)
+
+          manifest = [
+              f'source_lines={len(lines)}',
+              f'panel_id_occurrences={sum("mc-namer-panel" in line for line in lines)}',
+              f'guard_install_occurrences={sum("installSingleNamingToolsPanelGuard" in line for line in lines)}',
+          ]
+          (output_dir / 'manifest.txt').write_text('\n'.join(manifest) + '\n', encoding='utf-8')
+          PY
+
+      - name: Commit diagnostic context and remove inspector
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git rm .github/workflows/issue-95-inspect.yml
+          git add .issue-95-context
+          git commit -m 'Capture issue 95 lifecycle context'
+          git push origin HEAD:agent/fix-issue-95-stations-panel-lifecycle
