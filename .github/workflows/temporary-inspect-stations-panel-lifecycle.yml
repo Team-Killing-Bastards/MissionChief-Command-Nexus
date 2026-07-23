@@ -12,7 +12,7 @@ on:
       - '.github/workflows/temporary-inspect-stations-panel-lifecycle.yml'
 
 permissions:
-  contents: read
+  actions: read
 
 jobs:
   inspect:
@@ -23,29 +23,25 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - name: Check out exact issue branch
-        uses: actions/checkout@v6
-        with:
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.pull_request.head.ref }}
-          fetch-depth: 0
-
-      - name: Print panel lifecycle source
+      - name: Print exact lifecycle blocks from prior inspection
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          SOURCE='src/missionchief-command-nexus.user.js'
+          gh api \
+            -H 'Accept: application/vnd.github+json' \
+            "/repos/${GITHUB_REPOSITORY}/actions/jobs/89257965659/logs" \
+            > /tmp/lifecycle.log
 
           echo '===== IDENTIFIERS ====='
-          grep -n -E 'function (isStationOverviewScreen|ensureSingleNamingToolsPanel|installSingleNamingToolsPanelGuard|createNamingToolsPanel)|mc-namer-panel|STATION_OVERVIEW_LINK_SELECTOR|pageshow' "$SOURCE" | head -n 120
+          awk '/===== IDENTIFIERS =====/{show=1; next} /===== STATION SCREEN DETECTION =====/{show=0} show' /tmp/lifecycle.log
 
           echo '===== STATION SCREEN DETECTION ====='
-          line="$(grep -n 'function isStationOverviewScreen' "$SOURCE" | head -n1 | cut -d: -f1)"
-          sed -n "$((line-40)),$((line+100))p" "$SOURCE"
+          awk '/===== STATION SCREEN DETECTION =====/{show=1; next} /===== PANEL CREATION AND SINGLE INSTANCE =====/{show=0} show' /tmp/lifecycle.log
 
           echo '===== PANEL CREATION AND SINGLE INSTANCE ====='
-          line="$(grep -n 'function ensureSingleNamingToolsPanel' "$SOURCE" | head -n1 | cut -d: -f1)"
-          sed -n "$((line-80)),$((line+180))p" "$SOURCE"
+          awk '/===== PANEL CREATION AND SINGLE INSTANCE =====/{show=1; next} /===== LOADER \/ OBSERVER TAIL =====/{show=0} show' /tmp/lifecycle.log
 
           echo '===== LOADER / OBSERVER TAIL ====='
-          grep -n -E 'isStationOverviewScreen\(|ensureSingleNamingToolsPanel\(|installSingleNamingToolsPanelGuard\(' "$SOURCE" | tail -n 80
+          awk '/===== LOADER \/ OBSERVER TAIL =====/{show=1; next} show' /tmp/lifecycle.log | head -n 160
