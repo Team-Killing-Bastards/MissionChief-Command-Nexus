@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.20
+// @version      1.0.21
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -8439,7 +8439,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.85
+         * MODULE 2: MISSION FINDER V10.6.86
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -8692,6 +8692,10 @@
     // V10.6.83: Mission Control now uses an iOS Safari-only safe-area layout,
     // horizontal collapse state, visual-viewport placement and pointer dragging.
     // Desktop positioning, sizing and mouse dragging remain unchanged.
+    // V10.6.86: Firefighters convert to Rescue Pumps at nine personnel
+    // per vehicle; Car Recovery maps to the existing Flatbed Recovery
+    // Vehicle; RIV-or-Major-Foam-Tender wording uses RIV first and only
+    // falls back to a Major Foam Tender when no eligible RIV is available.
     // V10.6.85: Fire cross-reference now maps the exact "Road Rail Unit"
     // wording to the established RRU route.
     // V10.6.84: the exact mission wording "Fire, rescue or aerial appliance"
@@ -9457,6 +9461,12 @@
         "Aerial Appliance Trucks": "CARP",
         "Fire, rescue or aerial appliance": "Rescue Pump",
         "Road Rail Unit": "RRU",
+        "Firefighter": "Rescue Pump",
+        "Firefighters": "Rescue Pump",
+        "Required Firefighter": "Rescue Pump",
+        "Required Firefighters": "Rescue Pump",
+        "Car Recovery": "Flatbed Recovery Vehicle",
+        "Required Car Recovery": "Flatbed Recovery Vehicle",
         "ICCU or Ambulance Control Unit": "ICCU/ACU",
         "ICCU or Ambulance Control Units": "ICCU/ACU",
         "ICCUs or Ambulance Control Units": "ICCU/ACU",
@@ -9627,7 +9637,10 @@
         "Rapid Intervention Vehicles": "RIV",
         "Major Foam Tender": "Major Foam Tender",
         "Major Foam Tenders": "Major Foam Tender",
-        "RIVs or Major Foam Tenders": "Major Foam Tender",
+        "RIVs or Major Foam Tenders": "RIV",
+        "RIV or Major Foam Tender": "RIV",
+        "Required RIV or Major Foam Tender": "RIV",
+        "Required RIVs or Major Foam Tenders": "RIV",
         "Fire Engines, RIVs or Major Foam Tenders": "Major Foam Tender",
         "Fire Engines or Major Foam Tenders": "Major Foam Tender",
         "Airfield Operations Supervisor": "Airfield Operations Supervisors",
@@ -10235,6 +10248,66 @@
                 /^Rapid\s+Response\s+Vehicle\b/i.test(
                     cleaned
                 )
+            );
+        });
+    }
+
+
+    function isRivOrMajorFoamTenderRequirement(
+        originalName,
+        mappedName
+    ) {
+        const raw =
+            String(
+                originalName || ''
+            )
+                .replace(
+                    /\s+/g,
+                    ' '
+                )
+                .trim();
+
+        const mapped =
+            normaliseVehicleText(
+                mappedName
+            );
+
+        return (
+            /^(?:Required\s+)?RIVs?\s+or\s+Major\s+Foam\s+Tenders?$/i.test(
+                raw
+            ) ||
+            mapped ===
+                'riv or major foam tender' ||
+            mapped ===
+                'rivs or major foam tenders'
+        );
+    }
+
+    function isMajorFoamTenderVehicleCheckbox(
+        input
+    ) {
+        if (!input) return false;
+
+        if (
+            getVehicleTypeIdentifiers(
+                input
+            ).includes(
+                '75'
+            )
+        ) {
+            return true;
+        }
+
+        return getCheckboxVehicleValues(
+            input
+        ).some(value => {
+            return (
+                value ===
+                    'major foam tender' ||
+                value ===
+                    'major foam tenders' ||
+                value ===
+                    'mft'
             );
         });
     }
@@ -11223,6 +11296,12 @@
                 mappedName
             );
 
+        const rivOrMajorFoamTenderPreferred =
+            isRivOrMajorFoamTenderRequirement(
+                originalName,
+                mappedName
+            );
+
         const policeAirMode =
             getPoliceAirRequirementMode(
                 originalName,
@@ -11285,6 +11364,54 @@
                     if (!includeChecked && input.checked) return false;
                     return isSeagoingVesselCheckbox(input);
                 })
+            );
+        }
+
+
+        if (
+            rivOrMajorFoamTenderPreferred
+        ) {
+            const eligible =
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) {
+                        return false;
+                    }
+
+                    if (
+                        !includeChecked &&
+                        input.checked
+                    ) {
+                        return false;
+                    }
+
+                    return (
+                        isRivVehicleCheckbox(
+                            input
+                        ) ||
+                        isMajorFoamTenderVehicleCheckbox(
+                            input
+                        )
+                    );
+                });
+
+            const rivMatches =
+                sortVehicleCheckboxesByBestArrival(
+                    eligible.filter(
+                        isRivVehicleCheckbox
+                    )
+                );
+
+            if (
+                rivMatches.length >
+                0
+            ) {
+                return rivMatches;
+            }
+
+            return sortVehicleCheckboxesByBestArrival(
+                eligible.filter(
+                    isMajorFoamTenderVehicleCheckbox
+                )
             );
         }
 
@@ -11639,6 +11766,12 @@
         const sartecPrefixOnly = isSartecRequirement(originalName, mappedName);
         const rrvTypeOnly = isRrvRequirement(originalName, mappedName);
         const rivTypeOnly = isRivRequirement(originalName, mappedName);
+
+        const rivOrMajorFoamTenderPreferred =
+            isRivOrMajorFoamTenderRequirement(
+                originalName,
+                mappedName
+            );
         const policeAirMode = getPoliceAirRequirementMode(originalName, mappedName);
         const policeCarOnly = isPoliceCarRequirement(originalName, mappedName);
         const atvCarrierOnly = isAtvCarrierRequirement(originalName, mappedName);
@@ -11671,6 +11804,33 @@
             policeCarOnly
                 ? readPersonnelTrainingRegistry()
                 : null;
+
+
+        if (
+            rivOrMajorFoamTenderPreferred
+        ) {
+            const selected =
+                getVehicleCheckboxSnapshot().filter(
+                    input =>
+                        input.checked
+                );
+
+            const selectedRivs =
+                selected.filter(
+                    isRivVehicleCheckbox
+                ).length;
+
+            if (
+                selectedRivs >
+                0
+            ) {
+                return selectedRivs;
+            }
+
+            return selected.filter(
+                isMajorFoamTenderVehicleCheckbox
+            ).length;
+        }
 
         let count = 0;
 
@@ -16873,6 +17033,49 @@ let sessionRuntimeTicker = null;
         };
     }
 
+
+    function normaliseVehicleRequirementCount(
+        originalName,
+        mappedName,
+        amount
+    ) {
+        const required =
+            Math.max(
+                0,
+                parseInt(
+                    amount,
+                    10
+                ) || 0
+            );
+
+        const raw =
+            String(
+                originalName || ''
+            )
+                .replace(
+                    /\s+/g,
+                    ' '
+                )
+                .trim();
+
+        if (
+            /^(?:Required\s+)?Firefighters?$/i.test(
+                raw
+            ) &&
+            normaliseVehicleText(
+                mappedName
+            ) ===
+                'rescue pump'
+        ) {
+            return Math.ceil(
+                required /
+                9
+            );
+        }
+
+        return required;
+    }
+
     function mergeRequirementRows(rows) {
         const merged =
             new Map();
@@ -16947,24 +17150,21 @@ let sessionRuntimeTicker = null;
                 return;
             }
 
+            const mappedName =
+                resolveUnitName(
+                    row.unitName
+                );
+
             const amount =
-                Math.max(
-                    0,
-                    parseInt(
-                        row?.stillNeeded,
-                        10
-                    ) ||
-                    0
+                normaliseVehicleRequirementCount(
+                    row.unitName,
+                    mappedName,
+                    row?.stillNeeded
                 );
 
             if (amount <= 0) {
                 return;
             }
-
-            const mappedName =
-                resolveUnitName(
-                    row.unitName
-                );
 
             const key =
                 normaliseVehicleText(

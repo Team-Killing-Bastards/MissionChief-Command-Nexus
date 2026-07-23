@@ -15,12 +15,12 @@
 </tr>
 </table>
 
-**Current version:** `1.0.20` · **Mission Finder engine:** `V10.6.85` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
+**Current version:** `1.0.21` · **Mission Finder engine:** `V10.6.86` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)
 
-[**What it is**](#what-it-is) · [**Install**](#install) · [**Workflows**](#operational-workflows) · [**v1.0.20**](#current-v1020-behaviour) · [**Safety**](#operational-safety) · [**Architecture**](#architecture) · [**Ownership**](#ownership-and-contributions) · [**Release system**](#release-and-quality-system)
+[**What it is**](#what-it-is) · [**Install**](#install) · [**Workflows**](#operational-workflows) · [**v1.0.21**](#current-v1021-behaviour) · [**Safety**](#operational-safety) · [**Architecture**](#architecture) · [**Ownership**](#ownership-and-contributions) · [**Release system**](#release-and-quality-system)
 
 </div>
 
@@ -98,7 +98,7 @@ Before Unit Finder, Mission Update, or Auto Mode selects resources, Command Nexu
 
 This prevents selection against a partial MissionChief vehicle table.
 
-## Current v1.0.20 behaviour
+## Current v1.0.21 behaviour
 
 ### Verified Fire training profiles
 
@@ -108,6 +108,9 @@ This prevents selection against a partial MissionChief vehicle table.
 - BASU, Welfare and HazMat reuse one selected Fire OSU; type-86 SAR vans remain separate.
 - `Fire, rescue or aerial appliance` requirements map to `Rescue Pump`.
 - `Road Rail Unit` requirements map to `RRU`.
+- `Firefighters` requirements convert to Rescue Pumps at 9 personnel per vehicle.
+- `Car Recovery` maps to the existing Flatbed Recovery Vehicle.
+- `RIV or Major Foam Tender` uses RIV first and Major Foam Tender only when no RIV is available.
 
 High Volume Pump, Drone Operator, Co-Responder and Lifeguard remain disabled pending later evidence.
 

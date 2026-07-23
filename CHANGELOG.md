@@ -26,6 +26,20 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Consolidate the two retained control surfaces into one coherent interface.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
+## [1.0.21] - 2026-07-23
+
+### Added
+
+- Added `Firefighter`, `Firefighters` and `Required` aliases mapped to `Rescue Pump`.
+- Added `Car Recovery` and `Required Car Recovery` aliases mapped to the existing `Flatbed Recovery Vehicle`.
+- Added singular, plural and `Required` aliases for `RIV or Major Foam Tender`.
+
+### Changed
+
+- Firefighter personnel requirements now convert at 9 personnel per Rescue Pump: 1–9 → 1, 10–18 → 2, and so on.
+- `RIV or Major Foam Tender` now selects eligible type-76 RIVs first and uses a type-75 Major Foam Tender only when no eligible RIV is available.
+- Mission Finder increased from `V10.6.85` to `V10.6.86`.
+
 ## [1.0.20] - 2026-07-23
 
 ### Fixed
