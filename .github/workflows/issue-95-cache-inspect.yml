@@ -1,4 +1,4 @@
-name: Inspect issue 95 panel cache lifecycle
+name: Capture issue 95 panel cache lifecycle
 
 on:
   pull_request:
@@ -8,7 +8,7 @@ on:
       - '.github/workflows/issue-95-cache-inspect.yml'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   inspect:
@@ -17,17 +17,48 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          fetch-depth: 0
           ref: agent/fix-issue-95-stations-panel-lifecycle
-      - name: Print UI cache and lifecycle helpers
+      - name: Capture UI cache and cleanup helpers
         shell: bash
         run: |
           set -euo pipefail
-          SOURCE=src/missionchief-command-nexus.user.js
-          echo '=== TOOL_UI_ELEMENT_CACHE ==='
-          grep -n -C 16 'TOOL_UI_ELEMENT_CACHE' "$SOURCE" || true
-          echo '=== TOOL_LOG_SCROLL_FRAMES ==='
-          grep -n -C 16 'TOOL_LOG_SCROLL_FRAMES' "$SOURCE" || true
-          echo '=== registerToolLifecycleCleanup ==='
-          grep -n -C 24 'function registerToolLifecycleCleanup' "$SOURCE" || true
-          echo '=== cleanupToolLifecycle ==='
-          grep -n -C 24 'TOOL_LIFECYCLE_CLEANED' "$SOURCE" || true
+          python3 - <<'PY'
+          from pathlib import Path
+
+          source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8').splitlines()
+          output = Path('.issue-95-cache-context')
+          output.mkdir(exist_ok=True)
+
+          def capture(name, token, before=24, after=80):
+              matches = [i for i, line in enumerate(source) if token in line]
+              chunks = []
+              for number, index in enumerate(matches):
+                  start = max(0, index - before)
+                  end = min(len(source), index + after + 1)
+                  chunks.extend([
+                      f'# {name} occurrence {number + 1}',
+                      f'# marker line: {index + 1}',
+                      '',
+                      *[f'{line_no + 1:05d}: {source[line_no]}' for line_no in range(start, end)],
+                      ''
+                  ])
+              if not chunks:
+                  chunks = [f'# {name}', f'# missing token: {token!r}', '']
+              (output / f'{name}.txt').write_text('\n'.join(chunks), encoding='utf-8')
+
+          capture('ui-cache', 'TOOL_UI_ELEMENT_CACHE')
+          capture('scroll-frames', 'TOOL_LOG_SCROLL_FRAMES')
+          capture('lifecycle-registration', 'function registerToolLifecycleCleanup', 20, 100)
+          capture('lifecycle-cleaned', 'TOOL_LIFECYCLE_CLEANED', 20, 100)
+          PY
+      - name: Commit context and remove workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git rm .github/workflows/issue-95-cache-inspect.yml
+          git add .issue-95-cache-context
+          git commit -m 'Capture issue 95 panel cache context'
+          git push origin HEAD:agent/fix-issue-95-stations-panel-lifecycle
