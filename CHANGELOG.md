@@ -26,6 +26,15 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Consolidate the two retained control surfaces into one coherent interface.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
+## [1.0.21] - 2026-07-23
+
+### Changed
+
+- Limit the iOS Safari Resource Administration panel to the visible personal Stations list.
+- Hide the panel immediately on Map, Missions, Chat and Radio while preserving collapse and drag state.
+- Reject generic or hidden map building nodes as Stations-screen evidence and add permanent lifecycle regression checks.
+- Increased the unified userscript version from `1.0.20` to `1.0.21`.
+
 ## [1.0.20] - 2026-07-23
 
 ### Fixed

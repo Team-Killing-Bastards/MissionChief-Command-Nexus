@@ -82,6 +82,56 @@ requireText(
 );
 
 requireText(
+  'function syncNamingToolsPanelVisibility(',
+  'Stations-only panel visibility synchronisation'
+);
+requireText(
+  'panel.hidden = !shouldShow;',
+  'off-page panel suppression'
+);
+requireText(
+  "panel.style.setProperty('display', 'none', 'important');",
+  'off-page display enforcement'
+);
+requireText(
+  'NAMING_TOOLS_PANEL_GUARD_INSTALLED',
+  'singleton lifecycle guard state'
+);
+requireText(
+  "document.addEventListener('click', handleNavigationClick, true);",
+  'responsive navigation lifecycle check'
+);
+requirePattern(
+  /function isStationOverviewScreen\(\)[\s\S]{0,1800}getClientRects\(\)\.length > 0/,
+  'visible responsive Stations-list requirement'
+);
+
+const stationScreenStart = source.indexOf('function isStationOverviewScreen()');
+const stationScreenEnd = source.indexOf('\n    function init()', stationScreenStart);
+if (stationScreenStart < 0 || stationScreenEnd <= stationScreenStart) {
+  fail('Unable to isolate the Stations-screen detector');
+}
+const stationScreenBlock = source.slice(stationScreenStart, stationScreenEnd);
+if (stationScreenBlock.includes('[data-building-id]') || stationScreenBlock.includes('[id^="building_"]')) {
+  fail('Stations-screen detection must not accept generic map building nodes');
+}
+
+const initialiseStart = source.indexOf('function tryInitialise()');
+const initialiseEnd = source.indexOf('\n        if (tryInitialise()) return;', initialiseStart);
+if (initialiseStart < 0 || initialiseEnd <= initialiseStart) {
+  fail('Unable to isolate the naming-tools initialiser');
+}
+const initialiseBlock = source.slice(initialiseStart, initialiseEnd);
+if (
+  initialiseBlock.indexOf('isStationOverviewScreen()') < 0 ||
+  initialiseBlock.indexOf('ensureSingleNamingToolsPanel()') < 0 ||
+  initialiseBlock.indexOf('isStationOverviewScreen()') >
+    initialiseBlock.indexOf('ensureSingleNamingToolsPanel()')
+) {
+  fail('Stations-screen state must be evaluated before accepting an existing panel');
+}
+
+requireText(
   'function createManagedStationIframe(',
   'same-origin station iframe fallback'
 );
