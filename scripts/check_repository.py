@@ -310,62 +310,6 @@ def check_current_documentation() -> None:
             fail(f"Documentation still contains stale planning claim: {claim!r}")
 
 
-def upload_source_snapshot() -> None:
-    import json
-    import os
-    import subprocess
-    import tempfile
-    import textwrap
-
-    # Diagnostic export is deliberately limited to the short-lived v1.0.20 branch.
-    if os.environ.get("GITHUB_ACTIONS") != "true":
-        return
-    if os.environ.get("GITHUB_HEAD_REF") != "release/v1.0.20-road-rail-unit":
-        return
-
-    source_path = (ROOT / "src/missionchief-command-nexus.user.js").resolve()
-    work = Path(tempfile.mkdtemp(prefix="nexus-artifact-"))
-    (work / "package.json").write_text(
-        json.dumps(
-            {
-                "private": True,
-                "type": "module",
-                "dependencies": {"@actions/artifact": "2.2.2"},
-            }
-        ),
-        encoding="utf-8",
-    )
-    (work / "upload.mjs").write_text(
-        textwrap.dedent(
-            """
-            import path from 'node:path';
-            import { DefaultArtifactClient } from '@actions/artifact';
-
-            const sourcePath = process.env.NEXUS_SOURCE_PATH;
-            const client = new DefaultArtifactClient();
-            const result = await client.uploadArtifact(
-              'v1020-current-source',
-              [sourcePath],
-              path.dirname(sourcePath),
-              { retentionDays: 1 }
-            );
-            console.log(`Uploaded source artifact ${result.id}`);
-            """
-        ).strip()
-        + "\n",
-        encoding="utf-8",
-    )
-
-    subprocess.run(
-        ["npm", "install", "--silent", "--no-audit", "--no-fund"],
-        cwd=work,
-        check=True,
-    )
-    env = os.environ.copy()
-    env["NEXUS_SOURCE_PATH"] = str(source_path)
-    subprocess.run(["node", "upload.mjs"], cwd=work, env=env, check=True)
-
-
 def main() -> None:
     check_required_files()
     check_attribution()
@@ -374,7 +318,6 @@ def main() -> None:
     check_readme_presentation()
     check_userscript_metadata_and_version()
     check_current_documentation()
-    upload_source_snapshot()
     print("Repository integrity checks passed.")
 
 
