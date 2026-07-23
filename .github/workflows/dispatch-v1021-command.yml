@@ -27,6 +27,7 @@ jobs:
         with:
           fetch-depth: 0
           ref: main
+          show-progress: false
 
       - name: Set up Node.js
         uses: actions/setup-node@v6
@@ -34,27 +35,81 @@ jobs:
           node-version: '24'
           package-manager-cache: false
 
-      - name: Execute registered v1.0.21 builder
+      - name: Apply reviewed builder to current source
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
-          import textwrap
 
-          workflow_path = Path('.github/workflows/apply-v1.0.21-fire-crossref.yml')
-          workflow = workflow_path.read_text(encoding='utf-8')
+          workflow = Path('.github/workflows/apply-v1.0.21-fire-crossref.yml').read_text(encoding='utf-8')
           start_marker = "          python3 - <<'PY'\n"
           end_marker = "\n          PY\n"
           start = workflow.find(start_marker)
           if start < 0:
-              raise SystemExit('Embedded v1.0.21 builder start marker was not found')
+              raise SystemExit('Embedded builder start marker was not found')
           start += len(start_marker)
           end = workflow.find(end_marker, start)
           if end < 0:
-              raise SystemExit('Embedded v1.0.21 builder end marker was not found')
-          builder = textwrap.dedent(workflow[start:end])
+              raise SystemExit('Embedded builder end marker was not found')
+
+          builder = '\n'.join(
+              line[10:] if line.startswith('          ') else line
+              for line in workflow[start:end].splitlines()
+          ) + '\n'
+
+          stale_call = "source = replace_once(source, merge_anchor, merge_replacement, 'Firefighter count application')"
+          if builder.count(stale_call) != 1:
+              raise SystemExit('Stale Firefighter count application call was not found exactly once')
+          builder = builder.replace(
+              stale_call,
+              "# Firefighter count application is applied below against the current mergeRequirementRows structure.",
+              1
+          )
+
           exec(compile(builder, '<v1.0.21-fire-crossref-builder>', 'exec'), {'__name__': '__main__'})
+
+          source_path = Path('src/missionchief-command-nexus.user.js')
+          source = source_path.read_text(encoding='utf-8')
+          old = '''            const amount =
+                Math.max(
+                    0,
+                    parseInt(
+                        row?.stillNeeded,
+                        10
+                    ) ||
+                    0
+                );
+
+            if (amount <= 0) {
+                return;
+            }
+
+            const mappedName =
+                resolveUnitName(
+                    row.unitName
+                );
+'''
+          new = '''            const mappedName =
+                resolveUnitName(
+                    row.unitName
+                );
+
+            const amount =
+                normaliseVehicleRequirementCount(
+                    row.unitName,
+                    mappedName,
+                    row?.stillNeeded
+                );
+
+            if (amount <= 0) {
+                return;
+            }
+'''
+          if source.count(old) != 1:
+              raise SystemExit(f'Current mergeRequirementRows count block matched {source.count(old)} times, expected 1')
+          source = source.replace(old, new, 1)
+          source_path.write_text(source, encoding='utf-8', newline='\n')
 
           quality_path = Path('.github/workflows/repository-quality.yml')
           quality = quality_path.read_text(encoding='utf-8')
@@ -77,11 +132,14 @@ jobs:
           quality_path.write_text(quality, encoding='utf-8', newline='\n')
           PY
 
-          git rm -f .github/workflows/apply-v1.0.21-fire-crossref.yml
-          git rm -f .github/workflows/dispatch-v1021-command.yml
-          git rm -f .github/workflows/v1021-dispatch-marker.yml
-          git rm -f .release/v1.0.21.trigger
-          git rm -f .release/v1.0.21.command-ready
+          git rm -f --ignore-unmatch .github/workflows/apply-v1.0.21-fire-crossref.yml
+          git rm -f --ignore-unmatch .github/workflows/dispatch-v1021-command.yml
+          git rm -f --ignore-unmatch .github/workflows/diagnose-v1021-builder.yml
+          git rm -f --ignore-unmatch .github/workflows/apply-v1021-direct-fixed.yml
+          git rm -f --ignore-unmatch .github/workflows/apply-v1021-current-merge.yml
+          git rm -f --ignore-unmatch .github/workflows/v1021-dispatch-marker.yml
+          git rm -f --ignore-unmatch .release/v1.0.21.trigger
+          git rm -f --ignore-unmatch .release/v1.0.21.command-ready
 
       - name: Validate complete v1.0.21 build
         shell: bash
@@ -104,7 +162,7 @@ jobs:
               'Firefighters alias': '        "Firefighters": "Rescue Pump",',
               'Car Recovery alias': '        "Car Recovery": "Flatbed Recovery Vehicle",',
               'RIV/MFT alias': '        "RIV or Major Foam Tender": "RIV",',
-              'Firefighter conversion': 'function normaliseVehicleRequirementCount(',
+              'Firefighter conversion helper': 'function normaliseVehicleRequirementCount(',
               'RIV/MFT fallback': 'function isRivOrMajorFoamTenderRequirement(',
               'Major Foam Tender matcher': 'function isMajorFoamTenderVehicleCheckbox('
           }
@@ -119,10 +177,10 @@ jobs:
 
           if '        "RIVs or Major Foam Tenders": "Major Foam Tender",' in source:
               raise SystemExit('Legacy Major Foam Tender-first mapping remains')
-          print('Focused v1.0.21 Fire cross-reference validation passed.')
+          print('Focused v1.0.21 current-source validation passed.')
           PY
 
-      - name: Commit and push validated source
+      - name: Commit and push validated v1.0.21
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
