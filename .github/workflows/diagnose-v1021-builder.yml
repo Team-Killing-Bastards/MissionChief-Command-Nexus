@@ -1,0 +1,70 @@
+name: Diagnose v1.0.21 Fire cross-reference builder
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - synchronize
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  diagnose:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'release/run-v1021-fire-crossref'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out current main
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: main
+          show-progress: false
+
+      - name: Execute embedded builder and report result
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        shell: bash
+        run: |
+          set +e
+          python3 - <<'PY' > /tmp/v1021-builder.log 2>&1
+          from pathlib import Path
+          import textwrap
+
+          workflow = Path('.github/workflows/apply-v1.0.21-fire-crossref.yml').read_text(encoding='utf-8')
+          start_marker = "          python3 - <<'PY'\n"
+          end_marker = "\n          PY\n"
+          start = workflow.find(start_marker)
+          if start < 0:
+              raise SystemExit('Embedded builder start marker not found')
+          start += len(start_marker)
+          end = workflow.find(end_marker, start)
+          if end < 0:
+              raise SystemExit('Embedded builder end marker not found')
+          builder = textwrap.dedent(workflow[start:end])
+          exec(compile(builder, '<v1.0.21-fire-crossref-builder>', 'exec'), {'__name__': '__main__'})
+          PY
+          status=$?
+
+          if [[ ${status} -eq 0 ]]; then
+            gh pr comment "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --body 'Embedded v1.0.21 builder completed successfully; the prior failure is in cleanup or validation.'
+            exit 0
+          fi
+
+          tail -n 60 /tmp/v1021-builder.log > /tmp/v1021-builder-tail.log
+          {
+            echo 'Embedded v1.0.21 builder failed:'
+            echo '```text'
+            cat /tmp/v1021-builder-tail.log
+            echo '```'
+          } > /tmp/v1021-builder-comment.md
+          gh pr comment "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --body-file /tmp/v1021-builder-comment.md
+          cat /tmp/v1021-builder-tail.log
+          exit "${status}"
