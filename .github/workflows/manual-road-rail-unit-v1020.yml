@@ -1,44 +1,27 @@
-name: Build Road Rail Unit v1.0.20 release
+name: Apply Road Rail Unit v1.0.20
 
 on:
-  pull_request:
+  workflow_dispatch:
+  push:
     branches:
       - main
-    types:
-      - opened
-      - reopened
-      - synchronize
     paths:
-      - '.github/workflows/manual-road-rail-unit-v1020.yml'
       - '.release/v1.0.20.trigger'
-      - 'src/missionchief-command-nexus.user.js'
-      - 'README.md'
-      - 'CHANGELOG.md'
-      - 'src/README.md'
 
 permissions:
   contents: write
 
-concurrency:
-  group: road-rail-unit-v1020-${{ github.event.pull_request.number }}
-  cancel-in-progress: false
-
 jobs:
-  build:
-    name: Apply and validate v1.0.20
-    if: >-
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      github.event.pull_request.head.ref == 'release/v1.0.20-road-rail-unit'
+  apply:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
     steps:
-      - name: Check out exact release branch
+      - name: Check out main
         uses: actions/checkout@v6
         with:
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.pull_request.head.ref }}
           fetch-depth: 0
+          ref: main
 
       - name: Set up Node.js
         uses: actions/setup-node@v6
@@ -46,12 +29,10 @@ jobs:
           node-version: '24'
           package-manager-cache: false
 
-      - name: Apply Marty’s staged Road Rail Unit patch
+      - name: Build and validate v1.0.20
         shell: bash
         run: |
           set -euo pipefail
-          git fetch origin main --force
-
           python3 - <<'PY'
           from pathlib import Path
 
@@ -117,13 +98,6 @@ jobs:
           source_readme_path.write_text(source_readme, encoding='utf-8', newline='\n')
           PY
 
-          git rm -f .github/workflows/manual-road-rail-unit-v1020.yml
-          git rm -f .release/v1.0.20.trigger
-
-      - name: Run complete release validation
-        shell: bash
-        run: |
-          set -euo pipefail
           node --check src/missionchief-command-nexus.user.js
           node scripts/validate-userscript.mjs
           node scripts/validate-userscript.mjs --base-ref origin/main
@@ -131,36 +105,14 @@ jobs:
           python3 scripts/check_repository.py
           git diff --check
 
-          python3 - <<'PY'
-          from pathlib import Path
-
-          source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8')
-          checks = {
-              'unified version': '// @version      1.0.20',
-              'Mission Finder version': ' * MODULE 2: MISSION FINDER V10.6.85',
-              'Road Rail Unit alias': '        "Road Rail Unit": "RRU",',
-          }
-          missing = [label for label, token in checks.items() if token not in source]
-          if missing:
-              raise SystemExit('Missing v1.0.20 contracts: ' + ', '.join(missing))
-
-          if source.count('        "Road Rail Unit": "RRU",') != 1:
-              raise SystemExit('Road Rail Unit alias must exist exactly once')
-
-          print('Focused v1.0.20 Road Rail Unit contracts passed.')
-          PY
-
-      - name: Commit validated release candidate
+      - name: Commit validated patch and remove launcher
         shell: bash
         run: |
           set -euo pipefail
-
           git config user.name MartyBlyth
           git config user.email 32400596+Martyblyth@users.noreply.github.com
-          git add \
-            CHANGELOG.md \
-            README.md \
-            src/README.md \
-            src/missionchief-command-nexus.user.js
+          git rm -f .github/workflows/manual-road-rail-unit-v1020.yml
+          git rm -f .release/v1.0.20.trigger
+          git add CHANGELOG.md README.md src/README.md src/missionchief-command-nexus.user.js
           git commit -m 'Map Road Rail Unit to RRU'
-          git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
+          git push origin HEAD:main
