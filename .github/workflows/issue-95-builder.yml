@@ -43,17 +43,28 @@ jobs:
           rm -f .github/workflows/issue-95-cache-inspect.yml
           git rm -f .github/workflows/issue-95-builder.yml .github/issue-95-patch.py
 
-      - name: Run complete validation
+      - name: Validate JavaScript syntax
+        run: node --check src/missionchief-command-nexus.user.js
+
+      - name: Validate userscript metadata
+        run: node scripts/validate-userscript.mjs
+
+      - name: Validate version increase
+        run: node scripts/validate-userscript.mjs --base-ref origin/main
+
+      - name: Validate permanent iOS compatibility contracts
+        run: node scripts/check-ios-compatibility.mjs
+
+      - name: Validate repository integrity
+        run: python3 scripts/check_repository.py
+
+      - name: Validate whitespace
+        run: git diff --check
+
+      - name: Validate focused issue 95 contracts
         shell: bash
         run: |
           set -euo pipefail
-          node --check src/missionchief-command-nexus.user.js
-          node scripts/validate-userscript.mjs
-          node scripts/validate-userscript.mjs --base-ref origin/main
-          node scripts/check-ios-compatibility.mjs
-          python3 scripts/check_repository.py
-          git diff --check
-
           python3 - <<'PY'
           from pathlib import Path
 
