@@ -11,4 +11,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Marker
-        run: echo "v1.0.21 trusted dispatch marker"
+        run: echo "v1.0.21 inspectable PR-close dispatch marker"
