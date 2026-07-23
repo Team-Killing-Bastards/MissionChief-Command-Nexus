@@ -4,3 +4,4 @@ Run diagnostic after embedded-builder failure.
 Run corrected fixed-indentation builder.
 Report corrected embedded-builder error.
 Inspect current mergeRequirementRows structure.
+Apply against the current mergeRequirementRows structure.
