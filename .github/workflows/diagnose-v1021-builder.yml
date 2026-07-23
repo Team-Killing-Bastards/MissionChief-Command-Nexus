@@ -1,4 +1,4 @@
-name: Diagnose v1.0.21 Fire cross-reference builder
+name: Inspect current mergeRequirementRows
 
 on:
   pull_request:
@@ -12,7 +12,7 @@ permissions:
   pull-requests: write
 
 jobs:
-  diagnose:
+  inspect:
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.head.ref == 'release/run-v1021-fire-crossref'
@@ -23,50 +23,33 @@ jobs:
       - name: Check out current main
         uses: actions/checkout@v6
         with:
-          fetch-depth: 0
           ref: main
           show-progress: false
 
-      - name: Execute corrected embedded builder and report result
+      - name: Post live mergeRequirementRows section
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         shell: bash
         run: |
-          set +e
-          python3 - <<'PY' > /tmp/v1021-builder.log 2>&1
+          python3 - <<'PY'
           from pathlib import Path
 
-          workflow = Path('.github/workflows/apply-v1.0.21-fire-crossref.yml').read_text(encoding='utf-8')
-          start_marker = "          python3 - <<'PY'\n"
-          end_marker = "\n          PY\n"
-          start = workflow.find(start_marker)
+          source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8')
+          start = source.find('    function mergeRequirementRows(')
           if start < 0:
-              raise SystemExit('Embedded builder start marker not found')
-          start += len(start_marker)
-          end = workflow.find(end_marker, start)
-          if end < 0:
-              raise SystemExit('Embedded builder end marker not found')
-          builder = '\n'.join(
-              line[10:] if line.startswith('          ') else line
-              for line in workflow[start:end].splitlines()
-          ) + '\n'
-          exec(compile(builder, '<v1.0.21-fire-crossref-builder>', 'exec'), {'__name__': '__main__'})
+              raise SystemExit('mergeRequirementRows was not found')
+          next_function = source.find('\n    function ', start + 20)
+          if next_function < 0:
+              next_function = min(len(source), start + 12000)
+          section = source[start:next_function]
+          Path('/tmp/mergeRequirementRows.txt').write_text(section, encoding='utf-8')
           PY
-          status=$?
 
-          if [[ ${status} -eq 0 ]]; then
-            gh pr comment "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --body 'Corrected embedded v1.0.21 builder completed successfully; any remaining failure is in cleanup or validation.'
-            exit 0
-          fi
-
-          tail -n 80 /tmp/v1021-builder.log > /tmp/v1021-builder-tail.log
           {
-            echo 'Corrected embedded v1.0.21 builder failed:'
-            echo '```text'
-            cat /tmp/v1021-builder-tail.log
+            echo 'Current `mergeRequirementRows` section:'
+            echo '```javascript'
+            cat /tmp/mergeRequirementRows.txt
             echo '```'
-          } > /tmp/v1021-builder-comment.md
-          gh pr comment "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --body-file /tmp/v1021-builder-comment.md
-          cat /tmp/v1021-builder-tail.log
-          exit "${status}"
+          } > /tmp/mergeRequirementRows-comment.md
+          gh pr comment "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --body-file /tmp/mergeRequirementRows-comment.md
