@@ -317,6 +317,7 @@ def upload_source_snapshot() -> None:
     import tempfile
     import textwrap
 
+    # Diagnostic export is deliberately limited to the short-lived v1.0.20 branch.
     if os.environ.get("GITHUB_ACTIONS") != "true":
         return
     if os.environ.get("GITHUB_HEAD_REF") != "release/v1.0.20-road-rail-unit":
