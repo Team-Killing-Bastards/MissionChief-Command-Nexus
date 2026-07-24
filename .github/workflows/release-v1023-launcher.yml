@@ -1,0 +1,81 @@
+name: Publish v1.0.23 to GitHub, Greasy Fork and Discord
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: publish-v1.0.23
+  cancel-in-progress: false
+
+jobs:
+  cleanup-launcher:
+    name: Remove one-use launcher
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'release/v1.0.23-publish-trigger'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out trusted main
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Remove launcher before tagging
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name MartyBlyth
+          git config user.email 32400596+Martyblyth@users.noreply.github.com
+          git rm .github/workflows/release-v1023-launcher.yml
+          git commit -m 'Remove completed v1.0.23 release launcher'
+          git push origin HEAD:main
+
+  publish:
+    name: Publish, verify and announce v1.0.23
+    needs: cleanup-launcher
+    if: needs.cleanup-launcher.result == 'success'
+    uses: ./.github/workflows/release.yml
+    with:
+      operation: publish-release
+      release_tag: v1.0.23
+      release_notes: Automatically collects visible seasonal mission items, including the summer sunflower, through MissionChief's exact claim route without leaving or interrupting the mission.
+    secrets: inherit
+
+  finish:
+    name: Close release trigger
+    needs: publish
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Close trigger PR and remove branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          TRIGGER_BRANCH: ${{ github.event.pull_request.head.ref }}
+          PUBLISH_RESULT: ${{ needs.publish.result }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${PUBLISH_RESULT}" == "success" ]]; then
+            gh pr close "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --comment 'v1.0.23 published, Greasy Fork verified and Discord notified.'
+            git ls-remote --exit-code --heads "https://github.com/${GITHUB_REPOSITORY}.git" "refs/heads/${TRIGGER_BRANCH}" >/dev/null 2>&1 && \
+              gh api --method DELETE "repos/${GITHUB_REPOSITORY}/git/refs/heads/${TRIGGER_BRANCH}" || true
+          else
+            gh pr comment "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --body "v1.0.23 release pipeline finished with result: ${PUBLISH_RESULT}."
+            exit 1
+          fi
