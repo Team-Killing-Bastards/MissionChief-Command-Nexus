@@ -3,3 +3,4 @@ Rerun with precise transformation diagnostics.
 Use the current Mission Finder installation guard as the release-note anchor.
 Run the resilient line-based source transformation.
 Insert after the first current Mission Finder ownership assignment.
+Use the first current Mission Finder constant declaration as the stable insertion point.
