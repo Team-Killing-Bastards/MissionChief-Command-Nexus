@@ -89,14 +89,14 @@ jobs:
 
           replacement = [
               "module_tail = source[module_index:]\n",
-              "guard_assignment = re.search(\n",
-              "    r\"window\\.__[A-Za-z0-9_$]+__\\s*=\\s*true\\s*;\",\n",
+              "first_mission_finder_constant = re.search(\n",
+              "    r\"\\n\\s*const\\s+MF_[A-Z0-9_]+\\s*=\",\n",
               "    module_tail,\n",
               ")\n",
-              "if not guard_assignment:\n",
-              "    raise SystemExit(\"Mission Finder ownership assignment was not found\")\n",
+              "if not first_mission_finder_constant:\n",
+              "    raise SystemExit(\"First Mission Finder constant was not found\")\n",
               "\n",
-              "insert_at = module_index + guard_assignment.end()\n",
+              "insert_at = module_index + first_mission_finder_constant.start()\n",
           ]
           lines[guard_start:guard_end + 1] = replacement
           text = ''.join(lines)
