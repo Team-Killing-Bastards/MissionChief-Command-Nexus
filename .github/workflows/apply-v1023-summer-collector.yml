@@ -45,6 +45,40 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         shell: bash
         run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('scripts/apply_v1023_summer_collectibles.py')
+          text = path.read_text(encoding='utf-8')
+          stale_anchor = '''release_anchor = source.find("    // V10.6.87:", module_index)
+          if release_anchor < 0:
+              raise SystemExit("Mission Finder V10.6.87 release-note anchor was not found")
+
+          release_note = (
+              "    // V10.6.88: visible seasonal mission collectibles, including the\n"
+              "    // summer sunflower item, are claimed through MissionChief's exact\n"
+              "    // claim_found_object_sync route without navigating away from the mission.\n"
+          )
+          source = source[:release_anchor] + release_note + source[release_anchor:]
+
+          '''
+          if text.count(stale_anchor) != 1:
+              raise SystemExit('Unable to remove stale Mission Finder release-note anchor')
+          text = text.replace(stale_anchor, '', 1)
+
+          collector_anchor = "collector = r'''\n"
+          collector_note = (
+              "collector = r'''\n"
+              "    // V10.6.88: visible seasonal mission collectibles, including the\n"
+              "    // summer sunflower item, are claimed through MissionChief's exact\n"
+              "    // claim_found_object_sync route without navigating away from the mission.\n"
+          )
+          if text.count(collector_anchor) != 1:
+              raise SystemExit('Unable to locate summer collector insertion block')
+          text = text.replace(collector_anchor, collector_note, 1)
+          path.write_text(text, encoding='utf-8', newline='\n')
+          PY
+
           set +e
           python3 scripts/apply_v1023_summer_collectibles.py > /tmp/v1023-apply.log 2>&1
           status=$?
