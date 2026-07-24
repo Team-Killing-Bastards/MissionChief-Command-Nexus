@@ -45,26 +45,32 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         shell: bash
         run: |
-          python3 - <<'PY'
+          set +e
+          (
+            python3 - <<'PY'
           from pathlib import Path
 
           path = Path('scripts/apply_v1023_summer_collectibles.py')
-          text = path.read_text(encoding='utf-8')
-          stale_anchor = '''release_anchor = source.find("    // V10.6.87:", module_index)
-          if release_anchor < 0:
-              raise SystemExit("Mission Finder V10.6.87 release-note anchor was not found")
+          lines = path.read_text(encoding='utf-8').splitlines(keepends=True)
 
-          release_note = (
-              "    // V10.6.88: visible seasonal mission collectibles, including the\n"
-              "    // summer sunflower item, are claimed through MissionChief's exact\n"
-              "    // claim_found_object_sync route without navigating away from the mission.\n"
+          start = next(
+              (index for index, line in enumerate(lines)
+               if line.startswith('release_anchor = source.find(')),
+              None,
           )
-          source = source[:release_anchor] + release_note + source[release_anchor:]
+          if start is None:
+              raise SystemExit('Stale release-note block start was not found')
 
-          '''
-          if text.count(stale_anchor) != 1:
-              raise SystemExit('Unable to remove stale Mission Finder release-note anchor')
-          text = text.replace(stale_anchor, '', 1)
+          end = next(
+              (index for index in range(start, len(lines))
+               if lines[index].startswith('source = source[:release_anchor]')),
+              None,
+          )
+          if end is None:
+              raise SystemExit('Stale release-note block end was not found')
+
+          del lines[start:end + 1]
+          text = ''.join(lines)
 
           collector_anchor = "collector = r'''\n"
           collector_note = (
@@ -74,13 +80,14 @@ jobs:
               "    // claim_found_object_sync route without navigating away from the mission.\n"
           )
           if text.count(collector_anchor) != 1:
-              raise SystemExit('Unable to locate summer collector insertion block')
+              raise SystemExit('Summer collector insertion block was not unique')
+
           text = text.replace(collector_anchor, collector_note, 1)
           path.write_text(text, encoding='utf-8', newline='\n')
           PY
 
-          set +e
-          python3 scripts/apply_v1023_summer_collectibles.py > /tmp/v1023-apply.log 2>&1
+            python3 scripts/apply_v1023_summer_collectibles.py
+          ) > /tmp/v1023-apply.log 2>&1
           status=$?
           cat /tmp/v1023-apply.log
           if [[ ${status} -ne 0 ]]; then
