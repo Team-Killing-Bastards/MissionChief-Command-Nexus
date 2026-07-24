@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.22
+// @version      1.0.23
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -8680,11 +8680,280 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.87
+         * MODULE 2: MISSION FINDER V10.6.88
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
     'use strict';
+
+    // V10.6.88: visible seasonal mission collectibles, including the
+    // summer sunflower item, are claimed through MissionChief's exact
+    // claim_found_object_sync route without navigating away from the mission.
+    const MF_EVENT_COLLECTIBLE_SELECTOR =
+        'a#easter-egg-link[href^="/missions/"][href*="/claim_found_object_sync"]';
+    const MF_EVENT_COLLECTIBLE_SCAN_INTERVAL_MS = 1000;
+    const MF_EVENT_COLLECTIBLE_REQUEST_COOLDOWN_MS = 10000;
+    const MF_EVENT_COLLECTIBLE_MAX_TRACKED = 250;
+    const mfEventCollectibleClaimTimes = new Map();
+    let mfEventCollectibleScanTimer = null;
+    let mfEventCollectibleScanRunning = false;
+
+    function getMissionEventCollectibleDocuments() {
+        const documents = [];
+        const seen = new Set();
+        const queue = [document];
+
+        while (
+            queue.length > 0 &&
+            documents.length < 24
+        ) {
+            const candidate = queue.shift();
+
+            if (
+                !candidate ||
+                seen.has(candidate)
+            ) {
+                continue;
+            }
+
+            seen.add(candidate);
+            documents.push(candidate);
+
+            try {
+                candidate
+                    .querySelectorAll('iframe')
+                    .forEach(frame => {
+                        try {
+                            const frameDocument =
+                                frame.contentDocument;
+
+                            if (
+                                frameDocument &&
+                                !seen.has(frameDocument)
+                            ) {
+                                queue.push(frameDocument);
+                            }
+                        } catch (_error) {}
+                    });
+            } catch (_error) {}
+        }
+
+        return documents;
+    }
+
+    function readMissionEventCollectibleClaim(link) {
+        if (
+            !link ||
+            link.id !== 'easter-egg-link'
+        ) {
+            return null;
+        }
+
+        const href =
+            String(
+                link.getAttribute('href') || ''
+            ).trim();
+
+        const match =
+            href.match(
+                /^\/missions\/(\d+)\/claim_found_object_sync(?:[?#].*)?$/
+            );
+
+        if (!match) return null;
+
+        return {
+            href,
+            missionId: match[1]
+        };
+    }
+
+    function pruneMissionEventCollectibleClaimTimes(now = Date.now()) {
+        for (
+            const [href, claimedAt] of
+            mfEventCollectibleClaimTimes
+        ) {
+            if (
+                now - claimedAt >
+                MF_EVENT_COLLECTIBLE_REQUEST_COOLDOWN_MS
+            ) {
+                mfEventCollectibleClaimTimes.delete(href);
+            }
+        }
+
+        while (
+            mfEventCollectibleClaimTimes.size >
+            MF_EVENT_COLLECTIBLE_MAX_TRACKED
+        ) {
+            const oldestHref =
+                mfEventCollectibleClaimTimes
+                    .keys()
+                    .next()
+                    .value;
+
+            if (!oldestHref) break;
+            mfEventCollectibleClaimTimes.delete(oldestHref);
+        }
+    }
+
+    async function claimMissionEventCollectible(link, claim) {
+        const now = Date.now();
+        pruneMissionEventCollectibleClaimTimes(now);
+
+        let absoluteUrl = '';
+
+        try {
+            absoluteUrl =
+                new URL(
+                    claim.href,
+                    link.ownerDocument?.location?.href ||
+                    window.location.href
+                ).href;
+        } catch (_error) {
+            return false;
+        }
+
+        const lastClaimAt =
+            mfEventCollectibleClaimTimes.get(absoluteUrl) || 0;
+
+        if (
+            now - lastClaimAt <
+            MF_EVENT_COLLECTIBLE_REQUEST_COOLDOWN_MS
+        ) {
+            return false;
+        }
+
+        mfEventCollectibleClaimTimes.set(
+            absoluteUrl,
+            now
+        );
+        link.setAttribute(
+            'data-mc-event-claiming',
+            'true'
+        );
+
+        try {
+            const response =
+                await fetch(
+                    absoluteUrl,
+                    {
+                        method: 'GET',
+                        credentials: 'same-origin',
+                        cache: 'no-store',
+                        redirect: 'follow'
+                    }
+                );
+
+            if (!response.ok) {
+                throw new Error(
+                    `Collectible claim returned HTTP ${response.status}`
+                );
+            }
+
+            if (link.isConnected) {
+                link.remove();
+            }
+
+            try {
+                window.dispatchEvent(
+                    new CustomEvent(
+                        'mc-mission-event-collectible-claimed',
+                        {
+                            detail: {
+                                missionId: claim.missionId,
+                                href: claim.href
+                            }
+                        }
+                    )
+                );
+            } catch (_error) {}
+
+            return true;
+        } catch (_error) {
+            mfEventCollectibleClaimTimes.delete(
+                absoluteUrl
+            );
+
+            if (link.isConnected) {
+                link.removeAttribute(
+                    'data-mc-event-claiming'
+                );
+            }
+
+            return false;
+        }
+    }
+
+    async function scanMissionEventCollectibles() {
+        if (
+            mfEventCollectibleScanRunning ||
+            document.visibilityState === 'hidden'
+        ) {
+            return;
+        }
+
+        mfEventCollectibleScanRunning = true;
+
+        try {
+            const documents =
+                getMissionEventCollectibleDocuments();
+
+            for (const candidateDocument of documents) {
+                let links = [];
+
+                try {
+                    const exactLink =
+                        candidateDocument.getElementById(
+                            'easter-egg-link'
+                        );
+
+                    if (
+                        exactLink &&
+                        exactLink.matches(
+                            MF_EVENT_COLLECTIBLE_SELECTOR
+                        )
+                    ) {
+                        links = [exactLink];
+                    }
+                } catch (_error) {}
+
+                for (const link of links) {
+                    const claim =
+                        readMissionEventCollectibleClaim(
+                            link
+                        );
+
+                    if (!claim) continue;
+
+                    await claimMissionEventCollectible(
+                        link,
+                        claim
+                    );
+                }
+            }
+        } finally {
+            mfEventCollectibleScanRunning = false;
+        }
+    }
+
+    function startMissionEventCollectibleCollector() {
+        if (mfEventCollectibleScanTimer !== null) {
+            return;
+        }
+
+        void scanMissionEventCollectibles();
+
+        mfEventCollectibleScanTimer =
+            window.setInterval(
+                () => {
+                    void scanMissionEventCollectibles();
+                },
+                MF_EVENT_COLLECTIBLE_SCAN_INTERVAL_MS
+            );
+    }
+
+    startMissionEventCollectibleCollector();
+
+
 
     const MF_IS_TOP_WINDOW = (() => {
         try {

@@ -26,6 +26,23 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Consolidate the two retained control surfaces into one coherent interface.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
+## [1.0.23] - 2026-07-24
+
+### Added
+
+- Added automatic collection for visible seasonal mission items, including the current summer sunflower, when MissionChief renders the exact `#easter-egg-link` claim control.
+- The collector recognises only `/missions/{id}/claim_found_object_sync`, including mission content rendered inside same-origin lightboxes and iframes.
+
+### Safety and performance
+
+- Claims use a same-origin background GET, so collecting an item does not navigate away from the mission or interrupt dispatch selection.
+- Duplicate requests are guarded by an in-flight/retry cooldown and a bounded claim cache.
+- The collector uses a lightweight one-second exact-ID scan and adds no new `MutationObserver`, preserving the v1.0.22 runtime-hardening contract.
+
+### Changed
+
+- Mission Finder increased from `V10.6.87` to `V10.6.88`.
+
 ## [1.0.22] - 2026-07-24
 
 ### Fixed
