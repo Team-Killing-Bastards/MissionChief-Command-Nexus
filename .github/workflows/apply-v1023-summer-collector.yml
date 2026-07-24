@@ -40,7 +40,25 @@ jobs:
           package-manager-cache: false
 
       - name: Apply summer collectible collector
-        run: python3 scripts/apply_v1023_summer_collectibles.py
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        shell: bash
+        run: |
+          set +e
+          python3 scripts/apply_v1023_summer_collectibles.py > /tmp/v1023-apply.log 2>&1
+          status=$?
+          cat /tmp/v1023-apply.log
+          if [[ ${status} -ne 0 ]]; then
+            {
+              echo 'v1.0.23 transformation failed:'
+              echo '```text'
+              tail -n 80 /tmp/v1023-apply.log
+              echo '```'
+            } > /tmp/v1023-comment.md
+            gh pr comment "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --body-file /tmp/v1023-comment.md || true
+            exit "${status}"
+          fi
 
       - name: Remove one-use build files
         run: |
