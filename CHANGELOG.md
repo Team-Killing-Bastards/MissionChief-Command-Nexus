@@ -26,6 +26,26 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Consolidate the two retained control surfaces into one coherent interface.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
+## [1.0.22] - 2026-07-24
+
+### Fixed
+
+- Resource Administration on iOS Safari now follows only the visibly rendered personal Stations view, removing the stale panel from Map, Missions, Chat and Radio while preserving one panel instance and its saved state.
+- Mission Finder now preserves its observer, timers and listeners during Safari bfcache entry and reconciles the restored page on `pageshow` instead of returning with a torn-down runtime.
+- The personnel-training registry update listener now has a named owner and deterministic teardown.
+
+### Performance
+
+- Consolidated two full-document Resource Administration observers into one filtered, animation-frame-coalesced lifecycle controller.
+- Mission Finder now ignores mutations generated inside its own panel while retaining wrapper creation/removal detection and all mission, patient, vehicle and transport invalidation paths.
+- Added permanent runtime-hardening tests for observer count, lifecycle decisions, bfcache preservation, listener ownership and self-mutation exclusion.
+
+### Changed
+
+- Unit Naming increased from `3.3.7` to `3.3.8`.
+- Mission Finder increased from `V10.6.86` to `V10.6.87`.
+- Desktop Resource Administration, Mission Control, vehicle selection, trained-personnel verification and fail-closed dispatch safeguards remain on their established paths.
+
 ## [1.0.21] - 2026-07-23
 
 ### Added
