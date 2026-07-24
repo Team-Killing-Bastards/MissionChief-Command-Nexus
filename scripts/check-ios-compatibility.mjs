@@ -72,8 +72,8 @@ requireText(
   'function installSingleNamingToolsPanelGuard(',
   'continuous single-panel guard'
 );
-requireText(
-  "window.addEventListener('pageshow', enforce",
+requirePattern(
+  /window\.addEventListener\(\s*['"]pageshow['"]\s*,\s*enforce/,
   'Safari bfcache single-panel enforcement'
 );
 requireText(

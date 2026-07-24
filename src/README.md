@@ -10,8 +10,8 @@ src/missionchief-command-nexus.user.js
 
 | Item | Value |
 |---|---|
-| Command Nexus version | `1.0.21` |
-| Mission Finder baseline | `V10.6.86` |
+| Command Nexus version | `1.0.22` |
+| Mission Finder baseline | `V10.6.87` |
 | Unit, Station & Personnel baseline | `V4.2.8` |
 | Licence | MIT |
 | Developer and source-code owner | **MartyBlyth** |
@@ -28,7 +28,7 @@ The file contains:
 3. The Mission Operations Engine.
 4. A shared vehicle-training registry used for qualification-aware selection.
 
-The source is merged and installable. Mission Control uses a dedicated iOS Safari-only safe-area layout while the established desktop dimensions, saved positioning and mouse interaction remain unchanged. Deeper interface, lifecycle and storage consolidation remains subject to testing and MartyBlyth's technical direction.
+The source is merged and installable. Resource Administration now uses one filtered lifecycle controller, remains scoped to the rendered personal Stations view on iOS Safari and preserves the same panel instance across responsive navigation. Mission Finder ignores its own panel mutations, preserves its runtime during Safari bfcache entry and owns every new global lifecycle listener. Mission Control retains its dedicated iOS Safari-only safe-area layout while established desktop dimensions, saved positioning and mouse interaction remain unchanged.
 
 ## Distribution rule
 
@@ -50,6 +50,8 @@ Before publishing a source change:
 - Update `CHANGELOG.md`.
 - Run `node --check src/missionchief-command-nexus.user.js`.
 - Run `node scripts/validate-userscript.mjs`.
+- Run `node scripts/check-ios-compatibility.mjs`.
+- Run `node scripts/check-runtime-hardening.mjs`.
 - Run `python3 scripts/check_repository.py`.
 - Complete the relevant MissionChief regression checks.
 - Record the tested domain, browser, userscript manager and interacting scripts.

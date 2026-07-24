@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.21
+// @version      1.0.22
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -36,7 +36,7 @@
     if (window.__MC_NAMING_TOOLS_V428__) return;
     window.__MC_NAMING_TOOLS_V428__ = true;
 
-    const UNIT_VERSION = '3.3.7';
+    const UNIT_VERSION = '3.3.8';
     const STATION_VERSION = '1.3.3';
     const PERSONNEL_VERSION = '1.3.2';
     const PERSONNEL_TRAINING_CODE = 'critical_care';
@@ -74,6 +74,7 @@
     const PERSONNEL_START_OPTION_BY_HREF = new Map();
     const PERSONNEL_HIGHLIGHTED_STATION_LINKS = new Set();
     let TOOL_LIFECYCLE_CLEANED = false;
+    let NAMING_TOOLS_PANEL_GUARD_INSTALLED = false;
     let PERSONNEL_TRAINING_REGISTRY_CACHE = null;
     let PERSONNEL_TRAINING_REGISTRY_DIRTY = false;
     let PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER = null;
@@ -1382,36 +1383,289 @@
         return keeper;
     }
 
-    function installSingleNamingToolsPanelGuard(panel) {
-        let pending = false;
-        const enforce = () => {
-            if (pending) return;
-            pending = true;
+    function isRenderedStationOverviewEntry(entry) {
+        const container = entry?.container;
+        const responsiveList = container?.matches?.(
+            '.building_list_li, .building_list'
+        )
+            ? container
+            : entry?.link?.closest?.(
+                '.building_list_li, .building_list'
+            );
+
+        if (!responsiveList?.isConnected) return false;
+        if (
+            responsiveList.closest?.(
+                '[hidden], [aria-hidden="true"]'
+            )
+        ) {
+            return false;
+        }
+
+        const style = window.getComputedStyle?.(
+            responsiveList
+        );
+
+        if (
+            style && (
+                style.display === 'none' ||
+                style.visibility === 'hidden' ||
+                style.visibility === 'collapse'
+            )
+        ) {
+            return false;
+        }
+
+        const rectangles =
+            responsiveList.getClientRects?.();
+
+        return !rectangles || rectangles.length > 0;
+    }
+
+    function decideNamingToolsPanelLifecycle(
+        iosSafari,
+        stationOverview,
+        hasPanel
+    ) {
+        if (!iosSafari) return hasPanel ? 'dedupe' : 'wait';
+        if (!stationOverview) return hasPanel ? 'hide' : 'wait';
+        return hasPanel ? 'show' : 'create';
+    }
+
+    function setNamingToolsPanelVisibility(
+        panel,
+        visible
+    ) {
+        if (!panel?.isConnected) return null;
+
+        panel.hidden = !visible;
+        panel.setAttribute(
+            'aria-hidden',
+            visible ? 'false' : 'true'
+        );
+
+        if (visible) {
+            panel.style.removeProperty('display');
             requestAnimationFrame(() => {
-                pending = false;
-                ensureSingleNamingToolsPanel(panel?.isConnected ? panel : null);
+                if (panel.isConnected && !panel.hidden) {
+                    clampToolPanelToViewport(panel);
+                }
+            });
+        } else {
+            panel.style.setProperty(
+                'display',
+                'none',
+                'important'
+            );
+        }
+
+        return panel;
+    }
+
+    function syncNamingToolsPanelLifecycle(
+        preferredPanel = null
+    ) {
+        let panel = ensureSingleNamingToolsPanel(
+            preferredPanel?.isConnected
+                ? preferredPanel
+                : null
+        );
+        const iosSafari = isIosSafariWebsite();
+        const stationOverview = isStationOverviewScreen();
+        let action = decideNamingToolsPanelLifecycle(
+            iosSafari,
+            stationOverview,
+            Boolean(panel)
+        );
+
+        if (action === 'create') {
+            init();
+            panel = ensureSingleNamingToolsPanel();
+            action = panel ? 'show' : 'wait';
+        }
+
+        if (action === 'hide') {
+            return setNamingToolsPanelVisibility(
+                panel,
+                false
+            );
+        }
+
+        if (action === 'show') {
+            return setNamingToolsPanelVisibility(
+                panel,
+                true
+            );
+        }
+
+        return panel;
+    }
+
+    function installSingleNamingToolsPanelGuard() {
+        if (NAMING_TOOLS_PANEL_GUARD_INSTALLED) {
+            syncNamingToolsPanelLifecycle();
+            return;
+        }
+        NAMING_TOOLS_PANEL_GUARD_INSTALLED = true;
+
+        let pendingFrame = null;
+        let navigationTimer = null;
+
+        const enforce = () => {
+            if (pendingFrame != null) return;
+            pendingFrame = requestAnimationFrame(() => {
+                pendingFrame = null;
+                syncNamingToolsPanelLifecycle();
             });
         };
 
-        const observer = new MutationObserver(records => {
-            const panelMutation = records.some(record =>
-                [...record.addedNodes].some(node =>
-                    node?.nodeType === Node.ELEMENT_NODE && (
-                        node.matches?.('#mc-namer-panel') ||
-                        node.querySelector?.('#mc-namer-panel')
-                    )
+        const isRelevantLifecycleNode = node => {
+            if (
+                !node ||
+                node.nodeType !== Node.ELEMENT_NODE
+            ) {
+                return false;
+            }
+
+            return Boolean(
+                node.matches?.(
+                    '#mc-namer-panel, .building_list, .building_list_li'
+                ) ||
+                node.querySelector?.(
+                    '#mc-namer-panel, .building_list, .building_list_li'
                 )
             );
-            if (panelMutation) enforce();
-        });
-        observer.observe(document.documentElement, { childList: true, subtree: true });
-        window.addEventListener('pageshow', enforce, { passive: true });
+        };
 
-        registerToolLifecycleCleanup(() => {
+        const observer = new MutationObserver(records => {
+            const relevantMutation = records.some(record => {
+                const target =
+                    record.target?.nodeType ===
+                    Node.ELEMENT_NODE
+                        ? record.target
+                        : record.target?.parentElement;
+
+                if (target?.closest?.('#mc-namer-panel')) {
+                    return false;
+                }
+
+                if (
+                    target?.matches?.(
+                        '.building_list, .building_list_li'
+                    ) ||
+                    target?.closest?.(
+                        '.building_list, .building_list_li'
+                    )
+                ) {
+                    return true;
+                }
+
+                return [
+                    ...record.addedNodes,
+                    ...record.removedNodes
+                ].some(isRelevantLifecycleNode);
+            });
+
+            if (relevantMutation) enforce();
+        });
+
+        const handleNavigationClick = event => {
+            const control = event.target?.closest?.(
+                'a, button'
+            );
+
+            if (
+                !control ||
+                control.closest?.('#mc-namer-panel')
+            ) {
+                return;
+            }
+
+            enforce();
+
+            if (navigationTimer != null) {
+                clearTimeout(navigationTimer);
+            }
+
+            navigationTimer = setTimeout(() => {
+                navigationTimer = null;
+                enforce();
+            }, 250);
+        };
+
+        const handleVisibilityChange = () => {
+            if (!document.hidden) enforce();
+        };
+
+        observer.observe(
+            document.body || document.documentElement,
+            {
+                childList: true,
+                subtree: true
+            }
+        );
+        window.addEventListener(
+            'pageshow',
+            enforce,
+            { passive: true }
+        );
+        window.addEventListener(
+            'popstate',
+            enforce,
+            { passive: true }
+        );
+        window.addEventListener(
+            'hashchange',
+            enforce,
+            { passive: true }
+        );
+        document.addEventListener(
+            'visibilitychange',
+            handleVisibilityChange,
+            { passive: true }
+        );
+        document.addEventListener(
+            'click',
+            handleNavigationClick,
+            true
+        );
+
+        const cleanup = () => {
+            if (pendingFrame != null) {
+                cancelAnimationFrame(pendingFrame);
+                pendingFrame = null;
+            }
+            if (navigationTimer != null) {
+                clearTimeout(navigationTimer);
+                navigationTimer = null;
+            }
             observer.disconnect();
-            window.removeEventListener('pageshow', enforce);
-        });
+            window.removeEventListener(
+                'pageshow',
+                enforce
+            );
+            window.removeEventListener(
+                'popstate',
+                enforce
+            );
+            window.removeEventListener(
+                'hashchange',
+                enforce
+            );
+            document.removeEventListener(
+                'visibilitychange',
+                handleVisibilityChange
+            );
+            document.removeEventListener(
+                'click',
+                handleNavigationClick,
+                true
+            );
+            NAMING_TOOLS_PANEL_GUARD_INSTALLED = false;
+            TOOL_LIFECYCLE_CLEANUPS.delete(cleanup);
+        };
 
+        registerToolLifecycleCleanup(cleanup);
         enforce();
     }
 
@@ -1518,23 +1772,25 @@
     }
 
     function initWhenReady() {
+        installSingleNamingToolsPanelGuard();
+
+        if (isIosSafariWebsite()) {
+            syncNamingToolsPanelLifecycle();
+            return;
+        }
+
         let tries = 0;
         let timer = null;
-        let observer = null;
-        const maximumTries = isIosSafariWebsite()
-            ? 120
-            : 40;
+        const maximumTries = 40;
 
         const removeReadinessListeners = () => {
             if (timer != null) {
                 clearInterval(timer);
                 timer = null;
             }
-            observer?.disconnect();
-            observer = null;
-            window.removeEventListener('pageshow', tryInitialise);
-            document.removeEventListener('visibilitychange', tryInitialise);
-            TOOL_LIFECYCLE_CLEANUPS.delete(removeReadinessListeners);
+            TOOL_LIFECYCLE_CLEANUPS.delete(
+                removeReadinessListeners
+            );
         };
 
         function tryInitialise() {
@@ -1561,24 +1817,9 @@
             }
         }, 500);
 
-        // Mobile Safari can restore the page from bfcache or populate the
-        // responsive building list after the userscript has already started.
-        if (isIosSafariWebsite()) {
-            observer = new MutationObserver(() => {
-                tryInitialise();
-            });
-            observer.observe(
-                document.documentElement,
-                {
-                    childList: true,
-                    subtree: true
-                }
-            );
-            window.addEventListener('pageshow', tryInitialise, { passive: true });
-            document.addEventListener('visibilitychange', tryInitialise, { passive: true });
-        }
-
-        registerToolLifecycleCleanup(removeReadinessListeners);
+        registerToolLifecycleCleanup(
+            removeReadinessListeners
+        );
     }
 
 
@@ -1586,19 +1827,19 @@
         const entries = getStationOverviewEntries();
         if (!entries.length) return false;
 
-        const hasDesktopStationEntry = entries.some(entry =>
-            entry.link?.matches?.(
-                'a.lightbox-open.list-group-item.active[href*="/buildings/"]'
-            )
-        );
-        if (hasDesktopStationEntry) return true;
+        const desktopStationSelector =
+            'a.lightbox-open.list-group-item.active[href*="/buildings/"]';
 
-        if (!isIosSafariWebsite()) return false;
+        if (!isIosSafariWebsite()) {
+            return entries.some(entry =>
+                entry.link?.matches?.(
+                    desktopStationSelector
+                )
+            );
+        }
 
         return entries.some(entry =>
-            entry.container?.matches?.(
-                '.building_list_li, .building_list, [data-building-id], [id^="building_"]'
-            )
+            isRenderedStationOverviewEntry(entry)
         );
     }
 
@@ -2423,7 +2664,7 @@
         initialisePersonnelReportVisibility();
         makePanelDraggable(panel, document.querySelector('#mc-namer-header'));
         installToolViewportGuard(panel);
-        installSingleNamingToolsPanelGuard(panel);
+        syncNamingToolsPanelLifecycle(panel);
 
         let savedTab = 'unit';
         let savedCollapsed = false;
@@ -8439,7 +8680,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.86
+         * MODULE 2: MISSION FINDER V10.6.87
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -8818,15 +9059,26 @@
     const MF_AUTO_VEHICLE_LIST_LOAD_TIMEOUT_MS = 20000;
 
     const mfLiveTrainingVerifyCache = new Map();
+    let mfPersonnelRegistryUpdatedHandler = null;
 
-    try {
+    function installPersonnelRegistryUpdateHandler() {
+        if (mfPersonnelRegistryUpdatedHandler) return;
+
+        mfPersonnelRegistryUpdatedHandler = () => {
+            mfLiveTrainingVerifyCache.clear();
+        };
+
         window.addEventListener(
             'mc-personnel-training-registry-updated',
-            () => {
-                mfLiveTrainingVerifyCache.clear();
-            }
+            mfPersonnelRegistryUpdatedHandler
         );
-    } catch (_error) {}
+    }
+
+    try {
+        installPersonnelRegistryUpdateHandler();
+    } catch (_error) {
+        mfPersonnelRegistryUpdatedHandler = null;
+    }
 
     const MF_TRAINED_PERSONNEL_ROW_NAME =
         'Assigned Trained Police Vehicles';
@@ -8931,6 +9183,8 @@
     let mfDebugRenderFrame = null;
     let mfVehicleLoadRenderFrame = null;
     let mfRuntimeCleanupInstalled = false;
+    let mfRuntimePageHideHandler = null;
+    let mfRuntimePageShowHandler = null;
     let mfBackgroundWatcherSupervisorTimer = null;
     let mfBackgroundStorageHandler = null;
     const mfMissingUnitRetryIntervals = new Set();
@@ -33095,6 +33349,16 @@ let sessionRuntimeTicker = null;
         }
     }
 
+    function shouldIgnoreMissionFinderMutationRecord(
+        targetOwned,
+        hasPanelRootMutation
+    ) {
+        return Boolean(
+            targetOwned &&
+            !hasPanelRootMutation
+        );
+    }
+
     function classifyMissionFinderMutations(records) {
         const flags = {
             relevant: false,
@@ -33108,31 +33372,59 @@ let sessionRuntimeTicker = null;
         const inspectNode = node => {
             if (!node || node.nodeType !== 1) return;
 
-            if (!mutationNodeMatches(node, MF_MUTATION_RELEVANT_SELECTOR)) {
+            if (
+                node.matches?.(
+                    MF_MUTATION_PANEL_SELECTOR
+                )
+            ) {
+                flags.panelChanged = true;
+                flags.relevant = true;
                 return;
             }
 
-            if (mutationNodeMatches(node, MF_MUTATION_VEHICLE_SELECTOR)) {
+            if (
+                node.closest?.(
+                    '#mission-finder-wrapper'
+                )
+            ) {
+                return;
+            }
+
+            if (!mutationNodeMatches(
+                node,
+                MF_MUTATION_RELEVANT_SELECTOR
+            )) {
+                return;
+            }
+
+            if (mutationNodeMatches(
+                node,
+                MF_MUTATION_VEHICLE_SELECTOR
+            )) {
                 flags.vehicleListChanged = true;
                 flags.relevant = true;
             }
 
-            if (mutationNodeMatches(node, MF_MUTATION_MISSION_SELECTOR)) {
+            if (mutationNodeMatches(
+                node,
+                MF_MUTATION_MISSION_SELECTOR
+            )) {
                 flags.missionContextChanged = true;
                 flags.relevant = true;
             }
 
-            if (mutationNodeMatches(node, MF_MUTATION_PATIENT_SELECTOR)) {
+            if (mutationNodeMatches(
+                node,
+                MF_MUTATION_PATIENT_SELECTOR
+            )) {
                 flags.patientChanged = true;
                 flags.relevant = true;
             }
 
-            if (mutationNodeMatches(node, MF_MUTATION_PANEL_SELECTOR)) {
-                flags.panelChanged = true;
-                flags.relevant = true;
-            }
-
-            if (mutationNodeMatches(node, MF_MUTATION_TRANSPORT_SELECTOR)) {
+            if (mutationNodeMatches(
+                node,
+                MF_MUTATION_TRANSPORT_SELECTOR
+            )) {
                 flags.transportChanged = true;
                 flags.relevant = true;
             }
@@ -33140,33 +33432,79 @@ let sessionRuntimeTicker = null;
 
         for (const record of records || []) {
             const target = record.target;
+            const changedNodes = [
+                ...(record.addedNodes || []),
+                ...(record.removedNodes || [])
+            ];
+            const hasPanelRootMutation =
+                changedNodes.some(node =>
+                    node?.nodeType === 1 &&
+                    node.matches?.(
+                        MF_MUTATION_PANEL_SELECTOR
+                    )
+                );
+            const targetOwned = mutationTargetWithin(
+                target,
+                '#mission-finder-wrapper'
+            );
+
+            if (shouldIgnoreMissionFinderMutationRecord(
+                targetOwned,
+                hasPanelRootMutation
+            )) {
+                continue;
+            }
+
             const targetRelevant = mutationTargetWithin(
                 target,
                 MF_MUTATION_RELEVANT_TARGET_SELECTOR
             );
 
-            if (targetRelevant && mutationTargetWithin(target, MF_MUTATION_VEHICLE_SELECTOR)) {
+            if (
+                targetRelevant &&
+                mutationTargetWithin(
+                    target,
+                    MF_MUTATION_VEHICLE_SELECTOR
+                )
+            ) {
                 flags.vehicleListChanged = true;
                 flags.relevant = true;
             }
 
-            if (targetRelevant && mutationTargetWithin(target, MF_MUTATION_MISSION_TARGET_SELECTOR)) {
+            if (
+                targetRelevant &&
+                mutationTargetWithin(
+                    target,
+                    MF_MUTATION_MISSION_TARGET_SELECTOR
+                )
+            ) {
                 flags.missionContextChanged = true;
                 flags.relevant = true;
             }
 
-            if (targetRelevant && mutationTargetWithin(target, MF_MUTATION_PATIENT_SELECTOR)) {
+            if (
+                targetRelevant &&
+                mutationTargetWithin(
+                    target,
+                    MF_MUTATION_PATIENT_SELECTOR
+                )
+            ) {
                 flags.patientChanged = true;
                 flags.relevant = true;
             }
 
-            if (targetRelevant && mutationTargetWithin(target, MF_MUTATION_TRANSPORT_SELECTOR)) {
+            if (
+                targetRelevant &&
+                mutationTargetWithin(
+                    target,
+                    MF_MUTATION_TRANSPORT_SELECTOR
+                )
+            ) {
                 flags.transportChanged = true;
                 flags.relevant = true;
             }
 
-            record.addedNodes?.forEach(inspectNode);
-            record.removedNodes?.forEach(inspectNode);
+            changedNodes.forEach(inspectNode);
 
             if (
                 flags.vehicleListChanged &&
@@ -33178,10 +33516,6 @@ let sessionRuntimeTicker = null;
                 break;
             }
         }
-
-        // Ignore mutations produced by Mission Finder's own panel. Mission
-        // content, live requirement, patient and transport roots are all
-        // covered by the selectors above, so a broad fallback is unnecessary.
 
         return flags;
     }
@@ -33511,22 +33845,109 @@ let sessionRuntimeTicker = null;
             mfMissionFinderResizeHandler = null;
         }
 
+        if (mfPersonnelRegistryUpdatedHandler) {
+            window.removeEventListener(
+                'mc-personnel-training-registry-updated',
+                mfPersonnelRegistryUpdatedHandler
+            );
+            mfPersonnelRegistryUpdatedHandler = null;
+        }
+
+        if (mfRuntimePageHideHandler) {
+            window.removeEventListener(
+                'pagehide',
+                mfRuntimePageHideHandler
+            );
+            mfRuntimePageHideHandler = null;
+        }
+
+        if (mfRuntimePageShowHandler) {
+            window.removeEventListener(
+                'pageshow',
+                mfRuntimePageShowHandler
+            );
+            mfRuntimePageShowHandler = null;
+        }
+
         invalidateVehicleCheckboxCache();
         invalidateMissionContextCaches();
         invalidatePatientCountCache();
         invalidateTransportCaches();
         mfVehicleMatchCandidateCache.clear();
         resetMainMutationFlags();
+        mfRuntimeCleanupInstalled = false;
+    }
+
+    function shouldPreserveMissionFinderRuntimeOnPageHide(
+        persisted
+    ) {
+        return Boolean(persisted);
+    }
+
+    function reconcileMissionFinderAfterPageShow() {
+        invalidateVehicleCheckboxCache();
+        invalidateMissionContextCaches();
+        invalidatePatientCountCache();
+        invalidateTransportCaches();
+        resetMainMutationFlags();
+
+        if (
+            document.body &&
+            !mfMainMutationObserver
+        ) {
+            startMissionFinderObserver();
+        }
+
+        const missionPage = isMissionPage();
+        const wrapper = document.getElementById(
+            'mission-finder-wrapper'
+        );
+
+        if (missionPage && !wrapper) {
+            initialize();
+        } else if (!missionPage && wrapper) {
+            removeMissionFinderPanelForClosedMission(
+                'Safari bfcache restoration'
+            );
+        }
+
+        syncBackgroundAutomationWatchers();
     }
 
     function installMissionFinderRuntimeCleanup() {
         if (mfRuntimeCleanupInstalled) return;
         mfRuntimeCleanupInstalled = true;
 
+        mfRuntimePageHideHandler = event => {
+            if (
+                shouldPreserveMissionFinderRuntimeOnPageHide(
+                    event?.persisted
+                )
+            ) {
+                invalidateVehicleCheckboxCache();
+                invalidateMissionContextCaches();
+                invalidatePatientCountCache();
+                invalidateTransportCaches();
+                resetMainMutationFlags();
+                return;
+            }
+
+            cleanupMissionFinderRuntime();
+        };
+
+        mfRuntimePageShowHandler = event => {
+            if (!event?.persisted) return;
+            reconcileMissionFinderAfterPageShow();
+        };
+
         window.addEventListener(
             'pagehide',
-            cleanupMissionFinderRuntime,
-            { once: true }
+            mfRuntimePageHideHandler
+        );
+        window.addEventListener(
+            'pageshow',
+            mfRuntimePageShowHandler,
+            { passive: true }
         );
     }
 
@@ -33534,6 +33955,7 @@ let sessionRuntimeTicker = null;
         if (mfMainMutationObserver) return;
 
         installIssueRecorderWatchers();
+        installPersonnelRegistryUpdateHandler();
         installMissionFinderRuntimeCleanup();
 
         if (MF_IS_TOP_WINDOW) {
