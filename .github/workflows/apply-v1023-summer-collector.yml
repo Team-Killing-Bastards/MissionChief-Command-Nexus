@@ -1,0 +1,104 @@
+name: Apply v1.0.23 summer collectible collector
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: apply-v1023-summer-collector
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'release/v1023-summer-collector'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Check out current main
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: main
+          show-progress: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Apply summer collectible collector
+        run: python3 scripts/apply_v1023_summer_collectibles.py
+
+      - name: Remove one-use build files
+        run: |
+          git rm scripts/apply_v1023_summer_collectibles.py
+          git rm .github/workflows/apply-v1023-summer-collector.yml
+
+      - name: Validate complete repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          node scripts/validate-userscript.mjs --base-ref origin/main
+          node scripts/check-ios-compatibility.mjs
+          node scripts/check-runtime-hardening.mjs
+          python3 scripts/check_repository.py
+          git diff --check
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8')
+          required = {
+              'version': '// @version      1.0.23',
+              'Mission Finder': ' * MODULE 2: MISSION FINDER V10.6.88',
+              'collector selector': 'MF_EVENT_COLLECTIBLE_SELECTOR',
+              'exact element id': "link.id !== 'easter-egg-link'",
+              'exact claim route': 'claim_found_object_sync',
+              'same-origin request': "credentials: 'same-origin'",
+              'no-navigation request': "await fetch(",
+              'collector start': 'startMissionEventCollectibleCollector();',
+          }
+          missing = [name for name, token in required.items() if token not in source]
+          if missing:
+              raise SystemExit('Missing v1.0.23 contracts: ' + ', '.join(missing))
+
+          if source.count('const MF_EVENT_COLLECTIBLE_SELECTOR =') != 1:
+              raise SystemExit('Seasonal collectible collector must exist exactly once')
+          if source.count('new MutationObserver(') != 2:
+              raise SystemExit('The collector must not add a third permanent MutationObserver')
+          if '/^\\/missions\\/(\\d+)\\/claim_found_object_sync' not in source:
+              raise SystemExit('Exact mission collectible claim-route validation is missing')
+
+          print('Focused v1.0.23 seasonal collectible contracts passed.')
+          PY
+
+      - name: Push validated update
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          TRIGGER_BRANCH: ${{ github.event.pull_request.head.ref }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name MartyBlyth
+          git config user.email 32400596+Martyblyth@users.noreply.github.com
+          git add -A
+          git commit -m 'Collect seasonal mission items automatically'
+          git push origin HEAD:main
+          gh pr close "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --comment 'v1.0.23 validated and pushed to main.' || true
+          git push origin --delete "${TRIGGER_BRANCH}" || true
