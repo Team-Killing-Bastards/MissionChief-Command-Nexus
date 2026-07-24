@@ -133,8 +133,8 @@ jobs:
 
       - name: Remove one-use build files
         run: |
-          git rm scripts/apply_v1023_summer_collectibles.py
-          git rm .github/workflows/apply-v1023-summer-collector.yml
+          git rm -f scripts/apply_v1023_summer_collectibles.py
+          git rm -f .github/workflows/apply-v1023-summer-collector.yml
 
       - name: Validate complete repository
         shell: bash
