@@ -53,28 +53,58 @@ jobs:
           path = Path('scripts/apply_v1023_summer_collectibles.py')
           lines = path.read_text(encoding='utf-8').splitlines(keepends=True)
 
-          start = next(
+          release_start = next(
               (index for index, line in enumerate(lines)
                if line.startswith('release_anchor = source.find(')),
               None,
           )
-          if start is None:
+          if release_start is None:
               raise SystemExit('Stale release-note block start was not found')
 
-          end = next(
-              (index for index in range(start, len(lines))
+          release_end = next(
+              (index for index in range(release_start, len(lines))
                if lines[index].startswith('source = source[:release_anchor]')),
               None,
           )
-          if end is None:
+          if release_end is None:
               raise SystemExit('Stale release-note block end was not found')
 
-          del lines[start:end + 1]
+          del lines[release_start:release_end + 1]
+
+          guard_start = next(
+              (index for index, line in enumerate(lines)
+               if line.startswith('module_tail = source[module_index:]')),
+              None,
+          )
+          if guard_start is None:
+              raise SystemExit('Old guard-matching block start was not found')
+
+          guard_end = next(
+              (index for index in range(guard_start, len(lines))
+               if lines[index].startswith('insert_at = module_index + guard_match.end(')),
+              None,
+          )
+          if guard_end is None:
+              raise SystemExit('Old guard-matching block end was not found')
+
+          replacement = [
+              "module_tail = source[module_index:]\n",
+              "guard_assignment = re.search(\n",
+              "    r\"window\\.__[A-Za-z0-9_$]+__\\s*=\\s*true\\s*;\",\n",
+              "    module_tail,\n",
+              ")\n",
+              "if not guard_assignment:\n",
+              "    raise SystemExit(\"Mission Finder ownership assignment was not found\")\n",
+              "\n",
+              "insert_at = module_index + guard_assignment.end()\n",
+          ]
+          lines[guard_start:guard_end + 1] = replacement
           text = ''.join(lines)
 
           collector_anchor = "collector = r'''\n"
           collector_note = (
               "collector = r'''\n"
+              "\n"
               "    // V10.6.88: visible seasonal mission collectibles, including the\n"
               "    // summer sunflower item, are claimed through MissionChief's exact\n"
               "    // claim_found_object_sync route without navigating away from the mission.\n"
