@@ -647,6 +647,149 @@ Source lines: 34276
 11809: 
 11810:         const rrvTypeOnly =
 
+===== MISSING PERSONNEL SEGMENT AND COUNT PARSER: source lines 17080-17220 =====
+17080:                 )
+17081:             );
+17082: 
+17083:         if (!definition) {
+17084:             return null;
+17085:         }
+17086: 
+17087:         const vehicleRequired =
+17088:             Math.ceil(
+17089:                 personnelRequired /
+17090:                 definition.personnelPerVehicle
+17091:             );
+17092: 
+17093:         return {
+17094:             sourceName:
+17095:                 cleanedName,
+17096:             personnelRequired,
+17097:             personnelRequirement:
+17098:                 `${personnelRequired} ${definition.personnelLabel}${personnelRequired === 1 ? '' : 's'}`,
+17099:             personnelPerVehicle:
+17100:                 definition.personnelPerVehicle,
+17101:             unitName:
+17102:                 definition.unitName,
+17103:             stillNeeded:
+17104:                 vehicleRequired
+17105:         };
+17106:     }
+17107: 
+17108:     function getMissingPersonnelSegment(
+17109:         text
+17110:     ) {
+17111:         const input =
+17112:             String(
+17113:                 text ||
+17114:                 ''
+17115:             )
+17116:                 .replace(
+17117:                     /\s+/g,
+17118:                     ' '
+17119:                 )
+17120:                 .trim();
+17121: 
+17122:         const marker =
+17123:             /Missing\s+Personnel\s*:/i.exec(
+17124:                 input
+17125:             );
+17126: 
+17127:         if (!marker) {
+17128:             return '';
+17129:         }
+17130: 
+17131:         return input
+17132:             .slice(
+17133:                 marker.index +
+17134:                 marker[0].length
+17135:             )
+17136:             .replace(
+17137:                 /\s+(?:Missing\s+Vehicles?|We\s+need)\s*:.+$/i,
+17138:                 ''
+17139:             )
+17140:             .trim();
+17141:     }
+17142: 
+17143:     function getNamedPersonnelCount(
+17144:         personnelSegment,
+17145:         namePatternSource
+17146:     ) {
+17147:         const segment =
+17148:             String(
+17149:                 personnelSegment ||
+17150:                 ''
+17151:             );
+17152: 
+17153:         if (
+17154:             !segment ||
+17155:             !namePatternSource
+17156:         ) {
+17157:             return 0;
+17158:         }
+17159: 
+17160:         const pattern =
+17161:             new RegExp(
+17162:                 `(?:\\b(\\d+)\\s*(?:x\\s*)?${namePatternSource}\\b|\\b${namePatternSource}\\b\\s*(?:x\\s*)?(\\d+))`,
+17163:                 'gi'
+17164:             );
+17165: 
+17166:         let maximum = 0;
+17167:         let match;
+17168: 
+17169:         while (
+17170:             (
+17171:                 match =
+17172:                     pattern.exec(
+17173:                         segment
+17174:                     )
+17175:             )
+17176:         ) {
+17177:             maximum =
+17178:                 Math.max(
+17179:                     maximum,
+17180:                     parseInt(
+17181:                         match[1] ||
+17182:                         match[2],
+17183:                         10
+17184:                     ) ||
+17185:                     0
+17186:                 );
+17187:         }
+17188: 
+17189:         return maximum;
+17190:     }
+17191: 
+17192:     function shouldSkipLiveRequirement(name, value) {
+17193:         const cleanedName = cleanRequirementName(name);
+17194:         const text = `${cleanedName} ${value}`.toLowerCase();
+17195:         const mappedName = resolveUnitName(cleanedName);
+17196: 
+17197:         if (!cleanedName) return true;
+17198:         if (shouldIgnoreRequiredMinimumRequirement(name) ||
+17199:             shouldIgnoreRequiredMinimumRequirement(cleanedName)) return true;
+17200:         if (!/^\d+$/.test(String(value || '').trim())) return true;
+17201: 
+17202:         // V9.0.4: Ambulances are selected from the patient badge first, not from the live mission help table.
+17203:         // Mission Update still handles later patient-specific ambulance requests.
+17204:         if (normaliseVehicleText(mappedName) === normaliseVehicleText('Ambulance x 01')) return true;
+17205: 
+17206:         // V9.2.7: these are mission stats/preconditions, not vehicles to send.
+17207:         // Example: Domestic flooding (Large) has "Min. Pump Capacity = 1000".
+17208:         // That is litres/min pump capacity, NOT Pump x1000.
+17209:         if (/^min\.?\s*pump\s*capacity$/i.test(cleanedName)) return true;
+17210:         if (/^minimum\s*pump\s*capacity$/i.test(cleanedName)) return true;
+17211:         if (/^pump\s*capacity$/i.test(cleanedName)) return true;
+17212:         if (/^water\s*to\s*pump$/i.test(cleanedName)) return true;
+17213:         if (/water\s*damage\s*pump\s*extension/i.test(cleanedName)) return true;
+17214:         if (/\bextension\b/i.test(cleanedName) && !/vehicle|unit|officer|car|engine|pump$/i.test(cleanedName)) return true;
+17215: 
+17216:         if (/only required/.test(text)) return true;
+17217:         if (/^probability of /i.test(cleanedName)) return true;
+17218:         if (/\bprobability\b/.test(text)) return true;
+17219:         if (/personnel/.test(text)) return true;
+17220:         if (/patients?/.test(text)) return true;
+
 ===== POLICE OFFICER AND MISSING PERSONNEL CONVERTERS: source lines 20620-20940 =====
 20620:                                 ...requirement,
 20621:                                 remaining:
@@ -1572,6 +1715,159 @@ Source lines: 34276
 24478:         )
 24479:             .replace(
 24480:                 /[\u200B-\u200D\uFEFF]/g,
+
+===== UNIT FINDER PERSONNEL NORMALISATION: source lines 25380-25530 =====
+25380:                         !silent
+25381:                     ) {
+25382:                         debugLog(
+25383:                             'PUBLIC ORDER TABLE COLLAPSE',
+25384:                             `Police Sergeant x${needed} captured from ${source} for the L1/L2/Sergeant MAX calculation; not added as a normal vehicle row.`
+25385:                         );
+25386:                     }
+25387: 
+25388:                     return;
+25389:                 }
+25390: 
+25391:                 if (
+25392:                     isPoliceInspectorPersonnelRequirementName(
+25393:                         cleanedName
+25394:                     )
+25395:                 ) {
+25396:                     tablePoliceInspectorRequired =
+25397:                         Math.max(
+25398:                             tablePoliceInspectorRequired,
+25399:                             needed
+25400:                         );
+25401: 
+25402:                     if (
+25403:                         mfDebugEnabled &&
+25404:                         !silent
+25405:                     ) {
+25406:                         debugLog(
+25407:                             'POLICE INSPECTOR TABLE COLLAPSE',
+25408:                             `Police Inspector x${needed} captured from ${source}; selecting only exact IRVs live-verified with 2 police_inspector-trained personnel.`
+25409:                         );
+25410:                     }
+25411: 
+25412:                     return;
+25413:                 }
+25414: 
+25415: 
+25416:                 if (
+25417:                     isPoliceMedicPersonnelRequirementName(
+25418:                         cleanedName
+25419:                     )
+25420:                 ) {
+25421:                     tablePoliceMedicRequired =
+25422:                         Math.max(
+25423:                             tablePoliceMedicRequired,
+25424:                             needed
+25425:                         );
+25426: 
+25427:                     if (
+25428:                         mfDebugEnabled &&
+25429:                         !silent
+25430:                     ) {
+25431:                         debugLog(
+25432:                             'POLICE MEDIC TABLE COLLAPSE',
+25433:                             `Police Medic x${needed} captured from ${source}; selecting exact IRVs live-verified with 2 police_medic-trained personnel.`
+25434:                         );
+25435:                     }
+25436: 
+25437:                     return;
+25438:                 }
+25439: 
+25440:                 if (
+25441:                     isRailwayPolicePersonnelRequirementName(
+25442:                         cleanedName
+25443:                     )
+25444:                 ) {
+25445:                     tableRailwayPoliceRequired =
+25446:                         Math.max(
+25447:                             tableRailwayPoliceRequired,
+25448:                             needed
+25449:                         );
+25450: 
+25451:                     if (
+25452:                         mfDebugEnabled &&
+25453:                         !silent
+25454:                     ) {
+25455:                         debugLog(
+25456:                             'RAILWAY POLICE TABLE COLLAPSE',
+25457:                             `Railway Police Officer x${needed} captured from ${source}; selecting exact IRVs live-verified with 2 railway_police-trained personnel.`
+25458:                         );
+25459:                     }
+25460: 
+25461:                     return;
+25462:                 }
+25463: 
+25464: 
+25465:                 if (
+25466:                     isArmedResponsePersonnelRequirementName(
+25467:                         cleanedName
+25468:                     )
+25469:                 ) {
+25470:                     tableArmedResponseRequired = Math.max(
+25471:                         tableArmedResponseRequired,
+25472:                         needed
+25473:                     );
+25474: 
+25475:                     if (mfDebugEnabled && !silent) {
+25476:                         debugLog(
+25477:                             'ARMED RESPONSE TABLE COLLAPSE',
+25478:                             `Armed Response Personnel x${needed} captured from ${source}; selecting exact type-25 ATCs with 2 officers who each hold traffic_police + swat.`
+25479:                         );
+25480:                     }
+25481: 
+25482:                     return;
+25483:                 }
+25484: 
+25485:                 missingRows.push({
+25486:                     unitName:
+25487:                         cleanedName,
+25488:                     stillNeeded:
+25489:                         needed,
+25490:                     updateSource:
+25491:                         source,
+25492:                     liveRequirementDetails:
+25493:                         details,
+25494:                     patientRequirementType:
+25495:                         patientRequirement.type || '',
+25496:                     isPatientAlertFallback:
+25497:                         false,
+25498:                     isTotalPatientRequirement:
+25499:                         false
+25500:                 });
+25501:             };
+25502: 
+25503:         updateTables.forEach(table => {
+25504:             const liveRequirementsTable =
+25505:                 isLiveMissionRequirementsTable(
+25506:                     table
+25507:                 );
+25508: 
+25509:             table.querySelectorAll(
+25510:                 'tbody tr'
+25511:             ).forEach(row => {
+25512:                 if (
+25513:                     liveRequirementsTable
+25514:                 ) {
+25515:                     const parsed =
+25516:                         readLiveMissionRequirementRow(
+25517:                             row
+25518:                         );
+25519: 
+25520:                     if (!parsed) {
+25521:                         return;
+25522:                     }
+25523: 
+25524:                     const liveDispatchTarget =
+25525:                         getLiveRequirementDispatchTarget(
+25526:                             parsed
+25527:                         );
+25528: 
+25529:                     const liveDispatchTargetMode =
+25530:                         parsed.stillNeededText &&
 
 ===== MISSING PERSONNEL UPDATE COLLECTION: source lines 25880-26140 =====
 25880:                     parseInt(
