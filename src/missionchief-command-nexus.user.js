@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.34
+// @version      1.0.35
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -8788,7 +8788,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.99
+         * MODULE 2: MISSION FINDER V10.6.100
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -9595,6 +9595,11 @@
     const MF_STRICT_TRAINING_SOURCE_PREFIX =
         'mission-finder-live-strict-';
 
+    // V10.6.100: visible current-mission Missing Vehicles or supported Missing
+    // Personnel alerts now take authority before the full mission-help attachment.
+    // Explicit missing-vehicle quantities are treated as the target selected count
+    // for the current dispatch pass, so repeated Unit Finder/Mission Update checks
+    // cannot resend the full mission or add the same shortage twice.
     // V10.6.99: the active iPhone native-picker disclosure/wrapper was removed.
     // MissionChief's own quick-select DOM is now left structurally untouched and
     // receives only passive document-owned selector CSS, eliminating the native/
@@ -24262,13 +24267,100 @@ let sessionRuntimeTicker = null;
             : 'total';
     }
 
+    function isExplicitMissingVehicleRequirementRow(item) {
+        const details =
+            item?.liveRequirementDetails ||
+            null;
+
+        const source = String(
+            item?.updateSource ||
+            item?.source ||
+            ''
+        ).trim();
+
+        return !!(
+            details?.explicitMissingVehicles ||
+            details?.structuredMissingVehicles ||
+            source === 'data-requirement-type-vehicles' ||
+            source === 'visible-missing-vehicles-alert' ||
+            source === 'visible-structured-missing-vehicles'
+        );
+    }
+
+    function isExplicitMissingPersonnelRequirementRow(item) {
+        const details =
+            item?.liveRequirementDetails ||
+            null;
+
+        const source = String(
+            item?.updateSource ||
+            item?.source ||
+            ''
+        ).trim();
+
+        return !!(
+            details?.explicitMissingPersonnel ||
+            source === 'visible-missing-personnel-alert'
+        );
+    }
+
+    function getMissionUpdateRowAuthority(item) {
+        if (
+            isExplicitMissingVehicleRequirementRow(item) ||
+            isExplicitMissingPersonnelRequirementRow(item)
+        ) {
+            return 300;
+        }
+
+        if (
+            item?.liveRequirementDetails?.dispatchTargetMode ===
+            'shortage'
+        ) {
+            return 200;
+        }
+
+        if (item?.isPatientAlertFallback) {
+            return 150;
+        }
+
+        if (item?.patientRequirementType) {
+            return 100;
+        }
+
+        return 0;
+    }
+
+    function hasExplicitCurrentMissingRequirementRows(rows) {
+        return (Array.isArray(rows) ? rows : []).some(item => {
+            return (
+                isExplicitMissingVehicleRequirementRow(item) ||
+                isExplicitMissingPersonnelRequirementRow(item)
+            );
+        });
+    }
+
+    function getExplicitCurrentMissingRequirementRows(rows) {
+        return (Array.isArray(rows) ? rows : []).filter(item => {
+            return (
+                isExplicitMissingVehicleRequirementRow(item) ||
+                isExplicitMissingPersonnelRequirementRow(item)
+            );
+        });
+    }
+
     async function processRequirementRows(requirementRows, sourceLabel) {
         let missingUnits = [];
         const trainedPersonnelMissing = [];
 
+        const suppliedHasExplicitCurrentMissingRequirements =
+            hasExplicitCurrentMissingRequirementRows(
+                requirementRows
+            );
+
         if (
             hasAuthoritativeLiveMissionRequirementsPanel() &&
-            sourceLabel !== 'live mission requirements'
+            sourceLabel !== 'live mission requirements' &&
+            !suppliedHasExplicitCurrentMissingRequirements
         ) {
             requirementRows = readMissionUpdateRows();
             sourceLabel = 'live mission requirements';
@@ -26094,14 +26186,56 @@ let sessionRuntimeTicker = null;
         ) {
             debugLog(
                 'UNIT FINDER SOURCE',
-                'Mission-help attachment only: Vehicle and Personnel Requirements. Live Mission Requirements is reserved for Mission Update.'
+                'Current visible Missing Vehicles/Personnel is checked first. The full mission-help attachment is used only when no explicit current shortage exists.'
             );
         }
 
         let patientCount = handlePatientSelector();
-        const attachmentRows = suppliedAttachmentPromise
-            ? await suppliedAttachmentPromise
-            : await readLiveMissionRequirements();
+
+        let currentUpdateRows =
+            readMissionUpdateRows({
+                silent: true
+            });
+
+        let explicitMissingRows =
+            getExplicitCurrentMissingRequirementRows(
+                currentUpdateRows
+            );
+
+        let useExplicitMissingRequirements =
+            explicitMissingRows.length > 0;
+
+        const attachmentRows =
+            useExplicitMissingRequirements
+                ? []
+                : suppliedAttachmentPromise
+                    ? await suppliedAttachmentPromise
+                    : await readLiveMissionRequirements();
+
+        // A current Missing Vehicles/Personnel alert can render while the
+        // mission-help request is in flight. Re-read the current mission once
+        // before acting so a late authoritative shortage still suppresses the
+        // full static requirement set.
+        if (!useExplicitMissingRequirements) {
+            const refreshedUpdateRows =
+                readMissionUpdateRows();
+
+            const refreshedExplicitMissingRows =
+                getExplicitCurrentMissingRequirementRows(
+                    refreshedUpdateRows
+                );
+
+            if (refreshedExplicitMissingRows.length > 0) {
+                currentUpdateRows =
+                    refreshedUpdateRows;
+
+                explicitMissingRows =
+                    refreshedExplicitMissingRows;
+
+                useExplicitMissingRequirements =
+                    true;
+            }
+        }
 
         if (
             missionKeyAtStart !==
@@ -26114,9 +26248,11 @@ let sessionRuntimeTicker = null;
         }
 
         const requirementReadFailure =
-            getMissionRequirementReadFailure(
-                missionKeyAtStart
-            );
+            useExplicitMissingRequirements
+                ? null
+                : getMissionRequirementReadFailure(
+                    missionKeyAtStart
+                );
 
         if (requirementReadFailure) {
             changeDispatchBoxColor(false);
@@ -26151,6 +26287,35 @@ let sessionRuntimeTicker = null;
 
             return result;
         };
+
+        if (useExplicitMissingRequirements) {
+            updateStatusBox(
+                `Current missing requirements found: ${explicitMissingRows.length} row(s). Full mission requirements were not reloaded.`
+            );
+
+            if (mfDebugEnabled) {
+                debugLog(
+                    'UNIT FINDER MISSING AUTHORITY',
+                    explicitMissingRows
+                        .map(row => `${row.unitName} x${row.stillNeeded}`)
+                        .join(' | ')
+                );
+            }
+
+            // readMissionUpdateRows has already removed unrelated full mission
+            // totals while retaining current patient shortages. Process that
+            // authoritative set rather than dropping patient rows by passing
+            // only the explicit vehicle/personnel subset.
+            const missionRequirementsSatisfied =
+                await processRequirementRows(
+                    currentUpdateRows,
+                    'CURRENT MISSING REQUIREMENTS'
+                );
+
+            return preservePatientFailure(
+                missionRequirementsSatisfied
+            );
+        }
 
         if (attachmentRows.length > 0) {
             const missionRequirementsSatisfied =
@@ -28978,7 +29143,8 @@ let sessionRuntimeTicker = null;
                 row.stillNeeded,
                 'data-requirement-type-vehicles',
                 {
-                    dispatchTargetMode: 'shortage',
+                    dispatchTargetMode: 'total',
+                    explicitMissingVehicles: true,
                     structuredMissingVehicles: true
                 }
             );
@@ -29066,8 +29232,14 @@ let sessionRuntimeTicker = null;
             getGenericMissingVehicleRowsFromText(
                 text
             ).forEach(row => {
-                missingRows.push(
-                    row
+                recordUpdateRequirement(
+                    row.unitName,
+                    row.stillNeeded,
+                    'visible-missing-vehicles-alert',
+                    {
+                        dispatchTargetMode: 'total',
+                        explicitMissingVehicles: true
+                    }
                 );
 
                 if (
@@ -29104,14 +29276,17 @@ let sessionRuntimeTicker = null;
                         );
 
                     if (towRequirement) {
-                        missingRows.push({
-                            unitName:
-                                towRequirement.unitName,
-                            stillNeeded:
-                                towRequirement.stillNeeded,
-                            towCarsRequired:
-                                towRequirement.carsRequired
-                        });
+                        recordUpdateRequirement(
+                            towRequirement.unitName,
+                            towRequirement.stillNeeded,
+                            'visible-missing-vehicles-alert',
+                            {
+                                dispatchTargetMode: 'total',
+                                explicitMissingVehicles: true,
+                                towCarsRequired:
+                                    towRequirement.carsRequired
+                            }
+                        );
                     }
                 }
             }
@@ -29141,12 +29316,15 @@ let sessionRuntimeTicker = null;
                     return;
                 }
 
-                missingRows.push({
-                    unitName:
-                        'Police Helicopter or Drone',
-                    stillNeeded:
-                        amount
-                });
+                recordUpdateRequirement(
+                    'Police Helicopter or Drone',
+                    amount,
+                    'visible-missing-vehicles-alert',
+                    {
+                        dispatchTargetMode: 'total',
+                        explicitMissingVehicles: true
+                    }
+                );
 
                 if (
                     mfDebugEnabled &&
@@ -29181,10 +29359,15 @@ let sessionRuntimeTicker = null;
                     return;
                 }
 
-                missingRows.push({
-                    unitName: 'Seagoing Vessel',
-                    stillNeeded: amount
-                });
+                recordUpdateRequirement(
+                    'Seagoing Vessel',
+                    amount,
+                    'visible-missing-vehicles-alert',
+                    {
+                        dispatchTargetMode: 'total',
+                        explicitMissingVehicles: true
+                    }
+                );
 
                 if (mfDebugEnabled && !silent) {
                     debugLog(
@@ -29206,6 +29389,9 @@ let sessionRuntimeTicker = null;
         let maximumSartecUnitsFromPersonnel = 0;
 
         const trainedPersonnelRequirements =
+            new Map();
+
+        const explicitTrainedPersonnelRequirements =
             new Map();
 
         if (
@@ -29288,11 +29474,19 @@ let sessionRuntimeTicker = null;
         }
 
         personnelTextBlocks.forEach(text => {
-            mergeTrainedPersonnelRequirements(
-                trainedPersonnelRequirements,
+            const explicitTrainedRequirements =
                 getSupportedTrainedPersonnelRequirementsFromText(
                     text
-                )
+                );
+
+            mergeTrainedPersonnelRequirements(
+                trainedPersonnelRequirements,
+                explicitTrainedRequirements
+            );
+
+            mergeTrainedPersonnelRequirements(
+                explicitTrainedPersonnelRequirements,
+                explicitTrainedRequirements
             );
 
             const personnelRows =
@@ -29321,7 +29515,13 @@ let sessionRuntimeTicker = null;
 
                 missingRows.push({
                     unitName: row.unitName,
-                    stillNeeded: row.stillNeeded
+                    stillNeeded: row.stillNeeded,
+                    updateSource:
+                        'visible-missing-personnel-alert',
+                    liveRequirementDetails: {
+                        dispatchTargetMode: 'total',
+                        explicitMissingPersonnel: true
+                    }
                 });
             });
         });
@@ -29332,19 +29532,33 @@ let sessionRuntimeTicker = null;
             missingRows.push({
                 unitName: 'SARTEC',
                 stillNeeded:
-                    maximumSartecUnitsFromPersonnel
+                    maximumSartecUnitsFromPersonnel,
+                updateSource:
+                    'visible-missing-personnel-alert',
+                liveRequirementDetails: {
+                    dispatchTargetMode: 'total',
+                    explicitMissingPersonnel: true
+                }
             });
         }
 
+        const trainedPersonnelRequirementsForOutput =
+            explicitTrainedPersonnelRequirements.size > 0
+                ? explicitTrainedPersonnelRequirements
+                : trainedPersonnelRequirements;
+
         if (
-            trainedPersonnelRequirements.size >
+            trainedPersonnelRequirementsForOutput.size >
             0
         ) {
             const requirements =
                 Array.from(
-                    trainedPersonnelRequirements
+                    trainedPersonnelRequirementsForOutput
                         .values()
                 );
+
+            const explicitMissingPersonnel =
+                explicitTrainedPersonnelRequirements.size > 0;
 
             missingRows.push({
                 unitName:
@@ -29356,7 +29570,18 @@ let sessionRuntimeTicker = null;
                 isTrainedPersonnelRequirement:
                     true,
                 personnelTrainingRequirements:
-                    requirements
+                    requirements,
+                updateSource:
+                    explicitMissingPersonnel
+                        ? 'visible-missing-personnel-alert'
+                        : 'live-requirements-panel',
+                liveRequirementDetails:
+                    explicitMissingPersonnel
+                        ? {
+                            dispatchTargetMode: 'total',
+                            explicitMissingPersonnel: true
+                        }
+                        : null
             });
 
             if (
@@ -29786,13 +30011,51 @@ let sessionRuntimeTicker = null;
             }
         }
 
-        // De-duplicate requirements. MissionChief can expose the same
-        // red alert through several nested elements, so retain the maximum
-        // amount for each mapped vehicle requirement.
+        const explicitMissingRequirementsPresent =
+            hasExplicitCurrentMissingRequirementRows(
+                missingRows
+            );
+
+        const requirementRowsForDedupe =
+            explicitMissingRequirementsPresent
+                ? missingRows.filter(row => {
+                    if (
+                        isExplicitMissingVehicleRequirementRow(row) ||
+                        isExplicitMissingPersonnelRequirementRow(row)
+                    ) {
+                        return true;
+                    }
+
+                    if (row?.isPatientAlertFallback) {
+                        return true;
+                    }
+
+                    return !!(
+                        row?.patientRequirementType &&
+                        row?.liveRequirementDetails?.dispatchTargetMode ===
+                            'shortage'
+                    );
+                })
+                : missingRows;
+
+        if (
+            explicitMissingRequirementsPresent &&
+            mfDebugEnabled &&
+            !silent
+        ) {
+            debugLog(
+                'MISSING REQUIREMENTS AUTHORITY',
+                `Explicit current Missing Vehicles/Personnel rows own this pass. Retained ${requirementRowsForDedupe.length}/${missingRows.length} row(s); full mission totals were suppressed.`
+            );
+        }
+
+        // De-duplicate requirements. Explicit current Missing Vehicles or
+        // Personnel rows outrank full mission totals even when the total is
+        // numerically larger. Equal-authority duplicates retain the maximum.
         const dedupedByMappedName =
             new Map();
 
-        missingRows.forEach(row => {
+        requirementRowsForDedupe.forEach(row => {
             if (
                 row
                     .isTrainedPersonnelRequirement
@@ -29857,10 +30120,23 @@ let sessionRuntimeTicker = null;
                     canonicalName
                 );
 
+            const candidateAuthority =
+                getMissionUpdateRowAuthority(
+                    row
+                );
+
+            const existingAuthority =
+                getMissionUpdateRowAuthority(
+                    existing
+                );
+
             if (
                 !existing ||
-                amount >
-                    existing.stillNeeded
+                candidateAuthority > existingAuthority ||
+                (
+                    candidateAuthority === existingAuthority &&
+                    amount > existing.stillNeeded
+                )
             ) {
                 dedupedByMappedName.set(
                     canonicalName,
@@ -31771,7 +32047,8 @@ let sessionRuntimeTicker = null;
                 source: source || 'visible fallback',
                 liveRequirementDetails: structuredShortage
                     ? {
-                        dispatchTargetMode: 'shortage',
+                        dispatchTargetMode: 'total',
+                        explicitMissingVehicles: true,
                         structuredMissingVehicles: true
                     }
                     : null
@@ -35825,6 +36102,14 @@ let sessionRuntimeTicker = null;
                 break;
             }
 
+            const earlyExplicitMissingRows =
+                getExplicitCurrentMissingRequirementRows(
+                    earlyUpdateRows
+                );
+
+            const hasEarlyExplicitMissingRequirements =
+                earlyExplicitMissingRows.length > 0;
+
             let prefetchedAttachmentRowsPromise = null;
 
             if (
@@ -35839,7 +36124,9 @@ let sessionRuntimeTicker = null;
                 // stabilising the vehicle rows. This keeps the exact same data
                 // source but removes a serial network wait from Auto Mode.
                 prefetchedAttachmentRowsPromise =
-                    readLiveMissionRequirements();
+                    hasEarlyExplicitMissingRequirements
+                        ? null
+                        : readLiveMissionRequirements();
 
                 const autoVehicleLoadState =
                     await ensureVehicleListLoaded({
@@ -35866,16 +36153,15 @@ let sessionRuntimeTicker = null;
                 }
             }
 
-            // V10.6.50 source parity: Auto Mode now follows the same
-            // sequence as pressing the manual buttons:
-            //   1. Unit Finder reads the mission-help attachment table named
-            //      "Vehicle and Personnel Requirements".
-            //   2. Mission Update then reads the visible Live Mission
-            //      Requirements/patient update source.
-            //
-            // The previous update-first branch could see a patient alert,
-            // skip Unit Finder completely, and therefore send only Ambulances
-            // while ignoring attachment requirements such as Police Cars x5.
+            // V10.6.100 source priority:
+            //   1. A visible current Missing Vehicles/Personnel alert owns the
+            //      cycle and suppresses the full mission-help requirement set.
+            //   2. Without an explicit missing alert, Unit Finder retains the
+            //      proven mission-help attachment route.
+            //   3. Patient-only alerts never suppress the attachment route.
+            // Mission Update is still re-read after Unit Finder, but explicit
+            // missing quantities are current-selection totals so the same alert
+            // cannot add the shortage twice before Dispatch.
             let autoMissionUpdateRowsHandled = 0;
 
             if (
@@ -35883,8 +36169,10 @@ let sessionRuntimeTicker = null;
                 mfDebugEnabled
             ) {
                 debugLog(
-                    'AUTO SOURCE PARITY',
-                    `Early Mission Update snapshot detected (${earlyUpdateRows.length} row(s)); Unit Finder attachment will still run first, then the update snapshot will be re-read.`
+                    'AUTO SOURCE PRIORITY',
+                    hasEarlyExplicitMissingRequirements
+                        ? `Explicit missing requirements detected (${earlyExplicitMissingRows.length} row(s)); full attachment prefetch suppressed.`
+                        : `Early update snapshot contained no explicit Missing Vehicles/Personnel authority; normal attachment route retained.`
                 );
             }
 
