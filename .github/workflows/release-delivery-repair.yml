@@ -7,12 +7,17 @@ on:
   workflow_dispatch:
     inputs:
       release_tag:
-        description: Release tag to resend, such as v1.0.8. Leave blank for the current main version.
+        description: Release tag to repair, such as v1.0.8. Leave blank for the current main version.
         required: false
         type: string
+      force_resend:
+        description: Explicitly post another Discord announcement even when a delivery receipt already exists.
+        required: false
+        default: false
+        type: boolean
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   resend:
@@ -95,6 +100,8 @@ jobs:
       - name: Resend release and require Discord delivery receipt
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
+          GITHUB_TOKEN: ${{ github.token }}
+          FORCE_DISCORD_RESEND: ${{ inputs.force_resend && 'true' || 'false' }}
           GREASYFORK_INSTALL_URL: ${{ vars.GREASYFORK_INSTALL_URL }}
           GREASYFORK_PAGE_URL: ${{ vars.GREASYFORK_PAGE_URL }}
           GITHUB_REPOSITORY: ${{ github.repository }}
