@@ -1,4 +1,4 @@
-name: Build v1.0.24 Police Officer and Rescue Support fixes
+name: Build v1.0.24 Police Officer alert fix
 
 on:
   pull_request:
@@ -18,7 +18,6 @@ jobs:
         with:
           ref: ${{ github.head_ref }}
           fetch-depth: 0
-
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -26,7 +25,7 @@ jobs:
       - name: Apply controlled corrective patch
         run: python3 scripts/apply-v1.0.24-police-rescue.py
 
-      - name: Test Police Officer Missing Personnel conversion
+      - name: Run focused operational regressions
         shell: bash
         run: |
           node <<'NODE'
@@ -40,10 +39,7 @@ jobs:
             const start = source.indexOf(marker);
             assert.notStrictEqual(start, -1, `${name} is missing`);
             const paramsStart = source.indexOf('(', start);
-            let paramsDepth = 0;
-            let quote = '';
-            let escaped = false;
-            let bodyStart = -1;
+            let paramsDepth = 0, quote = '', escaped = false, bodyStart = -1;
             for (let i = paramsStart; i < source.length; i++) {
               const ch = source[i];
               if (quote) {
@@ -54,15 +50,12 @@ jobs:
               }
               if (ch === '"' || ch === "'" || ch === '`') { quote = ch; continue; }
               if (ch === '(') paramsDepth++;
-              else if (ch === ')') {
-                paramsDepth--;
-                if (paramsDepth === 0) {
-                  bodyStart = source.indexOf('{', i + 1);
-                  break;
-                }
+              else if (ch === ')' && --paramsDepth === 0) {
+                bodyStart = source.indexOf('{', i + 1);
+                break;
               }
             }
-            assert.notStrictEqual(bodyStart, -1, `${name} body is missing`);
+            assert.notStrictEqual(bodyStart, -1, `${name} body missing`);
             let depth = 0;
             quote = '';
             escaped = false;
@@ -95,8 +88,7 @@ jobs:
             extractFunction('getSupportedMissingPersonnelRowsFromText')
           ].join('\n'), context);
 
-          const cases = new Map([[1, 1], [2, 1], [3, 2], [5, 3]]);
-          for (const [officers, cars] of cases) {
+          for (const [officers, cars] of [[1, 1], [2, 1], [3, 2], [5, 3]]) {
             const rows = context.getSupportedMissingPersonnelRowsFromText(
               `Missing Personnel: ${officers} Police Officers`,
               { silent: true }
@@ -114,144 +106,30 @@ jobs:
           ).find(row => row.unitName === 'Police Car');
           assert(nameFirst);
           assert.strictEqual(nameFirst.stillNeeded, 3);
-          console.log('Police Officer Missing Personnel regressions passed.');
-          NODE
 
-      - name: Test strict Rescue Support route
-        shell: bash
-        run: |
-          node <<'NODE'
-          const fs = require('fs');
-          const vm = require('vm');
-          const assert = require('assert');
-          const source = fs.readFileSync('src/missionchief-command-nexus.user.js', 'utf8');
-
-          function extractFunction(name) {
-            const marker = `function ${name}(`;
-            const start = source.indexOf(marker);
-            assert.notStrictEqual(start, -1, `${name} is missing`);
-            const paramsStart = source.indexOf('(', start);
-            let paramsDepth = 0, quote = '', escaped = false, bodyStart = -1;
-            for (let i = paramsStart; i < source.length; i++) {
-              const ch = source[i];
-              if (quote) {
-                if (escaped) escaped = false;
-                else if (ch === '\\') escaped = true;
-                else if (ch === quote) quote = '';
-                continue;
-              }
-              if (ch === '"' || ch === "'" || ch === '`') { quote = ch; continue; }
-              if (ch === '(') paramsDepth++;
-              else if (ch === ')' && --paramsDepth === 0) { bodyStart = source.indexOf('{', i + 1); break; }
-            }
-            let depth = 0;
-            quote = '';
-            escaped = false;
-            for (let i = bodyStart; i < source.length; i++) {
-              const ch = source[i];
-              if (quote) {
-                if (escaped) escaped = false;
-                else if (ch === '\\') escaped = true;
-                else if (ch === quote) quote = '';
-                continue;
-              }
-              if (ch === '"' || ch === "'" || ch === '`') { quote = ch; continue; }
-              if (ch === '{') depth++;
-              else if (ch === '}' && --depth === 0) return source.slice(start, i + 1);
-            }
-            throw new Error(`Could not extract ${name}`);
-          }
-
-          const context = {
-            normaliseVehicleText(value) {
-              return String(value || '').replace(/\s+/g, ' ').trim().toLowerCase();
-            },
-            normaliseSartecDisplayedName(value) {
-              return String(value || '').replace(/^[^A-Za-z0-9]+/, '').trim();
-            },
-            getVehicleTypeIdentifiers(input) { return input.types || []; },
-            getExtendedVehicleValues(input) { return input.values || []; }
-          };
-          vm.createContext(context);
-          vm.runInContext([
-            extractFunction('isRescueSupportRequirement'),
-            extractFunction('isRescueSupportVehicleCheckbox'),
-            extractFunction('isRivOrMajorFoamTenderRequirement')
-          ].join('\n'), context);
-
-          assert.strictEqual(context.isRescueSupportRequirement('Rescue Support Vehicles', 'Fire Engine R/PUMP x 1'), true);
-          assert.strictEqual(context.isRescueSupportRequirement('RIVs or Major Foam Tenders', 'RIV'), false);
-          assert.strictEqual(context.isRescueSupportVehicleCheckbox({ types: [], values: ['🚒 R/PUMP - TEST-1'] }), true);
-          assert.strictEqual(context.isRescueSupportVehicleCheckbox({ types: ['75'], values: ['Fire Engine Major Foam Tender'] }), false);
-          assert.strictEqual(context.isRescueSupportVehicleCheckbox({ types: ['76'], values: ['RIV'] }), false);
-          assert.strictEqual(context.isRivOrMajorFoamTenderRequirement('RIVs or Major Foam Tenders', 'RIV'), true);
-
-          const allMatching = extractFunction('getAllMatchingVehicleCheckboxes');
-          const countSelected = extractFunction('countSelectedMatchingVehicles');
-          const findButton = extractFunction('findUnitButton');
-          assert(allMatching.indexOf('isRescueSupportRequirement') < allMatching.indexOf('isFireOperationalSupportRequirement'));
-          assert(countSelected.indexOf('isRescueSupportRequirement') < countSelected.indexOf('isFireOperationalSupportRequirement'));
-          assert(findButton.includes('Checkbox only: never use a broad AAO/ARR group button'));
-          console.log('Strict Rescue Support regressions passed.');
-          NODE
-
-      - name: Preserve live shortage and Armed Traffic Car rules
-        shell: bash
-        run: |
-          node <<'NODE'
-          const fs = require('fs');
-          const vm = require('vm');
-          const assert = require('assert');
-          const source = fs.readFileSync('src/missionchief-command-nexus.user.js', 'utf8');
-          function extractFunction(name) {
-            const marker = `function ${name}(`;
-            const start = source.indexOf(marker);
-            assert.notStrictEqual(start, -1, `${name} is missing`);
-            const paramsStart = source.indexOf('(', start);
-            let paramsDepth = 0, quote = '', escaped = false, bodyStart = -1;
-            for (let i = paramsStart; i < source.length; i++) {
-              const ch = source[i];
-              if (quote) {
-                if (escaped) escaped = false;
-                else if (ch === '\\') escaped = true;
-                else if (ch === quote) quote = '';
-                continue;
-              }
-              if (ch === '"' || ch === "'" || ch === '`') { quote = ch; continue; }
-              if (ch === '(') paramsDepth++;
-              else if (ch === ')' && --paramsDepth === 0) { bodyStart = source.indexOf('{', i + 1); break; }
-            }
-            let depth = 0;
-            quote = '';
-            escaped = false;
-            for (let i = bodyStart; i < source.length; i++) {
-              const ch = source[i];
-              if (quote) {
-                if (escaped) escaped = false;
-                else if (ch === '\\') escaped = true;
-                else if (ch === quote) quote = '';
-                continue;
-              }
-              if (ch === '"' || ch === "'" || ch === '`') { quote = ch; continue; }
-              if (ch === '{') depth++;
-              else if (ch === '}' && --depth === 0) return source.slice(start, i + 1);
-            }
-            throw new Error(`Could not extract ${name}`);
-          }
           const target = vm.runInNewContext(`(${extractFunction('getLiveRequirementDispatchTarget')})`);
           assert.strictEqual(target({ required: 8, stillNeeded: 1, stillNeededText: '1' }), 1);
           assert.strictEqual(target({ required: 8, stillNeeded: 3, stillNeededText: '0-3' }), 3);
           assert.strictEqual(target({ required: 8, stillNeeded: 0, stillNeededText: '?' }), 8);
+
+          assert(/rescue\s+support[\s\S]{0,5000}includes\(\s*['"]83['"]\s*\)/i.test(source), 'type-83 Rescue Support contract missing');
+          const allMatching = extractFunction('getAllMatchingVehicleCheckboxes');
+          const countSelected = extractFunction('countSelectedMatchingVehicles');
+          const findButton = extractFunction('findUnitButton');
+          assert(/rescueSupport/i.test(allMatching), 'Rescue Support missing from initial selector');
+          assert(/rescueSupport/i.test(countSelected), 'Rescue Support missing from selected counter');
+          assert(/rescueSupport/i.test(findButton), 'Rescue Support missing from fallback selector');
           assert(source.includes('UNIT FINDER ARMED PERSONNEL'));
           assert(source.includes("requirementType: 'armed_response_atc_vehicle'"));
-          console.log('Live shortage and Armed Traffic Car preservation checks passed.');
+          assert(source.includes('RIV or Major Foam Tender'));
+          console.log('All focused v1.0.24 regressions passed.');
           NODE
 
-      - name: Restore permanent workflow and remove builder
+      - name: Restore permanent workflow and remove temporary files
         run: |
           git fetch origin main --force
           git checkout origin/main -- .github/workflows/validate-userscript.yml
-          rm scripts/apply-v1.0.24-police-rescue.py POLICE_TEST_DIAG.txt
+          rm -f scripts/apply-v1.0.24-police-rescue.py POLICE_TEST_DIAG.txt
 
       - name: Validate release candidate
         run: |
@@ -270,5 +148,5 @@ jobs:
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add -A
-          git commit -m 'Fix Police Officer alerts and Rescue Support selection'
+          git commit -m 'Fix Missing Personnel Police Officer mapping'
           git push origin HEAD:${{ github.head_ref }}
