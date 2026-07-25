@@ -1,0 +1,76 @@
+name: Snapshot v1.0.30 release status
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/release-v1030-status.yml'
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: write
+
+jobs:
+  status:
+    name: Report launcher status
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Comment current launcher status
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: '131'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          RUN_JSON="$(
+            gh api \
+              "repos/${GITHUB_REPOSITORY}/actions/workflows/release-v1030-launcher.yml/runs?per_page=20"
+          )"
+          RUN_ROW="$(
+            jq -c \
+              '.workflow_runs | sort_by(.created_at) | reverse | .[0] // empty' \
+              <<< "${RUN_JSON}"
+          )"
+
+          if [[ -z "${RUN_ROW}" ]]; then
+            gh pr comment "${PR_NUMBER}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --body 'v1.0.30 release snapshot: no launcher run was found.'
+            exit 0
+          fi
+
+          RUN_ID="$(jq -r '.id' <<< "${RUN_ROW}")"
+          RUN_URL="$(jq -r '.html_url' <<< "${RUN_ROW}")"
+          RUN_STATUS="$(jq -r '.status' <<< "${RUN_ROW}")"
+          RUN_CONCLUSION="$(jq -r '.conclusion // "pending"' <<< "${RUN_ROW}")"
+          JOBS_JSON="$(
+            gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/jobs?per_page=100"
+          )"
+          JOB_SUMMARY="$(
+            jq -r \
+              '.jobs[] |
+               "- " + .name + ": " + .status + " / " + (.conclusion // "pending") +
+               (if (.steps | length) > 0 then
+                  "\n" + ([.steps[] | "  - " + .name + ": " + .status + " / " + (.conclusion // "pending")] | join("\n"))
+                else "" end)' <<< "${JOBS_JSON}"
+          )"
+
+          cat > /tmp/v1030-status.md <<EOF
+          ## v1.0.30 release snapshot
+
+          - Run: ${RUN_URL}
+          - Run ID: \`${RUN_ID}\`
+          - Status: \`${RUN_STATUS}\`
+          - Conclusion: \`${RUN_CONCLUSION}\`
+
+          ${JOB_SUMMARY}
+          EOF
+
+          gh pr comment "${PR_NUMBER}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --body-file /tmp/v1030-status.md
