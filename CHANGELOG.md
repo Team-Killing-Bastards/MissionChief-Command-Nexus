@@ -26,6 +26,30 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Consolidate the two retained control surfaces into one coherent interface.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
+## [1.0.33] - 2026-07-25
+
+### Fixed
+
+- Stopped the iPhone Unit Quick Select disclosure from repeatedly expanding and collapsing after one tap.
+- User-triggered picker state changes now update the tracked mission documents directly and no longer schedule an immediate structural re-scan of the control being tapped.
+- Added a bounded duplicate-touch/click lock and immediate propagation guard for the native picker disclosure.
+- Native picker class, text, ARIA, title and count writes are now idempotent and use a per-document render signature.
+- The main MutationObserver now ignores the short, explicitly marked window of Command Nexus-owned native-picker mutations while continuing to observe genuine MissionChief vehicle-list changes.
+- Mission and Vehicle launcher placement now measures the union of all visible top-right native controls rather than trusting one container rectangle.
+- The launcher now clears that full cluster by 16px, uses a farther-left 112px fallback and retains the last valid cluster briefly during modal replacement.
+- Pixel hysteresis prevents sub-pixel geometry changes from continuously rewriting launcher CSS variables.
+
+### Compatibility and safety
+
+- The correction remains strictly limited to the established iPhone Safari path, including phone-sized desktop-site sessions.
+- iPad/tablet and desktop layouts are unchanged.
+- Mission requirements, matching, vehicle selection, dispatch, Mission Update, Ally Steal, Auto Mode, Unit Quick Select anchors and Resource Administration logic are unchanged.
+- No new observer or recurring timer was added; the existing bounded/coalesced lifecycle remains authoritative.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.97` to `V10.6.98`.
+
 ## [1.0.32] - 2026-07-25
 
 ### Changed

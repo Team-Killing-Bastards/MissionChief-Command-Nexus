@@ -81,8 +81,8 @@ function extractFunction(name) {
   fail(`Unable to find end of ${name}`);
 }
 
-requireText('// @version      1.0.32', 'v1.0.32 metadata');
-requireText(' * MODULE 2: MISSION FINDER V10.6.97', 'V10.6.97 module header');
+requireText('// @version      1.0.33', 'v1.0.33 metadata');
+requireText(' * MODULE 2: MISSION FINDER V10.6.98', 'V10.6.98 module header');
 requireText('function getMissionFinderPhoneScreenShortSide()', 'physical phone-screen detector');
 requireText('function isMissionFinderIphoneSafariWebsite()', 'strict iPhone Safari detector');
 requireText("'mf_control_collapsed_iphone_v2'", 'separate iPhone control state');
@@ -110,6 +110,56 @@ requireText('mf-iphone-native-picker-collapsed', 'collapsed native picker presen
 requireText('mf-iphone-native-picker-strip', 'horizontal native category strip');
 requireText('display: contents !important', 'native picker structural flattening');
 requireText('max-height: 46dvh', 'bounded native quick-select viewport');
+
+requireText('function markMissionFinderIphoneNativePickerMutation()', 'native picker mutation suppression owner');
+requireText('function isMissionFinderIphoneNativePickerOwnedMutationRecord(', 'native picker owned-mutation classifier');
+requireText('mfIphoneNativePickerDisclosureLockUntil', 'duplicate disclosure lock');
+requireText('event.stopImmediatePropagation?.()', 'native picker immediate propagation guard');
+requireText('now + 420', 'native picker duplicate-tap lock window');
+requireText('mfIphoneNativePickerRenderState', 'document-level picker render signature');
+requireText('function setMissionFinderIphonePickerClass(', 'idempotent picker class writer');
+requireText('function setMissionFinderIphonePickerText(', 'idempotent picker text writer');
+requireText('function setMissionFinderIphonePickerAttribute(', 'idempotent picker attribute writer');
+requireText('function shouldIgnoreMissionFinderIphoneOwnedMutation(', 'main observer suppression bridge');
+requireText('function getMissionFinderIphoneLauncherGeometry(', 'pure launcher geometry owner');
+requireText('function setMissionFinderIphoneStablePixelProperty(', 'launcher placement hysteresis');
+requireText('mfIphoneLauncherLastNativeCluster', 'stable native cluster cache');
+requireText('const clearance = 16', 'native cluster clearance margin');
+requireText('const fallbackRight = Math.max(', 'farther-left fallback geometry');
+requireText('--mf-iphone-launcher-right: 112px', 'farther-left CSS fallback');
+requirePattern(
+  /toggle\.addEventListener\([\s\S]{0,1800}writeMissionFinderIphoneNativePickerCollapsed\([\s\S]{0,1200}mfIphoneNativePickerDocuments\.forEach\([\s\S]{0,500}requestAnimationFrame\(/,
+  'user picker transition updates state directly without immediate structural resync'
+);
+if (/native picker disclosure changed/.test(source)) {
+  fail('native picker click must not schedule a structural resync');
+}
+requirePattern(
+  /for \(const record of records \|\| \[\]\) \{[\s\S]{0,350}shouldIgnoreMissionFinderIphoneOwnedMutation\(/,
+  'main observer ignores self-authored picker mutations'
+);
+
+const geometrySource = extractFunction(
+  'getMissionFinderIphoneLauncherGeometry'
+);
+const geometry = Function(
+  `"use strict";\n${geometrySource}\nreturn getMissionFinderIphoneLauncherGeometry;`
+)();
+const panelRect = { left: 4, top: 4, right: 386, bottom: 840 };
+const bounds = { left: 0, top: 0, right: 390, bottom: 844, width: 390, height: 844 };
+const cluster = { left: 300, top: 68, right: 378, bottom: 104 };
+const placed = geometry(panelRect, bounds, cluster, 48);
+const launcherRightEdge = panelRect.right - placed.launcherRight;
+if (launcherRightEdge > cluster.left - 16) {
+  fail('launcher must clear the full native control cluster by at least 16px');
+}
+if (placed.launcherRight < 112) {
+  fail('launcher must retain the farther-left conservative fallback');
+}
+const fallbackPlaced = geometry(panelRect, bounds, null, 48);
+if (fallbackPlaced.launcherRight < 112) {
+  fail('missing native controls must still position the launcher farther left');
+}
 
 requireText("'mf_iphone_two_button_launcher_v1032'", 'two-button launcher migration');
 requireText('function getMissionFinderIphonePanelStateForToggle(', 'exclusive launcher state helper');
