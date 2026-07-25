@@ -1,4 +1,4 @@
-name: Build validated v1.0.29 open issues batch
+name: Build validated v1.0.30 open issues batch
 
 on:
   pull_request:
@@ -14,7 +14,7 @@ permissions:
   pull-requests: write
 
 concurrency:
-  group: build-v1.0.29-open-issues-${{ github.event.pull_request.number }}
+  group: build-v1.0.30-open-issues-${{ github.event.pull_request.number }}
   cancel-in-progress: false
 
 jobs:
@@ -42,7 +42,7 @@ jobs:
         run: |
           set -euo pipefail
           git fetch origin "${HEAD_BRANCH}" --force
-          if git show "origin/${HEAD_BRANCH}:.diagnostics/v1.0.29-open-issues.patch.gz.b64" > /tmp/v1029.patch.gz.b64 2>/dev/null; then
+          if git show "origin/${HEAD_BRANCH}:.diagnostics/v1.0.30-open-issues.patch.gz.b64" > /tmp/v1030.patch.gz.b64 2>/dev/null; then
             echo 'apply=true' >> "${GITHUB_OUTPUT}"
           else
             echo 'apply=false' >> "${GITHUB_OUTPUT}"
@@ -56,14 +56,14 @@ jobs:
           node-version: '24'
           package-manager-cache: false
 
-      - name: Apply exact v1.0.29 patch
+      - name: Apply exact v1.0.30 patch
         if: steps.detect.outputs.apply == 'true'
         shell: bash
         run: |
           set -euo pipefail
-          base64 --decode /tmp/v1029.patch.gz.b64 | gzip --decompress > /tmp/v1029.patch
-          git apply --check /tmp/v1029.patch
-          git apply /tmp/v1029.patch
+          base64 --decode /tmp/v1030.patch.gz.b64 | gzip --decompress > /tmp/v1030.patch
+          git apply --check /tmp/v1030.patch
+          git apply /tmp/v1030.patch
           git diff --check
 
       - name: Validate complete repository
@@ -95,8 +95,8 @@ jobs:
 
           source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8')
           required = {
-              'version': '// @version      1.0.29',
-              'mission finder': ' * MODULE 2: MISSION FINDER V10.6.94',
+              'version': '// @version      1.0.30',
+              'mission finder': ' * MODULE 2: MISSION FINDER V10.6.95',
               'personnel': "const PERSONNEL_VERSION = '1.3.3';",
               'PSU type': "return '51';",
               'assigned button': "classList.contains('btn-assigned')",
@@ -109,11 +109,12 @@ jobs:
               'HEMS type': "return typeIds.includes('9');",
               'trained ambulance type': "String(entry.vehicleTypeId || '') !== '5'",
               'critical care training': "critical_care",
+              'iPhone desktop site': 'getMissionFinderPhoneScreenShortSide',
           }
           missing = [label for label, token in required.items() if token not in source]
           if missing:
               raise SystemExit('Missing issue contracts: ' + ', '.join(missing))
-          print('All six issue contracts are present in the validated source.')
+          print('All six issue contracts and the newer iPhone correction are present.')
           PY
 
       - name: Replace diagnostic branch with validated source
@@ -133,4 +134,4 @@ jobs:
           COMMIT_SHA="$(git rev-parse HEAD)"
           gh pr comment "${PR_NUMBER}" \
             --repo "${GITHUB_REPOSITORY}" \
-            --body "v1.0.29 source commit \`${COMMIT_SHA}\` passed the complete repository validation suite."
+            --body "v1.0.30 source commit \`${COMMIT_SHA}\` passed the complete repository validation suite."
