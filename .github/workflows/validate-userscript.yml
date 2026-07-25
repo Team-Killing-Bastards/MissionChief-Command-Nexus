@@ -24,6 +24,6 @@ jobs:
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add LIVE_UPDATE_CRITICAL.txt
-          git commit -m 'Record critical live updater source blocks'
+          git add LIVE_UPDATE_FINAL_AUDIT.txt
+          git commit -m 'Record final live updater selection audit'
           git push origin HEAD:${{ github.head_ref }}
