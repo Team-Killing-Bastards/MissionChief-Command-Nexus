@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.25
+// @version      1.0.26
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -8680,7 +8680,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.90
+         * MODULE 2: MISSION FINDER V10.6.91
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -9302,6 +9302,10 @@
     const MF_STRICT_TRAINING_SOURCE_PREFIX =
         'mission-finder-live-strict-';
 
+    // V10.6.91: Unit Finder now treats the hidden mobile #mission_help link
+    // as an authoritative source, binds /einsaetze/ requests to the exact current
+    // mission ID, validates the response route and blocks on missing/mismatched
+    // requirement data instead of silently advancing through empty fallbacks.
     // V10.6.90: iOS Safari Unit Finder vehicle discovery now follows the
     // active mission document, and a vehicle allocation is counted only after
     // MissionChief's real checkbox state is confirmed. Native click, associated
@@ -15171,7 +15175,7 @@ let sessionRuntimeTicker = null;
         while (Date.now() - started < timeoutMs) {
             const hasMission = isMissionPage();
             const hasUnits = !!document.querySelector('a[search_attribute]');
-            const hasMissionHelp = !!document.querySelector('#mission_help');
+            const hasMissionHelp = !!getMissionRequirementSource();
             const hasBasicMissionUi = hasMission && hasUnits && hasMissionHelp;
 
             if (hasBasicMissionUi) {
@@ -15994,15 +15998,34 @@ let sessionRuntimeTicker = null;
             }
         } catch (_error) {}
 
-        const localHelpLink = Array.from(
+        const localHelpLinks = Array.from(
             document.querySelectorAll('#mission_help')
-        )
-            .filter(element => isMissionElementVisible(element))
-            .pop() || null;
+        );
+
+        const localHelpSource =
+            localHelpLinks
+                .map(link => {
+                    return normaliseMissionRequirementSourceUrl(
+                        link.getAttribute?.('href') ||
+                            link.href ||
+                            '',
+                        '',
+                        link.ownerDocument?.baseURI ||
+                            window.location.href
+                    );
+                })
+                .find(Boolean) ||
+            null;
+
+        if (localHelpSource?.missionId) {
+            return `mission:${localHelpSource.missionId}`;
+        }
 
         const helpHref = String(
-            localHelpLink?.getAttribute?.('href') ||
-            localHelpLink?.href ||
+            localHelpSource?.url ||
+            localHelpLinks[
+                localHelpLinks.length - 1
+            ]?.getAttribute?.('href') ||
             ''
         ).trim();
 
@@ -16039,19 +16062,24 @@ let sessionRuntimeTicker = null;
                 let visibleMarkerCount = 0;
 
                 const markerDefinitions = [
-                    ['#mission_general_info', 500],
-                    ['#mission_alarm_btn, #alarm_button', 350],
-                    ['input.vehicle_checkbox', 250],
-                    ['#mission_help', 180]
+                    ['#mission_general_info', 500, true],
+                    ['#mission_alarm_btn, #alarm_button', 350, true],
+                    ['input.vehicle_checkbox', 250, true],
+                    ['#mission_help', 180, false]
                 ];
 
-                markerDefinitions.forEach(([selector, weight]) => {
+                markerDefinitions.forEach(([selector, weight, requireVisible]) => {
                     let visibleCount = 0;
 
                     try {
                         visibleCount = Array.from(
                             candidateDocument.querySelectorAll(selector)
-                        ).filter(element => isMissionElementVisible(element)).length;
+                        ).filter(element => {
+                            if (element.isConnected === false) return false;
+                            return requireVisible
+                                ? isMissionElementVisible(element)
+                                : true;
+                        }).length;
                     } catch (_error) {}
 
                     if (visibleCount > 0) {
@@ -16791,6 +16819,8 @@ let sessionRuntimeTicker = null;
                                     .forEach(
                                         element => {
                                             if (
+                                                definition.reason !==
+                                                    'mission-help' &&
                                                 !isMissionElementVisible(
                                                     element
                                                 )
@@ -17036,66 +17066,454 @@ let sessionRuntimeTicker = null;
         );
     }
 
-    function getActiveMissionHelpLink() {
-        const contexts =
-            getActiveMissionRequirementContexts();
+    let mfMissionRequirementSourceCache = {
+        expiresAt: 0,
+        missionKey: '',
+        descriptor: null
+    };
 
-        let scopedCount = 0;
+    function normaliseMissionRequirementSourceUrl(
+        href,
+        expectedMissionId = '',
+        baseHref = ''
+    ) {
+        const value = String(href || '').trim();
 
-        for (
-            const context of
-            contexts
-        ) {
-            const candidates =
-                Array.from(
-                    context.root
-                        .querySelectorAll(
-                            '#mission_help'
-                        )
-                );
+        if (!value || /^javascript:/i.test(value)) {
+            return null;
+        }
 
-            scopedCount +=
-                candidates.length;
-
-            const visible =
-                candidates.filter(
-                    element =>
-                        isMissionElementVisible(
-                            element
-                        )
-                );
+        try {
+            const base =
+                baseHref ||
+                window.location.href;
+            const url = new URL(value, base);
+            const currentOrigin =
+                String(window.location.origin || '');
 
             if (
-                visible.length >
-                0
+                !/^https?:$/i.test(url.protocol) ||
+                url.origin !== currentOrigin
             ) {
-                const helpLink =
-                    visible[
-                        visible.length -
-                        1
-                    ];
+                return null;
+            }
 
-                if (
-                    mfDebugEnabled
-                ) {
-                    debugLog(
-                        'LIVE HELP GUARD',
-                        `Found active #mission_help in ${context.document.URL || 'unknown document'} | scope=${context.reasons.join(',')}`
-                    );
+            const pathMatch =
+                url.pathname.match(
+                    /^\/einsaetze\/(\d+)\/?$/i
+                );
+
+            if (!pathMatch) return null;
+
+            const requestedMissionId = String(
+                expectedMissionId || ''
+            ).trim();
+            const linkedMissionId = String(
+                url.searchParams.get('mission_id') || ''
+            ).trim();
+
+            if (
+                requestedMissionId &&
+                linkedMissionId &&
+                requestedMissionId !== linkedMissionId
+            ) {
+                return null;
+            }
+
+            const missionId =
+                requestedMissionId ||
+                linkedMissionId;
+
+            if (!/^\d+$/.test(missionId)) {
+                return null;
+            }
+
+            url.searchParams.set(
+                'mission_id',
+                missionId
+            );
+            url.hash = '';
+
+            return {
+                url: url.href,
+                missionId,
+                missionTypeId: pathMatch[1],
+                linkedMissionId,
+                hadMissionId: Boolean(linkedMissionId)
+            };
+        } catch (_error) {
+            return null;
+        }
+    }
+
+    function validateMissionRequirementResponseUrl(
+        sourceDescriptor,
+        responseUrl
+    ) {
+        if (!sourceDescriptor?.url) return false;
+
+        try {
+            const finalUrl = new URL(
+                responseUrl ||
+                    sourceDescriptor.url,
+                sourceDescriptor.url
+            );
+            const sourceUrl = new URL(
+                sourceDescriptor.url
+            );
+            const finalPathMatch =
+                finalUrl.pathname.match(
+                    /^\/einsaetze\/(\d+)\/?$/i
+                );
+            const finalMissionId = String(
+                finalUrl.searchParams.get('mission_id') || ''
+            );
+
+            return Boolean(
+                finalUrl.origin ===
+                    sourceUrl.origin &&
+                finalPathMatch &&
+                finalPathMatch[1] ===
+                    String(
+                        sourceDescriptor.missionTypeId ||
+                        ''
+                    ) &&
+                finalMissionId ===
+                    String(
+                        sourceDescriptor.missionId ||
+                        ''
+                    )
+            );
+        } catch (_error) {
+            return false;
+        }
+    }
+
+    function getStrongActiveMissionId() {
+        const missionKey = String(
+            getLocalMissionInstanceKey() || ''
+        );
+        const keyMatch =
+            missionKey.match(
+                /^mission:(\d+)$/
+            );
+
+        if (keyMatch) return keyMatch[1];
+
+        try {
+            const primaryDocument =
+                getPrimaryMissionRequirementDocument();
+            const scopedMissionId =
+                getMissionIdFromLocalScope(
+                    primaryDocument
+                );
+
+            if (scopedMissionId) {
+                return scopedMissionId;
+            }
+
+            const documentMissionId =
+                parseMissionIdFromHrefForQueueRestart(
+                    primaryDocument?.URL ||
+                    primaryDocument?.location?.href ||
+                    ''
+                );
+
+            if (documentMissionId) {
+                return documentMissionId;
+            }
+        } catch (_error) {}
+
+        try {
+            return parseMissionIdFromHrefForQueueRestart(
+                window.frameElement?.src ||
+                window.location.href
+            );
+        } catch (_error) {
+            return '';
+        }
+    }
+
+    function getMissionTypeIdFromScope(scope) {
+        if (!scope) return '';
+
+        const attributeNames = [
+            'data-mission-type-id',
+            'data-mission-type',
+            'mission_type_id',
+            'data-einsatz-id',
+            'data-einsatz'
+        ];
+        const elements = [];
+
+        if (scope.nodeType === 1) {
+            elements.push(scope);
+        }
+
+        try {
+            elements.push(
+                ...scope.querySelectorAll(
+                    '#mission_general_info, ' +
+                    '[data-mission-type-id], ' +
+                    '[data-mission-type], ' +
+                    '[mission_type_id], ' +
+                    '[data-einsatz-id], ' +
+                    '[data-einsatz]'
+                )
+            );
+        } catch (_error) {}
+
+        for (const element of elements) {
+            for (const attributeName of attributeNames) {
+                const value = String(
+                    element?.getAttribute?.(
+                        attributeName
+                    ) || ''
+                ).trim();
+
+                if (/^\d+$/.test(value)) {
+                    return value;
                 }
-
-                return helpLink;
             }
         }
 
-        if (mfDebugEnabled) {
-            debugLog(
-                'LIVE HELP GUARD',
-                `No visible #mission_help across ${contexts.length} mission context(s); inspected ${scopedCount} candidate(s).`
+        const routeElements = [];
+
+        try {
+            routeElements.push(
+                ...scope.querySelectorAll(
+                    'a[href*="/einsaetze/"], ' +
+                    'form[action*="/einsaetze/"]'
+                )
             );
+        } catch (_error) {}
+
+        for (const element of routeElements) {
+            const value =
+                element?.href ||
+                element?.action ||
+                element?.getAttribute?.('href') ||
+                element?.getAttribute?.('action') ||
+                '';
+
+            try {
+                const route = new URL(
+                    value,
+                    element.ownerDocument?.baseURI ||
+                        window.location.href
+                );
+                const match =
+                    route.pathname.match(
+                        /^\/einsaetze\/(\d+)\/?$/i
+                    );
+
+                if (match) return match[1];
+            } catch (_error) {}
         }
 
-        return null;
+        return '';
+    }
+
+    function getMissionRequirementSource(
+        forceRefresh = false
+    ) {
+        const now = Date.now();
+        const missionKey = String(
+            getLocalMissionInstanceKey() || ''
+        );
+
+        if (
+            !forceRefresh &&
+            now <
+                mfMissionRequirementSourceCache.expiresAt &&
+            missionKey ===
+                mfMissionRequirementSourceCache.missionKey
+        ) {
+            return mfMissionRequirementSourceCache.descriptor;
+        }
+
+        const expectedMissionId =
+            getStrongActiveMissionId();
+        const primaryDocument =
+            getPrimaryMissionRequirementDocument();
+        const contexts =
+            getActiveMissionRequirementContexts(
+                forceRefresh
+            );
+        const documents =
+            getMissionAccessibleDocuments(
+                forceRefresh
+            );
+        const candidates = [];
+        const seenElements = new Set();
+
+        const addElement = (
+            element,
+            baseScore,
+            reason
+        ) => {
+            if (
+                !element ||
+                seenElements.has(element) ||
+                element.isConnected === false
+            ) {
+                return;
+            }
+
+            seenElements.add(element);
+
+            const sourceDescriptor =
+                normaliseMissionRequirementSourceUrl(
+                    element.getAttribute?.('href') ||
+                        element.href ||
+                        '',
+                    expectedMissionId,
+                    element.ownerDocument?.baseURI ||
+                        window.location.href
+                );
+
+            if (!sourceDescriptor) return;
+
+            let score = baseScore;
+
+            if (element.id === 'mission_help') {
+                score += 1000;
+            }
+            if (
+                element.ownerDocument ===
+                primaryDocument
+            ) {
+                score += 800;
+            }
+            if (
+                sourceDescriptor.linkedMissionId &&
+                sourceDescriptor.linkedMissionId ===
+                    expectedMissionId
+            ) {
+                score += 2000;
+            }
+            if (
+                isMissionElementVisible(
+                    element
+                )
+            ) {
+                score += 20;
+            }
+
+            candidates.push({
+                ...sourceDescriptor,
+                element,
+                score,
+                reason
+            });
+        };
+
+        contexts.forEach(context => {
+            let elements = [];
+
+            try {
+                elements = Array.from(
+                    context.root.querySelectorAll(
+                        '#mission_help, ' +
+                        'a[href*="/einsaetze/"][href*="mission_id="]'
+                    )
+                );
+            } catch (_error) {}
+
+            elements.forEach(element => {
+                addElement(
+                    element,
+                    500 + Number(context.score || 0),
+                    `context:${context.reasons.join(',')}`
+                );
+            });
+        });
+
+        documents.forEach((candidateDocument, index) => {
+            let elements = [];
+
+            try {
+                elements = Array.from(
+                    candidateDocument.querySelectorAll(
+                        '#mission_help, ' +
+                        'a[href*="/einsaetze/"][href*="mission_id="]'
+                    )
+                );
+            } catch (_error) {}
+
+            elements.forEach(element => {
+                addElement(
+                    element,
+                    candidateDocument === primaryDocument
+                        ? 450
+                        : Math.max(0, 100 - index),
+                    candidateDocument === primaryDocument
+                        ? 'primary-document'
+                        : 'accessible-document'
+                );
+            });
+        });
+
+        candidates.sort((left, right) => {
+            return right.score - left.score;
+        });
+
+        let descriptor =
+            candidates[0] ||
+            null;
+
+        if (!descriptor && expectedMissionId) {
+            const scopes = [
+                primaryDocument,
+                ...contexts.map(context => context.root),
+                ...documents
+            ];
+            let missionTypeId = '';
+
+            for (const scope of scopes) {
+                missionTypeId =
+                    getMissionTypeIdFromScope(
+                        scope
+                    );
+
+                if (missionTypeId) break;
+            }
+
+            if (missionTypeId) {
+                const constructed =
+                    normaliseMissionRequirementSourceUrl(
+                        `/einsaetze/${missionTypeId}`,
+                        expectedMissionId,
+                        window.location.origin
+                    );
+
+                if (constructed) {
+                    descriptor = {
+                        ...constructed,
+                        element: null,
+                        score: 0,
+                        reason: 'constructed-from-active-mission'
+                    };
+                }
+            }
+        }
+
+        mfMissionRequirementSourceCache = {
+            expiresAt: now +
+                (descriptor ? 500 : 150),
+            missionKey,
+            descriptor
+        };
+
+        return descriptor;
+    }
+
+    function getActiveMissionHelpLink(
+        forceRefresh = false
+    ) {
+        return getMissionRequirementSource(
+            forceRefresh
+        )?.element || null;
     }
 
     function getActiveMissionProblemTextBlocks(
@@ -17324,38 +17742,25 @@ let sessionRuntimeTicker = null;
         );
     }
 
-    function getMissionHelpUrl() {
-        const helpLink =
-            getActiveMissionHelpLink();
-
-        if (!helpLink) {
-            return null;
-        }
-
-        const href =
-            helpLink.href ||
-            helpLink.getAttribute(
-                'href'
-            ) ||
-            '';
+    function getMissionHelpUrl(
+        forceRefresh = false
+    ) {
+        const sourceDescriptor =
+            getMissionRequirementSource(
+                forceRefresh
+            );
 
         if (
-            !href ||
-            /^javascript:/i.test(
-                href
-            )
+            mfDebugEnabled &&
+            sourceDescriptor
         ) {
-            return null;
-        }
-
-        if (mfDebugEnabled) {
             debugLog(
-                'LIVE HELP GUARD',
-                `Using active visible mission help: ${href}`
+                'UNIT FINDER REQUIREMENT SOURCE',
+                `${sourceDescriptor.reason} | mission=${sourceDescriptor.missionId} | type=${sourceDescriptor.missionTypeId} | ${sourceDescriptor.url}`
             );
         }
 
-        return href;
+        return sourceDescriptor?.url || null;
     }
 
     function cleanRequirementName(value) {
@@ -17621,6 +18026,91 @@ let sessionRuntimeTicker = null;
         return false;
     }
 
+    function findMissionRequirementTable(
+        doc,
+        suppliedTables = null
+    ) {
+        if (!doc) return null;
+
+        const tables = Array.isArray(suppliedTables)
+            ? suppliedTables
+            : Array.from(
+                doc.querySelectorAll(
+                    'table.table, table'
+                )
+            );
+        let bestTable = null;
+        let bestScore = 0;
+
+        const normalise = value => {
+            return String(value || '')
+                .replace(/\s+/g, ' ')
+                .trim();
+        };
+
+        tables.forEach(table => {
+            const headings = Array.from(
+                table.querySelectorAll(
+                    'thead th, thead td, th'
+                )
+            ).map(cell => normalise(
+                cell.textContent
+            ));
+            const headingText =
+                headings.join(' ');
+            let score = 0;
+
+            if (
+                headings.some(heading =>
+                    /^Vehicle and Personnel Requirements$/i
+                        .test(heading)
+                )
+            ) {
+                score += 10000;
+            } else if (
+                /Vehicle/i.test(headingText) &&
+                /Personnel/i.test(headingText) &&
+                /Requirements?/i.test(headingText)
+            ) {
+                score += 8000;
+            }
+
+            let actionableRows = 0;
+
+            table.querySelectorAll(
+                'tbody tr, tr'
+            ).forEach(row => {
+                const cells = Array.from(
+                    row.querySelectorAll('td')
+                ).map(cell => normalise(
+                    cell.textContent
+                ));
+
+                if (cells.length < 2) return;
+
+                if (
+                    /^(?:Required\s+|Maximum amount of cars to tow|Cars to tow)/i
+                        .test(cells[0]) &&
+                    /\d/.test(cells[1])
+                ) {
+                    actionableRows += 1;
+                }
+            });
+
+            if (actionableRows > 0) {
+                score += 100 +
+                    actionableRows;
+            }
+
+            if (score > bestScore) {
+                bestScore = score;
+                bestTable = table;
+            }
+        });
+
+        return bestTable;
+    }
+
     function extractLiveMissionRequirementRows(html) {
         const doc = new DOMParser().parseFromString(html, 'text/html');
 
@@ -17632,52 +18122,10 @@ let sessionRuntimeTicker = null;
             );
 
         const table =
-            candidateTables.find(tbl => {
-                const headings =
-                    Array.from(
-                        tbl.querySelectorAll(
-                            'thead th, thead td'
-                        )
-                    )
-                        .map(cell => {
-                            return (
-                                cell.textContent ||
-                                ''
-                            )
-                                .replace(
-                                    /\s+/g,
-                                    ' '
-                                )
-                                .trim();
-                        });
-
-                return headings.some(
-                    heading =>
-                        /^Vehicle and Personnel Requirements$/i
-                            .test(
-                                heading
-                            )
-                );
-            }) ||
-            candidateTables.find(tbl => {
-                const firstHeading =
-                    (
-                        tbl.querySelector(
-                            'th'
-                        )?.textContent ||
-                        ''
-                    )
-                        .replace(
-                            /\s+/g,
-                            ' '
-                        )
-                        .trim();
-
-                return /^Vehicle and Personnel Requirements$/i
-                    .test(
-                        firstHeading
-                    );
-            });
+            findMissionRequirementTable(
+                doc,
+                candidateTables
+            );
 
         if (
             mfDebugEnabled
@@ -17871,7 +18319,26 @@ let sessionRuntimeTicker = null;
 
         extractTowCarRequirementRows(doc).forEach(row => rows.push(row));
 
-        return mergeRequirementRows(rows);
+        const mergedRows =
+            mergeRequirementRows(rows);
+
+        try {
+            Object.defineProperties(
+                mergedRows,
+                {
+                    missionRequirementTableFound: {
+                        value: Boolean(table),
+                        enumerable: false
+                    },
+                    missionRequirementTableCount: {
+                        value: candidateTables.length,
+                        enumerable: false
+                    }
+                }
+            );
+        } catch (_error) {}
+
+        return mergedRows;
     }
 
     function extractTowCarRequirementRows(doc) {
@@ -18125,6 +18592,62 @@ let sessionRuntimeTicker = null;
         );
     }
 
+    const MF_REQUIREMENT_SOURCE_FAILURE_STATUSES =
+        new Set([
+            'missing-source',
+            'fetch-failed',
+            'invalid-response'
+        ]);
+
+    let mfLastMissionRequirementRead = {
+        status: 'idle',
+        missionKey: '',
+        url: '',
+        missionId: '',
+        missionTypeId: '',
+        tableFound: false,
+        rowCount: 0,
+        error: ''
+    };
+
+    function setMissionRequirementReadState(
+        state
+    ) {
+        mfLastMissionRequirementRead = {
+            status: String(state?.status || 'idle'),
+            missionKey: String(state?.missionKey || ''),
+            url: String(state?.url || ''),
+            missionId: String(state?.missionId || ''),
+            missionTypeId: String(state?.missionTypeId || ''),
+            tableFound: state?.tableFound === true,
+            rowCount: Math.max(
+                0,
+                parseInt(state?.rowCount, 10) || 0
+            ),
+            error: String(state?.error || '')
+        };
+
+        return mfLastMissionRequirementRead;
+    }
+
+    function getMissionRequirementReadFailure(
+        missionKey
+    ) {
+        const state =
+            mfLastMissionRequirementRead;
+
+        if (
+            String(missionKey || '') !==
+                state.missionKey ||
+            !MF_REQUIREMENT_SOURCE_FAILURE_STATUSES
+                .has(state.status)
+        ) {
+            return null;
+        }
+
+        return state;
+    }
+
     async function readLiveMissionRequirements() {
         if (!isCurrentMissionExecutionOwner('attachment requirement read')) {
             return [];
@@ -18134,69 +18657,174 @@ let sessionRuntimeTicker = null;
 
         const missionKeyAtFetchStart =
             getLocalMissionInstanceKey();
+        const sourceDescriptor =
+            getMissionRequirementSource(true);
 
-        const url = getMissionHelpUrl();
-
-        if (!url) {
-            updateStatusBox('Mission help link not found. Falling back to old vehicle list.');
+        if (!sourceDescriptor) {
+            setMissionRequirementReadState({
+                status: 'missing-source',
+                missionKey: missionKeyAtFetchStart,
+                error:
+                    'Requirements for this Mission source was not found for the active mission.'
+            });
+            updateStatusBox(
+                'Unit Finder stopped: Requirements for this Mission source was not found.'
+            );
             return [];
         }
 
+        setMissionRequirementReadState({
+            status: 'loading',
+            missionKey: missionKeyAtFetchStart,
+            url: sourceDescriptor.url,
+            missionId: sourceDescriptor.missionId,
+            missionTypeId:
+                sourceDescriptor.missionTypeId
+        });
+
         try {
             updateStatusBox(
-                'Reading the mission-help attachment: Vehicle and Personnel Requirements...'
+                'Reading Requirements for this Mission: Vehicle and Personnel Requirements...'
             );
 
-            if (
-                mfDebugEnabled
-            ) {
-                debugLog(
-                    'UNIT FINDER ATTACHMENT FETCH',
-                    url
-                );
-            }
-            const response = await fetch(url, { credentials: 'include', cache: 'no-store' });
+            const response = await fetch(
+                sourceDescriptor.url,
+                {
+                    credentials: 'include',
+                    cache: 'no-store',
+                    redirect: 'follow',
+                    headers: {
+                        Accept:
+                            'text/html,application/xhtml+xml'
+                    }
+                }
+            );
 
             if (!response.ok) {
-                throw new Error(`${response.status} ${response.statusText}`);
+                throw new Error(
+                    `${response.status} ${response.statusText}`
+                );
+            }
+
+            if (
+                !validateMissionRequirementResponseUrl(
+                    sourceDescriptor,
+                    response.url ||
+                        sourceDescriptor.url
+                )
+            ) {
+                setMissionRequirementReadState({
+                    status: 'invalid-response',
+                    missionKey:
+                        missionKeyAtFetchStart,
+                    url:
+                        response.url ||
+                        sourceDescriptor.url,
+                    missionId:
+                        sourceDescriptor.missionId,
+                    missionTypeId:
+                        sourceDescriptor.missionTypeId,
+                    error:
+                        'Requirement response URL did not match the active mission.'
+                });
+                updateStatusBox(
+                    'Unit Finder stopped: requirement response did not match the active mission.'
+                );
+                return [];
             }
 
             const html = await response.text();
+
+            if (!String(html || '').trim()) {
+                throw new Error(
+                    'Requirement response was empty.'
+                );
+            }
 
             if (
                 missionKeyAtFetchStart !==
                 getLocalMissionInstanceKey()
             ) {
                 updateStatusBox(
-                    'Mission changed while requirements were loading. Old attachment ignored.'
+                    'Mission changed while requirements were loading. Old requirements ignored.'
                 );
                 return [];
             }
 
-            const rows = extractLiveMissionRequirementRows(html);
-
-            if (
-                mfDebugEnabled
-            ) {
-                debugLog(
-                    'UNIT FINDER ATTACHMENT RESULT',
-                    `${rows.length} merged Vehicle and Personnel Requirements row(s)`
+            const rows =
+                extractLiveMissionRequirementRows(
+                    html
                 );
-            }
+            const tableFound =
+                rows
+                    .missionRequirementTableFound ===
+                true;
 
-            if (
-                rows.length >
-                0
-            ) {
+            if (!tableFound) {
+                setMissionRequirementReadState({
+                    status: 'invalid-response',
+                    missionKey:
+                        missionKeyAtFetchStart,
+                    url: sourceDescriptor.url,
+                    missionId:
+                        sourceDescriptor.missionId,
+                    missionTypeId:
+                        sourceDescriptor.missionTypeId,
+                    tableFound: false,
+                    rowCount: 0,
+                    error:
+                        'Vehicle and Personnel Requirements table was not present.'
+                });
                 updateStatusBox(
-                    `Mission-help attachment loaded: ${rows.length} Vehicle and Personnel Requirements row(s).`
+                    'Unit Finder stopped: Vehicle and Personnel Requirements table was not found.'
                 );
+                return [];
             }
+
+            setMissionRequirementReadState({
+                status:
+                    rows.length > 0
+                        ? 'loaded'
+                        : 'loaded-empty',
+                missionKey:
+                    missionKeyAtFetchStart,
+                url: sourceDescriptor.url,
+                missionId:
+                    sourceDescriptor.missionId,
+                missionTypeId:
+                    sourceDescriptor.missionTypeId,
+                tableFound: true,
+                rowCount: rows.length
+            });
+
+            updateStatusBox(
+                rows.length > 0
+                    ? `Mission requirements loaded: ${rows.length} actionable row(s).`
+                    : 'Mission requirements loaded: no actionable vehicle rows in the authoritative table.'
+            );
 
             return rows;
         } catch (error) {
-            console.warn('Mission Finder V9 live requirement fetch failed:', error);
-            updateStatusBox('Live requirements failed. Falling back to old vehicle list.');
+            console.warn(
+                'Mission Finder requirement fetch failed:',
+                error
+            );
+            setMissionRequirementReadState({
+                status: 'fetch-failed',
+                missionKey:
+                    missionKeyAtFetchStart,
+                url: sourceDescriptor.url,
+                missionId:
+                    sourceDescriptor.missionId,
+                missionTypeId:
+                    sourceDescriptor.missionTypeId,
+                error:
+                    error?.message ||
+                    String(error)
+            });
+            updateStatusBox(
+                'Unit Finder stopped: authoritative mission requirements could not be loaded.'
+            );
             return [];
         }
     }
@@ -23183,6 +23811,20 @@ let sessionRuntimeTicker = null;
             return;
         }
 
+        const requirementReadFailure =
+            getMissionRequirementReadFailure(
+                missionKeyAtStart
+            );
+
+        if (requirementReadFailure) {
+            changeDispatchBoxColor(false);
+            updateStatusBox(
+                `Unit Finder stopped: ${requirementReadFailure.error || 'authoritative mission requirements were unavailable.'}`
+            );
+            renderVehicleLoadList();
+            return false;
+        }
+
         // Patient cards can finish rendering while the attachment is being
         // fetched. Refresh the normal patient count once, then process the
         // explicit current-patient "We need:" rows before the mission rows.
@@ -27215,8 +27857,8 @@ let sessionRuntimeTicker = null;
                 );
 
             const hasMissionHelp =
-                !!selectionDocument.querySelector(
-                    '#mission_help'
+                !!getMissionRequirementSource(
+                    true
                 );
 
             const hasVehicleInterface =

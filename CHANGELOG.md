@@ -26,6 +26,27 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Consolidate the two retained control surfaces into one coherent interface.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
+## [1.0.26] - 2026-07-25
+
+### Fixed
+
+- iPhone and iPad Safari Unit Finder now discovers the authoritative `#mission_help` link even when MissionChief hides the desktop button with `hidden-xs`.
+- Mission-help URLs are constrained to the current MissionChief origin, the `/einsaetze/{missionType}` route and the exact active `mission_id`; stale or cross-mission links are rejected.
+- When the hidden link is absent, Mission Finder may construct the same requirement route only from explicit active-mission type metadata and the exact active mission instance.
+- Requirement responses are verified against the requested mission type and instance before their HTML is parsed.
+- The Vehicle and Personnel Requirements table detector now accepts the exact heading and a bounded semantic table fallback while rejecting unrelated HTML responses.
+
+### Safety and diagnostics
+
+- Missing, failed, redirected-to-the-wrong-mission or structurally invalid requirement responses now stop Unit Finder before visible or legacy fallbacks can report a false success.
+- A legitimate authoritative table with no actionable vehicle rows remains valid so patient-only missions can continue through the established patient path.
+- The previous `v1.0.25` exact checkbox-state verification remains unchanged and now receives authoritative mission rows on mobile Safari.
+- Added permanent tests for the supplied hidden link, same-origin URL construction, mission-ID mismatch rejection, response identity, hidden-link discovery, table selection and fail-closed handoff.
+
+### Changed
+
+- Mission Finder increased from `V10.6.90` to `V10.6.91`.
+
 ## [1.0.25] - 2026-07-25
 
 ### Fixed

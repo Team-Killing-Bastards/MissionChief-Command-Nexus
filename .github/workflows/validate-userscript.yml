@@ -9,6 +9,7 @@ on:
       - 'scripts/check-runtime-hardening.mjs'
       - 'scripts/check-police-irv-fallback.mjs'
       - 'scripts/check-ios-unit-finder-selection.mjs'
+      - 'scripts/check-ios-mission-requirements-source.mjs'
       - '.github/workflows/validate-userscript.yml'
   push:
     branches:
@@ -20,6 +21,7 @@ on:
       - 'scripts/check-runtime-hardening.mjs'
       - 'scripts/check-police-irv-fallback.mjs'
       - 'scripts/check-ios-unit-finder-selection.mjs'
+      - 'scripts/check-ios-mission-requirements-source.mjs'
       - '.github/workflows/validate-userscript.yml'
   workflow_dispatch:
 
@@ -64,6 +66,9 @@ jobs:
 
       - name: Validate iOS Safari Unit Finder selection contracts
         run: node scripts/check-ios-unit-finder-selection.mjs
+
+      - name: Validate iOS Safari mission requirement source contracts
+        run: node scripts/check-ios-mission-requirements-source.mjs
 
       - name: Require a version increase when code changes
         if: github.event_name == 'pull_request'
