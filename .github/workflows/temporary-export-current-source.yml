@@ -34,20 +34,34 @@ jobs:
           ref: main
           show-progress: false
 
-      - name: Fetch exact v1.0.35 patch payload
+      - name: Fetch and verify exact v1.0.35 patch chunks
         env:
           HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
         shell: bash
         run: |
           set -euo pipefail
           git fetch origin "${HEAD_BRANCH}" --force
-          git show "origin/${HEAD_BRANCH}:.diagnostics/v1.0.35-missing-requirements-priority.patch.gz.b64" > /tmp/v1035.patch.gz.b64
-          tr -d '\r\n\t ' < /tmp/v1035.patch.gz.b64 > /tmp/v1035.patch.normalized.b64
-          sha256sum /tmp/v1035.patch.normalized.b64
-          wc -c /tmp/v1035.patch.normalized.b64
 
-      - name: Verify exact normalized base64 payload checksum
-        run: echo '1b99a3ce0f91fd38926fa2eba021edb01bb320cacd983e60d533e3a52bce7847  /tmp/v1035.patch.normalized.b64' | sha256sum --check
+          declare -A expected=(
+            [00]='eaf7d51bf253d09ac0c21d57fd1402e28ed213fe95fe9893626a7c96985bb58f'
+            [01]='f40bf34e5b90c2a5ea1a6f9c3ef17873b3df636861c8032a0a4a0f59c618466a'
+            [02]='2108a8117469fdbb02695215875bcd271b3cbbaf9fa8407d755b5187e48396bd'
+            [03]='a4db8d05c58acc34c6ad7f42ee5f83b92767792a182ac50844bddec478ba342e'
+            [04]='47e5aadcd2bfe2f0466e8601ec1176682a8076c36662c38881f2d85035ddb065'
+            [05]='d54206139c059743c311e7d880cdee168c6cb92aa00a9d56840c2fad98bae6fe'
+          )
+
+          : > /tmp/v1035.patch.normalized.b64
+          for suffix in 00 01 02 03 04 05; do
+            part="/tmp/v1035.part-${suffix}"
+            git show "origin/${HEAD_BRANCH}:.diagnostics/v1.0.35-missing-requirements-priority.part-${suffix}" > "${part}"
+            tr -d '\r\n\t ' < "${part}" > "${part}.normalized"
+            echo "${expected[${suffix}]}  ${part}.normalized" | sha256sum --check
+            cat "${part}.normalized" >> /tmp/v1035.patch.normalized.b64
+          done
+
+          echo '1b99a3ce0f91fd38926fa2eba021edb01bb320cacd983e60d533e3a52bce7847  /tmp/v1035.patch.normalized.b64' | sha256sum --check
+          wc -c /tmp/v1035.patch.normalized.b64
 
       - name: Decode exact patch payload
         run: base64 --decode /tmp/v1035.patch.normalized.b64 | gzip --decompress > /tmp/v1035.patch
