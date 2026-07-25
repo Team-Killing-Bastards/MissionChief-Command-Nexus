@@ -1,0 +1,455 @@
+name: Apply Personnel Register integration
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-personnel-register-integration
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'agent/integrate-personnel-register-main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out integration branch
+        uses: actions/checkout@v6
+        with:
+          ref: agent/integrate-personnel-register-main
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Integrate register controls into canonical source
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+
+          source_path = Path('src/missionchief-command-nexus.user.js')
+          source = source_path.read_text(encoding='utf-8')
+
+          def replace_once(text, old, new, label):
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected exactly one match, found {count}')
+              return text.replace(old, new, 1)
+
+          source = replace_once(source, '// @version      1.0.35', '// @version      1.0.36', 'userscript version')
+          source = replace_once(source, "    const PERSONNEL_VERSION = '1.3.3';", "    const PERSONNEL_VERSION = '1.3.4';", 'Personnel version')
+          source = replace_once(
+              source,
+              "    const PERSONNEL_TRAINING_REGISTRY_SCHEMA_VERSION = 1;\n",
+              "    const PERSONNEL_TRAINING_REGISTRY_SCHEMA_VERSION = 1;\n"
+              "    const PERSONNEL_TRAINING_REGISTRY_EXPORT_FORMAT =\n"
+              "        'missionchief-personnel-training-register';\n"
+              "    const PERSONNEL_TRAINING_REGISTRY_EXPORT_VERSION = 1;\n"
+              "    const PERSONNEL_TRAINING_REGISTRY_IMPORT_MAX_BYTES = 10 * 1024 * 1024;\n",
+              'register constants',
+          )
+
+          source = replace_once(
+              source,
+              '                    <button id="mc-personnel-build-register" title="Scan every Police, Aviation and EOD station and rebuild the exact vehicle training register without changing any personnel assignments.">Build Personnel Register</button>\n',
+              '                    <button id="mc-personnel-build-register" title="Scan every station and rebuild the exact vehicle training register. This ignores the selected service, training profile, mode and start point. No personnel assignments are changed.">Build All Register</button>\n'
+              '                    <button id="mc-personnel-export-register" title="Download the saved Personnel Register as a JSON backup.">Export Register</button>\n'
+              '                    <button id="mc-personnel-import-register" title="Replace the saved Personnel Register with a validated JSON backup.">Import Register</button>\n'
+              '                    <input id="mc-personnel-import-register-file" type="file" accept="application/json,.json" hidden>\n',
+              'register controls markup',
+          )
+          source = replace_once(
+              source,
+              '                    <div><b>Vehicles checked:</b> <span id="mc-personnel-vehicles">0</span></div>\n',
+              '                    <div><b>Vehicles checked:</b> <span id="mc-personnel-vehicles">0</span></div>\n'
+              '                    <div><b>Register:</b> <span id="mc-personnel-register-status">No saved vehicles</span></div>\n',
+              'register status markup',
+          )
+          source = replace_once(
+              source,
+              '            #mc-personnel-copy,\n            #mc-personnel-copy-station { background: #7c3aed; color: white; }\n',
+              '            #mc-personnel-build-register {\n'
+              '                background: #0f766e;\n'
+              '                color: white;\n'
+              '                border: 1px solid #5eead4;\n'
+              '                font-weight: bold;\n'
+              '            }\n\n'
+              '            #mc-personnel-export-register { background: #2563eb; color: white; }\n'
+              '            #mc-personnel-import-register { background: #0e7490; color: white; }\n\n'
+              '            #mc-personnel-build-register:disabled,\n'
+              '            #mc-personnel-export-register:disabled,\n'
+              '            #mc-personnel-import-register:disabled {\n'
+              '                cursor: not-allowed;\n'
+              '                opacity: 0.5;\n'
+              '            }\n\n'
+              '            #mc-personnel-copy,\n'
+              '            #mc-personnel-copy-station { background: #7c3aed; color: white; }\n',
+              'register control styles',
+          )
+          source = replace_once(
+              source,
+              "        document.querySelector('#mc-personnel-build-register').onclick = buildPersonnelTrainingRegisterOneClick;\n",
+              "        document.querySelector('#mc-personnel-build-register').onclick = buildPersonnelTrainingRegisterOneClick;\n"
+              "        document.querySelector('#mc-personnel-export-register').onclick = exportPersonnelTrainingRegistry;\n"
+              "        document.querySelector('#mc-personnel-import-register').onclick = () => {\n"
+              "            document.querySelector('#mc-personnel-import-register-file')?.click();\n"
+              "        };\n"
+              "        document.querySelector('#mc-personnel-import-register-file').onchange = async event => {\n"
+              "            const input = event.currentTarget;\n"
+              "            const file = input?.files?.[0] || null;\n"
+              "            if (input) input.value = '';\n"
+              "            await importPersonnelTrainingRegistry(file);\n"
+              "        };\n",
+              'register event bindings',
+          )
+          source = replace_once(
+              source,
+              "        personnelLog(`Personnel Assignment v${PERSONNEL_VERSION} loaded. Medical Critical Care and the verified Police profiles are live; other services remain in safe UI preview.`, 'info');\n",
+              "        personnelLog(`Personnel Assignment v${PERSONNEL_VERSION} loaded. Medical Critical Care and the verified Police profiles are live; other services remain in safe UI preview.`, 'info');\n"
+              "        updatePersonnelTrainingRegistryStatus();\n",
+              'register initial status',
+          )
+
+          register_functions = r'''
+    function getPersonnelTrainingRegistryStats(registry = readPersonnelTrainingRegistry()) {
+        const vehicles = registry?.vehicles && typeof registry.vehicles === 'object'
+            ? Object.values(registry.vehicles)
+            : [];
+        const updatedAt = vehicles.reduce(
+            (latest, entry) => Math.max(latest, Number(entry?.updatedAt || 0)),
+            Number(registry?.updatedAt || 0)
+        );
+        return {
+            count: vehicles.length,
+            updatedAt: Number.isFinite(updatedAt) ? updatedAt : 0
+        };
+    }
+
+    function formatPersonnelTrainingRegistryTimestamp(timestamp) {
+        const value = Number(timestamp || 0);
+        if (!Number.isFinite(value) || value <= 0) return 'never';
+        try {
+            return new Intl.DateTimeFormat('en-GB', {
+                dateStyle: 'medium',
+                timeStyle: 'short'
+            }).format(new Date(value));
+        } catch (_error) {
+            return new Date(value).toLocaleString();
+        }
+    }
+
+    function updatePersonnelTrainingRegistryStatus() {
+        const target = document.querySelector('#mc-personnel-register-status');
+        if (!target) return;
+        try {
+            const stats = getPersonnelTrainingRegistryStats();
+            target.textContent = `${stats.count.toLocaleString('en-GB')} vehicle${stats.count === 1 ? '' : 's'} stored; updated ${formatPersonnelTrainingRegistryTimestamp(stats.updatedAt)}`;
+        } catch (error) {
+            target.textContent = `Register unavailable: ${error?.message || error}`;
+        }
+    }
+
+    function setPersonnelTrainingRegistryTransferDisabled(disabled) {
+        ['#mc-personnel-export-register', '#mc-personnel-import-register'].forEach(selector => {
+            const button = document.querySelector(selector);
+            if (button) button.disabled = Boolean(disabled);
+        });
+    }
+
+    function isUnsafePersonnelTrainingRegistryKey(value) {
+        return !value || value === '__proto__' || value === 'constructor' || value === 'prototype';
+    }
+
+    function normalisePersonnelTrainingRegistryCountMap(value) {
+        const source = value && typeof value === 'object' && !Array.isArray(value)
+            ? value
+            : {};
+        const result = Object.create(null);
+        Object.entries(source).forEach(([rawKey, rawCount]) => {
+            const key = String(rawKey || '').slice(0, 150);
+            const count = Number(rawCount || 0);
+            if (isUnsafePersonnelTrainingRegistryKey(key) || !Number.isFinite(count) || count < 0) return;
+            result[key] = Math.floor(count);
+        });
+        return result;
+    }
+
+    function normaliseImportedPersonnelTrainingRegistry(candidate) {
+        const source = candidate?.registry && typeof candidate.registry === 'object'
+            ? candidate.registry
+            : candidate;
+        if (!source || typeof source !== 'object' || Array.isArray(source)) {
+            throw new Error('The selected file does not contain a Personnel Register object.');
+        }
+        const schemaVersion = source.schemaVersion == null
+            ? PERSONNEL_TRAINING_REGISTRY_SCHEMA_VERSION
+            : Number(source.schemaVersion);
+        if (schemaVersion !== PERSONNEL_TRAINING_REGISTRY_SCHEMA_VERSION) {
+            throw new Error(`Unsupported Personnel Register schema version: ${schemaVersion}.`);
+        }
+        if (!source.vehicles || typeof source.vehicles !== 'object' || Array.isArray(source.vehicles)) {
+            throw new Error('The selected file does not contain a valid vehicles register.');
+        }
+        const entries = Object.entries(source.vehicles);
+        if (entries.length > PERSONNEL_TRAINING_REGISTRY_MAX_VEHICLES) {
+            throw new Error(`The file contains ${entries.length} vehicles; the supported maximum is ${PERSONNEL_TRAINING_REGISTRY_MAX_VEHICLES}.`);
+        }
+
+        const vehicles = Object.create(null);
+        entries.forEach(([rawVehicleId, rawEntry]) => {
+            const vehicleId = String(rawVehicleId || '').slice(0, 80);
+            if (isUnsafePersonnelTrainingRegistryKey(vehicleId)) {
+                throw new Error('The file contains an invalid vehicle identifier.');
+            }
+            if (!rawEntry || typeof rawEntry !== 'object' || Array.isArray(rawEntry)) {
+                throw new Error(`Vehicle ${vehicleId} does not contain a valid register entry.`);
+            }
+            const safeCount = value => {
+                const count = Number(value || 0);
+                return Number.isFinite(count) && count >= 0 ? Math.floor(count) : 0;
+            };
+            const safeTimestamp = value => {
+                const timestamp = Number(value || 0);
+                return Number.isFinite(timestamp) && timestamp >= 0 ? timestamp : 0;
+            };
+            vehicles[vehicleId] = {
+                vehicleId,
+                vehicleName: String(rawEntry.vehicleName || '').slice(0, 500),
+                vehicleTypeId: String(rawEntry.vehicleTypeId || '').slice(0, 80),
+                stationName: String(rawEntry.stationName || '').slice(0, 500),
+                stationHref: String(rawEntry.stationHref || '').slice(0, 1000),
+                assignedPersonnelCount: safeCount(rawEntry.assignedPersonnelCount),
+                assignmentScanComplete: rawEntry.assignmentScanComplete === true,
+                personnelRowsSeen: safeCount(rawEntry.personnelRowsSeen),
+                trainingCounts: normalisePersonnelTrainingRegistryCountMap(rawEntry.trainingCounts),
+                trainingCombinationCounts: normalisePersonnelTrainingRegistryCountMap(rawEntry.trainingCombinationCounts),
+                updatedAt: safeTimestamp(rawEntry.updatedAt),
+                source: String(rawEntry.source || '').slice(0, 250)
+            };
+        });
+        const safeRegistryTimestamp = value => {
+            const timestamp = Number(value || 0);
+            return Number.isFinite(timestamp) && timestamp >= 0 ? timestamp : 0;
+        };
+        return {
+            schemaVersion: PERSONNEL_TRAINING_REGISTRY_SCHEMA_VERSION,
+            sourceVersion: String(source.sourceVersion || '').slice(0, 80),
+            updatedAt: safeRegistryTimestamp(source.updatedAt),
+            lastPrunedAt: safeRegistryTimestamp(source.lastPrunedAt),
+            vehicles
+        };
+    }
+
+    function downloadPersonnelTrainingRegistryJson(filename, payload) {
+        const blob = new Blob([`${JSON.stringify(payload, null, 2)}\n`], {
+            type: 'application/json;charset=utf-8'
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        link.hidden = true;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    function exportPersonnelTrainingRegistry() {
+        if (PERSONNEL_STATE.running) {
+            window.alert('Finish or stop the active Personnel operation before exporting the register.');
+            return;
+        }
+        flushPersonnelTrainingRegistry(false);
+        const registry = readPersonnelTrainingRegistry();
+        const stats = getPersonnelTrainingRegistryStats(registry);
+        if (!stats.count) {
+            window.alert('The Personnel Register is empty. Build or import a register before exporting.');
+            return;
+        }
+        const exportedAt = new Date().toISOString();
+        downloadPersonnelTrainingRegistryJson(
+            `missionchief-personnel-register-${exportedAt.slice(0, 10)}.json`,
+            {
+                format: PERSONNEL_TRAINING_REGISTRY_EXPORT_FORMAT,
+                exportVersion: PERSONNEL_TRAINING_REGISTRY_EXPORT_VERSION,
+                exportedAt,
+                origin: location.origin,
+                vehicleCount: stats.count,
+                registry
+            }
+        );
+        personnelLog(`Personnel Register exported: ${stats.count} vehicle(s).`, 'done');
+    }
+
+    async function importPersonnelTrainingRegistry(file) {
+        if (!file) return;
+        if (PERSONNEL_STATE.running) {
+            window.alert('Finish or stop the active Personnel operation before importing a register.');
+            return;
+        }
+        if (Number(file.size || 0) > PERSONNEL_TRAINING_REGISTRY_IMPORT_MAX_BYTES) {
+            window.alert('Personnel Register import failed: the selected file is larger than 10 MB.');
+            return;
+        }
+        let registry;
+        try {
+            const parsed = JSON.parse(await file.text());
+            if (parsed?.format && parsed.format !== PERSONNEL_TRAINING_REGISTRY_EXPORT_FORMAT) {
+                throw new Error(`Unsupported export format: ${String(parsed.format).slice(0, 120)}`);
+            }
+            registry = normaliseImportedPersonnelTrainingRegistry(parsed);
+        } catch (error) {
+            personnelLog(`Personnel Register import failed: ${error?.message || error}`, 'error');
+            window.alert(`Personnel Register import failed: ${error?.message || error}`);
+            return;
+        }
+        const importedCount = Object.keys(registry.vehicles).length;
+        if (!importedCount) {
+            window.alert('The selected file contains an empty Personnel Register. Nothing was imported.');
+            return;
+        }
+        const existingCount = getPersonnelTrainingRegistryStats().count;
+        if (!window.confirm(
+            `Import ${importedCount.toLocaleString('en-GB')} vehicle register entries?\n\n` +
+            `This replaces the ${existingCount.toLocaleString('en-GB')} entries currently stored in this browser.`
+        )) return;
+        try {
+            if (PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER != null) {
+                clearTimeout(PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER);
+                PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER = null;
+            }
+            localStorage.setItem(PERSONNEL_TRAINING_REGISTRY_STORAGE_KEY, JSON.stringify(registry));
+            PERSONNEL_TRAINING_REGISTRY_CACHE = registry;
+            PERSONNEL_TRAINING_REGISTRY_DIRTY = false;
+            PERSONNEL_TRAINING_REGISTRY_PENDING_EVENT = null;
+        } catch (error) {
+            personnelLog(`Personnel Register import could not be saved: ${error?.message || error}`, 'error');
+            window.alert(`Personnel Register could not be saved: ${error?.message || error}`);
+            return;
+        }
+        dispatchPersonnelTrainingRegistryUpdate({
+            imported: true,
+            vehicleCount: importedCount,
+            updatedAt: Date.now()
+        });
+        updatePersonnelTrainingRegistryStatus();
+        personnelLog(`Personnel Register imported: ${importedCount} vehicle(s). Existing browser register replaced.`, 'done');
+        setPersonnelUiValue('status', 'Personnel register imported');
+        window.alert(`Personnel Register imported successfully: ${importedCount.toLocaleString('en-GB')} vehicle entries.`);
+    }
+'''
+          source = replace_once(
+              source,
+              '\n\n    async function buildPersonnelTrainingRegisterOneClick() {',
+              '\n' + register_functions + '\n    async function buildPersonnelTrainingRegisterOneClick() {',
+              'register functions insertion',
+          )
+          source = replace_once(
+              source,
+              "        if (button) {\n            button.disabled = true;\n            button.textContent = 'Building Register...';\n        }\n\n        document.querySelector('#mc-personnel-pause').textContent = 'Pause';\n",
+              "        if (button) {\n            button.disabled = true;\n            button.textContent = 'Building Register...';\n        }\n        setPersonnelTrainingRegistryTransferDisabled(true);\n\n        document.querySelector('#mc-personnel-pause').textContent = 'Pause';\n",
+              'disable register transfers during build',
+          )
+          source = replace_once(
+              source,
+              "            const saveResult = flushPersonnelTrainingRegistry(false);\n            const stopped = PERSONNEL_STATE.stopped;\n",
+              "            flushPersonnelTrainingRegistry(false);\n            const registryRetained = getPersonnelTrainingRegistryStats().count;\n            const stopped = PERSONNEL_STATE.stopped;\n",
+              'register retained calculation',
+          )
+          source = replace_once(source, "                `Registry retained: ${Number(saveResult?.retained || 0)}`,\n", "                `Registry retained: ${registryRetained}`,\n", 'register retained summary')
+          source = replace_once(
+              source,
+              "            if (button) {\n                button.disabled = false;\n                button.textContent = 'Build Personnel Register';\n            }\n\n            document.querySelector('#mc-personnel-pause').textContent = 'Pause';\n",
+              "            if (button) {\n                button.disabled = false;\n                button.textContent = 'Build All Register';\n            }\n            setPersonnelTrainingRegistryTransferDisabled(false);\n            updatePersonnelTrainingRegistryStatus();\n\n            document.querySelector('#mc-personnel-pause').textContent = 'Pause';\n",
+              'restore register controls after build',
+          )
+          source = replace_once(
+              source,
+              "            dispatchPersonnelTrainingRegistryUpdate(pendingEvent);\n\n            if (!silent) {\n",
+              "            dispatchPersonnelTrainingRegistryUpdate(pendingEvent);\n            updatePersonnelTrainingRegistryStatus();\n\n            if (!silent) {\n",
+              'register status after flush',
+          )
+          source_path.write_text(source, encoding='utf-8')
+
+          readme = Path('README.md')
+          readme.write_text(replace_once(readme.read_text(encoding='utf-8'), '**Current version:** `1.0.35`', '**Current version:** `1.0.36`', 'README version'), encoding='utf-8')
+          source_readme = Path('src/README.md')
+          source_readme.write_text(replace_once(source_readme.read_text(encoding='utf-8'), '| Command Nexus version | `1.0.35` |', '| Command Nexus version | `1.0.36` |', 'source README version'), encoding='utf-8')
+          changelog = Path('CHANGELOG.md')
+          notes = '''## [1.0.36] - 2026-07-26
+
+### Added
+
+- Added Personnel Register JSON export and import directly inside the main Command Nexus Personnel Assignment interface.
+- Added a visible saved-register vehicle count and last-updated timestamp.
+
+### Fixed
+
+- Gave **Build All Register** a dedicated readable colour instead of inheriting MissionChief button colours.
+- Corrected the completed build report so **Registry retained** shows the actual saved register size when entries were already flushed during the scan.
+
+### Safety and compatibility
+
+- Imports validate the register schema, reject unsafe object keys, enforce the existing 5,000-vehicle limit, cap files at 10 MB and require confirmation before replacing browser data.
+- Export and import are blocked while Personnel Assignment or a register build is active.
+- The temporary companion userscript has been removed; these controls now ship only as part of the canonical Command Nexus userscript.
+
+### Changed engine baseline
+
+- Personnel Assignment increased from `1.3.3` to `1.3.4`.
+
+'''
+          changelog.write_text(replace_once(changelog.read_text(encoding='utf-8'), '## [1.0.35] - 2026-07-25\n', notes + '## [1.0.35] - 2026-07-25\n', 'CHANGELOG release insertion'), encoding='utf-8')
+          PY
+
+          rm -f src/personnel-register-tools.user.js
+
+      - name: Validate integrated Command Nexus
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          python3 scripts/check_repository.py
+          node scripts/check-ios-compatibility.mjs
+          node scripts/check-runtime-hardening.mjs
+          node scripts/check-police-irv-fallback.mjs
+          node scripts/check-ios-unit-finder-selection.mjs
+          node scripts/check-ios-mission-requirements-source.mjs
+          node scripts/check-iphone-mission-ui.mjs
+          node scripts/check-open-issues-batch.mjs
+          node scripts/check-missing-requirements-priority.mjs
+          test ! -e src/personnel-register-tools.user.js
+          grep -Fq 'id="mc-personnel-export-register"' src/missionchief-command-nexus.user.js
+          grep -Fq 'id="mc-personnel-import-register"' src/missionchief-command-nexus.user.js
+          git diff --check
+
+      - name: Commit integrated source to branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/workflows/apply-personnel-register-integration.yml
+          rm -f .github/workflows/integrate-personnel-register-main.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/missionchief-command-nexus.user.js src/README.md README.md CHANGELOG.md
+          git add -u src/personnel-register-tools.user.js .github/workflows/apply-personnel-register-integration.yml .github/workflows/integrate-personnel-register-main.yml
+          git commit -m 'Integrate Personnel Register controls into Command Nexus'
+          git push origin HEAD:agent/integrate-personnel-register-main
