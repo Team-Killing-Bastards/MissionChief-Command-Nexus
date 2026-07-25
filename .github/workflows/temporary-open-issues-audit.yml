@@ -27,7 +27,7 @@ jobs:
 
     steps:
       - name: Check out latest main
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           ref: main
@@ -49,7 +49,7 @@ jobs:
           git rev-parse HEAD > /tmp/open-issues-current-main/main-sha.txt
 
       - name: Upload latest main audit
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: open-issues-latest-main-audit
           path: /tmp/open-issues-current-main
