@@ -6,3 +6,4 @@ Apply, validate, publish and announce the v1.0.24 corrective build.
 Retry the validated build with resilient Git push diagnostics.
 Stage the validated corrective commit through the protected-branch PR route.
 Trigger the registered protected-branch builder after workflow registration.
+Export the exact validated v1.0.24 files for connector-controlled commit.
