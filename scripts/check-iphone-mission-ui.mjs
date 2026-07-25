@@ -81,8 +81,8 @@ function extractFunction(name) {
   fail(`Unable to find end of ${name}`);
 }
 
-requireText('// @version      1.0.31', 'v1.0.31 metadata');
-requireText(' * MODULE 2: MISSION FINDER V10.6.96', 'V10.6.96 module header');
+requireText('// @version      1.0.32', 'v1.0.32 metadata');
+requireText(' * MODULE 2: MISSION FINDER V10.6.97', 'V10.6.97 module header');
 requireText('function getMissionFinderPhoneScreenShortSide()', 'physical phone-screen detector');
 requireText('function isMissionFinderIphoneSafariWebsite()', 'strict iPhone Safari detector');
 requireText("'mf_control_collapsed_iphone_v2'", 'separate iPhone control state');
@@ -110,6 +110,62 @@ requireText('mf-iphone-native-picker-collapsed', 'collapsed native picker presen
 requireText('mf-iphone-native-picker-strip', 'horizontal native category strip');
 requireText('display: contents !important', 'native picker structural flattening');
 requireText('max-height: 46dvh', 'bounded native quick-select viewport');
+
+requireText("'mf_iphone_two_button_launcher_v1032'", 'two-button launcher migration');
+requireText('function getMissionFinderIphonePanelStateForToggle(', 'exclusive launcher state helper');
+requireText("'mf-iphone-panel-launcher'", 'iPhone launcher container');
+requireText("'mf-iphone-mission-launcher'", 'Mission launcher button');
+requireText("'mf-iphone-vehicle-launcher'", 'Vehicle launcher button');
+requireText("iphoneMissionLauncherButton.textContent =\n            'Mission'", 'exact Mission label');
+requireText("iphoneVehicleLauncherButton.textContent =\n            'Vehicle'", 'exact Vehicle label');
+requireText("toggleIphoneLauncherPanel('mission')", 'Mission launcher activation');
+requireText("toggleIphoneLauncherPanel('vehicle')", 'Vehicle launcher activation');
+requireText("'aria-pressed'", 'launcher pressed-state contract');
+requireText('function getMissionFinderIphoneNativeControlContainer()', 'native control-container resolver');
+requireText('function syncMissionFinderIphoneLauncherPlacement(', 'launcher placement synchroniser');
+requireText("'.control-btn-container'", 'MissionChief native control cluster selector');
+requireText("'--mf-iphone-launcher-right'", 'launcher right-position variable');
+requireText("'--mf-iphone-panel-top'", 'expanded panel top variable');
+requirePattern(
+  /#mission-finder-wrapper\.mf2026-iphone-safari[\s\S]{0,12000}#mf-iphone-panel-launcher[\s\S]{0,4500}\.mf-iphone-launcher-button/,
+  'launcher styling is strictly iPhone-scoped'
+);
+requirePattern(
+  /#mission-finder-wrapper\.mf2026-iphone-safari[\s\S]{0,12000}\.mf2026-control-header-row,[\s\S]{0,300}\.mf2026-load-header-row[\s\S]{0,120}display: none !important/,
+  'legacy iPhone bars are hidden'
+);
+requirePattern(
+  /#control-panel\.mf2026-control-collapsed,[\s\S]{0,250}#vehicle-load-list-box\.mf2026-load-collapsed[\s\S]{0,120}display: none !important/,
+  'closed panels disappear behind the launcher'
+);
+requirePattern(
+  /function syncMissionFinderIphoneNativePickerSurfaces\([\s\S]{0,7000}syncMissionFinderIphoneLauncherPlacement\(/,
+  'mission mutations reposition the launcher'
+);
+
+const launcherStateSource = extractFunction(
+  'getMissionFinderIphonePanelStateForToggle'
+);
+const launcherState = Function(
+  `"use strict";\n${launcherStateSource}\nreturn getMissionFinderIphonePanelStateForToggle;`
+)();
+
+const missionOpened = launcherState('mission', true, true);
+if (missionOpened.missionCollapsed || !missionOpened.vehicleCollapsed) {
+  fail('Mission launcher must open Mission and close Vehicle');
+}
+const missionClosed = launcherState('mission', false, true);
+if (!missionClosed.missionCollapsed || !missionClosed.vehicleCollapsed) {
+  fail('Re-tapping Mission must close both panels');
+}
+const vehicleOpened = launcherState('vehicle', true, true);
+if (!vehicleOpened.missionCollapsed || vehicleOpened.vehicleCollapsed) {
+  fail('Vehicle launcher must open Vehicle and close Mission');
+}
+const switchedToVehicle = launcherState('vehicle', false, true);
+if (!switchedToVehicle.missionCollapsed || switchedToVehicle.vehicleCollapsed) {
+  fail('Opening Vehicle must close an open Mission panel');
+}
 
 requireText("'mf_control_collapsed_iphone_v3'", 'corrected iPhone Mission Control state key');
 requireText("'mf_vehicle_load_collapsed_iphone_v3'", 'corrected iPhone Vehicle Load state key');
@@ -152,8 +208,8 @@ requirePattern(
   'Mission Control defaults collapsed only on iPhone'
 );
 requirePattern(
-  /#mission-finder-wrapper\.mf2026-iphone-safari #control-panel[\s\S]{0,300}var\(--mf-iphone-close-gutter, 48px\)/,
-  'Mission Control reserves the native close-control corner'
+  /function syncMissionFinderIphoneLauncherPlacement\([\s\S]{0,5000}getMissionFinderIphoneNativeControlContainer\(\)[\s\S]{0,5000}'--mf-iphone-launcher-right'/,
+  'launcher is positioned from MissionChief native controls'
 );
 requirePattern(
   /function resetMissionFinderIosPosition\([\s\S]{0,800}syncMissionFinderIphoneCloseControlClearance\(panel\)/,
@@ -238,7 +294,7 @@ for (const contract of [
 }
 
 requirePattern(
-  /#mission-finder-wrapper\.mf2026-iphone-safari[\s\S]{0,1800}border-radius: 14px/,
+  /#mission-finder-wrapper\.mf2026-iphone-safari[\s\S]{0,14000}\.mf2026-panel[\s\S]{0,500}border-radius: 14px/,
   'compact card CSS is scoped to the iPhone wrapper'
 );
 requirePattern(

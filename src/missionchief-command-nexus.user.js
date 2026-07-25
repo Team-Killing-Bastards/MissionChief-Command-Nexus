@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.31
+// @version      1.0.32
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -8788,7 +8788,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.96
+         * MODULE 2: MISSION FINDER V10.6.97
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -9442,6 +9442,8 @@
         'mf_iphone_native_picker_collapsed_v2';
     const MF_IPHONE_COLLAPSE_DEFAULTS_MIGRATION_KEY =
         'mf_iphone_collapse_defaults_v1031';
+    const MF_IPHONE_TWO_BUTTON_LAUNCHER_MIGRATION_KEY =
+        'mf_iphone_two_button_launcher_v1032';
     const MF_IPHONE_NATIVE_PICKER_STYLE_ID =
         'mission-finder-iphone-native-picker-styles';
     const MF_IPHONE_NATIVE_PICKER_TOGGLE_ID =
@@ -9496,6 +9498,69 @@
 
     migrateMissionFinderIphoneCollapseDefaults();
 
+    function migrateMissionFinderIphoneTwoButtonLauncherDefaults() {
+        if (!isMissionFinderIphoneSafariWebsite()) return;
+
+        try {
+            if (
+                localStorage.getItem(
+                    MF_IPHONE_TWO_BUTTON_LAUNCHER_MIGRATION_KEY
+                ) === 'true'
+            ) {
+                return;
+            }
+
+            localStorage.setItem(
+                MF_CONTROL_COLLAPSED_KEY,
+                'true'
+            );
+            localStorage.setItem(
+                MF_VEHICLE_LOAD_COLLAPSED_KEY,
+                'true'
+            );
+            localStorage.setItem(
+                MF_IPHONE_TWO_BUTTON_LAUNCHER_MIGRATION_KEY,
+                'true'
+            );
+        } catch (_error) {}
+    }
+
+    function getMissionFinderIphonePanelStateForToggle(
+        target,
+        missionCollapsed,
+        vehicleCollapsed
+    ) {
+        const currentMissionCollapsed =
+            Boolean(missionCollapsed);
+        const currentVehicleCollapsed =
+            Boolean(vehicleCollapsed);
+
+        if (target === 'mission') {
+            return {
+                missionCollapsed:
+                    !currentMissionCollapsed,
+                vehicleCollapsed: true
+            };
+        }
+
+        if (target === 'vehicle') {
+            return {
+                missionCollapsed: true,
+                vehicleCollapsed:
+                    !currentVehicleCollapsed
+            };
+        }
+
+        return {
+            missionCollapsed:
+                currentMissionCollapsed,
+            vehicleCollapsed:
+                currentVehicleCollapsed
+        };
+    }
+
+    migrateMissionFinderIphoneTwoButtonLauncherDefaults();
+
     const savedVehicleLoadCollapsed =
         localStorage.getItem(
             MF_VEHICLE_LOAD_COLLAPSED_KEY
@@ -9537,6 +9602,10 @@
     const MF_STRICT_TRAINING_SOURCE_PREFIX =
         'mission-finder-live-strict-';
 
+    // V10.6.97: iPhone Mission Control and Vehicle Load now use a compact
+    // two-button launcher positioned immediately left of MissionChief's live
+    // native control cluster. Both panels default closed and open exclusively
+    // below the launcher without cloning or intercepting native controls.
     // V10.6.96: the strict iPhone command surfaces now migrate to collapsed
     // defaults, own deterministic touch/keyboard disclosure controls and reserve
     // a pointer-transparent upper-right gutter for MissionChief's native close X.
@@ -14167,10 +14236,15 @@
             /* iPhone Safari only. iPad remains on the established iOS layout. */
             #mission-finder-wrapper.mf2026-iphone-safari {
                 --mf-iphone-close-gutter: 48px;
+                --mf-iphone-launcher-top: 0px;
+                --mf-iphone-launcher-right: 52px;
+                --mf-iphone-launcher-max-width: calc(100% - 60px);
+                --mf-iphone-panel-top: 42px;
                 top: calc(4px + env(safe-area-inset-top, 0px));
                 right: calc(4px + env(safe-area-inset-right, 0px));
                 left: calc(4px + env(safe-area-inset-left, 0px));
-                gap: 4px;
+                display: block;
+                gap: 0;
                 pointer-events: none;
                 max-height: calc(
                     100vh
@@ -14178,6 +14252,7 @@
                     - env(safe-area-inset-top, 0px)
                     - env(safe-area-inset-bottom, 0px)
                 );
+                overflow: visible;
                 scrollbar-width: none;
             }
 
@@ -14197,14 +14272,98 @@
                 }
             }
 
-            #mission-finder-wrapper.mf2026-iphone-safari > .mf2026-panel {
+            #mission-finder-wrapper.mf2026-iphone-safari
+            #mf-iphone-panel-launcher {
+                position: absolute;
+                top: var(--mf-iphone-launcher-top, 0px);
+                right: var(--mf-iphone-launcher-right, 52px);
+                z-index: 4;
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+                gap: 4px;
+                max-width: var(
+                    --mf-iphone-launcher-max-width,
+                    calc(100% - 60px)
+                );
                 pointer-events: auto;
+                padding: 3px;
+                border: 1px solid rgba(255, 255, 255, 0.22);
+                border-radius: 11px;
+                background: rgba(28, 28, 30, 0.96);
+                box-shadow: 0 5px 16px rgba(0, 0, 0, 0.32);
+                -webkit-backdrop-filter: blur(16px) saturate(135%);
+                backdrop-filter: blur(16px) saturate(135%);
             }
 
-            #mission-finder-wrapper.mf2026-iphone-safari #control-panel {
-                width: calc(100% - var(--mf-iphone-close-gutter, 48px));
-                max-width: calc(100% - var(--mf-iphone-close-gutter, 48px));
-                align-self: flex-start;
+            #mission-finder-wrapper.mf2026-iphone-safari
+            .mf-iphone-launcher-button {
+                min-width: 66px;
+                min-height: 34px;
+                padding: 6px 10px;
+                border: 0;
+                border-radius: 8px;
+                background: rgba(118, 118, 128, 0.28);
+                color: #f2f2f7;
+                font-size: 12px;
+                font-weight: 750;
+                line-height: 1;
+                white-space: nowrap;
+                touch-action: manipulation;
+                -webkit-tap-highlight-color: transparent;
+            }
+
+            #mission-finder-wrapper.mf2026-iphone-safari
+            .mf-iphone-launcher-button.mf2026-active,
+            #mission-finder-wrapper.mf2026-iphone-safari
+            .mf-iphone-launcher-button[aria-pressed="true"] {
+                background: #0a84ff;
+                color: #fff;
+                box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+            }
+
+            #mission-finder-wrapper.mf2026-iphone-safari > .mf2026-panel {
+                position: absolute;
+                top: var(--mf-iphone-panel-top, 42px);
+                right: 0;
+                left: 0;
+                width: 100%;
+                max-width: 100%;
+                max-height: calc(
+                    100vh
+                    - var(--mf-iphone-panel-top, 42px)
+                    - 8px
+                    - env(safe-area-inset-bottom, 0px)
+                );
+                pointer-events: auto;
+                overflow-y: auto;
+                overscroll-behavior: contain;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            @supports (height: 100dvh) {
+                #mission-finder-wrapper.mf2026-iphone-safari > .mf2026-panel {
+                    max-height: calc(
+                        100dvh
+                        - var(--mf-iphone-panel-top, 42px)
+                        - 8px
+                        - env(safe-area-inset-bottom, 0px)
+                    );
+                }
+            }
+
+            #mission-finder-wrapper.mf2026-iphone-safari
+            #control-panel.mf2026-control-collapsed,
+            #mission-finder-wrapper.mf2026-iphone-safari
+            #vehicle-load-list-box.mf2026-load-collapsed {
+                display: none !important;
+            }
+
+            #mission-finder-wrapper.mf2026-iphone-safari
+            .mf2026-control-header-row,
+            #mission-finder-wrapper.mf2026-iphone-safari
+            .mf2026-load-header-row {
+                display: none !important;
             }
 
             #mission-finder-wrapper.mf2026-iphone-safari .mf2026-panel {
@@ -14216,67 +14375,6 @@
                 box-shadow: 0 8px 24px rgba(0, 0, 0, 0.36);
                 -webkit-backdrop-filter: blur(16px) saturate(135%);
                 backdrop-filter: blur(16px) saturate(135%);
-            }
-
-            #mission-finder-wrapper.mf2026-iphone-safari
-            .mf2026-control-header-row,
-            #mission-finder-wrapper.mf2026-iphone-safari
-            .mf2026-load-header-row {
-                gap: 4px;
-            }
-
-            #mission-finder-wrapper.mf2026-iphone-safari .mf2026-header,
-            #mission-finder-wrapper.mf2026-iphone-safari
-            #control-panel.mf2026-control-collapsed .mf2026-header,
-            #mission-finder-wrapper.mf2026-iphone-safari
-            #vehicle-load-list-box.mf2026-load-collapsed .mf2026-header {
-                min-height: 34px;
-                padding: 6px 10px;
-                border-radius: 10px;
-                justify-content: flex-start;
-                text-align: left;
-                font-size: 13px;
-                background: rgba(118, 118, 128, 0.28);
-            }
-
-            #mission-finder-wrapper.mf2026-iphone-safari
-            #mf-control-minimize,
-            #mission-finder-wrapper.mf2026-iphone-safari
-            #mf-load-minimize {
-                width: 34px;
-                min-width: 34px;
-                min-height: 34px;
-                flex: 0 0 34px;
-                padding: 0;
-                border-radius: 10px;
-                font-size: 17px;
-                line-height: 1;
-            }
-
-            #mission-finder-wrapper.mf2026-iphone-safari
-            #control-panel.mf2026-control-collapsed,
-            #mission-finder-wrapper.mf2026-iphone-safari
-            #vehicle-load-list-box.mf2026-load-collapsed {
-                padding: 5px;
-            }
-
-            #mission-finder-wrapper.mf2026-iphone-safari
-            #control-panel.mf2026-control-collapsed > .mf-control-body,
-            #mission-finder-wrapper.mf2026-iphone-safari
-            #vehicle-load-list-box.mf2026-load-collapsed > .mf-load-body {
-                display: none !important;
-            }
-
-            #mission-finder-wrapper.mf2026-iphone-safari
-            .mf2026-control-header-row,
-            #mission-finder-wrapper.mf2026-iphone-safari
-            .mf2026-load-header-row,
-            #mission-finder-wrapper.mf2026-iphone-safari
-            #mf-control-title,
-            #mission-finder-wrapper.mf2026-iphone-safari
-            #mf-load-title {
-                touch-action: manipulation;
-                -webkit-tap-highlight-color: transparent;
             }
 
             #mission-finder-wrapper.mf2026-iphone-safari .mf-control-body {
@@ -14372,11 +14470,6 @@
                 touch-action: manipulation;
             }
 
-            #mission-finder-wrapper.mf2026-iphone-safari .mf2026-drag {
-                cursor: default;
-                touch-action: manipulation;
-            }
-
             #mission-finder-wrapper.mf2026-iphone-safari .mf-load-body {
                 display: flex;
                 flex-direction: column;
@@ -14443,6 +14536,56 @@
         wrapper.classList.toggle(
             'mf2026-iphone-safari',
             missionFinderIphoneSafari
+        );
+
+        const iphoneLauncher =
+            document.createElement('div');
+        iphoneLauncher.id =
+            'mf-iphone-panel-launcher';
+        iphoneLauncher.setAttribute(
+            'role',
+            'group'
+        );
+        iphoneLauncher.setAttribute(
+            'aria-label',
+            'Command Nexus panels'
+        );
+
+        const iphoneMissionLauncherButton =
+            document.createElement('button');
+        iphoneMissionLauncherButton.id =
+            'mf-iphone-mission-launcher';
+        iphoneMissionLauncherButton.type =
+            'button';
+        iphoneMissionLauncherButton.className =
+            'mf-iphone-launcher-button';
+        iphoneMissionLauncherButton.textContent =
+            'Mission';
+        iphoneMissionLauncherButton.setAttribute(
+            'aria-controls',
+            'mf-control-body'
+        );
+
+        const iphoneVehicleLauncherButton =
+            document.createElement('button');
+        iphoneVehicleLauncherButton.id =
+            'mf-iphone-vehicle-launcher';
+        iphoneVehicleLauncherButton.type =
+            'button';
+        iphoneVehicleLauncherButton.className =
+            'mf-iphone-launcher-button';
+        iphoneVehicleLauncherButton.textContent =
+            'Vehicle';
+        iphoneVehicleLauncherButton.setAttribute(
+            'aria-controls',
+            'mf-load-body'
+        );
+
+        iphoneLauncher.appendChild(
+            iphoneMissionLauncherButton
+        );
+        iphoneLauncher.appendChild(
+            iphoneVehicleLauncherButton
         );
 
         const savedPanelLeft =
@@ -14861,9 +15004,31 @@
             );
             panel.dataset.collapsed =
                 String(mfMissionControlCollapsed);
+
+            if (missionFinderIphoneSafari) {
+                const expanded =
+                    !mfMissionControlCollapsed;
+                iphoneMissionLauncherButton.classList.toggle(
+                    'mf2026-active',
+                    expanded
+                );
+                iphoneMissionLauncherButton.setAttribute(
+                    'aria-pressed',
+                    String(expanded)
+                );
+                iphoneMissionLauncherButton.setAttribute(
+                    'aria-expanded',
+                    String(expanded)
+                );
+            }
         }
 
         function toggleMissionControlCollapsed() {
+            if (missionFinderIphoneSafari) {
+                toggleIphoneLauncherPanel('mission');
+                return;
+            }
+
             mfMissionControlCollapsed = !mfMissionControlCollapsed;
             localStorage.setItem(
                 MF_CONTROL_COLLAPSED_KEY,
@@ -14971,6 +15136,9 @@
             </div>
         `;
 
+        if (missionFinderIphoneSafari) {
+            wrapper.appendChild(iphoneLauncher);
+        }
         wrapper.appendChild(panel);
         wrapper.appendChild(loadPanel);
         document.body.appendChild(wrapper);
@@ -15022,9 +15190,31 @@
 
             loadPanel.dataset.collapsed =
                 String(mfVehicleLoadCollapsed);
+
+            if (missionFinderIphoneSafari) {
+                const expanded =
+                    !mfVehicleLoadCollapsed;
+                iphoneVehicleLauncherButton.classList.toggle(
+                    'mf2026-active',
+                    expanded
+                );
+                iphoneVehicleLauncherButton.setAttribute(
+                    'aria-pressed',
+                    String(expanded)
+                );
+                iphoneVehicleLauncherButton.setAttribute(
+                    'aria-expanded',
+                    String(expanded)
+                );
+            }
         }
 
         function toggleVehicleLoadCollapsed() {
+            if (missionFinderIphoneSafari) {
+                toggleIphoneLauncherPanel('vehicle');
+                return;
+            }
+
             mfVehicleLoadCollapsed = !mfVehicleLoadCollapsed;
             localStorage.setItem(
                 MF_VEHICLE_LOAD_COLLAPSED_KEY,
@@ -15039,6 +15229,78 @@
         const loadTitle = loadPanel.querySelector('#mf-load-title');
 
         syncVehicleLoadCollapseState();
+
+        function persistIphoneLauncherPanelState() {
+            localStorage.setItem(
+                MF_CONTROL_COLLAPSED_KEY,
+                String(mfMissionControlCollapsed)
+            );
+            localStorage.setItem(
+                MF_VEHICLE_LOAD_COLLAPSED_KEY,
+                String(mfVehicleLoadCollapsed)
+            );
+        }
+
+        function toggleIphoneLauncherPanel(target) {
+            if (!missionFinderIphoneSafari) return;
+
+            const nextState =
+                getMissionFinderIphonePanelStateForToggle(
+                    target,
+                    mfMissionControlCollapsed,
+                    mfVehicleLoadCollapsed
+                );
+
+            mfMissionControlCollapsed =
+                nextState.missionCollapsed;
+            mfVehicleLoadCollapsed =
+                nextState.vehicleCollapsed;
+
+            persistIphoneLauncherPanelState();
+
+            panel.classList.toggle(
+                'mf2026-control-collapsed',
+                mfMissionControlCollapsed
+            );
+            loadPanel.classList.toggle(
+                'mf2026-load-collapsed',
+                mfVehicleLoadCollapsed
+            );
+
+            syncMissionControlCollapseButton();
+            syncVehicleLoadCollapseState();
+
+            if (!mfVehicleLoadCollapsed) {
+                renderVehicleLoadList();
+                renderSessionPanel();
+            }
+
+            requestAnimationFrame(() => {
+                syncMissionFinderIphoneLauncherPlacement(
+                    wrapper
+                );
+                keepMissionFinderWindowOnScreen(
+                    wrapper
+                );
+            });
+        }
+
+        if (missionFinderIphoneSafari) {
+            iphoneMissionLauncherButton.addEventListener(
+                'click',
+                function(event) {
+                    consumeIphoneDisclosureEvent(event);
+                    toggleIphoneLauncherPanel('mission');
+                }
+            );
+            iphoneVehicleLauncherButton.addEventListener(
+                'click',
+                function(event) {
+                    consumeIphoneDisclosureEvent(event);
+                    toggleIphoneLauncherPanel('vehicle');
+                }
+            );
+        }
 
         if (loadMinimizeButton) {
             loadMinimizeButton.addEventListener(
@@ -15407,6 +15669,158 @@
         return Math.min(92, Math.max(fallback, gutter));
     }
 
+
+
+    function getMissionFinderIphoneNativeControlContainer() {
+        if (!isMissionFinderIphoneSafariWebsite()) {
+            return null;
+        }
+
+        const bounds = getMissionFinderViewportBounds();
+        const selectors = [
+            '.vm--modal .control-btn-container',
+            '.modal .control-btn-container',
+            '.lightbox .control-btn-container',
+            '.control-btn-container'
+        ];
+        const candidates = [];
+
+        selectors.forEach(selector => {
+            try {
+                document.querySelectorAll(selector).forEach(element => {
+                    if (!candidates.includes(element)) {
+                        candidates.push(element);
+                    }
+                });
+            } catch (_error) {}
+        });
+
+        return candidates
+            .map(element => {
+                try {
+                    const style =
+                        window.getComputedStyle(element);
+                    const rect =
+                        element.getBoundingClientRect();
+                    const interactiveCount =
+                        Array.from(
+                            element.querySelectorAll(
+                                'button, a, [role="button"], .lightbox-close, [title]'
+                            )
+                        ).filter(control => {
+                            const controlRect =
+                                control.getBoundingClientRect();
+                            return controlRect.width > 0 &&
+                                controlRect.height > 0;
+                        }).length;
+
+                    if (
+                        style.display === 'none' ||
+                        style.visibility === 'hidden' ||
+                        rect.width <= 0 ||
+                        rect.height <= 0 ||
+                        rect.top > bounds.top + 170 ||
+                        rect.right < bounds.right - 190
+                    ) {
+                        return null;
+                    }
+
+                    return {
+                        element,
+                        rect,
+                        interactiveCount
+                    };
+                } catch (_error) {
+                    return null;
+                }
+            })
+            .filter(Boolean)
+            .sort((left, right) => {
+                const countDifference =
+                    right.interactiveCount -
+                    left.interactiveCount;
+                if (countDifference) return countDifference;
+
+                const topDifference =
+                    left.rect.top -
+                    right.rect.top;
+                if (topDifference) return topDifference;
+
+                return right.rect.right -
+                    left.rect.right;
+            })[0]?.element || null;
+    }
+
+    function syncMissionFinderIphoneLauncherPlacement(panel) {
+        if (!panel) return;
+
+        if (!isMissionFinderIphoneSafariWebsite()) {
+            [
+                '--mf-iphone-launcher-top',
+                '--mf-iphone-launcher-right',
+                '--mf-iphone-launcher-max-width',
+                '--mf-iphone-panel-top'
+            ].forEach(property => {
+                panel.style.removeProperty(property);
+            });
+            return;
+        }
+
+        const bounds = getMissionFinderViewportBounds();
+        const panelRect = panel.getBoundingClientRect();
+        const controlContainer =
+            getMissionFinderIphoneNativeControlContainer();
+
+        let launcherTop = 0;
+        let launcherRight =
+            getMissionFinderIphoneCloseControlGutter() + 4;
+        let launcherMaxWidth = Math.max(
+            132,
+            bounds.width - launcherRight - 8
+        );
+        let expandedPanelTop = 42;
+
+        if (controlContainer) {
+            try {
+                const controlRect =
+                    controlContainer.getBoundingClientRect();
+                launcherTop = Math.max(
+                    0,
+                    controlRect.top - panelRect.top
+                );
+                launcherRight = Math.max(
+                    0,
+                    panelRect.right - controlRect.left + 6
+                );
+                launcherMaxWidth = Math.max(
+                    132,
+                    controlRect.left - panelRect.left - 8
+                );
+                expandedPanelTop = Math.max(
+                    42,
+                    controlRect.bottom - panelRect.top + 6
+                );
+            } catch (_error) {}
+        }
+
+        panel.style.setProperty(
+            '--mf-iphone-launcher-top',
+            `${Math.ceil(launcherTop)}px`
+        );
+        panel.style.setProperty(
+            '--mf-iphone-launcher-right',
+            `${Math.ceil(launcherRight)}px`
+        );
+        panel.style.setProperty(
+            '--mf-iphone-launcher-max-width',
+            `${Math.floor(launcherMaxWidth)}px`
+        );
+        panel.style.setProperty(
+            '--mf-iphone-panel-top',
+            `${Math.ceil(expandedPanelTop)}px`
+        );
+    }
+
     function syncMissionFinderIphoneCloseControlClearance(panel) {
         if (!panel) return;
 
@@ -15422,6 +15836,9 @@
             `${Math.ceil(
                 getMissionFinderIphoneCloseControlGutter()
             )}px`
+        );
+        syncMissionFinderIphoneLauncherPlacement(
+            panel
         );
     }
 
@@ -18430,6 +18847,12 @@ let sessionRuntimeTicker = null;
                 appliedCount += 1;
             }
         });
+
+        syncMissionFinderIphoneLauncherPlacement(
+            document.getElementById(
+                'mission-finder-wrapper'
+            )
+        );
 
         return appliedCount;
     }
