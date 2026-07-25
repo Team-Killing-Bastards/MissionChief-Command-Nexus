@@ -1,0 +1,236 @@
+name: Verify v1.0.24 release delivery
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: verify-v1.0.24-release-delivery
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify GitHub, Greasy Fork and Discord
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'diagnostic/normal-irv-selection'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: main
+          show-progress: false
+
+      - name: Wait for and verify permanent release workflow
+        id: verify
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GREASYFORK_INSTALL_URL: ${{ vars.GREASYFORK_INSTALL_URL }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          RELEASE_TAG: v1.0.24
+          RELEASE_SHA: c610bef883bb1be42869e625e8245b77f05ad0d8
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${GREASYFORK_INSTALL_URL}" ]]; then
+            echo 'GREASYFORK_INSTALL_URL is not configured.'
+            exit 1
+          fi
+
+          RUN_ID=''
+          RUN_URL=''
+          RUN_CONCLUSION=''
+
+          for attempt in $(seq 1 70); do
+            RUN_JSON="$(
+              gh api \
+                "repos/${GITHUB_REPOSITORY}/actions/workflows/release.yml/runs?event=push&per_page=30"
+            )"
+
+            RUN_ID="$(
+              jq -r \
+                --arg tag "${RELEASE_TAG}" \
+                --arg sha "${RELEASE_SHA}" \
+                '.workflow_runs |
+                 map(select(.head_branch == $tag or .head_sha == $sha)) |
+                 sort_by(.created_at) |
+                 reverse |
+                 .[0].id // empty' <<< "${RUN_JSON}"
+            )"
+
+            if [[ -n "${RUN_ID}" ]]; then
+              RUN_URL="$(
+                jq -r \
+                  --argjson run_id "${RUN_ID}" \
+                  '.workflow_runs[] | select(.id == $run_id) | .html_url' \
+                  <<< "${RUN_JSON}"
+              )"
+              RUN_STATUS="$(
+                jq -r \
+                  --argjson run_id "${RUN_ID}" \
+                  '.workflow_runs[] | select(.id == $run_id) | .status' \
+                  <<< "${RUN_JSON}"
+              )"
+              RUN_CONCLUSION="$(
+                jq -r \
+                  --argjson run_id "${RUN_ID}" \
+                  '.workflow_runs[] | select(.id == $run_id) | .conclusion // empty' \
+                  <<< "${RUN_JSON}"
+              )"
+
+              if [[ "${RUN_STATUS}" == 'completed' ]]; then
+                break
+              fi
+            fi
+
+            sleep 20
+          done
+
+          if [[ -z "${RUN_ID}" ]]; then
+            echo 'No v1.0.24 release workflow run was found.'
+            exit 1
+          fi
+
+          if [[ "${RUN_CONCLUSION}" != 'success' ]]; then
+            echo "Release workflow ${RUN_ID} finished with conclusion: ${RUN_CONCLUSION:-unknown}"
+            exit 1
+          fi
+
+          JOBS_JSON="$(
+            gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/jobs?per_page=100"
+          )"
+
+          RELEASE_JOB_CONCLUSION="$(
+            jq -r \
+              '.jobs |
+               map(select(.name == "Package, reconcile, verify and announce userscript release")) |
+               .[0].conclusion // empty' <<< "${JOBS_JSON}"
+          )"
+          DISCORD_STEP_CONCLUSION="$(
+            jq -r \
+              '.jobs[] |
+               select(.name == "Package, reconcile, verify and announce userscript release") |
+               .steps[] |
+               select(.name == "Verify deployment and notify Discord") |
+               .conclusion // empty' <<< "${JOBS_JSON}"
+          )"
+
+          if [[ "${RELEASE_JOB_CONCLUSION}" != 'success' ]]; then
+            echo "Release job conclusion was ${RELEASE_JOB_CONCLUSION:-missing}."
+            exit 1
+          fi
+          if [[ "${DISCORD_STEP_CONCLUSION}" != 'success' ]]; then
+            echo "Discord/deployment step conclusion was ${DISCORD_STEP_CONCLUSION:-missing}."
+            exit 1
+          fi
+
+          RELEASE_JSON="$(
+            gh release view "${RELEASE_TAG}" \
+              --json url,isDraft,isPrerelease,assets,tagName
+          )"
+          RELEASE_URL="$(jq -r '.url' <<< "${RELEASE_JSON}")"
+          IS_DRAFT="$(jq -r '.isDraft' <<< "${RELEASE_JSON}")"
+          IS_PRERELEASE="$(jq -r '.isPrerelease' <<< "${RELEASE_JSON}")"
+
+          if [[ "${IS_DRAFT}" != 'false' || "${IS_PRERELEASE}" != 'false' ]]; then
+            echo 'GitHub release is not a final published release.'
+            exit 1
+          fi
+
+          ASSET='MissionChief-Command-Nexus-1.0.24.user.js'
+          CHECKSUM_ASSET="${ASSET}.sha256"
+          ASSET_COUNT="$(
+            jq -r \
+              --arg asset "${ASSET}" \
+              --arg checksum "${CHECKSUM_ASSET}" \
+              '[.assets[].name | select(. == $asset or . == $checksum)] | length' \
+              <<< "${RELEASE_JSON}"
+          )"
+          if [[ "${ASSET_COUNT}" != '2' ]]; then
+            echo 'GitHub release assets are incomplete.'
+            exit 1
+          fi
+
+          rm -rf /tmp/v1024-release-check
+          mkdir -p /tmp/v1024-release-check
+          gh release download "${RELEASE_TAG}" \
+            --pattern "${ASSET}" \
+            --pattern "${CHECKSUM_ASSET}" \
+            --dir /tmp/v1024-release-check \
+            --clobber
+          (
+            cd /tmp/v1024-release-check
+            sha256sum -c "${CHECKSUM_ASSET}"
+          )
+
+          git show "${RELEASE_SHA}:src/missionchief-command-nexus.user.js" \
+            > /tmp/v1024-expected.user.js
+          cmp --silent \
+            /tmp/v1024-expected.user.js \
+            "/tmp/v1024-release-check/${ASSET}"
+
+          GREASY_OK='false'
+          for attempt in $(seq 1 45); do
+            CACHE_BUSTER="$(date +%s)-${attempt}"
+            if curl \
+              --fail \
+              --location \
+              --silent \
+              --show-error \
+              --retry 2 \
+              --max-time 30 \
+              -H 'Cache-Control: no-cache' \
+              "${GREASYFORK_INSTALL_URL}${GREASYFORK_INSTALL_URL//*\?*/&}${GREASYFORK_INSTALL_URL//*\?*/?}mc_release_check=${CACHE_BUSTER}" \
+              -o /tmp/v1024-greasy.user.js; then
+              if cmp --silent \
+                /tmp/v1024-expected.user.js \
+                /tmp/v1024-greasy.user.js; then
+                GREASY_OK='true'
+                break
+              fi
+            fi
+            sleep 20
+          done
+
+          if [[ "${GREASY_OK}" != 'true' ]]; then
+            echo 'Greasy Fork did not reach exact v1.0.24 source parity in time.'
+            exit 1
+          fi
+
+          CHECKSUM="$(sha256sum /tmp/v1024-expected.user.js | awk '{print $1}')"
+
+          cat > /tmp/v1024-release-receipt.md <<EOF
+          ## v1.0.24 release verified
+
+          - GitHub release: published and final
+          - GitHub assets: userscript and SHA-256 verified
+          - Greasy Fork: exact source parity confirmed
+          - Discord: verified deployment notification step succeeded
+          - Release workflow: ${RUN_URL}
+          - Release page: ${RELEASE_URL}
+          - Source commit: \`${RELEASE_SHA}\`
+          - SHA-256: \`${CHECKSUM}\`
+          EOF
+
+          gh pr comment "${PR_NUMBER}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --body-file /tmp/v1024-release-receipt.md
+
+          echo "release_url=${RELEASE_URL}" >> "${GITHUB_OUTPUT}"
+          echo "run_url=${RUN_URL}" >> "${GITHUB_OUTPUT}"
+          echo "checksum=${CHECKSUM}" >> "${GITHUB_OUTPUT}"
