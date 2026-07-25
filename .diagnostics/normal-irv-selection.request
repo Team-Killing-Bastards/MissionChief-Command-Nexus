@@ -5,3 +5,4 @@ Include the exact current userscript source for local inspection.
 Apply, validate, publish and announce the v1.0.24 corrective build.
 Retry the validated build with resilient Git push diagnostics.
 Stage the validated corrective commit through the protected-branch PR route.
+Trigger the registered protected-branch builder after workflow registration.
