@@ -1,4 +1,4 @@
-name: Temporary export current source
+name: Build validated v1.0.35 missing-requirements priority fix
 
 on:
   pull_request:
@@ -10,33 +10,119 @@ on:
       - reopened
 
 permissions:
-  contents: read
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: build-v1.0.35-missing-requirements-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
 
 jobs:
-  export:
+  build:
+    name: Apply and validate missing-requirements-first fix
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.head.ref == 'diagnostic/missing-requirements-source'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
+
     steps:
-      - uses: actions/checkout@v6
+      - name: Check out latest main
+        uses: actions/checkout@v6
         with:
-          ref: main
           fetch-depth: 0
+          ref: main
           show-progress: false
-      - name: Package current source
+
+      - name: Reconstruct and verify exact v1.0.35 patch
+        env:
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+          EXPECTED_B64_SHA256: 783db9923e341253ffebe21807c7e5e0478d69ca5d006892dcb517bf88500b4f
+          EXPECTED_PATCH_SHA256: 42e4036ec99e41de5debcb1e96d0cf06d9c1c14188d9845720645bb047112bc5
+        shell: bash
         run: |
-          mkdir -p /tmp/current-source/src /tmp/current-source/scripts /tmp/current-source/.github/workflows
-          cp src/missionchief-command-nexus.user.js /tmp/current-source/src/
-          cp README.md CHANGELOG.md /tmp/current-source/
-          cp src/README.md /tmp/current-source/src/
-          cp scripts/*.mjs /tmp/current-source/scripts/ 2>/dev/null || true
-          cp .github/workflows/validate-userscript.yml /tmp/current-source/.github/workflows/
-          git rev-parse HEAD > /tmp/current-source/main-sha.txt
-      - uses: actions/upload-artifact@v4
+          set -euo pipefail
+          git fetch origin "${HEAD_BRANCH}" --force
+          git show "origin/${HEAD_BRANCH}:.diagnostics/v1.0.35-missing-requirements-priority.patch.gz.b64" > /tmp/v1035.patch.gz.b64
+          echo "${EXPECTED_B64_SHA256}  /tmp/v1035.patch.gz.b64" | sha256sum --check
+          base64 --decode /tmp/v1035.patch.gz.b64 | gzip --decompress > /tmp/v1035.patch
+          echo "${EXPECTED_PATCH_SHA256}  /tmp/v1035.patch" | sha256sum --check
+          git apply --check /tmp/v1035.patch
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
         with:
-          name: current-command-nexus-source
-          path: /tmp/current-source
-          if-no-files-found: error
-          retention-days: 1
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Apply exact patch and remove one-use workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git apply /tmp/v1035.patch
+          git rm -f .github/workflows/temporary-export-current-source.yml
+          git diff --check
+
+      - name: Validate complete repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check src/missionchief-command-nexus.user.js
+          node --check scripts/check-missing-requirements-priority.mjs
+          node --check scripts/check-release-notification-single-delivery.mjs
+          node scripts/validate-userscript.mjs
+          node scripts/validate-userscript.mjs --base-ref origin/main
+          node scripts/check-ios-compatibility.mjs
+          node scripts/check-runtime-hardening.mjs
+          node scripts/check-police-irv-fallback.mjs
+          node scripts/check-ios-unit-finder-selection.mjs
+          node scripts/check-ios-mission-requirements-source.mjs
+          node scripts/check-iphone-mission-ui.mjs
+          node scripts/check-open-issues-batch.mjs
+          node scripts/check-missing-requirements-priority.mjs
+          node scripts/check-release-notification-single-delivery.mjs
+          python3 scripts/check_repository.py
+          git diff --check
+
+      - name: Verify focused v1.0.35 contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8')
+          required = {
+              'version': '// @version      1.0.35',
+              'engine': ' * MODULE 2: MISSION FINDER V10.6.100',
+              'explicit vehicles': 'explicitMissingVehicles: true',
+              'explicit personnel': 'explicitMissingPersonnel: true',
+              'authority filter': 'const explicitMissingRequirementsPresent =',
+              'current rows': "currentUpdateRows,\n                    'CURRENT MISSING REQUIREMENTS'",
+              'late recheck': 'const refreshedUpdateRows =',
+              'auto priority': 'const hasEarlyExplicitMissingRequirements =',
+              'total target': "dispatchTargetMode: 'total'",
+          }
+          missing = [label for label, token in required.items() if token not in source]
+          if missing:
+              raise SystemExit('Missing focused v1.0.35 contracts: ' + ', '.join(missing))
+          print('Focused v1.0.35 contracts passed.')
+          PY
+
+      - name: Replace diagnostic branch with validated source
+        env:
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name MartyBlyth
+          git config user.email 32400596+Martyblyth@users.noreply.github.com
+          git add -A
+          git commit -m 'Prioritise current missing requirements before full mission totals'
+          git push --force origin "HEAD:refs/heads/${HEAD_BRANCH}"
+          COMMIT_SHA="$(git rev-parse HEAD)"
+          gh pr comment "${PR_NUMBER}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --body "v1.0.35 source commit \`${COMMIT_SHA}\` passed the complete repository validation suite."
