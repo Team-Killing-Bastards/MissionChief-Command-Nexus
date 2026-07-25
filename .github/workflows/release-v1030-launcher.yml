@@ -34,12 +34,21 @@ jobs:
         run: |
           set -euo pipefail
 
+          LAUNCHER_PATH='.github/workflows/release-v1030-launcher.yml'
           LAUNCHER_SHA="$(git rev-parse HEAD)"
           RELEASE_SHA="$(git rev-parse HEAD^)"
-          CHANGED_FILES="$(git diff --name-only "${RELEASE_SHA}" "${LAUNCHER_SHA}")"
 
-          if [[ "${CHANGED_FILES}" != '.github/workflows/release-v1030-launcher.yml' ]]; then
-            echo 'The launcher commit is not isolated from the clean release source.'
+          # The first commit registered this workflow and the second commit
+          # triggered it. When both commits only touch the launcher, tag the
+          # clean commit immediately before them.
+          PREVIOUS_CHANGED_FILES="$(git diff-tree --no-commit-id --name-only -r HEAD^)"
+          if [[ "${PREVIOUS_CHANGED_FILES}" == "${LAUNCHER_PATH}" ]]; then
+            RELEASE_SHA="$(git rev-parse HEAD^^)"
+          fi
+
+          CHANGED_FILES="$(git diff --name-only "${RELEASE_SHA}" "${LAUNCHER_SHA}")"
+          if [[ "${CHANGED_FILES}" != "${LAUNCHER_PATH}" ]]; then
+            echo 'The launcher commits are not isolated from the clean release source.'
             echo "Changed files: ${CHANGED_FILES}"
             exit 1
           fi
@@ -52,7 +61,7 @@ jobs:
           )"
 
           if [[ "${RELEASE_VERSION}" != '1.0.30' ]]; then
-            echo "Expected clean parent version 1.0.30; found ${RELEASE_VERSION}."
+            echo "Expected clean source version 1.0.30; found ${RELEASE_VERSION}."
             exit 1
           fi
 
