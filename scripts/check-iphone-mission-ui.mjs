@@ -81,8 +81,8 @@ function extractFunction(name) {
   fail(`Unable to find end of ${name}`);
 }
 
-requireText('// @version      1.0.30', 'v1.0.30 metadata');
-requireText(' * MODULE 2: MISSION FINDER V10.6.95', 'V10.6.95 module header');
+requireText('// @version      1.0.31', 'v1.0.31 metadata');
+requireText(' * MODULE 2: MISSION FINDER V10.6.96', 'V10.6.96 module header');
 requireText('function getMissionFinderPhoneScreenShortSide()', 'physical phone-screen detector');
 requireText('function isMissionFinderIphoneSafariWebsite()', 'strict iPhone Safari detector');
 requireText("'mf_control_collapsed_iphone_v2'", 'separate iPhone control state');
@@ -110,6 +110,59 @@ requireText('mf-iphone-native-picker-collapsed', 'collapsed native picker presen
 requireText('mf-iphone-native-picker-strip', 'horizontal native category strip');
 requireText('display: contents !important', 'native picker structural flattening');
 requireText('max-height: 46dvh', 'bounded native quick-select viewport');
+
+requireText("'mf_control_collapsed_iphone_v3'", 'corrected iPhone Mission Control state key');
+requireText("'mf_vehicle_load_collapsed_iphone_v3'", 'corrected iPhone Vehicle Load state key');
+requireText("'mf_iphone_advanced_expanded_v2'", 'corrected iPhone advanced state key');
+requireText("'mf_iphone_native_picker_collapsed_v2'", 'corrected native picker state key');
+requireText("'mf_iphone_collapse_defaults_v1031'", 'one-time collapse-default migration');
+requireText('function migrateMissionFinderIphoneCollapseDefaults()', 'collapse-default migration owner');
+requirePattern(
+  /MF_CONTROL_COLLAPSED_KEY,\s*'true'/,
+  'Mission Control migration default'
+);
+requirePattern(
+  /MF_VEHICLE_LOAD_COLLAPSED_KEY,\s*'true'/,
+  'Vehicle Load migration default'
+);
+requirePattern(
+  /MF_IPHONE_NATIVE_PICKER_COLLAPSED_KEY,\s*'true'/,
+  'native picker migration default'
+);
+requireText('function getMissionFinderIphoneCloseControlGutter()', 'native close-control gutter resolver');
+requireText('function syncMissionFinderIphoneCloseControlClearance(', 'close-control clearance synchroniser');
+requireText("'--mf-iphone-close-gutter'", 'close-control CSS variable');
+requireText('pointer-events: none', 'pointer-transparent iPhone wrapper');
+requireText('pointer-events: auto', 'interactive iPhone panel children');
+requireText('display: none !important', 'explicit collapsed body hiding');
+requireText('consumeIphoneDisclosureEvent', 'deterministic iPhone disclosure ownership');
+requireText('event.stopImmediatePropagation?.()', 'disclosure propagation guard');
+requireText("dragHandle.setAttribute('role', 'button')", 'Mission Control title disclosure semantics');
+requireText("loadTitle.setAttribute('role', 'button')", 'Vehicle Load title disclosure semantics');
+requirePattern(
+  /'aria-controls',\s*'mf-control-body'/,
+  'Mission Control ARIA ownership'
+);
+requirePattern(
+  /'aria-controls',\s*'mf-load-body'/,
+  'Vehicle Load ARIA ownership'
+);
+requirePattern(
+  /savedMissionControlCollapsed == null[\s\S]{0,150}isMissionFinderIphoneSafariWebsite\(\)/,
+  'Mission Control defaults collapsed only on iPhone'
+);
+requirePattern(
+  /#mission-finder-wrapper\.mf2026-iphone-safari #control-panel[\s\S]{0,300}var\(--mf-iphone-close-gutter, 48px\)/,
+  'Mission Control reserves the native close-control corner'
+);
+requirePattern(
+  /function resetMissionFinderIosPosition\([\s\S]{0,800}syncMissionFinderIphoneCloseControlClearance\(panel\)/,
+  'viewport reset reconciles close-control clearance'
+);
+requirePattern(
+  /function keepMissionFinderWindowOnScreen\([\s\S]{0,500}syncMissionFinderIphoneCloseControlClearance\(panel\)/,
+  'visual viewport reconciliation preserves close-control clearance'
+);
 requirePattern(
   /function syncMissionFinderIphoneNativePickerSurfaces\([\s\S]{0,5000}getMissionAccessibleDocuments\(\s*true\s*\)[\s\S]{0,5000}applyMissionFinderIphoneNativePickerToDocument\(/,
   'native picker is applied to every accessible same-origin mission document'

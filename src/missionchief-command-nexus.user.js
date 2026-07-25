@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.30
+// @version      1.0.31
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -8788,7 +8788,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.95
+         * MODULE 2: MISSION FINDER V10.6.96
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -9426,20 +9426,22 @@
 
     const MF_CONTROL_COLLAPSED_KEY =
         isMissionFinderIphoneSafariWebsite()
-            ? 'mf_control_collapsed_iphone_v2'
+            ? 'mf_control_collapsed_iphone_v3'
             : isMissionFinderIosSafariWebsite()
                 ? 'mf_control_collapsed_ios_v1'
                 : 'mf_control_collapsed_v9';
     const MF_VEHICLE_LOAD_COLLAPSED_KEY =
         isMissionFinderIphoneSafariWebsite()
-            ? 'mf_vehicle_load_collapsed_iphone_v2'
+            ? 'mf_vehicle_load_collapsed_iphone_v3'
             : isMissionFinderIosSafariWebsite()
                 ? 'mf_vehicle_load_collapsed_ios_v1'
                 : 'mf_vehicle_load_collapsed_v9';
     const MF_IPHONE_ADVANCED_EXPANDED_KEY =
-        'mf_iphone_advanced_expanded_v1';
+        'mf_iphone_advanced_expanded_v2';
     const MF_IPHONE_NATIVE_PICKER_COLLAPSED_KEY =
-        'mf_iphone_native_picker_collapsed_v1';
+        'mf_iphone_native_picker_collapsed_v2';
+    const MF_IPHONE_COLLAPSE_DEFAULTS_MIGRATION_KEY =
+        'mf_iphone_collapse_defaults_v1031';
     const MF_IPHONE_NATIVE_PICKER_STYLE_ID =
         'mission-finder-iphone-native-picker-styles';
     const MF_IPHONE_NATIVE_PICKER_TOGGLE_ID =
@@ -9447,9 +9449,60 @@
     const MF_IPHONE_NATIVE_PICKER_ROOT_CLASS =
         'mf-command-nexus-iphone-native-picker';
 
+    function migrateMissionFinderIphoneCollapseDefaults() {
+        if (!isMissionFinderIphoneSafariWebsite()) return;
+
+        try {
+            if (
+                localStorage.getItem(
+                    MF_IPHONE_COLLAPSE_DEFAULTS_MIGRATION_KEY
+                ) === 'true'
+            ) {
+                return;
+            }
+
+            localStorage.setItem(
+                MF_CONTROL_COLLAPSED_KEY,
+                'true'
+            );
+            localStorage.setItem(
+                MF_VEHICLE_LOAD_COLLAPSED_KEY,
+                'true'
+            );
+            localStorage.setItem(
+                MF_IPHONE_ADVANCED_EXPANDED_KEY,
+                'false'
+            );
+            localStorage.setItem(
+                MF_IPHONE_NATIVE_PICKER_COLLAPSED_KEY,
+                'true'
+            );
+
+            [
+                'mf_control_collapsed_iphone_v2',
+                'mf_vehicle_load_collapsed_iphone_v2',
+                'mf_iphone_advanced_expanded_v1',
+                'mf_iphone_native_picker_collapsed_v1'
+            ].forEach(key => {
+                localStorage.removeItem(key);
+            });
+
+            localStorage.setItem(
+                MF_IPHONE_COLLAPSE_DEFAULTS_MIGRATION_KEY,
+                'true'
+            );
+        } catch (_error) {}
+    }
+
+    migrateMissionFinderIphoneCollapseDefaults();
+
     const savedVehicleLoadCollapsed =
         localStorage.getItem(
             MF_VEHICLE_LOAD_COLLAPSED_KEY
+        );
+    const savedMissionControlCollapsed =
+        localStorage.getItem(
+            MF_CONTROL_COLLAPSED_KEY
         );
 
     let mfVehicleLoadCollapsed =
@@ -9457,9 +9510,9 @@
             ? isMissionFinderIosSafariWebsite()
             : savedVehicleLoadCollapsed === 'true';
     let mfMissionControlCollapsed =
-        localStorage.getItem(
-            MF_CONTROL_COLLAPSED_KEY
-        ) === 'true';
+        savedMissionControlCollapsed == null
+            ? isMissionFinderIphoneSafariWebsite()
+            : savedMissionControlCollapsed === 'true';
     let mfIphoneAdvancedExpanded =
         localStorage.getItem(
             MF_IPHONE_ADVANCED_EXPANDED_KEY
@@ -9484,6 +9537,9 @@
     const MF_STRICT_TRAINING_SOURCE_PREFIX =
         'mission-finder-live-strict-';
 
+    // V10.6.96: the strict iPhone command surfaces now migrate to collapsed
+    // defaults, own deterministic touch/keyboard disclosure controls and reserve
+    // a pointer-transparent upper-right gutter for MissionChief's native close X.
     // V10.6.95: open-issue corrective batch. Exact type-57 CRVs and type-85
     // Control Vans now own their requirements; Search Advisors route to Control
     // Vans; current data-requirement-type=vehicles Missing Vehicles elements are
@@ -14110,10 +14166,12 @@
 
             /* iPhone Safari only. iPad remains on the established iOS layout. */
             #mission-finder-wrapper.mf2026-iphone-safari {
+                --mf-iphone-close-gutter: 48px;
                 top: calc(4px + env(safe-area-inset-top, 0px));
                 right: calc(4px + env(safe-area-inset-right, 0px));
                 left: calc(4px + env(safe-area-inset-left, 0px));
                 gap: 4px;
+                pointer-events: none;
                 max-height: calc(
                     100vh
                     - 8px
@@ -14137,6 +14195,16 @@
                         - env(safe-area-inset-bottom, 0px)
                     );
                 }
+            }
+
+            #mission-finder-wrapper.mf2026-iphone-safari > .mf2026-panel {
+                pointer-events: auto;
+            }
+
+            #mission-finder-wrapper.mf2026-iphone-safari #control-panel {
+                width: calc(100% - var(--mf-iphone-close-gutter, 48px));
+                max-width: calc(100% - var(--mf-iphone-close-gutter, 48px));
+                align-self: flex-start;
             }
 
             #mission-finder-wrapper.mf2026-iphone-safari .mf2026-panel {
@@ -14190,6 +14258,25 @@
             #mission-finder-wrapper.mf2026-iphone-safari
             #vehicle-load-list-box.mf2026-load-collapsed {
                 padding: 5px;
+            }
+
+            #mission-finder-wrapper.mf2026-iphone-safari
+            #control-panel.mf2026-control-collapsed > .mf-control-body,
+            #mission-finder-wrapper.mf2026-iphone-safari
+            #vehicle-load-list-box.mf2026-load-collapsed > .mf-load-body {
+                display: none !important;
+            }
+
+            #mission-finder-wrapper.mf2026-iphone-safari
+            .mf2026-control-header-row,
+            #mission-finder-wrapper.mf2026-iphone-safari
+            .mf2026-load-header-row,
+            #mission-finder-wrapper.mf2026-iphone-safari
+            #mf-control-title,
+            #mission-finder-wrapper.mf2026-iphone-safari
+            #mf-load-title {
+                touch-action: manipulation;
+                -webkit-tap-highlight-color: transparent;
             }
 
             #mission-finder-wrapper.mf2026-iphone-safari .mf-control-body {
@@ -14412,6 +14499,7 @@
 
         const controlBody = document.createElement('div');
         controlBody.className = 'mf-control-body';
+        controlBody.id = 'mf-control-body';
 
         const statusBox = document.createElement('div');
         statusBox.id = 'status-box';
@@ -14756,9 +14844,23 @@
                 controlMinimizeBtn.title
             );
             controlMinimizeBtn.setAttribute(
+                'aria-controls',
+                'mf-control-body'
+            );
+            controlMinimizeBtn.setAttribute(
                 'aria-expanded',
                 String(expanded)
             );
+            dragHandle.setAttribute(
+                'aria-controls',
+                'mf-control-body'
+            );
+            dragHandle.setAttribute(
+                'aria-expanded',
+                String(expanded)
+            );
+            panel.dataset.collapsed =
+                String(mfMissionControlCollapsed);
         }
 
         function toggleMissionControlCollapsed() {
@@ -14784,18 +14886,48 @@
 
         syncMissionControlCollapseButton();
 
+        function consumeIphoneDisclosureEvent(event) {
+            if (!missionFinderIphoneSafari || !event) return;
+            event.preventDefault();
+            event.stopPropagation();
+            event.stopImmediatePropagation?.();
+        }
+
         controlMinimizeBtn.addEventListener(
             'click',
-            toggleMissionControlCollapsed
+            function(event) {
+                consumeIphoneDisclosureEvent(event);
+                toggleMissionControlCollapsed();
+            }
         );
-        dragHandle.addEventListener('click', function() {
-            if (
-                missionFinderIphoneSafari ||
-                mfMissionControlCollapsed
-            ) {
+
+        dragHandle.addEventListener('click', function(event) {
+            if (missionFinderIphoneSafari) {
+                consumeIphoneDisclosureEvent(event);
+                toggleMissionControlCollapsed();
+                return;
+            }
+
+            if (mfMissionControlCollapsed) {
                 toggleMissionControlCollapsed();
             }
         });
+
+        if (missionFinderIphoneSafari) {
+            dragHandle.setAttribute('role', 'button');
+            dragHandle.tabIndex = 0;
+            dragHandle.addEventListener('keydown', function(event) {
+                if (
+                    event.key !== 'Enter' &&
+                    event.key !== ' '
+                ) {
+                    return;
+                }
+
+                consumeIphoneDisclosureEvent(event);
+                toggleMissionControlCollapsed();
+            });
+        }
 
         const loadPanel = document.createElement('div');
         loadPanel.id = 'vehicle-load-list-box';
@@ -14804,10 +14936,10 @@
         loadPanel.innerHTML = `
             <div class="mf2026-load-header-row">
                 <div id="mf-load-title" class="mf2026-header">Vehicle Load List</div>
-                <button id="mf-load-minimize" class="mf2026-button" title="Minimize / expand vehicle load list">${missionFinderIphoneSafari ? (mfVehicleLoadCollapsed ? '▾' : '▴') : (mfVehicleLoadCollapsed ? '+' : '−')}</button>
+                <button id="mf-load-minimize" type="button" class="mf2026-button" title="Minimize / expand vehicle load list">${missionFinderIphoneSafari ? (mfVehicleLoadCollapsed ? '▾' : '▴') : (mfVehicleLoadCollapsed ? '+' : '−')}</button>
             </div>
 
-            <div class="mf-load-body">
+            <div id="mf-load-body" class="mf-load-body">
                 <div class="mf2026-box">
                     <div class="mf2026-section-title">Progress</div>
                     <div id="vehicle-load-summary" class="mf2026-small">No mission loaded</div>
@@ -14843,26 +14975,62 @@
         wrapper.appendChild(loadPanel);
         document.body.appendChild(wrapper);
 
+        function syncVehicleLoadCollapseState() {
+            const expanded = !mfVehicleLoadCollapsed;
+            loadPanel.classList.toggle(
+                'mf2026-load-collapsed',
+                mfVehicleLoadCollapsed
+            );
+
+            const minimizeButton =
+                loadPanel.querySelector('#mf-load-minimize');
+            const title =
+                loadPanel.querySelector('#mf-load-title');
+
+            if (minimizeButton) {
+                minimizeButton.textContent =
+                    missionFinderIphoneSafari
+                        ? (expanded ? '▴' : '▾')
+                        : (expanded ? '−' : '+');
+                minimizeButton.title = expanded
+                    ? 'Collapse Vehicle Load List'
+                    : 'Expand Vehicle Load List';
+                minimizeButton.setAttribute(
+                    'aria-label',
+                    minimizeButton.title
+                );
+                minimizeButton.setAttribute(
+                    'aria-controls',
+                    'mf-load-body'
+                );
+                minimizeButton.setAttribute(
+                    'aria-expanded',
+                    String(expanded)
+                );
+            }
+
+            if (title) {
+                title.setAttribute(
+                    'aria-controls',
+                    'mf-load-body'
+                );
+                title.setAttribute(
+                    'aria-expanded',
+                    String(expanded)
+                );
+            }
+
+            loadPanel.dataset.collapsed =
+                String(mfVehicleLoadCollapsed);
+        }
+
         function toggleVehicleLoadCollapsed() {
             mfVehicleLoadCollapsed = !mfVehicleLoadCollapsed;
             localStorage.setItem(
                 MF_VEHICLE_LOAD_COLLAPSED_KEY,
                 String(mfVehicleLoadCollapsed)
             );
-            loadPanel.classList.toggle('mf2026-load-collapsed', mfVehicleLoadCollapsed);
-
-            const minimizeButton = loadPanel.querySelector('#mf-load-minimize');
-            if (minimizeButton) {
-                minimizeButton.textContent =
-                    missionFinderIphoneSafari
-                        ? (mfVehicleLoadCollapsed ? '▾' : '▴')
-                        : (mfVehicleLoadCollapsed ? '+' : '−');
-                minimizeButton.setAttribute(
-                    'aria-expanded',
-                    String(!mfVehicleLoadCollapsed)
-                );
-            }
-
+            syncVehicleLoadCollapseState();
             renderVehicleLoadList();
             renderSessionPanel();
         }
@@ -14870,18 +15038,49 @@
         const loadMinimizeButton = loadPanel.querySelector('#mf-load-minimize');
         const loadTitle = loadPanel.querySelector('#mf-load-title');
 
+        syncVehicleLoadCollapseState();
+
         if (loadMinimizeButton) {
-            loadMinimizeButton.addEventListener('click', toggleVehicleLoadCollapsed);
+            loadMinimizeButton.addEventListener(
+                'click',
+                function(event) {
+                    consumeIphoneDisclosureEvent(event);
+                    toggleVehicleLoadCollapsed();
+                }
+            );
         }
 
         if (loadTitle) {
-            loadTitle.addEventListener('click', function() {
-                if (
-                    missionFinderIphoneSafari ||
-                    mfVehicleLoadCollapsed
-                ) {
+            if (missionFinderIphoneSafari) {
+                loadTitle.setAttribute('role', 'button');
+                loadTitle.tabIndex = 0;
+            }
+
+            loadTitle.addEventListener('click', function(event) {
+                if (missionFinderIphoneSafari) {
+                    consumeIphoneDisclosureEvent(event);
+                    toggleVehicleLoadCollapsed();
+                    return;
+                }
+
+                if (mfVehicleLoadCollapsed) {
                     toggleVehicleLoadCollapsed();
                 }
+            });
+
+            loadTitle.addEventListener('keydown', function(event) {
+                if (
+                    !missionFinderIphoneSafari ||
+                    (
+                        event.key !== 'Enter' &&
+                        event.key !== ' '
+                    )
+                ) {
+                    return;
+                }
+
+                consumeIphoneDisclosureEvent(event);
+                toggleVehicleLoadCollapsed();
             });
         }
 
@@ -15145,6 +15344,87 @@
         };
     }
 
+    function getMissionFinderIphoneCloseControlGutter() {
+        const fallback = 48;
+
+        if (!isMissionFinderIphoneSafariWebsite()) {
+            return 0;
+        }
+
+        const bounds = getMissionFinderViewportBounds();
+        const selectors = [
+            '.control-btn-container .lightbox-close[title="Close"]',
+            '.vm--modal .lightbox-close[title="Close"]',
+            '.vm--modal-close',
+            '.lightbox-close[aria-label="Close"]',
+            'button.close[aria-label="Close"]'
+        ];
+        const candidates = [];
+
+        selectors.forEach(selector => {
+            try {
+                document.querySelectorAll(selector).forEach(element => {
+                    if (!candidates.includes(element)) {
+                        candidates.push(element);
+                    }
+                });
+            } catch (_error) {}
+        });
+
+        let gutter = fallback;
+
+        candidates.forEach(element => {
+            if (
+                !element ||
+                element.isConnected === false ||
+                element.closest?.('#mission-finder-wrapper')
+            ) {
+                return;
+            }
+
+            try {
+                const style = window.getComputedStyle(element);
+                const rect = element.getBoundingClientRect();
+
+                if (
+                    style.display === 'none' ||
+                    style.visibility === 'hidden' ||
+                    rect.width <= 0 ||
+                    rect.height <= 0 ||
+                    rect.top > bounds.top + 150 ||
+                    rect.right < bounds.right - 150
+                ) {
+                    return;
+                }
+
+                gutter = Math.max(
+                    gutter,
+                    bounds.right - rect.left + 8
+                );
+            } catch (_error) {}
+        });
+
+        return Math.min(92, Math.max(fallback, gutter));
+    }
+
+    function syncMissionFinderIphoneCloseControlClearance(panel) {
+        if (!panel) return;
+
+        if (!isMissionFinderIphoneSafariWebsite()) {
+            panel.style.removeProperty(
+                '--mf-iphone-close-gutter'
+            );
+            return;
+        }
+
+        panel.style.setProperty(
+            '--mf-iphone-close-gutter',
+            `${Math.ceil(
+                getMissionFinderIphoneCloseControlGutter()
+            )}px`
+        );
+    }
+
     function resetMissionFinderIosPosition(panel, reason) {
         if (
             !panel
@@ -15158,6 +15438,7 @@
         panel.style.right = '';
         panel.style.bottom = '';
         panel.style.width = '';
+        syncMissionFinderIphoneCloseControlClearance(panel);
         panel.style.visibility = 'visible';
 
         localStorage.removeItem(MF_PANEL_LEFT_KEY);
@@ -15257,6 +15538,7 @@
             && !panel.style.left
             && !panel.style.top
         ) {
+            syncMissionFinderIphoneCloseControlClearance(panel);
             panel.style.visibility = 'visible';
             return;
         }

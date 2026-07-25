@@ -17,7 +17,7 @@
 </tr>
 </table>
 
-**Current version:** `1.0.30` · **Mission Finder engine:** `V10.6.95` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
+**Current version:** `1.0.31` · **Mission Finder engine:** `V10.6.96` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)
@@ -180,12 +180,12 @@ Auto Mode validates readiness and final selected-unit state before dispatch. Cro
 
 ### iPhone Safari Mission Finder command card
 
-- Mission Control uses a compact iPhone-only command card derived from the supplied mobile screen recording.
+- Mission Control uses a compact iPhone-only command card derived from the supplied mobile screen recordings; Mission Control, Vehicle Load List and Unit Quick Select now start collapsed and expose deterministic touch-safe disclosures.
 - Primary mission actions remain immediately available in a compact two-column grid; Mission Ready Delay and Queue Restart sit behind a dedicated Settings disclosure.
 - Vehicle Load List remains independently collapsible and uses bounded internal scrolling rather than consuming the entire mission viewport.
 - MissionChief's native unit quick-select surface is also compacted: it defaults behind one **Unit Quick Select** disclosure, then opens into a horizontal category strip and a two-column internally scrolling grid.
 - The native controls are styled in their owning mission document, including same-origin mission iframes; original `search_attribute` links and click behaviour remain intact.
-- Safe-area insets, `visualViewport`, dynamic viewport height and Safari address-bar changes are handled without enabling this layout on iPad or desktop. Safari **Request Desktop Website** sessions on a physical iPhone are recognised by phone-sized screen dimensions rather than the misleading `MacIntel` label.
+- Safe-area insets, `visualViewport`, dynamic viewport height and Safari address-bar changes are handled without enabling this layout on iPad or desktop. Safari **Request Desktop Website** sessions on a physical iPhone are recognised by phone-sized screen dimensions rather than the misleading `MacIntel` label. A pointer-transparent upper-right gutter keeps MissionChief's native mission-close X visible and tappable.
 
 ### iOS Safari Unit Finder selection
 
