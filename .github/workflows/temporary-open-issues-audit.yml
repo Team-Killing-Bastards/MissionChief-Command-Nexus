@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   audit:
-    name: Export exact current source and focused contexts
+    name: Export exact current source
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.head.ref == 'agent/fix-open-issues-batch'
@@ -33,7 +33,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           show-progress: false
 
-      - name: Build focused source report
+      - name: Package exact source and validation files
         shell: bash
         run: |
           set -euo pipefail
@@ -41,58 +41,11 @@ jobs:
           mkdir -p /tmp/open-issues-audit/scripts
           mkdir -p /tmp/open-issues-audit/.github/workflows
           cp src/missionchief-command-nexus.user.js /tmp/open-issues-audit/src/
-          cp README.md CHANGELOG.md src/README.md /tmp/open-issues-audit/
-          cp scripts/*.mjs scripts/*.py /tmp/open-issues-audit/scripts/ 2>/dev/null || true
+          cp src/README.md /tmp/open-issues-audit/src/
+          cp README.md CHANGELOG.md /tmp/open-issues-audit/
+          find scripts -maxdepth 1 -type f \( -name '*.mjs' -o -name '*.py' \) -exec cp {} /tmp/open-issues-audit/scripts/ \;
           cp .github/workflows/validate-userscript.yml /tmp/open-issues-audit/.github/workflows/
-
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-
-          source_path = Path('src/missionchief-command-nexus.user.js')
-          lines = source_path.read_text(encoding='utf-8').splitlines()
-          terms = [
-              r'PSU', r'Public Support Unit', r'Police Support Unit',
-              r'CRV', r'Control Van', r'Search Advisor', r'SARTEC',
-              r'Missing Vehicles', r'data-requirement-type',
-              r'Police Officers', r'getPoliceOfficerVehicleRequirement',
-              r'Critical Care', r'HEMS', r'Air Ambulance',
-              r'personnel.*registry', r'registry.*vehicle',
-              r'zuweisung', r'Remove binding', r'btn-assigned',
-          ]
-          regex = re.compile('|'.join(f'(?:{term})' for term in terms), re.I)
-          matched = []
-          for index, line in enumerate(lines, start=1):
-              if regex.search(line):
-                  matched.append(index)
-
-          intervals = []
-          for line_no in matched:
-              start = max(1, line_no - 30)
-              end = min(len(lines), line_no + 45)
-              if intervals and start <= intervals[-1][1] + 5:
-                  intervals[-1] = (intervals[-1][0], max(intervals[-1][1], end))
-              else:
-                  intervals.append((start, end))
-
-          report = []
-          report.append(f'Current source lines: {len(lines)}')
-          report.append(f'Matched lines: {len(matched)}')
-          report.append(f'Context blocks: {len(intervals)}')
-          report.append('')
-          for block_no, (start, end) in enumerate(intervals, start=1):
-              report.append(f'===== BLOCK {block_no}: lines {start}-{end} =====')
-              for number in range(start, end + 1):
-                  report.append(f'{number:05d}: {lines[number - 1]}')
-              report.append('')
-
-          Path('/tmp/open-issues-audit/focused-contexts.txt').write_text(
-              '\n'.join(report) + '\n', encoding='utf-8'
-          )
-          Path('/tmp/open-issues-audit/source-metadata.txt').write_text(
-              '\n'.join(lines[:20]) + '\n', encoding='utf-8'
-          )
-          PY
+          head -n 20 src/missionchief-command-nexus.user.js > /tmp/open-issues-audit/source-metadata.txt
 
       - name: Upload current source audit
         uses: actions/upload-artifact@v4
