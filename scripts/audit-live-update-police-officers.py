@@ -63,17 +63,35 @@ out = [
     '',
 ]
 
-for function_name in [
+function_names = [
     'getLiveRequirementDispatchTarget',
     'readLiveMissionRequirementRow',
     'getPoliceOfficerVehicleRequirement',
-    'getPoliceOfficerVehicleRequirementFromText',
-    'getPoliceOfficerRequirementsFromText',
-    'getMissingPersonnelRequirementsFromText',
-    'recordUpdateRequirement',
-]:
+    'getSupportedMissingPersonnelRowsFromText',
+    'hasSupportedMissingPersonnelUpdate',
+    'getSupportedTrainedPersonnelRequirementsFromText',
+    'isRivOrMajorFoamTenderRequirement',
+    'isRivRequirement',
+    'isMajorFoamTenderVehicleCheckbox',
+    'getRequirementVehicleCandidates',
+    'getRequirementSelectionCandidates',
+    'selectRivOrMajorFoamTenderRequirement',
+]
+
+for function_name in function_names:
     out.append(f'===== FUNCTION {function_name} =====')
     out.append(extract_function(function_name))
+
+out.append('===== MATCHING FUNCTION INDEX =====')
+function_re = re.compile(r'^\s*(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(')
+for line_no, line in enumerate(lines, 1):
+    match = function_re.search(line)
+    if not match:
+        continue
+    name = match.group(1)
+    if re.search(r'missing|personnel|police|officer|rescue|riv|foam|candidate|requirement', name, re.I):
+        out.append(f'{line_no}: {name}')
+out.append('')
 
 for pattern in [
     r'Rescue Support Vehicles?',
@@ -81,6 +99,8 @@ for pattern in [
     r'Missing Personnel',
     r'Police Officers?',
     r'Fire Engine or RIV',
+    r'Final missing units',
+    r'missingRows\.push',
     r'normalise.*Requirement',
     r'foam',
 ]:
