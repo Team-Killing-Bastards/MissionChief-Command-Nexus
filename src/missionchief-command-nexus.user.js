@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.29
+// @version      1.0.30
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -38,7 +38,7 @@
 
     const UNIT_VERSION = '3.3.8';
     const STATION_VERSION = '1.3.3';
-    const PERSONNEL_VERSION = '1.3.2';
+    const PERSONNEL_VERSION = '1.3.3';
     const PERSONNEL_TRAINING_CODE = 'critical_care';
     const PERSONNEL_TRAINING_LABEL = 'Critical Care';
     const PERSONNEL_TARGET_VEHICLE_TYPE_ID = '5';
@@ -5723,6 +5723,47 @@
         });
     }
 
+    function getPersonnelVehicleTypeIdFromRow(row) {
+        if (!row) return '';
+
+        const typedElements = [
+            row,
+            ...row.querySelectorAll(
+                '[vehicle_type_id], [data-vehicle-type-id], ' +
+                '[vehicle_type], [data-vehicle-type]'
+            )
+        ];
+
+        const candidates = typedElements.flatMap(element => [
+            element.getAttribute?.('vehicle_type_id'),
+            element.getAttribute?.('data-vehicle-type-id'),
+            element.getAttribute?.('vehicle_type'),
+            element.getAttribute?.('data-vehicle-type')
+        ]);
+
+        const numericTypeId = candidates
+            .map(value => String(value || '').trim())
+            .find(value => /^\d+$/.test(value));
+
+        if (numericTypeId) return numericTypeId;
+
+        const typeText = cleanText([
+            row.getAttribute?.('vehicle_type_caption'),
+            row.getAttribute?.('data-vehicle-type-caption'),
+            row.querySelector?.('[vehicle_type_caption]')?.getAttribute?.('vehicle_type_caption'),
+            row.querySelector?.('[data-vehicle-type-caption]')?.getAttribute?.('data-vehicle-type-caption'),
+            row.querySelector?.('td:nth-child(2)')?.textContent
+        ].filter(Boolean).join(' '));
+
+        // MissionChief UK PSU Carrier. This fallback is used only when the
+        // station row exposes no numeric vehicle-type attribute at all.
+        if (/\b(?:PSU|Police\s+Support\s+Unit)\s+Carrier\b/i.test(typeText)) {
+            return '51';
+        }
+
+        return '';
+    }
+
     function getPersonnelVehicleQueue(doc, allowedTypeIds) {
         const allowed = new Set((allowedTypeIds || []).map(String));
         const allowAllVehicleTypes = allowed.size === 0;
@@ -5730,8 +5771,7 @@
         const queue = [];
 
         for (const row of [...doc.querySelectorAll('#vehicle_table tr')]) {
-            const image = row.querySelector('img[vehicle_type_id]');
-            const vehicleTypeId = image?.getAttribute('vehicle_type_id') || '';
+            const vehicleTypeId = getPersonnelVehicleTypeIdFromRow(row);
             if (!allowAllVehicleTypes && !allowed.has(vehicleTypeId)) continue;
 
             const vehicleLinks = [...row.querySelectorAll('a[href*="/vehicles/"]')];
@@ -7115,7 +7155,9 @@
 
 
     function parseTrainingCodes(row) {
-        const raw = row?.getAttribute('data-filterable-by') || '[]';
+        const raw = row?.getAttribute('data-filterable-by') ||
+            row?.querySelector?.('[data-filterable-by]')?.getAttribute('data-filterable-by') ||
+            '[]';
         try {
             const parsed = JSON.parse(raw);
             return Array.isArray(parsed) ? parsed.map(String) : [];
@@ -7131,45 +7173,111 @@
 
     function parseVehicleAssignmentPage(doc, vehicleId) {
         const currentVehicleId = String(vehicleId || '');
-        const vehicleTypeId = doc.querySelector('.vehicle_image_reload[vehicle_type_id]')?.getAttribute('vehicle_type_id') || '';
-        const rows = [...doc.querySelectorAll('#personal_table tbody tr[data-filterable-by]')]
+        const vehicleTypeElement = doc.querySelector(
+            '.vehicle_image_reload[vehicle_type_id], ' +
+            '[vehicle_type_id], [data-vehicle-type-id]'
+        );
+        const vehicleTypeId = String(
+            vehicleTypeElement?.getAttribute('vehicle_type_id') ||
+            vehicleTypeElement?.getAttribute('data-vehicle-type-id') ||
+            ''
+        );
+
+        const rows = [...doc.querySelectorAll('#personal_table tbody tr')]
             .map(row => {
                 const cells = [...row.children];
-                const actionLink = row.querySelector(`a[href*="/vehicles/${currentVehicleId}/zuweisungDo/"]`)
-                    || row.querySelector('a[href*="/zuweisungDo/"]');
+                const actionControls = [...row.querySelectorAll(
+                    'a[href*="/zuweisungDo/"], button, ' +
+                    'input[type="submit"], input[type="button"], ' +
+                    '[personal_id], [data-personal-id], .btn-assigned'
+                )];
+                const visibleActionControls = actionControls.filter(control => {
+                    const style = String(control.getAttribute?.('style') || '').toLowerCase();
+                    const hiddenByClass = control.classList?.contains('hidden') ||
+                        control.classList?.contains('d-none');
+                    return !(
+                        control.hidden ||
+                        control.getAttribute?.('aria-hidden') === 'true' ||
+                        hiddenByClass ||
+                        /display\s*:\s*none|visibility\s*:\s*hidden/.test(style)
+                    );
+                });
+
+                const exactActionLink = actionControls.find(control => {
+                    const href = control.getAttribute?.('href') || '';
+                    return href.includes(`/vehicles/${currentVehicleId}/zuweisungDo/`);
+                });
+
+                const assignedControl = visibleActionControls.find(control => {
+                    const text = cleanText(
+                        control?.innerText ||
+                        control?.textContent ||
+                        control?.value ||
+                        ''
+                    );
+                    return !!(
+                        control?.classList?.contains('btn-assigned') ||
+                        /remove\s+binding/i.test(text)
+                    );
+                });
+
+                const statusControl = assignedControl || exactActionLink || actionControls[0] || null;
+                const actionLink = exactActionLink || actionControls.find(control => control.tagName === 'A') || null;
+
+                const personnelIdCandidates = [
+                    statusControl?.getAttribute?.('personal_id'),
+                    statusControl?.getAttribute?.('data-personal-id'),
+                    actionLink?.getAttribute?.('personal_id'),
+                    actionLink?.getAttribute?.('data-personal-id'),
+                    row.getAttribute?.('personal_id'),
+                    row.getAttribute?.('data-personal-id'),
+                    row.id?.match(/personal_(\d+)/)?.[1],
+                    actionLink?.getAttribute?.('href')?.match(/\/zuweisungDo\/(\d+)/)?.[1],
+                    statusControl?.getAttribute?.('formaction')?.match(/\/zuweisungDo\/(\d+)/)?.[1]
+                ];
+
                 const personnelId = String(
-                    actionLink?.getAttribute('personal_id') ||
-                    row.id?.match(/personal_(\d+)/)?.[1] ||
-                    actionLink?.getAttribute('href')?.match(/\/zuweisungDo\/(\d+)/)?.[1] ||
+                    personnelIdCandidates.find(value => /^\d+$/.test(String(value || '').trim())) ||
                     ''
                 );
-                const classes = actionLink ? [...actionLink.classList] : [];
+
                 const assignedVehicleLink = [...row.querySelectorAll('a[href^="/vehicles/"]')].find(link => {
                     const href = link.getAttribute('href') || '';
                     return /^\/vehicles\/\d+\/?(?:[?#].*)?$/.test(href);
                 });
-                const detectedAssignedVehicleId = getVehicleIdFromHref(assignedVehicleLink?.getAttribute('href') || '');
-                const actionText = cleanText(
-                    actionLink?.innerText ||
-                    actionLink?.textContent ||
-                    actionLink?.value ||
-                    ''
+                const detectedAssignedVehicleId = getVehicleIdFromHref(
+                    assignedVehicleLink?.getAttribute('href') || ''
                 );
-                const assignedHere =
-                    classes.includes('btn-assigned') ||
-                    /remove\s+binding/i.test(actionText);
-                const assignedElsewhere = classes.includes('btn-warning');
-                const available = classes.includes('btn-success') && !assignedHere && !assignedElsewhere;
 
-                // Do not treat a displayed "In a Vehicle" link as an active binding by
-                // itself. On MissionChief, green btn-success rows can still carry an old
-                // or preferred vehicle link. Actual bindings are identified only by:
-                //   btn-assigned = assigned to the page's current vehicle
-                //   btn-warning  = assigned to a different vehicle
-                //   btn-success  = available to assign
+                const assignedHere = visibleActionControls.some(control => {
+                    const text = cleanText(
+                        control?.innerText ||
+                        control?.textContent ||
+                        control?.value ||
+                        ''
+                    );
+                    return !!(
+                        control?.classList?.contains('btn-assigned') ||
+                        /remove\s+binding/i.test(text)
+                    );
+                });
+                const assignedElsewhere = !assignedHere && visibleActionControls.some(
+                    control => control?.classList?.contains('btn-warning')
+                );
+                const available = !assignedHere && !assignedElsewhere && visibleActionControls.some(
+                    control => control?.classList?.contains('btn-success')
+                );
+
                 const assignedVehicleId = assignedHere
                     ? currentVehicleId
                     : (assignedElsewhere ? detectedAssignedVehicleId : '');
+
+                const assignHref = String(
+                    exactActionLink?.getAttribute?.('href') ||
+                    actionLink?.getAttribute?.('href') ||
+                    statusControl?.getAttribute?.('formaction') ||
+                    ''
+                );
 
                 return {
                     personnelId,
@@ -7182,7 +7290,7 @@
                     available,
                     assignedElsewhere,
                     displayedVehicleId: detectedAssignedVehicleId,
-                    assignHref: actionLink?.getAttribute('href') || ''
+                    assignHref
                 };
             })
             .filter(person => person.personnelId);
@@ -8680,7 +8788,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.94
+         * MODULE 2: MISSION FINDER V10.6.95
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -9376,6 +9484,13 @@
     const MF_STRICT_TRAINING_SOURCE_PREFIX =
         'mission-finder-live-strict-';
 
+    // V10.6.95: open-issue corrective batch. Exact type-57 CRVs and type-85
+    // Control Vans now own their requirements; Search Advisors route to Control
+    // Vans; current data-requirement-type=vehicles Missing Vehicles elements are
+    // parsed even beside the live panel; generic Critical Care chooses the nearest
+    // eligible type-9 HEMS or exact-registry-verified trained type-5 Ambulance;
+    // and the Personnel registry detects PSU/type-51 vehicles plus broader exact
+    // assignment controls without weakening exact vehicle-ID ownership.
     // V10.6.94: iPhone Safari desktop-site sessions that identify as MacIntel
     // now enter the compact phone layout when the physical screen short side is
     // phone-sized. iPad remains excluded by its larger physical screen even in
@@ -10221,8 +10336,11 @@
         "SAR Commanders": "Control Van",
         "Required SAR Commander": "Control Van",
         "Required SAR Commanders": "Control Van",
-        "Search Advisor": "SARTEC",
-        "Search Advisors": "SARTEC",
+        "Search Advisor": "Control Van",
+        "Search Advisors": "Control Van",
+        "HEMS": "Air Ambulance",
+        "HEMS Helicopter": "Air Ambulance",
+        "HEMS Helicopters": "Air Ambulance",
         "Operational Support Van": "Operational Support Van",
         "Operational Support Vans": "Operational Support Van",
         "Operational Support or SAR Vehicle": "Operational Support Van",
@@ -11267,6 +11385,172 @@
         });
     }
 
+
+    function isCrvRequirement(originalName, mappedName) {
+        const raw = normaliseVehicleText(originalName);
+        const mapped = normaliseVehicleText(mappedName);
+        const supported = new Set([
+            'crv', 'crvs',
+            'coastguard rescue vehicle', 'coastguard rescue vehicles',
+            'required crv', 'required crvs',
+            'required coastguard rescue vehicle',
+            'required coastguard rescue vehicles'
+        ]);
+        return supported.has(raw) || supported.has(mapped);
+    }
+
+    function isCrvVehicleCheckbox(input) {
+        if (!input) return false;
+        const typeIdentifiers = getVehicleTypeIdentifiers(input);
+        if (typeIdentifiers.length > 0) return typeIdentifiers.includes('57');
+
+        return getExtendedVehicleValues(input).some(value => {
+            const cleaned = normaliseVehicleText(value);
+            return (
+                cleaned === 'crv' ||
+                cleaned === 'crvs' ||
+                cleaned === 'coastguard rescue vehicle' ||
+                cleaned === 'coastguard rescue vehicles'
+            );
+        });
+    }
+
+    function isControlVanRequirement(originalName, mappedName) {
+        const raw = normaliseVehicleText(originalName);
+        const mapped = normaliseVehicleText(mappedName);
+        const supported = new Set([
+            'control van', 'control vans',
+            'required control van', 'required control vans',
+            'search advisor', 'search advisors',
+            'required search advisor', 'required search advisors',
+            'sar commander', 'sar commanders',
+            'required sar commander', 'required sar commanders'
+        ]);
+        return supported.has(raw) || supported.has(mapped);
+    }
+
+    function isControlVanVehicleCheckbox(input) {
+        if (!input) return false;
+        const typeIdentifiers = getVehicleTypeIdentifiers(input);
+        if (typeIdentifiers.length > 0) return typeIdentifiers.includes('85');
+
+        return getExtendedVehicleValues(input).some(value => {
+            const cleaned = normaliseVehicleText(value);
+            return (
+                cleaned === 'control van' ||
+                cleaned === 'control vans' ||
+                cleaned === 'control van sar' ||
+                cleaned === 'sar control van' ||
+                cleaned === 'cv'
+            );
+        });
+    }
+
+    function isAirAmbulanceRequirement(originalName, mappedName) {
+        const raw = normaliseVehicleText(originalName);
+        const mapped = normaliseVehicleText(mappedName);
+        const supported = new Set([
+            'air ambulance', 'air ambulances',
+            'hems', 'hems helicopter', 'hems helicopters',
+            'required air ambulance', 'required air ambulances',
+            'required hems', 'required hems helicopter',
+            'required hems helicopters'
+        ]);
+        return supported.has(raw) || supported.has(mapped);
+    }
+
+    function isAirAmbulanceVehicleCheckbox(input) {
+        if (!input) return false;
+        const typeIdentifiers = getVehicleTypeIdentifiers(input);
+        if (typeIdentifiers.length > 0) return typeIdentifiers.includes('9');
+
+        return getExtendedVehicleValues(input).some(value => {
+            const cleaned = normaliseVehicleText(value);
+            return (
+                cleaned === 'air ambulance' ||
+                cleaned === 'air ambulances' ||
+                cleaned === 'hems' ||
+                cleaned === 'hems helicopter' ||
+                cleaned === 'hems helicopters'
+            );
+        });
+    }
+
+    function isCriticalCareTransferAmbulanceRequirement(originalName, mappedName) {
+        const raw = normaliseVehicleText(originalName);
+        const mapped = normaliseVehicleText(mappedName);
+        const supported = new Set([
+            'critical care transfer ambulance',
+            'critical care transfer ambulances',
+            'required critical care transfer ambulance',
+            'required critical care transfer ambulances',
+            'cct', 'ccts'
+        ]);
+        return supported.has(raw) || supported.has(mapped);
+    }
+
+    function isCriticalCareTransferAmbulanceCheckbox(input) {
+        if (!input) return false;
+        const typeIdentifiers = getVehicleTypeIdentifiers(input);
+        if (typeIdentifiers.length > 0) return typeIdentifiers.includes('98');
+        return getExtendedVehicleValues(input).some(value => {
+            const cleaned = normaliseVehicleText(value);
+            return (
+                cleaned === 'critical care transfer ambulance' ||
+                cleaned === 'critical care transfer ambulances' ||
+                cleaned === 'cct' ||
+                cleaned === 'ccts'
+            );
+        });
+    }
+
+    function isGenericCriticalCareRequirement(originalName, mappedName) {
+        const raw = normaliseVehicleText(originalName);
+        const mapped = normaliseVehicleText(mappedName);
+        const supported = new Set([
+            'critical care',
+            'critical care team',
+            'critical care teams',
+            'required critical care',
+            'required critical care team',
+            'required critical care teams'
+        ]);
+        return supported.has(raw) || supported.has(mapped);
+    }
+
+    function isVerifiedCriticalCareAmbulanceRegistryEntry(entry) {
+        if (!entry || entry.assignmentScanComplete !== true) return false;
+        if (String(entry.vehicleTypeId || '') !== '5') return false;
+
+        const updatedAt = Number(entry.updatedAt || 0);
+        if (
+            !Number.isFinite(updatedAt) ||
+            updatedAt <= 0 ||
+            Date.now() - updatedAt > 180 * 24 * 60 * 60 * 1000
+        ) {
+            return false;
+        }
+
+        const trainingCounts = entry.trainingCounts && typeof entry.trainingCounts === 'object'
+            ? entry.trainingCounts
+            : {};
+        return Math.max(0, parseInt(trainingCounts.critical_care, 10) || 0) >= 1;
+    }
+
+    function isCriticalCareRoadAmbulanceCheckbox(input, registry) {
+        if (!input) return false;
+        if (!getVehicleTypeIdentifiers(input).includes('5')) return false;
+
+        const registryMatch = getRegistryEntryForMissionCheckbox(input, registry);
+        return isVerifiedCriticalCareAmbulanceRegistryEntry(registryMatch.entry);
+    }
+
+    function isGenericCriticalCareVehicleCheckbox(input, registry) {
+        return (
+            isAirAmbulanceVehicleCheckbox(input) ||
+            isCriticalCareRoadAmbulanceCheckbox(input, registry)
+        );
+    }
 
 
 
@@ -12339,6 +12623,36 @@
                 mappedName
             );
 
+        const crvOnly =
+            isCrvRequirement(
+                originalName,
+                mappedName
+            );
+
+        const controlVanOnly =
+            isControlVanRequirement(
+                originalName,
+                mappedName
+            );
+
+        const airAmbulanceOnly =
+            isAirAmbulanceRequirement(
+                originalName,
+                mappedName
+            );
+
+        const criticalCareTransferOnly =
+            isCriticalCareTransferAmbulanceRequirement(
+                originalName,
+                mappedName
+            );
+
+        const genericCriticalCare =
+            isGenericCriticalCareRequirement(
+                originalName,
+                mappedName
+            );
+
         const atvCarrierOnly =
             isAtvCarrierRequirement(
                 originalName,
@@ -12381,6 +12695,57 @@
                 mappedName
             );
 
+
+        if (crvOnly) {
+            return sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) return false;
+                    if (!includeChecked && input.checked) return false;
+                    return isCrvVehicleCheckbox(input);
+                })
+            );
+        }
+
+        if (controlVanOnly) {
+            return sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) return false;
+                    if (!includeChecked && input.checked) return false;
+                    return isControlVanVehicleCheckbox(input);
+                })
+            );
+        }
+
+        if (airAmbulanceOnly) {
+            return sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) return false;
+                    if (!includeChecked && input.checked) return false;
+                    return isAirAmbulanceVehicleCheckbox(input);
+                })
+            );
+        }
+
+        if (criticalCareTransferOnly) {
+            return sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) return false;
+                    if (!includeChecked && input.checked) return false;
+                    return isCriticalCareTransferAmbulanceCheckbox(input);
+                })
+            );
+        }
+
+        if (genericCriticalCare) {
+            const registry = readPersonnelTrainingRegistry();
+            return sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) return false;
+                    if (!includeChecked && input.checked) return false;
+                    return isGenericCriticalCareVehicleCheckbox(input, registry);
+                })
+            );
+        }
 
         if (seagoingVesselOnly) {
             return sortVehicleCheckboxesByBestArrival(
@@ -12802,6 +13167,12 @@
             );
         const policeAirMode = getPoliceAirRequirementMode(originalName, mappedName);
         const policeCarOnly = isPoliceCarRequirement(originalName, mappedName);
+        const crvOnly = isCrvRequirement(originalName, mappedName);
+        const controlVanOnly = isControlVanRequirement(originalName, mappedName);
+        const airAmbulanceOnly = isAirAmbulanceRequirement(originalName, mappedName);
+        const criticalCareTransferOnly = isCriticalCareTransferAmbulanceRequirement(originalName, mappedName);
+        const genericCriticalCare = isGenericCriticalCareRequirement(originalName, mappedName);
+        const criticalCareRegistry = genericCriticalCare ? readPersonnelTrainingRegistry() : null;
         const atvCarrierOnly = isAtvCarrierRequirement(originalName, mappedName);
         const seagoingVesselOnly = isSeagoingVesselRequirement(originalName, mappedName);
         const dogSupportOnly = isDogSupportUnitRequirement(originalName, mappedName);
@@ -12865,7 +13236,17 @@
 
             let matches = false;
 
-            if (seagoingVesselOnly) {
+            if (crvOnly) {
+                matches = isCrvVehicleCheckbox(input);
+            } else if (controlVanOnly) {
+                matches = isControlVanVehicleCheckbox(input);
+            } else if (airAmbulanceOnly) {
+                matches = isAirAmbulanceVehicleCheckbox(input);
+            } else if (criticalCareTransferOnly) {
+                matches = isCriticalCareTransferAmbulanceCheckbox(input);
+            } else if (genericCriticalCare) {
+                matches = isGenericCriticalCareVehicleCheckbox(input, criticalCareRegistry);
+            } else if (seagoingVesselOnly) {
                 matches = isSeagoingVesselCheckbox(
                     input
                 );
@@ -12941,6 +13322,35 @@
             originalName ||
             mappedName;
 
+
+        if (
+            isCrvRequirement(
+                requestedName,
+                mappedName
+            ) ||
+            isControlVanRequirement(
+                requestedName,
+                mappedName
+            ) ||
+            isAirAmbulanceRequirement(
+                requestedName,
+                mappedName
+            ) ||
+            isCriticalCareTransferAmbulanceRequirement(
+                requestedName,
+                mappedName
+            ) ||
+            isGenericCriticalCareRequirement(
+                requestedName,
+                mappedName
+            )
+        ) {
+            return getAllMatchingVehicleCheckboxes(
+                requestedName,
+                mappedName,
+                false
+            )[0] || null;
+        }
 
         if (
             isSeagoingVesselRequirement(
@@ -18942,6 +19352,7 @@ let sessionRuntimeTicker = null;
                 try {
                     root.querySelectorAll(
                         '.alert.alert-danger, .alert-danger, .alert, ' +
+                        '[data-requirement-type="vehicles"], ' +
                         '[role="alert"], [id*="missing_"], ' +
                         '[id^="alert_danger_"], [class*="missing"], ' +
                         '.mission_update, .mission_update_info'
@@ -18983,6 +19394,7 @@ let sessionRuntimeTicker = null;
                                             .textContent ||
                                         ''
                                     )
+                                        .replace(/\u00a0/g, ' ')
                                         .replace(
                                             /\s+/g,
                                             ' '
@@ -19185,9 +19597,9 @@ let sessionRuntimeTicker = null;
     }
 
     // V10.6.40 SAR personnel conversion registry.
-    // V10.6.68: Search Advisor now follows the dedicated SARTEC selector.
-    // It retains the established two Search Advisors per vehicle conversion,
-    // but resolves through the exact displayed-name-prefix SARTEC rule.
+    // V10.6.94: each Search Advisor requirement uses one exact type-85 Control
+    // Van. Search Technicians remain
+    // on the dedicated displayed-name-prefix SARTEC selector.
     // V10.6.66 restores the established two-Inspector-per-IRV rule and live-verifies Inspector bindings when the shared registry is missing or stale.
     // Police Sergeant is grouped with
     // Level 1 and Level 2, using the highest personnel requirement only.
@@ -19250,9 +19662,9 @@ let sessionRuntimeTicker = null;
                 personnelLabel:
                     'Search Advisor',
                 unitName:
-                    'SARTEC',
+                    'Control Van',
                 personnelPerVehicle:
-                    2
+                    1
             },
             {
                 pattern:
@@ -26171,6 +26583,7 @@ let sessionRuntimeTicker = null;
                 text ||
                 ''
             )
+                .replace(/\u00a0/g, ' ')
                 .replace(
                     /\s+/g,
                     ' '
@@ -26948,6 +27361,61 @@ let sessionRuntimeTicker = null;
             `${documentKey}|unscoped-patient:${alertIdentifier || Math.max(0, Number(fallbackIndex) || 0)}`
         );
     }
+
+
+    function getStructuredMissingVehicleRows(suppliedRoots) {
+        const roots = Array.isArray(suppliedRoots)
+            ? suppliedRoots
+            : suppliedRoots
+                ? [suppliedRoots]
+                : getActiveMissionRequirementContexts().map(context => context.root);
+
+        const elements = [];
+        Array.from(new Set(roots.filter(Boolean))).forEach(root => {
+            try {
+                if (
+                    root.nodeType !== 9 &&
+                    root.matches?.('[data-requirement-type="vehicles"]')
+                ) {
+                    elements.push(root);
+                }
+                root.querySelectorAll('[data-requirement-type="vehicles"]').forEach(element => {
+                    if (!elements.includes(element)) elements.push(element);
+                });
+            } catch (_error) {}
+        });
+
+        const deduped = new Map();
+
+        elements
+            .filter(element => isMissionElementVisible(element))
+            .forEach(element => {
+                const text = String(
+                    element.innerText ||
+                    element.textContent ||
+                    ''
+                )
+                    .replace(/\u00a0/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+
+                if (!/Missing\s+Vehicles?\s*:/i.test(text)) return;
+
+                getGenericMissingVehicleRowsFromText(text).forEach(row => {
+                    const key = `${normaliseVehicleText(row.unitName)}|${row.stillNeeded}`;
+                    if (!deduped.has(key)) {
+                        deduped.set(key, {
+                            ...row,
+                            source: 'data-requirement-type-vehicles'
+                        });
+                    }
+                });
+            });
+
+        return Array.from(deduped.values());
+    }
+
+
 
     function getCurrentMissionPatientAlertRoots(
         liveRequirementsTables,
@@ -28001,6 +28469,23 @@ let sessionRuntimeTicker = null;
                 missionUpdateRoots
             );
 
+        const structuredMissingVehicleRows =
+            getStructuredMissingVehicleRows(
+                missionUpdateRoots
+            );
+
+        structuredMissingVehicleRows.forEach(row => {
+            recordUpdateRequirement(
+                row.unitName,
+                row.stillNeeded,
+                'data-requirement-type-vehicles',
+                {
+                    dispatchTargetMode: 'shortage',
+                    structuredMissingVehicles: true
+                }
+            );
+        });
+
         const pageTextBlocks =
             hasLiveRequirementsPanel
                 ? []
@@ -28022,7 +28507,7 @@ let sessionRuntimeTicker = null;
             debugLog(
                 'UPDATE ALERT CHECK',
                 hasLiveRequirementsPanel
-                    ? 'Skipped legacy update alert scan because the Live Mission Requirements panel is authoritative.'
+                    ? `Skipped legacy alert scan because the Live Mission Requirements panel is authoritative; accepted ${structuredMissingVehicleRows.length} current structured Missing Vehicles row(s).`
                     : pageTextBlocks.length
                     ? (
                         `Found ${pageTextBlocks.length} visible update alert block(s): ` +
@@ -28215,7 +28700,7 @@ let sessionRuntimeTicker = null;
         // Missing Personnel is an actionable mission update, not a
         // vehicle staffing fault. Supported personnel conversions include:
         // Search Technicians = 4 per displayed-name-prefix SARTEC vehicle
-        // Search Advisors = 2 per displayed-name-prefix SARTEC vehicle
+        // Search Advisors = 1 per exact type-85 Control Van
         // SAR Commanders = 2 per Control Van
         // 3 Police Officers = 2 Police Cars
         // 6 Mud Rescue Operators = 2 Coastguard Mud Rescue Units
@@ -30711,6 +31196,11 @@ let sessionRuntimeTicker = null;
         const rows = [];
         const seen = new Set();
 
+        const structuredMissingVehicleRows =
+            getStructuredMissingVehicleRows(
+                scopes
+            );
+
         function addRow(name, amount, source) {
             let cleanName = normaliseVisibleRequirementName(name);
             let required = Math.max(1, parseInt(amount || '1', 10) || 1);
@@ -30769,6 +31259,9 @@ let sessionRuntimeTicker = null;
             if (seen.has(key)) return;
             seen.add(key);
 
+            const structuredShortage =
+                source === 'visible-structured-missing-vehicles';
+
             rows.push({
                 unitName: cleanName,
                 originalName: cleanName,
@@ -30777,9 +31270,23 @@ let sessionRuntimeTicker = null;
                 required,
                 selected: 0,
                 status: 'pending',
-                source: source || 'visible fallback'
+                source: source || 'visible fallback',
+                liveRequirementDetails: structuredShortage
+                    ? {
+                        dispatchTargetMode: 'shortage',
+                        structuredMissingVehicles: true
+                    }
+                    : null
             });
         }
+
+        structuredMissingVehicleRows.forEach(row => {
+            addRow(
+                row.unitName,
+                row.stillNeeded,
+                'visible-structured-missing-vehicles'
+            );
+        });
 
         for (const scope of scopes) {
             const text = (scope.innerText || scope.textContent || '').replace(/\s+/g, ' ').trim();
