@@ -1,0 +1,113 @@
+name: Repair release delivery
+
+on:
+  pull_request_target:
+    types:
+      - closed
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Release tag to repair, such as v1.0.8. Leave blank for the current main version.
+        required: false
+        type: string
+      force_resend:
+        description: Explicitly post another Discord announcement even when a delivery receipt already exists.
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  resend:
+    name: Resend release and capture Discord receipt
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.merged == true &&
+       github.event.pull_request.head.ref == 'agent/release-delivery-receipt')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out trusted main
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Resolve release source and assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_TAG: ${{ inputs.release_tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --tags --force
+
+          RELEASE_TAG="${REQUESTED_TAG#refs/tags/}"
+          if [[ -z "${RELEASE_TAG}" ]]; then
+            VERSION="$(node scripts/validate-userscript.mjs --print-version)"
+            RELEASE_TAG="v${VERSION}"
+          elif [[ "${RELEASE_TAG}" != v* ]]; then
+            RELEASE_TAG="v${RELEASE_TAG}"
+          fi
+
+          RELEASE_SHA="$(git rev-list -n 1 "${RELEASE_TAG}")"
+          VERSION="${RELEASE_TAG#v}"
+          ASSET="MissionChief-Command-Nexus-${VERSION}.user.js"
+
+          rm -rf release-source release-check
+          git worktree add --force --detach release-source "${RELEASE_SHA}"
+          mkdir release-check
+          gh release download "${RELEASE_TAG}" \
+            --pattern "${ASSET}" \
+            --pattern "${ASSET}.sha256" \
+            --dir release-check \
+            --clobber
+          cp "release-check/${ASSET}" "${ASSET}"
+          cp "release-check/${ASSET}.sha256" "${ASSET}.sha256"
+
+          echo "RELEASE_TAG=${RELEASE_TAG}" >> "${GITHUB_ENV}"
+          echo "RELEASE_SHA=${RELEASE_SHA}" >> "${GITHUB_ENV}"
+
+      - name: Confirm stored webhook identity
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
+          EXPECTED_WEBHOOK_SHA256: fd3a7dd1184be610bc5a0fbe8024e8838220574b15d46c8a7594d7e72c1676ec
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${DISCORD_WEBHOOK_URL}" ]]; then
+            echo 'Missing DISCORD_RELEASE_WEBHOOK repository secret.'
+            exit 1
+          fi
+          ACTUAL_HASH="$(printf '%s' "${DISCORD_WEBHOOK_URL}" | sha256sum | awk '{print $1}')"
+          if [[ "${ACTUAL_HASH}" == "${EXPECTED_WEBHOOK_SHA256}" ]]; then
+            echo 'Stored GitHub secret matches the originally configured Discord webhook.'
+            echo '- Stored webhook matches original configuration: `yes`' >> "${GITHUB_STEP_SUMMARY}"
+          else
+            echo '::warning title=Discord webhook changed::The stored GitHub secret does not match the originally configured webhook.'
+            echo '- Stored webhook matches original configuration: `no`' >> "${GITHUB_STEP_SUMMARY}"
+          fi
+
+      - name: Resend release and require Discord delivery receipt
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
+          GITHUB_TOKEN: ${{ github.token }}
+          FORCE_DISCORD_RESEND: ${{ inputs.force_resend && 'true' || 'false' }}
+          GREASYFORK_INSTALL_URL: ${{ vars.GREASYFORK_INSTALL_URL }}
+          GREASYFORK_PAGE_URL: ${{ vars.GREASYFORK_PAGE_URL }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          RELEASE_TAG: ${{ env.RELEASE_TAG }}
+          RELEASE_SHA: ${{ env.RELEASE_SHA }}
+          SOURCE_PATH: release-source/src/missionchief-command-nexus.user.js
+          CHANGELOG_PATH: release-source/CHANGELOG.md
+          PRODUCT_NAME: MissionChief Command Nexus
+        run: node scripts/release-notify.mjs

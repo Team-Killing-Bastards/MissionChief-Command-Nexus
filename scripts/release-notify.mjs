@@ -24,6 +24,9 @@ const GITHUB_SOURCE_ATTEMPTS = 12;
 const GITHUB_SOURCE_WAIT_MS = 2_500;
 const GREASY_FORK_ATTEMPTS = 60;
 const GREASY_FORK_WAIT_MS = 5_000;
+const GITHUB_API_VERSION = '2022-11-28';
+const DISCORD_RECEIPT_ASSET_PREFIX =
+  'Command-Nexus-Discord-Receipt-';
 
 const COLOURS = Object.freeze({
   command: 0x22d3ee,
@@ -43,6 +46,188 @@ function requireEnv(name) {
 
 function sleep(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+
+function readBooleanEnv(name) {
+  return /^(?:1|true|yes|on)$/i.test(
+    process.env[name]?.trim() || ''
+  );
+}
+
+function requireGitHubToken() {
+  const token =
+    process.env.GITHUB_TOKEN?.trim() ||
+    process.env.GH_TOKEN?.trim();
+
+  if (!token) {
+    throw new Error(
+      'Missing required environment variable: GITHUB_TOKEN or GH_TOKEN'
+    );
+  }
+
+  return token;
+}
+
+function githubHeaders(token, extra = {}) {
+  return {
+    Accept: 'application/vnd.github+json',
+    Authorization: `Bearer ${token}`,
+    'X-GitHub-Api-Version': GITHUB_API_VERSION,
+    'User-Agent':
+      'MissionChief-Command-Nexus-Discord-Receipt/1.0',
+    ...extra,
+  };
+}
+
+async function githubJson({
+  url,
+  token,
+  method = 'GET',
+  body,
+  expected = [200],
+  label,
+}) {
+  const response = await fetch(url, {
+    method,
+    headers: githubHeaders(
+      token,
+      body
+        ? { 'Content-Type': 'application/json' }
+        : {}
+    ),
+    body: body ? JSON.stringify(body) : undefined,
+    redirect: 'follow',
+  });
+
+  if (!expected.includes(response.status)) {
+    const responseBody = await response.text();
+    throw new Error(
+      `${label} returned HTTP ${response.status}: ` +
+      responseBody.slice(0, 1_500)
+    );
+  }
+
+  if (response.status === 204) return null;
+  return response.json();
+}
+
+function discordReceiptAssetPrefix(releaseTag) {
+  return `${DISCORD_RECEIPT_ASSET_PREFIX}${releaseTag}-`;
+}
+
+function findDiscordReceiptAsset(release, releaseTag) {
+  const prefix = discordReceiptAssetPrefix(releaseTag);
+  return (release?.assets || []).find((asset) =>
+    String(asset?.name || '').startsWith(prefix)
+  ) || null;
+}
+
+async function getGitHubReleaseByTag({
+  repository,
+  releaseTag,
+  token,
+}) {
+  return githubJson({
+    url:
+      `https://api.github.com/repos/${repository}` +
+      `/releases/tags/${encodeURIComponent(releaseTag)}`,
+    token,
+    label: `Read GitHub Release ${releaseTag}`,
+  });
+}
+
+async function recordDiscordSkipSummary({
+  releaseTag,
+  receiptAsset,
+}) {
+  const line =
+    `Discord release notification already recorded for ${releaseTag}; ` +
+    `skipping duplicate post (receipt asset: ${receiptAsset.name}).`;
+  console.log(line);
+
+  const summaryPath = process.env.GITHUB_STEP_SUMMARY?.trim();
+  if (!summaryPath) return;
+
+  await appendFile(
+    summaryPath,
+    [
+      '### Discord delivery already completed',
+      `- Release: \`${releaseTag}\``,
+      `- Receipt asset: \`${receiptAsset.name}\``,
+      '- Action: duplicate Discord post skipped',
+      '',
+    ].join('\n'),
+    'utf8'
+  );
+}
+
+async function uploadDiscordReceiptAsset({
+  repository,
+  releaseTag,
+  releaseSha,
+  token,
+  webhook,
+  message,
+}) {
+  const release = await getGitHubReleaseByTag({
+    repository,
+    releaseTag,
+    token,
+  });
+  const assetName =
+    `${discordReceiptAssetPrefix(releaseTag)}` +
+    `${message.messageId}.json`;
+  const uploadUrl = new URL(
+    String(release.upload_url || '').replace(
+      /\{\?name,label\}$/,
+      ''
+    )
+  );
+  uploadUrl.searchParams.set('name', assetName);
+
+  const receipt = Buffer.from(
+    JSON.stringify(
+      {
+        schema: 1,
+        product: PRODUCT_NAME,
+        release_tag: releaseTag,
+        release_sha: releaseSha,
+        webhook_id: webhook.webhookId,
+        guild_id: webhook.guildId || null,
+        channel_id: message.channelId,
+        message_id: message.messageId,
+        posted_at: new Date().toISOString(),
+      },
+      null,
+      2
+    ) + '\n',
+    'utf8'
+  );
+
+  const response = await fetch(uploadUrl, {
+    method: 'POST',
+    headers: githubHeaders(token, {
+      Accept: 'application/vnd.github+json',
+      'Content-Type': 'application/json; charset=utf-8',
+      'Content-Length': String(receipt.length),
+    }),
+    body: receipt,
+    redirect: 'follow',
+  });
+
+  if (response.status !== 201) {
+    const responseBody = await response.text();
+    throw new Error(
+      `Upload Discord receipt asset returned HTTP ` +
+      `${response.status}: ${responseBody.slice(0, 1_500)}`
+    );
+  }
+
+  console.log(
+    `Discord single-delivery receipt uploaded for ${releaseTag}: ` +
+    `asset=${assetName}`
+  );
 }
 
 function sha256(buffer) {
@@ -665,6 +850,10 @@ async function main() {
   const repository =
     requireEnv('GITHUB_REPOSITORY');
 
+  const githubToken = requireGitHubToken();
+  const forceDiscordResend =
+    readBooleanEnv('FORCE_DISCORD_RESEND');
+
   const releaseTag =
     requireEnv('RELEASE_TAG');
 
@@ -677,6 +866,25 @@ async function main() {
     throw new Error(
       `Release tag must start with v: ${releaseTag}`
     );
+  }
+
+  const existingRelease = await getGitHubReleaseByTag({
+    repository,
+    releaseTag,
+    token: githubToken,
+  });
+  const existingReceipt =
+    findDiscordReceiptAsset(
+      existingRelease,
+      releaseTag
+    );
+
+  if (existingReceipt && !forceDiscordResend) {
+    await recordDiscordSkipSummary({
+      releaseTag,
+      receiptAsset: existingReceipt,
+    });
+    return;
   }
 
   const sourceBuffer = await readFile(SOURCE_PATH);
@@ -786,6 +994,15 @@ async function main() {
 
   await recordDiscordReceipt({
     releaseTag,
+    webhook,
+    message,
+  });
+
+  await uploadDiscordReceiptAsset({
+    repository,
+    releaseTag,
+    releaseSha,
+    token: githubToken,
     webhook,
     message,
   });
