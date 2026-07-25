@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.32
+// @version      1.0.33
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -8788,7 +8788,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.97
+         * MODULE 2: MISSION FINDER V10.6.98
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -9602,6 +9602,10 @@
     const MF_STRICT_TRAINING_SOURCE_PREFIX =
         'mission-finder-live-strict-';
 
+    // V10.6.98: the iPhone native Unit Quick Select disclosure is now
+    // mutation-idempotent and guarded against duplicate touch/click transitions.
+    // The Mission/Vehicle launcher now clears the complete top-right native
+    // control cluster with stable geometry, hysteresis and a farther-left fallback.
     // V10.6.97: iPhone Mission Control and Vehicle Load now use a compact
     // two-button launcher positioned immediately left of MissionChief's live
     // native control cluster. Both panels default closed and open exclusively
@@ -14237,8 +14241,8 @@
             #mission-finder-wrapper.mf2026-iphone-safari {
                 --mf-iphone-close-gutter: 48px;
                 --mf-iphone-launcher-top: 0px;
-                --mf-iphone-launcher-right: 52px;
-                --mf-iphone-launcher-max-width: calc(100% - 60px);
+                --mf-iphone-launcher-right: 112px;
+                --mf-iphone-launcher-max-width: calc(100% - 120px);
                 --mf-iphone-panel-top: 42px;
                 top: calc(4px + env(safe-area-inset-top, 0px));
                 right: calc(4px + env(safe-area-inset-right, 0px));
@@ -15678,81 +15682,211 @@
 
         const bounds = getMissionFinderViewportBounds();
         const selectors = [
-            '.vm--modal .control-btn-container',
-            '.modal .control-btn-container',
-            '.lightbox .control-btn-container',
-            '.control-btn-container'
+            '.control-btn-container',
+            '.control-btn-container button',
+            '.control-btn-container a',
+            '.control-btn-container [role="button"]',
+            '.control-btn-container .lightbox-close',
+            '.vm--modal button',
+            '.vm--modal a',
+            '.modal button',
+            '.modal a',
+            '.lightbox button',
+            '.lightbox a'
         ];
         const candidates = [];
 
         selectors.forEach(selector => {
             try {
-                document.querySelectorAll(selector).forEach(element => {
-                    if (!candidates.includes(element)) {
-                        candidates.push(element);
+                document.querySelectorAll(selector).forEach(
+                    element => {
+                        if (!candidates.includes(element)) {
+                            candidates.push(element);
+                        }
                     }
-                });
+                );
             } catch (_error) {}
         });
 
-        return candidates
+        const visibleControls = candidates
             .map(element => {
                 try {
-                    const style =
-                        window.getComputedStyle(element);
-                    const rect =
-                        element.getBoundingClientRect();
-                    const interactiveCount =
-                        Array.from(
-                            element.querySelectorAll(
-                                'button, a, [role="button"], .lightbox-close, [title]'
-                            )
-                        ).filter(control => {
-                            const controlRect =
-                                control.getBoundingClientRect();
-                            return controlRect.width > 0 &&
-                                controlRect.height > 0;
-                        }).length;
-
                     if (
-                        style.display === 'none' ||
-                        style.visibility === 'hidden' ||
-                        rect.width <= 0 ||
-                        rect.height <= 0 ||
-                        rect.top > bounds.top + 170 ||
-                        rect.right < bounds.right - 190
+                        !element ||
+                        element.isConnected === false ||
+                        element.closest?.(
+                            '#mission-finder-wrapper'
+                        )
                     ) {
                         return null;
                     }
 
-                    return {
-                        element,
-                        rect,
-                        interactiveCount
-                    };
+                    const style =
+                        window.getComputedStyle(element);
+                    const rect =
+                        element.getBoundingClientRect();
+                    const elementName = String(
+                        element.tagName || ''
+                    ).toUpperCase();
+                    const interactive = Boolean(
+                        /^(?:BUTTON|A)$/.test(elementName) ||
+                        element.matches?.(
+                            '[role="button"], .lightbox-close, [aria-label], [title]'
+                        )
+                    );
+
+                    if (
+                        !interactive ||
+                        style.display === 'none' ||
+                        style.visibility === 'hidden' ||
+                        style.pointerEvents === 'none' ||
+                        rect.width <= 0 ||
+                        rect.height <= 0 ||
+                        rect.width > 76 ||
+                        rect.height > 76 ||
+                        rect.top > bounds.top + 155 ||
+                        rect.bottom < bounds.top ||
+                        rect.right < bounds.right - 150 ||
+                        rect.left > bounds.right
+                    ) {
+                        return null;
+                    }
+
+                    return { element, rect };
                 } catch (_error) {
                     return null;
                 }
             })
-            .filter(Boolean)
-            .sort((left, right) => {
-                const countDifference =
-                    right.interactiveCount -
-                    left.interactiveCount;
-                if (countDifference) return countDifference;
+            .filter(Boolean);
 
-                const topDifference =
-                    left.rect.top -
-                    right.rect.top;
-                if (topDifference) return topDifference;
+        if (!visibleControls.length) {
+            return null;
+        }
 
-                return right.rect.right -
-                    left.rect.right;
-            })[0]?.element || null;
+        const cluster = visibleControls.reduce(
+            (result, entry) => {
+                result.left = Math.min(
+                    result.left,
+                    entry.rect.left
+                );
+                result.top = Math.min(
+                    result.top,
+                    entry.rect.top
+                );
+                result.right = Math.max(
+                    result.right,
+                    entry.rect.right
+                );
+                result.bottom = Math.max(
+                    result.bottom,
+                    entry.rect.bottom
+                );
+                result.elements.push(entry.element);
+                return result;
+            },
+            {
+                left: Number.POSITIVE_INFINITY,
+                top: Number.POSITIVE_INFINITY,
+                right: Number.NEGATIVE_INFINITY,
+                bottom: Number.NEGATIVE_INFINITY,
+                elements: []
+            }
+        );
+
+        cluster.width = cluster.right - cluster.left;
+        cluster.height = cluster.bottom - cluster.top;
+        cluster.capturedAt = Date.now();
+        mfIphoneLauncherLastNativeCluster = cluster;
+        return cluster;
+    }
+
+
+
+    function getMissionFinderIphoneLauncherGeometry(
+        panelRect,
+        bounds,
+        clusterRect,
+        fallbackGutter
+    ) {
+        const clearance = 16;
+        const fallbackRight = Math.max(
+            112,
+            Number(fallbackGutter || 0) + 64
+        );
+        let launcherTop = 0;
+        let launcherRight = fallbackRight;
+        let launcherMaxWidth = Math.max(
+            132,
+            Number(bounds?.width || 0) -
+                fallbackRight - 8
+        );
+        let expandedPanelTop = 42;
+
+        if (
+            clusterRect &&
+            Number.isFinite(clusterRect.left) &&
+            Number.isFinite(clusterRect.top) &&
+            Number.isFinite(clusterRect.bottom)
+        ) {
+            launcherTop = Math.max(
+                0,
+                clusterRect.top - panelRect.top
+            );
+            launcherRight = Math.max(
+                fallbackRight,
+                panelRect.right -
+                    clusterRect.left +
+                    clearance
+            );
+            launcherMaxWidth = Math.max(
+                132,
+                clusterRect.left -
+                    panelRect.left -
+                    clearance
+            );
+            expandedPanelTop = Math.max(
+                42,
+                clusterRect.bottom -
+                    panelRect.top + 8
+            );
+        }
+
+        return {
+            launcherTop: Math.ceil(launcherTop),
+            launcherRight: Math.ceil(launcherRight),
+            launcherMaxWidth: Math.floor(launcherMaxWidth),
+            expandedPanelTop: Math.ceil(expandedPanelTop)
+        };
+    }
+
+    function setMissionFinderIphoneStablePixelProperty(
+        element,
+        property,
+        value,
+        tolerance = 2
+    ) {
+        if (!element?.style) return false;
+        const next = Math.round(Number(value) || 0);
+        const previous = parseFloat(
+            element.style.getPropertyValue(property)
+        );
+
+        if (
+            Number.isFinite(previous) &&
+            Math.abs(previous - next) <= tolerance
+        ) {
+            return false;
+        }
+
+        element.style.setProperty(
+            property,
+            `${next}px`
+        );
+        return true;
     }
 
     function syncMissionFinderIphoneLauncherPlacement(panel) {
-        if (!panel) return;
+        if (!panel) return false;
 
         if (!isMissionFinderIphoneSafariWebsite()) {
             [
@@ -15763,62 +15897,57 @@
             ].forEach(property => {
                 panel.style.removeProperty(property);
             });
-            return;
+            mfIphoneLauncherLastNativeCluster = null;
+            return false;
         }
 
         const bounds = getMissionFinderViewportBounds();
         const panelRect = panel.getBoundingClientRect();
-        const controlContainer =
+        const liveCluster =
             getMissionFinderIphoneNativeControlContainer();
+        const cachedCluster =
+            mfIphoneLauncherLastNativeCluster &&
+            Date.now() -
+                mfIphoneLauncherLastNativeCluster.capturedAt <
+                2500
+                ? mfIphoneLauncherLastNativeCluster
+                : null;
+        const cluster = liveCluster || cachedCluster;
+        const geometry =
+            getMissionFinderIphoneLauncherGeometry(
+                panelRect,
+                bounds,
+                cluster,
+                getMissionFinderIphoneCloseControlGutter()
+            );
 
-        let launcherTop = 0;
-        let launcherRight =
-            getMissionFinderIphoneCloseControlGutter() + 4;
-        let launcherMaxWidth = Math.max(
-            132,
-            bounds.width - launcherRight - 8
-        );
-        let expandedPanelTop = 42;
+        let changed = false;
+        changed =
+            setMissionFinderIphoneStablePixelProperty(
+                panel,
+                '--mf-iphone-launcher-top',
+                geometry.launcherTop
+            ) || changed;
+        changed =
+            setMissionFinderIphoneStablePixelProperty(
+                panel,
+                '--mf-iphone-launcher-right',
+                geometry.launcherRight
+            ) || changed;
+        changed =
+            setMissionFinderIphoneStablePixelProperty(
+                panel,
+                '--mf-iphone-launcher-max-width',
+                geometry.launcherMaxWidth
+            ) || changed;
+        changed =
+            setMissionFinderIphoneStablePixelProperty(
+                panel,
+                '--mf-iphone-panel-top',
+                geometry.expandedPanelTop
+            ) || changed;
 
-        if (controlContainer) {
-            try {
-                const controlRect =
-                    controlContainer.getBoundingClientRect();
-                launcherTop = Math.max(
-                    0,
-                    controlRect.top - panelRect.top
-                );
-                launcherRight = Math.max(
-                    0,
-                    panelRect.right - controlRect.left + 6
-                );
-                launcherMaxWidth = Math.max(
-                    132,
-                    controlRect.left - panelRect.left - 8
-                );
-                expandedPanelTop = Math.max(
-                    42,
-                    controlRect.bottom - panelRect.top + 6
-                );
-            } catch (_error) {}
-        }
-
-        panel.style.setProperty(
-            '--mf-iphone-launcher-top',
-            `${Math.ceil(launcherTop)}px`
-        );
-        panel.style.setProperty(
-            '--mf-iphone-launcher-right',
-            `${Math.ceil(launcherRight)}px`
-        );
-        panel.style.setProperty(
-            '--mf-iphone-launcher-max-width',
-            `${Math.floor(launcherMaxWidth)}px`
-        );
-        panel.style.setProperty(
-            '--mf-iphone-panel-top',
-            `${Math.ceil(expandedPanelTop)}px`
-        );
+        return changed;
     }
 
     function syncMissionFinderIphoneCloseControlClearance(panel) {
@@ -17992,6 +18121,114 @@ let sessionRuntimeTicker = null;
         return documents;
     }
 
+
+    const mfIphoneNativePickerRenderState =
+        new WeakMap();
+    let mfIphoneNativePickerMutationSuppressionUntil = 0;
+    let mfIphoneNativePickerDisclosureLockUntil = 0;
+    let mfIphoneLauncherLastNativeCluster = null;
+
+    function markMissionFinderIphoneNativePickerMutation() {
+        mfIphoneNativePickerMutationSuppressionUntil =
+            Math.max(
+                mfIphoneNativePickerMutationSuppressionUntil,
+                Date.now() + 180
+            );
+    }
+
+    function isMissionFinderIphoneNativePickerOwnedMutationRecord(
+        record
+    ) {
+        if (
+            Date.now() >
+            mfIphoneNativePickerMutationSuppressionUntil
+        ) {
+            return false;
+        }
+
+        const ownedSelector = [
+            `#${MF_IPHONE_NATIVE_PICKER_TOGGLE_ID}`,
+            '.mf-iphone-native-picker-shell',
+            '.mf-iphone-native-picker-grid',
+            '.mf-iphone-native-picker-item',
+            '.mf-iphone-native-picker-structural',
+            '.mf-iphone-native-picker-search',
+            '.mf-iphone-native-picker-strip'
+        ].join(', ');
+        const target =
+            record?.target?.nodeType === 1
+                ? record.target
+                : record?.target?.parentElement;
+
+        try {
+            if (
+                target?.matches?.(ownedSelector) ||
+                target?.closest?.(ownedSelector) ||
+                target === target?.ownerDocument?.documentElement &&
+                target.classList?.contains(
+                    MF_IPHONE_NATIVE_PICKER_ROOT_CLASS
+                )
+            ) {
+                return true;
+            }
+
+            const changedNodes = [
+                ...(record?.addedNodes || []),
+                ...(record?.removedNodes || [])
+            ].filter(node => node?.nodeType === 1);
+
+            return changedNodes.length > 0 &&
+                changedNodes.every(node => {
+                    return Boolean(
+                        node.matches?.(ownedSelector) ||
+                        node.querySelector?.(ownedSelector)
+                    );
+                });
+        } catch (_error) {
+            return false;
+        }
+    }
+
+    function setMissionFinderIphonePickerClass(
+        element,
+        className,
+        enabled
+    ) {
+        if (!element?.classList) return false;
+        const next = Boolean(enabled);
+        if (element.classList.contains(className) === next) {
+            return false;
+        }
+        markMissionFinderIphoneNativePickerMutation();
+        element.classList.toggle(className, next);
+        return true;
+    }
+
+    function setMissionFinderIphonePickerText(
+        element,
+        value
+    ) {
+        if (!element) return false;
+        const next = String(value ?? '');
+        if (element.textContent === next) return false;
+        markMissionFinderIphoneNativePickerMutation();
+        element.textContent = next;
+        return true;
+    }
+
+    function setMissionFinderIphonePickerAttribute(
+        element,
+        name,
+        value
+    ) {
+        if (!element?.getAttribute) return false;
+        const next = String(value ?? '');
+        if (element.getAttribute(name) === next) return false;
+        markMissionFinderIphoneNativePickerMutation();
+        element.setAttribute(name, next);
+        return true;
+    }
+
     function readMissionFinderIphoneNativePickerCollapsed() {
         try {
             return localStorage.getItem(
@@ -18549,19 +18786,22 @@ let sessionRuntimeTicker = null;
     function updateMissionFinderIphoneNativePickerState(
         candidateDocument
     ) {
-        if (!candidateDocument?.documentElement) return;
+        if (!candidateDocument?.documentElement) return false;
 
         const collapsed =
             readMissionFinderIphoneNativePickerCollapsed();
+        let changed = false;
 
         try {
             candidateDocument.querySelectorAll(
                 '.mf-iphone-native-picker-shell'
             ).forEach(shell => {
-                shell.classList.toggle(
-                    'mf-iphone-native-picker-collapsed',
-                    collapsed
-                );
+                changed =
+                    setMissionFinderIphonePickerClass(
+                        shell,
+                        'mf-iphone-native-picker-collapsed',
+                        collapsed
+                    ) || changed;
             });
         } catch (_error) {}
 
@@ -18570,39 +18810,81 @@ let sessionRuntimeTicker = null;
                 MF_IPHONE_NATIVE_PICKER_TOGGLE_ID
             );
 
-        if (!toggle) return;
-
-        const label =
-            toggle.querySelector(
-                '.mf-iphone-native-picker-toggle-label'
+        if (!toggle) {
+            mfIphoneNativePickerRenderState.delete(
+                candidateDocument
             );
-        const icon =
-            toggle.querySelector(
-                '.mf-iphone-native-picker-toggle-icon'
-            );
-
-        if (label) {
-            const count = String(
-                toggle.dataset.itemCount || ''
-            ).trim();
-            label.textContent = count
-                ? `Unit Quick Select · ${count}`
-                : 'Unit Quick Select';
+            return changed;
         }
 
-        if (icon) {
-            icon.textContent = collapsed
-                ? '▾'
-                : '▴';
-        }
-
-        toggle.setAttribute(
-            'aria-expanded',
-            String(!collapsed)
+        const label = toggle.querySelector(
+            '.mf-iphone-native-picker-toggle-label'
         );
-        toggle.title = collapsed
+        const icon = toggle.querySelector(
+            '.mf-iphone-native-picker-toggle-icon'
+        );
+        const count = String(
+            toggle.dataset.itemCount || ''
+        ).trim();
+        const labelText = count
+            ? `Unit Quick Select · ${count}`
+            : 'Unit Quick Select';
+        const iconText = collapsed ? '▾' : '▴';
+        const expandedText = String(!collapsed);
+        const titleText = collapsed
             ? 'Expand MissionChief unit quick select'
             : 'Collapse MissionChief unit quick select';
+        const signature = [
+            collapsed ? '1' : '0',
+            count,
+            labelText,
+            iconText,
+            expandedText,
+            titleText
+        ].join('|');
+
+        if (
+            mfIphoneNativePickerRenderState.get(
+                candidateDocument
+            ) === signature &&
+            label?.textContent === labelText &&
+            icon?.textContent === iconText &&
+            toggle.getAttribute('aria-expanded') ===
+                expandedText &&
+            toggle.title === titleText
+        ) {
+            return changed;
+        }
+
+        changed =
+            setMissionFinderIphonePickerText(
+                label,
+                labelText
+            ) || changed;
+        changed =
+            setMissionFinderIphonePickerText(
+                icon,
+                iconText
+            ) || changed;
+        changed =
+            setMissionFinderIphonePickerAttribute(
+                toggle,
+                'aria-expanded',
+                expandedText
+            ) || changed;
+
+        if (toggle.title !== titleText) {
+            markMissionFinderIphoneNativePickerMutation();
+            toggle.title = titleText;
+            changed = true;
+        }
+
+        mfIphoneNativePickerRenderState.set(
+            candidateDocument,
+            signature
+        );
+
+        return changed;
     }
 
     function applyMissionFinderIphoneNativePickerToDocument(
@@ -18638,6 +18920,7 @@ let sessionRuntimeTicker = null;
         ensureMissionFinderIphoneNativePickerStyles(
             candidateDocument
         );
+        markMissionFinderIphoneNativePickerMutation();
 
         candidateDocument.documentElement.classList.add(
             MF_IPHONE_NATIVE_PICKER_ROOT_CLASS
@@ -18710,8 +18993,16 @@ let sessionRuntimeTicker = null;
             `;
         }
 
-        toggle.dataset.itemCount =
+        const nextItemCount =
             String(anchors.length);
+        if (
+            toggle.dataset.itemCount !==
+            nextItemCount
+        ) {
+            markMissionFinderIphoneNativePickerMutation();
+            toggle.dataset.itemCount =
+                nextItemCount;
+        }
 
         if (
             toggle.dataset.mfIphoneNativePickerBound !==
@@ -18724,20 +19015,45 @@ let sessionRuntimeTicker = null;
                 event => {
                     event.preventDefault();
                     event.stopPropagation();
+                    event.stopImmediatePropagation?.();
+
+                    const now = Date.now();
+                    if (
+                        now <
+                        mfIphoneNativePickerDisclosureLockUntil
+                    ) {
+                        return;
+                    }
+
+                    mfIphoneNativePickerDisclosureLockUntil =
+                        now + 420;
+
+                    const owningShell =
+                        toggle.closest(
+                            '.mf-iphone-native-picker-shell'
+                        );
+                    const currentlyCollapsed =
+                        owningShell
+                            ? owningShell.classList.contains(
+                                'mf-iphone-native-picker-collapsed'
+                            )
+                            : readMissionFinderIphoneNativePickerCollapsed();
 
                     writeMissionFinderIphoneNativePickerCollapsed(
-                        !readMissionFinderIphoneNativePickerCollapsed()
+                        !currentlyCollapsed
                     );
 
                     mfIphoneNativePickerDocuments.forEach(
                         updateMissionFinderIphoneNativePickerState
                     );
 
-                    scheduleMissionFinderIphoneNativePickerSync(
-                        'native picker disclosure changed',
-                        0,
-                        0
-                    );
+                    requestAnimationFrame(() => {
+                        syncMissionFinderIphoneLauncherPlacement(
+                            document.getElementById(
+                                'mission-finder-wrapper'
+                            )
+                        );
+                    });
                 }
             );
         }
@@ -37118,6 +37434,19 @@ let sessionRuntimeTicker = null;
         );
     }
 
+
+
+    function shouldIgnoreMissionFinderIphoneOwnedMutation(
+        record
+    ) {
+        return Boolean(
+            isMissionFinderIphoneSafariWebsite() &&
+            isMissionFinderIphoneNativePickerOwnedMutationRecord(
+                record
+            )
+        );
+    }
+
     function classifyMissionFinderMutations(records) {
         const flags = {
             relevant: false,
@@ -37190,6 +37519,14 @@ let sessionRuntimeTicker = null;
         };
 
         for (const record of records || []) {
+            if (
+                shouldIgnoreMissionFinderIphoneOwnedMutation(
+                    record
+                )
+            ) {
+                continue;
+            }
+
             const target = record.target;
             const changedNodes = [
                 ...(record.addedNodes || []),
