@@ -10,3 +10,4 @@ Export the exact validated v1.0.24 files for connector-controlled commit.
 Create the final unattached validated v1.0.24 Git commit receipt.
 Create the workflow-independent validated source commit receipt.
 Trigger the clean v1.0.24 release tag launcher.
+Run the corrected GitHub, Greasy Fork and Discord delivery verifier.
