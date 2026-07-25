@@ -11,3 +11,4 @@ Create the final unattached validated v1.0.24 Git commit receipt.
 Create the workflow-independent validated source commit receipt.
 Trigger the clean v1.0.24 release tag launcher.
 Run the corrected GitHub, Greasy Fork and Discord delivery verifier.
+Capture the current permanent release workflow snapshot.
