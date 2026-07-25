@@ -36,6 +36,9 @@ jobs:
       - name: Run repository checks
         run: python3 scripts/check_repository.py
 
+      - name: Validate single-delivery Discord release notifications
+        run: node scripts/check-release-notification-single-delivery.mjs
+
   release-state:
     name: Detect unpublished canonical version
     if: >-
