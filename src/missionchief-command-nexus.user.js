@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.28
+// @version      1.0.29
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -8680,7 +8680,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.93
+         * MODULE 2: MISSION FINDER V10.6.94
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -9260,14 +9260,60 @@
             && /^https?:$/i.test(String(location.protocol || ''));
     }
 
+    function getMissionFinderPhoneScreenShortSide() {
+        const values = [];
+
+        const addValue = value => {
+            const number = Number(value);
+
+            if (
+                Number.isFinite(number) &&
+                number > 0
+            ) {
+                values.push(number);
+            }
+        };
+
+        try {
+            addValue(window.screen?.width);
+            addValue(window.screen?.height);
+        } catch (_error) {}
+
+        if (values.length >= 2) {
+            return Math.min(...values);
+        }
+
+        try {
+            addValue(window.visualViewport?.width);
+            addValue(window.innerWidth);
+            addValue(document.documentElement?.clientWidth);
+        } catch (_error) {}
+
+        return values.length
+            ? Math.min(...values)
+            : Number.POSITIVE_INFINITY;
+    }
+
     function isMissionFinderIphoneSafariWebsite() {
         const userAgent = String(navigator.userAgent || '');
         const platform = String(navigator.platform || '');
+        const maxTouchPoints = Number(
+            navigator.maxTouchPoints ||
+            0
+        );
+        const explicitPhoneIdentity =
+            /iPhone|iPod/i.test(userAgent);
+        const compactDesktopSiteIdentity =
+            platform === 'MacIntel' &&
+            maxTouchPoints > 1 &&
+            !/iPad/i.test(userAgent) &&
+            getMissionFinderPhoneScreenShortSide() <= 600;
 
-        return isMissionFinderIosSafariWebsite()
-            && /iPhone|iPod/i.test(userAgent)
-            && !/iPad/i.test(userAgent)
-            && platform !== 'MacIntel';
+        return isMissionFinderIosSafariWebsite() &&
+            (
+                explicitPhoneIdentity ||
+                compactDesktopSiteIdentity
+            );
     }
 
     const MF_CONTROL_COLLAPSED_KEY =
@@ -9330,6 +9376,10 @@
     const MF_STRICT_TRAINING_SOURCE_PREFIX =
         'mission-finder-live-strict-';
 
+    // V10.6.94: iPhone Safari desktop-site sessions that identify as MacIntel
+    // now enter the compact phone layout when the physical screen short side is
+    // phone-sized. iPad remains excluded by its larger physical screen even in
+    // split-screen or desktop-site mode.
     // V10.6.93: the iPhone Safari layout now also owns MissionChief's native
     // search_attribute quick-select matrix in whichever same-origin mission
     // document renders it. The native picker is collapsed behind one compact
