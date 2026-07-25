@@ -1,0 +1,85 @@
+name: Snapshot v1.0.24 release status
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: write
+
+jobs:
+  status:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'diagnostic/normal-irv-selection'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Report release run snapshot
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          RELEASE_TAG: v1.0.24
+          RELEASE_SHA: c610bef883bb1be42869e625e8245b77f05ad0d8
+        shell: bash
+        run: |
+          set -euo pipefail
+          RUN_JSON="$(
+            gh api \
+              "repos/${GITHUB_REPOSITORY}/actions/workflows/release.yml/runs?event=push&per_page=30"
+          )"
+          RUN_ROW="$(
+            jq -c \
+              --arg tag "${RELEASE_TAG}" \
+              --arg sha "${RELEASE_SHA}" \
+              '.workflow_runs |
+               map(select(.head_branch == $tag or .head_sha == $sha)) |
+               sort_by(.created_at) |
+               reverse |
+               .[0] // empty' <<< "${RUN_JSON}"
+          )"
+
+          if [[ -z "${RUN_ROW}" ]]; then
+            gh pr comment "${PR_NUMBER}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --body 'v1.0.24 release snapshot: no matching permanent release run found.'
+            exit 0
+          fi
+
+          RUN_ID="$(jq -r '.id' <<< "${RUN_ROW}")"
+          RUN_URL="$(jq -r '.html_url' <<< "${RUN_ROW}")"
+          RUN_STATUS="$(jq -r '.status' <<< "${RUN_ROW}")"
+          RUN_CONCLUSION="$(jq -r '.conclusion // "pending"' <<< "${RUN_ROW}")"
+          JOBS_JSON="$(
+            gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/jobs?per_page=100"
+          )"
+          JOB_SUMMARY="$(
+            jq -r \
+              '.jobs[] |
+               "- " + .name + ": " + .status + " / " + (.conclusion // "pending") +
+               (if (.steps | length) > 0 then
+                  "\n" + ([.steps[] | "  - " + .name + ": " + .status + " / " + (.conclusion // "pending")] | join("\n"))
+                else "" end)' <<< "${JOBS_JSON}"
+          )"
+
+          cat > /tmp/v1024-status.md <<EOF
+          ## v1.0.24 release snapshot
+
+          - Run: ${RUN_URL}
+          - Run ID: \`${RUN_ID}\`
+          - Status: \`${RUN_STATUS}\`
+          - Conclusion: \`${RUN_CONCLUSION}\`
+
+          ${JOB_SUMMARY}
+          EOF
+          gh pr comment "${PR_NUMBER}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --body-file /tmp/v1024-status.md
