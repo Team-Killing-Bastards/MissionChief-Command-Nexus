@@ -12,6 +12,11 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Evidence-driven roadmap, architecture, migration and testing documentation.
 - Expanded repository integrity checks for required development and release files.
 
+### Fixed
+
+- Prevented duplicate Discord release announcements by removing the second tag-push publisher path and recording a durable per-release Discord receipt asset.
+- Publication and repair reruns now skip an already-announced release unless an operator explicitly enables force resend.
+
 ### Changed
 
 - Replaced planning-era documentation with the actual merged v1.0.1 baseline.
