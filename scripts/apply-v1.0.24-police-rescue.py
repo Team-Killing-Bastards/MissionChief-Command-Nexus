@@ -1,5 +1,4 @@
 from pathlib import Path
-import re
 
 SOURCE_PATH = Path('src/missionchief-command-nexus.user.js')
 CHANGELOG_PATH = Path('CHANGELOG.md')
@@ -37,6 +36,8 @@ if mission_version_count < 1:
     raise SystemExit('Mission Finder V10.6.88 marker missing')
 source = source.replace('V10.6.88', 'V10.6.89')
 
+# Build the dynamic RegExp through explicit string concatenation so word,
+# digit and whitespace escapes survive JavaScript string parsing unchanged.
 new_count_function = r'''    function getNamedPersonnelCount(
         personnelSegment,
         namePatternSource
@@ -101,149 +102,8 @@ replace_between(
     'Missing Personnel count parser',
 )
 
-rescue_helpers = r'''    function isRescueSupportRequirement(
-        originalName,
-        mappedName
-    ) {
-        const raw = normaliseVehicleText(originalName);
-        const mapped = normaliseVehicleText(mappedName);
-
-        return (
-            /^(?:required\s+)?rescue\s+support\s+(?:units?|vehicles?)$/i.test(raw) ||
-            /^(?:required\s+)?rescue\s+support\s+(?:units?|vehicles?)\s+or\s+rescue\s+pumps?$/i.test(raw) ||
-            /^fire\s+engines?\s+or\s+rescue\s+support\s+vehicles?$/i.test(raw) ||
-            /^fire\s+engines?,\s+rescue\s+support\s+vehicles?\s+or\s+aerial\s+appliance\s+trucks?$/i.test(raw) ||
-            mapped === 'fire engine r/pump x 1'
-        );
-    }
-
-    function isRescueSupportVehicleCheckbox(input) {
-        if (!input) return false;
-
-        const typeIdentifiers =
-            getVehicleTypeIdentifiers(
-                input
-            );
-
-        if (
-            typeIdentifiers.includes('75') ||
-            typeIdentifiers.includes('76')
-        ) {
-            return false;
-        }
-
-        return getExtendedVehicleValues(input).some(value => {
-            const normalised = normaliseVehicleText(value);
-            const displayed = normaliseSartecDisplayedName(value);
-
-            if (
-                /major\s+foam\s+tender|(?:^|\b)MFT(?:\b|$)|rapid\s+intervention\s+vehicle|(?:^|\b)RIV(?:\b|$)/i.test(
-                    displayed
-                )
-            ) {
-                return false;
-            }
-
-            return (
-                normalised === 'fire engine' ||
-                normalised === 'fire engines' ||
-                normalised === 'pump' ||
-                normalised === 'pumps' ||
-                normalised === 'rescue pump' ||
-                normalised === 'rescue pumps' ||
-                normalised === 'rescue support unit' ||
-                normalised === 'rescue support units' ||
-                normalised === 'rescue support vehicle' ||
-                normalised === 'rescue support vehicles' ||
-                /^(?:R\/?PUMP|Rescue\s+Pump|Fire\s+Engine|Pump)\b/i.test(
-                    displayed
-                )
-            );
-        });
-    }
-
-'''
-replace_once(
-    '    function isMajorFoamTenderVehicleCheckbox(',
-    rescue_helpers + '    function isMajorFoamTenderVehicleCheckbox(',
-    'Rescue Support strict helpers',
-)
-
-all_matching_guard = r'''        if (
-            isRescueSupportRequirement(
-                originalName,
-                mappedName
-            )
-        ) {
-            return sortVehicleCheckboxesByBestArrival(
-                getVehicleCheckboxSnapshot().filter(input => {
-                    if (input.disabled) return false;
-                    if (!includeChecked && input.checked) return false;
-                    return isRescueSupportVehicleCheckbox(input);
-                })
-            );
-        }
-
-'''
-replace_once(
-    '''    function getAllMatchingVehicleCheckboxes(originalName, mappedName, includeChecked) {
-        // BASU, Welfare and HazMat share the same selected exact type-39 Fire OSU.''',
-    '''    function getAllMatchingVehicleCheckboxes(originalName, mappedName, includeChecked) {
-''' + all_matching_guard + '''        // BASU, Welfare and HazMat share the same selected exact type-39 Fire OSU.''',
-    'Rescue Support all-matching guard',
-)
-
-count_guard = r'''        if (
-            isRescueSupportRequirement(
-                originalName,
-                mappedName
-            )
-        ) {
-            return getVehicleCheckboxSnapshot().filter(input => {
-                return (
-                    input.checked &&
-                    isRescueSupportVehicleCheckbox(input)
-                );
-            }).length;
-        }
-
-'''
-replace_once(
-    '''    function countSelectedMatchingVehicles(originalName, mappedName) {
-        if (isFireOperationalSupportRequirement(originalName, mappedName)) {''',
-    '''    function countSelectedMatchingVehicles(originalName, mappedName) {
-''' + count_guard + '''        if (isFireOperationalSupportRequirement(originalName, mappedName)) {''',
-    'Rescue Support selected-count guard',
-)
-
-find_guard = r'''        if (
-            isRescueSupportRequirement(
-                originalName,
-                mappedName
-            )
-        ) {
-            // Checkbox only: never use a broad AAO/ARR group button for this
-            // requirement because those groups can dispatch an RIV or MFT.
-            return sortVehicleCheckboxesByBestArrival(
-                getVehicleCheckboxSnapshot(true).filter(input => {
-                    return (
-                        !input.disabled &&
-                        !input.checked &&
-                        isRescueSupportVehicleCheckbox(input)
-                    );
-                })
-            )[0] || null;
-        }
-
-'''
-replace_once(
-    '''    function findUnitButton(mappedName, originalName) {
-        if (isFireOperationalSupportRequirement(originalName, mappedName)) {''',
-    '''    function findUnitButton(mappedName, originalName) {
-''' + find_guard + '''        if (isFireOperationalSupportRequirement(originalName, mappedName)) {''',
-    'Rescue Support strict fallback guard',
-)
-
+# Make the alert path use the same canonical two-officers-per-car helper used by
+# live table and shared operational row normalisation.
 police_block_start = '''        // Police Cars normally carry 2 Police Officers.
         const policeOfficersNeeded ='''
 police_block_end = '''        // Coastguard Mud Rescue Units carry 5 Mud Rescue Operators each.'''
@@ -295,17 +155,17 @@ replace_between(
     'Police Officer Missing Personnel conversion',
 )
 
+# These current-main contracts must remain present. The release does not replace
+# the established type-83 Rescue Support selector with a broad Fire Engine rule.
 required_markers = [
     '// @version      1.0.24',
     'MODULE 2: MISSION FINDER V10.6.89',
-    'function isRescueSupportRequirement(',
-    'function isRescueSupportVehicleCheckbox(',
-    "typeIdentifiers.includes('75')",
-    "typeIdentifiers.includes('76')",
-    'convertedFromPersonnelRequirement:',
     "getPoliceOfficerVehicleRequirement(\n                    'Police Officers'",
+    'convertedFromPersonnelRequirement:',
     "if (stillNeededText === '?')",
     'UNIT FINDER ARMED PERSONNEL',
+    'Rescue Support Vehicle',
+    "includes('83')",
 ]
 for marker in required_markers:
     if marker not in source:
@@ -321,15 +181,14 @@ entry = '''## [1.0.24] - 2026-07-25
 
 ### Fixed
 
-- `Missing Personnel: N Police Officers` now always converts through the canonical two-officers-per-Police-Car rule using ceiling division: 1–2 officers select 1 ordinary IRV, 3–4 select 2, and 5 select 3.
-- Hardened the dynamic Missing Personnel count parser so both number-first and name-first personnel wording retain their numeric values.
-- Rescue Support Unit/Vehicle requirements now use a strict Rescue Pump/Fire Engine checkbox route and explicitly reject type-75 Major Foam Tenders and type-76 RIVs.
-- Rescue Support retry and verification now count the same strict vehicle pool, preventing the final missing popup from changing the requirement into Major Foam Tender.
+- `Missing Personnel: N Police Officers` now always passes through the canonical two-officers-per-Police-Car conversion using ceiling division: 1–2 officers select 1 ordinary IRV, 3–4 select 2, and 5 select 3.
+- Hardened the dynamic Missing Personnel count parser so number-first (`5 Police Officers`) and name-first (`Police Officers x5`) wording preserve the same numeric demand.
 
-### Preserved
+### Verified and preserved
 
-- Numeric and bounded-range `Still Needed` values remain authoritative; only a literal `?` falls back to `Required`.
-- Existing ordinary-IRV specialist-training protection, exact trained-vehicle verification, Armed Traffic Car handling and the legitimate RIV-first/Major-Foam fallback requirement remain unchanged.
+- Numeric and bounded-range `Still Needed` values remain authoritative; only a literal `?` or absent cell falls back to `Required`.
+- The established exact type-83 Rescue Support Vehicle selector remains isolated from type-75 Major Foam Tenders and type-76 RIVs during initial selection, selected counting, fallback and retry verification.
+- Armed Traffic Car trained-personnel selection and legitimate explicit RIV-first/Major-Foam fallback requirements remain unchanged.
 
 ### Changed
 
@@ -350,4 +209,4 @@ src_readme = src_readme.replace('| Command Nexus version | `1.0.23` |', '| Comma
 src_readme = src_readme.replace('| Mission Finder baseline | `V10.6.88` |', '| Mission Finder baseline | `V10.6.89` |')
 SRC_README_PATH.write_text(src_readme, encoding='utf-8', newline='\n')
 
-print('Prepared v1.0.24 Police Officer and Rescue Support fixes.')
+print('Prepared v1.0.24 Police Officer alert hardening.')
