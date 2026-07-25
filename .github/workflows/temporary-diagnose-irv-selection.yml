@@ -174,10 +174,12 @@ jobs:
 
           gh pr comment "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --body-file /tmp/irv-focused-comment.md
 
-      - name: Upload full focused diagnostic
+      - name: Upload full diagnostic and current source
         uses: actions/upload-artifact@v4
         with:
-          name: normal-irv-focused-diagnostic
-          path: /tmp/irv-focused-diagnostic.md
+          name: normal-irv-diagnostic-bundle
+          path: |
+            /tmp/irv-focused-diagnostic.md
+            src/missionchief-command-nexus.user.js
           if-no-files-found: error
           retention-days: 1
