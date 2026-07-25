@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Personnel Register Controls
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      0.1.0
+// @version      0.1.1
 // @description  Makes the Personnel Register controls readable and adds safe JSON export/import with visible register status.
 // @author       Team Killing Bastards
 // @license      MIT
@@ -19,50 +19,51 @@
 
     const STORAGE_KEY = 'mcPersonnelVehicleTrainingRegistry_v1';
     const EXPORT_FORMAT = 'missionchief-personnel-training-register';
-    const EXPORT_VERSION = 1;
-    const REGISTRY_SCHEMA_VERSION = 1;
+    const SCHEMA_VERSION = 1;
     const MAX_VEHICLES = 5000;
-    const MAIN_BUTTONS_SELECTOR = '#mc-personnel-view .mc-namer-buttons';
-    const BUILD_BUTTON_SELECTOR = '#mc-personnel-build-register';
+    const MAX_IMPORT_BYTES = 10 * 1024 * 1024;
+    const BUILD_SELECTOR = '#mc-personnel-build-register';
+    const BUTTONS_SELECTOR = '#mc-personnel-view .mc-namer-buttons';
 
-    let lifecycleObserver = null;
-    let buildMonitorTimer = null;
+    let lifecycleObserver;
+    let buildObserver;
+    let reportObserver;
+    let buildTimer;
     let initialiseQueued = false;
+    let boundBuild;
+    let boundExport;
+    let boundImport;
+    let cachedRaw = null;
+    let cachedRegistry = null;
+    let cachedStats = null;
 
-    function safeString(value, maximumLength = 1000) {
-        return String(value ?? '').slice(0, maximumLength);
-    }
-
-    function safeTimestamp(value) {
-        const timestamp = Number(value || 0);
-        return Number.isFinite(timestamp) && timestamp >= 0 ? timestamp : 0;
-    }
+    const q = selector => document.querySelector(selector);
+    const safeString = (value, limit = 1000) => String(value ?? '').slice(0, limit);
+    const safeTime = value => {
+        const number = Number(value || 0);
+        return Number.isFinite(number) && number >= 0 ? number : 0;
+    };
+    const unsafeKey = key => !key || key === '__proto__' || key === 'constructor' || key === 'prototype';
 
     function normaliseCountMap(value) {
-        const source = value && typeof value === 'object' && !Array.isArray(value)
-            ? value
-            : {};
-        const result = {};
-
-        Object.entries(source).forEach(([rawKey, rawCount]) => {
+        const result = Object.create(null);
+        const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+        for (const [rawKey, rawCount] of Object.entries(source)) {
             const key = safeString(rawKey, 150);
-            if (!key || key === '__proto__' || key === 'constructor' || key === 'prototype') return;
-
             const count = Number(rawCount || 0);
-            if (!Number.isFinite(count) || count < 0) return;
+            if (unsafeKey(key) || !Number.isFinite(count) || count < 0) continue;
             result[key] = Math.floor(count);
-        });
-
+        }
         return result;
     }
 
-    function createEmptyRegistry() {
+    function emptyRegistry() {
         return {
-            schemaVersion: REGISTRY_SCHEMA_VERSION,
+            schemaVersion: SCHEMA_VERSION,
             sourceVersion: '',
             updatedAt: 0,
             lastPrunedAt: 0,
-            vehicles: {}
+            vehicles: Object.create(null)
         };
     }
 
@@ -70,36 +71,30 @@
         const source = candidate?.registry && typeof candidate.registry === 'object'
             ? candidate.registry
             : candidate;
-
         if (!source || typeof source !== 'object' || Array.isArray(source)) {
             throw new Error('The selected file does not contain a Personnel Register object.');
         }
 
-        const schemaVersion = Number(source.schemaVersion || REGISTRY_SCHEMA_VERSION);
-        if (schemaVersion !== REGISTRY_SCHEMA_VERSION) {
+        const schemaVersion = source.schemaVersion == null ? SCHEMA_VERSION : Number(source.schemaVersion);
+        if (schemaVersion !== SCHEMA_VERSION) {
             throw new Error(`Unsupported Personnel Register schema version: ${schemaVersion}.`);
         }
-
         if (!source.vehicles || typeof source.vehicles !== 'object' || Array.isArray(source.vehicles)) {
             throw new Error('The selected file does not contain a valid vehicles register.');
         }
 
-        const vehicleEntries = Object.entries(source.vehicles);
-        if (vehicleEntries.length > MAX_VEHICLES) {
-            throw new Error(`The file contains ${vehicleEntries.length} vehicles; the supported maximum is ${MAX_VEHICLES}.`);
+        const entries = Object.entries(source.vehicles);
+        if (entries.length > MAX_VEHICLES) {
+            throw new Error(`The file contains ${entries.length} vehicles; the supported maximum is ${MAX_VEHICLES}.`);
         }
 
-        const vehicles = {};
-
-        vehicleEntries.forEach(([rawVehicleId, rawEntry]) => {
+        const vehicles = Object.create(null);
+        for (const [rawVehicleId, rawEntry] of entries) {
             const vehicleId = safeString(rawVehicleId, 80);
-            if (!vehicleId || vehicleId === '__proto__' || vehicleId === 'constructor' || vehicleId === 'prototype') {
-                throw new Error('The file contains an invalid vehicle identifier.');
-            }
+            if (unsafeKey(vehicleId)) throw new Error('The file contains an invalid vehicle identifier.');
             if (!rawEntry || typeof rawEntry !== 'object' || Array.isArray(rawEntry)) {
                 throw new Error(`Vehicle ${vehicleId} does not contain a valid register entry.`);
             }
-
             vehicles[vehicleId] = {
                 vehicleId,
                 vehicleName: safeString(rawEntry.vehicleName, 500),
@@ -111,45 +106,63 @@
                 personnelRowsSeen: Math.max(0, Math.floor(Number(rawEntry.personnelRowsSeen || 0) || 0)),
                 trainingCounts: normaliseCountMap(rawEntry.trainingCounts),
                 trainingCombinationCounts: normaliseCountMap(rawEntry.trainingCombinationCounts),
-                updatedAt: safeTimestamp(rawEntry.updatedAt),
+                updatedAt: safeTime(rawEntry.updatedAt),
                 source: safeString(rawEntry.source, 250)
             };
-        });
+        }
 
         return {
-            schemaVersion: REGISTRY_SCHEMA_VERSION,
+            schemaVersion: SCHEMA_VERSION,
             sourceVersion: safeString(source.sourceVersion, 80),
-            updatedAt: safeTimestamp(source.updatedAt),
-            lastPrunedAt: safeTimestamp(source.lastPrunedAt),
+            updatedAt: safeTime(source.updatedAt),
+            lastPrunedAt: safeTime(source.lastPrunedAt),
             vehicles
         };
     }
 
-    function readStoredRegistry() {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return createEmptyRegistry();
+    function invalidateCache() {
+        cachedRaw = null;
+        cachedRegistry = null;
+        cachedStats = null;
+    }
 
+    function readRegistry() {
+        const raw = localStorage.getItem(STORAGE_KEY) || '';
+        if (raw === cachedRaw && cachedRegistry) return cachedRegistry;
+        if (!raw) {
+            cachedRaw = '';
+            cachedRegistry = emptyRegistry();
+            cachedStats = { count: 0, updatedAt: 0 };
+            return cachedRegistry;
+        }
         try {
-            return normaliseRegistry(JSON.parse(raw));
+            cachedRaw = raw;
+            cachedRegistry = normaliseRegistry(JSON.parse(raw));
+            cachedStats = null;
+            return cachedRegistry;
         } catch (error) {
+            invalidateCache();
             throw new Error(`The saved Personnel Register is invalid: ${error?.message || error}`);
         }
     }
 
-    function getRegistryStats(registry = readStoredRegistry()) {
+    function calculateStats(registry) {
         const entries = Object.values(registry.vehicles || {});
-        const latestVehicleUpdate = entries.reduce(
-            (latest, entry) => Math.max(latest, safeTimestamp(entry?.updatedAt)),
-            0
+        const updatedAt = entries.reduce(
+            (latest, entry) => Math.max(latest, safeTime(entry?.updatedAt)),
+            safeTime(registry.updatedAt)
         );
-
-        return {
-            count: entries.length,
-            updatedAt: Math.max(safeTimestamp(registry.updatedAt), latestVehicleUpdate)
-        };
+        return { count: entries.length, updatedAt };
     }
 
-    function formatTimestamp(timestamp) {
+    function getStats(registry) {
+        if (registry) return calculateStats(registry);
+        const stored = readRegistry();
+        if (!cachedStats) cachedStats = calculateStats(stored);
+        return cachedStats;
+    }
+
+    function formatTime(timestamp) {
         if (!timestamp) return 'never';
         try {
             return new Intl.DateTimeFormat('en-GB', {
@@ -161,45 +174,27 @@
         }
     }
 
-    function appendPersonnelLog(message, tone = 'info') {
-        const log = document.querySelector('#mc-personnel-log');
-        if (!log) return;
-
+    function log(message, tone = 'info') {
+        const target = q('#mc-personnel-log');
+        if (!target) return;
         const line = document.createElement('div');
-        line.dataset.mcRegisterControls = 'true';
         line.textContent = message;
         line.style.color = tone === 'error' ? '#fecaca' : tone === 'done' ? '#bbf7d0' : '#bfdbfe';
-        log.appendChild(line);
-        log.scrollTop = log.scrollHeight;
+        target.appendChild(line);
+        target.scrollTop = target.scrollHeight;
     }
 
-    function updateRegisterStatus() {
-        const status = document.querySelector('#mc-personnel-register-storage-status');
-        if (!status) return;
-
-        try {
-            const stats = getRegistryStats();
-            status.textContent = `${stats.count.toLocaleString('en-GB')} vehicle${stats.count === 1 ? '' : 's'} stored · updated ${formatTimestamp(stats.updatedAt)}`;
-            status.dataset.state = stats.count ? 'ready' : 'empty';
-        } catch (error) {
-            status.textContent = error?.message || String(error);
-            status.dataset.state = 'error';
-        }
-
-        correctRetainedCountReport();
-    }
-
-    function correctRetainedCountReport() {
-        const report = document.querySelector('#mc-personnel-report');
+    function correctRetainedCount(knownCount) {
+        const report = q('#mc-personnel-report');
         if (!report) return;
-
-        let count = 0;
-        try {
-            count = getRegistryStats().count;
-        } catch (_error) {
-            return;
+        let count = Number(knownCount);
+        if (!Number.isFinite(count)) {
+            try {
+                count = getStats().count;
+            } catch (_error) {
+                return;
+            }
         }
-
         if (count <= 0 || !/Registry retained:\s*0\b/.test(report.textContent || '')) return;
         report.textContent = (report.textContent || '').replace(
             /Registry retained:\s*0\b/,
@@ -207,92 +202,104 @@
         );
     }
 
+    function updateStatus() {
+        const target = q('#mc-personnel-register-storage-status');
+        if (!target) return;
+        try {
+            const stats = getStats();
+            target.textContent = `${stats.count.toLocaleString('en-GB')} vehicle${stats.count === 1 ? '' : 's'} stored · updated ${formatTime(stats.updatedAt)}`;
+            target.dataset.state = stats.count ? 'ready' : 'empty';
+            correctRetainedCount(stats.count);
+        } catch (error) {
+            target.textContent = error?.message || String(error);
+            target.dataset.state = 'error';
+        }
+    }
+
+    const buildActive = () => Boolean(q(BUILD_SELECTOR)?.disabled);
+
+    function syncButtons() {
+        const disabled = buildActive();
+        if (boundExport) boundExport.disabled = disabled;
+        if (boundImport) boundImport.disabled = disabled;
+    }
+
     function downloadJson(filename, value) {
-        const blob = new Blob([`${JSON.stringify(value, null, 2)}\n`], {
-            type: 'application/json;charset=utf-8'
-        });
-        const url = URL.createObjectURL(blob);
+        const url = URL.createObjectURL(new Blob([
+            `${JSON.stringify(value, null, 2)}\n`
+        ], { type: 'application/json;charset=utf-8' }));
         const link = document.createElement('a');
         link.href = url;
         link.download = filename;
-        link.style.display = 'none';
+        link.hidden = true;
         document.body.appendChild(link);
         link.click();
         link.remove();
-        setTimeout(() => URL.revokeObjectURL(url), 0);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
 
-    function exportPersonnelRegister() {
-        const buildButton = document.querySelector(BUILD_BUTTON_SELECTOR);
-        if (buildButton?.disabled) {
-            window.alert('Finish or stop the active register build before exporting, so the file contains the final saved state.');
+    function exportRegister() {
+        if (buildActive()) {
+            window.alert('Finish or stop the active register build before exporting.');
             return;
         }
-
         let registry;
         try {
-            registry = readStoredRegistry();
+            registry = readRegistry();
         } catch (error) {
             window.alert(error?.message || String(error));
             return;
         }
-
-        const stats = getRegistryStats(registry);
+        const stats = getStats(registry);
         if (!stats.count) {
             window.alert('The Personnel Register is empty. Build or import a register before exporting.');
             return;
         }
-
         const exportedAt = new Date().toISOString();
-        const dateToken = exportedAt.slice(0, 10);
-        downloadJson(`missionchief-personnel-register-${dateToken}.json`, {
+        downloadJson(`missionchief-personnel-register-${exportedAt.slice(0, 10)}.json`, {
             format: EXPORT_FORMAT,
-            exportVersion: EXPORT_VERSION,
+            exportVersion: 1,
             exportedAt,
             origin: location.origin,
             vehicleCount: stats.count,
             registry
         });
-
-        appendPersonnelLog(`Personnel Register exported: ${stats.count} vehicle(s).`, 'done');
+        log(`Personnel Register exported: ${stats.count} vehicle(s).`, 'done');
     }
 
-    async function importPersonnelRegisterFile(file) {
+    async function importRegister(file) {
         if (!file) return;
-
-        const buildButton = document.querySelector(BUILD_BUTTON_SELECTOR);
-        if (buildButton?.disabled) {
+        if (Number(file.size || 0) > MAX_IMPORT_BYTES) {
+            window.alert('Personnel Register import failed: the selected file is larger than 10 MB.');
+            return;
+        }
+        if (buildActive()) {
             window.alert('Finish or stop the active register build before importing.');
             return;
         }
 
-        let importedRegistry;
+        let registry;
         try {
-            const text = await file.text();
-            const parsed = JSON.parse(text);
-
+            const parsed = JSON.parse(await file.text());
             if (parsed?.format && parsed.format !== EXPORT_FORMAT) {
                 throw new Error(`Unsupported export format: ${safeString(parsed.format, 120)}`);
             }
-
-            importedRegistry = normaliseRegistry(parsed);
+            registry = normaliseRegistry(parsed);
         } catch (error) {
+            log(`Personnel Register import failed: ${error?.message || error}`, 'error');
             window.alert(`Personnel Register import failed: ${error?.message || error}`);
-            appendPersonnelLog(`Personnel Register import failed: ${error?.message || error}`, 'error');
             return;
         }
 
-        const importedCount = Object.keys(importedRegistry.vehicles).length;
+        const importedCount = Object.keys(registry.vehicles).length;
         if (!importedCount) {
             window.alert('The selected file contains an empty Personnel Register. Nothing was imported.');
             return;
         }
-
         let existingCount = 0;
         try {
-            existingCount = getRegistryStats().count;
+            existingCount = getStats().count;
         } catch (_error) {}
-
         const confirmed = window.confirm(
             `Import ${importedCount.toLocaleString('en-GB')} vehicle register entries?\n\n` +
             `This replaces the ${existingCount.toLocaleString('en-GB')} entries currently stored in this browser.`
@@ -300,10 +307,11 @@
         if (!confirmed) return;
 
         try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(importedRegistry));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(registry));
+            invalidateCache();
         } catch (error) {
+            log(`Personnel Register import could not be saved: ${error?.message || error}`, 'error');
             window.alert(`Personnel Register could not be saved: ${error?.message || error}`);
-            appendPersonnelLog(`Personnel Register import could not be saved: ${error?.message || error}`, 'error');
             return;
         }
 
@@ -316,100 +324,84 @@
                 }
             }));
         } catch (_error) {}
-
-        updateRegisterStatus();
-        appendPersonnelLog(`Personnel Register imported: ${importedCount} vehicle(s). Existing browser register replaced.`, 'done');
+        updateStatus();
+        log(`Personnel Register imported: ${importedCount} vehicle(s). Existing browser register replaced.`, 'done');
         window.alert(
             `Personnel Register imported successfully: ${importedCount.toLocaleString('en-GB')} vehicle entries.\n\n` +
-            'The page will now reload so Command Nexus drops its old in-memory register cache and uses the imported data.'
+            'The page will now reload so Command Nexus uses the imported data.'
         );
         location.reload();
     }
 
-    function monitorBuildProgress() {
-        if (buildMonitorTimer != null) clearInterval(buildMonitorTimer);
-
-        buildMonitorTimer = setInterval(() => {
-            const buildButton = document.querySelector(BUILD_BUTTON_SELECTOR);
-            updateRegisterStatus();
-
-            if (!buildButton || !buildButton.disabled) {
-                clearInterval(buildMonitorTimer);
-                buildMonitorTimer = null;
-                updateBuildButtonLabel();
-                updateRegisterStatus();
-            }
-        }, 1000);
-    }
-
-    function updateBuildButtonLabel() {
-        const button = document.querySelector(BUILD_BUTTON_SELECTOR);
+    function labelBuildButton() {
+        const button = q(BUILD_SELECTOR);
         if (!button) return;
-
         if (!button.disabled && button.textContent.trim() === 'Build Personnel Register') {
             button.textContent = 'Build All Register';
         }
         button.title = 'Scan every station and rebuild the exact vehicle training register. This ignores the selected service, training profile, mode and start point. No personnel assignments are changed.';
     }
 
-    function ensureStyles() {
-        if (document.querySelector('style[data-mc-personnel-register-controls]')) return;
+    function monitorBuild() {
+        if (buildTimer != null) clearInterval(buildTimer);
+        buildTimer = setInterval(() => {
+            syncButtons();
+            updateStatus();
+            if (q(BUILD_SELECTOR)?.disabled) return;
+            clearInterval(buildTimer);
+            buildTimer = null;
+            labelBuildButton();
+            syncButtons();
+            updateStatus();
+        }, 1000);
+    }
 
+    function ensureStyles() {
+        if (q('style[data-mc-personnel-register-controls]')) return;
         const style = document.createElement('style');
         style.dataset.mcPersonnelRegisterControls = 'true';
         style.textContent = `
-            #mc-personnel-build-register {
-                background: #0f766e !important;
-                color: #ffffff !important;
-                border: 1px solid #5eead4 !important;
-                font-weight: 700 !important;
-            }
-
-            #mc-personnel-build-register:disabled {
-                cursor: wait !important;
-                opacity: 0.65 !important;
-            }
-
-            #mc-personnel-export-register {
-                background: #7c3aed !important;
-                color: #ffffff !important;
-                border: 1px solid #c4b5fd !important;
-            }
-
-            #mc-personnel-import-register {
-                background: #2563eb !important;
-                color: #ffffff !important;
-                border: 1px solid #93c5fd !important;
-            }
-
-            #mc-personnel-register-storage {
-                border-left: 4px solid #14b8a6;
-                background: rgba(15, 118, 110, 0.18);
-            }
-
-            #mc-personnel-register-storage-status[data-state="ready"] { color: #bbf7d0; }
-            #mc-personnel-register-storage-status[data-state="empty"] { color: #fde68a; }
-            #mc-personnel-register-storage-status[data-state="error"] { color: #fecaca; }
-        `;
+#mc-personnel-build-register{background:#0f766e!important;color:#fff!important;border:1px solid #5eead4!important;font-weight:700!important}
+#mc-personnel-build-register:disabled{cursor:wait!important;opacity:.65!important}
+#mc-personnel-export-register{background:#7c3aed!important;color:#fff!important;border:1px solid #c4b5fd!important}
+#mc-personnel-import-register{background:#2563eb!important;color:#fff!important;border:1px solid #93c5fd!important}
+#mc-personnel-export-register:disabled,#mc-personnel-import-register:disabled{cursor:not-allowed!important;opacity:.55!important}
+#mc-personnel-register-storage{border-left:4px solid #14b8a6;background:rgba(15,118,110,.18)}
+#mc-personnel-register-storage-status[data-state="ready"]{color:#bbf7d0}
+#mc-personnel-register-storage-status[data-state="empty"]{color:#fde68a}
+#mc-personnel-register-storage-status[data-state="error"]{color:#fecaca}`;
         document.head.appendChild(style);
     }
 
-    function ensureControls() {
-        const buttons = document.querySelector(MAIN_BUTTONS_SELECTOR);
-        const buildButton = document.querySelector(BUILD_BUTTON_SELECTOR);
-        if (!buttons || !buildButton) return false;
+    function makeButton(id, text, title, handler) {
+        let button = q(`#${id}`);
+        if (button) return button;
+        button = document.createElement('button');
+        button.id = id;
+        button.type = 'button';
+        button.textContent = text;
+        button.title = title;
+        button.addEventListener('click', handler);
+        return button;
+    }
 
+    function installControls() {
+        const buttons = q(BUTTONS_SELECTOR);
+        const build = q(BUILD_SELECTOR);
+        if (!buttons || !build) return false;
         ensureStyles();
-        updateBuildButtonLabel();
+        labelBuildButton();
 
-        if (!buildButton.dataset.mcRegisterControlsBound) {
-            buildButton.dataset.mcRegisterControlsBound = 'true';
-            buildButton.addEventListener('click', () => {
-                setTimeout(monitorBuildProgress, 0);
+        if (boundBuild !== build) {
+            buildObserver?.disconnect();
+            reportObserver?.disconnect();
+            boundBuild = build;
+            build.addEventListener('click', () => setTimeout(monitorBuild, 0));
+            buildObserver = new MutationObserver(() => {
+                labelBuildButton();
+                syncButtons();
             });
-
-            const buttonObserver = new MutationObserver(() => updateBuildButtonLabel());
-            buttonObserver.observe(buildButton, {
+            buildObserver.observe(build, {
                 childList: true,
                 characterData: true,
                 subtree: true,
@@ -418,82 +410,93 @@
             });
         }
 
-        let exportButton = document.querySelector('#mc-personnel-export-register');
-        if (!exportButton) {
-            exportButton = document.createElement('button');
-            exportButton.id = 'mc-personnel-export-register';
-            exportButton.type = 'button';
-            exportButton.textContent = 'Export Register';
-            exportButton.title = 'Download the saved Personnel Register as a validated JSON backup.';
-            exportButton.addEventListener('click', exportPersonnelRegister);
-            buttons.appendChild(exportButton);
-        }
+        boundExport = makeButton(
+            'mc-personnel-export-register',
+            'Export Register',
+            'Download the saved Personnel Register as a validated JSON backup.',
+            exportRegister
+        );
+        if (!boundExport.isConnected) buttons.appendChild(boundExport);
 
-        let importInput = document.querySelector('#mc-personnel-import-register-file');
-        if (!importInput) {
-            importInput = document.createElement('input');
-            importInput.id = 'mc-personnel-import-register-file';
-            importInput.type = 'file';
-            importInput.accept = '.json,application/json';
-            importInput.hidden = true;
-            importInput.addEventListener('change', async () => {
-                const [file] = Array.from(importInput.files || []);
-                importInput.value = '';
-                await importPersonnelRegisterFile(file);
+        let input = q('#mc-personnel-import-register-file');
+        if (!input) {
+            input = document.createElement('input');
+            input.id = 'mc-personnel-import-register-file';
+            input.type = 'file';
+            input.accept = '.json,application/json';
+            input.hidden = true;
+            input.addEventListener('change', async () => {
+                const file = input.files?.[0];
+                input.value = '';
+                await importRegister(file);
             });
-            buttons.appendChild(importInput);
+            buttons.appendChild(input);
         }
 
-        let importButton = document.querySelector('#mc-personnel-import-register');
-        if (!importButton) {
-            importButton = document.createElement('button');
-            importButton.id = 'mc-personnel-import-register';
-            importButton.type = 'button';
-            importButton.textContent = 'Import Register';
-            importButton.title = 'Replace the browser Personnel Register with a validated JSON backup.';
-            importButton.addEventListener('click', () => importInput.click());
-            buttons.appendChild(importButton);
+        boundImport = makeButton(
+            'mc-personnel-import-register',
+            'Import Register',
+            'Replace the browser Personnel Register with a validated JSON backup.',
+            () => input.click()
+        );
+        if (!boundImport.isConnected) buttons.appendChild(boundImport);
+
+        if (!q('#mc-personnel-register-storage')) {
+            const status = document.createElement('div');
+            status.id = 'mc-personnel-register-storage';
+            status.className = 'mc-namer-section';
+            status.innerHTML = '<b>Personnel Register:</b> <span id="mc-personnel-register-storage-status" data-state="empty">Checking…</span>';
+            buttons.insertAdjacentElement('afterend', status);
         }
 
-        let storageStatus = document.querySelector('#mc-personnel-register-storage');
-        if (!storageStatus) {
-            storageStatus = document.createElement('div');
-            storageStatus.id = 'mc-personnel-register-storage';
-            storageStatus.className = 'mc-namer-section';
-            storageStatus.innerHTML = '<b>Personnel Register:</b> <span id="mc-personnel-register-storage-status" data-state="empty">Checking…</span>';
-            buttons.insertAdjacentElement('afterend', storageStatus);
-        }
-
-        const report = document.querySelector('#mc-personnel-report');
+        const report = q('#mc-personnel-report');
         if (report && !report.dataset.mcRegisterControlsObserved) {
             report.dataset.mcRegisterControlsObserved = 'true';
-            const reportObserver = new MutationObserver(correctRetainedCountReport);
-            reportObserver.observe(report, { childList: true, characterData: true, subtree: true });
+            reportObserver = new MutationObserver(() => correctRetainedCount());
+            reportObserver.observe(report, {
+                childList: true,
+                characterData: true,
+                subtree: true
+            });
         }
 
-        updateRegisterStatus();
+        syncButtons();
+        updateStatus();
         return true;
     }
 
-    function queueInitialise() {
+    function queueInstall() {
+        if (boundBuild?.isConnected && boundExport?.isConnected && boundImport?.isConnected) return;
         if (initialiseQueued) return;
         initialiseQueued = true;
         requestAnimationFrame(() => {
             initialiseQueued = false;
-            ensureControls();
+            installControls();
         });
     }
 
-    window.addEventListener('mc-personnel-training-registry-updated', updateRegisterStatus);
+    window.addEventListener('mc-personnel-training-registry-updated', () => {
+        invalidateCache();
+        updateStatus();
+    });
     window.addEventListener('storage', event => {
-        if (event.key === STORAGE_KEY) updateRegisterStatus();
+        if (event.key !== STORAGE_KEY) return;
+        invalidateCache();
+        updateStatus();
+    });
+    window.addEventListener('pageshow', queueInstall);
+    window.addEventListener('pagehide', event => {
+        if (event.persisted) return;
+        lifecycleObserver?.disconnect();
+        buildObserver?.disconnect();
+        reportObserver?.disconnect();
+        if (buildTimer != null) clearInterval(buildTimer);
     });
 
-    lifecycleObserver = new MutationObserver(queueInitialise);
+    lifecycleObserver = new MutationObserver(queueInstall);
     lifecycleObserver.observe(document.documentElement, {
         childList: true,
         subtree: true
     });
-
-    queueInitialise();
+    queueInstall();
 })();
