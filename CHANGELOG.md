@@ -26,6 +26,28 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Consolidate the two retained control surfaces into one coherent interface.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
+## [1.0.34] - 2026-07-25
+
+### Fixed
+
+- Removed the JavaScript-owned iPhone **Unit Quick Select** title, disclosure button, collapse state, per-node classes and repeated native-picker structural enhancement.
+- The visible native/enhanced alternation shown in the supplied recording can no longer occur because Command Nexus no longer inserts or reattaches a wrapper inside MissionChief's quick-select DOM.
+- MissionChief's native category and unit controls now receive only passive, document-owned iPhone CSS using stable `a[search_attribute]` and `:has(...)` selectors.
+- Replacement quick-select DOM is styled automatically by the existing stylesheet without a MutationObserver-driven reattachment pass.
+- Removed native-picker state storage and main-observer resynchronisation. Historical toggle/classes/state are cleaned during upgrade and Safari bfcache restoration.
+
+### Compatibility and safety
+
+- The **Mission** and **Vehicle** launcher is unchanged.
+- Passive quick-select styling remains strictly limited to the established iPhone Safari document class, including phone-sized desktop-site sessions.
+- iPad/tablet and desktop layouts remain unchanged.
+- MissionChief's native anchors, counts, colours and click handlers are not cloned or replaced.
+- Mission requirements, unit selection, dispatch, Mission Update, Ally Steal, Auto Mode and Resource Administration are unchanged.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.98` to `V10.6.99`.
+
 ## [1.0.33] - 2026-07-25
 
 ### Fixed

@@ -22,9 +22,9 @@ function extractBetween(startText, endText, label) {
   return source.slice(start, end);
 }
 
-requireText('// @version      1.0.33', 'v1.0.33 metadata');
+requireText('// @version      1.0.34', 'v1.0.34 metadata');
 requireText("const PERSONNEL_VERSION = '1.3.3';", 'Personnel v1.3.3');
-requireText(' * MODULE 2: MISSION FINDER V10.6.98', 'V10.6.98 header');
+requireText(' * MODULE 2: MISSION FINDER V10.6.99', 'V10.6.99 header');
 
 // #126 PSU registry and assigned staff.
 requireText('function getPersonnelVehicleTypeIdFromRow(row)', 'broad vehicle-type discovery');
