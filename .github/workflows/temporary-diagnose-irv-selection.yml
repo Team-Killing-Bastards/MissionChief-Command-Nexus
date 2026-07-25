@@ -94,7 +94,6 @@ jobs:
           type8_hits, type8_blocks = context_blocks(lines, type8_predicates, 10, 16, 24)
           selector_hits, selector_blocks = context_blocks(lines, selector_predicates, 3, 5, 20)
 
-          # Compare post-v1.0.21 edits touching police/type-8/selection behaviour.
           diff_text = ''
           try:
               previous = subprocess.check_output(
@@ -162,9 +161,23 @@ jobs:
               '```',
           ]
           body = '\n'.join(report)
-          if len(body) > 62000:
-              body = body[:61500] + '\n```\n\n_Report truncated at GitHub comment limit._'
           Path('/tmp/irv-focused-diagnostic.md').write_text(body, encoding='utf-8')
           PY
 
-          gh pr comment "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --body-file /tmp/irv-focused-diagnostic.md
+          python3 - <<'PY'
+          from pathlib import Path
+          body = Path('/tmp/irv-focused-diagnostic.md').read_text(encoding='utf-8')
+          if len(body) > 62000:
+              body = body[:61500] + '\n```\n\n_Report truncated at GitHub comment limit; full report is attached as an Actions artifact._'
+          Path('/tmp/irv-focused-comment.md').write_text(body, encoding='utf-8')
+          PY
+
+          gh pr comment "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --body-file /tmp/irv-focused-comment.md
+
+      - name: Upload full focused diagnostic
+        uses: actions/upload-artifact@v4
+        with:
+          name: normal-irv-focused-diagnostic
+          path: /tmp/irv-focused-diagnostic.md
+          if-no-files-found: error
+          retention-days: 1
