@@ -17,7 +17,7 @@
 </tr>
 </table>
 
-**Current version:** `1.0.24` · **Mission Finder engine:** `V10.6.89` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
+**Current version:** `1.0.25` · **Mission Finder engine:** `V10.6.90` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)
@@ -171,6 +171,14 @@ Auto Mode validates readiness and final selected-unit state before dispatch. Cro
 
 ## Current production capability
 
+### iOS Safari Unit Finder selection
+
+- Unit Finder resolves vehicle controls from the active mission document when MissionChief uses responsive content, a same-origin iframe or a lightbox mission surface.
+- A unit is counted only after the exact MissionChief vehicle checkbox is confirmed checked.
+- Native checkbox activation remains first; Safari receives an associated-label fallback and a bounded checked-property plus `input`/`change` fallback only when native activation did not alter the real checkbox.
+- Complete-list loading, spinner detection, fallback controls and final selection counts now use the same mission document.
+- Failed or disabled selections remain fail closed and do not advance assigned-unit totals.
+
 ### Runtime hardening
 
 - Permanent userscript observers were reduced from three to two.
@@ -229,8 +237,8 @@ High Volume Pump, Drone Operator, Co-Responder, and Lifeguard remain disabled pe
 | Environment | Status | Notes |
 |---|---|---|
 | **Desktop browser** | Primary | Full Resource Administration and Mission Operations target |
-| **iPhone Safari website** | Supported surfaces | Dedicated Resource Administration and Mission Control layouts |
-| **iPad Safari website** | Supported surfaces | Includes touch-capable `MacIntel` desktop-site detection |
+| **iPhone Safari website** | Supported | Resource Administration, Mission Control and active-mission Unit Finder selection |
+| **iPad Safari website** | Supported | Includes touch-capable `MacIntel` desktop-site detection and active-mission Unit Finder selection |
 | **Chrome / Firefox / Edge on iOS** | Not treated as Safari | Safari-specific compatibility paths remain isolated |
 | **MissionChief native app / webview** | Not treated as Safari website | Native wrappers are outside the documented Safari website scope |
 | **Other Mission Finder surfaces on mobile** | Desktop-first | Supported only where explicitly documented |
@@ -243,6 +251,7 @@ High Volume Pump, Drone Operator, Co-Responder, and Lifeguard remain disabled pe
 - Responsive `Details` links can use a hidden same-origin station iframe when the desktop lightbox binding is unavailable.
 - Resource Administration uses safe-area insets, touch scrolling, pointer dragging, and deterministic cleanup.
 - Mission Control opens at the safe-area top, stacks to the mobile viewport, scrolls internally, and supports independent collapse controls.
+- Unit Finder follows the active mission document and verifies the exact MissionChief checkbox state before counting a selected unit.
 - Safari address-bar changes, rotation, history restoration, and bfcache restoration trigger bounded viewport reconciliation.
 
 > [!NOTE]
