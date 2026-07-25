@@ -17,7 +17,7 @@
 </tr>
 </table>
 
-**Current version:** `1.0.25` · **Mission Finder engine:** `V10.6.90` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
+**Current version:** `1.0.26` · **Mission Finder engine:** `V10.6.91` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)
@@ -146,7 +146,7 @@ Resource Administration discovers stations and vehicles, reads assignment pages,
 
 ### 2. Read the mission that exists now
 
-Mission Operations prioritises the visible Live Mission Requirements panel when it is available. Static mission-help data is retained as a fallback—not allowed to overwrite newer live demand.
+Unit Finder reads the authoritative **Requirements for this Mission** endpoint and binds it to the exact active mission ID, including when MissionChief hides the desktop `#mission_help` button on iPhone and iPad. Mission Update separately reads the visible Live Mission Requirements panel so later shortages do not overwrite or impersonate the initial mission definition.
 
 ### 3. Load the complete candidate pool
 
@@ -170,6 +170,13 @@ Specialist decisions can use vehicle IDs, assignment-page evidence, the verified
 Auto Mode validates readiness and final selected-unit state before dispatch. Cross-mission drift, stale demand, incomplete evidence, and repeat-dispatch conditions are treated as blockers.
 
 ## Current production capability
+
+### Authoritative iOS mission requirements
+
+- Hidden `#mission_help.hidden-xs` links remain authoritative on iPhone and iPad even though MissionChief does not render the desktop button.
+- Requirement URLs must remain same-origin, use `/einsaetze/{missionType}`, and match the exact active `mission_id`.
+- Missing-link recovery uses only explicit active-mission type evidence; stale or mismatched links and responses block.
+- The fetched Vehicle and Personnel Requirements table is verified before rows reach Unit Finder.
 
 ### iOS Safari Unit Finder selection
 
@@ -251,6 +258,7 @@ High Volume Pump, Drone Operator, Co-Responder, and Lifeguard remain disabled pe
 - Responsive `Details` links can use a hidden same-origin station iframe when the desktop lightbox binding is unavailable.
 - Resource Administration uses safe-area insets, touch scrolling, pointer dragging, and deterministic cleanup.
 - Mission Control opens at the safe-area top, stacks to the mobile viewport, scrolls internally, and supports independent collapse controls.
+- Unit Finder reads the hidden or visible Requirements for this Mission source for the exact active mission before selecting units.
 - Unit Finder follows the active mission document and verifies the exact MissionChief checkbox state before counting a selected unit.
 - Safari address-bar changes, rotation, history restoration, and bfcache restoration trigger bounded viewport reconciliation.
 
