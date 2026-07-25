@@ -1,0 +1,37 @@
+name: Temporary export current source
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/temporary-export-current-source.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+          show-progress: false
+      - name: Package current source
+        run: |
+          mkdir -p /tmp/current-source/src /tmp/current-source/scripts /tmp/current-source/.github/workflows
+          cp src/missionchief-command-nexus.user.js /tmp/current-source/src/
+          cp README.md CHANGELOG.md /tmp/current-source/
+          cp src/README.md /tmp/current-source/src/
+          cp scripts/*.mjs /tmp/current-source/scripts/ 2>/dev/null || true
+          cp .github/workflows/validate-userscript.yml /tmp/current-source/.github/workflows/
+          git rev-parse HEAD > /tmp/current-source/main-sha.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: current-command-nexus-source
+          path: /tmp/current-source
+          if-no-files-found: error
+          retention-days: 1
