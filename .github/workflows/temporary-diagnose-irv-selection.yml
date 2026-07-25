@@ -1,4 +1,4 @@
-name: Create validated v1.0.24 Police IRV commit
+name: Create validated v1.0.24 Police IRV source commit
 
 on:
   pull_request:
@@ -14,12 +14,12 @@ permissions:
   pull-requests: write
 
 concurrency:
-  group: create-normal-police-irv-v1024-commit
+  group: create-normal-police-irv-v1024-source-commit
   cancel-in-progress: false
 
 jobs:
   create:
-    name: Build, validate and create v1.0.24 commit
+    name: Build, validate and create v1.0.24 source commit
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.head.ref == 'diagnostic/normal-irv-selection'
@@ -42,11 +42,6 @@ jobs:
 
       - name: Apply normal Police IRV corrective build
         run: python3 scripts/apply_v1024_police_irv.py
-
-      - name: Remove one-use diagnostic and builder files
-        run: |
-          git rm -f scripts/apply_v1024_police_irv.py
-          git rm -f .github/workflows/temporary-diagnose-irv-selection.yml
 
       - name: Validate complete repository
         shell: bash
@@ -93,7 +88,7 @@ jobs:
           print('Focused v1.0.24 Police IRV and Missing Personnel contracts passed.')
           PY
 
-      - name: Create unattached validated Git commit
+      - name: Create unattached validated source commit
         id: commit
         env:
           GH_TOKEN: ${{ github.token }}
@@ -129,11 +124,10 @@ jobs:
           README_BLOB="$(create_blob README.md)"
           CHANGELOG_BLOB="$(create_blob CHANGELOG.md)"
           SOURCE_README_BLOB="$(create_blob src/README.md)"
-          VALIDATE_WORKFLOW_BLOB="$(create_blob .github/workflows/validate-userscript.yml)"
           REGRESSION_BLOB="$(create_blob scripts/check-police-irv-fallback.mjs)"
 
           export BASE_TREE_SHA SOURCE_BLOB README_BLOB CHANGELOG_BLOB
-          export SOURCE_README_BLOB VALIDATE_WORKFLOW_BLOB REGRESSION_BLOB
+          export SOURCE_README_BLOB REGRESSION_BLOB
 
           python3 - <<'PY' > /tmp/v1024-tree.json
           import json
@@ -147,20 +141,15 @@ jobs:
                   'sha': sha,
               }
 
-          tree = [
-              blob('src/missionchief-command-nexus.user.js', os.environ['SOURCE_BLOB']),
-              blob('README.md', os.environ['README_BLOB']),
-              blob('CHANGELOG.md', os.environ['CHANGELOG_BLOB']),
-              blob('src/README.md', os.environ['SOURCE_README_BLOB']),
-              blob('.github/workflows/validate-userscript.yml', os.environ['VALIDATE_WORKFLOW_BLOB']),
-              blob('scripts/check-police-irv-fallback.mjs', os.environ['REGRESSION_BLOB']),
-              {'path': 'scripts/apply_v1024_police_irv.py', 'mode': '100644', 'type': 'blob', 'sha': None},
-              {'path': '.github/workflows/temporary-diagnose-irv-selection.yml', 'mode': '100644', 'type': 'blob', 'sha': None},
-          ]
-
           print(json.dumps({
               'base_tree': os.environ['BASE_TREE_SHA'],
-              'tree': tree,
+              'tree': [
+                  blob('src/missionchief-command-nexus.user.js', os.environ['SOURCE_BLOB']),
+                  blob('README.md', os.environ['README_BLOB']),
+                  blob('CHANGELOG.md', os.environ['CHANGELOG_BLOB']),
+                  blob('src/README.md', os.environ['SOURCE_README_BLOB']),
+                  blob('scripts/check-police-irv-fallback.mjs', os.environ['REGRESSION_BLOB']),
+              ],
           }))
           PY
 
@@ -208,7 +197,7 @@ jobs:
       - name: Upload validated commit receipt
         uses: actions/upload-artifact@v4
         with:
-          name: validated-v1.0.24-commit-receipt
+          name: validated-v1.0.24-source-commit-receipt
           path: /tmp/v1024-validated
           if-no-files-found: error
           retention-days: 2
@@ -221,4 +210,4 @@ jobs:
         run: |
           gh pr comment "${PR_NUMBER}" \
             --repo "${GITHUB_REPOSITORY}" \
-            --body "v1.0.24 passed complete validation. Unattached validated commit created: \`${COMMIT_SHA}\`."
+            --body "v1.0.24 passed complete validation. Unattached validated source commit created: \`${COMMIT_SHA}\`."
