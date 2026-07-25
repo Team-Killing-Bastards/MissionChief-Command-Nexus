@@ -159,20 +159,117 @@ jobs:
           print('Focused v1.0.35 contracts passed.')
           PY
 
-      - name: Replace diagnostic branch with validated source
+      - name: Create unattached validated v1.0.35 source commit
+        id: commit
         env:
-          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         shell: bash
         run: |
           set -euo pipefail
-          git config user.name MartyBlyth
-          git config user.email 32400596+Martyblyth@users.noreply.github.com
-          git add -A
-          git commit -m 'Prioritise current missing requirements before full mission totals'
-          git push --force origin "HEAD:refs/heads/${HEAD_BRANCH}"
-          COMMIT_SHA="$(git rev-parse HEAD)"
+
+          create_blob() {
+            local file_path="$1"
+            python3 - "${file_path}" <<'PY' > /tmp/v1035-blob.json
+          import base64
+          import json
+          import sys
+          from pathlib import Path
+
+          path = Path(sys.argv[1])
+          print(json.dumps({
+              'content': base64.b64encode(path.read_bytes()).decode('ascii'),
+              'encoding': 'base64',
+          }))
+          PY
+            gh api \
+              --method POST \
+              "repos/${GITHUB_REPOSITORY}/git/blobs" \
+              --input /tmp/v1035-blob.json \
+              --jq '.sha'
+          }
+
+          PARENT_SHA="$(git rev-parse origin/main)"
+          BASE_TREE_SHA="$(git rev-parse "${PARENT_SHA}^{tree}")"
+
+          SOURCE_BLOB="$(create_blob src/missionchief-command-nexus.user.js)"
+          README_BLOB="$(create_blob README.md)"
+          CHANGELOG_BLOB="$(create_blob CHANGELOG.md)"
+          SOURCE_README_BLOB="$(create_blob src/README.md)"
+          IOS_SOURCE_TEST_BLOB="$(create_blob scripts/check-ios-mission-requirements-source.mjs)"
+          IPHONE_UI_TEST_BLOB="$(create_blob scripts/check-iphone-mission-ui.mjs)"
+          OPEN_ISSUES_TEST_BLOB="$(create_blob scripts/check-open-issues-batch.mjs)"
+          POLICE_TEST_BLOB="$(create_blob scripts/check-police-irv-fallback.mjs)"
+          MISSING_REQUIREMENTS_TEST_BLOB="$(create_blob scripts/check-missing-requirements-priority.mjs)"
+
+          export BASE_TREE_SHA SOURCE_BLOB README_BLOB CHANGELOG_BLOB SOURCE_README_BLOB
+          export IOS_SOURCE_TEST_BLOB IPHONE_UI_TEST_BLOB OPEN_ISSUES_TEST_BLOB POLICE_TEST_BLOB
+          export MISSING_REQUIREMENTS_TEST_BLOB PARENT_SHA
+
+          python3 - <<'PY' > /tmp/v1035-tree.json
+          import json
+          import os
+
+          def blob(path, env_name):
+              return {
+                  'path': path,
+                  'mode': '100644',
+                  'type': 'blob',
+                  'sha': os.environ[env_name],
+              }
+
+          print(json.dumps({
+              'base_tree': os.environ['BASE_TREE_SHA'],
+              'tree': [
+                  blob('src/missionchief-command-nexus.user.js', 'SOURCE_BLOB'),
+                  blob('README.md', 'README_BLOB'),
+                  blob('CHANGELOG.md', 'CHANGELOG_BLOB'),
+                  blob('src/README.md', 'SOURCE_README_BLOB'),
+                  blob('scripts/check-ios-mission-requirements-source.mjs', 'IOS_SOURCE_TEST_BLOB'),
+                  blob('scripts/check-iphone-mission-ui.mjs', 'IPHONE_UI_TEST_BLOB'),
+                  blob('scripts/check-open-issues-batch.mjs', 'OPEN_ISSUES_TEST_BLOB'),
+                  blob('scripts/check-police-irv-fallback.mjs', 'POLICE_TEST_BLOB'),
+                  blob('scripts/check-missing-requirements-priority.mjs', 'MISSING_REQUIREMENTS_TEST_BLOB'),
+              ],
+          }))
+          PY
+
+          TREE_SHA="$(
+            gh api \
+              --method POST \
+              "repos/${GITHUB_REPOSITORY}/git/trees" \
+              --input /tmp/v1035-tree.json \
+              --jq '.sha'
+          )"
+
+          export TREE_SHA
+          python3 - <<'PY' > /tmp/v1035-commit.json
+          import json
+          import os
+
+          identity = {
+              'name': 'MartyBlyth',
+              'email': '32400596+Martyblyth@users.noreply.github.com',
+          }
+
+          print(json.dumps({
+              'message': 'Prioritise current missing requirements before full mission totals',
+              'tree': os.environ['TREE_SHA'],
+              'parents': [os.environ['PARENT_SHA']],
+              'author': identity,
+              'committer': identity,
+          }))
+          PY
+
+          COMMIT_SHA="$(
+            gh api \
+              --method POST \
+              "repos/${GITHUB_REPOSITORY}/git/commits" \
+              --input /tmp/v1035-commit.json \
+              --jq '.sha'
+          )"
+
+          echo "commit_sha=${COMMIT_SHA}" >> "${GITHUB_OUTPUT}"
           gh pr comment "${PR_NUMBER}" \
             --repo "${GITHUB_REPOSITORY}" \
-            --body "v1.0.35 source commit \`${COMMIT_SHA}\` passed the complete repository validation suite."
+            --body "v1.0.35 passed the complete validation suite. Unattached validated source commit: \`${COMMIT_SHA}\`."
