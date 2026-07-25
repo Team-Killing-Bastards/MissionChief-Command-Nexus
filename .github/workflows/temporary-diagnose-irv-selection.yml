@@ -25,10 +25,11 @@ jobs:
       - name: Check out current main
         uses: actions/checkout@v6
         with:
+          fetch-depth: 0
           ref: main
           show-progress: false
 
-      - name: Extract IRV selection paths
+      - name: Extract focused normal IRV selection paths
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -36,63 +37,134 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import difflib
           import re
+          import subprocess
 
           source_path = Path('src/missionchief-command-nexus.user.js')
-          lines = source_path.read_text(encoding='utf-8').splitlines()
+          current = source_path.read_text(encoding='utf-8')
+          lines = current.splitlines()
 
-          patterns = [
-              re.compile(r'Incident Response Vehicle', re.I),
-              re.compile(r'Police Car', re.I),
-              re.compile(r'\bIRV\b', re.I),
-              re.compile(r'police_inspector', re.I),
-              re.compile(r'police_medic', re.I),
-              re.compile(r'public.?order', re.I),
-              re.compile(r'(vehicle|type).{0,40}["\']8["\']', re.I),
-              re.compile(r'["\']8["\'].{0,40}(vehicle|type)', re.I),
-              re.compile(r'trained.{0,30}irv', re.I),
-              re.compile(r'irv.{0,30}trained', re.I),
-              re.compile(r'exact.{0,30}(training|registry|vehicle)', re.I),
+          marker = ' * MODULE 2: MISSION FINDER '
+          module_start = current.find(marker)
+          if module_start < 0:
+              raise SystemExit('Mission Finder module marker not found')
+          module_line = current[:module_start].count('\n')
+
+          def context_blocks(source_lines, predicates, before=8, after=12, max_blocks=24):
+              indexes = []
+              for idx in range(module_line, len(source_lines)):
+                  line = source_lines[idx]
+                  if any(predicate(line) for predicate in predicates):
+                      indexes.append(idx)
+              spans = []
+              for idx in indexes:
+                  start = max(module_line, idx - before)
+                  end = min(len(source_lines), idx + after + 1)
+                  if spans and start <= spans[-1][1] + 3:
+                      spans[-1] = (spans[-1][0], max(spans[-1][1], end))
+                  else:
+                      spans.append((start, end))
+              rendered = []
+              for start, end in spans[:max_blocks]:
+                  rendered.append('\n'.join(
+                      f'{line_no + 1:05d}: {source_lines[line_no]}'
+                      for line_no in range(start, end)
+                  ))
+              return indexes, rendered
+
+          crossref_predicates = [
+              lambda line: bool(re.search(r'["\'](?:Police|Police Car|IRV|Incident Response Vehicle)[^"\']*["\']\s*:', line, re.I)),
+              lambda line: bool(re.search(r':\s*["\'](?:Police|Police Car|IRV|Incident Response Vehicle)[^"\']*["\']', line, re.I)),
+              lambda line: bool(re.search(r'normal.{0,20}(police|irv)|(?:police|irv).{0,20}normal', line, re.I)),
+          ]
+          type8_predicates = [
+              lambda line: bool(re.search(r'(?:vehicle|type|row|required).{0,50}["\']8["\']', line, re.I)),
+              lambda line: bool(re.search(r'["\']8["\'].{0,50}(?:vehicle|type|row|required)', line, re.I)),
+              lambda line: bool(re.search(r'(?:trained|strict|registry|inspector|medic|public.?order).{0,45}(?:IRV|Incident Response Vehicle)', line, re.I)),
+              lambda line: bool(re.search(r'(?:IRV|Incident Response Vehicle).{0,45}(?:trained|strict|registry|inspector|medic|public.?order)', line, re.I)),
+          ]
+          selector_predicates = [
+              lambda line: bool(re.search(r'function\s+\w*(?:select|find|match|eligible|require|vehicle)\w*\s*\(', line, re.I)),
+              lambda line: bool(re.search(r'(?:manual|auto).{0,50}(?:unit finder|select|vehicle)', line, re.I)),
+              lambda line: bool(re.search(r'(?:unit finder|select|vehicle).{0,50}(?:manual|auto)', line, re.I)),
           ]
 
-          hits = []
-          for idx, line in enumerate(lines):
-              if any(pattern.search(line) for pattern in patterns):
-                  hits.append(idx)
+          crossref_hits, crossref_blocks = context_blocks(lines, crossref_predicates, 6, 10, 18)
+          type8_hits, type8_blocks = context_blocks(lines, type8_predicates, 10, 16, 24)
+          selector_hits, selector_blocks = context_blocks(lines, selector_predicates, 3, 5, 20)
 
-          # Merge nearby hits into readable context blocks.
-          spans = []
-          for idx in hits:
-              start = max(0, idx - 18)
-              end = min(len(lines), idx + 23)
-              if spans and start <= spans[-1][1] + 8:
-                  spans[-1] = (spans[-1][0], max(spans[-1][1], end))
-              else:
-                  spans.append((start, end))
-
-          # Keep the report under GitHub's comment limit while preferring Mission Finder code.
-          rendered = []
-          total_chars = 0
-          for start, end in spans:
-              block_lines = [f'{line_no + 1:05d}: {lines[line_no]}' for line_no in range(start, end)]
-              block = '\n'.join(block_lines)
-              if total_chars + len(block) > 54000:
-                  break
-              rendered.append(block)
-              total_chars += len(block)
+          # Compare post-v1.0.21 edits touching police/type-8/selection behaviour.
+          diff_text = ''
+          try:
+              previous = subprocess.check_output(
+                  ['git', 'show', 'v1.0.21:src/missionchief-command-nexus.user.js'],
+                  text=True,
+              )
+              diff_lines = list(difflib.unified_diff(
+                  previous.splitlines(),
+                  lines,
+                  fromfile='v1.0.21',
+                  tofile='main',
+                  lineterm='',
+                  n=5,
+              ))
+              relevant = []
+              current_hunk = []
+              hunk_relevant = False
+              trigger = re.compile(
+                  r'IRV|Incident Response Vehicle|Police Car|vehicle.?type|type.?8|trained|registry|public.?order|inspector|medic|unit finder|auto mode|manual|mutation',
+                  re.I,
+              )
+              for line in diff_lines:
+                  if line.startswith('@@'):
+                      if current_hunk and hunk_relevant:
+                          relevant.extend(current_hunk)
+                      current_hunk = [line]
+                      hunk_relevant = False
+                  elif current_hunk:
+                      current_hunk.append(line)
+                      if trigger.search(line):
+                          hunk_relevant = True
+              if current_hunk and hunk_relevant:
+                  relevant.extend(current_hunk)
+              diff_text = '\n'.join(relevant[:900])
+          except subprocess.CalledProcessError as error:
+              diff_text = f'Unable to read v1.0.21 tag: {error}'
 
           report = [
-              '## Current main: normal IRV / Police Car diagnostic',
+              '## Focused normal IRV / Police Car diagnostic',
               '',
-              f'- Source version line: `{lines[3] if len(lines) > 3 else "unknown"}`',
-              f'- Matching source lines: `{len(hits)}`',
-              f'- Context blocks included: `{len(rendered)}`',
+              f'- Current source: `{lines[3] if len(lines) > 3 else "unknown"}`',
+              f'- Mission Finder starts near line: `{module_line + 1}`',
+              f'- Cross-reference hits: `{len(crossref_hits)}`',
+              f'- Type-8/trained-filter hits: `{len(type8_hits)}`',
+              f'- Shared selector/manual-auto hits: `{len(selector_hits)}`',
               '',
+              '### Cross-reference and normal-police mappings',
               '```javascript',
-              '\n\n// ---- NEXT MATCH BLOCK ----\n\n'.join(rendered) or 'No matching source lines found.',
+              '\n\n// ---- NEXT BLOCK ----\n\n'.join(crossref_blocks) or 'No focused cross-reference hits.',
+              '```',
+              '',
+              '### Type-8 eligibility and trained-IRV filtering',
+              '```javascript',
+              '\n\n// ---- NEXT BLOCK ----\n\n'.join(type8_blocks) or 'No focused type-8 hits.',
+              '```',
+              '',
+              '### Shared manual/Auto Mode selector entry points',
+              '```javascript',
+              '\n\n// ---- NEXT BLOCK ----\n\n'.join(selector_blocks) or 'No focused selector hits.',
+              '```',
+              '',
+              '### Relevant changes since v1.0.21',
+              '```diff',
+              diff_text or 'No relevant post-v1.0.21 diff hunks found.',
               '```',
           ]
-          Path('/tmp/irv-diagnostic.md').write_text('\n'.join(report), encoding='utf-8')
+          body = '\n'.join(report)
+          if len(body) > 62000:
+              body = body[:61500] + '\n```\n\n_Report truncated at GitHub comment limit._'
+          Path('/tmp/irv-focused-diagnostic.md').write_text(body, encoding='utf-8')
           PY
 
-          gh pr comment "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --body-file /tmp/irv-diagnostic.md
+          gh pr comment "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --body-file /tmp/irv-focused-diagnostic.md
