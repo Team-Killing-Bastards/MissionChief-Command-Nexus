@@ -34,20 +34,28 @@ jobs:
           ref: main
           show-progress: false
 
-      - name: Reconstruct and verify exact v1.0.35 patch
+      - name: Fetch exact v1.0.35 patch payload
         env:
           HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
-          EXPECTED_B64_SHA256: 1b99a3ce0f91fd38926fa2eba021edb01bb320cacd983e60d533e3a52bce7847
-          EXPECTED_PATCH_SHA256: 0bd0e8fb4617a8f8ecca1d3140af529ea5f43fdb327eb43479c18393b065b230
         shell: bash
         run: |
           set -euo pipefail
           git fetch origin "${HEAD_BRANCH}" --force
           git show "origin/${HEAD_BRANCH}:.diagnostics/v1.0.35-missing-requirements-priority.patch.gz.b64" > /tmp/v1035.patch.gz.b64
-          echo "${EXPECTED_B64_SHA256}  /tmp/v1035.patch.gz.b64" | sha256sum --check
-          base64 --decode /tmp/v1035.patch.gz.b64 | gzip --decompress > /tmp/v1035.patch
-          echo "${EXPECTED_PATCH_SHA256}  /tmp/v1035.patch" | sha256sum --check
-          git apply --check /tmp/v1035.patch
+          sha256sum /tmp/v1035.patch.gz.b64
+          wc -c /tmp/v1035.patch.gz.b64
+
+      - name: Verify exact base64 payload checksum
+        run: echo '1b99a3ce0f91fd38926fa2eba021edb01bb320cacd983e60d533e3a52bce7847  /tmp/v1035.patch.gz.b64' | sha256sum --check
+
+      - name: Decode exact patch payload
+        run: base64 --decode /tmp/v1035.patch.gz.b64 | gzip --decompress > /tmp/v1035.patch
+
+      - name: Verify exact raw patch checksum
+        run: echo '0bd0e8fb4617a8f8ecca1d3140af529ea5f43fdb327eb43479c18393b065b230  /tmp/v1035.patch' | sha256sum --check
+
+      - name: Verify patch applies to latest main
+        run: git apply --check /tmp/v1035.patch
 
       - name: Set up Node.js
         uses: actions/setup-node@v6
