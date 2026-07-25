@@ -24,6 +24,6 @@ jobs:
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add LIVE_UPDATE_POLICE_OFFICER_AUDIT.txt
-          git commit -m 'Record live updater and Police Officer audit'
+          git add LIVE_UPDATE_FOCUSED.txt
+          git commit -m 'Record focused live updater audit'
           git push origin HEAD:${{ github.head_ref }}
