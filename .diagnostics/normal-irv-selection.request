@@ -3,3 +3,4 @@ Run the focused shared-selector and post-v1.0.21 comparison diagnostic.
 Upload the complete untruncated diagnostic artifact.
 Include the exact current userscript source for local inspection.
 Apply, validate, publish and announce the v1.0.24 corrective build.
+Retry the validated build with resilient Git push diagnostics.
