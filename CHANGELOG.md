@@ -26,6 +26,29 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Consolidate the two retained control surfaces into one coherent interface.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
+## [1.0.27] - 2026-07-25
+
+### Changed
+
+- Rebuilt Mission Finder's mission-tab interface as a compact iPhone Safari command card based on the supplied screen recording.
+- Advanced Mission Ready Delay and Queue Restart controls now sit behind a dedicated Settings disclosure on iPhone, while primary mission actions remain immediately available.
+- Mission Control and Vehicle Load List use smaller native-style headers, tighter card spacing, compact touch targets and bounded internal scrolling.
+- The six established action handlers now render in a compact two-column grid without changing their logic or dispatch ownership.
+- Vehicle Load List remains independently collapsible and defaults to its compact state on a fresh iPhone UI profile.
+
+### Compatibility and safety
+
+- Added a strict iPhone/iPod Safari detector separate from the existing iOS detector.
+- iPad Safari, iPad desktop-site `MacIntel`, desktop Safari, Chrome/Firefox/Edge on iOS and every desktop browser remain on their previous layouts.
+- The iPhone card respects Safari safe areas, `visualViewport`, `100dvh`, address-bar changes and bounded overscroll.
+- Drag ownership is disabled only for the fixed iPhone command card; iPad and desktop dragging remain unchanged.
+- Mission requirement acquisition, unit matching, checkbox selection, Mission Update, Ally Steal, dispatch, sharing and Auto Mode handlers are unchanged.
+- Added permanent regression checks for strict platform gating, compact presentation contracts and preserved action handlers.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.91` to `V10.6.92`.
+
 ## [1.0.26] - 2026-07-25
 
 ### Fixed

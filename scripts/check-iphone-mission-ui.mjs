@@ -1,0 +1,160 @@
+#!/usr/bin/env node
+
+import { readFile } from 'node:fs/promises';
+
+const SOURCE_PATH = 'src/missionchief-command-nexus.user.js';
+const source = await readFile(SOURCE_PATH, 'utf8');
+
+function fail(message) {
+  console.error(`ERROR: ${message}`);
+  process.exit(1);
+}
+
+function requireText(text, label) {
+  if (!source.includes(text)) fail(`Missing iPhone Mission Finder UI contract: ${label}`);
+}
+
+function requirePattern(pattern, label) {
+  if (!pattern.test(source)) fail(`Missing iPhone Mission Finder UI contract: ${label}`);
+}
+
+function extractFunction(name) {
+  const pattern = new RegExp(`(?:^|\\n)[ \\t]*(?:async[ \\t]+)?function[ \\t]+${name}[ \\t]*\\([^)]*\\)[ \\t]*\\{`, 'm');
+  const match = pattern.exec(source);
+  if (!match) fail(`Unable to find function ${name}`);
+  const start = match.index + (match[0].startsWith('\n') ? 1 : 0);
+  const opening = source.lastIndexOf('{', match.index + match[0].length - 1);
+  let depth = 0;
+  let state = 'code';
+  let quote = '';
+  let escaped = false;
+
+  for (let index = opening; index < source.length; index += 1) {
+    const character = source[index];
+    const following = source[index + 1] || '';
+    if (state === 'line-comment') {
+      if (character === '\n') state = 'code';
+      continue;
+    }
+    if (state === 'block-comment') {
+      if (character === '*' && following === '/') {
+        state = 'code';
+        index += 1;
+      }
+      continue;
+    }
+    if (state === 'string' || state === 'template') {
+      if (escaped) escaped = false;
+      else if (character === '\\') escaped = true;
+      else if (character === quote) {
+        state = 'code';
+        quote = '';
+      }
+      continue;
+    }
+    if (character === '/' && following === '/') {
+      state = 'line-comment';
+      index += 1;
+      continue;
+    }
+    if (character === '/' && following === '*') {
+      state = 'block-comment';
+      index += 1;
+      continue;
+    }
+    if (character === "'" || character === '"') {
+      state = 'string';
+      quote = character;
+      continue;
+    }
+    if (character === '`') {
+      state = 'template';
+      quote = character;
+      continue;
+    }
+    if (character === '{') depth += 1;
+    else if (character === '}') {
+      depth -= 1;
+      if (depth === 0) return source.slice(start, index + 1);
+    }
+  }
+  fail(`Unable to find end of ${name}`);
+}
+
+requireText('// @version      1.0.27', 'v1.0.27 metadata');
+requireText(' * MODULE 2: MISSION FINDER V10.6.92', 'V10.6.92 module header');
+requireText('function isMissionFinderIphoneSafariWebsite()', 'strict iPhone Safari detector');
+requireText("'mf_control_collapsed_iphone_v2'", 'separate iPhone control state');
+requireText("'mf_vehicle_load_collapsed_iphone_v2'", 'separate iPhone load state');
+requireText("'mf_iphone_advanced_expanded_v1'", 'advanced disclosure state');
+requireText("'mf2026-iphone-safari'", 'iPhone-only wrapper class');
+requireText("'mf2026-primary-actions'", 'compact action grid');
+requireText("'mf-iphone-advanced-toggle'", 'advanced settings disclosure');
+requireText('mf-control-advanced', 'advanced settings container');
+requireText("if (!missionFinderIphoneSafari) {\n            makePanelDraggable", 'iPhone drag guard');
+requireText('100dvh', 'dynamic viewport sizing');
+requireText('env(safe-area-inset-top, 0px)', 'safe-area top sizing');
+requireText('env(safe-area-inset-bottom, 0px)', 'safe-area bottom sizing');
+requireText('backdrop-filter: blur(16px)', 'native compact card treatment');
+requireText('max-height: 42dvh', 'bounded load-panel viewport');
+
+const detectionSource = [
+  extractFunction('isMissionFinderIosSafariWebsite'),
+  extractFunction('isMissionFinderIphoneSafariWebsite')
+].join('\n');
+const detect = ({ userAgent, platform, maxTouchPoints = 0, protocol = 'https:' }) => Function(
+  'navigator',
+  'location',
+  `"use strict";\n${detectionSource}\nreturn isMissionFinderIphoneSafariWebsite();`
+)(
+  { userAgent, platform, maxTouchPoints },
+  { protocol }
+);
+
+const safariTail = 'AppleWebKit/605.1.15 Version/18.5 Mobile/15E148 Safari/604.1';
+if (!detect({ userAgent: `Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) ${safariTail}`, platform: 'iPhone' })) {
+  fail('iPhone Safari must receive the compact UI');
+}
+if (detect({ userAgent: `Mozilla/5.0 (iPad; CPU OS 18_5 like Mac OS X) ${safariTail}`, platform: 'iPad', maxTouchPoints: 5 })) {
+  fail('iPad Safari must not receive the iPhone compact UI');
+}
+if (detect({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/18.5 Safari/605.1.15', platform: 'MacIntel', maxTouchPoints: 5 })) {
+  fail('iPad desktop-site MacIntel mode must remain outside the iPhone UI');
+}
+if (detect({ userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 CriOS/150.0 Mobile/15E148 Safari/604.1', platform: 'iPhone' })) {
+  fail('Chrome on iOS must remain outside the Safari-only UI');
+}
+if (detect({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/18.5 Safari/605.1.15', platform: 'MacIntel', maxTouchPoints: 0 })) {
+  fail('Desktop Safari must remain outside the iPhone UI');
+}
+
+const control = extractFunction('createControlPanel');
+for (const contract of [
+  "await handleCombinedLogic();",
+  "await handleAllySteal();",
+  "handleMissionUpdateUnits(",
+  "triggerDispatchClick();",
+  "triggerDispatchShareClick();",
+  "toggleAutoMode();"
+]) {
+  if (!control.includes(contract)) fail(`Action handler changed or missing: ${contract}`);
+}
+
+requirePattern(
+  /#mission-finder-wrapper\.mf2026-iphone-safari[\s\S]{0,1800}border-radius: 14px/,
+  'compact card CSS is scoped to the iPhone wrapper'
+);
+requirePattern(
+  /#mission-finder-wrapper\.mf2026-iphone-safari[\s\S]{0,9000}#mf-iphone-advanced-toggle/,
+  'advanced disclosure CSS is iPhone-scoped'
+);
+requirePattern(
+  /#mission-finder-wrapper\.mf2026-iphone-safari[\s\S]{0,12000}\.mf2026-primary-actions/,
+  'action-grid override is iPhone-scoped'
+);
+requirePattern(
+  /\.mf2026-primary-actions #dispatch-share-box,[\s\S]{0,150}\.mf2026-primary-actions #auto-mode-box[\s\S]{0,100}grid-column: 1 \/ -1/,
+  'desktop and iPad preserve the previous full-width action rows'
+);
+
+console.log('iPhone Safari Mission Finder UI checks passed.');

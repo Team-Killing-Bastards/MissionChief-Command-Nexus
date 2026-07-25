@@ -17,7 +17,7 @@
 </tr>
 </table>
 
-**Current version:** `1.0.26` · **Mission Finder engine:** `V10.6.91` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
+**Current version:** `1.0.27` · **Mission Finder engine:** `V10.6.92` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)
@@ -178,6 +178,13 @@ Auto Mode validates readiness and final selected-unit state before dispatch. Cro
 - Missing-link recovery uses only explicit active-mission type evidence; stale or mismatched links and responses block.
 - The fetched Vehicle and Personnel Requirements table is verified before rows reach Unit Finder.
 
+### iPhone Safari Mission Finder command card
+
+- Mission Control uses a compact iPhone-only command card derived from the supplied mobile screen recording.
+- Primary mission actions remain immediately available in a compact two-column grid; Mission Ready Delay and Queue Restart sit behind a dedicated Settings disclosure.
+- Vehicle Load List remains independently collapsible and uses bounded internal scrolling rather than consuming the entire mission viewport.
+- Safe-area insets, `visualViewport`, dynamic viewport height and Safari address-bar changes are handled without enabling this layout on iPad or desktop.
+
 ### iOS Safari Unit Finder selection
 
 - Unit Finder resolves vehicle controls from the active mission document when MissionChief uses responsive content, a same-origin iframe or a lightbox mission surface.
@@ -244,7 +251,7 @@ High Volume Pump, Drone Operator, Co-Responder, and Lifeguard remain disabled pe
 | Environment | Status | Notes |
 |---|---|---|
 | **Desktop browser** | Primary | Full Resource Administration and Mission Operations target |
-| **iPhone Safari website** | Supported | Resource Administration, Mission Control and active-mission Unit Finder selection |
+| **iPhone Safari website** | Supported | Compact native-style Mission Finder command card, Resource Administration and active-mission Unit Finder selection |
 | **iPad Safari website** | Supported | Includes touch-capable `MacIntel` desktop-site detection and active-mission Unit Finder selection |
 | **Chrome / Firefox / Edge on iOS** | Not treated as Safari | Safari-specific compatibility paths remain isolated |
 | **MissionChief native app / webview** | Not treated as Safari website | Native wrappers are outside the documented Safari website scope |
