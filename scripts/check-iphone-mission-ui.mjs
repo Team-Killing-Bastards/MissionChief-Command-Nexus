@@ -81,8 +81,9 @@ function extractFunction(name) {
   fail(`Unable to find end of ${name}`);
 }
 
-requireText('// @version      1.0.28', 'v1.0.28 metadata');
-requireText(' * MODULE 2: MISSION FINDER V10.6.93', 'V10.6.93 module header');
+requireText('// @version      1.0.29', 'v1.0.29 metadata');
+requireText(' * MODULE 2: MISSION FINDER V10.6.94', 'V10.6.94 module header');
+requireText('function getMissionFinderPhoneScreenShortSide()', 'physical phone-screen detector');
 requireText('function isMissionFinderIphoneSafariWebsite()', 'strict iPhone Safari detector');
 requireText("'mf_control_collapsed_iphone_v2'", 'separate iPhone control state');
 requireText("'mf_vehicle_load_collapsed_iphone_v2'", 'separate iPhone load state');
@@ -136,33 +137,40 @@ requirePattern(
 
 const detectionSource = [
   extractFunction('isMissionFinderIosSafariWebsite'),
+  extractFunction('getMissionFinderPhoneScreenShortSide'),
   extractFunction('isMissionFinderIphoneSafariWebsite')
 ].join('\n');
-const detect = ({ userAgent, platform, maxTouchPoints = 0, protocol = 'https:' }) => Function(
-  'navigator',
-  'location',
-  `"use strict";\n${detectionSource}\nreturn isMissionFinderIphoneSafariWebsite();`
+
+const detect = ({
+  userAgent,
+  platform,
+  maxTouchPoints = 0,
+  protocol = 'https:',
+  screenWidth = 390,
+  screenHeight = 844,
+  innerWidth = screenWidth,
+  visualViewportWidth = innerWidth,
+  clientWidth = innerWidth
+}) => Function(
+  'navigator', 'location', 'window', 'document',
+  `"use strict";
+${detectionSource}
+return isMissionFinderIphoneSafariWebsite();`
 )(
   { userAgent, platform, maxTouchPoints },
-  { protocol }
+  { protocol },
+  { screen: { width: screenWidth, height: screenHeight }, innerWidth, visualViewport: { width: visualViewportWidth } },
+  { documentElement: { clientWidth } }
 );
 
 const safariTail = 'AppleWebKit/605.1.15 Version/18.5 Mobile/15E148 Safari/604.1';
-if (!detect({ userAgent: `Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) ${safariTail}`, platform: 'iPhone' })) {
-  fail('iPhone Safari must receive the compact UI');
-}
-if (detect({ userAgent: `Mozilla/5.0 (iPad; CPU OS 18_5 like Mac OS X) ${safariTail}`, platform: 'iPad', maxTouchPoints: 5 })) {
-  fail('iPad Safari must not receive the iPhone compact UI');
-}
-if (detect({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/18.5 Safari/605.1.15', platform: 'MacIntel', maxTouchPoints: 5 })) {
-  fail('iPad desktop-site MacIntel mode must remain outside the iPhone UI');
-}
-if (detect({ userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 CriOS/150.0 Mobile/15E148 Safari/604.1', platform: 'iPhone' })) {
-  fail('Chrome on iOS must remain outside the Safari-only UI');
-}
-if (detect({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/18.5 Safari/605.1.15', platform: 'MacIntel', maxTouchPoints: 0 })) {
-  fail('Desktop Safari must remain outside the iPhone UI');
-}
+const desktopSafariUa = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/18.5 Safari/605.1.15';
+if (!detect({ userAgent: `Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) ${safariTail}`, platform: 'iPhone' })) fail('iPhone Safari must receive the compact UI');
+if (!detect({ userAgent: desktopSafariUa, platform: 'MacIntel', maxTouchPoints: 5, screenWidth: 393, screenHeight: 852, innerWidth: 980, visualViewportWidth: 980, clientWidth: 980 })) fail('iPhone Safari desktop-site MacIntel mode must receive the compact UI');
+if (detect({ userAgent: `Mozilla/5.0 (iPad; CPU OS 18_5 like Mac OS X) ${safariTail}`, platform: 'iPad', maxTouchPoints: 5, screenWidth: 820, screenHeight: 1180 })) fail('iPad Safari must not receive the iPhone compact UI');
+if (detect({ userAgent: desktopSafariUa, platform: 'MacIntel', maxTouchPoints: 5, screenWidth: 820, screenHeight: 1180, innerWidth: 500, visualViewportWidth: 500, clientWidth: 500 })) fail('iPad desktop-site and split-screen modes must remain outside the iPhone UI');
+if (detect({ userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 CriOS/150.0 Mobile/15E148 Safari/604.1', platform: 'iPhone' })) fail('Chrome on iOS must remain outside the Safari-only UI');
+if (detect({ userAgent: desktopSafariUa, platform: 'MacIntel', maxTouchPoints: 0, screenWidth: 1440, screenHeight: 900 })) fail('Desktop Safari must remain outside the iPhone UI');
 
 const control = extractFunction('createControlPanel');
 for (const contract of [

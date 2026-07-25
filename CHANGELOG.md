@@ -26,6 +26,24 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Consolidate the two retained control surfaces into one coherent interface.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
+## [1.0.29] - 2026-07-25
+
+### Fixed
+
+- Corrected the iPhone Safari gate for Safari **Request Desktop Website** sessions that report `MacIntel`, which caused the compact `v1.0.27` and native-picker `v1.0.28` layouts to be skipped completely.
+- Touch-capable `MacIntel` Safari now enters the phone layout only when the physical screen's shortest side is phone-sized (`<= 600` CSS pixels).
+
+### Compatibility and regression protection
+
+- iPad remains excluded by physical screen dimensions even in desktop-site or narrow split-screen layouts.
+- Desktop Safari remains excluded by its non-touch identity; other iOS browsers remain excluded by the Safari guard.
+- Added positive regression coverage for a 393px physical iPhone screen with a 980px desktop layout viewport and negative coverage for an 820px iPad in a 500px split-screen viewport.
+- Mission logic, native controls, matching, selection and dispatch remain unchanged.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.93` to `V10.6.94`.
+
 ## [1.0.28] - 2026-07-25
 
 ### Fixed
