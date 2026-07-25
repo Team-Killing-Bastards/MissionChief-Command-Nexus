@@ -1,4 +1,4 @@
-name: Audit live updater and Police Officer mappings
+name: Audit current Rescue Support and Police Officer contract
 
 on:
   pull_request:
@@ -24,6 +24,6 @@ jobs:
         run: |
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
-          git add LIVE_UPDATE_FUNCTIONS.txt
-          git commit -m 'Record exact selector functions'
+          git add CURRENT_RESCUE_POLICE_CONTRACT.txt
+          git commit -m 'Record current Rescue Support contract'
           git push origin HEAD:${{ github.head_ref }}
