@@ -17,7 +17,7 @@
 </tr>
 </table>
 
-**Current version:** `1.0.33` · **Mission Finder engine:** `V10.6.98` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
+**Current version:** `1.0.34` · **Mission Finder engine:** `V10.6.99` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)
@@ -185,7 +185,7 @@ Auto Mode validates readiness and final selected-unit state before dispatch. Cro
 - Vehicle Load List remains independently collapsible and uses bounded internal scrolling rather than consuming the entire mission viewport.
 - MissionChief's native unit quick-select surface is also compacted: it defaults behind one **Unit Quick Select** disclosure, then opens into a horizontal category strip and a two-column internally scrolling grid.
 - The native controls are styled in their owning mission document, including same-origin mission iframes; original `search_attribute` links and click behaviour remain intact.
-- Safe-area insets, `visualViewport`, dynamic viewport height and Safari address-bar changes are handled without enabling this layout on iPad or desktop. Safari **Request Desktop Website** sessions on a physical iPhone are recognised by phone-sized screen dimensions rather than the misleading `MacIntel` label. Launcher geometry uses full-cluster measurement, a farther-left fallback and pixel hysteresis; Unit Quick Select state writes are mutation-idempotent to prevent flicker.
+- Safe-area insets, `visualViewport`, dynamic viewport height and Safari address-bar changes are handled without enabling this layout on iPad or desktop. Safari **Request Desktop Website** sessions on a physical iPhone are recognised by phone-sized screen dimensions rather than the misleading `MacIntel` label. Launcher geometry uses full-cluster measurement, a farther-left fallback and pixel hysteresis; MissionChief's native quick-select receives passive selector styling only; Command Nexus no longer injects a Unit Quick Select wrapper, disclosure or collapse state.
 
 ### iOS Safari Unit Finder selection
 

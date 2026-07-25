@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.33
+// @version      1.0.34
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -8788,7 +8788,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.98
+         * MODULE 2: MISSION FINDER V10.6.99
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -9438,16 +9438,12 @@
                 : 'mf_vehicle_load_collapsed_v9';
     const MF_IPHONE_ADVANCED_EXPANDED_KEY =
         'mf_iphone_advanced_expanded_v2';
-    const MF_IPHONE_NATIVE_PICKER_COLLAPSED_KEY =
-        'mf_iphone_native_picker_collapsed_v2';
     const MF_IPHONE_COLLAPSE_DEFAULTS_MIGRATION_KEY =
         'mf_iphone_collapse_defaults_v1031';
     const MF_IPHONE_TWO_BUTTON_LAUNCHER_MIGRATION_KEY =
         'mf_iphone_two_button_launcher_v1032';
     const MF_IPHONE_NATIVE_PICKER_STYLE_ID =
         'mission-finder-iphone-native-picker-styles';
-    const MF_IPHONE_NATIVE_PICKER_TOGGLE_ID =
-        'mission-finder-iphone-native-picker-toggle';
     const MF_IPHONE_NATIVE_PICKER_ROOT_CLASS =
         'mf-command-nexus-iphone-native-picker';
 
@@ -9475,16 +9471,13 @@
                 MF_IPHONE_ADVANCED_EXPANDED_KEY,
                 'false'
             );
-            localStorage.setItem(
-                MF_IPHONE_NATIVE_PICKER_COLLAPSED_KEY,
-                'true'
-            );
 
             [
                 'mf_control_collapsed_iphone_v2',
                 'mf_vehicle_load_collapsed_iphone_v2',
                 'mf_iphone_advanced_expanded_v1',
-                'mf_iphone_native_picker_collapsed_v1'
+                'mf_iphone_native_picker_collapsed_v1',
+                'mf_iphone_native_picker_collapsed_v2'
             ].forEach(key => {
                 localStorage.removeItem(key);
             });
@@ -9602,6 +9595,10 @@
     const MF_STRICT_TRAINING_SOURCE_PREFIX =
         'mission-finder-live-strict-';
 
+    // V10.6.99: the active iPhone native-picker disclosure/wrapper was removed.
+    // MissionChief's own quick-select DOM is now left structurally untouched and
+    // receives only passive document-owned selector CSS, eliminating the native/
+    // enhanced reattachment race while preserving Mission and Vehicle launchers.
     // V10.6.98: the iPhone native Unit Quick Select disclosure is now
     // mutation-idempotent and guarded against duplicate touch/click transitions.
     // The Mission/Vehicle launcher now clears the complete top-right native
@@ -18122,133 +18119,14 @@ let sessionRuntimeTicker = null;
     }
 
 
-    const mfIphoneNativePickerRenderState =
-        new WeakMap();
-    let mfIphoneNativePickerMutationSuppressionUntil = 0;
-    let mfIphoneNativePickerDisclosureLockUntil = 0;
     let mfIphoneLauncherLastNativeCluster = null;
 
-    function markMissionFinderIphoneNativePickerMutation() {
-        mfIphoneNativePickerMutationSuppressionUntil =
-            Math.max(
-                mfIphoneNativePickerMutationSuppressionUntil,
-                Date.now() + 180
-            );
-    }
 
-    function isMissionFinderIphoneNativePickerOwnedMutationRecord(
-        record
-    ) {
-        if (
-            Date.now() >
-            mfIphoneNativePickerMutationSuppressionUntil
-        ) {
-            return false;
-        }
 
-        const ownedSelector = [
-            `#${MF_IPHONE_NATIVE_PICKER_TOGGLE_ID}`,
-            '.mf-iphone-native-picker-shell',
-            '.mf-iphone-native-picker-grid',
-            '.mf-iphone-native-picker-item',
-            '.mf-iphone-native-picker-structural',
-            '.mf-iphone-native-picker-search',
-            '.mf-iphone-native-picker-strip'
-        ].join(', ');
-        const target =
-            record?.target?.nodeType === 1
-                ? record.target
-                : record?.target?.parentElement;
 
-        try {
-            if (
-                target?.matches?.(ownedSelector) ||
-                target?.closest?.(ownedSelector) ||
-                target === target?.ownerDocument?.documentElement &&
-                target.classList?.contains(
-                    MF_IPHONE_NATIVE_PICKER_ROOT_CLASS
-                )
-            ) {
-                return true;
-            }
 
-            const changedNodes = [
-                ...(record?.addedNodes || []),
-                ...(record?.removedNodes || [])
-            ].filter(node => node?.nodeType === 1);
 
-            return changedNodes.length > 0 &&
-                changedNodes.every(node => {
-                    return Boolean(
-                        node.matches?.(ownedSelector) ||
-                        node.querySelector?.(ownedSelector)
-                    );
-                });
-        } catch (_error) {
-            return false;
-        }
-    }
 
-    function setMissionFinderIphonePickerClass(
-        element,
-        className,
-        enabled
-    ) {
-        if (!element?.classList) return false;
-        const next = Boolean(enabled);
-        if (element.classList.contains(className) === next) {
-            return false;
-        }
-        markMissionFinderIphoneNativePickerMutation();
-        element.classList.toggle(className, next);
-        return true;
-    }
-
-    function setMissionFinderIphonePickerText(
-        element,
-        value
-    ) {
-        if (!element) return false;
-        const next = String(value ?? '');
-        if (element.textContent === next) return false;
-        markMissionFinderIphoneNativePickerMutation();
-        element.textContent = next;
-        return true;
-    }
-
-    function setMissionFinderIphonePickerAttribute(
-        element,
-        name,
-        value
-    ) {
-        if (!element?.getAttribute) return false;
-        const next = String(value ?? '');
-        if (element.getAttribute(name) === next) return false;
-        markMissionFinderIphoneNativePickerMutation();
-        element.setAttribute(name, next);
-        return true;
-    }
-
-    function readMissionFinderIphoneNativePickerCollapsed() {
-        try {
-            return localStorage.getItem(
-                MF_IPHONE_NATIVE_PICKER_COLLAPSED_KEY
-            ) !== 'false';
-        } catch (_error) {
-            return true;
-        }
-    }
-
-    function writeMissionFinderIphoneNativePickerCollapsed(
-        collapsed
-    ) {
-        try {
-            localStorage.setItem(
-                MF_IPHONE_NATIVE_PICKER_COLLAPSED_KEY,
-                String(Boolean(collapsed))
-            );
-        } catch (_error) {}
-    }
 
     function isMissionFinderIphoneNativePickerElementVisible(
         element
@@ -18592,300 +18470,90 @@ let sessionRuntimeTicker = null;
     function ensureMissionFinderIphoneNativePickerStyles(
         candidateDocument
     ) {
-        if (!candidateDocument?.documentElement) {
-            return null;
-        }
-
-        let style =
+        if (
+            !candidateDocument?.documentElement ||
             candidateDocument.getElementById(
                 MF_IPHONE_NATIVE_PICKER_STYLE_ID
-            );
+            )
+        ) {
+            return false;
+        }
 
-        if (style) return style;
-
-        style = candidateDocument.createElement('style');
-        style.id = MF_IPHONE_NATIVE_PICKER_STYLE_ID;
-        style.textContent = `
-            html.${MF_IPHONE_NATIVE_PICKER_ROOT_CLASS}
-            .mf-iphone-native-picker-shell {
-                width: 100%;
-                max-width: 100%;
-                box-sizing: border-box;
-            }
-
-            html.${MF_IPHONE_NATIVE_PICKER_ROOT_CLASS}
-            .mf-iphone-native-picker-toggle {
-                position: sticky;
-                top: 0;
-                z-index: 8;
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                width: 100%;
-                min-height: 38px;
-                margin: 4px 0;
-                padding: 7px 10px;
-                border: 1px solid rgba(255, 255, 255, 0.24);
-                border-radius: 11px;
-                background: rgba(44, 44, 46, 0.96);
-                color: #f2f2f7;
-                box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
-                -webkit-backdrop-filter: blur(14px) saturate(135%);
-                backdrop-filter: blur(14px) saturate(135%);
-                font: 700 12.5px/1.15 -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
-                text-align: left;
-                touch-action: manipulation;
-                -webkit-tap-highlight-color: transparent;
-            }
-
-            html.${MF_IPHONE_NATIVE_PICKER_ROOT_CLASS}
-            .mf-iphone-native-picker-toggle-icon {
-                flex: 0 0 auto;
-                margin-left: 8px;
-                font-size: 17px;
-                line-height: 1;
-            }
-
-            html.${MF_IPHONE_NATIVE_PICKER_ROOT_CLASS}
-            .mf-iphone-native-picker-shell.mf-iphone-native-picker-collapsed
-            .mf-iphone-native-picker-search,
-            html.${MF_IPHONE_NATIVE_PICKER_ROOT_CLASS}
-            .mf-iphone-native-picker-shell.mf-iphone-native-picker-collapsed
-            .mf-iphone-native-picker-strip,
-            html.${MF_IPHONE_NATIVE_PICKER_ROOT_CLASS}
-            .mf-iphone-native-picker-shell.mf-iphone-native-picker-collapsed
-            .mf-iphone-native-picker-grid {
-                display: none !important;
-            }
-
-            html.${MF_IPHONE_NATIVE_PICKER_ROOT_CLASS}
-            .mf-iphone-native-picker-search {
-                display: block !important;
-                width: 100% !important;
-                min-height: 36px !important;
-                margin: 3px 0 5px !important;
-                padding: 6px 10px !important;
-                border-radius: 10px !important;
-                box-sizing: border-box !important;
-                font-size: 16px !important;
-            }
-
-            html.${MF_IPHONE_NATIVE_PICKER_ROOT_CLASS}
-            .mf-iphone-native-picker-strip {
-                display: flex !important;
-                flex-flow: row nowrap !important;
-                align-items: center !important;
-                gap: 4px !important;
-                width: 100% !important;
-                max-width: 100% !important;
-                margin: 0 0 5px !important;
-                padding: 1px 0 5px !important;
-                overflow-x: auto !important;
-                overflow-y: hidden !important;
-                -webkit-overflow-scrolling: touch;
-                scrollbar-width: none;
-                scroll-snap-type: x proximity;
-            }
-
-            html.${MF_IPHONE_NATIVE_PICKER_ROOT_CLASS}
-            .mf-iphone-native-picker-strip::-webkit-scrollbar {
-                display: none;
-            }
-
-            html.${MF_IPHONE_NATIVE_PICKER_ROOT_CLASS}
-            .mf-iphone-native-picker-strip > * {
-                flex: 0 0 auto !important;
-                width: auto !important;
-                max-width: none !important;
-                float: none !important;
-                margin: 0 !important;
-                scroll-snap-align: start;
-            }
-
-            html.${MF_IPHONE_NATIVE_PICKER_ROOT_CLASS}
-            .mf-iphone-native-picker-strip a,
-            html.${MF_IPHONE_NATIVE_PICKER_ROOT_CLASS}
-            .mf-iphone-native-picker-strip button,
-            html.${MF_IPHONE_NATIVE_PICKER_ROOT_CLASS}
-            .mf-iphone-native-picker-strip [role="tab"] {
-                display: inline-flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-                min-height: 32px !important;
-                padding: 5px 8px !important;
-                border-radius: 8px !important;
-                white-space: nowrap !important;
-                font-size: 11.5px !important;
-                line-height: 1.1 !important;
-                touch-action: manipulation;
-            }
-
-            html.${MF_IPHONE_NATIVE_PICKER_ROOT_CLASS}
-            .mf-iphone-native-picker-grid {
-                display: grid !important;
-                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-                align-items: stretch !important;
-                gap: 4px !important;
-                width: 100% !important;
-                max-width: 100% !important;
-                max-height: 46vh;
-                margin: 0 !important;
-                padding: 2px !important;
-                overflow-x: hidden !important;
-                overflow-y: auto !important;
-                box-sizing: border-box !important;
-                overscroll-behavior: contain;
-                -webkit-overflow-scrolling: touch;
-                scrollbar-width: thin;
-            }
-
-            @supports (height: 100dvh) {
-                html.${MF_IPHONE_NATIVE_PICKER_ROOT_CLASS}
-                .mf-iphone-native-picker-grid {
-                    max-height: 46dvh;
-                }
-            }
-
-            html.${MF_IPHONE_NATIVE_PICKER_ROOT_CLASS}
-            .mf-iphone-native-picker-structural {
-                display: contents !important;
-            }
-
-            html.${MF_IPHONE_NATIVE_PICKER_ROOT_CLASS}
-            a[search_attribute].mf-iphone-native-picker-item {
-                display: flex !important;
-                align-items: center !important;
-                justify-content: flex-start !important;
-                min-width: 0 !important;
-                width: 100% !important;
-                min-height: 35px !important;
-                margin: 0 !important;
-                padding: 5px 6px !important;
-                border-radius: 8px !important;
-                box-sizing: border-box !important;
-                overflow: hidden !important;
-                overflow-wrap: anywhere !important;
-                white-space: normal !important;
-                text-align: left !important;
-                text-overflow: ellipsis !important;
-                font-size: 11px !important;
-                line-height: 1.15 !important;
-                touch-action: manipulation;
-                -webkit-tap-highlight-color: transparent;
-            }
-        `;
-
-        (
-            candidateDocument.head ||
-            candidateDocument.documentElement
-        ).appendChild(style);
-
-        return style;
-    }
-
-    function updateMissionFinderIphoneNativePickerState(
-        candidateDocument
-    ) {
-        if (!candidateDocument?.documentElement) return false;
-
-        const collapsed =
-            readMissionFinderIphoneNativePickerCollapsed();
-        let changed = false;
+        let style = null;
 
         try {
-            candidateDocument.querySelectorAll(
-                '.mf-iphone-native-picker-shell'
-            ).forEach(shell => {
-                changed =
-                    setMissionFinderIphonePickerClass(
-                        shell,
-                        'mf-iphone-native-picker-collapsed',
-                        collapsed
-                    ) || changed;
-            });
-        } catch (_error) {}
+            style = candidateDocument.createElement('style');
+            style.id = MF_IPHONE_NATIVE_PICKER_STYLE_ID;
+            style.textContent = `
+                html.${MF_IPHONE_NATIVE_PICKER_ROOT_CLASS}
+                table:has(a[search_attribute]) {
+                    display: grid !important;
+                    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                    gap: 4px !important;
+                    width: 100% !important;
+                    max-width: 100% !important;
+                    max-height: 46vh !important;
+                    overflow-y: auto !important;
+                    overscroll-behavior: contain !important;
+                    -webkit-overflow-scrolling: touch !important;
+                    border-collapse: separate !important;
+                    border-spacing: 0 !important;
+                }
 
-        const toggle =
-            candidateDocument.getElementById(
-                MF_IPHONE_NATIVE_PICKER_TOGGLE_ID
-            );
+                @supports (height: 100dvh) {
+                    html.${MF_IPHONE_NATIVE_PICKER_ROOT_CLASS}
+                    table:has(a[search_attribute]) {
+                        max-height: 46dvh !important;
+                    }
+                }
 
-        if (!toggle) {
-            mfIphoneNativePickerRenderState.delete(
-                candidateDocument
-            );
-            return changed;
+                html.${MF_IPHONE_NATIVE_PICKER_ROOT_CLASS}
+                table:has(a[search_attribute]) > tbody,
+                html.${MF_IPHONE_NATIVE_PICKER_ROOT_CLASS}
+                table:has(a[search_attribute]) > thead,
+                html.${MF_IPHONE_NATIVE_PICKER_ROOT_CLASS}
+                table:has(a[search_attribute]) > tbody > tr,
+                html.${MF_IPHONE_NATIVE_PICKER_ROOT_CLASS}
+                table:has(a[search_attribute]) > thead > tr,
+                html.${MF_IPHONE_NATIVE_PICKER_ROOT_CLASS}
+                table:has(a[search_attribute]) > tbody > tr > td,
+                html.${MF_IPHONE_NATIVE_PICKER_ROOT_CLASS}
+                table:has(a[search_attribute]) > thead > tr > th {
+                    display: contents !important;
+                }
+
+                html.${MF_IPHONE_NATIVE_PICKER_ROOT_CLASS}
+                a[search_attribute] {
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: flex-start !important;
+                    min-width: 0 !important;
+                    max-width: 100% !important;
+                    min-height: 28px !important;
+                    margin: 0 !important;
+                    padding: 4px 6px !important;
+                    border-radius: 6px !important;
+                    box-sizing: border-box !important;
+                    overflow: hidden !important;
+                    text-overflow: ellipsis !important;
+                    white-space: nowrap !important;
+                    font-size: 10px !important;
+                    line-height: 1.1 !important;
+                    touch-action: manipulation !important;
+                }
+            `;
+
+            (
+                candidateDocument.head ||
+                candidateDocument.documentElement
+            ).appendChild(style);
+            return true;
+        } catch (_error) {
+            style?.remove?.();
+            return false;
         }
-
-        const label = toggle.querySelector(
-            '.mf-iphone-native-picker-toggle-label'
-        );
-        const icon = toggle.querySelector(
-            '.mf-iphone-native-picker-toggle-icon'
-        );
-        const count = String(
-            toggle.dataset.itemCount || ''
-        ).trim();
-        const labelText = count
-            ? `Unit Quick Select · ${count}`
-            : 'Unit Quick Select';
-        const iconText = collapsed ? '▾' : '▴';
-        const expandedText = String(!collapsed);
-        const titleText = collapsed
-            ? 'Expand MissionChief unit quick select'
-            : 'Collapse MissionChief unit quick select';
-        const signature = [
-            collapsed ? '1' : '0',
-            count,
-            labelText,
-            iconText,
-            expandedText,
-            titleText
-        ].join('|');
-
-        if (
-            mfIphoneNativePickerRenderState.get(
-                candidateDocument
-            ) === signature &&
-            label?.textContent === labelText &&
-            icon?.textContent === iconText &&
-            toggle.getAttribute('aria-expanded') ===
-                expandedText &&
-            toggle.title === titleText
-        ) {
-            return changed;
-        }
-
-        changed =
-            setMissionFinderIphonePickerText(
-                label,
-                labelText
-            ) || changed;
-        changed =
-            setMissionFinderIphonePickerText(
-                icon,
-                iconText
-            ) || changed;
-        changed =
-            setMissionFinderIphonePickerAttribute(
-                toggle,
-                'aria-expanded',
-                expandedText
-            ) || changed;
-
-        if (toggle.title !== titleText) {
-            markMissionFinderIphoneNativePickerMutation();
-            toggle.title = titleText;
-            changed = true;
-        }
-
-        mfIphoneNativePickerRenderState.set(
-            candidateDocument,
-            signature
-        );
-
-        return changed;
     }
+
 
     function applyMissionFinderIphoneNativePickerToDocument(
         candidateDocument
@@ -18897,223 +18565,33 @@ let sessionRuntimeTicker = null;
             return false;
         }
 
-        const anchors =
-            getMissionFinderIphoneNativePickerAnchors(
-                candidateDocument
-            );
+        let hasNativePicker = false;
 
-        if (anchors.length < 4) return false;
-
-        const grid =
-            getMissionFinderIphoneNativePickerGrid(
-                candidateDocument,
-                anchors
+        try {
+            hasNativePicker = Boolean(
+                candidateDocument.querySelector(
+                    'a[search_attribute]'
+                )
             );
-        const shell =
-            getMissionFinderIphoneNativePickerShell(
-                candidateDocument,
-                grid
-            );
+        } catch (_error) {}
 
-        if (!grid || !shell) return false;
+        if (!hasNativePicker) return false;
 
         ensureMissionFinderIphoneNativePickerStyles(
             candidateDocument
         );
-        markMissionFinderIphoneNativePickerMutation();
 
-        candidateDocument.documentElement.classList.add(
-            MF_IPHONE_NATIVE_PICKER_ROOT_CLASS
-        );
-        shell.classList.add(
-            'mf-iphone-native-picker-shell'
-        );
-        grid.classList.add(
-            'mf-iphone-native-picker-grid'
-        );
-
-        anchors.forEach(anchor => {
-            anchor.classList.add(
-                'mf-iphone-native-picker-item'
+        try {
+            candidateDocument.documentElement.classList.add(
+                MF_IPHONE_NATIVE_PICKER_ROOT_CLASS
             );
-
-            let structural =
-                anchor.parentElement;
-
-            while (
-                structural &&
-                structural !== grid
-            ) {
-                structural.classList.add(
-                    'mf-iphone-native-picker-structural'
-                );
-                structural = structural.parentElement;
-            }
-        });
-
-        const searchInputs =
-            getMissionFinderIphoneNativePickerSearchInputs(
-                shell,
-                grid
-            );
-        const strips =
-            getMissionFinderIphoneNativePickerStrips(
-                shell,
-                grid
-            );
-
-        searchInputs.forEach(input => {
-            input.classList.add(
-                'mf-iphone-native-picker-search'
-            );
-        });
-        strips.forEach(strip => {
-            strip.classList.add(
-                'mf-iphone-native-picker-strip'
-            );
-        });
-
-        let toggle =
-            candidateDocument.getElementById(
-                MF_IPHONE_NATIVE_PICKER_TOGGLE_ID
-            );
-
-        if (!toggle) {
-            toggle = candidateDocument.createElement(
-                'button'
-            );
-            toggle.id =
-                MF_IPHONE_NATIVE_PICKER_TOGGLE_ID;
-            toggle.type = 'button';
-            toggle.className =
-                'mf-iphone-native-picker-toggle';
-            toggle.innerHTML = `
-                <span class="mf-iphone-native-picker-toggle-label">Unit Quick Select</span>
-                <span class="mf-iphone-native-picker-toggle-icon" aria-hidden="true">▾</span>
-            `;
-        }
-
-        const nextItemCount =
-            String(anchors.length);
-        if (
-            toggle.dataset.itemCount !==
-            nextItemCount
-        ) {
-            markMissionFinderIphoneNativePickerMutation();
-            toggle.dataset.itemCount =
-                nextItemCount;
-        }
-
-        if (
-            toggle.dataset.mfIphoneNativePickerBound !==
-            'true'
-        ) {
-            toggle.dataset.mfIphoneNativePickerBound =
-                'true';
-            toggle.addEventListener(
-                'click',
-                event => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    event.stopImmediatePropagation?.();
-
-                    const now = Date.now();
-                    if (
-                        now <
-                        mfIphoneNativePickerDisclosureLockUntil
-                    ) {
-                        return;
-                    }
-
-                    mfIphoneNativePickerDisclosureLockUntil =
-                        now + 420;
-
-                    const owningShell =
-                        toggle.closest(
-                            '.mf-iphone-native-picker-shell'
-                        );
-                    const currentlyCollapsed =
-                        owningShell
-                            ? owningShell.classList.contains(
-                                'mf-iphone-native-picker-collapsed'
-                            )
-                            : readMissionFinderIphoneNativePickerCollapsed();
-
-                    writeMissionFinderIphoneNativePickerCollapsed(
-                        !currentlyCollapsed
-                    );
-
-                    mfIphoneNativePickerDocuments.forEach(
-                        updateMissionFinderIphoneNativePickerState
-                    );
-
-                    requestAnimationFrame(() => {
-                        syncMissionFinderIphoneLauncherPlacement(
-                            document.getElementById(
-                                'mission-finder-wrapper'
-                            )
-                        );
-                    });
-                }
-            );
-        }
-
-        const insertionCandidates = [
-            ...searchInputs,
-            ...strips,
-            grid
-        ]
-            .map(element => {
-                return getMissionFinderIphoneNativePickerDirectChild(
-                    shell,
-                    element
-                );
-            })
-            .filter(Boolean)
-            .filter((element, index, list) => {
-                return list.indexOf(element) === index;
-            });
-
-        insertionCandidates.sort((left, right) => {
-            try {
-                if (
-                    left.compareDocumentPosition(right) &
-                    4
-                ) {
-                    return -1;
-                }
-                if (
-                    right.compareDocumentPosition(left) &
-                    4
-                ) {
-                    return 1;
-                }
-            } catch (_error) {}
-            return 0;
-        });
-
-        const insertionTarget =
-            insertionCandidates[0] ||
-            shell.firstElementChild ||
-            null;
-
-        if (
-            toggle.parentElement !== shell ||
-            toggle.nextElementSibling !== insertionTarget
-        ) {
-            shell.insertBefore(
-                toggle,
-                insertionTarget
-            );
+        } catch (_error) {
+            return false;
         }
 
         mfIphoneNativePickerDocuments.add(
             candidateDocument
         );
-        updateMissionFinderIphoneNativePickerState(
-            candidateDocument
-        );
-
         return true;
     }
 
@@ -19237,33 +18715,32 @@ let sessionRuntimeTicker = null;
             candidateDocument.documentElement.classList.remove(
                 MF_IPHONE_NATIVE_PICKER_ROOT_CLASS
             );
-
-            candidateDocument.getElementById(
-                MF_IPHONE_NATIVE_PICKER_TOGGLE_ID
-            )?.remove();
-
             candidateDocument.getElementById(
                 MF_IPHONE_NATIVE_PICKER_STYLE_ID
             )?.remove();
+            candidateDocument.getElementById(
+                'mission-finder-iphone-native-picker-toggle'
+            )?.remove();
 
-            const classNames = [
-                'mf-iphone-native-picker-shell',
-                'mf-iphone-native-picker-collapsed',
-                'mf-iphone-native-picker-grid',
-                'mf-iphone-native-picker-structural',
-                'mf-iphone-native-picker-item',
-                'mf-iphone-native-picker-search',
-                'mf-iphone-native-picker-strip'
-            ];
-
-            classNames.forEach(className => {
-                candidateDocument.querySelectorAll(
-                    `.${className}`
-                ).forEach(element => {
-                    element.classList.remove(
-                        className
-                    );
-                });
+            candidateDocument.querySelectorAll(
+                '.mf-iphone-native-picker-shell, ' +
+                '.mf-iphone-native-picker-grid, ' +
+                '.mf-iphone-native-picker-item, ' +
+                '.mf-iphone-native-picker-structural, ' +
+                '.mf-iphone-native-picker-search, ' +
+                '.mf-iphone-native-picker-strip, ' +
+                '.mf-iphone-native-picker-collapsed'
+            ).forEach(element => {
+                element.classList.remove(
+                    'mf-iphone-native-picker-shell',
+                    'mf-iphone-native-picker-grid',
+                    'mf-iphone-native-picker-item',
+                    'mf-iphone-native-picker-structural',
+                    'mf-iphone-native-picker-search',
+                    'mf-iphone-native-picker-strip',
+                    'mf-iphone-native-picker-collapsed'
+                );
+                delete element.dataset?.mfIphoneNativePickerBound;
             });
         } catch (_error) {}
     }
@@ -37436,16 +36913,6 @@ let sessionRuntimeTicker = null;
 
 
 
-    function shouldIgnoreMissionFinderIphoneOwnedMutation(
-        record
-    ) {
-        return Boolean(
-            isMissionFinderIphoneSafariWebsite() &&
-            isMissionFinderIphoneNativePickerOwnedMutationRecord(
-                record
-            )
-        );
-    }
 
     function classifyMissionFinderMutations(records) {
         const flags = {
@@ -37519,13 +36986,6 @@ let sessionRuntimeTicker = null;
         };
 
         for (const record of records || []) {
-            if (
-                shouldIgnoreMissionFinderIphoneOwnedMutation(
-                    record
-                )
-            ) {
-                continue;
-            }
 
             const target = record.target;
             const changedNodes = [
@@ -37793,16 +37253,6 @@ let sessionRuntimeTicker = null;
             invalidateTransportCaches();
         }
 
-        if (
-            flags.vehicleListChanged ||
-            flags.missionContextChanged
-        ) {
-            scheduleMissionFinderIphoneNativePickerSync(
-                'coalesced native picker mutation',
-                0,
-                0
-            );
-        }
 
         const missionPage = isMissionPage();
         const wrapper = document.getElementById('mission-finder-wrapper');
