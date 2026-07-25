@@ -81,11 +81,11 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ### Fixed
 
-- Added the exact Fire cross-reference `Road Rail Unit` → `RRU`.
-
-### Verified
-
-- Police Medic personnel counts continue to use two `police_medic`-trained personnel per exact type-8 IRV: 1 → 1 IRV, 2 → 1 IRV and 3 → 2 IRVs.
+- Mission Update no longer reuses static mission-help requirements after the live mission requirements panel becomes authoritative.
+- Firefighter personnel requirements now convert to Rescue Pumps using nine firefighters per vehicle.
+- Car Recovery requirements now select Flatbed Recovery Vehicles.
+- `Fire Engines, RIVs or Major Foam Tenders` now selects Major Foam Tenders instead of Rescue Pumps.
+- `RIV or Major Foam Tender` now prefers RIVs and falls back to Major Foam Tenders only when no RIV is available.
 
 ### Changed
 
@@ -95,7 +95,14 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ### Fixed
 
-- Mapped the exact `Fire, rescue or aerial appliance` mission requirement to `Rescue Pump`.
+- Mission Update live requirements now use numeric or bounded `Still Needed` shortages directly and fall back to `Required` only when the `Still Needed` cell is literally `?` or absent.
+- `Fire Engine or RIV` shortages no longer expand back to the full required total during Update or retry.
+- Added a strict `Rescue Support Vehicles` selector that accepts only type-83 Rescue Support Vehicles and rejects Major Foam Tenders and RIVs during selection, selected counting, fallback and retry verification.
+
+### Preserved
+
+- Existing `Fire Engines or RIVs`, `RIV or Major Foam Tender`, and airfield alternative-unit rules remain on their dedicated selectors.
+- Existing selected-unit subtraction and fail-closed loading safeguards remain enabled.
 
 ### Changed
 
@@ -103,87 +110,92 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [1.0.18] - 2026-07-22
 
-### Added
-
-- Enabled Railway Fire (2 `railway_fire` per type-107 RRU), Level 1 Incident Commander (3 `elw2` per type-15 ICCU) and HazMat (3 `gw_gefahrgut` per type-39 Fire OSU) personnel profiles.
-
 ### Fixed
 
-- Mission Control now uses an iOS Safari-only safe-area top layout instead of opening as the centred 560px desktop interface over the dispatch screen.
-- Added a horizontal chevron collapse control, pointer dragging and visual-viewport recovery for Safari address-bar changes, rotation and bfcache restoration.
-- The Vehicle Load List defaults collapsed on first iOS Safari use and uses mobile-specific collapse storage without changing desktop preferences.
+- Mission Update now treats `Still Needed` as authoritative whenever the value is numeric or a bounded range, using `Required` only when the live shortage is literally `?` or the cell is missing.
+- A row such as `Required 8 / Selected 7 / Still Needed 1` now selects exactly one additional unit instead of rebuilding the full requirement.
+- `Rescue Support Vehicle` and `Rescue Support Vehicles` now use a strict Rescue Support Vehicle-only selector and no longer fall through to Major Foam Tender or RIV alternatives.
+- Existing selected-unit subtraction is preserved after the corrected shortage target is chosen.
+
+### Preserved
+
+- Unit Finder Armed Personnel still uses exact type-25 Armed Traffic Cars with Roads Policing plus Firearms verification.
+- Legitimate `RIV or Major Foam Tender` requirements still prefer type-76 RIVs and fall back to type-75 Major Foam Tenders.
 
 ### Changed
 
-- BASU, Welfare and HazMat mission wording now shares one exact type-39 Fire OSU; type-86 SAR Operational Support Vans remain separate.
-- High Volume Pump, Drone Operator, Co-Responder and Lifeguard remain disabled pending later evidence.
-- Desktop Mission Control sizing, saved positioning, centring and mouse dragging remain unchanged.
-- Personnel Assignment increased to `1.3.2`; Mission Finder increased to `V10.6.83`.
+- Mission Finder increased from `V10.6.82` to `V10.6.83`.
 
 ## [1.0.17] - 2026-07-22
 
 ### Fixed
 
-- Restored the `Operational Support or SAR Vehicle` requirement mapping to `Operational Support Van`.
-- Unit Finder, Mission Update/Upgrade and final selected-unit verification now use the exact MissionChief type-86 Operational Support Van.
-- Fire Operational Support Units using type 39 are explicitly excluded from satisfying the SAR requirement.
-- Added current, legacy, singular, plural, `Required` and `x1` wording aliases for the same requirement.
+- Mission Update now uses numeric or bounded `Still Needed` shortages directly and falls back to `Required` only when the live shortage is literally `?` or the cell is unavailable.
+- `Fire Engine or RIV` rows therefore select only the visible shortage, while `?` rows continue using the required total.
+- Rescue Support Unit/Vehicle requirements are now strict and cannot enter the RIV-or-Major-Foam fallback path.
+
+### Preserved
+
+- Armed Personnel continues to use exact type-25 Armed Traffic Cars with Roads Policing plus Firearms verification.
+- Existing selected-unit subtraction remains active after the shortage target is chosen.
+
+### Changed
+
+- Mission Finder increased from `V10.6.81` to `V10.6.82`.
+
+## [1.0.16] - 2026-07-22
+
+### Fixed
+
+- Mission Update now treats numeric `Still Needed` values as shortages, uses the upper bound of bounded ranges such as `0-3`, and falls back to `Required` only when `Still Needed` is a literal `?`.
+- Existing matching selections continue to be subtracted before new clicks, preventing duplicate dispatch.
+- Rescue Support Unit/Vehicle requirements now use a strict Rescue Support selector that excludes Major Foam Tenders and RIVs.
+- The Rescue Support strict route applies to initial selection, selected counting and retry fallback, so final missing-unit reporting retains the original Rescue Support requirement.
+
+### Preserved
+
+- Armed Personnel remains linked to exact type-25 Armed Traffic Cars carrying Roads Policing plus Firearms-qualified personnel.
+- The legitimate RIV-first/Major-Foam fallback rule remains isolated to explicit `RIV or Major Foam Tender` requirements.
 
 ### Changed
 
 - Mission Finder increased from `V10.6.80` to `V10.6.81`.
 
-## [1.0.16] - 2026-07-22
-
-### Changed
-
-- Restore Unit Naming, Station Naming, Personnel Assignment and Personnel Register station discovery on the responsive iOS Stations tab.
-- Enforce exactly one Command Nexus tools menu after Safari bfcache restoration or duplicate injection.
-- Add a same-origin iOS station iframe fallback when responsive Details links do not activate MissionChief lightboxes.
-- Increased the unified userscript version from `1.0.15` to `1.0.16`.
-
 ## [1.0.15] - 2026-07-22
-
-### Added
-
-- Added Safari website support on iPhone and iPad for the shared Unit Naming, Station Naming and Personnel Assignment menu.
-- Added iPad desktop-site detection through `MacIntel` plus touch capability while excluding Chrome, Firefox, Edge and native iOS webview wrappers.
-- Added touch/pointer dragging and visual-viewport clamping for the shared tools panel.
 
 ### Fixed
 
-- Fixed the shared tools menu not appearing when MissionChief uses the responsive iOS station-list markup.
-- Fixed the 470px desktop panel width placing the menu partly or completely outside an iPhone viewport.
-- Fixed panel positioning after Safari address-bar changes, bfcache restoration and device rotation.
-
-### Changed
-
-- Unit Naming increased from `3.3.5` to `3.3.6`.
-- Station Naming increased from `1.3.1` to `1.3.2`.
-- Personnel Assignment increased from `1.2.9` to `1.3.0`.
+- Mission Update now uses numeric or bounded `Still Needed` shortages directly and falls back to `Required` only when the live shortage is a literal `?`.
+- Existing selections remain deducted before additional clicks, so Update does not resend already selected units.
+- Rescue Support Vehicle requirements now use an exact strict selector and no longer enter the RIV-or-Major-Foam alternative path.
+- `Missing Personnel: N Police Officers` now converts at two officers per ordinary Police Car using ceiling division.
 
 ### Preserved
 
-- Desktop layout, station and vehicle filtering, naming rules, personnel assignment rules, logs, reports, pause/stop controls and saved active-tab/collapse state remain unchanged.
+- The v1.0.12 Armed Personnel → exact type-25 Armed Traffic Car route remains enabled.
+- Legitimate `RIV or Major Foam Tender` requirements retain RIV-first/Major-Foam fallback behaviour.
+
+### Changed
+
+- Mission Finder increased from `V10.6.80` to `V10.6.81`.
 
 ## [1.0.14] - 2026-07-21
 
 ### Fixed
 
-- Unit Finder now uses the visible Live Mission Requirements panel as the authoritative source whenever it exists, preventing stale mission-help rows from requesting outdated units.
-- A current `Rescue Support Vehicles` live row can no longer be replaced by an outdated `Major Foam Tender` mission-help requirement.
-- Numeric or bounded `Still Needed` values are now treated as shortages and are no longer reduced by already-selected units a second time.
-- `Still Needed = ?` continues to use `Required` as a total target and deducts existing matching selections.
-- Successful selection clicks are included in final confirmation, preventing a false `Fire Engines or RIVs x2` warning when the live shortage was one.
+- Mission Update now uses numeric or bounded `Still Needed` shortages directly and falls back to `Required` only when the live shortage is a literal `?` or the cell is unavailable.
+- Existing selected units remain deducted before additional clicks, preventing duplicate dispatch.
+- `Rescue Support Unit` and `Rescue Support Vehicle` requirements now use a strict Rescue Support selector that excludes Major Foam Tenders and RIVs.
+- Missing-unit retry uses the same strict Rescue Support selector, preventing the final popup from changing the requirement into Major Foam Tender.
 
 ### Preserved
 
-- Static mission-help remains the fallback when no live requirements panel exists.
-- Armed Personnel exact type-25 Armed Traffic Car selection remains enabled.
+- The v1.0.12 Armed Personnel → exact type-25 Armed Traffic Car route remains enabled.
+- Legitimate `RIV or Major Foam Tender` requirements retain RIV-first/Major-Foam fallback behaviour.
 
 ### Changed
 
-- Mission Finder increased from `V10.6.79` to `V10.6.80`.
+- Mission Finder increased from `V10.6.80` to `V10.6.81`.
 
 ## [1.0.13] - 2026-07-21
 
@@ -216,56 +228,50 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 - Mission Finder increased from `V10.6.77` to `V10.6.78`.
 
-### Preserved
-
-- Exact vehicle-ID assignment-page verification, two-person preference, one-person trained fallback, ordinary IRV protection, patient authority rules and genuine trained-personnel shortfall warnings remain enabled.
-
-## [1.0.11] - 2026-07-21
+## [1.0.11] - 2026-07-20
 
 ### Fixed
 
-- Restored the live `4x4 Vehicle` requirement link in Unit Finder and Mission Update/Upgrade by matching the exact MissionChief type-66 4x4 Vehicle.
-- Kept the explicit `Mountain Rescue 4x4 or SAR 4x4` requirement on its separate type-99/type-93 specialist pool.
-- Restored raw live-table `SAR Commander` conversion at both shared processing entry points: two SAR Commanders are covered by one Control Van.
-- Added direct SAR Commander aliases so singular, plural and `Required` labels resolve consistently.
+- Restored `4x4 Vehicle` as its own MissionChief requirement using exact vehicle type `66`; type `93` SAR 4x4 and type `99` Mountain Rescue 4x4 no longer satisfy the generic 4x4 row.
+- Restored `SAR Commander` conversion at two commanders per Control Van in both the shared Unit Finder row normaliser and the supplied Mission Update/Upgrade live-row path.
+- Preserved the separate `Mountain Rescue 4x4 or SAR 4x4` priority rule with Mountain Rescue first and SAR fallback.
 
 ### Changed
 
 - Mission Finder increased from `V10.6.76` to `V10.6.77`.
 
-### Preserved
-
-- Existing SARTEC, Search Advisor, Mountain Rescue, SAR 4x4, Control Van, trained-personnel, patient and vehicle verification rules remain enabled.
-
-## [1.0.10] - 2026-07-21
+## [1.0.10] - 2026-07-20
 
 ### Added
 
-- Added issue #63 Unit Class filtering directly below Station Type in the Unit Naming Tool.
-- Unit Class options are generated from the vehicle classes valid for the selected station type, with All classes preserving the existing broad rename behaviour.
-- Selected-station and all-matching-stations runs now filter the lightweight vehicle queue before opening any vehicle edit page, preventing unrelated classes from being renamed.
+- Added a context-sensitive `Unit Class` dropdown to Unit Naming below `Station Type`, with `All classes` as the default option.
+- The Unit Class list follows the selected station type and filters the vehicle queue before any edit page is opened.
 
 ### Changed
 
-- Trained Police vehicle selection now prefers exact vehicles carrying two correctly trained personnel, then falls back to exact vehicles carrying one correctly trained person when no two-person option remains.
-- Trained mission fulfilment is now measured against the complete qualified-personnel demand, so one-person fallback vehicles continue to be selected until the requirement is genuinely covered.
-- One-person registry hints are prioritised after two-person hints and before ordinary arrival-limited candidates.
-- Unit Naming Tool increased from `3.3.4` to `3.3.5`.
+- Mission Finder trained-vehicle selection now prefers cars carrying two correctly trained personnel and falls back to one-person cars only when no valid two-person car remains.
+- Trained requirements now track the full trained-person total rather than marking the preferred vehicle count as complete.
+- A two-person trained car remains preferred even when only one trained person is left to cover.
+- Unit Naming increased from `3.3.4` to `3.3.5`.
 - Mission Finder increased from `V10.6.75` to `V10.6.76`.
 
 ### Preserved
 
-- Critical Care Ambulances remain one Critical Care-trained person per ambulance.
-- Exact vehicle-ID assignment-page verification, vehicle-type restrictions, multi-profile matching, ordinary IRV protection and genuine shortfall warnings remain enabled.
+- Critical Care Ambulances remain on the established one-trained-person-per-Ambulance rule.
+- Exact vehicle IDs, live assignment-page verification, type restrictions and genuine shortfall warnings remain enabled.
 
 ## [1.0.9] - 2026-07-20
 
 ### Fixed
 
-- Fixed urgent issue #57: Level 1 Public Order, Level 2 Public Order and Police Sergeant requirements are now matched independently instead of being collapsed into one mandatory combined profile bundle.
-- Sergeant-only, Level 1-only, Level 2-only and Police Medic-only personnel now qualify for missions requesting their exact training profile.
-- Multi-trained personnel continue to qualify for every requested profile they actually hold without unrelated training becoming a prerequisite.
-- Preserved exact type-8 IRV verification, two trained personnel per selected IRV, capacity controls and genuine missing-training shortfall warnings across Unit Finder, Mission Update and Auto Mode.
+- Public Order trained-vehicle selection no longer combines Level 1, Level 2 and Sergeant into one all-qualifications eligibility rule.
+- Level 1, Level 2, Sergeant, Police Medic, Railway Police Officer and Inspector requirements are now evaluated as independent profile-specific demands.
+- Each selected type-8 IRV still requires two personnel with the requested profile; multi-trained personnel contribute to each requested profile they actually hold.
+- Unit Finder, Mission Update and Auto Mode now use the same independent trained-profile selector.
+
+### Preserved
+
+- Exact vehicle-ID assignment-page verification, ordinary-IRV specialist protection, vehicle capacity rules and genuine trained-personnel shortfall warnings remain enabled.
 
 ### Changed
 
@@ -289,132 +295,92 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ### Fixed
 
-- Fixed Mission Update treating bounded unresolved requirement ranges such as `0-3` and `0-1` as zero by reading only the first number.
-- Mission Update now uses the upper bound of an explicit range, allowing Fire Engine, ICCU/ACU, Police Car, PRV and SRV shortages from the live panel to reach the normal selector.
-- Kept the existing safety behaviour for a completely unknown naked `?`, so unsupported unresolved rows still cannot resend an entire original mission load.
-- Applied the corrected live-range interpretation to manual Mission Update and the shared Auto Mode update path.
+- Mission Update live-range values such as `0-3`, `0-2` and `0-1` now use the unresolved upper bound instead of the first number.
+- The correction applies to Fire Engine, ICCU/ACU, Police Car, PRV, SRV and every other live-panel requirement using the shared range parser.
+- A completely unknown `?` remains blocked by the existing safety guard.
 
 ### Changed
 
-- Mission Finder baseline increased from `V10.6.73` to `V10.6.74`.
+- Mission Finder increased from `V10.6.73` to `V10.6.74`.
 
 ## [1.0.6] - 2026-07-20
 
-### Added
+### Fixed
 
-- Added exact Armed Response mission matching for `Required Armed Response Personnel (In Armed Vehicles)`, using type-25 Armed Traffic Cars with two personnel who each hold both Roads Policing and Firearms.
-- Expanded the one-click Personnel Register builder to every station type and every discovered vehicle, reading each vehicle's own assignment page before recording trained personnel.
-- Added strict Seagoing Vessel matching for ALB/ABL and All-weather Lifeboat display variants.
+- Critical Care Ambulances now require one `critical_care`-trained person per normal Ambulance instead of two.
+- Armed Response Personnel requirements now select exact type-25 Armed Traffic Cars carrying two personnel who each hold both Roads Policing and Firearms training.
+- The one-click Personnel Register builder now scans every station type and every supported vehicle assignment page instead of Police-only stations.
+- Police Officer personnel requirements now convert to Police Cars at two officers per IRV, so eight officers select four IRVs.
+- Seagoing Vessel requirements now use strict ALB/ABL and All-weather Lifeboat matching.
 
 ### Changed
 
-- Changed the Medical Critical Care assignment target from two trained personnel to one trained person per normal Ambulance, including Preview, Live, target planning, shortfall and reporting calculations.
-- Police Officer mission-upgrade rows now convert at two officers per normal Police IRV before Unit Finder, Mission Update or Auto Mode selects vehicles.
-- Mission Finder baseline increased from `V10.6.72` to `V10.6.73`; Personnel Assignment increased from `1.2.8` to `1.2.9`.
-
-### Fixed
-
-- Fixed issue #42 by stopping the Personnel Assignment Tool from planning or assigning a second unnecessary Critical Care-trained person to each Ambulance.
-- Fixed issue #30 by restoring Armed Response Personnel selection through dual-trained Armed Traffic Cars without excluding officers who also hold Firearms training.
-- Fixed live upgrade rows such as `Police Officers x8` selecting eight IRVs instead of four.
-- Fixed Seagoing Vessel upgrade rows falling through generic text matching instead of selecting an exact ALB/ABL vehicle.
-- Fixed the register builder copying a single vehicle-page snapshot across a station instead of recording exact vehicle assignments.
+- Mission Finder increased from `V10.6.72` to `V10.6.73`.
+- Personnel Assignment increased from `1.2.8` to `1.2.9`.
 
 ## [1.0.5] - 2026-07-20
 
+### Fixed
+
+- Normal Police Car attendance no longer requires an IRV to have at least one permanently bound person; exact type-8 IRVs still require a valid assignment-page scan with zero protected specialist qualifications.
+- Police Medic requirements now select exact type-8 IRVs carrying two `police_medic`-trained personnel.
+- Railway Police Officer requirements now select exact type-8 IRVs carrying two `railway_police`-trained personnel.
+- ATV Carrier selection now uses MissionChief vehicle type `30` with ATV/ATC Carrier aliases kept separate from the Police Armed Traffic Car matcher.
+
 ### Added
 
-- Added a one-click **Build Personnel Register** action that scans Police, Police Aviation and EOD stations without changing staffing assignments or requiring profile, mode, action or start-point setup.
-- Added exact trained-IRV mission selection for **Police Medic** and **Railway Police Officer**, using two correctly trained personnel per IRV.
+- Personnel Assignment now includes a one-click `Build Personnel Register` action that scans supported Police stations and vehicles without requiring profile setup and without changing assignments.
 
 ### Changed
 
-- Ordinary Police Car attendance now accepts a freshly verified exact IRV with zero protected specialist qualifications even when no personnel are permanently bound to that vehicle.
-- Mission Finder baseline increased from `V10.6.71` to `V10.6.72`; Personnel Assignment increased from `1.2.7` to `1.2.8`.
+- Mission Finder increased from `V10.6.71` to `V10.6.72`.
+- Personnel Assignment increased from `1.2.7` to `1.2.8`.
+
+## [1.0.4] - 2026-07-19
 
 ### Fixed
 
-- Fixed ordinary Police Cars being rejected by Unit Finder, Mission Update and Auto Mode solely because their assignment page reported zero permanent bindings.
-- Fixed issue #16 by mapping Police Medic requirement rows and Missing Personnel text to exact IRVs containing two `police_medic`-trained personnel.
-- Added Railway Police Officer parsing for both table and alert layouts, selecting exact type-8 IRVs containing two `railway_police`-trained personnel.
-- Added an authoritative type-30 ATV Carrier matcher, including `ATV Carrier`, `ATV` and `ATC Carrier` display aliases without matching Police Armed Traffic Cars.
-- Prevented incomplete or structurally invalid assignment-page scans from overwriting or authorising specialist-training decisions.
-
-## [1.0.4] - 2026-07-20
+- Auto Mode now detects and clicks every visible MissionChief `missing_vehicles_load` / `Vehicle display limited! Load more vehicles!` control before Unit Finder selection begins.
+- Each additional vehicle page must produce a changed vehicle signature and a progressed/replaced load control before the next page can load.
+- The complete vehicle table must remain stable and free of visible loading indicators before unit selection, Mission Update or dispatch can continue.
 
 ### Changed
 
-- Auto Mode now activates every visible MissionChief `missing_vehicles_load` control before Unit Finder begins selecting vehicles.
-- Increased the unified userscript version from `1.0.3` to `1.0.4` and the Mission Finder baseline from `V10.6.70` to `V10.6.71`.
+- Mission Finder increased from `V10.6.70` to `V10.6.71`.
+
+## [1.0.3] - 2026-07-19
 
 ### Fixed
 
-- Fixed Auto Mode waiting on the `Vehicle display limited! Load more vehicles!` bar without clicking it.
-- Added sequential `offset_page` loading so every additional vehicle page is requested, not only the first page.
-- Added per-page progress checks using the vehicle ID and row-count signature, control replacement and loading-indicator state.
-- Unit selection now starts only after the final load control has disappeared and the complete vehicle list remains stable.
-- Loading fails closed when the mission changes, the control cannot be clicked, no progress occurs or the bounded timeout is reached.
-
-## [1.0.3] - 2026-07-20
+- Normal Police attendance now selects only exact type-8 IRVs whose assignment pages were freshly verified with assigned personnel and zero protected specialist qualifications.
+- Already-selected specialist IRVs no longer count as normal Police attendance.
+- Automatic, manual Unit Finder and Mission Update now wait for the vehicle list to load and remain stable before selection begins.
 
 ### Changed
 
-- Normal Police Car and Police Officer attendance now uses only exact-ID IRVs live-verified with assigned staff and no protected specialist Police training.
-- Auto Mode and the manual Unit Finder/Mission Update paths now wait for a complete, non-zero, ID-stable vehicle list after loading finishes before selecting units.
-- Increased the unified userscript version from `1.0.2` to `1.0.3`.
-
-### Fixed
-
-- Prevented Level 1, Level 2, Sergeant, Medic, Inspector and other specialist-trained Police IRVs from satisfying ordinary Police attendance requirements.
-- Prevented an ordinary Police group-button fallback from bypassing exact vehicle training protection.
-- Prevented Auto Mode from continuing to selection or dispatch when the vehicle list times out, remains empty or is still changing.
+- Mission Finder increased from `V10.6.69` to `V10.6.70`.
 
 ## [1.0.2] - 2026-07-19
 
 ### Changed
 
-- Adds verified GitHub, Greasy Fork and Discord deployment notifications. This release tests the complete automated publication and validation process without changing MissionChief runtime behaviour.
-- Increased the unified userscript version from `1.0.1` to `1.0.2`.
+- Published version 1.0.2 as a no-functional-change release-control test.
+- Updated repository documentation to identify 1.0.2 as the current canonical version.
 
 ## [1.0.1] - 2026-07-19
 
 ### Changed
 
-- Increased the unified userscript version from `1.0.0` to `1.0.1` without functional changes.
-- Confirmed the canonical `main`-branch source synchronization path used for external distribution.
+- Published version 1.0.1 as a no-functional-change Greasy Fork synchronization test.
+- Confirmed the canonical update path from approved `main` to the Greasy Fork listing.
 
 ## [1.0.0] - 2026-07-19
 
 ### Added
 
-- First canonical MissionChief Command Nexus userscript.
-- One standardized userscript metadata block naming MartyBlyth as author.
-- Mission Finder `V10.6.69` baseline.
-- Unit, Station & Personnel Tools `V4.2.8` baseline.
-- One combined installation guard with retained module startup isolation.
-- Unit and station naming workflows.
-- Personnel assignment, verification and reporting workflows.
-- Shared vehicle-training registry.
-- Mission requirement, patient and specialist-resource handling.
-- Qualification-aware vehicle selection.
-- Unit Finder, Mission Update, dispatch and Auto Mode workflows.
-- Queue continuation and transport handling.
-- JavaScript, metadata, file-size and version-increase validation.
-- Tag-driven GitHub Release packaging with a userscript asset and SHA-256 checksum.
-- Greasy Fork synchronization, rollback and troubleshooting guidance.
-- Contribution, support, security and community policies.
-
-## Release format
-
-Future entries use:
-
-```text
-## [x.y.z] - YYYY-MM-DD
-### Added
-### Changed
-### Fixed
-### Removed
-### Security
-```
-
-Release notes should describe user-visible behaviour, migration impact, tested environments and known limitations rather than commit history alone.
+- Published MissionChief Command Nexus as one installable userscript.
+- Standardized the userscript metadata for repository ownership and automated distribution.
+- Added automated source validation, repository quality checks and GitHub Release packaging.
+- Added the maintained Greasy Fork synchronization and release workflow.
+- Added release documentation, source ownership notes and installation guidance.
+- Added the MIT licence and attribution record.
