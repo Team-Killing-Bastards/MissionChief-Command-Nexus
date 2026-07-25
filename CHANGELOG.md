@@ -26,6 +26,27 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Consolidate the two retained control surfaces into one coherent interface.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
+## [1.0.30] - 2026-07-25
+
+### Fixed
+
+- Personnel Assignment registry scans now detect PSU/type-51 vehicles through all current vehicle-type attributes, parse every personnel row on each exact `/vehicles/{id}/zuweisung` page and recognise both `btn-assigned` and visible **Remove binding** controls. Exact vehicle IDs remain authoritative, separate PSU records are preserved and refreshed snapshots replace stale assignment counts.
+- `CRV` and `CRVs` now select and count only the exact type-57 Coastguard Rescue Vehicle in Unit Finder, Mission Update and Auto Mode.
+- Current `[data-requirement-type="vehicles"]` **Missing Vehicles** elements are parsed with non-breaking-space normalisation even when the Live Mission Requirements panel is present. Police Car quantities remain additional vehicle shortages, not personnel counts or total-fleet targets, and flow through the existing type-8 ordinary-first selector.
+- Each Search Advisor requirement now maps one-for-one to an exact type-85 Control Van. Search Technicians remain on SARTEC and SAR Commanders remain on Control Vans.
+- Missing Police Officers continue to convert with ceiling division at two officers per Police Car, including current visible alerts beside the live panel.
+- Generic Critical Care requirements now compare exact type-9 HEMS/Air Ambulances with exact type-5 Ambulances whose current exact-ID Personnel registry record confirms at least one `critical_care` member, then choose whichever eligible resource has the better MissionChief arrival order. Explicit HEMS-only, Critical Care Transfer Ambulance/type-98 and road-transport Ambulance requirements remain strict and separate.
+
+### Validation
+
+- Added permanent regression coverage for PSU registry capture, exact CRV and Control Van mapping, structured Missing Vehicles markup, Police Officer conversion and nearest eligible HEMS/Critical Care selection.
+- Existing iOS Safari, iPhone desktop-site detection, iPhone UI, Police IRV, lifecycle, repository and userscript validation contracts remain enabled.
+
+### Changed
+
+- Personnel Assignment increased from `1.3.2` to `1.3.3`.
+- Mission Finder increased from `V10.6.94` to `V10.6.95`.
+
 ## [1.0.29] - 2026-07-25
 
 ### Fixed

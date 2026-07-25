@@ -10,8 +10,8 @@ src/missionchief-command-nexus.user.js
 
 | Item | Value |
 |---|---|
-| Command Nexus version | `1.0.29` |
-| Mission Finder baseline | `V10.6.94` |
+| Command Nexus version | `1.0.30` |
+| Mission Finder baseline | `V10.6.95` |
 | Unit, Station & Personnel baseline | `V4.2.8` |
 | Licence | MIT |
 | Developer and source-code owner | **MartyBlyth** |
@@ -53,6 +53,7 @@ Before publishing a source change:
 - Run `node scripts/check-ios-compatibility.mjs`.
 - Run `node scripts/check-runtime-hardening.mjs`.
 - Run `node scripts/check-police-irv-fallback.mjs`.
+- Run `node scripts/check-open-issues-batch.mjs`.
 - Run `node scripts/check-ios-unit-finder-selection.mjs`.
 - Run `node scripts/check-ios-mission-requirements-source.mjs`.
 - Run `node scripts/check-iphone-mission-ui.mjs`.
