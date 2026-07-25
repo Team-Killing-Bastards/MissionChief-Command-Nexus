@@ -1,0 +1,57 @@
+name: Temporary current-main source audit
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: read
+
+concurrency:
+  group: temporary-current-main-audit-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: Export exact latest main source
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'agent/fix-open-issues-batch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out latest main
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: main
+          show-progress: false
+
+      - name: Package exact source and validation files
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/open-issues-current-main/src
+          mkdir -p /tmp/open-issues-current-main/scripts
+          mkdir -p /tmp/open-issues-current-main/.github/workflows
+          cp src/missionchief-command-nexus.user.js /tmp/open-issues-current-main/src/
+          cp src/README.md /tmp/open-issues-current-main/src/
+          cp README.md CHANGELOG.md /tmp/open-issues-current-main/
+          find scripts -maxdepth 1 -type f \( -name '*.mjs' -o -name '*.py' \) -exec cp {} /tmp/open-issues-current-main/scripts/ \;
+          cp .github/workflows/validate-userscript.yml /tmp/open-issues-current-main/.github/workflows/
+          head -n 20 src/missionchief-command-nexus.user.js > /tmp/open-issues-current-main/source-metadata.txt
+          git rev-parse HEAD > /tmp/open-issues-current-main/main-sha.txt
+
+      - name: Upload latest main audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: open-issues-latest-main-audit
+          path: /tmp/open-issues-current-main
+          if-no-files-found: error
+          retention-days: 2
