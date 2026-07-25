@@ -81,8 +81,8 @@ function extractFunction(name) {
   fail(`Unable to find end of ${name}`);
 }
 
-requireText('// @version      1.0.27', 'v1.0.27 metadata');
-requireText(' * MODULE 2: MISSION FINDER V10.6.92', 'V10.6.92 module header');
+requireText('// @version      1.0.28', 'v1.0.28 metadata');
+requireText(' * MODULE 2: MISSION FINDER V10.6.93', 'V10.6.93 module header');
 requireText('function isMissionFinderIphoneSafariWebsite()', 'strict iPhone Safari detector');
 requireText("'mf_control_collapsed_iphone_v2'", 'separate iPhone control state');
 requireText("'mf_vehicle_load_collapsed_iphone_v2'", 'separate iPhone load state');
@@ -97,6 +97,42 @@ requireText('env(safe-area-inset-top, 0px)', 'safe-area top sizing');
 requireText('env(safe-area-inset-bottom, 0px)', 'safe-area bottom sizing');
 requireText('backdrop-filter: blur(16px)', 'native compact card treatment');
 requireText('max-height: 42dvh', 'bounded load-panel viewport');
+requireText("'mf_iphone_native_picker_collapsed_v1'", 'native picker collapsed state');
+requireText("'mission-finder-iphone-native-picker-styles'", 'document-owned native picker stylesheet');
+requireText("'mission-finder-iphone-native-picker-toggle'", 'native picker disclosure control');
+requireText('function applyMissionFinderIphoneNativePickerToDocument(', 'document-aware native picker enhancer');
+requireText('function syncMissionFinderIphoneNativePickerSurfaces(', 'multi-document native picker synchroniser');
+requireText('function cleanupMissionFinderIphoneNativePickerSurfaces()', 'native picker cleanup owner');
+requireText("'a[search_attribute]'", 'native quick-select discovery');
+requireText('grid-template-columns: repeat(2, minmax(0, 1fr))', 'two-column native quick-select grid');
+requireText('mf-iphone-native-picker-collapsed', 'collapsed native picker presentation');
+requireText('mf-iphone-native-picker-strip', 'horizontal native category strip');
+requireText('display: contents !important', 'native picker structural flattening');
+requireText('max-height: 46dvh', 'bounded native quick-select viewport');
+requirePattern(
+  /function syncMissionFinderIphoneNativePickerSurfaces\([\s\S]{0,5000}getMissionAccessibleDocuments\(\s*true\s*\)[\s\S]{0,5000}applyMissionFinderIphoneNativePickerToDocument\(/,
+  'native picker is applied to every accessible same-origin mission document'
+);
+requirePattern(
+  /function ensureMissionFinderIphoneNativePickerStyles\(\s*candidateDocument\s*\)[\s\S]{0,12000}candidateDocument\.createElement\('style'\)[\s\S]{0,12000}candidateDocument\.head \|\|\s*candidateDocument\.documentElement/,
+  'stylesheet is created inside the document that owns the native picker'
+);
+requirePattern(
+  /const MF_MUTATION_VEHICLE_SELECTOR =[\s\S]{0,250}a\[search_attribute\]/,
+  'native quick-selector replacement is covered by the existing mutation lifecycle'
+);
+requirePattern(
+  /function flushMissionFinderMutationWork\(\)[\s\S]{0,5000}scheduleMissionFinderIphoneNativePickerSync\(/,
+  'coalesced mission mutations resynchronise the native picker'
+);
+requirePattern(
+  /function initialize\(\)[\s\S]{0,1200}scheduleMissionFinderIphoneNativePickerSync\(/,
+  'mission initialization schedules the native picker enhancer'
+);
+requirePattern(
+  /function cleanupMissionFinderRuntime\(\)[\s\S]{0,7000}cleanupMissionFinderIphoneNativePickerSurfaces\(\)/,
+  'runtime cleanup removes cross-document native picker ownership'
+);
 
 const detectionSource = [
   extractFunction('isMissionFinderIosSafariWebsite'),
