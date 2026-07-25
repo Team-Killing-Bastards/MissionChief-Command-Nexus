@@ -31,6 +31,27 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Consolidate the two retained control surfaces into one coherent interface.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
+## [1.0.35] - 2026-07-25
+
+### Fixed
+
+- Manual Unit Finder and Auto Mode now check visible current **Missing Vehicles** and supported **Missing Personnel** alerts before reading the full static mission-help requirement set.
+- When MissionChief reports a current shortage such as `Missing Vehicles: 2 Fire engines`, only that current shortage is processed; unrelated original mission requirements are no longer selected again.
+- Explicit Missing Vehicles quantities are treated as the target number of currently checked unsent vehicles. Existing matching selections reduce the remaining clicks, so Unit Finder followed by Mission Update cannot add the same shortage twice.
+- A second current-requirement check runs after the mission-help request completes, preventing a newly rendered shortage from being overwritten by an attachment response already in flight.
+- Explicit current shortages outrank larger full/live totals during de-duplication. Current patient shortages are retained while unrelated full mission rows are suppressed.
+
+### Safety and compatibility
+
+- Patient-only `We need` alerts do not suppress the normal authoritative mission-help route.
+- Numeric **Still Needed** values from the Live Mission Requirements table retain their existing additional-shortage handling; the current-selection target rule applies only to explicit visible Missing Vehicles/Personnel alerts.
+- Specialist training verification, Police IRV protection, HEMS/Critical Care proximity, iPhone Safari interfaces, dispatch validation and Resource Administration remain on their established paths.
+- Added permanent regression coverage for missing-requirements-first authority, late-render rechecking, patient retention and duplicate-selection prevention.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.99` to `V10.6.100`.
+
 ## [1.0.34] - 2026-07-25
 
 ### Fixed

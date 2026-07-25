@@ -17,7 +17,7 @@
 </tr>
 </table>
 
-**Current version:** `1.0.34` · **Mission Finder engine:** `V10.6.99` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
+**Current version:** `1.0.35` · **Mission Finder engine:** `V10.6.100` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)
@@ -146,7 +146,7 @@ Resource Administration discovers stations and vehicles, reads assignment pages,
 
 ### 2. Read the mission that exists now
 
-Unit Finder reads the authoritative **Requirements for this Mission** endpoint and binds it to the exact active mission ID, including when MissionChief hides the desktop `#mission_help` button on iPhone and iPad. Mission Update separately reads the visible Live Mission Requirements panel so later shortages do not overwrite or impersonate the initial mission definition.
+Unit Finder first checks the exact active mission for a visible current **Missing Vehicles** or supported **Missing Personnel** shortage. When one exists, that current shortage owns the selection pass and the full original mission definition is not sent again. Otherwise, Unit Finder reads the authoritative **Requirements for this Mission** endpoint and binds it to the exact active mission ID, including when MissionChief hides the desktop `#mission_help` button on iPhone and iPad. Mission Update separately re-reads the visible Live Mission Requirements panel and current alerts.
 
 ### 3. Load the complete candidate pool
 
@@ -226,12 +226,14 @@ High Volume Pump, Drone Operator, Co-Responder, and Lifeguard remain disabled pe
 
 ### Live requirements authority
 
-- Numeric `Still Needed` values are treated as direct shortages.
+- Visible current **Missing Vehicles** and supported **Missing Personnel** alerts are checked before the full mission-help requirement set in both manual Unit Finder and Auto Mode.
+- An explicit current shortage suppresses unrelated original mission totals. Current patient shortages remain included.
+- Explicit Missing Vehicles quantities are current checked-selection targets: matching vehicles already selected reduce the additional clicks and prevent a second pass from duplicating the shortage.
+- Numeric `Still Needed` values in the Live Mission Requirements table remain direct additional shortages.
 - Bounded values such as `0-3` use their upper actionable bound.
 - A literal unknown `?` falls back to `Required` as a total target and deducts existing matching selections.
-- Numeric shortages are not reduced a second time by vehicles already selected.
 - Successful selection clicks are included in final confirmation.
-- Static mission-help remains a fallback only when no usable live requirements panel exists.
+- Patient-only alerts do not suppress the authoritative mission-help route.
 
 ### Police, rescue, maritime, and medical handling
 

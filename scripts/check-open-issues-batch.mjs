@@ -22,9 +22,9 @@ function extractBetween(startText, endText, label) {
   return source.slice(start, end);
 }
 
-requireText('// @version      1.0.34', 'v1.0.34 metadata');
+requireText('// @version      1.0.35', 'v1.0.35 metadata');
 requireText("const PERSONNEL_VERSION = '1.3.3';", 'Personnel v1.3.3');
-requireText(' * MODULE 2: MISSION FINDER V10.6.99', 'V10.6.99 header');
+requireText(' * MODULE 2: MISSION FINDER V10.6.100', 'V10.6.100 header');
 
 // #126 PSU registry and assigned staff.
 requireText('function getPersonnelVehicleTypeIdFromRow(row)', 'broad vehicle-type discovery');
@@ -45,7 +45,8 @@ requireText('[data-requirement-type="vehicles"]', 'new structured vehicle select
 requireText('function getStructuredMissingVehicleRows(', 'structured Missing Vehicles parser');
 requireText(".replace(/\\u00a0/g, ' ')", 'NBSP normalisation');
 requireText("'data-requirement-type-vehicles'", 'structured update source');
-requireText("dispatchTargetMode: 'shortage'", 'Missing Vehicles quantity remains an additional shortage');
+requireText("dispatchTargetMode: 'total'", 'Missing Vehicles quantity is a current checked-selection target');
+requireText('explicitMissingVehicles: true', 'Missing Vehicles current-source authority');
 
 // #117 Search Advisor -> Control Van.
 requireText('"Search Advisor": "Control Van"', 'Search Advisor cross-reference');
