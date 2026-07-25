@@ -319,17 +319,410 @@ function getPoliceOfficerVehicleRequirement(
         };
     }
 
-===== FUNCTION getPoliceOfficerVehicleRequirementFromText =====
-FUNCTION getPoliceOfficerVehicleRequirementFromText: NOT FOUND
+===== FUNCTION getSupportedMissingPersonnelRowsFromText =====
+function getSupportedMissingPersonnelRowsFromText(
+        text,
+        options = {}
 
-===== FUNCTION getPoliceOfficerRequirementsFromText =====
-FUNCTION getPoliceOfficerRequirementsFromText: NOT FOUND
+===== FUNCTION hasSupportedMissingPersonnelUpdate =====
+function hasSupportedMissingPersonnelUpdate(text) {
+        return (
+            getSupportedMissingPersonnelRowsFromText(
+                text,
+                { silent: true }
+            ).length > 0 ||
+            getSupportedTrainedPersonnelRequirementsFromText(
+                text
+            ).length > 0
+        );
+    }
 
-===== FUNCTION getMissingPersonnelRequirementsFromText =====
-FUNCTION getMissingPersonnelRequirementsFromText: NOT FOUND
+===== FUNCTION getSupportedTrainedPersonnelRequirementsFromText =====
+function getSupportedTrainedPersonnelRequirementsFromText(
+        text
+    ) {
+        const input =
+            String(
+                text ||
+                ''
+            )
+                .replace(
+                    /\s+/g,
+                    ' '
+                )
+                .trim();
 
-===== FUNCTION recordUpdateRequirement =====
-FUNCTION recordUpdateRequirement: NOT FOUND
+        if (
+            !input ||
+            !/Missing\s+Personnel:/i.test(
+                input
+            )
+        ) {
+            return [];
+        }
+
+        const requirements =
+            new Map();
+
+        MF_TRAINED_PERSONNEL_PATTERNS
+            .forEach(definition => {
+                let maximumRequired = 0;
+
+                definition.patterns
+                    .forEach(pattern => {
+                        pattern.lastIndex = 0;
+
+                        let match;
+
+                        while (
+                            (
+                                match =
+                                    pattern.exec(
+                                        input
+                                    )
+                            )
+                        ) {
+                            const required =
+                                Math.max(
+                                    0,
+                                    parseInt(
+                                        match[1],
+                                        10
+                                    ) || 0
+                                );
+
+                            maximumRequired =
+                                Math.max(
+                                    maximumRequired,
+                                    required
+                                );
+                        }
+                    });
+
+                if (
+                    maximumRequired > 0
+                ) {
+                    requirements.set(
+                        definition.code,
+                        {
+                            code:
+                                definition.code,
+                            label:
+                                definition.label,
+                            required:
+                                maximumRequired
+                        }
+                    );
+                }
+            });
+
+        return normalisePublicOrderTrainedRequirements(
+            Array.from(
+                requirements.values()
+            )
+        );
+    }
+
+===== FUNCTION isRivOrMajorFoamTenderRequirement =====
+function isRivOrMajorFoamTenderRequirement(
+        originalName,
+        mappedName
+    ) {
+        const raw =
+            String(
+                originalName || ''
+            )
+                .replace(
+                    /\s+/g,
+                    ' '
+                )
+                .trim();
+
+        const mapped =
+            normaliseVehicleText(
+                mappedName
+            );
+
+        return (
+            /^(?:Required\s+)?RIVs?\s+or\s+Major\s+Foam\s+Tenders?$/i.test(
+                raw
+            ) ||
+            mapped ===
+                'riv or major foam tender' ||
+            mapped ===
+                'rivs or major foam tenders'
+        );
+    }
+
+===== FUNCTION isRivRequirement =====
+function isRivRequirement(
+        originalName,
+        mappedName
+    ) {
+        const raw =
+            normaliseVehicleText(
+                originalName
+            );
+
+        const mapped =
+            normaliseVehicleText(
+                mappedName
+            );
+
+        return (
+            mapped === 'riv' ||
+            mapped === 'rivs' ||
+            mapped ===
+                'rapid intervention vehicle' ||
+            mapped ===
+                'rapid intervention vehicles' ||
+            raw === 'riv' ||
+            raw === 'rivs' ||
+            raw ===
+                'rapid intervention vehicle' ||
+            raw ===
+                'rapid intervention vehicles' ||
+            raw ===
+                'fire engines or rivs'
+        );
+    }
+
+===== FUNCTION isMajorFoamTenderVehicleCheckbox =====
+function isMajorFoamTenderVehicleCheckbox(
+        input
+    ) {
+        if (!input) return false;
+
+        if (
+            getVehicleTypeIdentifiers(
+                input
+            ).includes(
+                '75'
+            )
+        ) {
+            return true;
+        }
+
+        return getCheckboxVehicleValues(
+            input
+        ).some(value => {
+            return (
+                value ===
+                    'major foam tender' ||
+                value ===
+                    'major foam tenders' ||
+                value ===
+                    'mft'
+            );
+        });
+    }
+
+===== FUNCTION getRequirementVehicleCandidates =====
+FUNCTION getRequirementVehicleCandidates: NOT FOUND
+
+===== FUNCTION getRequirementSelectionCandidates =====
+FUNCTION getRequirementSelectionCandidates: NOT FOUND
+
+===== FUNCTION selectRivOrMajorFoamTenderRequirement =====
+FUNCTION selectRivOrMajorFoamTenderRequirement: NOT FOUND
+
+===== MATCHING FUNCTION INDEX =====
+2680: getPersonnelServiceDefinition
+2685: getPersonnelProfileDefinition
+2691: isLivePersonnelProfile
+2695: normalisePersonnelUnitsRequired
+2701: isPersonnelPerStationTargetMode
+2708: getPersonnelUnitsRemaining
+2715: formatPersonnelUnitsFulfilled
+2735: handlePersonnelUnitsRequiredChange
+2802: updatePersonnelModeUi
+2883: handlePersonnelModeChange
+2936: initialisePersonnelProfileNavigation
+2989: populatePersonnelProfileSelect
+3011: handlePersonnelServiceChange
+3024: handlePersonnelProfileChange
+3036: updatePersonnelProfileUi
+3126: initialisePersonnelReportVisibility
+3144: updatePersonnelReportVisibility
+3168: showAndViewPersonnelStationReport
+4267: getPersonnelProfileStationTypes
+4272: getPersonnelStationScopeLabel
+4283: refreshPersonnelStations
+4339: populatePersonnelStartDropdown
+4379: updatePersonnelSelectionPreview
+4390: buildPersonnelTrainingRegisterOneClick
+4631: startPersonnelRun
+4813: togglePersonnelPause
+4825: stopPersonnelRun
+4846: processPersonnelQueue
+5138: prunePersonnelTrainingRegistry
+5174: savePersonnelTrainingRegistry
+5239: createEmptyPersonnelTrainingRegistry
+5249: readPersonnelTrainingRegistry
+5281: dispatchPersonnelTrainingRegistryUpdate
+5292: flushPersonnelTrainingRegistry
+5325: schedulePersonnelTrainingRegistryFlush
+5334: countPersonnelTrainingCodes
+5372: getPersonnelTrainingCombinationKey
+5384: countPersonnelTrainingCombinations
+5409: publishPersonnelVehicleTrainingRegistry
+5479: getPersonnelAssignmentIndex
+5510: getPersonnelAssignedToVehicle
+5534: processOnePersonnelStation
+5543: getPoliceTrainingLabel
+5570: getPersonnelMissingTrainingForRule
+5599: buildPoliceRuleTrainingGapSummary
+5619: formatPoliceTrainingGapSummary
+5674: getPersonnelTrainingSet
+5689: getVisiblePersonnelTrainingCounts
+5706: personnelMatchesRule
+5714: sortPersonnelCandidatesForRule
+5726: getPersonnelVehicleQueue
+5764: sortPersonnelVehiclesForStationTarget
+5856: selectPoliceRuleVehicles
+5883: calculatePersonnelQualificationShortfall
+5922: processOnePoliceStation
+6969: waitPersonnelDelay
+6977: waitForPersonnelRequestSlot
+6984: personnelFetchResponse
+7009: personnelFetchDocument
+7023: parsePersonnelVehicleOccupancy
+7038: normalizePersonnelVehicleName
+7045: getPersonnelAmbulanceQueue
+7199: submitPersonnelAssignment
+7229: getPersonnelReportResult
+7243: getPersonnelReportQualificationLabel
+7247: getPersonnelReportVehicleCount
+7251: getPersonnelReportInitialFilled
+7255: getPersonnelReportFinalFilled
+7361: renderPersonnelAfterAction
+7367: renderPersonnelAfterActionText
+7377: buildPersonnelOverallStationBlock
+7461: buildAndRenderPersonnelReport
+7520: getPersonnelTrainingShortfallReports
+7537: updatePersonnelTrainingShortfallHighlights
+7601: renderPersonnelReport
+7630: copyPersonnelReport
+7635: copyPersonnelStationReport
+7648: scrollPersonnelTo
+7659: waitIfPersonnelPaused
+7665: updatePersonnelCounters
+7674: setPersonnelUiValue
+7692: togglePersonnelDebug
+7698: clearPersonnelLog
+7702: personnelLog
+7712: personnelDebug
+9333: installPersonnelRegistryUpdateHandler
+10343: isSartecRequirement
+10369: isIccuOrAmbulanceControlRequirement
+10455: get4x4RequirementMode
+10507: isGeneric4x4VehicleRequirement
+10517: isMountainRescueOrSar4x4Requirement
+10561: isMountainRescue4x4Checkbox
+10721: isRrvRequirement
+10779: isRivOrMajorFoamTenderRequirement
+10809: isMajorFoamTenderVehicleCheckbox
+10838: isRivRequirement
+10870: getRivVehicleValues
+10874: isRivVehicleCheckbox
+10905: getPoliceAirRequirementMode
+10961: isPoliceAirRequirement
+10971: getPoliceAirVehicleValues
+10975: isPoliceHelicopterCheckbox
+11013: isPoliceDroneCheckbox
+11057: isPoliceCarRequirement
+11117: isPoliceCarVehicleCheckbox
+11168: isSeagoingVesselRequirement
+11229: isAtvCarrierRequirement
+11287: isDogSupportUnitRequirement
+11357: isFireOperationalSupportRequirement
+11379: isOperationalSupportOrSarVehicleRequirement
+11421: getVehicleMatchCandidates
+11725: vehicleValuesMatchCandidates
+11755: sortVehicleCheckboxesByBestArrival
+12428: refreshVehicleRequirementCounters
+15355: triggerAmbulanceOfficerClick
+15630: getPrimaryMissionRequirementDocument
+16188: getActiveMissionRequirementContexts
+16220: buildActiveMissionRequirementContexts
+16634: getActiveMissionRequirementScope
+16965: cleanRequirementName
+16980: shouldIgnoreRequiredMinimumRequirement
+17003: getSarPersonnelVehicleRequirement
+17108: getMissingPersonnelSegment
+17143: getNamedPersonnelCount
+17192: shouldSkipLiveRequirement
+17228: extractLiveMissionRequirementRows
+17481: extractTowCarRequirementRows
+17520: isCarsToTowRequirementName
+17529: getCarsToTowVehicleRequirement
+17560: normaliseVehicleRequirementCount
+17602: mergeRequirementRows
+17732: readLiveMissionRequirements
+17841: readPersonnelTrainingRegistry
+17905: getPublicOrderPersonnelLevel
+17940: isPublicOrderPersonnelRequirementName
+17951: isPoliceSergeantPersonnelRequirementName
+17971: isPoliceInspectorPersonnelRequirementName
+17992: isPoliceMedicPersonnelRequirementName
+18012: isRailwayPolicePersonnelRequirementName
+18033: isArmedResponsePersonnelRequirementName
+18042: getArmedResponsePersonnelRequirements
+18086: getSupportedTrainedPersonnelRequirementsFromText
+18171: normalisePublicOrderTrainedRequirements
+18380: isAuthoritativeLivePoliceTrainingEntry
+18414: isKnownProtectedTrainedPoliceIrvEntry
+18433: isVerifiedOrdinaryPoliceIrvEntry
+18450: isOrdinaryPoliceIrvCheckboxEligible
+18493: orderOrdinaryPoliceIrvCandidates
+18547: getTrainingRequirementPersonnelTarget
+18597: getTrainingRequirementContribution
+18728: getTrainedPersonnelVehicleTarget
+18756: mergeTrainedPersonnelRequirements
+18812: getTrainedPersonnelRequirementsSignature
+18840: formatTrainedPersonnelRequirements
+18893: hasPoliceInspectorVehicleRequirement
+18917: hasStrictPoliceTrainingRequirement
+19002: parseLivePoliceTrainingAssignments
+19229: parseLivePoliceInspectorAssignments
+19255: savePersonnelTrainingRegistry
+19374: orderStrictPoliceTrainingCandidates
+19445: refreshPoliceInspectorRegistryFromLiveVehicles
+19932: getOrdinaryPoliceVehicleRequirementCount
+19963: refreshOrdinaryPoliceRegistryFromLiveVehicles
+20256: prepareTrainedPersonnelRegistryForRows
+20294: preparePoliceVehicleSafetyForRows
+20348: getRemainingTrainedPersonnelRequirements
+20408: areTrainedPersonnelRequirementsSatisfied
+20478: selectVehiclesForTrainedPersonnelRequirements
+20658: getPoliceOfficerVehicleRequirement
+20685: normaliseOperationalRequirementRows
+20732: getSupportedMissingPersonnelRowsFromText
+20884: hasSupportedMissingPersonnelUpdate
+21108: hasAuthoritativeLiveMissionRequirementsPanel
+21130: getOperationalRequirementTargetMode
+21136: processRequirementRows
+21422: retryMissingUnits
+21693: findLegacyVehicleRequirementList
+21767: recoverLateMissionRequirements
+22143: getAllyStealParentModalCloseCandidates
+22811: readUnitFinderPatientRequirementRows
+22835: handleUnitFinderPatientRequirements
+23909: getGenericMissingVehicleRowsFromText
+24005: isLiveMissionRequirementsTable
+24023: parseMissionRequirementNumber
+24071: parseMissionRequirementRangeUpperBound
+24105: getLiveRequirementCellText
+24155: getLiveRequirementDispatchTarget
+24201: readLiveMissionRequirementRow
+24494: getMissionUpdatePatientRequirementRule
+24555: normaliseMissionUpdatePatientRequirement
+28368: normaliseVisibleRequirementName
+28378: parseVisibleMissionRequirementRows
+29616: mfIsPoliceOrPrisonerTransportActive
+29661: getInlinePersonnelQualificationAlertText
+30104: isBadTransportButtonCandidate
+30124: scoreTransportButtonCandidate
 
 PATTERN: Rescue Support Vehicles?
 HITS: [10000, 10001, 10004, 10005, 11444]
@@ -2415,6 +2808,777 @@ HITS: [146, 340, 345, 628, 9193, 9200, 9221, 9301, 9415, 10019, 10020, 11077, 11
 
 PATTERN: Fire Engine or RIV
 HITS: []
+
+PATTERN: Final missing units
+HITS: [12472, 12636, 21379, 21675, 21676]
+
+--- source lines 12458-12500 ---
+12458:                     isSeagoingVesselCheckbox(input)
+12459:                 );
+12460:             }) || null;
+12461:         }
+12462: 
+12463:         if (
+12464:             isDogSupportUnitRequirement(
+12465:                 requestedName,
+12466:                 mappedName
+12467:             )
+12468:         ) {
+12469:             // Never use the AAO/ARR group button as proof of a DSU selection.
+12470:             // It previously returned a successful click while no matching
+12471:             // vehicle checkbox was checked, causing the repeated false
+12472:             // "Final missing units: Dog Support Units" popup.
+12473:             return getVehicleCheckboxSnapshot(
+12474:                 true
+12475:             ).find(input => {
+12476:                 return (
+12477:                     !input.disabled &&
+12478:                     !input.checked &&
+12479:                     isDogSupportUnitCheckbox(
+12480:                         input
+12481:                     )
+12482:                 );
+12483:             }) || null;
+12484:         }
+12485: 
+12486:         if (
+12487:             isOperationalSupportOrSarVehicleRequirement(
+12488:                 requestedName,
+12489:                 mappedName
+12490:             )
+12491:         ) {
+12492:             return sortVehicleCheckboxesByBestArrival(
+12493:                 getVehicleCheckboxSnapshot().filter(input => (
+12494:                     !input.disabled &&
+12495:                     !input.checked &&
+12496:                     isOperationalSupportVanCheckbox(input)
+12497:                 ))
+12498:             )[0] || null;
+12499:         }
+12500: 
+
+--- source lines 12622-12664 ---
+12622: 
+12623:             if (mountainRescueMatches.length > 0) {
+12624:                 return mountainRescueMatches[0];
+12625:             }
+12626: 
+12627:             const sarMatches =
+12628:                 sortVehicleCheckboxesByBestArrival(
+12629:                     available.filter(
+12630:                         isSar4x4Checkbox
+12631:                     )
+12632:                 );
+12633: 
+12634:             // Do not fall back to an AAO/ARR group button. A group-button click
+12635:             // cannot be verified as a selected vehicle and caused the false
+12636:             // "Final missing units: 4x4 Vehicles" popup.
+12637:             return sarMatches[0] || null;
+12638:         }
+12639: 
+12640:         if (
+12641:             isSartecRequirement(
+12642:                 requestedName,
+12643:                 mappedName
+12644:             )
+12645:         ) {
+12646:             // SARTEC must only come from the actual available-vehicle
+12647:             // checkbox list and must begin the displayed vehicle name.
+12648:             return getVehicleCheckboxSnapshot().find(input => {
+12649:                 return (
+12650:                     !input.disabled &&
+12651:                     !input.checked &&
+12652:                     isSartecVehicleCheckbox(
+12653:                         input
+12654:                     )
+12655:                 );
+12656:             }) || null;
+12657:         }
+12658: 
+12659:         if (
+12660:             isRrvRequirement(
+12661:                 requestedName,
+12662:                 mappedName
+12663:             )
+12664:         ) {
+
+--- source lines 21365-21407 ---
+21365: 
+21366:         if (mfStaffingBlockActive) {
+21367:             changeDispatchBoxColor(false);
+21368:             return false;
+21369:         }
+21370: 
+21371:         if (trainedPersonnelMissing.length > 0) {
+21372:             changeDispatchBoxColor(false);
+21373:             updateStatusBox(
+21374:                 'A required trained Police IRV is still missing.'
+21375:             );
+21376: 
+21377:             originalAlert.call(
+21378:                 window,
+21379:                 `Final missing units:\n\n${trainedPersonnelMissing.join('\n')}`
+21380:             );
+21381: 
+21382:             return false;
+21383:         }
+21384: 
+21385:         if (missingUnits.length > 0) {
+21386:             // V10.6.48 parity guard:
+21387:             // Manual Unit Finder naturally waits while MissionChief loads the
+21388:             // missing-vehicle list. Auto Mode must wait for the same bounded
+21389:             // retry before it is allowed to run Mission Update or Dispatch.
+21390:             return await retryMissingUnits(
+21391:                 missingUnits
+21392:             );
+21393:         }
+21394: 
+21395:         changeDispatchBoxColor(true);
+21396:         return true;
+21397:     }
+21398: 
+21399:     async function processVehicles(vehicleList) {
+21400:         const listItems = vehicleList.querySelectorAll('li.class-x');
+21401:         const requirementRows = [];
+21402: 
+21403:         listItems.forEach(item => {
+21404:             const unitText = [...item.childNodes]
+21405:                 .filter(node => node.nodeType === Node.TEXT_NODE)
+21406:                 .map(node => node.textContent.trim())[0];
+21407: 
+
+--- source lines 21661-21703 ---
+21661:         if (
+21662:             stillMissing.length ===
+21663:             0
+21664:         ) {
+21665:             changeDispatchBoxColor(true);
+21666:             return true;
+21667:         }
+21668: 
+21669:         changeDispatchBoxColor(false);
+21670: 
+21671:         if (!autoModeRunning) {
+21672:             alert(
+21673:                 `${
+21674:                     timedOut
+21675:                         ? 'Final missing units after vehicle-list timeout'
+21676:                         : 'Final missing units'
+21677:                 }:\n\n${stillMissing.join('\n')}`
+21678:             );
+21679:         } else {
+21680:             updateStatusBox(
+21681:                 'Auto Mode: missing units. Will dispatch to skip.'
+21682:             );
+21683:         }
+21684: 
+21685:         return false;
+21686:     }
+21687: 
+21688:     function isLoadingBarVisible() {
+21689:         const loadingBar = document.querySelector('a.missing_vehicles_load');
+21690:         return loadingBar && getComputedStyle(loadingBar).display !== 'none';
+21691:     }
+21692: 
+21693:     function findLegacyVehicleRequirementList() {
+21694:         const vehicleHeadings = document.querySelectorAll('h4');
+21695: 
+21696:         for (const heading of vehicleHeadings) {
+21697:             if (heading.textContent.trim() !== 'Vehicles') continue;
+21698: 
+21699:             let nextElem = heading.nextElementSibling;
+21700: 
+21701:             while (nextElem && nextElem.tagName !== 'UL') {
+21702:                 nextElem = nextElem.nextElementSibling;
+21703:             }
+
+--- source lines 21662-21704 ---
+21662:             stillMissing.length ===
+21663:             0
+21664:         ) {
+21665:             changeDispatchBoxColor(true);
+21666:             return true;
+21667:         }
+21668: 
+21669:         changeDispatchBoxColor(false);
+21670: 
+21671:         if (!autoModeRunning) {
+21672:             alert(
+21673:                 `${
+21674:                     timedOut
+21675:                         ? 'Final missing units after vehicle-list timeout'
+21676:                         : 'Final missing units'
+21677:                 }:\n\n${stillMissing.join('\n')}`
+21678:             );
+21679:         } else {
+21680:             updateStatusBox(
+21681:                 'Auto Mode: missing units. Will dispatch to skip.'
+21682:             );
+21683:         }
+21684: 
+21685:         return false;
+21686:     }
+21687: 
+21688:     function isLoadingBarVisible() {
+21689:         const loadingBar = document.querySelector('a.missing_vehicles_load');
+21690:         return loadingBar && getComputedStyle(loadingBar).display !== 'none';
+21691:     }
+21692: 
+21693:     function findLegacyVehicleRequirementList() {
+21694:         const vehicleHeadings = document.querySelectorAll('h4');
+21695: 
+21696:         for (const heading of vehicleHeadings) {
+21697:             if (heading.textContent.trim() !== 'Vehicles') continue;
+21698: 
+21699:             let nextElem = heading.nextElementSibling;
+21700: 
+21701:             while (nextElem && nextElem.tagName !== 'UL') {
+21702:                 nextElem = nextElem.nextElementSibling;
+21703:             }
+21704: 
+
+PATTERN: missingRows\.push
+HITS: [25485, 25817, 25855, 25892, 25932, 26072, 26082, 26099, 26478, 26489, 26509, 26522]
+
+--- source lines 25471-25513 ---
+25471:                         tableArmedResponseRequired,
+25472:                         needed
+25473:                     );
+25474: 
+25475:                     if (mfDebugEnabled && !silent) {
+25476:                         debugLog(
+25477:                             'ARMED RESPONSE TABLE COLLAPSE',
+25478:                             `Armed Response Personnel x${needed} captured from ${source}; selecting exact type-25 ATCs with 2 officers who each hold traffic_police + swat.`
+25479:                         );
+25480:                     }
+25481: 
+25482:                     return;
+25483:                 }
+25484: 
+25485:                 missingRows.push({
+25486:                     unitName:
+25487:                         cleanedName,
+25488:                     stillNeeded:
+25489:                         needed,
+25490:                     updateSource:
+25491:                         source,
+25492:                     liveRequirementDetails:
+25493:                         details,
+25494:                     patientRequirementType:
+25495:                         patientRequirement.type || '',
+25496:                     isPatientAlertFallback:
+25497:                         false,
+25498:                     isTotalPatientRequirement:
+25499:                         false
+25500:                 });
+25501:             };
+25502: 
+25503:         updateTables.forEach(table => {
+25504:             const liveRequirementsTable =
+25505:                 isLiveMissionRequirementsTable(
+25506:                     table
+25507:                 );
+25508: 
+25509:             table.querySelectorAll(
+25510:                 'tbody tr'
+25511:             ).forEach(row => {
+25512:                 if (
+25513:                     liveRequirementsTable
+
+--- source lines 25803-25845 ---
+25803:                     'UPDATE BODY PROBE',
+25804:                     bodyMatches.length
+25805:                         ? `The phrase exists in document text but no visible alert element was accepted: ${bodyMatches.join(' | ')}`
+25806:                         : 'No accessible document body contains Missing Vehicles/Personnel text.'
+25807:                 );
+25808:             }
+25809:         }
+25810: 
+25811:         pageTextBlocks.forEach(text => {
+25812:             if (!/Missing Vehicles?:/i.test(text)) return;
+25813: 
+25814:             getGenericMissingVehicleRowsFromText(
+25815:                 text
+25816:             ).forEach(row => {
+25817:                 missingRows.push(
+25818:                     row
+25819:                 );
+25820: 
+25821:                 if (
+25822:                     mfDebugEnabled &&
+25823:                     !silent
+25824:                 ) {
+25825:                     debugLog(
+25826:                         'UPDATE GENERIC VEHICLE',
+25827:                         `${row.unitName} x${row.stillNeeded}`
+25828:                     );
+25829:                 }
+25830:             });
+25831: 
+25832:             const lowerText = text.toLowerCase();
+25833: 
+25834:             const carToTowMatch = lowerText.match(
+25835:                 /(\d+)\s+car(?:s)?\s+to\s+tow/
+25836:             );
+25837: 
+25838:             if (carToTowMatch) {
+25839:                 const amount = parseInt(
+25840:                     carToTowMatch[1],
+25841:                     10
+25842:                 );
+25843: 
+25844:                 if (
+25845:                     Number.isFinite(amount) &&
+
+--- source lines 25841-25883 ---
+25841:                     10
+25842:                 );
+25843: 
+25844:                 if (
+25845:                     Number.isFinite(amount) &&
+25846:                     amount > 0
+25847:                 ) {
+25848:                     const towRequirement =
+25849:                         getCarsToTowVehicleRequirement(
+25850:                             'Cars to tow',
+25851:                             amount
+25852:                         );
+25853: 
+25854:                     if (towRequirement) {
+25855:                         missingRows.push({
+25856:                             unitName:
+25857:                                 towRequirement.unitName,
+25858:                             stillNeeded:
+25859:                                 towRequirement.stillNeeded,
+25860:                             towCarsRequired:
+25861:                                 towRequirement.carsRequired
+25862:                         });
+25863:                     }
+25864:                 }
+25865:             }
+25866: 
+25867:             // MissionChief can expose Police Air only in the red
+25868:             // Missing Vehicles alert rather than the update table.
+25869:             // Convert it to a normal update row. The existing strict
+25870:             // Police Air matcher then prefers Drone Vehicle
+25871:             // (Police Station), with Police Helicopter as fallback.
+25872:             const policeAirMatches = Array.from(
+25873:                 text.matchAll(
+25874:                     /(\d+)\s*(?:x\s*)?Police\s+Helicopter(?:s)?\s+or\s+Drone(?:s)?/gi
+25875:                 )
+25876:             );
+25877: 
+25878:             policeAirMatches.forEach(match => {
+25879:                 const amount =
+25880:                     parseInt(
+25881:                         match[1],
+25882:                         10
+25883:                     );
+
+--- source lines 25878-25920 ---
+25878:             policeAirMatches.forEach(match => {
+25879:                 const amount =
+25880:                     parseInt(
+25881:                         match[1],
+25882:                         10
+25883:                     );
+25884: 
+25885:                 if (
+25886:                     !Number.isFinite(amount) ||
+25887:                     amount <= 0
+25888:                 ) {
+25889:                     return;
+25890:                 }
+25891: 
+25892:                 missingRows.push({
+25893:                     unitName:
+25894:                         'Police Helicopter or Drone',
+25895:                     stillNeeded:
+25896:                         amount
+25897:                 });
+25898: 
+25899:                 if (
+25900:                     mfDebugEnabled &&
+25901:                     !silent
+25902:                 ) {
+25903:                     debugLog(
+25904:                         'UPDATE POLICE AIR',
+25905:                         `Missing Vehicles text -> Drone Vehicle (Police Station) first, Police Helicopter fallback x${amount}`
+25906:                     );
+25907:                 }
+25908:             });
+25909: 
+25910:             // MissionChief can place this requirement only inside the
+25911:             // red Missing Vehicles alert rather than the update table.
+25912:             // Convert it to the normal selector row so Update ticks ALB.
+25913:             const seagoingMatches = Array.from(
+25914:                 text.matchAll(
+25915:                     /(\d+)\s*(?:x\s*)?Seagoing\s+Vessel(?:s)?/gi
+25916:                 )
+25917:             );
+25918: 
+25919:             seagoingMatches.forEach(match => {
+25920:                 const amount = parseInt(
+
+--- source lines 25918-25960 ---
+25918: 
+25919:             seagoingMatches.forEach(match => {
+25920:                 const amount = parseInt(
+25921:                     match[1],
+25922:                     10
+25923:                 );
+25924: 
+25925:                 if (
+25926:                     !Number.isFinite(amount) ||
+25927:                     amount <= 0
+25928:                 ) {
+25929:                     return;
+25930:                 }
+25931: 
+25932:                 missingRows.push({
+25933:                     unitName: 'Seagoing Vessel',
+25934:                     stillNeeded: amount
+25935:                 });
+25936: 
+25937:                 if (mfDebugEnabled && !silent) {
+25938:                     debugLog(
+25939:                         'UPDATE SEAGOING',
+25940:                         `Missing Vehicles text -> ALB x${amount}`
+25941:                     );
+25942:                 }
+25943:             });
+25944:         });
+25945: 
+25946:         // Missing Personnel is an actionable mission update, not a
+25947:         // vehicle staffing fault. Supported personnel conversions include:
+25948:         // Search Technicians = 4 per displayed-name-prefix SARTEC vehicle
+25949:         // Search Advisors = 2 per displayed-name-prefix SARTEC vehicle
+25950:         // SAR Commanders = 2 per Control Van
+25951:         // 3 Police Officers = 2 Police Cars
+25952:         // 6 Mud Rescue Operators = 2 Coastguard Mud Rescue Units
+25953:         // Normal update-table vehicle requirements are selected as well.
+25954:         let maximumSartecUnitsFromPersonnel = 0;
+25955: 
+25956:         const trainedPersonnelRequirements =
+25957:             new Map();
+25958: 
+25959:         if (
+25960:             tableLevel1PublicOrderRequired >
+
+--- source lines 26058-26100 ---
+26058:                     ) === 'sartec'
+26059:                 ) {
+26060:                     maximumSartecUnitsFromPersonnel =
+26061:                         Math.max(
+26062:                             maximumSartecUnitsFromPersonnel,
+26063:                             parseInt(
+26064:                                 row.stillNeeded,
+26065:                                 10
+26066:                             ) || 0
+26067:                         );
+26068: 
+26069:                     return;
+26070:                 }
+26071: 
+26072:                 missingRows.push({
+26073:                     unitName: row.unitName,
+26074:                     stillNeeded: row.stillNeeded
+26075:                 });
+26076:             });
+26077:         });
+26078: 
+26079:         if (
+26080:             maximumSartecUnitsFromPersonnel > 0
+26081:         ) {
+26082:             missingRows.push({
+26083:                 unitName: 'SARTEC',
+26084:                 stillNeeded:
+26085:                     maximumSartecUnitsFromPersonnel
+26086:             });
+26087:         }
+26088: 
+26089:         if (
+26090:             trainedPersonnelRequirements.size >
+26091:             0
+26092:         ) {
+26093:             const requirements =
+26094:                 Array.from(
+26095:                     trainedPersonnelRequirements
+26096:                         .values()
+26097:                 );
+26098: 
+26099:             missingRows.push({
+26100:                 unitName:
+
+--- source lines 26068-26110 ---
+26068: 
+26069:                     return;
+26070:                 }
+26071: 
+26072:                 missingRows.push({
+26073:                     unitName: row.unitName,
+26074:                     stillNeeded: row.stillNeeded
+26075:                 });
+26076:             });
+26077:         });
+26078: 
+26079:         if (
+26080:             maximumSartecUnitsFromPersonnel > 0
+26081:         ) {
+26082:             missingRows.push({
+26083:                 unitName: 'SARTEC',
+26084:                 stillNeeded:
+26085:                     maximumSartecUnitsFromPersonnel
+26086:             });
+26087:         }
+26088: 
+26089:         if (
+26090:             trainedPersonnelRequirements.size >
+26091:             0
+26092:         ) {
+26093:             const requirements =
+26094:                 Array.from(
+26095:                     trainedPersonnelRequirements
+26096:                         .values()
+26097:                 );
+26098: 
+26099:             missingRows.push({
+26100:                 unitName:
+26101:                     MF_TRAINED_PERSONNEL_ROW_NAME,
+26102:                 stillNeeded:
+26103:                     getTrainedPersonnelVehicleTarget(
+26104:                         requirements
+26105:                     ),
+26106:                 isTrainedPersonnelRequirement:
+26107:                     true,
+26108:                 personnelTrainingRequirements:
+26109:                     requirements
+26110:             });
+
+--- source lines 26085-26127 ---
+26085:                     maximumSartecUnitsFromPersonnel
+26086:             });
+26087:         }
+26088: 
+26089:         if (
+26090:             trainedPersonnelRequirements.size >
+26091:             0
+26092:         ) {
+26093:             const requirements =
+26094:                 Array.from(
+26095:                     trainedPersonnelRequirements
+26096:                         .values()
+26097:                 );
+26098: 
+26099:             missingRows.push({
+26100:                 unitName:
+26101:                     MF_TRAINED_PERSONNEL_ROW_NAME,
+26102:                 stillNeeded:
+26103:                     getTrainedPersonnelVehicleTarget(
+26104:                         requirements
+26105:                     ),
+26106:                 isTrainedPersonnelRequirement:
+26107:                     true,
+26108:                 personnelTrainingRequirements:
+26109:                     requirements
+26110:             });
+26111: 
+26112:             if (
+26113:                 mfDebugEnabled &&
+26114:                 !silent
+26115:             ) {
+26116:                 debugLog(
+26117:                     'TRAINED PERSONNEL UPDATE',
+26118:                     formatTrainedPersonnelRequirements(
+26119:                         requirements
+26120:                     )
+26121:                 );
+26122:             }
+26123:         }
+26124: 
+26125:         // Dynamic patient update reader.
+26126:         // Reads the individual items after "We need:" rather than comparing
+26127:         // the whole sentence. This keeps combined requests working.
+
+--- source lines 26464-26506 ---
+26464:             ambulanceRequired =
+26465:                 Math.min(
+26466:                     ambulanceRequired,
+26467:                     currentPatientTotal
+26468:                 );
+26469: 
+26470:             criticalCareRequired =
+26471:                 Math.min(
+26472:                     criticalCareRequired,
+26473:                     currentPatientTotal
+26474:                 );
+26475:         }
+26476: 
+26477:         if (ambulanceRequired > 0) {
+26478:             missingRows.push({
+26479:                 unitName: 'Ambulance x 01',
+26480:                 stillNeeded: ambulanceRequired,
+26481:                 patientRequirementType: 'ambulance',
+26482:                 isPatientAlertFallback: true,
+26483:                 isTotalPatientRequirement: true,
+26484:                 patientCountCap: currentPatientTotal
+26485:             });
+26486:         }
+26487: 
+26488:         if (criticalCareRequired > 0) {
+26489:             missingRows.push({
+26490:                 unitName: 'Critical Care',
+26491:                 stillNeeded: criticalCareRequired,
+26492:                 patientRequirementType: 'critical-care',
+26493:                 isPatientAlertFallback: true,
+26494:                 isTotalPatientRequirement: true,
+26495:                 patientCountCap: currentPatientTotal
+26496:             });
+26497: 
+26498:             if (mfDebugEnabled && !silent) {
+26499:                 debugLog(
+26500:                     'PATIENT CRITICAL CARE',
+26501:                     `Patient alerts require Critical Care x${criticalCareRequired}`
+26502:                 );
+26503:             }
+26504:         }
+26505: 
+26506:         // Ambulance Officer is capped at one unit total, even when
+
+--- source lines 26475-26517 ---
+26475:         }
+26476: 
+26477:         if (ambulanceRequired > 0) {
+26478:             missingRows.push({
+26479:                 unitName: 'Ambulance x 01',
+26480:                 stillNeeded: ambulanceRequired,
+26481:                 patientRequirementType: 'ambulance',
+26482:                 isPatientAlertFallback: true,
+26483:                 isTotalPatientRequirement: true,
+26484:                 patientCountCap: currentPatientTotal
+26485:             });
+26486:         }
+26487: 
+26488:         if (criticalCareRequired > 0) {
+26489:             missingRows.push({
+26490:                 unitName: 'Critical Care',
+26491:                 stillNeeded: criticalCareRequired,
+26492:                 patientRequirementType: 'critical-care',
+26493:                 isPatientAlertFallback: true,
+26494:                 isTotalPatientRequirement: true,
+26495:                 patientCountCap: currentPatientTotal
+26496:             });
+26497: 
+26498:             if (mfDebugEnabled && !silent) {
+26499:                 debugLog(
+26500:                     'PATIENT CRITICAL CARE',
+26501:                     `Patient alerts require Critical Care x${criticalCareRequired}`
+26502:                 );
+26503:             }
+26504:         }
+26505: 
+26506:         // Ambulance Officer is capped at one unit total, even when
+26507:         // several patients or a multiplier request it.
+26508:         if (needsAmbulanceOfficer) {
+26509:             missingRows.push({
+26510:                 unitName: 'Ambulance Officer',
+26511:                 stillNeeded: 1,
+26512:                 patientRequirementType: 'ambulance-officer',
+26513:                 isPatientAlertFallback: true,
+26514:                 isTotalPatientRequirement: true,
+26515:                 patientCountCap: currentPatientTotal
+26516:             });
+26517:         }
+
+--- source lines 26495-26537 ---
+26495:                 patientCountCap: currentPatientTotal
+26496:             });
+26497: 
+26498:             if (mfDebugEnabled && !silent) {
+26499:                 debugLog(
+26500:                     'PATIENT CRITICAL CARE',
+26501:                     `Patient alerts require Critical Care x${criticalCareRequired}`
+26502:                 );
+26503:             }
+26504:         }
+26505: 
+26506:         // Ambulance Officer is capped at one unit total, even when
+26507:         // several patients or a multiplier request it.
+26508:         if (needsAmbulanceOfficer) {
+26509:             missingRows.push({
+26510:                 unitName: 'Ambulance Officer',
+26511:                 stillNeeded: 1,
+26512:                 patientRequirementType: 'ambulance-officer',
+26513:                 isPatientAlertFallback: true,
+26514:                 isTotalPatientRequirement: true,
+26515:                 patientCountCap: currentPatientTotal
+26516:             });
+26517:         }
+26518: 
+26519:         // Mass Casualty Equipment remains capped at one unit total,
+26520:         // regardless of how many patient alerts request it.
+26521:         if (needsMassCasualtyEquipment) {
+26522:             missingRows.push({
+26523:                 unitName: 'Mass Casualty Equipment',
+26524:                 stillNeeded: 1,
+26525:                 patientRequirementType: 'mass-casualty-equipment',
+26526:                 isPatientAlertFallback: true,
+26527:                 isTotalPatientRequirement: true,
+26528:                 patientCountCap: currentPatientTotal
+26529:             });
+26530: 
+26531:             if (mfDebugEnabled && !silent) {
+26532:                 debugLog(
+26533:                     'PATIENT MCE',
+26534:                     'Patient requires Mass Casualty Equipment -> select Mass Casualty Equipment x1'
+26535:                 );
+26536:             }
+26537:         }
+
+--- source lines 26508-26550 ---
+26508:         if (needsAmbulanceOfficer) {
+26509:             missingRows.push({
+26510:                 unitName: 'Ambulance Officer',
+26511:                 stillNeeded: 1,
+26512:                 patientRequirementType: 'ambulance-officer',
+26513:                 isPatientAlertFallback: true,
+26514:                 isTotalPatientRequirement: true,
+26515:                 patientCountCap: currentPatientTotal
+26516:             });
+26517:         }
+26518: 
+26519:         // Mass Casualty Equipment remains capped at one unit total,
+26520:         // regardless of how many patient alerts request it.
+26521:         if (needsMassCasualtyEquipment) {
+26522:             missingRows.push({
+26523:                 unitName: 'Mass Casualty Equipment',
+26524:                 stillNeeded: 1,
+26525:                 patientRequirementType: 'mass-casualty-equipment',
+26526:                 isPatientAlertFallback: true,
+26527:                 isTotalPatientRequirement: true,
+26528:                 patientCountCap: currentPatientTotal
+26529:             });
+26530: 
+26531:             if (mfDebugEnabled && !silent) {
+26532:                 debugLog(
+26533:                     'PATIENT MCE',
+26534:                     'Patient requires Mass Casualty Equipment -> select Mass Casualty Equipment x1'
+26535:                 );
+26536:             }
+26537:         }
+26538: 
+26539:         // De-duplicate requirements. MissionChief can expose the same
+26540:         // red alert through several nested elements, so retain the maximum
+26541:         // amount for each mapped vehicle requirement.
+26542:         const dedupedByMappedName =
+26543:             new Map();
+26544: 
+26545:         missingRows.forEach(row => {
+26546:             if (
+26547:                 row
+26548:                     .isTrainedPersonnelRequirement
+26549:             ) {
+26550:                 const signature =
 
 PATTERN: normalise.*Requirement
 HITS: [17356, 17560, 17682, 18074, 18164, 18171, 20685, 21155, 24555, 25250, 25977, 26575, 27113, 28368, 28439]
