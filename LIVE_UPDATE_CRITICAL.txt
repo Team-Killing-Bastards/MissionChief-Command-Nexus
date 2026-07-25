@@ -1,6 +1,454 @@
 CRITICAL LIVE UPDATE SOURCE BLOCKS
 Source lines: 34276
 
+MARKER function resolveUnitName(: [10319]
+===== DYNAMIC function resolveUnitName(: source lines 10294-10439 =====
+10294:     // guarded diagnostic calls without creating log arrays, timers, DOM nodes
+10295:     // or browser-console history.
+10296:     function debugLog() {}
+10297:     function highDebugLog() {}
+10298:     function setDebugEnabled() {}
+10299:     function setHighDebugEnabled() {}
+10300:     function clearDebugLog() {}
+10301:     async function copyDebugLog() {}
+10302:     function renderDebugPanelNow() {}
+10303:     function renderDebugPanel() {}
+10304: 
+10305:     function getVehicleDebugName(element) {
+10306:         if (!element) return 'not found';
+10307:         const row = element.closest && element.closest('tr');
+10308:         const values = [
+10309:             element.getAttribute && element.getAttribute('vehicle_caption'),
+10310:             element.getAttribute && element.getAttribute('vehicle_type_caption'),
+10311:             element.getAttribute && element.getAttribute('search_attribute'),
+10312:             row && row.getAttribute('vehicle_caption'),
+10313:             row && row.getAttribute('vehicle_type_caption'),
+10314:             row && row.querySelector('td:nth-child(2)') && row.querySelector('td:nth-child(2)').innerText
+10315:         ].filter(Boolean);
+10316:         return values.length ? values[0].replace(/\s+/g, ' ').trim() : element.tagName;
+10317:     }
+10318: 
+10319:     function resolveUnitName(unitName) {
+10320:         const cleaned = String(unitName || '')
+10321:             .replace(/\s+/g, ' ')
+10322:             .trim();
+10323: 
+10324:         if (!cleaned) return '';
+10325: 
+10326:         return (
+10327:             crossReference[cleaned] ||
+10328:             crossReferenceNormalisedLookup.get(
+10329:                 cleaned.toLowerCase()
+10330:             ) ||
+10331:             cleaned
+10332:         );
+10333:     }
+10334: 
+10335:     function normaliseVehicleText(value) {
+10336:         return String(value || '')
+10337:             .replace(/&amp;/g, '&')
+10338:             .replace(/\s+/g, ' ')
+10339:             .trim()
+10340:             .toLowerCase();
+10341:     }
+10342: 
+10343:     function isSartecRequirement(
+10344:         originalName,
+10345:         mappedName
+10346:     ) {
+10347:         return (
+10348:             normaliseVehicleText(
+10349:                 originalName
+10350:             ) === 'sartec' ||
+10351:             normaliseVehicleText(
+10352:                 mappedName
+10353:             ) === 'sartec'
+10354:         );
+10355:     }
+10356: 
+10357:     function normaliseSartecDisplayedName(
+10358:         value
+10359:     ) {
+10360:         return String(value || '')
+10361:             .replace(/&amp;/g, '&')
+10362:             .replace(/\s+/g, ' ')
+10363:             .trim()
+10364:             // Ignore leading emoji, coloured circles and punctuation.
+10365:             .replace(/^[^A-Za-z0-9]+/, '')
+10366:             .trim();
+10367:     }
+10368: 
+10369:     function isIccuOrAmbulanceControlRequirement(
+10370:         originalName,
+10371:         mappedName
+10372:     ) {
+10373:         const raw =
+10374:             normaliseVehicleText(
+10375:                 originalName
+10376:             );
+10377: 
+10378:         const mapped =
+10379:             normaliseVehicleText(
+10380:                 mappedName
+10381:             );
+10382: 
+10383:         const supported = new Set([
+10384:             'iccu or ambulance control unit',
+10385:             'iccu or ambulance control units',
+10386:             'iccus or ambulance control unit',
+10387:             'iccus or ambulance control units',
+10388:             'iccu/acu'
+10389:         ]);
+10390: 
+10391:         return (
+10392:             supported.has(raw) ||
+10393:             supported.has(mapped)
+10394:         );
+10395:     }
+10396: 
+10397:     function isIccuVehicleCheckbox(
+10398:         input
+10399:     ) {
+10400:         return getExtendedVehicleValues(
+10401:             input
+10402:         ).some(value => {
+10403:             const cleaned =
+10404:                 normaliseSartecDisplayedName(
+10405:                     value
+10406:                 );
+10407: 
+10408:             return (
+10409:                 value === 'iccu' ||
+10410:                 value === 'iccus' ||
+10411:                 value === 'incident command and control unit' ||
+10412:                 value === 'incident command and control units' ||
+10413:                 /(?:^|\b)ICCU(?:s)?(?:\b|$)/i.test(cleaned) ||
+10414:                 /(?:^|\b)Incident\s+Command\s+(?:and|&)\s+Control\s+Unit(?:s)?(?:\b|$)/i.test(cleaned)
+10415:             );
+10416:         });
+10417:     }
+10418: 
+10419:     function isAmbulanceControlUnitCheckbox(
+10420:         input
+10421:     ) {
+10422:         const typeIdentifiers =
+10423:             getVehicleTypeIdentifiers(
+10424:                 input
+10425:             );
+10426: 
+10427:         // MissionChief UK Ambulance Control Unit vehicle type.
+10428:         if (
+10429:             typeIdentifiers.includes(
+10430:                 '31'
+10431:             )
+10432:         ) {
+10433:             return true;
+10434:         }
+10435: 
+10436:         return getExtendedVehicleValues(
+10437:             input
+10438:         ).some(value => {
+10439:             const cleaned =
+
+MARKER function selectMatchingVehicles(: []
+MARKER function processRequirementRows(: [21136]
+===== DYNAMIC function processRequirementRows(: source lines 21111-21256 =====
+21111:                 try {
+21112:                     return Array.from(
+21113:                         candidateDocument.querySelectorAll(
+21114:                             'table[aria-label="Live mission requirements"], ' +
+21115:                             '#mc-map-command-toolkit-mission-requirements[data-mcms-requirements-panel="1"] table'
+21116:                         )
+21117:                     ).some(table => {
+21118:                         return (
+21119:                             isLiveMissionRequirementsTable(table) &&
+21120:                             isMissionElementVisible(table)
+21121:                         );
+21122:                     });
+21123:                 } catch (_error) {
+21124:                     return false;
+21125:                 }
+21126:             }
+21127:         );
+21128:     }
+21129: 
+21130:     function getOperationalRequirementTargetMode(item) {
+21131:         return item?.liveRequirementDetails?.dispatchTargetMode === 'shortage'
+21132:             ? 'shortage'
+21133:             : 'total';
+21134:     }
+21135: 
+21136:     async function processRequirementRows(requirementRows, sourceLabel) {
+21137:         let missingUnits = [];
+21138:         const trainedPersonnelMissing = [];
+21139: 
+21140:         if (
+21141:             hasAuthoritativeLiveMissionRequirementsPanel() &&
+21142:             sourceLabel !== 'live mission requirements'
+21143:         ) {
+21144:             requirementRows = readMissionUpdateRows();
+21145:             sourceLabel = 'live mission requirements';
+21146: 
+21147:             if (mfDebugEnabled) {
+21148:                 debugLog(
+21149:                     'UNIT FINDER LIVE AUTHORITY',
+21150:                     `Using ${requirementRows.length} current live requirement row(s); static mission-help rows were ignored.`
+21151:                 );
+21152:             }
+21153:         }
+21154: 
+21155:         requirementRows = normaliseOperationalRequirementRows(
+21156:             requirementRows
+21157:         );
+21158: 
+21159:         updateStatusBox(`Processing ${sourceLabel} requirements...`);
+21160: 
+21161:         await preparePoliceVehicleSafetyForRows(
+21162:             requirementRows,
+21163:             sourceLabel
+21164:         );
+21165: 
+21166:         for (const item of requirementRows) {
+21167:             if (
+21168:                 detectAndLatchStaffingBlock(
+21169:                     `process-${sourceLabel}`
+21170:                 )
+21171:             ) {
+21172:                 break;
+21173:             }
+21174: 
+21175:             const unitText = item.unitName;
+21176: 
+21177:             if (
+21178:                 item
+21179:                     .isTrainedPersonnelRequirement
+21180:             ) {
+21181:                 const requirements =
+21182:                     item
+21183:                         .personnelTrainingRequirements ||
+21184:                     [];
+21185: 
+21186:                 const trainedVehicleTarget =
+21187:                     getTrainedPersonnelVehicleTarget(
+21188:                         requirements
+21189:                     );
+21190: 
+21191:                 addOrUpdateVehicleRow(
+21192:                     unitText,
+21193:                     'Assigned trained vehicles',
+21194:                     trainedVehicleTarget,
+21195:                     'pending',
+21196:                     0
+21197:                 );
+21198: 
+21199:                 renderVehicleLoadList();
+21200: 
+21201:                 await refreshPoliceInspectorRegistryFromLiveVehicles(
+21202:                     requirements,
+21203:                     sourceLabel
+21204:                 );
+21205: 
+21206:                 const result =
+21207:                     selectVehiclesForTrainedPersonnelRequirements(
+21208:                         requirements,
+21209:                         sourceLabel
+21210:                     );
+21211: 
+21212:                 const largestRemaining =
+21213:                     result.remaining.reduce(
+21214:                         (
+21215:                             maximum,
+21216:                             requirement
+21217:                         ) => Math.max(
+21218:                             maximum,
+21219:                             Math.max(
+21220:                                 0,
+21221:                                 parseInt(
+21222:                                     requirement.remaining,
+21223:                                     10
+21224:                                 ) || 0
+21225:                             )
+21226:                         ),
+21227:                         0
+21228:                     );
+21229: 
+21230:                 const selectedCount =
+21231:                     Math.max(
+21232:                         0,
+21233:                         trainedVehicleTarget -
+21234:                         largestRemaining
+21235:                     );
+21236: 
+21237:                 addOrUpdateVehicleRow(
+21238:                     unitText,
+21239:                     'Assigned trained vehicles',
+21240:                     trainedVehicleTarget,
+21241:                     result.satisfied
+21242:                         ? 'assigned'
+21243:                         : (
+21244:                             selectedCount > 0
+21245:                                 ? 'retrying'
+21246:                                 : 'missing'
+21247:                         ),
+21248:                     selectedCount
+21249:                 );
+21250: 
+21251:                 renderVehicleLoadList();
+21252: 
+21253:                 if (!result.satisfied) {
+21254:                     trainedPersonnelMissing.push(
+21255:                         result.registryVehicleCount > 0
+21256:                             ? result.remaining
+
+MARKER function retryMissingUnits(: [21422]
+===== DYNAMIC function retryMissingUnits(: source lines 21397-21542 =====
+21397:     }
+21398: 
+21399:     async function processVehicles(vehicleList) {
+21400:         const listItems = vehicleList.querySelectorAll('li.class-x');
+21401:         const requirementRows = [];
+21402: 
+21403:         listItems.forEach(item => {
+21404:             const unitText = [...item.childNodes]
+21405:                 .filter(node => node.nodeType === Node.TEXT_NODE)
+21406:                 .map(node => node.textContent.trim())[0];
+21407: 
+21408:             if (!unitText) return;
+21409: 
+21410:             const requiredAmount = parseInt(item.getAttribute('data-amount'), 10);
+21411:             if (!Number.isFinite(requiredAmount) || requiredAmount <= 0) return;
+21412: 
+21413:             requirementRows.push({
+21414:                 unitName: unitText,
+21415:                 stillNeeded: requiredAmount
+21416:             });
+21417:         });
+21418: 
+21419:         return processRequirementRows(requirementRows, 'fallback vehicle list');
+21420:     }
+21421: 
+21422:     async function retryMissingUnits(missingUnits) {
+21423:         if (!isCurrentMissionExecutionOwner('missing-unit retry')) {
+21424:             return false;
+21425:         }
+21426: 
+21427:         if (
+21428:             detectAndLatchStaffingBlock(
+21429:                 'before-missing-unit-retry'
+21430:             )
+21431:         ) {
+21432:             updateStatusBox(
+21433:                 'Staffing shortage detected. Missing-unit retry cancelled.'
+21434:             );
+21435:             changeDispatchBoxColor(false);
+21436:             return false;
+21437:         }
+21438: 
+21439:         const retryMissionId =
+21440:             getCurrentMissionIdForQueueRestart();
+21441: 
+21442:         const missingRows = missingUnits.map(unit => {
+21443:             if (typeof unit === 'string') {
+21444:                 return {
+21445:                     unitName: unit,
+21446:                     stillNeeded: 1,
+21447:                     requiredTotal: 1
+21448:                 };
+21449:             }
+21450: 
+21451:             const stillNeeded =
+21452:                 Math.max(
+21453:                     1,
+21454:                     parseInt(
+21455:                         unit.stillNeeded,
+21456:                         10
+21457:                     ) || 1
+21458:                 );
+21459: 
+21460:             const requiredTotal =
+21461:                 Math.max(
+21462:                     stillNeeded,
+21463:                     parseInt(
+21464:                         unit.requiredTotal,
+21465:                         10
+21466:                     ) || stillNeeded
+21467:                 );
+21468: 
+21469:             return {
+21470:                 unitName: unit.unitName,
+21471:                 stillNeeded,
+21472:                 requiredTotal
+21473:             };
+21474:         });
+21475: 
+21476:         updateStatusBox('Retrying missing units...');
+21477: 
+21478:         missingRows.forEach(
+21479:             unit =>
+21480:                 setVehicleStatus(
+21481:                     unit.unitName,
+21482:                     'retrying'
+21483:                 )
+21484:         );
+21485: 
+21486:         renderVehicleLoadList();
+21487: 
+21488:         const loadingBar =
+21489:             document.querySelector(
+21490:                 'a.btn-warning.missing_vehicles_load'
+21491:             );
+21492: 
+21493:         let timedOut = false;
+21494: 
+21495:         if (loadingBar) {
+21496:             try {
+21497:                 loadingBar.click();
+21498:             } catch (_error) {}
+21499: 
+21500:             const retryStartedAt =
+21501:                 Date.now();
+21502: 
+21503:             const retryTimeoutMs =
+21504:                 20000;
+21505: 
+21506:             while (
+21507:                 isLoadingBarVisible() &&
+21508:                 Date.now() - retryStartedAt <
+21509:                     retryTimeoutMs
+21510:             ) {
+21511:                 if (
+21512:                     autoModeRunning &&
+21513:                     isManualAutoStopActive()
+21514:                 ) {
+21515:                     updateStatusBox(
+21516:                         'Missing-unit retry stopped.'
+21517:                     );
+21518:                     changeDispatchBoxColor(false);
+21519:                     return false;
+21520:                 }
+21521: 
+21522:                 const currentMissionId =
+21523:                     getCurrentMissionIdForQueueRestart();
+21524: 
+21525:                 if (
+21526:                     retryMissionId &&
+21527:                     currentMissionId &&
+21528:                     currentMissionId !==
+21529:                         retryMissionId
+21530:                 ) {
+21531:                     updateStatusBox(
+21532:                         'Mission changed during missing-unit retry. Selection cancelled.'
+21533:                     );
+21534: 
+21535:                     changeDispatchBoxColor(false);
+21536:                     return false;
+21537:                 }
+21538: 
+21539:                 await wait(250);
+21540:             }
+21541: 
+21542:             timedOut =
+
 ===== RIV AND MAJOR FOAM SELECTORS: source lines 10720-10940 =====
 10720: 
 10721:     function isRrvRequirement(
@@ -1112,6 +1560,609 @@ Source lines: 34276
 20938: 
 20939:         return '';
 20940:     }
+
+===== SHARED REQUIREMENT PROCESSING AND RETRY: source lines 21080-21680 =====
+21080:                     if (clickVehicleElement(fallback)) assigned += 1;
+21081:                     renderVehicleLoadList();
+21082:                 } else {
+21083:                     while (assigned < required) {
+21084:                         if (!clickVehicleElement(fallback)) break;
+21085:                         assigned += 1;
+21086:                         renderVehicleLoadList();
+21087:                     }
+21088:                 }
+21089:             } else if (mfDebugEnabled && assigned < required) {
+21090:                 debugLog('SELECT MISSING', `${selectionSource} | ${mappedName} | assigned=${assigned}/${required}`);
+21091:             }
+21092:         }
+21093: 
+21094:         const selectedNow = countSelectedMatchingVehicles(originalName, mappedName);
+21095: 
+21096:         if (mfDebugEnabled) {
+21097:             debugLog('SELECT RESULT', `${selectionSource} | ${originalName} -> ${mappedName} | clicked=${assigned}/${required} | visual=${Math.min(selectedNow, required)}/${required}`);
+21098:         }
+21099: 
+21100:         return {
+21101:             assigned,
+21102:             required,
+21103:             missing: Math.max(required - assigned, 0),
+21104:             skipped: false
+21105:         };
+21106:     }
+21107: 
+21108:     function hasAuthoritativeLiveMissionRequirementsPanel() {
+21109:         return getMissionAccessibleDocuments().some(
+21110:             candidateDocument => {
+21111:                 try {
+21112:                     return Array.from(
+21113:                         candidateDocument.querySelectorAll(
+21114:                             'table[aria-label="Live mission requirements"], ' +
+21115:                             '#mc-map-command-toolkit-mission-requirements[data-mcms-requirements-panel="1"] table'
+21116:                         )
+21117:                     ).some(table => {
+21118:                         return (
+21119:                             isLiveMissionRequirementsTable(table) &&
+21120:                             isMissionElementVisible(table)
+21121:                         );
+21122:                     });
+21123:                 } catch (_error) {
+21124:                     return false;
+21125:                 }
+21126:             }
+21127:         );
+21128:     }
+21129: 
+21130:     function getOperationalRequirementTargetMode(item) {
+21131:         return item?.liveRequirementDetails?.dispatchTargetMode === 'shortage'
+21132:             ? 'shortage'
+21133:             : 'total';
+21134:     }
+21135: 
+21136:     async function processRequirementRows(requirementRows, sourceLabel) {
+21137:         let missingUnits = [];
+21138:         const trainedPersonnelMissing = [];
+21139: 
+21140:         if (
+21141:             hasAuthoritativeLiveMissionRequirementsPanel() &&
+21142:             sourceLabel !== 'live mission requirements'
+21143:         ) {
+21144:             requirementRows = readMissionUpdateRows();
+21145:             sourceLabel = 'live mission requirements';
+21146: 
+21147:             if (mfDebugEnabled) {
+21148:                 debugLog(
+21149:                     'UNIT FINDER LIVE AUTHORITY',
+21150:                     `Using ${requirementRows.length} current live requirement row(s); static mission-help rows were ignored.`
+21151:                 );
+21152:             }
+21153:         }
+21154: 
+21155:         requirementRows = normaliseOperationalRequirementRows(
+21156:             requirementRows
+21157:         );
+21158: 
+21159:         updateStatusBox(`Processing ${sourceLabel} requirements...`);
+21160: 
+21161:         await preparePoliceVehicleSafetyForRows(
+21162:             requirementRows,
+21163:             sourceLabel
+21164:         );
+21165: 
+21166:         for (const item of requirementRows) {
+21167:             if (
+21168:                 detectAndLatchStaffingBlock(
+21169:                     `process-${sourceLabel}`
+21170:                 )
+21171:             ) {
+21172:                 break;
+21173:             }
+21174: 
+21175:             const unitText = item.unitName;
+21176: 
+21177:             if (
+21178:                 item
+21179:                     .isTrainedPersonnelRequirement
+21180:             ) {
+21181:                 const requirements =
+21182:                     item
+21183:                         .personnelTrainingRequirements ||
+21184:                     [];
+21185: 
+21186:                 const trainedVehicleTarget =
+21187:                     getTrainedPersonnelVehicleTarget(
+21188:                         requirements
+21189:                     );
+21190: 
+21191:                 addOrUpdateVehicleRow(
+21192:                     unitText,
+21193:                     'Assigned trained vehicles',
+21194:                     trainedVehicleTarget,
+21195:                     'pending',
+21196:                     0
+21197:                 );
+21198: 
+21199:                 renderVehicleLoadList();
+21200: 
+21201:                 await refreshPoliceInspectorRegistryFromLiveVehicles(
+21202:                     requirements,
+21203:                     sourceLabel
+21204:                 );
+21205: 
+21206:                 const result =
+21207:                     selectVehiclesForTrainedPersonnelRequirements(
+21208:                         requirements,
+21209:                         sourceLabel
+21210:                     );
+21211: 
+21212:                 const largestRemaining =
+21213:                     result.remaining.reduce(
+21214:                         (
+21215:                             maximum,
+21216:                             requirement
+21217:                         ) => Math.max(
+21218:                             maximum,
+21219:                             Math.max(
+21220:                                 0,
+21221:                                 parseInt(
+21222:                                     requirement.remaining,
+21223:                                     10
+21224:                                 ) || 0
+21225:                             )
+21226:                         ),
+21227:                         0
+21228:                     );
+21229: 
+21230:                 const selectedCount =
+21231:                     Math.max(
+21232:                         0,
+21233:                         trainedVehicleTarget -
+21234:                         largestRemaining
+21235:                     );
+21236: 
+21237:                 addOrUpdateVehicleRow(
+21238:                     unitText,
+21239:                     'Assigned trained vehicles',
+21240:                     trainedVehicleTarget,
+21241:                     result.satisfied
+21242:                         ? 'assigned'
+21243:                         : (
+21244:                             selectedCount > 0
+21245:                                 ? 'retrying'
+21246:                                 : 'missing'
+21247:                         ),
+21248:                     selectedCount
+21249:                 );
+21250: 
+21251:                 renderVehicleLoadList();
+21252: 
+21253:                 if (!result.satisfied) {
+21254:                     trainedPersonnelMissing.push(
+21255:                         result.registryVehicleCount > 0
+21256:                             ? result.remaining
+21257:                                 .filter(requirement => requirement.remaining > 0)
+21258:                                 .map(requirement => `${requirement.label} x${requirement.remaining}`)
+21259:                                 .join(', ')
+21260:                             : 'No trained-vehicle register was found. Run Personnel Assignment in Preview or Assign mode to build it.'
+21261:                     );
+21262:                 }
+21263: 
+21264:                 continue;
+21265:             }
+21266: 
+21267:             // Final shared safety net. Even if MissionChief changes a parser
+21268:             // layout and a minimum-statistic row reaches this stage, it must
+21269:             // never be selected, retried or reported as a missing unit.
+21270:             if (shouldIgnoreRequiredMinimumRequirement(unitText)) {
+21271:                 continue;
+21272:             }
+21273: 
+21274:             const parsedAmount = parseInt(item.stillNeeded, 10);
+21275:             const replacedItemText = resolveUnitName(unitText);
+21276:             const targetMode = getOperationalRequirementTargetMode(item);
+21277:             const matchingSelectedAtStart =
+21278:                 countSelectedMatchingVehicles(
+21279:                     unitText,
+21280:                     replacedItemText
+21281:                 );
+21282:             const effectiveRequired =
+21283:                 targetMode === 'shortage'
+21284:                     ? matchingSelectedAtStart + parsedAmount
+21285:                     : parsedAmount;
+21286: 
+21287:             if (mfDebugEnabled) {
+21288:                 debugLog(
+21289:                     'PROCESS ROW',
+21290:                     `${unitText} -> ${replacedItemText} | target=${parsedAmount} | mode=${targetMode} | effective total=${effectiveRequired}`
+21291:                 );
+21292:             }
+21293: 
+21294:             const selectedBefore = Math.min(
+21295:                 matchingSelectedAtStart,
+21296:                 effectiveRequired
+21297:             );
+21298:             const remainingToSelect = Math.max(
+21299:                 0,
+21300:                 effectiveRequired - selectedBefore
+21301:             );
+21302: 
+21303:             addOrUpdateVehicleRow(
+21304:                 unitText,
+21305:                 replacedItemText,
+21306:                 effectiveRequired,
+21307:                 remainingToSelect > 0 ? 'pending' : 'assigned',
+21308:                 selectedBefore
+21309:             );
+21310:             renderVehicleLoadList();
+21311: 
+21312:             let selectionResult = null;
+21313:             if (remainingToSelect > 0) {
+21314:                 selectionResult = selectVehicleUnits(
+21315:                     unitText,
+21316:                     replacedItemText,
+21317:                     remainingToSelect,
+21318:                     sourceLabel
+21319:                 );
+21320:             }
+21321: 
+21322:             const selectedFromDom = Math.min(
+21323:                 countSelectedMatchingVehicles(
+21324:                     unitText,
+21325:                     replacedItemText
+21326:                 ),
+21327:                 effectiveRequired
+21328:             );
+21329:             const selectedFromClicks = Math.min(
+21330:                 effectiveRequired,
+21331:                 selectedBefore + Math.max(
+21332:                     0,
+21333:                     parseInt(selectionResult?.assigned, 10) || 0
+21334:                 )
+21335:             );
+21336:             const visualSelected = Math.max(
+21337:                 selectedFromDom,
+21338:                 selectedFromClicks
+21339:             );
+21340:             const status = visualSelected >= effectiveRequired
+21341:                 ? 'assigned'
+21342:                 : visualSelected > 0
+21343:                     ? 'retrying'
+21344:                     : 'missing';
+21345: 
+21346:             addOrUpdateVehicleRow(
+21347:                 unitText,
+21348:                 replacedItemText,
+21349:                 effectiveRequired,
+21350:                 status,
+21351:                 visualSelected
+21352:             );
+21353:             renderVehicleLoadList();
+21354: 
+21355:             if (visualSelected < effectiveRequired) {
+21356:                 missingUnits.push({
+21357:                     unitName: unitText,
+21358:                     stillNeeded: effectiveRequired - visualSelected,
+21359:                     requiredTotal: effectiveRequired
+21360:                 });
+21361:             }
+21362:         }
+21363: 
+21364:         renderVehicleLoadList();
+21365: 
+21366:         if (mfStaffingBlockActive) {
+21367:             changeDispatchBoxColor(false);
+21368:             return false;
+21369:         }
+21370: 
+21371:         if (trainedPersonnelMissing.length > 0) {
+21372:             changeDispatchBoxColor(false);
+21373:             updateStatusBox(
+21374:                 'A required trained Police IRV is still missing.'
+21375:             );
+21376: 
+21377:             originalAlert.call(
+21378:                 window,
+21379:                 `Final missing units:\n\n${trainedPersonnelMissing.join('\n')}`
+21380:             );
+21381: 
+21382:             return false;
+21383:         }
+21384: 
+21385:         if (missingUnits.length > 0) {
+21386:             // V10.6.48 parity guard:
+21387:             // Manual Unit Finder naturally waits while MissionChief loads the
+21388:             // missing-vehicle list. Auto Mode must wait for the same bounded
+21389:             // retry before it is allowed to run Mission Update or Dispatch.
+21390:             return await retryMissingUnits(
+21391:                 missingUnits
+21392:             );
+21393:         }
+21394: 
+21395:         changeDispatchBoxColor(true);
+21396:         return true;
+21397:     }
+21398: 
+21399:     async function processVehicles(vehicleList) {
+21400:         const listItems = vehicleList.querySelectorAll('li.class-x');
+21401:         const requirementRows = [];
+21402: 
+21403:         listItems.forEach(item => {
+21404:             const unitText = [...item.childNodes]
+21405:                 .filter(node => node.nodeType === Node.TEXT_NODE)
+21406:                 .map(node => node.textContent.trim())[0];
+21407: 
+21408:             if (!unitText) return;
+21409: 
+21410:             const requiredAmount = parseInt(item.getAttribute('data-amount'), 10);
+21411:             if (!Number.isFinite(requiredAmount) || requiredAmount <= 0) return;
+21412: 
+21413:             requirementRows.push({
+21414:                 unitName: unitText,
+21415:                 stillNeeded: requiredAmount
+21416:             });
+21417:         });
+21418: 
+21419:         return processRequirementRows(requirementRows, 'fallback vehicle list');
+21420:     }
+21421: 
+21422:     async function retryMissingUnits(missingUnits) {
+21423:         if (!isCurrentMissionExecutionOwner('missing-unit retry')) {
+21424:             return false;
+21425:         }
+21426: 
+21427:         if (
+21428:             detectAndLatchStaffingBlock(
+21429:                 'before-missing-unit-retry'
+21430:             )
+21431:         ) {
+21432:             updateStatusBox(
+21433:                 'Staffing shortage detected. Missing-unit retry cancelled.'
+21434:             );
+21435:             changeDispatchBoxColor(false);
+21436:             return false;
+21437:         }
+21438: 
+21439:         const retryMissionId =
+21440:             getCurrentMissionIdForQueueRestart();
+21441: 
+21442:         const missingRows = missingUnits.map(unit => {
+21443:             if (typeof unit === 'string') {
+21444:                 return {
+21445:                     unitName: unit,
+21446:                     stillNeeded: 1,
+21447:                     requiredTotal: 1
+21448:                 };
+21449:             }
+21450: 
+21451:             const stillNeeded =
+21452:                 Math.max(
+21453:                     1,
+21454:                     parseInt(
+21455:                         unit.stillNeeded,
+21456:                         10
+21457:                     ) || 1
+21458:                 );
+21459: 
+21460:             const requiredTotal =
+21461:                 Math.max(
+21462:                     stillNeeded,
+21463:                     parseInt(
+21464:                         unit.requiredTotal,
+21465:                         10
+21466:                     ) || stillNeeded
+21467:                 );
+21468: 
+21469:             return {
+21470:                 unitName: unit.unitName,
+21471:                 stillNeeded,
+21472:                 requiredTotal
+21473:             };
+21474:         });
+21475: 
+21476:         updateStatusBox('Retrying missing units...');
+21477: 
+21478:         missingRows.forEach(
+21479:             unit =>
+21480:                 setVehicleStatus(
+21481:                     unit.unitName,
+21482:                     'retrying'
+21483:                 )
+21484:         );
+21485: 
+21486:         renderVehicleLoadList();
+21487: 
+21488:         const loadingBar =
+21489:             document.querySelector(
+21490:                 'a.btn-warning.missing_vehicles_load'
+21491:             );
+21492: 
+21493:         let timedOut = false;
+21494: 
+21495:         if (loadingBar) {
+21496:             try {
+21497:                 loadingBar.click();
+21498:             } catch (_error) {}
+21499: 
+21500:             const retryStartedAt =
+21501:                 Date.now();
+21502: 
+21503:             const retryTimeoutMs =
+21504:                 20000;
+21505: 
+21506:             while (
+21507:                 isLoadingBarVisible() &&
+21508:                 Date.now() - retryStartedAt <
+21509:                     retryTimeoutMs
+21510:             ) {
+21511:                 if (
+21512:                     autoModeRunning &&
+21513:                     isManualAutoStopActive()
+21514:                 ) {
+21515:                     updateStatusBox(
+21516:                         'Missing-unit retry stopped.'
+21517:                     );
+21518:                     changeDispatchBoxColor(false);
+21519:                     return false;
+21520:                 }
+21521: 
+21522:                 const currentMissionId =
+21523:                     getCurrentMissionIdForQueueRestart();
+21524: 
+21525:                 if (
+21526:                     retryMissionId &&
+21527:                     currentMissionId &&
+21528:                     currentMissionId !==
+21529:                         retryMissionId
+21530:                 ) {
+21531:                     updateStatusBox(
+21532:                         'Mission changed during missing-unit retry. Selection cancelled.'
+21533:                     );
+21534: 
+21535:                     changeDispatchBoxColor(false);
+21536:                     return false;
+21537:                 }
+21538: 
+21539:                 await wait(250);
+21540:             }
+21541: 
+21542:             timedOut =
+21543:                 isLoadingBarVisible();
+21544: 
+21545:             updateStatusBox(
+21546:                 timedOut
+21547:                     ? 'Vehicle-list loading timed out. Running one final bounded retry...'
+21548:                     : 'Loading completed. Retrying missing units...'
+21549:             );
+21550:         }
+21551: 
+21552:         const stillMissing = [];
+21553: 
+21554:         for (
+21555:             const unit of
+21556:             missingRows
+21557:         ) {
+21558:             if (
+21559:                 detectAndLatchStaffingBlock(
+21560:                     'during-missing-unit-retry'
+21561:                 )
+21562:             ) {
+21563:                 changeDispatchBoxColor(false);
+21564:                 return false;
+21565:             }
+21566: 
+21567:             const currentMissionId =
+21568:                 getCurrentMissionIdForQueueRestart();
+21569: 
+21570:             if (
+21571:                 retryMissionId &&
+21572:                 currentMissionId &&
+21573:                 currentMissionId !==
+21574:                     retryMissionId
+21575:             ) {
+21576:                 updateStatusBox(
+21577:                     'Mission changed before the missing-unit retry completed.'
+21578:                 );
+21579: 
+21580:                 changeDispatchBoxColor(false);
+21581:                 return false;
+21582:             }
+21583: 
+21584:             const mappedName =
+21585:                 resolveUnitName(
+21586:                     unit.unitName
+21587:                 );
+21588: 
+21589:             // Recalculate from the current checked vehicles. Never use the
+21590:             // stale amount captured before MissionChief loaded more rows.
+21591:             // This is the key guard that stops Auto Mode selecting additional
+21592:             // units when another pass already satisfied the requirement.
+21593:             const selectedBefore =
+21594:                 Math.min(
+21595:                     countSelectedMatchingVehicles(
+21596:                         unit.unitName,
+21597:                         mappedName
+21598:                     ),
+21599:                     unit.requiredTotal
+21600:                 );
+21601: 
+21602:             const remainingNow =
+21603:                 Math.max(
+21604:                     0,
+21605:                     unit.requiredTotal -
+21606:                     selectedBefore
+21607:                 );
+21608: 
+21609:             if (
+21610:                 remainingNow > 0
+21611:             ) {
+21612:                 selectVehicleUnits(
+21613:                     unit.unitName,
+21614:                     mappedName,
+21615:                     remainingNow,
+21616:                     'RETRY'
+21617:                 );
+21618:             }
+21619: 
+21620:             const selectedAfter =
+21621:                 Math.min(
+21622:                     countSelectedMatchingVehicles(
+21623:                         unit.unitName,
+21624:                         mappedName
+21625:                     ),
+21626:                     unit.requiredTotal
+21627:                 );
+21628: 
+21629:             if (
+21630:                 selectedAfter >=
+21631:                 unit.requiredTotal
+21632:             ) {
+21633:                 setVehicleStatus(
+21634:                     unit.unitName,
+21635:                     'assigned'
+21636:                 );
+21637:             } else {
+21638:                 setVehicleStatus(
+21639:                     unit.unitName,
+21640:                     'missing'
+21641:                 );
+21642: 
+21643:                 stillMissing.push(
+21644:                     `${unit.unitName} x${
+21645:                         unit.requiredTotal -
+21646:                         selectedAfter
+21647:                     }`
+21648:                 );
+21649:             }
+21650: 
+21651:             if (mfDebugEnabled) {
+21652:                 debugLog(
+21653:                     'RETRY CAP',
+21654:                     `${unit.unitName} -> ${mappedName} | required total=${unit.requiredTotal} | selected before=${selectedBefore} | remaining now=${remainingNow} | selected after=${selectedAfter}`
+21655:                 );
+21656:             }
+21657:         }
+21658: 
+21659:         renderVehicleLoadList();
+21660: 
+21661:         if (
+21662:             stillMissing.length ===
+21663:             0
+21664:         ) {
+21665:             changeDispatchBoxColor(true);
+21666:             return true;
+21667:         }
+21668: 
+21669:         changeDispatchBoxColor(false);
+21670: 
+21671:         if (!autoModeRunning) {
+21672:             alert(
+21673:                 `${
+21674:                     timedOut
+21675:                         ? 'Final missing units after vehicle-list timeout'
+21676:                         : 'Final missing units'
+21677:                 }:\n\n${stillMissing.join('\n')}`
+21678:             );
+21679:         } else {
+21680:             updateStatusBox(
 
 ===== MISSION UPDATE LIVE ROW TARGETS: source lines 23880-24480 =====
 23880:                     : 'Dispatch & Share clicked. No next mission is available.'
