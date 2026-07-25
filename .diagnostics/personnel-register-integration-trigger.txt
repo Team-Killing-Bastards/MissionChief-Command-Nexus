@@ -1,1 +1,1 @@
-Temporary integration trigger; removed before merge.
+Run the trusted main Personnel Register integration workflow.
