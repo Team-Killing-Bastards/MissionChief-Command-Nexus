@@ -1,3 +1,4 @@
+# Triggered after workflow registration.
 name: Finalize and publish clean v1.0.30
 
 on:
