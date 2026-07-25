@@ -50,8 +50,6 @@ Before publishing a source change:
 - Update `CHANGELOG.md`.
 - Run `node --check src/missionchief-command-nexus.user.js`.
 - Run `node scripts/validate-userscript.mjs`.
-- Run `node scripts/check-ios-compatibility.mjs`.
-- Run `node scripts/check-runtime-hardening.mjs`.
 - Run `python3 scripts/check_repository.py`.
 - Complete the relevant MissionChief regression checks.
 - Record the tested domain, browser, userscript manager and interacting scripts.
