@@ -17,7 +17,7 @@
 </tr>
 </table>
 
-**Current version:** `1.0.23` · **Mission Finder engine:** `V10.6.88` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
+**Current version:** `1.0.24` · **Mission Finder engine:** `V10.6.89` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)
@@ -211,8 +211,9 @@ High Volume Pump, Drone Operator, Co-Responder, and Lifeguard remain disabled pe
 
 ### Police, rescue, maritime, and medical handling
 
-- Ordinary Police attendance is protected from unnecessarily consuming specialist IRVs.
-- Police Officer upgrade rows convert at two officers per normal Police IRV.
+- Ordinary Police attendance prefers verified ordinary type-8 IRVs, then unknown or stale type-8 IRVs, and uses specialist-trained type-8 IRVs only when needed as a final fallback.
+- Any selected exact type-8 IRV counts toward generic Police Car attendance; named specialist requirements remain strict and live-verified.
+- Police Officer upgrade rows and visible `Missing Personnel` alerts convert at two officers per Police Car, including when the live requirements panel is present.
 - Police Medic and Railway Police requirements use exact trained personnel where mapped.
 - Armed Personnel and Armed Response Personnel route to exact type-25 Armed Traffic Cars.
 - Armed Traffic Car selection verifies Roads Policing plus Firearms capability.

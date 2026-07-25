@@ -10,8 +10,8 @@ src/missionchief-command-nexus.user.js
 
 | Item | Value |
 |---|---|
-| Command Nexus version | `1.0.23` |
-| Mission Finder baseline | `V10.6.88` |
+| Command Nexus version | `1.0.24` |
+| Mission Finder baseline | `V10.6.89` |
 | Unit, Station & Personnel baseline | `V4.2.8` |
 | Licence | MIT |
 | Developer and source-code owner | **MartyBlyth** |
@@ -52,6 +52,7 @@ Before publishing a source change:
 - Run `node scripts/validate-userscript.mjs`.
 - Run `node scripts/check-ios-compatibility.mjs`.
 - Run `node scripts/check-runtime-hardening.mjs`.
+- Run `node scripts/check-police-irv-fallback.mjs`.
 - Run `python3 scripts/check_repository.py`.
 - Complete the relevant MissionChief regression checks.
 - Record the tested domain, browser, userscript manager and interacting scripts.

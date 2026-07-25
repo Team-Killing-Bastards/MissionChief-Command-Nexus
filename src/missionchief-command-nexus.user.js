@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.23
+// @version      1.0.24
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -8680,12 +8680,18 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.88
+         * MODULE 2: MISSION FINDER V10.6.89
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
     'use strict';
 
+    // V10.6.89: normal Police Car requirements prefer verified ordinary
+    // type-8 IRVs, then unknown/stale IRVs, and use specialist-trained IRVs
+    // only as a final fallback. Any selected type-8 IRV counts toward generic
+    // Police attendance, while named trained-personnel requirements remain
+    // exact and live-verified. Missing Personnel: Police Officers remains
+    // actionable even when the Live Mission Requirements panel is present.
     // V10.6.88: visible seasonal mission collectibles, including the
     // summer sunflower item, are claimed through MissionChief's exact
     // claim_found_object_sync route without navigating away from the mission.
@@ -9296,9 +9302,10 @@
     const MF_STRICT_TRAINING_SOURCE_PREFIX =
         'mission-finder-live-strict-';
 
-    // V10.6.71: ordinary Police attendance must preserve specialist IRVs.
-    // Exact vehicle IDs carrying any protected Police qualification are never
-    // used to satisfy a normal Police Car / Police Officer requirement.
+    // V10.6.89: ordinary Police attendance preserves specialist IRVs by
+    // preference rather than by an absolute block. Verified ordinary type-8
+    // IRVs are selected first, unknown/stale IRVs second, and known specialist
+    // IRVs only when the normal pool cannot satisfy the mission requirement.
     const MF_PROTECTED_ORDINARY_IRV_TRAINING_CODES =
         Object.freeze([
             'level_1_public_order',
@@ -12179,7 +12186,7 @@
             const registry =
                 readPersonnelTrainingRegistry();
 
-            const ordinaryCandidates =
+            const policeCarCandidates =
                 sortVehicleCheckboxesByBestArrival(
                     getVehicleCheckboxSnapshot().filter(input => {
                         if (input.disabled) return false;
@@ -12188,13 +12195,16 @@
                         return isOrdinaryPoliceIrvCheckboxEligible(
                             input,
                             registry,
-                            { allowUnknown: false }
+                            {
+                                allowUnknown: true,
+                                allowProtected: true
+                            }
                         );
                     })
                 );
 
             return orderOrdinaryPoliceIrvCandidates(
-                ordinaryCandidates,
+                policeCarCandidates,
                 registry
             );
         }
@@ -12323,12 +12333,6 @@
                 mappedName
             );
 
-        const ordinaryPoliceRegistry =
-            policeCarOnly
-                ? readPersonnelTrainingRegistry()
-                : null;
-
-
         if (
             rivOrMajorFoamTenderPreferred
         ) {
@@ -12405,12 +12409,10 @@
             } else if (rivTypeOnly) {
                 matches = isRivVehicleCheckbox(input);
             } else if (policeCarOnly) {
-                matches =
-                    isOrdinaryPoliceIrvCheckboxEligible(
-                        input,
-                        ordinaryPoliceRegistry,
-                        { allowUnknown: false }
-                    );
+                // Any selected exact type-8 IRV satisfies generic Police
+                // attendance. Training data controls preference only; named
+                // specialist requirements still use their strict selectors.
+                matches = isPoliceCarVehicleCheckbox(input);
             } else {
                 matches = vehicleValuesMatchCandidates(
                     getCheckboxVehicleValues(input),
@@ -17159,7 +17161,7 @@ let sessionRuntimeTicker = null;
 
         const pattern =
             new RegExp(
-                `(?:\\b(\\d+)\\s*(?:x\\s*)?${namePatternSource}\\b|\\b${namePatternSource}\\b\\s*(?:x\\s*)?(\\d+))`,
+                `(?:\\b(\\d+)\\s*(?:x\\s*)?${namePatternSource}\\b|\\b${namePatternSource}\\b\\s*(?::|=|-)?\\s*(?:x\\s*)?(\\d+))`,
                 'gi'
             );
 
@@ -18459,6 +18461,9 @@ let sessionRuntimeTicker = null;
         const allowUnknown =
             options.allowUnknown === true;
 
+        const allowProtected =
+            options.allowProtected === true;
+
         const registryMatch =
             getRegistryEntryForMissionCheckbox(
                 checkbox,
@@ -18469,14 +18474,12 @@ let sessionRuntimeTicker = null;
             return allowUnknown;
         }
 
-        // A known specialist crew is always protected, even when the registry
-        // entry is older than the live-verification cache window.
         if (
             isKnownProtectedTrainedPoliceIrvEntry(
                 registryMatch.entry
             )
         ) {
-            return false;
+            return allowProtected;
         }
 
         if (
@@ -18496,6 +18499,7 @@ let sessionRuntimeTicker = null;
     ) {
         const verifiedOrdinary = [];
         const unknownOrStale = [];
+        const protectedFallback = [];
 
         (Array.isArray(candidates) ? candidates : [])
             .forEach(checkbox => {
@@ -18510,6 +18514,7 @@ let sessionRuntimeTicker = null;
                         registryMatch.entry
                     )
                 ) {
+                    protectedFallback.push(checkbox);
                     return;
                 }
 
@@ -18527,10 +18532,10 @@ let sessionRuntimeTicker = null;
 
         return [
             ...verifiedOrdinary,
-            ...unknownOrStale
+            ...unknownOrStale,
+            ...protectedFallback
         ];
     }
-
 
     function getMissionTrainingCombinationKey(trainingCodes) {
         return Array.from(
@@ -19974,280 +19979,78 @@ let sessionRuntimeTicker = null;
                 refreshed: false,
                 pagesRead: 0,
                 verifiedOrdinaryVehicles: 0,
+                unknownOrStaleVehicles: 0,
+                protectedFallbackVehicles: 0,
+                availablePoliceCars: 0,
                 required: 0
             };
         }
 
-        let registry =
+        const registry =
             readPersonnelTrainingRegistry();
-
-        if (!registry.vehicles) {
-            registry.vehicles = {};
-        }
 
         const candidates =
             sortVehicleCheckboxesByBestArrival(
                 getVehicleCheckboxSnapshot().filter(checkbox => {
                     return !!(
                         (!checkbox.disabled || checkbox.checked) &&
-                        isPoliceCarVehicleCheckbox(checkbox) &&
-                        getMissionVehicleId(checkbox)
+                        isPoliceCarVehicleCheckbox(checkbox)
                     );
                 })
             );
 
-        const selectableCandidates =
-            candidates.filter(checkbox => {
-                return !checkbox.disabled && !checkbox.checked;
-            });
+        let verifiedOrdinaryVehicles = 0;
+        let unknownOrStaleVehicles = 0;
+        let protectedFallbackVehicles = 0;
 
-        const countVerifiedOrdinary = () => {
-            return selectableCandidates.filter(checkbox => {
-                const registryMatch =
-                    getRegistryEntryForMissionCheckbox(
-                        checkbox,
-                        registry
-                    );
-
-                return isVerifiedOrdinaryPoliceIrvEntry(
-                    registryMatch.entry
-                );
-            }).length;
-        };
-
-        const hasUnverifiedCheckedVehicles = () => {
-            return candidates.some(checkbox => {
-                if (!checkbox.checked) return false;
-
-                const registryMatch =
-                    getRegistryEntryForMissionCheckbox(
-                        checkbox,
-                        registry
-                    );
-
-                return !isAuthoritativeLivePoliceTrainingEntry(
-                    registryMatch.entry
-                );
-            });
-        };
-
-        if (
-            !hasUnverifiedCheckedVehicles() &&
-            countVerifiedOrdinary() >=
-            ordinaryVehiclesRequired
-        ) {
-            return {
-                refreshed: false,
-                pagesRead: 0,
-                verifiedOrdinaryVehicles:
-                    countVerifiedOrdinary(),
-                required:
-                    ordinaryVehiclesRequired
-            };
-        }
-
-        const now = Date.now();
-
-        const unverified =
-            candidates.filter(checkbox => {
-                const vehicleId =
-                    getMissionVehicleId(checkbox);
-
-                const entry =
-                    registry.vehicles?.[vehicleId];
-
-                const cachedAt =
-                    Number(
-                        mfLiveTrainingVerifyCache.get(
-                            vehicleId
-                        ) || 0
-                    );
-
-                return !(
-                    vehicleId &&
-                    isAuthoritativeLivePoliceTrainingEntry(entry) &&
-                    now - cachedAt <=
-                        MF_LIVE_TRAINING_VERIFY_CACHE_MS
-                );
-            });
-
-        // Prefer entries already believed to be ordinary, then unknown IDs.
-        // Stale known-trained entries are checked last because specialist IRVs
-        // should not be consumed merely to make normal attendance faster.
-        const ordered = [
-            // Verify anything already selected first. This allows the normal
-            // Police requirement counter to reject a manually or previously
-            // selected specialist IRV before deciding whether more units are
-            // still needed.
-            ...unverified.filter(checkbox => checkbox.checked),
-            ...unverified.filter(checkbox => {
-                const entry =
-                    getRegistryEntryForMissionCheckbox(
-                        checkbox,
-                        registry
-                    ).entry;
-
-                return !!entry &&
-                    !isKnownProtectedTrainedPoliceIrvEntry(entry);
-            }),
-            ...unverified.filter(checkbox => {
-                return !getRegistryEntryForMissionCheckbox(
+        candidates.forEach(checkbox => {
+            const registryMatch =
+                getRegistryEntryForMissionCheckbox(
                     checkbox,
                     registry
-                ).entry;
-            }),
-            ...unverified.filter(checkbox => {
-                return isKnownProtectedTrainedPoliceIrvEntry(
-                    getRegistryEntryForMissionCheckbox(
-                        checkbox,
-                        registry
-                    ).entry
                 );
-            })
-        ].filter((checkbox, index, array) => {
-            return array.indexOf(checkbox) === index;
-        });
 
-        const checkedVerificationCount =
-            candidates.filter(checkbox => checkbox.checked).length;
-
-        const pageLimit =
-            Math.min(
-                MF_ORDINARY_IRV_VERIFY_MAX_PAGES,
-                Math.max(
-                    checkedVerificationCount + 24,
-                    checkedVerificationCount +
-                        ordinaryVehiclesRequired * 6
+            if (
+                isKnownProtectedTrainedPoliceIrvEntry(
+                    registryMatch.entry
                 )
-            );
-
-        const pagesToRead =
-            ordered.slice(0, pageLimit);
-
-        let pagesRead = 0;
-        let changed = false;
-
-        for (
-            let offset = 0;
-            offset < pagesToRead.length;
-            offset += MF_ORDINARY_IRV_VERIFY_BATCH_SIZE
-        ) {
-            const batch = pagesToRead.slice(
-                offset,
-                offset + MF_ORDINARY_IRV_VERIFY_BATCH_SIZE
-            );
-
-            const results = await Promise.all(
-                batch.map(async checkbox => {
-                    const vehicleId =
-                        getMissionVehicleId(checkbox);
-
-                    try {
-                        const response = await fetch(
-                            `/vehicles/${vehicleId}/zuweisung`,
-                            {
-                                credentials: 'include',
-                                cache: 'no-store',
-                                headers: {
-                                    Accept: 'text/html,application/xhtml+xml'
-                                }
-                            }
-                        );
-
-                        if (!response.ok) return null;
-
-                        return {
-                            checkbox,
-                            vehicleId,
-                            parsed:
-                                parseLivePoliceTrainingAssignments(
-                                    await response.text(),
-                                    vehicleId
-                                )
-                        };
-                    } catch (_error) {
-                        return null;
-                    }
-                })
-            );
-
-            results.filter(result => result?.parsed?.assignmentScanComplete).forEach(result => {
-                const existing =
-                    registry.vehicles?.[result.vehicleId] || {};
-
-                registry.vehicles[result.vehicleId] = {
-                    ...existing,
-                    vehicleId:
-                        result.vehicleId,
-                    vehicleName:
-                        existing.vehicleName ||
-                        getVehicleDebugName(result.checkbox),
-                    vehicleTypeId:
-                        String(
-                            getVehicleTypeIdentifiers(
-                                result.checkbox
-                            )[0] ||
-                            result.parsed.detectedVehicleTypeId ||
-                            existing.vehicleTypeId ||
-                            '8'
-                        ),
-                    assignedPersonnelCount:
-                        result.parsed.assignedPersonnelCount,
-                    assignmentScanComplete:
-                        result.parsed.assignmentScanComplete,
-                    personnelRowsSeen:
-                        result.parsed.personnelRowsSeen,
-                    trainingCounts: {
-                        ...(
-                            existing.trainingCounts &&
-                            typeof existing.trainingCounts === 'object'
-                                ? existing.trainingCounts
-                                : {}
-                        ),
-                        ...result.parsed.trainingCounts
-                    },
-                    trainingCombinationCounts: {
-                        ...(
-                            existing.trainingCombinationCounts &&
-                            typeof existing.trainingCombinationCounts === 'object'
-                                ? existing.trainingCombinationCounts
-                                : {}
-                        ),
-                        ...result.parsed.trainingCombinationCounts
-                    },
-                    updatedAt:
-                        Date.now(),
-                    source:
-                        `${MF_STRICT_TRAINING_SOURCE_PREFIX}ordinary-${String(source || 'update').toLowerCase()}-v10676`
-                };
-
-                mfLiveTrainingVerifyCache.set(
-                    result.vehicleId,
-                    Date.now()
-                );
-
-                pagesRead += 1;
-                changed = true;
-            });
-
-            if (changed) {
-                savePersonnelTrainingRegistry(registry);
+            ) {
+                protectedFallbackVehicles += 1;
+                return;
             }
 
             if (
-                !hasUnverifiedCheckedVehicles() &&
-                countVerifiedOrdinary() >=
-                ordinaryVehiclesRequired
+                isVerifiedOrdinaryPoliceIrvEntry(
+                    registryMatch.entry
+                )
             ) {
-                break;
+                verifiedOrdinaryVehicles += 1;
+                return;
             }
+
+            unknownOrStaleVehicles += 1;
+        });
+
+        // Generic Police attendance does not require a qualification check.
+        // The registry is therefore an ordering hint only. Avoid reading every
+        // /zuweisung page before selection: ordinary vehicles remain first,
+        // unknown/stale vehicles remain usable, and known specialists are a
+        // final fallback when no normal pool can satisfy the mission.
+        if (mfDebugEnabled) {
+            debugLog(
+                'POLICE CAR POOL',
+                `${source} | required=${ordinaryVehiclesRequired} | ordinary=${verifiedOrdinaryVehicles} | unknown/stale=${unknownOrStaleVehicles} | specialist fallback=${protectedFallbackVehicles} | total=${candidates.length}`
+            );
         }
 
         return {
-            refreshed: changed,
-            pagesRead,
-            verifiedOrdinaryVehicles:
-                countVerifiedOrdinary(),
+            refreshed: false,
+            pagesRead: 0,
+            verifiedOrdinaryVehicles,
+            unknownOrStaleVehicles,
+            protectedFallbackVehicles,
+            availablePoliceCars:
+                candidates.length,
             required:
                 ordinaryVehiclesRequired
         };
@@ -20661,6 +20464,8 @@ let sessionRuntimeTicker = null;
     ) {
         const cleaned = String(requirementName || '')
             .replace(/\s+/g, ' ')
+            .trim()
+            .replace(/^Missing\s+Personnel\s*:\s*/i, '')
             .trim();
         const required = Math.max(
             0,
@@ -25739,12 +25544,24 @@ let sessionRuntimeTicker = null;
         // Read exact visible problem alerts from the active mission only.
         // Parent containers and hidden/previous missions are deliberately
         // excluded to prevent unrelated vehicle selections.
+        const activeMissionProblemTextBlocks =
+            getActiveMissionProblemTextBlocks(
+                missionUpdateRoots
+            );
+
         const pageTextBlocks =
             hasLiveRequirementsPanel
                 ? []
-                : getActiveMissionProblemTextBlocks(
-                    missionUpdateRoots
-                );
+                : activeMissionProblemTextBlocks;
+
+        // The live requirements table is authoritative for vehicle rows, but
+        // MissionChief can expose Missing Personnel only in the current visible
+        // alert. Keep that alert actionable without re-enabling legacy Missing
+        // Vehicles parsing or accepting hidden/previous mission content.
+        const personnelTextBlocks =
+            activeMissionProblemTextBlocks.filter(text => {
+                return /Missing\s+Personnel\s*:/i.test(text);
+            });
 
         if (
             mfDebugEnabled &&
@@ -26035,9 +25852,7 @@ let sessionRuntimeTicker = null;
             );
         }
 
-        pageTextBlocks.forEach(text => {
-            if (!/Missing Personnel:/i.test(text)) return;
-
+        personnelTextBlocks.forEach(text => {
             mergeTrainedPersonnelRequirements(
                 trainedPersonnelRequirements,
                 getSupportedTrainedPersonnelRequirementsFromText(
