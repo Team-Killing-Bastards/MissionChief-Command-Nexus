@@ -1,12 +1,13 @@
-# Triggered after workflow registration.
 name: Finalize and publish clean v1.0.30
 
 on:
-  push:
+  pull_request:
     branches:
       - main
-    paths:
-      - '.github/workflows/finalize-v1030.yml'
+    types:
+      - opened
+      - synchronize
+      - reopened
 
 permissions:
   contents: write
@@ -20,6 +21,9 @@ concurrency:
 jobs:
   retag:
     name: Recreate clean v1.0.30 tag
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'release/finalize-v1030'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
@@ -73,28 +77,31 @@ jobs:
             exit 1
           fi
 
-          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
-            EXISTING_TARGET="$(gh release view "${RELEASE_TAG}" --json targetCommitish --jq '.targetCommitish')"
-            echo "Existing release target: ${EXISTING_TARGET}"
-          fi
-
           git config user.name MartyBlyth
           git config user.email 32400596+Martyblyth@users.noreply.github.com
 
           if git show-ref --tags --verify --quiet "refs/tags/${RELEASE_TAG}"; then
-            git tag -d "${RELEASE_TAG}"
+            CURRENT_TAG_SHA="$(git rev-list -n 1 "${RELEASE_TAG}")"
+          else
+            CURRENT_TAG_SHA=''
           fi
 
-          git push origin ":refs/tags/${RELEASE_TAG}" || true
-          git tag -a "${RELEASE_TAG}" "${RELEASE_SHA}" \
-            -m 'MissionChief Command Nexus 1.0.30'
-          git push origin "refs/tags/${RELEASE_TAG}"
+          if [[ "${CURRENT_TAG_SHA}" != "${RELEASE_SHA}" ]]; then
+            if [[ -n "${CURRENT_TAG_SHA}" ]]; then
+              git tag -d "${RELEASE_TAG}"
+              git push origin ":refs/tags/${RELEASE_TAG}" || true
+            fi
+            git tag -a "${RELEASE_TAG}" "${RELEASE_SHA}" \
+              -m 'MissionChief Command Nexus 1.0.30'
+            git push origin "refs/tags/${RELEASE_TAG}"
+          fi
 
           echo "release_sha=${RELEASE_SHA}" >> "${GITHUB_OUTPUT}"
 
   publish:
     name: Publish verify and announce v1.0.30
     needs: retag
+    if: needs.retag.result == 'success'
     uses: ./.github/workflows/release.yml
     with:
       operation: publish-release
