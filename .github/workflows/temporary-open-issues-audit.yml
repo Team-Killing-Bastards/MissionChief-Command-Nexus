@@ -1,4 +1,4 @@
-name: Temporary open issues source audit
+name: Temporary current-main source audit
 
 on:
   pull_request:
@@ -13,12 +13,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: temporary-open-issues-audit-${{ github.event.pull_request.number }}
+  group: temporary-current-main-audit-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
   audit:
-    name: Export exact current source
+    name: Export exact latest main source
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.head.ref == 'agent/fix-open-issues-batch'
@@ -26,31 +26,32 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - name: Check out issue-fix branch
+      - name: Check out latest main
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: main
           show-progress: false
 
       - name: Package exact source and validation files
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p /tmp/open-issues-audit/src
-          mkdir -p /tmp/open-issues-audit/scripts
-          mkdir -p /tmp/open-issues-audit/.github/workflows
-          cp src/missionchief-command-nexus.user.js /tmp/open-issues-audit/src/
-          cp src/README.md /tmp/open-issues-audit/src/
-          cp README.md CHANGELOG.md /tmp/open-issues-audit/
-          find scripts -maxdepth 1 -type f \( -name '*.mjs' -o -name '*.py' \) -exec cp {} /tmp/open-issues-audit/scripts/ \;
-          cp .github/workflows/validate-userscript.yml /tmp/open-issues-audit/.github/workflows/
-          head -n 20 src/missionchief-command-nexus.user.js > /tmp/open-issues-audit/source-metadata.txt
+          mkdir -p /tmp/open-issues-current-main/src
+          mkdir -p /tmp/open-issues-current-main/scripts
+          mkdir -p /tmp/open-issues-current-main/.github/workflows
+          cp src/missionchief-command-nexus.user.js /tmp/open-issues-current-main/src/
+          cp src/README.md /tmp/open-issues-current-main/src/
+          cp README.md CHANGELOG.md /tmp/open-issues-current-main/
+          find scripts -maxdepth 1 -type f \( -name '*.mjs' -o -name '*.py' \) -exec cp {} /tmp/open-issues-current-main/scripts/ \;
+          cp .github/workflows/validate-userscript.yml /tmp/open-issues-current-main/.github/workflows/
+          head -n 20 src/missionchief-command-nexus.user.js > /tmp/open-issues-current-main/source-metadata.txt
+          git rev-parse HEAD > /tmp/open-issues-current-main/main-sha.txt
 
-      - name: Upload current source audit
+      - name: Upload latest main audit
         uses: actions/upload-artifact@v4
         with:
-          name: open-issues-current-source-audit
-          path: /tmp/open-issues-audit
+          name: open-issues-latest-main-audit
+          path: /tmp/open-issues-current-main
           if-no-files-found: error
           retention-days: 2
