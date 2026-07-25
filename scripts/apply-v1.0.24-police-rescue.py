@@ -37,9 +37,6 @@ if mission_version_count < 1:
     raise SystemExit('Mission Finder V10.6.88 marker missing')
 source = source.replace('V10.6.88', 'V10.6.89')
 
-# Use a regex source string that preserves word-boundary and digit escapes.
-# The previous dynamic template form was vulnerable to JavaScript string escape
-# interpretation before the RegExp constructor received the pattern.
 new_count_function = r'''    function getNamedPersonnelCount(
         personnelSegment,
         namePatternSource
@@ -128,9 +125,6 @@ rescue_helpers = r'''    function isRescueSupportRequirement(
                 input
             );
 
-        // Type 75 is Major Foam Tender and type 76 is RIV. Neither may satisfy
-        // a Rescue Support requirement, even when a broad group label contains
-        // the words Fire Engine.
         if (
             typeIdentifiers.includes('75') ||
             typeIdentifiers.includes('76')
@@ -175,8 +169,6 @@ replace_once(
     'Rescue Support strict helpers',
 )
 
-# Rescue Support must use only real vehicle checkboxes. This is added before
-# every broad matching/fallback route so group buttons cannot select an MFT/RIV.
 all_matching_guard = r'''        if (
             isRescueSupportRequirement(
                 originalName,
@@ -252,8 +244,6 @@ replace_once(
     'Rescue Support strict fallback guard',
 )
 
-# Drive Police Officer alerts through the canonical conversion helper so every
-# path has identical ceiling division and metadata.
 police_block_start = '''        // Police Cars normally carry 2 Police Officers.
         const policeOfficersNeeded ='''
 police_block_end = '''        // Coastguard Mud Rescue Units carry 5 Mud Rescue Operators each.'''
