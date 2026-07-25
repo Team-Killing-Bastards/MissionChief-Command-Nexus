@@ -1,4 +1,4 @@
-name: Restore normal Police IRV selection and publish v1.0.24
+name: Build v1.0.24 normal Police IRV corrective branch
 
 on:
   pull_request:
@@ -12,15 +12,14 @@ on:
 permissions:
   contents: write
   pull-requests: write
-  issues: write
 
 concurrency:
-  group: restore-normal-police-irv-v1024
+  group: build-normal-police-irv-v1024
   cancel-in-progress: false
 
 jobs:
-  apply:
-    name: Build and validate v1.0.24
+  build:
+    name: Build, validate and stage v1.0.24
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.head.ref == 'diagnostic/normal-irv-selection'
@@ -75,7 +74,6 @@ jobs:
               'specialist fallback': 'allowProtected: true',
               'selected type-8 count': 'matches = isPoliceCarVehicleCheckbox(input);',
               'live personnel alerts': 'const personnelTextBlocks =',
-              'Police Officer conversion': 'personnelPerVehicle: 2',
               'strict trained IRV': "requirementType:\n                        'police_trained_irv_vehicle'",
           }
           missing = [name for name, token in required.items() if token not in source]
@@ -89,97 +87,58 @@ jobs:
               '    async function prepareTrainedPersonnelRegistryForRows(',
               refresh_start,
           )
-          ordinary_refresh = source[refresh_start:refresh_end]
-          if 'await fetch(' in ordinary_refresh:
+          if 'await fetch(' in source[refresh_start:refresh_end]:
               raise SystemExit('Generic Police attendance still performs assignment-page fetches')
 
           print('Focused v1.0.24 Police IRV and Missing Personnel contracts passed.')
           PY
 
-      - name: Push validated v1.0.24 source
-        id: push
+      - name: Push validated corrective branch
         env:
           GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        shell: bash
-        run: |
-          set +e
-          {
-            git config user.name MartyBlyth
-            git config user.email 32400596+Martyblyth@users.noreply.github.com
-            git add -A
-            git commit -m 'Restore normal Police IRV selection'
-            git fetch origin main --force
-            git rebase origin/main
-            git push origin HEAD:main
-          } > /tmp/v1024-push.log 2>&1
-          status=$?
-          cat /tmp/v1024-push.log
-
-          if [[ ${status} -ne 0 ]]; then
-            {
-              echo 'v1.0.24 passed all validation but the final Git operation failed:'
-              echo '```text'
-              tail -n 100 /tmp/v1024-push.log
-              echo '```'
-            } > /tmp/v1024-push-comment.md
-            gh pr comment "${PR_NUMBER}" \
-              --repo "${GITHUB_REPOSITORY}" \
-              --body-file /tmp/v1024-push-comment.md || true
-            exit "${status}"
-          fi
-
-          echo "commit_sha=$(git rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
-
-  publish:
-    name: Publish, verify and announce v1.0.24
-    needs: apply
-    if: needs.apply.result == 'success'
-    uses: ./.github/workflows/release.yml
-    with:
-      operation: publish-release
-      release_tag: v1.0.24
-      release_notes: Restores normal Police Car and type-8 IRV selection in manual Unit Finder and Auto Mode, uses specialist-trained IRVs only as a final fallback, and restores Police Officer Missing Personnel conversion at two officers per car.
-    secrets: inherit
-
-  finish:
-    name: Close corrective work
-    needs:
-      - apply
-      - publish
-    if: always()
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    steps:
-      - name: Close PR, issue and diagnostic branch
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          TRIGGER_BRANCH: ${{ github.event.pull_request.head.ref }}
-          APPLY_RESULT: ${{ needs.apply.result }}
-          PUBLISH_RESULT: ${{ needs.publish.result }}
+          DIAGNOSTIC_PR: ${{ github.event.pull_request.number }}
+          RELEASE_BRANCH: release/v1.0.24-police-irv
         shell: bash
         run: |
           set -euo pipefail
+          git config user.name MartyBlyth
+          git config user.email 32400596+Martyblyth@users.noreply.github.com
+          git add -A
+          git commit -m 'Restore normal Police IRV selection'
+          git push --force origin "HEAD:refs/heads/${RELEASE_BRANCH}"
 
-          if [[ "${APPLY_RESULT}" == "success" && "${PUBLISH_RESULT}" == "success" ]]; then
-            gh pr close "${PR_NUMBER}" \
-              --repo "${GITHUB_REPOSITORY}" \
-              --comment 'v1.0.24 validated and pushed to main. GitHub release published, Greasy Fork source parity verified and Discord notified.'
+          cat > /tmp/v1024-pr-body.md <<'PRBODY'
+          ## Normal Police IRV corrective release
 
-            gh issue close 115 \
-              --repo "${GITHUB_REPOSITORY}" \
-              --comment 'Fixed in v1.0.24: Missing Personnel Police Officers converts at two officers per Police Car, including with the live requirements panel present. Generic type-8 IRV selection is also restored with ordinary-first and specialist-fallback ordering.' || true
+          - Restores type-8 Incident Response Vehicle / Police Car selection in manual Unit Finder and Auto Mode.
+          - Prefers verified ordinary IRVs, then unknown/stale IRVs, with specialist-trained IRVs as a final fallback.
+          - Counts every selected exact type-8 IRV toward generic Police attendance.
+          - Restores `Missing Personnel: Police Officers` conversion at two officers per Police Car, including while the Live Mission Requirements panel is present.
+          - Keeps Inspector, Police Medic, Public Order, Railway Police and other named trained requirements strict and live-verified.
+          - Adds a permanent Police IRV regression check and passes complete userscript, iOS, lifecycle and repository validation.
+          PRBODY
 
-            git ls-remote --exit-code --heads \
-              "https://github.com/${GITHUB_REPOSITORY}.git" \
-              "refs/heads/${TRIGGER_BRANCH}" >/dev/null 2>&1 && \
-              gh api --method DELETE \
-                "repos/${GITHUB_REPOSITORY}/git/refs/heads/${TRIGGER_BRANCH}" || true
-          else
-            gh pr comment "${PR_NUMBER}" \
+          PR_URL="$(
+            gh pr list \
               --repo "${GITHUB_REPOSITORY}" \
-              --body "v1.0.24 pipeline stopped. Build result: ${APPLY_RESULT}; publication result: ${PUBLISH_RESULT}."
-            exit 1
+              --head "${RELEASE_BRANCH}" \
+              --base main \
+              --state open \
+              --json url \
+              --jq '.[0].url // empty'
+          )"
+
+          if [[ -z "${PR_URL}" ]]; then
+            PR_URL="$(
+              gh pr create \
+                --repo "${GITHUB_REPOSITORY}" \
+                --base main \
+                --head "${RELEASE_BRANCH}" \
+                --title 'Restore normal Police IRV selection' \
+                --body-file /tmp/v1024-pr-body.md 2>/dev/null || true
+            )"
           fi
+
+          gh pr comment "${DIAGNOSTIC_PR}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --body "v1.0.24 passed all validation and was pushed to \`${RELEASE_BRANCH}\`. Corrective PR: ${PR_URL:-https://github.com/${GITHUB_REPOSITORY}/compare/main...${RELEASE_BRANCH}?expand=1}"
