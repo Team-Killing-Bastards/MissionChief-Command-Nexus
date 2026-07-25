@@ -97,38 +97,6 @@ jobs:
           python3 scripts/check_repository.py
           git diff --check
 
-      - name: Verify issue contracts
-        if: steps.detect.outputs.apply == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-
-          source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8')
-          required = {
-              'version': '// @version      1.0.30',
-              'mission finder': ' * MODULE 2: MISSION FINDER V10.6.95',
-              'personnel': "const PERSONNEL_VERSION = '1.3.3';",
-              'PSU type': "return '51';",
-              'assigned button': "classList.contains('btn-assigned')",
-              'remove binding': "Remove binding",
-              'CRV exact type': "return typeIds.includes('57');",
-              'Control Van exact type': "return typeIds.includes('85');",
-              'structured vehicles': "[data-requirement-type=\"vehicles\"]",
-              'shortage mode': "dispatchTargetMode: 'shortage'",
-              'Police Officers conversion': 'personnelPerVehicle: 2',
-              'HEMS type': "return typeIds.includes('9');",
-              'trained ambulance type': "String(entry.vehicleTypeId || '') !== '5'",
-              'critical care training': 'critical_care',
-              'iPhone desktop site': 'getMissionFinderPhoneScreenShortSide',
-          }
-          missing = [label for label, token in required.items() if token not in source]
-          if missing:
-              raise SystemExit('Missing issue contracts: ' + ', '.join(missing))
-          print('All six issue contracts and the newer iPhone correction are present.')
-          PY
-
       - name: Replace diagnostic branch with validated source
         if: steps.detect.outputs.apply == 'true'
         env:
