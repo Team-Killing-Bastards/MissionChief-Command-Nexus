@@ -63,26 +63,46 @@ jobs:
           git rm -f .github/workflows/temporary-export-current-source.yml
           git diff --check
 
-      - name: Validate complete repository
-        shell: bash
+      - name: Validate JavaScript and version contract
         run: |
-          set -euo pipefail
           node --check src/missionchief-command-nexus.user.js
           node --check scripts/check-missing-requirements-priority.mjs
           node --check scripts/check-release-notification-single-delivery.mjs
           node scripts/validate-userscript.mjs
           node scripts/validate-userscript.mjs --base-ref origin/main
-          node scripts/check-ios-compatibility.mjs
-          node scripts/check-runtime-hardening.mjs
-          node scripts/check-police-irv-fallback.mjs
-          node scripts/check-ios-unit-finder-selection.mjs
-          node scripts/check-ios-mission-requirements-source.mjs
-          node scripts/check-iphone-mission-ui.mjs
-          node scripts/check-open-issues-batch.mjs
-          node scripts/check-missing-requirements-priority.mjs
-          node scripts/check-release-notification-single-delivery.mjs
-          python3 scripts/check_repository.py
-          git diff --check
+
+      - name: Validate iOS compatibility contracts
+        run: node scripts/check-ios-compatibility.mjs
+
+      - name: Validate runtime hardening contracts
+        run: node scripts/check-runtime-hardening.mjs
+
+      - name: Validate Police IRV fallback contracts
+        run: node scripts/check-police-irv-fallback.mjs
+
+      - name: Validate iOS Unit Finder contracts
+        run: node scripts/check-ios-unit-finder-selection.mjs
+
+      - name: Validate iOS mission source contracts
+        run: node scripts/check-ios-mission-requirements-source.mjs
+
+      - name: Validate iPhone Mission Finder UI contracts
+        run: node scripts/check-iphone-mission-ui.mjs
+
+      - name: Validate prior open-issue fixes
+        run: node scripts/check-open-issues-batch.mjs
+
+      - name: Validate missing-requirements priority contracts
+        run: node scripts/check-missing-requirements-priority.mjs
+
+      - name: Validate single-delivery Discord release contracts
+        run: node scripts/check-release-notification-single-delivery.mjs
+
+      - name: Validate repository integrity
+        run: python3 scripts/check_repository.py
+
+      - name: Validate patch whitespace
+        run: git diff --check
 
       - name: Verify focused v1.0.35 contracts
         shell: bash
