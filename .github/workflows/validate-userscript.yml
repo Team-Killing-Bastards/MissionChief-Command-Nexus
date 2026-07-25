@@ -12,6 +12,7 @@ on:
       - 'scripts/check-ios-mission-requirements-source.mjs'
       - 'scripts/check-iphone-mission-ui.mjs'
       - 'scripts/check-open-issues-batch.mjs'
+      - 'scripts/check-missing-requirements-priority.mjs'
       - '.github/workflows/validate-userscript.yml'
   push:
     branches:
@@ -26,6 +27,7 @@ on:
       - 'scripts/check-ios-mission-requirements-source.mjs'
       - 'scripts/check-iphone-mission-ui.mjs'
       - 'scripts/check-open-issues-batch.mjs'
+      - 'scripts/check-missing-requirements-priority.mjs'
       - '.github/workflows/validate-userscript.yml'
   workflow_dispatch:
 
@@ -79,6 +81,9 @@ jobs:
 
       - name: Validate current open issue batch contracts
         run: node scripts/check-open-issues-batch.mjs
+
+      - name: Validate current missing-requirements priority contracts
+        run: node scripts/check-missing-requirements-priority.mjs
 
       - name: Require a version increase when code changes
         if: github.event_name == 'pull_request'
