@@ -26,6 +26,27 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Consolidate the two retained control surfaces into one coherent interface.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
+## [1.0.28] - 2026-07-25
+
+### Fixed
+
+- Completed the iPhone Safari mission-interface redesign by taking ownership of MissionChief's native `a[search_attribute]` unit quick-selection matrix, which remained desktop-sized after `v1.0.27`.
+- The native search field, wrapped service tabs and three-column unit matrix are now discovered in the same active mission document that renders them, including same-origin mission iframes and lightboxes.
+- Added one compact **Unit Quick Select** disclosure that defaults collapsed on iPhone. Expanding it reveals a single horizontally scrolling category strip and a readable two-column internally scrolling unit grid.
+- Native quick-select anchors are styled in place. Their original `search_attribute`, colours, counts, text and MissionChief click handlers are not cloned, moved or replaced.
+
+### Lifecycle and compatibility
+
+- Added bounded initial retries for mission iframe load timing and reuse of the existing filtered/coalesced Mission Finder mutation observer when the native selector matrix is replaced.
+- Native picker classes, disclosure controls, document-local styles and retry timers now have deterministic mission-close, unload and bfcache reconciliation paths.
+- The native picker stylesheet is injected into the document that owns the controls rather than only the top page.
+- The correction remains strictly limited to iPhone/iPod Safari. iPad Safari, iPad desktop-site mode, desktop browsers, other iOS browsers and native webviews remain unchanged.
+- Added permanent regression contracts for cross-document injection, native selector discovery, horizontal categories, two-column layout, collapsed state, mutation resynchronisation and cleanup ownership.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.92` to `V10.6.93`.
+
 ## [1.0.27] - 2026-07-25
 
 ### Changed
