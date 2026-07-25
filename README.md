@@ -1,17 +1,19 @@
 <div align="center">
 
-<img src="docs/media/readme-hero.svg" alt="MissionChief Command Nexus operational control system" width="100%">
+<img src="docs/media/readme-hero.svg" alt="MissionChief Command Nexus operational command system" width="100%">
 
 # MissionChief Command Nexus
 
-### Resource preparation, trained-personnel intelligence, live mission matching, and dispatch—in one MissionChief UK userscript
+### The operational control layer for MissionChief UK
+
+**Prepare resources. Verify capability. Read live demand. Match exactly. Dispatch with control.**
 
 <table>
 <tr>
 <td width="25%" align="center"><a href="https://greasyfork.org/en/scripts/587702-missionchief-command-nexus"><strong>⬇ INSTALL / UPDATE</strong><br><sub>Recommended Greasy Fork route</sub></a></td>
-<td width="25%" align="center"><a href="src/missionchief-command-nexus.user.js"><strong>⌘ VIEW SOURCE</strong><br><sub>Canonical userscript</sub></a></td>
-<td width="25%" align="center"><a href="https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/latest"><strong>◈ LATEST RELEASE</strong><br><sub>Verified source and assets</sub></a></td>
-<td width="25%" align="center"><a href="https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues"><strong>⚠ ISSUES</strong><br><sub>Confirmed gaps and roadmap</sub></a></td>
+<td width="25%" align="center"><a href="src/missionchief-command-nexus.user.js"><strong>⌘ VIEW SOURCE</strong><br><sub>Canonical userscript on main</sub></a></td>
+<td width="25%" align="center"><a href="https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/latest"><strong>◈ LATEST RELEASE</strong><br><sub>Verified assets and checksum</sub></a></td>
+<td width="25%" align="center"><a href="https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues"><strong>⚠ COMMAND QUEUE</strong><br><sub>Bugs, gaps, and roadmap</sub></a></td>
 </tr>
 </table>
 
@@ -20,31 +22,82 @@
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)
 
-[**What it is**](#what-it-is) · [**Install**](#install) · [**Workflows**](#operational-workflows) · [**v1.0.23**](#current-v1023-behaviour) · [**Safety**](#operational-safety) · [**Architecture**](#architecture) · [**Ownership**](#ownership-and-contributions) · [**Release system**](#release-and-quality-system)
+[**Command brief**](#command-brief) · [**Install**](#install-in-60-seconds) · [**Capability matrix**](#capability-matrix) · [**Operational chain**](#operational-chain) · [**Production status**](#current-production-capability) · [**Safety**](#safety-doctrine) · [**Architecture**](#system-architecture) · [**Ownership**](#ownership-and-contribution-record) · [**Release control**](#release-control)
 
 </div>
 
 ---
 
-## What it is
+## Command brief
 
-MissionChief Command Nexus unifies two established MartyBlyth systems into one maintained installation:
+MissionChief Command Nexus combines two proven MartyBlyth systems into one maintained MissionChief UK installation:
 
-- **Mission Finder** — mission requirements, trained-personnel matching, vehicle selection, Mission Update, Auto Mode, dispatch, upgrades, and continuation.
-- **Unit, Station & Personnel Tools** — station naming, vehicle naming, personnel assignment, training intelligence, and operational reporting.
+<table>
+<tr>
+<td width="50%" valign="top">
+
+### 🛰️ Mission Operations Engine
+
+- Live mission-requirement interpretation
+- Complete vehicle-list loading
+- Exact vehicle and trained-personnel matching
+- Unit Finder and Mission Update
+- Auto Mode, dispatch, upgrades, and continuation
+- Patient, prisoner, and transport handling
+
+</td>
+<td width="50%" valign="top">
+
+### 🧭 Resource Administration Engine
+
+- Station and vehicle naming
+- Personnel Assignment planning
+- Preview and controlled Live modes
+- Build Personnel Register
+- Verified training-capability intelligence
+- Progress, reporting, persistence, and cleanup
+
+</td>
+</tr>
+</table>
+
+The two engines remain deliberately isolated at runtime, but they share one critical operational contract: the **verified vehicle-training register**.
 
 ```text
-Stations → Vehicles → Personnel → Training Capability → Live Mission Demand → Selection → Dispatch
+STATIONS
+   ↓
+VEHICLES
+   ↓
+ASSIGNED PERSONNEL
+   ↓
+VERIFIED TRAINING CAPABILITY
+   ↓
+LIVE MISSION DEMAND
+   ↓
+EXACT RESOURCE MATCHING
+   ↓
+CONTROLLED DISPATCH
 ```
 
-The distributed product is one `.user.js` file with one metadata block and one installation guard. Internally, the two mature runtime engines remain deliberately separated so resource administration and mission operations can initialise, fail, and clean up independently.
-
-Their primary shared contract is the **vehicle-training register**. The administration engine can verify exactly which personnel are assigned to each vehicle; the mission engine can then select specialist capability using vehicle identity and evidence rather than a display name alone.
+This is not a loose bundle of buttons. It is a connected operational chain from resource preparation to mission completion.
 
 > [!IMPORTANT]
-> **MartyBlyth remains the creator, principal userscript author, technical owner, and release authority.** **Conroy1988 supports repository infrastructure, documentation, validation, and general project operations. After identifying the Safari compatibility gap on the iPhone and iPad devices he uses, Conroy asked Marty for permission to contribute, then initiated, designed, and implemented the v1.0.15 iOS Safari compatibility layer, the v1.0.16 station-workflow hardening for the shared Unit, Station and Personnel menu, and the v1.0.18 iOS Safari Mission Control layout for the dispatch screen.** This scoped contribution does not change the project's overall ownership or release authority.
+> **MartyBlyth is the creator, principal userscript author, technical owner, and release authority.** Command Nexus remains **MartyBlyth's project**. **Conroy1988 is the project helper** for repository infrastructure, documentation, validation, and general operations; after identifying the mobile workflow gap, he requested Marty's permission and independently initiated, designed, and implemented the scoped **iOS Safari compatibility** work delivered across v1.0.15-v1.0.18. That contribution does not change the project's overall ownership.
 
-## Install
+## Why Command Nexus exists
+
+<table>
+<tr>
+<td width="25%" align="center"><strong>ONE INSTALLATION</strong><br><sub>One metadata block, one supported update route, one combined guard</sub></td>
+<td width="25%" align="center"><strong>TWO PROVEN ENGINES</strong><br><sub>Independent failure boundaries with a shared operational contract</sub></td>
+<td width="25%" align="center"><strong>VERIFIED INTELLIGENCE</strong><br><sub>Vehicle identity and personnel evidence—not display-name guesswork</sub></td>
+<td width="25%" align="center"><strong>FAIL-CLOSED CONTROL</strong><br><sub>Incomplete, stale, or unsafe states block rather than improvise</sub></td>
+</tr>
+</table>
+
+Command Nexus is designed for players who operate at scale and need repeatable resource preparation, specialist staffing intelligence, live mission interpretation, and controlled automation without running multiple overlapping scripts.
+
+## Install in 60 seconds
 
 1. Install **Tampermonkey** or **Violentmonkey**.
 2. Open [MissionChief Command Nexus on Greasy Fork](https://greasyfork.org/en/scripts/587702-missionchief-command-nexus).
@@ -55,27 +108,27 @@ Their primary shared contract is the **vehicle-training register**. The administ
 5. Reload MissionChief.
 
 > [!WARNING]
-> Keep **one active Command Nexus installation only**. Both legacy engines are already included and must not run beside the combined userscript.
+> Keep **one active Command Nexus installation only**. The combined userscript already contains both operational engines. Running legacy copies beside it can create duplicate interfaces, observers, selections, or dispatch behaviour.
 
-The canonical source is [`src/missionchief-command-nexus.user.js`](src/missionchief-command-nexus.user.js) on `main`. Greasy Fork remains the supported public update channel.
+The canonical source is [`src/missionchief-command-nexus.user.js`](src/missionchief-command-nexus.user.js) on `main`. Greasy Fork is the supported public installation and update channel.
 
-## Operational workflows
+## Capability matrix
 
-### Resource administration
+### Resource command
 
-| Area | Current behaviour |
+| Capability | Operational behaviour |
 |---|---|
-| **Station naming** | Generates and previews structured station names from available station and location data |
+| **Station naming** | Builds and previews structured station names from available station and location data |
 | **Vehicle naming** | Applies repeatable captions and numbering across supported station and vehicle types |
-| **Scoped batch processing** | Operates on a chosen station scope with progress, pause, resume, and stop controls where supported |
+| **Scoped processing** | Operates on a selected station scope with progress, pause, resume, and stop controls where supported |
 | **Personnel Assignment** | Finds trained personnel, plans eligible assignments, supports Preview and Live modes, and verifies submitted changes |
-| **Build Personnel Register** | Reads each discovered vehicle's assignment page without changing assignments |
-| **Training register** | Stores exact verified vehicle/personnel capability for specialist mission matching |
-| **Reporting** | Separates changed, skipped, failed, unfilled, and genuine training-shortage outcomes |
+| **Build Personnel Register** | Reads each discovered vehicle assignment page without changing assignments |
+| **Training intelligence** | Stores exact verified vehicle/personnel capability for specialist mission matching |
+| **Operational reporting** | Separates changed, skipped, failed, unfilled, and genuine training-shortage outcomes |
 
-### Mission operations
+### Mission command
 
-| Area | Current behaviour |
+| Capability | Operational behaviour |
 |---|---|
 | **Unit Finder** | Reads current mission demand and selects mapped vehicles and trained personnel |
 | **Mission Update / Upgrade** | Re-reads live requirements and adds only the remaining actionable shortage |
@@ -85,7 +138,17 @@ The canonical source is [`src/missionchief-command-nexus.user.js`](src/missionch
 | **Continuation** | Handles upgrades, queue progression, unattended recovery, and patient/prisoner transport controls |
 | **Diagnostics** | Records completed, skipped, blocked, and failed outcomes while guarding against stale missions and repeated dispatch |
 
-### Complete vehicle-list loading
+## Operational chain
+
+### 1. Build trustworthy resource data
+
+Resource Administration discovers stations and vehicles, reads assignment pages, and records verified capability. Naming and assignment workflows can be previewed before writes are made.
+
+### 2. Read the mission that exists now
+
+Mission Operations prioritises the visible Live Mission Requirements panel when it is available. Static mission-help data is retained as a fallback—not allowed to overwrite newer live demand.
+
+### 3. Load the complete candidate pool
 
 Before Unit Finder, Mission Update, or Auto Mode selects resources, Command Nexus:
 
@@ -98,7 +161,24 @@ Before Unit Finder, Mission Update, or Auto Mode selects resources, Command Nexu
 
 This prevents selection against a partial MissionChief vehicle table.
 
-## Current v1.0.23 behaviour
+### 4. Match capability—not merely labels
+
+Specialist decisions can use vehicle IDs, assignment-page evidence, the verified training register, current mission ownership, patient state, transport state, and current selections.
+
+### 5. Confirm before dispatch
+
+Auto Mode validates readiness and final selected-unit state before dispatch. Cross-mission drift, stale demand, incomplete evidence, and repeat-dispatch conditions are treated as blockers.
+
+## Current production capability
+
+### Runtime hardening
+
+- Permanent userscript observers were reduced from three to two.
+- Resource Administration now uses one filtered and animation-frame-coalesced lifecycle controller instead of two broad iOS observers.
+- Mission Finder ignores mutations generated by its own interface unless they represent a genuine wrapper lifecycle event.
+- Safari bfcache entry preserves the runtime; genuine unload performs deterministic cleanup.
+- Global registry, pagehide, pageshow, viewport, navigation, and observer ownership have explicit teardown paths.
+- Permanent CI protects the runtime-hardening contracts from regression.
 
 ### Seasonal mission collectibles
 
@@ -106,105 +186,80 @@ This prevents selection against a partial MissionChief vehicle table.
 - The current summer sunflower item is covered, including mission pages rendered inside same-origin lightboxes and iframes.
 - Collection adds no new DOM observer and uses bounded duplicate-request protection.
 
-### Verified Fire training profiles
+### Verified Fire capability
 
 - Railway Fire: 2 trained personnel per exact type-107 RRU.
 - Level 1 Incident Commander: 3 trained personnel per exact type-15 ICCU.
 - HazMat Unit: 3 trained personnel per exact type-39 Fire OSU.
-- BASU, Welfare and HazMat reuse one selected Fire OSU; type-86 SAR vans remain separate.
-- `Fire, rescue or aerial appliance` requirements map to `Rescue Pump`.
-- `Road Rail Unit` requirements map to `RRU`.
-- `Firefighters` requirements convert to Rescue Pumps at 9 personnel per vehicle.
+- BASU, Welfare, and HazMat reuse one selected Fire OSU; type-86 SAR vans remain separate.
+- `Fire, rescue or aerial appliance` maps to `Rescue Pump`.
+- `Road Rail Unit` maps to `RRU`.
+- `Firefighters` converts to Rescue Pumps at 9 personnel per vehicle.
 - `Car Recovery` maps to the existing Flatbed Recovery Vehicle.
 - `RIV or Major Foam Tender` uses RIV first and Major Foam Tender only when no RIV is available.
 
-High Volume Pump, Drone Operator, Co-Responder and Lifeguard remain disabled pending later evidence.
+High Volume Pump, Drone Operator, Co-Responder, and Lifeguard remain disabled pending sufficient evidence.
 
-### iOS Safari website menus
+### Live requirements authority
 
-The shared Resource Administration panel and the Mission Control dispatch panel now use dedicated layouts on the MissionChief website in Safari on iPhone and iPad.
-
-- Responsive station-list markup is recognised without weakening the desktop station-page guard.
-- Unit Naming, Station Naming, Personnel Assignment and Build Personnel Register all use the same responsive station discovery layer.
-- Exactly one Command Nexus administration menu is retained after duplicate injection, Safari bfcache restoration or page-fragment replacement.
-- On iOS Safari, Resource Administration is visible only on the rendered personal Stations view; Map, Missions, Chat and Radio hide the same panel instance and returning to Stations restores it without duplicate observers or listeners.
-- Responsive `Details` links fall back to a hidden same-origin station iframe when MissionChief's desktop lightbox binding is unavailable, preventing navigation away from the Stations tab.
-- The Resource Administration panel uses Safari safe-area insets, touch scrolling and pointer dragging.
-- Mission Control opens at the safe-area top instead of the centre of the dispatch screen, stacks its panels to the mobile viewport width and keeps long content internally scrollable.
-- Mission Control has a horizontal chevron collapse control; the Vehicle Load List defaults collapsed on first iOS Safari use and can be expanded independently.
-- Mission Control supports pointer dragging and visual-viewport repositioning after Safari address-bar changes, rotation and bfcache restoration.
-- Mission Finder preserves its runtime across Safari bfcache entry, filters mutations generated by its own interface and deterministically removes global listeners on genuine unload.
-- Desktop Mission Control dimensions, saved coordinates, centring and mouse dragging remain on the existing desktop code path.
-- iPad desktop-site mode is recognised through touch-capable `MacIntel` detection.
-- Chrome, Firefox, Edge and native iOS webview/app wrappers are not treated as Safari website sessions.
-
-> [!NOTE]
-> This compatibility work was initiated, designed, and implemented by **[Conroy1988](https://github.com/Conroy1988)** after he identified the need in his own iPhone and iPad Safari workflow. Conroy requested permission to contribute and **[MartyBlyth](https://github.com/Martyblyth)** approved the contribution. The underlying Unit, Station and Personnel system and Mission Finder engine remain Marty's work.
-
-### Live requirements are authoritative
-
-When MissionChief exposes the visible Live Mission Requirements panel, Unit Finder and Mission Update treat it as the current authority instead of allowing stale mission-help rows to override the live mission state.
-
-- Numeric `Still Needed` values are direct shortages.
+- Numeric `Still Needed` values are treated as direct shortages.
 - Bounded values such as `0-3` use their upper actionable bound.
 - A literal unknown `?` falls back to `Required` as a total target and deducts existing matching selections.
-- Numeric shortages are **not** reduced a second time by vehicles already selected.
+- Numeric shortages are not reduced a second time by vehicles already selected.
 - Successful selection clicks are included in final confirmation.
 - Static mission-help remains a fallback only when no usable live requirements panel exists.
 
-This prevents cases such as an old Major Foam Tender row replacing a current Rescue Support Vehicle demand, or a one-unit shortage producing a false two-unit warning.
-
-### Police and trained-personnel matching
+### Police, rescue, maritime, and medical handling
 
 - Ordinary Police attendance is protected from unnecessarily consuming specialist IRVs.
 - Police Officer upgrade rows convert at two officers per normal Police IRV.
 - Police Medic and Railway Police requirements use exact trained personnel where mapped.
 - Armed Personnel and Armed Response Personnel route to exact type-25 Armed Traffic Cars.
 - Armed Traffic Car selection verifies Roads Policing plus Firearms capability.
-- The preferred policy is two qualifying personnel, with the implemented bounded fallback preserved where applicable.
-
-### Fire, rescue, maritime, and medical handling
-
 - Generic type-66 `4x4 Vehicle` matching is restored.
 - SAR Commander demand converts to Control Van capability.
 - `Operational Support or SAR Vehicle` selects and verifies the exact type-86 Operational Support Van.
 - Seagoing Vessel requirements recognise supported ALB / ABL / All-weather Lifeboat variants.
 - ATV Carrier matching uses authoritative vehicle type `30` without confusing it with Armed Traffic Cars.
 - Patient and ambulance demand is reconciled across repeated selection passes.
-- Live mission upgrades are re-read before additional vehicles are selected.
 
-### Personnel intelligence
+## Platform matrix
 
-- Build Personnel Register scans every discovered station type and vehicle individually.
-- Each vehicle's own assignment page is read before capability is recorded.
-- Register building is read-only.
-- Personnel Assignment retains controlled Preview and Live workflows for implemented profiles.
-- Structurally incomplete specialist evidence fails closed rather than authorising a guessed selection.
+| Environment | Status | Notes |
+|---|---|---|
+| **Desktop browser** | Primary | Full Resource Administration and Mission Operations target |
+| **iPhone Safari website** | Supported surfaces | Dedicated Resource Administration and Mission Control layouts |
+| **iPad Safari website** | Supported surfaces | Includes touch-capable `MacIntel` desktop-site detection |
+| **Chrome / Firefox / Edge on iOS** | Not treated as Safari | Safari-specific compatibility paths remain isolated |
+| **MissionChief native app / webview** | Not treated as Safari website | Native wrappers are outside the documented Safari website scope |
+| **Other Mission Finder surfaces on mobile** | Desktop-first | Supported only where explicitly documented |
 
-## Known limitations
+### iOS Safari command surfaces
 
-Command Nexus is operational software, not a claim that every MissionChief UK vehicle, training course, mission, or markup variant is fully mapped.
+- Responsive station-list markup is recognised without weakening the desktop station-page guard.
+- Unit Naming, Station Naming, Personnel Assignment, and Build Personnel Register share one responsive station-discovery layer.
+- Resource Administration appears only on the rendered personal Stations view; Map, Missions, Chat, and Radio hide the same stateful panel instance.
+- Responsive `Details` links can use a hidden same-origin station iframe when the desktop lightbox binding is unavailable.
+- Resource Administration uses safe-area insets, touch scrolling, pointer dragging, and deterministic cleanup.
+- Mission Control opens at the safe-area top, stacks to the mobile viewport, scrolls internally, and supports independent collapse controls.
+- Safari address-bar changes, rotation, history restoration, and bfcache restoration trigger bounded viewport reconciliation.
 
-| Limitation | Current position |
-|---|---|
-| **Country coverage** | MissionChief UK only |
-| **Primary environment** | Desktop remains the principal operating target; the shared administration menu and Mission Control dispatch panel now have dedicated MissionChief website layouts in Safari on iPhone and iPad |
-| **Training profiles** | Remaining Medical, Fire, Airfield, SAR, Mountain Rescue, and Coastguard profiles are tracked through issues |
-| **External requirements data** | Some Fire specialist logic remains dependent on stable requirement data exposed by MissionChief or compatible panels |
-| **PSU assignment priority** | Nine-seat Police Support Unit preference remains tracked work |
-| **Interface consolidation** | One installation still contains two retained operational control surfaces |
-| **Mobile and Safari** | iOS Safari website support covers the shared administration menu and the Mission Control dispatch panel; other Mission Finder surfaces remain desktop-first unless separately documented |
-| **Live-game variability** | MissionChief markup and labels can change independently of this repository |
+> [!NOTE]
+> The iOS Safari compatibility work was initiated, designed, and implemented by **[Conroy1988](https://github.com/Conroy1988)** after he identified the need in his own iPhone and iPad workflow. He requested permission to contribute and **[MartyBlyth](https://github.com/Martyblyth)** approved the scoped contribution. The underlying Unit, Station & Personnel system and Mission Finder engine remain Marty's work.
 
-Use the [issue tracker](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues) as the authoritative development queue.
+## Safety doctrine
 
-## Operational safety
+Command Nexus can rename account resources, change personnel assignments, select vehicles, and dispatch missions. It must be operated as controlled automation.
 
-Command Nexus can make bulk account changes and can select and dispatch vehicles. Use it as controlled automation.
+<table>
+<tr>
+<td width="33%" valign="top"><strong>PREVIEW FIRST</strong><br><sub>Inspect naming and personnel-assignment plans before enabling writes.</sub></td>
+<td width="33%" valign="top"><strong>VERIFY EVIDENCE</strong><br><sub>Refresh the Personnel Register before depending on specialist capability.</sub></td>
+<td width="33%" valign="top"><strong>FAIL CLOSED</strong><br><sub>Unsupported, stale, partial, or structurally incomplete demand must block.</sub></td>
+</tr>
+</table>
 
-- Use **Preview** before naming or personnel-assignment writes.
 - Test a small station scope before a large batch.
-- Refresh the Personnel Register before relying on specialist matching.
 - Observe Auto Mode on representative missions before unattended use.
 - Treat unsupported demand and staffing shortages as blocking conditions.
 - Stop and report cross-mission selection, repeated dispatch, or incorrect personnel assignment.
@@ -217,92 +272,120 @@ https://www.missionchief.co.uk/*
 https://police.missionchief.co.uk/*
 ```
 
-## Architecture
+## Known limitations
+
+Command Nexus is operational software, not a claim that every MissionChief UK vehicle, course, mission, or markup variant is fully mapped.
+
+| Limitation | Current position |
+|---|---|
+| **Country coverage** | MissionChief UK only |
+| **Training profiles** | Remaining Medical, Fire, Airfield, SAR, Mountain Rescue, and Coastguard profiles are tracked through issues |
+| **External requirements data** | Some specialist logic depends on stable requirement data exposed by MissionChief or compatible panels |
+| **PSU assignment priority** | Nine-seat Police Support Unit preference remains tracked work |
+| **Interface consolidation** | One installation still contains two retained operational control surfaces |
+| **Mobile coverage** | Dedicated iOS Safari support covers Resource Administration and Mission Control; other surfaces remain desktop-first unless documented |
+| **Live-game variability** | MissionChief markup, labels, routes, and mission data can change independently of this repository |
+
+Use the [issue tracker](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues) as the authoritative development queue.
+
+## System architecture
 
 ```text
-MissionChief Command Nexus
+MISSIONCHIEF COMMAND NEXUS
 │
-├── One metadata block and combined installation guard
+├── Combined userscript metadata and installation guard
 │
-├── Resource Administration Engine
+├── RESOURCE ADMINISTRATION ENGINE
 │   ├── Station and vehicle naming
 │   ├── Personnel Assignment
 │   ├── Build Personnel Register
-│   ├── Training profiles and assignment scans
-│   └── Reports, persistence, and cleanup
+│   ├── Verified training profiles
+│   ├── Reports, persistence, and bounded cleanup
+│   └── iOS Safari Stations lifecycle controller
 │
-├── Shared verified vehicle-training register
+├── SHARED VEHICLE-TRAINING REGISTER
+│   └── Exact vehicle identity + assigned personnel capability
 │
-└── Mission Operations Engine
-    ├── Live requirement and patient parsing
+└── MISSION OPERATIONS ENGINE
+    ├── Live requirements and patient parsing
     ├── Complete vehicle-list loading
     ├── Exact vehicle and trained-personnel matching
     ├── Unit Finder and Mission Update
     ├── Auto Mode, dispatch, and sharing
-    └── Upgrades, queue, and transport continuation
+    ├── Upgrades, queues, collectibles, and transport continuation
+    └── Mutation filtering, bfcache preservation, and lifecycle teardown
 ```
+
+The separation is deliberate: a startup or runtime fault in one engine should not silently destroy the other. The shared register is the bridge, not a forced merge of mature internal systems.
 
 See [Architecture](docs/ARCHITECTURE.md) and [Developer Handoff](docs/DEVELOPER_HANDOFF.md) for deeper engineering detail.
 
-## Ownership and contributions
-
-Command Nexus remains **MartyBlyth's project**. Contributions are attributed at feature level so the repository records who delivered each piece of work without collapsing the project's ownership boundary.
-
-| Contributor | Role and responsibility |
-|---|---|
-| **[MartyBlyth](https://github.com/Martyblyth)** | Creator and technical owner; original author of Mission Finder and the Unit, Station & Personnel systems; principal userscript development, technical direction, release decisions, and ongoing feature authority |
-| **[Conroy1988](https://github.com/Conroy1988)** | Project helper for repository infrastructure, documentation, validation, and general operations; independently initiated the iOS Safari compatibility work, obtained Marty's permission to contribute, and designed and implemented the scoped v1.0.15 compatibility layer, the v1.0.16 station-workflow hardening and the v1.0.18 Mission Control iOS Safari layout |
-
-## Release and quality system
+## Release control
 
 ```text
-Focused source change
-        ↓
-Version and changelog update
-        ↓
-Pull request validation
-        ↓
-Merge to canonical main
-        ↓
-Unpublished-version detection
-        ↓
-Recoverable GitHub Release publication
-        ↓
-Asset download and SHA-256 verification
-        ↓
-GitHub source / release / Greasy Fork parity
-        ↓
-Discord release announcement
+FOCUSED CHANGE
+      ↓
+VERSION + CHANGELOG CONTRACT
+      ↓
+PULL REQUEST VALIDATION
+      ↓
+CANONICAL MAIN
+      ↓
+IMMUTABLE TAG + GITHUB RELEASE
+      ↓
+ASSET + SHA-256 VERIFICATION
+      ↓
+GITHUB / RELEASE / GREASY FORK SOURCE PARITY
+      ↓
+COMMAND NEXUS RELEASE CONTROL DISCORD ANNOUNCEMENT
 ```
 
 Repository validation covers:
 
 - JavaScript syntax;
 - userscript metadata and version consistency;
+- iOS Safari compatibility contracts;
+- runtime performance and lifecycle ownership contracts;
 - required repository and policy files;
-- README links, anchors, artwork, and badges;
-- ownership and attribution requirements;
-- release assets and checksum verification; and
-- recovery from partial, empty, starter, or mismatched release assets.
+- README links, anchors, artwork, and GitHub-native badges;
+- Marty ownership and scoped contribution attribution;
+- release assets and SHA-256 verification; and
+- recovery from partial, empty, starter, or mismatched releases.
 
-Discord is notified only after the release, immutable GitHub source, and Greasy Fork source satisfy the release contract.
+Discord is notified only after the immutable GitHub source, release asset, checksum, and Greasy Fork source satisfy the release contract.
+
+## Ownership and contribution record
+
+Command Nexus remains **MartyBlyth's project**. Feature-level attribution records who delivered specific work without collapsing the project's ownership boundary.
+
+| Contributor | Role and responsibility |
+|---|---|
+| **[MartyBlyth](https://github.com/Martyblyth)** | Creator, principal userscript author, technical owner, and release authority; original author of Mission Finder and the Unit, Station & Personnel systems; responsible for technical direction, release decisions, and ongoing feature authority |
+| **[Conroy1988](https://github.com/Conroy1988)** | Project helper for repository infrastructure, documentation, validation, and general operations; independently initiated the scoped iOS Safari work, obtained Marty's permission, and designed and implemented the v1.0.15 compatibility layer, v1.0.16 station-workflow hardening, and v1.0.18 Mission Control Safari layout |
 
 ## Development and support
 
 | Destination | Purpose |
 |---|---|
 | [Greasy Fork](https://greasyfork.org/en/scripts/587702-missionchief-command-nexus) | Supported installation and updates |
-| [Latest release](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/latest) | Verified release assets |
+| [Latest release](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/latest) | Verified source, release assets, and checksum |
 | [Issues](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues) | Bugs, limitations, and planned work |
-| [Changelog](CHANGELOG.md) | Version history |
+| [Changelog](CHANGELOG.md) | Version history and mission briefs |
 | [Architecture](docs/ARCHITECTURE.md) | Runtime and integration design |
+| [Testing](docs/TESTING.md) | Compatibility and release-blocking validation |
+| [Roadmap](docs/ROADMAP.md) | Planned development phases |
 | [Developer Handoff](docs/DEVELOPER_HANDOFF.md) | Current source-development context |
+| [Support](SUPPORT.md) | Support scope and reporting guidance |
 
 <div align="center">
+
+---
 
 ### One installation. Two proven engines. One operational chain.
 
 **Created and technically owned by [MartyBlyth](https://github.com/Martyblyth).**  
-Repository infrastructure, documentation, validation, and the independently initiated v1.0.15-v1.0.18 iOS Safari compatibility work by [Conroy1988](https://github.com/Conroy1988), contributed with Marty's permission.
+Repository infrastructure, documentation, validation, and the independently initiated v1.0.15-v1.0.18 iOS Safari compatibility contribution by [Conroy1988](https://github.com/Conroy1988), delivered with Marty's permission.
+
+**MissionChief Command Nexus — prepare with intelligence, dispatch with control.**
 
 </div>
