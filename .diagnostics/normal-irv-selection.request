@@ -12,3 +12,4 @@ Create the workflow-independent validated source commit receipt.
 Trigger the clean v1.0.24 release tag launcher.
 Run the corrected GitHub, Greasy Fork and Discord delivery verifier.
 Capture the current permanent release workflow snapshot.
+Print the permanent v1.0.24 release run and job steps.
