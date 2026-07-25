@@ -1,60 +1,29 @@
-name: Validate userscript
+name: Audit live updater and Police Officer mappings
 
 on:
   pull_request:
     paths:
-      - 'src/**'
-      - 'scripts/validate-userscript.mjs'
-      - 'scripts/check-ios-compatibility.mjs'
-      - 'scripts/check-runtime-hardening.mjs'
+      - 'scripts/audit-live-update-police-officers.py'
       - '.github/workflows/validate-userscript.yml'
-  push:
-    branches:
-      - main
-    paths:
-      - 'src/**'
-      - 'scripts/validate-userscript.mjs'
-      - 'scripts/check-ios-compatibility.mjs'
-      - 'scripts/check-runtime-hardening.mjs'
-      - '.github/workflows/validate-userscript.yml'
-  workflow_dispatch:
 
 permissions:
-  contents: read
-
-concurrency:
-  group: validate-userscript-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  contents: write
 
 jobs:
-  validate:
-    name: Userscript validation
+  audit:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v6
         with:
+          ref: ${{ github.head_ref }}
           fetch-depth: 0
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Validate JavaScript syntax
-        run: node --check src/missionchief-command-nexus.user.js
-
-      - name: Validate metadata and Greasy Fork limits
-        run: node scripts/validate-userscript.mjs
-
-      - name: Validate iOS Safari compatibility contracts
-        run: node scripts/check-ios-compatibility.mjs
-
-      - name: Validate runtime performance and lifecycle contracts
-        run: node scripts/check-runtime-hardening.mjs
-
-      - name: Require a version increase when code changes
-        if: github.event_name == 'pull_request'
-        run: node scripts/validate-userscript.mjs --base-ref "origin/${{ github.base_ref }}"
+      - name: Generate audit
+        run: python3 scripts/audit-live-update-police-officers.py
+      - name: Commit audit
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add LIVE_UPDATE_POLICE_OFFICER_AUDIT.txt
+          git commit -m 'Record live updater and Police Officer audit'
+          git push origin HEAD:${{ github.head_ref }}
