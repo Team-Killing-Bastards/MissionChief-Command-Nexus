@@ -26,6 +26,33 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Consolidate the two retained control surfaces into one coherent interface.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
+## [1.0.32] - 2026-07-25
+
+### Changed
+
+- Replaced the two full-width iPhone Mission Finder header bars with one compact launcher containing exactly **Mission** and **Vehicle** buttons.
+- Both panels start closed. Opening Mission closes Vehicle, opening Vehicle closes Mission, and tapping the active button again closes it.
+- The launcher is positioned from MissionChief's live native `.control-btn-container`, immediately to the left of the visible mission controls rather than from a hard-coded screen offset.
+- Mission Control and Vehicle Load List open below the launcher and remain bounded to the visual viewport and Safari safe area.
+
+### Fixed
+
+- Removed the detached right-side collapse controls and overlapping full-width header layer seen in the supplied iPhone recording.
+- Native Unit Quick Select expansion no longer changes the Command Nexus launcher geometry through the obsolete bars.
+- Launcher active state, `aria-pressed`, `aria-expanded` and `aria-controls` remain synchronized.
+- Modal replacement, visual viewport changes, rotation and Safari page restoration now recalculate launcher placement through the existing bounded lifecycle.
+
+### Compatibility and safety
+
+- The launcher exists only on the established iPhone Safari path, including phone-sized desktop-site sessions.
+- iPad/tablet and all desktop layouts retain the existing Mission Control and Vehicle Load headers and controls.
+- Mission requirements, matching, checkbox selection, dispatch, Mission Update, Ally Steal, Auto Mode, native quick-select controls and Resource Administration logic are unchanged.
+- Added permanent regression checks for exact labels, exclusive panel state, hidden legacy bars, native-control-cluster positioning and mutation/viewport reconciliation.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.96` to `V10.6.97`.
+
 ## [1.0.31] - 2026-07-25
 
 ### Fixed

@@ -10,8 +10,8 @@ src/missionchief-command-nexus.user.js
 
 | Item | Value |
 |---|---|
-| Command Nexus version | `1.0.31` |
-| Mission Finder baseline | `V10.6.96` |
+| Command Nexus version | `1.0.32` |
+| Mission Finder baseline | `V10.6.97` |
 | Unit, Station & Personnel baseline | `V4.2.8` |
 | Licence | MIT |
 | Developer and source-code owner | **MartyBlyth** |
@@ -28,7 +28,7 @@ The file contains:
 3. The Mission Operations Engine.
 4. A shared vehicle-training registry used for qualification-aware selection.
 
-The source is merged and installable. Resource Administration uses one filtered lifecycle controller, remains scoped to the rendered personal Stations view on iOS Safari and preserves the same panel instance across responsive navigation. Mission Finder ignores its own panel mutations, preserves its runtime during Safari bfcache entry and owns every global lifecycle listener. Unit Finder resolves the hidden or visible same-origin Requirements for this Mission source for the exact active mission, validates the `/einsaetze/{missionType}?mission_id={instance}` response, then resolves vehicle controls from the same active mission document and counts a selection only after MissionChief's exact checkbox is confirmed checked. iPhone Safari receives a separate compact Mission Finder command card with collapsed advanced settings and fixed safe-area ownership, including phone-sized Safari desktop-site sessions that identify as `MacIntel`. Mission Control, Vehicle Load List and Unit Quick Select migrate to collapsed defaults, use deterministic disclosure ownership and reserve a pointer-transparent corner for MissionChief's native mission-close control. The active mission document also receives an in-place compact native Unit Quick Select disclosure for its `search_attribute` controls, including same-origin iframe/lightbox documents, while iPad and desktop retain their established dimensions, dragging, saved positioning and interaction model.
+The source is merged and installable. Resource Administration uses one filtered lifecycle controller, remains scoped to the rendered personal Stations view on iOS Safari and preserves the same panel instance across responsive navigation. Mission Finder ignores its own panel mutations, preserves its runtime during Safari bfcache entry and owns every global lifecycle listener. Unit Finder resolves the hidden or visible same-origin Requirements for this Mission source for the exact active mission, validates the `/einsaetze/{missionType}?mission_id={instance}` response, then resolves vehicle controls from the same active mission document and counts a selection only after MissionChief's exact checkbox is confirmed checked. iPhone Safari receives a separate compact Mission Finder command card with collapsed advanced settings and fixed safe-area ownership, including phone-sized Safari desktop-site sessions that identify as `MacIntel`. Mission Control and Vehicle Load List are launched from two compact iPhone-only buttons labelled Mission and Vehicle. Both start closed, open exclusively below the launcher and are positioned from MissionChief's live native control container; Unit Quick Select remains independently collapsed and unchanged. The active mission document also receives an in-place compact native Unit Quick Select disclosure for its `search_attribute` controls, including same-origin iframe/lightbox documents, while iPad and desktop retain their established dimensions, dragging, saved positioning and interaction model.
 
 ## Distribution rule
 
