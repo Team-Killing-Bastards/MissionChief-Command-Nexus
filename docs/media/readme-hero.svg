@@ -1,19 +1,155 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="620" viewBox="0 0 1600 620" role="img" aria-labelledby="title desc">
-  <title id="title">MissionChief Command Nexus v1.0.21</title>
-  <desc id="desc">A unified MissionChief UK resource and dispatch system created by MartyBlyth, with a clearly bounded iOS Safari compatibility contribution by Conroy1988 across versions 1.0.15 to 1.0.18.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="700" viewBox="0 0 1600 700" role="img" aria-labelledby="title desc">
+  <title id="title">MissionChief Command Nexus operational command system</title>
+  <desc id="desc">An evergreen command-centre hero for the unified MissionChief UK resource administration and mission operations system created and technically owned by MartyBlyth, with scoped iOS Safari compatibility contributed by Conroy1988 with permission.</desc>
+
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#060a14"/><stop offset="0.48" stop-color="#121b34"/><stop offset="1" stop-color="#050812"/></linearGradient>
-    <radialGradient id="coreGlow" cx="50%" cy="52%" r="56%"><stop offset="0" stop-color="#17bfff" stop-opacity="0.34"/><stop offset="0.48" stop-color="#7c3aed" stop-opacity="0.14"/><stop offset="1" stop-color="#000000" stop-opacity="0"/></radialGradient>
-    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#00d4ff"/><stop offset="0.50" stop-color="#8b5cf6"/><stop offset="1" stop-color="#ff3158"/></linearGradient>
-    <linearGradient id="titleRule" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#00d4ff" stop-opacity="0"/><stop offset="0.25" stop-color="#00d4ff" stop-opacity="0.9"/><stop offset="0.50" stop-color="#8b5cf6" stop-opacity="1"/><stop offset="0.75" stop-color="#ff3158" stop-opacity="0.9"/><stop offset="1" stop-color="#ff3158" stop-opacity="0"/></linearGradient>
-    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="7" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-    <pattern id="grid" width="44" height="44" patternUnits="userSpaceOnUse"><path d="M44 0H0V44" fill="none" stroke="#9ab4d2" stroke-opacity="0.055" stroke-width="1"/></pattern>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#02050d"/>
+      <stop offset="0.42" stop-color="#101a36"/>
+      <stop offset="0.72" stop-color="#090d20"/>
+      <stop offset="1" stop-color="#02040a"/>
+    </linearGradient>
+    <radialGradient id="core" cx="50%" cy="49%" r="52%">
+      <stop offset="0" stop-color="#16c8ff" stop-opacity="0.34"/>
+      <stop offset="0.33" stop-color="#7c3aed" stop-opacity="0.18"/>
+      <stop offset="0.67" stop-color="#ff3158" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="spectrum" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#00d8ff"/>
+      <stop offset="0.5" stop-color="#8b5cf6"/>
+      <stop offset="1" stop-color="#ff3158"/>
+    </linearGradient>
+    <linearGradient id="spectrumVertical" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#00d8ff"/>
+      <stop offset="0.52" stop-color="#8b5cf6"/>
+      <stop offset="1" stop-color="#ff3158"/>
+    </linearGradient>
+    <linearGradient id="fadeRule" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#00d8ff" stop-opacity="0"/>
+      <stop offset="0.18" stop-color="#00d8ff" stop-opacity="0.9"/>
+      <stop offset="0.5" stop-color="#8b5cf6"/>
+      <stop offset="0.82" stop-color="#ff3158" stop-opacity="0.9"/>
+      <stop offset="1" stop-color="#ff3158" stop-opacity="0"/>
+    </linearGradient>
+    <pattern id="grid" width="42" height="42" patternUnits="userSpaceOnUse">
+      <path d="M42 0H0V42" fill="none" stroke="#bcd7f1" stroke-opacity="0.052" stroke-width="1"/>
+    </pattern>
+    <pattern id="scan" width="8" height="8" patternUnits="userSpaceOnUse">
+      <path d="M0 7.5H8" stroke="#ffffff" stroke-opacity="0.018" stroke-width="1"/>
+    </pattern>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="7" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="softGlow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
   </defs>
-  <rect width="1600" height="620" rx="30" fill="url(#bg)"/><rect width="1600" height="620" rx="30" fill="url(#grid)"/><ellipse cx="800" cy="330" rx="630" ry="350" fill="url(#coreGlow)"/><rect x="24" y="24" width="1552" height="572" rx="22" fill="none" stroke="#c7ddf7" stroke-opacity="0.12"/>
-  <g><rect x="300" y="28" width="1000" height="112" rx="20" fill="#060b18" fill-opacity="0.84" stroke="#9fc5eb" stroke-opacity="0.14"/><text x="800" y="73" text-anchor="middle" fill="#f8fbff" font-family="Segoe UI,Arial,sans-serif" font-size="46" font-weight="800" letter-spacing="1.5">MISSIONCHIEF COMMAND NEXUS</text><rect x="500" y="91" width="600" height="2" rx="1" fill="url(#titleRule)"/><text x="800" y="116" text-anchor="middle" fill="#9fb7d2" font-family="Segoe UI,Arial,sans-serif" font-size="14" font-weight="700" letter-spacing="3.4">RESOURCE INTELLIGENCE · TRAINED PERSONNEL · MISSION CONTROL · DISPATCH</text><text x="800" y="134" text-anchor="middle" fill="#d7cfff" font-family="Segoe UI,Arial,sans-serif" font-size="11" font-weight="800" letter-spacing="1.6">v1.0.21 · MISSION FINDER V10.6.86</text></g>
-  <g fill="none" stroke-linecap="round"><path d="M116 206H342C430 206 500 238 590 270" stroke="#00d4ff" stroke-opacity="0.42" stroke-width="2"/><path d="M92 326H350C455 326 515 326 590 326" stroke="#8b5cf6" stroke-opacity="0.5" stroke-width="2"/><path d="M132 446H360C445 446 512 414 590 384" stroke="#ff3158" stroke-opacity="0.40" stroke-width="2"/><path d="M1484 206H1258C1170 206 1100 238 1010 270" stroke="#ff3158" stroke-opacity="0.42" stroke-width="2"/><path d="M1508 326H1250C1145 326 1085 326 1010 326" stroke="#8b5cf6" stroke-opacity="0.5" stroke-width="2"/><path d="M1468 446H1240C1155 446 1088 414 1010 384" stroke="#00d4ff" stroke-opacity="0.40" stroke-width="2"/></g>
-  <g filter="url(#glow)"><circle cx="116" cy="206" r="8" fill="#00d4ff"/><circle cx="92" cy="326" r="8" fill="#8b5cf6"/><circle cx="132" cy="446" r="8" fill="#ff3158"/><circle cx="1484" cy="206" r="8" fill="#ff3158"/><circle cx="1508" cy="326" r="8" fill="#8b5cf6"/><circle cx="1468" cy="446" r="8" fill="#00d4ff"/></g>
-  <g font-family="Segoe UI,Arial,sans-serif" font-size="20" font-weight="800" letter-spacing="2"><g transform="translate(155 176)"><rect width="220" height="60" rx="14" fill="#091827" stroke="#00d4ff" stroke-opacity="0.62"/><text x="110" y="38" text-anchor="middle" fill="#bceeff">STATIONS</text></g><g transform="translate(135 296)"><rect width="240" height="60" rx="14" fill="#15102b" stroke="#8b5cf6" stroke-opacity="0.68"/><text x="120" y="38" text-anchor="middle" fill="#ddd0ff">VEHICLES</text></g><g transform="translate(165 416)"><rect width="270" height="60" rx="14" fill="#2b0d1a" stroke="#ff3158" stroke-opacity="0.62"/><text x="135" y="38" text-anchor="middle" fill="#ffd0d9">PERSONNEL</text></g><g transform="translate(1225 176)"><rect width="220" height="60" rx="14" fill="#2b0d1a" stroke="#ff3158" stroke-opacity="0.62"/><text x="110" y="38" text-anchor="middle" fill="#ffd0d9">MISSIONS</text></g><g transform="translate(1205 296)"><rect width="260" height="60" rx="14" fill="#15102b" stroke="#8b5cf6" stroke-opacity="0.68"/><text x="130" y="38" text-anchor="middle" fill="#ddd0ff">INTELLIGENCE</text></g><g transform="translate(1165 416)"><rect width="270" height="60" rx="14" fill="#091827" stroke="#00d4ff" stroke-opacity="0.62"/><text x="135" y="38" text-anchor="middle" fill="#bceeff">DISPATCH</text></g></g>
-  <g transform="translate(800 336)"><circle r="150" fill="#080d1b" stroke="url(#accent)" stroke-width="3"/><circle r="129" fill="none" stroke="#a8c4e4" stroke-opacity="0.17" stroke-width="1" stroke-dasharray="8 12"/><circle r="108" fill="#07101f" fill-opacity="0.72" stroke="#9dc7ed" stroke-opacity="0.08"/><path d="M-72-18L-24-68H48L91-26V40L44 88H-40L-90 38Z" fill="none" stroke="url(#accent)" stroke-width="5" filter="url(#glow)"/><circle cx="-72" cy="-18" r="7" fill="#00d4ff"/><circle cx="-24" cy="-68" r="7" fill="#52e3ff"/><circle cx="48" cy="-68" r="7" fill="#8b5cf6"/><circle cx="91" cy="-26" r="7" fill="#b55cff"/><circle cx="91" cy="40" r="7" fill="#ff3158"/><circle cx="44" cy="88" r="7" fill="#ff687f"/><circle cx="-40" cy="88" r="7" fill="#8b5cf6"/><circle cx="-90" cy="38" r="7" fill="#00d4ff"/><circle r="18" fill="#f8fbff" filter="url(#glow)"/></g>
-  <g font-family="Segoe UI,Arial,sans-serif" text-anchor="middle"><rect x="310" y="510" width="980" height="72" rx="16" fill="#060b18" fill-opacity="0.80" stroke="#9fc5eb" stroke-opacity="0.12"/><text x="800" y="538" fill="#e3f0ff" font-size="19" font-weight="800" letter-spacing="2.4">CREATED AND TECHNICALLY OWNED BY MARTYBLYTH</text><text x="800" y="565" fill="#8ca3bf" font-size="13" font-weight="700" letter-spacing="1.5">CONROY1988 · SCOPED iOS SAFARI CONTRIBUTION v1.0.15–v1.0.18 · WITH PERMISSION</text></g>
+
+  <rect width="1600" height="700" rx="34" fill="url(#background)"/>
+  <rect width="1600" height="700" rx="34" fill="url(#grid)"/>
+  <rect width="1600" height="700" rx="34" fill="url(#scan)"/>
+  <ellipse cx="800" cy="365" rx="690" ry="420" fill="url(#core)"/>
+  <rect x="22" y="22" width="1556" height="656" rx="25" fill="none" stroke="#d9ecff" stroke-opacity="0.12"/>
+  <path d="M60 70H220M1380 70H1540M60 630H220M1380 630H1540" stroke="url(#spectrum)" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
+
+  <g font-family="Segoe UI, Arial, sans-serif">
+    <text x="70" y="57" fill="#78dfff" font-size="13" font-weight="800" letter-spacing="3.4">TKB // OPERATIONAL SYSTEM</text>
+    <text x="1530" y="57" text-anchor="end" fill="#ff839a" font-size="13" font-weight="800" letter-spacing="3.4">MISSIONCHIEF UK // LIVE CONTROL</text>
+
+    <rect x="260" y="48" width="1080" height="132" rx="24" fill="#050a16" fill-opacity="0.87" stroke="#a9c9ea" stroke-opacity="0.14"/>
+    <text x="800" y="99" text-anchor="middle" fill="#f8fbff" font-size="52" font-weight="900" letter-spacing="2.2">MISSIONCHIEF COMMAND NEXUS</text>
+    <rect x="440" y="119" width="720" height="3" rx="2" fill="url(#fadeRule)"/>
+    <text x="800" y="150" text-anchor="middle" fill="#acc3dd" font-size="15" font-weight="800" letter-spacing="3.1">RESOURCE PREPARATION · CAPABILITY INTELLIGENCE · LIVE DEMAND · CONTROLLED DISPATCH</text>
+    <text x="800" y="170" text-anchor="middle" fill="#d9d1ff" font-size="11" font-weight="800" letter-spacing="2.4">ONE INSTALLATION // TWO PROVEN ENGINES // ONE OPERATIONAL CHAIN</text>
+  </g>
+
+  <g fill="none" stroke-linecap="round">
+    <path d="M112 255H330C410 255 485 280 584 322" stroke="#00d8ff" stroke-opacity="0.50" stroke-width="2.4"/>
+    <path d="M92 355H350C455 355 505 355 580 355" stroke="#8b5cf6" stroke-opacity="0.56" stroke-width="2.4"/>
+    <path d="M122 455H330C410 455 485 430 584 388" stroke="#ff3158" stroke-opacity="0.48" stroke-width="2.4"/>
+    <path d="M1488 255H1270C1190 255 1115 280 1016 322" stroke="#ff3158" stroke-opacity="0.50" stroke-width="2.4"/>
+    <path d="M1508 355H1250C1145 355 1095 355 1020 355" stroke="#8b5cf6" stroke-opacity="0.56" stroke-width="2.4"/>
+    <path d="M1478 455H1270C1190 455 1115 430 1016 388" stroke="#00d8ff" stroke-opacity="0.48" stroke-width="2.4"/>
+  </g>
+
+  <g filter="url(#glow)">
+    <circle cx="112" cy="255" r="7" fill="#00d8ff"/>
+    <circle cx="92" cy="355" r="7" fill="#8b5cf6"/>
+    <circle cx="122" cy="455" r="7" fill="#ff3158"/>
+    <circle cx="1488" cy="255" r="7" fill="#ff3158"/>
+    <circle cx="1508" cy="355" r="7" fill="#8b5cf6"/>
+    <circle cx="1478" cy="455" r="7" fill="#00d8ff"/>
+  </g>
+
+  <g font-family="Segoe UI, Arial, sans-serif">
+    <g transform="translate(145 221)">
+      <rect width="265" height="68" rx="15" fill="#071a28" stroke="#00d8ff" stroke-opacity="0.68"/>
+      <text x="132.5" y="29" text-anchor="middle" fill="#d9f8ff" font-size="17" font-weight="900" letter-spacing="1.8">RESOURCE CONTROL</text>
+      <text x="132.5" y="51" text-anchor="middle" fill="#7ebbd0" font-size="11" font-weight="700" letter-spacing="1.2">STATIONS · NAMING · SCOPED WORK</text>
+    </g>
+    <g transform="translate(125 321)">
+      <rect width="285" height="68" rx="15" fill="#15102d" stroke="#8b5cf6" stroke-opacity="0.72"/>
+      <text x="142.5" y="29" text-anchor="middle" fill="#eadfff" font-size="17" font-weight="900" letter-spacing="1.8">PERSONNEL INTEL</text>
+      <text x="142.5" y="51" text-anchor="middle" fill="#b3a2de" font-size="11" font-weight="700" letter-spacing="1.2">ASSIGNMENTS · TRAINING · REGISTER</text>
+    </g>
+    <g transform="translate(155 421)">
+      <rect width="285" height="68" rx="15" fill="#2a0d1a" stroke="#ff3158" stroke-opacity="0.67"/>
+      <text x="142.5" y="29" text-anchor="middle" fill="#ffe0e6" font-size="17" font-weight="900" letter-spacing="1.8">VERIFIED CAPABILITY</text>
+      <text x="142.5" y="51" text-anchor="middle" fill="#d09aaa" font-size="11" font-weight="700" letter-spacing="1.2">VEHICLE ID · PERSONNEL EVIDENCE</text>
+    </g>
+
+    <g transform="translate(1190 221)">
+      <rect width="265" height="68" rx="15" fill="#2a0d1a" stroke="#ff3158" stroke-opacity="0.67"/>
+      <text x="132.5" y="29" text-anchor="middle" fill="#ffe0e6" font-size="17" font-weight="900" letter-spacing="1.8">LIVE MISSION DEMAND</text>
+      <text x="132.5" y="51" text-anchor="middle" fill="#d09aaa" font-size="11" font-weight="700" letter-spacing="1.2">REQUIREMENTS · PATIENTS · UPGRADES</text>
+    </g>
+    <g transform="translate(1190 321)">
+      <rect width="285" height="68" rx="15" fill="#15102d" stroke="#8b5cf6" stroke-opacity="0.72"/>
+      <text x="142.5" y="29" text-anchor="middle" fill="#eadfff" font-size="17" font-weight="900" letter-spacing="1.8">EXACT MATCHING</text>
+      <text x="142.5" y="51" text-anchor="middle" fill="#b3a2de" font-size="11" font-weight="700" letter-spacing="1.2">VEHICLES · TRAINING · READINESS</text>
+    </g>
+    <g transform="translate(1160 421)">
+      <rect width="285" height="68" rx="15" fill="#071a28" stroke="#00d8ff" stroke-opacity="0.68"/>
+      <text x="142.5" y="29" text-anchor="middle" fill="#d9f8ff" font-size="17" font-weight="900" letter-spacing="1.8">CONTROLLED DISPATCH</text>
+      <text x="142.5" y="51" text-anchor="middle" fill="#7ebbd0" font-size="11" font-weight="700" letter-spacing="1.2">UNIT FINDER · UPDATE · AUTO MODE</text>
+    </g>
+  </g>
+
+  <g transform="translate(800 355)">
+    <circle r="181" fill="#080d1b" fill-opacity="0.72" stroke="#94badf" stroke-opacity="0.10"/>
+    <circle r="162" fill="none" stroke="url(#spectrum)" stroke-width="2.5" stroke-dasharray="3 11"/>
+    <circle r="132" fill="#050b17" stroke="#bad8f6" stroke-opacity="0.16"/>
+    <circle r="105" fill="none" stroke="url(#spectrumVertical)" stroke-width="4" opacity="0.92" filter="url(#glow)"/>
+    <path d="M0-82L71-41V41L0 82L-71 41V-41Z" fill="#07111f" stroke="url(#spectrum)" stroke-width="4" filter="url(#glow)"/>
+    <path d="M0-54L47-27V27L0 54L-47 27V-27Z" fill="none" stroke="#d9edff" stroke-opacity="0.34" stroke-width="2"/>
+    <circle r="16" fill="#ffffff" filter="url(#glow)"/>
+    <circle r="46" fill="none" stroke="#ffffff" stroke-opacity="0.09" stroke-dasharray="5 8"/>
+    <text x="0" y="6" text-anchor="middle" fill="#09111e" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="900">N</text>
+    <text x="0" y="119" text-anchor="middle" fill="#eaf5ff" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="900" letter-spacing="4">NEXUS CORE</text>
+    <text x="0" y="142" text-anchor="middle" fill="#839bb6" font-family="Segoe UI, Arial, sans-serif" font-size="10" font-weight="800" letter-spacing="2.2">SHARED VERIFIED TRAINING REGISTER</text>
+  </g>
+
+  <g font-family="Segoe UI, Arial, sans-serif">
+    <rect x="250" y="548" width="1100" height="72" rx="18" fill="#050a15" fill-opacity="0.88" stroke="#a9c9ea" stroke-opacity="0.13"/>
+    <g transform="translate(285 565)">
+      <rect width="300" height="38" rx="12" fill="#071a28" stroke="#00d8ff" stroke-opacity="0.46"/>
+      <text x="150" y="25" text-anchor="middle" fill="#bfefff" font-size="13" font-weight="900" letter-spacing="2.1">ONE INSTALLATION</text>
+    </g>
+    <g transform="translate(650 565)">
+      <rect width="300" height="38" rx="12" fill="#15102d" stroke="#8b5cf6" stroke-opacity="0.52"/>
+      <text x="150" y="25" text-anchor="middle" fill="#e5d8ff" font-size="13" font-weight="900" letter-spacing="2.1">TWO PROVEN ENGINES</text>
+    </g>
+    <g transform="translate(1015 565)">
+      <rect width="300" height="38" rx="12" fill="#2a0d1a" stroke="#ff3158" stroke-opacity="0.48"/>
+      <text x="150" y="25" text-anchor="middle" fill="#ffd9e1" font-size="13" font-weight="900" letter-spacing="2.1">FAIL-CLOSED CONTROL</text>
+    </g>
+
+    <text x="800" y="650" text-anchor="middle" fill="#e6f2ff" font-size="17" font-weight="900" letter-spacing="2.3">CREATED AND TECHNICALLY OWNED BY MARTYBLYTH</text>
+    <text x="800" y="675" text-anchor="middle" fill="#839ab4" font-size="12" font-weight="800" letter-spacing="1.5">CONROY1988 · SCOPED iOS SAFARI COMPATIBILITY CONTRIBUTION · DELIVERED WITH PERMISSION</text>
+  </g>
 </svg>
