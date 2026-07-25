@@ -1,4 +1,4 @@
-name: Build v1.0.24 normal Police IRV corrective branch
+name: Export validated v1.0.24 Police IRV correction
 
 on:
   pull_request:
@@ -10,16 +10,16 @@ on:
       - reopened
 
 permissions:
-  contents: write
+  contents: read
   pull-requests: write
 
 concurrency:
-  group: build-normal-police-irv-v1024
+  group: export-normal-police-irv-v1024
   cancel-in-progress: false
 
 jobs:
-  build:
-    name: Build, validate and stage v1.0.24
+  export:
+    name: Build, validate and export v1.0.24
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.head.ref == 'diagnostic/normal-irv-selection'
@@ -93,52 +93,35 @@ jobs:
           print('Focused v1.0.24 Police IRV and Missing Personnel contracts passed.')
           PY
 
-      - name: Push validated corrective branch
-        env:
-          GH_TOKEN: ${{ github.token }}
-          DIAGNOSTIC_PR: ${{ github.event.pull_request.number }}
-          RELEASE_BRANCH: release/v1.0.24-police-irv
+      - name: Package exact validated files
         shell: bash
         run: |
           set -euo pipefail
-          git config user.name MartyBlyth
-          git config user.email 32400596+Martyblyth@users.noreply.github.com
-          git add -A
-          git commit -m 'Restore normal Police IRV selection'
-          git push --force origin "HEAD:refs/heads/${RELEASE_BRANCH}"
+          mkdir -p /tmp/v1024-validated/src
+          mkdir -p /tmp/v1024-validated/scripts
+          mkdir -p /tmp/v1024-validated/.github/workflows
+          cp src/missionchief-command-nexus.user.js /tmp/v1024-validated/src/
+          cp src/README.md /tmp/v1024-validated/src/
+          cp README.md CHANGELOG.md /tmp/v1024-validated/
+          cp scripts/check-police-irv-fallback.mjs /tmp/v1024-validated/scripts/
+          cp .github/workflows/validate-userscript.yml /tmp/v1024-validated/.github/workflows/
+          git diff --binary > /tmp/v1024-validated/v1.0.24.patch
+          printf '%s\n' 'scripts/apply_v1024_police_irv.py' > /tmp/v1024-validated/delete-paths.txt
+          printf '%s\n' '.github/workflows/temporary-diagnose-irv-selection.yml' >> /tmp/v1024-validated/delete-paths.txt
 
-          cat > /tmp/v1024-pr-body.md <<'PRBODY'
-          ## Normal Police IRV corrective release
+      - name: Upload exact validated v1.0.24 files
+        uses: actions/upload-artifact@v4
+        with:
+          name: validated-v1.0.24-police-irv
+          path: /tmp/v1024-validated
+          if-no-files-found: error
+          retention-days: 2
 
-          - Restores type-8 Incident Response Vehicle / Police Car selection in manual Unit Finder and Auto Mode.
-          - Prefers verified ordinary IRVs, then unknown/stale IRVs, with specialist-trained IRVs as a final fallback.
-          - Counts every selected exact type-8 IRV toward generic Police attendance.
-          - Restores `Missing Personnel: Police Officers` conversion at two officers per Police Car, including while the Live Mission Requirements panel is present.
-          - Keeps Inspector, Police Medic, Public Order, Railway Police and other named trained requirements strict and live-verified.
-          - Adds a permanent Police IRV regression check and passes complete userscript, iOS, lifecycle and repository validation.
-          PRBODY
-
-          PR_URL="$(
-            gh pr list \
-              --repo "${GITHUB_REPOSITORY}" \
-              --head "${RELEASE_BRANCH}" \
-              --base main \
-              --state open \
-              --json url \
-              --jq '.[0].url // empty'
-          )"
-
-          if [[ -z "${PR_URL}" ]]; then
-            PR_URL="$(
-              gh pr create \
-                --repo "${GITHUB_REPOSITORY}" \
-                --base main \
-                --head "${RELEASE_BRANCH}" \
-                --title 'Restore normal Police IRV selection' \
-                --body-file /tmp/v1024-pr-body.md 2>/dev/null || true
-            )"
-          fi
-
-          gh pr comment "${DIAGNOSTIC_PR}" \
+      - name: Record export on diagnostic PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          gh pr comment "${PR_NUMBER}" \
             --repo "${GITHUB_REPOSITORY}" \
-            --body "v1.0.24 passed all validation and was pushed to \`${RELEASE_BRANCH}\`. Corrective PR: ${PR_URL:-https://github.com/${GITHUB_REPOSITORY}/compare/main...${RELEASE_BRANCH}?expand=1}"
+            --body 'v1.0.24 passed complete validation. The exact validated source, documentation, regression test and workflow update were exported for connector-controlled commit to protected `main`.'
