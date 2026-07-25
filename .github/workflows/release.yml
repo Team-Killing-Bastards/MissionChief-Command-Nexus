@@ -1,9 +1,6 @@
 name: Create GitHub release
 
 on:
-  push:
-    tags:
-      - 'v*.*.*'
   workflow_dispatch:
     inputs:
       operation:
@@ -238,7 +235,7 @@ jobs:
 
   release:
     name: Package, reconcile, verify and announce userscript release
-    if: github.event_name == 'push' || inputs.operation == 'publish-release'
+    if: inputs.operation == 'publish-release'
     runs-on: ubuntu-latest
     timeout-minutes: 35
 
@@ -511,6 +508,7 @@ jobs:
       - name: Verify deployment and notify Discord
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
+          GITHUB_TOKEN: ${{ github.token }}
           GREASYFORK_INSTALL_URL: ${{ vars.GREASYFORK_INSTALL_URL }}
           GREASYFORK_PAGE_URL: ${{ vars.GREASYFORK_PAGE_URL }}
           GITHUB_REPOSITORY: ${{ github.repository }}
