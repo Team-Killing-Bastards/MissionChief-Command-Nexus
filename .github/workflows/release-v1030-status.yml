@@ -1,4 +1,4 @@
-name: Diagnose v1.0.30 release failure
+name: Diagnose exact v1.0.30 release error
 
 on:
   push:
@@ -14,12 +14,12 @@ permissions:
 
 jobs:
   diagnose:
-    name: Report failed release log
+    name: Report exact release error
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
     steps:
-      - name: Comment failed log
+      - name: Comment exact error lines
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: '131'
@@ -31,14 +31,20 @@ jobs:
             --repo "${GITHUB_REPOSITORY}" \
             --log-failed > /tmp/v1030-failed.log 2>&1 || true
 
+          grep -Eai \
+            '(^|[^a-z])(error|fatal|failed|refusing|missing tag|not contained|does not match|could not be resolved|temporary workflows|release commit|tag .* points)([^a-z]|$)' \
+            /tmp/v1030-failed.log |
+            grep -Ev 'echo |if \[\[|UNKNOWN STEP.*(error|fatal|failed|refusing|missing tag|not contained|does not match|could not be resolved|temporary workflows|release commit)' |
+            tail -n 40 > /tmp/v1030-exact.log || true
+
           {
-            echo '## v1.0.30 failed release log'
+            echo '## v1.0.30 exact release error'
             echo
             echo '```text'
-            tail -n 120 /tmp/v1030-failed.log
+            cat /tmp/v1030-exact.log
             echo '```'
-          } > /tmp/v1030-failed.md
+          } > /tmp/v1030-exact.md
 
           gh pr comment "${PR_NUMBER}" \
             --repo "${GITHUB_REPOSITORY}" \
-            --body-file /tmp/v1030-failed.md
+            --body-file /tmp/v1030-exact.md
