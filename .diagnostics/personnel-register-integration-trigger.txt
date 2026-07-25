@@ -1,1 +1,1 @@
-Run the trusted main Personnel Register integration workflow.
+Run the trusted main Personnel Register integration workflow with split validation steps.
