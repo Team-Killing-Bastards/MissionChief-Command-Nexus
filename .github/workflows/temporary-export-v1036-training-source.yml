@@ -1,0 +1,52 @@
+name: Export current source for v1.0.36 training optimiser
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'agent/training-coverage-optimizer'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out current main
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Package exact current source
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/v1036-current/src
+          mkdir -p /tmp/v1036-current/scripts
+          mkdir -p /tmp/v1036-current/.github/workflows
+          cp src/missionchief-command-nexus.user.js /tmp/v1036-current/src/
+          cp README.md CHANGELOG.md /tmp/v1036-current/
+          cp src/README.md /tmp/v1036-current/src/
+          find scripts -maxdepth 1 -type f \( -name '*.mjs' -o -name '*.py' \) -exec cp {} /tmp/v1036-current/scripts/ \;
+          cp .github/workflows/validate-userscript.yml /tmp/v1036-current/.github/workflows/
+          cp .github/workflows/repository-quality.yml /tmp/v1036-current/.github/workflows/
+          git rev-parse HEAD > /tmp/v1036-current/main-sha.txt
+
+      - name: Upload exact current source
+        uses: actions/upload-artifact@v4
+        with:
+          name: v1036-current-source
+          path: /tmp/v1036-current
+          if-no-files-found: error
+          retention-days: 2
