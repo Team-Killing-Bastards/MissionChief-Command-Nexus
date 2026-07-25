@@ -1,0 +1,4448 @@
+FOCUSED LIVE UPDATE / POLICE OFFICER AUDIT
+Source lines: 34276
+
+===== FUNCTION getLiveRequirementDispatchTarget =====
+function getLiveRequirementDispatchTarget(
+        parsedRow
+    ) {
+        const required = Math.max(
+            0,
+            parseInt(
+                parsedRow?.required,
+                10
+            ) || 0
+        );
+
+        const reportedStillNeeded = Math.max(
+            0,
+            parseInt(
+                parsedRow?.stillNeeded,
+                10
+            ) || 0
+        );
+
+        const stillNeededText = String(
+            parsedRow?.stillNeededText ?? ''
+        )
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        // The live shortage remains authoritative whenever MissionChief gives
+        // a number or bounded range. Only a literal unknown "?" falls back to
+        // the Required total. The selection layer still subtracts matching
+        // vehicles already selected before it clicks any additional units.
+        if (stillNeededText === '?') {
+            return required > 0
+                ? required
+                : reportedStillNeeded;
+        }
+
+        if (stillNeededText) {
+            return reportedStillNeeded;
+        }
+
+        // Defensive fallback for a legacy or partial live row where the
+        // Still Needed cell is absent rather than explicitly zero.
+        return required > 0
+            ? required
+            : reportedStillNeeded;
+    }
+
+===== FUNCTION readLiveMissionRequirementRow =====
+function readLiveMissionRequirementRow(
+        row
+    ) {
+        if (!row) {
+            return null;
+        }
+
+        const cells =
+            row.querySelectorAll(
+                'td'
+            );
+
+        if (
+            cells.length <
+            2
+        ) {
+            return null;
+        }
+
+        const unitName =
+            (
+                cells[0].innerText ||
+                cells[0].textContent ||
+                ''
+            )
+                .replace(
+                    /\s+/g,
+                    ' '
+                )
+                .trim();
+
+        if (!unitName) {
+            return null;
+        }
+
+        if (shouldIgnoreRequiredMinimumRequirement(unitName)) {
+            return null;
+        }
+
+        const requiredText =
+            getLiveRequirementCellText(
+                row,
+                [
+                    'td[data-label="Required"]'
+                ],
+                1
+            );
+
+        const selectedText =
+            getLiveRequirementCellText(
+                row,
+                [
+                    'td[data-label="Selected"]'
+                ],
+                4
+            );
+
+        const stillNeededText =
+            getLiveRequirementCellText(
+                row,
+                [
+                    'td.mcms-req-still',
+                    'td[data-label="Need"]',
+                    'td[data-label="Still needed"]'
+                ],
+                5
+            );
+
+        const required =
+            parseMissionRequirementNumber(
+                requiredText
+            );
+
+        const selected =
+            parseMissionRequirementNumber(
+                selectedText
+            );
+
+        const explicitStillNeeded =
+            parseMissionRequirementNumber(
+                stillNeededText
+            );
+
+        const explicitStillNeededRange =
+            parseMissionRequirementRangeUpperBound(
+                stillNeededText
+            );
+
+        const rowState =
+            String(
+                row.getAttribute(
+                    'data-row-state'
+                ) ||
+                ''
+            )
+                .trim()
+                .toLowerCase();
+
+        const title =
+            String(
+                row.getAttribute(
+                    'title'
+                ) ||
+                ''
+            )
+                .replace(
+                    /\s+/g,
+                    ' '
+                )
+                .trim();
+
+        const requiresConfirmation =
+            rowState ===
+                'unresolved' ||
+            /requires?\s+confirmation/i
+                .test(
+                    title
+                ) ||
+            stillNeededText ===
+                '?' ||
+            explicitStillNeededRange !==
+                null;
+
+        // A bounded unresolved value such as 0-3 is actionable. Use the
+        // upper bound so Mission Update covers the worst-case shortage,
+        // while a completely unknown naked '?' continues through the
+        // existing trusted-row safety rules below.
+        let stillNeeded =
+            explicitStillNeededRange !== null
+                ? explicitStillNeededRange
+                : explicitStillNeeded;
+
+        if (
+            stillNeeded ===
+                null &&
+            requiresConfirmation
+        ) {
+            const isTrustedUnresolvedPublicOrderPersonnel =
+                isPublicOrderPersonnelRequirementName(
+                    unitName
+                ) ||
+                isPoliceSergeantPersonnelRequirementName(
+                    unitName
+                ) ||
+                isPoliceInspectorPersonnelRequirementName(
+                    unitName
+                );
+
+            const isTrustedUnresolvedSarPersonnel =
+                required !== null &&
+                !!getSarPersonnelVehicleRequirement(
+                    unitName,
+                    required
+                );
+
+            const isTrustedUnresolvedTowRequirement =
+                required !== null &&
+                isCarsToTowRequirementName(
+                    unitName
+                );
+
+            if (
+                (
+                    isTrustedUnresolvedPublicOrderPersonnel ||
+                    isTrustedUnresolvedSarPersonnel ||
+                    isTrustedUnresolvedTowRequirement
+                ) &&
+                required !==
+                    null
+            ) {
+                // V10.6.61/V10.6.63: Supported SAR/Public Order personnel and
+                // Cars to tow scalar rows can legitimately stay unresolved as
+                // "Need ?" while still showing an explicit Required count.
+                // Trust only those narrow rules. Every other unresolved row
+                // remains zero so Mission Update cannot resend the complete
+                // original mission load.
+                stillNeeded =
+                    Math.max(
+                        0,
+                        required
+                    );
+            } else {
+                // A '?' / unresolved general row is not a confirmed shortage.
+                // Do not substitute the full Required value because that can
+                // make Mission Update resend the entire original mission load.
+                stillNeeded = 0;
+            }
+        }
+
+        if (
+            stillNeeded ===
+                null &&
+            !requiresConfirmation &&
+            required !==
+                null &&
+            selected !==
+                null
+        ) {
+            stillNeeded =
+                Math.max(
+                    0,
+                    required -
+                    selected
+                );
+        }
+
+        if (
+            stillNeeded ===
+                null
+        ) {
+            stillNeeded =
+                0;
+        }
+
+        return {
+            unitName,
+            required:
+                Math.max(
+                    0,
+                    required ||
+                    0
+                ),
+            selected:
+                Math.max(
+                    0,
+                    selected ||
+                    0
+                ),
+            stillNeeded:
+                Math.max(
+                    0,
+                    stillNeeded
+                ),
+            rowState,
+            requiresConfirmation,
+            requiredText,
+            selectedText,
+            stillNeededText,
+            title
+        };
+    }
+
+===== FUNCTION getPoliceOfficerVehicleRequirement =====
+function getPoliceOfficerVehicleRequirement(
+        requirementName,
+        personnelRequired
+    ) {
+        const cleaned = String(requirementName || '')
+            .replace(/\s+/g, ' ')
+            .trim();
+        const required = Math.max(
+            0,
+            parseInt(personnelRequired, 10) || 0
+        );
+
+        if (
+            required <= 0 ||
+            !/^(?:Required\s+)?Police\s+Officer(?:s)?$/i.test(cleaned)
+        ) {
+            return null;
+        }
+
+        return {
+            unitName: 'Police Car',
+            stillNeeded: Math.ceil(required / 2),
+            personnelRequired: required,
+            personnelPerVehicle: 2
+        };
+    }
+
+===== FUNCTION getPoliceOfficerVehicleRequirementFromText =====
+FUNCTION getPoliceOfficerVehicleRequirementFromText: NOT FOUND
+
+===== FUNCTION getPoliceOfficerRequirementsFromText =====
+FUNCTION getPoliceOfficerRequirementsFromText: NOT FOUND
+
+===== FUNCTION getMissingPersonnelRequirementsFromText =====
+FUNCTION getMissingPersonnelRequirementsFromText: NOT FOUND
+
+===== FUNCTION recordUpdateRequirement =====
+FUNCTION recordUpdateRequirement: NOT FOUND
+
+PATTERN: Rescue Support Vehicles?
+HITS: [10000, 10001, 10004, 10005, 11444]
+
+--- source lines 9986-10028 ---
+09986:         "Road Rail Unit": "RRU",
+09987:         "Firefighter": "Rescue Pump",
+09988:         "Firefighters": "Rescue Pump",
+09989:         "Required Firefighter": "Rescue Pump",
+09990:         "Required Firefighters": "Rescue Pump",
+09991:         "Car Recovery": "Flatbed Recovery Vehicle",
+09992:         "Required Car Recovery": "Flatbed Recovery Vehicle",
+09993:         "ICCU or Ambulance Control Unit": "ICCU/ACU",
+09994:         "ICCU or Ambulance Control Units": "ICCU/ACU",
+09995:         "ICCUs or Ambulance Control Units": "ICCU/ACU",
+09996:         "Fire Officer": "Fire Officer",
+09997:         "Fire Officers": "Fire Officer",
+09998:         "Rescue Support Unit": "Fire Engine R/PUMP x 1",
+09999:         "Rescue Support Units": "Fire Engine R/PUMP x 1",
+10000:         "Rescue Support Vehicle": "Fire Engine R/PUMP x 1",
+10001:         "Rescue Support Vehicles": "Fire Engine R/PUMP x 1",
+10002:         "Rescue Support Unit or Rescue Pump": "Fire Engine R/PUMP x 1",
+10003:         "Rescue Support Units or Rescue Pumps": "Fire Engine R/PUMP x 1",
+10004:         "Fire Engines or Rescue Support Vehicles": "Fire Engine R/PUMP x 1",
+10005:         "Fire Engines, Rescue Support Vehicles or Aerial Appliance Trucks": "Fire Engine R/PUMP x 1",
+10006:         "Foam Unit": "RP CAFS",
+10007:         "Foam Units": "RP CAFS",
+10008:         "Water Carrier": "Water Carrier",
+10009:         "Water Carriers": "Water Carrier",
+10010:         "Welfare Vehicles x1": "Welfare Vehicle",
+10011: 
+10012:         /*************************************************
+10013:          * POLICE
+10014:          *************************************************/
+10015:         "Police Car": "Police Car",
+10016:         "Police Cars": "Police Car",
+10017:         "Police car": "Police Car",
+10018:         "Police cars": "Police Car",
+10019:         "Police Officer": "Police Car",
+10020:         "Police Officers": "Police Car",
+10021:         "Traffic Car": "Police ATC",
+10022:         "Traffic Cars": "Police ATC",
+10023:         "Police Cars or Armed Response Vehicles (ARVs)": "Police ATC",
+10024:         "Armed Response Personnel (In Armed Vehicles)": "Police ATC",
+10025:         "Dog Support Unit (DSU)": "Police DSU",
+10026:         "Dog Support Units (DSU)": "Police DSU",
+10027:         "Dog Support Units (DSUs)": "Police DSU",
+10028:         "Mounted Unit": "Mounted Unit",
+
+--- source lines 9987-10029 ---
+09987:         "Firefighter": "Rescue Pump",
+09988:         "Firefighters": "Rescue Pump",
+09989:         "Required Firefighter": "Rescue Pump",
+09990:         "Required Firefighters": "Rescue Pump",
+09991:         "Car Recovery": "Flatbed Recovery Vehicle",
+09992:         "Required Car Recovery": "Flatbed Recovery Vehicle",
+09993:         "ICCU or Ambulance Control Unit": "ICCU/ACU",
+09994:         "ICCU or Ambulance Control Units": "ICCU/ACU",
+09995:         "ICCUs or Ambulance Control Units": "ICCU/ACU",
+09996:         "Fire Officer": "Fire Officer",
+09997:         "Fire Officers": "Fire Officer",
+09998:         "Rescue Support Unit": "Fire Engine R/PUMP x 1",
+09999:         "Rescue Support Units": "Fire Engine R/PUMP x 1",
+10000:         "Rescue Support Vehicle": "Fire Engine R/PUMP x 1",
+10001:         "Rescue Support Vehicles": "Fire Engine R/PUMP x 1",
+10002:         "Rescue Support Unit or Rescue Pump": "Fire Engine R/PUMP x 1",
+10003:         "Rescue Support Units or Rescue Pumps": "Fire Engine R/PUMP x 1",
+10004:         "Fire Engines or Rescue Support Vehicles": "Fire Engine R/PUMP x 1",
+10005:         "Fire Engines, Rescue Support Vehicles or Aerial Appliance Trucks": "Fire Engine R/PUMP x 1",
+10006:         "Foam Unit": "RP CAFS",
+10007:         "Foam Units": "RP CAFS",
+10008:         "Water Carrier": "Water Carrier",
+10009:         "Water Carriers": "Water Carrier",
+10010:         "Welfare Vehicles x1": "Welfare Vehicle",
+10011: 
+10012:         /*************************************************
+10013:          * POLICE
+10014:          *************************************************/
+10015:         "Police Car": "Police Car",
+10016:         "Police Cars": "Police Car",
+10017:         "Police car": "Police Car",
+10018:         "Police cars": "Police Car",
+10019:         "Police Officer": "Police Car",
+10020:         "Police Officers": "Police Car",
+10021:         "Traffic Car": "Police ATC",
+10022:         "Traffic Cars": "Police ATC",
+10023:         "Police Cars or Armed Response Vehicles (ARVs)": "Police ATC",
+10024:         "Armed Response Personnel (In Armed Vehicles)": "Police ATC",
+10025:         "Dog Support Unit (DSU)": "Police DSU",
+10026:         "Dog Support Units (DSU)": "Police DSU",
+10027:         "Dog Support Units (DSUs)": "Police DSU",
+10028:         "Mounted Unit": "Mounted Unit",
+10029:         "Mounted Units": "Mounted Unit",
+
+--- source lines 9990-10032 ---
+09990:         "Required Firefighters": "Rescue Pump",
+09991:         "Car Recovery": "Flatbed Recovery Vehicle",
+09992:         "Required Car Recovery": "Flatbed Recovery Vehicle",
+09993:         "ICCU or Ambulance Control Unit": "ICCU/ACU",
+09994:         "ICCU or Ambulance Control Units": "ICCU/ACU",
+09995:         "ICCUs or Ambulance Control Units": "ICCU/ACU",
+09996:         "Fire Officer": "Fire Officer",
+09997:         "Fire Officers": "Fire Officer",
+09998:         "Rescue Support Unit": "Fire Engine R/PUMP x 1",
+09999:         "Rescue Support Units": "Fire Engine R/PUMP x 1",
+10000:         "Rescue Support Vehicle": "Fire Engine R/PUMP x 1",
+10001:         "Rescue Support Vehicles": "Fire Engine R/PUMP x 1",
+10002:         "Rescue Support Unit or Rescue Pump": "Fire Engine R/PUMP x 1",
+10003:         "Rescue Support Units or Rescue Pumps": "Fire Engine R/PUMP x 1",
+10004:         "Fire Engines or Rescue Support Vehicles": "Fire Engine R/PUMP x 1",
+10005:         "Fire Engines, Rescue Support Vehicles or Aerial Appliance Trucks": "Fire Engine R/PUMP x 1",
+10006:         "Foam Unit": "RP CAFS",
+10007:         "Foam Units": "RP CAFS",
+10008:         "Water Carrier": "Water Carrier",
+10009:         "Water Carriers": "Water Carrier",
+10010:         "Welfare Vehicles x1": "Welfare Vehicle",
+10011: 
+10012:         /*************************************************
+10013:          * POLICE
+10014:          *************************************************/
+10015:         "Police Car": "Police Car",
+10016:         "Police Cars": "Police Car",
+10017:         "Police car": "Police Car",
+10018:         "Police cars": "Police Car",
+10019:         "Police Officer": "Police Car",
+10020:         "Police Officers": "Police Car",
+10021:         "Traffic Car": "Police ATC",
+10022:         "Traffic Cars": "Police ATC",
+10023:         "Police Cars or Armed Response Vehicles (ARVs)": "Police ATC",
+10024:         "Armed Response Personnel (In Armed Vehicles)": "Police ATC",
+10025:         "Dog Support Unit (DSU)": "Police DSU",
+10026:         "Dog Support Units (DSU)": "Police DSU",
+10027:         "Dog Support Units (DSUs)": "Police DSU",
+10028:         "Mounted Unit": "Mounted Unit",
+10029:         "Mounted Units": "Mounted Unit",
+10030:         "Police Inspector": "Police Inspector",
+10031:         "Police Sergeant": "Police Sergeant",
+10032:         "Cell Van": "Cell Van",
+
+--- source lines 9991-10033 ---
+09991:         "Car Recovery": "Flatbed Recovery Vehicle",
+09992:         "Required Car Recovery": "Flatbed Recovery Vehicle",
+09993:         "ICCU or Ambulance Control Unit": "ICCU/ACU",
+09994:         "ICCU or Ambulance Control Units": "ICCU/ACU",
+09995:         "ICCUs or Ambulance Control Units": "ICCU/ACU",
+09996:         "Fire Officer": "Fire Officer",
+09997:         "Fire Officers": "Fire Officer",
+09998:         "Rescue Support Unit": "Fire Engine R/PUMP x 1",
+09999:         "Rescue Support Units": "Fire Engine R/PUMP x 1",
+10000:         "Rescue Support Vehicle": "Fire Engine R/PUMP x 1",
+10001:         "Rescue Support Vehicles": "Fire Engine R/PUMP x 1",
+10002:         "Rescue Support Unit or Rescue Pump": "Fire Engine R/PUMP x 1",
+10003:         "Rescue Support Units or Rescue Pumps": "Fire Engine R/PUMP x 1",
+10004:         "Fire Engines or Rescue Support Vehicles": "Fire Engine R/PUMP x 1",
+10005:         "Fire Engines, Rescue Support Vehicles or Aerial Appliance Trucks": "Fire Engine R/PUMP x 1",
+10006:         "Foam Unit": "RP CAFS",
+10007:         "Foam Units": "RP CAFS",
+10008:         "Water Carrier": "Water Carrier",
+10009:         "Water Carriers": "Water Carrier",
+10010:         "Welfare Vehicles x1": "Welfare Vehicle",
+10011: 
+10012:         /*************************************************
+10013:          * POLICE
+10014:          *************************************************/
+10015:         "Police Car": "Police Car",
+10016:         "Police Cars": "Police Car",
+10017:         "Police car": "Police Car",
+10018:         "Police cars": "Police Car",
+10019:         "Police Officer": "Police Car",
+10020:         "Police Officers": "Police Car",
+10021:         "Traffic Car": "Police ATC",
+10022:         "Traffic Cars": "Police ATC",
+10023:         "Police Cars or Armed Response Vehicles (ARVs)": "Police ATC",
+10024:         "Armed Response Personnel (In Armed Vehicles)": "Police ATC",
+10025:         "Dog Support Unit (DSU)": "Police DSU",
+10026:         "Dog Support Units (DSU)": "Police DSU",
+10027:         "Dog Support Units (DSUs)": "Police DSU",
+10028:         "Mounted Unit": "Mounted Unit",
+10029:         "Mounted Units": "Mounted Unit",
+10030:         "Police Inspector": "Police Inspector",
+10031:         "Police Sergeant": "Police Sergeant",
+10032:         "Cell Van": "Cell Van",
+10033:         "Police Helicopter": "Police Helicopter",
+
+--- source lines 11430-11472 ---
+11430: 
+11431:         const add = value => {
+11432:             if (value) candidates.add(String(value).replace(/\s+/g, ' ').trim());
+11433:         };
+11434: 
+11435:         const lowerMapped = mapped.toLowerCase();
+11436:         const lowerRaw = raw.toLowerCase();
+11437: 
+11438:         if (lowerMapped.includes('fire engine') || lowerRaw.includes('pump') || lowerRaw.includes('rescue support')) {
+11439:             add('Fire Engine');
+11440:             add('Pump');
+11441:             add('Pumps');
+11442:             add('Rescue Pump');
+11443:             add('Rescue Support Unit');
+11444:             add('Rescue Support Vehicle');
+11445:         }
+11446: 
+11447:         if (lowerMapped === 'police atc' || lowerRaw.includes('traffic car')) {
+11448:             add('Traffic Car');
+11449:             add('Traffic Cars');
+11450:             add('Police ATC');
+11451:         }
+11452: 
+11453:         if (lowerMapped === 'police car' || lowerRaw.includes('police car')) {
+11454:             add('Police Car');
+11455:             add('Police Cars');
+11456:         }
+11457: 
+11458:         if (
+11459:             isAtvCarrierRequirement(
+11460:                 originalName,
+11461:                 mappedName
+11462:             )
+11463:         ) {
+11464:             add('ATV');
+11465:             add('ATV Carrier');
+11466:             add('ATV Carriers');
+11467:             add('ATC Carrier');
+11468:             add('ATC Carriers');
+11469:         }
+11470: 
+11471:         if (lowerMapped === 'police dsu' || lowerRaw.includes('dog support')) {
+11472:             add('Dog Support Unit (DSU)');
+
+PATTERN: Major Foam Tenders?
+HITS: [737, 809, 9208, 10161, 10162, 10163, 10164, 10165, 10166, 10167, 10168, 10803, 10805, 10829, 10831]
+
+--- source lines 723-765 ---
+00723:         "60": "Coastguard Commander",
+00724:         "61": "Flood Rescue Unit Trailer",
+00725:         "62": "Flood Rescue Unit",
+00726:         "63": "Support Unit",
+00727:         "65": "Coastguard Rescue Helicopter Large",
+00728:         "66": "4x4 Vehicle",
+00729:         "67": "ILB Trainer",
+00730:         "68": "ILB",
+00731:         "69": "ALB",
+00732:         "70": "Rescue Watercraft Trailer",
+00733:         "71": "Hovercraft Trailer",
+00734:         "72": "Hovercraft Transporter",
+00735:         "73": "Light 4x4",
+00736:         "74": "Boat Trailer",
+00737:         "75": "Major Foam Tender",
+00738:         "76": "RIV",
+00739:         "77": "Airfield Command",
+00740:         "78": "Rescue Stairs",
+00741:         "79": "Airfield Operations Vehicle",
+00742:         "80": "Airfield Operations Supervisor",
+00743:         "81": "Medical Equipment Trailer",
+00744:         "85": "Control Van SAR",
+00745:         "86": "Operational Support Van",
+00746:         "87": "Operational Support Trailer",
+00747:         "88": "SAR Flood Rescue Trailer",
+00748:         "89": "Drone Vehicle SAR HQ",
+00749:         "91": "Police Drone Vehicle",
+00750:         "93": "SAR 4x4",
+00751:         "96": "Specialist Paramedic RRV",
+00752:         "97": "Patient Transport Service Ambulance",
+00753:         "98": "Critical Care Transfer Ambulance",
+00754:         "99": "Mountain Rescue 4x4",
+00755:         "102": "Search Dog Unit SAR",
+00756:         "105": "Flatbed Recovery Vehicle",
+00757:         "107": "RRU",
+00758:         "108": "EIU",
+00759:         "109": "EOD Commander",
+00760:         "110": "EOD Response Vehicle",
+00761:         "111": "EOD Medium Equipment Van",
+00762:         "112": "EOD Heavy Equipment Vehicle",
+00763:         "113": "Marine EOD Response Vehicle",
+00764:         "114": "Marine EOD Equipment Van",
+00765:         "115": "Welfare Vehicle",
+
+--- source lines 795-837 ---
+00795:         "Coastguard Commander": { code: "CGC", icon: "⚠️👨‍✈️" },
+00796:         "Coastguard Rescue Helicopter Large": { code: "CGH", icon: "🚁⚠️" },
+00797:         "Flood Rescue Unit Trailer": { code: "FRUT", icon: "🛟" },
+00798:         "Flood Rescue Unit": { code: "FRU", icon: "🛟" },
+00799:         "Support Unit": { code: "SU", icon: "⚠️🚐" },
+00800:         "4x4 Vehicle": { code: "4x4", icon: "🛟" },
+00801:         "ILB Trainer": { code: "ILBT", icon: "🚤" },
+00802:         "ILB": { code: "ILB", icon: "🚤" },
+00803:         "ALB": { code: "ALB", icon: "🚤" },
+00804:         "Boat Trailer": { code: "BT", icon: "🚤" },
+00805:         "Rescue Watercraft Trailer": { code: "RWC", icon: "🚤" },
+00806:         "Hovercraft Trailer": { code: "HCT", icon: "🛥️" },
+00807:         "Hovercraft Transporter": { code: "HCTR", icon: "🛥️" },
+00808:         "Light 4x4": { code: "L4x4", icon: "🚙" },
+00809:         "Major Foam Tender": { code: "MFT", icon: "🚒✈️" },
+00810:         "RIV": { code: "RIV", icon: "🚒✈️" },
+00811:         "Airfield Command": { code: "AirCommand", icon: "🚒✈️" },
+00812:         "Rescue Stairs": { code: "RS", icon: "✈️🪜" },
+00813:         "Airfield Operations Vehicle": { code: "AOV", icon: "✈️🚗" },
+00814:         "Airfield Operations Supervisor": { code: "AOS", icon: "✈️👷" },
+00815:         "Medical Equipment Trailer": { code: "MET", icon: "🚒⚕️" },
+00816:         "Control Van SAR": { code: "CV", icon: "📡" },
+00817:         "Operational Support Van": { code: "OSV", icon: "🛠️" },
+00818:         "Operational Support Trailer": { code: "OST", icon: "🛠️" },
+00819:         "SAR Flood Rescue Trailer": { code: "SFR", icon: "🌊" },
+00820:         "Drone Vehicle SAR HQ": { code: "DRV", icon: "🚁" },
+00821:         "SAR 4x4": { code: "SAR4x4", icon: "🟡" },
+00822:         "Specialist Paramedic RRV": { code: "SP-RRV", icon: "🚑" },
+00823:         "Patient Transport Service Ambulance": { code: "PTS", icon: "🚑" },
+00824:         "Critical Care Transfer Ambulance": { code: "CCT", icon: "🚑❤️" },
+00825:         "Mountain Rescue 4x4": { code: "MR4x4", icon: "🏔️" },
+00826:         "Search Dog Unit SAR": { code: "K9", icon: "🐕" },
+00827:         "Flatbed Recovery Vehicle": { code: "FRV", icon: "🛻" },
+00828:         "RRV": { code: "RRV", icon: "🚑" },
+00829:         "RRU": { code: "RRU", icon: "🚒✈️" },
+00830:         "Rescue Support Unit (RSU)": { code: "RSU", icon: "🚒🛠️" },
+00831:         "DSU": { code: "DSU", icon: "🚔🐕" },
+00832:         "OTL": { code: "OTL", icon: "🚔" },
+00833:         "PRV": { code: "PRV", icon: "🚑1️⃣" },
+00834:         "SRV": { code: "SRV", icon: "🚑2️⃣" },
+00835:         "ATV": { code: "ATV", icon: "🚑🦺" },
+00836:         "BFU": { code: "BFU", icon: "🚒✈️" },
+00837:         "F/WrC": { code: "FWrC", icon: "🚒💦" },
+
+--- source lines 9194-9236 ---
+09194:     // exact-ID IRVs carrying specialist-trained staff, live-verify ordinary IRVs
+09195:     // before selection, and exclude known trained IRVs from ordinary attendance.
+09196:     // Auto Mode now waits for a complete, non-zero, ID-stable vehicle list with
+09197:     // no remaining load control or spinner before Unit Finder may select units.
+09198:     // V10.6.72: Exact assignment-page scans no longer require a permanent binding
+09199:     // before an untrained IRV may satisfy ordinary Police attendance. Police Medic
+09200:     // and Railway Police Officer requirements now use exact trained IRVs with two
+09201:     // qualified personnel, and ATV Carrier uses an authoritative type-30 matcher.
+09202:     // V10.6.83: Mission Control now uses an iOS Safari-only safe-area layout,
+09203:     // horizontal collapse state, visual-viewport placement and pointer dragging.
+09204:     // Desktop positioning, sizing and mouse dragging remain unchanged.
+09205:     // V10.6.86: Firefighters convert to Rescue Pumps at nine personnel
+09206:     // per vehicle; Car Recovery maps to the existing Flatbed Recovery
+09207:     // Vehicle; RIV-or-Major-Foam-Tender wording uses RIV first and only
+09208:     // falls back to a Major Foam Tender when no eligible RIV is available.
+09209:     // V10.6.85: Fire cross-reference now maps the exact "Road Rail Unit"
+09210:     // wording to the established RRU route.
+09211:     // V10.6.84: the exact mission wording "Fire, rescue or aerial appliance"
+09212:     // now maps to the existing Rescue Pump route.
+09213:     // V10.6.82: verified Fire profiles staff type-107 RRUs with two Railway Fire
+09214:     // personnel, type-15 ICCUs with three Level 1 Incident Commanders and type-39
+09215:     // Fire OSUs with three HazMat personnel. BASU, Welfare and HazMat share one OSU.
+09216:     // V10.6.81: Operational Support or SAR Vehicle requirements now select and
+09217:     // verify the exact type-86 Operational Support Van. Fire type-39 Operational
+09218:     // Support Units remain excluded from this SAR requirement.
+09219:     // V10.6.80: Critical Care Ambulances now require one trained person per vehicle.
+09220:     // Armed Response personnel use exact type-25 ATCs with two officers who each hold
+09221:     // both Roads Policing and Firearms. Police Officer and Seagoing Vessel upgrade
+09222:     // rows now use shared strict conversions across Unit Finder, Update and Auto.
+09223:     // V10.6.54: Auto Mode no longer waits for post-dispatch upgrades. It now
+09224:     // dispatches and advances immediately, including exact-next continuation
+09225:     // after high-value Dispatch & Share missions.
+09226:     // V10.6.53: ICCU-or-ACU requirements now select an ICCU first and use
+09227:     // Ambulance Control Unit vehicle type 31 only when no ICCU is available.
+09228:     // V10.6.52: Debug, High Debug and the Issue Recorder have been removed.
+09229:     // Clear legacy settings/data so they cannot be restored by an older saved preference.
+09230:     let mfDebugEnabled = false;
+09231:     let mfHighDebugEnabled = false;
+09232: 
+09233:     try {
+09234:         localStorage.removeItem('mf_debug_enabled_v9');
+09235:         localStorage.removeItem('mf_high_debug_enabled_v9');
+09236:         localStorage.removeItem('mf_debug_collapsed_v9');
+
+--- source lines 10147-10189 ---
+10147:         "Coastguard Commander": "CG Commander",
+10148:         "Flood Rescue Units":"Flood Rescue",
+10149: 
+10150:         /*************************************************
+10151:          * AIRFIELD OPS
+10152:          *************************************************/
+10153:         "Airfield Operations Vehicle": "Airfield Operations Vehicle",
+10154:         "Airfield Operations Vehicles": "Airfield Operations Vehicle",
+10155:         "Aerial Appliance Trucks or Rescue Stairs": "Rescue Stairs",
+10156:         "Fire Engines or RIVs": "RIV",
+10157:         "RIV": "RIV",
+10158:         "RIVs": "RIV",
+10159:         "Rapid Intervention Vehicle": "RIV",
+10160:         "Rapid Intervention Vehicles": "RIV",
+10161:         "Major Foam Tender": "Major Foam Tender",
+10162:         "Major Foam Tenders": "Major Foam Tender",
+10163:         "RIVs or Major Foam Tenders": "RIV",
+10164:         "RIV or Major Foam Tender": "RIV",
+10165:         "Required RIV or Major Foam Tender": "RIV",
+10166:         "Required RIVs or Major Foam Tenders": "RIV",
+10167:         "Fire Engines, RIVs or Major Foam Tenders": "Major Foam Tender",
+10168:         "Fire Engines or Major Foam Tenders": "Major Foam Tender",
+10169:         "Airfield Operations Supervisor": "Airfield Operations Supervisors",
+10170:         "Airfield Operations Supervisors": "Airfield Operations Supervisors",
+10171:         "Airfield Firefighting Command Vehicle": "Airfield FF Command Vehicle",
+10172:         "ICCU or Ambulance Control Units or Airfield Firefighting Command Vehicles": "Airfield FF Command Vehicle",
+10173:         "Fire Officers or Airfield Firefighting Command Vehicles": "Fire Officer",
+10174: 
+10175:         /*************************************************
+10176:          * SEARCH & RESCUE / FLOOD / RECOVERY / BOMB
+10177:          *************************************************/
+10178:         "Flood Rescue Unit": "Flood Rescue Unit (Trailer)",
+10179:         "4x4 Vehicle": "4x4 Units",
+10180:         "4x4 Vehicles": "4x4 Units",
+10181:         "Mountain Rescue 4x4 or SAR 4x4": "4x4 Units",
+10182:         "Mountain Rescue 4x4s or SAR 4x4s": "4x4 Units",
+10183: 
+10184:         // Special Search Technician vehicle selector.
+10185:         // Matching is handled by the dedicated displayed-name-prefix rule.
+10186:         "SARTEC": "SARTEC",
+10187: 
+10188:         "modules.missionHelper.prerequisites.tow_trucks_large": "Flatbed Recovery Vehicle",
+10189:         "modules.missionHelper.prerequisites.tow_trucks": "Flatbed Recovery Vehicle",
+
+--- source lines 10148-10190 ---
+10148:         "Flood Rescue Units":"Flood Rescue",
+10149: 
+10150:         /*************************************************
+10151:          * AIRFIELD OPS
+10152:          *************************************************/
+10153:         "Airfield Operations Vehicle": "Airfield Operations Vehicle",
+10154:         "Airfield Operations Vehicles": "Airfield Operations Vehicle",
+10155:         "Aerial Appliance Trucks or Rescue Stairs": "Rescue Stairs",
+10156:         "Fire Engines or RIVs": "RIV",
+10157:         "RIV": "RIV",
+10158:         "RIVs": "RIV",
+10159:         "Rapid Intervention Vehicle": "RIV",
+10160:         "Rapid Intervention Vehicles": "RIV",
+10161:         "Major Foam Tender": "Major Foam Tender",
+10162:         "Major Foam Tenders": "Major Foam Tender",
+10163:         "RIVs or Major Foam Tenders": "RIV",
+10164:         "RIV or Major Foam Tender": "RIV",
+10165:         "Required RIV or Major Foam Tender": "RIV",
+10166:         "Required RIVs or Major Foam Tenders": "RIV",
+10167:         "Fire Engines, RIVs or Major Foam Tenders": "Major Foam Tender",
+10168:         "Fire Engines or Major Foam Tenders": "Major Foam Tender",
+10169:         "Airfield Operations Supervisor": "Airfield Operations Supervisors",
+10170:         "Airfield Operations Supervisors": "Airfield Operations Supervisors",
+10171:         "Airfield Firefighting Command Vehicle": "Airfield FF Command Vehicle",
+10172:         "ICCU or Ambulance Control Units or Airfield Firefighting Command Vehicles": "Airfield FF Command Vehicle",
+10173:         "Fire Officers or Airfield Firefighting Command Vehicles": "Fire Officer",
+10174: 
+10175:         /*************************************************
+10176:          * SEARCH & RESCUE / FLOOD / RECOVERY / BOMB
+10177:          *************************************************/
+10178:         "Flood Rescue Unit": "Flood Rescue Unit (Trailer)",
+10179:         "4x4 Vehicle": "4x4 Units",
+10180:         "4x4 Vehicles": "4x4 Units",
+10181:         "Mountain Rescue 4x4 or SAR 4x4": "4x4 Units",
+10182:         "Mountain Rescue 4x4s or SAR 4x4s": "4x4 Units",
+10183: 
+10184:         // Special Search Technician vehicle selector.
+10185:         // Matching is handled by the dedicated displayed-name-prefix rule.
+10186:         "SARTEC": "SARTEC",
+10187: 
+10188:         "modules.missionHelper.prerequisites.tow_trucks_large": "Flatbed Recovery Vehicle",
+10189:         "modules.missionHelper.prerequisites.tow_trucks": "Flatbed Recovery Vehicle",
+10190:         "1 car to tow": "Flatbed Recovery Vehicle",
+
+--- source lines 10149-10191 ---
+10149: 
+10150:         /*************************************************
+10151:          * AIRFIELD OPS
+10152:          *************************************************/
+10153:         "Airfield Operations Vehicle": "Airfield Operations Vehicle",
+10154:         "Airfield Operations Vehicles": "Airfield Operations Vehicle",
+10155:         "Aerial Appliance Trucks or Rescue Stairs": "Rescue Stairs",
+10156:         "Fire Engines or RIVs": "RIV",
+10157:         "RIV": "RIV",
+10158:         "RIVs": "RIV",
+10159:         "Rapid Intervention Vehicle": "RIV",
+10160:         "Rapid Intervention Vehicles": "RIV",
+10161:         "Major Foam Tender": "Major Foam Tender",
+10162:         "Major Foam Tenders": "Major Foam Tender",
+10163:         "RIVs or Major Foam Tenders": "RIV",
+10164:         "RIV or Major Foam Tender": "RIV",
+10165:         "Required RIV or Major Foam Tender": "RIV",
+10166:         "Required RIVs or Major Foam Tenders": "RIV",
+10167:         "Fire Engines, RIVs or Major Foam Tenders": "Major Foam Tender",
+10168:         "Fire Engines or Major Foam Tenders": "Major Foam Tender",
+10169:         "Airfield Operations Supervisor": "Airfield Operations Supervisors",
+10170:         "Airfield Operations Supervisors": "Airfield Operations Supervisors",
+10171:         "Airfield Firefighting Command Vehicle": "Airfield FF Command Vehicle",
+10172:         "ICCU or Ambulance Control Units or Airfield Firefighting Command Vehicles": "Airfield FF Command Vehicle",
+10173:         "Fire Officers or Airfield Firefighting Command Vehicles": "Fire Officer",
+10174: 
+10175:         /*************************************************
+10176:          * SEARCH & RESCUE / FLOOD / RECOVERY / BOMB
+10177:          *************************************************/
+10178:         "Flood Rescue Unit": "Flood Rescue Unit (Trailer)",
+10179:         "4x4 Vehicle": "4x4 Units",
+10180:         "4x4 Vehicles": "4x4 Units",
+10181:         "Mountain Rescue 4x4 or SAR 4x4": "4x4 Units",
+10182:         "Mountain Rescue 4x4s or SAR 4x4s": "4x4 Units",
+10183: 
+10184:         // Special Search Technician vehicle selector.
+10185:         // Matching is handled by the dedicated displayed-name-prefix rule.
+10186:         "SARTEC": "SARTEC",
+10187: 
+10188:         "modules.missionHelper.prerequisites.tow_trucks_large": "Flatbed Recovery Vehicle",
+10189:         "modules.missionHelper.prerequisites.tow_trucks": "Flatbed Recovery Vehicle",
+10190:         "1 car to tow": "Flatbed Recovery Vehicle",
+10191:         "Cars to tow": "Flatbed Recovery Vehicle",
+
+--- source lines 10150-10192 ---
+10150:         /*************************************************
+10151:          * AIRFIELD OPS
+10152:          *************************************************/
+10153:         "Airfield Operations Vehicle": "Airfield Operations Vehicle",
+10154:         "Airfield Operations Vehicles": "Airfield Operations Vehicle",
+10155:         "Aerial Appliance Trucks or Rescue Stairs": "Rescue Stairs",
+10156:         "Fire Engines or RIVs": "RIV",
+10157:         "RIV": "RIV",
+10158:         "RIVs": "RIV",
+10159:         "Rapid Intervention Vehicle": "RIV",
+10160:         "Rapid Intervention Vehicles": "RIV",
+10161:         "Major Foam Tender": "Major Foam Tender",
+10162:         "Major Foam Tenders": "Major Foam Tender",
+10163:         "RIVs or Major Foam Tenders": "RIV",
+10164:         "RIV or Major Foam Tender": "RIV",
+10165:         "Required RIV or Major Foam Tender": "RIV",
+10166:         "Required RIVs or Major Foam Tenders": "RIV",
+10167:         "Fire Engines, RIVs or Major Foam Tenders": "Major Foam Tender",
+10168:         "Fire Engines or Major Foam Tenders": "Major Foam Tender",
+10169:         "Airfield Operations Supervisor": "Airfield Operations Supervisors",
+10170:         "Airfield Operations Supervisors": "Airfield Operations Supervisors",
+10171:         "Airfield Firefighting Command Vehicle": "Airfield FF Command Vehicle",
+10172:         "ICCU or Ambulance Control Units or Airfield Firefighting Command Vehicles": "Airfield FF Command Vehicle",
+10173:         "Fire Officers or Airfield Firefighting Command Vehicles": "Fire Officer",
+10174: 
+10175:         /*************************************************
+10176:          * SEARCH & RESCUE / FLOOD / RECOVERY / BOMB
+10177:          *************************************************/
+10178:         "Flood Rescue Unit": "Flood Rescue Unit (Trailer)",
+10179:         "4x4 Vehicle": "4x4 Units",
+10180:         "4x4 Vehicles": "4x4 Units",
+10181:         "Mountain Rescue 4x4 or SAR 4x4": "4x4 Units",
+10182:         "Mountain Rescue 4x4s or SAR 4x4s": "4x4 Units",
+10183: 
+10184:         // Special Search Technician vehicle selector.
+10185:         // Matching is handled by the dedicated displayed-name-prefix rule.
+10186:         "SARTEC": "SARTEC",
+10187: 
+10188:         "modules.missionHelper.prerequisites.tow_trucks_large": "Flatbed Recovery Vehicle",
+10189:         "modules.missionHelper.prerequisites.tow_trucks": "Flatbed Recovery Vehicle",
+10190:         "1 car to tow": "Flatbed Recovery Vehicle",
+10191:         "Cars to tow": "Flatbed Recovery Vehicle",
+10192:         "Car to tow": "Flatbed Recovery Vehicle",
+
+--- source lines 10151-10193 ---
+10151:          * AIRFIELD OPS
+10152:          *************************************************/
+10153:         "Airfield Operations Vehicle": "Airfield Operations Vehicle",
+10154:         "Airfield Operations Vehicles": "Airfield Operations Vehicle",
+10155:         "Aerial Appliance Trucks or Rescue Stairs": "Rescue Stairs",
+10156:         "Fire Engines or RIVs": "RIV",
+10157:         "RIV": "RIV",
+10158:         "RIVs": "RIV",
+10159:         "Rapid Intervention Vehicle": "RIV",
+10160:         "Rapid Intervention Vehicles": "RIV",
+10161:         "Major Foam Tender": "Major Foam Tender",
+10162:         "Major Foam Tenders": "Major Foam Tender",
+10163:         "RIVs or Major Foam Tenders": "RIV",
+10164:         "RIV or Major Foam Tender": "RIV",
+10165:         "Required RIV or Major Foam Tender": "RIV",
+10166:         "Required RIVs or Major Foam Tenders": "RIV",
+10167:         "Fire Engines, RIVs or Major Foam Tenders": "Major Foam Tender",
+10168:         "Fire Engines or Major Foam Tenders": "Major Foam Tender",
+10169:         "Airfield Operations Supervisor": "Airfield Operations Supervisors",
+10170:         "Airfield Operations Supervisors": "Airfield Operations Supervisors",
+10171:         "Airfield Firefighting Command Vehicle": "Airfield FF Command Vehicle",
+10172:         "ICCU or Ambulance Control Units or Airfield Firefighting Command Vehicles": "Airfield FF Command Vehicle",
+10173:         "Fire Officers or Airfield Firefighting Command Vehicles": "Fire Officer",
+10174: 
+10175:         /*************************************************
+10176:          * SEARCH & RESCUE / FLOOD / RECOVERY / BOMB
+10177:          *************************************************/
+10178:         "Flood Rescue Unit": "Flood Rescue Unit (Trailer)",
+10179:         "4x4 Vehicle": "4x4 Units",
+10180:         "4x4 Vehicles": "4x4 Units",
+10181:         "Mountain Rescue 4x4 or SAR 4x4": "4x4 Units",
+10182:         "Mountain Rescue 4x4s or SAR 4x4s": "4x4 Units",
+10183: 
+10184:         // Special Search Technician vehicle selector.
+10185:         // Matching is handled by the dedicated displayed-name-prefix rule.
+10186:         "SARTEC": "SARTEC",
+10187: 
+10188:         "modules.missionHelper.prerequisites.tow_trucks_large": "Flatbed Recovery Vehicle",
+10189:         "modules.missionHelper.prerequisites.tow_trucks": "Flatbed Recovery Vehicle",
+10190:         "1 car to tow": "Flatbed Recovery Vehicle",
+10191:         "Cars to tow": "Flatbed Recovery Vehicle",
+10192:         "Car to tow": "Flatbed Recovery Vehicle",
+10193:         "Maximum amount of cars to tow": "Flatbed Recovery Vehicle",
+
+--- source lines 10152-10194 ---
+10152:          *************************************************/
+10153:         "Airfield Operations Vehicle": "Airfield Operations Vehicle",
+10154:         "Airfield Operations Vehicles": "Airfield Operations Vehicle",
+10155:         "Aerial Appliance Trucks or Rescue Stairs": "Rescue Stairs",
+10156:         "Fire Engines or RIVs": "RIV",
+10157:         "RIV": "RIV",
+10158:         "RIVs": "RIV",
+10159:         "Rapid Intervention Vehicle": "RIV",
+10160:         "Rapid Intervention Vehicles": "RIV",
+10161:         "Major Foam Tender": "Major Foam Tender",
+10162:         "Major Foam Tenders": "Major Foam Tender",
+10163:         "RIVs or Major Foam Tenders": "RIV",
+10164:         "RIV or Major Foam Tender": "RIV",
+10165:         "Required RIV or Major Foam Tender": "RIV",
+10166:         "Required RIVs or Major Foam Tenders": "RIV",
+10167:         "Fire Engines, RIVs or Major Foam Tenders": "Major Foam Tender",
+10168:         "Fire Engines or Major Foam Tenders": "Major Foam Tender",
+10169:         "Airfield Operations Supervisor": "Airfield Operations Supervisors",
+10170:         "Airfield Operations Supervisors": "Airfield Operations Supervisors",
+10171:         "Airfield Firefighting Command Vehicle": "Airfield FF Command Vehicle",
+10172:         "ICCU or Ambulance Control Units or Airfield Firefighting Command Vehicles": "Airfield FF Command Vehicle",
+10173:         "Fire Officers or Airfield Firefighting Command Vehicles": "Fire Officer",
+10174: 
+10175:         /*************************************************
+10176:          * SEARCH & RESCUE / FLOOD / RECOVERY / BOMB
+10177:          *************************************************/
+10178:         "Flood Rescue Unit": "Flood Rescue Unit (Trailer)",
+10179:         "4x4 Vehicle": "4x4 Units",
+10180:         "4x4 Vehicles": "4x4 Units",
+10181:         "Mountain Rescue 4x4 or SAR 4x4": "4x4 Units",
+10182:         "Mountain Rescue 4x4s or SAR 4x4s": "4x4 Units",
+10183: 
+10184:         // Special Search Technician vehicle selector.
+10185:         // Matching is handled by the dedicated displayed-name-prefix rule.
+10186:         "SARTEC": "SARTEC",
+10187: 
+10188:         "modules.missionHelper.prerequisites.tow_trucks_large": "Flatbed Recovery Vehicle",
+10189:         "modules.missionHelper.prerequisites.tow_trucks": "Flatbed Recovery Vehicle",
+10190:         "1 car to tow": "Flatbed Recovery Vehicle",
+10191:         "Cars to tow": "Flatbed Recovery Vehicle",
+10192:         "Car to tow": "Flatbed Recovery Vehicle",
+10193:         "Maximum amount of cars to tow": "Flatbed Recovery Vehicle",
+10194:         "Minimum amount of cars to tow": "Flatbed Recovery Vehicle",
+
+--- source lines 10153-10195 ---
+10153:         "Airfield Operations Vehicle": "Airfield Operations Vehicle",
+10154:         "Airfield Operations Vehicles": "Airfield Operations Vehicle",
+10155:         "Aerial Appliance Trucks or Rescue Stairs": "Rescue Stairs",
+10156:         "Fire Engines or RIVs": "RIV",
+10157:         "RIV": "RIV",
+10158:         "RIVs": "RIV",
+10159:         "Rapid Intervention Vehicle": "RIV",
+10160:         "Rapid Intervention Vehicles": "RIV",
+10161:         "Major Foam Tender": "Major Foam Tender",
+10162:         "Major Foam Tenders": "Major Foam Tender",
+10163:         "RIVs or Major Foam Tenders": "RIV",
+10164:         "RIV or Major Foam Tender": "RIV",
+10165:         "Required RIV or Major Foam Tender": "RIV",
+10166:         "Required RIVs or Major Foam Tenders": "RIV",
+10167:         "Fire Engines, RIVs or Major Foam Tenders": "Major Foam Tender",
+10168:         "Fire Engines or Major Foam Tenders": "Major Foam Tender",
+10169:         "Airfield Operations Supervisor": "Airfield Operations Supervisors",
+10170:         "Airfield Operations Supervisors": "Airfield Operations Supervisors",
+10171:         "Airfield Firefighting Command Vehicle": "Airfield FF Command Vehicle",
+10172:         "ICCU or Ambulance Control Units or Airfield Firefighting Command Vehicles": "Airfield FF Command Vehicle",
+10173:         "Fire Officers or Airfield Firefighting Command Vehicles": "Fire Officer",
+10174: 
+10175:         /*************************************************
+10176:          * SEARCH & RESCUE / FLOOD / RECOVERY / BOMB
+10177:          *************************************************/
+10178:         "Flood Rescue Unit": "Flood Rescue Unit (Trailer)",
+10179:         "4x4 Vehicle": "4x4 Units",
+10180:         "4x4 Vehicles": "4x4 Units",
+10181:         "Mountain Rescue 4x4 or SAR 4x4": "4x4 Units",
+10182:         "Mountain Rescue 4x4s or SAR 4x4s": "4x4 Units",
+10183: 
+10184:         // Special Search Technician vehicle selector.
+10185:         // Matching is handled by the dedicated displayed-name-prefix rule.
+10186:         "SARTEC": "SARTEC",
+10187: 
+10188:         "modules.missionHelper.prerequisites.tow_trucks_large": "Flatbed Recovery Vehicle",
+10189:         "modules.missionHelper.prerequisites.tow_trucks": "Flatbed Recovery Vehicle",
+10190:         "1 car to tow": "Flatbed Recovery Vehicle",
+10191:         "Cars to tow": "Flatbed Recovery Vehicle",
+10192:         "Car to tow": "Flatbed Recovery Vehicle",
+10193:         "Maximum amount of cars to tow": "Flatbed Recovery Vehicle",
+10194:         "Minimum amount of cars to tow": "Flatbed Recovery Vehicle",
+10195:         "Tow Trucks Large": "Flatbed Recovery Vehicle",
+
+--- source lines 10154-10196 ---
+10154:         "Airfield Operations Vehicles": "Airfield Operations Vehicle",
+10155:         "Aerial Appliance Trucks or Rescue Stairs": "Rescue Stairs",
+10156:         "Fire Engines or RIVs": "RIV",
+10157:         "RIV": "RIV",
+10158:         "RIVs": "RIV",
+10159:         "Rapid Intervention Vehicle": "RIV",
+10160:         "Rapid Intervention Vehicles": "RIV",
+10161:         "Major Foam Tender": "Major Foam Tender",
+10162:         "Major Foam Tenders": "Major Foam Tender",
+10163:         "RIVs or Major Foam Tenders": "RIV",
+10164:         "RIV or Major Foam Tender": "RIV",
+10165:         "Required RIV or Major Foam Tender": "RIV",
+10166:         "Required RIVs or Major Foam Tenders": "RIV",
+10167:         "Fire Engines, RIVs or Major Foam Tenders": "Major Foam Tender",
+10168:         "Fire Engines or Major Foam Tenders": "Major Foam Tender",
+10169:         "Airfield Operations Supervisor": "Airfield Operations Supervisors",
+10170:         "Airfield Operations Supervisors": "Airfield Operations Supervisors",
+10171:         "Airfield Firefighting Command Vehicle": "Airfield FF Command Vehicle",
+10172:         "ICCU or Ambulance Control Units or Airfield Firefighting Command Vehicles": "Airfield FF Command Vehicle",
+10173:         "Fire Officers or Airfield Firefighting Command Vehicles": "Fire Officer",
+10174: 
+10175:         /*************************************************
+10176:          * SEARCH & RESCUE / FLOOD / RECOVERY / BOMB
+10177:          *************************************************/
+10178:         "Flood Rescue Unit": "Flood Rescue Unit (Trailer)",
+10179:         "4x4 Vehicle": "4x4 Units",
+10180:         "4x4 Vehicles": "4x4 Units",
+10181:         "Mountain Rescue 4x4 or SAR 4x4": "4x4 Units",
+10182:         "Mountain Rescue 4x4s or SAR 4x4s": "4x4 Units",
+10183: 
+10184:         // Special Search Technician vehicle selector.
+10185:         // Matching is handled by the dedicated displayed-name-prefix rule.
+10186:         "SARTEC": "SARTEC",
+10187: 
+10188:         "modules.missionHelper.prerequisites.tow_trucks_large": "Flatbed Recovery Vehicle",
+10189:         "modules.missionHelper.prerequisites.tow_trucks": "Flatbed Recovery Vehicle",
+10190:         "1 car to tow": "Flatbed Recovery Vehicle",
+10191:         "Cars to tow": "Flatbed Recovery Vehicle",
+10192:         "Car to tow": "Flatbed Recovery Vehicle",
+10193:         "Maximum amount of cars to tow": "Flatbed Recovery Vehicle",
+10194:         "Minimum amount of cars to tow": "Flatbed Recovery Vehicle",
+10195:         "Tow Trucks Large": "Flatbed Recovery Vehicle",
+10196:         "Flatbed Recovery Vehicle": "Flatbed Recovery Vehicle",
+
+--- source lines 10789-10831 ---
+10789:                     ' '
+10790:                 )
+10791:                 .trim();
+10792: 
+10793:         const mapped =
+10794:             normaliseVehicleText(
+10795:                 mappedName
+10796:             );
+10797: 
+10798:         return (
+10799:             /^(?:Required\s+)?RIVs?\s+or\s+Major\s+Foam\s+Tenders?$/i.test(
+10800:                 raw
+10801:             ) ||
+10802:             mapped ===
+10803:                 'riv or major foam tender' ||
+10804:             mapped ===
+10805:                 'rivs or major foam tenders'
+10806:         );
+10807:     }
+10808: 
+10809:     function isMajorFoamTenderVehicleCheckbox(
+10810:         input
+10811:     ) {
+10812:         if (!input) return false;
+10813: 
+10814:         if (
+10815:             getVehicleTypeIdentifiers(
+10816:                 input
+10817:             ).includes(
+10818:                 '75'
+10819:             )
+10820:         ) {
+10821:             return true;
+10822:         }
+10823: 
+10824:         return getCheckboxVehicleValues(
+10825:             input
+10826:         ).some(value => {
+10827:             return (
+10828:                 value ===
+10829:                     'major foam tender' ||
+10830:                 value ===
+10831:                     'major foam tenders' ||
+
+--- source lines 10791-10833 ---
+10791:                 .trim();
+10792: 
+10793:         const mapped =
+10794:             normaliseVehicleText(
+10795:                 mappedName
+10796:             );
+10797: 
+10798:         return (
+10799:             /^(?:Required\s+)?RIVs?\s+or\s+Major\s+Foam\s+Tenders?$/i.test(
+10800:                 raw
+10801:             ) ||
+10802:             mapped ===
+10803:                 'riv or major foam tender' ||
+10804:             mapped ===
+10805:                 'rivs or major foam tenders'
+10806:         );
+10807:     }
+10808: 
+10809:     function isMajorFoamTenderVehicleCheckbox(
+10810:         input
+10811:     ) {
+10812:         if (!input) return false;
+10813: 
+10814:         if (
+10815:             getVehicleTypeIdentifiers(
+10816:                 input
+10817:             ).includes(
+10818:                 '75'
+10819:             )
+10820:         ) {
+10821:             return true;
+10822:         }
+10823: 
+10824:         return getCheckboxVehicleValues(
+10825:             input
+10826:         ).some(value => {
+10827:             return (
+10828:                 value ===
+10829:                     'major foam tender' ||
+10830:                 value ===
+10831:                     'major foam tenders' ||
+10832:                 value ===
+10833:                     'mft'
+
+--- source lines 10815-10857 ---
+10815:             getVehicleTypeIdentifiers(
+10816:                 input
+10817:             ).includes(
+10818:                 '75'
+10819:             )
+10820:         ) {
+10821:             return true;
+10822:         }
+10823: 
+10824:         return getCheckboxVehicleValues(
+10825:             input
+10826:         ).some(value => {
+10827:             return (
+10828:                 value ===
+10829:                     'major foam tender' ||
+10830:                 value ===
+10831:                     'major foam tenders' ||
+10832:                 value ===
+10833:                     'mft'
+10834:             );
+10835:         });
+10836:     }
+10837: 
+10838:     function isRivRequirement(
+10839:         originalName,
+10840:         mappedName
+10841:     ) {
+10842:         const raw =
+10843:             normaliseVehicleText(
+10844:                 originalName
+10845:             );
+10846: 
+10847:         const mapped =
+10848:             normaliseVehicleText(
+10849:                 mappedName
+10850:             );
+10851: 
+10852:         return (
+10853:             mapped === 'riv' ||
+10854:             mapped === 'rivs' ||
+10855:             mapped ===
+10856:                 'rapid intervention vehicle' ||
+10857:             mapped ===
+
+--- source lines 10817-10859 ---
+10817:             ).includes(
+10818:                 '75'
+10819:             )
+10820:         ) {
+10821:             return true;
+10822:         }
+10823: 
+10824:         return getCheckboxVehicleValues(
+10825:             input
+10826:         ).some(value => {
+10827:             return (
+10828:                 value ===
+10829:                     'major foam tender' ||
+10830:                 value ===
+10831:                     'major foam tenders' ||
+10832:                 value ===
+10833:                     'mft'
+10834:             );
+10835:         });
+10836:     }
+10837: 
+10838:     function isRivRequirement(
+10839:         originalName,
+10840:         mappedName
+10841:     ) {
+10842:         const raw =
+10843:             normaliseVehicleText(
+10844:                 originalName
+10845:             );
+10846: 
+10847:         const mapped =
+10848:             normaliseVehicleText(
+10849:                 mappedName
+10850:             );
+10851: 
+10852:         return (
+10853:             mapped === 'riv' ||
+10854:             mapped === 'rivs' ||
+10855:             mapped ===
+10856:                 'rapid intervention vehicle' ||
+10857:             mapped ===
+10858:                 'rapid intervention vehicles' ||
+10859:             raw === 'riv' ||
+
+PATTERN: Missing Personnel
+HITS: [25946, 26039, 28312, 28331, 28352]
+
+--- source lines 25932-25974 ---
+25932:                 missingRows.push({
+25933:                     unitName: 'Seagoing Vessel',
+25934:                     stillNeeded: amount
+25935:                 });
+25936: 
+25937:                 if (mfDebugEnabled && !silent) {
+25938:                     debugLog(
+25939:                         'UPDATE SEAGOING',
+25940:                         `Missing Vehicles text -> ALB x${amount}`
+25941:                     );
+25942:                 }
+25943:             });
+25944:         });
+25945: 
+25946:         // Missing Personnel is an actionable mission update, not a
+25947:         // vehicle staffing fault. Supported personnel conversions include:
+25948:         // Search Technicians = 4 per displayed-name-prefix SARTEC vehicle
+25949:         // Search Advisors = 2 per displayed-name-prefix SARTEC vehicle
+25950:         // SAR Commanders = 2 per Control Van
+25951:         // 3 Police Officers = 2 Police Cars
+25952:         // 6 Mud Rescue Operators = 2 Coastguard Mud Rescue Units
+25953:         // Normal update-table vehicle requirements are selected as well.
+25954:         let maximumSartecUnitsFromPersonnel = 0;
+25955: 
+25956:         const trainedPersonnelRequirements =
+25957:             new Map();
+25958: 
+25959:         if (
+25960:             tableLevel1PublicOrderRequired >
+25961:                 0 ||
+25962:             tableLevel2PublicOrderRequired >
+25963:                 0 ||
+25964:             tablePoliceSergeantRequired >
+25965:                 0 ||
+25966:             tablePoliceInspectorRequired >
+25967:                 0 ||
+25968:             tablePoliceMedicRequired >
+25969:                 0 ||
+25970:             tableRailwayPoliceRequired >
+25971:                 0 ||
+25972:             tableArmedResponseRequired >
+25973:                 0
+25974:         ) {
+
+--- source lines 26025-26067 ---
+26025:                     },
+26026:                     {
+26027:                         code:
+26028:                             'armed_response_personnel',
+26029:                         label:
+26030:                             'Armed Response Personnel',
+26031:                         required:
+26032:                             tableArmedResponseRequired
+26033:                     }
+26034:                 ])
+26035:             );
+26036:         }
+26037: 
+26038:         pageTextBlocks.forEach(text => {
+26039:             if (!/Missing Personnel:/i.test(text)) return;
+26040: 
+26041:             mergeTrainedPersonnelRequirements(
+26042:                 trainedPersonnelRequirements,
+26043:                 getSupportedTrainedPersonnelRequirementsFromText(
+26044:                     text
+26045:                 )
+26046:             );
+26047: 
+26048:             const personnelRows =
+26049:                 getSupportedMissingPersonnelRowsFromText(
+26050:                     text,
+26051:                     { silent }
+26052:                 );
+26053: 
+26054:             personnelRows.forEach(row => {
+26055:                 if (
+26056:                     normaliseVehicleText(
+26057:                         row.unitName
+26058:                     ) === 'sartec'
+26059:                 ) {
+26060:                     maximumSartecUnitsFromPersonnel =
+26061:                         Math.max(
+26062:                             maximumSartecUnitsFromPersonnel,
+26063:                             parseInt(
+26064:                                 row.stillNeeded,
+26065:                                 10
+26066:                             ) || 0
+26067:                         );
+
+--- source lines 28298-28340 ---
+28298:             });
+28299:         });
+28300: 
+28301:         for (const alert of alerts) {
+28302:             try {
+28303:                 if (!isElementVisible(alert)) continue;
+28304:             } catch (error) {}
+28305: 
+28306:             const text = (alert.innerText || alert.textContent || '').replace(/\s+/g, ' ').trim();
+28307:             if (!text) continue;
+28308: 
+28309:             const lower = text.toLowerCase();
+28310: 
+28311:             if (
+28312:                 lower.includes('missing personnel:') &&
+28313:                 hasSupportedMissingPersonnelUpdate(text) &&
+28314:                 !lower.includes('missing vehicles:')
+28315:             ) {
+28316:                 continue;
+28317:             }
+28318: 
+28319:             const isActionableMissionUpdateAlert =
+28320:                 lower.includes(
+28321:                     'missing vehicles:'
+28322:                 ) ||
+28323:                 lower.includes(
+28324:                     'missing vehicle:'
+28325:                 ) ||
+28326:                 lower.includes(
+28327:                     'we need:'
+28328:                 ) ||
+28329:                 (
+28330:                     lower.includes(
+28331:                         'missing personnel:'
+28332:                     ) &&
+28333:                     hasSupportedMissingPersonnelUpdate(
+28334:                         text
+28335:                     )
+28336:                 );
+28337: 
+28338:             if (
+28339:                 isActionableMissionUpdateAlert &&
+28340:                 areCurrentMissionUpdateRowsFullySelected()
+
+--- source lines 28317-28359 ---
+28317:             }
+28318: 
+28319:             const isActionableMissionUpdateAlert =
+28320:                 lower.includes(
+28321:                     'missing vehicles:'
+28322:                 ) ||
+28323:                 lower.includes(
+28324:                     'missing vehicle:'
+28325:                 ) ||
+28326:                 lower.includes(
+28327:                     'we need:'
+28328:                 ) ||
+28329:                 (
+28330:                     lower.includes(
+28331:                         'missing personnel:'
+28332:                     ) &&
+28333:                     hasSupportedMissingPersonnelUpdate(
+28334:                         text
+28335:                     )
+28336:                 );
+28337: 
+28338:             if (
+28339:                 isActionableMissionUpdateAlert &&
+28340:                 areCurrentMissionUpdateRowsFullySelected()
+28341:             ) {
+28342:                 // MissionChief keeps the red update text visible until
+28343:                 // Dispatch. Do not turn the panel back to not-ready when
+28344:                 // every parsed update requirement is already selected.
+28345:                 continue;
+28346:             }
+28347: 
+28348:             if (
+28349:                 lower.includes('missing vehicles:') ||
+28350:                 lower.includes('missing vehicle:') ||
+28351:                 (
+28352:                     lower.includes('missing personnel:') &&
+28353:                     !hasSupportedMissingPersonnelUpdate(text)
+28354:                 ) ||
+28355:                 lower.includes('we need:') ||
+28356:                 lower.includes('something went wrong') ||
+28357:                 lower.includes('has not enough personal') ||
+28358:                 lower.includes('has not enough personnel') ||
+28359:                 lower.includes('right qualification')
+
+--- source lines 28338-28380 ---
+28338:             if (
+28339:                 isActionableMissionUpdateAlert &&
+28340:                 areCurrentMissionUpdateRowsFullySelected()
+28341:             ) {
+28342:                 // MissionChief keeps the red update text visible until
+28343:                 // Dispatch. Do not turn the panel back to not-ready when
+28344:                 // every parsed update requirement is already selected.
+28345:                 continue;
+28346:             }
+28347: 
+28348:             if (
+28349:                 lower.includes('missing vehicles:') ||
+28350:                 lower.includes('missing vehicle:') ||
+28351:                 (
+28352:                     lower.includes('missing personnel:') &&
+28353:                     !hasSupportedMissingPersonnelUpdate(text)
+28354:                 ) ||
+28355:                 lower.includes('we need:') ||
+28356:                 lower.includes('something went wrong') ||
+28357:                 lower.includes('has not enough personal') ||
+28358:                 lower.includes('has not enough personnel') ||
+28359:                 lower.includes('right qualification')
+28360:             ) {
+28361:                 return text;
+28362:             }
+28363:         }
+28364: 
+28365:         return '';
+28366:     }
+28367: 
+28368:     function normaliseVisibleRequirementName(rawName) {
+28369:         return String(rawName || '')
+28370:             .replace(/\(.*?\)/g, ' ')
+28371:             .replace(/\bmin\.\s*\d+\b/gi, ' ')
+28372:             .replace(/\bx\s*\d+\b/gi, ' ')
+28373:             .replace(/[:;,.]/g, ' ')
+28374:             .replace(/\s+/g, ' ')
+28375:             .trim();
+28376:     }
+28377: 
+28378:     function parseVisibleMissionRequirementRows() {
+28379:         if (!isCurrentMissionExecutionOwner('visible fallback requirement read')) {
+28380:             return [];
+
+PATTERN: Police Officers?
+HITS: [146, 340, 345, 628, 9193, 9200, 9221, 9301, 9415, 10019, 10020, 11077, 11079, 18329, 20725, 20813, 20833, 20842, 25457, 25951, 26022]
+
+--- source lines 132-174 ---
+00132:                 'Firearms',
+00133:             police_horse:
+00134:                 'Mounted Officer',
+00135:             k9:
+00136:                 'Dog Handler',
+00137:             drone:
+00138:                 'Drone Operator',
+00139:             search_and_rescue:
+00140:                 'Police Search Advisor',
+00141:             polizeihubschrauber:
+00142:                 'Police Aviation',
+00143:             railway_police_command:
+00144:                 'Mobile Operations Management',
+00145:             railway_police:
+00146:                 'Railway Police Officer',
+00147:             bomb_disposal_command:
+00148:                 'EOD Commander',
+00149:             bomb_disposal:
+00150:                 'Bomb Disposal',
+00151:             bomb_disposal_diver:
+00152:                 'Marine Bomb Disposal',
+00153:             elw2:
+00154:                 'Level 1 Incident Commander Training',
+00155:             gw_gefahrgut:
+00156:                 'HazMat Unit',
+00157:             railway_fire:
+00158:                 'Railway Fire'
+00159:         });
+00160: 
+00161:     const POLICE_RULES = Object.freeze({
+00162:         publicOrderLevel1: makePoliceRule({
+00163:             id:
+00164:                 'police_public_order_level_1',
+00165:             label:
+00166:                 'Level 1 Public Order',
+00167:             vehicleTypeIds: [
+00168:                 '8'
+00169:             ],
+00170:             vehicleLabel:
+00171:                 'Incident Response Vehicle',
+00172:             target:
+00173:                 2,
+00174:             trainingAll: [
+
+--- source lines 326-368 ---
+00326:             trainingAll: ['polizeihubschrauber'],
+00327:             trainingLabel: 'Police aviation'
+00328:         }),
+00329:         mobileOperations: makePoliceRule({
+00330:             id: 'police_mobile_operations',
+00331:             label: 'Mobile Operations Management',
+00332:             vehicleTypeIds: ['108'],
+00333:             vehicleLabel: 'EIU',
+00334:             target: 2,
+00335:             trainingAll: ['railway_police_command'],
+00336:             trainingLabel: 'Mobile Operations Manager'
+00337:         }),
+00338:         railway: makePoliceRule({
+00339:             id: 'police_railway',
+00340:             label: 'Railway Police Officer',
+00341:             vehicleTypeIds: ['8'],
+00342:             vehicleLabel: 'Railway Policing IRV',
+00343:             target: 2,
+00344:             trainingAll: ['railway_police'],
+00345:             trainingLabel: 'Railway Police Officer',
+00346:             preferWithout: ['railway_police_command'],
+00347:             sharedVehiclePool: true
+00348:         }),
+00349:         eodCommander: makePoliceRule({
+00350:             id: 'police_eod_commander',
+00351:             label: 'EOD Commander',
+00352:             vehicleTypeIds: ['109'],
+00353:             vehicleLabel: 'EOD Commander Vehicle',
+00354:             target: 2,
+00355:             trainingAll: ['bomb_disposal_command'],
+00356:             trainingLabel: 'EOD Commander'
+00357:         }),
+00358:         eodResponse: makePoliceRule({
+00359:             id: 'police_eod_response',
+00360:             label: 'Bomb Disposal',
+00361:             vehicleTypeIds: ['110'],
+00362:             vehicleLabel: 'EOD Response Vehicle',
+00363:             target: 4,
+00364:             trainingAll: ['bomb_disposal'],
+00365:             trainingLabel: 'Bomb Disposal',
+00366:             preferWithout: ['bomb_disposal_command']
+00367:         }),
+00368:         eodMedium: makePoliceRule({
+
+--- source lines 331-373 ---
+00331:             label: 'Mobile Operations Management',
+00332:             vehicleTypeIds: ['108'],
+00333:             vehicleLabel: 'EIU',
+00334:             target: 2,
+00335:             trainingAll: ['railway_police_command'],
+00336:             trainingLabel: 'Mobile Operations Manager'
+00337:         }),
+00338:         railway: makePoliceRule({
+00339:             id: 'police_railway',
+00340:             label: 'Railway Police Officer',
+00341:             vehicleTypeIds: ['8'],
+00342:             vehicleLabel: 'Railway Policing IRV',
+00343:             target: 2,
+00344:             trainingAll: ['railway_police'],
+00345:             trainingLabel: 'Railway Police Officer',
+00346:             preferWithout: ['railway_police_command'],
+00347:             sharedVehiclePool: true
+00348:         }),
+00349:         eodCommander: makePoliceRule({
+00350:             id: 'police_eod_commander',
+00351:             label: 'EOD Commander',
+00352:             vehicleTypeIds: ['109'],
+00353:             vehicleLabel: 'EOD Commander Vehicle',
+00354:             target: 2,
+00355:             trainingAll: ['bomb_disposal_command'],
+00356:             trainingLabel: 'EOD Commander'
+00357:         }),
+00358:         eodResponse: makePoliceRule({
+00359:             id: 'police_eod_response',
+00360:             label: 'Bomb Disposal',
+00361:             vehicleTypeIds: ['110'],
+00362:             vehicleLabel: 'EOD Response Vehicle',
+00363:             target: 4,
+00364:             trainingAll: ['bomb_disposal'],
+00365:             trainingLabel: 'Bomb Disposal',
+00366:             preferWithout: ['bomb_disposal_command']
+00367:         }),
+00368:         eodMedium: makePoliceRule({
+00369:             id: 'police_eod_medium',
+00370:             label: 'Bomb Disposal',
+00371:             vehicleTypeIds: ['111'],
+00372:             vehicleLabel: 'EOD Medium Equipment Van',
+00373:             target: 3,
+
+--- source lines 614-656 ---
+00614:                 ),
+00615:                 livePoliceProfile('police_search_advisor', 'Police Search Advisor Training', 'Police Drone Vehicle', '2 dual-trained Drone/Search Advisor personnel', 'LIVE: both personnel must hold drone and search_and_rescue training.', [POLICE_RULES.searchAdvisor]),
+00616:                 livePoliceProfile(
+00617:                     'police_sergeant',
+00618:                     'Police Sergeant Training',
+00619:                     'Normal Police IRV',
+00620:                     '2 Police Sergeants per IRV',
+00621:                     'LIVE INDIVIDUAL PROFILE: checks and assigns Police Sergeant training only. Run all Police profiles retains the combined four-course crew rule.',
+00622:                     [
+00623:                         POLICE_RULES
+00624:                             .publicOrderSergeant
+00625:                     ]
+00626:                 ),
+00627:                 livePoliceProfile('police_aviation', 'Police aviation', 'Police Helicopter', '3 Police Aviation personnel per helicopter', 'LIVE: fills each Police Helicopter to 3/3 with polizeihubschrauber-trained personnel.', [POLICE_RULES.aviation], ['AIR']),
+00628:                 livePoliceProfile('police_railway', 'Railway Policing', 'Railway Policing IRV', '2 Railway Police Officers per IRV', 'LIVE: fills Railway Unit IRVs to 2/2 with railway_police-trained personnel and preserves Mobile Operations Managers where possible.', [POLICE_RULES.railway]),
+00629:                 livePoliceProfile('police_roads', 'Roads Policing Officer Training', 'Armed Traffic Car', '2 dual-trained Roads Policing + Firearms officers', 'LIVE: both officers must hold traffic_police and swat.', [POLICE_RULES.roads]),
+00630:                 {
+00631:                     id: 'all_police',
+00632:                     label: 'Run all Police profiles',
+00633:                     vehicle: 'All verified Police, Aviation and EOD vehicle groups',
+00634:                     requirement: 'Process verified profiles in safe reservation order',
+00635:                     policy: 'LIVE BATCH: preserves current assignments, assigns specialist and dual-trained roles first, allocates shared IRV/Drone pools safely, then verifies the station-wide result.',
+00636:                     live: true,
+00637:                     engine: 'police',
+00638:                     stationTypes: ['POLICE', 'AIR', 'EOD'],
+00639:                     rules: POLICE_ALL_RULES,
+00640:                     batch: true
+00641:                 }
+00642:             ]
+00643:         },
+00644:         coastguard: {
+00645:             label: 'SAR / Mountain Rescue / Coastguard',
+00646:             icon: '🌊⛰️',
+00647:             profiles: [
+00648:                 makeServicePreviewProfile('sar_cave_rescue', 'Cave Rescue Training', 'SAR'),
+00649:                 makeServicePreviewProfile('sar_coastal_air_rescue', 'Coastal Air Rescue Operations Training', 'SAR'),
+00650:                 makeServicePreviewProfile('sar_coastal_command', 'Coastal Command Training', 'SAR'),
+00651:                 makeServicePreviewProfile('sar_search_advisor', 'Coastguard Search Advisor Training', 'SAR'),
+00652:                 makeServicePreviewProfile('sar_dog_handling', 'Dog handling', 'SAR'),
+00653:                 makeServicePreviewProfile('sar_drone_operator', 'Drone Operator Training', 'SAR'),
+00654:                 makeServicePreviewProfile('sar_flood_first_responder', 'Flood First Responder Training', 'SAR'),
+00655:                 makeServicePreviewProfile('sar_hovercraft_commander', 'Hovercraft Commander Training', 'SAR'),
+00656:                 makeServicePreviewProfile('sar_jet_ski', 'Jet Ski Handling', 'SAR'),
+
+--- source lines 9179-9221 ---
+09179:     // Requirements remain exclusive to the Mission Update workflow.
+09180:     // V10.6.63: Mission Update now converts Cars to tow in pairs (1-2 cars =
+09181:     // one Flatbed Recovery Vehicle, 3-4 = two) and current linked patient-card
+09182:     // We need alerts override a stale/zero live-panel patient row for that patient.
+09183:     // V10.6.67: Inspector and Public Order IRVs are now matched by exact
+09184:     // vehicle ID and current per-vehicle assignment-page training only. This
+09185:     // blocks duplicate generic names such as "IRV" from copying one vehicle's
+09186:     // training to another and prevents an untrained IRV from being selected.
+09187:     // Public Order qualification now requires only the L1/L2/Sergeant codes
+09188:     // actually requested by the current mission.
+09189:     // V10.6.69: Strict Inspector/Public Order verification now uses the exact
+09190:     // Personnel Assignment registry vehicle IDs as priority hints, then rechecks
+09191:     // those precise /zuweisung pages before selection. This prevents trained
+09192:     // IRVs being missed when they are outside the first arrival-sorted scan batch.
+09193:     // V10.6.71: Normal Police Car/Police Officer requirements now protect
+09194:     // exact-ID IRVs carrying specialist-trained staff, live-verify ordinary IRVs
+09195:     // before selection, and exclude known trained IRVs from ordinary attendance.
+09196:     // Auto Mode now waits for a complete, non-zero, ID-stable vehicle list with
+09197:     // no remaining load control or spinner before Unit Finder may select units.
+09198:     // V10.6.72: Exact assignment-page scans no longer require a permanent binding
+09199:     // before an untrained IRV may satisfy ordinary Police attendance. Police Medic
+09200:     // and Railway Police Officer requirements now use exact trained IRVs with two
+09201:     // qualified personnel, and ATV Carrier uses an authoritative type-30 matcher.
+09202:     // V10.6.83: Mission Control now uses an iOS Safari-only safe-area layout,
+09203:     // horizontal collapse state, visual-viewport placement and pointer dragging.
+09204:     // Desktop positioning, sizing and mouse dragging remain unchanged.
+09205:     // V10.6.86: Firefighters convert to Rescue Pumps at nine personnel
+09206:     // per vehicle; Car Recovery maps to the existing Flatbed Recovery
+09207:     // Vehicle; RIV-or-Major-Foam-Tender wording uses RIV first and only
+09208:     // falls back to a Major Foam Tender when no eligible RIV is available.
+09209:     // V10.6.85: Fire cross-reference now maps the exact "Road Rail Unit"
+09210:     // wording to the established RRU route.
+09211:     // V10.6.84: the exact mission wording "Fire, rescue or aerial appliance"
+09212:     // now maps to the existing Rescue Pump route.
+09213:     // V10.6.82: verified Fire profiles staff type-107 RRUs with two Railway Fire
+09214:     // personnel, type-15 ICCUs with three Level 1 Incident Commanders and type-39
+09215:     // Fire OSUs with three HazMat personnel. BASU, Welfare and HazMat share one OSU.
+09216:     // V10.6.81: Operational Support or SAR Vehicle requirements now select and
+09217:     // verify the exact type-86 Operational Support Van. Fire type-39 Operational
+09218:     // Support Units remain excluded from this SAR requirement.
+09219:     // V10.6.80: Critical Care Ambulances now require one trained person per vehicle.
+09220:     // Armed Response personnel use exact type-25 ATCs with two officers who each hold
+09221:     // both Roads Policing and Firearms. Police Officer and Seagoing Vessel upgrade
+
+--- source lines 9186-9228 ---
+09186:     // training to another and prevents an untrained IRV from being selected.
+09187:     // Public Order qualification now requires only the L1/L2/Sergeant codes
+09188:     // actually requested by the current mission.
+09189:     // V10.6.69: Strict Inspector/Public Order verification now uses the exact
+09190:     // Personnel Assignment registry vehicle IDs as priority hints, then rechecks
+09191:     // those precise /zuweisung pages before selection. This prevents trained
+09192:     // IRVs being missed when they are outside the first arrival-sorted scan batch.
+09193:     // V10.6.71: Normal Police Car/Police Officer requirements now protect
+09194:     // exact-ID IRVs carrying specialist-trained staff, live-verify ordinary IRVs
+09195:     // before selection, and exclude known trained IRVs from ordinary attendance.
+09196:     // Auto Mode now waits for a complete, non-zero, ID-stable vehicle list with
+09197:     // no remaining load control or spinner before Unit Finder may select units.
+09198:     // V10.6.72: Exact assignment-page scans no longer require a permanent binding
+09199:     // before an untrained IRV may satisfy ordinary Police attendance. Police Medic
+09200:     // and Railway Police Officer requirements now use exact trained IRVs with two
+09201:     // qualified personnel, and ATV Carrier uses an authoritative type-30 matcher.
+09202:     // V10.6.83: Mission Control now uses an iOS Safari-only safe-area layout,
+09203:     // horizontal collapse state, visual-viewport placement and pointer dragging.
+09204:     // Desktop positioning, sizing and mouse dragging remain unchanged.
+09205:     // V10.6.86: Firefighters convert to Rescue Pumps at nine personnel
+09206:     // per vehicle; Car Recovery maps to the existing Flatbed Recovery
+09207:     // Vehicle; RIV-or-Major-Foam-Tender wording uses RIV first and only
+09208:     // falls back to a Major Foam Tender when no eligible RIV is available.
+09209:     // V10.6.85: Fire cross-reference now maps the exact "Road Rail Unit"
+09210:     // wording to the established RRU route.
+09211:     // V10.6.84: the exact mission wording "Fire, rescue or aerial appliance"
+09212:     // now maps to the existing Rescue Pump route.
+09213:     // V10.6.82: verified Fire profiles staff type-107 RRUs with two Railway Fire
+09214:     // personnel, type-15 ICCUs with three Level 1 Incident Commanders and type-39
+09215:     // Fire OSUs with three HazMat personnel. BASU, Welfare and HazMat share one OSU.
+09216:     // V10.6.81: Operational Support or SAR Vehicle requirements now select and
+09217:     // verify the exact type-86 Operational Support Van. Fire type-39 Operational
+09218:     // Support Units remain excluded from this SAR requirement.
+09219:     // V10.6.80: Critical Care Ambulances now require one trained person per vehicle.
+09220:     // Armed Response personnel use exact type-25 ATCs with two officers who each hold
+09221:     // both Roads Policing and Firearms. Police Officer and Seagoing Vessel upgrade
+09222:     // rows now use shared strict conversions across Unit Finder, Update and Auto.
+09223:     // V10.6.54: Auto Mode no longer waits for post-dispatch upgrades. It now
+09224:     // dispatches and advances immediately, including exact-next continuation
+09225:     // after high-value Dispatch & Share missions.
+09226:     // V10.6.53: ICCU-or-ACU requirements now select an ICCU first and use
+09227:     // Ambulance Control Unit vehicle type 31 only when no ICCU is available.
+09228:     // V10.6.52: Debug, High Debug and the Issue Recorder have been removed.
+
+--- source lines 9207-9249 ---
+09207:     // Vehicle; RIV-or-Major-Foam-Tender wording uses RIV first and only
+09208:     // falls back to a Major Foam Tender when no eligible RIV is available.
+09209:     // V10.6.85: Fire cross-reference now maps the exact "Road Rail Unit"
+09210:     // wording to the established RRU route.
+09211:     // V10.6.84: the exact mission wording "Fire, rescue or aerial appliance"
+09212:     // now maps to the existing Rescue Pump route.
+09213:     // V10.6.82: verified Fire profiles staff type-107 RRUs with two Railway Fire
+09214:     // personnel, type-15 ICCUs with three Level 1 Incident Commanders and type-39
+09215:     // Fire OSUs with three HazMat personnel. BASU, Welfare and HazMat share one OSU.
+09216:     // V10.6.81: Operational Support or SAR Vehicle requirements now select and
+09217:     // verify the exact type-86 Operational Support Van. Fire type-39 Operational
+09218:     // Support Units remain excluded from this SAR requirement.
+09219:     // V10.6.80: Critical Care Ambulances now require one trained person per vehicle.
+09220:     // Armed Response personnel use exact type-25 ATCs with two officers who each hold
+09221:     // both Roads Policing and Firearms. Police Officer and Seagoing Vessel upgrade
+09222:     // rows now use shared strict conversions across Unit Finder, Update and Auto.
+09223:     // V10.6.54: Auto Mode no longer waits for post-dispatch upgrades. It now
+09224:     // dispatches and advances immediately, including exact-next continuation
+09225:     // after high-value Dispatch & Share missions.
+09226:     // V10.6.53: ICCU-or-ACU requirements now select an ICCU first and use
+09227:     // Ambulance Control Unit vehicle type 31 only when no ICCU is available.
+09228:     // V10.6.52: Debug, High Debug and the Issue Recorder have been removed.
+09229:     // Clear legacy settings/data so they cannot be restored by an older saved preference.
+09230:     let mfDebugEnabled = false;
+09231:     let mfHighDebugEnabled = false;
+09232: 
+09233:     try {
+09234:         localStorage.removeItem('mf_debug_enabled_v9');
+09235:         localStorage.removeItem('mf_high_debug_enabled_v9');
+09236:         localStorage.removeItem('mf_debug_collapsed_v9');
+09237:         localStorage.removeItem('mf_issue_recorder_v1');
+09238:         localStorage.removeItem('mf_issue_recorder_enabled_v1');
+09239:     } catch (_error) {}
+09240: 
+09241:     function isMissionFinderIosSafariWebsite() {
+09242:         const userAgent = String(navigator.userAgent || '');
+09243:         const platform = String(navigator.platform || '');
+09244:         const isIosDevice = /iP(?:ad|hone|od)/i.test(userAgent)
+09245:             || (
+09246:                 platform === 'MacIntel'
+09247:                 && Number(navigator.maxTouchPoints || 0) > 1
+09248:             );
+09249:         const isSafariBrowser = /Safari/i.test(userAgent)
+
+--- source lines 9287-9329 ---
+09287: 
+09288:     // V10.6.67: The Personnel Tool registry can be contaminated when several
+09289:     // vehicles share the same displayed name (for example many vehicles named
+09290:     // simply "IRV"). Inspector and Public Order selection therefore trusts only
+09291:     // an exact vehicle ID that has been verified from that vehicle's current
+09292:     // /zuweisung page. Unsafe name-based registry matching is never used.
+09293:     const MF_LIVE_TRAINING_VERIFY_CACHE_MS = 10 * 60 * 1000;
+09294:     const MF_LIVE_TRAINING_VERIFY_MAX_PAGES = 48;
+09295:     const MF_LIVE_TRAINING_VERIFY_BATCH_SIZE = 6;
+09296:     const MF_STRICT_TRAINING_SOURCE_PREFIX =
+09297:         'mission-finder-live-strict-';
+09298: 
+09299:     // V10.6.71: ordinary Police attendance must preserve specialist IRVs.
+09300:     // Exact vehicle IDs carrying any protected Police qualification are never
+09301:     // used to satisfy a normal Police Car / Police Officer requirement.
+09302:     const MF_PROTECTED_ORDINARY_IRV_TRAINING_CODES =
+09303:         Object.freeze([
+09304:             'level_1_public_order',
+09305:             'level_2_public_order',
+09306:             'police_sergeant',
+09307:             'police_medic',
+09308:             'police_inspector',
+09309:             'traffic_police',
+09310:             'swat',
+09311:             'police_horse',
+09312:             'k9',
+09313:             'drone',
+09314:             'search_and_rescue',
+09315:             'polizeihubschrauber',
+09316:             'railway_police_command',
+09317:             'railway_police',
+09318:             'bomb_disposal_command',
+09319:             'bomb_disposal',
+09320:             'bomb_disposal_diver'
+09321:         ]);
+09322: 
+09323:     const MF_ORDINARY_IRV_VERIFY_MAX_PAGES = 64;
+09324:     const MF_ORDINARY_IRV_VERIFY_BATCH_SIZE = 6;
+09325:     const MF_AUTO_VEHICLE_LIST_STABLE_TIMEOUT_MS = 9000;
+09326:     const MF_AUTO_VEHICLE_LIST_STABLE_FOR_MS = 1200;
+09327:     const MF_AUTO_VEHICLE_LIST_MIN_SETTLE_MS = 1000;
+09328:     const MF_AUTO_VEHICLE_LIST_LOAD_TIMEOUT_MS = 20000;
+09329: 
+
+--- source lines 9401-9443 ---
+09401:             {
+09402:                 code:
+09403:                     'police_medic',
+09404:                 label:
+09405:                     'Police Medic',
+09406:                 patterns: [
+09407:                     /(\d+)\s*(?:x\s*)?Police\s+Medic(?:s)?/gi,
+09408:                     /Police\s+Medic(?:s)?\s*(?:x\s*)?(\d+)/gi
+09409:                 ]
+09410:             },
+09411:             {
+09412:                 code:
+09413:                     'railway_police',
+09414:                 label:
+09415:                     'Railway Police Officer',
+09416:                 patterns: [
+09417:                     /(\d+)\s*(?:x\s*)?Railway\s+Police\s+Officer(?:s)?/gi,
+09418:                     /Railway\s+Police\s+Officer(?:s)?\s*(?:x\s*)?(\d+)/gi
+09419:                 ]
+09420:             },
+09421:             {
+09422:                 code:
+09423:                     'armed_response_personnel',
+09424:                 label:
+09425:                     'Armed Response Personnel',
+09426:                 patterns: [
+09427:                     /(\d+)\s*(?:x\s*)?(?:Required\s+)?Armed(?:\s+Response)?\s+Personnel(?:\s*\(\s*In\s+Armed\s+Vehicles\s*\))?/gi,
+09428:                     /(?:Required\s+)?Armed(?:\s+Response)?\s+Personnel(?:\s*\(\s*In\s+Armed\s+Vehicles\s*\))?\s*(?:x\s*)?(\d+)/gi
+09429:                 ]
+09430:             }
+09431:         ]);
+09432: 
+09433:     let mfKeepPanelPosition =
+09434:         localStorage.getItem(MF_KEEP_PANEL_POSITION_KEY) === 'true';
+09435: 
+09436:     let mfStaffingBlockActive = false;
+09437:     let mfStaffingBlockText = '';
+09438:     let mfStaffingBlockMissionKey = '';
+09439:     const mfDebugRows = [];
+09440: 
+09441:     // V10.6.42 long-session performance controls.
+09442:     // V10.6.44 full-project optimisation sweep. V10.6.43 patient update controls remain intact:
+09443:     // scalable Ambulance/Critical Care counts, and global one-unit caps for
+
+--- source lines 10005-10047 ---
+10005:         "Fire Engines, Rescue Support Vehicles or Aerial Appliance Trucks": "Fire Engine R/PUMP x 1",
+10006:         "Foam Unit": "RP CAFS",
+10007:         "Foam Units": "RP CAFS",
+10008:         "Water Carrier": "Water Carrier",
+10009:         "Water Carriers": "Water Carrier",
+10010:         "Welfare Vehicles x1": "Welfare Vehicle",
+10011: 
+10012:         /*************************************************
+10013:          * POLICE
+10014:          *************************************************/
+10015:         "Police Car": "Police Car",
+10016:         "Police Cars": "Police Car",
+10017:         "Police car": "Police Car",
+10018:         "Police cars": "Police Car",
+10019:         "Police Officer": "Police Car",
+10020:         "Police Officers": "Police Car",
+10021:         "Traffic Car": "Police ATC",
+10022:         "Traffic Cars": "Police ATC",
+10023:         "Police Cars or Armed Response Vehicles (ARVs)": "Police ATC",
+10024:         "Armed Response Personnel (In Armed Vehicles)": "Police ATC",
+10025:         "Dog Support Unit (DSU)": "Police DSU",
+10026:         "Dog Support Units (DSU)": "Police DSU",
+10027:         "Dog Support Units (DSUs)": "Police DSU",
+10028:         "Mounted Unit": "Mounted Unit",
+10029:         "Mounted Units": "Mounted Unit",
+10030:         "Police Inspector": "Police Inspector",
+10031:         "Police Sergeant": "Police Sergeant",
+10032:         "Cell Van": "Cell Van",
+10033:         "Police Helicopter": "Police Helicopter",
+10034:         "Police Helicopters": "Police Helicopter",
+10035:         "Police Helicopter or Drone": "Police Helicopter",
+10036:         "Police Helicopter or Drones": "Police Helicopter",
+10037:         "Police Helicopters or Drone": "Police Helicopter",
+10038:         "Police Helicopters or Drones": "Police Helicopter",
+10039:         "Required Police Helicopter or Drone": "Police Helicopter",
+10040:         "Required Police Helicopter or Drones": "Police Helicopter",
+10041:         "Required Police Helicopters or Drone": "Police Helicopter",
+10042:         "Required Police Helicopters or Drones": "Police Helicopter",
+10043:         "Police Drone": "Police Helicopter",
+10044:         "Police Drones": "Police Helicopter",
+10045:         "Policehelicopter": "Police Helicopter",
+10046:         "Policehelicopters": "Police Helicopter",
+10047:         "modules.missionHelper.vehicles.captions.railway_police": "railway police",
+
+--- source lines 10006-10048 ---
+10006:         "Foam Unit": "RP CAFS",
+10007:         "Foam Units": "RP CAFS",
+10008:         "Water Carrier": "Water Carrier",
+10009:         "Water Carriers": "Water Carrier",
+10010:         "Welfare Vehicles x1": "Welfare Vehicle",
+10011: 
+10012:         /*************************************************
+10013:          * POLICE
+10014:          *************************************************/
+10015:         "Police Car": "Police Car",
+10016:         "Police Cars": "Police Car",
+10017:         "Police car": "Police Car",
+10018:         "Police cars": "Police Car",
+10019:         "Police Officer": "Police Car",
+10020:         "Police Officers": "Police Car",
+10021:         "Traffic Car": "Police ATC",
+10022:         "Traffic Cars": "Police ATC",
+10023:         "Police Cars or Armed Response Vehicles (ARVs)": "Police ATC",
+10024:         "Armed Response Personnel (In Armed Vehicles)": "Police ATC",
+10025:         "Dog Support Unit (DSU)": "Police DSU",
+10026:         "Dog Support Units (DSU)": "Police DSU",
+10027:         "Dog Support Units (DSUs)": "Police DSU",
+10028:         "Mounted Unit": "Mounted Unit",
+10029:         "Mounted Units": "Mounted Unit",
+10030:         "Police Inspector": "Police Inspector",
+10031:         "Police Sergeant": "Police Sergeant",
+10032:         "Cell Van": "Cell Van",
+10033:         "Police Helicopter": "Police Helicopter",
+10034:         "Police Helicopters": "Police Helicopter",
+10035:         "Police Helicopter or Drone": "Police Helicopter",
+10036:         "Police Helicopter or Drones": "Police Helicopter",
+10037:         "Police Helicopters or Drone": "Police Helicopter",
+10038:         "Police Helicopters or Drones": "Police Helicopter",
+10039:         "Required Police Helicopter or Drone": "Police Helicopter",
+10040:         "Required Police Helicopter or Drones": "Police Helicopter",
+10041:         "Required Police Helicopters or Drone": "Police Helicopter",
+10042:         "Required Police Helicopters or Drones": "Police Helicopter",
+10043:         "Police Drone": "Police Helicopter",
+10044:         "Police Drones": "Police Helicopter",
+10045:         "Policehelicopter": "Police Helicopter",
+10046:         "Policehelicopters": "Police Helicopter",
+10047:         "modules.missionHelper.vehicles.captions.railway_police": "railway police",
+10048:         "modules.missionHelper.prerequisites.railway_police": "EIU",
+
+--- source lines 11063-11105 ---
+11063:                 originalName
+11064:             );
+11065: 
+11066:         const mapped =
+11067:             normaliseVehicleText(
+11068:                 mappedName
+11069:             );
+11070: 
+11071:         return (
+11072:             raw ===
+11073:                 'police car' ||
+11074:             raw ===
+11075:                 'police cars' ||
+11076:             raw ===
+11077:                 'police officer' ||
+11078:             raw ===
+11079:                 'police officers' ||
+11080:             mapped ===
+11081:                 'police car' ||
+11082:             mapped ===
+11083:                 'police cars'
+11084:         );
+11085:     }
+11086: 
+11087:     function getVehicleTypeIdentifiers(input) {
+11088:         if (!input) return [];
+11089: 
+11090:         const cached = mfVehicleTypeIdentifierCache.get(input);
+11091:         if (cached) return cached;
+11092: 
+11093:         const row = input.closest?.('tr');
+11094:         const typeCell = row?.querySelector?.(
+11095:             '[vehicle_type_id], [data-vehicle-type-id]'
+11096:         );
+11097: 
+11098:         const identifiers = [
+11099:             input.getAttribute?.('vehicle_type'),
+11100:             input.getAttribute?.('vehicle_type_id'),
+11101:             input.getAttribute?.('data-vehicle-type'),
+11102:             input.getAttribute?.('data-vehicle-type-id'),
+11103:             row?.getAttribute?.('vehicle_type'),
+11104:             row?.getAttribute?.('vehicle_type_id'),
+11105:             row?.getAttribute?.('data-vehicle-type'),
+
+--- source lines 11065-11107 ---
+11065: 
+11066:         const mapped =
+11067:             normaliseVehicleText(
+11068:                 mappedName
+11069:             );
+11070: 
+11071:         return (
+11072:             raw ===
+11073:                 'police car' ||
+11074:             raw ===
+11075:                 'police cars' ||
+11076:             raw ===
+11077:                 'police officer' ||
+11078:             raw ===
+11079:                 'police officers' ||
+11080:             mapped ===
+11081:                 'police car' ||
+11082:             mapped ===
+11083:                 'police cars'
+11084:         );
+11085:     }
+11086: 
+11087:     function getVehicleTypeIdentifiers(input) {
+11088:         if (!input) return [];
+11089: 
+11090:         const cached = mfVehicleTypeIdentifierCache.get(input);
+11091:         if (cached) return cached;
+11092: 
+11093:         const row = input.closest?.('tr');
+11094:         const typeCell = row?.querySelector?.(
+11095:             '[vehicle_type_id], [data-vehicle-type-id]'
+11096:         );
+11097: 
+11098:         const identifiers = [
+11099:             input.getAttribute?.('vehicle_type'),
+11100:             input.getAttribute?.('vehicle_type_id'),
+11101:             input.getAttribute?.('data-vehicle-type'),
+11102:             input.getAttribute?.('data-vehicle-type-id'),
+11103:             row?.getAttribute?.('vehicle_type'),
+11104:             row?.getAttribute?.('vehicle_type_id'),
+11105:             row?.getAttribute?.('data-vehicle-type'),
+11106:             row?.getAttribute?.('data-vehicle-type-id'),
+11107:             typeCell?.getAttribute?.('vehicle_type_id'),
+
+--- source lines 18315-18357 ---
+18315:                 eligibleVehicleTypeIds: [
+18316:                     '8'
+18317:                 ]
+18318:             });
+18319:         }
+18320: 
+18321:         addStrictTrainedIrvRequirement(
+18322:             'police_medic',
+18323:             'Police Medic',
+18324:             policeMedicRequired
+18325:         );
+18326: 
+18327:         addStrictTrainedIrvRequirement(
+18328:             'railway_police',
+18329:             'Railway Police Officer',
+18330:             railwayPoliceRequired
+18331:         );
+18332: 
+18333:         if (armedResponseRequired > 0) {
+18334:             const requiredArmedTrafficCars = Math.ceil(
+18335:                 armedResponseRequired / 2
+18336:             );
+18337: 
+18338:             normalised.push({
+18339:                 code: 'armed_response_atc_vehicle',
+18340:                 label: 'Armed Response Personnel in Armed Traffic Cars',
+18341:                 requirementType: 'armed_response_atc_vehicle',
+18342:                 required: requiredArmedTrafficCars,
+18343:                 personnelRequired: armedResponseRequired,
+18344:                 personnelPerVehicle: 2,
+18345:                 requiredTrainingCodes: [
+18346:                     'traffic_police',
+18347:                     'swat'
+18348:                 ],
+18349:                 eligibleVehicleTypeIds: [
+18350:                     '25'
+18351:                 ]
+18352:             });
+18353:         }
+18354: 
+18355:         return normalised;
+18356:     }
+18357: 
+
+--- source lines 20711-20753 ---
+20711:             }
+20712: 
+20713:             const conversion = getPoliceOfficerVehicleRequirement(
+20714:                 row.unitName,
+20715:                 row.stillNeeded
+20716:             );
+20717: 
+20718:             if (!conversion) return row;
+20719: 
+20720:             return {
+20721:                 ...row,
+20722:                 unitName: conversion.unitName,
+20723:                 stillNeeded: conversion.stillNeeded,
+20724:                 personnelRequirement:
+20725:                     `${conversion.personnelRequired} Police Officer${conversion.personnelRequired === 1 ? '' : 's'}`,
+20726:                 personnelPerVehicle: conversion.personnelPerVehicle,
+20727:                 convertedFromPersonnelRequirement: true
+20728:             };
+20729:         });
+20730:     }
+20731: 
+20732:     function getSupportedMissingPersonnelRowsFromText(
+20733:         text,
+20734:         options = {}
+20735:     ) {
+20736:         const silent = !!(options && options.silent);
+20737: 
+20738:         const personnelSegment =
+20739:             getMissingPersonnelSegment(
+20740:                 text
+20741:             );
+20742: 
+20743:         if (!personnelSegment) {
+20744:             return [];
+20745:         }
+20746: 
+20747:         const rows = [];
+20748: 
+20749:         const sarPersonnelDefinitions = [
+20750:             {
+20751:                 displayName:
+20752:                     'Search Technicians',
+20753:                 namePattern:
+
+--- source lines 20799-20841 ---
+20799:                 });
+20800: 
+20801:                 if (
+20802:                     mfDebugEnabled &&
+20803:                     !silent
+20804:                 ) {
+20805:                     debugLog(
+20806:                         'UPDATE PERSONNEL',
+20807:                         `${conversion.personnelRequirement} -> select ${conversion.unitName} x${conversion.stillNeeded} (${conversion.personnelPerVehicle} personnel per vehicle)`
+20808:                     );
+20809:                 }
+20810:             }
+20811:         );
+20812: 
+20813:         // Police Cars normally carry 2 Police Officers.
+20814:         const policeOfficersNeeded =
+20815:             getNamedPersonnelCount(
+20816:                 personnelSegment,
+20817:                 'police\\s+officer(?:s)?'
+20818:             );
+20819: 
+20820:         if (policeOfficersNeeded > 0) {
+20821:             const policeCarsNeeded =
+20822:                 Math.ceil(
+20823:                     policeOfficersNeeded /
+20824:                     2
+20825:                 );
+20826: 
+20827:             rows.push({
+20828:                 unitName:
+20829:                     'Police Car',
+20830:                 stillNeeded:
+20831:                     policeCarsNeeded,
+20832:                 personnelRequirement:
+20833:                     `${policeOfficersNeeded} Police Officer${policeOfficersNeeded === 1 ? '' : 's'}`
+20834:             });
+20835: 
+20836:             if (
+20837:                 mfDebugEnabled &&
+20838:                 !silent
+20839:             ) {
+20840:                 debugLog(
+20841:                     'UPDATE PERSONNEL',
+
+--- source lines 20819-20861 ---
+20819: 
+20820:         if (policeOfficersNeeded > 0) {
+20821:             const policeCarsNeeded =
+20822:                 Math.ceil(
+20823:                     policeOfficersNeeded /
+20824:                     2
+20825:                 );
+20826: 
+20827:             rows.push({
+20828:                 unitName:
+20829:                     'Police Car',
+20830:                 stillNeeded:
+20831:                     policeCarsNeeded,
+20832:                 personnelRequirement:
+20833:                     `${policeOfficersNeeded} Police Officer${policeOfficersNeeded === 1 ? '' : 's'}`
+20834:             });
+20835: 
+20836:             if (
+20837:                 mfDebugEnabled &&
+20838:                 !silent
+20839:             ) {
+20840:                 debugLog(
+20841:                     'UPDATE PERSONNEL',
+20842:                     `${policeOfficersNeeded} Police Officer${policeOfficersNeeded === 1 ? '' : 's'} -> select Police Car x${policeCarsNeeded}`
+20843:                 );
+20844:             }
+20845:         }
+20846: 
+20847:         // Coastguard Mud Rescue Units carry 5 Mud Rescue Operators each.
+20848:         const mudRescueOperatorsNeeded =
+20849:             getNamedPersonnelCount(
+20850:                 personnelSegment,
+20851:                 'mud\\s+rescue\\s+operator(?:s)?'
+20852:             );
+20853: 
+20854:         if (mudRescueOperatorsNeeded > 0) {
+20855:             const mudRescueUnitsNeeded =
+20856:                 Math.ceil(
+20857:                     mudRescueOperatorsNeeded /
+20858:                     5
+20859:                 );
+20860: 
+20861:             rows.push({
+
+--- source lines 20828-20870 ---
+20828:                 unitName:
+20829:                     'Police Car',
+20830:                 stillNeeded:
+20831:                     policeCarsNeeded,
+20832:                 personnelRequirement:
+20833:                     `${policeOfficersNeeded} Police Officer${policeOfficersNeeded === 1 ? '' : 's'}`
+20834:             });
+20835: 
+20836:             if (
+20837:                 mfDebugEnabled &&
+20838:                 !silent
+20839:             ) {
+20840:                 debugLog(
+20841:                     'UPDATE PERSONNEL',
+20842:                     `${policeOfficersNeeded} Police Officer${policeOfficersNeeded === 1 ? '' : 's'} -> select Police Car x${policeCarsNeeded}`
+20843:                 );
+20844:             }
+20845:         }
+20846: 
+20847:         // Coastguard Mud Rescue Units carry 5 Mud Rescue Operators each.
+20848:         const mudRescueOperatorsNeeded =
+20849:             getNamedPersonnelCount(
+20850:                 personnelSegment,
+20851:                 'mud\\s+rescue\\s+operator(?:s)?'
+20852:             );
+20853: 
+20854:         if (mudRescueOperatorsNeeded > 0) {
+20855:             const mudRescueUnitsNeeded =
+20856:                 Math.ceil(
+20857:                     mudRescueOperatorsNeeded /
+20858:                     5
+20859:                 );
+20860: 
+20861:             rows.push({
+20862:                 unitName:
+20863:                     'Coastguard Mud Rescue Unit',
+20864:                 stillNeeded:
+20865:                     mudRescueUnitsNeeded,
+20866:                 personnelRequirement:
+20867:                     `${mudRescueOperatorsNeeded} Mud Rescue Operator${mudRescueOperatorsNeeded === 1 ? '' : 's'}`
+20868:             });
+20869: 
+20870:             if (
+
+--- source lines 25443-25485 ---
+25443:                     )
+25444:                 ) {
+25445:                     tableRailwayPoliceRequired =
+25446:                         Math.max(
+25447:                             tableRailwayPoliceRequired,
+25448:                             needed
+25449:                         );
+25450: 
+25451:                     if (
+25452:                         mfDebugEnabled &&
+25453:                         !silent
+25454:                     ) {
+25455:                         debugLog(
+25456:                             'RAILWAY POLICE TABLE COLLAPSE',
+25457:                             `Railway Police Officer x${needed} captured from ${source}; selecting exact IRVs live-verified with 2 railway_police-trained personnel.`
+25458:                         );
+25459:                     }
+25460: 
+25461:                     return;
+25462:                 }
+25463: 
+25464: 
+25465:                 if (
+25466:                     isArmedResponsePersonnelRequirementName(
+25467:                         cleanedName
+25468:                     )
+25469:                 ) {
+25470:                     tableArmedResponseRequired = Math.max(
+25471:                         tableArmedResponseRequired,
+25472:                         needed
+25473:                     );
+25474: 
+25475:                     if (mfDebugEnabled && !silent) {
+25476:                         debugLog(
+25477:                             'ARMED RESPONSE TABLE COLLAPSE',
+25478:                             `Armed Response Personnel x${needed} captured from ${source}; selecting exact type-25 ATCs with 2 officers who each hold traffic_police + swat.`
+25479:                         );
+25480:                     }
+25481: 
+25482:                     return;
+25483:                 }
+25484: 
+25485:                 missingRows.push({
+
+--- source lines 25937-25979 ---
+25937:                 if (mfDebugEnabled && !silent) {
+25938:                     debugLog(
+25939:                         'UPDATE SEAGOING',
+25940:                         `Missing Vehicles text -> ALB x${amount}`
+25941:                     );
+25942:                 }
+25943:             });
+25944:         });
+25945: 
+25946:         // Missing Personnel is an actionable mission update, not a
+25947:         // vehicle staffing fault. Supported personnel conversions include:
+25948:         // Search Technicians = 4 per displayed-name-prefix SARTEC vehicle
+25949:         // Search Advisors = 2 per displayed-name-prefix SARTEC vehicle
+25950:         // SAR Commanders = 2 per Control Van
+25951:         // 3 Police Officers = 2 Police Cars
+25952:         // 6 Mud Rescue Operators = 2 Coastguard Mud Rescue Units
+25953:         // Normal update-table vehicle requirements are selected as well.
+25954:         let maximumSartecUnitsFromPersonnel = 0;
+25955: 
+25956:         const trainedPersonnelRequirements =
+25957:             new Map();
+25958: 
+25959:         if (
+25960:             tableLevel1PublicOrderRequired >
+25961:                 0 ||
+25962:             tableLevel2PublicOrderRequired >
+25963:                 0 ||
+25964:             tablePoliceSergeantRequired >
+25965:                 0 ||
+25966:             tablePoliceInspectorRequired >
+25967:                 0 ||
+25968:             tablePoliceMedicRequired >
+25969:                 0 ||
+25970:             tableRailwayPoliceRequired >
+25971:                 0 ||
+25972:             tableArmedResponseRequired >
+25973:                 0
+25974:         ) {
+25975:             mergeTrainedPersonnelRequirements(
+25976:                 trainedPersonnelRequirements,
+25977:                 normalisePublicOrderTrainedRequirements([
+25978:                     {
+25979:                         code:
+
+--- source lines 26008-26050 ---
+26008:                             tablePoliceInspectorRequired
+26009:                     },
+26010:                     {
+26011:                         code:
+26012:                             'police_medic',
+26013:                         label:
+26014:                             'Police Medic',
+26015:                         required:
+26016:                             tablePoliceMedicRequired
+26017:                     },
+26018:                     {
+26019:                         code:
+26020:                             'railway_police',
+26021:                         label:
+26022:                             'Railway Police Officer',
+26023:                         required:
+26024:                             tableRailwayPoliceRequired
+26025:                     },
+26026:                     {
+26027:                         code:
+26028:                             'armed_response_personnel',
+26029:                         label:
+26030:                             'Armed Response Personnel',
+26031:                         required:
+26032:                             tableArmedResponseRequired
+26033:                     }
+26034:                 ])
+26035:             );
+26036:         }
+26037: 
+26038:         pageTextBlocks.forEach(text => {
+26039:             if (!/Missing Personnel:/i.test(text)) return;
+26040: 
+26041:             mergeTrainedPersonnelRequirements(
+26042:                 trainedPersonnelRequirements,
+26043:                 getSupportedTrainedPersonnelRequirementsFromText(
+26044:                     text
+26045:                 )
+26046:             );
+26047: 
+26048:             const personnelRows =
+26049:                 getSupportedMissingPersonnelRowsFromText(
+26050:                     text,
+
+PATTERN: Fire Engine or RIV
+HITS: []
+
+PATTERN: normalise.*Requirement
+HITS: [17356, 17560, 17682, 18074, 18164, 18171, 20685, 21155, 24555, 25250, 25977, 26575, 27113, 28368, 28439]
+
+--- source lines 17342-17384 ---
+17342:                     isPoliceInspectorPersonnelRequirementName(
+17343:                         originalName
+17344:                     )
+17345:                 ) {
+17346:                     const inspectorRequired =
+17347:                         Math.max(
+17348:                             0,
+17349:                             parseInt(
+17350:                                 amountText,
+17351:                                 10
+17352:                             ) || 0
+17353:                         );
+17354: 
+17355:                     const inspectorRequirements =
+17356:                         normalisePublicOrderTrainedRequirements([
+17357:                             {
+17358:                                 code:
+17359:                                     'police_inspector',
+17360:                                 label:
+17361:                                     'Police Inspector',
+17362:                                 required:
+17363:                                     inspectorRequired
+17364:                             }
+17365:                         ]);
+17366: 
+17367:                     if (
+17368:                         inspectorRequirements.length >
+17369:                         0
+17370:                     ) {
+17371:                         rows.push({
+17372:                             unitName:
+17373:                                 MF_TRAINED_PERSONNEL_ROW_NAME,
+17374:                             stillNeeded:
+17375:                                 getTrainedPersonnelVehicleTarget(
+17376:                                     inspectorRequirements
+17377:                                 ),
+17378:                             isTrainedPersonnelRequirement:
+17379:                                 true,
+17380:                             personnelTrainingRequirements:
+17381:                                 inspectorRequirements
+17382:                         });
+17383:                     }
+17384: 
+
+--- source lines 17546-17588 ---
+17546:             : 0;
+17547: 
+17548:         if (cars <= 0) {
+17549:             return null;
+17550:         }
+17551: 
+17552:         return {
+17553:             unitName: 'Cars to tow',
+17554:             carsRequired: cars,
+17555:             stillNeeded: Math.ceil(cars / 2)
+17556:         };
+17557:     }
+17558: 
+17559: 
+17560:     function normaliseVehicleRequirementCount(
+17561:         originalName,
+17562:         mappedName,
+17563:         amount
+17564:     ) {
+17565:         const required =
+17566:             Math.max(
+17567:                 0,
+17568:                 parseInt(
+17569:                     amount,
+17570:                     10
+17571:                 ) || 0
+17572:             );
+17573: 
+17574:         const raw =
+17575:             String(
+17576:                 originalName || ''
+17577:             )
+17578:                 .replace(
+17579:                     /\s+/g,
+17580:                     ' '
+17581:                 )
+17582:                 .trim();
+17583: 
+17584:         if (
+17585:             /^(?:Required\s+)?Firefighters?$/i.test(
+17586:                 raw
+17587:             ) &&
+17588:             normaliseVehicleText(
+
+--- source lines 17668-17710 ---
+17668:                         'PUBLIC ORDER VEHICLE GUARD',
+17669:                         `${row.unitName} rejected from the normal vehicle path.`
+17670:                     );
+17671:                 }
+17672: 
+17673:                 return;
+17674:             }
+17675: 
+17676:             const mappedName =
+17677:                 resolveUnitName(
+17678:                     row.unitName
+17679:                 );
+17680: 
+17681:             const amount =
+17682:                 normaliseVehicleRequirementCount(
+17683:                     row.unitName,
+17684:                     mappedName,
+17685:                     row?.stillNeeded
+17686:                 );
+17687: 
+17688:             if (amount <= 0) {
+17689:                 return;
+17690:             }
+17691: 
+17692:             const key =
+17693:                 normaliseVehicleText(
+17694:                     mappedName ||
+17695:                     row.unitName
+17696:                 );
+17697: 
+17698:             if (!key) return;
+17699: 
+17700:             const existing =
+17701:                 merged.get(
+17702:                     key
+17703:                 );
+17704: 
+17705:             if (
+17706:                 !existing ||
+17707:                 amount >
+17708:                 existing.stillNeeded
+17709:             ) {
+17710:                 merged.set(
+
+--- source lines 18060-18102 ---
+18060:         const personnelRequired = amountMatch
+18061:             ? Math.max(
+18062:                 0,
+18063:                 parseInt(
+18064:                     amountMatch[0],
+18065:                     10
+18066:                 ) || 0
+18067:             )
+18068:             : 0;
+18069: 
+18070:         if (personnelRequired <= 0) {
+18071:             return [];
+18072:         }
+18073: 
+18074:         return normalisePublicOrderTrainedRequirements([
+18075:             {
+18076:                 code:
+18077:                     'armed_response_personnel',
+18078:                 label:
+18079:                     'Armed Response Personnel',
+18080:                 required:
+18081:                     personnelRequired
+18082:             }
+18083:         ]);
+18084:     }
+18085: 
+18086:     function getSupportedTrainedPersonnelRequirementsFromText(
+18087:         text
+18088:     ) {
+18089:         const input =
+18090:             String(
+18091:                 text ||
+18092:                 ''
+18093:             )
+18094:                 .replace(
+18095:                     /\s+/g,
+18096:                     ' '
+18097:                 )
+18098:                 .trim();
+18099: 
+18100:         if (
+18101:             !input ||
+18102:             !/Missing\s+Personnel:/i.test(
+
+--- source lines 18150-18192 ---
+18150:                     requirements.set(
+18151:                         definition.code,
+18152:                         {
+18153:                             code:
+18154:                                 definition.code,
+18155:                             label:
+18156:                                 definition.label,
+18157:                             required:
+18158:                                 maximumRequired
+18159:                         }
+18160:                     );
+18161:                 }
+18162:             });
+18163: 
+18164:         return normalisePublicOrderTrainedRequirements(
+18165:             Array.from(
+18166:                 requirements.values()
+18167:             )
+18168:         );
+18169:     }
+18170: 
+18171:     function normalisePublicOrderTrainedRequirements(
+18172:         requirements
+18173:     ) {
+18174:         const source =
+18175:             Array.isArray(requirements)
+18176:                 ? requirements
+18177:                 : [];
+18178: 
+18179:         const findRequired = code => {
+18180:             const item = source.find(
+18181:                 requirement => requirement.code === code
+18182:             );
+18183: 
+18184:             return Math.max(
+18185:                 0,
+18186:                 parseInt(item?.required, 10) || 0
+18187:             );
+18188:         };
+18189: 
+18190:         const level1Required =
+18191:             findRequired('level_1_public_order');
+18192: 
+
+--- source lines 18157-18199 ---
+18157:                             required:
+18158:                                 maximumRequired
+18159:                         }
+18160:                     );
+18161:                 }
+18162:             });
+18163: 
+18164:         return normalisePublicOrderTrainedRequirements(
+18165:             Array.from(
+18166:                 requirements.values()
+18167:             )
+18168:         );
+18169:     }
+18170: 
+18171:     function normalisePublicOrderTrainedRequirements(
+18172:         requirements
+18173:     ) {
+18174:         const source =
+18175:             Array.isArray(requirements)
+18176:                 ? requirements
+18177:                 : [];
+18178: 
+18179:         const findRequired = code => {
+18180:             const item = source.find(
+18181:                 requirement => requirement.code === code
+18182:             );
+18183: 
+18184:             return Math.max(
+18185:                 0,
+18186:                 parseInt(item?.required, 10) || 0
+18187:             );
+18188:         };
+18189: 
+18190:         const level1Required =
+18191:             findRequired('level_1_public_order');
+18192: 
+18193:         const level2Required =
+18194:             findRequired('level_2_public_order');
+18195: 
+18196:         const policeSergeantRequired =
+18197:             findRequired('police_sergeant');
+18198: 
+18199:         const policeInspectorRequired =
+
+--- source lines 20671-20713 ---
+20671:             required <= 0 ||
+20672:             !/^(?:Required\s+)?Police\s+Officer(?:s)?$/i.test(cleaned)
+20673:         ) {
+20674:             return null;
+20675:         }
+20676: 
+20677:         return {
+20678:             unitName: 'Police Car',
+20679:             stillNeeded: Math.ceil(required / 2),
+20680:             personnelRequired: required,
+20681:             personnelPerVehicle: 2
+20682:         };
+20683:     }
+20684: 
+20685:     function normaliseOperationalRequirementRows(rows) {
+20686:         return (Array.isArray(rows) ? rows : []).map(row => {
+20687:             if (!row || row.isTrainedPersonnelRequirement) return row;
+20688: 
+20689:             const sarConversion =
+20690:                 getSarPersonnelVehicleRequirement(
+20691:                     row.unitName,
+20692:                     row.stillNeeded
+20693:                 );
+20694: 
+20695:             if (sarConversion) {
+20696:                 return {
+20697:                     ...row,
+20698:                     unitName:
+20699:                         sarConversion.unitName,
+20700:                     stillNeeded:
+20701:                         sarConversion.stillNeeded,
+20702:                     personnelRequirement:
+20703:                         sarConversion.personnelRequirement,
+20704:                     personnelPerVehicle:
+20705:                         sarConversion.personnelPerVehicle,
+20706:                     sarPersonnelConversion:
+20707:                         sarConversion,
+20708:                     convertedFromPersonnelRequirement:
+20709:                         true
+20710:                 };
+20711:             }
+20712: 
+20713:             const conversion = getPoliceOfficerVehicleRequirement(
+
+--- source lines 21141-21183 ---
+21141:             hasAuthoritativeLiveMissionRequirementsPanel() &&
+21142:             sourceLabel !== 'live mission requirements'
+21143:         ) {
+21144:             requirementRows = readMissionUpdateRows();
+21145:             sourceLabel = 'live mission requirements';
+21146: 
+21147:             if (mfDebugEnabled) {
+21148:                 debugLog(
+21149:                     'UNIT FINDER LIVE AUTHORITY',
+21150:                     `Using ${requirementRows.length} current live requirement row(s); static mission-help rows were ignored.`
+21151:                 );
+21152:             }
+21153:         }
+21154: 
+21155:         requirementRows = normaliseOperationalRequirementRows(
+21156:             requirementRows
+21157:         );
+21158: 
+21159:         updateStatusBox(`Processing ${sourceLabel} requirements...`);
+21160: 
+21161:         await preparePoliceVehicleSafetyForRows(
+21162:             requirementRows,
+21163:             sourceLabel
+21164:         );
+21165: 
+21166:         for (const item of requirementRows) {
+21167:             if (
+21168:                 detectAndLatchStaffingBlock(
+21169:                     `process-${sourceLabel}`
+21170:                 )
+21171:             ) {
+21172:                 break;
+21173:             }
+21174: 
+21175:             const unitText = item.unitName;
+21176: 
+21177:             if (
+21178:                 item
+21179:                     .isTrainedPersonnelRequirement
+21180:             ) {
+21181:                 const requirements =
+21182:                     item
+21183:                         .personnelTrainingRequirements ||
+
+--- source lines 24541-24583 ---
+24541:         if (
+24542:             /^(?:Required\s+)?Critical\s+Care(?:\s+Team(?:s)?)?$/i
+24543:                 .test(cleaned)
+24544:         ) {
+24545:             return {
+24546:                 type: 'critical-care',
+24547:                 unitName: 'Critical Care',
+24548:                 maximum: null
+24549:             };
+24550:         }
+24551: 
+24552:         return null;
+24553:     }
+24554: 
+24555:     function normaliseMissionUpdatePatientRequirement(
+24556:         unitName,
+24557:         amount
+24558:     ) {
+24559:         const safeAmount =
+24560:             Math.max(
+24561:                 0,
+24562:                 parseInt(
+24563:                     amount,
+24564:                     10
+24565:                 ) || 0
+24566:             );
+24567: 
+24568:         const rule =
+24569:             getMissionUpdatePatientRequirementRule(
+24570:                 unitName
+24571:             );
+24572: 
+24573:         if (!rule) {
+24574:             return {
+24575:                 unitName:
+24576:                     String(
+24577:                         unitName ||
+24578:                         ''
+24579:                     )
+24580:                         .replace(
+24581:                             /\s+/g,
+24582:                             ' '
+24583:                         )
+
+--- source lines 25236-25278 ---
+25236: 
+25237:                     needed =
+25238:                         towRequirement.stillNeeded;
+25239: 
+25240:                     details = {
+25241:                         ...(
+25242:                             details ||
+25243:                             {}
+25244:                         ),
+25245:                         towRequirement
+25246:                     };
+25247:                 }
+25248: 
+25249:                 const patientRequirement =
+25250:                     normaliseMissionUpdatePatientRequirement(
+25251:                         cleanedName,
+25252:                         needed
+25253:                     );
+25254: 
+25255:                 if (
+25256:                     patientRequirement.type
+25257:                 ) {
+25258:                     if (
+25259:                         mfDebugEnabled &&
+25260:                         !silent
+25261:                     ) {
+25262:                         debugLog(
+25263:                             'UPDATE PATIENT RULE',
+25264:                             `${cleanedName} x${needed} -> ${patientRequirement.unitName} x${patientRequirement.stillNeeded}` +
+25265:                             `${patientRequirement.capped ? ' (capped at one)' : ' (required count preserved)'}` +
+25266:                             ` | source=${source}`
+25267:                         );
+25268:                     }
+25269: 
+25270:                     cleanedName =
+25271:                         patientRequirement.unitName;
+25272: 
+25273:                     needed =
+25274:                         patientRequirement.stillNeeded;
+25275:                 }
+25276: 
+25277:                 if (
+25278:                     needed <=
+
+--- source lines 25963-26005 ---
+25963:                 0 ||
+25964:             tablePoliceSergeantRequired >
+25965:                 0 ||
+25966:             tablePoliceInspectorRequired >
+25967:                 0 ||
+25968:             tablePoliceMedicRequired >
+25969:                 0 ||
+25970:             tableRailwayPoliceRequired >
+25971:                 0 ||
+25972:             tableArmedResponseRequired >
+25973:                 0
+25974:         ) {
+25975:             mergeTrainedPersonnelRequirements(
+25976:                 trainedPersonnelRequirements,
+25977:                 normalisePublicOrderTrainedRequirements([
+25978:                     {
+25979:                         code:
+25980:                             'level_1_public_order',
+25981:                         label:
+25982:                             'Level 1 Public Order Officer',
+25983:                         required:
+25984:                             tableLevel1PublicOrderRequired
+25985:                     },
+25986:                     {
+25987:                         code:
+25988:                             'level_2_public_order',
+25989:                         label:
+25990:                             'Level 2 Public Order Officer',
+25991:                         required:
+25992:                             tableLevel2PublicOrderRequired
+25993:                     },
+25994:                     {
+25995:                         code:
+25996:                             'police_sergeant',
+25997:                         label:
+25998:                             'Police Sergeant',
+25999:                         required:
+26000:                             tablePoliceSergeantRequired
+26001:                     },
+26002:                     {
+26003:                         code:
+26004:                             'police_inspector',
+26005:                         label:
+
+--- source lines 26561-26603 ---
+26561:                     {
+26562:                         ...row,
+26563:                         stillNeeded:
+26564:                             getTrainedPersonnelVehicleTarget(
+26565:                                 row
+26566:                                     .personnelTrainingRequirements
+26567:                             )
+26568:                     }
+26569:                 );
+26570: 
+26571:                 return;
+26572:             }
+26573: 
+26574:             const patientRequirement =
+26575:                 normaliseMissionUpdatePatientRequirement(
+26576:                     row.unitName,
+26577:                     row.stillNeeded
+26578:                 );
+26579: 
+26580:             const effectiveUnitName =
+26581:                 patientRequirement.unitName ||
+26582:                 row.unitName;
+26583: 
+26584:             const mappedName =
+26585:                 resolveUnitName(
+26586:                     effectiveUnitName
+26587:                 );
+26588: 
+26589:             const canonicalName =
+26590:                 normaliseVehicleText(
+26591:                     mappedName ||
+26592:                     effectiveUnitName
+26593:                 );
+26594: 
+26595:             const amount =
+26596:                 patientRequirement.stillNeeded;
+26597: 
+26598:             if (
+26599:                 !canonicalName ||
+26600:                 amount <= 0
+26601:             ) {
+26602:                 return;
+26603:             }
+
+--- source lines 27099-27141 ---
+27099:             return false;
+27100:         }
+27101: 
+27102:         const rawMissingRows =
+27103:             Array.isArray(
+27104:                 suppliedRows
+27105:             )
+27106:                 ? suppliedRows
+27107:                 : readMissionUpdateRows();
+27108: 
+27109:         // Supplied live-table rows can bypass readMissionUpdateRows(), so run
+27110:         // the same personnel-to-vehicle conversion at the Upgrade entry point.
+27111:         // This restores SAR Commander -> Control Van parity with Unit Finder.
+27112:         const missingRows =
+27113:             normaliseOperationalRequirementRows(
+27114:                 rawMissingRows
+27115:             );
+27116: 
+27117:         if (mfDebugEnabled) {
+27118:             debugLog(
+27119:                 'UPDATE ONLY',
+27120:                 missingRows.length
+27121:                     ? `Active mission rows only: ${missingRows.map(row => `${row.unitName} x${row.stillNeeded}`).join(', ')}`
+27122:                     : 'No visible active-mission update rows found. Hidden and previous mission requirements were ignored.'
+27123:             );
+27124:         }
+27125: 
+27126:         if (missingRows.length === 0) {
+27127:             updateStatusBox("No mission update units needed.");
+27128:             return false;
+27129:         }
+27130: 
+27131:         const missingAfterAttempt = [];
+27132: 
+27133:         missingRows.forEach(item => {
+27134:             if (
+27135:                 isPublicOrderPersonnelRequirementName(
+27136:                     item?.unitName
+27137:                 )
+27138:             ) {
+27139:                 if (
+27140:                     mfDebugEnabled
+27141:                 ) {
+
+--- source lines 28354-28396 ---
+28354:                 ) ||
+28355:                 lower.includes('we need:') ||
+28356:                 lower.includes('something went wrong') ||
+28357:                 lower.includes('has not enough personal') ||
+28358:                 lower.includes('has not enough personnel') ||
+28359:                 lower.includes('right qualification')
+28360:             ) {
+28361:                 return text;
+28362:             }
+28363:         }
+28364: 
+28365:         return '';
+28366:     }
+28367: 
+28368:     function normaliseVisibleRequirementName(rawName) {
+28369:         return String(rawName || '')
+28370:             .replace(/\(.*?\)/g, ' ')
+28371:             .replace(/\bmin\.\s*\d+\b/gi, ' ')
+28372:             .replace(/\bx\s*\d+\b/gi, ' ')
+28373:             .replace(/[:;,.]/g, ' ')
+28374:             .replace(/\s+/g, ' ')
+28375:             .trim();
+28376:     }
+28377: 
+28378:     function parseVisibleMissionRequirementRows() {
+28379:         if (!isCurrentMissionExecutionOwner('visible fallback requirement read')) {
+28380:             return [];
+28381:         }
+28382: 
+28383:         synchroniseMissionInstanceState('visible fallback read');
+28384: 
+28385:         const activeRoots =
+28386:             getActiveMissionRequirementContexts()
+28387:                 .map(
+28388:                     context =>
+28389:                         context.root
+28390:                 );
+28391: 
+28392:         const candidates =
+28393:             activeRoots.flatMap(root => {
+28394:                 const values = [];
+28395: 
+28396:                 if (
+
+--- source lines 28425-28467 ---
+28425:                 new Set(
+28426:                     candidates
+28427:                 )
+28428:             ).filter(
+28429:                 scope =>
+28430:                     isMissionElementVisible(
+28431:                         scope
+28432:                     )
+28433:             );
+28434: 
+28435:         const rows = [];
+28436:         const seen = new Set();
+28437: 
+28438:         function addRow(name, amount, source) {
+28439:             let cleanName = normaliseVisibleRequirementName(name);
+28440:             let required = Math.max(1, parseInt(amount || '1', 10) || 1);
+28441: 
+28442:             if (!cleanName) return;
+28443:             if (cleanName.length > 90) return;
+28444:             if (shouldIgnoreRequiredMinimumRequirement(cleanName)) return;
+28445: 
+28446:             const sarPersonnelConversion =
+28447:                 getSarPersonnelVehicleRequirement(
+28448:                     cleanName,
+28449:                     required
+28450:                 );
+28451: 
+28452:             if (sarPersonnelConversion) {
+28453:                 cleanName =
+28454:                     sarPersonnelConversion.unitName;
+28455: 
+28456:                 required =
+28457:                     sarPersonnelConversion.stillNeeded;
+28458: 
+28459:                 if (mfDebugEnabled) {
+28460:                     debugLog(
+28461:                         'VISIBLE SAR PERSONNEL',
+28462:                         `${sarPersonnelConversion.personnelRequirement} -> ${sarPersonnelConversion.unitName} x${sarPersonnelConversion.stillNeeded} (${sarPersonnelConversion.personnelPerVehicle} personnel per vehicle)`
+28463:                     );
+28464:                 }
+28465:             }
+28466: 
+28467:             const lower = cleanName.toLowerCase();
+
+PATTERN: foam
+HITS: [737, 809, 9207, 9208, 10006, 10007, 10161, 10162, 10163, 10164, 10165, 10166, 10167, 10168, 10779, 10799, 10803, 10805, 10809, 10829, 10831, 11822, 11823, 11895, 11914, 11936, 12293, 12294, 12333, 12354]
+
+--- source lines 723-765 ---
+00723:         "60": "Coastguard Commander",
+00724:         "61": "Flood Rescue Unit Trailer",
+00725:         "62": "Flood Rescue Unit",
+00726:         "63": "Support Unit",
+00727:         "65": "Coastguard Rescue Helicopter Large",
+00728:         "66": "4x4 Vehicle",
+00729:         "67": "ILB Trainer",
+00730:         "68": "ILB",
+00731:         "69": "ALB",
+00732:         "70": "Rescue Watercraft Trailer",
+00733:         "71": "Hovercraft Trailer",
+00734:         "72": "Hovercraft Transporter",
+00735:         "73": "Light 4x4",
+00736:         "74": "Boat Trailer",
+00737:         "75": "Major Foam Tender",
+00738:         "76": "RIV",
+00739:         "77": "Airfield Command",
+00740:         "78": "Rescue Stairs",
+00741:         "79": "Airfield Operations Vehicle",
+00742:         "80": "Airfield Operations Supervisor",
+00743:         "81": "Medical Equipment Trailer",
+00744:         "85": "Control Van SAR",
+00745:         "86": "Operational Support Van",
+00746:         "87": "Operational Support Trailer",
+00747:         "88": "SAR Flood Rescue Trailer",
+00748:         "89": "Drone Vehicle SAR HQ",
+00749:         "91": "Police Drone Vehicle",
+00750:         "93": "SAR 4x4",
+00751:         "96": "Specialist Paramedic RRV",
+00752:         "97": "Patient Transport Service Ambulance",
+00753:         "98": "Critical Care Transfer Ambulance",
+00754:         "99": "Mountain Rescue 4x4",
+00755:         "102": "Search Dog Unit SAR",
+00756:         "105": "Flatbed Recovery Vehicle",
+00757:         "107": "RRU",
+00758:         "108": "EIU",
+00759:         "109": "EOD Commander",
+00760:         "110": "EOD Response Vehicle",
+00761:         "111": "EOD Medium Equipment Van",
+00762:         "112": "EOD Heavy Equipment Vehicle",
+00763:         "113": "Marine EOD Response Vehicle",
+00764:         "114": "Marine EOD Equipment Van",
+00765:         "115": "Welfare Vehicle",
+
+--- source lines 795-837 ---
+00795:         "Coastguard Commander": { code: "CGC", icon: "⚠️👨‍✈️" },
+00796:         "Coastguard Rescue Helicopter Large": { code: "CGH", icon: "🚁⚠️" },
+00797:         "Flood Rescue Unit Trailer": { code: "FRUT", icon: "🛟" },
+00798:         "Flood Rescue Unit": { code: "FRU", icon: "🛟" },
+00799:         "Support Unit": { code: "SU", icon: "⚠️🚐" },
+00800:         "4x4 Vehicle": { code: "4x4", icon: "🛟" },
+00801:         "ILB Trainer": { code: "ILBT", icon: "🚤" },
+00802:         "ILB": { code: "ILB", icon: "🚤" },
+00803:         "ALB": { code: "ALB", icon: "🚤" },
+00804:         "Boat Trailer": { code: "BT", icon: "🚤" },
+00805:         "Rescue Watercraft Trailer": { code: "RWC", icon: "🚤" },
+00806:         "Hovercraft Trailer": { code: "HCT", icon: "🛥️" },
+00807:         "Hovercraft Transporter": { code: "HCTR", icon: "🛥️" },
+00808:         "Light 4x4": { code: "L4x4", icon: "🚙" },
+00809:         "Major Foam Tender": { code: "MFT", icon: "🚒✈️" },
+00810:         "RIV": { code: "RIV", icon: "🚒✈️" },
+00811:         "Airfield Command": { code: "AirCommand", icon: "🚒✈️" },
+00812:         "Rescue Stairs": { code: "RS", icon: "✈️🪜" },
+00813:         "Airfield Operations Vehicle": { code: "AOV", icon: "✈️🚗" },
+00814:         "Airfield Operations Supervisor": { code: "AOS", icon: "✈️👷" },
+00815:         "Medical Equipment Trailer": { code: "MET", icon: "🚒⚕️" },
+00816:         "Control Van SAR": { code: "CV", icon: "📡" },
+00817:         "Operational Support Van": { code: "OSV", icon: "🛠️" },
+00818:         "Operational Support Trailer": { code: "OST", icon: "🛠️" },
+00819:         "SAR Flood Rescue Trailer": { code: "SFR", icon: "🌊" },
+00820:         "Drone Vehicle SAR HQ": { code: "DRV", icon: "🚁" },
+00821:         "SAR 4x4": { code: "SAR4x4", icon: "🟡" },
+00822:         "Specialist Paramedic RRV": { code: "SP-RRV", icon: "🚑" },
+00823:         "Patient Transport Service Ambulance": { code: "PTS", icon: "🚑" },
+00824:         "Critical Care Transfer Ambulance": { code: "CCT", icon: "🚑❤️" },
+00825:         "Mountain Rescue 4x4": { code: "MR4x4", icon: "🏔️" },
+00826:         "Search Dog Unit SAR": { code: "K9", icon: "🐕" },
+00827:         "Flatbed Recovery Vehicle": { code: "FRV", icon: "🛻" },
+00828:         "RRV": { code: "RRV", icon: "🚑" },
+00829:         "RRU": { code: "RRU", icon: "🚒✈️" },
+00830:         "Rescue Support Unit (RSU)": { code: "RSU", icon: "🚒🛠️" },
+00831:         "DSU": { code: "DSU", icon: "🚔🐕" },
+00832:         "OTL": { code: "OTL", icon: "🚔" },
+00833:         "PRV": { code: "PRV", icon: "🚑1️⃣" },
+00834:         "SRV": { code: "SRV", icon: "🚑2️⃣" },
+00835:         "ATV": { code: "ATV", icon: "🚑🦺" },
+00836:         "BFU": { code: "BFU", icon: "🚒✈️" },
+00837:         "F/WrC": { code: "FWrC", icon: "🚒💦" },
+
+--- source lines 9193-9235 ---
+09193:     // V10.6.71: Normal Police Car/Police Officer requirements now protect
+09194:     // exact-ID IRVs carrying specialist-trained staff, live-verify ordinary IRVs
+09195:     // before selection, and exclude known trained IRVs from ordinary attendance.
+09196:     // Auto Mode now waits for a complete, non-zero, ID-stable vehicle list with
+09197:     // no remaining load control or spinner before Unit Finder may select units.
+09198:     // V10.6.72: Exact assignment-page scans no longer require a permanent binding
+09199:     // before an untrained IRV may satisfy ordinary Police attendance. Police Medic
+09200:     // and Railway Police Officer requirements now use exact trained IRVs with two
+09201:     // qualified personnel, and ATV Carrier uses an authoritative type-30 matcher.
+09202:     // V10.6.83: Mission Control now uses an iOS Safari-only safe-area layout,
+09203:     // horizontal collapse state, visual-viewport placement and pointer dragging.
+09204:     // Desktop positioning, sizing and mouse dragging remain unchanged.
+09205:     // V10.6.86: Firefighters convert to Rescue Pumps at nine personnel
+09206:     // per vehicle; Car Recovery maps to the existing Flatbed Recovery
+09207:     // Vehicle; RIV-or-Major-Foam-Tender wording uses RIV first and only
+09208:     // falls back to a Major Foam Tender when no eligible RIV is available.
+09209:     // V10.6.85: Fire cross-reference now maps the exact "Road Rail Unit"
+09210:     // wording to the established RRU route.
+09211:     // V10.6.84: the exact mission wording "Fire, rescue or aerial appliance"
+09212:     // now maps to the existing Rescue Pump route.
+09213:     // V10.6.82: verified Fire profiles staff type-107 RRUs with two Railway Fire
+09214:     // personnel, type-15 ICCUs with three Level 1 Incident Commanders and type-39
+09215:     // Fire OSUs with three HazMat personnel. BASU, Welfare and HazMat share one OSU.
+09216:     // V10.6.81: Operational Support or SAR Vehicle requirements now select and
+09217:     // verify the exact type-86 Operational Support Van. Fire type-39 Operational
+09218:     // Support Units remain excluded from this SAR requirement.
+09219:     // V10.6.80: Critical Care Ambulances now require one trained person per vehicle.
+09220:     // Armed Response personnel use exact type-25 ATCs with two officers who each hold
+09221:     // both Roads Policing and Firearms. Police Officer and Seagoing Vessel upgrade
+09222:     // rows now use shared strict conversions across Unit Finder, Update and Auto.
+09223:     // V10.6.54: Auto Mode no longer waits for post-dispatch upgrades. It now
+09224:     // dispatches and advances immediately, including exact-next continuation
+09225:     // after high-value Dispatch & Share missions.
+09226:     // V10.6.53: ICCU-or-ACU requirements now select an ICCU first and use
+09227:     // Ambulance Control Unit vehicle type 31 only when no ICCU is available.
+09228:     // V10.6.52: Debug, High Debug and the Issue Recorder have been removed.
+09229:     // Clear legacy settings/data so they cannot be restored by an older saved preference.
+09230:     let mfDebugEnabled = false;
+09231:     let mfHighDebugEnabled = false;
+09232: 
+09233:     try {
+09234:         localStorage.removeItem('mf_debug_enabled_v9');
+09235:         localStorage.removeItem('mf_high_debug_enabled_v9');
+
+--- source lines 9194-9236 ---
+09194:     // exact-ID IRVs carrying specialist-trained staff, live-verify ordinary IRVs
+09195:     // before selection, and exclude known trained IRVs from ordinary attendance.
+09196:     // Auto Mode now waits for a complete, non-zero, ID-stable vehicle list with
+09197:     // no remaining load control or spinner before Unit Finder may select units.
+09198:     // V10.6.72: Exact assignment-page scans no longer require a permanent binding
+09199:     // before an untrained IRV may satisfy ordinary Police attendance. Police Medic
+09200:     // and Railway Police Officer requirements now use exact trained IRVs with two
+09201:     // qualified personnel, and ATV Carrier uses an authoritative type-30 matcher.
+09202:     // V10.6.83: Mission Control now uses an iOS Safari-only safe-area layout,
+09203:     // horizontal collapse state, visual-viewport placement and pointer dragging.
+09204:     // Desktop positioning, sizing and mouse dragging remain unchanged.
+09205:     // V10.6.86: Firefighters convert to Rescue Pumps at nine personnel
+09206:     // per vehicle; Car Recovery maps to the existing Flatbed Recovery
+09207:     // Vehicle; RIV-or-Major-Foam-Tender wording uses RIV first and only
+09208:     // falls back to a Major Foam Tender when no eligible RIV is available.
+09209:     // V10.6.85: Fire cross-reference now maps the exact "Road Rail Unit"
+09210:     // wording to the established RRU route.
+09211:     // V10.6.84: the exact mission wording "Fire, rescue or aerial appliance"
+09212:     // now maps to the existing Rescue Pump route.
+09213:     // V10.6.82: verified Fire profiles staff type-107 RRUs with two Railway Fire
+09214:     // personnel, type-15 ICCUs with three Level 1 Incident Commanders and type-39
+09215:     // Fire OSUs with three HazMat personnel. BASU, Welfare and HazMat share one OSU.
+09216:     // V10.6.81: Operational Support or SAR Vehicle requirements now select and
+09217:     // verify the exact type-86 Operational Support Van. Fire type-39 Operational
+09218:     // Support Units remain excluded from this SAR requirement.
+09219:     // V10.6.80: Critical Care Ambulances now require one trained person per vehicle.
+09220:     // Armed Response personnel use exact type-25 ATCs with two officers who each hold
+09221:     // both Roads Policing and Firearms. Police Officer and Seagoing Vessel upgrade
+09222:     // rows now use shared strict conversions across Unit Finder, Update and Auto.
+09223:     // V10.6.54: Auto Mode no longer waits for post-dispatch upgrades. It now
+09224:     // dispatches and advances immediately, including exact-next continuation
+09225:     // after high-value Dispatch & Share missions.
+09226:     // V10.6.53: ICCU-or-ACU requirements now select an ICCU first and use
+09227:     // Ambulance Control Unit vehicle type 31 only when no ICCU is available.
+09228:     // V10.6.52: Debug, High Debug and the Issue Recorder have been removed.
+09229:     // Clear legacy settings/data so they cannot be restored by an older saved preference.
+09230:     let mfDebugEnabled = false;
+09231:     let mfHighDebugEnabled = false;
+09232: 
+09233:     try {
+09234:         localStorage.removeItem('mf_debug_enabled_v9');
+09235:         localStorage.removeItem('mf_high_debug_enabled_v9');
+09236:         localStorage.removeItem('mf_debug_collapsed_v9');
+
+--- source lines 9992-10034 ---
+09992:         "Required Car Recovery": "Flatbed Recovery Vehicle",
+09993:         "ICCU or Ambulance Control Unit": "ICCU/ACU",
+09994:         "ICCU or Ambulance Control Units": "ICCU/ACU",
+09995:         "ICCUs or Ambulance Control Units": "ICCU/ACU",
+09996:         "Fire Officer": "Fire Officer",
+09997:         "Fire Officers": "Fire Officer",
+09998:         "Rescue Support Unit": "Fire Engine R/PUMP x 1",
+09999:         "Rescue Support Units": "Fire Engine R/PUMP x 1",
+10000:         "Rescue Support Vehicle": "Fire Engine R/PUMP x 1",
+10001:         "Rescue Support Vehicles": "Fire Engine R/PUMP x 1",
+10002:         "Rescue Support Unit or Rescue Pump": "Fire Engine R/PUMP x 1",
+10003:         "Rescue Support Units or Rescue Pumps": "Fire Engine R/PUMP x 1",
+10004:         "Fire Engines or Rescue Support Vehicles": "Fire Engine R/PUMP x 1",
+10005:         "Fire Engines, Rescue Support Vehicles or Aerial Appliance Trucks": "Fire Engine R/PUMP x 1",
+10006:         "Foam Unit": "RP CAFS",
+10007:         "Foam Units": "RP CAFS",
+10008:         "Water Carrier": "Water Carrier",
+10009:         "Water Carriers": "Water Carrier",
+10010:         "Welfare Vehicles x1": "Welfare Vehicle",
+10011: 
+10012:         /*************************************************
+10013:          * POLICE
+10014:          *************************************************/
+10015:         "Police Car": "Police Car",
+10016:         "Police Cars": "Police Car",
+10017:         "Police car": "Police Car",
+10018:         "Police cars": "Police Car",
+10019:         "Police Officer": "Police Car",
+10020:         "Police Officers": "Police Car",
+10021:         "Traffic Car": "Police ATC",
+10022:         "Traffic Cars": "Police ATC",
+10023:         "Police Cars or Armed Response Vehicles (ARVs)": "Police ATC",
+10024:         "Armed Response Personnel (In Armed Vehicles)": "Police ATC",
+10025:         "Dog Support Unit (DSU)": "Police DSU",
+10026:         "Dog Support Units (DSU)": "Police DSU",
+10027:         "Dog Support Units (DSUs)": "Police DSU",
+10028:         "Mounted Unit": "Mounted Unit",
+10029:         "Mounted Units": "Mounted Unit",
+10030:         "Police Inspector": "Police Inspector",
+10031:         "Police Sergeant": "Police Sergeant",
+10032:         "Cell Van": "Cell Van",
+10033:         "Police Helicopter": "Police Helicopter",
+10034:         "Police Helicopters": "Police Helicopter",
+
+--- source lines 9993-10035 ---
+09993:         "ICCU or Ambulance Control Unit": "ICCU/ACU",
+09994:         "ICCU or Ambulance Control Units": "ICCU/ACU",
+09995:         "ICCUs or Ambulance Control Units": "ICCU/ACU",
+09996:         "Fire Officer": "Fire Officer",
+09997:         "Fire Officers": "Fire Officer",
+09998:         "Rescue Support Unit": "Fire Engine R/PUMP x 1",
+09999:         "Rescue Support Units": "Fire Engine R/PUMP x 1",
+10000:         "Rescue Support Vehicle": "Fire Engine R/PUMP x 1",
+10001:         "Rescue Support Vehicles": "Fire Engine R/PUMP x 1",
+10002:         "Rescue Support Unit or Rescue Pump": "Fire Engine R/PUMP x 1",
+10003:         "Rescue Support Units or Rescue Pumps": "Fire Engine R/PUMP x 1",
+10004:         "Fire Engines or Rescue Support Vehicles": "Fire Engine R/PUMP x 1",
+10005:         "Fire Engines, Rescue Support Vehicles or Aerial Appliance Trucks": "Fire Engine R/PUMP x 1",
+10006:         "Foam Unit": "RP CAFS",
+10007:         "Foam Units": "RP CAFS",
+10008:         "Water Carrier": "Water Carrier",
+10009:         "Water Carriers": "Water Carrier",
+10010:         "Welfare Vehicles x1": "Welfare Vehicle",
+10011: 
+10012:         /*************************************************
+10013:          * POLICE
+10014:          *************************************************/
+10015:         "Police Car": "Police Car",
+10016:         "Police Cars": "Police Car",
+10017:         "Police car": "Police Car",
+10018:         "Police cars": "Police Car",
+10019:         "Police Officer": "Police Car",
+10020:         "Police Officers": "Police Car",
+10021:         "Traffic Car": "Police ATC",
+10022:         "Traffic Cars": "Police ATC",
+10023:         "Police Cars or Armed Response Vehicles (ARVs)": "Police ATC",
+10024:         "Armed Response Personnel (In Armed Vehicles)": "Police ATC",
+10025:         "Dog Support Unit (DSU)": "Police DSU",
+10026:         "Dog Support Units (DSU)": "Police DSU",
+10027:         "Dog Support Units (DSUs)": "Police DSU",
+10028:         "Mounted Unit": "Mounted Unit",
+10029:         "Mounted Units": "Mounted Unit",
+10030:         "Police Inspector": "Police Inspector",
+10031:         "Police Sergeant": "Police Sergeant",
+10032:         "Cell Van": "Cell Van",
+10033:         "Police Helicopter": "Police Helicopter",
+10034:         "Police Helicopters": "Police Helicopter",
+10035:         "Police Helicopter or Drone": "Police Helicopter",
+
+--- source lines 10147-10189 ---
+10147:         "Coastguard Commander": "CG Commander",
+10148:         "Flood Rescue Units":"Flood Rescue",
+10149: 
+10150:         /*************************************************
+10151:          * AIRFIELD OPS
+10152:          *************************************************/
+10153:         "Airfield Operations Vehicle": "Airfield Operations Vehicle",
+10154:         "Airfield Operations Vehicles": "Airfield Operations Vehicle",
+10155:         "Aerial Appliance Trucks or Rescue Stairs": "Rescue Stairs",
+10156:         "Fire Engines or RIVs": "RIV",
+10157:         "RIV": "RIV",
+10158:         "RIVs": "RIV",
+10159:         "Rapid Intervention Vehicle": "RIV",
+10160:         "Rapid Intervention Vehicles": "RIV",
+10161:         "Major Foam Tender": "Major Foam Tender",
+10162:         "Major Foam Tenders": "Major Foam Tender",
+10163:         "RIVs or Major Foam Tenders": "RIV",
+10164:         "RIV or Major Foam Tender": "RIV",
+10165:         "Required RIV or Major Foam Tender": "RIV",
+10166:         "Required RIVs or Major Foam Tenders": "RIV",
+10167:         "Fire Engines, RIVs or Major Foam Tenders": "Major Foam Tender",
+10168:         "Fire Engines or Major Foam Tenders": "Major Foam Tender",
+10169:         "Airfield Operations Supervisor": "Airfield Operations Supervisors",
+10170:         "Airfield Operations Supervisors": "Airfield Operations Supervisors",
+10171:         "Airfield Firefighting Command Vehicle": "Airfield FF Command Vehicle",
+10172:         "ICCU or Ambulance Control Units or Airfield Firefighting Command Vehicles": "Airfield FF Command Vehicle",
+10173:         "Fire Officers or Airfield Firefighting Command Vehicles": "Fire Officer",
+10174: 
+10175:         /*************************************************
+10176:          * SEARCH & RESCUE / FLOOD / RECOVERY / BOMB
+10177:          *************************************************/
+10178:         "Flood Rescue Unit": "Flood Rescue Unit (Trailer)",
+10179:         "4x4 Vehicle": "4x4 Units",
+10180:         "4x4 Vehicles": "4x4 Units",
+10181:         "Mountain Rescue 4x4 or SAR 4x4": "4x4 Units",
+10182:         "Mountain Rescue 4x4s or SAR 4x4s": "4x4 Units",
+10183: 
+10184:         // Special Search Technician vehicle selector.
+10185:         // Matching is handled by the dedicated displayed-name-prefix rule.
+10186:         "SARTEC": "SARTEC",
+10187: 
+10188:         "modules.missionHelper.prerequisites.tow_trucks_large": "Flatbed Recovery Vehicle",
+10189:         "modules.missionHelper.prerequisites.tow_trucks": "Flatbed Recovery Vehicle",
+
+--- source lines 10148-10190 ---
+10148:         "Flood Rescue Units":"Flood Rescue",
+10149: 
+10150:         /*************************************************
+10151:          * AIRFIELD OPS
+10152:          *************************************************/
+10153:         "Airfield Operations Vehicle": "Airfield Operations Vehicle",
+10154:         "Airfield Operations Vehicles": "Airfield Operations Vehicle",
+10155:         "Aerial Appliance Trucks or Rescue Stairs": "Rescue Stairs",
+10156:         "Fire Engines or RIVs": "RIV",
+10157:         "RIV": "RIV",
+10158:         "RIVs": "RIV",
+10159:         "Rapid Intervention Vehicle": "RIV",
+10160:         "Rapid Intervention Vehicles": "RIV",
+10161:         "Major Foam Tender": "Major Foam Tender",
+10162:         "Major Foam Tenders": "Major Foam Tender",
+10163:         "RIVs or Major Foam Tenders": "RIV",
+10164:         "RIV or Major Foam Tender": "RIV",
+10165:         "Required RIV or Major Foam Tender": "RIV",
+10166:         "Required RIVs or Major Foam Tenders": "RIV",
+10167:         "Fire Engines, RIVs or Major Foam Tenders": "Major Foam Tender",
+10168:         "Fire Engines or Major Foam Tenders": "Major Foam Tender",
+10169:         "Airfield Operations Supervisor": "Airfield Operations Supervisors",
+10170:         "Airfield Operations Supervisors": "Airfield Operations Supervisors",
+10171:         "Airfield Firefighting Command Vehicle": "Airfield FF Command Vehicle",
+10172:         "ICCU or Ambulance Control Units or Airfield Firefighting Command Vehicles": "Airfield FF Command Vehicle",
+10173:         "Fire Officers or Airfield Firefighting Command Vehicles": "Fire Officer",
+10174: 
+10175:         /*************************************************
+10176:          * SEARCH & RESCUE / FLOOD / RECOVERY / BOMB
+10177:          *************************************************/
+10178:         "Flood Rescue Unit": "Flood Rescue Unit (Trailer)",
+10179:         "4x4 Vehicle": "4x4 Units",
+10180:         "4x4 Vehicles": "4x4 Units",
+10181:         "Mountain Rescue 4x4 or SAR 4x4": "4x4 Units",
+10182:         "Mountain Rescue 4x4s or SAR 4x4s": "4x4 Units",
+10183: 
+10184:         // Special Search Technician vehicle selector.
+10185:         // Matching is handled by the dedicated displayed-name-prefix rule.
+10186:         "SARTEC": "SARTEC",
+10187: 
+10188:         "modules.missionHelper.prerequisites.tow_trucks_large": "Flatbed Recovery Vehicle",
+10189:         "modules.missionHelper.prerequisites.tow_trucks": "Flatbed Recovery Vehicle",
+10190:         "1 car to tow": "Flatbed Recovery Vehicle",
+
+--- source lines 10149-10191 ---
+10149: 
+10150:         /*************************************************
+10151:          * AIRFIELD OPS
+10152:          *************************************************/
+10153:         "Airfield Operations Vehicle": "Airfield Operations Vehicle",
+10154:         "Airfield Operations Vehicles": "Airfield Operations Vehicle",
+10155:         "Aerial Appliance Trucks or Rescue Stairs": "Rescue Stairs",
+10156:         "Fire Engines or RIVs": "RIV",
+10157:         "RIV": "RIV",
+10158:         "RIVs": "RIV",
+10159:         "Rapid Intervention Vehicle": "RIV",
+10160:         "Rapid Intervention Vehicles": "RIV",
+10161:         "Major Foam Tender": "Major Foam Tender",
+10162:         "Major Foam Tenders": "Major Foam Tender",
+10163:         "RIVs or Major Foam Tenders": "RIV",
+10164:         "RIV or Major Foam Tender": "RIV",
+10165:         "Required RIV or Major Foam Tender": "RIV",
+10166:         "Required RIVs or Major Foam Tenders": "RIV",
+10167:         "Fire Engines, RIVs or Major Foam Tenders": "Major Foam Tender",
+10168:         "Fire Engines or Major Foam Tenders": "Major Foam Tender",
+10169:         "Airfield Operations Supervisor": "Airfield Operations Supervisors",
+10170:         "Airfield Operations Supervisors": "Airfield Operations Supervisors",
+10171:         "Airfield Firefighting Command Vehicle": "Airfield FF Command Vehicle",
+10172:         "ICCU or Ambulance Control Units or Airfield Firefighting Command Vehicles": "Airfield FF Command Vehicle",
+10173:         "Fire Officers or Airfield Firefighting Command Vehicles": "Fire Officer",
+10174: 
+10175:         /*************************************************
+10176:          * SEARCH & RESCUE / FLOOD / RECOVERY / BOMB
+10177:          *************************************************/
+10178:         "Flood Rescue Unit": "Flood Rescue Unit (Trailer)",
+10179:         "4x4 Vehicle": "4x4 Units",
+10180:         "4x4 Vehicles": "4x4 Units",
+10181:         "Mountain Rescue 4x4 or SAR 4x4": "4x4 Units",
+10182:         "Mountain Rescue 4x4s or SAR 4x4s": "4x4 Units",
+10183: 
+10184:         // Special Search Technician vehicle selector.
+10185:         // Matching is handled by the dedicated displayed-name-prefix rule.
+10186:         "SARTEC": "SARTEC",
+10187: 
+10188:         "modules.missionHelper.prerequisites.tow_trucks_large": "Flatbed Recovery Vehicle",
+10189:         "modules.missionHelper.prerequisites.tow_trucks": "Flatbed Recovery Vehicle",
+10190:         "1 car to tow": "Flatbed Recovery Vehicle",
+10191:         "Cars to tow": "Flatbed Recovery Vehicle",
+
+--- source lines 10150-10192 ---
+10150:         /*************************************************
+10151:          * AIRFIELD OPS
+10152:          *************************************************/
+10153:         "Airfield Operations Vehicle": "Airfield Operations Vehicle",
+10154:         "Airfield Operations Vehicles": "Airfield Operations Vehicle",
+10155:         "Aerial Appliance Trucks or Rescue Stairs": "Rescue Stairs",
+10156:         "Fire Engines or RIVs": "RIV",
+10157:         "RIV": "RIV",
+10158:         "RIVs": "RIV",
+10159:         "Rapid Intervention Vehicle": "RIV",
+10160:         "Rapid Intervention Vehicles": "RIV",
+10161:         "Major Foam Tender": "Major Foam Tender",
+10162:         "Major Foam Tenders": "Major Foam Tender",
+10163:         "RIVs or Major Foam Tenders": "RIV",
+10164:         "RIV or Major Foam Tender": "RIV",
+10165:         "Required RIV or Major Foam Tender": "RIV",
+10166:         "Required RIVs or Major Foam Tenders": "RIV",
+10167:         "Fire Engines, RIVs or Major Foam Tenders": "Major Foam Tender",
+10168:         "Fire Engines or Major Foam Tenders": "Major Foam Tender",
+10169:         "Airfield Operations Supervisor": "Airfield Operations Supervisors",
+10170:         "Airfield Operations Supervisors": "Airfield Operations Supervisors",
+10171:         "Airfield Firefighting Command Vehicle": "Airfield FF Command Vehicle",
+10172:         "ICCU or Ambulance Control Units or Airfield Firefighting Command Vehicles": "Airfield FF Command Vehicle",
+10173:         "Fire Officers or Airfield Firefighting Command Vehicles": "Fire Officer",
+10174: 
+10175:         /*************************************************
+10176:          * SEARCH & RESCUE / FLOOD / RECOVERY / BOMB
+10177:          *************************************************/
+10178:         "Flood Rescue Unit": "Flood Rescue Unit (Trailer)",
+10179:         "4x4 Vehicle": "4x4 Units",
+10180:         "4x4 Vehicles": "4x4 Units",
+10181:         "Mountain Rescue 4x4 or SAR 4x4": "4x4 Units",
+10182:         "Mountain Rescue 4x4s or SAR 4x4s": "4x4 Units",
+10183: 
+10184:         // Special Search Technician vehicle selector.
+10185:         // Matching is handled by the dedicated displayed-name-prefix rule.
+10186:         "SARTEC": "SARTEC",
+10187: 
+10188:         "modules.missionHelper.prerequisites.tow_trucks_large": "Flatbed Recovery Vehicle",
+10189:         "modules.missionHelper.prerequisites.tow_trucks": "Flatbed Recovery Vehicle",
+10190:         "1 car to tow": "Flatbed Recovery Vehicle",
+10191:         "Cars to tow": "Flatbed Recovery Vehicle",
+10192:         "Car to tow": "Flatbed Recovery Vehicle",
+
+--- source lines 10151-10193 ---
+10151:          * AIRFIELD OPS
+10152:          *************************************************/
+10153:         "Airfield Operations Vehicle": "Airfield Operations Vehicle",
+10154:         "Airfield Operations Vehicles": "Airfield Operations Vehicle",
+10155:         "Aerial Appliance Trucks or Rescue Stairs": "Rescue Stairs",
+10156:         "Fire Engines or RIVs": "RIV",
+10157:         "RIV": "RIV",
+10158:         "RIVs": "RIV",
+10159:         "Rapid Intervention Vehicle": "RIV",
+10160:         "Rapid Intervention Vehicles": "RIV",
+10161:         "Major Foam Tender": "Major Foam Tender",
+10162:         "Major Foam Tenders": "Major Foam Tender",
+10163:         "RIVs or Major Foam Tenders": "RIV",
+10164:         "RIV or Major Foam Tender": "RIV",
+10165:         "Required RIV or Major Foam Tender": "RIV",
+10166:         "Required RIVs or Major Foam Tenders": "RIV",
+10167:         "Fire Engines, RIVs or Major Foam Tenders": "Major Foam Tender",
+10168:         "Fire Engines or Major Foam Tenders": "Major Foam Tender",
+10169:         "Airfield Operations Supervisor": "Airfield Operations Supervisors",
+10170:         "Airfield Operations Supervisors": "Airfield Operations Supervisors",
+10171:         "Airfield Firefighting Command Vehicle": "Airfield FF Command Vehicle",
+10172:         "ICCU or Ambulance Control Units or Airfield Firefighting Command Vehicles": "Airfield FF Command Vehicle",
+10173:         "Fire Officers or Airfield Firefighting Command Vehicles": "Fire Officer",
+10174: 
+10175:         /*************************************************
+10176:          * SEARCH & RESCUE / FLOOD / RECOVERY / BOMB
+10177:          *************************************************/
+10178:         "Flood Rescue Unit": "Flood Rescue Unit (Trailer)",
+10179:         "4x4 Vehicle": "4x4 Units",
+10180:         "4x4 Vehicles": "4x4 Units",
+10181:         "Mountain Rescue 4x4 or SAR 4x4": "4x4 Units",
+10182:         "Mountain Rescue 4x4s or SAR 4x4s": "4x4 Units",
+10183: 
+10184:         // Special Search Technician vehicle selector.
+10185:         // Matching is handled by the dedicated displayed-name-prefix rule.
+10186:         "SARTEC": "SARTEC",
+10187: 
+10188:         "modules.missionHelper.prerequisites.tow_trucks_large": "Flatbed Recovery Vehicle",
+10189:         "modules.missionHelper.prerequisites.tow_trucks": "Flatbed Recovery Vehicle",
+10190:         "1 car to tow": "Flatbed Recovery Vehicle",
+10191:         "Cars to tow": "Flatbed Recovery Vehicle",
+10192:         "Car to tow": "Flatbed Recovery Vehicle",
+10193:         "Maximum amount of cars to tow": "Flatbed Recovery Vehicle",
+
+--- source lines 10152-10194 ---
+10152:          *************************************************/
+10153:         "Airfield Operations Vehicle": "Airfield Operations Vehicle",
+10154:         "Airfield Operations Vehicles": "Airfield Operations Vehicle",
+10155:         "Aerial Appliance Trucks or Rescue Stairs": "Rescue Stairs",
+10156:         "Fire Engines or RIVs": "RIV",
+10157:         "RIV": "RIV",
+10158:         "RIVs": "RIV",
+10159:         "Rapid Intervention Vehicle": "RIV",
+10160:         "Rapid Intervention Vehicles": "RIV",
+10161:         "Major Foam Tender": "Major Foam Tender",
+10162:         "Major Foam Tenders": "Major Foam Tender",
+10163:         "RIVs or Major Foam Tenders": "RIV",
+10164:         "RIV or Major Foam Tender": "RIV",
+10165:         "Required RIV or Major Foam Tender": "RIV",
+10166:         "Required RIVs or Major Foam Tenders": "RIV",
+10167:         "Fire Engines, RIVs or Major Foam Tenders": "Major Foam Tender",
+10168:         "Fire Engines or Major Foam Tenders": "Major Foam Tender",
+10169:         "Airfield Operations Supervisor": "Airfield Operations Supervisors",
+10170:         "Airfield Operations Supervisors": "Airfield Operations Supervisors",
+10171:         "Airfield Firefighting Command Vehicle": "Airfield FF Command Vehicle",
+10172:         "ICCU or Ambulance Control Units or Airfield Firefighting Command Vehicles": "Airfield FF Command Vehicle",
+10173:         "Fire Officers or Airfield Firefighting Command Vehicles": "Fire Officer",
+10174: 
+10175:         /*************************************************
+10176:          * SEARCH & RESCUE / FLOOD / RECOVERY / BOMB
+10177:          *************************************************/
+10178:         "Flood Rescue Unit": "Flood Rescue Unit (Trailer)",
+10179:         "4x4 Vehicle": "4x4 Units",
+10180:         "4x4 Vehicles": "4x4 Units",
+10181:         "Mountain Rescue 4x4 or SAR 4x4": "4x4 Units",
+10182:         "Mountain Rescue 4x4s or SAR 4x4s": "4x4 Units",
+10183: 
+10184:         // Special Search Technician vehicle selector.
+10185:         // Matching is handled by the dedicated displayed-name-prefix rule.
+10186:         "SARTEC": "SARTEC",
+10187: 
+10188:         "modules.missionHelper.prerequisites.tow_trucks_large": "Flatbed Recovery Vehicle",
+10189:         "modules.missionHelper.prerequisites.tow_trucks": "Flatbed Recovery Vehicle",
+10190:         "1 car to tow": "Flatbed Recovery Vehicle",
+10191:         "Cars to tow": "Flatbed Recovery Vehicle",
+10192:         "Car to tow": "Flatbed Recovery Vehicle",
+10193:         "Maximum amount of cars to tow": "Flatbed Recovery Vehicle",
+10194:         "Minimum amount of cars to tow": "Flatbed Recovery Vehicle",
+
+--- source lines 10153-10195 ---
+10153:         "Airfield Operations Vehicle": "Airfield Operations Vehicle",
+10154:         "Airfield Operations Vehicles": "Airfield Operations Vehicle",
+10155:         "Aerial Appliance Trucks or Rescue Stairs": "Rescue Stairs",
+10156:         "Fire Engines or RIVs": "RIV",
+10157:         "RIV": "RIV",
+10158:         "RIVs": "RIV",
+10159:         "Rapid Intervention Vehicle": "RIV",
+10160:         "Rapid Intervention Vehicles": "RIV",
+10161:         "Major Foam Tender": "Major Foam Tender",
+10162:         "Major Foam Tenders": "Major Foam Tender",
+10163:         "RIVs or Major Foam Tenders": "RIV",
+10164:         "RIV or Major Foam Tender": "RIV",
+10165:         "Required RIV or Major Foam Tender": "RIV",
+10166:         "Required RIVs or Major Foam Tenders": "RIV",
+10167:         "Fire Engines, RIVs or Major Foam Tenders": "Major Foam Tender",
+10168:         "Fire Engines or Major Foam Tenders": "Major Foam Tender",
+10169:         "Airfield Operations Supervisor": "Airfield Operations Supervisors",
+10170:         "Airfield Operations Supervisors": "Airfield Operations Supervisors",
+10171:         "Airfield Firefighting Command Vehicle": "Airfield FF Command Vehicle",
+10172:         "ICCU or Ambulance Control Units or Airfield Firefighting Command Vehicles": "Airfield FF Command Vehicle",
+10173:         "Fire Officers or Airfield Firefighting Command Vehicles": "Fire Officer",
+10174: 
+10175:         /*************************************************
+10176:          * SEARCH & RESCUE / FLOOD / RECOVERY / BOMB
+10177:          *************************************************/
+10178:         "Flood Rescue Unit": "Flood Rescue Unit (Trailer)",
+10179:         "4x4 Vehicle": "4x4 Units",
+10180:         "4x4 Vehicles": "4x4 Units",
+10181:         "Mountain Rescue 4x4 or SAR 4x4": "4x4 Units",
+10182:         "Mountain Rescue 4x4s or SAR 4x4s": "4x4 Units",
+10183: 
+10184:         // Special Search Technician vehicle selector.
+10185:         // Matching is handled by the dedicated displayed-name-prefix rule.
+10186:         "SARTEC": "SARTEC",
+10187: 
+10188:         "modules.missionHelper.prerequisites.tow_trucks_large": "Flatbed Recovery Vehicle",
+10189:         "modules.missionHelper.prerequisites.tow_trucks": "Flatbed Recovery Vehicle",
+10190:         "1 car to tow": "Flatbed Recovery Vehicle",
+10191:         "Cars to tow": "Flatbed Recovery Vehicle",
+10192:         "Car to tow": "Flatbed Recovery Vehicle",
+10193:         "Maximum amount of cars to tow": "Flatbed Recovery Vehicle",
+10194:         "Minimum amount of cars to tow": "Flatbed Recovery Vehicle",
+10195:         "Tow Trucks Large": "Flatbed Recovery Vehicle",
+
+--- source lines 10154-10196 ---
+10154:         "Airfield Operations Vehicles": "Airfield Operations Vehicle",
+10155:         "Aerial Appliance Trucks or Rescue Stairs": "Rescue Stairs",
+10156:         "Fire Engines or RIVs": "RIV",
+10157:         "RIV": "RIV",
+10158:         "RIVs": "RIV",
+10159:         "Rapid Intervention Vehicle": "RIV",
+10160:         "Rapid Intervention Vehicles": "RIV",
+10161:         "Major Foam Tender": "Major Foam Tender",
+10162:         "Major Foam Tenders": "Major Foam Tender",
+10163:         "RIVs or Major Foam Tenders": "RIV",
+10164:         "RIV or Major Foam Tender": "RIV",
+10165:         "Required RIV or Major Foam Tender": "RIV",
+10166:         "Required RIVs or Major Foam Tenders": "RIV",
+10167:         "Fire Engines, RIVs or Major Foam Tenders": "Major Foam Tender",
+10168:         "Fire Engines or Major Foam Tenders": "Major Foam Tender",
+10169:         "Airfield Operations Supervisor": "Airfield Operations Supervisors",
+10170:         "Airfield Operations Supervisors": "Airfield Operations Supervisors",
+10171:         "Airfield Firefighting Command Vehicle": "Airfield FF Command Vehicle",
+10172:         "ICCU or Ambulance Control Units or Airfield Firefighting Command Vehicles": "Airfield FF Command Vehicle",
+10173:         "Fire Officers or Airfield Firefighting Command Vehicles": "Fire Officer",
+10174: 
+10175:         /*************************************************
+10176:          * SEARCH & RESCUE / FLOOD / RECOVERY / BOMB
+10177:          *************************************************/
+10178:         "Flood Rescue Unit": "Flood Rescue Unit (Trailer)",
+10179:         "4x4 Vehicle": "4x4 Units",
+10180:         "4x4 Vehicles": "4x4 Units",
+10181:         "Mountain Rescue 4x4 or SAR 4x4": "4x4 Units",
+10182:         "Mountain Rescue 4x4s or SAR 4x4s": "4x4 Units",
+10183: 
+10184:         // Special Search Technician vehicle selector.
+10185:         // Matching is handled by the dedicated displayed-name-prefix rule.
+10186:         "SARTEC": "SARTEC",
+10187: 
+10188:         "modules.missionHelper.prerequisites.tow_trucks_large": "Flatbed Recovery Vehicle",
+10189:         "modules.missionHelper.prerequisites.tow_trucks": "Flatbed Recovery Vehicle",
+10190:         "1 car to tow": "Flatbed Recovery Vehicle",
+10191:         "Cars to tow": "Flatbed Recovery Vehicle",
+10192:         "Car to tow": "Flatbed Recovery Vehicle",
+10193:         "Maximum amount of cars to tow": "Flatbed Recovery Vehicle",
+10194:         "Minimum amount of cars to tow": "Flatbed Recovery Vehicle",
+10195:         "Tow Trucks Large": "Flatbed Recovery Vehicle",
+10196:         "Flatbed Recovery Vehicle": "Flatbed Recovery Vehicle",
+
+--- source lines 10765-10807 ---
+10765:                 /^RRV\b/i.test(
+10766:                     cleaned
+10767:                 ) ||
+10768:                 /^Specialist\s+Paramedic\s+RRV\b/i.test(
+10769:                     cleaned
+10770:                 ) ||
+10771:                 /^Rapid\s+Response\s+Vehicle\b/i.test(
+10772:                     cleaned
+10773:                 )
+10774:             );
+10775:         });
+10776:     }
+10777: 
+10778: 
+10779:     function isRivOrMajorFoamTenderRequirement(
+10780:         originalName,
+10781:         mappedName
+10782:     ) {
+10783:         const raw =
+10784:             String(
+10785:                 originalName || ''
+10786:             )
+10787:                 .replace(
+10788:                     /\s+/g,
+10789:                     ' '
+10790:                 )
+10791:                 .trim();
+10792: 
+10793:         const mapped =
+10794:             normaliseVehicleText(
+10795:                 mappedName
+10796:             );
+10797: 
+10798:         return (
+10799:             /^(?:Required\s+)?RIVs?\s+or\s+Major\s+Foam\s+Tenders?$/i.test(
+10800:                 raw
+10801:             ) ||
+10802:             mapped ===
+10803:                 'riv or major foam tender' ||
+10804:             mapped ===
+10805:                 'rivs or major foam tenders'
+10806:         );
+10807:     }
+
+--- source lines 10785-10827 ---
+10785:                 originalName || ''
+10786:             )
+10787:                 .replace(
+10788:                     /\s+/g,
+10789:                     ' '
+10790:                 )
+10791:                 .trim();
+10792: 
+10793:         const mapped =
+10794:             normaliseVehicleText(
+10795:                 mappedName
+10796:             );
+10797: 
+10798:         return (
+10799:             /^(?:Required\s+)?RIVs?\s+or\s+Major\s+Foam\s+Tenders?$/i.test(
+10800:                 raw
+10801:             ) ||
+10802:             mapped ===
+10803:                 'riv or major foam tender' ||
+10804:             mapped ===
+10805:                 'rivs or major foam tenders'
+10806:         );
+10807:     }
+10808: 
+10809:     function isMajorFoamTenderVehicleCheckbox(
+10810:         input
+10811:     ) {
+10812:         if (!input) return false;
+10813: 
+10814:         if (
+10815:             getVehicleTypeIdentifiers(
+10816:                 input
+10817:             ).includes(
+10818:                 '75'
+10819:             )
+10820:         ) {
+10821:             return true;
+10822:         }
+10823: 
+10824:         return getCheckboxVehicleValues(
+10825:             input
+10826:         ).some(value => {
+10827:             return (
+
+--- source lines 10789-10831 ---
+10789:                     ' '
+10790:                 )
+10791:                 .trim();
+10792: 
+10793:         const mapped =
+10794:             normaliseVehicleText(
+10795:                 mappedName
+10796:             );
+10797: 
+10798:         return (
+10799:             /^(?:Required\s+)?RIVs?\s+or\s+Major\s+Foam\s+Tenders?$/i.test(
+10800:                 raw
+10801:             ) ||
+10802:             mapped ===
+10803:                 'riv or major foam tender' ||
+10804:             mapped ===
+10805:                 'rivs or major foam tenders'
+10806:         );
+10807:     }
+10808: 
+10809:     function isMajorFoamTenderVehicleCheckbox(
+10810:         input
+10811:     ) {
+10812:         if (!input) return false;
+10813: 
+10814:         if (
+10815:             getVehicleTypeIdentifiers(
+10816:                 input
+10817:             ).includes(
+10818:                 '75'
+10819:             )
+10820:         ) {
+10821:             return true;
+10822:         }
+10823: 
+10824:         return getCheckboxVehicleValues(
+10825:             input
+10826:         ).some(value => {
+10827:             return (
+10828:                 value ===
+10829:                     'major foam tender' ||
+10830:                 value ===
+10831:                     'major foam tenders' ||
+
+--- source lines 10791-10833 ---
+10791:                 .trim();
+10792: 
+10793:         const mapped =
+10794:             normaliseVehicleText(
+10795:                 mappedName
+10796:             );
+10797: 
+10798:         return (
+10799:             /^(?:Required\s+)?RIVs?\s+or\s+Major\s+Foam\s+Tenders?$/i.test(
+10800:                 raw
+10801:             ) ||
+10802:             mapped ===
+10803:                 'riv or major foam tender' ||
+10804:             mapped ===
+10805:                 'rivs or major foam tenders'
+10806:         );
+10807:     }
+10808: 
+10809:     function isMajorFoamTenderVehicleCheckbox(
+10810:         input
+10811:     ) {
+10812:         if (!input) return false;
+10813: 
+10814:         if (
+10815:             getVehicleTypeIdentifiers(
+10816:                 input
+10817:             ).includes(
+10818:                 '75'
+10819:             )
+10820:         ) {
+10821:             return true;
+10822:         }
+10823: 
+10824:         return getCheckboxVehicleValues(
+10825:             input
+10826:         ).some(value => {
+10827:             return (
+10828:                 value ===
+10829:                     'major foam tender' ||
+10830:                 value ===
+10831:                     'major foam tenders' ||
+10832:                 value ===
+10833:                     'mft'
+
+--- source lines 10795-10837 ---
+10795:                 mappedName
+10796:             );
+10797: 
+10798:         return (
+10799:             /^(?:Required\s+)?RIVs?\s+or\s+Major\s+Foam\s+Tenders?$/i.test(
+10800:                 raw
+10801:             ) ||
+10802:             mapped ===
+10803:                 'riv or major foam tender' ||
+10804:             mapped ===
+10805:                 'rivs or major foam tenders'
+10806:         );
+10807:     }
+10808: 
+10809:     function isMajorFoamTenderVehicleCheckbox(
+10810:         input
+10811:     ) {
+10812:         if (!input) return false;
+10813: 
+10814:         if (
+10815:             getVehicleTypeIdentifiers(
+10816:                 input
+10817:             ).includes(
+10818:                 '75'
+10819:             )
+10820:         ) {
+10821:             return true;
+10822:         }
+10823: 
+10824:         return getCheckboxVehicleValues(
+10825:             input
+10826:         ).some(value => {
+10827:             return (
+10828:                 value ===
+10829:                     'major foam tender' ||
+10830:                 value ===
+10831:                     'major foam tenders' ||
+10832:                 value ===
+10833:                     'mft'
+10834:             );
+10835:         });
+10836:     }
+10837: 
+
+--- source lines 10815-10857 ---
+10815:             getVehicleTypeIdentifiers(
+10816:                 input
+10817:             ).includes(
+10818:                 '75'
+10819:             )
+10820:         ) {
+10821:             return true;
+10822:         }
+10823: 
+10824:         return getCheckboxVehicleValues(
+10825:             input
+10826:         ).some(value => {
+10827:             return (
+10828:                 value ===
+10829:                     'major foam tender' ||
+10830:                 value ===
+10831:                     'major foam tenders' ||
+10832:                 value ===
+10833:                     'mft'
+10834:             );
+10835:         });
+10836:     }
+10837: 
+10838:     function isRivRequirement(
+10839:         originalName,
+10840:         mappedName
+10841:     ) {
+10842:         const raw =
+10843:             normaliseVehicleText(
+10844:                 originalName
+10845:             );
+10846: 
+10847:         const mapped =
+10848:             normaliseVehicleText(
+10849:                 mappedName
+10850:             );
+10851: 
+10852:         return (
+10853:             mapped === 'riv' ||
+10854:             mapped === 'rivs' ||
+10855:             mapped ===
+10856:                 'rapid intervention vehicle' ||
+10857:             mapped ===
+
+--- source lines 10817-10859 ---
+10817:             ).includes(
+10818:                 '75'
+10819:             )
+10820:         ) {
+10821:             return true;
+10822:         }
+10823: 
+10824:         return getCheckboxVehicleValues(
+10825:             input
+10826:         ).some(value => {
+10827:             return (
+10828:                 value ===
+10829:                     'major foam tender' ||
+10830:                 value ===
+10831:                     'major foam tenders' ||
+10832:                 value ===
+10833:                     'mft'
+10834:             );
+10835:         });
+10836:     }
+10837: 
+10838:     function isRivRequirement(
+10839:         originalName,
+10840:         mappedName
+10841:     ) {
+10842:         const raw =
+10843:             normaliseVehicleText(
+10844:                 originalName
+10845:             );
+10846: 
+10847:         const mapped =
+10848:             normaliseVehicleText(
+10849:                 mappedName
+10850:             );
+10851: 
+10852:         return (
+10853:             mapped === 'riv' ||
+10854:             mapped === 'rivs' ||
+10855:             mapped ===
+10856:                 'rapid intervention vehicle' ||
+10857:             mapped ===
+10858:                 'rapid intervention vehicles' ||
+10859:             raw === 'riv' ||
+
+--- source lines 11808-11850 ---
+11808:         );
+11809: 
+11810:         const rrvTypeOnly =
+11811:             isRrvRequirement(
+11812:                 originalName,
+11813:                 mappedName
+11814:             );
+11815: 
+11816:         const rivTypeOnly =
+11817:             isRivRequirement(
+11818:                 originalName,
+11819:                 mappedName
+11820:             );
+11821: 
+11822:         const rivOrMajorFoamTenderPreferred =
+11823:             isRivOrMajorFoamTenderRequirement(
+11824:                 originalName,
+11825:                 mappedName
+11826:             );
+11827: 
+11828:         const policeAirMode =
+11829:             getPoliceAirRequirementMode(
+11830:                 originalName,
+11831:                 mappedName
+11832:             );
+11833: 
+11834:         const policeCarOnly =
+11835:             isPoliceCarRequirement(
+11836:                 originalName,
+11837:                 mappedName
+11838:             );
+11839: 
+11840:         const atvCarrierOnly =
+11841:             isAtvCarrierRequirement(
+11842:                 originalName,
+11843:                 mappedName
+11844:             );
+11845: 
+11846:         const seagoingVesselOnly =
+11847:             isSeagoingVesselRequirement(
+11848:                 originalName,
+11849:                 mappedName
+11850:             );
+
+--- source lines 11809-11851 ---
+11809: 
+11810:         const rrvTypeOnly =
+11811:             isRrvRequirement(
+11812:                 originalName,
+11813:                 mappedName
+11814:             );
+11815: 
+11816:         const rivTypeOnly =
+11817:             isRivRequirement(
+11818:                 originalName,
+11819:                 mappedName
+11820:             );
+11821: 
+11822:         const rivOrMajorFoamTenderPreferred =
+11823:             isRivOrMajorFoamTenderRequirement(
+11824:                 originalName,
+11825:                 mappedName
+11826:             );
+11827: 
+11828:         const policeAirMode =
+11829:             getPoliceAirRequirementMode(
+11830:                 originalName,
+11831:                 mappedName
+11832:             );
+11833: 
+11834:         const policeCarOnly =
+11835:             isPoliceCarRequirement(
+11836:                 originalName,
+11837:                 mappedName
+11838:             );
+11839: 
+11840:         const atvCarrierOnly =
+11841:             isAtvCarrierRequirement(
+11842:                 originalName,
+11843:                 mappedName
+11844:             );
+11845: 
+11846:         const seagoingVesselOnly =
+11847:             isSeagoingVesselRequirement(
+11848:                 originalName,
+11849:                 mappedName
+11850:             );
+11851: 
+
+--- source lines 11881-11923 ---
+11881: 
+11882: 
+11883:         if (seagoingVesselOnly) {
+11884:             return sortVehicleCheckboxesByBestArrival(
+11885:                 getVehicleCheckboxSnapshot().filter(input => {
+11886:                     if (input.disabled) return false;
+11887:                     if (!includeChecked && input.checked) return false;
+11888:                     return isSeagoingVesselCheckbox(input);
+11889:                 })
+11890:             );
+11891:         }
+11892: 
+11893: 
+11894:         if (
+11895:             rivOrMajorFoamTenderPreferred
+11896:         ) {
+11897:             const eligible =
+11898:                 getVehicleCheckboxSnapshot().filter(input => {
+11899:                     if (input.disabled) {
+11900:                         return false;
+11901:                     }
+11902: 
+11903:                     if (
+11904:                         !includeChecked &&
+11905:                         input.checked
+11906:                     ) {
+11907:                         return false;
+11908:                     }
+11909: 
+11910:                     return (
+11911:                         isRivVehicleCheckbox(
+11912:                             input
+11913:                         ) ||
+11914:                         isMajorFoamTenderVehicleCheckbox(
+11915:                             input
+11916:                         )
+11917:                     );
+11918:                 });
+11919: 
+11920:             const rivMatches =
+11921:                 sortVehicleCheckboxesByBestArrival(
+11922:                     eligible.filter(
+11923:                         isRivVehicleCheckbox
+
+--- source lines 11900-11942 ---
+11900:                         return false;
+11901:                     }
+11902: 
+11903:                     if (
+11904:                         !includeChecked &&
+11905:                         input.checked
+11906:                     ) {
+11907:                         return false;
+11908:                     }
+11909: 
+11910:                     return (
+11911:                         isRivVehicleCheckbox(
+11912:                             input
+11913:                         ) ||
+11914:                         isMajorFoamTenderVehicleCheckbox(
+11915:                             input
+11916:                         )
+11917:                     );
+11918:                 });
+11919: 
+11920:             const rivMatches =
+11921:                 sortVehicleCheckboxesByBestArrival(
+11922:                     eligible.filter(
+11923:                         isRivVehicleCheckbox
+11924:                     )
+11925:                 );
+11926: 
+11927:             if (
+11928:                 rivMatches.length >
+11929:                 0
+11930:             ) {
+11931:                 return rivMatches;
+11932:             }
+11933: 
+11934:             return sortVehicleCheckboxesByBestArrival(
+11935:                 eligible.filter(
+11936:                     isMajorFoamTenderVehicleCheckbox
+11937:                 )
+11938:             );
+11939:         }
+11940: 
+11941:         if (atvCarrierOnly) {
+11942:             return sortVehicleCheckboxesByBestArrival(
+
+--- source lines 11922-11964 ---
+11922:                     eligible.filter(
+11923:                         isRivVehicleCheckbox
+11924:                     )
+11925:                 );
+11926: 
+11927:             if (
+11928:                 rivMatches.length >
+11929:                 0
+11930:             ) {
+11931:                 return rivMatches;
+11932:             }
+11933: 
+11934:             return sortVehicleCheckboxesByBestArrival(
+11935:                 eligible.filter(
+11936:                     isMajorFoamTenderVehicleCheckbox
+11937:                 )
+11938:             );
+11939:         }
+11940: 
+11941:         if (atvCarrierOnly) {
+11942:             return sortVehicleCheckboxesByBestArrival(
+11943:                 getVehicleCheckboxSnapshot().filter(input => {
+11944:                     if (input.disabled) {
+11945:                         return false;
+11946:                     }
+11947: 
+11948:                     if (
+11949:                         !includeChecked &&
+11950:                         input.checked
+11951:                     ) {
+11952:                         return false;
+11953:                     }
+11954: 
+11955:                     return isAtvCarrierCheckbox(
+11956:                         input
+11957:                     );
+11958:                 })
+11959:             );
+11960:         }
+11961: 
+11962:         if (dogSupportOnly) {
+11963:             return sortVehicleCheckboxesByBestArrival(
+11964:                 getVehicleCheckboxSnapshot().filter(input => {
+
+--- source lines 12279-12321 ---
+12279:         return getAllMatchingVehicleCheckboxes(originalName, mappedName, false);
+12280:     }
+12281: 
+12282:     function countSelectedMatchingVehicles(originalName, mappedName) {
+12283:         if (isFireOperationalSupportRequirement(originalName, mappedName)) {
+12284:             return getVehicleCheckboxSnapshot().filter(input =>
+12285:                 input.checked && isFireOperationalSupportUnitCheckbox(input)).length;
+12286:         }
+12287:         const candidates = getVehicleMatchCandidates(originalName, mappedName);
+12288:         const strictExactOnly = isAmbulanceTransportRequest(originalName, mappedName);
+12289:         const sartecPrefixOnly = isSartecRequirement(originalName, mappedName);
+12290:         const rrvTypeOnly = isRrvRequirement(originalName, mappedName);
+12291:         const rivTypeOnly = isRivRequirement(originalName, mappedName);
+12292: 
+12293:         const rivOrMajorFoamTenderPreferred =
+12294:             isRivOrMajorFoamTenderRequirement(
+12295:                 originalName,
+12296:                 mappedName
+12297:             );
+12298:         const policeAirMode = getPoliceAirRequirementMode(originalName, mappedName);
+12299:         const policeCarOnly = isPoliceCarRequirement(originalName, mappedName);
+12300:         const atvCarrierOnly = isAtvCarrierRequirement(originalName, mappedName);
+12301:         const seagoingVesselOnly = isSeagoingVesselRequirement(originalName, mappedName);
+12302:         const dogSupportOnly = isDogSupportUnitRequirement(originalName, mappedName);
+12303:         const operationalSupportOnly =
+12304:             isOperationalSupportOrSarVehicleRequirement(
+12305:                 originalName,
+12306:                 mappedName
+12307:             );
+12308: 
+12309:         const generic4x4Only =
+12310:             isGeneric4x4VehicleRequirement(
+12311:                 originalName,
+12312:                 mappedName
+12313:             );
+12314: 
+12315:         const mountainRescue4x4Preferred =
+12316:             isMountainRescueOrSar4x4Requirement(
+12317:                 originalName,
+12318:                 mappedName
+12319:             );
+12320:         const iccuPreferred =
+12321:             isIccuOrAmbulanceControlRequirement(
+
+--- source lines 12280-12322 ---
+12280:     }
+12281: 
+12282:     function countSelectedMatchingVehicles(originalName, mappedName) {
+12283:         if (isFireOperationalSupportRequirement(originalName, mappedName)) {
+12284:             return getVehicleCheckboxSnapshot().filter(input =>
+12285:                 input.checked && isFireOperationalSupportUnitCheckbox(input)).length;
+12286:         }
+12287:         const candidates = getVehicleMatchCandidates(originalName, mappedName);
+12288:         const strictExactOnly = isAmbulanceTransportRequest(originalName, mappedName);
+12289:         const sartecPrefixOnly = isSartecRequirement(originalName, mappedName);
+12290:         const rrvTypeOnly = isRrvRequirement(originalName, mappedName);
+12291:         const rivTypeOnly = isRivRequirement(originalName, mappedName);
+12292: 
+12293:         const rivOrMajorFoamTenderPreferred =
+12294:             isRivOrMajorFoamTenderRequirement(
+12295:                 originalName,
+12296:                 mappedName
+12297:             );
+12298:         const policeAirMode = getPoliceAirRequirementMode(originalName, mappedName);
+12299:         const policeCarOnly = isPoliceCarRequirement(originalName, mappedName);
+12300:         const atvCarrierOnly = isAtvCarrierRequirement(originalName, mappedName);
+12301:         const seagoingVesselOnly = isSeagoingVesselRequirement(originalName, mappedName);
+12302:         const dogSupportOnly = isDogSupportUnitRequirement(originalName, mappedName);
+12303:         const operationalSupportOnly =
+12304:             isOperationalSupportOrSarVehicleRequirement(
+12305:                 originalName,
+12306:                 mappedName
+12307:             );
+12308: 
+12309:         const generic4x4Only =
+12310:             isGeneric4x4VehicleRequirement(
+12311:                 originalName,
+12312:                 mappedName
+12313:             );
+12314: 
+12315:         const mountainRescue4x4Preferred =
+12316:             isMountainRescueOrSar4x4Requirement(
+12317:                 originalName,
+12318:                 mappedName
+12319:             );
+12320:         const iccuPreferred =
+12321:             isIccuOrAmbulanceControlRequirement(
+12322:                 originalName,
+
+--- source lines 12319-12361 ---
+12319:             );
+12320:         const iccuPreferred =
+12321:             isIccuOrAmbulanceControlRequirement(
+12322:                 originalName,
+12323:                 mappedName
+12324:             );
+12325: 
+12326:         const ordinaryPoliceRegistry =
+12327:             policeCarOnly
+12328:                 ? readPersonnelTrainingRegistry()
+12329:                 : null;
+12330: 
+12331: 
+12332:         if (
+12333:             rivOrMajorFoamTenderPreferred
+12334:         ) {
+12335:             const selected =
+12336:                 getVehicleCheckboxSnapshot().filter(
+12337:                     input =>
+12338:                         input.checked
+12339:                 );
+12340: 
+12341:             const selectedRivs =
+12342:                 selected.filter(
+12343:                     isRivVehicleCheckbox
+12344:                 ).length;
+12345: 
+12346:             if (
+12347:                 selectedRivs >
+12348:                 0
+12349:             ) {
+12350:                 return selectedRivs;
+12351:             }
+12352: 
+12353:             return selected.filter(
+12354:                 isMajorFoamTenderVehicleCheckbox
+12355:             ).length;
+12356:         }
+12357: 
+12358:         let count = 0;
+12359: 
+12360:         for (const input of getVehicleCheckboxSnapshot()) {
+12361:             // A vehicle that is already checked still counts toward the
+
+--- source lines 12340-12382 ---
+12340: 
+12341:             const selectedRivs =
+12342:                 selected.filter(
+12343:                     isRivVehicleCheckbox
+12344:                 ).length;
+12345: 
+12346:             if (
+12347:                 selectedRivs >
+12348:                 0
+12349:             ) {
+12350:                 return selectedRivs;
+12351:             }
+12352: 
+12353:             return selected.filter(
+12354:                 isMajorFoamTenderVehicleCheckbox
+12355:             ).length;
+12356:         }
+12357: 
+12358:         let count = 0;
+12359: 
+12360:         for (const input of getVehicleCheckboxSnapshot()) {
+12361:             // A vehicle that is already checked still counts toward the
+12362:             // requirement even when MissionChief disables its checkbox after
+12363:             // selection. V10.6.48 skipped disabled checked boxes, which made a
+12364:             // successfully selected vehicle look missing during verification.
+12365:             if (!input.checked) continue;
+12366: 
+12367:             let matches = false;
+12368: 
+12369:             if (seagoingVesselOnly) {
+12370:                 matches = isSeagoingVesselCheckbox(
+12371:                     input
+12372:                 );
+12373:             } else if (atvCarrierOnly) {
+12374:                 matches = isAtvCarrierCheckbox(
+12375:                     input
+12376:                 );
+12377:             } else if (dogSupportOnly) {
+12378:                 matches = isDogSupportUnitCheckbox(
+12379:                     input
+12380:                 );
+12381:             } else if (operationalSupportOnly) {
+12382:                 matches = isOperationalSupportVanCheckbox(input);
