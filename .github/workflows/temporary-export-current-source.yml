@@ -37,8 +37,8 @@ jobs:
       - name: Reconstruct and verify exact v1.0.35 patch
         env:
           HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
-          EXPECTED_B64_SHA256: 783db9923e341253ffebe21807c7e5e0478d69ca5d006892dcb517bf88500b4f
-          EXPECTED_PATCH_SHA256: 42e4036ec99e41de5debcb1e96d0cf06d9c1c14188d9845720645bb047112bc5
+          EXPECTED_B64_SHA256: 1b99a3ce0f91fd38926fa2eba021edb01bb320cacd983e60d533e3a52bce7847
+          EXPECTED_PATCH_SHA256: 0bd0e8fb4617a8f8ecca1d3140af529ea5f43fdb327eb43479c18393b065b230
         shell: bash
         run: |
           set -euo pipefail
