@@ -7,6 +7,7 @@ on:
       - 'scripts/validate-userscript.mjs'
       - 'scripts/check-ios-compatibility.mjs'
       - 'scripts/check-runtime-hardening.mjs'
+      - 'scripts/check-police-irv-fallback.mjs'
       - '.github/workflows/validate-userscript.yml'
   push:
     branches:
@@ -16,6 +17,7 @@ on:
       - 'scripts/validate-userscript.mjs'
       - 'scripts/check-ios-compatibility.mjs'
       - 'scripts/check-runtime-hardening.mjs'
+      - 'scripts/check-police-irv-fallback.mjs'
       - '.github/workflows/validate-userscript.yml'
   workflow_dispatch:
 
@@ -54,6 +56,9 @@ jobs:
 
       - name: Validate runtime performance and lifecycle contracts
         run: node scripts/check-runtime-hardening.mjs
+
+      - name: Validate normal Police IRV fallback contracts
+        run: node scripts/check-police-irv-fallback.mjs
 
       - name: Require a version increase when code changes
         if: github.event_name == 'pull_request'
