@@ -100,14 +100,35 @@ jobs:
         id: push
         env:
           GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         shell: bash
         run: |
-          set -euo pipefail
-          git config user.name MartyBlyth
-          git config user.email 32400596+Martyblyth@users.noreply.github.com
-          git add -A
-          git commit -m 'Restore normal Police IRV selection'
-          git push origin HEAD:main
+          set +e
+          {
+            git config user.name MartyBlyth
+            git config user.email 32400596+Martyblyth@users.noreply.github.com
+            git add -A
+            git commit -m 'Restore normal Police IRV selection'
+            git fetch origin main --force
+            git rebase origin/main
+            git push origin HEAD:main
+          } > /tmp/v1024-push.log 2>&1
+          status=$?
+          cat /tmp/v1024-push.log
+
+          if [[ ${status} -ne 0 ]]; then
+            {
+              echo 'v1.0.24 passed all validation but the final Git operation failed:'
+              echo '```text'
+              tail -n 100 /tmp/v1024-push.log
+              echo '```'
+            } > /tmp/v1024-push-comment.md
+            gh pr comment "${PR_NUMBER}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --body-file /tmp/v1024-push-comment.md || true
+            exit "${status}"
+          fi
+
           echo "commit_sha=$(git rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
 
   publish:
