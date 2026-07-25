@@ -26,6 +26,27 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Consolidate the two retained control surfaces into one coherent interface.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
+## [1.0.31] - 2026-07-25
+
+### Fixed
+
+- Mission Control, Vehicle Load List and Unit Quick Select now migrate to collapsed defaults on the corrected iPhone Safari profile instead of inheriting stale expanded state from the earlier mobile rollout.
+- Mission Control and Vehicle Load List disclosures now own touch and keyboard activation explicitly, prevent event propagation into MissionChief and keep icons, titles, `aria-expanded` and `aria-controls` synchronized.
+- Collapsed iPhone cards now hide their bodies through explicit iPhone-scoped rules, leaving one compact header row.
+- Mission Control now reserves a pointer-transparent upper-right gutter for MissionChief's visible native close control, preventing the Command Nexus card from covering or intercepting the mission-window X button.
+- The close-control gutter is recalculated from the live modal control during visual-viewport changes, orientation changes and Safari page restoration.
+
+### Compatibility and safety
+
+- The correction remains strictly gated to the established iPhone Safari path, including phone-sized desktop-site sessions.
+- iPad/tablet and desktop layout, dragging and saved positioning remain unchanged.
+- Mission requirements, resource matching, vehicle selection, dispatch, Mission Update, Ally Steal, Auto Mode and Resource Administration logic are unchanged.
+- Added permanent regression contracts for collapse migration, deterministic disclosure ownership, explicit collapsed-body hiding, ARIA synchronization and native close-control clearance.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.95` to `V10.6.96`.
+
 ## [1.0.30] - 2026-07-25
 
 ### Fixed
