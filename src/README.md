@@ -10,8 +10,8 @@ src/missionchief-command-nexus.user.js
 
 | Item | Value |
 |---|---|
-| Command Nexus version | `1.0.24` |
-| Mission Finder baseline | `V10.6.89` |
+| Command Nexus version | `1.0.25` |
+| Mission Finder baseline | `V10.6.90` |
 | Unit, Station & Personnel baseline | `V4.2.8` |
 | Licence | MIT |
 | Developer and source-code owner | **MartyBlyth** |
@@ -28,7 +28,7 @@ The file contains:
 3. The Mission Operations Engine.
 4. A shared vehicle-training registry used for qualification-aware selection.
 
-The source is merged and installable. Resource Administration now uses one filtered lifecycle controller, remains scoped to the rendered personal Stations view on iOS Safari and preserves the same panel instance across responsive navigation. Mission Finder ignores its own panel mutations, preserves its runtime during Safari bfcache entry and owns every new global lifecycle listener. Mission Control retains its dedicated iOS Safari-only safe-area layout while established desktop dimensions, saved positioning and mouse interaction remain unchanged.
+The source is merged and installable. Resource Administration uses one filtered lifecycle controller, remains scoped to the rendered personal Stations view on iOS Safari and preserves the same panel instance across responsive navigation. Mission Finder ignores its own panel mutations, preserves its runtime during Safari bfcache entry and owns every global lifecycle listener. Unit Finder resolves vehicle controls from the active mission document and counts a selection only after MissionChief's exact checkbox is confirmed checked, with bounded Safari label and property/event fallbacks when native activation is ignored. Mission Control retains its dedicated iOS Safari-only safe-area layout while established desktop dimensions, saved positioning and mouse interaction remain unchanged.
 
 ## Distribution rule
 
@@ -53,6 +53,7 @@ Before publishing a source change:
 - Run `node scripts/check-ios-compatibility.mjs`.
 - Run `node scripts/check-runtime-hardening.mjs`.
 - Run `node scripts/check-police-irv-fallback.mjs`.
+- Run `node scripts/check-ios-unit-finder-selection.mjs`.
 - Run `python3 scripts/check_repository.py`.
 - Complete the relevant MissionChief regression checks.
 - Record the tested domain, browser, userscript manager and interacting scripts.

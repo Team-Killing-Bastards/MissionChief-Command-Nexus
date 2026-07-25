@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.24
+// @version      1.0.25
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -8680,7 +8680,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.89
+         * MODULE 2: MISSION FINDER V10.6.90
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -9302,6 +9302,11 @@
     const MF_STRICT_TRAINING_SOURCE_PREFIX =
         'mission-finder-live-strict-';
 
+    // V10.6.90: iOS Safari Unit Finder vehicle discovery now follows the
+    // active mission document, and a vehicle allocation is counted only after
+    // MissionChief's real checkbox state is confirmed. Native click, associated
+    // label activation and a checked-property plus input/change fallback remain
+    // bounded to the exact eligible checkbox selected by the existing engine.
     // V10.6.89: ordinary Police attendance preserves specialist IRVs by
     // preference rather than by an absolute block. Verified ordinary type-8
     // IRVs are selected first, unknown/stale IRVs second, and known specialist
@@ -11609,10 +11614,147 @@
         return result;
     }
 
+    let mfVehicleSelectionDocumentCache = {
+        expiresAt: 0,
+        missionKey: '',
+        document: null
+    };
+
+    function getVehicleSelectionDocument(
+        forceRefresh = false
+    ) {
+        const now = Date.now();
+        let missionKey = '';
+
+        try {
+            missionKey = getLocalMissionInstanceKey();
+        } catch (_error) {}
+
+        const cachedDocument =
+            mfVehicleSelectionDocumentCache.document;
+
+        let cachedDocumentUsable = false;
+
+        if (cachedDocument?.documentElement) {
+            try {
+                cachedDocumentUsable =
+                    isCachedMissionDocumentUsable(
+                        cachedDocument
+                    ) &&
+                    isMissionDocumentVisible(
+                        cachedDocument
+                    );
+            } catch (_error) {
+                cachedDocumentUsable =
+                    cachedDocument === document;
+            }
+        }
+
+        if (
+            !forceRefresh &&
+            cachedDocumentUsable &&
+            missionKey ===
+                mfVehicleSelectionDocumentCache.missionKey &&
+            now <
+                mfVehicleSelectionDocumentCache.expiresAt
+        ) {
+            return cachedDocument;
+        }
+
+        let candidateDocument = document;
+
+        try {
+            const primaryDocument =
+                getPrimaryMissionRequirementDocument();
+
+            if (
+                primaryDocument?.querySelectorAll &&
+                isCachedMissionDocumentUsable(
+                    primaryDocument
+                ) &&
+                isMissionDocumentVisible(
+                    primaryDocument
+                )
+            ) {
+                candidateDocument =
+                    primaryDocument;
+            }
+        } catch (_error) {}
+
+        mfVehicleSelectionDocumentCache = {
+            expiresAt: now + 250,
+            missionKey,
+            document: candidateDocument
+        };
+
+        return candidateDocument;
+    }
+
+    function queryVehicleSelectionElements(
+        selector,
+        forceRefresh = false
+    ) {
+        const selectionDocument =
+            getVehicleSelectionDocument(
+                forceRefresh
+            );
+
+        try {
+            return Array.from(
+                selectionDocument.querySelectorAll(
+                    selector
+                )
+            );
+        } catch (_error) {
+            return [];
+        }
+    }
+
+    function isVehicleSelectionElementVisible(
+        element
+    ) {
+        if (
+            !element ||
+            element.isConnected === false
+        ) {
+            return false;
+        }
+
+        try {
+            const ownerWindow =
+                element.ownerDocument
+                    ?.defaultView ||
+                window;
+
+            const style =
+                ownerWindow.getComputedStyle(
+                    element
+                );
+
+            if (
+                style.display === 'none' ||
+                style.visibility === 'hidden'
+            ) {
+                return false;
+            }
+
+            return element.getClientRects().length > 0;
+        } catch (_error) {
+            return true;
+        }
+    }
+
     function invalidateVehicleCheckboxCache() {
         mfVehicleCheckboxCache = {
             expiresAt: 0,
-            nodes: []
+            nodes: [],
+            document: null
+        };
+
+        mfVehicleSelectionDocumentCache = {
+            expiresAt: 0,
+            missionKey: '',
+            document: null
         };
 
         // Vehicle rows are replaced during Load Missing and mission changes.
@@ -11625,33 +11767,57 @@
         mfVehicleArrivalMetricCache = new WeakMap();
     }
 
-    function getVehicleCheckboxSnapshot(forceRefresh = false) {
+    function getVehicleCheckboxSnapshot(
+        forceRefresh = false
+    ) {
         const now = Date.now();
-        const cachedNodes = mfVehicleCheckboxCache.nodes;
+        const selectionDocument =
+            getVehicleSelectionDocument(
+                forceRefresh
+            );
+        const cachedNodes =
+            mfVehicleCheckboxCache.nodes;
         const firstNode = cachedNodes[0];
-        const lastNode = cachedNodes[cachedNodes.length - 1];
+        const lastNode =
+            cachedNodes[
+                cachedNodes.length - 1
+            ];
         const cacheStillConnected =
             cachedNodes.length === 0 ||
             (
                 firstNode?.isConnected !== false &&
                 lastNode?.isConnected !== false
             );
+        const cacheMatchesDocument =
+            mfVehicleCheckboxCache.document ===
+            selectionDocument;
 
         if (
             !forceRefresh &&
-            now < mfVehicleCheckboxCache.expiresAt &&
-            cacheStillConnected
+            now <
+                mfVehicleCheckboxCache.expiresAt &&
+            cacheStillConnected &&
+            cacheMatchesDocument
         ) {
             return cachedNodes;
         }
 
-        const nodes = Array.from(
-            document.querySelectorAll('input.vehicle_checkbox')
-        );
+        let nodes = [];
+
+        try {
+            nodes = Array.from(
+                selectionDocument.querySelectorAll(
+                    'input.vehicle_checkbox'
+                )
+            );
+        } catch (_error) {}
 
         mfVehicleCheckboxCache = {
-            expiresAt: now + (nodes.length ? 500 : 120),
-            nodes
+            expiresAt:
+                now +
+                (nodes.length ? 500 : 120),
+            nodes,
+            document: selectionDocument
         };
 
         return nodes;
@@ -11737,26 +11903,262 @@
         return values.some(value => candidates.some(candidate => value === candidate || value.includes(candidate)));
     }
 
-    function isVehicleElementAlreadySelected(element) {
-        if (!element) return false;
-        if (element.matches && element.matches('input.vehicle_checkbox')) return element.checked;
-        const row = element.closest && element.closest('tr');
-        const checkbox = row && row.querySelector('input.vehicle_checkbox');
-        return checkbox ? checkbox.checked : false;
+    function getVehicleCheckboxForElement(
+        element
+    ) {
+        if (!element) return null;
+
+        if (
+            element.matches?.(
+                'input.vehicle_checkbox'
+            )
+        ) {
+            return element;
+        }
+
+        const row =
+            element.closest?.('tr');
+
+        return row?.querySelector?.(
+            'input.vehicle_checkbox'
+        ) || null;
+    }
+
+    function getAssociatedVehicleCheckboxLabel(
+        checkbox
+    ) {
+        if (!checkbox) return null;
+
+        try {
+            const directLabel =
+                Array.from(
+                    checkbox.labels || []
+                )[0];
+
+            if (directLabel) {
+                return directLabel;
+            }
+        } catch (_error) {}
+
+        const wrappingLabel =
+            checkbox.closest?.('label');
+
+        if (wrappingLabel) {
+            return wrappingLabel;
+        }
+
+        const checkboxId =
+            String(checkbox.id || '').trim();
+
+        if (!checkboxId) return null;
+
+        const ownerDocument =
+            checkbox.ownerDocument ||
+            document;
+
+        try {
+            return Array.from(
+                ownerDocument.querySelectorAll(
+                    'label[for]'
+                )
+            ).find(label => {
+                return String(
+                    label.htmlFor ||
+                    label.getAttribute('for') ||
+                    ''
+                ) === checkboxId;
+            }) || null;
+        } catch (_error) {
+            return null;
+        }
+    }
+
+    function dispatchVehicleCheckboxStateEvent(
+        checkbox,
+        type
+    ) {
+        try {
+            const ownerWindow =
+                checkbox.ownerDocument
+                    ?.defaultView ||
+                window;
+
+            const EventConstructor =
+                ownerWindow.Event ||
+                Event;
+
+            checkbox.dispatchEvent(
+                new EventConstructor(
+                    type,
+                    {
+                        bubbles: true,
+                        cancelable: false,
+                        composed: true
+                    }
+                )
+            );
+
+            return true;
+        } catch (_error) {
+            return false;
+        }
+    }
+
+    function forceVehicleCheckboxSelection(
+        checkbox
+    ) {
+        if (
+            !checkbox ||
+            checkbox.disabled ||
+            checkbox.isConnected === false
+        ) {
+            return false;
+        }
+
+        try {
+            const ownerWindow =
+                checkbox.ownerDocument
+                    ?.defaultView ||
+                window;
+
+            const inputPrototype =
+                ownerWindow.HTMLInputElement
+                    ?.prototype;
+
+            const checkedDescriptor =
+                inputPrototype
+                    ? Object.getOwnPropertyDescriptor(
+                        inputPrototype,
+                        'checked'
+                    )
+                    : null;
+
+            if (checkedDescriptor?.set) {
+                checkedDescriptor.set.call(
+                    checkbox,
+                    true
+                );
+            } else {
+                checkbox.checked = true;
+            }
+        } catch (_error) {
+            try {
+                checkbox.checked = true;
+            } catch (_innerError) {}
+        }
+
+        if (checkbox.checked !== true) {
+            return false;
+        }
+
+        dispatchVehicleCheckboxStateEvent(
+            checkbox,
+            'input'
+        );
+        dispatchVehicleCheckboxStateEvent(
+            checkbox,
+            'change'
+        );
+
+        return checkbox.checked === true;
+    }
+
+    function isVehicleElementAlreadySelected(
+        element
+    ) {
+        const checkbox =
+            getVehicleCheckboxForElement(
+                element
+            );
+
+        return checkbox
+            ? checkbox.checked === true
+            : false;
     }
 
     function clickVehicleElement(element) {
-        if (!element) return false;
-
-        if (element.matches && element.matches('input.vehicle_checkbox')) {
-            if (!element.checked) {
-                element.click();
-            }
-            return true;
+        if (
+            !element ||
+            element.isConnected === false
+        ) {
+            return false;
         }
 
-        element.click();
-        return true;
+        const checkbox =
+            getVehicleCheckboxForElement(
+                element
+            );
+
+        if (checkbox) {
+            if (
+                checkbox.disabled ||
+                checkbox.isConnected === false
+            ) {
+                return false;
+            }
+
+            if (checkbox.checked === true) {
+                return true;
+            }
+
+            try {
+                checkbox.click();
+            } catch (_error) {}
+
+            if (checkbox.checked === true) {
+                mfVehicleCheckboxCache.expiresAt = 0;
+                return true;
+            }
+
+            const associatedLabel =
+                getAssociatedVehicleCheckboxLabel(
+                    checkbox
+                );
+
+            if (
+                associatedLabel &&
+                associatedLabel !== element
+            ) {
+                try {
+                    associatedLabel.click();
+                } catch (_error) {}
+            }
+
+            if (checkbox.checked === true) {
+                mfVehicleCheckboxCache.expiresAt = 0;
+                return true;
+            }
+
+            const forced =
+                forceVehicleCheckboxSelection(
+                    checkbox
+                );
+
+            if (forced) {
+                mfVehicleCheckboxCache.expiresAt = 0;
+            }
+
+            return forced &&
+                checkbox.checked === true;
+        }
+
+        let clickIssued = false;
+
+        try {
+            element.click();
+            clickIssued = true;
+        } catch (_error) {}
+
+        if (!clickIssued) {
+            try {
+                clickIssued =
+                    realClickForQueueRestart(
+                        element
+                    );
+            } catch (_error) {}
+        }
+
+        return clickIssued;
     }
 
     function sortVehicleCheckboxesByBestArrival(matches) {
@@ -12524,11 +12926,7 @@
             }
 
             const iccuButton =
-                Array.from(
-                    document.querySelectorAll(
-                        'a[search_attribute]'
-                    )
-                ).find(anchor => {
+                queryVehicleSelectionElements('a[search_attribute]').find(anchor => {
                     const value =
                         normaliseVehicleText(
                             anchor.getAttribute(
@@ -12559,11 +12957,7 @@
                 return ambulanceControlCheckbox;
             }
 
-            return Array.from(
-                document.querySelectorAll(
-                    'a[search_attribute]'
-                )
-            ).find(anchor => {
+            return queryVehicleSelectionElements('a[search_attribute]').find(anchor => {
                 const value =
                     normaliseVehicleText(
                         anchor.getAttribute(
@@ -12755,7 +13149,7 @@
 
         if (checkbox) return checkbox;
 
-        const button = Array.from(document.querySelectorAll('a[search_attribute]')).find(anchor => {
+        const button = queryVehicleSelectionElements('a[search_attribute]').find(anchor => {
             const value = normaliseVehicleText(anchor.getAttribute('search_attribute'));
             return candidates.some(candidate => value === candidate || value.includes(candidate));
         });
@@ -21491,23 +21885,47 @@ let sessionRuntimeTicker = null;
     }
 
     function isLoadingBarVisible() {
-        const loadingBar = document.querySelector('a.missing_vehicles_load');
-        return loadingBar && getComputedStyle(loadingBar).display !== 'none';
+        const loadingBar =
+            getVisibleVehicleListLoadControl();
+
+        return !!loadingBar;
     }
 
     function findLegacyVehicleRequirementList() {
-        const vehicleHeadings = document.querySelectorAll('h4');
+        const selectionDocument =
+            getVehicleSelectionDocument();
+        let vehicleHeadings = [];
+
+        try {
+            vehicleHeadings =
+                selectionDocument.querySelectorAll(
+                    'h4'
+                );
+        } catch (_error) {}
 
         for (const heading of vehicleHeadings) {
-            if (heading.textContent.trim() !== 'Vehicles') continue;
-
-            let nextElem = heading.nextElementSibling;
-
-            while (nextElem && nextElem.tagName !== 'UL') {
-                nextElem = nextElem.nextElementSibling;
+            if (
+                heading.textContent.trim() !==
+                'Vehicles'
+            ) {
+                continue;
             }
 
-            if (nextElem && nextElem.tagName === 'UL') {
+            let nextElem =
+                heading.nextElementSibling;
+
+            while (
+                nextElem &&
+                nextElem.tagName !== 'UL'
+            ) {
+                nextElem =
+                    nextElem.nextElementSibling;
+            }
+
+            if (
+                nextElem &&
+                nextElem.tagName === 'UL'
+            ) {
                 return nextElem;
             }
         }
@@ -26786,14 +27204,23 @@ let sessionRuntimeTicker = null;
                 }
             }
 
+            const selectionDocument =
+                getVehicleSelectionDocument(
+                    true
+                );
+
             const hasMissionInfo =
-                !!document.querySelector('#mission_general_info');
+                !!selectionDocument.querySelector(
+                    '#mission_general_info'
+                );
 
             const hasMissionHelp =
-                !!document.querySelector('#mission_help');
+                !!selectionDocument.querySelector(
+                    '#mission_help'
+                );
 
             const hasVehicleInterface =
-                !!document.querySelector(
+                !!selectionDocument.querySelector(
                     'a[search_attribute], input[type="checkbox"][vehicle_id], input[type="checkbox"][id^="vehicle_"]'
                 );
 
@@ -32867,11 +33294,23 @@ let sessionRuntimeTicker = null;
     }
 
     function getVehicleCheckboxListSignature() {
-        const boxes = Array.from(
-            document.querySelectorAll(
-                'input.vehicle_checkbox'
-            )
-        );
+        const selectionDocument =
+            getVehicleSelectionDocument();
+        let boxes = [];
+        let vehicleRows = 0;
+
+        try {
+            boxes = Array.from(
+                selectionDocument.querySelectorAll(
+                    'input.vehicle_checkbox'
+                )
+            );
+
+            vehicleRows =
+                selectionDocument.querySelectorAll(
+                    'tr.vehicle_select_table_tr, #vehicle_table tr[vehicle_id], #vehicle_table tr[data-vehicle-id]'
+                ).length;
+        } catch (_error) {}
 
         const ids = boxes.map(box => {
             return String(
@@ -32882,11 +33321,6 @@ let sessionRuntimeTicker = null;
             );
         });
 
-        const vehicleRows =
-            document.querySelectorAll(
-                'tr.vehicle_select_table_tr, #vehicle_table tr[vehicle_id], #vehicle_table tr[data-vehicle-id]'
-            ).length;
-
         return {
             boxes,
             signature:
@@ -32895,12 +33329,14 @@ let sessionRuntimeTicker = null;
     }
 
     function getVisibleVehicleListLoadControl() {
-        return Array.from(
-            document.querySelectorAll(
-                'a.btn-warning.missing_vehicles_load, a.missing_vehicles_load'
-            )
+        return queryVehicleSelectionElements(
+            'a.btn-warning.missing_vehicles_load, a.missing_vehicles_load',
+            true
         ).find(loadControl => {
-            if (!loadControl || !loadControl.isConnected) {
+            if (
+                !loadControl ||
+                loadControl.isConnected === false
+            ) {
                 return false;
             }
 
@@ -32911,16 +33347,9 @@ let sessionRuntimeTicker = null;
 
             if (disabled) return false;
 
-            try {
-                return isElementVisible(loadControl);
-            } catch (_error) {
-                try {
-                    return getComputedStyle(loadControl).display !== 'none' &&
-                        loadControl.getClientRects().length > 0;
-                } catch (_innerError) {
-                    return true;
-                }
-            }
+            return isVehicleSelectionElementVisible(
+                loadControl
+            );
         }) || null;
     }
 
@@ -32947,19 +33376,14 @@ let sessionRuntimeTicker = null;
     }
 
     function isVehicleListLoadingIndicatorVisible() {
-        return Array.from(
-            document.querySelectorAll(
-                '#vehicle_table .loading, #vehicle_table .spinner, ' +
-                '.vehicle_select_table .loading, .vehicle_select_table .spinner, ' +
-                '[data-vehicle-loading="true"]'
-            )
+        return queryVehicleSelectionElements(
+            '#vehicle_table .loading, #vehicle_table .spinner, ' +
+            '.vehicle_select_table .loading, .vehicle_select_table .spinner, ' +
+            '[data-vehicle-loading="true"]'
         ).some(element => {
-            try {
-                return getComputedStyle(element).display !== 'none' &&
-                    element.getClientRects().length > 0;
-            } catch (_error) {
-                return true;
-            }
+            return isVehicleSelectionElementVisible(
+                element
+            );
         });
     }
 

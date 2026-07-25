@@ -26,6 +26,25 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Consolidate the two retained control surfaces into one coherent interface.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
+## [1.0.25] - 2026-07-25
+
+### Fixed
+
+- Unit Finder on the MissionChief website in iPhone and iPad Safari now resolves vehicle checkboxes, load controls and fallback selectors from the active mission document instead of assuming the global document owns the live vehicle table.
+- Vehicle selection is counted only after MissionChief's exact checkbox is confirmed checked. Safari now receives bounded native-click, associated-label and checked-property plus `input`/`change` fallbacks when required.
+- Complete vehicle-list stability checks, visible load controls, loading indicators, legacy vehicle requirements and the Mission Update first-pass gate now use the same active mission document as Unit Finder.
+
+### Safety and compatibility
+
+- A failed or ignored checkbox activation now returns selection failure instead of advancing internal assigned counts.
+- Exact vehicle type, trained-personnel, mission ownership, stale-mission, complete-list and final-confirmation safeguards remain unchanged.
+- Desktop selection retains the native click path; the additional fallbacks run only when the real checkbox remains unchecked.
+- Added permanent regression tests covering active mission-document resolution and native, label, property/event, failed and disabled checkbox activation paths.
+
+### Changed
+
+- Mission Finder increased from `V10.6.89` to `V10.6.90`.
+
 ## [1.0.24] - 2026-07-25
 
 ### Fixed
