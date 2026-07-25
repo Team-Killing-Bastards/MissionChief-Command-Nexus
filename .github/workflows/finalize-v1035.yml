@@ -1,0 +1,301 @@
+name: Finalize and verify v1.0.35
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  actions: read
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: finalize-v1.0.35
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    name: Recreate clean v1.0.35 tag
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'release/finalize-v1035'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out current main
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Verify clean source and reconcile tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: v1.0.35
+          RELEASE_SHA: 4b93c42b83471d1ad9604ee916d6a5a75c3531ee
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --tags --force
+
+          git cat-file -e "${RELEASE_SHA}^{commit}"
+          git merge-base --is-ancestor "${RELEASE_SHA}" origin/main
+
+          VERSION="$(
+            git show "${RELEASE_SHA}:src/missionchief-command-nexus.user.js" |
+              sed -n 's#^//[[:space:]]*@version[[:space:]]*##p' |
+              head -n 1 |
+              xargs
+          )"
+          if [[ "${VERSION}" != '1.0.35' ]]; then
+            echo "Expected release source 1.0.35; found ${VERSION}."
+            exit 1
+          fi
+
+          TEMPORARY_WORKFLOWS="$(
+            git ls-tree -r --name-only "${RELEASE_SHA}" .github/workflows |
+              grep -E '^\.github/workflows/temporary-.*\.ya?ml$' || true
+          )"
+          if [[ -n "${TEMPORARY_WORKFLOWS}" ]]; then
+            echo 'Release source contains temporary workflows:'
+            echo "${TEMPORARY_WORKFLOWS}"
+            exit 1
+          fi
+
+          if git show-ref --tags --verify --quiet "refs/tags/${RELEASE_TAG}"; then
+            CURRENT_TAG_SHA="$(git rev-list -n 1 "${RELEASE_TAG}")"
+            if [[ "${CURRENT_TAG_SHA}" != "${RELEASE_SHA}" ]]; then
+              if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+                echo "Existing published ${RELEASE_TAG} points to ${CURRENT_TAG_SHA}; refusing to retag."
+                exit 1
+              fi
+              git tag -d "${RELEASE_TAG}"
+              git push origin ":refs/tags/${RELEASE_TAG}"
+            fi
+          fi
+
+          if ! git show-ref --tags --verify --quiet "refs/tags/${RELEASE_TAG}"; then
+            git config user.name MartyBlyth
+            git config user.email 32400596+Martyblyth@users.noreply.github.com
+            git tag -a "${RELEASE_TAG}" "${RELEASE_SHA}" \
+              -m 'MissionChief Command Nexus 1.0.35'
+            git push origin "refs/tags/${RELEASE_TAG}"
+          fi
+
+          FINAL_TAG_SHA="$(git rev-list -n 1 "${RELEASE_TAG}")"
+          if [[ "${FINAL_TAG_SHA}" != "${RELEASE_SHA}" ]]; then
+            echo "Final ${RELEASE_TAG} tag points to ${FINAL_TAG_SHA}; expected ${RELEASE_SHA}."
+            exit 1
+          fi
+
+  publish:
+    name: Publish v1.0.35 through permanent release workflow
+    needs: tag
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: ./.github/workflows/release.yml
+    with:
+      operation: publish-release
+      release_tag: v1.0.35
+      release_notes: Prioritises current Missing Vehicles and supported Missing Personnel requirements before full mission totals, preventing the whole mission requirement set from being selected again.
+    secrets: inherit
+
+  verify:
+    name: Verify release delivery and record receipt
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Check out current main
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Verify GitHub Greasy Fork and Discord delivery
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GREASYFORK_INSTALL_URL: ${{ vars.GREASYFORK_INSTALL_URL }}
+          SOURCE_PR: '149'
+          FINALIZER_PR: ${{ github.event.pull_request.number }}
+          RELEASE_TAG: v1.0.35
+          RELEASE_SHA: 4b93c42b83471d1ad9604ee916d6a5a75c3531ee
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --tags --force
+
+          ASSET='MissionChief-Command-Nexus-1.0.35.user.js'
+          CHECKSUM_ASSET="${ASSET}.sha256"
+
+          gh release view "${RELEASE_TAG}" \
+            --json url,isDraft,isPrerelease,assets,tagName,targetCommitish \
+            > /tmp/v1035-release.json
+
+          RELEASE_URL="$(jq -r '.url' /tmp/v1035-release.json)"
+          IS_DRAFT="$(jq -r '.isDraft' /tmp/v1035-release.json)"
+          IS_PRERELEASE="$(jq -r '.isPrerelease' /tmp/v1035-release.json)"
+          if [[ "${IS_DRAFT}" != 'false' || "${IS_PRERELEASE}" != 'false' ]]; then
+            echo 'v1.0.35 is not a final published release.'
+            exit 1
+          fi
+
+          for required_asset in "${ASSET}" "${CHECKSUM_ASSET}"; do
+            COUNT="$(
+              jq -r --arg name "${required_asset}" \
+                '[.assets[] | select(.name == $name)] | length' \
+                /tmp/v1035-release.json
+            )"
+            if [[ "${COUNT}" != '1' ]]; then
+              echo "Expected one ${required_asset} asset; found ${COUNT}."
+              exit 1
+            fi
+          done
+
+          RECEIPT_COUNT="$(
+            jq -r \
+              '[.assets[] | select(.name | startswith("Command-Nexus-Discord-Receipt-v1.0.35-"))] | length' \
+              /tmp/v1035-release.json
+          )"
+          if [[ "${RECEIPT_COUNT}" != '1' ]]; then
+            echo "Expected exactly one Discord receipt; found ${RECEIPT_COUNT}."
+            exit 1
+          fi
+          RECEIPT_NAME="$(
+            jq -r \
+              '.assets[] | select(.name | startswith("Command-Nexus-Discord-Receipt-v1.0.35-")) | .name' \
+              /tmp/v1035-release.json
+          )"
+
+          TAG_SHA="$(git rev-list -n 1 "${RELEASE_TAG}")"
+          if [[ "${TAG_SHA}" != "${RELEASE_SHA}" ]]; then
+            echo "Release tag points to ${TAG_SHA}; expected ${RELEASE_SHA}."
+            exit 1
+          fi
+
+          rm -rf /tmp/v1035-release-check
+          mkdir -p /tmp/v1035-release-check
+          gh release download "${RELEASE_TAG}" \
+            --pattern "${ASSET}" \
+            --pattern "${CHECKSUM_ASSET}" \
+            --dir /tmp/v1035-release-check \
+            --clobber
+
+          (
+            cd /tmp/v1035-release-check
+            sha256sum -c "${CHECKSUM_ASSET}"
+          )
+
+          git show "${TAG_SHA}:src/missionchief-command-nexus.user.js" \
+            > /tmp/v1035-expected.user.js
+          cmp --silent \
+            /tmp/v1035-expected.user.js \
+            "/tmp/v1035-release-check/${ASSET}"
+
+          if [[ -z "${GREASYFORK_INSTALL_URL}" ]]; then
+            echo 'GREASYFORK_INSTALL_URL is not configured.'
+            exit 1
+          fi
+
+          URL_SEPARATOR='?'
+          [[ "${GREASYFORK_INSTALL_URL}" == *'?'* ]] && URL_SEPARATOR='&'
+          GREASY_OK='false'
+          for attempt in $(seq 1 60); do
+            CACHE_BUSTER="$(date +%s)-${attempt}"
+            CHECK_URL="${GREASYFORK_INSTALL_URL}${URL_SEPARATOR}mc_release_check=${CACHE_BUSTER}"
+            if curl \
+              --fail \
+              --location \
+              --silent \
+              --show-error \
+              --retry 2 \
+              --max-time 30 \
+              -H 'Cache-Control: no-cache' \
+              "${CHECK_URL}" \
+              -o /tmp/v1035-greasy.user.js; then
+              if cmp --silent \
+                /tmp/v1035-expected.user.js \
+                /tmp/v1035-greasy.user.js; then
+                GREASY_OK='true'
+                break
+              fi
+            fi
+            sleep 5
+          done
+
+          if [[ "${GREASY_OK}" != 'true' ]]; then
+            echo 'Greasy Fork did not reach exact v1.0.35 source parity.'
+            exit 1
+          fi
+
+          CHECKSUM="$(sha256sum /tmp/v1035-expected.user.js | awk '{print $1}')"
+          RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+
+          cat > /tmp/v1035-receipt.md <<EOF
+          ## v1.0.35 release verified
+
+          - Release workflow: ${RUN_URL}
+          - GitHub release: ${RELEASE_URL}
+          - GitHub userscript and checksum assets: verified
+          - Greasy Fork: exact source parity confirmed
+          - Discord: one delivery receipt confirmed as \`${RECEIPT_NAME}\`
+          - Source commit: \`${TAG_SHA}\`
+          - SHA-256: \`${CHECKSUM}\`
+          EOF
+
+          gh pr comment "${SOURCE_PR}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --body-file /tmp/v1035-receipt.md
+          gh pr comment "${FINALIZER_PR}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --body-file /tmp/v1035-receipt.md
+
+  finish:
+    name: Close one-use finalizer
+    needs:
+      - tag
+      - publish
+      - verify
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Close finalizer and remove one-use branches
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FINALIZER_PR: ${{ github.event.pull_request.number }}
+          TAG_RESULT: ${{ needs.tag.result }}
+          PUBLISH_RESULT: ${{ needs.publish.result }}
+          VERIFY_RESULT: ${{ needs.verify.result }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${TAG_RESULT}" == 'success' && \
+                "${PUBLISH_RESULT}" == 'success' && \
+                "${VERIFY_RESULT}" == 'success' ]]; then
+            gh pr close "${FINALIZER_PR}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --comment 'v1.0.35 was published and independently verified across GitHub, Greasy Fork and Discord.'
+
+            gh api --method DELETE \
+              "repos/${GITHUB_REPOSITORY}/git/refs/heads/release/finalize-v1035" || true
+            gh api --method DELETE \
+              "repos/${GITHUB_REPOSITORY}/git/refs/heads/diagnostic/v1035-release-status" || true
+          else
+            gh pr comment "${FINALIZER_PR}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --body "v1.0.35 finalization stopped: tag=${TAG_RESULT}, publish=${PUBLISH_RESULT}, verify=${VERIFY_RESULT}."
+            exit 1
+          fi
