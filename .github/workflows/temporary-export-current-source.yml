@@ -1,17 +1,22 @@
 name: Temporary export current source
 
 on:
-  push:
+  pull_request:
     branches:
       - main
-    paths:
-      - '.github/workflows/temporary-export-current-source.yml'
+    types:
+      - opened
+      - synchronize
+      - reopened
 
 permissions:
   contents: read
 
 jobs:
   export:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'diagnostic/missing-requirements-source'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
