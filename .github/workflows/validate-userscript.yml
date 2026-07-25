@@ -11,6 +11,7 @@ on:
       - 'scripts/check-ios-unit-finder-selection.mjs'
       - 'scripts/check-ios-mission-requirements-source.mjs'
       - 'scripts/check-iphone-mission-ui.mjs'
+      - 'scripts/check-open-issues-batch.mjs'
       - '.github/workflows/validate-userscript.yml'
   push:
     branches:
@@ -24,6 +25,7 @@ on:
       - 'scripts/check-ios-unit-finder-selection.mjs'
       - 'scripts/check-ios-mission-requirements-source.mjs'
       - 'scripts/check-iphone-mission-ui.mjs'
+      - 'scripts/check-open-issues-batch.mjs'
       - '.github/workflows/validate-userscript.yml'
   workflow_dispatch:
 
@@ -74,6 +76,9 @@ jobs:
 
       - name: Validate iPhone Safari Mission Finder UI contracts
         run: node scripts/check-iphone-mission-ui.mjs
+
+      - name: Validate current open issue batch contracts
+        run: node scripts/check-open-issues-batch.mjs
 
       - name: Require a version increase when code changes
         if: github.event_name == 'pull_request'
