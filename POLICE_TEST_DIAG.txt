@@ -1,0 +1,22 @@
+Prepared v1.0.24 Police Officer and Rescue Support fixes.
+patch_status=0
+getMissingPersonnelSegment_start=630528
+getNamedPersonnelCount_start=631240
+getPoliceOfficerVehicleRequirement_start=736037
+getSupportedMissingPersonnelRowsFromText_start=738387
+evalmachine.<anonymous>:118
+        options = {}
+                    
+
+SyntaxError: Unexpected end of input
+    at new Script (node:vm:117:7)
+    at createScript (node:vm:269:10)
+    at Object.runInContext (node:vm:300:10)
+    at [stdin]:33:6
+    at runScriptInThisContext (node:internal/vm:209:10)
+    at node:internal/process/execution:446:12
+    at [stdin]-wrapper:6:24
+    at runScriptInContext (node:internal/process/execution:444:60)
+    at evalFunction (node:internal/process/execution:279:30)
+    at evalTypeScript (node:internal/process/execution:291:3)
+test_status=1
