@@ -1,6 +1,5 @@
 BULK TRAINED REGISTER DIAGNOSTIC CONTEXT
 SOURCE LINES: 39886
-MERGED CONTEXT BLOCKS: 69
 
 === BLOCK 1: source lines 1-189 ===
 000001: // ==UserScript==
@@ -729,100 +728,7 @@ MERGED CONTEXT BLOCKS: 69
 001106:         if (!TOOL_LOG_SCROLL_FRAMES.has(logBox)) {
 001107:             const frameId = requestAnimationFrame(() => {
 
-=== BLOCK 5: source lines 1284-1374 ===
-001284:         });
-001285:     }
-001286: 
-001287:     function findStationOverviewEntry(href) {
-001288:         const expected = normaliseStationOverviewHref(href);
-001289:         if (!expected) return null;
-001290:         return getStationOverviewEntries().find(entry => entry.href === expected) || null;
-001291:     }
-001292: 
-001293:     function activateStationOverviewEntry(entry) {
-001294:         const link = entry?.link;
-001295:         if (!link?.isConnected) return false;
-001296: 
-001297:         if (!isIosSafariWebsite() || link.classList.contains('lightbox-open')) {
-001298:             link.click();
-001299:             return true;
-001300:         }
-001301: 
-001302:         // Responsive iOS markup may expose a normal Details link without the
-001303:         // desktop lightbox class. Temporarily opt that exact building link into
-001304:         // MissionChief's delegated lightbox handler while preventing navigation.
-001305:         link.classList.add('lightbox-open');
-001306:         const preventNavigation = event => event.preventDefault();
-001307:         link.addEventListener('click', preventNavigation, { capture: true, once: true });
-001308:         link.click();
-001309:         setTimeout(() => link.classList.remove('lightbox-open'), 0);
-001310:         return true;
-001311:     }
-001312: 
-001313:     function createManagedStationIframe(stationHref, purpose = 'station') {
-001314:         const href = normaliseStationOverviewHref(stationHref);
-001315:         if (!href) return null;
-001316: 
-001317:         document.querySelectorAll(
-001318:             `iframe.mc-namer-managed-station-iframe[data-mc-purpose="${purpose}"]`
-001319:         ).forEach(frame => frame.remove());
-001320: 
-001321:         const iframe = document.createElement('iframe');
-001322:         iframe.className = 'mc-namer-managed-station-iframe';
-001323:         iframe.dataset.mcPurpose = purpose;
-001324:         iframe.src = href;
-001325:         iframe.setAttribute('aria-hidden', 'true');
-001326:         iframe.tabIndex = -1;
-001327:         Object.assign(iframe.style, {
-001328:             position: 'fixed',
-001329:             left: '-10000px',
-001330:             top: '0',
-001331:             width: '2px',
-001332:             height: '2px',
-001333:             opacity: '0.01',
-001334:             pointerEvents: 'none',
-001335:             border: '0'
-001336:         });
-001337:         document.body.appendChild(iframe);
-001338:         return iframe;
-001339:     }
-001340: 
-001341:     function removeManagedStationIframe(iframe) {
-001342:         if (!iframe?.classList?.contains('mc-namer-managed-station-iframe')) {
-001343:             return false;
-001344:         }
-001345:         try {
-001346:             iframe.src = 'about:blank';
-001347:         } catch (_error) {}
-001348:         iframe.remove();
-001349:         return true;
-001350:     }
-001351: 
-001352:     async function openStationWorkflowIframe(entry, purpose, waitForIframe) {
-001353:         if (!entry?.link?.isConnected) return null;
-001354: 
-001355:         if (isIosSafariWebsite() && !entry.link.classList.contains('lightbox-open')) {
-001356:             const managed = createManagedStationIframe(entry.href, purpose);
-001357:             return managed ? await waitForIframe(entry.href, managed) : null;
-001358:         }
-001359: 
-001360:         activateStationOverviewEntry(entry);
-001361:         const normal = await waitForIframe(entry.href, null, 24);
-001362:         if (normal || !isIosSafariWebsite()) return normal;
-001363: 
-001364:         // Safari can render a responsive Details link while MissionChief's
-001365:         // lightbox binding is unavailable. Fall back to a same-origin managed
-001366:         // iframe so naming and personnel-safe station reads still work without
-001367:         // navigating away from the Stations tab.
-001368:         const managed = createManagedStationIframe(entry.href, purpose);
-001369:         return managed ? await waitForIframe(entry.href, managed) : null;
-001370:     }
-001371: 
-001372:     function ensureSingleNamingToolsPanel(preferredPanel = null) {
-001373:         const panels = [...document.querySelectorAll('#mc-namer-panel')];
-001374:         const keeper = preferredPanel?.isConnected
-
-=== BLOCK 6: source lines 1981-2092 ===
+=== BLOCK 5: source lines 1981-2092 ===
 001981:                     <div class="mc-personnel-navigation-title">Assignment Navigator</div>
 001982: 
 001983:                     <label style="display:block;"><b>Service:</b></label>
@@ -936,7 +842,7 @@ MERGED CONTEXT BLOCKS: 69
 002091:                 <div id="mc-personnel-log"></div>
 002092:             </div>
 
-=== BLOCK 7: source lines 2246-2348 ===
+=== BLOCK 6: source lines 2246-2348 ===
 002246:                 color: #111;
 002247:                 border-radius: 4px;
 002248:                 border: 1px solid #555;
@@ -1041,7 +947,7 @@ MERGED CONTEXT BLOCKS: 69
 002347:                 padding: 6px 8px;
 002348:                 border: 1px solid #374151;
 
-=== BLOCK 8: source lines 2626-2721 ===
+=== BLOCK 7: source lines 2626-2721 ===
 002626:         `;
 002627: 
 002628:         document.head.appendChild(style);
@@ -1139,233 +1045,7 @@ MERGED CONTEXT BLOCKS: 69
 002720: 
 002721:     function getPersonnelProfileDefinition(serviceId = PERSONNEL_STATE.service, profileId = PERSONNEL_STATE.profile) {
 
-=== BLOCK 9: source lines 3967-4097 ===
-003967:         await STATION_STATE.buildingDataPromise;
-003968:     }
-003969: 
-003970:     function extractBuildingRecords(payload) {
-003971:         if (!payload) return [];
-003972:         if (Array.isArray(payload)) return payload;
-003973:         if (Array.isArray(payload.buildings)) return payload.buildings;
-003974:         if (Array.isArray(payload.result)) return payload.result;
-003975:         if (Array.isArray(payload.data)) return payload.data;
-003976: 
-003977:         if (typeof payload === 'object') {
-003978:             const values = Object.values(payload);
-003979:             const directRecords = values.filter(value => value && typeof value === 'object' && !Array.isArray(value));
-003980:             if (directRecords.some(value => 'latitude' in value && 'longitude' in value)) return directRecords;
-003981: 
-003982:             for (const value of values) {
-003983:                 if (Array.isArray(value)) return value;
-003984:                 if (value && typeof value === 'object') {
-003985:                     const nested = extractBuildingRecords(value);
-003986:                     if (nested.length) return nested;
-003987:                 }
-003988:             }
-003989:         }
-003990: 
-003991:         return [];
-003992:     }
-003993: 
-003994:     async function fetchMissionChiefReverseAddress(latitude, longitude) {
-003995:         const coordinates = normalizeCoordinates(latitude, longitude);
-003996:         if (!coordinates) {
-003997:             return { address: '', error: 'Invalid coordinates were supplied to the reverse-address lookup.' };
-003998:         }
-003999: 
-004000:         const query = new URLSearchParams({
-004001:             latitude: String(coordinates.latitude),
-004002:             longitude: String(coordinates.longitude)
-004003:         });
-004004: 
-004005:         try {
-004006:             const response = await stationFetchWithTimeout(`/reverse_address?${query.toString()}`, {
-004007:                 credentials: 'same-origin',
-004008:                 cache: 'no-store',
-004009:                 headers: {
-004010:                     'X-Requested-With': 'XMLHttpRequest'
-004011:                 }
-004012:             }, 10000);
-004013: 
-004014:             if (!response.ok) {
-004015:                 return { address: '', error: `Reverse-address lookup returned HTTP ${response.status}.` };
-004016:             }
-004017: 
-004018:             let address = String(await response.text()).trim();
-004019:             if (/^<!doctype|^<html/i.test(address)) {
-004020:                 return { address: '', error: 'Reverse-address lookup returned an HTML page instead of an address.' };
-004021:             }
-004022: 
-004023:             if ((address.startsWith('"') && address.endsWith('"')) || (address.startsWith("'") && address.endsWith("'"))) {
-004024:                 try {
-004025:                     address = JSON.parse(address);
-004026:                 } catch (_error) {
-004027:                     address = address.slice(1, -1);
-004028:                 }
-004029:             }
-004030: 
-004031:             address = String(address || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-004032:             if (!address) {
-004033:                 return { address: '', error: 'Reverse-address lookup returned an empty or invalid response.' };
-004034:             }
-004035: 
-004036:             return { address };
-004037:         } catch (error) {
-004038:             return { address: '', error: `Reverse-address lookup failed: ${error?.message || error}` };
-004039:         }
-004040:     }
-004041: 
-004042:     function normalizeCoordinates(latitude, longitude) {
-004043:         const lat = Number(latitude);
-004044:         const lng = Number(longitude);
-004045: 
-004046:         if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-004047:         if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
-004048: 
-004049:         return { latitude: lat, longitude: lng };
-004050:     }
-004051: 
-004052:     async function stationFetchWithTimeout(url, options = {}, timeoutMs = 10000) {
-004053:         const controller = new AbortController();
-004054:         STATION_STATE.activeControllers.add(controller);
-004055:         const timer = setTimeout(() => controller.abort(), timeoutMs);
-004056: 
-004057:         try {
-004058:             return await fetch(url, {
-004059:                 ...options,
-004060:                 signal: controller.signal
-004061:             });
-004062:         } finally {
-004063:             clearTimeout(timer);
-004064:             STATION_STATE.activeControllers.delete(controller);
-004065:         }
-004066:     }
-004067: 
-004068:     function extractStationArea(address) {
-004069:         const input = String(address || '').trim();
-004070:         const postcodeRegex = /\b(GIR\s?0AA|(?:[A-PR-UWYZ][0-9][0-9A-HJKPSTUW]?|[A-PR-UWYZ][A-HK-Y][0-9][0-9ABEHMNPRV-Y]?)\s?[0-9][ABD-HJLNP-UW-Z]{2})\b/i;
-004071:         const match = input.match(postcodeRegex);
-004072: 
-004073:         if (!match || match.index == null) {
-004074:             return { postcode: '', afterPostcode: '', area: '' };
-004075:         }
-004076: 
-004077:         const postcode = match[1].toUpperCase().replace(/\s+/g, ' ').trim();
-004078:         const afterPostcode = input
-004079:             .slice(match.index + match[0].length)
-004080:             .replace(/^[\s,;:\-]+/, '')
-004081:             .trim();
-004082: 
-004083:         const parts = afterPostcode
-004084:             .split(',')
-004085:             .map(part => part.trim())
-004086:             .filter(Boolean);
-004087: 
-004088:         const countryOnly = /^(UNITED KINGDOM|UK|SCOTLAND|ENGLAND|WALES|NORTHERN IRELAND)$/i;
-004089:         while (parts.length > 1 && countryOnly.test(parts[parts.length - 1])) parts.pop();
-004090: 
-004091:         return {
-004092:             postcode,
-004093:             afterPostcode,
-004094:             area: parts.at(-1) || afterPostcode
-004095:         };
-004096:     }
-004097: 
-
-=== BLOCK 10: source lines 4141-4231 ===
-004141:                     const currentPath = iframe.contentWindow?.location?.pathname || iframe.getAttribute('src') || '';
-004142:                     if (doc && (currentPath.startsWith(stationHref) || doc.querySelector(`a[href="${stationHref}/move"], form[action="${stationHref}"], form[action="${stationHref}/move_do"]`))) {
-004143:                         return iframe;
-004144:                     }
-004145:                 } catch (error) {
-004146:                     stationDebug(`Iframe access retry: ${error?.message || error}`);
-004147:                 }
-004148:             }
-004149: 
-004150:             await sleep(250);
-004151:         }
-004152: 
-004153:         return null;
-004154:     }
-004155: 
-004156:     async function waitForStationNamingDocument(iframe, predicate, label) {
-004157:         for (let i = 0; i < 100; i++) {
-004158:             if (STATION_STATE.stopped) return null;
-004159: 
-004160:             try {
-004161:                 const doc = iframe?.contentDocument;
-004162:                 if (doc && doc.readyState !== 'loading' && predicate(doc)) {
-004163:                     stationDebug(`${label} ready at ${iframe.contentWindow?.location?.pathname || iframe.getAttribute('src') || 'unknown path'}`);
-004164:                     return doc;
-004165:                 }
-004166:             } catch (error) {
-004167:                 stationDebug(`${label} wait retry: ${error?.message || error}`);
-004168:             }
-004169: 
-004170:             await sleep(200);
-004171:         }
-004172: 
-004173:         return null;
-004174:     }
-004175: 
-004176:     async function verifyStationNameSaved(stationHref, expectedName) {
-004177:         for (let attempt = 1; attempt <= 14; attempt++) {
-004178:             if (STATION_STATE.stopped) return false;
-004179: 
-004180:             await sleep(attempt === 1 ? 500 : 350);
-004181: 
-004182:             try {
-004183:                 const response = await stationFetchWithTimeout(`${stationHref}/edit`, {
-004184:                     credentials: 'same-origin',
-004185:                     cache: 'no-store'
-004186:                 }, 10000);
-004187: 
-004188:                 if (!response.ok) {
-004189:                     stationDebug(`Save verification HTTP ${response.status}, attempt ${attempt}.`);
-004190:                     continue;
-004191:                 }
-004192: 
-004193:                 const html = await response.text();
-004194:                 const doc = new DOMParser().parseFromString(html, 'text/html');
-004195:                 const savedName = String(doc.querySelector('#building_name')?.value || '').trim();
-004196:                 stationDebug(`Save verification attempt ${attempt}: "${savedName}"`);
-004197: 
-004198:                 if (savedName === expectedName) return true;
-004199:             } catch (error) {
-004200:                 stationDebug(`Save verification attempt ${attempt} failed: ${error?.message || error}`);
-004201:             }
-004202:         }
-004203: 
-004204:         return false;
-004205:     }
-004206: 
-004207:     function updateStationListName(href, newName) {
-004208:         const entry = findStationOverviewEntry(href);
-004209:         const link = entry?.link;
-004210:         const container = entry?.container || getStationOverviewContainer(link);
-004211:         if (!link) return;
-004212: 
-004213:         const sameBuildingLinks = container
-004214:             ? [...container.querySelectorAll('a[href]')]
-004215:                 .filter(candidate => normaliseStationOverviewHref(candidate.getAttribute('href')) === entry.href)
-004216:             : [link];
-004217:         const nameLink = sameBuildingLinks.find(candidate => {
-004218:             const label = cleanText(candidate.textContent);
-004219:             return label && !isGenericStationActionText(label);
-004220:         });
-004221:         const nameNode = nameLink || container?.querySelector(
-004222:             '[data-building-name], .building_list_title, .building-list-title, ' +
-004223:             '.building_name, .building-name, .panel-heading, .card-title'
-004224:         );
-004225: 
-004226:         if (nameNode) {
-004227:             nameNode.textContent = newName;
-004228:             nameNode.setAttribute?.('data-building-name', newName);
-004229:         }
-004230:         if (container) container.setAttribute('search_attribute', newName);
-004231:     }
-
-=== BLOCK 11: source lines 4381-4919 ===
+=== BLOCK 8: source lines 4381-4919 ===
 004381: 
 004382:         if (!PERSONNEL_STATE.filteredStations.length) {
 004383:             const option = document.createElement('option');
@@ -1906,7 +1586,7 @@ MERGED CONTEXT BLOCKS: 69
 004918:         PERSONNEL_STATE.mode =
 004919:             document.querySelector(
 
-=== BLOCK 12: source lines 5277-5761 ===
+=== BLOCK 9: source lines 5277-5761 ===
 005277: 
 005278:                     personnelLog(
 005279:                         `Skipped ${station.displayName}: ${error?.message || error}`,
@@ -2393,7 +2073,7 @@ MERGED CONTEXT BLOCKS: 69
 005760:         return index;
 005761:     }
 
-=== BLOCK 13: source lines 5934-6092 ===
+=== BLOCK 10: source lines 5934-6092 ===
 005934:             Array.isArray(person.trainingCodes)
 005935:                 ? person.trainingCodes.map(String)
 005936:                 : []
@@ -2554,7 +2234,7 @@ MERGED CONTEXT BLOCKS: 69
 006091:                 return {
 006092:                     covered:
 
-=== BLOCK 14: source lines 6206-6297 ===
+=== BLOCK 11: source lines 6206-6297 ===
 006206: 
 006207:         let matched = 0;
 006208:         for (let slotIndex = 0; slotIndex < slots.length; slotIndex++) {
@@ -2648,7 +2328,7 @@ MERGED CONTEXT BLOCKS: 69
 006296:                 rule,
 006297:                 allVehicles,
 
-=== BLOCK 15: source lines 6353-6527 ===
+=== BLOCK 12: source lines 6353-6527 ===
 006353:                         vehicle
 006354:                     );
 006355: 
@@ -2825,7 +2505,7 @@ MERGED CONTEXT BLOCKS: 69
 006526:                     name: vehicle.name,
 006527:                     ruleId: rule.id,
 
-=== BLOCK 16: source lines 6552-6643 ===
+=== BLOCK 13: source lines 6552-6643 ===
 006552:                             ? `Unit target progress at this station: ${projectedFulfilledUnits}/${stationUnitsNeeded}.`
 006553:                             : `Fully covered units at this station: ${projectedFulfilledUnits}.`,
 006554:                         'done'
@@ -2919,7 +2599,7 @@ MERGED CONTEXT BLOCKS: 69
 006642:                                             getPersonnelMissingTrainingForRule(
 006643:                                                 person,
 
-=== BLOCK 17: source lines 6812-7162 ===
+=== BLOCK 14: source lines 6812-7162 ===
 006812:             };
 006813: 
 006814:             const leftState = getState(left);
@@ -3272,7 +2952,7 @@ MERGED CONTEXT BLOCKS: 69
 007161:             fulfilledUnits =
 007162:                 Math.min(
 
-=== BLOCK 18: source lines 7293-7479 ===
+=== BLOCK 15: source lines 7293-7479 ===
 007293:             return response;
 007294:         } finally {
 007295:             clearTimeout(timer);
@@ -3461,7 +3141,7 @@ MERGED CONTEXT BLOCKS: 69
 007478:                 const actionLink = exactActionLink || actionControls.find(control => control.tagName === 'A') || null;
 007479: 
 
-=== BLOCK 19: source lines 8665-8875 ===
+=== BLOCK 16: source lines 8665-8875 ===
 008665:                 );
 008666:                 log(`Finished. Renamed ${STATE.renamedCount}. Skipped ${STATE.skippedCount}.`, 'done');
 008667:             }
@@ -3674,7 +3354,7 @@ MERGED CONTEXT BLOCKS: 69
 008874: 
 008875:             let editDoc = iframe.contentDocument;
 
-=== BLOCK 20: source lines 8972-9107 ===
+=== BLOCK 17: source lines 8972-9064 ===
 008972: 
 008973:     function setStatus(text) {
 008974:         const el = getToolElementById('mc-namer-status');
@@ -3768,51 +3448,8 @@ MERGED CONTEXT BLOCKS: 69
 009062:     const MF_EVENT_COLLECTIBLE_REQUEST_COOLDOWN_MS = 10000;
 009063:     const MF_EVENT_COLLECTIBLE_MAX_TRACKED = 250;
 009064:     const mfEventCollectibleClaimTimes = new Map();
-009065:     let mfEventCollectibleScanTimer = null;
-009066:     let mfEventCollectibleScanRunning = false;
-009067: 
-009068:     function getMissionEventCollectibleDocuments() {
-009069:         const documents = [];
-009070:         const seen = new Set();
-009071:         const queue = [document];
-009072: 
-009073:         while (
-009074:             queue.length > 0 &&
-009075:             documents.length < 24
-009076:         ) {
-009077:             const candidate = queue.shift();
-009078: 
-009079:             if (
-009080:                 !candidate ||
-009081:                 seen.has(candidate)
-009082:             ) {
-009083:                 continue;
-009084:             }
-009085: 
-009086:             seen.add(candidate);
-009087:             documents.push(candidate);
-009088: 
-009089:             try {
-009090:                 candidate
-009091:                     .querySelectorAll('iframe')
-009092:                     .forEach(frame => {
-009093:                         try {
-009094:                             const frameDocument =
-009095:                                 frame.contentDocument;
-009096: 
-009097:                             if (
-009098:                                 frameDocument &&
-009099:                                 !seen.has(frameDocument)
-009100:                             ) {
-009101:                                 queue.push(frameDocument);
-009102:                             }
-009103:                         } catch (_error) {}
-009104:                     });
-009105:             } catch (_error) {}
-009106:         }
-009107: 
 
-=== BLOCK 21: source lines 9792-9995 ===
+=== BLOCK 18: source lines 9792-9967 ===
 009792:         if (target === 'vehicle') {
 009793:             return {
 009794:                 missionCollapsed: true,
@@ -3989,36 +3626,8 @@ MERGED CONTEXT BLOCKS: 69
 009965:             mfPersonnelRegistryUpdatedHandler
 009966:         );
 009967:     }
-009968: 
-009969:     try {
-009970:         installPersonnelRegistryUpdateHandler();
-009971:     } catch (_error) {
-009972:         mfPersonnelRegistryUpdatedHandler = null;
-009973:     }
-009974: 
-009975:     const MF_TRAINED_PERSONNEL_ROW_NAME =
-009976:         'Assigned Trained Police Vehicles';
-009977: 
-009978:     const MF_TRAINED_PERSONNEL_PATTERNS =
-009979:         Object.freeze([
-009980:             {
-009981:                 code:
-009982:                     'level_1_public_order',
-009983:                 label:
-009984:                     'Level 1 Public Order Officer',
-009985:                 patterns: [
-009986:                     /(\d+)\s*(?:x\s*)?Level\s*1\s+Public\s+Order\s+Officer(?:s)?/gi,
-009987:                     /(\d+)\s*(?:x\s*)?Public\s+Order\s+Level\s*1\s+Officer(?:s)?/gi,
-009988:                     /Level\s*1\s+Public\s+Order\s+Officer(?:s)?\s*(?:x\s*)?(\d+)/gi,
-009989:                     /Public\s+Order\s+Level\s*1\s+Officer(?:s)?\s*(?:x\s*)?(\d+)/gi
-009990:                 ]
-009991:             },
-009992:             {
-009993:                 code:
-009994:                     'level_2_public_order',
-009995:                 label:
 
-=== BLOCK 22: source lines 10207-10344 ===
+=== BLOCK 19: source lines 10207-10344 ===
 010207:     // bound to one mission instance so a still-connected previous mission
 010208:     // iframe/modal cannot contribute requirements to the current mission.
 010209:     let mfCurrentMissionInstanceKey = '';
@@ -4158,7 +3767,7 @@ MERGED CONTEXT BLOCKS: 69
 010343:         } catch (error) {}
 010344: 
 
-=== BLOCK 23: source lines 10694-10791 ===
+=== BLOCK 20: source lines 10694-10791 ===
 010694:         "Mass Casualty Equipment": "Mass Casualty Equipment",
 010695:         "Mass Casualty Equipment Unit": "Mass Casualty Equipment",
 010696:         "Mass Casualty Equipment Units": "Mass Casualty Equipment",
@@ -4258,7 +3867,7 @@ MERGED CONTEXT BLOCKS: 69
 010790:         "Major Foam Tender": "Major Foam Tender",
 010791:         "Major Foam Tenders": "Major Foam Tender",
 
-=== BLOCK 24: source lines 11730-11832 ===
+=== BLOCK 21: source lines 11730-11832 ===
 011730:                     cleaned
 011731:                 )
 011732:             );
@@ -4363,7 +3972,7 @@ MERGED CONTEXT BLOCKS: 69
 011831:                 cleaned ===
 011832:                     'police car' ||
 
-=== BLOCK 25: source lines 11852-12049 ===
+=== BLOCK 22: source lines 11852-11963 ===
 011852:         'road rail units',
 011853:         'required road rail unit',
 011854:         'required road rail units'
@@ -4476,94 +4085,8 @@ MERGED CONTEXT BLOCKS: 69
 011961:             'required critical care transfer ambulances',
 011962:             'cct', 'ccts'
 011963:         ]);
-011964:         return supported.has(raw) || supported.has(mapped);
-011965:     }
-011966: 
-011967:     function isCriticalCareTransferAmbulanceCheckbox(input) {
-011968:         if (!input) return false;
-011969:         const typeIdentifiers = getVehicleTypeIdentifiers(input);
-011970:         if (typeIdentifiers.length > 0) return typeIdentifiers.includes('98');
-011971:         return getExtendedVehicleValues(input).some(value => {
-011972:             const cleaned = normaliseVehicleText(value);
-011973:             return (
-011974:                 cleaned === 'critical care transfer ambulance' ||
-011975:                 cleaned === 'critical care transfer ambulances' ||
-011976:                 cleaned === 'cct' ||
-011977:                 cleaned === 'ccts'
-011978:             );
-011979:         });
-011980:     }
-011981: 
-011982:     function isGenericCriticalCareRequirement(originalName, mappedName) {
-011983:         const raw = normaliseVehicleText(originalName);
-011984:         const mapped = normaliseVehicleText(mappedName);
-011985:         const supported = new Set([
-011986:             'critical care',
-011987:             'critical care team',
-011988:             'critical care teams',
-011989:             'required critical care',
-011990:             'required critical care team',
-011991:             'required critical care teams'
-011992:         ]);
-011993:         return supported.has(raw) || supported.has(mapped);
-011994:     }
-011995: 
-011996:     function isVerifiedCriticalCareAmbulanceRegistryEntry(entry) {
-011997:         if (!entry || entry.assignmentScanComplete !== true) return false;
-011998:         if (String(entry.vehicleTypeId || '') !== '5') return false;
-011999: 
-012000:         const updatedAt = Number(entry.updatedAt || 0);
-012001:         if (
-012002:             !Number.isFinite(updatedAt) ||
-012003:             updatedAt <= 0 ||
-012004:             Date.now() - updatedAt > 180 * 24 * 60 * 60 * 1000
-012005:         ) {
-012006:             return false;
-012007:         }
-012008: 
-012009:         const trainingCounts = entry.trainingCounts && typeof entry.trainingCounts === 'object'
-012010:             ? entry.trainingCounts
-012011:             : {};
-012012:         return Math.max(0, parseInt(trainingCounts.critical_care, 10) || 0) >= 1;
-012013:     }
-012014: 
-012015:     function isCriticalCareRoadAmbulanceCheckbox(input, registry) {
-012016:         if (!input) return false;
-012017:         if (!getVehicleTypeIdentifiers(input).includes('5')) return false;
-012018: 
-012019:         const registryMatch = getRegistryEntryForMissionCheckbox(input, registry);
-012020:         return isVerifiedCriticalCareAmbulanceRegistryEntry(registryMatch.entry);
-012021:     }
-012022: 
-012023:     function isGenericCriticalCareVehicleCheckbox(input, registry) {
-012024:         return (
-012025:             isAirAmbulanceVehicleCheckbox(input) ||
-012026:             isCriticalCareRoadAmbulanceCheckbox(input, registry)
-012027:         );
-012028:     }
-012029: 
-012030: 
-012031: 
-012032:     function isSeagoingVesselRequirement(originalName, mappedName) {
-012033:         const raw = normaliseVehicleText(originalName);
-012034:         const mapped = normaliseVehicleText(mappedName);
-012035:         const names = new Set([
-012036:             'seagoing vessel',
-012037:             'seagoing vessels',
-012038:             'required seagoing vessel',
-012039:             'required seagoing vessels',
-012040:             'alb',
-012041:             'albs',
-012042:             'abl',
-012043:             'abls',
-012044:             'all weather lifeboat',
-012045:             'all weather lifeboats',
-012046:             'all-weather lifeboat',
-012047:             'all-weather lifeboats'
-012048:         ]);
-012049:         return names.has(raw) || names.has(mapped);
 
-=== BLOCK 26: source lines 12680-12770 ===
+=== BLOCK 23: source lines 12680-12770 ===
 012680: 
 012681:         const cached = mfCheckboxVehicleValueCache.get(input);
 012682:         if (cached) return cached;
@@ -4656,7 +4179,7 @@ MERGED CONTEXT BLOCKS: 69
 012769:         }
 012770: 
 
-=== BLOCK 27: source lines 13196-13286 ===
+=== BLOCK 24: source lines 13196-13286 ===
 013196:                 })
 013197:             );
 013198:         }
@@ -4749,7 +4272,7 @@ MERGED CONTEXT BLOCKS: 69
 013285:                     );
 013286:                 });
 
-=== BLOCK 28: source lines 13503-13593 ===
+=== BLOCK 25: source lines 13503-13593 ===
 013503:                     return (
 013504:                         isPoliceHelicopterCheckbox(input) ||
 013505:                         isPoliceDroneCheckbox(input)
@@ -4842,7 +4365,7 @@ MERGED CONTEXT BLOCKS: 69
 013592:                 );
 013593:             }
 
-=== BLOCK 29: source lines 13639-13729 ===
+=== BLOCK 26: source lines 13639-13729 ===
 013639:         ) {
 013640:             debugLog(
 013641:                 'POLICE CAR STRICT',
@@ -4935,7 +4458,7 @@ MERGED CONTEXT BLOCKS: 69
 013728:             ) {
 013729:                 return selectedRivs;
 
-=== BLOCK 30: source lines 15047-15155 ===
+=== BLOCK 27: source lines 15047-15155 ===
 015047:         controlBody.appendChild(statusBox);
 015048: 
 015049:         const iphoneAdvancedToggle =
@@ -5046,7 +4569,7 @@ MERGED CONTEXT BLOCKS: 69
 015154:                 mfQueueRestartThreshold;
 015155: 
 
-=== BLOCK 31: source lines 16769-16861 ===
+=== BLOCK 28: source lines 16769-16861 ===
 016769: 
 016770:             panel.style.left = `${
 016771:                 Math.round(
@@ -5141,161 +4664,7 @@ MERGED CONTEXT BLOCKS: 69
 016860:         reason,
 016861:         options = {}
 
-=== BLOCK 32: source lines 17000-17151 ===
-017000:         return 'Mission';
-017001:     }
-017002: 
-017003:     function getCurrentMissionValueScope() {
-017004:         const missionInfo =
-017005:             document.querySelector('#mission_general_info');
-017006: 
-017007:         const missionModal =
-017008:             missionInfo &&
-017009:             missionInfo.closest &&
-017010:             missionInfo.closest('.vm--modal, .modal, .lightbox');
-017011: 
-017012:         return missionModal ||
-017013:             document.querySelector(
-017014:                 '#mission_general_info, #mission_content, #iframe-inside-container'
-017015:             ) ||
-017016:             document;
-017017:     }
-017018: 
-017019:     function parseCreditValueFromText(text) {
-017020:         const value = String(text || '')
-017021:             .replace(/\u00a0/g, ' ')
-017022:             .replace(/\s+/g, ' ')
-017023:             .trim();
-017024: 
-017025:         if (!value) return 0;
-017026: 
-017027:         const patterns = [
-017028:             /(?:average\s+credits?|mission\s+value|reward|credits?)\s*:?\s*~?\s*([\d,.]+)/i,
-017029:             /~?\s*([\d,.]+)\s*credits?/i
-017030:         ];
-017031: 
-017032:         for (const pattern of patterns) {
-017033:             const match = value.match(pattern);
-017034: 
-017035:             if (!match) continue;
-017036: 
-017037:             const parsed = parseInt(
-017038:                 match[1].replace(/[^\d]/g, ''),
-017039:                 10
-017040:             );
-017041: 
-017042:             if (
-017043:                 Number.isFinite(parsed) &&
-017044:                 parsed > 0 &&
-017045:                 parsed < 100000000
-017046:             ) {
-017047:                 return parsed;
-017048:             }
-017049:         }
-017050: 
-017051:         return 0;
-017052:     }
-017053: 
-017054:     function getMissionCredits() {
-017055:         const scope = getCurrentMissionValueScope();
-017056: 
-017057:         const attributeCandidates = Array.from(
-017058:             scope.querySelectorAll(
-017059:                 '[data-mission-credits], [data-credits], [data-reward]'
-017060:             )
-017061:         );
-017062: 
-017063:         for (const element of attributeCandidates) {
-017064:             const raw =
-017065:                 element.getAttribute('data-mission-credits') ||
-017066:                 element.getAttribute('data-credits') ||
-017067:                 element.getAttribute('data-reward') ||
-017068:                 '';
-017069: 
-017070:             const parsed = parseInt(
-017071:                 String(raw).replace(/[^\d]/g, ''),
-017072:                 10
-017073:             );
-017074: 
-017075:             if (Number.isFinite(parsed) && parsed > 0) {
-017076:                 return parsed;
-017077:             }
-017078:         }
-017079: 
-017080:         const badgeCandidates = Array.from(
-017081:             scope.querySelectorAll(
-017082:                 'span.badge, .badge, .label, #mission_help, #mission_general_info'
-017083:             )
-017084:         );
-017085: 
-017086:         for (const element of badgeCandidates) {
-017087:             const parsed = parseCreditValueFromText(
-017088:                 element.innerText ||
-017089:                 element.textContent ||
-017090:                 ''
-017091:             );
-017092: 
-017093:             if (parsed > 0) return parsed;
-017094:         }
-017095: 
-017096:         const scopeText = (
-017097:             scope.innerText ||
-017098:             scope.textContent ||
-017099:             ''
-017100:         ).replace(/\s+/g, ' ').trim();
-017101: 
-017102:         return parseCreditValueFromText(scopeText);
-017103:     }
-017104: 
-017105:     function formatRuntime(ms) {
-017106:         const totalSeconds = Math.max(0, Math.floor(ms / 1000));
-017107:         const hours = Math.floor(totalSeconds / 3600);
-017108:         const minutes = Math.floor((totalSeconds % 3600) / 60);
-017109:         const seconds = totalSeconds % 60;
-017110: 
-017111:         return [hours, minutes, seconds]
-017112:             .map(value => String(value).padStart(2, '0'))
-017113:             .join(':');
-017114:     }
-017115: 
-017116:     function formatMoney(value) {
-017117:         const number = Number(value || 0);
-017118:         return `£${number.toLocaleString('en-GB')}`;
-017119:     }
-017120: 
-017121:     function addMissionLogEntry(type, missionName, detail, credits) {
-017122:         const stats = loadSessionStats();
-017123:         const safeCredits = Number.isFinite(Number(credits)) ? Number(credits) : 0;
-017124: 
-017125:         if (type === 'completed') {
-017126:             stats.completed += 1;
-017127:             stats.credits += safeCredits;
-017128:         }
-017129: 
-017130:         if (type === 'skipped') {
-017131:             stats.skipped += 1;
-017132:         }
-017133: 
-017134:         if (type === 'update') {
-017135:             stats.updates += 1;
-017136:         }
-017137: 
-017138:         stats.entries.unshift({
-017139:             type,
-017140:             missionName: missionName || 'Mission',
-017141:             detail: detail || '',
-017142:             credits: safeCredits,
-017143:             hasCredits: Number.isFinite(Number(credits)) && Number(credits) > 0,
-017144:             timestamp: Date.now()
-017145:         });
-017146: 
-017147:         stats.entries = stats.entries.slice(0, 25);
-017148:         saveSessionStats(stats);
-017149:         renderSessionPanel();
-017150:     }
-017151: 
-
-=== BLOCK 33: source lines 17162-17297 ===
+=== BLOCK 29: source lines 17162-17297 ===
 017162:         const hours = Math.max(runtimeMs / 3600000, 0.001);
 017163:         const average = completed > 0 ? Math.round(credits / completed) : 0;
 017164:         const creditsPerHour = Math.round(credits / hours);
@@ -5433,277 +4802,7 @@ MERGED CONTEXT BLOCKS: 69
 017296:             ),
 017297:             ...Array.from(autoBox.children || [])
 
-=== BLOCK 34: source lines 18158-18332 ===
-018158:             .forEach((candidateDocument, documentIndex) => {
-018159:                 if (
-018160:                     !candidateDocument ||
-018161:                     !isMissionDocumentVisible(candidateDocument)
-018162:                 ) {
-018163:                     return;
-018164:                 }
-018165: 
-018166:                 let score = 0;
-018167:                 let visibleMarkerCount = 0;
-018168: 
-018169:                 const markerDefinitions = [
-018170:                     ['#mission_general_info', 500, true],
-018171:                     ['#mission_alarm_btn, #alarm_button', 350, true],
-018172:                     ['input.vehicle_checkbox', 250, true],
-018173:                     ['#mission_help', 180, false]
-018174:                 ];
-018175: 
-018176:                 markerDefinitions.forEach(([selector, weight, requireVisible]) => {
-018177:                     let visibleCount = 0;
-018178: 
-018179:                     try {
-018180:                         visibleCount = Array.from(
-018181:                             candidateDocument.querySelectorAll(selector)
-018182:                         ).filter(element => {
-018183:                             if (element.isConnected === false) return false;
-018184:                             return requireVisible
-018185:                                 ? isMissionElementVisible(element)
-018186:                                 : true;
-018187:                         }).length;
-018188:                     } catch (_error) {}
-018189: 
-018190:                     if (visibleCount > 0) {
-018191:                         score += weight;
-018192:                         visibleMarkerCount += visibleCount;
-018193:                     }
-018194:                 });
-018195: 
-018196:                 if (visibleMarkerCount === 0) return;
-018197: 
-018198:                 try {
-018199:                     const frame =
-018200:                         candidateDocument.defaultView?.frameElement;
-018201: 
-018202:                     if (frame && isMissionElementVisible(frame)) {
-018203:                         score += 1000;
-018204: 
-018205:                         const ownerDocument = frame.ownerDocument;
-018206:                         const ownerWindow =
-018207:                             ownerDocument?.defaultView ||
-018208:                             window;
-018209: 
-018210:                         const ownerModal = frame.closest(
-018211:                             '.vm--modal, .modal, .lightbox, #lightbox_box'
-018212:                         );
-018213: 
-018214:                         if (ownerModal) {
-018215:                             const modalStyle =
-018216:                                 ownerWindow.getComputedStyle(ownerModal);
-018217: 
-018218:                             const modalZIndex = parseInt(
-018219:                                 modalStyle.zIndex,
-018220:                                 10
-018221:                             );
-018222: 
-018223:                             if (Number.isFinite(modalZIndex)) {
-018224:                                 score += Math.max(0, modalZIndex) * 10;
-018225:                             }
-018226: 
-018227:                             if (
-018228:                                 ownerModal.getAttribute('aria-modal') === 'true' ||
-018229:                                 ownerModal.getAttribute('aria-expanded') === 'true'
-018230:                             ) {
-018231:                                 score += 2000;
-018232:                             }
-018233: 
-018234:                             const allModals = Array.from(
-018235:                                 ownerDocument.querySelectorAll(
-018236:                                     '.vm--modal, .modal, .lightbox, #lightbox_box'
-018237:                                 )
-018238:                             );
-018239: 
-018240:                             score += Math.max(
-018241:                                 0,
-018242:                                 allModals.indexOf(ownerModal)
-018243:                             ) * 20;
-018244:                         }
-018245: 
-018246:                         const frameStyle =
-018247:                             ownerWindow.getComputedStyle(frame);
-018248: 
-018249:                         const frameZIndex = parseInt(
-018250:                             frameStyle.zIndex,
-018251:                             10
-018252:                         );
-018253: 
-018254:                         if (Number.isFinite(frameZIndex)) {
-018255:                             score += Math.max(0, frameZIndex);
-018256:                         }
-018257: 
-018258:                         const allFrames = Array.from(
-018259:                             ownerDocument.querySelectorAll('iframe')
-018260:                         );
-018261: 
-018262:                         score += Math.max(0, allFrames.indexOf(frame));
-018263: 
-018264:                         try {
-018265:                             const rect = frame.getBoundingClientRect();
-018266:                             const probePoints = [
-018267:                                 [rect.left + rect.width / 2, rect.top + rect.height / 2],
-018268:                                 [rect.left + Math.min(30, rect.width / 4), rect.top + Math.min(30, rect.height / 4)],
-018269:                                 [rect.right - Math.min(30, rect.width / 4), rect.top + Math.min(30, rect.height / 4)]
-018270:                             ];
-018271: 
-018272:                             const topmostHits = probePoints.filter(([x, y]) => {
-018273:                                 if (
-018274:                                     x < 0 ||
-018275:                                     y < 0 ||
-018276:                                     x > ownerWindow.innerWidth ||
-018277:                                     y > ownerWindow.innerHeight
-018278:                                 ) {
-018279:                                     return false;
-018280:                                 }
-018281: 
-018282:                                 const hit = ownerDocument.elementFromPoint(x, y);
-018283:                                 return hit === frame;
-018284:                             }).length;
-018285: 
-018286:                             if (topmostHits > 0) {
-018287:                                 score += 100000 + (topmostHits * 1000);
-018288:                             }
-018289:                         } catch (_error) {}
-018290:                     } else if (
-018291:                         candidateDocument ===
-018292:                         candidateDocument.defaultView?.top?.document
-018293:                     ) {
-018294:                         // Direct /missions/... page without an iframe.
-018295:                         score += 50000;
-018296:                     }
-018297:                 } catch (_error) {}
-018298: 
-018299:                 candidates.push({
-018300:                     document: candidateDocument,
-018301:                     score,
-018302:                     documentIndex
-018303:                 });
-018304:             });
-018305: 
-018306:         candidates.sort((left, right) => {
-018307:             return (
-018308:                 right.score - left.score ||
-018309:                 right.documentIndex - left.documentIndex
-018310:             );
-018311:         });
-018312: 
-018313:         return candidates[0]?.document || document;
-018314:     }
-018315: 
-018316:     function getSharedTopWindow() {
-018317:         try {
-018318:             return window.top || window;
-018319:         } catch (_error) {
-018320:             return window;
-018321:         }
-018322:     }
-018323: 
-018324:     function claimCurrentMissionExecutionOwnership(reason = '') {
-018325:         const primaryDocument =
-018326:             getPrimaryMissionRequirementDocument();
-018327: 
-018328:         if (primaryDocument !== document) {
-018329:             return false;
-018330:         }
-018331: 
-018332:         const sharedTopWindow =
-
-=== BLOCK 35: source lines 20095-20185 ===
-020095:         const expectedMissionId =
-020096:             getStrongActiveMissionId();
-020097:         const primaryDocument =
-020098:             getPrimaryMissionRequirementDocument();
-020099:         const contexts =
-020100:             getActiveMissionRequirementContexts(
-020101:                 forceRefresh
-020102:             );
-020103:         const documents =
-020104:             getMissionAccessibleDocuments(
-020105:                 forceRefresh
-020106:             );
-020107:         const candidates = [];
-020108:         const seenElements = new Set();
-020109: 
-020110:         const addElement = (
-020111:             element,
-020112:             baseScore,
-020113:             reason
-020114:         ) => {
-020115:             if (
-020116:                 !element ||
-020117:                 seenElements.has(element) ||
-020118:                 element.isConnected === false
-020119:             ) {
-020120:                 return;
-020121:             }
-020122: 
-020123:             seenElements.add(element);
-020124: 
-020125:             const sourceDescriptor =
-020126:                 normaliseMissionRequirementSourceUrl(
-020127:                     element.getAttribute?.('href') ||
-020128:                         element.href ||
-020129:                         '',
-020130:                     expectedMissionId,
-020131:                     element.ownerDocument?.baseURI ||
-020132:                         window.location.href
-020133:                 );
-020134: 
-020135:             if (!sourceDescriptor) return;
-020136: 
-020137:             let score = baseScore;
-020138: 
-020139:             if (element.id === 'mission_help') {
-020140:                 score += 1000;
-020141:             }
-020142:             if (
-020143:                 element.ownerDocument ===
-020144:                 primaryDocument
-020145:             ) {
-020146:                 score += 800;
-020147:             }
-020148:             if (
-020149:                 sourceDescriptor.linkedMissionId &&
-020150:                 sourceDescriptor.linkedMissionId ===
-020151:                     expectedMissionId
-020152:             ) {
-020153:                 score += 2000;
-020154:             }
-020155:             if (
-020156:                 isMissionElementVisible(
-020157:                     element
-020158:                 )
-020159:             ) {
-020160:                 score += 20;
-020161:             }
-020162: 
-020163:             candidates.push({
-020164:                 ...sourceDescriptor,
-020165:                 element,
-020166:                 score,
-020167:                 reason
-020168:             });
-020169:         };
-020170: 
-020171:         contexts.forEach(context => {
-020172:             let elements = [];
-020173: 
-020174:             try {
-020175:                 elements = Array.from(
-020176:                     context.root.querySelectorAll(
-020177:                         '#mission_help, ' +
-020178:                         'a[href*="/einsaetze/"][href*="mission_id="]'
-020179:                     )
-020180:                 );
-020181:             } catch (_error) {}
-020182: 
-020183:             elements.forEach(element => {
-020184:                 addElement(
-020185:                     element,
-
-=== BLOCK 36: source lines 20513-20678 ===
+=== BLOCK 30: source lines 20513-20678 ===
 020513:             );
 020514: 
 020515:         if (
@@ -5871,161 +4970,7 @@ MERGED CONTEXT BLOCKS: 69
 020677:                 ''
 020678:             )
 
-=== BLOCK 37: source lines 20725-20876 ===
-020725:                 `(?:\\b(\\d+)\\s*(?:x\\s*)?${namePatternSource}\\b|\\b${namePatternSource}\\b\\s*(?::|=|-)?\\s*(?:x\\s*)?(\\d+))`,
-020726:                 'gi'
-020727:             );
-020728: 
-020729:         let maximum = 0;
-020730:         let match;
-020731: 
-020732:         while (
-020733:             (
-020734:                 match =
-020735:                     pattern.exec(
-020736:                         segment
-020737:                     )
-020738:             )
-020739:         ) {
-020740:             maximum =
-020741:                 Math.max(
-020742:                     maximum,
-020743:                     parseInt(
-020744:                         match[1] ||
-020745:                         match[2],
-020746:                         10
-020747:                     ) ||
-020748:                     0
-020749:                 );
-020750:         }
-020751: 
-020752:         return maximum;
-020753:     }
-020754: 
-020755:     function shouldSkipLiveRequirement(name, value) {
-020756:         const cleanedName = cleanRequirementName(name);
-020757:         const text = `${cleanedName} ${value}`.toLowerCase();
-020758:         const mappedName = resolveUnitName(cleanedName);
-020759: 
-020760:         if (!cleanedName) return true;
-020761:         if (shouldIgnoreRequiredMinimumRequirement(name) ||
-020762:             shouldIgnoreRequiredMinimumRequirement(cleanedName)) return true;
-020763:         if (!/^\d+$/.test(String(value || '').trim())) return true;
-020764: 
-020765:         // V9.0.4: Ambulances are selected from the patient badge first, not from the live mission help table.
-020766:         // Mission Update still handles later patient-specific ambulance requests.
-020767:         if (normaliseVehicleText(mappedName) === normaliseVehicleText('Ambulance x 01')) return true;
-020768: 
-020769:         // V9.2.7: these are mission stats/preconditions, not vehicles to send.
-020770:         // Example: Domestic flooding (Large) has "Min. Pump Capacity = 1000".
-020771:         // That is litres/min pump capacity, NOT Pump x1000.
-020772:         if (/^min\.?\s*pump\s*capacity$/i.test(cleanedName)) return true;
-020773:         if (/^minimum\s*pump\s*capacity$/i.test(cleanedName)) return true;
-020774:         if (/^pump\s*capacity$/i.test(cleanedName)) return true;
-020775:         if (/^water\s*to\s*pump$/i.test(cleanedName)) return true;
-020776:         if (/water\s*damage\s*pump\s*extension/i.test(cleanedName)) return true;
-020777:         if (/\bextension\b/i.test(cleanedName) && !/vehicle|unit|officer|car|engine|pump$/i.test(cleanedName)) return true;
-020778: 
-020779:         if (/only required/.test(text)) return true;
-020780:         if (/^probability of /i.test(cleanedName)) return true;
-020781:         if (/\bprobability\b/.test(text)) return true;
-020782:         if (/personnel/.test(text)) return true;
-020783:         if (/patients?/.test(text)) return true;
-020784:         if (/prisoners?/.test(text)) return true;
-020785:         if (/transport request/.test(text)) return true;
-020786:         if (/chance/.test(text)) return true;
-020787: 
-020788:         return false;
-020789:     }
-020790: 
-020791:     function findMissionRequirementTable(
-020792:         doc,
-020793:         suppliedTables = null
-020794:     ) {
-020795:         if (!doc) return null;
-020796: 
-020797:         const tables = Array.isArray(suppliedTables)
-020798:             ? suppliedTables
-020799:             : Array.from(
-020800:                 doc.querySelectorAll(
-020801:                     'table.table, table'
-020802:                 )
-020803:             );
-020804:         let bestTable = null;
-020805:         let bestScore = 0;
-020806: 
-020807:         const normalise = value => {
-020808:             return String(value || '')
-020809:                 .replace(/\s+/g, ' ')
-020810:                 .trim();
-020811:         };
-020812: 
-020813:         tables.forEach(table => {
-020814:             const headings = Array.from(
-020815:                 table.querySelectorAll(
-020816:                     'thead th, thead td, th'
-020817:                 )
-020818:             ).map(cell => normalise(
-020819:                 cell.textContent
-020820:             ));
-020821:             const headingText =
-020822:                 headings.join(' ');
-020823:             let score = 0;
-020824: 
-020825:             if (
-020826:                 headings.some(heading =>
-020827:                     /^Vehicle and Personnel Requirements$/i
-020828:                         .test(heading)
-020829:                 )
-020830:             ) {
-020831:                 score += 10000;
-020832:             } else if (
-020833:                 /Vehicle/i.test(headingText) &&
-020834:                 /Personnel/i.test(headingText) &&
-020835:                 /Requirements?/i.test(headingText)
-020836:             ) {
-020837:                 score += 8000;
-020838:             }
-020839: 
-020840:             let actionableRows = 0;
-020841: 
-020842:             table.querySelectorAll(
-020843:                 'tbody tr, tr'
-020844:             ).forEach(row => {
-020845:                 const cells = Array.from(
-020846:                     row.querySelectorAll('td')
-020847:                 ).map(cell => normalise(
-020848:                     cell.textContent
-020849:                 ));
-020850: 
-020851:                 if (cells.length < 2) return;
-020852: 
-020853:                 if (
-020854:                     /^(?:Required\s+|Maximum amount of cars to tow|Cars to tow)/i
-020855:                         .test(cells[0]) &&
-020856:                     /\d/.test(cells[1])
-020857:                 ) {
-020858:                     actionableRows += 1;
-020859:                 }
-020860:             });
-020861: 
-020862:             if (actionableRows > 0) {
-020863:                 score += 100 +
-020864:                     actionableRows;
-020865:             }
-020866: 
-020867:             if (score > bestScore) {
-020868:                 bestScore = score;
-020869:                 bestTable = table;
-020870:             }
-020871:         });
-020872: 
-020873:         return bestTable;
-020874:     }
-020875: 
-020876:     function extractLiveMissionRequirementRows(html) {
-
-=== BLOCK 38: source lines 20936-21073 ===
+=== BLOCK 31: source lines 20936-21073 ===
 020936:                         unitName:
 020937:                             towRequirement.unitName,
 020938:                         stillNeeded:
@@ -6165,7 +5110,7 @@ MERGED CONTEXT BLOCKS: 69
 021072: 
 021073:                 if (mfDebugEnabled) {
 
-=== BLOCK 39: source lines 21202-21302 ===
+=== BLOCK 32: source lines 21202-21302 ===
 021202:             )
 021203:                 .replace(
 021204:                     /\s+/g,
@@ -6268,7 +5213,7 @@ MERGED CONTEXT BLOCKS: 69
 021301:             const mappedName =
 021302:                 resolveUnitName(
 
-=== BLOCK 40: source lines 21582-21676 ===
+=== BLOCK 33: source lines 21582-21676 ===
 021582:                     sourceDescriptor.missionTypeId,
 021583:                 error:
 021584:                     error?.message ||
@@ -6365,7 +5310,7 @@ MERGED CONTEXT BLOCKS: 69
 021675:             input.getAttribute('data-vehicle-id'),
 021676:             row?.getAttribute('vehicle_id'),
 
-=== BLOCK 41: source lines 22895-23065 ===
+=== BLOCK 34: source lines 22895-23065 ===
 022895:                 .assignedTrainingProfiles
 022896:                 .slice(0, maximumCapacity)
 022897:                 .map(profile => {
@@ -6538,7 +5483,7 @@ MERGED CONTEXT BLOCKS: 69
 023064:                         requirement
 023065:                     );
 
-=== BLOCK 42: source lines 23261-23352 ===
+=== BLOCK 35: source lines 23261-23352 ===
 023261:         return match
 023262:             ? String(match[1])
 023263:             : '';
@@ -6632,7 +5577,7 @@ MERGED CONTEXT BLOCKS: 69
 023351:             const assignedHere = !!(
 023352:                 assignedAction &&
 
-=== BLOCK 43: source lines 23512-23750 ===
+=== BLOCK 36: source lines 23512-23602 ===
 023512:             personnelRowsSeen:
 023513:                 personnelRows.length,
 023514:             detectedVehicleTypeId,
@@ -6724,63 +5669,8 @@ MERGED CONTEXT BLOCKS: 69
 023600:                     registryEntry
 023601:                 );
 023602: 
-023603:             const capacity =
-023604:                 getTrainingRequirementVehicleCapacity(
-023605:                     requirement,
-023606:                     entryTypeId
-023607:                 );
-023608: 
-023609:             return (
-023610:                 score +
-023611:                 Math.min(qualified, capacity) * 1000 +
-023612:                 (entryTypeId === '51' ? 50 : 0)
-023613:             );
-023614:         }, 0);
-023615:     }
-023616: 
-023617:     function orderStrictPoliceTrainingCandidates(
-023618:         candidates,
-023619:         requirements,
-023620:         registry
-023621:     ) {
-023622:         const source =
-023623:             Array.isArray(candidates)
-023624:                 ? candidates
-023625:                 : [];
-023626: 
-023627:         const arrivalIndex =
-023628:             new Map(
-023629:                 source.map((checkbox, index) => [
-023630:                     checkbox,
-023631:                     index
-023632:                 ])
-023633:             );
-023634: 
-023635:         const checked =
-023636:             source.filter(checkbox => checkbox.checked);
-023637: 
-023638:         const unchecked =
-023639:             source.filter(checkbox => !checkbox.checked);
-023640: 
-023641:         const hinted =
-023642:             unchecked
-023643:                 .map(checkbox => {
-023644:                     const registryMatch =
-023645:                         getRegistryEntryForMissionCheckbox(
-023646:                             checkbox,
-023647:                             registry
-023648:                         );
-023649: 
-023650:                     return {
-023651:                         checkbox,
-023652:                         score:
-023653:                             getUnverifiedRegistryTrainingHintScore(
-023654:                                 requirements,
-023655:                                 registryMatch.entry
-023656:                             )
-023657:                     };
-023658:                 })
-023659:                 .filter(item => item.score > 0)
+
+=== BLOCK 37: source lines 23660-23750 ===
 023660:                 .sort((left, right) => {
 023661:                     if (left.score !== right.score) {
 023662:                         return right.score - left.score;
@@ -6873,7 +5763,7 @@ MERGED CONTEXT BLOCKS: 69
 023749:                 registry
 023750:             );
 
-=== BLOCK 44: source lines 23973-24063 ===
+=== BLOCK 38: source lines 23973-24063 ===
 023973:                     );
 023974: 
 023975:                     verifiedIds.add(vehicleId);
@@ -6966,7 +5856,7 @@ MERGED CONTEXT BLOCKS: 69
 024062:                 armedRequirements,
 024063:                 verifiedCheckboxes,
 
-=== BLOCK 45: source lines 24207-24297 ===
+=== BLOCK 39: source lines 24207-24297 ===
 024207:                 ) {
 024208:                     return total;
 024209:                 }
@@ -7059,7 +5949,7 @@ MERGED CONTEXT BLOCKS: 69
 024296:         // Generic Police attendance does not require a qualification check.
 024297:         // The registry is therefore an ordering hint only. Avoid reading every
 
-=== BLOCK 46: source lines 24553-24762 ===
+=== BLOCK 40: source lines 24553-24643 ===
 024553:                     ? requirements
 024554:                     : []
 024555:             ).map(requirement => {
@@ -7151,29 +6041,8 @@ MERGED CONTEXT BLOCKS: 69
 024641:         }
 024642: 
 024643:         const trainingScore =
-024644:             trainedPhase
-024645:                 ? metrics.trainedUseful * 1000000
-024646:                 : 0;
-024647: 
-024648:         const capacityScore =
-024649:             metrics.capacityUseful * 100000;
-024650: 
-024651:         const overshootPenalty =
-024652:             metrics.overshoot * 500000;
-024653: 
-024654:         const categoryScore =
-024655:             metrics.coveredCategories * 1000;
-024656: 
-024657:         const psuTieBreak =
-024658:             metrics.isPsu
-024659:                 ? 100
-024660:                 : 0;
-024661: 
-024662:         return (
-024663:             trainingScore +
-024664:             capacityScore -
-024665:             overshootPenalty +
-024666:             categoryScore +
+
+=== BLOCK 41: source lines 24667-24762 ===
 024667:             psuTieBreak
 024668:         );
 024669:     }
@@ -7271,7 +6140,7 @@ MERGED CONTEXT BLOCKS: 69
 024761:                     countSelectedTrainingVehicles(
 024762:                         requirements,
 
-=== BLOCK 47: source lines 24945-25128 ===
+=== BLOCK 42: source lines 24945-25128 ===
 024945:                     registry
 024946:                 ),
 024947:             remaining,
@@ -7457,7 +6326,7 @@ MERGED CONTEXT BLOCKS: 69
 025127:             rows.push({
 025128:                 unitName:
 
-=== BLOCK 48: source lines 25530-25640 ===
+=== BLOCK 43: source lines 25530-25640 ===
 025530:             !suppliedHasExplicitCurrentMissingRequirements
 025531:         ) {
 025532:             requirementRows = readMissionUpdateRows();
@@ -7570,100 +6439,7 @@ MERGED CONTEXT BLOCKS: 69
 025639: 
 025640:                 if (!result.trainingSatisfied) {
 
-=== BLOCK 49: source lines 27732-27822 ===
-027732:                         .trim()
-027733:                         .toLowerCase();
-027734: 
-027735:                     const text = (
-027736:                         button.textContent ||
-027737:                         button.innerText ||
-027738:                         ''
-027739:                     ).replace(/\s+/g, ' ')
-027740:                         .trim()
-027741:                         .toLowerCase();
-027742: 
-027743:                     const amountBadge =
-027744:                         button.querySelector(
-027745:                             '#vehicle_amount'
-027746:                         );
-027747: 
-027748:                     const selectedAmount = parseInt(
-027749:                         (
-027750:                             amountBadge?.textContent ||
-027751:                             amountBadge?.innerText ||
-027752:                             '0'
-027753:                         ).replace(/[^0-9]/g, ''),
-027754:                         10
-027755:                     ) || 0;
-027756: 
-027757:                     return (
-027758:                         title.startsWith('dispatch') &&
-027759:                         !title.includes('next') &&
-027760:                         text.startsWith('dispatch') &&
-027761:                         selectedAmount >= 1
-027762:                     );
-027763:                 });
-027764: 
-027765:             if (dispatchButton) {
-027766:                 allyStealDebugLog(
-027767:                     'DISPATCH LOOKUP MATCH',
-027768:                     describeAllyDebugElement(
-027769:                         dispatchButton
-027770:                     )
-027771:                 );
-027772: 
-027773:                 return dispatchButton;
-027774:             }
-027775: 
-027776:             if (
-027777:                 (Date.now() - startedAt) % 1000 <
-027778:                 120
-027779:             ) {
-027780:                 allyStealDebugLog(
-027781:                     'DISPATCH LOOKUP WAIT',
-027782:                     Array.from(
-027783:                         document.querySelectorAll(
-027784:                             '#mission_alarm_btn'
-027785:                         )
-027786:                     ).map(
-027787:                         describeAllyDebugElement
-027788:                     )
-027789:                 );
-027790:             }
-027791: 
-027792:             await wait(100);
-027793:         }
-027794: 
-027795:         return null;
-027796:     }
-027797: 
-027798:     function allyStealSuccessAlertMatchesVehicle(
-027799:         alert,
-027800:         identity
-027801:     ) {
-027802:         if (!alert) return false;
-027803: 
-027804:         const text = (
-027805:             alert.textContent ||
-027806:             alert.innerText ||
-027807:             ''
-027808:         ).replace(/\s+/g, ' ').trim();
-027809: 
-027810:         if (
-027811:             !/has successfully been dispatched\.?$/i.test(
-027812:                 text
-027813:             )
-027814:         ) {
-027815:             return false;
-027816:         }
-027817: 
-027818:         const vehicleLink =
-027819:             alert.querySelector(
-027820:                 'a[href^="/vehicles/"]'
-027821:             );
-027822: 
-
-=== BLOCK 50: source lines 28825-28915 ===
+=== BLOCK 44: source lines 28825-28915 ===
 028825:                 .replace(
 028826:                     /\s+/g,
 028827:                     ' '
@@ -7756,7 +6532,7 @@ MERGED CONTEXT BLOCKS: 69
 028914:                 null &&
 028915:             selected !==
 
-=== BLOCK 51: source lines 29814-29904 ===
+=== BLOCK 45: source lines 29814-29904 ===
 029814:                     details = {
 029815:                         ...(
 029816:                             details ||
@@ -7849,7 +6625,7 @@ MERGED CONTEXT BLOCKS: 69
 029903:                         );
 029904: 
 
-=== BLOCK 52: source lines 30525-30616 ===
+=== BLOCK 46: source lines 30525-30616 ===
 030525: 
 030526:             // MissionChief can place this requirement only inside the
 030527:             // red Missing Vehicles alert rather than the update table.
@@ -7943,7 +6719,7 @@ MERGED CONTEXT BLOCKS: 69
 030615:                         required:
 030616:                             tableLevel2PublicOrderRequired
 
-=== BLOCK 53: source lines 30708-30798 ===
+=== BLOCK 47: source lines 30708-30798 ===
 030708:                         dispatchTargetMode: 'total',
 030709:                         explicitMissingPersonnel: true
 030710:                     }
@@ -8036,7 +6812,7 @@ MERGED CONTEXT BLOCKS: 69
 030797:         const patientAlertCandidates =
 030798:             Array.from(
 
-=== BLOCK 54: source lines 31205-31308 ===
+=== BLOCK 48: source lines 31205-31308 ===
 031205:         const requirementRowsForDedupe =
 031206:             explicitMissingRequirementsPresent
 031207:                 ? missingRows.filter(row => {
@@ -8142,7 +6918,7 @@ MERGED CONTEXT BLOCKS: 69
 031307:                 );
 031308: 
 
-=== BLOCK 55: source lines 31787-31957 ===
+=== BLOCK 49: source lines 31787-31957 ===
 031787: 
 031788:         mfMissionUpdateFirstPassRequired = false;
 031789:         mfMissionUpdateFirstPassCompletedAt = Date.now();
@@ -8315,100 +7091,7 @@ MERGED CONTEXT BLOCKS: 69
 031956:                         )
 031957:                     );
 
-=== BLOCK 56: source lines 32204-32294 ===
-032204:             );
-032205: 
-032206:             if (showAlerts && !autoModeRunning) {
-032207:                 alert(
-032208:                     `Training shortfall — compatible units were still selected and can be sent:\n\n${warningText}`
-032209:                 );
-032210:             }
-032211:         } else {
-032212:             updateStatusBox(
-032213:                 "Mission update vehicles and supported personnel units assigned."
-032214:             );
-032215:         }
-032216:         changeDispatchBoxColor(true);
-032217: 
-032218:         if (
-032219:             missingRows.length > 0 &&
-032220:             !options.suppressUpdateLog
-032221:         ) {
-032222:             addMissionLogEntry('update', getCurrentMissionName(), `Mission update handled x${missingRows.length}`, null);
-032223:         }
-032224: 
-032225:         return true;
-032226:     }
-032227: 
-032228:     async function autoHandleMissionUpdateAfterDispatch() {
-032229:         const rows = readMissionUpdateRows();
-032230: 
-032231:         if (rows.length === 0) {
-032232:             updateStatusBox("No mission update found after dispatch.");
-032233:             return;
-032234:         }
-032235: 
-032236:         updateStatusBox("Mission update found. Assigning new units...");
-032237: 
-032238:         await preparePoliceVehicleSafetyForRows(
-032239:             rows,
-032240:             'AUTO POST-DISPATCH UPDATE'
-032241:         );
-032242: 
-032243:         const assigned = handleMissionUpdateUnits(false, rows);
-032244: 
-032245:         if (assigned) {
-032246:             setTimeout(() => {
-032247:                 updateStatusBox("Mission update assigned. Ready to dispatch again.");
-032248:                 changeDispatchBoxColor(true);
-032249:             }, 1000);
-032250:         }
-032251:     }
-032252: 
-032253: 
-032254: 
-032255:     function parseMissionIdFromHrefForQueueRestart(href) {
-032256:         const value = String(href || '');
-032257: 
-032258:         const directMatch = value.match(/\/missions\/(\d+)/i);
-032259:         if (directMatch) return directMatch[1];
-032260: 
-032261:         try {
-032262:             const url = new URL(value, window.location.origin);
-032263:             const missionId = url.searchParams.get('mission_id');
-032264:             if (missionId) return missionId;
-032265:         } catch (error) {}
-032266: 
-032267:         const anyMatch = value.match(/mission_id=(\d+)/i);
-032268:         return anyMatch ? anyMatch[1] : '';
-032269:     }
-032270: 
-032271:     function getCurrentMissionIdForQueueRestart() {
-032272:         const helpLink =
-032273:             getActiveMissionHelpLink();
-032274: 
-032275:         const helpId =
-032276:             parseMissionIdFromHrefForQueueRestart(
-032277:                 helpLink
-032278:                     ? (
-032279:                         helpLink.href ||
-032280:                         helpLink.getAttribute(
-032281:                             'href'
-032282:                         )
-032283:                     )
-032284:                     : ''
-032285:             );
-032286: 
-032287:         if (helpId) return helpId;
-032288: 
-032289:         const missionInfo =
-032290:             getActiveVisibleMissionInfo();
-032291: 
-032292:         if (missionInfo) {
-032293:             const attrs = ['data-mission-id', 'data-id', 'mission_id', 'data-mission'];
-032294: 
-
-=== BLOCK 57: source lines 33129-33219 ===
+=== BLOCK 50: source lines 33129-33219 ===
 033129:                     );
 033130:                 }
 033131: 
@@ -8501,7 +7184,7 @@ MERGED CONTEXT BLOCKS: 69
 033218:             const key = `${cleanName.toLowerCase()}|${mappedName}|${required}`;
 033219: 
 
-=== BLOCK 58: source lines 33560-33650 ===
+=== BLOCK 51: source lines 33560-33650 ===
 033560: 
 033561:         if (!Number.isFinite(currentLockUntil) || currentLockUntil < until) {
 033562:             sessionStorage.setItem(MF_MAIN_MISSION_OPEN_LOCK_KEY, String(until));
@@ -8594,795 +7277,7 @@ MERGED CONTEXT BLOCKS: 69
 033649:                 `${reason || 'unknown'} | mission content did not become ready within 45 seconds`
 033650:             );
 
-=== BLOCK 59: source lines 33944-34034 ===
-033944:             mfTransportLastClickAt || 0,
-033945:             mfBruteLastClickAt || 0,
-033946:             mfLastTransportClickAt || 0
-033947:         );
-033948: 
-033949:         const modal = mfGetTransportOwnerModal();
-033950: 
-033951:         if (modal) {
-033952:             let visible = false;
-033953: 
-033954:             try {
-033955:                 visible = mfIsVisibleInOwnDocument(modal);
-033956:             } catch (error) {}
-033957: 
-033958:             if (visible) {
-033959:                 mfTransportMainStableAt = 0;
-033960: 
-033961:                 if (
-033962:                     mfGetExactVisibleApproachButtons(modal).length > 0
-033963:                 ) {
-033964:                     mfTransportOwnerApproachGoneAt = 0;
-033965:                     return false;
-033966:                 }
-033967: 
-033968:                 if (!mfTransportOwnerApproachGoneAt) {
-033969:                     mfTransportOwnerApproachGoneAt = now;
-033970: 
-033971:                     if (mfDebugEnabled) {
-033972:                         debugLog(
-033973:                             'TRANSPORT MODAL OWNER',
-033974:                             `${reason || 'check'} | Approach gone but grey shell still visible. Waiting.`
-033975:                         );
-033976:                     }
-033977:                     return false;
-033978:                 }
-033979: 
-033980:                 const emptyFor =
-033981:                     now - mfTransportOwnerApproachGoneAt;
-033982: 
-033983:                 if (emptyFor < MF_TRANSPORT_SHELL_WAIT_MS) {
-033984:                     return false;
-033985:                 }
-033986: 
-033987:                 if (
-033988:                     !mfTransportOwnerCloseAttemptedAt ||
-033989:                     now - mfTransportOwnerCloseAttemptedAt > 10000
-033990:                 ) {
-033991:                     const closeButton = modal.querySelector(
-033992:                         '.control-btn-container span.lightbox-close[title="Close"], span.lightbox-close[title="Close"], #lightbox_close_inside, button.close'
-033993:                     );
-033994: 
-033995:                     mfTransportOwnerCloseAttemptedAt = now;
-033996: 
-033997:                     if (closeButton) {
-033998:                         if (mfDebugEnabled) {
-033999:                             debugLog(
-034000:                                 'TRANSPORT MODAL OWNER',
-034001:                                 `${reason || 'check'} | Closing stale grey transport shell after ${emptyFor}ms.`
-034002:                             );
-034003:                         }
-034004: 
-034005:                         realClickForQueueRestart(closeButton);
-034006:                     }
-034007:                 }
-034008: 
-034009:                 return false;
-034010:             }
-034011:         }
-034012: 
-034013:         if (
-034014:             lastClickAt > 0 &&
-034015:             now - lastClickAt < MF_TRANSPORT_SHELL_WAIT_MS
-034016:         ) {
-034017:             return false;
-034018:         }
-034019: 
-034020:         if (!mfTransportMainStableAt) {
-034021:             mfTransportMainStableAt = now;
-034022: 
-034023:             if (mfDebugEnabled) {
-034024:                 debugLog(
-034025:                     'TRANSPORT MODAL OWNER',
-034026:                     `${reason || 'check'} | Shell gone. Starting main-screen settle timer.`
-034027:                 );
-034028:             }
-034029:             return false;
-034030:         }
-034031: 
-034032:         return now - mfTransportMainStableAt >=
-034033:             MF_TRANSPORT_MAIN_STABLE_MS;
-034034:     }
-
-=== BLOCK 60: source lines 34209-34299 ===
-034209:             return true;
-034210:         });
-034211: 
-034212:         const positive = validForScreen.find(item =>
-034213:             item.info.hasCapacityColumn &&
-034214:             Number.isFinite(item.info.capacity) &&
-034215:             item.info.capacity > 0
-034216:         );
-034217: 
-034218:         if (positive) {
-034219:             if (mfDebugEnabled) {
-034220:                 debugLog(
-034221:                     prisonerScreen ? 'POLICE TRANSPORT' : 'PATIENT TRANSPORT',
-034222:                     `Selected Approach with free capacity=${positive.info.capacity} | row="${positive.info.rowText || positive.rowText}"`
-034223:                 );
-034224:             }
-034225: 
-034226:             return positive.button;
-034227:         }
-034228: 
-034229:         const hasCapacityColumns = validForScreen.some(item => item.info.hasCapacityColumn);
-034230: 
-034231:         if (hasCapacityColumns) {
-034232:             if (mfDebugEnabled) {
-034233:                 debugLog(
-034234:                     prisonerScreen ? 'POLICE TRANSPORT' : 'PATIENT TRANSPORT',
-034235:                     `No valid destination with free capacity. Valid rows=${validForScreen.length}.`
-034236:                 );
-034237:             }
-034238: 
-034239:             return null;
-034240:         }
-034241: 
-034242:         // Older transport layouts without a free-capacity column.
-034243:         return validForScreen.length ? validForScreen[0].button : null;
-034244:     }
-034245: 
-034246:     function mfGetTransportModalScore(modal) {
-034247:         if (!modal) return -1;
-034248: 
-034249:         let score = 0;
-034250: 
-034251:         try {
-034252:             const style = modal.ownerDocument.defaultView.getComputedStyle(modal);
-034253:             const zIndex = parseInt(style.zIndex || '0', 10);
-034254:             if (Number.isFinite(zIndex)) score += zIndex * 1000;
-034255:         } catch (error) {}
-034256: 
-034257:         try {
-034258:             const siblings = Array.from(modal.ownerDocument.querySelectorAll('.vm--modal, .modal, .lightbox'));
-034259:             score += Math.max(0, siblings.indexOf(modal));
-034260:         } catch (error) {}
-034261: 
-034262:         return score;
-034263:     }
-034264: 
-034265:     function mfGetTransportActiveScopes(forceRefresh = false) {
-034266:         const now = Date.now();
-034267:         const cachedScopes = mfTransportScopeCache.scopes;
-034268:         const cacheStillConnected = cachedScopes.every(
-034269:             scope => scope?.isConnected !== false
-034270:         );
-034271: 
-034272:         if (
-034273:             !forceRefresh &&
-034274:             now < mfTransportScopeCache.expiresAt &&
-034275:             cacheStillConnected
-034276:         ) {
-034277:             return cachedScopes;
-034278:         }
-034279: 
-034280:         const scopes = buildTransportActiveScopes();
-034281: 
-034282:         mfTransportScopeCache = {
-034283:             expiresAt: now + 250,
-034284:             scopes
-034285:         };
-034286: 
-034287:         return scopes;
-034288:     }
-034289: 
-034290:     function buildTransportActiveScopes() {
-034291:         const modalCandidates = [];
-034292: 
-034293:         mfGetAccessibleDocumentsForTransport().forEach(doc => {
-034294:             const modals = Array.from(doc.querySelectorAll('.vm--modal, .modal, .lightbox'));
-034295: 
-034296:             modals.forEach(modal => {
-034297:                 if (!mfIsVisibleInOwnDocument(modal)) return;
-034298: 
-034299:                 const buttons = mfGetExactVisibleApproachButtons(modal);
-
-=== BLOCK 61: source lines 34326-34416 ===
-034326:             try {
-034327:                 const path = doc.location && doc.location.pathname || '';
-034328: 
-034329:                 if (
-034330:                     path.startsWith('/vehicles/') &&
-034331:                     mfGetExactVisibleApproachButtons(doc.body).length > 0
-034332:                 ) {
-034333:                     modalCandidates.push({
-034334:                         scope: doc.body,
-034335:                         score: -1
-034336:                     });
-034337:                 }
-034338:             } catch (error) {}
-034339:         });
-034340: 
-034341:         if (!modalCandidates.length) return [];
-034342: 
-034343:         modalCandidates.sort((a, b) => b.score - a.score);
-034344: 
-034345:         // The current topmost transport screen is the only owner.
-034346:         return [modalCandidates[0].scope];
-034347:     }
-034348: 
-034349:     function mfFindAnyVisibleApproachButtonDeep() {
-034350:         const scopes = mfGetTransportActiveScopes();
-034351: 
-034352:         for (const scope of scopes) {
-034353:             const button = mfChoosePreferredApproachButton(scope);
-034354: 
-034355:             if (button) return button;
-034356:         }
-034357: 
-034358:         return null;
-034359:     }
-034360: 
-034361: 
-034362: const MF_AUTO_PRISONER_CELL_HANDOFF_KEY =
-034363:     'mf_auto_prisoner_cell_handoff_v1';
-034364: const MF_AUTO_PRISONER_CELL_DESTINATION_WAIT_MS = 8000;
-034365: const MF_AUTO_PRISONER_CELL_CLICK_RETRY_MS = 6500;
-034366: const MF_AUTO_PRISONER_CELL_MAX_ATTEMPTS = 2;
-034367: const MF_AUTO_PRISONER_RELEASE_STATE_KEY =
-034368:     'mf_auto_prisoner_release_v1';
-034369: const MF_AUTO_PRISONER_RELEASE_CLICK_RETRY_MS = 6500;
-034370: const MF_AUTO_PRISONER_RELEASE_MAX_ATTEMPTS = 2;
-034371: const MF_AUTO_PRISONER_RELEASE_RESULT_WAIT_MS = 10000;
-034372: const MF_AUTO_PRISONER_RELEASE_DISMISS_WAIT_MS = 8000;
-034373: const MF_AUTO_PRISONER_RELEASE_DISMISS_CLOSE_WAIT_MS = 8000;
-034374: 
-034375: function getActivePrisonerCellSelectionContext() {
-034376:     const candidateDocuments =
-034377:         typeof mfGetAccessibleDocumentsForTransport === 'function'
-034378:             ? mfGetAccessibleDocumentsForTransport()
-034379:             : [document];
-034380: 
-034381:     for (const candidateDocument of candidateDocuments) {
-034382:         if (!candidateDocument || !candidateDocument.querySelectorAll) {
-034383:             continue;
-034384:         }
-034385: 
-034386:         const alerts = Array.from(
-034387:             candidateDocument.querySelectorAll('.alert.alert-info')
-034388:         );
-034389: 
-034390:         for (const alert of alerts) {
-034391:             try {
-034392:                 if (!mfIsVisibleInOwnDocument(alert)) continue;
-034393:             } catch (_error) {
-034394:                 continue;
-034395:             }
-034396: 
-034397:             const alertText = String(
-034398:                 alert.innerText || alert.textContent || ''
-034399:             )
-034400:                 .replace(/\s+/g, ' ')
-034401:                 .trim()
-034402:                 .toLowerCase();
-034403: 
-034404:             if (
-034405:                 !alertText.includes(
-034406:                     'the prisoners should be placed in a cell'
-034407:                 )
-034408:             ) {
-034409:                 continue;
-034410:             }
-034411: 
-034412:             const root =
-034413:                 alert.closest('#col_left') ||
-034414:                 alert.closest(
-034415:                     '.vm--modal, .modal, .lightbox, #lightbox_box'
-034416:                 ) ||
-
-=== BLOCK 62: source lines 35901-36221 ===
-035901: 
-035902:             if (mfDebugEnabled) {
-035903:                 debugLog('TRANSPORT REHOOK', `${reason}: hard main-screen open attempt started.`);
-035904:             }
-035905: 
-035906:             // If we are still on a vehicle URL after transport closes, do a real page load
-035907:             // back to the main screen. history.pushState only changes the URL and leaves the
-035908:             // vehicle DOM in place, which prevents mission-count/open from working.
-035909:             if (window.location.pathname.startsWith('/vehicles/')) {
-035910:                 if (mfDebugEnabled) {
-035911:                     debugLog('TRANSPORT REHOOK', `${reason}: on vehicle page after transport, loading main page for mission count.`);
-035912:                 }
-035913: 
-035914:                 sessionStorage.setItem('mf_post_transport_rehook_pending_v1', 'true');
-035915:                 localStorage.setItem('mf_post_transport_rehook_pending_v1', 'true');
-035916:                 const rehookUntil = Date.now() + 120000;
-035917:                 sessionStorage.setItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY, String(rehookUntil));
-035918:                 localStorage.setItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY, String(rehookUntil));
-035919: 
-035920:                 window.location.href = '/';
-035921:                 return false;
-035922:             }
-035923: 
-035924:             const started = Date.now();
-035925:             let filterClickedAt = 0;
-035926: 
-035927:             while (Date.now() - started < 120000) {
-035928:                 if (isManualAutoStopActive()) return false;
-035929: 
-035930:                 if (!mfTransportShellReadyForRehook(`hard-loop-${reason}`)) {
-035931:                     await wait(800);
-035932:                     continue;
-035933:                 }
-035934: 
-035935:                 if (hasVisibleApproachButtonForTransportRehook()) {
-035936:                     if (mfDebugEnabled) {
-035937:                         debugLog('TRANSPORT REHOOK', `${reason}: Approach visible again; pausing rehook.`);
-035938:                     }
-035939:                     return false;
-035940:                 }
-035941: 
-035942:                 if (isCurrentMissionWindowStillOpenForSafeOpen(`hard-rehook-${reason}`)) {
-035943:                     if (mfDebugEnabled) {
-035944:                         debugLog('TRANSPORT REHOOK', `${reason}: current mission window still open; retrying shortly.`);
-035945:                     }
-035946:                     await wait(1000);
-035947:                     continue;
-035948:                 }
-035949: 
-035950:                 // If a mission modal/page is already open again, just restart Auto Mode.
-035951:                 if (isMissionPage() && isMissionScreenVisibleForQueueRestart()) {
-035952:                     clearPostTransportRehookPending();
-035953: 
-035954:                     if (mfDebugEnabled) {
-035955:                         debugLog('TRANSPORT REHOOK', `${reason}: mission modal visible; restarting Auto Mode.`);
-035956:                     }
-035957: 
-035958:                     forceAutoModeBackOnForTransportRehook();
-035959: 
-035960:                     setTimeout(() => {
-035961:                         if (autoModeRunning && !autoModeLoopActive) runAutoModeLoop();
-035962:                     }, 1000);
-035963: 
-035964:                     return true;
-035965:                 }
-035966: 
-035967:                 if (hasVisibleQueueOpenModal(`hard-rehook-${reason}`)) {
-035968:                     await wait(800);
-035969:                     continue;
-035970:                 }
-035971: 
-035972:                 const queueCountState =
-035973:                     getQueueRestartCountState();
-035974: 
-035975:                 if (!queueCountState.reached) {
-035976:                     reportQueueRestartCountWait(
-035977:                         queueCountState,
-035978:                         `transport-rehook-${reason}`
-035979:                     );
-035980: 
-035981:                     await wait(1200);
-035982:                     continue;
-035983:                 }
-035984: 
-035985:                 if (
-035986:                     !filterClickedAt ||
-035987:                     Date.now() - filterClickedAt > 5000
-035988:                 ) {
-035989:                     clickUnattendedMissionFilterForQueueRestart();
-035990:                     filterClickedAt = Date.now();
-035991: 
-035992:                     if (mfDebugEnabled) {
-035993:                         debugLog(
-035994:                             'TRANSPORT REHOOK',
-035995:                             `${reason}: threshold reached ${queueCountState.count}/${queueCountState.threshold}; unattended filter ready.`
-035996:                         );
-035997:                     }
-035998:                 }
-035999: 
-036000:                 await wait(900);
-036001: 
-036002:                 // The counter can change while MissionChief rebuilds the
-036003:                 // filtered list, so verify it once more before Dispatch.
-036004:                 const confirmedQueueCountState =
-036005:                     getQueueRestartCountState();
-036006: 
-036007:                 if (!confirmedQueueCountState.reached) {
-036008:                     reportQueueRestartCountWait(
-036009:                         confirmedQueueCountState,
-036010:                         `transport-rehook-after-filter-${reason}`
-036011:                     );
-036012: 
-036013:                     await wait(1200);
-036014:                     continue;
-036015:                 }
-036016: 
-036017:                 let firstMissionButton = findFirstMissionButtonForQueueRestart();
-036018: 
-036019:                 if (!firstMissionButton) {
-036020:                     firstMissionButton = findAnyMainScreenMissionOpenButton();
-036021:                 }
-036022: 
-036023:                 if (firstMissionButton) {
-036024:                     const href = firstMissionButton.getAttribute('href') || firstMissionButton.href || '';
-036025: 
-036026:                     if (mfDebugEnabled) {
-036027:                         debugLog('TRANSPORT REHOOK', `${reason}: opening first mission via hard rehook: ${href || 'unknown href'}`);
-036028:                     }
-036029: 
-036030:                     try {
-036031:                         updateStatusBox('Transport complete. Opening first mission from main screen...');
-036032:                     } catch (error) {}
-036033: 
-036034:                     if (!acquireMainMissionOpenLock(`transport-rehook-${reason}`, 24000)) {
-036035:                         await wait(1000);
-036036:                         continue;
-036037:                     }
-036038: 
-036039:                     const targetMissionId =
-036040:                         parseMissionIdFromHrefForQueueRestart(href);
-036041: 
-036042:                     const previousMissionId =
-036043:                         getCurrentMissionIdForQueueRestart();
-036044: 
-036045:                     const modalCountBeforeClick =
-036046:                         getVisibleQueueOpenModals().length;
-036047: 
-036048:                     if (modalCountBeforeClick > 0) {
-036049:                         releaseMainMissionOpenLock(
-036050:                             `transport-rehook-${reason}-modal-already-open`
-036051:                         );
-036052:                         return false;
-036053:                     }
-036054: 
-036055:                     sessionStorage.removeItem(MF_QUEUE_WAIT_ACTIVE_FLAG);
-036056:                     sessionStorage.removeItem(MF_FINAL_QUEUE_DISPATCH_FLAG);
-036057:                     mfQueueRestartWaiting = false;
-036058: 
-036059:                     markMainMissionOpeningPending(
-036060:                         targetMissionId,
-036061:                         `transport-rehook-${reason}`,
-036062:                         45000
-036063:                     );
-036064: 
-036065:                     const clicked =
-036066:                         realClickForQueueRestart(firstMissionButton);
-036067: 
-036068:                     if (!clicked) {
-036069:                         clearMainMissionOpeningPending(
-036070:                             `transport-rehook-${reason}-click-failed`
-036071:                         );
-036072:                         return false;
-036073:                     }
-036074: 
-036075:                     const opened =
-036076:                         await waitForSpecificQueueMissionToOpen(
-036077:                             targetMissionId,
-036078:                             previousMissionId,
-036079:                             modalCountBeforeClick
-036080:                         );
-036081: 
-036082:                     if (opened || hasVisibleQueueOpenModal(
-036083:                         `transport-rehook-${reason}-after-click`
-036084:                     )) {
-036085:                         clearMainMissionOpeningPending(
-036086:                             `transport-rehook-${reason}-opened`
-036087:                         );
-036088:                         clearPostTransportRehookPending();
-036089: 
-036090:                         forceAutoModeBackOnForTransportRehook();
-036091: 
-036092:                         await resumeAutoAfterMainMissionOpen(
-036093:                             `transport-rehook-${reason}`
-036094:                         );
-036095: 
-036096:                         return true;
-036097:                     }
-036098: 
-036099:                     clearMainMissionOpeningPending(
-036100:                         `transport-rehook-${reason}-not-confirmed`
-036101:                     );
-036102: 
-036103:                     if (mfDebugEnabled) {
-036104:                         debugLog(
-036105:                             'TRANSPORT REHOOK',
-036106:                             `${reason}: mission open not confirmed and no loading modal exists.`
-036107:                         );
-036108:                     }
-036109: 
-036110:                     return false;
-036111:                 }
-036112: 
-036113:                 await wait(1000);
-036114:             }
-036115: 
-036116:             if (mfDebugEnabled) {
-036117:                 debugLog('TRANSPORT REHOOK', `${reason}: hard main-screen rehook timed out.`);
-036118:             }
-036119: 
-036120:             return false;
-036121:         } finally {
-036122:             releaseTransportRehookLock(`hard-rehook-${reason}-finally`);
-036123:         }
-036124:     }
-036125: 
-036126:     function wasTransportSequenceActive() {
-036127:         return mfTransportSequenceActive ||
-036128:             sessionStorage.getItem('mf_transport_sequence_active_v1') === 'true' ||
-036129:             sessionStorage.getItem('mf_brute_transport_sent_v1') === 'true' ||
-036130:             sessionStorage.getItem('mf_transport_sent_in_vehicle_modal_v1') === 'true';
-036131:     }
-036132: 
-036133:     async function openFirstMissionAfterTransportAutoClose(reason) {
-036134:         if (!MF_IS_TOP_WINDOW) return false;
-036135:         if (isManualAutoStopActive()) return false;
-036136:         if (!isTransportAutomationAllowed()) return false;
-036137: 
-036138:         if (isTransportRehookLockActive(`open-after-transport-${reason}`)) {
-036139:             return false;
-036140:         }
-036141: 
-036142:         if (mfTransportContinuationRunning || mfPostTransportOpening) {
-036143:             return false;
-036144:         }
-036145: 
-036146:         if (!isPostTransportRehookPending()) return false;
-036147:         if (hasVisibleApproachButtonForTransportRehook()) return false;
-036148:         if (!mfTransportShellReadyForRehook(reason)) return false;
-036149: 
-036150:         mfTransportContinuationRunning = true;
-036151:         mfPostTransportOpening = true;
-036152: 
-036153:         try {
-036154:             forceAutoModeBackOnForTransportRehook();
-036155: 
-036156:             if (mfDebugEnabled) {
-036157:                 debugLog(
-036158:                     'TRANSPORT REHOOK',
-036159:                     `${reason}: old transport shell gone; starting one rehook.`
-036160:                 );
-036161:             }
-036162: 
-036163:             updateStatusBox(
-036164:                 'Transport complete. Main screen stable; opening one mission...'
-036165:             );
-036166: 
-036167:             if (
-036168:                 isMissionPage() &&
-036169:                 isMissionScreenVisibleForQueueRestart()
-036170:             ) {
-036171:                 clearPostTransportRehookPending();
-036172: 
-036173:                 setTimeout(() => {
-036174:                     forceAutoModeBackOnForTransportRehook();
-036175:                     if (!autoModeLoopActive) runAutoModeLoop();
-036176:                 }, 1000);
-036177: 
-036178:                 return true;
-036179:             }
-036180: 
-036181:             return await hardOpenFirstMissionFromMainAfterTransport(reason);
-036182:         } finally {
-036183:             mfTransportContinuationRunning = false;
-036184:             mfPostTransportOpening = false;
-036185:         }
-036186:     }
-036187: 
-036188: 
-036189: 
-036190:     function startPostTransportRehookWatcher() {
-036191:         if (!MF_IS_TOP_WINDOW) return;
-036192:         if (mfPostTransportRehookTimer) return;
-036193: 
-036194:         mfPostTransportRehookTimer = setInterval(async () => {
-036195:             if (isManualAutoStopActive()) return;
-036196:             if (!isTransportAutomationAllowed()) return;
-036197:             if (!isPostTransportRehookPending()) return;
-036198:             if (mfPostTransportOpening || mfTransportContinuationRunning) return;
-036199:             if (isMainMissionOpeningPending('post-transport-watch')) return;
-036200:             if (hasVisibleApproachButtonForTransportRehook()) return;
-036201: 
-036202:             await openFirstMissionAfterTransportAutoClose(
-036203:                 'post-transport-watch'
-036204:             );
-036205:         }, 1200);
-036206:     }
-036207: 
-036208: 
-036209: 
-036210:     function closeVehicleTransportModalIfDone(reason) {
-036211:         return false;
-036212:     }
-036213: 
-036214: 
-036215:     async function clickExactApproachTransportButton(reason) {
-036216:         if (isManualAutoStopActive()) return false;
-036217:         if (!isTransportAutomationAllowed()) return false;
-036218:         if (mfGlobalTransportClicking) return false;
-036219:         if (mfTransportApproachClicking) return false;
-036220:         if (Date.now() - mfTransportLastClickAt < 4000) return false;
-036221: 
-
-=== BLOCK 63: source lines 36540-36630 ===
-036540:             if (mfDebugEnabled) {
-036541:                 debugLog(
-036542:                     'TRANSPORT APPROACH',
-036543:                     `chosenCapacity=${capacityInfo.hasCapacityColumn ? capacityInfo.capacity : 'n/a'} | row="${capacityInfo.rowText || rowText}"`
-036544:                 );
-036545:             }
-036546: 
-036547:             sessionStorage.setItem('mf_brute_transport_sent_v1', 'true');
-036548: 
-036549:             const clicked = mfBruteClickElement(button);
-036550: 
-036551:             await wait(4000);
-036552: 
-036553:             return clicked;
-036554:         } finally {
-036555:             mfBruteApproachClicking = false;
-036556:             mfTransportApproachClicking = false;
-036557:         }
-036558:     }
-036559: 
-036560: 
-036561:     function startBruteApproachTransportWatcher() {
-036562:         if (!MF_IS_TOP_WINDOW) return;
-036563:         if (mfBruteApproachWatcherTimer) return;
-036564: 
-036565:         mfBruteApproachWatcherTimer = setInterval(async () => {
-036566:             if (isManualAutoStopActive()) return;
-036567: 
-036568:             // Auto guard: this must not run when Auto Mode is off,
-036569:             // unless a valid post-transport rehook is pending from an Auto Mode run.
-036570:             if (!isTransportAutomationAllowed()) return;
-036571: 
-036572:             // Most Auto Mode ticks are normal missions, not transport screens.
-036573:             // A cheap preflight avoids full modal/body scans until a vehicle
-036574:             // transport surface or exact Approach button actually exists.
-036575:             if (!mfHasPotentialTransportUi()) return;
-036576: 
-036577:             const button = mfBruteFindFirstApproachButton();
-036578: 
-036579:             if (button) {
-036580:                 await mfBruteClickFirstApproach('global-brute-watch');
-036581:                 return;
-036582:             }
-036583: 
-036584:             // Dedicated post-transport watcher owns the rehook.
-036585:         }, 1000);
-036586:     }
-036587: 
-036588: 
-036589: 
-036590:     function findTransportSendButton() {
-036591:         // The new MissionChief transport screen is a vehicle modal with hospital rows.
-036592:         // The correct action is the first visible green "Approach" button in that table.
-036593:         const exactApproachButton = findExactFirstApproachTransportButton();
-036594: 
-036595:         if (exactApproachButton) {
-036596:             return exactApproachButton;
-036597:         }
-036598: 
-036599:         // Fallback for older transport screens.
-036600:         const candidates = Array.from(document.querySelectorAll('button, a, input[type="button"], input[type="submit"]'))
-036601:             .filter(element => isElementVisible(element))
-036602:             .filter(element => !isBadTransportButtonCandidate(element))
-036603:             .map(element => ({
-036604:                 element,
-036605:                 score: scoreTransportButtonCandidate(element)
-036606:             }))
-036607:             .filter(item => item.score > 0)
-036608:             .sort((a, b) => b.score - a.score);
-036609: 
-036610:         return candidates.length ? candidates[0].element : null;
-036611:     }
-036612: 
-036613: 
-036614:     async function waitForTransportScreenAfterDispatch(timeoutMs) {
-036615:         const started = Date.now();
-036616:         const limit = Number.isFinite(timeoutMs) ? timeoutMs : 5000;
-036617: 
-036618:         while (Date.now() - started < limit) {
-036619:             if (isTransportScreenBlockingQueueRestart()) {
-036620:                 return true;
-036621:             }
-036622: 
-036623:             await wait(250);
-036624:         }
-036625: 
-036626:         return false;
-036627:     }
-036628: 
-036629:     async function handleTransportRequestsAfterDispatch(reason) {
-036630:         if (!isTransportAutomationAllowed()) return 'none';
-
-=== BLOCK 64: source lines 36697-36787 ===
-036697:         if (mfDebugEnabled) {
-036698:             debugLog('AUTO TRANSPORT', `${reason}: completed. sent=${sentCount}`);
-036699:         }
-036700: 
-036701:         return sentCount > 0 ? 'sent' : 'none';
-036702:     }
-036703: 
-036704: 
-036705:     async function waitForQueueRestartAndOpenMission(reason) {
-036706:         // This function is entered only after the final mission's Dispatch
-036707:         // click succeeded. MissionChief often leaves old red update alerts
-036708:         // visible for a short time after Dispatch. Those stale alerts must
-036709:         // not cancel the final close / unattended-count / reopen workflow.
-036710:         if (mfQueueRestartWaiting) return false;
-036711: 
-036712:         mfQueueRestartWaiting = true;
-036713: 
-036714:         try {
-036715:             sessionStorage.setItem(
-036716:                 MF_QUEUE_WAIT_ACTIVE_FLAG,
-036717:                 'true'
-036718:             );
-036719:             sessionStorage.removeItem(
-036720:                 MF_QUEUE_OPENING_MISSION_FLAG
-036721:             );
-036722:             sessionStorage.removeItem(
-036723:                 MF_FINAL_QUEUE_DISPATCH_FLAG
-036724:             );
-036725:             sessionStorage.setItem('mf_auto_mode_running', 'true');
-036726:             autoModeRunning = true;
-036727: 
-036728:             updateStatusBox(`End of queue reached (${reason}). Closing mission and handing over to silent queue watcher...`);
-036729: 
-036730:             if (mfDebugEnabled) {
-036731:                 debugLog('SILENT QUEUE', `handover started. reason=${reason}`);
-036732:             }
-036733: 
-036734:             startSilentQueueWatcher();
-036735: 
-036736:             const closed = await closeMissionScreenForQueueRestart();
-036737: 
-036738:             if (mfDebugEnabled) {
-036739:                 debugLog('SILENT QUEUE', `Close clicked=${closed ? 'yes' : 'no'} | missionVisible=${isMissionScreenVisibleForQueueRestart() ? 'yes' : 'no'}`);
-036740:             }
-036741: 
-036742:             await wait(1000);
-036743: 
-036744:             updateStatusBox(
-036745:                 `Silent queue watcher active. Waiting for ${getConfiguredQueueRestartThreshold()} unattended missions.`
-036746:             );
-036747:             return false;
-036748:         } finally {
-036749:             // Do not clear queue-wait here. The silent watcher owns the next open.
-036750:             mfQueueRestartWaiting = false;
-036751:         }
-036752:     }
-036753: 
-036754: 
-036755:     function readAutoAdvanceAfterDispatchState() {
-036756:         let state = null;
-036757: 
-036758:         try {
-036759:             state = JSON.parse(
-036760:                 sessionStorage.getItem(
-036761:                     MF_AUTO_ADVANCE_AFTER_DISPATCH_KEY
-036762:                 ) ||
-036763:                 localStorage.getItem(
-036764:                     MF_AUTO_ADVANCE_AFTER_DISPATCH_KEY
-036765:                 ) ||
-036766:                 'null'
-036767:             );
-036768:         } catch (error) {
-036769:             state = null;
-036770:         }
-036771: 
-036772:         if (
-036773:             !state ||
-036774:             typeof state !== 'object'
-036775:         ) {
-036776:             return null;
-036777:         }
-036778: 
-036779:         const age =
-036780:             Date.now() -
-036781:             Number(
-036782:                 state.clickedAt ||
-036783:                 state.createdAt ||
-036784:                 0
-036785:             );
-036786: 
-036787:         if (
-
-=== BLOCK 65: source lines 37254-37352 ===
+=== BLOCK 52: source lines 37254-37352 ===
 037254:         } catch (error) {}
 037255:     }
 037256: 
@@ -9483,195 +7378,7 @@ MERGED CONTEXT BLOCKS: 69
 037351:                     amount
 037352:                 )
 
-=== BLOCK 66: source lines 37522-37614 ===
-037522:                     ? 8000
-037523:                     : 4000,
-037524:                 true
-037525:             );
-037526: 
-037527:         if (!dispatchButton) {
-037528:             return {
-037529:                 clicked: false,
-037530:                 shared: false
-037531:             };
-037532:         }
-037533: 
-037534:         try {
-037535:             dispatchButton.scrollIntoView({
-037536:                 block: 'center',
-037537:                 inline: 'center'
-037538:             });
-037539:         } catch (error) {}
-037540: 
-037541:         try {
-037542:             dispatchButton.click();
-037543: 
-037544:             return {
-037545:                 clicked: true,
-037546:                 shared: false
-037547:             };
-037548:         } catch (error) {
-037549:             return {
-037550:                 clicked: false,
-037551:                 shared: false
-037552:             };
-037553:         }
-037554:     }
-037555: 
-037556:     async function waitForAutoPostDispatchUpgradeRows(
-037557:         state
-037558:     ) {
-037559:         const elapsed =
-037560:             Date.now() -
-037561:             Number(
-037562:                 state.clickedAt ||
-037563:                 Date.now()
-037564:             );
-037565: 
-037566:         // MissionChief performs a small page refresh after Dispatch.
-037567:         if (elapsed < 1000) {
-037568:             await wait(
-037569:                 1000 - elapsed
-037570:             );
-037571:         }
-037572: 
-037573:         const startedAt =
-037574:             Date.now();
-037575: 
-037576:         const beforeRowsSignature =
-037577:             String(
-037578:                 state.beforeRowsSignature ||
-037579:                 ''
-037580:             );
-037581: 
-037582:         // When there were no update rows before Dispatch, any new stable
-037583:         // row can be treated as an upgrade immediately. When there were
-037584:         // existing rows, they must first disappear or change.
-037585:         let staleBaselineReleased =
-037586:             !beforeRowsSignature;
-037587: 
-037588:         let lastSignature = '';
-037589:         let stableSince = 0;
-037590:         let latestRows = [];
-037591: 
-037592:         while (
-037593:             Date.now() - startedAt <
-037594:             MF_AUTO_UPGRADE_WAIT_MS
-037595:         ) {
-037596:             if (
-037597:                 !autoModeRunning ||
-037598:                 isManualAutoStopActive()
-037599:             ) {
-037600:                 return {
-037601:                     stopped: true,
-037602:                     movedMission: false,
-037603:                     rows: []
-037604:                 };
-037605:             }
-037606: 
-037607:             const currentMissionId =
-037608:                 getCurrentMissionIdForQueueRestart();
-037609: 
-037610:             if (
-037611:                 state.missionId &&
-037612:                 currentMissionId &&
-037613:                 currentMissionId !==
-037614:                     state.missionId
-
-=== BLOCK 67: source lines 37784-37874 ===
-037784:         );
-037785: 
-037786:         return true;
-037787:     }
-037788: 
-037789:     async function resumeAutoPostDispatchUpgrade(
-037790:         source = 'retired'
-037791:     ) {
-037792:         // Retired in V10.6.54. This compatibility stub ensures an old or
-037793:         // delayed callback cannot restart the removed upgrade-wait workflow.
-037794:         clearAutoPostDispatchUpgradeState(
-037795:             `retired callback ignored: ${source}`
-037796:         );
-037797:         mfAutoUpgradeResumeActive = false;
-037798:         return false;
-037799:     }
-037800: 
-037801: 
-037802:     async function handleAfterFinalQueueDispatch() {
-037803:         // Give MissionChief a brief moment to accept Dispatch, but do not
-037804:         // re-read old red alerts here. All requirement checks happened
-037805:         // before Dispatch and the click has already succeeded.
-037806:         await wait(800);
-037807: 
-037808:         if (!autoModeRunning) return false;
-037809: 
-037810:         // If the transport screen appears, do not close the modal.
-037811:         // The independent Approach watcher sends it every 4 seconds, then auto-close continuation handles the next mission.
-037812:         if (mfIsApproachTransportVisible() || isTransportScreenBlockingQueueRestart()) {
-037813:             updateStatusBox('Final mission transport detected. Sending Approach sequence...');
-037814:             markTransportSequenceActive();
-037815: 
-037816:             const started = Date.now();
-037817: 
-037818:             while (autoModeRunning && Date.now() - started < 90000) {
-037819:                 if (mfIsApproachTransportVisible()) {
-037820:                     await mfBruteClickFirstApproach('after-final-dispatch');
-037821:                     await wait(300);
-037822:                     continue;
-037823:                 }
-037824: 
-037825:                 if (!hasVisibleApproachButtonForTransportRehook()) {
-037826:                     return false;
-037827:                 }
-037828: 
-037829:                 await wait(1000);
-037830:             }
-037831: 
-037832:             return false;
-037833:         }
-037834: 
-037835:         return await waitForQueueRestartAndOpenMission('after-final-dispatch');
-037836:     }
-037837: 
-037838: 
-037839:     function getCurrentAutoDispatchSelectionState() {
-037840:         const badge =
-037841:             document.getElementById(
-037842:                 'vehicle_amount'
-037843:             );
-037844: 
-037845:         const badgeCount =
-037846:             parseInt(
-037847:                 (
-037848:                     badge?.textContent ||
-037849:                     badge?.innerText ||
-037850:                     '0'
-037851:                 ).replace(/[^0-9]/g, ''),
-037852:                 10
-037853:             ) || 0;
-037854: 
-037855:         const checkedCount =
-037856:             document.querySelectorAll(
-037857:                 'input.vehicle_checkbox:checked'
-037858:             ).length;
-037859: 
-037860:         return {
-037861:             badgeCount,
-037862:             checkedCount,
-037863:             selectedCount:
-037864:                 Math.max(
-037865:                     badgeCount,
-037866:                     checkedCount
-037867:                 )
-037868:         };
-037869:     }
-037870: 
-037871:     async function retryAutoSelectionWhenZero() {
-037872:         const before =
-037873:             getCurrentAutoDispatchSelectionState();
-037874: 
-
-=== BLOCK 68: source lines 38621-38873 ===
+=== BLOCK 53: source lines 38621-38780 ===
 038621:             );
 038622: 
 038623:             setTimeout(
@@ -9832,101 +7539,8 @@ MERGED CONTEXT BLOCKS: 69
 038778:                     snapshot.signature;
 038779:                 stableSince =
 038780:                     Date.now();
-038781:             }
-038782: 
-038783:             const elapsed =
-038784:                 Date.now() - startedAt;
-038785: 
-038786:             const stableElapsed =
-038787:                 Date.now() - stableSince;
-038788: 
-038789:             const loadControlVisible =
-038790:                 isVehicleListLoadControlVisible();
-038791: 
-038792:             const loadingIndicatorVisible =
-038793:                 isVehicleListLoadingIndicatorVisible();
-038794: 
-038795:             if (
-038796:                 elapsed >= minimumWaitMs &&
-038797:                 stableElapsed >= stableForMs &&
-038798:                 !loadControlVisible &&
-038799:                 !loadingIndicatorVisible &&
-038800:                 (!requireNonZero || snapshot.boxes.length > 0)
-038801:             ) {
-038802:                 return {
-038803:                     ready: true,
-038804:                     count: snapshot.boxes.length,
-038805:                     signature: snapshot.signature,
-038806:                     elapsed
-038807:                 };
-038808:             }
-038809: 
-038810:             await wait(125);
-038811:         }
-038812: 
-038813:         const finalSnapshot =
-038814:             getVehicleCheckboxListSignature();
-038815: 
-038816:         return {
-038817:             ready: false,
-038818:             count: finalSnapshot.boxes.length,
-038819:             signature: finalSnapshot.signature,
-038820:             elapsed: Date.now() - startedAt,
-038821:             timedOut: true
-038822:         };
-038823:     }
-038824: 
-038825:     async function ensureVehicleListLoaded(options = {}) {
-038826:         const stableTimeoutMs = Number.isFinite(options.stableTimeoutMs)
-038827:             ? Math.max(1500, options.stableTimeoutMs)
-038828:             : 10000;
-038829: 
-038830:         const stableForMs = Number.isFinite(options.stableForMs)
-038831:             ? Math.max(400, options.stableForMs)
-038832:             : 1200;
-038833: 
-038834:         const loadTimeoutMs = Number.isFinite(options.loadTimeoutMs)
-038835:             ? Math.max(5000, options.loadTimeoutMs)
-038836:             : 60000;
-038837: 
-038838:         const pageProgressTimeoutMs = Number.isFinite(
-038839:             options.pageProgressTimeoutMs
-038840:         )
-038841:             ? Math.max(3000, options.pageProgressTimeoutMs)
-038842:             : 15000;
-038843: 
-038844:         const minimumSettleMs = Number.isFinite(options.minimumSettleMs)
-038845:             ? Math.max(0, options.minimumSettleMs)
-038846:             : 800;
-038847: 
-038848:         const requireNonZero = options.requireNonZero !== false;
-038849:         const missionKeyAtStart = getLocalMissionInstanceKey();
-038850:         const loadingStartedAt = Date.now();
-038851: 
-038852:         let loadClicked = false;
-038853:         let clickedPages = 0;
-038854:         let lastCompletedControlToken = '';
-038855:         let lastCompletedVehicleSignature = '';
-038856:         let loadFailureReason = '';
-038857: 
-038858:         while (Date.now() - loadingStartedAt < loadTimeoutMs) {
-038859:             const currentMissionKey = getLocalMissionInstanceKey();
-038860: 
-038861:             if (
-038862:                 missionKeyAtStart &&
-038863:                 currentMissionKey &&
-038864:                 currentMissionKey !== missionKeyAtStart
-038865:             ) {
-038866:                 loadFailureReason =
-038867:                     'mission changed while loading vehicles';
-038868:                 break;
-038869:             }
-038870: 
-038871:             const vehicleDisplayBar =
-038872:                 getVisibleVehicleListLoadControl();
-038873: 
 
-=== BLOCK 69: source lines 39089-39179 ===
+=== BLOCK 54: source lines 39089-39179 ===
 039089: 
 039090:             return {
 039091:                 ...stability,
@@ -10275,7 +7889,6 @@ Mission Ready Delay: 2
 mission ready delay: 2
 missionReady: 15
 MISSION_READY: 11
-1000: 44
 Search Advisor: 18
 Search Advisors: 6
 search_and_rescue: 5
@@ -10292,7 +7905,6 @@ getPersonnelAmbulanceQueue: 2
 parseVehicleAssignmentPage: 10
 PERSONNEL_TARGET_VEHICLE_TYPE_ID: 5
 PERSONNEL_TRAINING_REGISTRY: 74
-buildPersonnelTrainingRegistry: 0
 personnel.*register: 46
 vehicle_type_id: 26
 #vehicle_table: 10
