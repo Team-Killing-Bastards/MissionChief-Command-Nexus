@@ -37,10 +37,10 @@ jobs:
           set -euo pipefail
           git config user.name MartyBlyth
           git config user.email 32400596+Martyblyth@users.noreply.github.com
-          git add .diagnostics/bulk-trained-register-context.txt
+          git add .diagnostics/*.txt
           if git diff --cached --quiet; then
             echo 'Diagnostic context already current.'
             exit 0
           fi
-          git commit -m 'Capture bulk trained register context'
+          git commit -m 'Capture split bulk trained register context'
           git push origin HEAD:agent/bulk-trained-register-update
