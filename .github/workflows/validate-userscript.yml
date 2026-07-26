@@ -20,6 +20,7 @@ on:
       - 'scripts/check-saved-position-helper-copy.mjs'
       - 'scripts/check-bulk-trained-register-update.mjs'
       - 'scripts/check-hems-ambulance-eta-priority.mjs'
+      - 'scripts/check-police-search-advisor-register.mjs'
       - '.github/workflows/validate-userscript.yml'
   push:
     branches:
@@ -42,6 +43,7 @@ on:
       - 'scripts/check-saved-position-helper-copy.mjs'
       - 'scripts/check-bulk-trained-register-update.mjs'
       - 'scripts/check-hems-ambulance-eta-priority.mjs'
+      - 'scripts/check-police-search-advisor-register.mjs'
       - '.github/workflows/validate-userscript.yml'
   workflow_dispatch:
 
@@ -119,6 +121,9 @@ jobs:
 
       - name: Validate HEMS ambulance ETA priority
         run: node scripts/check-hems-ambulance-eta-priority.mjs
+
+      - name: Validate Police Search Advisor register coverage
+        run: node scripts/check-police-search-advisor-register.mjs
 
       - name: Require a version increase when code changes
         if: github.event_name == 'pull_request'
