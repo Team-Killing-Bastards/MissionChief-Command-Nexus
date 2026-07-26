@@ -1,0 +1,1 @@
+Publish and verify Command Nexus v1.0.40 from clean commit 14369481ec4e71a4d621f87dfa22de984726af89.
