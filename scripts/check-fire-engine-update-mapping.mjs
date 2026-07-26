@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+// Permanent contract for the Fire Engine Update route and the requested Auto Mode copy cleanup.
 import { readFile } from 'node:fs/promises';
 
 const source = await readFile('src/missionchief-command-nexus.user.js', 'utf8');
