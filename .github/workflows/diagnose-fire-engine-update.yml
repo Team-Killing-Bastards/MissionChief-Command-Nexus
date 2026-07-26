@@ -1,0 +1,50 @@
+name: Diagnose Fire Engine update route
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'diagnostic/fire-engine-update-route'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out diagnostic branch
+        uses: actions/checkout@v6
+        with:
+          ref: diagnostic/fire-engine-update-route
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Extract current update mapping context
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .diagnostics/collect-fire-engine-update.py
+          rm -f .diagnostics/collect-fire-engine-update.py
+
+      - name: Commit diagnostic context
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name MartyBlyth
+          git config user.email 32400596+Martyblyth@users.noreply.github.com
+          git add -A
+          if git diff --cached --quiet; then
+            echo 'Diagnostic context already current.'
+            exit 0
+          fi
+          git commit -m 'Capture Fire Engine update route context'
+          git push origin HEAD:diagnostic/fire-engine-update-route
