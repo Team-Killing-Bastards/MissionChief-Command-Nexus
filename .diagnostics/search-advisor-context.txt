@@ -409,7 +409,7 @@ SOURCE LINES: 39886
 000849:         "Marine EOD Equipment Van": { code: "MEODV", icon: "💣🚐" },
 000850:         "Cell Van": { code: "CVAN", icon: "🚔🚐" }
 
-=== BLOCK 6: source lines 9848-9952 ===
+=== BLOCK 6: source lines 9848-10008 ===
 009848:     const MF_STRICT_TRAINING_SOURCE_PREFIX =
 009849:         'mission-finder-live-strict-';
 009850: 
@@ -515,6 +515,62 @@ SOURCE LINES: 39886
 009950:     const MF_AUTO_VEHICLE_LIST_MIN_SETTLE_MS = 1000;
 009951:     const MF_AUTO_VEHICLE_LIST_LOAD_TIMEOUT_MS = 20000;
 009952: 
+009953:     const mfLiveTrainingVerifyCache = new Map();
+009954:     let mfPersonnelRegistryUpdatedHandler = null;
+009955: 
+009956:     function installPersonnelRegistryUpdateHandler() {
+009957:         if (mfPersonnelRegistryUpdatedHandler) return;
+009958: 
+009959:         mfPersonnelRegistryUpdatedHandler = () => {
+009960:             mfLiveTrainingVerifyCache.clear();
+009961:         };
+009962: 
+009963:         window.addEventListener(
+009964:             'mc-personnel-training-registry-updated',
+009965:             mfPersonnelRegistryUpdatedHandler
+009966:         );
+009967:     }
+009968: 
+009969:     try {
+009970:         installPersonnelRegistryUpdateHandler();
+009971:     } catch (_error) {
+009972:         mfPersonnelRegistryUpdatedHandler = null;
+009973:     }
+009974: 
+009975:     const MF_TRAINED_PERSONNEL_ROW_NAME =
+009976:         'Assigned Trained Police Vehicles';
+009977: 
+009978:     const MF_TRAINED_PERSONNEL_PATTERNS =
+009979:         Object.freeze([
+009980:             {
+009981:                 code:
+009982:                     'level_1_public_order',
+009983:                 label:
+009984:                     'Level 1 Public Order Officer',
+009985:                 patterns: [
+009986:                     /(\d+)\s*(?:x\s*)?Level\s*1\s+Public\s+Order\s+Officer(?:s)?/gi,
+009987:                     /(\d+)\s*(?:x\s*)?Public\s+Order\s+Level\s*1\s+Officer(?:s)?/gi,
+009988:                     /Level\s*1\s+Public\s+Order\s+Officer(?:s)?\s*(?:x\s*)?(\d+)/gi,
+009989:                     /Public\s+Order\s+Level\s*1\s+Officer(?:s)?\s*(?:x\s*)?(\d+)/gi
+009990:                 ]
+009991:             },
+009992:             {
+009993:                 code:
+009994:                     'level_2_public_order',
+009995:                 label:
+009996:                     'Level 2 Public Order Officer',
+009997:                 patterns: [
+009998:                     /(\d+)\s*(?:x\s*)?Level\s*2\s+Public\s+Order\s+Officer(?:s)?/gi,
+009999:                     /(\d+)\s*(?:x\s*)?Public\s+Order\s+Level\s*2\s+Officer(?:s)?/gi,
+010000:                     /Level\s*2\s+Public\s+Order\s+Officer(?:s)?\s*(?:x\s*)?(\d+)/gi,
+010001:                     /Public\s+Order\s+Level\s*2\s+Officer(?:s)?\s*(?:x\s*)?(\d+)/gi
+010002:                 ]
+010003:             },
+010004:             {
+010005:                 code:
+010006:                     'police_sergeant',
+010007:                 label:
+010008:                     'Police Sergeant',
 
 === BLOCK 7: source lines 10709-10776 ===
 010709:         "Required RRV": "RRV",
@@ -808,7 +864,70 @@ SOURCE LINES: 39886
 020662:             personnelPerVehicle:
 020663:                 definition.personnelPerVehicle,
 
-=== BLOCK 10: source lines 21993-22260 ===
+=== BLOCK 10: source lines 21868-21928 ===
+021868:             }
+021869:         ]);
+021870:     }
+021871: 
+021872:     function getSupportedTrainedPersonnelRequirementsFromText(
+021873:         text
+021874:     ) {
+021875:         const input =
+021876:             String(
+021877:                 text ||
+021878:                 ''
+021879:             )
+021880:                 .replace(
+021881:                     /\s+/g,
+021882:                     ' '
+021883:                 )
+021884:                 .trim();
+021885: 
+021886:         if (
+021887:             !input ||
+021888:             !/Missing\s+Personnel:/i.test(
+021889:                 input
+021890:             )
+021891:         ) {
+021892:             return [];
+021893:         }
+021894: 
+021895:         const requirements =
+021896:             new Map();
+021897: 
+021898:         MF_TRAINED_PERSONNEL_PATTERNS
+021899:             .forEach(definition => {
+021900:                 let maximumRequired = 0;
+021901: 
+021902:                 definition.patterns
+021903:                     .forEach(pattern => {
+021904:                         pattern.lastIndex = 0;
+021905: 
+021906:                         let match;
+021907: 
+021908:                         while (
+021909:                             (
+021910:                                 match =
+021911:                                     pattern.exec(
+021912:                                         input
+021913:                                     )
+021914:                             )
+021915:                         ) {
+021916:                             const required =
+021917:                                 Math.max(
+021918:                                     0,
+021919:                                     parseInt(
+021920:                                         match[1],
+021921:                                         10
+021922:                                     ) || 0
+021923:                                 );
+021924: 
+021925:                             maximumRequired =
+021926:                                 Math.max(
+021927:                                     maximumRequired,
+021928:                                     required
+
+=== BLOCK 11: source lines 21993-22277 ===
 021993: 
 021994:         const armedResponseRequired =
 021995:             findRequired('armed_response_personnel');
@@ -1077,8 +1196,25 @@ SOURCE LINES: 39886
 022258:     ) {
 022259:         if (!registryEntry) return false;
 022260: 
+022261:         const vehicleTypeId =
+022262:             String(registryEntry.vehicleTypeId || '');
+022263: 
+022264:         // Exact MissionChief vehicle IDs are authoritative here. Older shared
+022265:         // registry records may pre-date vehicle-type capture, so a missing type
+022266:         // must not weaken a positive specialist-training signal.
+022267:         return !!(
+022268:             (!vehicleTypeId || vehicleTypeId === '8') &&
+022269:             getProtectedOrdinaryIrvTrainingCount(
+022270:                 registryEntry
+022271:             ) > 0
+022272:         );
+022273:     }
+022274: 
+022275:     function isVerifiedOrdinaryPoliceIrvEntry(
+022276:         registryEntry
+022277:     ) {
 
-=== BLOCK 11: source lines 22421-22481 ===
+=== BLOCK 12: source lines 22421-22481 ===
 022421:     function getTrainingRequirementRequiredCodes(
 022422:         requirement
 022423:     ) {
@@ -1141,7 +1277,7 @@ SOURCE LINES: 39886
 022480:         if (direct > 0) {
 022481:             return direct;
 
-=== BLOCK 12: source lines 22648-22710 ===
+=== BLOCK 13: source lines 22648-22710 ===
 022648:             ) {
 022649:                 return typeId;
 022650:             }
@@ -1206,7 +1342,7 @@ SOURCE LINES: 39886
 022709:                 : {};
 022710: 
 
-=== BLOCK 13: source lines 22812-22925 ===
+=== BLOCK 14: source lines 22812-22925 ===
 022812:         const vehicleTypeId =
 022813:             getTrainingRequirementVehicleTypeId(
 022814:                 requirement,
@@ -1322,7 +1458,12 @@ SOURCE LINES: 39886
 022924:         const profileSet =
 022925:             new Set(
 
-=== BLOCK 14: source lines 23256-23316 ===
+=== BLOCK 15: source lines 23251-23316 ===
+023251:             entry: directEntry,
+023252:             matchMode: 'exact-vehicle-id'
+023253:         };
+023254:     }
+023255: 
 023256: 
 023257:     function parseVehicleIdFromAssignmentLink(value) {
 023258:         const match = String(value || '')
@@ -1385,7 +1526,7 @@ SOURCE LINES: 39886
 023315:                         'a[href*="/zuweisungDo/"], button, input[type="submit"], input[type="button"]'
 023316:                     )
 
-=== BLOCK 15: source lines 23415-23536 ===
+=== BLOCK 16: source lines 23415-23536 ===
 023415: 
 023416:             if (/\bPolice\s+Sergeant\b/i.test(rowText)) {
 023417:                 rowCodes.add('police_sergeant');
@@ -1509,7 +1650,7 @@ SOURCE LINES: 39886
 023535:                 [String(currentVehicleId || '')]:
 023536:                     Number(
 
-=== BLOCK 16: source lines 23929-23990 ===
+=== BLOCK 17: source lines 23929-23990 ===
 023929:                             existing.vehicleName ||
 023930:                             getVehicleDebugName(checkbox),
 023931:                         vehicleTypeId:
@@ -1573,7 +1714,7 @@ SOURCE LINES: 39886
 023989:         }
 023990: 
 
-=== BLOCK 17: source lines 25028-25094 ===
+=== BLOCK 18: source lines 25028-25094 ===
 025028:             };
 025029:         });
 025030:     }
@@ -1642,7 +1783,7 @@ SOURCE LINES: 39886
 025093:                     unitName:
 025094:                         conversion.unitName,
 
-=== BLOCK 18: source lines 30540-30601 ===
+=== BLOCK 19: source lines 30540-30601 ===
 030540: 
 030541:                 if (
 030542:                     !Number.isFinite(amount) ||
@@ -1706,7 +1847,7 @@ SOURCE LINES: 39886
 030600:                 trainedPersonnelRequirements,
 030601:                 normalisePublicOrderTrainedRequirements([
 
-=== BLOCK 19: source lines 31802-31862 ===
+=== BLOCK 20: source lines 31802-31862 ===
 031802:     function handleMissionUpdateUnits(showAlerts, suppliedRows = null, options = {}) {
 031803:         if (!isCurrentMissionExecutionOwner('Mission Update')) {
 031804:             return false;
@@ -1768,6 +1909,390 @@ SOURCE LINES: 39886
 031860:             ) {
 031861:                 if (
 031862:                     mfDebugEnabled
+
+=== FULL CONSTANTS ===
+
+=== CONSTANT crossReference: source lines 10596-10868 ===
+    const crossReference = {
+        /*************************************************
+         * FIRE
+         *************************************************/
+        "Pumps": "Fire Engine R/PUMP x 1",
+        "Pump": "Fire Engine R/PUMP x 1",
+        "Fire engine": "Fire Engine R/PUMP x 1",
+        "Fire engines": "Fire Engine R/PUMP x 1",
+        "Fire Engine": "Fire Engine R/PUMP x 1",
+        "Fire Engines": "Fire Engine R/PUMP x 1",
+        "Aerial Appliance": "CARP",
+        "Aerial Appliances": "CARP",
+        "Aerial Appliance Truck": "CARP",
+        "Aerial Appliance Trucks": "CARP",
+        "Fire, rescue or aerial appliance": "Rescue Pump",
+        "Road Rail Unit": "Road Rail Unit",
+        "Road Rail Units": "Road Rail Unit",
+        "Firefighter": "Rescue Pump",
+        "Firefighters": "Rescue Pump",
+        "Required Firefighter": "Rescue Pump",
+        "Required Firefighters": "Rescue Pump",
+        "Car Recovery": "Flatbed Recovery Vehicle",
+        "Required Car Recovery": "Flatbed Recovery Vehicle",
+        "ICCU or Ambulance Control Unit": "ICCU/ACU",
+        "ICCU or Ambulance Control Units": "ICCU/ACU",
+        "ICCUs or Ambulance Control Units": "ICCU/ACU",
+        "Fire Officer": "Fire Officer",
+        "Fire Officers": "Fire Officer",
+        "Rescue Support Unit": "Fire Engine R/PUMP x 1",
+        "Rescue Support Units": "Fire Engine R/PUMP x 1",
+        "Rescue Support Vehicle": "Fire Engine R/PUMP x 1",
+        "Rescue Support Vehicles": "Fire Engine R/PUMP x 1",
+        "Rescue Support Unit or Rescue Pump": "Fire Engine R/PUMP x 1",
+        "Rescue Support Units or Rescue Pumps": "Fire Engine R/PUMP x 1",
+        "Fire Engines or Rescue Support Vehicles": "Fire Engine R/PUMP x 1",
+        "Fire Engines, Rescue Support Vehicles or Aerial Appliance Trucks": "Fire Engine R/PUMP x 1",
+        "Foam Unit": "RP CAFS",
+        "Foam Units": "RP CAFS",
+        "Water Carrier": "Water Carrier",
+        "Water Carriers": "Water Carrier",
+        "Welfare Vehicles x1": "Welfare Vehicle",
+
+        /*************************************************
+         * POLICE
+         *************************************************/
+        "Police Car": "Police Car",
+        "Police Cars": "Police Car",
+        "Police car": "Police Car",
+        "Police cars": "Police Car",
+        "Police Officer": "Police Car",
+        "Police Officers": "Police Car",
+        "Traffic Car": "Police ATC",
+        "Traffic Cars": "Police ATC",
+        "Police Cars or Armed Response Vehicles (ARVs)": "Police ATC",
+        "Armed Response Personnel (In Armed Vehicles)": "Police ATC",
+        "Dog Support Unit (DSU)": "Police DSU",
+        "Dog Support Units (DSU)": "Police DSU",
+        "Dog Support Units (DSUs)": "Police DSU",
+        "Mounted Unit": "Mounted Unit",
+        "Mounted Units": "Mounted Unit",
+        "Police Inspector": "Police Inspector",
+        "Police Sergeant": "Police Sergeant",
+        "Cell Van": "Cell Van",
+        "Police Helicopter": "Police Helicopter",
+        "Police Helicopters": "Police Helicopter",
+        "Police Helicopter or Drone": "Police Helicopter",
+        "Police Helicopter or Drones": "Police Helicopter",
+        "Police Helicopters or Drone": "Police Helicopter",
+        "Police Helicopters or Drones": "Police Helicopter",
+        "Required Police Helicopter or Drone": "Police Helicopter",
+        "Required Police Helicopter or Drones": "Police Helicopter",
+        "Required Police Helicopters or Drone": "Police Helicopter",
+        "Required Police Helicopters or Drones": "Police Helicopter",
+        "Police Drone": "Police Helicopter",
+        "Police Drones": "Police Helicopter",
+        "Policehelicopter": "Police Helicopter",
+        "Policehelicopters": "Police Helicopter",
+        "modules.missionHelper.vehicles.captions.railway_police": "railway police",
+        "modules.missionHelper.prerequisites.railway_police": "EIU",
+        "modules.missionHelper.prerequisites.railway_police_command": "EIU",
+
+        /*************************************************
+         * AMBULANCE
+         *************************************************/
+        "Ambulance": "Ambulance",
+        "Ambulances": "Ambulance",
+        "Ambulance Officer": "Ambulance Officer",
+        "Ambulance Officers": "Ambulance Officer",
+        "Required Ambulance Officer": "Ambulance Officer",
+        "Required Ambulance Officers": "Ambulance Officer",
+        "Primary Response Vehicle": "PRV",
+        "Primary Response Vehicles": "PRV",
+        "PRVs": "PRV",
+        "Secondary Response Vehicle": "SRV",
+        "Secondary Response Vehicles": "SRV",
+        "SRVs": "SRV",
+        "Operational Team Leader": "OTL",
+        "Operational Team Leaders": "OTL",
+        "Mass Casualty Equipment": "Mass Casualty Equipment",
+        "Mass Casualty Equipment Unit": "Mass Casualty Equipment",
+        "Mass Casualty Equipment Units": "Mass Casualty Equipment",
+        "Critical Care": "Critical Care",
+        "Critical Care Team": "Critical Care",
+        "Critical Care Teams": "Critical Care",
+        "Required Critical Care": "Critical Care",
+        "Required Critical Care Team": "Critical Care",
+        "Required Critical Care Teams": "Critical Care",
+        "ATV Carrier": "ATV Carrier",
+        "ATV Carriers": "ATV Carrier",
+        "ATC Carrier": "ATV Carrier",
+        "ATC Carriers": "ATV Carrier",
+        "RRV": "RRV",
+        "RRVs": "RRV",
+        "Required RRV": "RRV",
+        "Required RRVs": "RRV",
+        "Specialist Paramedic RRV": "RRV",
+        "Specialist Paramedic RRVs": "RRV",
+        "Required Specialist Paramedic RRV": "RRV",
+        "Required Specialist Paramedic RRVs": "RRV",
+        "RRV or Specialist Paramedic RRV": "RRV",
+        "RRVs or Specialist Paramedic RRVs": "RRV",
+        "Required RRV or Specialist Paramedic RRV": "RRV",
+        "Required RRVs or Specialist Paramedic RRVs": "RRV",
+        "Community Midwife": "Community Midwife",
+        "Community Midwifes": "Community Midwife",
+
+        /*************************************************
+         * COASTGUARD / LIFEBOAT
+         *************************************************/
+        "CRV": "CRV",
+        "CRVs": "CRV",
+        "Inland Rescue Boat (Trailer)": "Inland Rescue Boat (Trailer)",
+        "Boat Trailer or Inland Rescue Boat": "Boat Trailer",
+        "Seagoing Vessel": "ALB",
+        "Seagoing Vessels": "ALB",
+        "Coastguard Rescue Helicopter": "CG Rescue Helicopter (Large)",
+        "Coastguard Rescue Helicopters": "CG Rescue Helicopter (Large)",
+        "Coastguard Rescue Helicopter (20%)": "CG Rescue Helicopter (Large)",
+        "ILBs or ALBs": "ALB",
+        "ALBs": "ALB",
+        "ALB": "ALB",
+        "ILBs": "ILB",
+        "ILB": "ILB",
+        "Control Van": "Control Van",
+        "Control Vans": "Control Van",
+        "SAR Commander": "Control Van",
+        "SAR Commanders": "Control Van",
+        "Required SAR Commander": "Control Van",
+        "Required SAR Commanders": "Control Van",
+        "Search Advisor": "Control Van",
+        "Search Advisors": "Control Van",
+        "HEMS": "Air Ambulance",
+        "HEMS Helicopter": "Air Ambulance",
+        "HEMS Helicopters": "Air Ambulance",
+        "Operational Support Van": "Operational Support Van",
+        "Operational Support Vans": "Operational Support Van",
+        "Operational Support or SAR Vehicle": "Operational Support Van",
+        "Operational Support or SAR Vehicles": "Operational Support Van",
+        "Operational Support or SAR Vehicle x1": "Operational Support Van",
+        "Operational Support Van or SAR Vehicle": "Operational Support Van",
+        "Operational Support Vans or SAR Vehicles": "Operational Support Van",
+        "Operational Support Vehicle or SAR Vehicle": "Operational Support Van",
+        "Operational Support Vehicles or SAR Vehicles": "Operational Support Van",
+        "Operational Support or Personal SAR Vehicle": "Operational Support Van",
+        "Operational Support or Personal SAR Vehicles": "Operational Support Van",
+        "Required Operational Support or SAR Vehicle": "Operational Support Van",
+        "Required Operational Support or SAR Vehicles": "Operational Support Van",
+        "Operational Support Van, Trailer or Personal SAR Vehicle": "Operational Support Van",
+        "Operational Support Vans, Trailers or Personal SAR Vehicles": "Operational Support Van",
+        "Operational Support Van Trailer or Personal SAR Vehicle": "Operational Support Van",
+        "Operational Support Vans Trailers or Personal SAR Vehicles": "Operational Support Van",
+        "Operational Support Van or Personal SAR Vehicle": "Operational Support Van",
+        "Operational Support Vans or Personal SAR Vehicles": "Operational Support Van",
+        "OSV": "Operational Support Van",
+        "OSVs": "Operational Support Van",
+        "Hovercraft (trailer)": "Hovercraft (trailer)",
+        "Coastguard Mud Rescue Unit": "Coastguard Mud Rescue Unit",
+        "Coastguard Mud Rescue Units": "Coastguard Mud Rescue Unit",
+        "Mud Decontamination Unit": "Mud Decontamination Unit",
+        "Mud Decontamination Units": "Mud Decontamination Unit",
+        "Coastguard Commander": "CG Commander",
+        "Flood Rescue Units":"Flood Rescue",
+
+        /*************************************************
+         * AIRFIELD OPS
+         *************************************************/
+        "Airfield Operations Vehicle": "Airfield Operations Vehicle",
+        "Airfield Operations Vehicles": "Airfield Operations Vehicle",
+        "Aerial Appliance Trucks or Rescue Stairs": "Rescue Stairs",
+        "Fire Engines or RIVs": "RIV",
+        "RIV": "RIV",
+        "RIVs": "RIV",
+        "Rapid Intervention Vehicle": "RIV",
+        "Rapid Intervention Vehicles": "RIV",
+        "Major Foam Tender": "Major Foam Tender",
+        "Major Foam Tenders": "Major Foam Tender",
+        "RIVs or Major Foam Tenders": "RIV",
+        "RIV or Major Foam Tender": "RIV",
+        "Required RIV or Major Foam Tender": "RIV",
+        "Required RIVs or Major Foam Tenders": "RIV",
+        "Fire Engines, RIVs or Major Foam Tenders": "Major Foam Tender",
+        "Fire Engines or Major Foam Tenders": "Major Foam Tender",
+        "Airfield Operations Supervisor": "Airfield Operations Supervisors",
+        "Airfield Operations Supervisors": "Airfield Operations Supervisors",
+        "Airfield Firefighting Command Vehicle": "Airfield FF Command Vehicle",
+        "ICCU or Ambulance Control Units or Airfield Firefighting Command Vehicles": "Airfield FF Command Vehicle",
+        "Fire Officers or Airfield Firefighting Command Vehicles": "Fire Officer",
+
+        /*************************************************
+         * SEARCH & RESCUE / FLOOD / RECOVERY / BOMB
+         *************************************************/
+        "Flood Rescue Unit": "Flood Rescue Unit (Trailer)",
+        "4x4 Vehicle": "4x4 Units",
+        "4x4 Vehicles": "4x4 Units",
+        "Mountain Rescue 4x4 or SAR 4x4": "4x4 Units",
+        "Mountain Rescue 4x4s or SAR 4x4s": "4x4 Units",
+
+        // Special Search Technician vehicle selector.
+        // Matching is handled by the dedicated displayed-name-prefix rule.
+        "SARTEC": "SARTEC",
+
+        "modules.missionHelper.prerequisites.tow_trucks_large": "Flatbed Recovery Vehicle",
+        "modules.missionHelper.prerequisites.tow_trucks": "Flatbed Recovery Vehicle",
+        "1 car to tow": "Flatbed Recovery Vehicle",
+        "Cars to tow": "Flatbed Recovery Vehicle",
+        "Car to tow": "Flatbed Recovery Vehicle",
+        "Maximum amount of cars to tow": "Flatbed Recovery Vehicle",
+        "Minimum amount of cars to tow": "Flatbed Recovery Vehicle",
+        "Tow Trucks Large": "Flatbed Recovery Vehicle",
+        "Flatbed Recovery Vehicle": "Flatbed Recovery Vehicle",
+        "Flatbed Recovery Vehicles": "Flatbed Recovery Vehicle",
+        "modules.missionHelper.vehicles.captions.bomb_disposal_crew": "Bomb Disposal crew x1",
+        "Support Units": "Support Unit",
+        "Breathing Apparatus Support Unit": "OSU",
+        "Breathing Apparatus Support Units": "OSU",
+        "Breathing Apparatus Support Vehicle": "OSU",
+        "Breathing Apparatus Support Vehicles": "OSU",
+        "BASU": "OSU",
+        "BASUs": "OSU",
+        "Welfare": "OSU",
+        "Welfare Unit": "OSU",
+        "Welfare Units": "OSU",
+        "Welfare Vehicle": "OSU",
+        "Welfare Vehicles": "OSU",
+        "HazMat": "OSU",
+        "Hazmat": "OSU",
+        "HazMat Unit": "OSU",
+        "HazMat Units": "OSU",
+        "Hazmat Unit": "OSU",
+        "Hazmat Units": "OSU",
+        "HazMat Unit or CBRN Vehicle": "OSU",
+        "HazMat Units or CBRN Vehicles": "OSU",
+        "Hazmat Unit or CBRN Vehicle": "OSU",
+        "Hazmat Units or CBRN Vehicles": "OSU",
+        "CBRN Vehicle": "OSU",
+        "CBRN Vehicles": "OSU",
+        "Operational Support Unit": "OSU",
+        "Operational Support Units": "OSU",
+        "Fire Operational Support Unit": "OSU",
+        "Fire Operational Support Units": "OSU",
+        "Breathing Apparatus Support Unit x1": "OSU",
+        "Breathing Apparatus Support Units x1": "OSU",
+        "BASU x1": "OSU",
+        "BASUs x1": "OSU",
+        "Welfare Vehicle x1": "OSU",
+        "Welfare Vehicles x1": "OSU",
+        "HazMat Unit or CBRN Vehicle x1": "OSU",
+        "HazMat Units or CBRN Vehicles x1": "OSU",
+        "Operational Support Unit x1": "OSU",
+        "Operational Support Units x1": "OSU",
+    };
+
+=== CONSTANT MF_TRAINED_PERSONNEL_PATTERNS: source lines 9978-10056 ===
+    const MF_TRAINED_PERSONNEL_PATTERNS =
+        Object.freeze([
+            {
+                code:
+                    'level_1_public_order',
+                label:
+                    'Level 1 Public Order Officer',
+                patterns: [
+                    /(\d+)\s*(?:x\s*)?Level\s*1\s+Public\s+Order\s+Officer(?:s)?/gi,
+                    /(\d+)\s*(?:x\s*)?Public\s+Order\s+Level\s*1\s+Officer(?:s)?/gi,
+                    /Level\s*1\s+Public\s+Order\s+Officer(?:s)?\s*(?:x\s*)?(\d+)/gi,
+                    /Public\s+Order\s+Level\s*1\s+Officer(?:s)?\s*(?:x\s*)?(\d+)/gi
+                ]
+            },
+            {
+                code:
+                    'level_2_public_order',
+                label:
+                    'Level 2 Public Order Officer',
+                patterns: [
+                    /(\d+)\s*(?:x\s*)?Level\s*2\s+Public\s+Order\s+Officer(?:s)?/gi,
+                    /(\d+)\s*(?:x\s*)?Public\s+Order\s+Level\s*2\s+Officer(?:s)?/gi,
+                    /Level\s*2\s+Public\s+Order\s+Officer(?:s)?\s*(?:x\s*)?(\d+)/gi,
+                    /Public\s+Order\s+Level\s*2\s+Officer(?:s)?\s*(?:x\s*)?(\d+)/gi
+                ]
+            },
+            {
+                code:
+                    'police_sergeant',
+                label:
+                    'Police Sergeant',
+                patterns: [
+                    /(\d+)\s*(?:x\s*)?Police\s+Sergeant(?:s)?/gi,
+                    /Police\s+Sergeant(?:s)?\s*(?:x\s*)?(\d+)/gi
+                ]
+            },
+            {
+                code:
+                    'police_inspector',
+                label:
+                    'Police Inspector',
+                patterns: [
+                    /(\d+)\s*(?:x\s*)?Police\s+Inspector(?:s)?/gi,
+                    /Police\s+Inspector(?:s)?\s*(?:x\s*)?(\d+)/gi
+                ]
+            },
+            {
+                code:
+                    'police_medic',
+                label:
+                    'Police Medic',
+                patterns: [
+                    /(\d+)\s*(?:x\s*)?Police\s+Medic(?:s)?/gi,
+                    /Police\s+Medic(?:s)?\s*(?:x\s*)?(\d+)/gi
+                ]
+            },
+            {
+                code:
+                    'railway_police',
+                label:
+                    'Railway Police Officer',
+                patterns: [
+                    /(\d+)\s*(?:x\s*)?Railway\s+Police\s+Officer(?:s)?/gi,
+                    /Railway\s+Police\s+Officer(?:s)?\s*(?:x\s*)?(\d+)/gi
+                ]
+            },
+            {
+                code:
+                    'armed_response_personnel',
+                label:
+                    'Armed Response Personnel',
+                patterns: [
+                    /(\d+)\s*(?:x\s*)?(?:Required\s+)?Armed(?:\s+Response)?\s+Personnel(?:\s*\(\s*In\s+Armed\s+Vehicles\s*\))?/gi,
+                    /(?:Required\s+)?Armed(?:\s+Response)?\s+Personnel(?:\s*\(\s*In\s+Armed\s+Vehicles\s*\))?\s*(?:x\s*)?(\d+)/gi
+                ]
+            }
+        ]);
+
+=== CONSTANT MF_PROTECTED_ORDINARY_IRV_TRAINING_CODES: source lines 9910-9931 ===
+    const MF_PROTECTED_ORDINARY_IRV_TRAINING_CODES =
+        Object.freeze([
+            'level_1_public_order',
+            'level_2_public_order',
+            'police_sergeant',
+            'police_medic',
+            'police_inspector',
+            'traffic_police',
+            'swat',
+            'police_horse',
+            'k9',
+            'drone',
+            'search_and_rescue',
+            'polizeihubschrauber',
+            'railway_police_command',
+            'railway_police',
+            'bomb_disposal_command',
+            'bomb_disposal',
+            'bomb_disposal_diver'
+        ]);
+
+=== CONSTANT MF_TRAINED_VEHICLE_CAPACITY_BY_TYPE: source lines 9939-9946 ===
+    const MF_TRAINED_VEHICLE_CAPACITY_BY_TYPE =
+        Object.freeze({
+            '51': 9,
+            '8': 2,
+            '25': 2
+        });
 
 === FULL TOP-LEVEL FUNCTIONS ===
 
@@ -1963,6 +2488,292 @@ SOURCE LINES: 39886
         );
     }
 
+=== FUNCTION normalisePublicOrderTrainedRequirements: source lines 21957-22194 ===
+    function normalisePublicOrderTrainedRequirements(
+        requirements
+    ) {
+        const source =
+            Array.isArray(requirements)
+                ? requirements
+                : [];
+
+        const findRequired = code => {
+            const item = source.find(
+                requirement => requirement.code === code
+            );
+
+            return Math.max(
+                0,
+                parseInt(item?.required, 10) || 0
+            );
+        };
+
+        const level1Required =
+            findRequired('level_1_public_order');
+
+        const level2Required =
+            findRequired('level_2_public_order');
+
+        const policeSergeantRequired =
+            findRequired('police_sergeant');
+
+        const policeInspectorRequired =
+            findRequired('police_inspector');
+
+        const policeMedicRequired =
+            findRequired('police_medic');
+
+        const railwayPoliceRequired =
+            findRequired('railway_police');
+
+        const armedResponseRequired =
+            findRequired('armed_response_personnel');
+
+        const normalised =
+            source.filter(requirement => {
+                return (
+                    requirement.code !==
+                        'level_1_public_order' &&
+                    requirement.code !==
+                        'level_2_public_order' &&
+                    requirement.code !==
+                        'police_sergeant' &&
+                    requirement.code !==
+                        'police_inspector' &&
+                    requirement.code !==
+                        'police_medic' &&
+                    requirement.code !==
+                        'railway_police' &&
+                    requirement.code !==
+                        'armed_response_personnel'
+                );
+            });
+
+        const addTrainedVehicleRequirement = ({
+            code,
+            label,
+            personnelRequired,
+            requirementType =
+                'police_trained_irv_vehicle',
+            eligibleVehicleTypeIds = ['8'],
+            vehicleCapacityByType = {
+                '8': 2
+            },
+            preferredVehicleTypeIds =
+                eligibleVehicleTypeIds,
+            requiredTrainingCodes = [code],
+            psuCompatible = false
+        }) => {
+            if (personnelRequired <= 0) {
+                return;
+            }
+
+            const provisional = {
+                code:
+                    `${code}_vehicle`,
+                label,
+                requirementType,
+                required:
+                    1,
+                personnelRequired,
+                inspectorsRequired:
+                    requirementType ===
+                        'police_inspector_vehicle'
+                        ? personnelRequired
+                        : undefined,
+                personnelPerVehicle:
+                    Math.max(
+                        ...Object.values(
+                            vehicleCapacityByType
+                        ).map(value => {
+                            return Math.max(
+                                1,
+                                parseInt(value, 10) || 1
+                            );
+                        })
+                    ),
+                requiredTrainingCodes,
+                eligibleVehicleTypeIds:
+                    eligibleVehicleTypeIds.map(String),
+                vehicleCapacityByType: {
+                    ...vehicleCapacityByType
+                },
+                preferredVehicleTypeIds:
+                    preferredVehicleTypeIds.map(String),
+                psuCompatible:
+                    Boolean(psuCompatible)
+            };
+
+            provisional.required =
+                getPreferredTrainedVehicleCountForRequirement(
+                    provisional
+                );
+
+            normalised.push(provisional);
+        };
+
+        const addPsuCompatibleRequirement = (
+            code,
+            label,
+            personnelRequired
+        ) => {
+            addTrainedVehicleRequirement({
+                code,
+                label:
+                    `${label} Trained Police Unit`,
+                personnelRequired,
+                eligibleVehicleTypeIds: [
+                    '51',
+                    '8'
+                ],
+                vehicleCapacityByType: {
+                    '51': 9,
+                    '8': 2
+                },
+                preferredVehicleTypeIds: [
+                    '51',
+                    '8'
+                ],
+                psuCompatible:
+                    true
+            });
+        };
+
+        // Level 1, Level 2, Sergeant and Police Medic can share one PSU or IRV
+        // pool. Multi-trained staff count toward every course they hold. A PSU
+        // supplies up to nine personnel seats; IRVs fill small remainders.
+        addPsuCompatibleRequirement(
+            'level_1_public_order',
+            'Level 1 Public Order',
+            level1Required
+        );
+
+        addPsuCompatibleRequirement(
+            'level_2_public_order',
+            'Level 2 Public Order',
+            level2Required
+        );
+
+        addPsuCompatibleRequirement(
+            'police_sergeant',
+            'Police Sergeant',
+            policeSergeantRequired
+        );
+
+        if (policeInspectorRequired > 0) {
+            addTrainedVehicleRequirement({
+                code:
+                    'police_inspector',
+                label:
+                    'Police Inspector Trained Police IRV',
+                personnelRequired:
+                    policeInspectorRequired,
+                requirementType:
+                    'police_inspector_vehicle',
+                eligibleVehicleTypeIds: [
+                    '8'
+                ],
+                vehicleCapacityByType: {
+                    '8': 2
+                }
+            });
+        }
+
+        addPsuCompatibleRequirement(
+            'police_medic',
+            'Police Medic',
+            policeMedicRequired
+        );
+
+        addTrainedVehicleRequirement({
+            code:
+                'railway_police',
+            label:
+                'Railway Police Officer Trained Police IRV',
+            personnelRequired:
+                railwayPoliceRequired,
+            eligibleVehicleTypeIds: [
+                '8'
+            ],
+            vehicleCapacityByType: {
+                '8': 2
+            }
+        });
+
+        if (armedResponseRequired > 0) {
+            addTrainedVehicleRequirement({
+                code:
+                    'armed_response_atc',
+                label:
+                    'Armed Response Personnel in Armed Traffic Cars',
+                personnelRequired:
+                    armedResponseRequired,
+                requirementType:
+                    'armed_response_atc_vehicle',
+                eligibleVehicleTypeIds: [
+                    '25'
+                ],
+                vehicleCapacityByType: {
+                    '25': 2
+                },
+                requiredTrainingCodes: [
+                    'traffic_police',
+                    'swat'
+                ]
+            });
+        }
+
+        return normalised;
+    }
+
+=== FUNCTION normaliseOperationalRequirementRows: source lines 24985-25032 ===
+    function normaliseOperationalRequirementRows(rows) {
+        return (Array.isArray(rows) ? rows : []).map(row => {
+            if (!row || row.isTrainedPersonnelRequirement) return row;
+
+            const sarConversion =
+                getSarPersonnelVehicleRequirement(
+                    row.unitName,
+                    row.stillNeeded
+                );
+
+            if (sarConversion) {
+                return {
+                    ...row,
+                    unitName:
+                        sarConversion.unitName,
+                    stillNeeded:
+                        sarConversion.stillNeeded,
+                    personnelRequirement:
+                        sarConversion.personnelRequirement,
+                    personnelPerVehicle:
+                        sarConversion.personnelPerVehicle,
+                    sarPersonnelConversion:
+                        sarConversion,
+                    convertedFromPersonnelRequirement:
+                        true
+                };
+            }
+
+            const conversion = getPoliceOfficerVehicleRequirement(
+                row.unitName,
+                row.stillNeeded
+            );
+
+            if (!conversion) return row;
+
+            return {
+                ...row,
+                unitName: conversion.unitName,
+                stillNeeded: conversion.stillNeeded,
+                personnelRequirement:
+                    `${conversion.personnelRequired} Police Officer${conversion.personnelRequired === 1 ? '' : 's'}`,
+                personnelPerVehicle: conversion.personnelPerVehicle,
+                convertedFromPersonnelRequirement: true
+            };
+        });
+    }
+
 === FUNCTION getTrainingRequirementPersonnelTarget: source lines 22392-22421 ===
     function getTrainingRequirementPersonnelTarget(requirement) {
         if (!requirement) return 0;
@@ -2080,6 +2891,141 @@ SOURCE LINES: 39886
                 requirement?.personnelPerVehicle,
                 10
             ) || 1
+        );
+    }
+
+=== FUNCTION getTrainingRequirementVehicleTypeId: source lines 22602-22660 ===
+    function getTrainingRequirementVehicleTypeId(
+        requirement,
+        checkbox,
+        registryEntry = null
+    ) {
+        const eligible =
+            getTrainingRequirementEligibleTypeIds(
+                requirement
+            );
+
+        const eligibleSet =
+            new Set(eligible);
+
+        const checkboxTypes =
+            getVehicleTypeIdentifiers(
+                checkbox
+            ).map(String);
+
+        const entryType =
+            String(
+                registryEntry?.vehicleTypeId ||
+                ''
+            );
+
+        const available =
+            new Set([
+                ...checkboxTypes,
+                entryType
+            ].filter(Boolean));
+
+        const preferred = [
+            ...(
+                requirement
+                    ?.preferredVehicleTypeIds ||
+                []
+            ).map(String),
+            ...eligible
+        ];
+
+        for (const typeId of preferred) {
+            if (
+                available.has(typeId) &&
+                (
+                    eligibleSet.size === 0 ||
+                    eligibleSet.has(typeId)
+                )
+            ) {
+                return typeId;
+            }
+        }
+
+        if (eligibleSet.size === 0) {
+            return checkboxTypes[0] || entryType;
+        }
+
+        return '';
+    }
+
+=== FUNCTION getTrainingRequirementQualifiedCount: source lines 22746-22764 ===
+    function getTrainingRequirementQualifiedCount(
+        requirement,
+        registryEntry
+    ) {
+        if (
+            !isAuthoritativeLivePoliceTrainingEntry(
+                registryEntry
+            )
+        ) {
+            return 0;
+        }
+
+        return getRegistryTrainingQualifiedCount(
+            requirement,
+            registryEntry
+        );
+    }
+
+=== FUNCTION getTrainingRequirementNominalCapacity: source lines 22807-22850 ===
+    function getTrainingRequirementNominalCapacity(
+        requirement,
+        checkbox,
+        registryEntry = null
+    ) {
+        const vehicleTypeId =
+            getTrainingRequirementVehicleTypeId(
+                requirement,
+                checkbox,
+                registryEntry
+            );
+
+        if (!vehicleTypeId) {
+            return 0;
+        }
+
+        const maximumCapacity =
+            getTrainingRequirementVehicleCapacity(
+                requirement,
+                vehicleTypeId
+            );
+
+        if (
+            isAuthoritativeLivePoliceTrainingEntry(
+                registryEntry
+            )
+        ) {
+            return Math.min(
+                maximumCapacity,
+                Math.max(
+                    0,
+                    parseInt(
+                        registryEntry.assignedPersonnelCount,
+                        10
+                    ) ||
+                    registryEntry.assignedTrainingProfiles.length
+                )
+            );
+        }
+
+        return maximumCapacity;
+    }
+
+=== FUNCTION isCheckboxEligibleForTrainingRequirement: source lines 22850-22862 ===
+    function isCheckboxEligibleForTrainingRequirement(
+        checkbox,
+        requirement,
+        registryEntry = null
+    ) {
+        return !!getTrainingRequirementVehicleTypeId(
+            requirement,
+            checkbox,
+            registryEntry
         );
     }
 
@@ -2308,6 +3254,19 @@ SOURCE LINES: 39886
         return Array.from(
             { length: maximumCapacity },
             () => []
+        );
+    }
+
+=== FUNCTION getTrainedCandidateMetrics: source lines 24616-24628 ===
+    function getTrainedCandidateMetrics(
+        remaining,
+        checkbox,
+        registryEntry
+    ) {
+        return applyTrainingCandidateCoverage(
+            remaining,
+            checkbox,
+            registryEntry
         );
     }
 
@@ -2707,5 +3666,136 @@ SOURCE LINES: 39886
         }
 
         return rows;
+    }
+
+=== FUNCTION prepareTrainedPersonnelRegistryForRows: source lines 24321-24350 ===
+    async function prepareTrainedPersonnelRegistryForRows(
+        rows,
+        source = 'UPDATE'
+    ) {
+        const requirements = [];
+
+        (Array.isArray(rows) ? rows : []).forEach(row => {
+            if (!row?.isTrainedPersonnelRequirement) return;
+            (row.personnelTrainingRequirements || []).forEach(requirement => {
+                requirements.push(requirement);
+            });
+        });
+
+        const trained =
+            await refreshPoliceInspectorRegistryFromLiveVehicles(
+                requirements,
+                source
+            );
+
+        return {
+            irv:
+                trained,
+            armedResponse:
+                trained,
+            all:
+                trained
+        };
+    }
+
+=== FUNCTION getRegistryEntryForMissionCheckbox: source lines 23198-23257 ===
+    function getRegistryEntryForMissionCheckbox(
+        checkbox,
+        registry
+    ) {
+        const vehicleId =
+            getMissionVehicleId(checkbox);
+
+        if (!vehicleId) {
+            return {
+                vehicleId: '',
+                entry: null,
+                matchMode: 'no-exact-vehicle-id'
+            };
+        }
+
+        const directEntry =
+            registry?.vehicles?.[vehicleId];
+
+        if (!directEntry) {
+            return {
+                vehicleId,
+                entry: null,
+                matchMode: 'none'
+            };
+        }
+
+        const checkboxTypeIds =
+            new Set(
+                getVehicleTypeIdentifiers(
+                    checkbox
+                ).map(String)
+            );
+
+        const entryTypeId =
+            String(
+                directEntry.vehicleTypeId ||
+                ''
+            );
+
+        if (
+            entryTypeId &&
+            checkboxTypeIds.size > 0 &&
+            !checkboxTypeIds.has(entryTypeId)
+        ) {
+            return {
+                vehicleId,
+                entry: null,
+                matchMode: 'vehicle-type-mismatch'
+            };
+        }
+
+        return {
+            vehicleId,
+            entry: directEntry,
+            matchMode: 'exact-vehicle-id'
+        };
+    }
+
+=== FUNCTION isStrictLiveVerifiedTrainingEntry: source lines 22194-22216 ===
+    function isStrictLiveVerifiedTrainingEntry(
+        registryEntry
+    ) {
+        if (!registryEntry) return false;
+
+        const source =
+            String(registryEntry.source || '');
+
+        const updatedAt =
+            Number(registryEntry.updatedAt || 0);
+
+        return (
+            source.startsWith(
+                MF_STRICT_TRAINING_SOURCE_PREFIX
+            ) &&
+            updatedAt > 0 &&
+            Date.now() - updatedAt <=
+                MF_LIVE_TRAINING_VERIFY_CACHE_MS
+        );
+    }
+
+=== FUNCTION isAuthoritativeLivePoliceTrainingEntry: source lines 22216-22236 ===
+    function isAuthoritativeLivePoliceTrainingEntry(
+        registryEntry
+    ) {
+        return !!(
+            isStrictLiveVerifiedTrainingEntry(
+                registryEntry
+            ) &&
+            registryEntry
+                .assignmentScanComplete ===
+                true &&
+            registryEntry
+                .trainingProfilesComplete ===
+                true &&
+            Array.isArray(
+                registryEntry.assignedTrainingProfiles
+            )
+        );
     }
 

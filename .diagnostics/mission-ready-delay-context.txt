@@ -491,6 +491,11 @@ SOURCE LINES: 39886
 033634:                 continue;
 033635:             }
 
+=== FULL CONSTANTS ===
+
+=== CONSTANT DEFAULT_MISSION_READY_DELAY: source lines 10252-10253 ===
+    const DEFAULT_MISSION_READY_DELAY = 1000;
+
 === FULL TOP-LEVEL FUNCTIONS ===
 
 === FUNCTION getMissionReadyDelay: source lines 16814-16819 ===

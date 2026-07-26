@@ -2401,7 +2401,73 @@ SOURCE LINES: 39886
 022176:                 requirementType:
 022177:                     'armed_response_atc_vehicle',
 
-=== BLOCK 27: source lines 22498-22595 ===
+=== BLOCK 27: source lines 22197-22260 ===
+022197:         if (!registryEntry) return false;
+022198: 
+022199:         const source =
+022200:             String(registryEntry.source || '');
+022201: 
+022202:         const updatedAt =
+022203:             Number(registryEntry.updatedAt || 0);
+022204: 
+022205:         return (
+022206:             source.startsWith(
+022207:                 MF_STRICT_TRAINING_SOURCE_PREFIX
+022208:             ) &&
+022209:             updatedAt > 0 &&
+022210:             Date.now() - updatedAt <=
+022211:                 MF_LIVE_TRAINING_VERIFY_CACHE_MS
+022212:         );
+022213:     }
+022214: 
+022215: 
+022216:     function isAuthoritativeLivePoliceTrainingEntry(
+022217:         registryEntry
+022218:     ) {
+022219:         return !!(
+022220:             isStrictLiveVerifiedTrainingEntry(
+022221:                 registryEntry
+022222:             ) &&
+022223:             registryEntry
+022224:                 .assignmentScanComplete ===
+022225:                 true &&
+022226:             registryEntry
+022227:                 .trainingProfilesComplete ===
+022228:                 true &&
+022229:             Array.isArray(
+022230:                 registryEntry.assignedTrainingProfiles
+022231:             )
+022232:         );
+022233:     }
+022234: 
+022235: 
+022236:     function getProtectedOrdinaryIrvTrainingCount(
+022237:         registryEntry
+022238:     ) {
+022239:         if (!registryEntry) return 0;
+022240: 
+022241:         const trainingCounts =
+022242:             registryEntry.trainingCounts &&
+022243:             typeof registryEntry.trainingCounts === 'object'
+022244:                 ? registryEntry.trainingCounts
+022245:                 : {};
+022246: 
+022247:         return MF_PROTECTED_ORDINARY_IRV_TRAINING_CODES
+022248:             .reduce((total, code) => {
+022249:                 return total + Math.max(
+022250:                     0,
+022251:                     parseInt(trainingCounts[code], 10) || 0
+022252:                 );
+022253:             }, 0);
+022254:     }
+022255: 
+022256:     function isKnownProtectedTrainedPoliceIrvEntry(
+022257:         registryEntry
+022258:     ) {
+022259:         if (!registryEntry) return false;
+022260: 
+
+=== BLOCK 28: source lines 22498-22595 ===
 022498: 
 022499:         return Math.max(
 022500:             1,
@@ -2501,7 +2567,188 @@ SOURCE LINES: 39886
 022594:                 );
 022595: 
 
-=== BLOCK 28: source lines 23041-23102 ===
+=== BLOCK 29: source lines 22648-22710 ===
+022648:             ) {
+022649:                 return typeId;
+022650:             }
+022651:         }
+022652: 
+022653:         if (eligibleSet.size === 0) {
+022654:             return checkboxTypes[0] || entryType;
+022655:         }
+022656: 
+022657:         return '';
+022658:     }
+022659: 
+022660:     function getRegistryTrainingQualifiedCount(
+022661:         requirement,
+022662:         registryEntry
+022663:     ) {
+022664:         if (
+022665:             !requirement ||
+022666:             !registryEntry
+022667:         ) {
+022668:             return 0;
+022669:         }
+022670: 
+022671:         const requiredCodes =
+022672:             getTrainingRequirementRequiredCodes(
+022673:                 requirement
+022674:             );
+022675: 
+022676:         const profiles =
+022677:             Array.isArray(
+022678:                 registryEntry.assignedTrainingProfiles
+022679:             )
+022680:                 ? registryEntry.assignedTrainingProfiles
+022681:                 : null;
+022682: 
+022683:         if (profiles) {
+022684:             return profiles.reduce((count, profile) => {
+022685:                 const profileSet =
+022686:                     new Set(
+022687:                         (
+022688:                             Array.isArray(profile)
+022689:                                 ? profile
+022690:                                 : []
+022691:                         ).map(String)
+022692:                     );
+022693: 
+022694:                 return count + (
+022695:                     requiredCodes.every(code => {
+022696:                         return profileSet.has(code);
+022697:                     })
+022698:                         ? 1
+022699:                         : 0
+022700:                 );
+022701:             }, 0);
+022702:         }
+022703: 
+022704:         const trainingCounts =
+022705:             registryEntry.trainingCounts &&
+022706:             typeof registryEntry.trainingCounts ===
+022707:                 'object'
+022708:                 ? registryEntry.trainingCounts
+022709:                 : {};
+022710: 
+
+=== BLOCK 30: source lines 22812-22925 ===
+022812:         const vehicleTypeId =
+022813:             getTrainingRequirementVehicleTypeId(
+022814:                 requirement,
+022815:                 checkbox,
+022816:                 registryEntry
+022817:             );
+022818: 
+022819:         if (!vehicleTypeId) {
+022820:             return 0;
+022821:         }
+022822: 
+022823:         const maximumCapacity =
+022824:             getTrainingRequirementVehicleCapacity(
+022825:                 requirement,
+022826:                 vehicleTypeId
+022827:             );
+022828: 
+022829:         if (
+022830:             isAuthoritativeLivePoliceTrainingEntry(
+022831:                 registryEntry
+022832:             )
+022833:         ) {
+022834:             return Math.min(
+022835:                 maximumCapacity,
+022836:                 Math.max(
+022837:                     0,
+022838:                     parseInt(
+022839:                         registryEntry.assignedPersonnelCount,
+022840:                         10
+022841:                     ) ||
+022842:                     registryEntry.assignedTrainingProfiles.length
+022843:                 )
+022844:             );
+022845:         }
+022846: 
+022847:         return maximumCapacity;
+022848:     }
+022849: 
+022850:     function isCheckboxEligibleForTrainingRequirement(
+022851:         checkbox,
+022852:         requirement,
+022853:         registryEntry = null
+022854:     ) {
+022855:         return !!getTrainingRequirementVehicleTypeId(
+022856:             requirement,
+022857:             checkbox,
+022858:             registryEntry
+022859:         );
+022860:     }
+022861: 
+022862:     function getTrainingCandidatePersonnelProfiles(
+022863:         requirements,
+022864:         checkbox,
+022865:         registryEntry = null
+022866:     ) {
+022867:         let maximumCapacity = 0;
+022868: 
+022869:         (
+022870:             Array.isArray(requirements)
+022871:                 ? requirements
+022872:                 : []
+022873:         ).forEach(requirement => {
+022874:             maximumCapacity =
+022875:                 Math.max(
+022876:                     maximumCapacity,
+022877:                     getTrainingRequirementNominalCapacity(
+022878:                         requirement,
+022879:                         checkbox,
+022880:                         registryEntry
+022881:                     )
+022882:                 );
+022883:         });
+022884: 
+022885:         if (maximumCapacity <= 0) {
+022886:             return [];
+022887:         }
+022888: 
+022889:         if (
+022890:             isAuthoritativeLivePoliceTrainingEntry(
+022891:                 registryEntry
+022892:             )
+022893:         ) {
+022894:             return registryEntry
+022895:                 .assignedTrainingProfiles
+022896:                 .slice(0, maximumCapacity)
+022897:                 .map(profile => {
+022898:                     return Array.from(
+022899:                         new Set(
+022900:                             (
+022901:                                 Array.isArray(profile)
+022902:                                     ? profile
+022903:                                     : []
+022904:                             )
+022905:                                 .map(String)
+022906:                                 .filter(Boolean)
+022907:                         )
+022908:                     );
+022909:                 });
+022910:         }
+022911: 
+022912:         // Unknown/stale candidates remain usable as untrained fallback. Their
+022913:         // exact vehicle type defines the maximum nominal personnel capacity.
+022914:         return Array.from(
+022915:             { length: maximumCapacity },
+022916:             () => []
+022917:         );
+022918:     }
+022919: 
+022920:     function doesTrainingProfileSatisfyRequirement(
+022921:         profile,
+022922:         requirement
+022923:     ) {
+022924:         const profileSet =
+022925:             new Set(
+
+=== BLOCK 31: source lines 23041-23102 ===
 023041:                 ].join(':');
 023042:             })
 023043:             .filter(Boolean)
@@ -2565,7 +2812,27 @@ SOURCE LINES: 39886
 023101:             Array.isArray(requirements)
 023102:                 ? requirements
 
-=== BLOCK 29: source lines 23276-23337 ===
+=== BLOCK 32: source lines 23256-23337 ===
+023256: 
+023257:     function parseVehicleIdFromAssignmentLink(value) {
+023258:         const match = String(value || '')
+023259:             .match(/\/vehicles\/(\d+)(?:\/|$|[?#])/i);
+023260: 
+023261:         return match
+023262:             ? String(match[1])
+023263:             : '';
+023264:     }
+023265: 
+023266:     function parseLivePoliceTrainingAssignments(
+023267:         html,
+023268:         currentVehicleId
+023269:     ) {
+023270:         const doc = new DOMParser()
+023271:             .parseFromString(
+023272:                 String(html || ''),
+023273:                 'text/html'
+023274:             );
+023275: 
 023276:         const currentId =
 023277:             String(currentVehicleId || '');
 023278: 
@@ -2629,7 +2896,132 @@ SOURCE LINES: 39886
 023336:                             actionText
 023337:                         )
 
-=== BLOCK 30: source lines 23582-23642 ===
+=== BLOCK 33: source lines 23415-23537 ===
+023415: 
+023416:             if (/\bPolice\s+Sergeant\b/i.test(rowText)) {
+023417:                 rowCodes.add('police_sergeant');
+023418:             }
+023419: 
+023420:             if (/\bPolice\s+Medic\b/i.test(rowText)) {
+023421:                 rowCodes.add('police_medic');
+023422:             }
+023423: 
+023424:             if (/\bPolice\s+Inspector\b/i.test(rowText)) {
+023425:                 rowCodes.add('police_inspector');
+023426:             }
+023427: 
+023428:             if (
+023429:                 /\bRailway\s+Police\s+Officer\b/i.test(
+023430:                     rowText
+023431:                 ) ||
+023432:                 /\bRailway\s+Policing\b/i.test(
+023433:                     rowText
+023434:                 )
+023435:             ) {
+023436:                 rowCodes.add('railway_police');
+023437:             }
+023438: 
+023439:             const trainingProfile =
+023440:                 Array.from(rowCodes)
+023441:                     .map(String)
+023442:                     .filter(Boolean)
+023443:                     .sort();
+023444: 
+023445:             assignedTrainingProfiles.push(
+023446:                 trainingProfile
+023447:             );
+023448: 
+023449:             rowCodes.forEach(code => {
+023450:                 trainingCounts[code] =
+023451:                     Number(
+023452:                         trainingCounts[code] ||
+023453:                         0
+023454:                     ) + 1;
+023455:             });
+023456: 
+023457:             if (trainingProfile.length > 1) {
+023458:                 const exactProfileKey =
+023459:                     getMissionTrainingCombinationKey(
+023460:                         trainingProfile
+023461:                     );
+023462: 
+023463:                 trainingCombinationCounts[exactProfileKey] =
+023464:                     Number(
+023465:                         trainingCombinationCounts[exactProfileKey] ||
+023466:                         0
+023467:                     ) + 1;
+023468:             }
+023469: 
+023470:             const roadsFirearmsKey =
+023471:                 getMissionTrainingCombinationKey([
+023472:                     'traffic_police',
+023473:                     'swat'
+023474:                 ]);
+023475: 
+023476:             if (
+023477:                 rowCodes.has('traffic_police') &&
+023478:                 rowCodes.has('swat') &&
+023479:                 getMissionTrainingCombinationKey(
+023480:                     trainingProfile
+023481:                 ) !== roadsFirearmsKey
+023482:             ) {
+023483:                 trainingCombinationCounts[roadsFirearmsKey] =
+023484:                     Number(
+023485:                         trainingCombinationCounts[roadsFirearmsKey] ||
+023486:                         0
+023487:                     ) + 1;
+023488:             }
+023489:         });
+023490: 
+023491:         supportedCodes.forEach(code => {
+023492:             if (
+023493:                 !Object.prototype.hasOwnProperty.call(
+023494:                     trainingCounts,
+023495:                     code
+023496:                 )
+023497:             ) {
+023498:                 trainingCounts[code] = 0;
+023499:             }
+023500:         });
+023501: 
+023502:         return {
+023503:             vehicleId: currentId,
+023504:             trainingCounts,
+023505:             trainingCombinationCounts,
+023506:             assignedTrainingProfiles,
+023507:             trainingProfilesComplete:
+023508:                 Boolean(personnelTable),
+023509:             assignedPersonnelCount,
+023510:             assignmentScanComplete:
+023511:                 Boolean(personnelTable),
+023512:             personnelRowsSeen:
+023513:                 personnelRows.length,
+023514:             detectedVehicleTypeId,
+023515:             document: doc
+023516:         };
+023517:     }
+023518: 
+023519: 
+023520:     // Compatibility wrapper retained for older guarded call paths. The strict
+023521:     // parser now returns exact current-vehicle counts for all supported Police
+023522:     // training codes, including Police Inspector.
+023523:     function parseLivePoliceInspectorAssignments(
+023524:         html,
+023525:         currentVehicleId
+023526:     ) {
+023527:         const parsed =
+023528:             parseLivePoliceTrainingAssignments(
+023529:                 html,
+023530:                 currentVehicleId
+023531:             );
+023532: 
+023533:         return {
+023534:             countsByVehicleId: {
+023535:                 [String(currentVehicleId || '')]:
+023536:                     Number(
+023537:                         parsed.trainingCounts
+
+=== BLOCK 34: source lines 23582-23642 ===
 023582:                 );
 023583: 
 023584:             const entryTypeId =
@@ -2692,7 +3084,73 @@ SOURCE LINES: 39886
 023641:         const hinted =
 023642:             unchecked
 
-=== BLOCK 31: source lines 24399-24469 ===
+=== BLOCK 35: source lines 23929-23992 ===
+023929:                             existing.vehicleName ||
+023930:                             getVehicleDebugName(checkbox),
+023931:                         vehicleTypeId:
+023932:                             detectedType,
+023933:                         assignedPersonnelCount:
+023934:                             parsed.assignedPersonnelCount,
+023935:                         assignmentScanComplete:
+023936:                             parsed.assignmentScanComplete,
+023937:                         personnelRowsSeen:
+023938:                             parsed.personnelRowsSeen,
+023939:                         trainingCounts: {
+023940:                             ...(
+023941:                                 existing.trainingCounts &&
+023942:                                 typeof existing.trainingCounts ===
+023943:                                     'object'
+023944:                                     ? existing.trainingCounts
+023945:                                     : {}
+023946:                             ),
+023947:                             ...parsed.trainingCounts
+023948:                         },
+023949:                         trainingCombinationCounts: {
+023950:                             ...(
+023951:                                 existing.trainingCombinationCounts &&
+023952:                                 typeof existing.trainingCombinationCounts ===
+023953:                                     'object'
+023954:                                     ? existing.trainingCombinationCounts
+023955:                                     : {}
+023956:                             ),
+023957:                             ...parsed.trainingCombinationCounts
+023958:                         },
+023959:                         assignedTrainingProfiles:
+023960:                             parsed.assignedTrainingProfiles,
+023961:                         trainingProfilesComplete:
+023962:                             parsed.trainingProfilesComplete,
+023963:                         updatedAt:
+023964:                             Date.now(),
+023965:                         source:
+023966:                             `${MF_STRICT_TRAINING_SOURCE_PREFIX}` +
+023967:                             `coverage-${String(source || 'update').toLowerCase()}-v106101`
+023968:                     };
+023969: 
+023970:                     mfLiveTrainingVerifyCache.set(
+023971:                         vehicleId,
+023972:                         Date.now()
+023973:                     );
+023974: 
+023975:                     verifiedIds.add(vehicleId);
+023976:                     pagesRead += 1;
+023977:                     changed = true;
+023978:                 });
+023979: 
+023980:             if (changed) {
+023981:                 savePersonnelTrainingRegistry(
+023982:                     registry
+023983:                 );
+023984:             }
+023985: 
+023986:             if (requirementsSatisfiedByVerified()) {
+023987:                 break;
+023988:             }
+023989:         }
+023990: 
+023991:         return {
+023992:             refreshed: changed,
+
+=== BLOCK 36: source lines 24399-24469 ===
 024399:                     ? entry.trainingCounts
 024400:                     : {}
 024401:         };
@@ -2765,7 +3223,7 @@ SOURCE LINES: 39886
 024468:                     );
 024469:                 });
 
-=== BLOCK 32: source lines 24509-24569 ===
+=== BLOCK 37: source lines 24509-24569 ===
 024509:                         return String(left.code)
 024510:                             .localeCompare(String(right.code));
 024511:                     })[0];
@@ -2828,7 +3286,7 @@ SOURCE LINES: 39886
 024568:             });
 024569: 
 
-=== BLOCK 33: source lines 24627-24697 ===
+=== BLOCK 38: source lines 24627-24697 ===
 024627: 
 024628:     function getTrainedVehicleSelectionScore(
 024629:         metrics,
@@ -2901,7 +3359,7 @@ SOURCE LINES: 39886
 024696: 
 024697:                 return (
 
-=== BLOCK 34: source lines 38636-38696 ===
+=== BLOCK 39: source lines 38636-38696 ===
 038636:             requireMissionUpdateFirstPass(
 038637:                 'mission panel initialized'
 038638:             );
@@ -2964,7 +3422,7 @@ SOURCE LINES: 39886
 038695:                 return false;
 038696:             }
 
-=== BLOCK 35: source lines 38705-38765 ===
+=== BLOCK 40: source lines 38705-38765 ===
 038705:             return isVehicleSelectionElementVisible(
 038706:                 loadControl
 038707:             );
@@ -3027,7 +3485,7 @@ SOURCE LINES: 39886
 038764:             Date.now();
 038765: 
 
-=== BLOCK 36: source lines 39104-39164 ===
+=== BLOCK 41: source lines 39104-39164 ===
 039104:             debugLog(
 039105:                 'VEHICLE PAGE LOAD',
 039106:                 `READY | pages=${clickedPages} | vehicles=${stability.count} | elapsed=${Date.now() - loadingStartedAt}ms`
@@ -3089,6 +3547,14 @@ SOURCE LINES: 39886
 039162:         '#mc-map-command-toolkit-mission-requirements, ' +
 039163:         '[data-mcms-requirements-panel="1"], ' +
 039164:         'table[aria-label="Live mission requirements"], ' +
+
+=== FULL CONSTANTS ===
+
+=== CONSTANT PERSONNEL_TRAINING_REGISTRY_SCHEMA_VERSION: source lines 58-59 ===
+    const PERSONNEL_TRAINING_REGISTRY_SCHEMA_VERSION = 1;
+
+=== CONSTANT PERSONNEL_TRAINING_REGISTRY_MAX_AGE_MS: source lines 66-67 ===
+    const PERSONNEL_TRAINING_REGISTRY_MAX_AGE_MS = 180 * 24 * 60 * 60 * 1000;
 
 === FULL TOP-LEVEL FUNCTIONS ===
 
@@ -3886,6 +4352,83 @@ SOURCE LINES: 39886
         return stationVehicles.length;
     }
 
+=== FUNCTION countPersonnelTrainingCodes: source lines 5587-5625 ===
+    function countPersonnelTrainingCodes(
+        assignedPersonnel
+    ) {
+        const counts = {};
+
+        (
+            Array.isArray(
+                assignedPersonnel
+            )
+                ? assignedPersonnel
+                : []
+        ).forEach(person => {
+            const uniqueCodes =
+                new Set(
+                    (
+                        Array.isArray(
+                            person?.trainingCodes
+                        )
+                            ? person.trainingCodes
+                            : []
+                    )
+                        .map(String)
+                        .filter(Boolean)
+                );
+
+            uniqueCodes.forEach(code => {
+                counts[code] =
+                    Number(
+                        counts[code] ||
+                        0
+                    ) + 1;
+            });
+        });
+
+        return counts;
+    }
+
+=== FUNCTION countPersonnelTrainingCombinations: source lines 5637-5662 ===
+    function countPersonnelTrainingCombinations(assignedPersonnel) {
+        const combinations = [
+            ['traffic_police', 'swat']
+        ];
+        const counts = {};
+
+        combinations.forEach(requiredCodes => {
+            const key = getPersonnelTrainingCombinationKey(requiredCodes);
+            counts[key] = (
+                Array.isArray(assignedPersonnel)
+                    ? assignedPersonnel
+                    : []
+            ).filter(person => {
+                const trainingSet = new Set(
+                    Array.isArray(person?.trainingCodes)
+                        ? person.trainingCodes.map(String)
+                        : []
+                );
+                return requiredCodes.every(code => trainingSet.has(code));
+            }).length;
+        });
+
+        return counts;
+    }
+
+=== FUNCTION getPersonnelTrainingCombinationKey: source lines 5625-5637 ===
+    function getPersonnelTrainingCombinationKey(trainingCodes) {
+        return Array.from(
+            new Set(
+                (Array.isArray(trainingCodes) ? trainingCodes : [])
+                    .map(String)
+                    .filter(Boolean)
+            )
+        )
+            .sort()
+            .join('+');
+    }
+
 === FUNCTION getPersonnelAssignmentIndex: source lines 5732-5763 ===
     function getPersonnelAssignmentIndex(personnel) {
         if (!Array.isArray(personnel)) {
@@ -4132,6 +4675,23 @@ SOURCE LINES: 39886
         return queue;
     }
 
+=== FUNCTION parseTrainingCodes: source lines 7410-7427 ===
+    function parseTrainingCodes(row) {
+        const raw = row?.getAttribute('data-filterable-by') ||
+            row?.querySelector?.('[data-filterable-by]')?.getAttribute('data-filterable-by') ||
+            '[]';
+        try {
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) ? parsed.map(String) : [];
+        } catch (_error) {
+            return String(raw)
+                .replace(/[\[\]"']/g, '')
+                .split(',')
+                .map(value => value.trim())
+                .filter(Boolean);
+        }
+    }
+
 === FUNCTION parseVehicleAssignmentPage: source lines 7427-7560 ===
     function parseVehicleAssignmentPage(doc, vehicleId) {
         const currentVehicleId = String(vehicleId || '');
@@ -4263,6 +4823,68 @@ SOURCE LINES: 39886
             totalAssigned: rows.filter(person => person.assignedVehicleId === currentVehicleId),
             criticalAssigned: rows.filter(person => person.assignedVehicleId === currentVehicleId && person.trainingCodes.includes(PERSONNEL_TRAINING_CODE)),
             availableCritical: rows.filter(person => person.available && person.trainingCodes.includes(PERSONNEL_TRAINING_CODE))
+        };
+    }
+
+=== FUNCTION normaliseImportedPersonnelTrainingRegistry: source lines 4487-4548 ===
+    function normaliseImportedPersonnelTrainingRegistry(candidate) {
+        const source = candidate?.registry && typeof candidate.registry === 'object' ? candidate.registry : candidate;
+        if (!source || typeof source !== 'object' || Array.isArray(source)) {
+            throw new Error('The selected file does not contain a Personnel Register object.');
+        }
+        const schemaVersion = source.schemaVersion == null
+            ? PERSONNEL_TRAINING_REGISTRY_SCHEMA_VERSION
+            : Number(source.schemaVersion);
+        if (schemaVersion !== PERSONNEL_TRAINING_REGISTRY_SCHEMA_VERSION) {
+            throw new Error(`Unsupported Personnel Register schema version: ${schemaVersion}.`);
+        }
+        if (!source.vehicles || typeof source.vehicles !== 'object' || Array.isArray(source.vehicles)) {
+            throw new Error('The selected file does not contain a valid vehicles register.');
+        }
+        const entries = Object.entries(source.vehicles);
+        if (entries.length > PERSONNEL_TRAINING_REGISTRY_MAX_VEHICLES) {
+            throw new Error(`The file contains ${entries.length} vehicles; the supported maximum is ${PERSONNEL_TRAINING_REGISTRY_MAX_VEHICLES}.`);
+        }
+        const vehicles = Object.create(null);
+        entries.forEach(([rawVehicleId, rawEntry]) => {
+            const vehicleId = String(rawVehicleId || '').slice(0, 80);
+            if (isUnsafePersonnelTrainingRegistryKey(vehicleId)) throw new Error('The file contains an invalid vehicle identifier.');
+            if (!rawEntry || typeof rawEntry !== 'object' || Array.isArray(rawEntry)) {
+                throw new Error(`Vehicle ${vehicleId} does not contain a valid register entry.`);
+            }
+            const safeCount = value => {
+                const count = Number(value || 0);
+                return Number.isFinite(count) && count >= 0 ? Math.floor(count) : 0;
+            };
+            const safeTimestamp = value => {
+                const timestamp = Number(value || 0);
+                return Number.isFinite(timestamp) && timestamp >= 0 ? timestamp : 0;
+            };
+            vehicles[vehicleId] = {
+                vehicleId,
+                vehicleName: String(rawEntry.vehicleName || '').slice(0, 500),
+                vehicleTypeId: String(rawEntry.vehicleTypeId || '').slice(0, 80),
+                stationName: String(rawEntry.stationName || '').slice(0, 500),
+                stationHref: String(rawEntry.stationHref || '').slice(0, 1000),
+                assignedPersonnelCount: safeCount(rawEntry.assignedPersonnelCount),
+                assignmentScanComplete: rawEntry.assignmentScanComplete === true,
+                personnelRowsSeen: safeCount(rawEntry.personnelRowsSeen),
+                trainingCounts: normalisePersonnelTrainingRegistryCountMap(rawEntry.trainingCounts),
+                trainingCombinationCounts: normalisePersonnelTrainingRegistryCountMap(rawEntry.trainingCombinationCounts),
+                updatedAt: safeTimestamp(rawEntry.updatedAt),
+                source: String(rawEntry.source || '').slice(0, 250)
+            };
+        });
+        const safeRegistryTimestamp = value => {
+            const timestamp = Number(value || 0);
+            return Number.isFinite(timestamp) && timestamp >= 0 ? timestamp : 0;
+        };
+        return {
+            schemaVersion: PERSONNEL_TRAINING_REGISTRY_SCHEMA_VERSION,
+            sourceVersion: String(source.sourceVersion || '').slice(0, 80),
+            updatedAt: safeRegistryTimestamp(source.updatedAt),
+            lastPrunedAt: safeRegistryTimestamp(source.lastPrunedAt),
+            vehicles
         };
     }
 
