@@ -1,0 +1,43 @@
+name: Refresh PR 169 with current main
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - synchronize
+      - reopened
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'agent/auto-prisoner-cell-before-unit-finder'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out prisoner branch
+        uses: actions/checkout@v6
+        with:
+          ref: agent/auto-prisoner-cell-before-unit-finder
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Merge current main and remove one-use workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name MartyBlyth
+          git config user.email 32400596+Martyblyth@users.noreply.github.com
+          git fetch origin main
+          git merge --no-edit origin/main
+          rm -f .github/workflows/update-pr169-main.yml
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m 'Remove completed PR refresh workflow'
+          fi
+          git push origin HEAD:agent/auto-prisoner-cell-before-unit-finder
