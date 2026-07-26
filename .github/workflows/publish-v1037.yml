@@ -14,10 +14,57 @@ permissions:
   pull-requests: write
 
 jobs:
-  publish:
+  repair-tag:
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.head.ref == 'diagnostic/verify-v1037-delivery'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out clean main
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Remove unpublished tag containing temporary workflow
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          RELEASE_TAG='v1.0.37'
+          ASSET='MissionChief-Command-Nexus-1.0.37.user.js'
+          CHECKSUM_ASSET="${ASSET}.sha256"
+
+          if gh release view "${RELEASE_TAG}" --json isDraft,isPrerelease,assets > /tmp/release.json 2>/dev/null; then
+            complete_assets="$(jq -r --arg a "${ASSET}" --arg c "${CHECKSUM_ASSET}" '[.assets[] | select(.name == $a or .name == $c)] | unique_by(.name) | length' /tmp/release.json)"
+            if [[ "$(jq -r '.isDraft' /tmp/release.json)" == 'false' && \
+                  "$(jq -r '.isPrerelease' /tmp/release.json)" == 'false' && \
+                  "${complete_assets}" == '2' ]]; then
+              echo 'A complete GitHub release already exists; tag repair is unnecessary.'
+              exit 0
+            fi
+          fi
+
+          git fetch origin main --tags --force
+          if git show-ref --tags --verify --quiet "refs/tags/${RELEASE_TAG}"; then
+            TAG_SHA="$(git rev-list -n 1 "${RELEASE_TAG}")"
+            TEMPORARY_WORKFLOWS="$(git ls-tree -r --name-only "${TAG_SHA}" -- .github/workflows | grep '^.github/workflows/temporary-.*\.ya\?ml$' || true)"
+            if [[ -z "${TEMPORARY_WORKFLOWS}" ]]; then
+              echo "Existing tag ${RELEASE_TAG} contains no temporary workflow; keeping it."
+              exit 0
+            fi
+            echo 'Removing unpublished stale tag containing:'
+            echo "${TEMPORARY_WORKFLOWS}"
+            git push origin ":refs/tags/${RELEASE_TAG}"
+          fi
+
+  publish:
+    needs: repair-tag
+    if: needs.repair-tag.result == 'success'
     uses: ./.github/workflows/release.yml
     with:
       operation: publish-release
