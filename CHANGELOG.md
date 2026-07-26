@@ -32,6 +32,17 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
 
+## [1.0.45] - 2026-07-26
+
+### Changed
+
+- Removed the explanatory sentence beneath `Keep my saved panel position` from the Mission Finder control panel.
+- The checkbox, stored panel coordinates and centre-on-mission behaviour remain unchanged.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.108` to `V10.6.109`.
+
 ## [1.0.44] - 2026-07-26
 
 ### Fixed

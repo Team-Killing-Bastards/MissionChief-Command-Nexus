@@ -17,6 +17,7 @@ on:
       - 'scripts/check-road-rail-rru-mapping.mjs'
       - 'scripts/check-auto-prisoner-cell-gate.mjs'
       - 'scripts/check-fire-engine-update-mapping.mjs'
+      - 'scripts/check-saved-position-helper-copy.mjs'
       - '.github/workflows/validate-userscript.yml'
   push:
     branches:
@@ -36,6 +37,7 @@ on:
       - 'scripts/check-road-rail-rru-mapping.mjs'
       - 'scripts/check-auto-prisoner-cell-gate.mjs'
       - 'scripts/check-fire-engine-update-mapping.mjs'
+      - 'scripts/check-saved-position-helper-copy.mjs'
       - '.github/workflows/validate-userscript.yml'
   workflow_dispatch:
 
@@ -104,6 +106,9 @@ jobs:
 
       - name: Validate Fire Engine Update mapping and Auto Mode helper cleanup
         run: node scripts/check-fire-engine-update-mapping.mjs
+
+      - name: Validate saved-position helper copy removal
+        run: node scripts/check-saved-position-helper-copy.mjs
 
       - name: Require a version increase when code changes
         if: github.event_name == 'pull_request'

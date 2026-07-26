@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.44
+// @version      1.0.45
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -9041,7 +9041,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.108
+         * MODULE 2: MISSION FINDER V10.6.109
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -9848,7 +9848,7 @@
     const MF_STRICT_TRAINING_SOURCE_PREFIX =
         'mission-finder-live-strict-';
 
-    // V10.6.108: trained-personnel selection now optimises exact vehicle
+    // V10.6.109: trained-personnel selection now optimises exact vehicle
     // coverage instead of treating full qualification as a dispatch gate.
     // Multi-trained crews reduce every matching course, type-51 PSUs provide
     // up to nine seats for compatible Public Order demand, IRVs fill smaller
@@ -15078,7 +15078,7 @@ function isRoadRailUnitVehicleCheckbox(input) {
                 <span>Keep my saved panel position</span>
             </label>
             <div class="mf2026-small" style="margin-top:5px;">
-                Off = centre on every mission. On = remember where you drag it.
+
             </div>
         `;
         advancedBody.appendChild(positionBox);
