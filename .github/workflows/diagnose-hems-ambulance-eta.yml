@@ -32,6 +32,7 @@ jobs:
         run: |
           python3 .diagnostics/collect-hems-ambulance-context.py
           python3 .diagnostics/collect-hems-ambulance-context-extra.py
+          python3 .diagnostics/collect-hems-ambulance-context-extra2.py
 
       - name: Commit diagnostic context
         shell: bash
@@ -39,7 +40,7 @@ jobs:
           set -euo pipefail
           git config user.name MartyBlyth
           git config user.email 32400596+Martyblyth@users.noreply.github.com
-          git add .diagnostics/hems-ambulance-context.txt .diagnostics/hems-ambulance-context-extra.txt
+          git add .diagnostics/hems-ambulance-context.txt .diagnostics/hems-ambulance-context-extra.txt .diagnostics/hems-ambulance-context-extra2.txt
           if git diff --cached --quiet; then
             echo 'Diagnostic context already current.'
             exit 0
