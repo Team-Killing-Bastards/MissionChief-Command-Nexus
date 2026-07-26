@@ -2,6 +2,7 @@
 
 import { readFile } from 'node:fs/promises';
 
+// Keep the Personnel Register transfer and latest trained-coverage optimiser inseparable.
 const source = await readFile('src/missionchief-command-nexus.user.js', 'utf8');
 
 function fail(message) {
