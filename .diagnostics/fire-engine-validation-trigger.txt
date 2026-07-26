@@ -1,1 +1,1 @@
-retry validation with corrected capture wrapper
+retry validation and persist exact failure log
