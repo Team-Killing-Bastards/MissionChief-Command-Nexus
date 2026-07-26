@@ -1,0 +1,73 @@
+name: Build prisoner release lightbox close fix
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'agent/fix-prisoner-release-lightbox-close'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v6
+        with:
+          ref: agent/fix-prisoner-release-lightbox-close
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Apply prisoner close source and contract patches
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .diagnostics/patch-prisoner-close-source.py
+          python3 .diagnostics/patch-prisoner-close-contracts.py
+          rm -rf .diagnostics
+
+      - name: Validate complete candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          python3 scripts/check_repository.py
+          for check in scripts/check-*.mjs; do
+            echo "Running ${check}"
+            node "${check}"
+          done
+          test ! -e src/personnel-register-tools.user.js
+          test ! -d .diagnostics
+          grep -Fq '// @version      1.0.47' src/missionchief-command-nexus.user.js
+          grep -Fq ' * MODULE 2: MISSION FINDER V10.6.111' src/missionchief-command-nexus.user.js
+          git diff --check
+
+      - name: Commit validated prisoner close fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name MartyBlyth
+          git config user.email 32400596+Martyblyth@users.noreply.github.com
+          git add -A
+          if git diff --cached --quiet; then
+            echo 'Candidate already current.'
+            exit 0
+          fi
+          git commit -m 'Fix prisoner release Vue lightbox close'
+          git push origin HEAD:agent/fix-prisoner-release-lightbox-close
