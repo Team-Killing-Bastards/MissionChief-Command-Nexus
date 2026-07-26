@@ -9,20 +9,34 @@ function fail(message) {
   process.exit(1);
 }
 
-// MissionChief may render the same current shortage in singular or plural form.
+// Fire Road Rail Unit and Coastguard Rope Rescue Unit share an abbreviation only;
+// their dispatch routes must remain exact type 107 and type 59 respectively.
 for (const [token, label] of [
-  ['// @version      1.0.38', 'v1.0.38 metadata'],
-  [' * MODULE 2: MISSION FINDER V10.6.102', 'Mission Finder V10.6.102 header'],
-  ['"Road Rail Unit": "RRU",', 'singular Road Rail Unit alias'],
-  ['"Road Rail Units": "RRU",', 'plural Road Rail Units alias'],
-  ['"107": "RRU",', 'exact type-107 RRU vehicle mapping'],
+  ['// @version      1.0.39', 'v1.0.39 metadata'],
+  [' * MODULE 2: MISSION FINDER V10.6.103', 'Mission Finder V10.6.103 header'],
+  ['"Road Rail Unit": "Road Rail Unit",', 'singular canonical Road Rail alias'],
+  ['"Road Rail Units": "Road Rail Unit",', 'plural canonical Road Rail alias'],
+  ['function isRoadRailUnitRequirement(', 'strict Road Rail requirement detector'],
+  ['function isRoadRailUnitVehicleCheckbox(', 'strict Road Rail checkbox matcher'],
+  ["typeIdentifiers.includes('107')", 'exact type-107 matcher'],
+  ['const roadRailOnly =', 'dedicated selector flag'],
+  ['matches = isRoadRailUnitVehicleCheckbox(input);', 'dedicated selected-count verification'],
+  ['"59": "Coastguard Rope Rescue Unit",', 'separate Coastguard type-59 mapping'],
+  ['"107": "RRU",', 'Fire type-107 display mapping'],
 ]) {
   if (!source.includes(token)) fail(`Missing Road Rail RRU contract: ${label}`);
 }
 
-const pluralCount = (source.match(/"Road Rail Units"\s*:\s*"RRU"/g) || []).length;
-if (pluralCount !== 1) {
-  fail(`Expected one plural Road Rail Units alias; found ${pluralCount}`);
+if (/"Road Rail Units?"\s*:\s*"RRU"/.test(source)) {
+  fail('Road Rail aliases still use the ambiguous generic RRU route');
 }
 
-console.log('Road Rail Unit singular/plural aliases map to exact type-107 RRU.');
+const roadRailMatcher = source.slice(
+  source.indexOf('function isRoadRailUnitVehicleCheckbox('),
+  source.indexOf('function isCrvRequirement(')
+);
+if (roadRailMatcher.includes("includes('59')") || roadRailMatcher.includes('coastguard rope')) {
+  fail('Road Rail matcher must never include Coastguard Rope Rescue type 59');
+}
+
+console.log('Road Rail requirements use exact Fire type-107 RRU and exclude Coastguard type-59 CRRU.');
