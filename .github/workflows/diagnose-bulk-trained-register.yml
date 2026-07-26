@@ -54,8 +54,15 @@ jobs:
           git reset --hard HEAD
           git clean -fd
           mkdir -p .diagnostics
-          cp /tmp/bulk-build.log .diagnostics/bulk-build-failure.log
-          echo "${status}" > .diagnostics/bulk-build-failure.status
+          {
+            echo "RUN_ID=${GITHUB_RUN_ID}"
+            echo "RUN_ATTEMPT=${GITHUB_RUN_ATTEMPT}"
+            cat /tmp/bulk-build.log
+          } > .diagnostics/bulk-build-failure.log
+          {
+            echo "STATUS=${status}"
+            echo "RUN_ID=${GITHUB_RUN_ID}"
+          } > .diagnostics/bulk-build-failure.status
           git config user.name MartyBlyth
           git config user.email 32400596+Martyblyth@users.noreply.github.com
           git add -f .diagnostics/bulk-build-failure.log .diagnostics/bulk-build-failure.status
@@ -121,8 +128,15 @@ jobs:
           git reset --hard HEAD
           git clean -fd
           mkdir -p .diagnostics
-          cp /tmp/bulk-validation.log .diagnostics/bulk-validation-failure.log
-          echo "${status}" > .diagnostics/bulk-validation-failure.status
+          {
+            echo "RUN_ID=${GITHUB_RUN_ID}"
+            echo "RUN_ATTEMPT=${GITHUB_RUN_ATTEMPT}"
+            cat /tmp/bulk-validation.log
+          } > .diagnostics/bulk-validation-failure.log
+          {
+            echo "STATUS=${status}"
+            echo "RUN_ID=${GITHUB_RUN_ID}"
+          } > .diagnostics/bulk-validation-failure.status
           git config user.name MartyBlyth
           git config user.email 32400596+Martyblyth@users.noreply.github.com
           git add -f .diagnostics/bulk-validation-failure.log .diagnostics/bulk-validation-failure.status
