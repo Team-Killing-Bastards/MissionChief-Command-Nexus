@@ -40,23 +40,59 @@ jobs:
           python3 .diagnostics/apply-fire-engine-update-fix.py
           rm -f .diagnostics/apply-fire-engine-update-fix.py
 
-      - name: Validate complete Command Nexus candidate
+      - name: Capture complete validation result
+        shell: bash
+        run: |
+          set +e
+          mkdir -p .diagnostics
+          {
+            set -x
+            node --check src/missionchief-command-nexus.user.js
+            node scripts/validate-userscript.mjs
+            python3 scripts/check_repository.py
+            for check in scripts/check-*.mjs; do
+              echo "Running ${check}"
+              node "${check}" || exit $?
+            done
+            test ! -e src/personnel-register-tools.user.js
+            grep -Fq '// @version      1.0.44' src/missionchief-command-nexus.user.js
+            grep -Fq ' * MODULE 2: MISSION FINDER V10.6.108' src/missionchief-command-nexus.user.js
+            grep -Fq 'function isFireEngineVehicleCheckbox(' src/missionchief-command-nexus.user.js
+            grep -Fq 'removeAutoModeQueueHelperCopy();' src/missionchief-command-nexus.user.js
+            git diff --check
+          } > .diagnostics/fire-engine-validation.log 2>&1
+          status=$?
+          echo "${status}" > .diagnostics/fire-engine-validation.status
+          cat .diagnostics/fire-engine-validation.log
+          exit 0
+
+      - name: Commit failed validation receipt
         shell: bash
         run: |
           set -euo pipefail
-          node --check src/missionchief-command-nexus.user.js
-          node scripts/validate-userscript.mjs
-          python3 scripts/check_repository.py
-          for check in scripts/check-*.mjs; do
-            echo "Running ${check}"
-            node "${check}"
-          done
-          test ! -e src/personnel-register-tools.user.js
-          grep -Fq '// @version      1.0.44' src/missionchief-command-nexus.user.js
-          grep -Fq ' * MODULE 2: MISSION FINDER V10.6.108' src/missionchief-command-nexus.user.js
-          grep -Fq 'function isFireEngineVehicleCheckbox(' src/missionchief-command-nexus.user.js
-          grep -Fq 'removeAutoModeQueueHelperCopy();' src/missionchief-command-nexus.user.js
-          git diff --check
+          status="$(cat .diagnostics/fire-engine-validation.status)"
+          if [ "${status}" = '0' ]; then
+            exit 0
+          fi
+          git reset --hard HEAD
+          git clean -fd
+          printf '%s\n' "${status}" > .diagnostics/fire-engine-validation.status
+          git config user.name MartyBlyth
+          git config user.email 32400596+Martyblyth@users.noreply.github.com
+          git add .diagnostics/fire-engine-validation.status
+          git commit -m 'Record Fire Engine validation failure'
+          git push origin HEAD:agent/fire-engine-update-type-guard-ui-cleanup
+
+      - name: Require successful validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          status="$(cat .diagnostics/fire-engine-validation.status)"
+          if [ "${status}" != '0' ]; then
+            echo "Candidate validation failed with status ${status}."
+            exit "${status}"
+          fi
+          rm -f .diagnostics/fire-engine-validation.log .diagnostics/fire-engine-validation.status
 
       - name: Commit validated integration
         shell: bash
