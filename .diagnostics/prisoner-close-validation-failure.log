@@ -1,0 +1,15 @@
+RUN_ID=30221290834
+RUN_ATTEMPT=1
+
+### JavaScript syntax
+
+### Userscript metadata
+Userscript validation passed: version 1.0.47, 1349401 bytes.
+
+### Repository integrity
+Repository integrity checks passed.
+
+### scripts/check-auto-prisoner-cell-gate.mjs
+ERROR: Release-result dismiss handler is missing: getTopmostAutoPrisonerReleaseDismissContext()
+
+FINAL_STATUS=1
