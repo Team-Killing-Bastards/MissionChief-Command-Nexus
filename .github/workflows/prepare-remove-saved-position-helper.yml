@@ -40,23 +40,66 @@ jobs:
           python3 .diagnostics/apply-remove-saved-position-helper.py
           rm -f .diagnostics/apply-remove-saved-position-helper.py
 
-      - name: Validate complete Command Nexus candidate
+      - name: Capture complete validation result
+        shell: bash
+        run: |
+          set +e
+          mkdir -p .diagnostics
+          status=0
+          {
+            set -x
+            node --check src/missionchief-command-nexus.user.js || status=$?
+            if [ "${status}" = '0' ]; then node scripts/validate-userscript.mjs || status=$?; fi
+            if [ "${status}" = '0' ]; then python3 scripts/check_repository.py || status=$?; fi
+            if [ "${status}" = '0' ]; then
+              for check in scripts/check-*.mjs; do
+                echo "Running ${check}"
+                node "${check}" || { status=$?; break; }
+              done
+            fi
+            if [ "${status}" = '0' ]; then test ! -e src/personnel-register-tools.user.js || status=$?; fi
+            if [ "${status}" = '0' ]; then grep -Fq '// @version      1.0.45' src/missionchief-command-nexus.user.js || status=$?; fi
+            if [ "${status}" = '0' ]; then grep -Fq ' * MODULE 2: MISSION FINDER V10.6.109' src/missionchief-command-nexus.user.js || status=$?; fi
+            if [ "${status}" = '0' ]; then grep -Fq 'Keep my saved panel position' src/missionchief-command-nexus.user.js || status=$?; fi
+            if [ "${status}" = '0' ]; then ! grep -Fq 'Off = centre on every mission. On = remember where you drag it.' src/missionchief-command-nexus.user.js || status=$?; fi
+            if [ "${status}" = '0' ]; then git diff --check || status=$?; fi
+            echo "FINAL_STATUS=${status}"
+          } > .diagnostics/saved-position-validation.log 2>&1
+          echo "${status}" > .diagnostics/saved-position-validation.status
+          cat .diagnostics/saved-position-validation.log
+          exit 0
+
+      - name: Commit failed validation receipt
         shell: bash
         run: |
           set -euo pipefail
-          node --check src/missionchief-command-nexus.user.js
-          node scripts/validate-userscript.mjs
-          python3 scripts/check_repository.py
-          for check in scripts/check-*.mjs; do
-            echo "Running ${check}"
-            node "${check}"
-          done
-          test ! -e src/personnel-register-tools.user.js
-          grep -Fq '// @version      1.0.45' src/missionchief-command-nexus.user.js
-          grep -Fq ' * MODULE 2: MISSION FINDER V10.6.109' src/missionchief-command-nexus.user.js
-          grep -Fq 'Keep my saved panel position' src/missionchief-command-nexus.user.js
-          ! grep -Fq 'Off = centre on every mission. On = remember where you drag it.' src/missionchief-command-nexus.user.js
-          git diff --check
+          status="$(cat .diagnostics/saved-position-validation.status)"
+          if [ "${status}" = '0' ]; then
+            exit 0
+          fi
+          cp .diagnostics/saved-position-validation.log /tmp/saved-position-validation.log
+          cp .diagnostics/saved-position-validation.status /tmp/saved-position-validation.status
+          git reset --hard HEAD
+          git clean -fd
+          mkdir -p .diagnostics
+          cp /tmp/saved-position-validation.log .diagnostics/saved-position-validation.log
+          cp /tmp/saved-position-validation.status .diagnostics/saved-position-validation.status
+          git config user.name MartyBlyth
+          git config user.email 32400596+Martyblyth@users.noreply.github.com
+          git add .diagnostics/saved-position-validation.log .diagnostics/saved-position-validation.status
+          git commit -m 'Record saved-position validation failure'
+          git push origin HEAD:agent/remove-saved-position-helper-text
+
+      - name: Require successful validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          status="$(cat .diagnostics/saved-position-validation.status)"
+          if [ "${status}" != '0' ]; then
+            echo "Candidate validation failed with status ${status}."
+            exit "${status}"
+          fi
+          rm -f .diagnostics/saved-position-validation.log .diagnostics/saved-position-validation.status
 
       - name: Commit validated integration
         shell: bash
