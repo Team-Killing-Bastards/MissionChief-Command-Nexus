@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.39
+// @version      1.0.40
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -9041,7 +9041,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.103
+         * MODULE 2: MISSION FINDER V10.6.104
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -9848,7 +9848,7 @@
     const MF_STRICT_TRAINING_SOURCE_PREFIX =
         'mission-finder-live-strict-';
 
-    // V10.6.103: trained-personnel selection now optimises exact vehicle
+    // V10.6.104: trained-personnel selection now optimises exact vehicle
     // coverage instead of treating full qualification as a dispatch gate.
     // Multi-trained crews reduce every matching course, type-51 PSUs provide
     // up to nine seats for compatible Public Order demand, IRVs fill smaller
@@ -11807,17 +11807,7 @@ function isRoadRailUnitRequirement(originalName, mappedName) {
 
 function isRoadRailUnitVehicleCheckbox(input) {
     if (!input) return false;
-    const typeIdentifiers = getVehicleTypeIdentifiers(input);
-    if (typeIdentifiers.length > 0) return typeIdentifiers.includes('107');
-
-    return getExtendedVehicleValues(input).some(value => {
-        const cleaned = normaliseVehicleText(value);
-        return (
-            cleaned === 'rru' ||
-            cleaned === 'road rail unit' ||
-            cleaned === 'road rail units'
-        );
-    });
+    return getVehicleTypeIdentifiers(input).includes('107');
 }
 
     function isCrvRequirement(originalName, mappedName) {
