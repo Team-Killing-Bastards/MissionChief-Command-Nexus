@@ -15,6 +15,7 @@ on:
       - 'scripts/check-missing-requirements-priority.mjs'
       - 'scripts/check-trained-coverage-optimizer.mjs'
       - 'scripts/check-road-rail-rru-mapping.mjs'
+      - 'scripts/check-auto-prisoner-cell-gate.mjs'
       - '.github/workflows/validate-userscript.yml'
   push:
     branches:
@@ -32,6 +33,7 @@ on:
       - 'scripts/check-missing-requirements-priority.mjs'
       - 'scripts/check-trained-coverage-optimizer.mjs'
       - 'scripts/check-road-rail-rru-mapping.mjs'
+      - 'scripts/check-auto-prisoner-cell-gate.mjs'
       - '.github/workflows/validate-userscript.yml'
   workflow_dispatch:
 
@@ -94,6 +96,9 @@ jobs:
 
       - name: Validate Road Rail Unit to RRU mapping
         run: node scripts/check-road-rail-rru-mapping.mjs
+
+      - name: Validate Auto Mode prisoner cell gate
+        run: node scripts/check-auto-prisoner-cell-gate.mjs
 
       - name: Require a version increase when code changes
         if: github.event_name == 'pull_request'
