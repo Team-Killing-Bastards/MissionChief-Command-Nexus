@@ -1,1 +1,1 @@
-capture exact validation failure
+capture concise validation failure
