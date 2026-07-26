@@ -1,0 +1,65 @@
+name: Prepare Road Rail Unit mapping
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: write
+
+concurrency:
+  group: road-rail-rru-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  inspect:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'agent/map-road-rail-unit-to-rru'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out working branch
+        uses: actions/checkout@v6
+        with:
+          ref: agent/map-road-rail-unit-to-rru
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Print Road Rail and RRU source contexts
+        shell: bash
+        run: |
+          python3 <<'PY'
+          import re
+          from pathlib import Path
+
+          source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8')
+          lines = source.splitlines()
+          patterns = [
+              re.compile(r'road\s*rail', re.I),
+              re.compile(r'\bRRU\b', re.I),
+              re.compile(r'rail.*unit', re.I),
+          ]
+
+          matches = []
+          for index, line in enumerate(lines, 1):
+              if any(pattern.search(line) for pattern in patterns):
+                  matches.append(index)
+
+          print(f'Found {len(matches)} matching line(s).')
+          for index in matches:
+              start = max(1, index - 8)
+              end = min(len(lines), index + 8)
+              print(f'\n===== {start}-{end} (match {index}) =====')
+              for number in range(start, end + 1):
+                  print(f'{number}: {lines[number - 1]}')
+
+          if not matches:
+              raise SystemExit('No Road Rail or RRU source context found.')
+          PY
