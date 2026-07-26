@@ -1,0 +1,1 @@
+Publish and independently verify the clean v1.0.42 release through the permanent GitHub, Greasy Fork and Discord workflow.
