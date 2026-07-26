@@ -1,5 +1,0 @@
-Inspect and map Missing Vehicles: Road Rail Units to the existing RRU vehicle matcher.
-Capture current source contexts for the live v1.0.37 code path.
-Apply the validated v1.0.38 singular/plural alias patch.
-Trigger the registered trusted preparation workflow.
-Run the simplified branch-local patch builder.
