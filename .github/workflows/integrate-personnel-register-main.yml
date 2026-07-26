@@ -1,6 +1,11 @@
 name: Integrate Personnel Register into Command Nexus
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/integrate-personnel-register-main.yml'
   pull_request:
     branches:
       - main
@@ -13,14 +18,15 @@ permissions:
   contents: write
 
 concurrency:
-  group: integrate-personnel-register-${{ github.event.pull_request.number }}
+  group: integrate-personnel-register-main
   cancel-in-progress: false
 
 jobs:
   integrate:
     if: >-
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      github.event.pull_request.head.ref == 'agent/integrate-personnel-register-main'
+      github.event_name == 'push' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+       github.event.pull_request.head.ref == 'agent/integrate-personnel-register-main')
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
