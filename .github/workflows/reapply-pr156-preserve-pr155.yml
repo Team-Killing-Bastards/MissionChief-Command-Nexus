@@ -27,6 +27,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          echo 'Reapplying PR #156 onto the current PR #155 baseline.'
           PR156_BASE='7c00109945f4968ce02501069cc8b479f419a838'
           PR156_MERGE='7f0a7c279849f034f39c7fc1d47efcce5d650987'
           SOURCE='src/missionchief-command-nexus.user.js'
@@ -83,13 +84,11 @@ jobs:
 
           readme = Path('README.md')
           text = readme.read_text(encoding='utf-8')
-          text = text.replace('**Current version:** `1.0.36`', '**Current version:** `1.0.37`', 1)
-          readme.write_text(text, encoding='utf-8')
+          readme.write_text(text.replace('**Current version:** `1.0.36`', '**Current version:** `1.0.37`', 1), encoding='utf-8')
 
           src_readme = Path('src/README.md')
           text = src_readme.read_text(encoding='utf-8')
-          text = text.replace('| Command Nexus version | `1.0.36` |', '| Command Nexus version | `1.0.37` |', 1)
-          src_readme.write_text(text, encoding='utf-8')
+          src_readme.write_text(text.replace('| Command Nexus version | `1.0.36` |', '| Command Nexus version | `1.0.37` |', 1), encoding='utf-8')
 
           changelog = Path('CHANGELOG.md')
           text = changelog.read_text(encoding='utf-8')
