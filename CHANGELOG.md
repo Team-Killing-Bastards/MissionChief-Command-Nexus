@@ -32,6 +32,21 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
 
+## [1.0.46] - 2026-07-26
+
+### Changed
+
+- Removed the explanatory copy beneath Mission Ready Delay while retaining its control and 1000 ms default.
+- Build All Register now publishes complete per-person training profiles for every exact vehicle assignment page across all vehicle types.
+- Mission Finder trusts fresh exact all-vehicle register scans and can find specialist trained staff on any assigned unit.
+- Search Advisor demand now selects exact registered vehicles carrying assigned `search_and_rescue`-trained staff instead of hard-mapping to Control Vans.
+- `Car to tow` and `Cars to tow` now route through exact type-105 Flatbed Recovery Vehicles, including structured Missing Vehicles alerts.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.109` to `V10.6.110`.
+- Personnel Assignment increased from `1.3.4` to `1.3.5`.
+
 ## [1.0.45] - 2026-07-26
 
 ### Changed

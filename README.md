@@ -17,7 +17,7 @@
 </tr>
 </table>
 
-**Current version:** `1.0.45` · **Mission Finder engine:** `V10.6.109` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
+**Current version:** `1.0.46` · **Mission Finder engine:** `V10.6.110` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)
@@ -219,7 +219,7 @@ Auto Mode validates readiness and final selected-unit state before dispatch. Cro
 - `Fire, rescue or aerial appliance` maps to `Rescue Pump`.
 - `Road Rail Unit` maps to `RRU`.
 - `Firefighters` converts to Rescue Pumps at 9 personnel per vehicle.
-- `Car Recovery` maps to the existing Flatbed Recovery Vehicle.
+- `Car Recovery`, `Car to tow`, and `Cars to tow` use exact type-105 Flatbed Recovery Vehicles.
 - `RIV or Major Foam Tender` uses RIV first and Major Foam Tender only when no RIV is available.
 
 High Volume Pump, Drone Operator, Co-Responder, and Lifeguard remain disabled pending sufficient evidence.
@@ -247,6 +247,7 @@ High Volume Pump, Drone Operator, Co-Responder, and Lifeguard remain disabled pe
 - Armed Personnel and Armed Response Personnel route to exact type-25 Armed Traffic Cars.
 - Armed Traffic Car selection verifies Roads Policing plus Firearms capability.
 - Generic type-66 `4x4 Vehicle` matching is restored.
+- Search Advisor demand selects any exact registered vehicle carrying assigned `search_and_rescue`-trained staff; it is no longer tied to Control Vans.
 - SAR Commander demand converts to Control Van capability.
 - `Operational Support or SAR Vehicle` selects and verifies the exact type-86 Operational Support Van.
 - Seagoing Vessel requirements recognise supported ALB / ABL / All-weather Lifeboat variants.
