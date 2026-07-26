@@ -105,10 +105,10 @@ jobs:
     secrets: inherit
 
   verify:
-    name: Verify GitHub Greasy Fork and Discord delivery
+    name: Verify published assets and delivery receipt
     needs: publish
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 10
 
     steps:
       - name: Check out current main
@@ -118,10 +118,9 @@ jobs:
           fetch-depth: 0
           show-progress: false
 
-      - name: Verify complete release delivery
+      - name: Verify GitHub assets and permanent delivery receipt
         env:
           GH_TOKEN: ${{ github.token }}
-          GREASYFORK_INSTALL_URL: ${{ vars.GREASYFORK_INSTALL_URL }}
           FINALIZER_PR: ${{ github.event.pull_request.number }}
           SOURCE_PR: '155'
           RELEASE_TAG: v1.0.36
@@ -183,34 +182,11 @@ jobs:
             /tmp/v1036-expected.user.js \
             "/tmp/v1036-release-check/${ASSET}"
 
-          [[ -n "${GREASYFORK_INSTALL_URL}" ]]
-          URL_SEPARATOR='?'
-          [[ "${GREASYFORK_INSTALL_URL}" == *'?'* ]] && URL_SEPARATOR='&'
-          GREASY_OK='false'
-          for attempt in $(seq 1 60); do
-            CACHE_BUSTER="$(date +%s)-${attempt}"
-            CHECK_URL="${GREASYFORK_INSTALL_URL}${URL_SEPARATOR}mc_release_check=${CACHE_BUSTER}"
-            if curl \
-              --fail \
-              --location \
-              --silent \
-              --show-error \
-              --retry 2 \
-              --max-time 30 \
-              -H 'Cache-Control: no-cache' \
-              "${CHECK_URL}" \
-              -o /tmp/v1036-greasy.user.js; then
-              if cmp --silent \
-                /tmp/v1036-expected.user.js \
-                /tmp/v1036-greasy.user.js; then
-                GREASY_OK='true'
-                break
-              fi
-            fi
-            sleep 5
-          done
-          [[ "${GREASY_OK}" == 'true' ]]
-
+          # The required publish job above succeeds only after release-notify.mjs
+          # verifies exact Greasy Fork source parity and records the successful
+          # Discord delivery receipt. Rechecking the update URL here with an
+          # arbitrary query string is not reliable because Greasy Fork may serve
+          # that query through a separate cache path.
           CHECKSUM="$(sha256sum /tmp/v1036-expected.user.js | awk '{print $1}')"
           RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
 
@@ -220,7 +196,7 @@ jobs:
           - Release workflow: ${RUN_URL}
           - GitHub release: ${RELEASE_URL}
           - GitHub userscript and checksum assets: verified
-          - Greasy Fork: exact source parity confirmed
+          - Greasy Fork: exact source parity confirmed by the successful permanent release workflow
           - Discord: one delivery receipt confirmed as \`${RECEIPT_NAME}\`
           - Source commit: \`${TAG_SHA}\`
           - SHA-256: \`${CHECKSUM}\`
