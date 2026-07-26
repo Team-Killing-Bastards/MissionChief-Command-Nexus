@@ -22,8 +22,8 @@ function extractBetween(startText, endText, label) {
   return source.slice(start, end);
 }
 
-requireText('// @version      1.0.36', 'v1.0.36 metadata');
-requireText("const PERSONNEL_VERSION = '1.3.3';", 'Personnel v1.3.3');
+requireText('// @version      1.0.37', 'v1.0.37 metadata');
+requireText("const PERSONNEL_VERSION = '1.3.4';", 'Personnel v1.3.4');
 requireText(' * MODULE 2: MISSION FINDER V10.6.101', 'V10.6.101 header');
 
 // #126 PSU registry and assigned staff.
