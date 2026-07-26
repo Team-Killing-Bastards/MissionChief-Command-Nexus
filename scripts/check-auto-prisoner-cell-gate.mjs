@@ -2,6 +2,7 @@
 
 import { readFile } from 'node:fs/promises';
 
+// This contract runs on the final branch after current main has been recorded.
 const source = await readFile('src/missionchief-command-nexus.user.js', 'utf8');
 
 function fail(message) {
