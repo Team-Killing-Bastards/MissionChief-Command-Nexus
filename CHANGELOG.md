@@ -32,6 +32,23 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
 
+## [1.0.43] - 2026-07-26
+
+### Fixed
+
+- After the exact `Release Prisoners` fallback completes, Auto Mode now waits for the resulting lightbox, clicks its visible topmost `<span title="Close" class="lightbox-close">` control and confirms the screen has disappeared.
+- The release-result close path supports MissionChief layouts where the close span is not wrapped by `.control-btn-container`.
+- Once the dismiss screen is closed, release state is cleared and Auto Mode restarts the mission cycle instead of remaining blocked on the result screen.
+
+### Safety
+
+- The dismiss close runs only after the exact current-mission `Release Prisoners` action has cleared the prisoner alert.
+- Existing patient transport and positive-capacity prison-cell handling remain higher priority and unchanged.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.106` to `V10.6.107`.
+
 ## [1.0.42] - 2026-07-26
 
 ### Changed

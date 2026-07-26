@@ -13,8 +13,8 @@ function fail(message) {
 }
 
 for (const [token, label] of [
-  ['// @version      1.0.42', 'v1.0.42 metadata'],
-  [' * MODULE 2: MISSION FINDER V10.6.106', 'Mission Finder V10.6.106 header'],
+  ['// @version      1.0.43', 'v1.0.43 metadata'],
+  [' * MODULE 2: MISSION FINDER V10.6.107', 'Mission Finder V10.6.107 header'],
   ['the prisoners should be placed in a cell', 'normalised prisoner alert contract'],
   ['a.btn.btn-success[data-prison-id][href*="/gefangener/"]', 'green prison destination selector'],
   ['a.btn.btn-danger[data-method="post"][href*="/gefangene/entlassen"]', 'exact release fallback selector'],
@@ -25,6 +25,10 @@ for (const [token, label] of [
   ["return 'defer-release';", 'deferred final fallback outcome'],
   ['realClickForQueueRestart(releaseLink);', 'single native release click'],
   ['MF_AUTO_PRISONER_RELEASE_STATE_KEY', 'release duplicate-click guard'],
+  ['span.lightbox-close[title=\"Close\"]', 'release-result close selector'],
+  ['function getTopmostAutoPrisonerReleaseDismissContext(', 'topmost release-result close chooser'],
+  ['function closeAutoPrisonerReleaseDismissAfterClick(', 'release-result dismiss handler'],
+  ['await closeAutoPrisonerReleaseDismissAfterClick();', 'release dismiss invocation'],
 ]) {
   if (!source.includes(token)) fail(`Missing Auto prisoner contract: ${label}`);
 }
@@ -95,4 +99,28 @@ if (!source.includes("prisonerReleaseResult === 'stuck'")) {
   fail('Auto Mode must stop safely when the exact release fallback cannot complete');
 }
 
-console.log('Auto Mode prefers active cells, finishes normal actions when none are available, then clicks only the exact current-mission Release Prisoners fallback before dispatch.');
+const releaseClick = finalBody.indexOf('realClickForQueueRestart(releaseLink);');
+const dismissCall = finalBody.indexOf('await closeAutoPrisonerReleaseDismissAfterClick();');
+const releaseReturn = finalBody.indexOf("return 'clicked';", dismissCall);
+
+if (!(releaseClick >= 0 && dismissCall > releaseClick && releaseReturn > dismissCall)) {
+  fail('Release Prisoners must click first, then close the result screen, then restart the Auto cycle');
+}
+
+const dismissStart = source.indexOf('async function closeAutoPrisonerReleaseDismissAfterClick(');
+const dismissEnd = source.indexOf('function getExactAutoReleasePrisonersLink(', dismissStart);
+const dismissBody = source.slice(dismissStart, dismissEnd);
+
+for (const required of [
+  'getActivePrisonerCellSelectionContext()',
+  'getTopmostAutoPrisonerReleaseDismissContext()',
+  'realClickForQueueRestart(',
+  'isAutoPrisonerReleaseDismissContextVisible(',
+  "return 'closed';",
+]) {
+  if (!dismissBody.includes(required)) {
+    fail(`Release-result dismiss handler is missing: ${required}`);
+  }
+}
+
+console.log('Auto Mode prefers active cells, finishes normal actions when none are available, then clicks only the exact current-mission Release Prisoners fallback, closes its result screen and restarts the mission cycle before dispatch.');

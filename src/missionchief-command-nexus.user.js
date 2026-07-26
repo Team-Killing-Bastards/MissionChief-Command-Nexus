@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.42
+// @version      1.0.43
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -9041,7 +9041,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.106
+         * MODULE 2: MISSION FINDER V10.6.107
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -9848,7 +9848,7 @@
     const MF_STRICT_TRAINING_SOURCE_PREFIX =
         'mission-finder-live-strict-';
 
-    // V10.6.106: trained-personnel selection now optimises exact vehicle
+    // V10.6.107: trained-personnel selection now optimises exact vehicle
     // coverage instead of treating full qualification as a dispatch gate.
     // Multi-trained crews reduce every matching course, type-51 PSUs provide
     // up to nine seats for compatible Public Order demand, IRVs fill smaller
@@ -34225,6 +34225,9 @@ const MF_AUTO_PRISONER_RELEASE_STATE_KEY =
     'mf_auto_prisoner_release_v1';
 const MF_AUTO_PRISONER_RELEASE_CLICK_RETRY_MS = 6500;
 const MF_AUTO_PRISONER_RELEASE_MAX_ATTEMPTS = 2;
+const MF_AUTO_PRISONER_RELEASE_RESULT_WAIT_MS = 10000;
+const MF_AUTO_PRISONER_RELEASE_DISMISS_WAIT_MS = 8000;
+const MF_AUTO_PRISONER_RELEASE_DISMISS_CLOSE_WAIT_MS = 8000;
 
 function getActivePrisonerCellSelectionContext() {
     const candidateDocuments =
@@ -34536,6 +34539,230 @@ async function handleAutoPrisonerCellBeforeUnitFinder() {
 }
 
 
+
+function getVisibleAutoPrisonerReleaseDismissContexts() {
+    const candidateDocuments =
+        typeof mfGetAccessibleDocumentsForTransport === 'function'
+            ? mfGetAccessibleDocumentsForTransport()
+            : [document];
+    const candidates = [];
+    let order = 0;
+
+    for (const candidateDocument of candidateDocuments) {
+        if (!candidateDocument || !candidateDocument.querySelectorAll) {
+            continue;
+        }
+
+        const closeButtons = Array.from(
+            candidateDocument.querySelectorAll(
+                'span.lightbox-close[title="Close"], .lightbox-close[title="Close"]'
+            )
+        );
+
+        for (const closeButton of closeButtons) {
+            order += 1;
+
+            if (!closeButton || closeButton.id?.includes('mf-')) {
+                continue;
+            }
+
+            try {
+                if (!mfIsVisibleInOwnDocument(closeButton)) continue;
+            } catch (_error) {
+                continue;
+            }
+
+            const modal = closeButton.closest(
+                '.vm--modal, .modal, .lightbox, #lightbox_box, #iframe-inside-container'
+            );
+
+            if (!modal) continue;
+
+            try {
+                if (!mfIsVisibleInOwnDocument(modal)) continue;
+            } catch (_error) {
+                continue;
+            }
+
+            let zIndex = 0;
+            try {
+                const rawZIndex =
+                    candidateDocument.defaultView
+                        ?.getComputedStyle(modal)
+                        ?.zIndex ||
+                    modal.style?.zIndex ||
+                    '0';
+                const parsedZIndex = Number.parseInt(rawZIndex, 10);
+                zIndex = Number.isFinite(parsedZIndex)
+                    ? parsedZIndex
+                    : 0;
+            } catch (_error) {}
+
+            candidates.push({
+                closeButton,
+                modal,
+                zIndex,
+                order
+            });
+        }
+    }
+
+    candidates.sort((left, right) =>
+        left.zIndex - right.zIndex ||
+        left.order - right.order
+    );
+
+    return candidates;
+}
+
+function getTopmostAutoPrisonerReleaseDismissContext() {
+    const candidates =
+        getVisibleAutoPrisonerReleaseDismissContexts();
+
+    return candidates.length
+        ? candidates[candidates.length - 1]
+        : null;
+}
+
+function isAutoPrisonerReleaseDismissContextVisible(context) {
+    if (!context || !context.closeButton || !context.modal) {
+        return false;
+    }
+
+    if (
+        context.closeButton.isConnected === false ||
+        context.modal.isConnected === false
+    ) {
+        return false;
+    }
+
+    try {
+        return !!(
+            mfIsVisibleInOwnDocument(context.closeButton) ||
+            mfIsVisibleInOwnDocument(context.modal)
+        );
+    } catch (_error) {
+        return false;
+    }
+}
+
+async function closeAutoPrisonerReleaseDismissAfterClick() {
+    updateStatusBox(
+        'Auto Mode: Release Prisoners clicked. Waiting for the result screen before restarting the mission cycle...'
+    );
+
+    const resultStarted = Date.now();
+
+    while (
+        autoModeRunning &&
+        !isManualAutoStopActive() &&
+        getActivePrisonerCellSelectionContext() &&
+        Date.now() - resultStarted <
+            MF_AUTO_PRISONER_RELEASE_RESULT_WAIT_MS
+    ) {
+        await wait(200);
+    }
+
+    if (!autoModeRunning || isManualAutoStopActive()) {
+        return 'stuck';
+    }
+
+    if (getActivePrisonerCellSelectionContext()) {
+        if (mfDebugEnabled) {
+            debugLog(
+                'AUTO PRISONER RELEASE',
+                'Release Prisoners did not clear the prisoner alert before the result-screen timeout.'
+            );
+        }
+        return 'stuck';
+    }
+
+    const dismissStarted = Date.now();
+    let dismissContext =
+        getTopmostAutoPrisonerReleaseDismissContext();
+
+    while (
+        !dismissContext &&
+        autoModeRunning &&
+        !isManualAutoStopActive() &&
+        Date.now() - dismissStarted <
+            MF_AUTO_PRISONER_RELEASE_DISMISS_WAIT_MS
+    ) {
+        await wait(200);
+        dismissContext =
+            getTopmostAutoPrisonerReleaseDismissContext();
+    }
+
+    if (!autoModeRunning || isManualAutoStopActive()) {
+        return 'stuck';
+    }
+
+    if (!dismissContext) {
+        if (mfDebugEnabled) {
+            debugLog(
+                'AUTO PRISONER RELEASE',
+                'No visible release-result close span appeared; continuing because the prisoner alert cleared.'
+            );
+        }
+        clearAutoPrisonerReleaseState();
+        return 'none';
+    }
+
+    updateStatusBox(
+        'Auto Mode: closing the Release Prisoners result screen before restarting the mission cycle...'
+    );
+
+    if (mfDebugEnabled) {
+        const modalClass = String(
+            dismissContext.modal.className || ''
+        ).replace(/\s+/g, '.');
+        debugLog(
+            'AUTO PRISONER RELEASE',
+            `Closing topmost release-result lightbox | zIndex=${dismissContext.zIndex} | modal=${modalClass}`
+        );
+    }
+
+    const clicked = realClickForQueueRestart(
+        dismissContext.closeButton
+    );
+
+    if (!clicked) return 'stuck';
+
+    const closeStarted = Date.now();
+
+    while (
+        autoModeRunning &&
+        !isManualAutoStopActive() &&
+        isAutoPrisonerReleaseDismissContextVisible(
+            dismissContext
+        ) &&
+        Date.now() - closeStarted <
+            MF_AUTO_PRISONER_RELEASE_DISMISS_CLOSE_WAIT_MS
+    ) {
+        await wait(180);
+    }
+
+    if (
+        isAutoPrisonerReleaseDismissContextVisible(
+            dismissContext
+        )
+    ) {
+        if (mfDebugEnabled) {
+            debugLog(
+                'AUTO PRISONER RELEASE',
+                'The release-result lightbox remained visible after its close span was clicked.'
+            );
+        }
+        return 'stuck';
+    }
+
+    clearAutoPrisonerReleaseState();
+    updateStatusBox(
+        'Auto Mode: prisoner result screen closed. Restarting the mission cycle...'
+    );
+    return 'closed';
+}
+
 function getExactAutoReleasePrisonersLink(context) {
     if (!context || !context.root || !context.root.querySelectorAll) {
         return null;
@@ -34748,7 +34975,16 @@ async function handleAutoPrisonerReleaseAfterActions() {
         return 'stuck';
     }
 
-    await wait(450);
+    await wait(250);
+
+    const dismissResult =
+        await closeAutoPrisonerReleaseDismissAfterClick();
+
+    if (dismissResult === 'stuck') {
+        return 'stuck';
+    }
+
+    clearAutoPrisonerReleaseState();
     return 'clicked';
 }
 
