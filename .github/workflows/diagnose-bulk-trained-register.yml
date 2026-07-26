@@ -37,7 +37,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          python3 .diagnostics/apply-bulk-trained-register-update.py > /tmp/bulk-build.log 2>&1
+          python3 .diagnostics/run-bulk-trained-register-update.py > /tmp/bulk-build.log 2>&1
           status=$?
           echo "${status}" > /tmp/bulk-build.status
           cat /tmp/bulk-build.log
