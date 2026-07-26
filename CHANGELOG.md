@@ -31,6 +31,18 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Consolidate the two retained control surfaces into one coherent interface.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
+## [1.0.40] - 2026-07-26
+
+### Fixed
+
+- Removed the final text-based `RRU` fallback from Road Rail Unit dispatch matching.
+- Road Rail Unit requirements now select and verify only checkboxes exposing exact MissionChief vehicle type `107`.
+- Coastguard Rope Rescue Unit remains separate as vehicle type `59` and cannot satisfy a Fire Road Rail Unit requirement, even when renamed with an `RRU`-containing callsign.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.103` to `V10.6.104`.
+
 ## [1.0.39] - 2026-07-26
 
 ### Fixed
