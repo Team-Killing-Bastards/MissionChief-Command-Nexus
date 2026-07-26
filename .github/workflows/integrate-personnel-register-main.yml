@@ -36,7 +36,7 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Apply canonical integration
+      - name: Apply canonical integration when pending
         id: apply
         shell: bash
         run: |
@@ -57,51 +57,39 @@ jobs:
           echo 'changed=true' >> "${GITHUB_OUTPUT}"
 
       - name: Validate JavaScript syntax
-        if: steps.apply.outputs.changed == 'true'
         run: node --check src/missionchief-command-nexus.user.js
 
       - name: Validate userscript metadata
-        if: steps.apply.outputs.changed == 'true'
         run: node scripts/validate-userscript.mjs
 
       - name: Validate repository integrity
-        if: steps.apply.outputs.changed == 'true'
         run: python3 scripts/check_repository.py
 
       - name: Validate iOS compatibility
-        if: steps.apply.outputs.changed == 'true'
         run: node scripts/check-ios-compatibility.mjs
 
       - name: Validate runtime hardening
-        if: steps.apply.outputs.changed == 'true'
         run: node scripts/check-runtime-hardening.mjs
 
       - name: Validate Police IRV fallback
-        if: steps.apply.outputs.changed == 'true'
         run: node scripts/check-police-irv-fallback.mjs
 
       - name: Validate iOS Unit Finder selection
-        if: steps.apply.outputs.changed == 'true'
         run: node scripts/check-ios-unit-finder-selection.mjs
 
       - name: Validate iOS mission requirements
-        if: steps.apply.outputs.changed == 'true'
         run: node scripts/check-ios-mission-requirements-source.mjs
 
       - name: Validate iPhone Mission UI
-        if: steps.apply.outputs.changed == 'true'
         run: node scripts/check-iphone-mission-ui.mjs
 
       - name: Validate open issue contracts
-        if: steps.apply.outputs.changed == 'true'
         run: node scripts/check-open-issues-batch.mjs
 
       - name: Validate missing-requirements priority
-        if: steps.apply.outputs.changed == 'true'
         run: node scripts/check-missing-requirements-priority.mjs
 
       - name: Validate Personnel Register integration
-        if: steps.apply.outputs.changed == 'true'
         shell: bash
         run: |
           set -euo pipefail
