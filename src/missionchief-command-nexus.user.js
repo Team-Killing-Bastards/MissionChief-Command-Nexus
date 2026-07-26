@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.43
+// @version      1.0.44
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -9041,7 +9041,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.107
+         * MODULE 2: MISSION FINDER V10.6.108
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -9848,7 +9848,7 @@
     const MF_STRICT_TRAINING_SOURCE_PREFIX =
         'mission-finder-live-strict-';
 
-    // V10.6.107: trained-personnel selection now optimises exact vehicle
+    // V10.6.108: trained-personnel selection now optimises exact vehicle
     // coverage instead of treating full qualification as a dispatch gate.
     // Multi-trained crews reduce every matching course, type-51 PSUs provide
     // up to nine seats for compatible Public Order demand, IRVs fill smaller
@@ -10967,6 +10967,57 @@
             .replace(/\s+/g, ' ')
             .trim()
             .toLowerCase();
+    }
+
+    const MF_FIRE_ENGINE_TYPE_IDS = new Set([
+        '0',
+        '16',
+        '17'
+    ]);
+
+    const MF_FIRE_ENGINE_REQUIREMENT_NAMES = new Set([
+        'pump',
+        'pumps',
+        'required pump',
+        'required pumps',
+        'fire engine',
+        'fire engines',
+        'required fire engine',
+        'required fire engines',
+        'fire engine r/pump x 1'
+    ]);
+
+    function isFireEngineRequirement(
+        originalName,
+        mappedName
+    ) {
+        const raw = normaliseVehicleText(originalName);
+        const mapped = normaliseVehicleText(mappedName);
+
+        return (
+            MF_FIRE_ENGINE_REQUIREMENT_NAMES.has(raw) ||
+            (
+                mapped === 'fire engine r/pump x 1' &&
+                (
+                    raw.includes('fire engine') ||
+                    raw === 'pump' ||
+                    raw === 'pumps' ||
+                    raw === 'required pump' ||
+                    raw === 'required pumps'
+                )
+            )
+        );
+    }
+
+    function isFireEngineVehicleCheckbox(input) {
+        if (!input) return false;
+
+        // MissionChief UK pump-capable Fire Engine types only:
+        // type 0 Water Ladder, type 16 Rescue Pump and type 17 CARP.
+        // There is deliberately no name, callsign or substring fallback here.
+        return getVehicleTypeIdentifiers(input).some(
+            typeId => MF_FIRE_ENGINE_TYPE_IDS.has(typeId)
+        );
     }
 
     function isSartecRequirement(
@@ -13010,6 +13061,16 @@ function isRoadRailUnitVehicleCheckbox(input) {
                 return isFireOperationalSupportUnitCheckbox(input);
             }));
         }
+        if (isFireEngineRequirement(originalName, mappedName)) {
+            return sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) return false;
+                    if (!includeChecked && input.checked) return false;
+                    return isFireEngineVehicleCheckbox(input);
+                })
+            );
+        }
+
         const candidates = getVehicleMatchCandidates(originalName, mappedName);
         const strictExactOnly = isAmbulanceTransportRequest(originalName, mappedName);
         const sartecPrefixOnly = isSartecRequirement(
@@ -13594,6 +13655,13 @@ function isRoadRailUnitVehicleCheckbox(input) {
             return getVehicleCheckboxSnapshot().filter(input =>
                 input.checked && isFireOperationalSupportUnitCheckbox(input)).length;
         }
+        if (isFireEngineRequirement(originalName, mappedName)) {
+            return getVehicleCheckboxSnapshot().filter(input => (
+                input.checked &&
+                isFireEngineVehicleCheckbox(input)
+            )).length;
+        }
+
         const candidates = getVehicleMatchCandidates(originalName, mappedName);
         const strictExactOnly = isAmbulanceTransportRequest(originalName, mappedName);
         const sartecPrefixOnly = isSartecRequirement(originalName, mappedName);
@@ -13761,6 +13829,16 @@ function isRoadRailUnitVehicleCheckbox(input) {
             return sortVehicleCheckboxesByBestArrival(getVehicleCheckboxSnapshot().filter(input =>
                 !input.disabled && !input.checked && isFireOperationalSupportUnitCheckbox(input)))[0] || null;
         }
+        if (isFireEngineRequirement(originalName, mappedName)) {
+            return sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(input => (
+                    !input.disabled &&
+                    !input.checked &&
+                    isFireEngineVehicleCheckbox(input)
+                ))
+            )[0] || null;
+        }
+
         const requestedName =
             originalName ||
             mappedName;
@@ -17190,7 +17268,72 @@ let sessionRuntimeTicker = null;
         }
     }
 
+    function removeAutoModeQueueHelperCopy() {
+        const autoButton = Array.from(
+            document.querySelectorAll('button')
+        ).find(button => {
+            const text = String(
+                button.innerText ||
+                button.textContent ||
+                ''
+            )
+                .replace(/\s+/g, ' ')
+                .trim();
+
+            return /^(?:Start|Stop)\s+Auto\s+Mode$/i.test(text);
+        });
+
+        const autoBox = autoButton?.closest?.('.mf2026-box');
+        const checkbox = autoBox?.querySelector?.('input[type="checkbox"]');
+
+        if (!autoBox || !checkbox) return;
+
+        const helperCandidates = new Set([
+            ...Array.from(
+                autoBox.querySelectorAll(
+                    '.mf2026-small, small, p'
+                )
+            ),
+            ...Array.from(autoBox.children || [])
+        ]);
+
+        helperCandidates.forEach(element => {
+            if (
+                !element ||
+                element === autoButton ||
+                element.contains(autoButton) ||
+                element.contains(checkbox) ||
+                element.querySelector?.(
+                    'button, input, select, textarea'
+                )
+            ) {
+                return;
+            }
+
+            const text = String(
+                element.innerText ||
+                element.textContent ||
+                ''
+            )
+                .replace(/\s+/g, ' ')
+                .trim();
+
+            if (
+                /unit finder/i.test(text) &&
+                /mission update/i.test(text) &&
+                /dispatch/i.test(text)
+            ) {
+                element.remove();
+            }
+        });
+    }
+
     function updateAutoModeButton() {
+        removeAutoModeQueueHelperCopy();
+        setTimeout(
+            removeAutoModeQueueHelperCopy,
+            0
+        );
         const button = document.getElementById('auto-mode-box');
 
         if (!button) return;

@@ -11,8 +11,8 @@ function fail(message) {
 
 // Road Rail dispatch must not use names, callsigns or abbreviation fallback.
 for (const [token, label] of [
-  ['// @version      1.0.43', 'v1.0.43 metadata'],
-  [' * MODULE 2: MISSION FINDER V10.6.107', 'Mission Finder V10.6.107 header'],
+  ['// @version      1.0.44', 'v1.0.44 metadata'],
+  [' * MODULE 2: MISSION FINDER V10.6.108', 'Mission Finder V10.6.108 header'],
   ['"Road Rail Unit": "Road Rail Unit",', 'singular canonical Road Rail alias'],
   ['"Road Rail Units": "Road Rail Unit",', 'plural canonical Road Rail alias'],
   ['function isRoadRailUnitRequirement(', 'strict Road Rail requirement detector'],
