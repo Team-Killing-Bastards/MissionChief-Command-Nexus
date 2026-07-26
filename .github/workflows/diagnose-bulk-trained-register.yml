@@ -1,0 +1,46 @@
+name: Diagnose bulk trained register update
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'agent/bulk-trained-register-update'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out working branch
+        uses: actions/checkout@v6
+        with:
+          ref: agent/bulk-trained-register-update
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Collect current implementation context
+        run: python3 .diagnostics/collect-bulk-trained-register-context.py
+
+      - name: Commit diagnostic context
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name MartyBlyth
+          git config user.email 32400596+Martyblyth@users.noreply.github.com
+          git add .diagnostics/bulk-trained-register-context.txt
+          if git diff --cached --quiet; then
+            echo 'Diagnostic context already current.'
+            exit 0
+          fi
+          git commit -m 'Capture bulk trained register context'
+          git push origin HEAD:agent/bulk-trained-register-update
