@@ -70,24 +70,74 @@ jobs:
           if [ "${status}" != '0' ]; then
             exit "${status}"
           fi
-          rm -rf .diagnostics
 
-      - name: Validate complete candidate
+      - name: Capture complete validation result
+        shell: bash
+        run: |
+          set +e
+          log=/tmp/bulk-validation.log
+          : > "${log}"
+          status=0
+
+          run_check() {
+            label="$1"
+            shift
+            printf '\n### %s\n' "${label}" >> "${log}"
+            "$@" >> "${log}" 2>&1
+            result=$?
+            if [ "${result}" != '0' ]; then
+              status="${result}"
+            fi
+          }
+
+          run_check 'JavaScript syntax' node --check src/missionchief-command-nexus.user.js
+          if [ "${status}" = '0' ]; then run_check 'Userscript metadata' node scripts/validate-userscript.mjs; fi
+          if [ "${status}" = '0' ]; then run_check 'Repository integrity' python3 scripts/check_repository.py; fi
+          if [ "${status}" = '0' ]; then
+            for check in scripts/check-*.mjs; do
+              run_check "${check}" node "${check}"
+              if [ "${status}" != '0' ]; then break; fi
+            done
+          fi
+          if [ "${status}" = '0' ]; then run_check 'Standalone source absence' test ! -e src/personnel-register-tools.user.js; fi
+          if [ "${status}" = '0' ]; then run_check 'Version metadata' grep -Fq '// @version      1.0.46' src/missionchief-command-nexus.user.js; fi
+          if [ "${status}" = '0' ]; then run_check 'Mission Finder header' grep -Fq ' * MODULE 2: MISSION FINDER V10.6.110' src/missionchief-command-nexus.user.js; fi
+          if [ "${status}" = '0' ]; then run_check 'Personnel version' grep -Fq "const PERSONNEL_VERSION = '1.3.5';" src/missionchief-command-nexus.user.js; fi
+          if [ "${status}" = '0' ]; then run_check 'Diff whitespace' git diff --check; fi
+
+          printf '\nFINAL_STATUS=%s\n' "${status}" >> "${log}"
+          echo "${status}" > /tmp/bulk-validation.status
+          tail -n 220 "${log}"
+          exit 0
+
+      - name: Commit failed validation receipt
         shell: bash
         run: |
           set -euo pipefail
-          node --check src/missionchief-command-nexus.user.js
-          node scripts/validate-userscript.mjs
-          python3 scripts/check_repository.py
-          for check in scripts/check-*.mjs; do
-            echo "Running ${check}"
-            node "${check}"
-          done
-          test ! -e src/personnel-register-tools.user.js
-          grep -Fq '// @version      1.0.46' src/missionchief-command-nexus.user.js
-          grep -Fq ' * MODULE 2: MISSION FINDER V10.6.110' src/missionchief-command-nexus.user.js
-          grep -Fq "const PERSONNEL_VERSION = '1.3.5';" src/missionchief-command-nexus.user.js
-          git diff --check
+          status="$(cat /tmp/bulk-validation.status)"
+          if [ "${status}" = '0' ]; then
+            exit 0
+          fi
+          git reset --hard HEAD
+          git clean -fd
+          mkdir -p .diagnostics
+          cp /tmp/bulk-validation.log .diagnostics/bulk-validation-failure.log
+          echo "${status}" > .diagnostics/bulk-validation-failure.status
+          git config user.name MartyBlyth
+          git config user.email 32400596+Martyblyth@users.noreply.github.com
+          git add -f .diagnostics/bulk-validation-failure.log .diagnostics/bulk-validation-failure.status
+          git commit -m 'Record bulk validation failure'
+          git push origin HEAD:agent/bulk-trained-register-update
+
+      - name: Require successful validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          status="$(cat /tmp/bulk-validation.status)"
+          if [ "${status}" != '0' ]; then
+            exit "${status}"
+          fi
+          rm -rf .diagnostics
 
       - name: Commit validated bulk update
         shell: bash
