@@ -1,0 +1,1015 @@
+===== getVehicleMatchCandidates @ 12216 =====
+    function getVehicleMatchCandidates(originalName, mappedName) {
+        const raw = String(originalName || '').replace(/\s+/g, ' ').trim();
+        const mapped = String(mappedName || '').replace(/\s+/g, ' ').trim();
+        const cacheKey = `${raw.toLowerCase()}|${mapped.toLowerCase()}`;
+        const cached = mfVehicleMatchCandidateCache.get(cacheKey);
+
+        if (cached) return cached;
+
+        const candidates = new Set([raw, mapped]);
+
+        const add = value => {
+            if (value) candidates.add(String(value).replace(/\s+/g, ' ').trim());
+        };
+
+        const lowerMapped = mapped.toLowerCase();
+        const lowerRaw = raw.toLowerCase();
+
+        if (lowerMapped.includes('fire engine') || lowerRaw.includes('pump') || lowerRaw.includes('rescue support')) {
+            add('Fire Engine');
+            add('Pump');
+            add('Pumps');
+            add('Rescue Pump');
+            add('Rescue Support Unit');
+            add('Rescue Support Vehicle');
+        }
+
+        if (lowerMapped === 'police atc' || lowerRaw.includes('traffic car')) {
+            add('Traffic Car');
+            add('Traffic Cars');
+            add('Police ATC');
+        }
+
+        if (lowerMapped === 'police car' || lowerRaw.includes('police car')) {
+            add('Police Car');
+            add('Police Cars');
+        }
+
+        if (
+            isAtvCarrierRequirement(
+                originalName,
+                mappedName
+            )
+        ) {
+            add('ATV');
+            add('ATV Carrier');
+            add('ATV Carriers');
+            add('ATC Carrier');
+            add('ATC Carriers');
+        }
+
+        if (lowerMapped === 'police dsu' || lowerRaw.includes('dog support')) {
+            add('Dog Support Unit (DSU)');
+            add('Dog Support Units (DSU)');
+            add('Dog Support Units (DSUs)');
+            add('Police DSU');
+            add('DSU');
+        }
+
+        const policeAirMode =
+            getPoliceAirRequirementMode(
+                originalName,
+                mappedName
+            );
+
+        if (
+            policeAirMode === 'flexible' ||
+            policeAirMode === 'helicopter'
+        ) {
+            add('Police Helicopter');
+            add('Police Helicopters');
+            add('Policehelicopter');
+            add('Policehelicopters');
+        }
+
+        if (
+            policeAirMode === 'flexible' ||
+            policeAirMode === 'drone'
+        ) {
+            add('Police Drone');
+            add('Police Drones');
+            add('Drone Vehicle(Police Station)');
+            add('Drone Vehicle (Police Station)');
+        }
+
+        if (lowerMapped === 'welfare vehicle' || lowerRaw.includes('welfare vehicle')) {
+            add('Welfare Vehicle');
+            add('Welfare Vehicles');
+        }
+
+        if (
+            isIccuOrAmbulanceControlRequirement(
+                originalName,
+                mappedName
+            )
+        ) {
+            add('ICCU');
+            add('ICCUs');
+            add('Incident Command and Control Unit');
+            add('Incident Command and Control Units');
+            add('Ambulance Control Unit');
+            add('Ambulance Control Units');
+            add('ACU');
+            add('ACUs');
+        }
+
+        if (
+            lowerMapped === 'operational support van' ||
+            lowerRaw.includes('operational support van') ||
+            lowerRaw.includes('personal sar vehicle')
+        ) {
+            add('Operational Support Van');
+            add('Operational Support Vans');
+            add('OSV');
+            add('OSVs');
+        }
+
+        if (
+            lowerMapped === 'alb' ||
+            lowerMapped === 'abl' ||
+            lowerRaw.includes('seagoing vessel') ||
+            lowerRaw.includes('all-weather lifeboat') ||
+            lowerRaw.includes('all weather lifeboat')
+        ) {
+            add('ALB');
+            add('ALBs');
+            add('All-weather Lifeboat');
+            add('All Weather Lifeboat');
+            add('Seagoing Vessel');
+            add('Seagoing Vessels');
+            add('ABL');
+            add('ABLs');
+        }
+
+        if (lowerMapped === 'ilb' || lowerRaw.includes('ilb')) {
+            add('ILB');
+            add('ILBs');
+        }
+
+        if (isRrvRequirement(originalName, mappedName)) {
+            add('RRV');
+            add('RRVs');
+            add('Specialist Paramedic RRV');
+            add('Specialist Paramedic RRVs');
+            add('Rapid Response Vehicle');
+            add('Rapid Response Vehicles');
+        }
+
+        if (isRivRequirement(originalName, mappedName)) {
+            add('RIV');
+            add('RIVs');
+            add('Rapid Intervention Vehicle');
+            add('Rapid Intervention Vehicles');
+        }
+
+        let result;
+
+        // Ambulance Officer must never fall through to normal Ambulance matching.
+        if (lowerMapped.includes('ambulance officer') || lowerRaw.includes('ambulance officer')) {
+            result = ['ambulance officer', 'ambulance officers'];
+        } else {
+            if (
+                lowerMapped === 'ambulance x 01' ||
+                lowerMapped === 'ambulance' ||
+                lowerMapped === 'ambulances' ||
+                /^ambulances?$/i.test(raw)
+            ) {
+                add('Ambulance');
+                add('Ambulances');
+                add('Ambulance x 01');
+            }
+
+            result = Array.from(candidates)
+                .filter(Boolean)
+                .map(normaliseVehicleText);
+        }
+
+        if (mfVehicleMatchCandidateCache.size >= MF_VEHICLE_MATCH_CACHE_LIMIT) {
+            mfVehicleMatchCandidateCache.clear();
+        }
+
+        mfVehicleMatchCandidateCache.set(cacheKey, result);
+        return result;
+    }
+
+===== vehicleValuesMatchCandidates @ 12681 =====
+    function vehicleValuesMatchCandidates(values, candidates, strictExactOnly) {
+        if (strictExactOnly) {
+            return values.some(value => candidates.some(candidate => value === candidate));
+        }
+
+        return values.some(value => candidates.some(candidate => value === candidate || value.includes(candidate)));
+    }
+
+===== getCheckboxVehicleValues @ 12609 =====
+    function getCheckboxVehicleValues(input) {
+        if (!input) return [];
+
+        const cached = mfCheckboxVehicleValueCache.get(input);
+        if (cached) return cached;
+
+        const row = input.closest('tr');
+        const values = [
+            input.getAttribute('vehicle_caption'),
+            input.getAttribute('vehicle_type_caption'),
+            input.getAttribute('search_attribute'),
+            input.getAttribute('vehicle_type'),
+            row?.getAttribute('vehicle_caption'),
+            row?.getAttribute('vehicle_type_caption'),
+            row?.getAttribute('vehicle_type'),
+            row?.querySelector('td:nth-child(2)')?.innerText
+        ]
+        .filter(Boolean)
+        .map(normaliseVehicleText);
+
+        mfCheckboxVehicleValueCache.set(input, values);
+        return values;
+    }
+
+===== getAllMatchingVehicleCheckboxes @ 12986 =====
+    function getAllMatchingVehicleCheckboxes(originalName, mappedName, includeChecked) {
+        // BASU, Welfare and HazMat share the same selected exact type-39 Fire OSU.
+        if (isFireOperationalSupportRequirement(originalName, mappedName)) {
+            return sortVehicleCheckboxesByBestArrival(getVehicleCheckboxSnapshot().filter(input => {
+                if (input.disabled) return false;
+                if (!includeChecked && input.checked) return false;
+                return isFireOperationalSupportUnitCheckbox(input);
+            }));
+        }
+        const candidates = getVehicleMatchCandidates(originalName, mappedName);
+        const strictExactOnly = isAmbulanceTransportRequest(originalName, mappedName);
+        const sartecPrefixOnly = isSartecRequirement(
+            originalName,
+            mappedName
+        );
+
+        const rrvTypeOnly =
+            isRrvRequirement(
+                originalName,
+                mappedName
+            );
+
+        const rivTypeOnly =
+            isRivRequirement(
+                originalName,
+                mappedName
+            );
+
+        const rivOrMajorFoamTenderPreferred =
+            isRivOrMajorFoamTenderRequirement(
+                originalName,
+                mappedName
+            );
+
+        const policeAirMode =
+            getPoliceAirRequirementMode(
+                originalName,
+                mappedName
+            );
+
+        const policeCarOnly =
+            isPoliceCarRequirement(
+                originalName,
+                mappedName
+            );
+
+        const crvOnly =
+            isCrvRequirement(
+                originalName,
+                mappedName
+            );
+
+        const controlVanOnly =
+            isControlVanRequirement(
+                originalName,
+                mappedName
+            );
+
+        const airAmbulanceOnly =
+            isAirAmbulanceRequirement(
+                originalName,
+                mappedName
+            );
+
+        const criticalCareTransferOnly =
+            isCriticalCareTransferAmbulanceRequirement(
+                originalName,
+                mappedName
+            );
+
+        const genericCriticalCare =
+            isGenericCriticalCareRequirement(
+                originalName,
+                mappedName
+            );
+
+        const atvCarrierOnly =
+            isAtvCarrierRequirement(
+                originalName,
+                mappedName
+            );
+
+        const seagoingVesselOnly =
+            isSeagoingVesselRequirement(
+                originalName,
+                mappedName
+            );
+
+        const dogSupportOnly =
+            isDogSupportUnitRequirement(
+                originalName,
+                mappedName
+            );
+
+        const operationalSupportOnly =
+            isOperationalSupportOrSarVehicleRequirement(
+                originalName,
+                mappedName
+            );
+
+        const generic4x4Only =
+            isGeneric4x4VehicleRequirement(
+                originalName,
+                mappedName
+            );
+
+        const mountainRescue4x4Preferred =
+            isMountainRescueOrSar4x4Requirement(
+                originalName,
+                mappedName
+            );
+
+        const iccuPreferred =
+            isIccuOrAmbulanceControlRequirement(
+                originalName,
+                mappedName
+            );
+
+
+        if (crvOnly) {
+            return sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) return false;
+                    if (!includeChecked && input.checked) return false;
+                    return isCrvVehicleCheckbox(input);
+                })
+            );
+        }
+
+        if (controlVanOnly) {
+            return sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) return false;
+                    if (!includeChecked && input.checked) return false;
+                    return isControlVanVehicleCheckbox(input);
+                })
+            );
+        }
+
+        if (airAmbulanceOnly) {
+            return sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) return false;
+                    if (!includeChecked && input.checked) return false;
+                    return isAirAmbulanceVehicleCheckbox(input);
+                })
+            );
+        }
+
+        if (criticalCareTransferOnly) {
+            return sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) return false;
+                    if (!includeChecked && input.checked) return false;
+                    return isCriticalCareTransferAmbulanceCheckbox(input);
+                })
+            );
+        }
+
+        if (genericCriticalCare) {
+            const registry = readPersonnelTrainingRegistry();
+            return sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) return false;
+                    if (!includeChecked && input.checked) return false;
+                    return isGenericCriticalCareVehicleCheckbox(input, registry);
+                })
+            );
+        }
+
+        if (seagoingVesselOnly) {
+            return sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) return false;
+                    if (!includeChecked && input.checked) return false;
+                    return isSeagoingVesselCheckbox(input);
+                })
+            );
+        }
+
+
+        if (
+            rivOrMajorFoamTenderPreferred
+        ) {
+            const eligible =
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) {
+                        return false;
+                    }
+
+                    if (
+                        !includeChecked &&
+                        input.checked
+                    ) {
+                        return false;
+                    }
+
+                    return (
+                        isRivVehicleCheckbox(
+                            input
+                        ) ||
+                        isMajorFoamTenderVehicleCheckbox(
+                            input
+                        )
+                    );
+                });
+
+            const rivMatches =
+                sortVehicleCheckboxesByBestArrival(
+                    eligible.filter(
+                        isRivVehicleCheckbox
+                    )
+                );
+
+            if (
+                rivMatches.length >
+                0
+            ) {
+                return rivMatches;
+            }
+
+            return sortVehicleCheckboxesByBestArrival(
+                eligible.filter(
+                    isMajorFoamTenderVehicleCheckbox
+                )
+            );
+        }
+
+        if (atvCarrierOnly) {
+            return sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) {
+                        return false;
+                    }
+
+                    if (
+                        !includeChecked &&
+                        input.checked
+                    ) {
+                        return false;
+                    }
+
+                    return isAtvCarrierCheckbox(
+                        input
+                    );
+                })
+            );
+        }
+
+        if (dogSupportOnly) {
+            return sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) {
+                        return false;
+                    }
+
+                    if (
+                        !includeChecked &&
+                        input.checked
+                    ) {
+                        return false;
+                    }
+
+                    return isDogSupportUnitCheckbox(
+                        input
+                    );
+                })
+            );
+        }
+
+        if (operationalSupportOnly) {
+            return sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) return false;
+                    if (!includeChecked && input.checked) return false;
+                    return isOperationalSupportVanCheckbox(input);
+                })
+            );
+        }
+
+        if (iccuPreferred) {
+            const eligible =
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) {
+                        return false;
+                    }
+
+                    if (
+                        !includeChecked &&
+                        input.checked
+                    ) {
+                        return false;
+                    }
+
+                    return (
+                        isIccuVehicleCheckbox(
+                            input
+                        ) ||
+                        isAmbulanceControlUnitCheckbox(
+                            input
+                        )
+                    );
+                });
+
+            const iccuMatches =
+                sortVehicleCheckboxesByBestArrival(
+                    eligible.filter(
+                        isIccuVehicleCheckbox
+                    )
+                );
+
+            const ambulanceControlFallbackMatches =
+                sortVehicleCheckboxesByBestArrival(
+                    eligible.filter(
+                        input =>
+                            !isIccuVehicleCheckbox(input) &&
+                            isAmbulanceControlUnitCheckbox(input)
+                    )
+                );
+
+            return [
+                ...iccuMatches,
+                ...ambulanceControlFallbackMatches
+            ];
+        }
+
+        if (generic4x4Only) {
+            return sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) {
+                        return false;
+                    }
+
+                    if (
+                        !includeChecked &&
+                        input.checked
+                    ) {
+                        return false;
+                    }
+
+                    return isGeneric4x4VehicleCheckbox(
+                        input
+                    );
+                })
+            );
+        }
+
+        if (mountainRescue4x4Preferred) {
+            const eligible =
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) {
+                        return false;
+                    }
+
+                    if (
+                        !includeChecked &&
+                        input.checked
+                    ) {
+                        return false;
+                    }
+
+                    return (
+                        isMountainRescue4x4Checkbox(
+                            input
+                        ) ||
+                        isSar4x4Checkbox(
+                            input
+                        )
+                    );
+                });
+
+            const mountainRescueMatches =
+                sortVehicleCheckboxesByBestArrival(
+                    eligible.filter(
+                        isMountainRescue4x4Checkbox
+                    )
+                );
+
+            const sarFallbackMatches =
+                sortVehicleCheckboxesByBestArrival(
+                    eligible.filter(
+                        isSar4x4Checkbox
+                    )
+                );
+
+            const orderedMatches = [
+                ...mountainRescueMatches,
+                ...sarFallbackMatches
+            ];
+
+            if (mfDebugEnabled) {
+                debugLog(
+                    'MOUNTAIN 4X4 PRIORITY',
+                    `${originalName} -> ${mappedName} | Mountain Rescue 4x4 matches=${mountainRescueMatches.length} first | SAR 4x4 matches=${sarFallbackMatches.length} fallback | returned=${orderedMatches.length}`
+                );
+            }
+
+            return orderedMatches;
+        }
+
+        if (policeAirMode) {
+            const eligible =
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) {
+                        return false;
+                    }
+
+                    if (
+                        !includeChecked &&
+                        input.checked
+                    ) {
+                        return false;
+                    }
+
+                    if (policeAirMode === 'helicopter') {
+                        return isPoliceHelicopterCheckbox(input);
+                    }
+
+                    if (policeAirMode === 'drone') {
+                        return isPoliceDroneCheckbox(input);
+                    }
+
+                    return (
+                        isPoliceHelicopterCheckbox(input) ||
+                        isPoliceDroneCheckbox(input)
+                    );
+                });
+
+            if (policeAirMode === 'helicopter') {
+                return sortVehicleCheckboxesByBestArrival(
+                    eligible.filter(
+                        isPoliceHelicopterCheckbox
+                    )
+                );
+            }
+
+            if (policeAirMode === 'drone') {
+                return sortVehicleCheckboxesByBestArrival(
+                    eligible.filter(
+                        isPoliceDroneCheckbox
+                    )
+                );
+            }
+
+            const sortedDroneMatches =
+                sortVehicleCheckboxesByBestArrival(
+                    eligible.filter(
+                        isPoliceDroneCheckbox
+                    )
+                );
+
+            const sortedHelicopterMatches =
+                sortVehicleCheckboxesByBestArrival(
+                    eligible.filter(
+                        isPoliceHelicopterCheckbox
+                    )
+                );
+
+            // Flexible wording only: Drone first, Police Helicopter fallback.
+            return [
+                ...sortedDroneMatches,
+                ...sortedHelicopterMatches
+            ];
+        }
+
+        if (policeCarOnly) {
+            const registry =
+                readPersonnelTrainingRegistry();
+
+            const policeCarCandidates =
+                sortVehicleCheckboxesByBestArrival(
+                    getVehicleCheckboxSnapshot().filter(input => {
+                        if (input.disabled) return false;
+                        if (!includeChecked && input.checked) return false;
+
+                        return isOrdinaryPoliceIrvCheckboxEligible(
+                            input,
+                            registry,
+                            {
+                                allowUnknown: true,
+                                allowProtected: true
+                            }
+                        );
+                    })
+                );
+
+            return orderOrdinaryPoliceIrvCandidates(
+                policeCarCandidates,
+                registry
+            );
+        }
+
+        const matches = getVehicleCheckboxSnapshot().filter(input => {
+            if (input.disabled) return false;
+            if (!includeChecked && input.checked) return false;
+
+            if (sartecPrefixOnly) {
+                return isSartecVehicleCheckbox(
+                    input
+                );
+            }
+
+            if (rrvTypeOnly) {
+                return isRrvVehicleCheckbox(
+                    input
+                );
+            }
+
+            if (rivTypeOnly) {
+                return isRivVehicleCheckbox(
+                    input
+                );
+            }
+
+            if (policeCarOnly) {
+                return isPoliceCarVehicleCheckbox(
+                    input
+                );
+            }
+
+            const values = getCheckboxVehicleValues(input);
+            return vehicleValuesMatchCandidates(values, candidates, strictExactOnly);
+        });
+
+        if (mfDebugEnabled && strictExactOnly) {
+            debugLog('AMBULANCE STRICT', `${originalName} -> ${mappedName} | exact-match boxes=${matches.length}`);
+        }
+
+        if (mfDebugEnabled && sartecPrefixOnly) {
+            debugLog(
+                'SARTEC PREFIX',
+                `${originalName} -> ${mappedName} | displayed-name-prefix boxes=${matches.length}`
+            );
+        }
+
+        if (
+            mfDebugEnabled &&
+            rrvTypeOnly
+        ) {
+            debugLog(
+                'RRV STRICT',
+                `${originalName} -> ${mappedName} | RRV type boxes=${matches.length}`
+            );
+        }
+
+        if (
+            mfDebugEnabled &&
+            rivTypeOnly
+        ) {
+            debugLog(
+                'RIV STRICT',
+                `${originalName} -> ${mappedName} | RIV type boxes=${matches.length}`
+            );
+        }
+
+        if (
+            mfDebugEnabled &&
+            policeCarOnly
+        ) {
+            debugLog(
+                'POLICE CAR STRICT',
+                `${originalName} -> ${mappedName} | Police Car/IRV type boxes=${matches.length}`
+            );
+        }
+
+        return sortVehicleCheckboxesByBestArrival(matches);
+    }
+
+===== countSelectedMatchingVehicles @ 13558 =====
+    function countSelectedMatchingVehicles(originalName, mappedName) {
+        if (isFireOperationalSupportRequirement(originalName, mappedName)) {
+            return getVehicleCheckboxSnapshot().filter(input =>
+                input.checked && isFireOperationalSupportUnitCheckbox(input)).length;
+        }
+        const candidates = getVehicleMatchCandidates(originalName, mappedName);
+        const strictExactOnly = isAmbulanceTransportRequest(originalName, mappedName);
+        const sartecPrefixOnly = isSartecRequirement(originalName, mappedName);
+        const rrvTypeOnly = isRrvRequirement(originalName, mappedName);
+        const rivTypeOnly = isRivRequirement(originalName, mappedName);
+
+        const rivOrMajorFoamTenderPreferred =
+            isRivOrMajorFoamTenderRequirement(
+                originalName,
+                mappedName
+            );
+        const policeAirMode = getPoliceAirRequirementMode(originalName, mappedName);
+        const policeCarOnly = isPoliceCarRequirement(originalName, mappedName);
+        const crvOnly = isCrvRequirement(originalName, mappedName);
+        const controlVanOnly = isControlVanRequirement(originalName, mappedName);
+        const airAmbulanceOnly = isAirAmbulanceRequirement(originalName, mappedName);
+        const criticalCareTransferOnly = isCriticalCareTransferAmbulanceRequirement(originalName, mappedName);
+        const genericCriticalCare = isGenericCriticalCareRequirement(originalName, mappedName);
+        const criticalCareRegistry = genericCriticalCare ? readPersonnelTrainingRegistry() : null;
+        const atvCarrierOnly = isAtvCarrierRequirement(originalName, mappedName);
+        const seagoingVesselOnly = isSeagoingVesselRequirement(originalName, mappedName);
+        const dogSupportOnly = isDogSupportUnitRequirement(originalName, mappedName);
+        const operationalSupportOnly =
+            isOperationalSupportOrSarVehicleRequirement(
+                originalName,
+                mappedName
+            );
+
+        const generic4x4Only =
+            isGeneric4x4VehicleRequirement(
+                originalName,
+                mappedName
+            );
+
+        const mountainRescue4x4Preferred =
+            isMountainRescueOrSar4x4Requirement(
+                originalName,
+                mappedName
+            );
+        const iccuPreferred =
+            isIccuOrAmbulanceControlRequirement(
+                originalName,
+                mappedName
+            );
+
+        if (
+            rivOrMajorFoamTenderPreferred
+        ) {
+            const selected =
+                getVehicleCheckboxSnapshot().filter(
+                    input =>
+                        input.checked
+                );
+
+            const selectedRivs =
+                selected.filter(
+                    isRivVehicleCheckbox
+                ).length;
+
+            if (
+                selectedRivs >
+                0
+            ) {
+                return selectedRivs;
+            }
+
+            return selected.filter(
+                isMajorFoamTenderVehicleCheckbox
+            ).length;
+        }
+
+        let count = 0;
+
+        for (const input of getVehicleCheckboxSnapshot()) {
+            // A vehicle that is already checked still counts toward the
+            // requirement even when MissionChief disables its checkbox after
+            // selection. V10.6.48 skipped disabled checked boxes, which made a
+            // successfully selected vehicle look missing during verification.
+            if (!input.checked) continue;
+
+            let matches = false;
+
+            if (crvOnly) {
+                matches = isCrvVehicleCheckbox(input);
+            } else if (controlVanOnly) {
+                matches = isControlVanVehicleCheckbox(input);
+            } else if (airAmbulanceOnly) {
+                matches = isAirAmbulanceVehicleCheckbox(input);
+            } else if (criticalCareTransferOnly) {
+                matches = isCriticalCareTransferAmbulanceCheckbox(input);
+            } else if (genericCriticalCare) {
+                matches = isGenericCriticalCareVehicleCheckbox(input, criticalCareRegistry);
+            } else if (seagoingVesselOnly) {
+                matches = isSeagoingVesselCheckbox(
+                    input
+                );
+            } else if (atvCarrierOnly) {
+                matches = isAtvCarrierCheckbox(
+                    input
+                );
+            } else if (dogSupportOnly) {
+                matches = isDogSupportUnitCheckbox(
+                    input
+                );
+            } else if (operationalSupportOnly) {
+                matches = isOperationalSupportVanCheckbox(input);
+            } else if (iccuPreferred) {
+                matches =
+                    isIccuVehicleCheckbox(input) ||
+                    isAmbulanceControlUnitCheckbox(input);
+            } else if (generic4x4Only) {
+                matches = isGeneric4x4VehicleCheckbox(input);
+            } else if (mountainRescue4x4Preferred) {
+                matches =
+                    isMountainRescue4x4Checkbox(input) ||
+                    isSar4x4Checkbox(input);
+            } else if (policeAirMode === 'helicopter') {
+                matches = isPoliceHelicopterCheckbox(input);
+            } else if (policeAirMode === 'drone') {
+                matches = isPoliceDroneCheckbox(input);
+            } else if (policeAirMode === 'flexible') {
+                matches =
+                    isPoliceHelicopterCheckbox(input) ||
+                    isPoliceDroneCheckbox(input);
+            } else if (sartecPrefixOnly) {
+                matches = isSartecVehicleCheckbox(input);
+            } else if (rrvTypeOnly) {
+                matches = isRrvVehicleCheckbox(input);
+            } else if (rivTypeOnly) {
+                matches = isRivVehicleCheckbox(input);
+            } else if (policeCarOnly) {
+                // Any selected exact type-8 IRV satisfies generic Police
+                // attendance. Training data controls preference only; named
+                // specialist requirements still use their strict selectors.
+                matches = isPoliceCarVehicleCheckbox(input);
+            } else {
+                matches = vehicleValuesMatchCandidates(
+                    getCheckboxVehicleValues(input),
+                    candidates,
+                    strictExactOnly
+                );
+            }
+
+            if (matches) count += 1;
+        }
+
+        return count;
+    }
+
+===== getVehicleTypeIdentifiers @ 11716 =====
+    function getVehicleTypeIdentifiers(input) {
+        if (!input) return [];
+
+        const cached = mfVehicleTypeIdentifierCache.get(input);
+        if (cached) return cached;
+
+        const row = input.closest?.('tr');
+        const typeCell = row?.querySelector?.(
+            '[vehicle_type_id], [data-vehicle-type-id]'
+        );
+
+        const identifiers = [
+            input.getAttribute?.('vehicle_type'),
+            input.getAttribute?.('vehicle_type_id'),
+            input.getAttribute?.('data-vehicle-type'),
+            input.getAttribute?.('data-vehicle-type-id'),
+            row?.getAttribute?.('vehicle_type'),
+            row?.getAttribute?.('vehicle_type_id'),
+            row?.getAttribute?.('data-vehicle-type'),
+            row?.getAttribute?.('data-vehicle-type-id'),
+            typeCell?.getAttribute?.('vehicle_type_id'),
+            typeCell?.getAttribute?.('data-vehicle-type-id')
+        ]
+            .filter(value => value !== null && value !== undefined && String(value).trim() !== '')
+            .map(value => String(value).trim());
+
+        mfVehicleTypeIdentifierCache.set(input, identifiers);
+        return identifiers;
+    }
+
+===== getExtendedVehicleValues @ 12633 =====
+    function getExtendedVehicleValues(input) {
+        if (!input) return [];
+
+        const cached = mfExtendedVehicleValueCache.get(input);
+        if (cached) return cached;
+
+        const row = input.closest && input.closest('tr');
+        const labelById = input.id
+            ? document.getElementById(`label_${input.id}`)
+            : null;
+
+        const rowLabel = row && input.id
+            ? Array.from(row.querySelectorAll('label[for]')).find(
+                label => label.htmlFor === input.id
+            )
+            : null;
+
+        const values = [
+            ...getCheckboxVehicleValues(input),
+            labelById?.textContent,
+            labelById?.innerText,
+            rowLabel?.textContent,
+            rowLabel?.innerText,
+            row?.querySelector('td[vehicle_type_id]')?.innerText
+        ]
+            .filter(Boolean)
+            .map(normaliseVehicleText);
+
+        mfExtendedVehicleValueCache.set(input, values);
+        return values;
+    }
+
+===== normaliseVehicleText @ 10964 =====
+    function normaliseVehicleText(value) {
+        return String(value || '')
+            .replace(/&amp;/g, '&')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .toLowerCase();
+    }
