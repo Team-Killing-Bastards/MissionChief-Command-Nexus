@@ -90,7 +90,7 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-requireText('// @version      1.0.35', 'v1.0.35 metadata');
+requireText('// @version      1.0.36', 'v1.0.36 metadata');
 requireText(' * MODULE 2: MISSION FINDER V10.6.100', 'V10.6.100 module header');
 requireText('function getMissionRequirementSource(', 'authoritative source resolver');
 requireText('function normaliseMissionRequirementSourceUrl(', 'same-origin URL normaliser');

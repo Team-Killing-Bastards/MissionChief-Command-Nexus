@@ -31,6 +31,28 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Consolidate the two retained control surfaces into one coherent interface.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
+## [1.0.36] - 2026-07-26
+
+### Added
+
+- Added Personnel Register JSON export and import directly inside the main Command Nexus Personnel Assignment interface.
+- Added a visible saved-register vehicle count and last-updated timestamp.
+
+### Fixed
+
+- Gave **Build All Register** a dedicated readable colour instead of inheriting MissionChief button colours.
+- Corrected the completed build report so **Registry retained** shows the actual saved register size when entries were already flushed during the scan.
+
+### Safety and compatibility
+
+- Imports validate the register schema, reject unsafe object keys, enforce the existing 5,000-vehicle limit, cap files at 10 MB and require confirmation before replacing browser data.
+- Export and import are blocked while Personnel Assignment or a register build is active.
+- The temporary companion userscript has been removed; these controls now ship only as part of the canonical Command Nexus userscript.
+
+### Changed engine baseline
+
+- Personnel Assignment increased from `1.3.3` to `1.3.4`.
+
 ## [1.0.35] - 2026-07-25
 
 ### Fixed
