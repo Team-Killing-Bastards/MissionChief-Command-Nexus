@@ -223,6 +223,34 @@
         return queue;
     }
 
+=== normalizePersonnelVehicleName source lines 7372-7379 ===
+
+    function normalizePersonnelVehicleName(value) {
+        return cleanText(value)
+            .replace(/\s+/g, ' ')
+            .trim()
+            .toUpperCase();
+    }
+
+=== parseTrainingCodes source lines 7450-7467 ===
+
+
+    function parseTrainingCodes(row) {
+        const raw = row?.getAttribute('data-filterable-by') ||
+            row?.querySelector?.('[data-filterable-by]')?.getAttribute('data-filterable-by') ||
+            '[]';
+        try {
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) ? parsed.map(String) : [];
+        } catch (_error) {
+            return String(raw)
+                .replace(/[\[\]"']/g, '')
+                .split(',')
+                .map(value => value.trim())
+                .filter(Boolean);
+        }
+    }
+
 === parseVehicleAssignmentPage source lines 7467-7601 ===
 
 
@@ -357,6 +385,13 @@
             criticalAssigned: rows.filter(person => person.assignedVehicleId === currentVehicleId && person.trainingCodes.includes(PERSONNEL_TRAINING_CODE)),
             availableCritical: rows.filter(person => person.available && person.trainingCodes.includes(PERSONNEL_TRAINING_CODE))
         };
+    }
+
+=== getVehicleIdFromHref source lines 8265-8270 ===
+
+    function getVehicleIdFromHref(href) {
+        const match = String(href || '').match(/\/vehicles\/(\d+)/);
+        return match ? match[1] : '';
     }
 
 === getSearchAdvisorTrainedVehicleRequirement source lines 20804-20834 ===
