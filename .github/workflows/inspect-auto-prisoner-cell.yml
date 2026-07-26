@@ -1,4 +1,4 @@
-name: Inspect Auto Mode prisoner cell flow
+name: Prepare Auto Mode prisoner cell gate
 
 on:
   pull_request:
@@ -13,12 +13,12 @@ permissions:
   contents: write
 
 jobs:
-  inspect:
+  prepare:
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.head.ref == 'agent/auto-prisoner-cell-before-unit-finder'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
 
     steps:
       - name: Check out working branch
@@ -28,95 +28,45 @@ jobs:
           fetch-depth: 0
           show-progress: false
 
-      - name: Capture current Auto Mode and prisoner handlers
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Apply prisoner cell gate
         shell: bash
         run: |
-          python3 <<'PY'
-          import re
-          from pathlib import Path
+          set -euo pipefail
+          python3 .diagnostics/apply-auto-prisoner-cell.py
+          rm -f .diagnostics/apply-auto-prisoner-cell.py
+          rm -f .diagnostics/prisoner-cell-auto.txt
+          rm -f .diagnostics/auto-prisoner-context.txt
+          rm -f .diagnostics/auto-prisoner-transport-context.txt
 
-          source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8')
+      - name: Validate complete Command Nexus candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          python3 scripts/check_repository.py
+          for check in scripts/check-*.mjs; do
+            echo "Running ${check}"
+            node "${check}"
+          done
+          test ! -e src/personnel-register-tools.user.js
+          grep -Fq '// @version      1.0.41' src/missionchief-command-nexus.user.js
+          grep -Fq ' * MODULE 2: MISSION FINDER V10.6.105' src/missionchief-command-nexus.user.js
+          grep -Fq 'await handleAutoPrisonerCellBeforeUnitFinder();' src/missionchief-command-nexus.user.js
+          grep -Fq 'a.btn.btn-success[data-prison-id][href*="/gefangener/"]' src/missionchief-command-nexus.user.js
+          git diff --check
 
-          def extract_function(name):
-              pattern = re.compile(rf'^    (?:async )?function {re.escape(name)}\s*\(', re.MULTILINE)
-              match = pattern.search(source)
-              if not match:
-                  return f'===== {name}: NOT FOUND =====\n'
-              brace = source.find('{', match.end())
-              depth = 0
-              quote = None
-              escaped = False
-              line_comment = False
-              block_comment = False
-              i = brace
-              while i < len(source):
-                  ch = source[i]
-                  nxt = source[i + 1] if i + 1 < len(source) else ''
-                  if line_comment:
-                      if ch == '\n': line_comment = False
-                  elif block_comment:
-                      if ch == '*' and nxt == '/':
-                          block_comment = False
-                          i += 1
-                  elif quote:
-                      if escaped:
-                          escaped = False
-                      elif ch == '\\':
-                          escaped = True
-                      elif ch == quote:
-                          quote = None
-                  else:
-                      if ch == '/' and nxt == '/':
-                          line_comment = True
-                          i += 1
-                      elif ch == '/' and nxt == '*':
-                          block_comment = True
-                          i += 1
-                      elif ch in ('"', "'", '`'):
-                          quote = ch
-                      elif ch == '{':
-                          depth += 1
-                      elif ch == '}':
-                          depth -= 1
-                          if depth == 0:
-                              start_line = source.count('\n', 0, match.start()) + 1
-                              return f'===== {name} @ {start_line} =====\n{source[match.start():i+1]}\n'
-                  i += 1
-              return f'===== {name}: UNTERMINATED =====\n'
-
-          names = [
-              'shouldBlockOpeningNewMissionForTransport',
-              'mfChoosePreferredApproachButton',
-              'buildTransportActiveScopes',
-              'mfGetTransportActiveScopes',
-              'mfGetExactVisibleApproachButtons',
-              'findExactFirstApproachTransportButton',
-              'clickExactApproachTransportButton',
-              'mfBruteFindFirstApproachButton',
-              'mfBruteClickFirstApproach',
-              'mfIsPoliceOrPrisonerTransportActive',
-              'scoreTransportButtonCandidate',
-              'isBadTransportButtonCandidate',
-              'isTransportScreenBlockingQueueRestart',
-              'handleTransportRequestsAfterDispatch',
-          ]
-
-          Path('.diagnostics/auto-prisoner-transport-context.txt').write_text(
-              '\n'.join(extract_function(name) for name in names),
-              encoding='utf-8',
-          )
-          PY
-
-      - name: Commit captured context
+      - name: Commit validated integration
         shell: bash
         run: |
           set -euo pipefail
           git config user.name MartyBlyth
           git config user.email 32400596+Martyblyth@users.noreply.github.com
-          git add .diagnostics/auto-prisoner-transport-context.txt
-          if git diff --cached --quiet; then
-            echo 'Context already current.'
-            exit 0
-          fi
-          git commit -m 'Capture detailed prisoner transport context'
+          git add -A
+          git commit -m 'Handle prisoner cells before Auto Mode Unit Finder'
           git push origin HEAD:agent/auto-prisoner-cell-before-unit-finder
