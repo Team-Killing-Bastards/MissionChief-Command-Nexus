@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from pathlib import Path
+import subprocess
 
 builder_path = Path('.diagnostics/apply-bulk-trained-register-update.py')
 builder = builder_path.read_text(encoding='utf-8')
@@ -47,4 +48,17 @@ if match_count != 1:
 check_path.write_text(
     check_source.replace(bad_token, good_token, 1),
     encoding='utf-8',
+)
+
+# GitHub Actions' token cannot push modifications to workflow files without the
+# workflows permission. Keep this validated product commit workflow-neutral;
+# the permanent validator step is added immediately afterwards through the
+# GitHub connector, which has the required permission.
+workflow_path = Path('.github/workflows/validate-userscript.yml')
+workflow_path.write_bytes(
+    subprocess.check_output([
+        'git',
+        'show',
+        'HEAD:.github/workflows/validate-userscript.yml',
+    ])
 )
