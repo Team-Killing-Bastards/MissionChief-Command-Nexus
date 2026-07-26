@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
-// Guards the two-stage contract: prefer live cells first, then allow only the
-// exact current-mission Release Prisoners fallback after normal Auto actions.
+// Guards the three-stage contract: prefer live cells first, allow only the
+// exact current-mission Release Prisoners fallback after normal Auto actions,
+// then close its direct lightbox result span before the mission cycle restarts.
 
 import { readFile } from 'node:fs/promises';
 
@@ -25,7 +26,8 @@ for (const [token, label] of [
   ["return 'defer-release';", 'deferred final fallback outcome'],
   ['realClickForQueueRestart(releaseLink);', 'single native release click'],
   ['MF_AUTO_PRISONER_RELEASE_STATE_KEY', 'release duplicate-click guard'],
-  ['span.lightbox-close[title=\"Close\"]', 'release-result close selector'],
+  ['MF_AUTO_PRISONER_RELEASE_RESULT_WAIT_MS', 'release result wait guard'],
+  ['span.lightbox-close[title="Close"]', 'release-result close selector'],
   ['function getTopmostAutoPrisonerReleaseDismissContext(', 'topmost release-result close chooser'],
   ['function closeAutoPrisonerReleaseDismissAfterClick(', 'release-result dismiss handler'],
   ['await closeAutoPrisonerReleaseDismissAfterClick();', 'release dismiss invocation'],
@@ -115,6 +117,7 @@ for (const required of [
   'getActivePrisonerCellSelectionContext()',
   'getTopmostAutoPrisonerReleaseDismissContext()',
   'realClickForQueueRestart(',
+  'dismissContext.closeButton',
   'isAutoPrisonerReleaseDismissContextVisible(',
   "return 'closed';",
 ]) {
@@ -123,4 +126,13 @@ for (const required of [
   }
 }
 
-console.log('Auto Mode prefers active cells, finishes normal actions when none are available, then clicks only the exact current-mission Release Prisoners fallback, closes its result screen and restarts the mission cycle before dispatch.');
+const prisonerAlertClearCheck = dismissBody.indexOf('getActivePrisonerCellSelectionContext()');
+const resultCloseLookup = dismissBody.indexOf('getTopmostAutoPrisonerReleaseDismissContext()');
+const resultCloseClick = dismissBody.indexOf('dismissContext.closeButton');
+const resultCloseVerify = dismissBody.indexOf('isAutoPrisonerReleaseDismissContextVisible(');
+
+if (!(prisonerAlertClearCheck >= 0 && resultCloseLookup > prisonerAlertClearCheck && resultCloseClick > resultCloseLookup && resultCloseVerify > resultCloseClick)) {
+  fail('Release result must wait for the prisoner alert to clear, choose the topmost close span, click it and verify disappearance in that order');
+}
+
+console.log('Auto Mode prefers active cells, finishes normal actions when none are available, clicks only the exact current-mission Release Prisoners fallback, closes its direct result lightbox and restarts the mission cycle before dispatch.');
