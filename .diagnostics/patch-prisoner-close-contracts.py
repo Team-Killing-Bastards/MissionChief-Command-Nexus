@@ -42,6 +42,12 @@ check = once(
 )
 check = once(
     check,
+    "  'getTopmostAutoPrisonerReleaseDismissContext()',",
+    "  'getTopmostAutoPrisonerReleaseDismissContext(releaseContext)',",
+    'owner-scoped topmost chooser requirement'
+)
+check = once(
+    check,
     "  'dismissContext.closeButton',\n  'isAutoPrisonerReleaseDismissContextVisible(',",
     "  'resolveAutoPrisonerReleaseDismissContext(',\n  'current.closeButton',\n  'current.overlay',\n  'isAutoPrisonerReleaseDismissContextVisible(',",
     'dismiss body requirements'
