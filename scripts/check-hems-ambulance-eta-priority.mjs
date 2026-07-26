@@ -1,23 +1,4 @@
-#!/usr/bin/env python3
-from pathlib import Path
-
-ROOT = Path('.')
-
-
-def replace_once(text, old, new, label):
-    count = text.count(old)
-    if count != 1:
-        raise SystemExit(f'{label}: expected exactly one match, found {count}')
-    return text.replace(old, new, 1)
-
-
-for path in sorted((ROOT / 'scripts').glob('*.mjs')):
-    text = path.read_text(encoding='utf-8')
-    updated = text.replace('1.0.47', '1.0.48').replace('V10.6.111', 'V10.6.112')
-    if updated != text:
-        path.write_text(updated, encoding='utf-8')
-
-check = r'''#!/usr/bin/env node
+#!/usr/bin/env node
 
 import { readFile } from 'node:fs/promises';
 
@@ -147,61 +128,3 @@ for (const token of ['isAirAmbulanceVehicleCheckbox(input)', 'isCriticalCareRoad
 }
 
 console.log('HEMS ambulance ETA contracts passed: standard patient demand compares exact type-5 Ambulances and type-9 HEMS by ETA, counts either when selected, blocks generic fallback, and preserves strict HEMS, transfer and Critical Care routes.');
-'''
-(ROOT / 'scripts/check-hems-ambulance-eta-priority.mjs').write_text(check, encoding='utf-8')
-
-readme_path = ROOT / 'README.md'
-readme = readme_path.read_text(encoding='utf-8')
-readme = replace_once(
-    readme,
-    '**Current version:** `1.0.47` · **Mission Finder engine:** `V10.6.111`',
-    '**Current version:** `1.0.48` · **Mission Finder engine:** `V10.6.112`',
-    'README version',
-)
-readme_path.write_text(readme, encoding='utf-8')
-
-src_readme_path = ROOT / 'src/README.md'
-src_readme = src_readme_path.read_text(encoding='utf-8')
-src_readme = replace_once(
-    src_readme,
-    '| Command Nexus version | `1.0.47` |',
-    '| Command Nexus version | `1.0.48` |',
-    'source README version',
-)
-src_readme = replace_once(
-    src_readme,
-    '| Mission Finder baseline | `V10.6.111` |',
-    '| Mission Finder baseline | `V10.6.112` |',
-    'source README engine',
-)
-src_readme_path.write_text(src_readme, encoding='utf-8')
-
-changelog_path = ROOT / 'CHANGELOG.md'
-changelog = changelog_path.read_text(encoding='utf-8')
-entry = '''## [1.0.48] - 2026-07-26
-
-### Changed
-
-- Standard patient and Ambulance demand now compares exact type-5 road Ambulances with exact type-9 HEMS/Air Ambulances in one candidate pool.
-- MissionChief displayed arrival time is the primary ordering metric, so a geographically farther HEMS is selected first whenever its ETA is quicker; distance remains only the equal-ETA tie-breaker.
-- Already-selected HEMS now count toward ordinary Ambulance demand in Unit Finder, Mission Update and Auto Mode.
-
-### Safety
-
-- Explicit HEMS/Air Ambulance requirements remain strict type 9.
-- Critical Care Transfer Ambulance requirements remain strict type 98.
-- Generic Critical Care continues to compare HEMS with only verified Critical Care-trained road Ambulances.
-- Standard Ambulance demand cannot fall through to generic text or quick-select buttons.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.111` to `V10.6.112`.
-
-'''
-changelog = replace_once(
-    changelog,
-    '## [1.0.47] - 2026-07-26\n',
-    entry + '## [1.0.47] - 2026-07-26\n',
-    'changelog entry',
-)
-changelog_path.write_text(changelog, encoding='utf-8')
