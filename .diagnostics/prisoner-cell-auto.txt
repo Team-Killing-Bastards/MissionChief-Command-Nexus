@@ -1,1 +1,2 @@
 Add a first-priority Auto Mode prisoner-cell handoff before vehicle loading and Unit Finder.
+Capture current main flow before applying the integration.
