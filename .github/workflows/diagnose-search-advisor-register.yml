@@ -29,7 +29,9 @@ jobs:
           show-progress: false
 
       - name: Collect Search Advisor register context
-        run: python3 .diagnostics/collect-search-advisor-register-context.py
+        run: |
+          python3 .diagnostics/collect-search-advisor-register-context.py
+          python3 .diagnostics/collect-search-advisor-exact.py
 
       - name: Commit diagnostic context
         shell: bash
@@ -37,7 +39,7 @@ jobs:
           set -euo pipefail
           git config user.name MartyBlyth
           git config user.email 32400596+Martyblyth@users.noreply.github.com
-          git add .diagnostics/search-advisor-register-context.txt
+          git add .diagnostics/search-advisor-register-context.txt .diagnostics/search-advisor-exact-context.txt
           if git diff --cached --quiet; then
             echo 'Diagnostic context already current.'
             exit 0
