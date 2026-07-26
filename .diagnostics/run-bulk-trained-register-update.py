@@ -27,11 +27,11 @@ replacement = """source = replace_once(
 
 patched_builder = builder[:start] + replacement + builder[end:]
 
-# The builder writes JavaScript from a Python triple-quoted replacement. Keep
-# the newline escaped for JavaScript instead of letting Python insert a literal
-# line break inside a double-quoted requireText token.
-old_open_issue_token = r'''requireText("code:\n                    'search_and_rescue'",'''
-new_open_issue_token = r'''requireText("code:\\n                    'search_and_rescue'",'''
+# Keep the newline escaped in the generated JavaScript token. The builder file
+# contains a literal backslash+n sequence here; Python must receive two
+# backslashes so its triple-quoted replacement writes one backslash to JS.
+old_open_issue_token = r'''requireText("code:\n                    'search_and_rescue'",'''.replace(r'\"', '"')
+new_open_issue_token = r'''requireText("code:\\n                    'search_and_rescue'",'''.replace(r'\"', '"')
 match_count = patched_builder.count(old_open_issue_token)
 if match_count != 1:
     raise SystemExit(
