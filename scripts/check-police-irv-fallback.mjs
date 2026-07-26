@@ -25,7 +25,7 @@ function extractBetween(startText, endText, label) {
 }
 
 requireText('// @version      1.0.36', 'v1.0.36 metadata');
-requireText(' * MODULE 2: MISSION FINDER V10.6.100', 'V10.6.100 module header');
+requireText(' * MODULE 2: MISSION FINDER V10.6.101', 'V10.6.101 module header');
 requireText('allowUnknown: true', 'unknown or stale type-8 IRV fallback');
 requireText('allowProtected: true', 'known specialist type-8 IRV final fallback');
 requireText('protectedFallback.push(checkbox)', 'specialist fallback partition');
@@ -75,13 +75,15 @@ const strictRequirements = extractBetween(
   'strict trained Police requirements'
 );
 for (const requiredToken of [
-  "requirementType:\n                        'police_trained_irv_vehicle'",
-  "requirementType:\n                    'police_inspector_vehicle'",
-  "eligibleVehicleTypeIds: [\n                        '8'"
+  "'police_trained_irv_vehicle'",
+  "'police_inspector_vehicle'",
+  "eligibleVehicleTypeIds: [\n                    '8'",
+  "eligibleVehicleTypeIds: [\n                    '51',\n                    '8'"
 ]) {
   if (!strictRequirements.includes(requiredToken)) {
-    fail(`Named trained Police IRV contract changed: ${requiredToken}`);
+    fail(`Named trained Police vehicle contract changed: ${requiredToken}`);
   }
 }
+
 
 console.log('Police IRV fallback and Missing Personnel regression checks passed.');

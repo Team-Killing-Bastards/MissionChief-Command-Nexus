@@ -38,7 +38,7 @@
 
     const UNIT_VERSION = '3.3.8';
     const STATION_VERSION = '1.3.3';
-    const PERSONNEL_VERSION = '1.3.4';
+    const PERSONNEL_VERSION = '1.3.3';
     const PERSONNEL_TRAINING_CODE = 'critical_care';
     const PERSONNEL_TRAINING_LABEL = 'Critical Care';
     const PERSONNEL_TARGET_VEHICLE_TYPE_ID = '5';
@@ -56,10 +56,6 @@
     const PERSONNEL_TRAINING_REGISTRY_STORAGE_KEY =
         'mcPersonnelVehicleTrainingRegistry_v1';
     const PERSONNEL_TRAINING_REGISTRY_SCHEMA_VERSION = 1;
-    const PERSONNEL_TRAINING_REGISTRY_EXPORT_FORMAT =
-        'missionchief-personnel-training-register';
-    const PERSONNEL_TRAINING_REGISTRY_EXPORT_VERSION = 1;
-    const PERSONNEL_TRAINING_REGISTRY_IMPORT_MAX_BYTES = 10 * 1024 * 1024;
     const TOOL_LOG_MAX_LINES = 400;
     const TOOL_LOG_TRIM_BUFFER = 40;
     const PERSONNEL_TRAINING_REGISTRY_MAX_VEHICLES = 5000;
@@ -1853,7 +1849,6 @@
         log(`Unit Naming Tool v${UNIT_VERSION} loaded. Press Refresh Stations first.`, 'info');
         stationLog(`Station Naming Tool v${STATION_VERSION} loaded. Refresh stations, choose Preview or Rename and Save, then press Start.`, 'info');
         personnelLog(`Personnel Assignment v${PERSONNEL_VERSION} loaded. Medical Critical Care and the verified Police profiles are live; other services remain in safe UI preview.`, 'info');
-        updatePersonnelTrainingRegistryStatus();
     }
 
     function addPanel() {
@@ -2023,10 +2018,7 @@
 
                 <div class="mc-namer-buttons">
                     <button id="mc-personnel-refresh">Refresh Stations</button>
-                    <button id="mc-personnel-build-register" title="Scan every station and rebuild the exact vehicle training register. This ignores the selected service, training profile, mode and start point. No personnel assignments are changed.">Build All Register</button>
-                    <button id="mc-personnel-export-register" title="Download the saved Personnel Register as a JSON backup.">Export Register</button>
-                    <button id="mc-personnel-import-register" title="Replace the saved Personnel Register with a validated JSON backup.">Import Register</button>
-                    <input id="mc-personnel-import-register-file" type="file" accept="application/json,.json" hidden>
+                    <button id="mc-personnel-build-register" title="Scan every Police, Aviation and EOD station and rebuild the exact vehicle training register without changing any personnel assignments.">Build Personnel Register</button>
                     <button id="mc-personnel-start">Start</button>
                     <button id="mc-personnel-pause">Pause</button>
                     <button id="mc-personnel-stop">Stop</button>
@@ -2044,7 +2036,6 @@
                     <div><b>Station progress:</b> <span id="mc-personnel-progress">0 / 0</span></div>
                     <div><b>Stations completed:</b> <span id="mc-personnel-completed">0</span></div>
                     <div><b>Vehicles checked:</b> <span id="mc-personnel-vehicles">0</span></div>
-                    <div><b>Register:</b> <span id="mc-personnel-register-status">No saved vehicles</span></div>
                     <div><b id="mc-personnel-units-fulfilled-label">Units fulfilled:</b> <span id="mc-personnel-units-fulfilled">0 / All</span></div>
                     <div><b>Planned / assigned:</b> <span id="mc-personnel-assigned">0</span></div>
                     <div><b>Need training:</b> <span id="mc-personnel-training-shortfall">0</span></div>
@@ -2287,23 +2278,6 @@
             #mc-namer-stop,
             #mc-station-stop,
             #mc-personnel-stop { background: #dc3545; color: white; }
-
-            #mc-personnel-build-register {
-                background: #0f766e;
-                color: white;
-                border: 1px solid #5eead4;
-                font-weight: bold;
-            }
-
-            #mc-personnel-export-register { background: #2563eb; color: white; }
-            #mc-personnel-import-register { background: #0e7490; color: white; }
-
-            #mc-personnel-build-register:disabled,
-            #mc-personnel-export-register:disabled,
-            #mc-personnel-import-register:disabled {
-                cursor: not-allowed;
-                opacity: 0.5;
-            }
 
             #mc-personnel-copy,
             #mc-personnel-copy-station { background: #7c3aed; color: white; }
@@ -2669,16 +2643,6 @@
         document.querySelector('#mc-personnel-units-required').onchange = handlePersonnelUnitsRequiredChange;
         document.querySelector('#mc-personnel-refresh').onclick = refreshPersonnelStations;
         document.querySelector('#mc-personnel-build-register').onclick = buildPersonnelTrainingRegisterOneClick;
-        document.querySelector('#mc-personnel-export-register').onclick = exportPersonnelTrainingRegistry;
-        document.querySelector('#mc-personnel-import-register').onclick = () => {
-            document.querySelector('#mc-personnel-import-register-file')?.click();
-        };
-        document.querySelector('#mc-personnel-import-register-file').onchange = async event => {
-            const input = event.currentTarget;
-            const file = input?.files?.[0] || null;
-            if (input) input.value = '';
-            await importPersonnelTrainingRegistry(file);
-        };
         document.querySelector('#mc-personnel-start').onclick = startPersonnelRun;
         document.querySelector('#mc-personnel-pause').onclick = togglePersonnelPause;
         document.querySelector('#mc-personnel-stop').onclick = stopPersonnelRun;
@@ -4423,218 +4387,6 @@
     }
 
 
-    function getPersonnelTrainingRegistryStats(registry = readPersonnelTrainingRegistry()) {
-        const vehicles = registry?.vehicles && typeof registry.vehicles === 'object'
-            ? Object.values(registry.vehicles)
-            : [];
-        const updatedAt = vehicles.reduce(
-            (latest, entry) => Math.max(latest, Number(entry?.updatedAt || 0)),
-            Number(registry?.updatedAt || 0)
-        );
-        return {
-            count: vehicles.length,
-            updatedAt: Number.isFinite(updatedAt) ? updatedAt : 0
-        };
-    }
-
-    function formatPersonnelTrainingRegistryTimestamp(timestamp) {
-        const value = Number(timestamp || 0);
-        if (!Number.isFinite(value) || value <= 0) return 'never';
-        try {
-            return new Intl.DateTimeFormat('en-GB', {
-                dateStyle: 'medium',
-                timeStyle: 'short'
-            }).format(new Date(value));
-        } catch (_error) {
-            return new Date(value).toLocaleString();
-        }
-    }
-
-    function updatePersonnelTrainingRegistryStatus() {
-        const target = document.querySelector('#mc-personnel-register-status');
-        if (!target) return;
-        try {
-            const stats = getPersonnelTrainingRegistryStats();
-            target.textContent = `${stats.count.toLocaleString('en-GB')} vehicle${stats.count === 1 ? '' : 's'} stored; updated ${formatPersonnelTrainingRegistryTimestamp(stats.updatedAt)}`;
-        } catch (error) {
-            target.textContent = `Register unavailable: ${error?.message || error}`;
-        }
-    }
-
-    function setPersonnelTrainingRegistryTransferDisabled(disabled) {
-        ['#mc-personnel-export-register', '#mc-personnel-import-register'].forEach(selector => {
-            const button = document.querySelector(selector);
-            if (button) button.disabled = Boolean(disabled);
-        });
-    }
-
-    function isUnsafePersonnelTrainingRegistryKey(value) {
-        return !value || value === '__proto__' || value === 'constructor' || value === 'prototype';
-    }
-
-    function normalisePersonnelTrainingRegistryCountMap(value) {
-        const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-        const result = Object.create(null);
-        Object.entries(source).forEach(([rawKey, rawCount]) => {
-            const key = String(rawKey || '').slice(0, 150);
-            const count = Number(rawCount || 0);
-            if (isUnsafePersonnelTrainingRegistryKey(key) || !Number.isFinite(count) || count < 0) return;
-            result[key] = Math.floor(count);
-        });
-        return result;
-    }
-
-    function normaliseImportedPersonnelTrainingRegistry(candidate) {
-        const source = candidate?.registry && typeof candidate.registry === 'object' ? candidate.registry : candidate;
-        if (!source || typeof source !== 'object' || Array.isArray(source)) {
-            throw new Error('The selected file does not contain a Personnel Register object.');
-        }
-        const schemaVersion = source.schemaVersion == null
-            ? PERSONNEL_TRAINING_REGISTRY_SCHEMA_VERSION
-            : Number(source.schemaVersion);
-        if (schemaVersion !== PERSONNEL_TRAINING_REGISTRY_SCHEMA_VERSION) {
-            throw new Error(`Unsupported Personnel Register schema version: ${schemaVersion}.`);
-        }
-        if (!source.vehicles || typeof source.vehicles !== 'object' || Array.isArray(source.vehicles)) {
-            throw new Error('The selected file does not contain a valid vehicles register.');
-        }
-        const entries = Object.entries(source.vehicles);
-        if (entries.length > PERSONNEL_TRAINING_REGISTRY_MAX_VEHICLES) {
-            throw new Error(`The file contains ${entries.length} vehicles; the supported maximum is ${PERSONNEL_TRAINING_REGISTRY_MAX_VEHICLES}.`);
-        }
-        const vehicles = Object.create(null);
-        entries.forEach(([rawVehicleId, rawEntry]) => {
-            const vehicleId = String(rawVehicleId || '').slice(0, 80);
-            if (isUnsafePersonnelTrainingRegistryKey(vehicleId)) throw new Error('The file contains an invalid vehicle identifier.');
-            if (!rawEntry || typeof rawEntry !== 'object' || Array.isArray(rawEntry)) {
-                throw new Error(`Vehicle ${vehicleId} does not contain a valid register entry.`);
-            }
-            const safeCount = value => {
-                const count = Number(value || 0);
-                return Number.isFinite(count) && count >= 0 ? Math.floor(count) : 0;
-            };
-            const safeTimestamp = value => {
-                const timestamp = Number(value || 0);
-                return Number.isFinite(timestamp) && timestamp >= 0 ? timestamp : 0;
-            };
-            vehicles[vehicleId] = {
-                vehicleId,
-                vehicleName: String(rawEntry.vehicleName || '').slice(0, 500),
-                vehicleTypeId: String(rawEntry.vehicleTypeId || '').slice(0, 80),
-                stationName: String(rawEntry.stationName || '').slice(0, 500),
-                stationHref: String(rawEntry.stationHref || '').slice(0, 1000),
-                assignedPersonnelCount: safeCount(rawEntry.assignedPersonnelCount),
-                assignmentScanComplete: rawEntry.assignmentScanComplete === true,
-                personnelRowsSeen: safeCount(rawEntry.personnelRowsSeen),
-                trainingCounts: normalisePersonnelTrainingRegistryCountMap(rawEntry.trainingCounts),
-                trainingCombinationCounts: normalisePersonnelTrainingRegistryCountMap(rawEntry.trainingCombinationCounts),
-                updatedAt: safeTimestamp(rawEntry.updatedAt),
-                source: String(rawEntry.source || '').slice(0, 250)
-            };
-        });
-        const safeRegistryTimestamp = value => {
-            const timestamp = Number(value || 0);
-            return Number.isFinite(timestamp) && timestamp >= 0 ? timestamp : 0;
-        };
-        return {
-            schemaVersion: PERSONNEL_TRAINING_REGISTRY_SCHEMA_VERSION,
-            sourceVersion: String(source.sourceVersion || '').slice(0, 80),
-            updatedAt: safeRegistryTimestamp(source.updatedAt),
-            lastPrunedAt: safeRegistryTimestamp(source.lastPrunedAt),
-            vehicles
-        };
-    }
-
-    function downloadPersonnelTrainingRegistryJson(filename, payload) {
-        const blob = new Blob([`${JSON.stringify(payload, null, 2)}\n`], { type: 'application/json;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = filename;
-        link.hidden = true;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
-    }
-
-    function exportPersonnelTrainingRegistry() {
-        if (PERSONNEL_STATE.running) {
-            window.alert('Finish or stop the active Personnel operation before exporting the register.');
-            return;
-        }
-        flushPersonnelTrainingRegistry(false);
-        const registry = readPersonnelTrainingRegistry();
-        const stats = getPersonnelTrainingRegistryStats(registry);
-        if (!stats.count) {
-            window.alert('The Personnel Register is empty. Build or import a register before exporting.');
-            return;
-        }
-        const exportedAt = new Date().toISOString();
-        downloadPersonnelTrainingRegistryJson(`missionchief-personnel-register-${exportedAt.slice(0, 10)}.json`, {
-            format: PERSONNEL_TRAINING_REGISTRY_EXPORT_FORMAT,
-            exportVersion: PERSONNEL_TRAINING_REGISTRY_EXPORT_VERSION,
-            exportedAt,
-            origin: location.origin,
-            vehicleCount: stats.count,
-            registry
-        });
-        personnelLog(`Personnel Register exported: ${stats.count} vehicle(s).`, 'done');
-    }
-
-    async function importPersonnelTrainingRegistry(file) {
-        if (!file) return;
-        if (PERSONNEL_STATE.running) {
-            window.alert('Finish or stop the active Personnel operation before importing a register.');
-            return;
-        }
-        if (Number(file.size || 0) > PERSONNEL_TRAINING_REGISTRY_IMPORT_MAX_BYTES) {
-            window.alert('Personnel Register import failed: the selected file is larger than 10 MB.');
-            return;
-        }
-        let registry;
-        try {
-            const parsed = JSON.parse(await file.text());
-            if (parsed?.format && parsed.format !== PERSONNEL_TRAINING_REGISTRY_EXPORT_FORMAT) {
-                throw new Error(`Unsupported export format: ${String(parsed.format).slice(0, 120)}`);
-            }
-            registry = normaliseImportedPersonnelTrainingRegistry(parsed);
-        } catch (error) {
-            personnelLog(`Personnel Register import failed: ${error?.message || error}`, 'error');
-            window.alert(`Personnel Register import failed: ${error?.message || error}`);
-            return;
-        }
-        const importedCount = Object.keys(registry.vehicles).length;
-        if (!importedCount) {
-            window.alert('The selected file contains an empty Personnel Register. Nothing was imported.');
-            return;
-        }
-        const existingCount = getPersonnelTrainingRegistryStats().count;
-        if (!window.confirm(
-            `Import ${importedCount.toLocaleString('en-GB')} vehicle register entries?\n\n` +
-            `This replaces the ${existingCount.toLocaleString('en-GB')} entries currently stored in this browser.`
-        )) return;
-        try {
-            if (PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER != null) {
-                clearTimeout(PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER);
-                PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER = null;
-            }
-            localStorage.setItem(PERSONNEL_TRAINING_REGISTRY_STORAGE_KEY, JSON.stringify(registry));
-            PERSONNEL_TRAINING_REGISTRY_CACHE = registry;
-            PERSONNEL_TRAINING_REGISTRY_DIRTY = false;
-            PERSONNEL_TRAINING_REGISTRY_PENDING_EVENT = null;
-        } catch (error) {
-            personnelLog(`Personnel Register import could not be saved: ${error?.message || error}`, 'error');
-            window.alert(`Personnel Register could not be saved: ${error?.message || error}`);
-            return;
-        }
-        dispatchPersonnelTrainingRegistryUpdate({ imported: true, vehicleCount: importedCount, updatedAt: Date.now() });
-        updatePersonnelTrainingRegistryStatus();
-        personnelLog(`Personnel Register imported: ${importedCount} vehicle(s). Existing browser register replaced.`, 'done');
-        setPersonnelUiValue('status', 'Personnel register imported');
-        window.alert(`Personnel Register imported successfully: ${importedCount.toLocaleString('en-GB')} vehicle entries.`);
-    }
-
     async function buildPersonnelTrainingRegisterOneClick() {
         if (STATE.running || STATION_STATE.running) {
             personnelLog(
@@ -4690,7 +4442,6 @@
             button.disabled = true;
             button.textContent = 'Building Register...';
         }
-        setPersonnelTrainingRegistryTransferDisabled(true);
 
         document.querySelector('#mc-personnel-pause').textContent = 'Pause';
         setPersonnelUiValue('status', 'Building all-station personnel register');
@@ -4825,8 +4576,7 @@
                 }
             }
 
-            flushPersonnelTrainingRegistry(false);
-            const registryRetained = getPersonnelTrainingRegistryStats().count;
+            const saveResult = flushPersonnelTrainingRegistry(false);
             const stopped = PERSONNEL_STATE.stopped;
             const summary = [
                 'PERSONNEL TRAINING REGISTER BUILD',
@@ -4839,7 +4589,7 @@
                 `Exact vehicle pages read: ${exactVehiclePagesRead}`,
                 `Exact vehicles registered: ${scannedVehicles}`,
                 `Vehicle pages failed: ${failedVehicles}`,
-                `Registry retained: ${registryRetained}`,
+                `Registry retained: ${Number(saveResult?.retained || 0)}`,
                 '',
                 'Only personnel already assigned to each exact vehicle were recorded.',
                 'No personnel assignments were changed.'
@@ -4871,10 +4621,8 @@
 
             if (button) {
                 button.disabled = false;
-                button.textContent = 'Build All Register';
+                button.textContent = 'Build Personnel Register';
             }
-            setPersonnelTrainingRegistryTransferDisabled(false);
-            updatePersonnelTrainingRegistryStatus();
 
             document.querySelector('#mc-personnel-pause').textContent = 'Pause';
         }
@@ -5558,7 +5306,6 @@
             const pendingEvent = PERSONNEL_TRAINING_REGISTRY_PENDING_EVENT;
             PERSONNEL_TRAINING_REGISTRY_PENDING_EVENT = null;
             dispatchPersonnelTrainingRegistryUpdate(pendingEvent);
-            updatePersonnelTrainingRegistryStatus();
 
             if (!silent) {
                 personnelDebug(
@@ -9041,7 +8788,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.100
+         * MODULE 2: MISSION FINDER V10.6.101
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -9848,6 +9595,12 @@
     const MF_STRICT_TRAINING_SOURCE_PREFIX =
         'mission-finder-live-strict-';
 
+    // V10.6.101: trained-personnel selection now optimises exact vehicle
+    // coverage instead of treating full qualification as a dispatch gate.
+    // Multi-trained crews reduce every matching course, type-51 PSUs provide
+    // up to nine seats for compatible Public Order demand, IRVs fill smaller
+    // remainders, and correct-type untrained fallback units are still selected
+    // while the remaining training shortfall is reported without blocking.
     // V10.6.100: visible current-mission Missing Vehicles or supported Missing
     // Personnel alerts now take authority before the full mission-help attachment.
     // Explicit missing-vehicle quantities are treated as the target selected count
@@ -9921,6 +9674,21 @@
             'bomb_disposal',
             'bomb_disposal_diver'
         ]);
+
+    const MF_PSU_COMPATIBLE_TRAINING_CODES =
+        Object.freeze([
+            'level_1_public_order',
+            'level_2_public_order',
+            'police_sergeant',
+            'police_medic'
+        ]);
+
+    const MF_TRAINED_VEHICLE_CAPACITY_BY_TYPE =
+        Object.freeze({
+            '51': 9,
+            '8': 2,
+            '25': 2
+        });
 
     const MF_ORDINARY_IRV_VERIFY_MAX_PAGES = 64;
     const MF_ORDINARY_IRV_VERIFY_BATCH_SIZE = 6;
@@ -21812,126 +21580,176 @@ let sessionRuntimeTicker = null;
                 );
             });
 
-        const addStrictTrainedIrvRequirement =
-            (
-                code,
+        const addTrainedVehicleRequirement = ({
+            code,
+            label,
+            personnelRequired,
+            requirementType =
+                'police_trained_irv_vehicle',
+            eligibleVehicleTypeIds = ['8'],
+            vehicleCapacityByType = {
+                '8': 2
+            },
+            preferredVehicleTypeIds =
+                eligibleVehicleTypeIds,
+            requiredTrainingCodes = [code],
+            psuCompatible = false
+        }) => {
+            if (personnelRequired <= 0) {
+                return;
+            }
+
+            const provisional = {
+                code:
+                    `${code}_vehicle`,
                 label,
-                personnelRequired
-            ) => {
-                if (personnelRequired <= 0) {
-                    return;
-                }
-
-                const requiredVehicles =
-                    Math.ceil(
-                        personnelRequired /
-                        2
-                    );
-
-                normalised.push({
-                    code:
-                        `${code}_vehicle`,
-                    label:
-                        `${label} Trained Police IRV`,
-                    requirementType:
-                        'police_trained_irv_vehicle',
-                    required:
-                        requiredVehicles,
-                    personnelRequired,
-                    personnelPerVehicle:
-                        2,
-                    requiredTrainingCodes: [
-                        code
-                    ],
-                    eligibleVehicleTypeIds: [
-                        '8'
-                    ]
-                });
+                requirementType,
+                required:
+                    1,
+                personnelRequired,
+                inspectorsRequired:
+                    requirementType ===
+                        'police_inspector_vehicle'
+                        ? personnelRequired
+                        : undefined,
+                personnelPerVehicle:
+                    Math.max(
+                        ...Object.values(
+                            vehicleCapacityByType
+                        ).map(value => {
+                            return Math.max(
+                                1,
+                                parseInt(value, 10) || 1
+                            );
+                        })
+                    ),
+                requiredTrainingCodes,
+                eligibleVehicleTypeIds:
+                    eligibleVehicleTypeIds.map(String),
+                vehicleCapacityByType: {
+                    ...vehicleCapacityByType
+                },
+                preferredVehicleTypeIds:
+                    preferredVehicleTypeIds.map(String),
+                psuCompatible:
+                    Boolean(psuCompatible)
             };
 
-        // Public Order levels and Sergeant are independent mission profiles.
-        // Prefer exact IRVs carrying two personnel with the requested profile,
-        // then allow one-person trained IRVs as a fallback until the complete
-        // personnel demand is covered. Unrelated profiles are never prerequisites.
-        addStrictTrainedIrvRequirement(
+            provisional.required =
+                getPreferredTrainedVehicleCountForRequirement(
+                    provisional
+                );
+
+            normalised.push(provisional);
+        };
+
+        const addPsuCompatibleRequirement = (
+            code,
+            label,
+            personnelRequired
+        ) => {
+            addTrainedVehicleRequirement({
+                code,
+                label:
+                    `${label} Trained Police Unit`,
+                personnelRequired,
+                eligibleVehicleTypeIds: [
+                    '51',
+                    '8'
+                ],
+                vehicleCapacityByType: {
+                    '51': 9,
+                    '8': 2
+                },
+                preferredVehicleTypeIds: [
+                    '51',
+                    '8'
+                ],
+                psuCompatible:
+                    true
+            });
+        };
+
+        // Level 1, Level 2, Sergeant and Police Medic can share one PSU or IRV
+        // pool. Multi-trained staff count toward every course they hold. A PSU
+        // supplies up to nine personnel seats; IRVs fill small remainders.
+        addPsuCompatibleRequirement(
             'level_1_public_order',
             'Level 1 Public Order',
             level1Required
         );
 
-        addStrictTrainedIrvRequirement(
+        addPsuCompatibleRequirement(
             'level_2_public_order',
             'Level 2 Public Order',
             level2Required
         );
 
-        addStrictTrainedIrvRequirement(
+        addPsuCompatibleRequirement(
             'police_sergeant',
             'Police Sergeant',
             policeSergeantRequired
         );
 
-        if (
-            policeInspectorRequired > 0
-        ) {
-            const requiredInspectorVehicles =
-                Math.ceil(
-                    policeInspectorRequired /
-                    2
-                );
-
-            normalised.push({
+        if (policeInspectorRequired > 0) {
+            addTrainedVehicleRequirement({
                 code:
-                    'police_inspector_vehicle',
+                    'police_inspector',
                 label:
                     'Police Inspector Trained Police IRV',
+                personnelRequired:
+                    policeInspectorRequired,
                 requirementType:
                     'police_inspector_vehicle',
-                required:
-                    requiredInspectorVehicles,
-                inspectorsRequired:
-                    policeInspectorRequired,
-                personnelPerVehicle:
-                    2,
-                requiredTrainingCodes: [
-                    'police_inspector'
-                ],
                 eligibleVehicleTypeIds: [
                     '8'
-                ]
+                ],
+                vehicleCapacityByType: {
+                    '8': 2
+                }
             });
         }
 
-        addStrictTrainedIrvRequirement(
+        addPsuCompatibleRequirement(
             'police_medic',
             'Police Medic',
             policeMedicRequired
         );
 
-        addStrictTrainedIrvRequirement(
-            'railway_police',
-            'Railway Police Officer',
-            railwayPoliceRequired
-        );
+        addTrainedVehicleRequirement({
+            code:
+                'railway_police',
+            label:
+                'Railway Police Officer Trained Police IRV',
+            personnelRequired:
+                railwayPoliceRequired,
+            eligibleVehicleTypeIds: [
+                '8'
+            ],
+            vehicleCapacityByType: {
+                '8': 2
+            }
+        });
 
         if (armedResponseRequired > 0) {
-            const requiredArmedTrafficCars = Math.ceil(
-                armedResponseRequired / 2
-            );
-
-            normalised.push({
-                code: 'armed_response_atc_vehicle',
-                label: 'Armed Response Personnel in Armed Traffic Cars',
-                requirementType: 'armed_response_atc_vehicle',
-                required: requiredArmedTrafficCars,
-                personnelRequired: armedResponseRequired,
-                personnelPerVehicle: 2,
+            addTrainedVehicleRequirement({
+                code:
+                    'armed_response_atc',
+                label:
+                    'Armed Response Personnel in Armed Traffic Cars',
+                personnelRequired:
+                    armedResponseRequired,
+                requirementType:
+                    'armed_response_atc_vehicle',
+                eligibleVehicleTypeIds: [
+                    '25'
+                ],
+                vehicleCapacityByType: {
+                    '25': 2
+                },
                 requiredTrainingCodes: [
                     'traffic_police',
                     'swat'
-                ],
-                eligibleVehicleTypeIds: [
-                    '25'
                 ]
             });
         }
@@ -21970,7 +21788,13 @@ let sessionRuntimeTicker = null;
             ) &&
             registryEntry
                 .assignmentScanComplete ===
-                true
+                true &&
+            registryEntry
+                .trainingProfilesComplete ===
+                true &&
+            Array.isArray(
+                registryEntry.assignedTrainingProfiles
+            )
         );
     }
 
@@ -22148,36 +21972,358 @@ let sessionRuntimeTicker = null;
         const requiredVehicles =
             Math.max(0, parseInt(requirement.required, 10) || 0);
 
-        if (
-            requirement.requirementType === 'armed_response_atc_vehicle' ||
-            requirement.requirementType === 'police_inspector_vehicle' ||
-            requirement.requirementType === 'police_trained_irv_vehicle'
-        ) {
-            const personnelPerVehicle =
-                Math.max(
-                    1,
-                    parseInt(requirement.personnelPerVehicle, 10) || 2
-                );
-
-            return requiredVehicles * personnelPerVehicle;
-        }
-
-        return requiredVehicles;
-    }
-
-    function getStrictTrainingVehicleContribution(
-        requirement,
-        qualifiedCount
-    ) {
         const personnelPerVehicle =
             Math.max(
                 1,
-                parseInt(requirement?.personnelPerVehicle, 10) || 2
+                parseInt(
+                    requirement.personnelPerVehicle,
+                    10
+                ) || 1
             );
 
-        return Math.min(
-            personnelPerVehicle,
-            Math.max(0, parseInt(qualifiedCount, 10) || 0)
+        return requiredVehicles * personnelPerVehicle;
+    }
+
+    function getTrainingRequirementRequiredCodes(
+        requirement
+    ) {
+        const explicit =
+            Array.isArray(
+                requirement?.requiredTrainingCodes
+            )
+                ? requirement.requiredTrainingCodes
+                : [];
+
+        const codes = explicit.length
+            ? explicit
+            : [requirement?.code];
+
+        return Array.from(
+            new Set(
+                codes
+                    .map(String)
+                    .filter(Boolean)
+            )
+        );
+    }
+
+    function getTrainingRequirementEligibleTypeIds(
+        requirement
+    ) {
+        return Array.from(
+            new Set(
+                (
+                    requirement
+                        ?.eligibleVehicleTypeIds ||
+                    []
+                )
+                    .map(String)
+                    .filter(Boolean)
+            )
+        );
+    }
+
+    function getTrainingRequirementVehicleCapacity(
+        requirement,
+        vehicleTypeId
+    ) {
+        const typeId =
+            String(vehicleTypeId || '');
+
+        const configured =
+            requirement?.vehicleCapacityByType &&
+            typeof requirement.vehicleCapacityByType ===
+                'object'
+                ? requirement.vehicleCapacityByType
+                : {};
+
+        const direct =
+            Math.max(
+                0,
+                parseInt(configured[typeId], 10) || 0
+            );
+
+        if (direct > 0) {
+            return direct;
+        }
+
+        const shared =
+            Math.max(
+                0,
+                parseInt(
+                    MF_TRAINED_VEHICLE_CAPACITY_BY_TYPE[
+                        typeId
+                    ],
+                    10
+                ) || 0
+            );
+
+        if (shared > 0) {
+            return shared;
+        }
+
+        return Math.max(
+            1,
+            parseInt(
+                requirement?.personnelPerVehicle,
+                10
+            ) || 1
+        );
+    }
+
+    function getPreferredTrainedVehicleCountForRequirement(
+        requirement
+    ) {
+        const personnelTarget =
+            getTrainingRequirementPersonnelTarget(
+                requirement
+            );
+
+        if (personnelTarget <= 0) {
+            return 0;
+        }
+
+        const eligible =
+            new Set(
+                getTrainingRequirementEligibleTypeIds(
+                    requirement
+                )
+            );
+
+        if (
+            eligible.has('51') &&
+            eligible.has('8')
+        ) {
+            const psuCapacity =
+                getTrainingRequirementVehicleCapacity(
+                    requirement,
+                    '51'
+                );
+
+            const irvCapacity =
+                getTrainingRequirementVehicleCapacity(
+                    requirement,
+                    '8'
+                );
+
+            let psuCount =
+                Math.floor(
+                    personnelTarget /
+                    psuCapacity
+                );
+
+            let remainder =
+                personnelTarget %
+                psuCapacity;
+
+            // Use another PSU only when at least five seats are useful. Smaller
+            // remainders use IRVs, so 12 personnel becomes one PSU plus two IRVs
+            // instead of two PSUs carrying six unnecessary spare seats.
+            if (
+                remainder >=
+                Math.ceil(psuCapacity / 2)
+            ) {
+                psuCount += 1;
+                remainder = 0;
+            }
+
+            return (
+                psuCount +
+                Math.ceil(
+                    remainder /
+                    irvCapacity
+                )
+            );
+        }
+
+        const capacities =
+            getTrainingRequirementEligibleTypeIds(
+                requirement
+            )
+                .map(typeId => {
+                    return getTrainingRequirementVehicleCapacity(
+                        requirement,
+                        typeId
+                    );
+                })
+                .filter(capacity => capacity > 0);
+
+        const bestCapacity =
+            capacities.length
+                ? Math.max(...capacities)
+                : Math.max(
+                    1,
+                    parseInt(
+                        requirement?.personnelPerVehicle,
+                        10
+                    ) || 1
+                );
+
+        return Math.ceil(
+            personnelTarget /
+            bestCapacity
+        );
+    }
+
+    function getTrainingRequirementVehicleTypeId(
+        requirement,
+        checkbox,
+        registryEntry = null
+    ) {
+        const eligible =
+            getTrainingRequirementEligibleTypeIds(
+                requirement
+            );
+
+        const eligibleSet =
+            new Set(eligible);
+
+        const checkboxTypes =
+            getVehicleTypeIdentifiers(
+                checkbox
+            ).map(String);
+
+        const entryType =
+            String(
+                registryEntry?.vehicleTypeId ||
+                ''
+            );
+
+        const available =
+            new Set([
+                ...checkboxTypes,
+                entryType
+            ].filter(Boolean));
+
+        const preferred = [
+            ...(
+                requirement
+                    ?.preferredVehicleTypeIds ||
+                []
+            ).map(String),
+            ...eligible
+        ];
+
+        for (const typeId of preferred) {
+            if (
+                available.has(typeId) &&
+                (
+                    eligibleSet.size === 0 ||
+                    eligibleSet.has(typeId)
+                )
+            ) {
+                return typeId;
+            }
+        }
+
+        if (eligibleSet.size === 0) {
+            return checkboxTypes[0] || entryType;
+        }
+
+        return '';
+    }
+
+    function getRegistryTrainingQualifiedCount(
+        requirement,
+        registryEntry
+    ) {
+        if (
+            !requirement ||
+            !registryEntry
+        ) {
+            return 0;
+        }
+
+        const requiredCodes =
+            getTrainingRequirementRequiredCodes(
+                requirement
+            );
+
+        const profiles =
+            Array.isArray(
+                registryEntry.assignedTrainingProfiles
+            )
+                ? registryEntry.assignedTrainingProfiles
+                : null;
+
+        if (profiles) {
+            return profiles.reduce((count, profile) => {
+                const profileSet =
+                    new Set(
+                        (
+                            Array.isArray(profile)
+                                ? profile
+                                : []
+                        ).map(String)
+                    );
+
+                return count + (
+                    requiredCodes.every(code => {
+                        return profileSet.has(code);
+                    })
+                        ? 1
+                        : 0
+                );
+            }, 0);
+        }
+
+        const trainingCounts =
+            registryEntry.trainingCounts &&
+            typeof registryEntry.trainingCounts ===
+                'object'
+                ? registryEntry.trainingCounts
+                : {};
+
+        const combinationCounts =
+            registryEntry.trainingCombinationCounts &&
+            typeof registryEntry.trainingCombinationCounts ===
+                'object'
+                ? registryEntry.trainingCombinationCounts
+                : {};
+
+        if (requiredCodes.length > 1) {
+            const combinationKey =
+                getMissionTrainingCombinationKey(
+                    requiredCodes
+                );
+
+            return Math.max(
+                0,
+                parseInt(
+                    combinationCounts[combinationKey],
+                    10
+                ) || 0
+            );
+        }
+
+        const code =
+            requiredCodes[0] ||
+            String(requirement.code || '');
+
+        return Math.max(
+            0,
+            parseInt(
+                trainingCounts[code],
+                10
+            ) || 0
+        );
+    }
+
+    function getTrainingRequirementQualifiedCount(
+        requirement,
+        registryEntry
+    ) {
+        if (
+            !isAuthoritativeLivePoliceTrainingEntry(
+                registryEntry
+            )
+        ) {
+            return 0;
+        }
+
+        return getRegistryTrainingQualifiedCount(
+            requirement,
+            registryEntry
         );
     }
 
@@ -22192,124 +22338,169 @@ let sessionRuntimeTicker = null;
             return 0;
         }
 
-        const trainingCounts =
-            registryEntry.trainingCounts &&
-            typeof registryEntry.trainingCounts ===
-                'object'
-                ? registryEntry.trainingCounts
-                : {};
+        const vehicleTypeId =
+            String(
+                registryEntry.vehicleTypeId ||
+                ''
+            );
 
-        const trainingCombinationCounts =
-            registryEntry.trainingCombinationCounts &&
-            typeof registryEntry.trainingCombinationCounts === 'object'
-                ? registryEntry.trainingCombinationCounts
-                : {};
-
-        const allowedTypes =
+        const eligible =
             new Set(
-                (
+                getTrainingRequirementEligibleTypeIds(
                     requirement
-                        .eligibleVehicleTypeIds ||
-                    []
-                ).map(String)
+                )
             );
 
         if (
-            allowedTypes.size > 0 &&
-            !allowedTypes.has(
-                String(
-                    registryEntry.vehicleTypeId ||
-                    ''
-                )
-            )
+            eligible.size > 0 &&
+            !eligible.has(vehicleTypeId)
         ) {
             return 0;
         }
 
-        if (
-            requirement.requirementType ===
-                'armed_response_atc_vehicle'
-        ) {
-            if (
-                !isAuthoritativeLivePoliceTrainingEntry(
-                    registryEntry
-                )
-            ) {
-                return 0;
-            }
-
-            const combinationKey =
-                getMissionTrainingCombinationKey(
-                    requirement.requiredTrainingCodes
-                );
-
-            const qualifiedDualTrainedCount =
-                parseInt(
-                    trainingCombinationCounts[combinationKey],
-                    10
-                ) || 0;
-
-            return getStrictTrainingVehicleContribution(
+        return Math.min(
+            getTrainingRequirementVehicleCapacity(
                 requirement,
-                qualifiedDualTrainedCount
-            );
-        }
-
-        if (
-            requirement.requirementType ===
-                'police_inspector_vehicle'
-        ) {
-            if (
-                !isAuthoritativeLivePoliceTrainingEntry(
-                    registryEntry
-                )
-            ) {
-                return 0;
-            }
-
-            return getStrictTrainingVehicleContribution(
+                vehicleTypeId
+            ),
+            getTrainingRequirementQualifiedCount(
                 requirement,
-                trainingCounts.police_inspector
-            );
-        }
-
-        if (
-            requirement.requirementType ===
-                'police_trained_irv_vehicle'
-        ) {
-            if (
-                !isAuthoritativeLivePoliceTrainingEntry(
-                    registryEntry
-                )
-            ) {
-                return 0;
-            }
-
-            const requiredCodes =
-                Array.isArray(
-                    requirement.requiredTrainingCodes
-                )
-                    ? requirement.requiredTrainingCodes
-                    : [];
-
-            if (requiredCodes.length !== 1) {
-                return 0;
-            }
-
-            return getStrictTrainingVehicleContribution(
-                requirement,
-                trainingCounts[requiredCodes[0]]
-            );
-        }
-
-        return (
-            parseInt(
-                trainingCounts[
-                    requirement.code
-                ],
-                10
-            ) || 0
+                registryEntry
+            )
         );
+    }
+
+    function getTrainingRequirementNominalCapacity(
+        requirement,
+        checkbox,
+        registryEntry = null
+    ) {
+        const vehicleTypeId =
+            getTrainingRequirementVehicleTypeId(
+                requirement,
+                checkbox,
+                registryEntry
+            );
+
+        if (!vehicleTypeId) {
+            return 0;
+        }
+
+        const maximumCapacity =
+            getTrainingRequirementVehicleCapacity(
+                requirement,
+                vehicleTypeId
+            );
+
+        if (
+            isAuthoritativeLivePoliceTrainingEntry(
+                registryEntry
+            )
+        ) {
+            return Math.min(
+                maximumCapacity,
+                Math.max(
+                    0,
+                    parseInt(
+                        registryEntry.assignedPersonnelCount,
+                        10
+                    ) ||
+                    registryEntry.assignedTrainingProfiles.length
+                )
+            );
+        }
+
+        return maximumCapacity;
+    }
+
+    function isCheckboxEligibleForTrainingRequirement(
+        checkbox,
+        requirement,
+        registryEntry = null
+    ) {
+        return !!getTrainingRequirementVehicleTypeId(
+            requirement,
+            checkbox,
+            registryEntry
+        );
+    }
+
+    function getTrainingCandidatePersonnelProfiles(
+        requirements,
+        checkbox,
+        registryEntry = null
+    ) {
+        let maximumCapacity = 0;
+
+        (
+            Array.isArray(requirements)
+                ? requirements
+                : []
+        ).forEach(requirement => {
+            maximumCapacity =
+                Math.max(
+                    maximumCapacity,
+                    getTrainingRequirementNominalCapacity(
+                        requirement,
+                        checkbox,
+                        registryEntry
+                    )
+                );
+        });
+
+        if (maximumCapacity <= 0) {
+            return [];
+        }
+
+        if (
+            isAuthoritativeLivePoliceTrainingEntry(
+                registryEntry
+            )
+        ) {
+            return registryEntry
+                .assignedTrainingProfiles
+                .slice(0, maximumCapacity)
+                .map(profile => {
+                    return Array.from(
+                        new Set(
+                            (
+                                Array.isArray(profile)
+                                    ? profile
+                                    : []
+                            )
+                                .map(String)
+                                .filter(Boolean)
+                        )
+                    );
+                });
+        }
+
+        // Unknown/stale candidates remain usable as untrained fallback. Their
+        // exact vehicle type defines the maximum nominal personnel capacity.
+        return Array.from(
+            { length: maximumCapacity },
+            () => []
+        );
+    }
+
+    function doesTrainingProfileSatisfyRequirement(
+        profile,
+        requirement
+    ) {
+        const profileSet =
+            new Set(
+                (
+                    Array.isArray(profile)
+                        ? profile
+                        : []
+                ).map(String)
+            );
+
+        return getTrainingRequirementRequiredCodes(
+            requirement
+        ).every(code => {
+            return profileSet.has(code);
+        });
     }
 
     function getTrainedPersonnelVehicleTarget(
@@ -22322,19 +22513,15 @@ let sessionRuntimeTicker = null;
                     : []
             )
                 .map(requirement => {
-                    return Math.max(
-                        0,
-                        parseInt(
-                            requirement?.required,
-                            10
-                        ) || 0
+                    return getPreferredTrainedVehicleCountForRequirement(
+                        requirement
                     );
                 })
-                .filter(
-                    target =>
-                        target > 0
-                );
+                .filter(target => target > 0);
 
+        // Compatible multi-trained staff can satisfy several requirement rows
+        // from the same vehicle, so the shared target is the largest individual
+        // vehicle plan rather than the sum of every course plan.
         return targets.length
             ? Math.max(...targets)
             : 1;
@@ -22433,49 +22620,103 @@ let sessionRuntimeTicker = null;
                 : []
         )
             .map(requirement => {
-
-                if (
-                    requirement.requirementType ===
-                    'armed_response_atc_vehicle'
-                ) {
-                    return (
-                        `${requirement.label} x${requirement.required} ` +
-                        `(${requirement.personnelRequired} required; ` +
-                        `prefer 2 personnel who each hold Roads Policing + Firearms per exact type-25 ATC; fallback accepts 1 until the full personnel demand is covered)`
+                const personnelTarget =
+                    getTrainingRequirementPersonnelTarget(
+                        requirement
                     );
-                }
 
-                if (
-                    requirement
-                        .requirementType ===
-                    'police_inspector_vehicle'
-                ) {
-                    return (
-                        `${requirement.label} x${requirement.required} ` +
-                        `(${requirement.inspectorsRequired} Inspector` +
-                        `${requirement.inspectorsRequired === 1 ? '' : 's'}; ` +
-                        `prefer 2 Inspector-trained personnel per exact IRV; fallback accepts 1 until the full Inspector demand is covered)`
+                const types =
+                    getTrainingRequirementEligibleTypeIds(
+                        requirement
                     );
-                }
 
+                const capacityText =
+                    types
+                        .map(typeId => {
+                            const label =
+                                typeId === '51'
+                                    ? 'PSU'
+                                    : typeId === '8'
+                                        ? 'IRV'
+                                        : typeId === '25'
+                                            ? 'ATC'
+                                            : `type ${typeId}`;
 
-                if (
-                    requirement
-                        .requirementType ===
-                    'police_trained_irv_vehicle'
-                ) {
-                    return (
-                        `${requirement.label} x${requirement.required} ` +
-                        `(${requirement.personnelRequired} required; ` +
-                        `prefer 2 ${requirement.requiredTrainingCodes?.[0] || 'trained'} personnel per exact IRV; fallback accepts 1 until the full personnel demand is covered)`
-                    );
-                }
+                            return (
+                                `${label} ` +
+                                `${getTrainingRequirementVehicleCapacity(requirement, typeId)}`
+                            );
+                        })
+                        .join(', ');
 
-                return `${requirement.label} x${requirement.required}`;
+                return (
+                    `${requirement.label} ` +
+                    `(${personnelTarget} trained personnel required; ` +
+                    `${capacityText || 'exact compatible vehicle'}; ` +
+                    `best available training is preferred and any residual ` +
+                    `shortfall is reported without blocking correct-type units)`
+                );
             })
             .join(', ');
     }
 
+    function formatTrainedPersonnelShortfall(
+        requirements
+    ) {
+        return (
+            Array.isArray(requirements)
+                ? requirements
+                : []
+        )
+            .filter(requirement => {
+                return (
+                    Math.max(
+                        0,
+                        parseInt(
+                            requirement?.remaining,
+                            10
+                        ) || 0
+                    ) > 0
+                );
+            })
+            .map(requirement => {
+                return (
+                    `${requirement.label}: ` +
+                    `${requirement.remaining} trained ` +
+                    `personnel short`
+                );
+            })
+            .join(', ');
+    }
+
+    function formatTrainedVehicleCapacityShortfall(
+        requirements
+    ) {
+        return (
+            Array.isArray(requirements)
+                ? requirements
+                : []
+        )
+            .filter(requirement => {
+                return (
+                    Math.max(
+                        0,
+                        parseInt(
+                            requirement?.capacityRemaining,
+                            10
+                        ) || 0
+                    ) > 0
+                );
+            })
+            .map(requirement => {
+                return (
+                    `${requirement.label}: ` +
+                    `${requirement.capacityRemaining} personnel ` +
+                    `seats still require compatible vehicles`
+                );
+            })
+            .join(', ');
+    }
 
     function hasPoliceInspectorVehicleRequirement(requirements) {
         return (
@@ -22509,11 +22750,13 @@ let sessionRuntimeTicker = null;
                 ? requirements
                 : []
         ).some(requirement => {
-            return (
-                requirement?.requirementType ===
-                    'police_inspector_vehicle' ||
-                requirement?.requirementType ===
-                    'police_trained_irv_vehicle'
+            return !!(
+                getTrainingRequirementRequiredCodes(
+                    requirement
+                ).length &&
+                getTrainingRequirementEligibleTypeIds(
+                    requirement
+                ).length
             );
         });
     }
@@ -22606,6 +22849,7 @@ let sessionRuntimeTicker = null;
 
         const trainingCounts = {};
         const trainingCombinationCounts = {};
+        const assignedTrainingProfiles = [];
         let assignedPersonnelCount = 0;
 
         const personnelTable =
@@ -22758,6 +23002,16 @@ let sessionRuntimeTicker = null;
                 rowCodes.add('railway_police');
             }
 
+            const trainingProfile =
+                Array.from(rowCodes)
+                    .map(String)
+                    .filter(Boolean)
+                    .sort();
+
+            assignedTrainingProfiles.push(
+                trainingProfile
+            );
+
             rowCodes.forEach(code => {
                 trainingCounts[code] =
                     Number(
@@ -22765,6 +23019,19 @@ let sessionRuntimeTicker = null;
                         0
                     ) + 1;
             });
+
+            if (trainingProfile.length > 1) {
+                const exactProfileKey =
+                    getMissionTrainingCombinationKey(
+                        trainingProfile
+                    );
+
+                trainingCombinationCounts[exactProfileKey] =
+                    Number(
+                        trainingCombinationCounts[exactProfileKey] ||
+                        0
+                    ) + 1;
+            }
 
             const roadsFirearmsKey =
                 getMissionTrainingCombinationKey([
@@ -22774,7 +23041,10 @@ let sessionRuntimeTicker = null;
 
             if (
                 rowCodes.has('traffic_police') &&
-                rowCodes.has('swat')
+                rowCodes.has('swat') &&
+                getMissionTrainingCombinationKey(
+                    trainingProfile
+                ) !== roadsFirearmsKey
             ) {
                 trainingCombinationCounts[roadsFirearmsKey] =
                     Number(
@@ -22799,6 +23069,9 @@ let sessionRuntimeTicker = null;
             vehicleId: currentId,
             trainingCounts,
             trainingCombinationCounts,
+            assignedTrainingProfiles,
+            trainingProfilesComplete:
+                Boolean(personnelTable),
             assignedPersonnelCount,
             assignmentScanComplete:
                 Boolean(personnelTable),
@@ -22862,99 +23135,48 @@ let sessionRuntimeTicker = null;
     ) {
         if (!registryEntry) return 0;
 
-        const trainingCounts =
-            registryEntry.trainingCounts &&
-            typeof registryEntry.trainingCounts === 'object'
-                ? registryEntry.trainingCounts
-                : {};
-
-        const trainingCombinationCounts =
-            registryEntry.trainingCombinationCounts &&
-            typeof registryEntry.trainingCombinationCounts === 'object'
-                ? registryEntry.trainingCombinationCounts
-                : {};
-
-        const entryTypeId =
-            String(
-                registryEntry.vehicleTypeId ||
-                ''
-            );
-
-        const getPreferenceScore = qualifiedCount => {
-            const count =
-                Math.max(0, parseInt(qualifiedCount, 10) || 0);
-
-            if (count >= 2) {
-                return 2000 + Math.min(count, 2);
-            }
-
-            return count === 1
-                ? 1001
-                : 0;
-        };
-
         return (
             Array.isArray(requirements)
                 ? requirements
                 : []
         ).reduce((score, requirement) => {
-            const allowedTypes =
+            const eligible =
                 new Set(
-                    (
-                        requirement?.eligibleVehicleTypeIds ||
-                        []
-                    ).map(String)
+                    getTrainingRequirementEligibleTypeIds(
+                        requirement
+                    )
+                );
+
+            const entryTypeId =
+                String(
+                    registryEntry.vehicleTypeId ||
+                    ''
                 );
 
             if (
-                allowedTypes.size > 0 &&
-                !allowedTypes.has(entryTypeId)
+                eligible.size > 0 &&
+                !eligible.has(entryTypeId)
             ) {
                 return score;
             }
 
-            if (
-                requirement?.requirementType ===
-                    'armed_response_atc_vehicle'
-            ) {
-                const combinationKey =
-                    getMissionTrainingCombinationKey(
-                        requirement.requiredTrainingCodes
-                    );
-
-                return score + getPreferenceScore(
-                    trainingCombinationCounts[combinationKey]
+            const qualified =
+                getRegistryTrainingQualifiedCount(
+                    requirement,
+                    registryEntry
                 );
-            }
 
-            if (
-                requirement?.requirementType ===
-                    'police_inspector_vehicle'
-            ) {
-                return score + getPreferenceScore(
-                    trainingCounts.police_inspector
+            const capacity =
+                getTrainingRequirementVehicleCapacity(
+                    requirement,
+                    entryTypeId
                 );
-            }
 
-            if (
-                requirement?.requirementType ===
-                    'police_trained_irv_vehicle'
-            ) {
-                const requiredCodes =
-                    Array.isArray(
-                        requirement.requiredTrainingCodes
-                    )
-                        ? requirement.requiredTrainingCodes
-                        : [];
-
-                if (requiredCodes.length === 1) {
-                    return score + getPreferenceScore(
-                        trainingCounts[requiredCodes[0]]
-                    );
-                }
-            }
-
-            return score;
+            return (
+                score +
+                Math.min(qualified, capacity) * 1000 +
+                (entryTypeId === '51' ? 50 : 0)
+            );
         }, 0);
     }
 
@@ -23052,25 +23274,44 @@ let sessionRuntimeTicker = null;
             registry.vehicles = {};
         }
 
-        const allIrvCandidates =
+        const requirementList =
+            Array.isArray(requirements)
+                ? requirements
+                : [];
+
+        const allCandidates =
             sortVehicleCheckboxesByBestArrival(
                 getVehicleCheckboxSnapshot().filter(checkbox => {
-                    return (
-                        (!checkbox.disabled || checkbox.checked) &&
-                        isPoliceCarVehicleCheckbox(checkbox) &&
-                        !!getMissionVehicleId(checkbox)
-                    );
+                    if (
+                        !checkbox ||
+                        (checkbox.disabled && !checkbox.checked) ||
+                        !getMissionVehicleId(checkbox)
+                    ) {
+                        return false;
+                    }
+
+                    const registryMatch =
+                        getRegistryEntryForMissionCheckbox(
+                            checkbox,
+                            registry
+                        );
+
+                    return requirementList.some(requirement => {
+                        return isCheckboxEligibleForTrainingRequirement(
+                            checkbox,
+                            requirement,
+                            registryMatch.entry
+                        );
+                    });
                 })
             );
 
-        // The Personnel Assignment registry is an exact-ID hint only.
-        // It is never trusted as final proof, but it places known Inspector or
-        // requested Public Order IRVs at the front of the live verification
-        // queue. The exact /vehicles/{id}/zuweisung page is still authoritative.
+        // The Personnel Assignment registry is a queue hint only. Every final
+        // training count comes from the exact vehicle's live assignment page.
         const orderedCandidates =
             orderStrictPoliceTrainingCandidates(
-                allIrvCandidates,
-                requirements,
+                allCandidates,
+                requirementList,
                 registry
             );
 
@@ -23111,7 +23352,7 @@ let sessionRuntimeTicker = null;
                 });
 
             return getRemainingTrainedPersonnelRequirements(
-                requirements,
+                requirementList,
                 verifiedCheckboxes,
                 registry
             ).every(requirement => {
@@ -23149,28 +23390,23 @@ let sessionRuntimeTicker = null;
 
                 return (
                     getUnverifiedRegistryTrainingHintScore(
-                        requirements,
+                        requirementList,
                         registryMatch.entry
                     ) > 0
                 );
             });
 
-        const registryHintedSet =
+        const hintedSet =
             new Set(registryHintedCandidates);
 
-        const ordinaryCandidates =
-            unverifiedCandidates.filter(
-                checkbox =>
-                    !registryHintedSet.has(checkbox)
-            );
+        const remainingCandidates =
+            unverifiedCandidates.filter(checkbox => {
+                return !hintedSet.has(checkbox);
+            });
 
-        // Always verify the exact registry-hinted IRVs first. Then use the
-        // established arrival-sorted cap for ordinary candidates. This fixes
-        // trained station vehicles being missed simply because they sit beyond
-        // the first 48 normal IRVs in a large mission vehicle list.
         const pagesToRead = [
             ...registryHintedCandidates,
-            ...ordinaryCandidates.slice(
+            ...remainingCandidates.slice(
                 0,
                 Math.max(
                     0,
@@ -23214,14 +23450,12 @@ let sessionRuntimeTicker = null;
                             return null;
                         }
 
-                        const html = await response.text();
-
                         return {
                             checkbox,
                             vehicleId,
                             parsed:
                                 parseLivePoliceTrainingAssignments(
-                                    html,
+                                    await response.text(),
                                     vehicleId
                                 )
                         };
@@ -23231,69 +23465,83 @@ let sessionRuntimeTicker = null;
                 })
             );
 
-            results.filter(result => result?.parsed?.assignmentScanComplete).forEach(result => {
-                const {
-                    checkbox,
-                    vehicleId,
-                    parsed
-                } = result;
+            results
+                .filter(result => {
+                    return result?.parsed?.assignmentScanComplete;
+                })
+                .forEach(result => {
+                    const {
+                        checkbox,
+                        vehicleId,
+                        parsed
+                    } = result;
 
-                const existing =
-                    registry.vehicles?.[vehicleId] ||
-                    {};
+                    const existing =
+                        registry.vehicles?.[vehicleId] ||
+                        {};
 
-                registry.vehicles[vehicleId] = {
-                    ...existing,
-                    vehicleId,
-                    vehicleName:
-                        existing.vehicleName ||
-                        getVehicleDebugName(checkbox),
-                    vehicleTypeId:
+                    const detectedType =
                         String(
                             getVehicleTypeIdentifiers(checkbox)[0] ||
                             parsed.detectedVehicleTypeId ||
                             existing.vehicleTypeId ||
-                            '8'
-                        ),
-                    assignedPersonnelCount:
-                        parsed.assignedPersonnelCount,
-                    assignmentScanComplete:
-                        parsed.assignmentScanComplete,
-                    personnelRowsSeen:
-                        parsed.personnelRowsSeen,
-                    trainingCounts: {
-                        ...(
-                            existing.trainingCounts &&
-                            typeof existing.trainingCounts === 'object'
-                                ? existing.trainingCounts
-                                : {}
-                        ),
-                        ...parsed.trainingCounts
-                    },
-                    trainingCombinationCounts: {
-                        ...(
-                            existing.trainingCombinationCounts &&
-                            typeof existing.trainingCombinationCounts === 'object'
-                                ? existing.trainingCombinationCounts
-                                : {}
-                        ),
-                        ...parsed.trainingCombinationCounts
-                    },
-                    updatedAt:
-                        Date.now(),
-                    source:
-                        `${MF_STRICT_TRAINING_SOURCE_PREFIX}${String(source || 'update').toLowerCase()}-v10676`
-                };
+                            ''
+                        );
 
-                mfLiveTrainingVerifyCache.set(
-                    vehicleId,
-                    Date.now()
-                );
+                    registry.vehicles[vehicleId] = {
+                        ...existing,
+                        vehicleId,
+                        vehicleName:
+                            existing.vehicleName ||
+                            getVehicleDebugName(checkbox),
+                        vehicleTypeId:
+                            detectedType,
+                        assignedPersonnelCount:
+                            parsed.assignedPersonnelCount,
+                        assignmentScanComplete:
+                            parsed.assignmentScanComplete,
+                        personnelRowsSeen:
+                            parsed.personnelRowsSeen,
+                        trainingCounts: {
+                            ...(
+                                existing.trainingCounts &&
+                                typeof existing.trainingCounts ===
+                                    'object'
+                                    ? existing.trainingCounts
+                                    : {}
+                            ),
+                            ...parsed.trainingCounts
+                        },
+                        trainingCombinationCounts: {
+                            ...(
+                                existing.trainingCombinationCounts &&
+                                typeof existing.trainingCombinationCounts ===
+                                    'object'
+                                    ? existing.trainingCombinationCounts
+                                    : {}
+                            ),
+                            ...parsed.trainingCombinationCounts
+                        },
+                        assignedTrainingProfiles:
+                            parsed.assignedTrainingProfiles,
+                        trainingProfilesComplete:
+                            parsed.trainingProfilesComplete,
+                        updatedAt:
+                            Date.now(),
+                        source:
+                            `${MF_STRICT_TRAINING_SOURCE_PREFIX}` +
+                            `coverage-${String(source || 'update').toLowerCase()}-v106101`
+                    };
 
-                verifiedIds.add(vehicleId);
-                pagesRead += 1;
-                changed = true;
-            });
+                    mfLiveTrainingVerifyCache.set(
+                        vehicleId,
+                        Date.now()
+                    );
+
+                    verifiedIds.add(vehicleId);
+                    pagesRead += 1;
+                    changed = true;
+                });
 
             if (changed) {
                 savePersonnelTrainingRegistry(
@@ -23313,8 +23561,6 @@ let sessionRuntimeTicker = null;
                 verifiedIds.size
         };
     }
-
-
 
     async function refreshArmedResponseRegistryFromLiveVehicles(
         requirements,
@@ -23651,28 +23897,19 @@ let sessionRuntimeTicker = null;
             });
         });
 
-        const irvRequirements = requirements.filter(requirement => {
-            return requirement?.requirementType !==
-                'armed_response_atc_vehicle';
-        });
-
-        const armedResponseRequirements = requirements.filter(requirement => {
-            return requirement?.requirementType ===
-                'armed_response_atc_vehicle';
-        });
-
-        const irv = await refreshPoliceInspectorRegistryFromLiveVehicles(
-            irvRequirements,
-            source
-        );
-        const armedResponse = await refreshArmedResponseRegistryFromLiveVehicles(
-            armedResponseRequirements,
-            source
-        );
+        const trained =
+            await refreshPoliceInspectorRegistryFromLiveVehicles(
+                requirements,
+                source
+            );
 
         return {
-            irv,
-            armedResponse
+            irv:
+                trained,
+            armedResponse:
+                trained,
+            all:
+                trained
         };
     }
 
@@ -23730,35 +23967,174 @@ let sessionRuntimeTicker = null;
         };
     }
 
+    function applyTrainingCandidateCoverage(
+        remaining,
+        checkbox,
+        registryEntry
+    ) {
+        const next =
+            (
+                Array.isArray(remaining)
+                    ? remaining
+                    : []
+            ).map(requirement => ({
+                ...requirement
+            }));
+
+        const profiles =
+            getTrainingCandidatePersonnelProfiles(
+                next,
+                checkbox,
+                registryEntry
+            );
+
+        const coveredCodes = new Set();
+        let trainedUseful = 0;
+        let capacityUseful = 0;
+        let usedProfiles = 0;
+        let isPsu = false;
+
+        next.forEach(requirement => {
+            if (
+                getTrainingRequirementVehicleTypeId(
+                    requirement,
+                    checkbox,
+                    registryEntry
+                ) === '51'
+            ) {
+                isPsu = true;
+            }
+        });
+
+        profiles.forEach(profile => {
+            const eligible =
+                next.filter(requirement => {
+                    return !!(
+                        requirement.capacityRemaining > 0 &&
+                        isCheckboxEligibleForTrainingRequirement(
+                            checkbox,
+                            requirement,
+                            registryEntry
+                        )
+                    );
+                });
+
+            if (!eligible.length) {
+                return;
+            }
+
+            const qualifying =
+                eligible.filter(requirement => {
+                    return !!(
+                        requirement.remaining > 0 &&
+                        doesTrainingProfileSatisfyRequirement(
+                            profile,
+                            requirement
+                        )
+                    );
+                });
+
+            if (qualifying.length > 0) {
+                qualifying.forEach(requirement => {
+                    requirement.remaining =
+                        Math.max(
+                            0,
+                            requirement.remaining - 1
+                        );
+                    requirement.capacityRemaining =
+                        Math.max(
+                            0,
+                            requirement.capacityRemaining - 1
+                        );
+                    trainedUseful += 1;
+                    capacityUseful += 1;
+                    coveredCodes.add(requirement.code);
+                });
+                usedProfiles += 1;
+                return;
+            }
+
+            // A person without a currently useful course can still occupy one
+            // correct-type fallback seat. Allocate that seat to exactly one
+            // unmet requirement; never multiply an untrained person across
+            // several course counts.
+            const fallbackRequirement =
+                eligible
+                    .slice()
+                    .sort((left, right) => {
+                        if (
+                            left.capacityRemaining !==
+                            right.capacityRemaining
+                        ) {
+                            return (
+                                right.capacityRemaining -
+                                left.capacityRemaining
+                            );
+                        }
+
+                        return String(left.code)
+                            .localeCompare(String(right.code));
+                    })[0];
+
+            if (fallbackRequirement) {
+                fallbackRequirement.capacityRemaining =
+                    Math.max(
+                        0,
+                        fallbackRequirement.capacityRemaining - 1
+                    );
+                capacityUseful += 1;
+                usedProfiles += 1;
+            }
+        });
+
+        return {
+            remaining:
+                next,
+            trainedUseful,
+            capacityUseful,
+            coveredCategories:
+                coveredCodes.size,
+            physicalCapacity:
+                profiles.length,
+            overshoot:
+                Math.max(
+                    0,
+                    profiles.length -
+                    usedProfiles
+                ),
+            isPsu,
+            eligible:
+                capacityUseful > 0
+        };
+    }
+
     function getRemainingTrainedPersonnelRequirements(
         requirements,
         selectedCheckboxes,
         registry
     ) {
-        const remaining =
-            new Map();
+        let remaining =
+            (
+                Array.isArray(requirements)
+                    ? requirements
+                    : []
+            ).map(requirement => {
+                const personnelTarget =
+                    getTrainingRequirementPersonnelTarget(
+                        requirement
+                    );
 
-        (
-            Array.isArray(requirements)
-                ? requirements
-                : []
-        ).forEach(requirement => {
-            remaining.set(
-                requirement.code,
-                {
+                return {
                     ...requirement,
                     remaining:
-                        getTrainingRequirementPersonnelTarget(
-                            requirement
-                        )
-                }
-            );
-        });
+                        personnelTarget,
+                    capacityRemaining:
+                        personnelTarget
+                };
+            });
 
         (
-            Array.isArray(
-                selectedCheckboxes
-            )
+            Array.isArray(selectedCheckboxes)
                 ? selectedCheckboxes
                 : []
         ).forEach(checkbox => {
@@ -23770,24 +24146,15 @@ let sessionRuntimeTicker = null;
                     registry
                 );
 
-            remaining.forEach(
-                requirement => {
-                    requirement.remaining =
-                        Math.max(
-                            0,
-                            requirement.remaining -
-                            getTrainingRequirementContribution(
-                                requirement,
-                                entry
-                            )
-                        );
-                }
-            );
+            remaining =
+                applyTrainingCandidateCoverage(
+                    remaining,
+                    checkbox,
+                    entry
+                ).remaining;
         });
 
-        return Array.from(
-            remaining.values()
-        );
+        return remaining;
     }
 
     function areTrainedPersonnelRequirementsSatisfied(
@@ -23801,63 +24168,111 @@ let sessionRuntimeTicker = null;
                 checkbox => checkbox.checked
             );
 
+        // Correct-type vehicle coverage is the dispatch gate. A training
+        // shortage remains visible but does not block the selected units.
         return getRemainingTrainedPersonnelRequirements(
             requirements,
             selected,
             registry
-        ).every(
-            requirement =>
-                requirement.remaining <= 0
+        ).every(requirement => {
+            return requirement.capacityRemaining <= 0;
+        });
+    }
+
+    function getTrainedCandidateMetrics(
+        remaining,
+        checkbox,
+        registryEntry
+    ) {
+        return applyTrainingCandidateCoverage(
+            remaining,
+            checkbox,
+            registryEntry
         );
     }
 
     function getTrainedVehicleSelectionScore(
-        remaining,
-        registryEntry
+        metrics,
+        trainedPhase
     ) {
-        let usefulCoverage = 0;
-        let twoPersonProfileMatches = 0;
-        let rawContribution = 0;
-
-        (Array.isArray(remaining) ? remaining : [])
-            .forEach(requirement => {
-                if (
-                    !requirement ||
-                    requirement.remaining <= 0
-                ) {
-                    return;
-                }
-
-                const contribution =
-                    getTrainingRequirementContribution(
-                        requirement,
-                        registryEntry
-                    );
-
-                usefulCoverage += Math.min(
-                    requirement.remaining,
-                    contribution
-                );
-
-                rawContribution += contribution;
-
-                if (contribution >= 2) {
-                    twoPersonProfileMatches++;
-                }
-            });
-
-        if (usefulCoverage <= 0) {
-            return 0;
+        if (!metrics?.eligible) {
+            return Number.NEGATIVE_INFINITY;
         }
 
-        // Coverage remains the primary goal. For otherwise equal candidates,
-        // a vehicle carrying two qualified personnel always ranks above a
-        // one-person fallback, including when only one person remains needed.
+        if (
+            trainedPhase &&
+            metrics.trainedUseful <= 0
+        ) {
+            return Number.NEGATIVE_INFINITY;
+        }
+
+        const trainingScore =
+            trainedPhase
+                ? metrics.trainedUseful * 1000000
+                : 0;
+
+        const capacityScore =
+            metrics.capacityUseful * 100000;
+
+        const overshootPenalty =
+            metrics.overshoot * 500000;
+
+        const categoryScore =
+            metrics.coveredCategories * 1000;
+
+        const psuTieBreak =
+            metrics.isPsu
+                ? 100
+                : 0;
+
         return (
-            usefulCoverage * 10000 +
-            twoPersonProfileMatches * 100 +
-            Math.min(rawContribution, 99)
+            trainingScore +
+            capacityScore -
+            overshootPenalty +
+            categoryScore +
+            psuTieBreak
         );
+    }
+
+    function applyTrainingCandidateToRemaining(
+        remaining,
+        checkbox,
+        registryEntry
+    ) {
+        return applyTrainingCandidateCoverage(
+            remaining,
+            checkbox,
+            registryEntry
+        ).remaining;
+    }
+
+    function countSelectedTrainingVehicles(
+        requirements,
+        registry
+    ) {
+        return getVehicleCheckboxSnapshot()
+            .filter(checkbox => {
+                if (!checkbox.checked) return false;
+
+                const registryMatch =
+                    getRegistryEntryForMissionCheckbox(
+                        checkbox,
+                        registry
+                    );
+
+                return (
+                    Array.isArray(requirements)
+                        ? requirements
+                        : []
+                ).some(requirement => {
+                    return isCheckboxEligibleForTrainingRequirement(
+                        checkbox,
+                        requirement,
+                        registryMatch.entry
+                    );
+                });
+            })
+            .length;
     }
 
     function selectVehiclesForTrainedPersonnelRequirements(
@@ -23885,19 +24300,39 @@ let sessionRuntimeTicker = null;
                 registry
             );
 
-        const initiallySatisfied =
-            remaining.every(
-                requirement =>
-                    requirement.remaining <= 0
-            );
+        const initiallyCovered =
+            remaining.every(requirement => {
+                return requirement.capacityRemaining <= 0;
+            });
 
-        if (initiallySatisfied) {
+        if (initiallyCovered) {
+            const trainingSatisfied =
+                remaining.every(requirement => {
+                    return requirement.remaining <= 0;
+                });
+
             return {
                 satisfied:
                     true,
+                vehicleCoverageSatisfied:
+                    true,
+                trainingSatisfied,
                 selectedVehicles:
                     0,
+                trainedVehicles:
+                    0,
+                fallbackVehicles:
+                    0,
+                selectedVehicleCount:
+                    countSelectedTrainingVehicles(
+                        requirements,
+                        registry
+                    ),
                 remaining,
+                trainingRemaining:
+                    remaining,
+                capacityRemaining:
+                    remaining,
                 registryVehicleCount
             };
         }
@@ -23912,133 +24347,177 @@ let sessionRuntimeTicker = null;
                         return false;
                     }
 
-                    const {
-                        entry
-                    } =
-                        getRegistryTrainingCountsForCheckbox(
+                    const registryMatch =
+                        getRegistryEntryForMissionCheckbox(
                             checkbox,
                             registry
                         );
 
-                    return !!entry;
+                    return (
+                        Array.isArray(requirements)
+                            ? requirements
+                            : []
+                    ).some(requirement => {
+                        return isCheckboxEligibleForTrainingRequirement(
+                            checkbox,
+                            requirement,
+                            registryMatch.entry
+                        );
+                    });
                 })
             );
 
+        const arrivalIndex =
+            new Map(
+                readyCandidates.map((checkbox, index) => [
+                    checkbox,
+                    index
+                ])
+            );
+
+        const used = new Set();
         let selectedVehicles = 0;
-        const used =
-            new Set();
+        let trainedVehicles = 0;
+        let fallbackVehicles = 0;
 
-        while (
-            remaining.some(
-                requirement =>
-                    requirement.remaining > 0
-            )
-        ) {
-            let bestCheckbox = null;
-            let bestScore = 0;
+        const runSelectionPhase = trainedPhase => {
+            while (
+                remaining.some(requirement => {
+                    return requirement.capacityRemaining > 0;
+                })
+            ) {
+                let bestCheckbox = null;
+                let bestEntry = null;
+                let bestMetrics = null;
+                let bestScore =
+                    Number.NEGATIVE_INFINITY;
 
-            readyCandidates.forEach(
-                checkbox => {
-                    if (
-                        used.has(checkbox)
-                    ) {
+                readyCandidates.forEach(checkbox => {
+                    if (used.has(checkbox)) {
                         return;
                     }
 
-                    const {
-                        entry
-                    } =
-                        getRegistryTrainingCountsForCheckbox(
+                    const registryMatch =
+                        getRegistryEntryForMissionCheckbox(
                             checkbox,
                             registry
+                        );
+
+                    const metrics =
+                        getTrainedCandidateMetrics(
+                            remaining,
+                            checkbox,
+                            registryMatch.entry
                         );
 
                     const score =
                         getTrainedVehicleSelectionScore(
-                            remaining,
-                            entry
+                            metrics,
+                            trainedPhase
                         );
 
                     if (
-                        score >
-                        bestScore
+                        score > bestScore ||
+                        (
+                            score === bestScore &&
+                            bestCheckbox &&
+                            arrivalIndex.get(checkbox) <
+                                arrivalIndex.get(bestCheckbox)
+                        )
                     ) {
-                        bestScore =
-                            score;
-
-                        bestCheckbox =
-                            checkbox;
+                        bestCheckbox = checkbox;
+                        bestEntry = registryMatch.entry;
+                        bestMetrics = metrics;
+                        bestScore = score;
                     }
-                }
-            );
-
-            if (
-                !bestCheckbox ||
-                bestScore <= 0
-            ) {
-                break;
-            }
-
-            used.add(
-                bestCheckbox
-            );
-
-            if (
-                clickVehicleElement(
-                    bestCheckbox
-                )
-            ) {
-                selectedVehicles++;
-
-                const {
-                    entry
-                } =
-                    getRegistryTrainingCountsForCheckbox(
-                        bestCheckbox,
-                        registry
-                    );
-
-                remaining =
-                    remaining.map(
-                        requirement => {
-                            return {
-                                ...requirement,
-                                remaining:
-                                    Math.max(
-                                        0,
-                                        requirement.remaining -
-                                        getTrainingRequirementContribution(
-                                            requirement,
-                                            entry
-                                        )
-                                    )
-                            };
-                        }
-                    );
+                });
 
                 if (
-                    mfDebugEnabled
+                    !bestCheckbox ||
+                    !bestMetrics?.eligible ||
+                    (
+                        trainedPhase &&
+                        bestMetrics.trainedUseful <= 0
+                    )
                 ) {
+                    break;
+                }
+
+                used.add(bestCheckbox);
+
+                if (!clickVehicleElement(bestCheckbox)) {
+                    continue;
+                }
+
+                selectedVehicles += 1;
+
+                if (bestMetrics.trainedUseful > 0) {
+                    trainedVehicles += 1;
+                } else {
+                    fallbackVehicles += 1;
+                }
+
+                remaining =
+                    applyTrainingCandidateToRemaining(
+                        remaining,
+                        bestCheckbox,
+                        bestEntry
+                    );
+
+                if (mfDebugEnabled) {
                     debugLog(
-                        'TRAINED VEHICLE CLICK',
-                        `${source} | ${getVehicleDebugName(bestCheckbox)} | score=${bestScore} | remaining=${remaining.map(item => `${item.label}:${item.remaining}`).join(', ')}`
+                        trainedPhase
+                            ? 'TRAINED COVERAGE CLICK'
+                            : 'TRAINING FALLBACK CLICK',
+                        `${source} | ${getVehicleDebugName(bestCheckbox)} | ` +
+                        `trained=${bestMetrics.trainedUseful} | ` +
+                        `capacity=${bestMetrics.capacityUseful} | ` +
+                        `overshoot=${bestMetrics.overshoot} | ` +
+                        `training remaining=${remaining.map(item => `${item.label}:${item.remaining}`).join(', ')} | ` +
+                        `capacity remaining=${remaining.map(item => `${item.label}:${item.capacityRemaining}`).join(', ')}`
                     );
                 }
             }
-        }
+        };
+
+        // Phase one chooses the best available trained coverage. Phase two is
+        // deliberately allowed to select correct-type vehicles with no verified
+        // training so the mission can still be sent; the training deficit is
+        // returned separately and never hidden.
+        runSelectionPhase(true);
+        runSelectionPhase(false);
+
+        const vehicleCoverageSatisfied =
+            remaining.every(requirement => {
+                return requirement.capacityRemaining <= 0;
+            });
+
+        const trainingSatisfied =
+            remaining.every(requirement => {
+                return requirement.remaining <= 0;
+            });
 
         return {
             satisfied:
-                remaining.every(
-                    requirement =>
-                        requirement.remaining <= 0
-                ),
+                vehicleCoverageSatisfied,
+            vehicleCoverageSatisfied,
+            trainingSatisfied,
             selectedVehicles,
+            trainedVehicles,
+            fallbackVehicles,
+            selectedVehicleCount:
+                countSelectedTrainingVehicles(
+                    requirements,
+                    registry
+                ),
             remaining,
+            trainingRemaining:
+                remaining,
+            capacityRemaining:
+                remaining,
             registryVehicleCount
         };
     }
-
 
     function getPoliceOfficerVehicleRequirement(
         requirementName,
@@ -24603,7 +25082,8 @@ let sessionRuntimeTicker = null;
 
     async function processRequirementRows(requirementRows, sourceLabel) {
         let missingUnits = [];
-        const trainedPersonnelMissing = [];
+        const trainedVehicleMissing = [];
+        const trainedPersonnelWarnings = [];
 
         const suppliedHasExplicitCurrentMissingRequirements =
             hasExplicitCurrentMissingRequirementRows(
@@ -24683,55 +25163,52 @@ let sessionRuntimeTicker = null;
                         sourceLabel
                     );
 
-                const largestRemaining =
-                    result.remaining.reduce(
-                        (
-                            maximum,
-                            requirement
-                        ) => Math.max(
-                            maximum,
-                            Math.max(
-                                0,
-                                parseInt(
-                                    requirement.remaining,
-                                    10
-                                ) || 0
-                            )
-                        ),
-                        0
-                    );
-
                 const selectedCount =
+                    result.selectedVehicleCount;
+
+                const displayedTarget =
                     Math.max(
-                        0,
-                        trainedVehicleTarget -
-                        largestRemaining
+                        trainedVehicleTarget,
+                        selectedCount
                     );
 
                 addOrUpdateVehicleRow(
                     unitText,
-                    'Assigned trained vehicles',
-                    trainedVehicleTarget,
-                    result.satisfied
-                        ? 'assigned'
-                        : (
+                    result.trainingSatisfied
+                        ? 'Assigned trained vehicles'
+                        : 'Assigned vehicles · training shortfall',
+                    displayedTarget,
+                    !result.vehicleCoverageSatisfied
+                        ? (
                             selectedCount > 0
                                 ? 'retrying'
                                 : 'missing'
+                        )
+                        : (
+                            result.trainingSatisfied
+                                ? 'assigned'
+                                : 'retrying'
                         ),
                     selectedCount
                 );
 
                 renderVehicleLoadList();
 
-                if (!result.satisfied) {
-                    trainedPersonnelMissing.push(
-                        result.registryVehicleCount > 0
-                            ? result.remaining
-                                .filter(requirement => requirement.remaining > 0)
-                                .map(requirement => `${requirement.label} x${requirement.remaining}`)
-                                .join(', ')
-                            : 'No trained-vehicle register was found. Run Personnel Assignment in Preview or Assign mode to build it.'
+                if (!result.vehicleCoverageSatisfied) {
+                    trainedVehicleMissing.push(
+                        formatTrainedVehicleCapacityShortfall(
+                            result.capacityRemaining
+                        ) ||
+                        'Compatible trained-personnel vehicle capacity is still missing.'
+                    );
+                }
+
+                if (!result.trainingSatisfied) {
+                    trainedPersonnelWarnings.push(
+                        formatTrainedPersonnelShortfall(
+                            result.trainingRemaining
+                        ) ||
+                        'No verified trained personnel were found in the selected compatible vehicles.'
                     );
                 }
 
@@ -24842,15 +25319,15 @@ let sessionRuntimeTicker = null;
             return false;
         }
 
-        if (trainedPersonnelMissing.length > 0) {
+        if (trainedVehicleMissing.length > 0) {
             changeDispatchBoxColor(false);
             updateStatusBox(
-                'A required trained Police IRV is still missing.'
+                'Compatible trained-personnel vehicle capacity is still missing.'
             );
 
             originalAlert.call(
                 window,
-                `Final missing units:\n\n${trainedPersonnelMissing.join('\n')}`
+                `Final missing units:\n\n${trainedVehicleMissing.join('\n')}`
             );
 
             return false;
@@ -24867,6 +25344,28 @@ let sessionRuntimeTicker = null;
         }
 
         changeDispatchBoxColor(true);
+
+        if (trainedPersonnelWarnings.length > 0) {
+            const warningText =
+                trainedPersonnelWarnings.join('\n');
+
+            updateStatusBox(
+                `Vehicles selected. Training shortfall reported: ${warningText}`
+            );
+
+            console.warn(
+                '[Mission Finder] Training shortfall; compatible units remain selected:',
+                warningText
+            );
+
+            if (!autoModeRunning) {
+                originalAlert.call(
+                    window,
+                    `Training shortfall — compatible units were still selected and can be sent:\n\n${warningText}`
+                );
+            }
+        }
+
         return true;
     }
 
@@ -30917,6 +31416,7 @@ let sessionRuntimeTicker = null;
         }
 
         const missingAfterAttempt = [];
+        const trainedPersonnelWarnings = [];
 
         missingRows.forEach(item => {
             if (
@@ -30980,75 +31480,55 @@ let sessionRuntimeTicker = null;
                         'UPDATE'
                     );
 
+                const selectedCount =
+                    result.selectedVehicleCount;
+
+                const displayedTarget =
+                    Math.max(
+                        trainedVehicleTarget,
+                        selectedCount
+                    );
+
                 addOrUpdateVehicleRow(
                     item.unitName,
-                    'Assigned trained vehicles',
-                    trainedVehicleTarget,
-                    result.satisfied
-                        ? 'assigned'
-                        : (
-                            result.selectedVehicles >
-                            0
+                    result.trainingSatisfied
+                        ? 'Assigned trained vehicles'
+                        : 'Assigned vehicles · training shortfall',
+                    displayedTarget,
+                    !result.vehicleCoverageSatisfied
+                        ? (
+                            selectedCount > 0
                                 ? 'retrying'
                                 : 'missing'
+                        )
+                        : (
+                            result.trainingSatisfied
+                                ? 'assigned'
+                                : 'retrying'
                         ),
-                    result.selectedVehicles
+                    selectedCount
                 );
 
                 renderVehicleLoadList();
 
-                if (
-                    !result.satisfied
-                ) {
-                    const remainingText =
-                        result.remaining
-                            .filter(
-                                requirement =>
-                                    requirement.remaining >
-                                    0
-                            )
-                            .map(
-                                requirement => {
-                                    if (
-                                        requirement.requirementType ===
-                                        'armed_response_atc_vehicle'
-                                    ) {
-                                        return (
-                                            `${requirement.label}: ${requirement.remaining} ` +
-                                            `dual-trained personnel still needed (2 per ATC preferred; 1 allowed as fallback)`
-                                        );
-                                    }
-
-                                    if (
-                                        requirement.requirementType ===
-                                        'police_inspector_vehicle'
-                                    ) {
-                                        return (
-                                            `${requirement.label}: ${requirement.remaining} ` +
-                                            `Inspector-trained personnel still needed (2 per IRV preferred; 1 allowed as fallback)`
-                                        );
-                                    }
-
-                                    if (
-                                        requirement.requirementType ===
-                                        'police_trained_irv_vehicle'
-                                    ) {
-                                        return (
-                                            `${requirement.label}: ${requirement.remaining} ` +
-                                            `trained personnel still needed (2 per IRV preferred; 1 allowed as fallback)`
-                                        );
-                                    }
-
-                                    return `${requirement.label} x${requirement.remaining}`;
-                                }
-                            )
-                            .join(', ');
-
+                if (!result.vehicleCoverageSatisfied) {
                     missingAfterAttempt.push(
-                        result.registryVehicleCount >
-                        0
-                            ? `Trained vehicles still needed: ${remainingText}`
-                            : 'No trained-vehicle register was found. Run Personnel Assignment in Preview or Assign mode to build it.'
+                        `Compatible trained-personnel vehicles still needed: ` +
+                        (
+                            formatTrainedVehicleCapacityShortfall(
+                                result.capacityRemaining
+                            ) ||
+                            requirementText
+                        )
+                    );
+                }
+
+                if (!result.trainingSatisfied) {
+                    trainedPersonnelWarnings.push(
+                        formatTrainedPersonnelShortfall(
+                            result.trainingRemaining
+                        ) ||
+                        'No verified trained personnel were found in the selected compatible vehicles.'
                     );
                 }
 
@@ -31276,9 +31756,29 @@ let sessionRuntimeTicker = null;
             return false;
         }
 
-        updateStatusBox(
-            "Mission update vehicles and supported personnel units assigned."
-        );
+        if (trainedPersonnelWarnings.length > 0) {
+            const warningText =
+                trainedPersonnelWarnings.join('\n');
+
+            updateStatusBox(
+                `Mission update vehicles assigned with training shortfall: ${warningText}`
+            );
+
+            console.warn(
+                '[Mission Finder] Mission Update training shortfall; compatible units remain selected:',
+                warningText
+            );
+
+            if (showAlerts && !autoModeRunning) {
+                alert(
+                    `Training shortfall — compatible units were still selected and can be sent:\n\n${warningText}`
+                );
+            }
+        } else {
+            updateStatusBox(
+                "Mission update vehicles and supported personnel units assigned."
+            );
+        }
         changeDispatchBoxColor(true);
 
         if (

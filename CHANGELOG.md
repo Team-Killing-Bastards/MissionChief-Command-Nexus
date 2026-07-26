@@ -33,25 +33,31 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [1.0.36] - 2026-07-26
 
-### Added
+### Changed
 
-- Added Personnel Register JSON export and import directly inside the main Command Nexus Personnel Assignment interface.
-- Added a visible saved-register vehicle count and last-updated timestamp.
+- Replaced strict trained-unit pass/fail selection with a best-available coverage optimiser for every supported trained-personnel requirement.
+- Level 1 Public Order, Level 2 Public Order, Police Sergeant and Police Medic requirements now share exact type-51 PSU and type-8 IRV candidates. A PSU supplies up to nine personnel seats, while IRVs supply two and fill smaller remainders.
+- Multi-trained assigned staff reduce every matching simultaneous course requirement from the same selected vehicle.
+- Partially trained vehicles remain useful: an IRV carrying one relevant trained officer can be selected and contributes that one officer instead of being discarded.
+- Candidate ranking prefers verified trained coverage, then correct-type capacity, avoids excessive spare capacity, and uses MissionChief arrival order as the final tie-breaker.
 
-### Fixed
+### Fallback and reporting
 
-- Gave **Build All Register** a dedicated readable colour instead of inheriting MissionChief button colours.
-- Corrected the completed build report so **Registry retained** shows the actual saved register size when entries were already flushed during the scan.
+- When verified trained coverage is exhausted, Command Nexus still selects enough correct-type vehicles to provide the required nominal personnel capacity.
+- Remaining training deficits are reported clearly but no longer block dispatch when compatible vehicle capacity is present.
+- Missing compatible vehicle capacity remains release-blocking and is reported separately from the training shortfall.
+- Selection stops as soon as the shared personnel-capacity vector is covered, preventing extra PSUs or IRVs when multi-trained crews already satisfy several courses.
+- A 12-person compatible Public Order requirement prefers one nine-seat PSU and two IRVs for the three-person remainder; a second PSU is used only when it is a better fit or the IRV remainder cannot be supplied.
 
-### Safety and compatibility
+### Safety and validation
 
-- Imports validate the register schema, reject unsafe object keys, enforce the existing 5,000-vehicle limit, cap files at 10 MB and require confirmation before replacing browser data.
-- Export and import are blocked while Personnel Assignment or a register build is active.
-- The temporary companion userscript has been removed; these controls now ship only as part of the canonical Command Nexus userscript.
+- Police Inspector and Railway Police remain exact type-8 profiles; Armed Response remains exact type-25 and still requires the Roads Policing plus Firearms combination for trained credit.
+- Exact vehicle IDs and live `/vehicles/{id}/zuweisung` assignment scans remain authoritative for trained-personnel counts.
+- Added permanent regression coverage for PSU capacity, partial training, multi-course coverage, correct-type untrained fallback, shortfall reporting and no-oversend behaviour.
 
 ### Changed engine baseline
 
-- Personnel Assignment increased from `1.3.3` to `1.3.4`.
+- Mission Finder increased from `V10.6.100` to `V10.6.101`.
 
 ## [1.0.35] - 2026-07-25
 

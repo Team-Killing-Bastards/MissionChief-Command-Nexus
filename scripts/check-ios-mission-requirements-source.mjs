@@ -91,7 +91,7 @@ function extractFunction(name) {
 }
 
 requireText('// @version      1.0.36', 'v1.0.36 metadata');
-requireText(' * MODULE 2: MISSION FINDER V10.6.100', 'V10.6.100 module header');
+requireText(' * MODULE 2: MISSION FINDER V10.6.101', 'V10.6.101 module header');
 requireText('function getMissionRequirementSource(', 'authoritative source resolver');
 requireText('function normaliseMissionRequirementSourceUrl(', 'same-origin URL normaliser');
 requireText('function validateMissionRequirementResponseUrl(', 'response identity validator');
