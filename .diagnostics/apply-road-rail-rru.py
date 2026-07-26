@@ -134,22 +134,18 @@ text = text.replace(
     path_token,
     path_token + "      - 'scripts/check-road-rail-rru-mapping.mjs'\n",
 )
-step_token = dedent(
-    '''      - name: Validate trained-personnel coverage optimiser contracts
-        run: node scripts/check-trained-coverage-optimizer.mjs
-'''
+step_token = (
+    "      - name: Validate trained-personnel coverage optimiser contracts\n"
+    "        run: node scripts/check-trained-coverage-optimizer.mjs\n"
 )
 if text.count(step_token) != 1:
     raise SystemExit("Unable to find trained-coverage validation step")
 text = text.replace(
     step_token,
     step_token
-    + dedent(
-        '''
-      - name: Validate Road Rail Unit to RRU mapping
-        run: node scripts/check-road-rail-rru-mapping.mjs
-'''
-    ),
+    + "\n"
+    + "      - name: Validate Road Rail Unit to RRU mapping\n"
+    + "        run: node scripts/check-road-rail-rru-mapping.mjs\n",
     1,
 )
 workflow.write_text(text, encoding="utf-8")
