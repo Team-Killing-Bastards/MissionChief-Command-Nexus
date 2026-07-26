@@ -1,0 +1,1 @@
+Publish and verify the clean v1.0.43 merge commit through the permanent release workflow.
