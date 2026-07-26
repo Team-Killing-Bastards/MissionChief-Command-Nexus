@@ -189,3 +189,5 @@ console.log('Personnel Register transfer and latest trained-coverage contracts p
           git add src/missionchief-command-nexus.user.js README.md src/README.md CHANGELOG.md scripts
           git commit -m 'Restore Personnel Register controls on latest main'
           git push origin HEAD:agent/release-personnel-register-v1037
+
+# Explicit second push trigger after workflow registration.
