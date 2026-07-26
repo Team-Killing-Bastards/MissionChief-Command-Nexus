@@ -1,0 +1,217 @@
+Found 8 matching line(s).
+
+===== 413-437 (match 425) =====
+413:         incidentCommand: makePoliceRule({
+414:             id: 'fire_level_1_incident_command', label: 'Level 1 Incident Commander Training',
+415:             vehicleTypeIds: ['15'], vehicleLabel: 'Incident Command and Control Unit', target: 3,
+416:             trainingAll: ['elw2'], trainingLabel: 'Level 1 Incident Commander Training'
+417:         }),
+418:         hazmatOsu: makePoliceRule({
+419:             id: 'fire_hazmat_osu', label: 'HazMat Unit',
+420:             vehicleTypeIds: ['39'], vehicleLabel: 'Operational Support Unit', target: 3,
+421:             trainingAll: ['gw_gefahrgut'], trainingLabel: 'HazMat Unit'
+422:         }),
+423:         railway: makePoliceRule({
+424:             id: 'fire_railway', label: 'Railway Fire',
+425:             vehicleTypeIds: ['107'], vehicleLabel: 'RRU', target: 2,
+426:             trainingAll: ['railway_fire'], trainingLabel: 'Railway Fire'
+427:         })
+428:     });
+429: 
+430:     const POLICE_ALL_RULES = Object.freeze([
+431:         POLICE_RULES.eodCommander,
+432:         POLICE_RULES.searchAdvisor,
+433:         POLICE_RULES.mobileOperations,
+434:         POLICE_RULES.roads,
+435:         POLICE_RULES.inspector,
+436:         POLICE_RULES.railway,
+437:         POLICE_RULES.publicOrderCombined,
+
+===== 549-573 (match 561) =====
+549:         },
+550:         fire: {
+551:             label: 'Fire / Airfield',
+552:             icon: '🚒✈️',
+553:             profiles: [
+554:                 makeServicePreviewProfile('fire_aircraft_rescue', 'Aircraft Rescue and Firefighting', 'Fire'),
+555:                 makeServicePreviewProfile('fire_co_responder', 'Co-Responder Training', 'Fire'),
+556:                 makeServicePreviewProfile('fire_drone_operator', 'Drone Operator Training', 'Fire'),
+557:                 liveFireProfile('fire_hazmat', 'HazMat Unit', 'Operational Support Unit (OSU)', '3 HazMat-trained personnel per OSU', 'LIVE: fills each exact type-39 Fire OSU with 3 gw_gefahrgut-trained personnel. Type-7 HazMat Units are excluded.', [FIRE_RULES.hazmatOsu]),
+558:                 makeServicePreviewProfile('fire_high_volume_pump', 'High Volume Pump Training', 'Fire'),
+559:                 makeServicePreviewProfile('fire_lifeguard', 'Lifeguard Training', 'Fire'),
+560:                 liveFireProfile('fire_mobile_command', 'Level 1 Incident Commander Training', 'Incident Command and Control Unit (ICCU)', '3 Level 1 Incident Commanders per ICCU', "LIVE: fills each exact type-15 ICCU with 3 elw2-trained personnel while preserving its remaining seats.", [FIRE_RULES.incidentCommand]),
+561:                 liveFireProfile('fire_railway', 'Railway Fire', 'RRU', '2 Railway Fire-trained personnel per RRU', 'LIVE: fills each exact type-107 RRU to 2/2 with railway_fire-trained personnel.', [FIRE_RULES.railway]),
+562:                 {
+563:                     id: 'all_fire',
+564:                     label: 'Run all Fire / Airfield profiles',
+565:                     vehicle: 'All mapped Fire and Airfield vehicle groups',
+566:                     requirement: 'Process enabled Fire and Airfield profiles in priority order',
+567:                     policy: 'Future batch option. Airfield training and vehicles are handled within Fire. It remains disabled until every Fire and Airfield profile has confirmed mappings.',
+568:                     live: false,
+569:                     stationTypes: ['FIRE', 'AIRFIELD']
+570:                 }
+571:             ]
+572:         },
+573:         police: {
+
+===== 620-644 (match 632) =====
+620:                 livePoliceProfile(
+621:                     'police_sergeant',
+622:                     'Police Sergeant Training',
+623:                     'Normal Police IRV',
+624:                     '2 Police Sergeants per IRV',
+625:                     'LIVE INDIVIDUAL PROFILE: checks and assigns Police Sergeant training only. Run all Police profiles retains the combined four-course crew rule.',
+626:                     [
+627:                         POLICE_RULES
+628:                             .publicOrderSergeant
+629:                     ]
+630:                 ),
+631:                 livePoliceProfile('police_aviation', 'Police aviation', 'Police Helicopter', '3 Police Aviation personnel per helicopter', 'LIVE: fills each Police Helicopter to 3/3 with polizeihubschrauber-trained personnel.', [POLICE_RULES.aviation], ['AIR']),
+632:                 livePoliceProfile('police_railway', 'Railway Policing', 'Railway Policing IRV', '2 Railway Police Officers per IRV', 'LIVE: fills Railway Unit IRVs to 2/2 with railway_police-trained personnel and preserves Mobile Operations Managers where possible.', [POLICE_RULES.railway]),
+633:                 livePoliceProfile('police_roads', 'Roads Policing Officer Training', 'Armed Traffic Car', '2 dual-trained Roads Policing + Firearms officers', 'LIVE: both officers must hold traffic_police and swat.', [POLICE_RULES.roads]),
+634:                 {
+635:                     id: 'all_police',
+636:                     label: 'Run all Police profiles',
+637:                     vehicle: 'All verified Police, Aviation and EOD vehicle groups',
+638:                     requirement: 'Process verified profiles in safe reservation order',
+639:                     policy: 'LIVE BATCH: preserves current assignments, assigns specialist and dual-trained roles first, allocates shared IRV/Drone pools safely, then verifies the station-wide result.',
+640:                     live: true,
+641:                     engine: 'police',
+642:                     stationTypes: ['POLICE', 'AIR', 'EOD'],
+643:                     rules: POLICE_ALL_RULES,
+644:                     batch: true
+
+===== 749-773 (match 761) =====
+749:         "86": "Operational Support Van",
+750:         "87": "Operational Support Trailer",
+751:         "88": "SAR Flood Rescue Trailer",
+752:         "89": "Drone Vehicle SAR HQ",
+753:         "91": "Police Drone Vehicle",
+754:         "93": "SAR 4x4",
+755:         "96": "Specialist Paramedic RRV",
+756:         "97": "Patient Transport Service Ambulance",
+757:         "98": "Critical Care Transfer Ambulance",
+758:         "99": "Mountain Rescue 4x4",
+759:         "102": "Search Dog Unit SAR",
+760:         "105": "Flatbed Recovery Vehicle",
+761:         "107": "RRU",
+762:         "108": "EIU",
+763:         "109": "EOD Commander",
+764:         "110": "EOD Response Vehicle",
+765:         "111": "EOD Medium Equipment Van",
+766:         "112": "EOD Heavy Equipment Vehicle",
+767:         "113": "Marine EOD Response Vehicle",
+768:         "114": "Marine EOD Equipment Van",
+769:         "115": "Welfare Vehicle",
+770:         "116": "Cell Van"
+771:     };
+772: 
+773:     const VEHICLE_INFO = {
+
+===== 821-845 (match 833) =====
+821:         "Operational Support Van": { code: "OSV", icon: "🛠️" },
+822:         "Operational Support Trailer": { code: "OST", icon: "🛠️" },
+823:         "SAR Flood Rescue Trailer": { code: "SFR", icon: "🌊" },
+824:         "Drone Vehicle SAR HQ": { code: "DRV", icon: "🚁" },
+825:         "SAR 4x4": { code: "SAR4x4", icon: "🟡" },
+826:         "Specialist Paramedic RRV": { code: "SP-RRV", icon: "🚑" },
+827:         "Patient Transport Service Ambulance": { code: "PTS", icon: "🚑" },
+828:         "Critical Care Transfer Ambulance": { code: "CCT", icon: "🚑❤️" },
+829:         "Mountain Rescue 4x4": { code: "MR4x4", icon: "🏔️" },
+830:         "Search Dog Unit SAR": { code: "K9", icon: "🐕" },
+831:         "Flatbed Recovery Vehicle": { code: "FRV", icon: "🛻" },
+832:         "RRV": { code: "RRV", icon: "🚑" },
+833:         "RRU": { code: "RRU", icon: "🚒✈️" },
+834:         "Rescue Support Unit (RSU)": { code: "RSU", icon: "🚒🛠️" },
+835:         "DSU": { code: "DSU", icon: "🚔🐕" },
+836:         "OTL": { code: "OTL", icon: "🚔" },
+837:         "PRV": { code: "PRV", icon: "🚑1️⃣" },
+838:         "SRV": { code: "SRV", icon: "🚑2️⃣" },
+839:         "ATV": { code: "ATV", icon: "🚑🦺" },
+840:         "BFU": { code: "BFU", icon: "🚒✈️" },
+841:         "F/WrC": { code: "FWrC", icon: "🚒💦" },
+842:         "RPF": { code: "RPF", icon: "🚒🫧" },
+843:         "MRAV": { code: "MRAV", icon: "🚔🔫" },
+844:         "EOD Commander": { code: "EODC", icon: "💣" },
+845:         "EOD Response Vehicle": { code: "EOD", icon: "💣🚐" },
+
+===== 9564-9588 (match 9576) =====
+9564:     // no remaining load control or spinner before Unit Finder may select units.
+9565:     // V10.6.72: Exact assignment-page scans no longer require a permanent binding
+9566:     // before an untrained IRV may satisfy ordinary Police attendance. Police Medic
+9567:     // and Railway Police Officer requirements now use exact trained IRVs with two
+9568:     // qualified personnel, and ATV Carrier uses an authoritative type-30 matcher.
+9569:     // V10.6.83: Mission Control now uses an iOS Safari-only safe-area layout,
+9570:     // horizontal collapse state, visual-viewport placement and pointer dragging.
+9571:     // Desktop positioning, sizing and mouse dragging remain unchanged.
+9572:     // V10.6.86: Firefighters convert to Rescue Pumps at nine personnel
+9573:     // per vehicle; Car Recovery maps to the existing Flatbed Recovery
+9574:     // Vehicle; RIV-or-Major-Foam-Tender wording uses RIV first and only
+9575:     // falls back to a Major Foam Tender when no eligible RIV is available.
+9576:     // V10.6.85: Fire cross-reference now maps the exact "Road Rail Unit"
+9577:     // wording to the established RRU route.
+9578:     // V10.6.84: the exact mission wording "Fire, rescue or aerial appliance"
+9579:     // now maps to the existing Rescue Pump route.
+9580:     // V10.6.82: verified Fire profiles staff type-107 RRUs with two Railway Fire
+9581:     // personnel, type-15 ICCUs with three Level 1 Incident Commanders and type-39
+9582:     // Fire OSUs with three HazMat personnel. BASU, Welfare and HazMat share one OSU.
+9583:     // V10.6.81: Operational Support or SAR Vehicle requirements now select and
+9584:     // verify the exact type-86 Operational Support Van. Fire type-39 Operational
+9585:     // Support Units remain excluded from this SAR requirement.
+9586:     // V10.6.80: Critical Care Ambulances now require one trained person per vehicle.
+9587:     // Armed Response personnel use exact type-25 ATCs with two officers who each hold
+9588:     // both Roads Policing and Firearms. Police Officer and Seagoing Vessel upgrade
+
+===== 9565-9589 (match 9577) =====
+9565:     // V10.6.72: Exact assignment-page scans no longer require a permanent binding
+9566:     // before an untrained IRV may satisfy ordinary Police attendance. Police Medic
+9567:     // and Railway Police Officer requirements now use exact trained IRVs with two
+9568:     // qualified personnel, and ATV Carrier uses an authoritative type-30 matcher.
+9569:     // V10.6.83: Mission Control now uses an iOS Safari-only safe-area layout,
+9570:     // horizontal collapse state, visual-viewport placement and pointer dragging.
+9571:     // Desktop positioning, sizing and mouse dragging remain unchanged.
+9572:     // V10.6.86: Firefighters convert to Rescue Pumps at nine personnel
+9573:     // per vehicle; Car Recovery maps to the existing Flatbed Recovery
+9574:     // Vehicle; RIV-or-Major-Foam-Tender wording uses RIV first and only
+9575:     // falls back to a Major Foam Tender when no eligible RIV is available.
+9576:     // V10.6.85: Fire cross-reference now maps the exact "Road Rail Unit"
+9577:     // wording to the established RRU route.
+9578:     // V10.6.84: the exact mission wording "Fire, rescue or aerial appliance"
+9579:     // now maps to the existing Rescue Pump route.
+9580:     // V10.6.82: verified Fire profiles staff type-107 RRUs with two Railway Fire
+9581:     // personnel, type-15 ICCUs with three Level 1 Incident Commanders and type-39
+9582:     // Fire OSUs with three HazMat personnel. BASU, Welfare and HazMat share one OSU.
+9583:     // V10.6.81: Operational Support or SAR Vehicle requirements now select and
+9584:     // verify the exact type-86 Operational Support Van. Fire type-39 Operational
+9585:     // Support Units remain excluded from this SAR requirement.
+9586:     // V10.6.80: Critical Care Ambulances now require one trained person per vehicle.
+9587:     // Armed Response personnel use exact type-25 ATCs with two officers who each hold
+9588:     // both Roads Policing and Firearms. Police Officer and Seagoing Vessel upgrade
+9589:     // rows now use shared strict conversions across Unit Finder, Update and Auto.
+
+===== 10599-10623 (match 10611) =====
+10599:          *************************************************/
+10600:         "Pumps": "Fire Engine R/PUMP x 1",
+10601:         "Pump": "Fire Engine R/PUMP x 1",
+10602:         "Fire engine": "Fire Engine R/PUMP x 1",
+10603:         "Fire engines": "Fire Engine R/PUMP x 1",
+10604:         "Fire Engine": "Fire Engine R/PUMP x 1",
+10605:         "Fire Engines": "Fire Engine R/PUMP x 1",
+10606:         "Aerial Appliance": "CARP",
+10607:         "Aerial Appliances": "CARP",
+10608:         "Aerial Appliance Truck": "CARP",
+10609:         "Aerial Appliance Trucks": "CARP",
+10610:         "Fire, rescue or aerial appliance": "Rescue Pump",
+10611:         "Road Rail Unit": "RRU",
+10612:         "Firefighter": "Rescue Pump",
+10613:         "Firefighters": "Rescue Pump",
+10614:         "Required Firefighter": "Rescue Pump",
+10615:         "Required Firefighters": "Rescue Pump",
+10616:         "Car Recovery": "Flatbed Recovery Vehicle",
+10617:         "Required Car Recovery": "Flatbed Recovery Vehicle",
+10618:         "ICCU or Ambulance Control Unit": "ICCU/ACU",
+10619:         "ICCU or Ambulance Control Units": "ICCU/ACU",
+10620:         "ICCUs or Ambulance Control Units": "ICCU/ACU",
+10621:         "Fire Officer": "Fire Officer",
+10622:         "Fire Officers": "Fire Officer",
+10623:         "Rescue Support Unit": "Fire Engine R/PUMP x 1",
