@@ -23,7 +23,7 @@ if end < 0:
     raise SystemExit('Unable to find end of Search Advisor pattern builder block')
 end += len(end_marker)
 
-replacement = r'''source = replace_once(
+replacement = r"""source = replace_once(
     source,
     r'''            {
                 code:
@@ -65,7 +65,7 @@ replacement = r'''source = replace_once(
 ''',
     'Search Advisor trained pattern',
 )
-'''
+"""
 
 patched_builder = builder[:start] + replacement + builder[end:]
 namespace = {
