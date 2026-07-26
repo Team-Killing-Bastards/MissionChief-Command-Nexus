@@ -85,31 +85,26 @@ jobs:
               return f'===== {name}: UNTERMINATED =====\n'
 
           names = [
-              'runAutoModeLoop',
-              'handleTransportRequestsAfterDispatch',
-              'isTransportScreenBlockingQueueRestart',
+              'shouldBlockOpeningNewMissionForTransport',
+              'mfChoosePreferredApproachButton',
+              'buildTransportActiveScopes',
+              'mfGetTransportActiveScopes',
+              'mfGetExactVisibleApproachButtons',
+              'findExactFirstApproachTransportButton',
+              'clickExactApproachTransportButton',
+              'mfBruteFindFirstApproachButton',
+              'mfBruteClickFirstApproach',
               'mfIsPoliceOrPrisonerTransportActive',
-              'findTransportSendButton',
-              'isElementVisible',
-              'realClickForQueueRestart',
-              'getCurrentMissionIdForQueueRestart',
+              'scoreTransportButtonCandidate',
+              'isBadTransportButtonCandidate',
+              'isTransportScreenBlockingQueueRestart',
+              'handleTransportRequestsAfterDispatch',
           ]
 
-          discovered = []
-          for match in re.finditer(r'^    (?:async )?function ([A-Za-z0-9_$]+)\s*\(', source, re.MULTILINE):
-              name = match.group(1)
-              block = extract_function(name)
-              if re.search(r'prison|prisoner|gefangene|gefangener|data-prison-id', block, re.I):
-                  discovered.append(name)
-
-          output = [
-              'Discovered prisoner-related functions: ' + ', '.join(discovered),
-              '',
-          ]
-          for name in dict.fromkeys(names + discovered):
-              output.append(extract_function(name))
-
-          Path('.diagnostics/auto-prisoner-context.txt').write_text('\n'.join(output), encoding='utf-8')
+          Path('.diagnostics/auto-prisoner-transport-context.txt').write_text(
+              '\n'.join(extract_function(name) for name in names),
+              encoding='utf-8',
+          )
           PY
 
       - name: Commit captured context
@@ -118,10 +113,10 @@ jobs:
           set -euo pipefail
           git config user.name MartyBlyth
           git config user.email 32400596+Martyblyth@users.noreply.github.com
-          git add .diagnostics/auto-prisoner-context.txt
+          git add .diagnostics/auto-prisoner-transport-context.txt
           if git diff --cached --quiet; then
             echo 'Context already current.'
             exit 0
           fi
-          git commit -m 'Capture Auto Mode prisoner cell context'
+          git commit -m 'Capture detailed prisoner transport context'
           git push origin HEAD:agent/auto-prisoner-cell-before-unit-finder
