@@ -46,10 +46,12 @@ jobs:
             exit 0
           fi
           python3 .diagnostics/apply_personnel_register_integration.py
+          python3 .diagnostics/update_v1036_contract_versions.py
           rm -f src/personnel-register-tools.user.js
           rm -f .github/workflows/apply-personnel-register-integration.yml
           rm -f .github/workflows/integrate-personnel-register-main.yml
           rm -f .diagnostics/apply_personnel_register_integration.py
+          rm -f .diagnostics/update_v1036_contract_versions.py
           rm -f .diagnostics/personnel-register-integration.txt
           rm -f .diagnostics/personnel-register-integration-trigger.txt
           echo 'changed=true' >> "${GITHUB_OUTPUT}"
