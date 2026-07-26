@@ -202,6 +202,8 @@ write_topic(
         'getAllMatchingVehicleCheckboxes',
         'getMatchingVehicleCheckboxes',
         'countSelectedMatchingVehicles',
+        'findFallbackVehicleCheckbox',
+        'selectVehicleUnits',
         'readMissionUpdateRows',
         'getGenericMissingVehicleRowsFromText',
         'getStructuredMissingVehicleRows',
@@ -209,6 +211,7 @@ write_topic(
     [
         r'Car to tow', r'Cars to tow', r'cars?\s+to\s+tow',
         r'Flatbed Recovery Vehicle', r'tow_trucks', r'vehicle type.?105', r"'105'",
+        r'search_attribute',
     ],
     ['crossReference'],
 )
