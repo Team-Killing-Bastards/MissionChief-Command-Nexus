@@ -1,0 +1,2711 @@
+SEARCH ADVISOR TRAINED DISPATCH CONTEXT
+SOURCE LINES: 39886
+
+=== BLOCK 1: source lines 113-174 ===
+000113:         vehicleLabel,
+000114:         target: Number(target),
+000115:         trainingAll: trainingAll.map(String),
+000116:         trainingLabel,
+000117:         preferWithout: preferWithout.map(String),
+000118:         sharedVehiclePool: Boolean(sharedVehiclePool)
+000119:     });
+000120: 
+000121:     const POLICE_TRAINING_LABELS =
+000122:         Object.freeze({
+000123:             level_1_public_order:
+000124:                 'Level 1 Public Order',
+000125:             level_2_public_order:
+000126:                 'Level 2 Public Order',
+000127:             police_sergeant:
+000128:                 'Police Sergeant',
+000129:             police_medic:
+000130:                 'Police Medic',
+000131:             police_inspector:
+000132:                 'Police Inspector',
+000133:             traffic_police:
+000134:                 'Roads Policing',
+000135:             swat:
+000136:                 'Firearms',
+000137:             police_horse:
+000138:                 'Mounted Officer',
+000139:             k9:
+000140:                 'Dog Handler',
+000141:             drone:
+000142:                 'Drone Operator',
+000143:             search_and_rescue:
+000144:                 'Police Search Advisor',
+000145:             polizeihubschrauber:
+000146:                 'Police Aviation',
+000147:             railway_police_command:
+000148:                 'Mobile Operations Management',
+000149:             railway_police:
+000150:                 'Railway Police Officer',
+000151:             bomb_disposal_command:
+000152:                 'EOD Commander',
+000153:             bomb_disposal:
+000154:                 'Bomb Disposal',
+000155:             bomb_disposal_diver:
+000156:                 'Marine Bomb Disposal',
+000157:             elw2:
+000158:                 'Level 1 Incident Commander Training',
+000159:             gw_gefahrgut:
+000160:                 'HazMat Unit',
+000161:             railway_fire:
+000162:                 'Railway Fire'
+000163:         });
+000164: 
+000165:     const POLICE_RULES = Object.freeze({
+000166:         publicOrderLevel1: makePoliceRule({
+000167:             id:
+000168:                 'police_public_order_level_1',
+000169:             label:
+000170:                 'Level 1 Public Order',
+000171:             vehicleTypeIds: [
+000172:                 '8'
+000173:             ],
+000174:             vehicleLabel:
+
+=== BLOCK 2: source lines 275-351 ===
+000275:         firearms: makePoliceRule({
+000276:             id: 'police_mrav_firearms',
+000277:             label: 'Firearms',
+000278:             vehicleTypeIds: ['56'],
+000279:             vehicleLabel: 'Multi-Role Armoured Vehicle',
+000280:             target: 6,
+000281:             trainingAll: ['swat'],
+000282:             trainingLabel: 'Firearms',
+000283:             preferWithout: ['traffic_police']
+000284:         }),
+000285:         mounted: makePoliceRule({
+000286:             id: 'police_mounted',
+000287:             label: 'Mounted Officers',
+000288:             vehicleTypeIds: ['55'],
+000289:             vehicleLabel: 'Mounted Unit',
+000290:             target: 1,
+000291:             trainingAll: ['police_horse'],
+000292:             trainingLabel: 'Mounted Officers'
+000293:         }),
+000294:         dog: makePoliceRule({
+000295:             id: 'police_dog',
+000296:             label: 'Dog handling',
+000297:             vehicleTypeIds: ['12'],
+000298:             vehicleLabel: 'Dog Support Unit',
+000299:             target: 1,
+000300:             trainingAll: ['k9'],
+000301:             trainingLabel: 'Dog handling'
+000302:         }),
+000303:         searchAdvisor: makePoliceRule({
+000304:             id: 'police_drone_search_advisor',
+000305:             label: 'Drone Operator + Police Search Advisor',
+000306:             vehicleTypeIds: ['91'],
+000307:             vehicleLabel: 'Police Drone Vehicle',
+000308:             target: 2,
+000309:             trainingAll: ['drone', 'search_and_rescue'],
+000310:             trainingLabel: 'Drone Operator + Police Search Advisor',
+000311:             sharedVehiclePool: true
+000312:         }),
+000313:         drone: makePoliceRule({
+000314:             id: 'police_drone',
+000315:             label: 'Drone Operator',
+000316:             vehicleTypeIds: ['91'],
+000317:             vehicleLabel: 'Police Drone Vehicle',
+000318:             target: 2,
+000319:             trainingAll: ['drone'],
+000320:             trainingLabel: 'Drone Operator',
+000321:             preferWithout: ['search_and_rescue'],
+000322:             sharedVehiclePool: true
+000323:         }),
+000324:         aviation: makePoliceRule({
+000325:             id: 'police_aviation',
+000326:             label: 'Police aviation',
+000327:             vehicleTypeIds: ['11'],
+000328:             vehicleLabel: 'Police Helicopter',
+000329:             target: 3,
+000330:             trainingAll: ['polizeihubschrauber'],
+000331:             trainingLabel: 'Police aviation'
+000332:         }),
+000333:         mobileOperations: makePoliceRule({
+000334:             id: 'police_mobile_operations',
+000335:             label: 'Mobile Operations Management',
+000336:             vehicleTypeIds: ['108'],
+000337:             vehicleLabel: 'EIU',
+000338:             target: 2,
+000339:             trainingAll: ['railway_police_command'],
+000340:             trainingLabel: 'Mobile Operations Manager'
+000341:         }),
+000342:         railway: makePoliceRule({
+000343:             id: 'police_railway',
+000344:             label: 'Railway Police Officer',
+000345:             vehicleTypeIds: ['8'],
+000346:             vehicleLabel: 'Railway Policing IRV',
+000347:             target: 2,
+000348:             trainingAll: ['railway_police'],
+000349:             trainingLabel: 'Railway Police Officer',
+000350:             preferWithout: ['railway_police_command'],
+000351:             sharedVehiclePool: true
+
+=== BLOCK 3: source lines 549-685 ===
+000549:         },
+000550:         fire: {
+000551:             label: 'Fire / Airfield',
+000552:             icon: '🚒✈️',
+000553:             profiles: [
+000554:                 makeServicePreviewProfile('fire_aircraft_rescue', 'Aircraft Rescue and Firefighting', 'Fire'),
+000555:                 makeServicePreviewProfile('fire_co_responder', 'Co-Responder Training', 'Fire'),
+000556:                 makeServicePreviewProfile('fire_drone_operator', 'Drone Operator Training', 'Fire'),
+000557:                 liveFireProfile('fire_hazmat', 'HazMat Unit', 'Operational Support Unit (OSU)', '3 HazMat-trained personnel per OSU', 'LIVE: fills each exact type-39 Fire OSU with 3 gw_gefahrgut-trained personnel. Type-7 HazMat Units are excluded.', [FIRE_RULES.hazmatOsu]),
+000558:                 makeServicePreviewProfile('fire_high_volume_pump', 'High Volume Pump Training', 'Fire'),
+000559:                 makeServicePreviewProfile('fire_lifeguard', 'Lifeguard Training', 'Fire'),
+000560:                 liveFireProfile('fire_mobile_command', 'Level 1 Incident Commander Training', 'Incident Command and Control Unit (ICCU)', '3 Level 1 Incident Commanders per ICCU', "LIVE: fills each exact type-15 ICCU with 3 elw2-trained personnel while preserving its remaining seats.", [FIRE_RULES.incidentCommand]),
+000561:                 liveFireProfile('fire_railway', 'Railway Fire', 'RRU', '2 Railway Fire-trained personnel per RRU', 'LIVE: fills each exact type-107 RRU to 2/2 with railway_fire-trained personnel.', [FIRE_RULES.railway]),
+000562:                 {
+000563:                     id: 'all_fire',
+000564:                     label: 'Run all Fire / Airfield profiles',
+000565:                     vehicle: 'All mapped Fire and Airfield vehicle groups',
+000566:                     requirement: 'Process enabled Fire and Airfield profiles in priority order',
+000567:                     policy: 'Future batch option. Airfield training and vehicles are handled within Fire. It remains disabled until every Fire and Airfield profile has confirmed mappings.',
+000568:                     live: false,
+000569:                     stationTypes: ['FIRE', 'AIRFIELD']
+000570:                 }
+000571:             ]
+000572:         },
+000573:         police: {
+000574:             label: 'Police',
+000575:             icon: '🚓',
+000576:             profiles: [
+000577:                 livePoliceProfile('police_bomb_disposal', 'Bomb Disposal', 'EOD Response, Medium and Heavy vehicles', 'Fill each mapped EOD vehicle to its verified maximum with Bomb Disposal personnel', 'LIVE: EOD Commander vehicles are processed first by Run all Police, then Response 4/4, Medium 3/3 and Heavy 2/2. Existing assignments are preserved.', [POLICE_RULES.eodResponse, POLICE_RULES.eodMedium, POLICE_RULES.eodHeavy], ['EOD']),
+000578:                 livePoliceProfile('police_dog_handling', 'Dog handling', 'Dog Support Unit', 'At least 1 Dog Handler per DSU', 'LIVE: safely meets the game-confirmed minimum of one Dog Handler per DSU without moving existing staff.', [POLICE_RULES.dog]),
+000579:                 livePoliceProfile('police_drone_operator', 'Drone Operator Training', 'Police Drone Vehicle', '2 Drone Operators per Police Drone Vehicle', 'LIVE: fills Police Drone Vehicles to 2/2. Search Advisor dual-trained personnel are preserved where possible.', [POLICE_RULES.drone]),
+000580:                 livePoliceProfile('police_eod_commander', 'EOD Commander', 'EOD Commander Vehicle', '2 EOD Commanders per vehicle', 'LIVE: fills EOD Commander vehicles to 2/2 before general Bomb Disposal vehicles in the full Police run.', [POLICE_RULES.eodCommander], ['EOD']),
+000581:                 livePoliceProfile('police_firearms', 'Firearms training', 'Multi-Role Armoured Vehicle', '6 Firearms-trained officers per MRAV', 'LIVE: fills every MRAV to 6/6 with Firearms-trained personnel and preserves Roads Policing dual-trained officers where possible.', [POLICE_RULES.firearms]),
+000582:                 livePoliceProfile(
+000583:                     'police_public_order_1',
+000584:                     'Level 1 Public Order Training',
+000585:                     'Normal Police IRV',
+000586:                     '2 Level 1 Public Order officers per IRV',
+000587:                     'LIVE INDIVIDUAL PROFILE: checks and assigns Level 1 Public Order training only. Other Police qualifications do not affect this result.',
+000588:                     [
+000589:                         POLICE_RULES
+000590:                             .publicOrderLevel1
+000591:                     ]
+000592:                 ),
+000593:                 livePoliceProfile(
+000594:                     'police_public_order_2',
+000595:                     'Level 2 Public Order Training',
+000596:                     'Normal Police IRV',
+000597:                     '2 Level 2 Public Order officers per IRV',
+000598:                     'LIVE INDIVIDUAL PROFILE: checks and assigns Level 2 Public Order training only. Other Police qualifications do not affect this result.',
+000599:                     [
+000600:                         POLICE_RULES
+000601:                             .publicOrderLevel2
+000602:                     ]
+000603:                 ),
+000604:                 livePoliceProfile('police_marine_bomb_disposal', 'Marine Bomb Disposal', 'Marine EOD Response and Equipment vehicles', 'Response 4/4; Equipment Van 3/3', 'LIVE: fills Marine EOD Response vehicles to 4/4 and Equipment Vans to 3/3 with Marine Bomb Disposal personnel.', [POLICE_RULES.marineResponse, POLICE_RULES.marineEquipment], ['EOD']),
+000605:                 livePoliceProfile('police_mobile_operations_management', 'Mobile Operations Management', 'EIU', '2 Mobile Operations Managers per EIU', 'LIVE: fills each EIU to 2/2 with railway_police_command-trained personnel.', [POLICE_RULES.mobileOperations]),
+000606:                 livePoliceProfile('police_mounted', 'Mounted Training', 'Mounted Unit', 'At least 1 Mounted Officer per vehicle', 'LIVE: meets the verified native minimum of one Mounted Officer per Mounted Unit. It does not fill the remaining passenger seats.', [POLICE_RULES.mounted]),
+000607:                 livePoliceProfile('police_inspector', 'Police Inspector Training', 'Normal Police IRV', '2 Police Inspectors per allocated IRV', 'LIVE: uses normal IRVs and fills allocated vehicles to 2/2 with police_inspector-trained officers.', [POLICE_RULES.inspector]),
+000608:                 livePoliceProfile(
+000609:                     'police_medic',
+000610:                     'Police Medic Training',
+000611:                     'Normal Police IRV',
+000612:                     '2 Police Medics per IRV',
+000613:                     'LIVE INDIVIDUAL PROFILE: checks and assigns Police Medic training only. Run all Police profiles retains the combined four-course crew rule.',
+000614:                     [
+000615:                         POLICE_RULES
+000616:                             .publicOrderMedic
+000617:                     ]
+000618:                 ),
+000619:                 livePoliceProfile('police_search_advisor', 'Police Search Advisor Training', 'Police Drone Vehicle', '2 dual-trained Drone/Search Advisor personnel', 'LIVE: both personnel must hold drone and search_and_rescue training.', [POLICE_RULES.searchAdvisor]),
+000620:                 livePoliceProfile(
+000621:                     'police_sergeant',
+000622:                     'Police Sergeant Training',
+000623:                     'Normal Police IRV',
+000624:                     '2 Police Sergeants per IRV',
+000625:                     'LIVE INDIVIDUAL PROFILE: checks and assigns Police Sergeant training only. Run all Police profiles retains the combined four-course crew rule.',
+000626:                     [
+000627:                         POLICE_RULES
+000628:                             .publicOrderSergeant
+000629:                     ]
+000630:                 ),
+000631:                 livePoliceProfile('police_aviation', 'Police aviation', 'Police Helicopter', '3 Police Aviation personnel per helicopter', 'LIVE: fills each Police Helicopter to 3/3 with polizeihubschrauber-trained personnel.', [POLICE_RULES.aviation], ['AIR']),
+000632:                 livePoliceProfile('police_railway', 'Railway Policing', 'Railway Policing IRV', '2 Railway Police Officers per IRV', 'LIVE: fills Railway Unit IRVs to 2/2 with railway_police-trained personnel and preserves Mobile Operations Managers where possible.', [POLICE_RULES.railway]),
+000633:                 livePoliceProfile('police_roads', 'Roads Policing Officer Training', 'Armed Traffic Car', '2 dual-trained Roads Policing + Firearms officers', 'LIVE: both officers must hold traffic_police and swat.', [POLICE_RULES.roads]),
+000634:                 {
+000635:                     id: 'all_police',
+000636:                     label: 'Run all Police profiles',
+000637:                     vehicle: 'All verified Police, Aviation and EOD vehicle groups',
+000638:                     requirement: 'Process verified profiles in safe reservation order',
+000639:                     policy: 'LIVE BATCH: preserves current assignments, assigns specialist and dual-trained roles first, allocates shared IRV/Drone pools safely, then verifies the station-wide result.',
+000640:                     live: true,
+000641:                     engine: 'police',
+000642:                     stationTypes: ['POLICE', 'AIR', 'EOD'],
+000643:                     rules: POLICE_ALL_RULES,
+000644:                     batch: true
+000645:                 }
+000646:             ]
+000647:         },
+000648:         coastguard: {
+000649:             label: 'SAR / Mountain Rescue / Coastguard',
+000650:             icon: '🌊⛰️',
+000651:             profiles: [
+000652:                 makeServicePreviewProfile('sar_cave_rescue', 'Cave Rescue Training', 'SAR'),
+000653:                 makeServicePreviewProfile('sar_coastal_air_rescue', 'Coastal Air Rescue Operations Training', 'SAR'),
+000654:                 makeServicePreviewProfile('sar_coastal_command', 'Coastal Command Training', 'SAR'),
+000655:                 makeServicePreviewProfile('sar_search_advisor', 'Coastguard Search Advisor Training', 'SAR'),
+000656:                 makeServicePreviewProfile('sar_dog_handling', 'Dog handling', 'SAR'),
+000657:                 makeServicePreviewProfile('sar_drone_operator', 'Drone Operator Training', 'SAR'),
+000658:                 makeServicePreviewProfile('sar_flood_first_responder', 'Flood First Responder Training', 'SAR'),
+000659:                 makeServicePreviewProfile('sar_hovercraft_commander', 'Hovercraft Commander Training', 'SAR'),
+000660:                 makeServicePreviewProfile('sar_jet_ski', 'Jet Ski Handling', 'SAR'),
+000661:                 makeServicePreviewProfile('sar_lifeboat_operations', 'Lifeboat Operations Training', 'SAR'),
+000662:                 makeServicePreviewProfile('sar_lifeguard', 'Lifeguard Training', 'SAR'),
+000663:                 makeServicePreviewProfile('sar_mud_rescue', 'Mud Rescue Training', 'SAR'),
+000664:                 makeServicePreviewProfile('sar_rope_rescue', 'Rope Rescue Training', 'SAR'),
+000665:                 makeServicePreviewProfile('sar_search_management', 'Search Management Training', 'SAR'),
+000666:                 {
+000667:                     id: 'all_sar',
+000668:                     label: 'Run all SAR / Mountain Rescue profiles',
+000669:                     vehicle: 'All mapped SAR, Mountain Rescue, Coastguard and Water Rescue vehicle groups',
+000670:                     requirement: 'Process enabled SAR and Mountain Rescue profiles in priority order',
+000671:                     policy: 'Future batch option. It remains disabled until every SAR profile has confirmed mappings.',
+000672:                     live: false,
+000673:                     stationTypes: ['SAR', 'COASTGUARD', 'RNLI']
+000674:                 }
+000675:             ]
+000676:         },
+000677:         all_services: {
+000678:             label: 'All Services',
+000679:             icon: '🧭',
+000680:             profiles: [{
+000681:                 id: 'all_services_profiles',
+000682:                 label: 'Run all service profiles — future option',
+000683:                 vehicle: 'All supported service vehicles',
+000684:                 requirement: 'Process services and profiles in safe priority order',
+000685:                 policy: 'This future option will only be enabled after each individual service is fully tested and live.',
+
+=== BLOCK 4: source lines 718-778 ===
+000718:         "38": "RPF",
+000719:         "39": "Operational Support Unit",
+000720:         "51": "PSU Carrier",
+000721:         "54": "Detention Van",
+000722:         "55": "Mounted Unit",
+000723:         "56": "MRAV",
+000724:         "57": "Coastguard Rescue Vehicle",
+000725:         "58": "Mud Rescue Unit",
+000726:         "59": "Coastguard Rope Rescue Unit",
+000727:         "60": "Coastguard Commander",
+000728:         "61": "Flood Rescue Unit Trailer",
+000729:         "62": "Flood Rescue Unit",
+000730:         "63": "Support Unit",
+000731:         "65": "Coastguard Rescue Helicopter Large",
+000732:         "66": "4x4 Vehicle",
+000733:         "67": "ILB Trainer",
+000734:         "68": "ILB",
+000735:         "69": "ALB",
+000736:         "70": "Rescue Watercraft Trailer",
+000737:         "71": "Hovercraft Trailer",
+000738:         "72": "Hovercraft Transporter",
+000739:         "73": "Light 4x4",
+000740:         "74": "Boat Trailer",
+000741:         "75": "Major Foam Tender",
+000742:         "76": "RIV",
+000743:         "77": "Airfield Command",
+000744:         "78": "Rescue Stairs",
+000745:         "79": "Airfield Operations Vehicle",
+000746:         "80": "Airfield Operations Supervisor",
+000747:         "81": "Medical Equipment Trailer",
+000748:         "85": "Control Van SAR",
+000749:         "86": "Operational Support Van",
+000750:         "87": "Operational Support Trailer",
+000751:         "88": "SAR Flood Rescue Trailer",
+000752:         "89": "Drone Vehicle SAR HQ",
+000753:         "91": "Police Drone Vehicle",
+000754:         "93": "SAR 4x4",
+000755:         "96": "Specialist Paramedic RRV",
+000756:         "97": "Patient Transport Service Ambulance",
+000757:         "98": "Critical Care Transfer Ambulance",
+000758:         "99": "Mountain Rescue 4x4",
+000759:         "102": "Search Dog Unit SAR",
+000760:         "105": "Flatbed Recovery Vehicle",
+000761:         "107": "RRU",
+000762:         "108": "EIU",
+000763:         "109": "EOD Commander",
+000764:         "110": "EOD Response Vehicle",
+000765:         "111": "EOD Medium Equipment Van",
+000766:         "112": "EOD Heavy Equipment Vehicle",
+000767:         "113": "Marine EOD Response Vehicle",
+000768:         "114": "Marine EOD Equipment Van",
+000769:         "115": "Welfare Vehicle",
+000770:         "116": "Cell Van"
+000771:     };
+000772: 
+000773:     const VEHICLE_INFO = {
+000774:         "Ambulance": { code: "AB", icon: "🚑" },
+000775:         "Ambulance Officer": { code: "AO", icon: "🚑🎖️" },
+000776:         "Ambulance Control Unit": { code: "ACU", icon: "🚑📡" },
+000777:         "Air Ambulance": { code: "AA", icon: "🚁" },
+000778:         "Rescue Pump": { code: "RP", icon: "🚒" },
+
+=== BLOCK 5: source lines 790-850 ===
+000790:         "Police Helicopter": { code: "POLHELI", icon: "🚔🚁" },
+000791:         "Police Drone Vehicle": { code: "PDV", icon: "🚔🚁" },
+000792:         "EIU": { code: "EIU", icon: "🚔📡" },
+000793:         "PSU Carrier": { code: "PSU", icon: "🚔🚌" },
+000794:         "Detention Van": { code: "DV", icon: "🚔🥅" },
+000795:         "Mounted Unit": { code: "MU", icon: "🚔🐎" },
+000796:         "Coastguard Rescue Vehicle": { code: "CRV", icon: "⚠️🛻" },
+000797:         "Mud Rescue Unit": { code: "MRU", icon: "⚠️🟤" },
+000798:         "Coastguard Rope Rescue Unit": { code: "CRRU", icon: "⚠️🧗" },
+000799:         "Coastguard Commander": { code: "CGC", icon: "⚠️👨‍✈️" },
+000800:         "Coastguard Rescue Helicopter Large": { code: "CGH", icon: "🚁⚠️" },
+000801:         "Flood Rescue Unit Trailer": { code: "FRUT", icon: "🛟" },
+000802:         "Flood Rescue Unit": { code: "FRU", icon: "🛟" },
+000803:         "Support Unit": { code: "SU", icon: "⚠️🚐" },
+000804:         "4x4 Vehicle": { code: "4x4", icon: "🛟" },
+000805:         "ILB Trainer": { code: "ILBT", icon: "🚤" },
+000806:         "ILB": { code: "ILB", icon: "🚤" },
+000807:         "ALB": { code: "ALB", icon: "🚤" },
+000808:         "Boat Trailer": { code: "BT", icon: "🚤" },
+000809:         "Rescue Watercraft Trailer": { code: "RWC", icon: "🚤" },
+000810:         "Hovercraft Trailer": { code: "HCT", icon: "🛥️" },
+000811:         "Hovercraft Transporter": { code: "HCTR", icon: "🛥️" },
+000812:         "Light 4x4": { code: "L4x4", icon: "🚙" },
+000813:         "Major Foam Tender": { code: "MFT", icon: "🚒✈️" },
+000814:         "RIV": { code: "RIV", icon: "🚒✈️" },
+000815:         "Airfield Command": { code: "AirCommand", icon: "🚒✈️" },
+000816:         "Rescue Stairs": { code: "RS", icon: "✈️🪜" },
+000817:         "Airfield Operations Vehicle": { code: "AOV", icon: "✈️🚗" },
+000818:         "Airfield Operations Supervisor": { code: "AOS", icon: "✈️👷" },
+000819:         "Medical Equipment Trailer": { code: "MET", icon: "🚒⚕️" },
+000820:         "Control Van SAR": { code: "CV", icon: "📡" },
+000821:         "Operational Support Van": { code: "OSV", icon: "🛠️" },
+000822:         "Operational Support Trailer": { code: "OST", icon: "🛠️" },
+000823:         "SAR Flood Rescue Trailer": { code: "SFR", icon: "🌊" },
+000824:         "Drone Vehicle SAR HQ": { code: "DRV", icon: "🚁" },
+000825:         "SAR 4x4": { code: "SAR4x4", icon: "🟡" },
+000826:         "Specialist Paramedic RRV": { code: "SP-RRV", icon: "🚑" },
+000827:         "Patient Transport Service Ambulance": { code: "PTS", icon: "🚑" },
+000828:         "Critical Care Transfer Ambulance": { code: "CCT", icon: "🚑❤️" },
+000829:         "Mountain Rescue 4x4": { code: "MR4x4", icon: "🏔️" },
+000830:         "Search Dog Unit SAR": { code: "K9", icon: "🐕" },
+000831:         "Flatbed Recovery Vehicle": { code: "FRV", icon: "🛻" },
+000832:         "RRV": { code: "RRV", icon: "🚑" },
+000833:         "RRU": { code: "RRU", icon: "🚒✈️" },
+000834:         "Rescue Support Unit (RSU)": { code: "RSU", icon: "🚒🛠️" },
+000835:         "DSU": { code: "DSU", icon: "🚔🐕" },
+000836:         "OTL": { code: "OTL", icon: "🚔" },
+000837:         "PRV": { code: "PRV", icon: "🚑1️⃣" },
+000838:         "SRV": { code: "SRV", icon: "🚑2️⃣" },
+000839:         "ATV": { code: "ATV", icon: "🚑🦺" },
+000840:         "BFU": { code: "BFU", icon: "🚒✈️" },
+000841:         "F/WrC": { code: "FWrC", icon: "🚒💦" },
+000842:         "RPF": { code: "RPF", icon: "🚒🫧" },
+000843:         "MRAV": { code: "MRAV", icon: "🚔🔫" },
+000844:         "EOD Commander": { code: "EODC", icon: "💣" },
+000845:         "EOD Response Vehicle": { code: "EOD", icon: "💣🚐" },
+000846:         "EOD Medium Equipment Van": { code: "EODM", icon: "💣🚐" },
+000847:         "EOD Heavy Equipment Vehicle": { code: "EODH", icon: "💣🚚" },
+000848:         "Marine EOD Response Vehicle": { code: "MEOD", icon: "💣🚤" },
+000849:         "Marine EOD Equipment Van": { code: "MEODV", icon: "💣🚐" },
+000850:         "Cell Van": { code: "CVAN", icon: "🚔🚐" }
+
+=== BLOCK 6: source lines 9848-9952 ===
+009848:     const MF_STRICT_TRAINING_SOURCE_PREFIX =
+009849:         'mission-finder-live-strict-';
+009850: 
+009851:     // V10.6.109: trained-personnel selection now optimises exact vehicle
+009852:     // coverage instead of treating full qualification as a dispatch gate.
+009853:     // Multi-trained crews reduce every matching course, type-51 PSUs provide
+009854:     // up to nine seats for compatible Public Order demand, IRVs fill smaller
+009855:     // remainders, and correct-type untrained fallback units are still selected
+009856:     // while the remaining training shortfall is reported without blocking.
+009857:     // V10.6.100: visible current-mission Missing Vehicles or supported Missing
+009858:     // Personnel alerts now take authority before the full mission-help attachment.
+009859:     // Explicit missing-vehicle quantities are treated as the target selected count
+009860:     // for the current dispatch pass, so repeated Unit Finder/Mission Update checks
+009861:     // cannot resend the full mission or add the same shortage twice.
+009862:     // V10.6.99: the active iPhone native-picker disclosure/wrapper was removed.
+009863:     // MissionChief's own quick-select DOM is now left structurally untouched and
+009864:     // receives only passive document-owned selector CSS, eliminating the native/
+009865:     // enhanced reattachment race while preserving Mission and Vehicle launchers.
+009866:     // V10.6.98: the iPhone native Unit Quick Select disclosure is now
+009867:     // mutation-idempotent and guarded against duplicate touch/click transitions.
+009868:     // The Mission/Vehicle launcher now clears the complete top-right native
+009869:     // control cluster with stable geometry, hysteresis and a farther-left fallback.
+009870:     // V10.6.97: iPhone Mission Control and Vehicle Load now use a compact
+009871:     // two-button launcher positioned immediately left of MissionChief's live
+009872:     // native control cluster. Both panels default closed and open exclusively
+009873:     // below the launcher without cloning or intercepting native controls.
+009874:     // V10.6.96: the strict iPhone command surfaces now migrate to collapsed
+009875:     // defaults, own deterministic touch/keyboard disclosure controls and reserve
+009876:     // a pointer-transparent upper-right gutter for MissionChief's native close X.
+009877:     // V10.6.95: open-issue corrective batch. Exact type-57 CRVs and type-85
+009878:     // Control Vans now own their requirements; Search Advisors route to Control
+009879:     // Vans; current data-requirement-type=vehicles Missing Vehicles elements are
+009880:     // parsed even beside the live panel; generic Critical Care chooses the nearest
+009881:     // eligible type-9 HEMS or exact-registry-verified trained type-5 Ambulance;
+009882:     // and the Personnel registry detects PSU/type-51 vehicles plus broader exact
+009883:     // assignment controls without weakening exact vehicle-ID ownership.
+009884:     // V10.6.94: iPhone Safari desktop-site sessions that identify as MacIntel
+009885:     // now enter the compact phone layout when the physical screen short side is
+009886:     // phone-sized. iPad remains excluded by its larger physical screen even in
+009887:     // split-screen or desktop-site mode.
+009888:     // V10.6.93: the iPhone Safari layout now also owns MissionChief's native
+009889:     // search_attribute quick-select matrix in whichever same-origin mission
+009890:     // document renders it. The native picker is collapsed behind one compact
+009891:     // disclosure by default, then expands into a horizontal category strip and
+009892:     // readable two-column internal scroller without cloning or replacing controls.
+009893:     // V10.6.92: iPhone Safari now receives a dedicated compact Mission
+009894:     // Finder command card with collapsed advanced settings, compact action and
+009895:     // vehicle-load surfaces, safe-area sizing and no drag ownership. The new
+009896:     // presentation class excludes iPad and every desktop/browser path.
+009897:     // V10.6.91: Unit Finder now treats the hidden mobile #mission_help link
+009898:     // as an authoritative source, binds /einsaetze/ requests to the exact current
+009899:     // mission ID, validates the response route and blocks on missing/mismatched
+009900:     // requirement data instead of silently advancing through empty fallbacks.
+009901:     // V10.6.90: iOS Safari Unit Finder vehicle discovery now follows the
+009902:     // active mission document, and a vehicle allocation is counted only after
+009903:     // MissionChief's real checkbox state is confirmed. Native click, associated
+009904:     // label activation and a checked-property plus input/change fallback remain
+009905:     // bounded to the exact eligible checkbox selected by the existing engine.
+009906:     // V10.6.89: ordinary Police attendance preserves specialist IRVs by
+009907:     // preference rather than by an absolute block. Verified ordinary type-8
+009908:     // IRVs are selected first, unknown/stale IRVs second, and known specialist
+009909:     // IRVs only when the normal pool cannot satisfy the mission requirement.
+009910:     const MF_PROTECTED_ORDINARY_IRV_TRAINING_CODES =
+009911:         Object.freeze([
+009912:             'level_1_public_order',
+009913:             'level_2_public_order',
+009914:             'police_sergeant',
+009915:             'police_medic',
+009916:             'police_inspector',
+009917:             'traffic_police',
+009918:             'swat',
+009919:             'police_horse',
+009920:             'k9',
+009921:             'drone',
+009922:             'search_and_rescue',
+009923:             'polizeihubschrauber',
+009924:             'railway_police_command',
+009925:             'railway_police',
+009926:             'bomb_disposal_command',
+009927:             'bomb_disposal',
+009928:             'bomb_disposal_diver'
+009929:         ]);
+009930: 
+009931:     const MF_PSU_COMPATIBLE_TRAINING_CODES =
+009932:         Object.freeze([
+009933:             'level_1_public_order',
+009934:             'level_2_public_order',
+009935:             'police_sergeant',
+009936:             'police_medic'
+009937:         ]);
+009938: 
+009939:     const MF_TRAINED_VEHICLE_CAPACITY_BY_TYPE =
+009940:         Object.freeze({
+009941:             '51': 9,
+009942:             '8': 2,
+009943:             '25': 2
+009944:         });
+009945: 
+009946:     const MF_ORDINARY_IRV_VERIFY_MAX_PAGES = 64;
+009947:     const MF_ORDINARY_IRV_VERIFY_BATCH_SIZE = 6;
+009948:     const MF_AUTO_VEHICLE_LIST_STABLE_TIMEOUT_MS = 9000;
+009949:     const MF_AUTO_VEHICLE_LIST_STABLE_FOR_MS = 1200;
+009950:     const MF_AUTO_VEHICLE_LIST_MIN_SETTLE_MS = 1000;
+009951:     const MF_AUTO_VEHICLE_LIST_LOAD_TIMEOUT_MS = 20000;
+009952: 
+
+=== BLOCK 7: source lines 10709-10776 ===
+010709:         "Required RRV": "RRV",
+010710:         "Required RRVs": "RRV",
+010711:         "Specialist Paramedic RRV": "RRV",
+010712:         "Specialist Paramedic RRVs": "RRV",
+010713:         "Required Specialist Paramedic RRV": "RRV",
+010714:         "Required Specialist Paramedic RRVs": "RRV",
+010715:         "RRV or Specialist Paramedic RRV": "RRV",
+010716:         "RRVs or Specialist Paramedic RRVs": "RRV",
+010717:         "Required RRV or Specialist Paramedic RRV": "RRV",
+010718:         "Required RRVs or Specialist Paramedic RRVs": "RRV",
+010719:         "Community Midwife": "Community Midwife",
+010720:         "Community Midwifes": "Community Midwife",
+010721: 
+010722:         /*************************************************
+010723:          * COASTGUARD / LIFEBOAT
+010724:          *************************************************/
+010725:         "CRV": "CRV",
+010726:         "CRVs": "CRV",
+010727:         "Inland Rescue Boat (Trailer)": "Inland Rescue Boat (Trailer)",
+010728:         "Boat Trailer or Inland Rescue Boat": "Boat Trailer",
+010729:         "Seagoing Vessel": "ALB",
+010730:         "Seagoing Vessels": "ALB",
+010731:         "Coastguard Rescue Helicopter": "CG Rescue Helicopter (Large)",
+010732:         "Coastguard Rescue Helicopters": "CG Rescue Helicopter (Large)",
+010733:         "Coastguard Rescue Helicopter (20%)": "CG Rescue Helicopter (Large)",
+010734:         "ILBs or ALBs": "ALB",
+010735:         "ALBs": "ALB",
+010736:         "ALB": "ALB",
+010737:         "ILBs": "ILB",
+010738:         "ILB": "ILB",
+010739:         "Control Van": "Control Van",
+010740:         "Control Vans": "Control Van",
+010741:         "SAR Commander": "Control Van",
+010742:         "SAR Commanders": "Control Van",
+010743:         "Required SAR Commander": "Control Van",
+010744:         "Required SAR Commanders": "Control Van",
+010745:         "Search Advisor": "Control Van",
+010746:         "Search Advisors": "Control Van",
+010747:         "HEMS": "Air Ambulance",
+010748:         "HEMS Helicopter": "Air Ambulance",
+010749:         "HEMS Helicopters": "Air Ambulance",
+010750:         "Operational Support Van": "Operational Support Van",
+010751:         "Operational Support Vans": "Operational Support Van",
+010752:         "Operational Support or SAR Vehicle": "Operational Support Van",
+010753:         "Operational Support or SAR Vehicles": "Operational Support Van",
+010754:         "Operational Support or SAR Vehicle x1": "Operational Support Van",
+010755:         "Operational Support Van or SAR Vehicle": "Operational Support Van",
+010756:         "Operational Support Vans or SAR Vehicles": "Operational Support Van",
+010757:         "Operational Support Vehicle or SAR Vehicle": "Operational Support Van",
+010758:         "Operational Support Vehicles or SAR Vehicles": "Operational Support Van",
+010759:         "Operational Support or Personal SAR Vehicle": "Operational Support Van",
+010760:         "Operational Support or Personal SAR Vehicles": "Operational Support Van",
+010761:         "Required Operational Support or SAR Vehicle": "Operational Support Van",
+010762:         "Required Operational Support or SAR Vehicles": "Operational Support Van",
+010763:         "Operational Support Van, Trailer or Personal SAR Vehicle": "Operational Support Van",
+010764:         "Operational Support Vans, Trailers or Personal SAR Vehicles": "Operational Support Van",
+010765:         "Operational Support Van Trailer or Personal SAR Vehicle": "Operational Support Van",
+010766:         "Operational Support Vans Trailers or Personal SAR Vehicles": "Operational Support Van",
+010767:         "Operational Support Van or Personal SAR Vehicle": "Operational Support Van",
+010768:         "Operational Support Vans or Personal SAR Vehicles": "Operational Support Van",
+010769:         "OSV": "Operational Support Van",
+010770:         "OSVs": "Operational Support Van",
+010771:         "Hovercraft (trailer)": "Hovercraft (trailer)",
+010772:         "Coastguard Mud Rescue Unit": "Coastguard Mud Rescue Unit",
+010773:         "Coastguard Mud Rescue Units": "Coastguard Mud Rescue Unit",
+010774:         "Mud Decontamination Unit": "Mud Decontamination Unit",
+010775:         "Mud Decontamination Units": "Mud Decontamination Unit",
+010776:         "Coastguard Commander": "CG Commander",
+
+=== BLOCK 8: source lines 11867-11948 ===
+011867:         const supported = new Set([
+011868:             'crv', 'crvs',
+011869:             'coastguard rescue vehicle', 'coastguard rescue vehicles',
+011870:             'required crv', 'required crvs',
+011871:             'required coastguard rescue vehicle',
+011872:             'required coastguard rescue vehicles'
+011873:         ]);
+011874:         return supported.has(raw) || supported.has(mapped);
+011875:     }
+011876: 
+011877:     function isCrvVehicleCheckbox(input) {
+011878:         if (!input) return false;
+011879:         const typeIdentifiers = getVehicleTypeIdentifiers(input);
+011880:         if (typeIdentifiers.length > 0) return typeIdentifiers.includes('57');
+011881: 
+011882:         return getExtendedVehicleValues(input).some(value => {
+011883:             const cleaned = normaliseVehicleText(value);
+011884:             return (
+011885:                 cleaned === 'crv' ||
+011886:                 cleaned === 'crvs' ||
+011887:                 cleaned === 'coastguard rescue vehicle' ||
+011888:                 cleaned === 'coastguard rescue vehicles'
+011889:             );
+011890:         });
+011891:     }
+011892: 
+011893:     function isControlVanRequirement(originalName, mappedName) {
+011894:         const raw = normaliseVehicleText(originalName);
+011895:         const mapped = normaliseVehicleText(mappedName);
+011896:         const supported = new Set([
+011897:             'control van', 'control vans',
+011898:             'required control van', 'required control vans',
+011899:             'search advisor', 'search advisors',
+011900:             'required search advisor', 'required search advisors',
+011901:             'sar commander', 'sar commanders',
+011902:             'required sar commander', 'required sar commanders'
+011903:         ]);
+011904:         return supported.has(raw) || supported.has(mapped);
+011905:     }
+011906: 
+011907:     function isControlVanVehicleCheckbox(input) {
+011908:         if (!input) return false;
+011909:         const typeIdentifiers = getVehicleTypeIdentifiers(input);
+011910:         if (typeIdentifiers.length > 0) return typeIdentifiers.includes('85');
+011911: 
+011912:         return getExtendedVehicleValues(input).some(value => {
+011913:             const cleaned = normaliseVehicleText(value);
+011914:             return (
+011915:                 cleaned === 'control van' ||
+011916:                 cleaned === 'control vans' ||
+011917:                 cleaned === 'control van sar' ||
+011918:                 cleaned === 'sar control van' ||
+011919:                 cleaned === 'cv'
+011920:             );
+011921:         });
+011922:     }
+011923: 
+011924:     function isAirAmbulanceRequirement(originalName, mappedName) {
+011925:         const raw = normaliseVehicleText(originalName);
+011926:         const mapped = normaliseVehicleText(mappedName);
+011927:         const supported = new Set([
+011928:             'air ambulance', 'air ambulances',
+011929:             'hems', 'hems helicopter', 'hems helicopters',
+011930:             'required air ambulance', 'required air ambulances',
+011931:             'required hems', 'required hems helicopter',
+011932:             'required hems helicopters'
+011933:         ]);
+011934:         return supported.has(raw) || supported.has(mapped);
+011935:     }
+011936: 
+011937:     function isAirAmbulanceVehicleCheckbox(input) {
+011938:         if (!input) return false;
+011939:         const typeIdentifiers = getVehicleTypeIdentifiers(input);
+011940:         if (typeIdentifiers.length > 0) return typeIdentifiers.includes('9');
+011941: 
+011942:         return getExtendedVehicleValues(input).some(value => {
+011943:             const cleaned = normaliseVehicleText(value);
+011944:             return (
+011945:                 cleaned === 'air ambulance' ||
+011946:                 cleaned === 'air ambulances' ||
+011947:                 cleaned === 'hems' ||
+011948:                 cleaned === 'hems helicopter' ||
+
+=== BLOCK 9: source lines 20528-20663 ===
+020528:     function cleanRequirementName(value) {
+020529:         return String(value || '')
+020530:             .replace(/\s+/g, ' ')
+020531:             .replace(/^Required\s+/i, '')
+020532:             .replace(/\s+only required.*$/i, '')
+020533:             .replace(/\s*\(\s*\d+\s*%\s*\)\s*$/i, '')
+020534:             .trim();
+020535:     }
+020536: 
+020537:     // V10.6.56: MissionChief help/update tables can contain threshold or
+020538:     // prerequisite statistics such as "Required minimum policemen 10".
+020539:     // These describe the mission generation/minimum staffing threshold; they
+020540:     // are not a vehicle or live shortage to dispatch. Keep this as one shared
+020541:     // guard so Unit Finder, Mission Update, visible fallback and Auto Mode all
+020542:     // ignore the same rows.
+020543:     function shouldIgnoreRequiredMinimumRequirement(value) {
+020544:         const raw = String(value || '')
+020545:             .replace(/\s+/g, ' ')
+020546:             .trim();
+020547: 
+020548:         if (!raw) return false;
+020549: 
+020550:         const withoutRequired = raw
+020551:             .replace(/^Required\s+/i, '')
+020552:             .trim();
+020553: 
+020554:         return /^(?:minimum|min\.?)\b/i.test(withoutRequired);
+020555:     }
+020556: 
+020557:     // V10.6.40 SAR personnel conversion registry.
+020558:     // V10.6.94: each Search Advisor requirement uses one exact type-85 Control
+020559:     // Van. Search Technicians remain
+020560:     // on the dedicated displayed-name-prefix SARTEC selector.
+020561:     // V10.6.66 restores the established two-Inspector-per-IRV rule and live-verifies Inspector bindings when the shared registry is missing or stale.
+020562:     // Police Sergeant is grouped with
+020563:     // Level 1 and Level 2, using the highest personnel requirement only.
+020564:     // This is used by both Unit Finder and Mission Update so the same
+020565:     // personnel requirement always resolves to the same vehicle quantity.
+020566:     function getSarPersonnelVehicleRequirement(
+020567:         requirementName,
+020568:         personnelAmount
+020569:     ) {
+020570:         const cleanedName =
+020571:             cleanRequirementName(
+020572:                 requirementName
+020573:             );
+020574: 
+020575:         const amountMatch =
+020576:             String(
+020577:                 personnelAmount ??
+020578:                 ''
+020579:             )
+020580:                 .replace(
+020581:                     /,/g,
+020582:                     ''
+020583:                 )
+020584:                 .match(
+020585:                     /\d+/
+020586:                 );
+020587: 
+020588:         const personnelRequired =
+020589:             amountMatch
+020590:                 ? parseInt(
+020591:                     amountMatch[0],
+020592:                     10
+020593:                 )
+020594:                 : 0;
+020595: 
+020596:         if (
+020597:             !cleanedName ||
+020598:             !Number.isFinite(
+020599:                 personnelRequired
+020600:             ) ||
+020601:             personnelRequired <= 0
+020602:         ) {
+020603:             return null;
+020604:         }
+020605: 
+020606:         const definitions = [
+020607:             {
+020608:                 pattern:
+020609:                     /^search\s+technician(?:s)?$/i,
+020610:                 personnelLabel:
+020611:                     'Search Technician',
+020612:                 unitName:
+020613:                     'SARTEC',
+020614:                 personnelPerVehicle:
+020615:                     4
+020616:             },
+020617:             {
+020618:                 pattern:
+020619:                     /^search\s+advisor(?:s)?$/i,
+020620:                 personnelLabel:
+020621:                     'Search Advisor',
+020622:                 unitName:
+020623:                     'Control Van',
+020624:                 personnelPerVehicle:
+020625:                     1
+020626:             },
+020627:             {
+020628:                 pattern:
+020629:                     /^sar\s+commander(?:s)?$/i,
+020630:                 personnelLabel:
+020631:                     'SAR Commander',
+020632:                 unitName:
+020633:                     'Control Van',
+020634:                 personnelPerVehicle:
+020635:                     2
+020636:             }
+020637:         ];
+020638: 
+020639:         const definition =
+020640:             definitions.find(item =>
+020641:                 item.pattern.test(
+020642:                     cleanedName
+020643:                 )
+020644:             );
+020645: 
+020646:         if (!definition) {
+020647:             return null;
+020648:         }
+020649: 
+020650:         const vehicleRequired =
+020651:             Math.ceil(
+020652:                 personnelRequired /
+020653:                 definition.personnelPerVehicle
+020654:             );
+020655: 
+020656:         return {
+020657:             sourceName:
+020658:                 cleanedName,
+020659:             personnelRequired,
+020660:             personnelRequirement:
+020661:                 `${personnelRequired} ${definition.personnelLabel}${personnelRequired === 1 ? '' : 's'}`,
+020662:             personnelPerVehicle:
+020663:                 definition.personnelPerVehicle,
+
+=== BLOCK 10: source lines 21993-22260 ===
+021993: 
+021994:         const armedResponseRequired =
+021995:             findRequired('armed_response_personnel');
+021996: 
+021997:         const normalised =
+021998:             source.filter(requirement => {
+021999:                 return (
+022000:                     requirement.code !==
+022001:                         'level_1_public_order' &&
+022002:                     requirement.code !==
+022003:                         'level_2_public_order' &&
+022004:                     requirement.code !==
+022005:                         'police_sergeant' &&
+022006:                     requirement.code !==
+022007:                         'police_inspector' &&
+022008:                     requirement.code !==
+022009:                         'police_medic' &&
+022010:                     requirement.code !==
+022011:                         'railway_police' &&
+022012:                     requirement.code !==
+022013:                         'armed_response_personnel'
+022014:                 );
+022015:             });
+022016: 
+022017:         const addTrainedVehicleRequirement = ({
+022018:             code,
+022019:             label,
+022020:             personnelRequired,
+022021:             requirementType =
+022022:                 'police_trained_irv_vehicle',
+022023:             eligibleVehicleTypeIds = ['8'],
+022024:             vehicleCapacityByType = {
+022025:                 '8': 2
+022026:             },
+022027:             preferredVehicleTypeIds =
+022028:                 eligibleVehicleTypeIds,
+022029:             requiredTrainingCodes = [code],
+022030:             psuCompatible = false
+022031:         }) => {
+022032:             if (personnelRequired <= 0) {
+022033:                 return;
+022034:             }
+022035: 
+022036:             const provisional = {
+022037:                 code:
+022038:                     `${code}_vehicle`,
+022039:                 label,
+022040:                 requirementType,
+022041:                 required:
+022042:                     1,
+022043:                 personnelRequired,
+022044:                 inspectorsRequired:
+022045:                     requirementType ===
+022046:                         'police_inspector_vehicle'
+022047:                         ? personnelRequired
+022048:                         : undefined,
+022049:                 personnelPerVehicle:
+022050:                     Math.max(
+022051:                         ...Object.values(
+022052:                             vehicleCapacityByType
+022053:                         ).map(value => {
+022054:                             return Math.max(
+022055:                                 1,
+022056:                                 parseInt(value, 10) || 1
+022057:                             );
+022058:                         })
+022059:                     ),
+022060:                 requiredTrainingCodes,
+022061:                 eligibleVehicleTypeIds:
+022062:                     eligibleVehicleTypeIds.map(String),
+022063:                 vehicleCapacityByType: {
+022064:                     ...vehicleCapacityByType
+022065:                 },
+022066:                 preferredVehicleTypeIds:
+022067:                     preferredVehicleTypeIds.map(String),
+022068:                 psuCompatible:
+022069:                     Boolean(psuCompatible)
+022070:             };
+022071: 
+022072:             provisional.required =
+022073:                 getPreferredTrainedVehicleCountForRequirement(
+022074:                     provisional
+022075:                 );
+022076: 
+022077:             normalised.push(provisional);
+022078:         };
+022079: 
+022080:         const addPsuCompatibleRequirement = (
+022081:             code,
+022082:             label,
+022083:             personnelRequired
+022084:         ) => {
+022085:             addTrainedVehicleRequirement({
+022086:                 code,
+022087:                 label:
+022088:                     `${label} Trained Police Unit`,
+022089:                 personnelRequired,
+022090:                 eligibleVehicleTypeIds: [
+022091:                     '51',
+022092:                     '8'
+022093:                 ],
+022094:                 vehicleCapacityByType: {
+022095:                     '51': 9,
+022096:                     '8': 2
+022097:                 },
+022098:                 preferredVehicleTypeIds: [
+022099:                     '51',
+022100:                     '8'
+022101:                 ],
+022102:                 psuCompatible:
+022103:                     true
+022104:             });
+022105:         };
+022106: 
+022107:         // Level 1, Level 2, Sergeant and Police Medic can share one PSU or IRV
+022108:         // pool. Multi-trained staff count toward every course they hold. A PSU
+022109:         // supplies up to nine personnel seats; IRVs fill small remainders.
+022110:         addPsuCompatibleRequirement(
+022111:             'level_1_public_order',
+022112:             'Level 1 Public Order',
+022113:             level1Required
+022114:         );
+022115: 
+022116:         addPsuCompatibleRequirement(
+022117:             'level_2_public_order',
+022118:             'Level 2 Public Order',
+022119:             level2Required
+022120:         );
+022121: 
+022122:         addPsuCompatibleRequirement(
+022123:             'police_sergeant',
+022124:             'Police Sergeant',
+022125:             policeSergeantRequired
+022126:         );
+022127: 
+022128:         if (policeInspectorRequired > 0) {
+022129:             addTrainedVehicleRequirement({
+022130:                 code:
+022131:                     'police_inspector',
+022132:                 label:
+022133:                     'Police Inspector Trained Police IRV',
+022134:                 personnelRequired:
+022135:                     policeInspectorRequired,
+022136:                 requirementType:
+022137:                     'police_inspector_vehicle',
+022138:                 eligibleVehicleTypeIds: [
+022139:                     '8'
+022140:                 ],
+022141:                 vehicleCapacityByType: {
+022142:                     '8': 2
+022143:                 }
+022144:             });
+022145:         }
+022146: 
+022147:         addPsuCompatibleRequirement(
+022148:             'police_medic',
+022149:             'Police Medic',
+022150:             policeMedicRequired
+022151:         );
+022152: 
+022153:         addTrainedVehicleRequirement({
+022154:             code:
+022155:                 'railway_police',
+022156:             label:
+022157:                 'Railway Police Officer Trained Police IRV',
+022158:             personnelRequired:
+022159:                 railwayPoliceRequired,
+022160:             eligibleVehicleTypeIds: [
+022161:                 '8'
+022162:             ],
+022163:             vehicleCapacityByType: {
+022164:                 '8': 2
+022165:             }
+022166:         });
+022167: 
+022168:         if (armedResponseRequired > 0) {
+022169:             addTrainedVehicleRequirement({
+022170:                 code:
+022171:                     'armed_response_atc',
+022172:                 label:
+022173:                     'Armed Response Personnel in Armed Traffic Cars',
+022174:                 personnelRequired:
+022175:                     armedResponseRequired,
+022176:                 requirementType:
+022177:                     'armed_response_atc_vehicle',
+022178:                 eligibleVehicleTypeIds: [
+022179:                     '25'
+022180:                 ],
+022181:                 vehicleCapacityByType: {
+022182:                     '25': 2
+022183:                 },
+022184:                 requiredTrainingCodes: [
+022185:                     'traffic_police',
+022186:                     'swat'
+022187:                 ]
+022188:             });
+022189:         }
+022190: 
+022191:         return normalised;
+022192:     }
+022193: 
+022194:     function isStrictLiveVerifiedTrainingEntry(
+022195:         registryEntry
+022196:     ) {
+022197:         if (!registryEntry) return false;
+022198: 
+022199:         const source =
+022200:             String(registryEntry.source || '');
+022201: 
+022202:         const updatedAt =
+022203:             Number(registryEntry.updatedAt || 0);
+022204: 
+022205:         return (
+022206:             source.startsWith(
+022207:                 MF_STRICT_TRAINING_SOURCE_PREFIX
+022208:             ) &&
+022209:             updatedAt > 0 &&
+022210:             Date.now() - updatedAt <=
+022211:                 MF_LIVE_TRAINING_VERIFY_CACHE_MS
+022212:         );
+022213:     }
+022214: 
+022215: 
+022216:     function isAuthoritativeLivePoliceTrainingEntry(
+022217:         registryEntry
+022218:     ) {
+022219:         return !!(
+022220:             isStrictLiveVerifiedTrainingEntry(
+022221:                 registryEntry
+022222:             ) &&
+022223:             registryEntry
+022224:                 .assignmentScanComplete ===
+022225:                 true &&
+022226:             registryEntry
+022227:                 .trainingProfilesComplete ===
+022228:                 true &&
+022229:             Array.isArray(
+022230:                 registryEntry.assignedTrainingProfiles
+022231:             )
+022232:         );
+022233:     }
+022234: 
+022235: 
+022236:     function getProtectedOrdinaryIrvTrainingCount(
+022237:         registryEntry
+022238:     ) {
+022239:         if (!registryEntry) return 0;
+022240: 
+022241:         const trainingCounts =
+022242:             registryEntry.trainingCounts &&
+022243:             typeof registryEntry.trainingCounts === 'object'
+022244:                 ? registryEntry.trainingCounts
+022245:                 : {};
+022246: 
+022247:         return MF_PROTECTED_ORDINARY_IRV_TRAINING_CODES
+022248:             .reduce((total, code) => {
+022249:                 return total + Math.max(
+022250:                     0,
+022251:                     parseInt(trainingCounts[code], 10) || 0
+022252:                 );
+022253:             }, 0);
+022254:     }
+022255: 
+022256:     function isKnownProtectedTrainedPoliceIrvEntry(
+022257:         registryEntry
+022258:     ) {
+022259:         if (!registryEntry) return false;
+022260: 
+
+=== BLOCK 11: source lines 22421-22481 ===
+022421:     function getTrainingRequirementRequiredCodes(
+022422:         requirement
+022423:     ) {
+022424:         const explicit =
+022425:             Array.isArray(
+022426:                 requirement?.requiredTrainingCodes
+022427:             )
+022428:                 ? requirement.requiredTrainingCodes
+022429:                 : [];
+022430: 
+022431:         const codes = explicit.length
+022432:             ? explicit
+022433:             : [requirement?.code];
+022434: 
+022435:         return Array.from(
+022436:             new Set(
+022437:                 codes
+022438:                     .map(String)
+022439:                     .filter(Boolean)
+022440:             )
+022441:         );
+022442:     }
+022443: 
+022444:     function getTrainingRequirementEligibleTypeIds(
+022445:         requirement
+022446:     ) {
+022447:         return Array.from(
+022448:             new Set(
+022449:                 (
+022450:                     requirement
+022451:                         ?.eligibleVehicleTypeIds ||
+022452:                     []
+022453:                 )
+022454:                     .map(String)
+022455:                     .filter(Boolean)
+022456:             )
+022457:         );
+022458:     }
+022459: 
+022460:     function getTrainingRequirementVehicleCapacity(
+022461:         requirement,
+022462:         vehicleTypeId
+022463:     ) {
+022464:         const typeId =
+022465:             String(vehicleTypeId || '');
+022466: 
+022467:         const configured =
+022468:             requirement?.vehicleCapacityByType &&
+022469:             typeof requirement.vehicleCapacityByType ===
+022470:                 'object'
+022471:                 ? requirement.vehicleCapacityByType
+022472:                 : {};
+022473: 
+022474:         const direct =
+022475:             Math.max(
+022476:                 0,
+022477:                 parseInt(configured[typeId], 10) || 0
+022478:             );
+022479: 
+022480:         if (direct > 0) {
+022481:             return direct;
+
+=== BLOCK 12: source lines 22648-22710 ===
+022648:             ) {
+022649:                 return typeId;
+022650:             }
+022651:         }
+022652: 
+022653:         if (eligibleSet.size === 0) {
+022654:             return checkboxTypes[0] || entryType;
+022655:         }
+022656: 
+022657:         return '';
+022658:     }
+022659: 
+022660:     function getRegistryTrainingQualifiedCount(
+022661:         requirement,
+022662:         registryEntry
+022663:     ) {
+022664:         if (
+022665:             !requirement ||
+022666:             !registryEntry
+022667:         ) {
+022668:             return 0;
+022669:         }
+022670: 
+022671:         const requiredCodes =
+022672:             getTrainingRequirementRequiredCodes(
+022673:                 requirement
+022674:             );
+022675: 
+022676:         const profiles =
+022677:             Array.isArray(
+022678:                 registryEntry.assignedTrainingProfiles
+022679:             )
+022680:                 ? registryEntry.assignedTrainingProfiles
+022681:                 : null;
+022682: 
+022683:         if (profiles) {
+022684:             return profiles.reduce((count, profile) => {
+022685:                 const profileSet =
+022686:                     new Set(
+022687:                         (
+022688:                             Array.isArray(profile)
+022689:                                 ? profile
+022690:                                 : []
+022691:                         ).map(String)
+022692:                     );
+022693: 
+022694:                 return count + (
+022695:                     requiredCodes.every(code => {
+022696:                         return profileSet.has(code);
+022697:                     })
+022698:                         ? 1
+022699:                         : 0
+022700:                 );
+022701:             }, 0);
+022702:         }
+022703: 
+022704:         const trainingCounts =
+022705:             registryEntry.trainingCounts &&
+022706:             typeof registryEntry.trainingCounts ===
+022707:                 'object'
+022708:                 ? registryEntry.trainingCounts
+022709:                 : {};
+022710: 
+
+=== BLOCK 13: source lines 22812-22925 ===
+022812:         const vehicleTypeId =
+022813:             getTrainingRequirementVehicleTypeId(
+022814:                 requirement,
+022815:                 checkbox,
+022816:                 registryEntry
+022817:             );
+022818: 
+022819:         if (!vehicleTypeId) {
+022820:             return 0;
+022821:         }
+022822: 
+022823:         const maximumCapacity =
+022824:             getTrainingRequirementVehicleCapacity(
+022825:                 requirement,
+022826:                 vehicleTypeId
+022827:             );
+022828: 
+022829:         if (
+022830:             isAuthoritativeLivePoliceTrainingEntry(
+022831:                 registryEntry
+022832:             )
+022833:         ) {
+022834:             return Math.min(
+022835:                 maximumCapacity,
+022836:                 Math.max(
+022837:                     0,
+022838:                     parseInt(
+022839:                         registryEntry.assignedPersonnelCount,
+022840:                         10
+022841:                     ) ||
+022842:                     registryEntry.assignedTrainingProfiles.length
+022843:                 )
+022844:             );
+022845:         }
+022846: 
+022847:         return maximumCapacity;
+022848:     }
+022849: 
+022850:     function isCheckboxEligibleForTrainingRequirement(
+022851:         checkbox,
+022852:         requirement,
+022853:         registryEntry = null
+022854:     ) {
+022855:         return !!getTrainingRequirementVehicleTypeId(
+022856:             requirement,
+022857:             checkbox,
+022858:             registryEntry
+022859:         );
+022860:     }
+022861: 
+022862:     function getTrainingCandidatePersonnelProfiles(
+022863:         requirements,
+022864:         checkbox,
+022865:         registryEntry = null
+022866:     ) {
+022867:         let maximumCapacity = 0;
+022868: 
+022869:         (
+022870:             Array.isArray(requirements)
+022871:                 ? requirements
+022872:                 : []
+022873:         ).forEach(requirement => {
+022874:             maximumCapacity =
+022875:                 Math.max(
+022876:                     maximumCapacity,
+022877:                     getTrainingRequirementNominalCapacity(
+022878:                         requirement,
+022879:                         checkbox,
+022880:                         registryEntry
+022881:                     )
+022882:                 );
+022883:         });
+022884: 
+022885:         if (maximumCapacity <= 0) {
+022886:             return [];
+022887:         }
+022888: 
+022889:         if (
+022890:             isAuthoritativeLivePoliceTrainingEntry(
+022891:                 registryEntry
+022892:             )
+022893:         ) {
+022894:             return registryEntry
+022895:                 .assignedTrainingProfiles
+022896:                 .slice(0, maximumCapacity)
+022897:                 .map(profile => {
+022898:                     return Array.from(
+022899:                         new Set(
+022900:                             (
+022901:                                 Array.isArray(profile)
+022902:                                     ? profile
+022903:                                     : []
+022904:                             )
+022905:                                 .map(String)
+022906:                                 .filter(Boolean)
+022907:                         )
+022908:                     );
+022909:                 });
+022910:         }
+022911: 
+022912:         // Unknown/stale candidates remain usable as untrained fallback. Their
+022913:         // exact vehicle type defines the maximum nominal personnel capacity.
+022914:         return Array.from(
+022915:             { length: maximumCapacity },
+022916:             () => []
+022917:         );
+022918:     }
+022919: 
+022920:     function doesTrainingProfileSatisfyRequirement(
+022921:         profile,
+022922:         requirement
+022923:     ) {
+022924:         const profileSet =
+022925:             new Set(
+
+=== BLOCK 14: source lines 23256-23316 ===
+023256: 
+023257:     function parseVehicleIdFromAssignmentLink(value) {
+023258:         const match = String(value || '')
+023259:             .match(/\/vehicles\/(\d+)(?:\/|$|[?#])/i);
+023260: 
+023261:         return match
+023262:             ? String(match[1])
+023263:             : '';
+023264:     }
+023265: 
+023266:     function parseLivePoliceTrainingAssignments(
+023267:         html,
+023268:         currentVehicleId
+023269:     ) {
+023270:         const doc = new DOMParser()
+023271:             .parseFromString(
+023272:                 String(html || ''),
+023273:                 'text/html'
+023274:             );
+023275: 
+023276:         const currentId =
+023277:             String(currentVehicleId || '');
+023278: 
+023279:         const supportedCodes =
+023280:             new Set(
+023281:                 MF_PROTECTED_ORDINARY_IRV_TRAINING_CODES
+023282:             );
+023283: 
+023284:         const trainingCounts = {};
+023285:         const trainingCombinationCounts = {};
+023286:         const assignedTrainingProfiles = [];
+023287:         let assignedPersonnelCount = 0;
+023288: 
+023289:         const personnelTable =
+023290:             doc.querySelector(
+023291:                 '#personal_table'
+023292:             );
+023293: 
+023294:         const personnelRows =
+023295:             personnelTable
+023296:                 ? Array.from(
+023297:                     personnelTable.querySelectorAll(
+023298:                         'tbody tr[data-filterable-by], tbody tr'
+023299:                     )
+023300:                 )
+023301:                 : [];
+023302: 
+023303:         const detectedVehicleTypeId =
+023304:             String(
+023305:                 doc.querySelector(
+023306:                     '.vehicle_image_reload[vehicle_type_id]'
+023307:                 )?.getAttribute('vehicle_type_id') ||
+023308:                 ''
+023309:             );
+023310: 
+023311:         personnelRows.forEach(row => {
+023312:             const assignmentActions =
+023313:                 Array.from(
+023314:                     row.querySelectorAll(
+023315:                         'a[href*="/zuweisungDo/"], button, input[type="submit"], input[type="button"]'
+023316:                     )
+
+=== BLOCK 15: source lines 23415-23536 ===
+023415: 
+023416:             if (/\bPolice\s+Sergeant\b/i.test(rowText)) {
+023417:                 rowCodes.add('police_sergeant');
+023418:             }
+023419: 
+023420:             if (/\bPolice\s+Medic\b/i.test(rowText)) {
+023421:                 rowCodes.add('police_medic');
+023422:             }
+023423: 
+023424:             if (/\bPolice\s+Inspector\b/i.test(rowText)) {
+023425:                 rowCodes.add('police_inspector');
+023426:             }
+023427: 
+023428:             if (
+023429:                 /\bRailway\s+Police\s+Officer\b/i.test(
+023430:                     rowText
+023431:                 ) ||
+023432:                 /\bRailway\s+Policing\b/i.test(
+023433:                     rowText
+023434:                 )
+023435:             ) {
+023436:                 rowCodes.add('railway_police');
+023437:             }
+023438: 
+023439:             const trainingProfile =
+023440:                 Array.from(rowCodes)
+023441:                     .map(String)
+023442:                     .filter(Boolean)
+023443:                     .sort();
+023444: 
+023445:             assignedTrainingProfiles.push(
+023446:                 trainingProfile
+023447:             );
+023448: 
+023449:             rowCodes.forEach(code => {
+023450:                 trainingCounts[code] =
+023451:                     Number(
+023452:                         trainingCounts[code] ||
+023453:                         0
+023454:                     ) + 1;
+023455:             });
+023456: 
+023457:             if (trainingProfile.length > 1) {
+023458:                 const exactProfileKey =
+023459:                     getMissionTrainingCombinationKey(
+023460:                         trainingProfile
+023461:                     );
+023462: 
+023463:                 trainingCombinationCounts[exactProfileKey] =
+023464:                     Number(
+023465:                         trainingCombinationCounts[exactProfileKey] ||
+023466:                         0
+023467:                     ) + 1;
+023468:             }
+023469: 
+023470:             const roadsFirearmsKey =
+023471:                 getMissionTrainingCombinationKey([
+023472:                     'traffic_police',
+023473:                     'swat'
+023474:                 ]);
+023475: 
+023476:             if (
+023477:                 rowCodes.has('traffic_police') &&
+023478:                 rowCodes.has('swat') &&
+023479:                 getMissionTrainingCombinationKey(
+023480:                     trainingProfile
+023481:                 ) !== roadsFirearmsKey
+023482:             ) {
+023483:                 trainingCombinationCounts[roadsFirearmsKey] =
+023484:                     Number(
+023485:                         trainingCombinationCounts[roadsFirearmsKey] ||
+023486:                         0
+023487:                     ) + 1;
+023488:             }
+023489:         });
+023490: 
+023491:         supportedCodes.forEach(code => {
+023492:             if (
+023493:                 !Object.prototype.hasOwnProperty.call(
+023494:                     trainingCounts,
+023495:                     code
+023496:                 )
+023497:             ) {
+023498:                 trainingCounts[code] = 0;
+023499:             }
+023500:         });
+023501: 
+023502:         return {
+023503:             vehicleId: currentId,
+023504:             trainingCounts,
+023505:             trainingCombinationCounts,
+023506:             assignedTrainingProfiles,
+023507:             trainingProfilesComplete:
+023508:                 Boolean(personnelTable),
+023509:             assignedPersonnelCount,
+023510:             assignmentScanComplete:
+023511:                 Boolean(personnelTable),
+023512:             personnelRowsSeen:
+023513:                 personnelRows.length,
+023514:             detectedVehicleTypeId,
+023515:             document: doc
+023516:         };
+023517:     }
+023518: 
+023519: 
+023520:     // Compatibility wrapper retained for older guarded call paths. The strict
+023521:     // parser now returns exact current-vehicle counts for all supported Police
+023522:     // training codes, including Police Inspector.
+023523:     function parseLivePoliceInspectorAssignments(
+023524:         html,
+023525:         currentVehicleId
+023526:     ) {
+023527:         const parsed =
+023528:             parseLivePoliceTrainingAssignments(
+023529:                 html,
+023530:                 currentVehicleId
+023531:             );
+023532: 
+023533:         return {
+023534:             countsByVehicleId: {
+023535:                 [String(currentVehicleId || '')]:
+023536:                     Number(
+
+=== BLOCK 16: source lines 23929-23990 ===
+023929:                             existing.vehicleName ||
+023930:                             getVehicleDebugName(checkbox),
+023931:                         vehicleTypeId:
+023932:                             detectedType,
+023933:                         assignedPersonnelCount:
+023934:                             parsed.assignedPersonnelCount,
+023935:                         assignmentScanComplete:
+023936:                             parsed.assignmentScanComplete,
+023937:                         personnelRowsSeen:
+023938:                             parsed.personnelRowsSeen,
+023939:                         trainingCounts: {
+023940:                             ...(
+023941:                                 existing.trainingCounts &&
+023942:                                 typeof existing.trainingCounts ===
+023943:                                     'object'
+023944:                                     ? existing.trainingCounts
+023945:                                     : {}
+023946:                             ),
+023947:                             ...parsed.trainingCounts
+023948:                         },
+023949:                         trainingCombinationCounts: {
+023950:                             ...(
+023951:                                 existing.trainingCombinationCounts &&
+023952:                                 typeof existing.trainingCombinationCounts ===
+023953:                                     'object'
+023954:                                     ? existing.trainingCombinationCounts
+023955:                                     : {}
+023956:                             ),
+023957:                             ...parsed.trainingCombinationCounts
+023958:                         },
+023959:                         assignedTrainingProfiles:
+023960:                             parsed.assignedTrainingProfiles,
+023961:                         trainingProfilesComplete:
+023962:                             parsed.trainingProfilesComplete,
+023963:                         updatedAt:
+023964:                             Date.now(),
+023965:                         source:
+023966:                             `${MF_STRICT_TRAINING_SOURCE_PREFIX}` +
+023967:                             `coverage-${String(source || 'update').toLowerCase()}-v106101`
+023968:                     };
+023969: 
+023970:                     mfLiveTrainingVerifyCache.set(
+023971:                         vehicleId,
+023972:                         Date.now()
+023973:                     );
+023974: 
+023975:                     verifiedIds.add(vehicleId);
+023976:                     pagesRead += 1;
+023977:                     changed = true;
+023978:                 });
+023979: 
+023980:             if (changed) {
+023981:                 savePersonnelTrainingRegistry(
+023982:                     registry
+023983:                 );
+023984:             }
+023985: 
+023986:             if (requirementsSatisfiedByVerified()) {
+023987:                 break;
+023988:             }
+023989:         }
+023990: 
+
+=== BLOCK 17: source lines 25028-25094 ===
+025028:             };
+025029:         });
+025030:     }
+025031: 
+025032:     function getSupportedMissingPersonnelRowsFromText(
+025033:         text,
+025034:         options = {}
+025035:     ) {
+025036:         const silent = !!(options && options.silent);
+025037: 
+025038:         const personnelSegment =
+025039:             getMissingPersonnelSegment(
+025040:                 text
+025041:             );
+025042: 
+025043:         if (!personnelSegment) {
+025044:             return [];
+025045:         }
+025046: 
+025047:         const rows = [];
+025048: 
+025049:         const sarPersonnelDefinitions = [
+025050:             {
+025051:                 displayName:
+025052:                     'Search Technicians',
+025053:                 namePattern:
+025054:                     'search\\s+technician(?:s)?'
+025055:             },
+025056:             {
+025057:                 displayName:
+025058:                     'Search Advisors',
+025059:                 namePattern:
+025060:                     'search\\s+advisor(?:s)?'
+025061:             },
+025062:             {
+025063:                 displayName:
+025064:                     'SAR Commanders',
+025065:                 namePattern:
+025066:                     'sar\\s+commander(?:s)?'
+025067:             }
+025068:         ];
+025069: 
+025070:         sarPersonnelDefinitions.forEach(
+025071:             definition => {
+025072:                 const personnelRequired =
+025073:                     getNamedPersonnelCount(
+025074:                         personnelSegment,
+025075:                         definition.namePattern
+025076:                     );
+025077: 
+025078:                 if (personnelRequired <= 0) {
+025079:                     return;
+025080:                 }
+025081: 
+025082:                 const conversion =
+025083:                     getSarPersonnelVehicleRequirement(
+025084:                         definition.displayName,
+025085:                         personnelRequired
+025086:                     );
+025087: 
+025088:                 if (!conversion) {
+025089:                     return;
+025090:                 }
+025091: 
+025092:                 rows.push({
+025093:                     unitName:
+025094:                         conversion.unitName,
+
+=== BLOCK 18: source lines 30540-30601 ===
+030540: 
+030541:                 if (
+030542:                     !Number.isFinite(amount) ||
+030543:                     amount <= 0
+030544:                 ) {
+030545:                     return;
+030546:                 }
+030547: 
+030548:                 recordUpdateRequirement(
+030549:                     'Seagoing Vessel',
+030550:                     amount,
+030551:                     'visible-missing-vehicles-alert',
+030552:                     {
+030553:                         dispatchTargetMode: 'total',
+030554:                         explicitMissingVehicles: true
+030555:                     }
+030556:                 );
+030557: 
+030558:                 if (mfDebugEnabled && !silent) {
+030559:                     debugLog(
+030560:                         'UPDATE SEAGOING',
+030561:                         `Missing Vehicles text -> ALB x${amount}`
+030562:                     );
+030563:                 }
+030564:             });
+030565:         });
+030566: 
+030567:         // Missing Personnel is an actionable mission update, not a
+030568:         // vehicle staffing fault. Supported personnel conversions include:
+030569:         // Search Technicians = 4 per displayed-name-prefix SARTEC vehicle
+030570:         // Search Advisors = 1 per exact type-85 Control Van
+030571:         // SAR Commanders = 2 per Control Van
+030572:         // 3 Police Officers = 2 Police Cars
+030573:         // 6 Mud Rescue Operators = 2 Coastguard Mud Rescue Units
+030574:         // Normal update-table vehicle requirements are selected as well.
+030575:         let maximumSartecUnitsFromPersonnel = 0;
+030576: 
+030577:         const trainedPersonnelRequirements =
+030578:             new Map();
+030579: 
+030580:         const explicitTrainedPersonnelRequirements =
+030581:             new Map();
+030582: 
+030583:         if (
+030584:             tableLevel1PublicOrderRequired >
+030585:                 0 ||
+030586:             tableLevel2PublicOrderRequired >
+030587:                 0 ||
+030588:             tablePoliceSergeantRequired >
+030589:                 0 ||
+030590:             tablePoliceInspectorRequired >
+030591:                 0 ||
+030592:             tablePoliceMedicRequired >
+030593:                 0 ||
+030594:             tableRailwayPoliceRequired >
+030595:                 0 ||
+030596:             tableArmedResponseRequired >
+030597:                 0
+030598:         ) {
+030599:             mergeTrainedPersonnelRequirements(
+030600:                 trainedPersonnelRequirements,
+030601:                 normalisePublicOrderTrainedRequirements([
+
+=== BLOCK 19: source lines 31802-31862 ===
+031802:     function handleMissionUpdateUnits(showAlerts, suppliedRows = null, options = {}) {
+031803:         if (!isCurrentMissionExecutionOwner('Mission Update')) {
+031804:             return false;
+031805:         }
+031806: 
+031807:         synchroniseMissionInstanceState('Mission Update start');
+031808: 
+031809:         updateStatusBox("Checking mission update requirements...");
+031810: 
+031811:         if (
+031812:             detectAndLatchStaffingBlock(
+031813:                 'before-mission-update-selection'
+031814:             )
+031815:         ) {
+031816:             updateStatusBox(
+031817:                 'Mission update is a staffing/qualification shortage. No extra vehicles selected.'
+031818:             );
+031819:             changeDispatchBoxColor(false);
+031820:             return false;
+031821:         }
+031822: 
+031823:         const rawMissingRows =
+031824:             Array.isArray(
+031825:                 suppliedRows
+031826:             )
+031827:                 ? suppliedRows
+031828:                 : readMissionUpdateRows();
+031829: 
+031830:         // Supplied live-table rows can bypass readMissionUpdateRows(), so run
+031831:         // the same personnel-to-vehicle conversion at the Upgrade entry point.
+031832:         // This restores SAR Commander -> Control Van parity with Unit Finder.
+031833:         const missingRows =
+031834:             normaliseOperationalRequirementRows(
+031835:                 rawMissingRows
+031836:             );
+031837: 
+031838:         if (mfDebugEnabled) {
+031839:             debugLog(
+031840:                 'UPDATE ONLY',
+031841:                 missingRows.length
+031842:                     ? `Active mission rows only: ${missingRows.map(row => `${row.unitName} x${row.stillNeeded}`).join(', ')}`
+031843:                     : 'No visible active-mission update rows found. Hidden and previous mission requirements were ignored.'
+031844:             );
+031845:         }
+031846: 
+031847:         if (missingRows.length === 0) {
+031848:             updateStatusBox("No mission update units needed.");
+031849:             return false;
+031850:         }
+031851: 
+031852:         const missingAfterAttempt = [];
+031853:         const trainedPersonnelWarnings = [];
+031854: 
+031855:         missingRows.forEach(item => {
+031856:             if (
+031857:                 isPublicOrderPersonnelRequirementName(
+031858:                     item?.unitName
+031859:                 )
+031860:             ) {
+031861:                 if (
+031862:                     mfDebugEnabled
+
+=== FULL TOP-LEVEL FUNCTIONS ===
+
+=== FUNCTION getSarPersonnelVehicleRequirement: source lines 20566-20671 ===
+    function getSarPersonnelVehicleRequirement(
+        requirementName,
+        personnelAmount
+    ) {
+        const cleanedName =
+            cleanRequirementName(
+                requirementName
+            );
+
+        const amountMatch =
+            String(
+                personnelAmount ??
+                ''
+            )
+                .replace(
+                    /,/g,
+                    ''
+                )
+                .match(
+                    /\d+/
+                );
+
+        const personnelRequired =
+            amountMatch
+                ? parseInt(
+                    amountMatch[0],
+                    10
+                )
+                : 0;
+
+        if (
+            !cleanedName ||
+            !Number.isFinite(
+                personnelRequired
+            ) ||
+            personnelRequired <= 0
+        ) {
+            return null;
+        }
+
+        const definitions = [
+            {
+                pattern:
+                    /^search\s+technician(?:s)?$/i,
+                personnelLabel:
+                    'Search Technician',
+                unitName:
+                    'SARTEC',
+                personnelPerVehicle:
+                    4
+            },
+            {
+                pattern:
+                    /^search\s+advisor(?:s)?$/i,
+                personnelLabel:
+                    'Search Advisor',
+                unitName:
+                    'Control Van',
+                personnelPerVehicle:
+                    1
+            },
+            {
+                pattern:
+                    /^sar\s+commander(?:s)?$/i,
+                personnelLabel:
+                    'SAR Commander',
+                unitName:
+                    'Control Van',
+                personnelPerVehicle:
+                    2
+            }
+        ];
+
+        const definition =
+            definitions.find(item =>
+                item.pattern.test(
+                    cleanedName
+                )
+            );
+
+        if (!definition) {
+            return null;
+        }
+
+        const vehicleRequired =
+            Math.ceil(
+                personnelRequired /
+                definition.personnelPerVehicle
+            );
+
+        return {
+            sourceName:
+                cleanedName,
+            personnelRequired,
+            personnelRequirement:
+                `${personnelRequired} ${definition.personnelLabel}${personnelRequired === 1 ? '' : 's'}`,
+            personnelPerVehicle:
+                definition.personnelPerVehicle,
+            unitName:
+                definition.unitName,
+            stillNeeded:
+                vehicleRequired
+        };
+    }
+
+=== FUNCTION getSupportedTrainedPersonnelRequirementsFromText: source lines 21872-21957 ===
+    function getSupportedTrainedPersonnelRequirementsFromText(
+        text
+    ) {
+        const input =
+            String(
+                text ||
+                ''
+            )
+                .replace(
+                    /\s+/g,
+                    ' '
+                )
+                .trim();
+
+        if (
+            !input ||
+            !/Missing\s+Personnel:/i.test(
+                input
+            )
+        ) {
+            return [];
+        }
+
+        const requirements =
+            new Map();
+
+        MF_TRAINED_PERSONNEL_PATTERNS
+            .forEach(definition => {
+                let maximumRequired = 0;
+
+                definition.patterns
+                    .forEach(pattern => {
+                        pattern.lastIndex = 0;
+
+                        let match;
+
+                        while (
+                            (
+                                match =
+                                    pattern.exec(
+                                        input
+                                    )
+                            )
+                        ) {
+                            const required =
+                                Math.max(
+                                    0,
+                                    parseInt(
+                                        match[1],
+                                        10
+                                    ) || 0
+                                );
+
+                            maximumRequired =
+                                Math.max(
+                                    maximumRequired,
+                                    required
+                                );
+                        }
+                    });
+
+                if (
+                    maximumRequired > 0
+                ) {
+                    requirements.set(
+                        definition.code,
+                        {
+                            code:
+                                definition.code,
+                            label:
+                                definition.label,
+                            required:
+                                maximumRequired
+                        }
+                    );
+                }
+            });
+
+        return normalisePublicOrderTrainedRequirements(
+            Array.from(
+                requirements.values()
+            )
+        );
+    }
+
+=== FUNCTION getTrainingRequirementPersonnelTarget: source lines 22392-22421 ===
+    function getTrainingRequirementPersonnelTarget(requirement) {
+        if (!requirement) return 0;
+
+        const explicitPersonnelTargets = [
+            requirement.personnelRequired,
+            requirement.inspectorsRequired
+        ]
+            .map(value => Math.max(0, parseInt(value, 10) || 0))
+            .filter(value => value > 0);
+
+        if (explicitPersonnelTargets.length > 0) {
+            return Math.max(...explicitPersonnelTargets);
+        }
+
+        const requiredVehicles =
+            Math.max(0, parseInt(requirement.required, 10) || 0);
+
+        const personnelPerVehicle =
+            Math.max(
+                1,
+                parseInt(
+                    requirement.personnelPerVehicle,
+                    10
+                ) || 1
+            );
+
+        return requiredVehicles * personnelPerVehicle;
+    }
+
+=== FUNCTION getTrainingRequirementRequiredCodes: source lines 22421-22444 ===
+    function getTrainingRequirementRequiredCodes(
+        requirement
+    ) {
+        const explicit =
+            Array.isArray(
+                requirement?.requiredTrainingCodes
+            )
+                ? requirement.requiredTrainingCodes
+                : [];
+
+        const codes = explicit.length
+            ? explicit
+            : [requirement?.code];
+
+        return Array.from(
+            new Set(
+                codes
+                    .map(String)
+                    .filter(Boolean)
+            )
+        );
+    }
+
+=== FUNCTION getTrainingRequirementEligibleTypeIds: source lines 22444-22460 ===
+    function getTrainingRequirementEligibleTypeIds(
+        requirement
+    ) {
+        return Array.from(
+            new Set(
+                (
+                    requirement
+                        ?.eligibleVehicleTypeIds ||
+                    []
+                )
+                    .map(String)
+                    .filter(Boolean)
+            )
+        );
+    }
+
+=== FUNCTION getTrainingRequirementVehicleCapacity: source lines 22460-22508 ===
+    function getTrainingRequirementVehicleCapacity(
+        requirement,
+        vehicleTypeId
+    ) {
+        const typeId =
+            String(vehicleTypeId || '');
+
+        const configured =
+            requirement?.vehicleCapacityByType &&
+            typeof requirement.vehicleCapacityByType ===
+                'object'
+                ? requirement.vehicleCapacityByType
+                : {};
+
+        const direct =
+            Math.max(
+                0,
+                parseInt(configured[typeId], 10) || 0
+            );
+
+        if (direct > 0) {
+            return direct;
+        }
+
+        const shared =
+            Math.max(
+                0,
+                parseInt(
+                    MF_TRAINED_VEHICLE_CAPACITY_BY_TYPE[
+                        typeId
+                    ],
+                    10
+                ) || 0
+            );
+
+        if (shared > 0) {
+            return shared;
+        }
+
+        return Math.max(
+            1,
+            parseInt(
+                requirement?.personnelPerVehicle,
+                10
+            ) || 1
+        );
+    }
+
+=== FUNCTION getTrainedPersonnelVehicleTarget: source lines 22940-22964 ===
+    function getTrainedPersonnelVehicleTarget(
+        requirements
+    ) {
+        const targets =
+            (
+                Array.isArray(requirements)
+                    ? requirements
+                    : []
+            )
+                .map(requirement => {
+                    return getPreferredTrainedVehicleCountForRequirement(
+                        requirement
+                    );
+                })
+                .filter(target => target > 0);
+
+        // Compatible multi-trained staff can satisfy several requirement rows
+        // from the same vehicle, so the shared target is the largest individual
+        // vehicle plan rather than the sum of every course plan.
+        return targets.length
+            ? Math.max(...targets)
+            : 1;
+    }
+
+=== FUNCTION mergeTrainedPersonnelRequirements: source lines 22964-23020 ===
+    function mergeTrainedPersonnelRequirements(
+        target,
+        requirements
+    ) {
+        (
+            Array.isArray(requirements)
+                ? requirements
+                : []
+        ).forEach(requirement => {
+            const code =
+                String(
+                    requirement?.code ||
+                    ''
+                );
+
+            const required =
+                Math.max(
+                    0,
+                    parseInt(
+                        requirement?.required,
+                        10
+                    ) || 0
+                );
+
+            if (
+                !code ||
+                required <= 0
+            ) {
+                return;
+            }
+
+            const existing =
+                target.get(code);
+
+            if (
+                !existing ||
+                required >
+                    existing.required
+            ) {
+                target.set(
+                    code,
+                    {
+                        ...requirement,
+                        code,
+                        label:
+                            String(
+                                requirement?.label ||
+                                code
+                            ),
+                        required
+                    }
+                );
+            }
+        });
+    }
+
+=== FUNCTION getRegistryTrainingQualifiedCount: source lines 22660-22746 ===
+    function getRegistryTrainingQualifiedCount(
+        requirement,
+        registryEntry
+    ) {
+        if (
+            !requirement ||
+            !registryEntry
+        ) {
+            return 0;
+        }
+
+        const requiredCodes =
+            getTrainingRequirementRequiredCodes(
+                requirement
+            );
+
+        const profiles =
+            Array.isArray(
+                registryEntry.assignedTrainingProfiles
+            )
+                ? registryEntry.assignedTrainingProfiles
+                : null;
+
+        if (profiles) {
+            return profiles.reduce((count, profile) => {
+                const profileSet =
+                    new Set(
+                        (
+                            Array.isArray(profile)
+                                ? profile
+                                : []
+                        ).map(String)
+                    );
+
+                return count + (
+                    requiredCodes.every(code => {
+                        return profileSet.has(code);
+                    })
+                        ? 1
+                        : 0
+                );
+            }, 0);
+        }
+
+        const trainingCounts =
+            registryEntry.trainingCounts &&
+            typeof registryEntry.trainingCounts ===
+                'object'
+                ? registryEntry.trainingCounts
+                : {};
+
+        const combinationCounts =
+            registryEntry.trainingCombinationCounts &&
+            typeof registryEntry.trainingCombinationCounts ===
+                'object'
+                ? registryEntry.trainingCombinationCounts
+                : {};
+
+        if (requiredCodes.length > 1) {
+            const combinationKey =
+                getMissionTrainingCombinationKey(
+                    requiredCodes
+                );
+
+            return Math.max(
+                0,
+                parseInt(
+                    combinationCounts[combinationKey],
+                    10
+                ) || 0
+            );
+        }
+
+        const code =
+            requiredCodes[0] ||
+            String(requirement.code || '');
+
+        return Math.max(
+            0,
+            parseInt(
+                trainingCounts[code],
+                10
+            ) || 0
+        );
+    }
+
+=== FUNCTION getTrainingCandidatePersonnelProfiles: source lines 22862-22920 ===
+    function getTrainingCandidatePersonnelProfiles(
+        requirements,
+        checkbox,
+        registryEntry = null
+    ) {
+        let maximumCapacity = 0;
+
+        (
+            Array.isArray(requirements)
+                ? requirements
+                : []
+        ).forEach(requirement => {
+            maximumCapacity =
+                Math.max(
+                    maximumCapacity,
+                    getTrainingRequirementNominalCapacity(
+                        requirement,
+                        checkbox,
+                        registryEntry
+                    )
+                );
+        });
+
+        if (maximumCapacity <= 0) {
+            return [];
+        }
+
+        if (
+            isAuthoritativeLivePoliceTrainingEntry(
+                registryEntry
+            )
+        ) {
+            return registryEntry
+                .assignedTrainingProfiles
+                .slice(0, maximumCapacity)
+                .map(profile => {
+                    return Array.from(
+                        new Set(
+                            (
+                                Array.isArray(profile)
+                                    ? profile
+                                    : []
+                            )
+                                .map(String)
+                                .filter(Boolean)
+                        )
+                    );
+                });
+        }
+
+        // Unknown/stale candidates remain usable as untrained fallback. Their
+        // exact vehicle type defines the maximum nominal personnel capacity.
+        return Array.from(
+            { length: maximumCapacity },
+            () => []
+        );
+    }
+
+=== FUNCTION selectVehiclesForTrainedPersonnelRequirements: source lines 24712-24956 ===
+    function selectVehiclesForTrainedPersonnelRequirements(
+        requirements,
+        source = 'UPDATE'
+    ) {
+        const registry =
+            readPersonnelTrainingRegistry();
+
+        const registryVehicleCount =
+            Object.keys(
+                registry.vehicles ||
+                {}
+            ).length;
+
+        const selected =
+            getVehicleCheckboxSnapshot().filter(
+                checkbox => checkbox.checked
+            );
+
+        let remaining =
+            getRemainingTrainedPersonnelRequirements(
+                requirements,
+                selected,
+                registry
+            );
+
+        const initiallyCovered =
+            remaining.every(requirement => {
+                return requirement.capacityRemaining <= 0;
+            });
+
+        if (initiallyCovered) {
+            const trainingSatisfied =
+                remaining.every(requirement => {
+                    return requirement.remaining <= 0;
+                });
+
+            return {
+                satisfied:
+                    true,
+                vehicleCoverageSatisfied:
+                    true,
+                trainingSatisfied,
+                selectedVehicles:
+                    0,
+                trainedVehicles:
+                    0,
+                fallbackVehicles:
+                    0,
+                selectedVehicleCount:
+                    countSelectedTrainingVehicles(
+                        requirements,
+                        registry
+                    ),
+                remaining,
+                trainingRemaining:
+                    remaining,
+                capacityRemaining:
+                    remaining,
+                registryVehicleCount
+            };
+        }
+
+        const readyCandidates =
+            sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(checkbox => {
+                    if (
+                        checkbox.disabled ||
+                        checkbox.checked
+                    ) {
+                        return false;
+                    }
+
+                    const registryMatch =
+                        getRegistryEntryForMissionCheckbox(
+                            checkbox,
+                            registry
+                        );
+
+                    return (
+                        Array.isArray(requirements)
+                            ? requirements
+                            : []
+                    ).some(requirement => {
+                        return isCheckboxEligibleForTrainingRequirement(
+                            checkbox,
+                            requirement,
+                            registryMatch.entry
+                        );
+                    });
+                })
+            );
+
+        const arrivalIndex =
+            new Map(
+                readyCandidates.map((checkbox, index) => [
+                    checkbox,
+                    index
+                ])
+            );
+
+        const used = new Set();
+        let selectedVehicles = 0;
+        let trainedVehicles = 0;
+        let fallbackVehicles = 0;
+
+        const runSelectionPhase = trainedPhase => {
+            while (
+                remaining.some(requirement => {
+                    return requirement.capacityRemaining > 0;
+                })
+            ) {
+                let bestCheckbox = null;
+                let bestEntry = null;
+                let bestMetrics = null;
+                let bestScore =
+                    Number.NEGATIVE_INFINITY;
+
+                readyCandidates.forEach(checkbox => {
+                    if (used.has(checkbox)) {
+                        return;
+                    }
+
+                    const registryMatch =
+                        getRegistryEntryForMissionCheckbox(
+                            checkbox,
+                            registry
+                        );
+
+                    const metrics =
+                        getTrainedCandidateMetrics(
+                            remaining,
+                            checkbox,
+                            registryMatch.entry
+                        );
+
+                    const score =
+                        getTrainedVehicleSelectionScore(
+                            metrics,
+                            trainedPhase
+                        );
+
+                    if (
+                        score > bestScore ||
+                        (
+                            score === bestScore &&
+                            bestCheckbox &&
+                            arrivalIndex.get(checkbox) <
+                                arrivalIndex.get(bestCheckbox)
+                        )
+                    ) {
+                        bestCheckbox = checkbox;
+                        bestEntry = registryMatch.entry;
+                        bestMetrics = metrics;
+                        bestScore = score;
+                    }
+                });
+
+                if (
+                    !bestCheckbox ||
+                    !bestMetrics?.eligible ||
+                    (
+                        trainedPhase &&
+                        bestMetrics.trainedUseful <= 0
+                    )
+                ) {
+                    break;
+                }
+
+                used.add(bestCheckbox);
+
+                if (!clickVehicleElement(bestCheckbox)) {
+                    continue;
+                }
+
+                selectedVehicles += 1;
+
+                if (bestMetrics.trainedUseful > 0) {
+                    trainedVehicles += 1;
+                } else {
+                    fallbackVehicles += 1;
+                }
+
+                remaining =
+                    applyTrainingCandidateToRemaining(
+                        remaining,
+                        bestCheckbox,
+                        bestEntry
+                    );
+
+                if (mfDebugEnabled) {
+                    debugLog(
+                        trainedPhase
+                            ? 'TRAINED COVERAGE CLICK'
+                            : 'TRAINING FALLBACK CLICK',
+                        `${source} | ${getVehicleDebugName(bestCheckbox)} | ` +
+                        `trained=${bestMetrics.trainedUseful} | ` +
+                        `capacity=${bestMetrics.capacityUseful} | ` +
+                        `overshoot=${bestMetrics.overshoot} | ` +
+                        `training remaining=${remaining.map(item => `${item.label}:${item.remaining}`).join(', ')} | ` +
+                        `capacity remaining=${remaining.map(item => `${item.label}:${item.capacityRemaining}`).join(', ')}`
+                    );
+                }
+            }
+        };
+
+        // Phase one chooses the best available trained coverage. Phase two is
+        // deliberately allowed to select correct-type vehicles with no verified
+        // training so the mission can still be sent; the training deficit is
+        // returned separately and never hidden.
+        runSelectionPhase(true);
+        runSelectionPhase(false);
+
+        const vehicleCoverageSatisfied =
+            remaining.every(requirement => {
+                return requirement.capacityRemaining <= 0;
+            });
+
+        const trainingSatisfied =
+            remaining.every(requirement => {
+                return requirement.remaining <= 0;
+            });
+
+        return {
+            satisfied:
+                vehicleCoverageSatisfied,
+            vehicleCoverageSatisfied,
+            trainingSatisfied,
+            selectedVehicles,
+            trainedVehicles,
+            fallbackVehicles,
+            selectedVehicleCount:
+                countSelectedTrainingVehicles(
+                    requirements,
+                    registry
+                ),
+            remaining,
+            trainingRemaining:
+                remaining,
+            capacityRemaining:
+                remaining,
+            registryVehicleCount
+        };
+    }
+
+=== FUNCTION getSupportedMissingPersonnelRowsFromText: source lines 25032-25184 ===
+    function getSupportedMissingPersonnelRowsFromText(
+        text,
+        options = {}
+    ) {
+        const silent = !!(options && options.silent);
+
+        const personnelSegment =
+            getMissingPersonnelSegment(
+                text
+            );
+
+        if (!personnelSegment) {
+            return [];
+        }
+
+        const rows = [];
+
+        const sarPersonnelDefinitions = [
+            {
+                displayName:
+                    'Search Technicians',
+                namePattern:
+                    'search\\s+technician(?:s)?'
+            },
+            {
+                displayName:
+                    'Search Advisors',
+                namePattern:
+                    'search\\s+advisor(?:s)?'
+            },
+            {
+                displayName:
+                    'SAR Commanders',
+                namePattern:
+                    'sar\\s+commander(?:s)?'
+            }
+        ];
+
+        sarPersonnelDefinitions.forEach(
+            definition => {
+                const personnelRequired =
+                    getNamedPersonnelCount(
+                        personnelSegment,
+                        definition.namePattern
+                    );
+
+                if (personnelRequired <= 0) {
+                    return;
+                }
+
+                const conversion =
+                    getSarPersonnelVehicleRequirement(
+                        definition.displayName,
+                        personnelRequired
+                    );
+
+                if (!conversion) {
+                    return;
+                }
+
+                rows.push({
+                    unitName:
+                        conversion.unitName,
+                    stillNeeded:
+                        conversion.stillNeeded,
+                    personnelRequirement:
+                        conversion.personnelRequirement
+                });
+
+                if (
+                    mfDebugEnabled &&
+                    !silent
+                ) {
+                    debugLog(
+                        'UPDATE PERSONNEL',
+                        `${conversion.personnelRequirement} -> select ${conversion.unitName} x${conversion.stillNeeded} (${conversion.personnelPerVehicle} personnel per vehicle)`
+                    );
+                }
+            }
+        );
+
+        // Police Cars normally carry 2 Police Officers.
+        const policeOfficersNeeded =
+            getNamedPersonnelCount(
+                personnelSegment,
+                'police\\s+officer(?:s)?'
+            );
+
+        if (policeOfficersNeeded > 0) {
+            const policeCarsNeeded =
+                Math.ceil(
+                    policeOfficersNeeded /
+                    2
+                );
+
+            rows.push({
+                unitName:
+                    'Police Car',
+                stillNeeded:
+                    policeCarsNeeded,
+                personnelRequirement:
+                    `${policeOfficersNeeded} Police Officer${policeOfficersNeeded === 1 ? '' : 's'}`
+            });
+
+            if (
+                mfDebugEnabled &&
+                !silent
+            ) {
+                debugLog(
+                    'UPDATE PERSONNEL',
+                    `${policeOfficersNeeded} Police Officer${policeOfficersNeeded === 1 ? '' : 's'} -> select Police Car x${policeCarsNeeded}`
+                );
+            }
+        }
+
+        // Coastguard Mud Rescue Units carry 5 Mud Rescue Operators each.
+        const mudRescueOperatorsNeeded =
+            getNamedPersonnelCount(
+                personnelSegment,
+                'mud\\s+rescue\\s+operator(?:s)?'
+            );
+
+        if (mudRescueOperatorsNeeded > 0) {
+            const mudRescueUnitsNeeded =
+                Math.ceil(
+                    mudRescueOperatorsNeeded /
+                    5
+                );
+
+            rows.push({
+                unitName:
+                    'Coastguard Mud Rescue Unit',
+                stillNeeded:
+                    mudRescueUnitsNeeded,
+                personnelRequirement:
+                    `${mudRescueOperatorsNeeded} Mud Rescue Operator${mudRescueOperatorsNeeded === 1 ? '' : 's'}`
+            });
+
+            if (
+                mfDebugEnabled &&
+                !silent
+            ) {
+                debugLog(
+                    'UPDATE PERSONNEL',
+                    `${mudRescueOperatorsNeeded} Mud Rescue Operator${mudRescueOperatorsNeeded === 1 ? '' : 's'} -> select Coastguard Mud Rescue Unit x${mudRescueUnitsNeeded}`
+                );
+            }
+        }
+
+        return rows;
+    }
+
