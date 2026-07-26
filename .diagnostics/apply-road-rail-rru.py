@@ -124,28 +124,3 @@ entry = dedent(
 '''
 )
 changelog.write_text(text.replace(marker, entry + marker, 1), encoding="utf-8")
-
-workflow = Path(".github/workflows/validate-userscript.yml")
-text = workflow.read_text(encoding="utf-8")
-path_token = "      - 'scripts/check-trained-coverage-optimizer.mjs'\n"
-if text.count(path_token) != 2:
-    raise SystemExit("Expected two trained-coverage workflow path entries")
-text = text.replace(
-    path_token,
-    path_token + "      - 'scripts/check-road-rail-rru-mapping.mjs'\n",
-)
-step_token = (
-    "      - name: Validate trained-personnel coverage optimiser contracts\n"
-    "        run: node scripts/check-trained-coverage-optimizer.mjs\n"
-)
-if text.count(step_token) != 1:
-    raise SystemExit("Unable to find trained-coverage validation step")
-text = text.replace(
-    step_token,
-    step_token
-    + "\n"
-    + "      - name: Validate Road Rail Unit to RRU mapping\n"
-    + "        run: node scripts/check-road-rail-rru-mapping.mjs\n",
-    1,
-)
-workflow.write_text(text, encoding="utf-8")
