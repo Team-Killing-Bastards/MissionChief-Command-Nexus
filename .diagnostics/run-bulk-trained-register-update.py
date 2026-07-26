@@ -26,6 +26,23 @@ replacement = """source = replace_once(
 )"""
 
 patched_builder = builder[:start] + replacement + builder[end:]
+
+# The builder writes JavaScript from a Python triple-quoted replacement. Keep
+# the newline escaped for JavaScript instead of letting Python insert a literal
+# line break inside a double-quoted requireText token.
+old_open_issue_token = r'''requireText("code:\n                    'search_and_rescue'",'''
+new_open_issue_token = r'''requireText("code:\\n                    'search_and_rescue'",'''
+match_count = patched_builder.count(old_open_issue_token)
+if match_count != 1:
+    raise SystemExit(
+        f'Open-issues Search Advisor token: expected one builder match, found {match_count}'
+    )
+patched_builder = patched_builder.replace(
+    old_open_issue_token,
+    new_open_issue_token,
+    1,
+)
+
 namespace = {
     '__name__': '__main__',
     '__file__': str(builder_path),
