@@ -5,6 +5,9 @@ import re
 source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8')
 funcs = list(re.finditer(r'^\s*(?:async\s+)?function\s+([A-Za-z0-9_$]+)\s*\(', source, re.M))
 requested = {
+    'parseTrainingCodes',
+    'normalizePersonnelVehicleName',
+    'getVehicleIdFromHref',
     'parseVehicleAssignmentPage',
     'getPersonnelAssignmentIndex',
     'getPersonnelAssignedToVehicle',
