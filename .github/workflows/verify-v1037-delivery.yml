@@ -29,44 +29,35 @@ jobs:
           fetch-depth: 0
           show-progress: false
 
-      - name: Verify GitHub, Greasy Fork and Discord delivery
+      - name: Wait for and verify GitHub release assets
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: v1.0.37
-          GREASYFORK_INSTALL_URL: ${{ vars.GREASYFORK_INSTALL_URL }}
-          SOURCE_PR: ${{ github.event.pull_request.number }}
         shell: bash
         run: |
           set -euo pipefail
-
-          if [[ -z "${GREASYFORK_INSTALL_URL}" ]]; then
-            echo 'GREASYFORK_INSTALL_URL repository variable is missing.'
-            exit 1
-          fi
-
           git fetch origin main --tags --force
           ASSET='MissionChief-Command-Nexus-1.0.37.user.js'
           CHECKSUM_ASSET="${ASSET}.sha256"
 
-          gh release view "${RELEASE_TAG}" \
-            --json url,isDraft,isPrerelease,targetCommitish,assets \
-            > /tmp/release.json
-
-          [[ "$(jq -r '.isDraft' /tmp/release.json)" == 'false' ]]
-          [[ "$(jq -r '.isPrerelease' /tmp/release.json)" == 'false' ]]
-          RELEASE_URL="$(jq -r '.url' /tmp/release.json)"
-
-          for required_asset in "${ASSET}" "${CHECKSUM_ASSET}"; do
-            count="$(jq -r --arg name "${required_asset}" '[.assets[] | select(.name == $name)] | length' /tmp/release.json)"
-            [[ "${count}" == '1' ]]
+          for attempt in $(seq 1 60); do
+            if gh release view "${RELEASE_TAG}" \
+              --json url,isDraft,isPrerelease,targetCommitish,assets \
+              > /tmp/release.json 2>/tmp/release-error.txt; then
+              asset_count="$(jq -r --arg a "${ASSET}" --arg c "${CHECKSUM_ASSET}" '[.assets[] | select(.name == $a or .name == $c)] | unique_by(.name) | length' /tmp/release.json)"
+              if [[ "$(jq -r '.isDraft' /tmp/release.json)" == 'false' && \
+                    "$(jq -r '.isPrerelease' /tmp/release.json)" == 'false' && \
+                    "${asset_count}" == '2' ]]; then
+                break
+              fi
+            fi
+            if [[ "${attempt}" == '60' ]]; then
+              echo 'GitHub release or required assets were not ready.'
+              cat /tmp/release-error.txt || true
+              exit 1
+            fi
+            sleep 5
           done
-
-          RECEIPT_NAME="$(
-            jq -r \
-              '.assets[] | select(.name | startswith("Command-Nexus-Discord-Receipt-v1.0.37-")) | .name' \
-              /tmp/release.json | head -n 1
-          )"
-          [[ -n "${RECEIPT_NAME}" ]]
 
           TAG_SHA="$(git rev-list -n 1 "${RELEASE_TAG}")"
           git show "${TAG_SHA}:src/missionchief-command-nexus.user.js" > /tmp/tagged.user.js
@@ -88,9 +79,45 @@ jobs:
             sha256sum -c "${CHECKSUM_ASSET}"
           )
           cmp --silent /tmp/tagged.user.js "/tmp/release-assets/${ASSET}"
-          CHECKSUM="$(sha256sum /tmp/tagged.user.js | awk '{print $1}')"
 
-          GREASY_VERSION=''
+          jq -r '.url' /tmp/release.json > /tmp/release-url.txt
+          printf '%s\n' "${TAG_SHA}" > /tmp/tag-sha.txt
+          sha256sum /tmp/tagged.user.js | awk '{print $1}' > /tmp/source-sha256.txt
+
+      - name: Wait for Discord single-delivery receipt
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: v1.0.37
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 60); do
+            gh release view "${RELEASE_TAG}" --json assets > /tmp/receipt-release.json
+            RECEIPT_NAME="$(
+              jq -r \
+                '.assets[] | select(.name | startswith("Command-Nexus-Discord-Receipt-v1.0.37-")) | .name' \
+                /tmp/receipt-release.json | head -n 1
+            )"
+            if [[ -n "${RECEIPT_NAME}" ]]; then
+              printf '%s\n' "${RECEIPT_NAME}" > /tmp/discord-receipt-name.txt
+              exit 0
+            fi
+            sleep 5
+          done
+          echo 'Discord release receipt asset was not recorded.'
+          exit 1
+
+      - name: Wait for exact Greasy Fork parity
+        env:
+          GREASYFORK_INSTALL_URL: ${{ vars.GREASYFORK_INSTALL_URL }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${GREASYFORK_INSTALL_URL}" ]]; then
+            echo 'GREASYFORK_INSTALL_URL repository variable is missing.'
+            exit 1
+          fi
+
           for attempt in $(seq 1 60); do
             if curl --fail --location --silent --show-error \
               --header 'Accept: text/plain, application/javascript, */*' \
@@ -113,13 +140,27 @@ jobs:
           if (version !== '1.0.37' || live !== expected) process.exit(1);
           NODE
               then
-                GREASY_VERSION='1.0.37'
-                break
+                printf '1.0.37\n' > /tmp/greasy-version.txt
+                exit 0
               fi
             fi
             sleep 5
           done
-          [[ "${GREASY_VERSION}" == '1.0.37' ]]
+          echo 'Greasy Fork did not reach exact v1.0.37 source parity.'
+          exit 1
+
+      - name: Record verified delivery receipt
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_PR: ${{ github.event.pull_request.number }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          RELEASE_URL="$(cat /tmp/release-url.txt)"
+          TAG_SHA="$(cat /tmp/tag-sha.txt)"
+          CHECKSUM="$(cat /tmp/source-sha256.txt)"
+          GREASY_VERSION="$(cat /tmp/greasy-version.txt)"
+          RECEIPT_NAME="$(cat /tmp/discord-receipt-name.txt)"
 
           cat > /tmp/receipt.md <<EOF
           ## v1.0.37 delivery verified
