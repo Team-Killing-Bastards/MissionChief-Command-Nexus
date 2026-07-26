@@ -64,6 +64,18 @@ def extract_top_level_function(name):
     return f'=== FUNCTION {name}: source lines {start_line}-{end_line} ===\n{source[match.start():end].rstrip()}\n'
 
 
+def extract_named_constant(name):
+    pattern = re.compile(rf'^    const\s+{re.escape(name)}\s*=', re.M)
+    match = pattern.search(source)
+    if not match:
+        return f'=== CONSTANT {name}: NOT FOUND ===\n'
+    next_match = re.search(r'^    (?:const|let|var|(?:async\s+)?function)\s+', source[match.end():], re.M)
+    end = match.end() + next_match.start() if next_match else len(source)
+    start_line = source.count('\n', 0, match.start()) + 1
+    end_line = source.count('\n', 0, end) + 1
+    return f'=== CONSTANT {name}: source lines {start_line}-{end_line} ===\n{source[match.start():end].rstrip()}\n'
+
+
 intervals = keyword_intervals(patterns, radius=45)
 out = render_intervals('BULK TRAINED REGISTER DIAGNOSTIC CONTEXT', intervals)
 out.append('=== FUNCTION INVENTORY MATCHING PERSONNEL / TRAINING / SEARCH / READY ===')
@@ -81,8 +93,12 @@ ROOT.mkdir(parents=True, exist_ok=True)
 OUTPUT.write_text('\n'.join(out) + '\n', encoding='utf-8')
 
 
-def write_topic(filename, title, function_names, keywords):
+def write_topic(filename, title, function_names, keywords, constants=()):
     topic = render_intervals(title, keyword_intervals(keywords, radius=30))
+    topic.append('=== FULL CONSTANTS ===')
+    topic.append('')
+    for name in constants:
+        topic.append(extract_named_constant(name))
     topic.append('=== FULL TOP-LEVEL FUNCTIONS ===')
     topic.append('')
     for name in function_names:
@@ -95,6 +111,7 @@ write_topic(
     'MISSION READY DELAY CONTEXT',
     ['getMissionReadyDelay', 'waitForMissionReady'],
     [r'Mission Ready Delay', r'missionReady', r'MISSION_READY', r'mf-mission-ready', r'1000\s*ms'],
+    ['DEFAULT_MISSION_READY_DELAY'],
 )
 
 write_topic(
@@ -103,21 +120,39 @@ write_topic(
     [
         'getSarPersonnelVehicleRequirement',
         'getSupportedTrainedPersonnelRequirementsFromText',
+        'normalisePublicOrderTrainedRequirements',
+        'normaliseOperationalRequirementRows',
         'getTrainingRequirementPersonnelTarget',
         'getTrainingRequirementRequiredCodes',
         'getTrainingRequirementEligibleTypeIds',
         'getTrainingRequirementVehicleCapacity',
+        'getTrainingRequirementVehicleTypeId',
+        'getTrainingRequirementQualifiedCount',
+        'getTrainingRequirementNominalCapacity',
+        'isCheckboxEligibleForTrainingRequirement',
         'getTrainedPersonnelVehicleTarget',
         'mergeTrainedPersonnelRequirements',
         'getRegistryTrainingQualifiedCount',
         'getTrainingCandidatePersonnelProfiles',
+        'getTrainedCandidateMetrics',
         'selectVehiclesForTrainedPersonnelRequirements',
         'getSupportedMissingPersonnelRowsFromText',
+        'prepareTrainedPersonnelRegistryForRows',
+        'getRegistryEntryForMissionCheckbox',
+        'isStrictLiveVerifiedTrainingEntry',
+        'isAuthoritativeLivePoliceTrainingEntry',
     ],
     [
         r'"Search Advisor"', r'"Search Advisors"', r'Search Advisor',
         r'search_and_rescue', r'Control Van', r'SAR Commander',
         r'eligibleVehicleTypeIds', r'assignedTrainingProfiles',
+        r'MF_TRAINED_PERSONNEL_PATTERNS', r'MF_PROTECTED_ORDINARY_IRV_TRAINING_CODES',
+    ],
+    [
+        'crossReference',
+        'MF_TRAINED_PERSONNEL_PATTERNS',
+        'MF_PROTECTED_ORDINARY_IRV_TRAINING_CODES',
+        'MF_TRAINED_VEHICLE_CAPACITY_BY_TYPE',
     ],
 )
 
@@ -129,6 +164,9 @@ write_topic(
         'startPersonnelRun',
         'processPersonnelQueue',
         'publishPersonnelVehicleTrainingRegistry',
+        'countPersonnelTrainingCodes',
+        'countPersonnelTrainingCombinations',
+        'getPersonnelTrainingCombinationKey',
         'getPersonnelAssignmentIndex',
         'getPersonnelAssignedToVehicle',
         'processOnePersonnelStation',
@@ -136,12 +174,19 @@ write_topic(
         'getPersonnelVehicleQueue',
         'selectPoliceRuleVehicles',
         'getPersonnelAmbulanceQueue',
+        'parseTrainingCodes',
         'parseVehicleAssignmentPage',
+        'normaliseImportedPersonnelTrainingRegistry',
     ],
     [
         r'Build All Register', r'Build Personnel', r'PERSONNEL_TARGET_VEHICLE_TYPE_ID',
         r'getPersonnelVehicleQueue', r'getPersonnelAmbulanceQueue',
         r'vehicle_type_id', r'assignmentHref', r'publishPersonnelVehicleTrainingRegistry',
         r'#vehicle_table', r'type-51', r"'51'", r'PSU',
+        r'assignedTrainingProfiles', r'trainingProfilesComplete',
+    ],
+    [
+        'PERSONNEL_TRAINING_REGISTRY_SCHEMA_VERSION',
+        'PERSONNEL_TRAINING_REGISTRY_MAX_AGE_MS',
     ],
 )
