@@ -1,5 +1,29 @@
 SOURCE_LINES=40173
 
+=== FUNCTION mfIsVisibleInOwnDocument: lines 34322-34344 ===
+
+
+    function mfIsVisibleInOwnDocument(element) {
+        if (!element) return false;
+
+        try {
+            const rect = element.getBoundingClientRect();
+            const style = element.ownerDocument.defaultView.getComputedStyle(element);
+
+            return rect.width > 0
+                && rect.height > 0
+                && style.display !== 'none'
+                && style.visibility !== 'hidden'
+                && style.opacity !== '0';
+        } catch (error) {
+            try {
+                return !!(element.offsetWidth || element.offsetHeight || element.getClientRects().length);
+            } catch (innerError) {
+                return false;
+            }
+        }
+    }
+
 === FUNCTION realClickForQueueRestart: lines 35539-35574 ===
 
 
@@ -93,6 +117,85 @@ function getActivePrisonerCellSelectionContext() {
     }
 
     return null;
+}
+
+=== FUNCTION getVisibleAutoPrisonerReleaseDismissContexts: lines 34970-35047 ===
+
+
+
+function getVisibleAutoPrisonerReleaseDismissContexts() {
+    const candidateDocuments =
+        typeof mfGetAccessibleDocumentsForTransport === 'function'
+            ? mfGetAccessibleDocumentsForTransport()
+            : [document];
+    const candidates = [];
+    let order = 0;
+
+    for (const candidateDocument of candidateDocuments) {
+        if (!candidateDocument || !candidateDocument.querySelectorAll) {
+            continue;
+        }
+
+        const closeButtons = Array.from(
+            candidateDocument.querySelectorAll(
+                'span.lightbox-close[title="Close"], .lightbox-close[title="Close"]'
+            )
+        );
+
+        for (const closeButton of closeButtons) {
+            order += 1;
+
+            if (!closeButton || closeButton.id?.includes('mf-')) {
+                continue;
+            }
+
+            try {
+                if (!mfIsVisibleInOwnDocument(closeButton)) continue;
+            } catch (_error) {
+                continue;
+            }
+
+            const modal = closeButton.closest(
+                '.vm--modal, .modal, .lightbox, #lightbox_box, #iframe-inside-container'
+            );
+
+            if (!modal) continue;
+
+            try {
+                if (!mfIsVisibleInOwnDocument(modal)) continue;
+            } catch (_error) {
+                continue;
+            }
+
+            let zIndex = 0;
+            try {
+                const rawZIndex =
+                    candidateDocument.defaultView
+                        ?.getComputedStyle(modal)
+                        ?.zIndex ||
+                    modal.style?.zIndex ||
+                    '0';
+                const parsedZIndex = Number.parseInt(rawZIndex, 10);
+                zIndex = Number.isFinite(parsedZIndex)
+                    ? parsedZIndex
+                    : 0;
+            } catch (_error) {}
+
+            candidates.push({
+                closeButton,
+                modal,
+                zIndex,
+                order
+            });
+        }
+    }
+
+    candidates.sort((left, right) =>
+        left.zIndex - right.zIndex ||
+        left.order - right.order
+    );
+
+    return candidates;
 }
 
 === FUNCTION getTopmostAutoPrisonerReleaseDismissContext: lines 35047-35056 ===
@@ -532,6 +635,105 @@ async function handleAutoPrisonerReleaseAfterActions() {
         return clicked;
     }
 
+=== PRISONER RELEASE CONSTANTS ===
+--- lines 34652-34657 ---
+034652: const MF_AUTO_PRISONER_CELL_CLICK_RETRY_MS = 6500;
+034653: const MF_AUTO_PRISONER_CELL_MAX_ATTEMPTS = 2;
+034654: const MF_AUTO_PRISONER_RELEASE_STATE_KEY =
+034655:     'mf_auto_prisoner_release_v1';
+034656: const MF_AUTO_PRISONER_RELEASE_CLICK_RETRY_MS = 6500;
+034657: const MF_AUTO_PRISONER_RELEASE_MAX_ATTEMPTS = 2;
+--- lines 34654-34659 ---
+034654: const MF_AUTO_PRISONER_RELEASE_STATE_KEY =
+034655:     'mf_auto_prisoner_release_v1';
+034656: const MF_AUTO_PRISONER_RELEASE_CLICK_RETRY_MS = 6500;
+034657: const MF_AUTO_PRISONER_RELEASE_MAX_ATTEMPTS = 2;
+034658: const MF_AUTO_PRISONER_RELEASE_RESULT_WAIT_MS = 10000;
+034659: const MF_AUTO_PRISONER_RELEASE_DISMISS_WAIT_MS = 8000;
+--- lines 34655-34660 ---
+034655:     'mf_auto_prisoner_release_v1';
+034656: const MF_AUTO_PRISONER_RELEASE_CLICK_RETRY_MS = 6500;
+034657: const MF_AUTO_PRISONER_RELEASE_MAX_ATTEMPTS = 2;
+034658: const MF_AUTO_PRISONER_RELEASE_RESULT_WAIT_MS = 10000;
+034659: const MF_AUTO_PRISONER_RELEASE_DISMISS_WAIT_MS = 8000;
+034660: const MF_AUTO_PRISONER_RELEASE_DISMISS_CLOSE_WAIT_MS = 8000;
+--- lines 34656-34661 ---
+034656: const MF_AUTO_PRISONER_RELEASE_CLICK_RETRY_MS = 6500;
+034657: const MF_AUTO_PRISONER_RELEASE_MAX_ATTEMPTS = 2;
+034658: const MF_AUTO_PRISONER_RELEASE_RESULT_WAIT_MS = 10000;
+034659: const MF_AUTO_PRISONER_RELEASE_DISMISS_WAIT_MS = 8000;
+034660: const MF_AUTO_PRISONER_RELEASE_DISMISS_CLOSE_WAIT_MS = 8000;
+034661: 
+--- lines 34657-34662 ---
+034657: const MF_AUTO_PRISONER_RELEASE_MAX_ATTEMPTS = 2;
+034658: const MF_AUTO_PRISONER_RELEASE_RESULT_WAIT_MS = 10000;
+034659: const MF_AUTO_PRISONER_RELEASE_DISMISS_WAIT_MS = 8000;
+034660: const MF_AUTO_PRISONER_RELEASE_DISMISS_CLOSE_WAIT_MS = 8000;
+034661: 
+034662: function getActivePrisonerCellSelectionContext() {
+--- lines 34658-34663 ---
+034658: const MF_AUTO_PRISONER_RELEASE_RESULT_WAIT_MS = 10000;
+034659: const MF_AUTO_PRISONER_RELEASE_DISMISS_WAIT_MS = 8000;
+034660: const MF_AUTO_PRISONER_RELEASE_DISMISS_CLOSE_WAIT_MS = 8000;
+034661: 
+034662: function getActivePrisonerCellSelectionContext() {
+034663:     const candidateDocuments =
+--- lines 35089-35094 ---
+035089:         getActivePrisonerCellSelectionContext() &&
+035090:         Date.now() - resultStarted <
+035091:             MF_AUTO_PRISONER_RELEASE_RESULT_WAIT_MS
+035092:     ) {
+035093:         await wait(200);
+035094:     }
+--- lines 35117-35122 ---
+035117:         !isManualAutoStopActive() &&
+035118:         Date.now() - dismissStarted <
+035119:             MF_AUTO_PRISONER_RELEASE_DISMISS_WAIT_MS
+035120:     ) {
+035121:         await wait(200);
+035122:         dismissContext =
+--- lines 35168-35173 ---
+035168:         ) &&
+035169:         Date.now() - closeStarted <
+035170:             MF_AUTO_PRISONER_RELEASE_DISMISS_CLOSE_WAIT_MS
+035171:     ) {
+035172:         await wait(180);
+035173:     }
+--- lines 35266-35271 ---
+035266:         const parsed = JSON.parse(
+035267:             sessionStorage.getItem(
+035268:                 MF_AUTO_PRISONER_RELEASE_STATE_KEY
+035269:             ) ||
+035270:                 'null'
+035271:         );
+--- lines 35290-35295 ---
+035290:     try {
+035291:         sessionStorage.setItem(
+035292:             MF_AUTO_PRISONER_RELEASE_STATE_KEY,
+035293:             JSON.stringify(state)
+035294:         );
+035295:     } catch (_error) {}
+--- lines 35299-35304 ---
+035299:     try {
+035300:         sessionStorage.removeItem(
+035301:             MF_AUTO_PRISONER_RELEASE_STATE_KEY
+035302:         );
+035303:     } catch (_error) {}
+035304: }
+--- lines 35359-35364 ---
+035359:         sameRelease &&
+035360:         previousAge >= 0 &&
+035361:         previousAge < MF_AUTO_PRISONER_RELEASE_CLICK_RETRY_MS
+035362:     ) {
+035363:         updateStatusBox(
+035364:             'Auto Mode: waiting for Release Prisoners to complete before dispatch...'
+--- lines 35371-35376 ---
+035371:         : 1;
+035372: 
+035373:     if (attempts > MF_AUTO_PRISONER_RELEASE_MAX_ATTEMPTS) {
+035374:         if (mfDebugEnabled) {
+035375:             debugLog(
+035376:                 'AUTO PRISONER RELEASE',
 === LIGHTBOX CLOSE OCCURRENCES ===
 --- lines 4236-4244 ---
 004236:             await sleep(50);
