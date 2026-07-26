@@ -179,7 +179,133 @@ SOURCE LINES: 39886
 000912:         5:  { stationType: 'AIR',        suffix: '-AA',   label: 'Air ambulance station' },
 000913:         13: { stationType: 'AIR',        suffix: '-PH',   label: 'Police helicopter station' },
 
-=== BLOCK 3: source lines 9517-9578 ===
+=== BLOCK 3: source lines 1172-1232 ===
+001172:             const raw =
+001173:                 candidate.getAttribute?.('building_type_id') ??
+001174:                 candidate.getAttribute?.('data-building-type-id') ??
+001175:                 candidate.dataset?.buildingTypeId ??
+001176:                 '';
+001177:             if (raw !== '' && Number.isFinite(Number(raw))) return Number(raw);
+001178:         }
+001179: 
+001180:         return null;
+001181:     }
+001182: 
+001183:     function scoreStationOverviewLink(link, href) {
+001184:         let score = 0;
+001185:         if (link.classList?.contains('lightbox-open')) score += 100;
+001186:         if (link.matches?.('.list-group-item.active')) score += 70;
+001187:         if (normaliseStationOverviewHref(link.getAttribute?.('href')) === href) score += 40;
+001188:         const label = cleanText(link.textContent || link.getAttribute?.('aria-label') || '');
+001189:         if (label && !isGenericStationActionText(label)) score += 35;
+001190:         if (link.offsetParent !== null) score += 10;
+001191:         return score;
+001192:     }
+001193: 
+001194:     function readStationOverviewName(link, container, href) {
+001195:         const values = [];
+001196:         const add = value => {
+001197:             const cleaned = cleanText(value);
+001198:             if (!cleaned || isGenericStationActionText(cleaned)) return;
+001199:             if (!values.includes(cleaned)) values.push(cleaned);
+001200:         };
+001201: 
+001202:         add(container?.getAttribute?.('search_attribute'));
+001203:         add(container?.getAttribute?.('data-building-name'));
+001204:         add(container?.dataset?.buildingName);
+001205: 
+001206:         const sameBuildingLinks = container
+001207:             ? [...container.querySelectorAll('a[href]')]
+001208:                 .filter(candidate => normaliseStationOverviewHref(candidate.getAttribute('href')) === href)
+001209:                 .sort((a, b) => scoreStationOverviewLink(b, href) - scoreStationOverviewLink(a, href))
+001210:             : [link];
+001211: 
+001212:         sameBuildingLinks.forEach(candidate => {
+001213:             add(candidate.getAttribute?.('aria-label'));
+001214:             add(candidate.getAttribute?.('title'));
+001215:             add(candidate.textContent);
+001216:         });
+001217: 
+001218:         const nameSelectors = [
+001219:             '[data-building-name]',
+001220:             '.building_list_title',
+001221:             '.building-list-title',
+001222:             '.building_name',
+001223:             '.building-name',
+001224:             '.panel-heading',
+001225:             '.card-title',
+001226:             'h1', 'h2', 'h3', 'h4'
+001227:         ];
+001228: 
+001229:         for (const selector of nameSelectors) {
+001230:             container?.querySelectorAll?.(selector).forEach(node => {
+001231:                 add(node.getAttribute?.('data-building-name'));
+001232:                 add(node.textContent);
+
+=== BLOCK 4: source lines 4200-4260 ===
+004200:                 stationDebug(`Save verification attempt ${attempt} failed: ${error?.message || error}`);
+004201:             }
+004202:         }
+004203: 
+004204:         return false;
+004205:     }
+004206: 
+004207:     function updateStationListName(href, newName) {
+004208:         const entry = findStationOverviewEntry(href);
+004209:         const link = entry?.link;
+004210:         const container = entry?.container || getStationOverviewContainer(link);
+004211:         if (!link) return;
+004212: 
+004213:         const sameBuildingLinks = container
+004214:             ? [...container.querySelectorAll('a[href]')]
+004215:                 .filter(candidate => normaliseStationOverviewHref(candidate.getAttribute('href')) === entry.href)
+004216:             : [link];
+004217:         const nameLink = sameBuildingLinks.find(candidate => {
+004218:             const label = cleanText(candidate.textContent);
+004219:             return label && !isGenericStationActionText(label);
+004220:         });
+004221:         const nameNode = nameLink || container?.querySelector(
+004222:             '[data-building-name], .building_list_title, .building-list-title, ' +
+004223:             '.building_name, .building-name, .panel-heading, .card-title'
+004224:         );
+004225: 
+004226:         if (nameNode) {
+004227:             nameNode.textContent = newName;
+004228:             nameNode.setAttribute?.('data-building-name', newName);
+004229:         }
+004230:         if (container) container.setAttribute('search_attribute', newName);
+004231:     }
+004232: 
+004233:     async function closeStationNamingModal(iframe = STATION_STATE.activeIframe) {
+004234:         if (removeManagedStationIframe(iframe)) {
+004235:             if (STATION_STATE.activeIframe === iframe) STATION_STATE.activeIframe = null;
+004236:             await sleep(50);
+004237:             return;
+004238:         }
+004239: 
+004240:         const closeButtons = [...document.querySelectorAll('span.lightbox-close')];
+004241:         const closeButton = closeButtons.reverse().find(button => button.offsetParent !== null) || closeButtons[0];
+004242: 
+004243:         if (closeButton) {
+004244:             closeButton.click();
+004245:             await sleep(450);
+004246:         }
+004247:     }
+004248: 
+004249:     async function waitIfStationNamingPaused() {
+004250:         while (STATION_STATE.paused && !STATION_STATE.stopped) {
+004251:             await sleep(250);
+004252:         }
+004253:     }
+004254: 
+004255:     function updateStationCounters() {
+004256:         setStationUiValue('renamed', STATION_STATE.renamedCount);
+004257:         setStationUiValue('skipped', STATION_STATE.skippedCount);
+004258:     }
+004259: 
+004260:     function toggleStationDebug() {
+
+=== BLOCK 5: source lines 9517-9578 ===
 009517:     // V10.2.3 safety reset:
 009518:     // Only clear stale queue flags when Auto Mode is NOT running.
 009519:     // Do NOT clear them during Auto Mode reloads, because the final-dispatch flag
@@ -243,7 +369,70 @@ SOURCE LINES: 39886
 009577:     // wording to the established RRU route.
 009578:     // V10.6.84: the exact mission wording "Fire, rescue or aerial appliance"
 
-=== BLOCK 4: source lines 10587-10648 ===
+=== BLOCK 6: source lines 9859-9919 ===
+009859:     // Explicit missing-vehicle quantities are treated as the target selected count
+009860:     // for the current dispatch pass, so repeated Unit Finder/Mission Update checks
+009861:     // cannot resend the full mission or add the same shortage twice.
+009862:     // V10.6.99: the active iPhone native-picker disclosure/wrapper was removed.
+009863:     // MissionChief's own quick-select DOM is now left structurally untouched and
+009864:     // receives only passive document-owned selector CSS, eliminating the native/
+009865:     // enhanced reattachment race while preserving Mission and Vehicle launchers.
+009866:     // V10.6.98: the iPhone native Unit Quick Select disclosure is now
+009867:     // mutation-idempotent and guarded against duplicate touch/click transitions.
+009868:     // The Mission/Vehicle launcher now clears the complete top-right native
+009869:     // control cluster with stable geometry, hysteresis and a farther-left fallback.
+009870:     // V10.6.97: iPhone Mission Control and Vehicle Load now use a compact
+009871:     // two-button launcher positioned immediately left of MissionChief's live
+009872:     // native control cluster. Both panels default closed and open exclusively
+009873:     // below the launcher without cloning or intercepting native controls.
+009874:     // V10.6.96: the strict iPhone command surfaces now migrate to collapsed
+009875:     // defaults, own deterministic touch/keyboard disclosure controls and reserve
+009876:     // a pointer-transparent upper-right gutter for MissionChief's native close X.
+009877:     // V10.6.95: open-issue corrective batch. Exact type-57 CRVs and type-85
+009878:     // Control Vans now own their requirements; Search Advisors route to Control
+009879:     // Vans; current data-requirement-type=vehicles Missing Vehicles elements are
+009880:     // parsed even beside the live panel; generic Critical Care chooses the nearest
+009881:     // eligible type-9 HEMS or exact-registry-verified trained type-5 Ambulance;
+009882:     // and the Personnel registry detects PSU/type-51 vehicles plus broader exact
+009883:     // assignment controls without weakening exact vehicle-ID ownership.
+009884:     // V10.6.94: iPhone Safari desktop-site sessions that identify as MacIntel
+009885:     // now enter the compact phone layout when the physical screen short side is
+009886:     // phone-sized. iPad remains excluded by its larger physical screen even in
+009887:     // split-screen or desktop-site mode.
+009888:     // V10.6.93: the iPhone Safari layout now also owns MissionChief's native
+009889:     // search_attribute quick-select matrix in whichever same-origin mission
+009890:     // document renders it. The native picker is collapsed behind one compact
+009891:     // disclosure by default, then expands into a horizontal category strip and
+009892:     // readable two-column internal scroller without cloning or replacing controls.
+009893:     // V10.6.92: iPhone Safari now receives a dedicated compact Mission
+009894:     // Finder command card with collapsed advanced settings, compact action and
+009895:     // vehicle-load surfaces, safe-area sizing and no drag ownership. The new
+009896:     // presentation class excludes iPad and every desktop/browser path.
+009897:     // V10.6.91: Unit Finder now treats the hidden mobile #mission_help link
+009898:     // as an authoritative source, binds /einsaetze/ requests to the exact current
+009899:     // mission ID, validates the response route and blocks on missing/mismatched
+009900:     // requirement data instead of silently advancing through empty fallbacks.
+009901:     // V10.6.90: iOS Safari Unit Finder vehicle discovery now follows the
+009902:     // active mission document, and a vehicle allocation is counted only after
+009903:     // MissionChief's real checkbox state is confirmed. Native click, associated
+009904:     // label activation and a checked-property plus input/change fallback remain
+009905:     // bounded to the exact eligible checkbox selected by the existing engine.
+009906:     // V10.6.89: ordinary Police attendance preserves specialist IRVs by
+009907:     // preference rather than by an absolute block. Verified ordinary type-8
+009908:     // IRVs are selected first, unknown/stale IRVs second, and known specialist
+009909:     // IRVs only when the normal pool cannot satisfy the mission requirement.
+009910:     const MF_PROTECTED_ORDINARY_IRV_TRAINING_CODES =
+009911:         Object.freeze([
+009912:             'level_1_public_order',
+009913:             'level_2_public_order',
+009914:             'police_sergeant',
+009915:             'police_medic',
+009916:             'police_inspector',
+009917:             'traffic_police',
+009918:             'swat',
+009919:             'police_horse',
+
+=== BLOCK 7: source lines 10587-10648 ===
 010587:         });
 010588: 
 010589:         document.querySelectorAll('#control-panel').forEach(panel => {
@@ -307,7 +496,7 @@ SOURCE LINES: 39886
 010647:         "Traffic Car": "Police ATC",
 010648:         "Traffic Cars": "Police ATC",
 
-=== BLOCK 5: source lines 10787-10856 ===
+=== BLOCK 8: source lines 10787-10856 ===
 010787:         "RIVs": "RIV",
 010788:         "Rapid Intervention Vehicle": "RIV",
 010789:         "Rapid Intervention Vehicles": "RIV",
@@ -379,7 +568,724 @@ SOURCE LINES: 39886
 010855:         "Fire Operational Support Units": "OSU",
 010856:         "Breathing Apparatus Support Unit x1": "OSU",
 
-=== BLOCK 6: source lines 20824-20884 ===
+=== BLOCK 9: source lines 10910-10970 ===
+010910:                 value => {
+010911:                     clearTimeout(timeoutId);
+010912:                     resolve(value);
+010913:                 },
+010914:                 error => {
+010915:                     clearTimeout(timeoutId);
+010916:                     reject(error);
+010917:                 }
+010918:             );
+010919:         });
+010920:     }
+010921: 
+010922:     // V10.6.52 compatibility stubs. Existing operational code can retain its
+010923:     // guarded diagnostic calls without creating log arrays, timers, DOM nodes
+010924:     // or browser-console history.
+010925:     function debugLog() {}
+010926:     function highDebugLog() {}
+010927:     function setDebugEnabled() {}
+010928:     function setHighDebugEnabled() {}
+010929:     function clearDebugLog() {}
+010930:     async function copyDebugLog() {}
+010931:     function renderDebugPanelNow() {}
+010932:     function renderDebugPanel() {}
+010933: 
+010934:     function getVehicleDebugName(element) {
+010935:         if (!element) return 'not found';
+010936:         const row = element.closest && element.closest('tr');
+010937:         const values = [
+010938:             element.getAttribute && element.getAttribute('vehicle_caption'),
+010939:             element.getAttribute && element.getAttribute('vehicle_type_caption'),
+010940:             element.getAttribute && element.getAttribute('search_attribute'),
+010941:             row && row.getAttribute('vehicle_caption'),
+010942:             row && row.getAttribute('vehicle_type_caption'),
+010943:             row && row.querySelector('td:nth-child(2)') && row.querySelector('td:nth-child(2)').innerText
+010944:         ].filter(Boolean);
+010945:         return values.length ? values[0].replace(/\s+/g, ' ').trim() : element.tagName;
+010946:     }
+010947: 
+010948:     function resolveUnitName(unitName) {
+010949:         const cleaned = String(unitName || '')
+010950:             .replace(/\s+/g, ' ')
+010951:             .trim();
+010952: 
+010953:         if (!cleaned) return '';
+010954: 
+010955:         return (
+010956:             crossReference[cleaned] ||
+010957:             crossReferenceNormalisedLookup.get(
+010958:                 cleaned.toLowerCase()
+010959:             ) ||
+010960:             cleaned
+010961:         );
+010962:     }
+010963: 
+010964:     function normaliseVehicleText(value) {
+010965:         return String(value || '')
+010966:             .replace(/&amp;/g, '&')
+010967:             .replace(/\s+/g, ' ')
+010968:             .trim()
+010969:             .toLowerCase();
+010970:     }
+
+=== BLOCK 10: source lines 11330-11398 ===
+011330:             input.id
+011331:                 ? document.getElementById(
+011332:                     `label_${input.id}`
+011333:                 )
+011334:                 : null;
+011335: 
+011336:         const rowLabel =
+011337:             row && input.id
+011338:                 ? Array.from(
+011339:                     row.querySelectorAll(
+011340:                         'label[for]'
+011341:                     )
+011342:                 ).find(
+011343:                     label =>
+011344:                         label.htmlFor ===
+011345:                         input.id
+011346:                 )
+011347:                 : null;
+011348: 
+011349:         const values = [
+011350:             labelById?.textContent,
+011351:             labelById?.innerText,
+011352:             rowLabel?.textContent,
+011353:             rowLabel?.innerText,
+011354:             input.getAttribute &&
+011355:                 input.getAttribute(
+011356:                     'vehicle_caption'
+011357:                 ),
+011358:             input.getAttribute &&
+011359:                 input.getAttribute(
+011360:                     'search_attribute'
+011361:                 ),
+011362:             row &&
+011363:                 row.getAttribute(
+011364:                     'vehicle_caption'
+011365:                 ),
+011366:             row &&
+011367:                 row.getAttribute(
+011368:                     'search_attribute'
+011369:                 ),
+011370:             row &&
+011371:                 row.querySelector(
+011372:                     'td:nth-child(2)'
+011373:                 )?.innerText
+011374:         ]
+011375:             .filter(Boolean)
+011376:             .map(
+011377:                 normaliseSartecDisplayedName
+011378:             );
+011379: 
+011380:         mfSartecDisplayedValueCache.set(
+011381:             input,
+011382:             values
+011383:         );
+011384: 
+011385:         return values;
+011386:     }
+011387: 
+011388:     function isSartecVehicleCheckbox(
+011389:         input
+011390:     ) {
+011391:         return getSartecDisplayedVehicleValues(
+011392:             input
+011393:         ).some(value => {
+011394:             // Whole-word prefix only. Everything after SARTEC is ignored.
+011395:             return /^SARTEC\b/i.test(
+011396:                 value
+011397:             );
+011398:         });
+
+=== BLOCK 11: source lines 12658-12718 ===
+012658: 
+012659:         try {
+012660:             nodes = Array.from(
+012661:                 selectionDocument.querySelectorAll(
+012662:                     'input.vehicle_checkbox'
+012663:                 )
+012664:             );
+012665:         } catch (_error) {}
+012666: 
+012667:         mfVehicleCheckboxCache = {
+012668:             expiresAt:
+012669:                 now +
+012670:                 (nodes.length ? 500 : 120),
+012671:             nodes,
+012672:             document: selectionDocument
+012673:         };
+012674: 
+012675:         return nodes;
+012676:     }
+012677: 
+012678:     function getCheckboxVehicleValues(input) {
+012679:         if (!input) return [];
+012680: 
+012681:         const cached = mfCheckboxVehicleValueCache.get(input);
+012682:         if (cached) return cached;
+012683: 
+012684:         const row = input.closest('tr');
+012685:         const values = [
+012686:             input.getAttribute('vehicle_caption'),
+012687:             input.getAttribute('vehicle_type_caption'),
+012688:             input.getAttribute('search_attribute'),
+012689:             input.getAttribute('vehicle_type'),
+012690:             row?.getAttribute('vehicle_caption'),
+012691:             row?.getAttribute('vehicle_type_caption'),
+012692:             row?.getAttribute('vehicle_type'),
+012693:             row?.querySelector('td:nth-child(2)')?.innerText
+012694:         ]
+012695:         .filter(Boolean)
+012696:         .map(normaliseVehicleText);
+012697: 
+012698:         mfCheckboxVehicleValueCache.set(input, values);
+012699:         return values;
+012700:     }
+012701: 
+012702:     function getExtendedVehicleValues(input) {
+012703:         if (!input) return [];
+012704: 
+012705:         const cached = mfExtendedVehicleValueCache.get(input);
+012706:         if (cached) return cached;
+012707: 
+012708:         const row = input.closest && input.closest('tr');
+012709:         const labelById = input.id
+012710:             ? document.getElementById(`label_${input.id}`)
+012711:             : null;
+012712: 
+012713:         const rowLabel = row && input.id
+012714:             ? Array.from(row.querySelectorAll('label[for]')).find(
+012715:                 label => label.htmlFor === input.id
+012716:             )
+012717:             : null;
+012718: 
+
+=== BLOCK 12: source lines 13923-14018 ===
+013923:                     !input.checked &&
+013924:                     isOperationalSupportVanCheckbox(input)
+013925:                 ))
+013926:             )[0] || null;
+013927:         }
+013928: 
+013929:         if (
+013930:             isIccuOrAmbulanceControlRequirement(
+013931:                 requestedName,
+013932:                 mappedName
+013933:             )
+013934:         ) {
+013935:             const available =
+013936:                 getVehicleCheckboxSnapshot().filter(input => {
+013937:                     return (
+013938:                         !input.disabled &&
+013939:                         !input.checked
+013940:                     );
+013941:                 });
+013942: 
+013943:             const iccuCheckbox =
+013944:                 available.find(
+013945:                     isIccuVehicleCheckbox
+013946:                 );
+013947: 
+013948:             if (iccuCheckbox) {
+013949:                 return iccuCheckbox;
+013950:             }
+013951: 
+013952:             const iccuButton =
+013953:                 queryVehicleSelectionElements('a[search_attribute]').find(anchor => {
+013954:                     const value =
+013955:                         normaliseVehicleText(
+013956:                             anchor.getAttribute(
+013957:                                 'search_attribute'
+013958:                             )
+013959:                         );
+013960: 
+013961:                     return (
+013962:                         value === 'iccu' ||
+013963:                         value === 'iccus' ||
+013964:                         value.includes(
+013965:                             'incident command and control unit'
+013966:                         ) ||
+013967:                         /(?:^|\b)iccu(?:s)?(?:\b|$)/i.test(value)
+013968:                     );
+013969:                 });
+013970: 
+013971:             if (iccuButton) {
+013972:                 return iccuButton;
+013973:             }
+013974: 
+013975:             const ambulanceControlCheckbox =
+013976:                 available.find(
+013977:                     isAmbulanceControlUnitCheckbox
+013978:                 );
+013979: 
+013980:             if (ambulanceControlCheckbox) {
+013981:                 return ambulanceControlCheckbox;
+013982:             }
+013983: 
+013984:             return queryVehicleSelectionElements('a[search_attribute]').find(anchor => {
+013985:                 const value =
+013986:                     normaliseVehicleText(
+013987:                         anchor.getAttribute(
+013988:                             'search_attribute'
+013989:                         )
+013990:                     );
+013991: 
+013992:                 return (
+013993:                     value === 'acu' ||
+013994:                     value === 'acus' ||
+013995:                     value.includes(
+013996:                         'ambulance control unit'
+013997:                     ) ||
+013998:                     /(?:^|\b)acu(?:s)?(?:\b|$)/i.test(value)
+013999:                 );
+014000:             }) || null;
+014001:         }
+014002: 
+014003:         if (
+014004:             isGeneric4x4VehicleRequirement(
+014005:                 requestedName,
+014006:                 mappedName
+014007:             )
+014008:         ) {
+014009:             return sortVehicleCheckboxesByBestArrival(
+014010:                 getVehicleCheckboxSnapshot().filter(input => {
+014011:                     return (
+014012:                         !input.disabled &&
+014013:                         !input.checked &&
+014014:                         isGeneric4x4VehicleCheckbox(
+014015:                             input
+014016:                         )
+014017:                     );
+014018:                 })
+
+=== BLOCK 13: source lines 14146-14207 ===
+014146:                 ) ||
+014147:                 null
+014148:             );
+014149:         }
+014150: 
+014151:         if (
+014152:             isPoliceCarRequirement(
+014153:                 requestedName,
+014154:                 mappedName
+014155:             )
+014156:         ) {
+014157:             return getAllMatchingVehicleCheckboxes(
+014158:                 requestedName,
+014159:                 mappedName,
+014160:                 false
+014161:             )[0] || null;
+014162:         }
+014163: 
+014164:         const candidates = getVehicleMatchCandidates(requestedName, mappedName);
+014165: 
+014166:         const strictExactOnly = isAmbulanceTransportRequest(requestedName, mappedName);
+014167: 
+014168:         const checkbox = getVehicleCheckboxSnapshot().find(input => {
+014169:             if (input.disabled || input.checked) return false;
+014170:             const values = getCheckboxVehicleValues(input);
+014171:             return vehicleValuesMatchCandidates(values, candidates, strictExactOnly);
+014172:         });
+014173: 
+014174:         if (checkbox) return checkbox;
+014175: 
+014176:         const button = queryVehicleSelectionElements('a[search_attribute]').find(anchor => {
+014177:             const value = normaliseVehicleText(anchor.getAttribute('search_attribute'));
+014178:             return candidates.some(candidate => value === candidate || value.includes(candidate));
+014179:         });
+014180: 
+014181:         return button || null;
+014182:     }
+014183: 
+014184:     function injectStyles() {
+014185:         if (document.getElementById('mission-finder-2026-styles')) return;
+014186: 
+014187:         const style = document.createElement('style');
+014188:         style.id = 'mission-finder-2026-styles';
+014189:         style.textContent = `
+014190:             #mission-finder-wrapper {
+014191:                 position: fixed;
+014192:                 z-index: 999999;
+014193:                 display: flex;
+014194:                 gap: 8px;
+014195:                 align-items: flex-start;
+014196:                 font-family: Arial, Helvetica, sans-serif;
+014197:             }
+014198: 
+014199:             .mf2026-panel {
+014200:                 width: 270px;
+014201:                 min-height: 0;
+014202:                 padding: 8px;
+014203:                 background: rgba(0, 0, 0, 0.88);
+014204:                 color: white;
+014205:                 font-size: 13px;
+014206:                 border: 2px solid white;
+014207:                 border-radius: 8px;
+
+=== BLOCK 14: source lines 17187-17247 ===
+017187: 
+017188:     function stopSessionRuntimeTicker() {
+017189:         if (!sessionRuntimeTicker) return;
+017190:         clearInterval(sessionRuntimeTicker);
+017191:         sessionRuntimeTicker = null;
+017192:     }
+017193: 
+017194:     function startSessionRuntimeTicker() {
+017195:         if (sessionRuntimeTicker) return;
+017196: 
+017197:         sessionRuntimeTicker = setInterval(() => {
+017198:             if (!document.getElementById('session-panel-content')) {
+017199:                 stopSessionRuntimeTicker();
+017200:                 return;
+017201:             }
+017202: 
+017203:             renderSessionPanel();
+017204:         }, 2000);
+017205:     }
+017206: 
+017207:     async function waitForMissionReady() {
+017208:         const timeoutMs = Math.max(4500, getMissionReadyDelay() + 2500);
+017209:         const started = Date.now();
+017210:         let stableSince = 0;
+017211:         let lastDeepProbeAt = 0;
+017212:         let hasPatientData = false;
+017213:         let hasUpdateRows = false;
+017214: 
+017215:         while (Date.now() - started < timeoutMs) {
+017216:             const hasMission = isMissionPage();
+017217:             const hasUnits = !!document.querySelector('a[search_attribute]');
+017218:             const hasMissionHelp = !!getMissionRequirementSource();
+017219:             const hasBasicMissionUi = hasMission && hasUnits && hasMissionHelp;
+017220: 
+017221:             if (hasBasicMissionUi) {
+017222:                 if (!stableSince) stableSince = Date.now();
+017223: 
+017224:                 const now = Date.now();
+017225: 
+017226:                 if (now - lastDeepProbeAt >= 300) {
+017227:                     lastDeepProbeAt = now;
+017228:                     hasPatientData = findPatientCount(true) > 0;
+017229:                     hasUpdateRows = readMissionUpdateRows({
+017230:                         silent: true
+017231:                     }).length > 0;
+017232:                 }
+017233: 
+017234:                 // Give dynamic patient cards at least 1.5 seconds after the
+017235:                 // basic mission controls appear. They often render later.
+017236:                 if (
+017237:                     hasPatientData ||
+017238:                     hasUpdateRows ||
+017239:                     Date.now() - stableSince >= 650
+017240:                 ) {
+017241:                     break;
+017242:                 }
+017243:             } else {
+017244:                 stableSince = 0;
+017245:                 hasPatientData = false;
+017246:                 hasUpdateRows = false;
+017247:             }
+
+=== BLOCK 15: source lines 18602-18662 ===
+018602:             const ownerWindow =
+018603:                 element.ownerDocument
+018604:                     ?.defaultView ||
+018605:                 window;
+018606:             const style =
+018607:                 ownerWindow.getComputedStyle(
+018608:                     element
+018609:                 );
+018610: 
+018611:             if (
+018612:                 style.display === 'none' ||
+018613:                 style.visibility === 'hidden'
+018614:             ) {
+018615:                 return false;
+018616:             }
+018617: 
+018618:             return element.getClientRects().length > 0;
+018619:         } catch (_error) {
+018620:             return true;
+018621:         }
+018622:     }
+018623: 
+018624:     function getMissionFinderIphoneNativePickerAnchors(
+018625:         candidateDocument
+018626:     ) {
+018627:         let anchors = [];
+018628: 
+018629:         try {
+018630:             anchors = Array.from(
+018631:                 candidateDocument.querySelectorAll(
+018632:                     'a[search_attribute]'
+018633:                 )
+018634:             ).filter(anchor => {
+018635:                 return Boolean(
+018636:                     anchor &&
+018637:                     anchor.isConnected !== false &&
+018638:                     !anchor.closest?.(
+018639:                         '#mission-finder-wrapper'
+018640:                     )
+018641:                 );
+018642:             });
+018643:         } catch (_error) {}
+018644: 
+018645:         const visibleAnchors =
+018646:             anchors.filter(
+018647:                 isMissionFinderIphoneNativePickerElementVisible
+018648:             );
+018649: 
+018650:         return visibleAnchors.length >= 4
+018651:             ? visibleAnchors
+018652:             : anchors;
+018653:     }
+018654: 
+018655:     function getMissionFinderIphoneNativePickerGrid(
+018656:         candidateDocument,
+018657:         anchors
+018658:     ) {
+018659:         if (!anchors?.length) return null;
+018660: 
+018661:         const firstTable =
+018662:             anchors[0].closest?.('table');
+
+=== BLOCK 16: source lines 18780-18862 ===
+018780: 
+018781:     function getMissionFinderIphoneNativePickerStrips(
+018782:         shell,
+018783:         grid
+018784:     ) {
+018785:         if (!shell || !grid) return [];
+018786: 
+018787:         const candidates = new Set();
+018788: 
+018789:         try {
+018790:             shell.querySelectorAll(
+018791:                 'ul.nav, .nav-tabs, [role="tablist"], ' +
+018792:                 '.btn-group, .btn-toolbar'
+018793:             ).forEach(candidate => {
+018794:                 if (
+018795:                     !grid.contains(candidate) &&
+018796:                     !candidate.contains(grid) &&
+018797:                     isMissionFinderIphoneNativePickerBeforeGrid(
+018798:                         candidate,
+018799:                         grid
+018800:                     )
+018801:                 ) {
+018802:                     candidates.add(candidate);
+018803:                 }
+018804:             });
+018805:         } catch (_error) {}
+018806: 
+018807:         try {
+018808:             const controls = Array.from(
+018809:                 shell.querySelectorAll(
+018810:                     'a:not([search_attribute]), button, [role="tab"]'
+018811:                 )
+018812:             ).filter(control => {
+018813:                 return Boolean(
+018814:                     !grid.contains(control) &&
+018815:                     isMissionFinderIphoneNativePickerBeforeGrid(
+018816:                         control,
+018817:                         grid
+018818:                     )
+018819:                 );
+018820:             });
+018821: 
+018822:             const parents = new Set(
+018823:                 controls
+018824:                     .map(control => control.parentElement)
+018825:                     .filter(Boolean)
+018826:             );
+018827: 
+018828:             parents.forEach(parent => {
+018829:                 if (
+018830:                     parent === shell ||
+018831:                     parent.querySelector?.(
+018832:                         'a[search_attribute]'
+018833:                     )
+018834:                 ) {
+018835:                     return;
+018836:                 }
+018837: 
+018838:                 let directControls = [];
+018839: 
+018840:                 try {
+018841:                     directControls = Array.from(
+018842:                         parent.children || []
+018843:                     ).filter(child => {
+018844:                         return Boolean(
+018845:                             child.matches?.(
+018846:                                 'a, button, [role="tab"], li'
+018847:                             ) ||
+018848:                             child.querySelector?.(
+018849:                                 ':scope > a, :scope > button, :scope > [role="tab"]'
+018850:                             )
+018851:                         );
+018852:                     });
+018853:                 } catch (_error) {}
+018854: 
+018855:                 if (
+018856:                     directControls.length >= 3 &&
+018857:                     directControls.length <= 20 &&
+018858:                     isMissionFinderIphoneNativePickerBeforeGrid(
+018859:                         parent,
+018860:                         grid
+018861:                     )
+018862:                 ) {
+
+=== BLOCK 17: source lines 18919-19063 ===
+018919:             current?.parentElement &&
+018920:             current.parentElement !== ancestor
+018921:         ) {
+018922:             current = current.parentElement;
+018923:         }
+018924: 
+018925:         return current?.parentElement === ancestor
+018926:             ? current
+018927:             : null;
+018928:     }
+018929: 
+018930:     function ensureMissionFinderIphoneNativePickerStyles(
+018931:         candidateDocument
+018932:     ) {
+018933:         if (
+018934:             !candidateDocument?.documentElement ||
+018935:             candidateDocument.getElementById(
+018936:                 MF_IPHONE_NATIVE_PICKER_STYLE_ID
+018937:             )
+018938:         ) {
+018939:             return false;
+018940:         }
+018941: 
+018942:         let style = null;
+018943: 
+018944:         try {
+018945:             style = candidateDocument.createElement('style');
+018946:             style.id = MF_IPHONE_NATIVE_PICKER_STYLE_ID;
+018947:             style.textContent = `
+018948:                 html.${MF_IPHONE_NATIVE_PICKER_ROOT_CLASS}
+018949:                 table:has(a[search_attribute]) {
+018950:                     display: grid !important;
+018951:                     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+018952:                     gap: 4px !important;
+018953:                     width: 100% !important;
+018954:                     max-width: 100% !important;
+018955:                     max-height: 46vh !important;
+018956:                     overflow-y: auto !important;
+018957:                     overscroll-behavior: contain !important;
+018958:                     -webkit-overflow-scrolling: touch !important;
+018959:                     border-collapse: separate !important;
+018960:                     border-spacing: 0 !important;
+018961:                 }
+018962: 
+018963:                 @supports (height: 100dvh) {
+018964:                     html.${MF_IPHONE_NATIVE_PICKER_ROOT_CLASS}
+018965:                     table:has(a[search_attribute]) {
+018966:                         max-height: 46dvh !important;
+018967:                     }
+018968:                 }
+018969: 
+018970:                 html.${MF_IPHONE_NATIVE_PICKER_ROOT_CLASS}
+018971:                 table:has(a[search_attribute]) > tbody,
+018972:                 html.${MF_IPHONE_NATIVE_PICKER_ROOT_CLASS}
+018973:                 table:has(a[search_attribute]) > thead,
+018974:                 html.${MF_IPHONE_NATIVE_PICKER_ROOT_CLASS}
+018975:                 table:has(a[search_attribute]) > tbody > tr,
+018976:                 html.${MF_IPHONE_NATIVE_PICKER_ROOT_CLASS}
+018977:                 table:has(a[search_attribute]) > thead > tr,
+018978:                 html.${MF_IPHONE_NATIVE_PICKER_ROOT_CLASS}
+018979:                 table:has(a[search_attribute]) > tbody > tr > td,
+018980:                 html.${MF_IPHONE_NATIVE_PICKER_ROOT_CLASS}
+018981:                 table:has(a[search_attribute]) > thead > tr > th {
+018982:                     display: contents !important;
+018983:                 }
+018984: 
+018985:                 html.${MF_IPHONE_NATIVE_PICKER_ROOT_CLASS}
+018986:                 a[search_attribute] {
+018987:                     display: flex !important;
+018988:                     align-items: center !important;
+018989:                     justify-content: flex-start !important;
+018990:                     min-width: 0 !important;
+018991:                     max-width: 100% !important;
+018992:                     min-height: 28px !important;
+018993:                     margin: 0 !important;
+018994:                     padding: 4px 6px !important;
+018995:                     border-radius: 6px !important;
+018996:                     box-sizing: border-box !important;
+018997:                     overflow: hidden !important;
+018998:                     text-overflow: ellipsis !important;
+018999:                     white-space: nowrap !important;
+019000:                     font-size: 10px !important;
+019001:                     line-height: 1.1 !important;
+019002:                     touch-action: manipulation !important;
+019003:                 }
+019004:             `;
+019005: 
+019006:             (
+019007:                 candidateDocument.head ||
+019008:                 candidateDocument.documentElement
+019009:             ).appendChild(style);
+019010:             return true;
+019011:         } catch (_error) {
+019012:             style?.remove?.();
+019013:             return false;
+019014:         }
+019015:     }
+019016: 
+019017: 
+019018:     function applyMissionFinderIphoneNativePickerToDocument(
+019019:         candidateDocument
+019020:     ) {
+019021:         if (
+019022:             !isMissionFinderIphoneSafariWebsite() ||
+019023:             !candidateDocument?.documentElement
+019024:         ) {
+019025:             return false;
+019026:         }
+019027: 
+019028:         let hasNativePicker = false;
+019029: 
+019030:         try {
+019031:             hasNativePicker = Boolean(
+019032:                 candidateDocument.querySelector(
+019033:                     'a[search_attribute]'
+019034:                 )
+019035:             );
+019036:         } catch (_error) {}
+019037: 
+019038:         if (!hasNativePicker) return false;
+019039: 
+019040:         ensureMissionFinderIphoneNativePickerStyles(
+019041:             candidateDocument
+019042:         );
+019043: 
+019044:         try {
+019045:             candidateDocument.documentElement.classList.add(
+019046:                 MF_IPHONE_NATIVE_PICKER_ROOT_CLASS
+019047:             );
+019048:         } catch (_error) {
+019049:             return false;
+019050:         }
+019051: 
+019052:         mfIphoneNativePickerDocuments.add(
+019053:             candidateDocument
+019054:         );
+019055:         return true;
+019056:     }
+019057: 
+019058:     function syncMissionFinderIphoneNativePickerSurfaces(
+019059:         forceRefresh = false
+019060:     ) {
+019061:         if (!isMissionFinderIphoneSafariWebsite()) {
+019062:             return 0;
+019063:         }
+
+=== BLOCK 18: source lines 20824-20884 ===
 020824: 
 020825:             if (
 020826:                 headings.some(heading =>
@@ -442,7 +1348,7 @@ SOURCE LINES: 39886
 020883:                 )
 020884:             );
 
-=== BLOCK 7: source lines 21088-21208 ===
+=== BLOCK 19: source lines 21088-21208 ===
 021088:             Object.defineProperties(
 021089:                 mergedRows,
 021090:                 {
@@ -565,7 +1471,7 @@ SOURCE LINES: 39886
 021207:                 .trim();
 021208: 
 
-=== BLOCK 8: source lines 28861-28921 ===
+=== BLOCK 20: source lines 28861-28921 ===
 028861:                 isPoliceSergeantPersonnelRequirementName(
 028862:                     unitName
 028863:                 ) ||
@@ -628,7 +1534,7 @@ SOURCE LINES: 39886
 028920:                     0,
 028921:                     required -
 
-=== BLOCK 9: source lines 29774-29834 ===
+=== BLOCK 21: source lines 29774-29834 ===
 029774:                             ) ||
 029775:                             0
 029776:                             : 0
@@ -691,7 +1597,7 @@ SOURCE LINES: 39886
 029833:                         mfDebugEnabled &&
 029834:                         !silent
 
-=== BLOCK 10: source lines 30430-30490 ===
+=== BLOCK 22: source lines 30430-30490 ===
 030430: 
 030431:                 if (
 030432:                     mfDebugEnabled &&
@@ -753,6 +1659,195 @@ SOURCE LINES: 39886
 030488:                 )
 030489:             );
 030490: 
+
+=== BLOCK 23: source lines 31536-31596 ===
+031536:                     )
+031537:                     .trim()
+031538:                 )
+031539:                 .join(' || ')
+031540:                 .slice(
+031541:                     0,
+031542:                     800
+031543:                 );
+031544: 
+031545:         const visibleProblemAlerts =
+031546:             getActiveMissionProblemTextBlocks(
+031547:                 roots
+031548:             )
+031549:                 .join(' || ')
+031550:                 .slice(
+031551:                     0,
+031552:                     1200
+031553:                 );
+031554: 
+031555:         const vehicleCount =
+031556:             roots.reduce(
+031557:                 (
+031558:                     total,
+031559:                     root
+031560:                 ) => {
+031561:                     try {
+031562:                         return (
+031563:                             total +
+031564:                             root
+031565:                                 .querySelectorAll(
+031566:                                     'a[search_attribute], input[type="checkbox"][vehicle_id], input[type="checkbox"][id^="vehicle_"]'
+031567:                                 )
+031568:                                 .length
+031569:                         );
+031570:                     } catch (_error) {
+031571:                         return total;
+031572:                     }
+031573:                 },
+031574:                 0
+031575:             );
+031576: 
+031577:         const dispatchPresent =
+031578:             roots.some(root => {
+031579:                 try {
+031580:                     return !!root.querySelector(
+031581:                         '#alarm_button, #mission_alarm_btn, input[type="submit"][name="commit"], button[type="submit"]'
+031582:                     );
+031583:                 } catch (_error) {
+031584:                     return false;
+031585:                 }
+031586:             });
+031587: 
+031588:         return [
+031589:             updateTables.length,
+031590:             updateTableText,
+031591:             patientAlerts,
+031592:             visibleProblemAlerts,
+031593:             vehicleCount,
+031594:             dispatchPresent
+031595:                 ? 1
+031596:                 : 0
+
+=== BLOCK 24: source lines 31673-31733 ===
+031673:                 signatureStableAt = 0;
+031674:                 lastRowsSignature = '';
+031675:                 rowsStableAt = 0;
+031676:                 latestRows = [];
+031677: 
+031678:                 if (mfDebugEnabled) {
+031679:                     debugLog(
+031680:                         'UPDATE FIRST GATE',
+031681:                         `Mission identity changed while loading -> ${currentKey}`
+031682:                     );
+031683:                 }
+031684:             }
+031685: 
+031686:             const selectionDocument =
+031687:                 getVehicleSelectionDocument(
+031688:                     true
+031689:                 );
+031690: 
+031691:             const hasMissionInfo =
+031692:                 !!selectionDocument.querySelector(
+031693:                     '#mission_general_info'
+031694:                 );
+031695: 
+031696:             const hasMissionHelp =
+031697:                 !!getMissionRequirementSource(
+031698:                     true
+031699:                 );
+031700: 
+031701:             const hasVehicleInterface =
+031702:                 !!selectionDocument.querySelector(
+031703:                     'a[search_attribute], input[type="checkbox"][vehicle_id], input[type="checkbox"][id^="vehicle_"]'
+031704:                 );
+031705: 
+031706:             if (
+031707:                 hasMissionInfo &&
+031708:                 hasMissionHelp &&
+031709:                 hasVehicleInterface
+031710:             ) {
+031711:                 if (!basicReadyAt) {
+031712:                     basicReadyAt = Date.now();
+031713:                 }
+031714:             } else {
+031715:                 basicReadyAt = 0;
+031716:             }
+031717: 
+031718:             const signature = getMissionUpdateRenderSignature();
+031719: 
+031720:             if (signature !== lastSignature) {
+031721:                 lastSignature = signature;
+031722:                 signatureStableAt = Date.now();
+031723:             }
+031724: 
+031725:             latestRows = readMissionUpdateRows({
+031726:                 silent: true
+031727:             });
+031728: 
+031729:             const rowsSignature =
+031730:                 getMissionUpdateRowsSignature(
+031731:                     latestRows
+031732:                 );
+031733: 
+
+=== BLOCK 25: source lines 39105-39165 ===
+039105:                 'VEHICLE PAGE LOAD',
+039106:                 `READY | pages=${clickedPages} | vehicles=${stability.count} | elapsed=${Date.now() - loadingStartedAt}ms`
+039107:             );
+039108:         }
+039109: 
+039110:         return {
+039111:             ...stability,
+039112:             loadClicked,
+039113:             clickedPages
+039114:         };
+039115:     }
+039116: 
+039117:     async function clickVehicleDisplayBarImmediately() {
+039118:         await ensureVehicleListLoaded();
+039119:     }
+039120: 
+039121:     function shouldRunBackgroundAutomationWatchers() {
+039122:         return !!(
+039123:             autoModeRunning ||
+039124:             sessionStorage.getItem('mf_auto_mode_running') === 'true' ||
+039125:             localStorage.getItem('mf_auto_mode_running') === 'true' ||
+039126:             sessionStorage.getItem(MF_QUEUE_WAIT_ACTIVE_FLAG) === 'true' ||
+039127:             sessionStorage.getItem(MF_FINAL_QUEUE_DISPATCH_FLAG) === 'true' ||
+039128:             isPostTransportRehookPending() ||
+039129:             isRecentTransportRehookWindowActive()
+039130:         );
+039131:     }
+039132: 
+039133:     const MF_MUTATION_VEHICLE_SELECTOR =
+039134:         'input.vehicle_checkbox, #vehicle_table, .vehicle_select_table_tr, ' +
+039135:         'a[search_attribute], a.missing_vehicles_load, .missing_vehicles_load';
+039136: 
+039137:     const MF_MUTATION_MISSION_SELECTOR =
+039138:         '#mission_general_info, #mission_help, #mission_content, ' +
+039139:         '#iframe-inside-container, .mission_content, ' +
+039140:         '#mc-map-command-toolkit-mission-requirements, ' +
+039141:         '[data-mcms-requirements-panel="1"], ' +
+039142:         'table[aria-label="Live mission requirements"], ' +
+039143:         '.alert-danger, [role="alert"], .mission_update, ' +
+039144:         '.mission_update_info, #mission_alarm_btn, #alarm_button, ' +
+039145:         '.vm--modal, .modal, .lightbox, iframe';
+039146: 
+039147:     const MF_MUTATION_PATIENT_SELECTOR =
+039148:         '.mission_patient, [id^="patient_"], [data-patient-id], .badge';
+039149: 
+039150:     const MF_MUTATION_PANEL_SELECTOR =
+039151:         '#mission-finder-wrapper, #control-panel, ' +
+039152:         '#vehicle-load-list-box';
+039153: 
+039154:     const MF_MUTATION_TRANSPORT_SELECTOR =
+039155:         '.vehicle-window, .redesign-wrapper[type="vehicle"], ' +
+039156:         '.vm--modal button.btn-success, .modal button.btn-success, ' +
+039157:         '.lightbox button.btn-success, iframe';
+039158: 
+039159:     const MF_MUTATION_MISSION_TARGET_SELECTOR =
+039160:         '#mission_general_info, #mission_help, #mission_content, ' +
+039161:         '#iframe-inside-container, .mission_content, ' +
+039162:         '#mc-map-command-toolkit-mission-requirements, ' +
+039163:         '[data-mcms-requirements-panel="1"], ' +
+039164:         'table[aria-label="Live mission requirements"], ' +
+039165:         '.alert-danger, [role="alert"], .mission_update, ' +
 
 === FULL CONSTANTS ===
 
@@ -1829,6 +2924,130 @@ SOURCE LINES: 39886
         }
 
         return count;
+    }
+
+=== FUNCTION findFallbackVehicleCheckbox: NOT FOUND ===
+
+=== FUNCTION selectVehicleUnits: source lines 25287-25408 ===
+    function selectVehicleUnits(originalName, mappedName, amount, source) {
+        if (!isCurrentMissionExecutionOwner('vehicle selection')) {
+            const blockedRequired = Math.max(
+                0,
+                parseInt(amount, 10) || 0
+            );
+
+            return {
+                assigned: 0,
+                required: blockedRequired,
+                missing: blockedRequired,
+                skipped: true,
+                staleMissionBlocked: true
+            };
+        }
+
+        if (
+            detectAndLatchStaffingBlock(
+                `before-select-${String(source || 'unknown')}`
+            )
+        ) {
+            return {
+                assigned: 0,
+                required: Math.max(
+                    0,
+                    parseInt(amount, 10) || 0
+                ),
+                missing: Math.max(
+                    0,
+                    parseInt(amount, 10) || 0
+                ),
+                skipped: true,
+                staffingBlocked: true
+            };
+        }
+
+        const required = Math.max(0, parseInt(amount, 10) || 0);
+        const selectionSource = String(source || 'UNKNOWN').toUpperCase();
+        const key = buildSelectionKey(selectionSource, originalName, mappedName, required);
+
+        if (required <= 0) {
+            return { assigned: 0, required, missing: 0, skipped: true };
+        }
+
+        if (processedSelectionKeys.has(key)) {
+            if (mfDebugEnabled) {
+                debugLog('SELECT SKIP', `${selectionSource} already processed ${originalName} -> ${mappedName} x${required}`);
+            }
+            return { assigned: 0, required, missing: 0, skipped: true };
+        }
+
+        processedSelectionKeys.add(key);
+
+        const checkboxes = getMatchingVehicleCheckboxes(originalName, mappedName);
+        let assigned = 0;
+
+        if (mfDebugEnabled) {
+            debugLog('SELECT START', `${selectionSource} | ${originalName} -> ${mappedName} | required=${required} | matching unchecked boxes=${checkboxes.length}`);
+        }
+        highDebugLog('SELECT DETAIL', `${selectionSource} | ${originalName} -> ${mappedName} | required=${required} | first=${checkboxes[0] ? getVehicleDebugName(checkboxes[0]) : 'none'}`);
+
+        // V9.2.1: The requirement quantity decides dispatch. The visual counter never controls this loop.
+        for (const checkbox of checkboxes.slice(0, required)) {
+            if (
+                detectAndLatchStaffingBlock(
+                    `selection-loop-${selectionSource}`
+                )
+            ) {
+                break;
+            }
+
+            if (mfDebugEnabled) debugLog('SELECT CLICK', `${selectionSource} | ${mappedName} | ${getVehicleDebugName(checkbox)}`);
+            if (clickVehicleElement(checkbox)) {
+                assigned += 1;
+                const row = vehicleLoadState.rows.find(r => r.originalName === originalName && r.mappedName === mappedName);
+                if (row) {
+                    row.status = assigned >= required ? 'assigned' : 'retrying';
+                    renderVehicleLoadList();
+                }
+            }
+        }
+
+        if (
+            assigned < required &&
+            !detectAndLatchStaffingBlock(
+                `before-fallback-${selectionSource}`
+            )
+        ) {
+            const fallback = findUnitButton(mappedName, originalName);
+
+            if (fallback && !isVehicleElementAlreadySelected(fallback)) {
+                if (mfDebugEnabled) debugLog('SELECT FALLBACK', `${selectionSource} | ${mappedName} | ${getVehicleDebugName(fallback)}`);
+                if (fallback.matches && fallback.matches('input.vehicle_checkbox')) {
+                    if (clickVehicleElement(fallback)) assigned += 1;
+                    renderVehicleLoadList();
+                } else {
+                    while (assigned < required) {
+                        if (!clickVehicleElement(fallback)) break;
+                        assigned += 1;
+                        renderVehicleLoadList();
+                    }
+                }
+            } else if (mfDebugEnabled && assigned < required) {
+                debugLog('SELECT MISSING', `${selectionSource} | ${mappedName} | assigned=${assigned}/${required}`);
+            }
+        }
+
+        const selectedNow = countSelectedMatchingVehicles(originalName, mappedName);
+
+        if (mfDebugEnabled) {
+            debugLog('SELECT RESULT', `${selectionSource} | ${originalName} -> ${mappedName} | clicked=${assigned}/${required} | visual=${Math.min(selectedNow, required)}/${required}`);
+        }
+
+        return {
+            assigned,
+            required,
+            missing: Math.max(required - assigned, 0),
+            skipped: false
+        };
     }
 
 === FUNCTION readMissionUpdateRows: source lines 29575-31416 ===
