@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.46
+// @version      1.0.47
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -9083,7 +9083,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.110
+         * MODULE 2: MISSION FINDER V10.6.111
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -34970,170 +34970,230 @@ async function handleAutoPrisonerCellBeforeUnitFinder() {
 
 
 
-function getVisibleAutoPrisonerReleaseDismissContexts() {
-    const candidateDocuments =
-        typeof mfGetAccessibleDocumentsForTransport === 'function'
-            ? mfGetAccessibleDocumentsForTransport()
-            : [document];
+function getAutoPrisonerReleaseOwnerContainer(releaseContext) {
+    const releaseDocument =
+        releaseContext?.document ||
+        releaseContext?.alert?.ownerDocument ||
+        releaseContext?.root?.ownerDocument ||
+        null;
+
+    try {
+        const frame = releaseDocument?.defaultView?.frameElement;
+        const container = frame?.closest?.('.vm--container');
+        if (container) return container;
+    } catch (_error) {}
+
+    const anchor = releaseContext?.alert || releaseContext?.root || null;
+    try {
+        return anchor?.closest?.('.vm--container') || null;
+    } catch (_error) {
+        return null;
+    }
+}
+
+function getAutoPrisonerReleaseContainerKey(container) {
+    if (!container?.querySelector) return '';
+    try {
+        return String(
+            container.querySelector('.vm--overlay[data-modal]')
+                ?.getAttribute('data-modal') || ''
+        ).trim();
+    } catch (_error) {
+        return '';
+    }
+}
+
+function findAutoPrisonerReleaseContainerByKey(candidateDocument, key) {
+    if (!candidateDocument?.querySelectorAll || !key) return null;
+    return Array.from(candidateDocument.querySelectorAll(
+        '#modals-container .vm--container, .vm--container'
+    )).find(container => {
+        return getAutoPrisonerReleaseContainerKey(container) === key;
+    }) || null;
+}
+
+function resolveAutoPrisonerReleaseDismissContext(context) {
+    if (!context) return null;
+
+    const documents = Array.from(new Set([
+        context.document,
+        document,
+        ...(
+            typeof mfGetAccessibleDocumentsForTransport === 'function'
+                ? mfGetAccessibleDocumentsForTransport()
+                : []
+        )
+    ].filter(Boolean)));
+
+    let container = context.container || null;
+    const key = String(
+        context.containerKey ||
+        getAutoPrisonerReleaseContainerKey(container) || ''
+    ).trim();
+
+    if (!container || container.isConnected === false) {
+        container = null;
+        for (const candidateDocument of documents) {
+            container = findAutoPrisonerReleaseContainerByKey(
+                candidateDocument,
+                key
+            );
+            if (container) break;
+        }
+    }
+
+    if (!container?.querySelectorAll) return null;
+
+    const visible = element => {
+        try {
+            return !!element && mfIsVisibleInOwnDocument(element);
+        } catch (_error) {
+            return false;
+        }
+    };
+
+    const modals = Array.from(container.querySelectorAll(
+        '.vm--modal[role="dialog"], .vm--modal, .modal, .lightbox, #lightbox_box'
+    )).filter(visible);
+    const overlays = Array.from(container.querySelectorAll(
+        '.vm--overlay[aria-expanded="true"], .vm--overlay'
+    )).filter(visible);
+    const modal = modals[modals.length - 1] || null;
+    const overlay = overlays[overlays.length - 1] || null;
+
+    if (!modal && !overlay) return null;
+
+    let closeButton = modal?.querySelector?.(
+        '.control-btn-container span.lightbox-close[title="Close"], ' +
+        '.control-btn-container .lightbox-close[title="Close"], ' +
+        'span.lightbox-close[title="Close"], ' +
+        '.lightbox-close[title="Close"]'
+    ) || null;
+    if (!visible(closeButton)) closeButton = null;
+
+    let zIndex = 0;
+    try {
+        const raw = container.ownerDocument?.defaultView
+            ?.getComputedStyle(modal || overlay || container)?.zIndex || '0';
+        const parsed = Number.parseInt(raw, 10);
+        zIndex = Number.isFinite(parsed) ? parsed : 0;
+    } catch (_error) {}
+
+    return {
+        ...context,
+        document: container.ownerDocument || context.document || document,
+        container,
+        containerKey: key || getAutoPrisonerReleaseContainerKey(container),
+        modal,
+        overlay,
+        closeButton,
+        zIndex
+    };
+}
+
+function getVisibleAutoPrisonerReleaseDismissContexts(releaseContext = null) {
+    const ownerContainer = getAutoPrisonerReleaseOwnerContainer(releaseContext);
+    if (ownerContainer) {
+        const ownerContext = resolveAutoPrisonerReleaseDismissContext({
+            document: ownerContainer.ownerDocument || document,
+            container: ownerContainer,
+            containerKey: getAutoPrisonerReleaseContainerKey(ownerContainer),
+            order: Number.MAX_SAFE_INTEGER
+        });
+        if (ownerContext?.closeButton) return [ownerContext];
+    }
+
+    const documents = Array.from(new Set([
+        document,
+        ...(
+            typeof mfGetAccessibleDocumentsForTransport === 'function'
+                ? mfGetAccessibleDocumentsForTransport()
+                : []
+        )
+    ].filter(Boolean)));
     const candidates = [];
+    const seen = new Set();
     let order = 0;
 
-    for (const candidateDocument of candidateDocuments) {
-        if (!candidateDocument || !candidateDocument.querySelectorAll) {
-            continue;
-        }
+    for (const candidateDocument of documents) {
+        if (!candidateDocument?.querySelectorAll) continue;
+        const buttons = Array.from(candidateDocument.querySelectorAll(
+            '#modals-container .vm--container .vm--modal ' +
+            '.control-btn-container span.lightbox-close[title="Close"], ' +
+            '.vm--container .vm--modal span.lightbox-close[title="Close"], ' +
+            'span.lightbox-close[title="Close"]'
+        ));
 
-        const closeButtons = Array.from(
-            candidateDocument.querySelectorAll(
-                'span.lightbox-close[title="Close"], .lightbox-close[title="Close"]'
-            )
-        );
-
-        for (const closeButton of closeButtons) {
+        for (const button of buttons) {
             order += 1;
-
-            if (!closeButton || closeButton.id?.includes('mf-')) {
-                continue;
-            }
-
-            try {
-                if (!mfIsVisibleInOwnDocument(closeButton)) continue;
-            } catch (_error) {
-                continue;
-            }
-
-            const modal = closeButton.closest(
-                '.vm--modal, .modal, .lightbox, #lightbox_box, #iframe-inside-container'
-            );
-
-            if (!modal) continue;
-
-            try {
-                if (!mfIsVisibleInOwnDocument(modal)) continue;
-            } catch (_error) {
-                continue;
-            }
-
-            let zIndex = 0;
-            try {
-                const rawZIndex =
-                    candidateDocument.defaultView
-                        ?.getComputedStyle(modal)
-                        ?.zIndex ||
-                    modal.style?.zIndex ||
-                    '0';
-                const parsedZIndex = Number.parseInt(rawZIndex, 10);
-                zIndex = Number.isFinite(parsedZIndex)
-                    ? parsedZIndex
-                    : 0;
-            } catch (_error) {}
-
-            candidates.push({
-                closeButton,
-                modal,
-                zIndex,
+            if (!button || button.id?.includes('mf-')) continue;
+            const modal = button.closest('.vm--modal, .modal, .lightbox, #lightbox_box');
+            const container = button.closest('.vm--container') || modal?.parentElement;
+            if (!modal || !container || seen.has(container)) continue;
+            seen.add(container);
+            const resolved = resolveAutoPrisonerReleaseDismissContext({
+                document: candidateDocument,
+                container,
+                containerKey: getAutoPrisonerReleaseContainerKey(container),
                 order
             });
+            if (resolved?.closeButton) candidates.push(resolved);
         }
     }
 
     candidates.sort((left, right) =>
-        left.zIndex - right.zIndex ||
-        left.order - right.order
+        left.zIndex - right.zIndex || left.order - right.order
     );
-
     return candidates;
 }
 
-function getTopmostAutoPrisonerReleaseDismissContext() {
-    const candidates =
-        getVisibleAutoPrisonerReleaseDismissContexts();
-
-    return candidates.length
-        ? candidates[candidates.length - 1]
-        : null;
+function getTopmostAutoPrisonerReleaseDismissContext(releaseContext = null) {
+    const candidates = getVisibleAutoPrisonerReleaseDismissContexts(
+        releaseContext
+    );
+    return candidates.length ? candidates[candidates.length - 1] : null;
 }
 
 function isAutoPrisonerReleaseDismissContextVisible(context) {
-    if (!context || !context.closeButton || !context.modal) {
-        return false;
-    }
-
-    if (
-        context.closeButton.isConnected === false ||
-        context.modal.isConnected === false
-    ) {
-        return false;
-    }
-
-    try {
-        return !!(
-            mfIsVisibleInOwnDocument(context.closeButton) ||
-            mfIsVisibleInOwnDocument(context.modal)
-        );
-    } catch (_error) {
-        return false;
-    }
+    return !!resolveAutoPrisonerReleaseDismissContext(context);
 }
 
-async function closeAutoPrisonerReleaseDismissAfterClick() {
+async function closeAutoPrisonerReleaseDismissAfterClick(releaseContext = null) {
     updateStatusBox(
         'Auto Mode: Release Prisoners clicked. Waiting for the result screen before restarting the mission cycle...'
     );
 
     const resultStarted = Date.now();
-
     while (
         autoModeRunning &&
         !isManualAutoStopActive() &&
         getActivePrisonerCellSelectionContext() &&
-        Date.now() - resultStarted <
-            MF_AUTO_PRISONER_RELEASE_RESULT_WAIT_MS
+        Date.now() - resultStarted < MF_AUTO_PRISONER_RELEASE_RESULT_WAIT_MS
     ) {
         await wait(200);
     }
 
-    if (!autoModeRunning || isManualAutoStopActive()) {
-        return 'stuck';
-    }
-
-    if (getActivePrisonerCellSelectionContext()) {
-        if (mfDebugEnabled) {
-            debugLog(
-                'AUTO PRISONER RELEASE',
-                'Release Prisoners did not clear the prisoner alert before the result-screen timeout.'
-            );
-        }
-        return 'stuck';
-    }
+    if (!autoModeRunning || isManualAutoStopActive()) return 'stuck';
+    if (getActivePrisonerCellSelectionContext()) return 'stuck';
 
     const dismissStarted = Date.now();
-    let dismissContext =
-        getTopmostAutoPrisonerReleaseDismissContext();
-
+    let dismissContext = getTopmostAutoPrisonerReleaseDismissContext(
+        releaseContext
+    );
     while (
         !dismissContext &&
         autoModeRunning &&
         !isManualAutoStopActive() &&
-        Date.now() - dismissStarted <
-            MF_AUTO_PRISONER_RELEASE_DISMISS_WAIT_MS
+        Date.now() - dismissStarted < MF_AUTO_PRISONER_RELEASE_DISMISS_WAIT_MS
     ) {
         await wait(200);
-        dismissContext =
-            getTopmostAutoPrisonerReleaseDismissContext();
+        dismissContext = getTopmostAutoPrisonerReleaseDismissContext(
+            releaseContext
+        );
     }
 
-    if (!autoModeRunning || isManualAutoStopActive()) {
-        return 'stuck';
-    }
-
+    if (!autoModeRunning || isManualAutoStopActive()) return 'stuck';
     if (!dismissContext) {
-        if (mfDebugEnabled) {
-            debugLog(
-                'AUTO PRISONER RELEASE',
-                'No visible release-result close span appeared; continuing because the prisoner alert cleared.'
-            );
-        }
         clearAutoPrisonerReleaseState();
         return 'none';
     }
@@ -35142,55 +35202,79 @@ async function closeAutoPrisonerReleaseDismissAfterClick() {
         'Auto Mode: closing the Release Prisoners result screen before restarting the mission cycle...'
     );
 
-    if (mfDebugEnabled) {
-        const modalClass = String(
-            dismissContext.modal.className || ''
-        ).replace(/\s+/g, '.');
-        debugLog(
-            'AUTO PRISONER RELEASE',
-            `Closing topmost release-result lightbox | zIndex=${dismissContext.zIndex} | modal=${modalClass}`
-        );
-    }
-
-    const clicked = realClickForQueueRestart(
-        dismissContext.closeButton
-    );
-
-    if (!clicked) return 'stuck';
-
     const closeStarted = Date.now();
+    let attempt = 0;
 
     while (
         autoModeRunning &&
         !isManualAutoStopActive() &&
-        isAutoPrisonerReleaseDismissContextVisible(
-            dismissContext
-        ) &&
-        Date.now() - closeStarted <
-            MF_AUTO_PRISONER_RELEASE_DISMISS_CLOSE_WAIT_MS
+        Date.now() - closeStarted < MF_AUTO_PRISONER_RELEASE_DISMISS_CLOSE_WAIT_MS
     ) {
-        await wait(180);
-    }
+        const current =
+            resolveAutoPrisonerReleaseDismissContext(dismissContext) ||
+            getTopmostAutoPrisonerReleaseDismissContext(releaseContext);
 
-    if (
-        isAutoPrisonerReleaseDismissContextVisible(
-            dismissContext
-        )
-    ) {
+        if (!current) {
+            clearAutoPrisonerReleaseState();
+            updateStatusBox(
+                'Auto Mode: prisoner result screen closed. Restarting the mission cycle...'
+            );
+            return 'closed';
+        }
+
+        dismissContext = current;
+        if (!current.closeButton) {
+            await wait(180);
+            continue;
+        }
+
+        attempt += 1;
         if (mfDebugEnabled) {
             debugLog(
                 'AUTO PRISONER RELEASE',
-                'The release-result lightbox remained visible after its close span was clicked.'
+                `Closing exact prisoner lightbox | attempt=${attempt} | key=${current.containerKey || 'none'}`
             );
         }
-        return 'stuck';
+
+        if (attempt === 2) {
+            const view = current.closeButton.ownerDocument?.defaultView || window;
+            for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) {
+                try {
+                    const EventClass =
+                        type.startsWith('pointer') && typeof view.PointerEvent === 'function'
+                            ? view.PointerEvent
+                            : view.MouseEvent;
+                    current.closeButton.dispatchEvent(new EventClass(type, {
+                        bubbles: true,
+                        cancelable: true,
+                        composed: true,
+                        view
+                    }));
+                } catch (_error) {}
+            }
+        } else if (attempt === 3 && current.overlay) {
+            realClickForQueueRestart(current.overlay);
+        } else {
+            realClickForQueueRestart(current.closeButton);
+        }
+
+        await wait(480);
+        if (!isAutoPrisonerReleaseDismissContextVisible(dismissContext)) {
+            clearAutoPrisonerReleaseState();
+            updateStatusBox(
+                'Auto Mode: prisoner result screen closed. Restarting the mission cycle...'
+            );
+            return 'closed';
+        }
     }
 
-    clearAutoPrisonerReleaseState();
-    updateStatusBox(
-        'Auto Mode: prisoner result screen closed. Restarting the mission cycle...'
-    );
-    return 'closed';
+    if (mfDebugEnabled) {
+        debugLog(
+            'AUTO PRISONER RELEASE',
+            'The exact prisoner lightbox remained visible after live-node close retries.'
+        );
+    }
+    return 'stuck';
 }
 
 function getExactAutoReleasePrisonersLink(context) {
@@ -35408,7 +35492,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
     await wait(250);
 
     const dismissResult =
-        await closeAutoPrisonerReleaseDismissAfterClick();
+        await closeAutoPrisonerReleaseDismissAfterClick(context);
 
     if (dismissResult === 'stuck') {
         return 'stuck';

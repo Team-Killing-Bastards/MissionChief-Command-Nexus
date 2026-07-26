@@ -87,8 +87,8 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-requireText('// @version      1.0.46', 'v1.0.46 metadata');
-requireText(' * MODULE 2: MISSION FINDER V10.6.110', 'V10.6.110 header');
+requireText('// @version      1.0.47', 'v1.0.47 metadata');
+requireText(' * MODULE 2: MISSION FINDER V10.6.111', 'V10.6.111 header');
 requireText("const MF_PSU_COMPATIBLE_TRAINING_CODES =", 'PSU-compatible course list');
 requireText("'51': 9", 'type-51 PSU capacity nine');
 requireText("'8': 2", 'type-8 IRV capacity two');
