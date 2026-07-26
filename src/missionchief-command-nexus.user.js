@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.36
+// @version      1.0.37
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -38,7 +38,7 @@
 
     const UNIT_VERSION = '3.3.8';
     const STATION_VERSION = '1.3.3';
-    const PERSONNEL_VERSION = '1.3.3';
+    const PERSONNEL_VERSION = '1.3.4';
     const PERSONNEL_TRAINING_CODE = 'critical_care';
     const PERSONNEL_TRAINING_LABEL = 'Critical Care';
     const PERSONNEL_TARGET_VEHICLE_TYPE_ID = '5';
@@ -56,6 +56,10 @@
     const PERSONNEL_TRAINING_REGISTRY_STORAGE_KEY =
         'mcPersonnelVehicleTrainingRegistry_v1';
     const PERSONNEL_TRAINING_REGISTRY_SCHEMA_VERSION = 1;
+    const PERSONNEL_TRAINING_REGISTRY_EXPORT_FORMAT =
+        'missionchief-personnel-training-register';
+    const PERSONNEL_TRAINING_REGISTRY_EXPORT_VERSION = 1;
+    const PERSONNEL_TRAINING_REGISTRY_IMPORT_MAX_BYTES = 10 * 1024 * 1024;
     const TOOL_LOG_MAX_LINES = 400;
     const TOOL_LOG_TRIM_BUFFER = 40;
     const PERSONNEL_TRAINING_REGISTRY_MAX_VEHICLES = 5000;
@@ -1849,6 +1853,7 @@
         log(`Unit Naming Tool v${UNIT_VERSION} loaded. Press Refresh Stations first.`, 'info');
         stationLog(`Station Naming Tool v${STATION_VERSION} loaded. Refresh stations, choose Preview or Rename and Save, then press Start.`, 'info');
         personnelLog(`Personnel Assignment v${PERSONNEL_VERSION} loaded. Medical Critical Care and the verified Police profiles are live; other services remain in safe UI preview.`, 'info');
+        updatePersonnelTrainingRegistryStatus();
     }
 
     function addPanel() {
@@ -2018,7 +2023,10 @@
 
                 <div class="mc-namer-buttons">
                     <button id="mc-personnel-refresh">Refresh Stations</button>
-                    <button id="mc-personnel-build-register" title="Scan every Police, Aviation and EOD station and rebuild the exact vehicle training register without changing any personnel assignments.">Build Personnel Register</button>
+                    <button id="mc-personnel-build-register" title="Scan every station and rebuild the exact vehicle training register. This ignores the selected service, training profile, mode and start point. No personnel assignments are changed.">Build All Register</button>
+                    <button id="mc-personnel-export-register" title="Download the saved Personnel Register as a JSON backup.">Export Register</button>
+                    <button id="mc-personnel-import-register" title="Replace the saved Personnel Register with a validated JSON backup.">Import Register</button>
+                    <input id="mc-personnel-import-register-file" type="file" accept="application/json,.json" hidden>
                     <button id="mc-personnel-start">Start</button>
                     <button id="mc-personnel-pause">Pause</button>
                     <button id="mc-personnel-stop">Stop</button>
@@ -2036,6 +2044,7 @@
                     <div><b>Station progress:</b> <span id="mc-personnel-progress">0 / 0</span></div>
                     <div><b>Stations completed:</b> <span id="mc-personnel-completed">0</span></div>
                     <div><b>Vehicles checked:</b> <span id="mc-personnel-vehicles">0</span></div>
+                    <div><b>Register:</b> <span id="mc-personnel-register-status">No saved vehicles</span></div>
                     <div><b id="mc-personnel-units-fulfilled-label">Units fulfilled:</b> <span id="mc-personnel-units-fulfilled">0 / All</span></div>
                     <div><b>Planned / assigned:</b> <span id="mc-personnel-assigned">0</span></div>
                     <div><b>Need training:</b> <span id="mc-personnel-training-shortfall">0</span></div>
@@ -2278,6 +2287,23 @@
             #mc-namer-stop,
             #mc-station-stop,
             #mc-personnel-stop { background: #dc3545; color: white; }
+
+            #mc-personnel-build-register {
+                background: #0f766e;
+                color: white;
+                border: 1px solid #5eead4;
+                font-weight: bold;
+            }
+
+            #mc-personnel-export-register { background: #2563eb; color: white; }
+            #mc-personnel-import-register { background: #0e7490; color: white; }
+
+            #mc-personnel-build-register:disabled,
+            #mc-personnel-export-register:disabled,
+            #mc-personnel-import-register:disabled {
+                cursor: not-allowed;
+                opacity: 0.5;
+            }
 
             #mc-personnel-copy,
             #mc-personnel-copy-station { background: #7c3aed; color: white; }
@@ -2643,6 +2669,16 @@
         document.querySelector('#mc-personnel-units-required').onchange = handlePersonnelUnitsRequiredChange;
         document.querySelector('#mc-personnel-refresh').onclick = refreshPersonnelStations;
         document.querySelector('#mc-personnel-build-register').onclick = buildPersonnelTrainingRegisterOneClick;
+        document.querySelector('#mc-personnel-export-register').onclick = exportPersonnelTrainingRegistry;
+        document.querySelector('#mc-personnel-import-register').onclick = () => {
+            document.querySelector('#mc-personnel-import-register-file')?.click();
+        };
+        document.querySelector('#mc-personnel-import-register-file').onchange = async event => {
+            const input = event.currentTarget;
+            const file = input?.files?.[0] || null;
+            if (input) input.value = '';
+            await importPersonnelTrainingRegistry(file);
+        };
         document.querySelector('#mc-personnel-start').onclick = startPersonnelRun;
         document.querySelector('#mc-personnel-pause').onclick = togglePersonnelPause;
         document.querySelector('#mc-personnel-stop').onclick = stopPersonnelRun;
@@ -4387,6 +4423,218 @@
     }
 
 
+    function getPersonnelTrainingRegistryStats(registry = readPersonnelTrainingRegistry()) {
+        const vehicles = registry?.vehicles && typeof registry.vehicles === 'object'
+            ? Object.values(registry.vehicles)
+            : [];
+        const updatedAt = vehicles.reduce(
+            (latest, entry) => Math.max(latest, Number(entry?.updatedAt || 0)),
+            Number(registry?.updatedAt || 0)
+        );
+        return {
+            count: vehicles.length,
+            updatedAt: Number.isFinite(updatedAt) ? updatedAt : 0
+        };
+    }
+
+    function formatPersonnelTrainingRegistryTimestamp(timestamp) {
+        const value = Number(timestamp || 0);
+        if (!Number.isFinite(value) || value <= 0) return 'never';
+        try {
+            return new Intl.DateTimeFormat('en-GB', {
+                dateStyle: 'medium',
+                timeStyle: 'short'
+            }).format(new Date(value));
+        } catch (_error) {
+            return new Date(value).toLocaleString();
+        }
+    }
+
+    function updatePersonnelTrainingRegistryStatus() {
+        const target = document.querySelector('#mc-personnel-register-status');
+        if (!target) return;
+        try {
+            const stats = getPersonnelTrainingRegistryStats();
+            target.textContent = `${stats.count.toLocaleString('en-GB')} vehicle${stats.count === 1 ? '' : 's'} stored; updated ${formatPersonnelTrainingRegistryTimestamp(stats.updatedAt)}`;
+        } catch (error) {
+            target.textContent = `Register unavailable: ${error?.message || error}`;
+        }
+    }
+
+    function setPersonnelTrainingRegistryTransferDisabled(disabled) {
+        ['#mc-personnel-export-register', '#mc-personnel-import-register'].forEach(selector => {
+            const button = document.querySelector(selector);
+            if (button) button.disabled = Boolean(disabled);
+        });
+    }
+
+    function isUnsafePersonnelTrainingRegistryKey(value) {
+        return !value || value === '__proto__' || value === 'constructor' || value === 'prototype';
+    }
+
+    function normalisePersonnelTrainingRegistryCountMap(value) {
+        const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+        const result = Object.create(null);
+        Object.entries(source).forEach(([rawKey, rawCount]) => {
+            const key = String(rawKey || '').slice(0, 150);
+            const count = Number(rawCount || 0);
+            if (isUnsafePersonnelTrainingRegistryKey(key) || !Number.isFinite(count) || count < 0) return;
+            result[key] = Math.floor(count);
+        });
+        return result;
+    }
+
+    function normaliseImportedPersonnelTrainingRegistry(candidate) {
+        const source = candidate?.registry && typeof candidate.registry === 'object' ? candidate.registry : candidate;
+        if (!source || typeof source !== 'object' || Array.isArray(source)) {
+            throw new Error('The selected file does not contain a Personnel Register object.');
+        }
+        const schemaVersion = source.schemaVersion == null
+            ? PERSONNEL_TRAINING_REGISTRY_SCHEMA_VERSION
+            : Number(source.schemaVersion);
+        if (schemaVersion !== PERSONNEL_TRAINING_REGISTRY_SCHEMA_VERSION) {
+            throw new Error(`Unsupported Personnel Register schema version: ${schemaVersion}.`);
+        }
+        if (!source.vehicles || typeof source.vehicles !== 'object' || Array.isArray(source.vehicles)) {
+            throw new Error('The selected file does not contain a valid vehicles register.');
+        }
+        const entries = Object.entries(source.vehicles);
+        if (entries.length > PERSONNEL_TRAINING_REGISTRY_MAX_VEHICLES) {
+            throw new Error(`The file contains ${entries.length} vehicles; the supported maximum is ${PERSONNEL_TRAINING_REGISTRY_MAX_VEHICLES}.`);
+        }
+        const vehicles = Object.create(null);
+        entries.forEach(([rawVehicleId, rawEntry]) => {
+            const vehicleId = String(rawVehicleId || '').slice(0, 80);
+            if (isUnsafePersonnelTrainingRegistryKey(vehicleId)) throw new Error('The file contains an invalid vehicle identifier.');
+            if (!rawEntry || typeof rawEntry !== 'object' || Array.isArray(rawEntry)) {
+                throw new Error(`Vehicle ${vehicleId} does not contain a valid register entry.`);
+            }
+            const safeCount = value => {
+                const count = Number(value || 0);
+                return Number.isFinite(count) && count >= 0 ? Math.floor(count) : 0;
+            };
+            const safeTimestamp = value => {
+                const timestamp = Number(value || 0);
+                return Number.isFinite(timestamp) && timestamp >= 0 ? timestamp : 0;
+            };
+            vehicles[vehicleId] = {
+                vehicleId,
+                vehicleName: String(rawEntry.vehicleName || '').slice(0, 500),
+                vehicleTypeId: String(rawEntry.vehicleTypeId || '').slice(0, 80),
+                stationName: String(rawEntry.stationName || '').slice(0, 500),
+                stationHref: String(rawEntry.stationHref || '').slice(0, 1000),
+                assignedPersonnelCount: safeCount(rawEntry.assignedPersonnelCount),
+                assignmentScanComplete: rawEntry.assignmentScanComplete === true,
+                personnelRowsSeen: safeCount(rawEntry.personnelRowsSeen),
+                trainingCounts: normalisePersonnelTrainingRegistryCountMap(rawEntry.trainingCounts),
+                trainingCombinationCounts: normalisePersonnelTrainingRegistryCountMap(rawEntry.trainingCombinationCounts),
+                updatedAt: safeTimestamp(rawEntry.updatedAt),
+                source: String(rawEntry.source || '').slice(0, 250)
+            };
+        });
+        const safeRegistryTimestamp = value => {
+            const timestamp = Number(value || 0);
+            return Number.isFinite(timestamp) && timestamp >= 0 ? timestamp : 0;
+        };
+        return {
+            schemaVersion: PERSONNEL_TRAINING_REGISTRY_SCHEMA_VERSION,
+            sourceVersion: String(source.sourceVersion || '').slice(0, 80),
+            updatedAt: safeRegistryTimestamp(source.updatedAt),
+            lastPrunedAt: safeRegistryTimestamp(source.lastPrunedAt),
+            vehicles
+        };
+    }
+
+    function downloadPersonnelTrainingRegistryJson(filename, payload) {
+        const blob = new Blob([`${JSON.stringify(payload, null, 2)}\n`], { type: 'application/json;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        link.hidden = true;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    function exportPersonnelTrainingRegistry() {
+        if (PERSONNEL_STATE.running) {
+            window.alert('Finish or stop the active Personnel operation before exporting the register.');
+            return;
+        }
+        flushPersonnelTrainingRegistry(false);
+        const registry = readPersonnelTrainingRegistry();
+        const stats = getPersonnelTrainingRegistryStats(registry);
+        if (!stats.count) {
+            window.alert('The Personnel Register is empty. Build or import a register before exporting.');
+            return;
+        }
+        const exportedAt = new Date().toISOString();
+        downloadPersonnelTrainingRegistryJson(`missionchief-personnel-register-${exportedAt.slice(0, 10)}.json`, {
+            format: PERSONNEL_TRAINING_REGISTRY_EXPORT_FORMAT,
+            exportVersion: PERSONNEL_TRAINING_REGISTRY_EXPORT_VERSION,
+            exportedAt,
+            origin: location.origin,
+            vehicleCount: stats.count,
+            registry
+        });
+        personnelLog(`Personnel Register exported: ${stats.count} vehicle(s).`, 'done');
+    }
+
+    async function importPersonnelTrainingRegistry(file) {
+        if (!file) return;
+        if (PERSONNEL_STATE.running) {
+            window.alert('Finish or stop the active Personnel operation before importing a register.');
+            return;
+        }
+        if (Number(file.size || 0) > PERSONNEL_TRAINING_REGISTRY_IMPORT_MAX_BYTES) {
+            window.alert('Personnel Register import failed: the selected file is larger than 10 MB.');
+            return;
+        }
+        let registry;
+        try {
+            const parsed = JSON.parse(await file.text());
+            if (parsed?.format && parsed.format !== PERSONNEL_TRAINING_REGISTRY_EXPORT_FORMAT) {
+                throw new Error(`Unsupported export format: ${String(parsed.format).slice(0, 120)}`);
+            }
+            registry = normaliseImportedPersonnelTrainingRegistry(parsed);
+        } catch (error) {
+            personnelLog(`Personnel Register import failed: ${error?.message || error}`, 'error');
+            window.alert(`Personnel Register import failed: ${error?.message || error}`);
+            return;
+        }
+        const importedCount = Object.keys(registry.vehicles).length;
+        if (!importedCount) {
+            window.alert('The selected file contains an empty Personnel Register. Nothing was imported.');
+            return;
+        }
+        const existingCount = getPersonnelTrainingRegistryStats().count;
+        if (!window.confirm(
+            `Import ${importedCount.toLocaleString('en-GB')} vehicle register entries?\n\n` +
+            `This replaces the ${existingCount.toLocaleString('en-GB')} entries currently stored in this browser.`
+        )) return;
+        try {
+            if (PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER != null) {
+                clearTimeout(PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER);
+                PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER = null;
+            }
+            localStorage.setItem(PERSONNEL_TRAINING_REGISTRY_STORAGE_KEY, JSON.stringify(registry));
+            PERSONNEL_TRAINING_REGISTRY_CACHE = registry;
+            PERSONNEL_TRAINING_REGISTRY_DIRTY = false;
+            PERSONNEL_TRAINING_REGISTRY_PENDING_EVENT = null;
+        } catch (error) {
+            personnelLog(`Personnel Register import could not be saved: ${error?.message || error}`, 'error');
+            window.alert(`Personnel Register could not be saved: ${error?.message || error}`);
+            return;
+        }
+        dispatchPersonnelTrainingRegistryUpdate({ imported: true, vehicleCount: importedCount, updatedAt: Date.now() });
+        updatePersonnelTrainingRegistryStatus();
+        personnelLog(`Personnel Register imported: ${importedCount} vehicle(s). Existing browser register replaced.`, 'done');
+        setPersonnelUiValue('status', 'Personnel register imported');
+        window.alert(`Personnel Register imported successfully: ${importedCount.toLocaleString('en-GB')} vehicle entries.`);
+    }
+
     async function buildPersonnelTrainingRegisterOneClick() {
         if (STATE.running || STATION_STATE.running) {
             personnelLog(
@@ -4442,6 +4690,7 @@
             button.disabled = true;
             button.textContent = 'Building Register...';
         }
+        setPersonnelTrainingRegistryTransferDisabled(true);
 
         document.querySelector('#mc-personnel-pause').textContent = 'Pause';
         setPersonnelUiValue('status', 'Building all-station personnel register');
@@ -4576,7 +4825,8 @@
                 }
             }
 
-            const saveResult = flushPersonnelTrainingRegistry(false);
+            flushPersonnelTrainingRegistry(false);
+            const registryRetained = getPersonnelTrainingRegistryStats().count;
             const stopped = PERSONNEL_STATE.stopped;
             const summary = [
                 'PERSONNEL TRAINING REGISTER BUILD',
@@ -4589,7 +4839,7 @@
                 `Exact vehicle pages read: ${exactVehiclePagesRead}`,
                 `Exact vehicles registered: ${scannedVehicles}`,
                 `Vehicle pages failed: ${failedVehicles}`,
-                `Registry retained: ${Number(saveResult?.retained || 0)}`,
+                `Registry retained: ${registryRetained}`,
                 '',
                 'Only personnel already assigned to each exact vehicle were recorded.',
                 'No personnel assignments were changed.'
@@ -4621,8 +4871,10 @@
 
             if (button) {
                 button.disabled = false;
-                button.textContent = 'Build Personnel Register';
+                button.textContent = 'Build All Register';
             }
+            setPersonnelTrainingRegistryTransferDisabled(false);
+            updatePersonnelTrainingRegistryStatus();
 
             document.querySelector('#mc-personnel-pause').textContent = 'Pause';
         }
@@ -5306,6 +5558,7 @@
             const pendingEvent = PERSONNEL_TRAINING_REGISTRY_PENDING_EVENT;
             PERSONNEL_TRAINING_REGISTRY_PENDING_EVENT = null;
             dispatchPersonnelTrainingRegistryUpdate(pendingEvent);
+            updatePersonnelTrainingRegistryStatus();
 
             if (!silent) {
                 personnelDebug(

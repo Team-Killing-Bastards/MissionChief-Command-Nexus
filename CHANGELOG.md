@@ -31,6 +31,23 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Consolidate the two retained control surfaces into one coherent interface.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
+## [1.0.37] - 2026-07-26
+
+### Restored
+
+- Restored Personnel Assignment `1.3.4` on top of the latest `main` source.
+- Restored the readable **Build All Register** action, JSON register export/import, saved-register status, and accurate retained-register reporting.
+
+### Preserved
+
+- Preserved Mission Finder `V10.6.101`, the trained-personnel coverage optimiser, PSU/IRV multi-trained allocation, compatible fallback selection, and non-blocking training-shortfall handling.
+
+### Safety and compatibility
+
+- Register imports validate schema and object keys, enforce the existing 5,000-vehicle limit, cap files at 10 MB, and require confirmation before replacing browser data.
+- Export and import remain blocked while Personnel Assignment or a register build is active.
+- Added a permanent regression check requiring the Personnel Register controls and the latest trained-coverage optimiser to remain present together.
+
 ## [1.0.36] - 2026-07-26
 
 ### Changed
