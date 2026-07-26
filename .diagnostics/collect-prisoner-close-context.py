@@ -8,8 +8,10 @@ lines = source.splitlines()
 out = [f'SOURCE_LINES={len(lines)}', '']
 
 names = [
+    'mfIsVisibleInOwnDocument',
     'realClickForQueueRestart',
     'getActivePrisonerCellSelectionContext',
+    'getVisibleAutoPrisonerReleaseDismissContexts',
     'getTopmostAutoPrisonerReleaseDismissContext',
     'isAutoPrisonerReleaseDismissContextVisible',
     'closeAutoPrisonerReleaseDismissAfterClick',
@@ -32,6 +34,15 @@ for name in names:
     out.append(f'=== FUNCTION {name}: lines {start_line}-{end_line} ===')
     out.append(source[match.start():end].rstrip())
     out.append('')
+
+out.append('=== PRISONER RELEASE CONSTANTS ===')
+for index, line in enumerate(lines, 1):
+    if 'MF_AUTO_PRISONER_RELEASE_' in line:
+        start = max(1, index - 2)
+        end = min(len(lines), index + 3)
+        out.append(f'--- lines {start}-{end} ---')
+        for line_no in range(start, end + 1):
+            out.append(f'{line_no:06d}: {lines[line_no - 1]}')
 
 out.append('=== LIGHTBOX CLOSE OCCURRENCES ===')
 for index, line in enumerate(lines, 1):
