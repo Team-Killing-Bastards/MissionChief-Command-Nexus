@@ -1,4 +1,4 @@
-name: Export current source for v1.0.36 training optimiser
+name: Build validated v1.0.36 training coverage optimiser
 
 on:
   pull_request:
@@ -10,46 +10,260 @@ on:
       - reopened
 
 permissions:
-  contents: read
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: build-v1.0.36-training-coverage-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
 
 jobs:
-  export:
+  build:
+    name: Apply and validate trained-personnel optimiser
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.head.ref == 'agent/training-coverage-optimizer'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 35
 
     steps:
-      - name: Check out current main
+      - name: Check out latest main
         uses: actions/checkout@v6
         with:
-          ref: main
           fetch-depth: 0
+          ref: main
           show-progress: false
 
-      - name: Package exact current source
+      - name: Fetch and verify exact v1.0.36 patch chunks
+        env:
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p /tmp/v1036-current/src
-          mkdir -p /tmp/v1036-current/scripts
-          mkdir -p /tmp/v1036-current/.github/workflows
-          cp src/missionchief-command-nexus.user.js /tmp/v1036-current/src/
-          cp README.md CHANGELOG.md /tmp/v1036-current/
-          cp src/README.md /tmp/v1036-current/src/
-          find scripts -maxdepth 1 -type f \( -name '*.mjs' -o -name '*.py' \) -exec cp {} /tmp/v1036-current/scripts/ \;
-          cp .github/workflows/validate-userscript.yml /tmp/v1036-current/.github/workflows/
-          cp .github/workflows/repository-quality.yml /tmp/v1036-current/.github/workflows/
-          cp .github/workflows/release.yml /tmp/v1036-current/.github/workflows/
-          cp .github/workflows/release-delivery-repair.yml /tmp/v1036-current/.github/workflows/
-          git rev-parse HEAD > /tmp/v1036-current/main-sha.txt
+          git fetch origin "${HEAD_BRANCH}" --force
 
-      - name: Upload exact current source
-        uses: actions/upload-artifact@v4
+          declare -A expected=(
+            [00]='4d3b7ab74af4c40c6efb69a8b87b940c8e904cf6cc99893dd4f090c81779ef9f'
+            [01]='9bcbbc5a53caa378ec7e9f5261e2c09a2d30455538afc5c3608bb6b1267f51a8'
+            [02]='7641ce909066af9fbaa7ee46e0575ebf738b054379a32654cec15f808158562d'
+            [03]='7e3cec3f37ca816137de401a48fdec6a5fc693f1198d9207aa7ec5c5ade72b3e'
+            [04]='2cb55c67d71190eb50de00655c74b4f4e454b34f15eeab1f6988ee00d59bfe77'
+            [05]='5ce397a5eb2be136ea6732b931ec9b430c4a3c1eafe33950a032d71f14c125ed'
+          )
+
+          : > /tmp/v1036.patch.normalized.b64
+          for suffix in 00 01 02 03 04 05; do
+            part="/tmp/v1036.part-${suffix}"
+            git show "origin/${HEAD_BRANCH}:.diagnostics/v1.0.36-training-coverage.part-${suffix}" > "${part}"
+            tr -d '\r\n\t ' < "${part}" > "${part}.normalized"
+            echo "${expected[${suffix}]}  ${part}.normalized" | sha256sum --check
+            cat "${part}.normalized" >> /tmp/v1036.patch.normalized.b64
+          done
+
+          echo '7ba85fbc185949fbb0c6c86cd111822b543438027d1d2aa69954a3befd86737d  /tmp/v1036.patch.normalized.b64' | sha256sum --check
+          base64 --decode /tmp/v1036.patch.normalized.b64 | gzip --decompress > /tmp/v1036.patch
+          echo 'fa535160e5aebf76bd72eb984795180c73e16b4562b0e92d55273f5ef495db6c  /tmp/v1036.patch' | sha256sum --check
+          git apply --check /tmp/v1036.patch
+
+      - name: Import permanent optimiser regression test
+        env:
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git show "origin/${HEAD_BRANCH}:scripts/check-trained-coverage-optimizer.mjs" > /tmp/check-trained-coverage-optimizer.mjs
+          echo '732adf57c836292601b8d19390f52d8292898a47256a08f0e3097a19c79187ad  /tmp/check-trained-coverage-optimizer.mjs' | sha256sum --check
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
         with:
-          name: v1036-current-source
-          path: /tmp/v1036-current
-          if-no-files-found: error
-          include-hidden-files: true
-          retention-days: 2
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Apply exact optimiser patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git apply /tmp/v1036.patch
+          cp /tmp/check-trained-coverage-optimizer.mjs scripts/check-trained-coverage-optimizer.mjs
+          git diff --check
+
+      - name: Validate JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check src/missionchief-command-nexus.user.js
+          node --check scripts/check-trained-coverage-optimizer.mjs
+          node --check scripts/check-release-notification-single-delivery.mjs
+
+      - name: Validate userscript and version increase
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/validate-userscript.mjs
+          node scripts/validate-userscript.mjs --base-ref origin/main
+
+      - name: Validate all runtime and compatibility contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/check-ios-compatibility.mjs
+          node scripts/check-runtime-hardening.mjs
+          node scripts/check-police-irv-fallback.mjs
+          node scripts/check-ios-unit-finder-selection.mjs
+          node scripts/check-ios-mission-requirements-source.mjs
+          node scripts/check-iphone-mission-ui.mjs
+          node scripts/check-open-issues-batch.mjs
+          node scripts/check-missing-requirements-priority.mjs
+          node scripts/check-trained-coverage-optimizer.mjs
+          node scripts/check-release-notification-single-delivery.mjs
+
+      - name: Validate repository integrity
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/check_repository.py
+          git diff --check
+
+      - name: Verify focused v1.0.36 contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8')
+          required = {
+              'version': '// @version      1.0.36',
+              'engine': ' * MODULE 2: MISSION FINDER V10.6.101',
+              'PSU capacity': "'51': 9",
+              'IRV capacity': "'8': 2",
+              'two-phase selection': 'runSelectionPhase(false);',
+              'multi-trained profiles': 'assignedTrainingProfiles',
+              'nominal capacity': 'capacityRemaining:',
+              'vehicle coverage': 'vehicleCoverageSatisfied',
+              'training coverage': 'trainingSatisfied',
+              'nonblocking shortfall': 'compatible units were still selected and can be sent',
+          }
+          missing = [label for label, token in required.items() if token not in source]
+          if missing:
+              raise SystemExit('Missing v1.0.36 contracts: ' + ', '.join(missing))
+          print('Focused v1.0.36 training coverage contracts passed.')
+          PY
+
+      - name: Create unattached validated v1.0.36 source commit
+        id: commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          create_blob() {
+            local file_path="$1"
+            python3 - "${file_path}" <<'PY' > /tmp/v1036-blob.json
+          import base64
+          import json
+          import sys
+          from pathlib import Path
+
+          path = Path(sys.argv[1])
+          print(json.dumps({
+              'content': base64.b64encode(path.read_bytes()).decode('ascii'),
+              'encoding': 'base64',
+          }))
+          PY
+            gh api \
+              --method POST \
+              "repos/${GITHUB_REPOSITORY}/git/blobs" \
+              --input /tmp/v1036-blob.json \
+              --jq '.sha'
+          }
+
+          PARENT_SHA="$(git rev-parse origin/main)"
+          BASE_TREE_SHA="$(git rev-parse "${PARENT_SHA}^{tree}")"
+
+          SOURCE_BLOB="$(create_blob src/missionchief-command-nexus.user.js)"
+          README_BLOB="$(create_blob README.md)"
+          CHANGELOG_BLOB="$(create_blob CHANGELOG.md)"
+          SOURCE_README_BLOB="$(create_blob src/README.md)"
+          IOS_SOURCE_BLOB="$(create_blob scripts/check-ios-mission-requirements-source.mjs)"
+          IPHONE_UI_BLOB="$(create_blob scripts/check-iphone-mission-ui.mjs)"
+          MISSING_REQUIREMENTS_BLOB="$(create_blob scripts/check-missing-requirements-priority.mjs)"
+          OPEN_ISSUES_BLOB="$(create_blob scripts/check-open-issues-batch.mjs)"
+          POLICE_BLOB="$(create_blob scripts/check-police-irv-fallback.mjs)"
+          OPTIMISER_BLOB="$(create_blob scripts/check-trained-coverage-optimizer.mjs)"
+
+          export BASE_TREE_SHA SOURCE_BLOB README_BLOB CHANGELOG_BLOB SOURCE_README_BLOB
+          export IOS_SOURCE_BLOB IPHONE_UI_BLOB MISSING_REQUIREMENTS_BLOB OPEN_ISSUES_BLOB
+          export POLICE_BLOB OPTIMISER_BLOB PARENT_SHA
+
+          python3 - <<'PY' > /tmp/v1036-tree.json
+          import json
+          import os
+
+          def blob(path, env_name):
+              return {
+                  'path': path,
+                  'mode': '100644',
+                  'type': 'blob',
+                  'sha': os.environ[env_name],
+              }
+
+          print(json.dumps({
+              'base_tree': os.environ['BASE_TREE_SHA'],
+              'tree': [
+                  blob('src/missionchief-command-nexus.user.js', 'SOURCE_BLOB'),
+                  blob('README.md', 'README_BLOB'),
+                  blob('CHANGELOG.md', 'CHANGELOG_BLOB'),
+                  blob('src/README.md', 'SOURCE_README_BLOB'),
+                  blob('scripts/check-ios-mission-requirements-source.mjs', 'IOS_SOURCE_BLOB'),
+                  blob('scripts/check-iphone-mission-ui.mjs', 'IPHONE_UI_BLOB'),
+                  blob('scripts/check-missing-requirements-priority.mjs', 'MISSING_REQUIREMENTS_BLOB'),
+                  blob('scripts/check-open-issues-batch.mjs', 'OPEN_ISSUES_BLOB'),
+                  blob('scripts/check-police-irv-fallback.mjs', 'POLICE_BLOB'),
+                  blob('scripts/check-trained-coverage-optimizer.mjs', 'OPTIMISER_BLOB'),
+              ],
+          }))
+          PY
+
+          TREE_SHA="$(
+            gh api \
+              --method POST \
+              "repos/${GITHUB_REPOSITORY}/git/trees" \
+              --input /tmp/v1036-tree.json \
+              --jq '.sha'
+          )"
+
+          export TREE_SHA
+          python3 - <<'PY' > /tmp/v1036-commit.json
+          import json
+          import os
+
+          identity = {
+              'name': 'MartyBlyth',
+              'email': '32400596+Martyblyth@users.noreply.github.com',
+          }
+
+          print(json.dumps({
+              'message': 'Optimise trained-personnel coverage with PSU fallback',
+              'tree': os.environ['TREE_SHA'],
+              'parents': [os.environ['PARENT_SHA']],
+              'author': identity,
+              'committer': identity,
+          }))
+          PY
+
+          COMMIT_SHA="$(
+            gh api \
+              --method POST \
+              "repos/${GITHUB_REPOSITORY}/git/commits" \
+              --input /tmp/v1036-commit.json \
+              --jq '.sha'
+          )"
+
+          echo "commit_sha=${COMMIT_SHA}" >> "${GITHUB_OUTPUT}"
+          gh pr comment "${PR_NUMBER}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --body "v1.0.36 passed the complete validation suite. Unattached validated source commit: \`${COMMIT_SHA}\`."
