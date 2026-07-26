@@ -19,6 +19,7 @@ on:
       - 'scripts/check-fire-engine-update-mapping.mjs'
       - 'scripts/check-saved-position-helper-copy.mjs'
       - 'scripts/check-bulk-trained-register-update.mjs'
+      - 'scripts/check-hems-ambulance-eta-priority.mjs'
       - '.github/workflows/validate-userscript.yml'
   push:
     branches:
@@ -40,6 +41,7 @@ on:
       - 'scripts/check-fire-engine-update-mapping.mjs'
       - 'scripts/check-saved-position-helper-copy.mjs'
       - 'scripts/check-bulk-trained-register-update.mjs'
+      - 'scripts/check-hems-ambulance-eta-priority.mjs'
       - '.github/workflows/validate-userscript.yml'
   workflow_dispatch:
 
@@ -114,6 +116,9 @@ jobs:
 
       - name: Validate bulk trained-register, Search Advisor and recovery update
         run: node scripts/check-bulk-trained-register-update.mjs
+
+      - name: Validate HEMS ambulance ETA priority
+        run: node scripts/check-hems-ambulance-eta-priority.mjs
 
       - name: Require a version increase when code changes
         if: github.event_name == 'pull_request'
