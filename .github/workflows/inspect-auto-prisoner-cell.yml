@@ -37,6 +37,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          rm -f auto-prisoner-validation.txt
           python3 .diagnostics/fix-auto-prisoner-builder.py
           python3 .diagnostics/apply-auto-prisoner-cell.py
           rm -f .diagnostics/fix-auto-prisoner-builder.py
