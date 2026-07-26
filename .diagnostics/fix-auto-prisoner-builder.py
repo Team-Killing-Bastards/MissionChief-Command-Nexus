@@ -86,4 +86,11 @@ auto_replacement = (
 if text.count(old) != 1:
     raise SystemExit(f'Expected one broken Auto Mode anchor block; found {text.count(old)}')
 
-path.write_text(text.replace(old, new, 1), encoding='utf-8')
+text = text.replace(old, new, 1)
+
+old_test = "['The prisoners should be placed in a cell', 'exact prisoner alert contract'],"
+new_test = "['the prisoners should be placed in a cell', 'normalised prisoner alert contract'],"
+if text.count(old_test) != 1:
+    raise SystemExit(f'Expected one prisoner alert test token; found {text.count(old_test)}')
+
+path.write_text(text.replace(old_test, new_test, 1), encoding='utf-8')
