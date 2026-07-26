@@ -1,17 +1,15 @@
 name: Reapply PR 156 while preserving PR 155
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/reapply-pr156-preserve-pr155.yml'
+  issue_comment:
+    types: [created]
 
 permissions:
   contents: write
 
 jobs:
   reapply:
+    if: github.event.issue.pull_request && github.event.comment.body == '/reapply-pr156'
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
