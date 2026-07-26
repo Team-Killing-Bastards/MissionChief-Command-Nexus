@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.41
+// @version      1.0.42
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -9041,7 +9041,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.105
+         * MODULE 2: MISSION FINDER V10.6.106
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -9848,7 +9848,7 @@
     const MF_STRICT_TRAINING_SOURCE_PREFIX =
         'mission-finder-live-strict-';
 
-    // V10.6.105: trained-personnel selection now optimises exact vehicle
+    // V10.6.106: trained-personnel selection now optimises exact vehicle
     // coverage instead of treating full qualification as a dispatch gate.
     // Multi-trained crews reduce every matching course, type-51 PSUs provide
     // up to nine seats for compatible Public Order demand, IRVs fill smaller
@@ -34221,6 +34221,10 @@ const MF_AUTO_PRISONER_CELL_HANDOFF_KEY =
 const MF_AUTO_PRISONER_CELL_DESTINATION_WAIT_MS = 8000;
 const MF_AUTO_PRISONER_CELL_CLICK_RETRY_MS = 6500;
 const MF_AUTO_PRISONER_CELL_MAX_ATTEMPTS = 2;
+const MF_AUTO_PRISONER_RELEASE_STATE_KEY =
+    'mf_auto_prisoner_release_v1';
+const MF_AUTO_PRISONER_RELEASE_CLICK_RETRY_MS = 6500;
+const MF_AUTO_PRISONER_RELEASE_MAX_ATTEMPTS = 2;
 
 function getActivePrisonerCellSelectionContext() {
     const candidateDocuments =
@@ -34401,6 +34405,7 @@ async function handleAutoPrisonerCellBeforeUnitFinder() {
 
     if (!context) {
         clearAutoPrisonerCellHandoffState();
+        clearAutoPrisonerReleaseState();
         return 'none';
     }
 
@@ -34437,14 +34442,16 @@ async function handleAutoPrisonerCellBeforeUnitFinder() {
     }
 
     if (!destination) {
+        clearAutoPrisonerCellHandoffState();
+
         if (mfDebugEnabled) {
             debugLog(
                 'AUTO PRISONER CELL',
-                'Prisoner alert remained visible, but no active green destination with available cells was found.'
+                'No active cell destination is available. Deferring the exact Release Prisoners fallback until normal Auto Mode actions are complete.'
             );
         }
 
-        return 'stuck';
+        return 'defer-release';
     }
 
     const href = String(
@@ -34521,6 +34528,223 @@ async function handleAutoPrisonerCellBeforeUnitFinder() {
 
     if (!clicked) {
         clearAutoPrisonerCellHandoffState();
+        return 'stuck';
+    }
+
+    await wait(450);
+    return 'clicked';
+}
+
+
+function getExactAutoReleasePrisonersLink(context) {
+    if (!context || !context.root || !context.root.querySelectorAll) {
+        return null;
+    }
+
+    const missionId = String(
+        getCurrentMissionIdForQueueRestart() || ''
+    ).trim();
+
+    if (!/^\d+$/.test(missionId)) return null;
+
+    const links = Array.from(
+        context.root.querySelectorAll(
+            'a.btn.btn-danger[data-method="post"][href*="/gefangene/entlassen"]'
+        )
+    );
+
+    for (const link of links) {
+        try {
+            if (!mfIsVisibleInOwnDocument(link)) continue;
+        } catch (_error) {
+            continue;
+        }
+
+        if (
+            link.hidden ||
+            link.classList.contains('disabled') ||
+            link.classList.contains('hidden') ||
+            link.classList.contains('d-none') ||
+            link.getAttribute('aria-disabled') === 'true'
+        ) {
+            continue;
+        }
+
+        const text = String(
+            link.innerText || link.textContent || ''
+        )
+            .replace(/\s+/g, ' ')
+            .trim()
+            .toLowerCase();
+
+        if (text !== 'release prisoners') continue;
+
+        let releaseUrl;
+        try {
+            releaseUrl = new URL(
+                link.getAttribute('href') || link.href || '',
+                context.document.location?.origin ||
+                    window.location.origin
+            );
+        } catch (_error) {
+            continue;
+        }
+
+        if (
+            releaseUrl.origin !== window.location.origin ||
+            releaseUrl.pathname !==
+                `/missions/${missionId}/gefangene/entlassen`
+        ) {
+            continue;
+        }
+
+        return link;
+    }
+
+    return null;
+}
+
+function readAutoPrisonerReleaseState() {
+    try {
+        const parsed = JSON.parse(
+            sessionStorage.getItem(
+                MF_AUTO_PRISONER_RELEASE_STATE_KEY
+            ) ||
+                'null'
+        );
+
+        if (!parsed || typeof parsed !== 'object') return null;
+
+        return {
+            ownerKey: String(parsed.ownerKey || ''),
+            href: String(parsed.href || ''),
+            clickedAt: Number(parsed.clickedAt || 0),
+            attempts: Math.max(
+                0,
+                Math.trunc(Number(parsed.attempts || 0))
+            )
+        };
+    } catch (_error) {
+        return null;
+    }
+}
+
+function writeAutoPrisonerReleaseState(state) {
+    try {
+        sessionStorage.setItem(
+            MF_AUTO_PRISONER_RELEASE_STATE_KEY,
+            JSON.stringify(state)
+        );
+    } catch (_error) {}
+}
+
+function clearAutoPrisonerReleaseState() {
+    try {
+        sessionStorage.removeItem(
+            MF_AUTO_PRISONER_RELEASE_STATE_KEY
+        );
+    } catch (_error) {}
+}
+
+async function handleAutoPrisonerReleaseAfterActions() {
+    const context = getActivePrisonerCellSelectionContext();
+
+    if (!context) {
+        clearAutoPrisonerReleaseState();
+        return 'none';
+    }
+
+    const availableDestination =
+        getFirstAvailablePrisonCellDestination(context);
+
+    if (availableDestination) {
+        clearAutoPrisonerReleaseState();
+        updateStatusBox(
+            'Auto Mode: an available cell is still listed. Restarting the cell handoff before release fallback...'
+        );
+        return 'cell-available';
+    }
+
+    const releaseLink =
+        getExactAutoReleasePrisonersLink(context);
+
+    if (!releaseLink) {
+        if (mfDebugEnabled) {
+            debugLog(
+                'AUTO PRISONER RELEASE',
+                'The prisoner alert remained after all actions, but the exact current-mission Release Prisoners link was not available.'
+            );
+        }
+        return 'stuck';
+    }
+
+    const href = String(
+        releaseLink.getAttribute('href') ||
+            releaseLink.href ||
+            ''
+    ).trim();
+    const ownerKey = String(
+        getCurrentMissionIdForQueueRestart() ||
+            window.location.href ||
+            ''
+    );
+    const previous = readAutoPrisonerReleaseState();
+    const sameRelease = !!(
+        previous &&
+        previous.ownerKey === ownerKey &&
+        previous.href === href
+    );
+    const previousAge = sameRelease
+        ? Date.now() - previous.clickedAt
+        : Number.POSITIVE_INFINITY;
+
+    if (
+        sameRelease &&
+        previousAge >= 0 &&
+        previousAge < MF_AUTO_PRISONER_RELEASE_CLICK_RETRY_MS
+    ) {
+        updateStatusBox(
+            'Auto Mode: waiting for Release Prisoners to complete before dispatch...'
+        );
+        return 'waiting';
+    }
+
+    const attempts = sameRelease
+        ? previous.attempts + 1
+        : 1;
+
+    if (attempts > MF_AUTO_PRISONER_RELEASE_MAX_ATTEMPTS) {
+        if (mfDebugEnabled) {
+            debugLog(
+                'AUTO PRISONER RELEASE',
+                `Release Prisoners did not complete after ${previous.attempts} click attempt(s): ${href}`
+            );
+        }
+        return 'stuck';
+    }
+
+    writeAutoPrisonerReleaseState({
+        ownerKey,
+        href,
+        clickedAt: Date.now(),
+        attempts
+    });
+
+    updateStatusBox(
+        'Auto Mode: all other actions are complete. Releasing the remaining prisoners before dispatch...'
+    );
+
+    if (mfDebugEnabled) {
+        debugLog(
+            'AUTO PRISONER RELEASE',
+            `Clicking exact current-mission Release Prisoners fallback | attempt=${attempts} | href=${href}`
+        );
+    }
+
+    const clicked = realClickForQueueRestart(releaseLink);
+
+    if (!clicked) {
+        clearAutoPrisonerReleaseState();
         return 'stuck';
     }
 
@@ -37438,7 +37662,18 @@ async function handleAutoPrisonerCellBeforeUnitFinder() {
             const prisonerCellGate =
                 await handleAutoPrisonerCellBeforeUnitFinder();
 
-            if (prisonerCellGate !== 'none') {
+            if (prisonerCellGate === 'defer-release') {
+                updateStatusBox(
+                    'Auto Mode: no available cell destination. Finishing normal mission actions before the Release Prisoners fallback...'
+                );
+
+                if (mfDebugEnabled) {
+                    debugLog(
+                        'AUTO PRISONER CELL',
+                        'Cell handoff deferred; Unit Finder and Mission Update may proceed before the final release fallback.'
+                    );
+                }
+            } else if (prisonerCellGate !== 'none') {
                 clearAutoSelectionMissionGuard(
                     'prisoner cell handoff before Unit Finder'
                 );
@@ -37447,7 +37682,7 @@ async function handleAutoPrisonerCellBeforeUnitFinder() {
 
                 if (prisonerCellGate === 'stuck') {
                     stopAutoMode(
-                        'Auto stopped: prisoners require a cell, but no active available destination could be completed. Unit Finder was not started.'
+                        'Auto stopped: the prisoner cell handoff could not be completed. Unit Finder was not started.'
                     );
                     break;
                 }
@@ -37687,6 +37922,31 @@ async function handleAutoPrisonerCellBeforeUnitFinder() {
             }
 
             if (!autoModeRunning) break;
+
+            const prisonerReleaseResult =
+                await handleAutoPrisonerReleaseAfterActions();
+
+            if (prisonerReleaseResult !== 'none') {
+                clearAutoSelectionMissionGuard(
+                    'final prisoner release fallback'
+                );
+                resetVehicleLoadState();
+                changeDispatchBoxColor(false);
+
+                if (prisonerReleaseResult === 'stuck') {
+                    stopAutoMode(
+                        'Auto stopped: all other actions completed, but the remaining prisoners could not be placed or released. Dispatch was not clicked.'
+                    );
+                    break;
+                }
+
+                await wait(
+                    prisonerReleaseResult === 'waiting'
+                        ? 500
+                        : 850
+                );
+                continue;
+            }
 
             const visibleProblemAlert = getVisibleInlineProblemAlertText();
 

@@ -31,6 +31,29 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Consolidate the two retained control surfaces into one coherent interface.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
+
+## [1.0.42] - 2026-07-26
+
+### Changed
+
+- Auto Mode continues to prefer the first visible active prison destination with free cells.
+- When the prisoner alert remains but no available cell destination exists, Unit Finder, Mission Update and normal vehicle-selection actions are allowed to finish before the fallback is considered.
+
+### Added
+
+- After all normal Auto Mode actions complete, the exact current-mission `Release Prisoners` link is clicked if the prisoner alert still remains.
+- The release fallback restarts the Auto cycle and must clear before dispatch or queue advance can continue.
+
+### Safety
+
+- Release is allowed only for a visible `btn-danger` link with `data-method="post"`, exact text `Release Prisoners` and the exact current mission `/gefangene/entlassen` route.
+- The fallback is never used while any active destination with positive free-cell capacity remains.
+- A separate session guard prevents duplicate release clicks while MissionChief processes the request.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.105` to `V10.6.106`.
+
 ## [1.0.41] - 2026-07-26
 
 ### Added
