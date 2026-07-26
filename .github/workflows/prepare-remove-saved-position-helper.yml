@@ -45,28 +45,46 @@ jobs:
         run: |
           set +e
           mkdir -p .diagnostics
+          log=.diagnostics/saved-position-validation.log
+          : > "${log}"
           status=0
-          {
-            set -x
-            node --check src/missionchief-command-nexus.user.js || status=$?
-            if [ "${status}" = '0' ]; then node scripts/validate-userscript.mjs || status=$?; fi
-            if [ "${status}" = '0' ]; then python3 scripts/check_repository.py || status=$?; fi
-            if [ "${status}" = '0' ]; then
-              for check in scripts/check-*.mjs; do
-                echo "Running ${check}"
-                node "${check}" || { status=$?; break; }
-              done
+
+          run_check() {
+            label="$1"
+            shift
+            printf '\n### %s\n' "${label}" >> "${log}"
+            "$@" >> "${log}" 2>&1
+            result=$?
+            if [ "${result}" != '0' ]; then
+              status="${result}"
             fi
-            if [ "${status}" = '0' ]; then test ! -e src/personnel-register-tools.user.js || status=$?; fi
-            if [ "${status}" = '0' ]; then grep -Fq '// @version      1.0.45' src/missionchief-command-nexus.user.js || status=$?; fi
-            if [ "${status}" = '0' ]; then grep -Fq ' * MODULE 2: MISSION FINDER V10.6.109' src/missionchief-command-nexus.user.js || status=$?; fi
-            if [ "${status}" = '0' ]; then grep -Fq 'Keep my saved panel position' src/missionchief-command-nexus.user.js || status=$?; fi
-            if [ "${status}" = '0' ]; then ! grep -Fq 'Off = centre on every mission. On = remember where you drag it.' src/missionchief-command-nexus.user.js || status=$?; fi
-            if [ "${status}" = '0' ]; then git diff --check || status=$?; fi
-            echo "FINAL_STATUS=${status}"
-          } > .diagnostics/saved-position-validation.log 2>&1
+          }
+
+          run_check 'JavaScript syntax' node --check src/missionchief-command-nexus.user.js
+          if [ "${status}" = '0' ]; then run_check 'Userscript metadata' node scripts/validate-userscript.mjs; fi
+          if [ "${status}" = '0' ]; then run_check 'Repository integrity' python3 scripts/check_repository.py; fi
+          if [ "${status}" = '0' ]; then
+            for check in scripts/check-*.mjs; do
+              run_check "${check}" node "${check}"
+              if [ "${status}" != '0' ]; then break; fi
+            done
+          fi
+          if [ "${status}" = '0' ]; then run_check 'Standalone source absence' test ! -e src/personnel-register-tools.user.js; fi
+          if [ "${status}" = '0' ]; then run_check 'Version metadata' grep -Fq '// @version      1.0.45' src/missionchief-command-nexus.user.js; fi
+          if [ "${status}" = '0' ]; then run_check 'Mission Finder header' grep -Fq ' * MODULE 2: MISSION FINDER V10.6.109' src/missionchief-command-nexus.user.js; fi
+          if [ "${status}" = '0' ]; then run_check 'Saved-position label retained' grep -Fq 'Keep my saved panel position' src/missionchief-command-nexus.user.js; fi
+          if [ "${status}" = '0' ]; then
+            printf '\n### Saved-position helper absent\n' >> "${log}"
+            if grep -Fq 'Off = centre on every mission. On = remember where you drag it.' src/missionchief-command-nexus.user.js; then
+              echo 'Helper text remains in source.' >> "${log}"
+              status=1
+            fi
+          fi
+          if [ "${status}" = '0' ]; then run_check 'Diff whitespace' git diff --check; fi
+
+          printf '\nFINAL_STATUS=%s\n' "${status}" >> "${log}"
           echo "${status}" > .diagnostics/saved-position-validation.status
-          cat .diagnostics/saved-position-validation.log
+          tail -n 160 "${log}"
           exit 0
 
       - name: Commit failed validation receipt
@@ -86,7 +104,7 @@ jobs:
           cp /tmp/saved-position-validation.status .diagnostics/saved-position-validation.status
           git config user.name MartyBlyth
           git config user.email 32400596+Martyblyth@users.noreply.github.com
-          git add .diagnostics/saved-position-validation.log .diagnostics/saved-position-validation.status
+          git add -f .diagnostics/saved-position-validation.log .diagnostics/saved-position-validation.status
           git commit -m 'Record saved-position validation failure'
           git push origin HEAD:agent/remove-saved-position-helper-text
 
@@ -100,6 +118,7 @@ jobs:
             exit "${status}"
           fi
           rm -f .diagnostics/saved-position-validation.log .diagnostics/saved-position-validation.status
+          rm -f .diagnostics/saved-position-validation-trigger.txt
 
       - name: Commit validated integration
         shell: bash
