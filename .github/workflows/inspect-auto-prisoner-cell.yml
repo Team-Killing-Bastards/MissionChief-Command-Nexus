@@ -65,18 +65,18 @@ jobs:
             grep -Fq 'a.btn.btn-success[data-prison-id][href*="/gefangener/"]' src/missionchief-command-nexus.user.js || return $?
             git diff --check || return $?
           }
-          run_validation > auto-prisoner-validation.log 2>&1
+          run_validation > auto-prisoner-validation.txt 2>&1
           status=$?
-          cat auto-prisoner-validation.log
+          cat auto-prisoner-validation.txt
           if [[ ${status} -ne 0 ]]; then
             git config user.name MartyBlyth
             git config user.email 32400596+Martyblyth@users.noreply.github.com
-            git add auto-prisoner-validation.log
+            git add auto-prisoner-validation.txt
             git commit -m 'Capture Auto Mode prisoner validation failure'
             git push origin HEAD:agent/auto-prisoner-cell-before-unit-finder
             exit ${status}
           fi
-          rm -f auto-prisoner-validation.log
+          rm -f auto-prisoner-validation.txt
 
       - name: Commit validated integration
         shell: bash
