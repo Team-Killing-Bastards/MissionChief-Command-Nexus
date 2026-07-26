@@ -54,9 +54,15 @@ check = once(
 )
 check = once(
     check,
+    "const resultCloseLookup = dismissBody.indexOf('getTopmostAutoPrisonerReleaseDismissContext()');",
+    "const resultCloseLookup = dismissBody.indexOf('resolveAutoPrisonerReleaseDismissContext(dismissContext)');",
+    'live dismiss lookup order token'
+)
+check = once(
+    check,
     "const resultCloseClick = dismissBody.indexOf('dismissContext.closeButton');",
-    "const resultCloseClick = dismissBody.indexOf('current.closeButton');",
-    'dismiss click order token'
+    "const resultCloseClick = dismissBody.indexOf('realClickForQueueRestart(current.closeButton)');",
+    'native dismiss click order token'
 )
 final_log = "console.log('Auto Mode prefers active cells, finishes normal actions when none are available, clicks only the exact current-mission Release Prisoners fallback, closes its direct result lightbox and restarts the mission cycle before dispatch.');"
 extra = r'''const visibleContextsStart = source.indexOf('function getVisibleAutoPrisonerReleaseDismissContexts(');
