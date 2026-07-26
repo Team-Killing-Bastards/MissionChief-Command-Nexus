@@ -1,0 +1,78 @@
+name: Inspect RRU collision
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: write
+
+jobs:
+  inspect:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'agent/separate-fire-road-rail-rru'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out working branch
+        uses: actions/checkout@v6
+        with:
+          ref: agent/separate-fire-road-rail-rru
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Capture RRU collision contexts
+        shell: bash
+        run: |
+          python3 <<'PY'
+          import re
+          from pathlib import Path
+
+          source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8')
+          lines = source.splitlines()
+          patterns = [
+              re.compile(r'Rope Rescue', re.I),
+              re.compile(r'Road Rail', re.I),
+              re.compile(r'Coastguard', re.I),
+              re.compile(r'\bRRU\b'),
+          ]
+          matches = []
+          for index, line in enumerate(lines, 1):
+              if any(pattern.search(line) for pattern in patterns):
+                  matches.append(index)
+
+          blocks = []
+          seen = set()
+          for index in matches:
+              start = max(1, index - 10)
+              end = min(len(lines), index + 10)
+              key = (start, end)
+              if key in seen:
+                  continue
+              seen.add(key)
+              blocks.append(f'===== {start}-{end} (match {index}) =====')
+              blocks.extend(f'{n}: {lines[n-1]}' for n in range(start, end + 1))
+              blocks.append('')
+
+          Path('.diagnostics/rru-collision-context.txt').write_text(
+              f'Found {len(matches)} matching line(s).\n\n' + '\n'.join(blocks),
+              encoding='utf-8',
+          )
+          PY
+
+      - name: Commit captured context
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name MartyBlyth
+          git config user.email 32400596+Martyblyth@users.noreply.github.com
+          git add .diagnostics/rru-collision-context.txt
+          git commit -m 'Capture RRU collision source context'
+          git push origin HEAD:agent/separate-fire-road-rail-rru
