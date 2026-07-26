@@ -49,7 +49,6 @@ jobs:
         shell: bash
         run: |
           set +e
-          mkdir -p .diagnostics
           run_validation() {
             set -x
             node --check src/missionchief-command-nexus.user.js || return $?
@@ -66,18 +65,18 @@ jobs:
             grep -Fq 'a.btn.btn-success[data-prison-id][href*="/gefangener/"]' src/missionchief-command-nexus.user.js || return $?
             git diff --check || return $?
           }
-          run_validation > .diagnostics/auto-prisoner-validation.log 2>&1
+          run_validation > auto-prisoner-validation.log 2>&1
           status=$?
-          cat .diagnostics/auto-prisoner-validation.log
+          cat auto-prisoner-validation.log
           if [[ ${status} -ne 0 ]]; then
             git config user.name MartyBlyth
             git config user.email 32400596+Martyblyth@users.noreply.github.com
-            git add .diagnostics/auto-prisoner-validation.log
+            git add auto-prisoner-validation.log
             git commit -m 'Capture Auto Mode prisoner validation failure'
             git push origin HEAD:agent/auto-prisoner-cell-before-unit-finder
             exit ${status}
           fi
-          rm -f .diagnostics/auto-prisoner-validation.log
+          rm -f auto-prisoner-validation.log
 
       - name: Commit validated integration
         shell: bash
