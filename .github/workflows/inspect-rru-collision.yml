@@ -85,28 +85,19 @@ jobs:
               return f'===== {name}: UNTERMINATED =====\n'
 
           names = [
+              'getVehicleMatchCandidates',
+              'vehicleValuesMatchCandidates',
+              'getCheckboxVehicleValues',
               'getAllMatchingVehicleCheckboxes',
-              'getMatchingVehicleCheckboxes',
               'countSelectedMatchingVehicles',
               'getVehicleTypeIdentifiers',
               'getExtendedVehicleValues',
               'normaliseVehicleText',
-              'clickRequiredVehicles',
-              'selectRequiredVehicles',
           ]
-
-          function_names = []
-          for match in re.finditer(r'^    (?:async )?function ([A-Za-z0-9_$]+)\s*\(', source, re.MULTILINE):
-              name = match.group(1)
-              block = extract_function(name)
-              if re.search(r'Road Rail|Rope Rescue|\bRRU\b|type-107|type 107', block, re.I):
-                  function_names.append(name)
-
-          output = ['RRU-bearing functions: ' + ', '.join(function_names), '']
-          for name in dict.fromkeys(names + function_names):
-              output.append(extract_function(name))
-
-          Path('.diagnostics/rru-dispatch-functions.txt').write_text('\n'.join(output), encoding='utf-8')
+          Path('.diagnostics/rru-generic-match-functions.txt').write_text(
+              '\n'.join(extract_function(name) for name in names),
+              encoding='utf-8',
+          )
           PY
 
       - name: Commit captured matcher context
@@ -115,10 +106,10 @@ jobs:
           set -euo pipefail
           git config user.name MartyBlyth
           git config user.email 32400596+Martyblyth@users.noreply.github.com
-          git add .diagnostics/rru-dispatch-functions.txt
+          git add .diagnostics/rru-generic-match-functions.txt
           if git diff --cached --quiet; then
             echo 'Matcher context already current.'
             exit 0
           fi
-          git commit -m 'Capture RRU dispatch matcher context'
+          git commit -m 'Capture generic RRU matcher context'
           git push origin HEAD:agent/separate-fire-road-rail-rru
