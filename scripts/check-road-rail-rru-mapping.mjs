@@ -9,6 +9,7 @@ function fail(message) {
   process.exit(1);
 }
 
+// MissionChief may render the same current shortage in singular or plural form.
 for (const [token, label] of [
   ['// @version      1.0.38', 'v1.0.38 metadata'],
   [' * MODULE 2: MISSION FINDER V10.6.102', 'Mission Finder V10.6.102 header'],
