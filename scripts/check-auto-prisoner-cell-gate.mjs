@@ -14,8 +14,8 @@ function fail(message) {
 }
 
 for (const [token, label] of [
-  ['// @version      1.0.43', 'v1.0.43 metadata'],
-  [' * MODULE 2: MISSION FINDER V10.6.107', 'Mission Finder V10.6.107 header'],
+  ['// @version      1.0.44', 'v1.0.44 metadata'],
+  [' * MODULE 2: MISSION FINDER V10.6.108', 'Mission Finder V10.6.108 header'],
   ['the prisoners should be placed in a cell', 'normalised prisoner alert contract'],
   ['a.btn.btn-success[data-prison-id][href*="/gefangener/"]', 'green prison destination selector'],
   ['a.btn.btn-danger[data-method="post"][href*="/gefangene/entlassen"]', 'exact release fallback selector'],

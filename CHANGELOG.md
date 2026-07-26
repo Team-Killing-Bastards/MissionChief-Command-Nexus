@@ -32,6 +32,22 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
 
+## [1.0.44] - 2026-07-26
+
+### Fixed
+
+- `Missing Vehicles: 3 Fire engines` now uses an exact Fire Engine requirement route instead of the generic substring matcher that could select Ambulances.
+- Fire Engine selection and selected-count verification accept only MissionChief UK pump-capable Fire vehicle types `0`, `16` and `17`; Ambulance type `5` is explicitly outside the route.
+- The fallback selector can no longer use a generic `search_attribute` quick-select button for Fire Engine shortages.
+
+### Interface
+
+- Removed the explanatory helper sentence beneath the Auto Mode queue checkbox while retaining the checkbox, Start/Stop control and operational status display.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.107` to `V10.6.108`.
+
 ## [1.0.43] - 2026-07-26
 
 ### Fixed
