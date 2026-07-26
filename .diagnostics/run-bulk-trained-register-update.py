@@ -26,25 +26,25 @@ replacement = """source = replace_once(
 )"""
 
 patched_builder = builder[:start] + replacement + builder[end:]
-
-# Keep the newline escaped in the generated JavaScript token. The builder file
-# contains a literal backslash+n sequence here; Python must receive two
-# backslashes so its triple-quoted replacement writes one backslash to JS.
-old_open_issue_token = r'''requireText("code:\n                    'search_and_rescue'",'''.replace(r'\"', '"')
-new_open_issue_token = r'''requireText("code:\\n                    'search_and_rescue'",'''.replace(r'\"', '"')
-match_count = patched_builder.count(old_open_issue_token)
-if match_count != 1:
-    raise SystemExit(
-        f'Open-issues Search Advisor token: expected one builder match, found {match_count}'
-    )
-patched_builder = patched_builder.replace(
-    old_open_issue_token,
-    new_open_issue_token,
-    1,
-)
-
 namespace = {
     '__name__': '__main__',
     '__file__': str(builder_path),
 }
 exec(compile(patched_builder, str(builder_path), 'exec'), namespace)
+
+# Repair the generated JavaScript token directly. The nested Python replacement
+# can otherwise turn its intended \n escape into a literal line break inside a
+# double-quoted JavaScript string.
+check_path = Path('scripts/check-open-issues-batch.mjs')
+check_source = check_path.read_text(encoding='utf-8')
+bad_token = "requireText(\"code:\n                    'search_and_rescue'\","
+good_token = "requireText(\"code:\\n                    'search_and_rescue'\","
+match_count = check_source.count(bad_token)
+if match_count != 1:
+    raise SystemExit(
+        f'Generated open-issues Search Advisor token: expected one invalid match, found {match_count}'
+    )
+check_path.write_text(
+    check_source.replace(bad_token, good_token, 1),
+    encoding='utf-8',
+)
