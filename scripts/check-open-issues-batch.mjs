@@ -22,9 +22,9 @@ function extractBetween(startText, endText, label) {
   return source.slice(start, end);
 }
 
-requireText('// @version      1.0.45', 'v1.0.45 metadata');
-requireText("const PERSONNEL_VERSION = '1.3.4';", 'Personnel v1.3.4');
-requireText(' * MODULE 2: MISSION FINDER V10.6.109', 'V10.6.109 header');
+requireText('// @version      1.0.46', 'v1.0.46 metadata');
+requireText("const PERSONNEL_VERSION = '1.3.5';", 'Personnel v1.3.4');
+requireText(' * MODULE 2: MISSION FINDER V10.6.110', 'V10.6.110 header');
 
 // #126 PSU registry and assigned staff.
 requireText('function getPersonnelVehicleTypeIdFromRow(row)', 'broad vehicle-type discovery');
@@ -48,11 +48,13 @@ requireText("'data-requirement-type-vehicles'", 'structured update source');
 requireText("dispatchTargetMode: 'total'", 'Missing Vehicles quantity is a current checked-selection target');
 requireText('explicitMissingVehicles: true', 'Missing Vehicles current-source authority');
 
-// #117 Search Advisor -> Control Van.
-requireText('"Search Advisor": "Control Van"', 'Search Advisor cross-reference');
-requireText("unitName:\n                    'Control Van'", 'Search Advisor conversion to Control Van');
-requireText("personnelPerVehicle:\n                    1", 'one Control Van per Search Advisor requirement');
-requireText("return typeIdentifiers.includes('85')", 'exact type-85 Control Van matcher');
+// #117 was superseded by the later all-vehicle trained-staff rule.
+requireText("code:\n                    'search_and_rescue'", 'Search Advisor trained-person code');
+requireText('registryAnyVehicle:', 'Search Advisor all-vehicle registry flag');
+requireText("getRegistryTrainingQualifiedCount(", 'Search Advisor exact assigned-training evidence');
+if (source.includes('"Search Advisor": "Control Van"')) {
+  fail('Search Advisor must no longer be hard-mapped to Control Van');
+}
 
 // #115 Police Officers.
 requireText('Math.ceil(required / 2)', 'Police Officer ceiling conversion');
