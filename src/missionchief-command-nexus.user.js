@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.38
+// @version      1.0.39
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -9041,7 +9041,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.102
+         * MODULE 2: MISSION FINDER V10.6.103
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -9848,7 +9848,7 @@
     const MF_STRICT_TRAINING_SOURCE_PREFIX =
         'mission-finder-live-strict-';
 
-    // V10.6.102: trained-personnel selection now optimises exact vehicle
+    // V10.6.103: trained-personnel selection now optimises exact vehicle
     // coverage instead of treating full qualification as a dispatch gate.
     // Multi-trained crews reduce every matching course, type-51 PSUs provide
     // up to nine seats for compatible Public Order demand, IRVs fill smaller
@@ -10608,8 +10608,8 @@
         "Aerial Appliance Truck": "CARP",
         "Aerial Appliance Trucks": "CARP",
         "Fire, rescue or aerial appliance": "Rescue Pump",
-        "Road Rail Unit": "RRU",
-        "Road Rail Units": "RRU",
+        "Road Rail Unit": "Road Rail Unit",
+        "Road Rail Units": "Road Rail Unit",
         "Firefighter": "Rescue Pump",
         "Firefighters": "Rescue Pump",
         "Required Firefighter": "Rescue Pump",
@@ -11791,6 +11791,34 @@
         });
     }
 
+
+
+function isRoadRailUnitRequirement(originalName, mappedName) {
+    const raw = normaliseVehicleText(originalName);
+    const mapped = normaliseVehicleText(mappedName);
+    const supported = new Set([
+        'road rail unit',
+        'road rail units',
+        'required road rail unit',
+        'required road rail units'
+    ]);
+    return supported.has(raw) || supported.has(mapped);
+}
+
+function isRoadRailUnitVehicleCheckbox(input) {
+    if (!input) return false;
+    const typeIdentifiers = getVehicleTypeIdentifiers(input);
+    if (typeIdentifiers.length > 0) return typeIdentifiers.includes('107');
+
+    return getExtendedVehicleValues(input).some(value => {
+        const cleaned = normaliseVehicleText(value);
+        return (
+            cleaned === 'rru' ||
+            cleaned === 'road rail unit' ||
+            cleaned === 'road rail units'
+        );
+    });
+}
 
     function isCrvRequirement(originalName, mappedName) {
         const raw = normaliseVehicleText(originalName);
@@ -13029,6 +13057,12 @@
                 mappedName
             );
 
+        const roadRailOnly =
+            isRoadRailUnitRequirement(
+                originalName,
+                mappedName
+            );
+
         const crvOnly =
             isCrvRequirement(
                 originalName,
@@ -13101,6 +13135,16 @@
                 mappedName
             );
 
+
+        if (roadRailOnly) {
+            return sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) return false;
+                    if (!includeChecked && input.checked) return false;
+                    return isRoadRailUnitVehicleCheckbox(input);
+                })
+            );
+        }
 
         if (crvOnly) {
             return sortVehicleCheckboxesByBestArrival(
@@ -13573,6 +13617,7 @@
             );
         const policeAirMode = getPoliceAirRequirementMode(originalName, mappedName);
         const policeCarOnly = isPoliceCarRequirement(originalName, mappedName);
+        const roadRailOnly = isRoadRailUnitRequirement(originalName, mappedName);
         const crvOnly = isCrvRequirement(originalName, mappedName);
         const controlVanOnly = isControlVanRequirement(originalName, mappedName);
         const airAmbulanceOnly = isAirAmbulanceRequirement(originalName, mappedName);
@@ -13642,7 +13687,9 @@
 
             let matches = false;
 
-            if (crvOnly) {
+            if (roadRailOnly) {
+                matches = isRoadRailUnitVehicleCheckbox(input);
+            } else if (crvOnly) {
                 matches = isCrvVehicleCheckbox(input);
             } else if (controlVanOnly) {
                 matches = isControlVanVehicleCheckbox(input);
