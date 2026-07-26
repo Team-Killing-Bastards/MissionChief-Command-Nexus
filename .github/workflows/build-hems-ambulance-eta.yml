@@ -1,0 +1,126 @@
+name: Build HEMS ambulance ETA priority
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'agent/ambulance-hems-eta-priority'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v6
+        with:
+          ref: agent/ambulance-hems-eta-priority
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Apply HEMS ambulance ETA patches
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .diagnostics/patch-hems-ambulance-eta-source.py
+          python3 .diagnostics/patch-hems-ambulance-eta-contracts.py
+          rm -rf .diagnostics
+
+      - name: Capture complete validation result
+        shell: bash
+        run: |
+          set +e
+          log=/tmp/hems-ambulance-validation.log
+          : > "${log}"
+          status=0
+
+          run_check() {
+            label="$1"
+            shift
+            printf '\n### %s\n' "${label}" >> "${log}"
+            "$@" >> "${log}" 2>&1
+            result=$?
+            if [ "${result}" != '0' ]; then
+              status="${result}"
+            fi
+          }
+
+          run_check 'JavaScript syntax' node --check src/missionchief-command-nexus.user.js
+          if [ "${status}" = '0' ]; then run_check 'Userscript metadata' node scripts/validate-userscript.mjs; fi
+          if [ "${status}" = '0' ]; then run_check 'Repository integrity' python3 scripts/check_repository.py; fi
+          if [ "${status}" = '0' ]; then
+            for check in scripts/check-*.mjs; do
+              run_check "${check}" node "${check}"
+              if [ "${status}" != '0' ]; then break; fi
+            done
+          fi
+          if [ "${status}" = '0' ]; then run_check 'Standalone source absence' test ! -e src/personnel-register-tools.user.js; fi
+          if [ "${status}" = '0' ]; then run_check 'Diagnostics removed' test ! -d .diagnostics; fi
+          if [ "${status}" = '0' ]; then run_check 'Version metadata' grep -Fq '// @version      1.0.48' src/missionchief-command-nexus.user.js; fi
+          if [ "${status}" = '0' ]; then run_check 'Mission Finder header' grep -Fq ' * MODULE 2: MISSION FINDER V10.6.112' src/missionchief-command-nexus.user.js; fi
+          if [ "${status}" = '0' ]; then run_check 'Diff whitespace' git diff --check; fi
+
+          printf '\nFINAL_STATUS=%s\n' "${status}" >> "${log}"
+          echo "${status}" > /tmp/hems-ambulance-validation.status
+          tail -n 260 "${log}"
+          exit 0
+
+      - name: Commit failed validation receipt
+        shell: bash
+        run: |
+          set -euo pipefail
+          status="$(cat /tmp/hems-ambulance-validation.status)"
+          if [ "${status}" = '0' ]; then
+            exit 0
+          fi
+          git reset --hard HEAD
+          git clean -fd
+          mkdir -p .diagnostics
+          {
+            echo "RUN_ID=${GITHUB_RUN_ID}"
+            echo "RUN_ATTEMPT=${GITHUB_RUN_ATTEMPT}"
+            cat /tmp/hems-ambulance-validation.log
+          } > .diagnostics/hems-ambulance-validation-failure.log
+          git config user.name MartyBlyth
+          git config user.email 32400596+Martyblyth@users.noreply.github.com
+          git add -f .diagnostics/hems-ambulance-validation-failure.log
+          git commit -m 'Record HEMS ambulance ETA validation failure'
+          git push origin HEAD:agent/ambulance-hems-eta-priority
+
+      - name: Require successful validation
+        shell: bash
+        run: |
+          set -euo pipefail
+          status="$(cat /tmp/hems-ambulance-validation.status)"
+          if [ "${status}" != '0' ]; then
+            exit "${status}"
+          fi
+
+      - name: Commit validated HEMS ambulance ETA update
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name MartyBlyth
+          git config user.email 32400596+Martyblyth@users.noreply.github.com
+          git add -A
+          if git diff --cached --quiet; then
+            echo 'Candidate already current.'
+            exit 0
+          fi
+          git commit -m 'Prioritise HEMS by ETA for ambulance demand'
+          git push origin HEAD:agent/ambulance-hems-eta-priority
