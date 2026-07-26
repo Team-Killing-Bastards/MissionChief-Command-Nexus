@@ -1,1 +1,0 @@
-Run the trusted main Personnel Register integration workflow with all v1.0.36 and Personnel v1.3.4 contract updates.
