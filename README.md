@@ -17,7 +17,7 @@
 </tr>
 </table>
 
-**Current version:** `1.0.48` · **Mission Finder engine:** `V10.6.112` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
+**Current version:** `1.0.49` · **Mission Finder engine:** `V10.6.113` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)
@@ -247,7 +247,7 @@ High Volume Pump, Drone Operator, Co-Responder, and Lifeguard remain disabled pe
 - Armed Personnel and Armed Response Personnel route to exact type-25 Armed Traffic Cars.
 - Armed Traffic Car selection verifies Roads Policing plus Firearms capability.
 - Generic type-66 `4x4 Vehicle` matching is restored.
-- Search Advisor demand selects any exact registered vehicle carrying assigned `search_and_rescue`-trained staff; it is no longer tied to Control Vans.
+- Search Advisor demand selects any exact registered vehicle carrying assigned `search_and_rescue`-trained staff; Police station personnel rows also preserve the persistent **Assigned To** binding when MissionChief marks the officer Available, while ambiguous vehicle names fail closed.
 - SAR Commander demand converts to Control Van capability.
 - `Operational Support or SAR Vehicle` selects and verifies the exact type-86 Operational Support Van.
 - Seagoing Vessel requirements recognise supported ALB / ABL / All-weather Lifeboat variants.
