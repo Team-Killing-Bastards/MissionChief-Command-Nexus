@@ -1,3 +1,0 @@
-Personnel Register canonical integration validation passed.
-Validated head: 31a4dc11e2b5cf9722caf11f5017ea03481f69bc
-Validated at: 2026-07-26T00:08:51Z
