@@ -153,16 +153,47 @@ jobs:
           fi
           rm -rf .diagnostics
 
-      - name: Commit validated bulk update
+      - name: Promote validated bulk update
         shell: bash
         run: |
-          set -euo pipefail
+          set +e
+          log=/tmp/bulk-promotion.log
+          : > "${log}"
           git config user.name MartyBlyth
           git config user.email 32400596+Martyblyth@users.noreply.github.com
           git add -A
+
           if git diff --cached --quiet; then
-            echo 'Candidate already current.'
+            echo 'Candidate already current.' | tee -a "${log}"
             exit 0
           fi
-          git commit -m 'Apply trained register and recovery bulk update'
+
+          git commit -m 'Apply trained register and recovery bulk update' >> "${log}" 2>&1
+          commit_status=$?
+          push_status=0
+
+          if [ "${commit_status}" = '0' ]; then
+            git push origin HEAD:agent/bulk-trained-register-update >> "${log}" 2>&1
+            push_status=$?
+          fi
+
+          if [ "${commit_status}" = '0' ] && [ "${push_status}" = '0' ]; then
+            cat "${log}"
+            exit 0
+          fi
+
+          cat "${log}"
+          git fetch origin agent/bulk-trained-register-update --force
+          git reset --hard origin/agent/bulk-trained-register-update
+          git clean -fd
+          mkdir -p .diagnostics
+          {
+            echo "RUN_ID=${GITHUB_RUN_ID}"
+            echo "COMMIT_STATUS=${commit_status}"
+            echo "PUSH_STATUS=${push_status}"
+            cat "${log}"
+          } > .diagnostics/bulk-promotion-failure.log
+          git add -f .diagnostics/bulk-promotion-failure.log
+          git commit -m 'Record bulk promotion failure'
           git push origin HEAD:agent/bulk-trained-register-update
+          exit 1
