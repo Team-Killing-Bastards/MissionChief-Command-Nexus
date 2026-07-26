@@ -1,4 +1,4 @@
-RUN_ID=30221290834
+RUN_ID=30221336421
 RUN_ATTEMPT=1
 
 ### JavaScript syntax
@@ -10,6 +10,6 @@ Userscript validation passed: version 1.0.47, 1349401 bytes.
 Repository integrity checks passed.
 
 ### scripts/check-auto-prisoner-cell-gate.mjs
-ERROR: Release-result dismiss handler is missing: getTopmostAutoPrisonerReleaseDismissContext()
+ERROR: Release result must wait for the prisoner alert to clear, choose the topmost close span, click it and verify disappearance in that order
 
 FINAL_STATUS=1
