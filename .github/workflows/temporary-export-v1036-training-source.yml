@@ -41,6 +41,8 @@ jobs:
           find scripts -maxdepth 1 -type f \( -name '*.mjs' -o -name '*.py' \) -exec cp {} /tmp/v1036-current/scripts/ \;
           cp .github/workflows/validate-userscript.yml /tmp/v1036-current/.github/workflows/
           cp .github/workflows/repository-quality.yml /tmp/v1036-current/.github/workflows/
+          cp .github/workflows/release.yml /tmp/v1036-current/.github/workflows/
+          cp .github/workflows/release-delivery-repair.yml /tmp/v1036-current/.github/workflows/
           git rev-parse HEAD > /tmp/v1036-current/main-sha.txt
 
       - name: Upload exact current source
@@ -49,4 +51,5 @@ jobs:
           name: v1036-current-source
           path: /tmp/v1036-current
           if-no-files-found: error
+          include-hidden-files: true
           retention-days: 2
