@@ -31,6 +31,23 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Consolidate the two retained control surfaces into one coherent interface.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
+## [1.0.41] - 2026-07-26
+
+### Added
+
+- Auto Mode now detects the visible prisoner-cell handoff before Mission Update, vehicle loading or Unit Finder.
+- It selects the first visible green MissionChief destination link in DOM order when the link has a valid `data-prison-id`, a `/gefangener/` route and positive free-cell capacity.
+- A session guard prevents duplicate clicks while MissionChief processes the handoff.
+
+### Safety
+
+- The red `Release Prisoners` action is never considered or clicked.
+- Auto Mode stops without running Unit Finder when the prisoner alert remains but no active destination can be completed.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.104` to `V10.6.105`.
+
 ## [1.0.40] - 2026-07-26
 
 ### Fixed
