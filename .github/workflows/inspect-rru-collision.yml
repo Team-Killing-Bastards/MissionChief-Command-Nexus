@@ -28,7 +28,7 @@ jobs:
           fetch-depth: 0
           show-progress: false
 
-      - name: Capture RRU collision contexts
+      - name: Capture RRU dispatch matchers
         shell: bash
         run: |
           python3 <<'PY'
@@ -36,43 +36,89 @@ jobs:
           from pathlib import Path
 
           source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8')
-          lines = source.splitlines()
-          patterns = [
-              re.compile(r'Rope Rescue', re.I),
-              re.compile(r'Road Rail', re.I),
-              re.compile(r'Coastguard', re.I),
-              re.compile(r'\bRRU\b'),
+
+          def extract_function(name):
+              pattern = re.compile(rf'^    (?:async )?function {re.escape(name)}\s*\(', re.MULTILINE)
+              match = pattern.search(source)
+              if not match:
+                  return f'===== {name}: NOT FOUND =====\n'
+              brace = source.find('{', match.end())
+              depth = 0
+              quote = None
+              escaped = False
+              line_comment = False
+              block_comment = False
+              i = brace
+              while i < len(source):
+                  ch = source[i]
+                  nxt = source[i + 1] if i + 1 < len(source) else ''
+                  if line_comment:
+                      if ch == '\n': line_comment = False
+                  elif block_comment:
+                      if ch == '*' and nxt == '/':
+                          block_comment = False
+                          i += 1
+                  elif quote:
+                      if escaped:
+                          escaped = False
+                      elif ch == '\\':
+                          escaped = True
+                      elif ch == quote:
+                          quote = None
+                  else:
+                      if ch == '/' and nxt == '/':
+                          line_comment = True
+                          i += 1
+                      elif ch == '/' and nxt == '*':
+                          block_comment = True
+                          i += 1
+                      elif ch in ('"', "'", '`'):
+                          quote = ch
+                      elif ch == '{':
+                          depth += 1
+                      elif ch == '}':
+                          depth -= 1
+                          if depth == 0:
+                              start_line = source.count('\n', 0, match.start()) + 1
+                              return f'===== {name} @ {start_line} =====\n{source[match.start():i+1]}\n'
+                  i += 1
+              return f'===== {name}: UNTERMINATED =====\n'
+
+          names = [
+              'getAllMatchingVehicleCheckboxes',
+              'getMatchingVehicleCheckboxes',
+              'countSelectedMatchingVehicles',
+              'getVehicleTypeIdentifiers',
+              'getExtendedVehicleValues',
+              'normaliseVehicleText',
+              'clickRequiredVehicles',
+              'selectRequiredVehicles',
           ]
-          matches = []
-          for index, line in enumerate(lines, 1):
-              if any(pattern.search(line) for pattern in patterns):
-                  matches.append(index)
 
-          blocks = []
-          seen = set()
-          for index in matches:
-              start = max(1, index - 10)
-              end = min(len(lines), index + 10)
-              key = (start, end)
-              if key in seen:
-                  continue
-              seen.add(key)
-              blocks.append(f'===== {start}-{end} (match {index}) =====')
-              blocks.extend(f'{n}: {lines[n-1]}' for n in range(start, end + 1))
-              blocks.append('')
+          function_names = []
+          for match in re.finditer(r'^    (?:async )?function ([A-Za-z0-9_$]+)\s*\(', source, re.MULTILINE):
+              name = match.group(1)
+              block = extract_function(name)
+              if re.search(r'Road Rail|Rope Rescue|\bRRU\b|type-107|type 107', block, re.I):
+                  function_names.append(name)
 
-          Path('.diagnostics/rru-collision-context.txt').write_text(
-              f'Found {len(matches)} matching line(s).\n\n' + '\n'.join(blocks),
-              encoding='utf-8',
-          )
+          output = ['RRU-bearing functions: ' + ', '.join(function_names), '']
+          for name in dict.fromkeys(names + function_names):
+              output.append(extract_function(name))
+
+          Path('.diagnostics/rru-dispatch-functions.txt').write_text('\n'.join(output), encoding='utf-8')
           PY
 
-      - name: Commit captured context
+      - name: Commit captured matcher context
         shell: bash
         run: |
           set -euo pipefail
           git config user.name MartyBlyth
           git config user.email 32400596+Martyblyth@users.noreply.github.com
-          git add .diagnostics/rru-collision-context.txt
-          git commit -m 'Capture RRU collision source context'
+          git add .diagnostics/rru-dispatch-functions.txt
+          if git diff --cached --quiet; then
+            echo 'Matcher context already current.'
+            exit 0
+          fi
+          git commit -m 'Capture RRU dispatch matcher context'
           git push origin HEAD:agent/separate-fire-road-rail-rru
