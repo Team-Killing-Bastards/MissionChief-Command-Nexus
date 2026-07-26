@@ -1,0 +1,1 @@
+Publish and verify clean source commit c8e7aa2b1927219e46bc50a20f714161c9cb6628 as v1.0.47.
