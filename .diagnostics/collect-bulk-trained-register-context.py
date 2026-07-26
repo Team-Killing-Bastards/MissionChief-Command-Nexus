@@ -17,7 +17,8 @@ patterns = [
     r'getPersonnelVehicleTypeIdFromRow', r'getPersonnelAmbulanceQueue',
     r'parseVehicleAssignmentPage', r'PERSONNEL_TARGET_VEHICLE_TYPE_ID',
     r'PERSONNEL_TRAINING_REGISTRY', r'personnel.*register', r'vehicle_type_id',
-    r'#vehicle_table', r'assignmentHref',
+    r'#vehicle_table', r'assignmentHref', r'Car to tow', r'Cars to tow',
+    r'Flatbed Recovery Vehicle', r'getCarsToTowVehicleRequirement', r'tow_trucks',
 ]
 compiled = [re.compile(pattern, re.I) for pattern in patterns]
 
@@ -78,10 +79,10 @@ def extract_named_constant(name):
 
 intervals = keyword_intervals(patterns, radius=45)
 out = render_intervals('BULK TRAINED REGISTER DIAGNOSTIC CONTEXT', intervals)
-out.append('=== FUNCTION INVENTORY MATCHING PERSONNEL / TRAINING / SEARCH / READY ===')
+out.append('=== FUNCTION INVENTORY MATCHING PERSONNEL / TRAINING / SEARCH / READY / TOW ===')
 for match in re.finditer(r'^\s*(?:async\s+)?function\s+([A-Za-z0-9_$]+)\s*\(', source, re.M):
     name = match.group(1)
-    if re.search(r'personnel|training|search|advisor|ready|register|vehicle', name, re.I):
+    if re.search(r'personnel|training|search|advisor|ready|register|vehicle|tow|recovery', name, re.I):
         line_no = source.count('\n', 0, match.start()) + 1
         out.append(f'{line_no:06d}: {name}')
 out.append('')
@@ -189,4 +190,25 @@ write_topic(
         'PERSONNEL_TRAINING_REGISTRY_SCHEMA_VERSION',
         'PERSONNEL_TRAINING_REGISTRY_MAX_AGE_MS',
     ],
+)
+
+write_topic(
+    'towing-recovery-context.txt',
+    'CAR TO TOW / CARS TO TOW RECOVERY CONTEXT',
+    [
+        'getCarsToTowVehicleRequirement',
+        'isFlatbedRecoveryVehicleRequirement',
+        'isFlatbedRecoveryVehicleCheckbox',
+        'getAllMatchingVehicleCheckboxes',
+        'getMatchingVehicleCheckboxes',
+        'countSelectedMatchingVehicles',
+        'readMissionUpdateRows',
+        'getGenericMissingVehicleRowsFromText',
+        'getStructuredMissingVehicleRows',
+    ],
+    [
+        r'Car to tow', r'Cars to tow', r'cars?\s+to\s+tow',
+        r'Flatbed Recovery Vehicle', r'tow_trucks', r'vehicle type.?105', r"'105'",
+    ],
+    ['crossReference'],
 )
