@@ -1,5 +1,8 @@
 #!/usr/bin/env node
 
+// Guards the two-stage contract: prefer live cells first, then allow only the
+// exact current-mission Release Prisoners fallback after normal Auto actions.
+
 import { readFile } from 'node:fs/promises';
 
 const source = await readFile('src/missionchief-command-nexus.user.js', 'utf8');
