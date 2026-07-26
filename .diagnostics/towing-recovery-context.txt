@@ -1,0 +1,3825 @@
+CAR TO TOW / CARS TO TOW RECOVERY CONTEXT
+SOURCE LINES: 39886
+
+=== BLOCK 1: source lines 730-790 ===
+000730:         "63": "Support Unit",
+000731:         "65": "Coastguard Rescue Helicopter Large",
+000732:         "66": "4x4 Vehicle",
+000733:         "67": "ILB Trainer",
+000734:         "68": "ILB",
+000735:         "69": "ALB",
+000736:         "70": "Rescue Watercraft Trailer",
+000737:         "71": "Hovercraft Trailer",
+000738:         "72": "Hovercraft Transporter",
+000739:         "73": "Light 4x4",
+000740:         "74": "Boat Trailer",
+000741:         "75": "Major Foam Tender",
+000742:         "76": "RIV",
+000743:         "77": "Airfield Command",
+000744:         "78": "Rescue Stairs",
+000745:         "79": "Airfield Operations Vehicle",
+000746:         "80": "Airfield Operations Supervisor",
+000747:         "81": "Medical Equipment Trailer",
+000748:         "85": "Control Van SAR",
+000749:         "86": "Operational Support Van",
+000750:         "87": "Operational Support Trailer",
+000751:         "88": "SAR Flood Rescue Trailer",
+000752:         "89": "Drone Vehicle SAR HQ",
+000753:         "91": "Police Drone Vehicle",
+000754:         "93": "SAR 4x4",
+000755:         "96": "Specialist Paramedic RRV",
+000756:         "97": "Patient Transport Service Ambulance",
+000757:         "98": "Critical Care Transfer Ambulance",
+000758:         "99": "Mountain Rescue 4x4",
+000759:         "102": "Search Dog Unit SAR",
+000760:         "105": "Flatbed Recovery Vehicle",
+000761:         "107": "RRU",
+000762:         "108": "EIU",
+000763:         "109": "EOD Commander",
+000764:         "110": "EOD Response Vehicle",
+000765:         "111": "EOD Medium Equipment Van",
+000766:         "112": "EOD Heavy Equipment Vehicle",
+000767:         "113": "Marine EOD Response Vehicle",
+000768:         "114": "Marine EOD Equipment Van",
+000769:         "115": "Welfare Vehicle",
+000770:         "116": "Cell Van"
+000771:     };
+000772: 
+000773:     const VEHICLE_INFO = {
+000774:         "Ambulance": { code: "AB", icon: "🚑" },
+000775:         "Ambulance Officer": { code: "AO", icon: "🚑🎖️" },
+000776:         "Ambulance Control Unit": { code: "ACU", icon: "🚑📡" },
+000777:         "Air Ambulance": { code: "AA", icon: "🚁" },
+000778:         "Rescue Pump": { code: "RP", icon: "🚒" },
+000779:         "Combined Aerial Rescue Pump": { code: "CARP", icon: "🚒🪜" },
+000780:         "Fire Officer": { code: "FO", icon: "🧑‍🚒" },
+000781:         "Police Car": { code: "PC", icon: "🚔" },
+000782:         "Armed Traffic Car": { code: "ATC", icon: "🚔🔫" },
+000783:         "Operational Support Unit": { code: "OSU", icon: "☢️🤿🦺" },
+000784:         "Mass Casualty Equipment": { code: "MCE", icon: "🏥" },
+000785:         "Welfare Vehicle": { code: "WV", icon: "🚌" },
+000786:         "HazMat Unit": { code: "HMAT", icon: "☢️" },
+000787:         "Water Carrier": { code: "WrC", icon: "🚒💦" },
+000788:         "Incident Command and Control Unit": { code: "ICCU", icon: "🔥🚒🔥" },
+000789:         "Heavy 4x4 Tanker": { code: "H4x4T", icon: "🚒💦" },
+000790:         "Police Helicopter": { code: "POLHELI", icon: "🚔🚁" },
+
+=== BLOCK 2: source lines 801-913 ===
+000801:         "Flood Rescue Unit Trailer": { code: "FRUT", icon: "🛟" },
+000802:         "Flood Rescue Unit": { code: "FRU", icon: "🛟" },
+000803:         "Support Unit": { code: "SU", icon: "⚠️🚐" },
+000804:         "4x4 Vehicle": { code: "4x4", icon: "🛟" },
+000805:         "ILB Trainer": { code: "ILBT", icon: "🚤" },
+000806:         "ILB": { code: "ILB", icon: "🚤" },
+000807:         "ALB": { code: "ALB", icon: "🚤" },
+000808:         "Boat Trailer": { code: "BT", icon: "🚤" },
+000809:         "Rescue Watercraft Trailer": { code: "RWC", icon: "🚤" },
+000810:         "Hovercraft Trailer": { code: "HCT", icon: "🛥️" },
+000811:         "Hovercraft Transporter": { code: "HCTR", icon: "🛥️" },
+000812:         "Light 4x4": { code: "L4x4", icon: "🚙" },
+000813:         "Major Foam Tender": { code: "MFT", icon: "🚒✈️" },
+000814:         "RIV": { code: "RIV", icon: "🚒✈️" },
+000815:         "Airfield Command": { code: "AirCommand", icon: "🚒✈️" },
+000816:         "Rescue Stairs": { code: "RS", icon: "✈️🪜" },
+000817:         "Airfield Operations Vehicle": { code: "AOV", icon: "✈️🚗" },
+000818:         "Airfield Operations Supervisor": { code: "AOS", icon: "✈️👷" },
+000819:         "Medical Equipment Trailer": { code: "MET", icon: "🚒⚕️" },
+000820:         "Control Van SAR": { code: "CV", icon: "📡" },
+000821:         "Operational Support Van": { code: "OSV", icon: "🛠️" },
+000822:         "Operational Support Trailer": { code: "OST", icon: "🛠️" },
+000823:         "SAR Flood Rescue Trailer": { code: "SFR", icon: "🌊" },
+000824:         "Drone Vehicle SAR HQ": { code: "DRV", icon: "🚁" },
+000825:         "SAR 4x4": { code: "SAR4x4", icon: "🟡" },
+000826:         "Specialist Paramedic RRV": { code: "SP-RRV", icon: "🚑" },
+000827:         "Patient Transport Service Ambulance": { code: "PTS", icon: "🚑" },
+000828:         "Critical Care Transfer Ambulance": { code: "CCT", icon: "🚑❤️" },
+000829:         "Mountain Rescue 4x4": { code: "MR4x4", icon: "🏔️" },
+000830:         "Search Dog Unit SAR": { code: "K9", icon: "🐕" },
+000831:         "Flatbed Recovery Vehicle": { code: "FRV", icon: "🛻" },
+000832:         "RRV": { code: "RRV", icon: "🚑" },
+000833:         "RRU": { code: "RRU", icon: "🚒✈️" },
+000834:         "Rescue Support Unit (RSU)": { code: "RSU", icon: "🚒🛠️" },
+000835:         "DSU": { code: "DSU", icon: "🚔🐕" },
+000836:         "OTL": { code: "OTL", icon: "🚔" },
+000837:         "PRV": { code: "PRV", icon: "🚑1️⃣" },
+000838:         "SRV": { code: "SRV", icon: "🚑2️⃣" },
+000839:         "ATV": { code: "ATV", icon: "🚑🦺" },
+000840:         "BFU": { code: "BFU", icon: "🚒✈️" },
+000841:         "F/WrC": { code: "FWrC", icon: "🚒💦" },
+000842:         "RPF": { code: "RPF", icon: "🚒🫧" },
+000843:         "MRAV": { code: "MRAV", icon: "🚔🔫" },
+000844:         "EOD Commander": { code: "EODC", icon: "💣" },
+000845:         "EOD Response Vehicle": { code: "EOD", icon: "💣🚐" },
+000846:         "EOD Medium Equipment Van": { code: "EODM", icon: "💣🚐" },
+000847:         "EOD Heavy Equipment Vehicle": { code: "EODH", icon: "💣🚚" },
+000848:         "Marine EOD Response Vehicle": { code: "MEOD", icon: "💣🚤" },
+000849:         "Marine EOD Equipment Van": { code: "MEODV", icon: "💣🚐" },
+000850:         "Cell Van": { code: "CVAN", icon: "🚔🚐" }
+000851:     };
+000852: 
+000853:     const UNIT_CLASS_ALL = 'ALL';
+000854:     const UNIT_CLASS_TYPE_IDS_BY_STATION_TYPE = Object.freeze({
+000855:         AMBULANCE: Object.freeze([
+000856:             '5', '10', '27', '28', '30', '31', '33', '34', '96', '97', '98'
+000857:         ]),
+000858:         FIRE: Object.freeze([
+000859:             '3', '4', '6', '7', '15', '16', '17', '26', '29', '35', '36', '38', '39'
+000860:         ]),
+000861:         POLICE: Object.freeze([
+000862:             '8', '11', '12', '20', '25', '51', '54', '55', '56', '91', '108', '115', '116'
+000863:         ]),
+000864:         AIR: Object.freeze([
+000865:             '9', '11', '65'
+000866:         ]),
+000867:         AIRFIELD: Object.freeze([
+000868:             '73', '75', '76', '77', '78', '79', '80', '81', '107'
+000869:         ]),
+000870:         COASTGUARD: Object.freeze([
+000871:             '57', '58', '59', '60', '61', '62', '63', '65', '66', '70', '71', '72'
+000872:         ]),
+000873:         RNLI: Object.freeze([
+000874:             '67', '68', '69', '70', '74'
+000875:         ]),
+000876:         SAR: Object.freeze([
+000877:             '61', '62', '63', '66', '70', '71', '72', '85', '86', '87', '88', '89', '93', '99', '102'
+000878:         ]),
+000879:         EOD: Object.freeze([
+000880:             '109', '110', '111', '112', '113', '114'
+000881:         ]),
+000882:         RECOVERY: Object.freeze([
+000883:             '105'
+000884:         ])
+000885:     });
+000886: 
+000887:     const STATION_TYPES = {
+000888:         ALL: "All station types",
+000889:         AMBULANCE: "Ambulance",
+000890:         FIRE: "Fire",
+000891:         POLICE: "Police",
+000892:         AIR: "Air / Heli",
+000893:         COASTGUARD: "Coastguard",
+000894:         RNLI: "RNLI / Lifeboat",
+000895:         SAR: "SAR",
+000896:         AIRFIELD: "Airfield",
+000897:         EOD: "EOD / Bomb",
+000898:         RECOVERY: "Recovery",
+000899:         OTHER: "Other"
+000900:     };
+000901: 
+000902: 
+000903:     // MissionChief's own building type IDs. These are read from the parent
+000904:     // .building_list_li element and do not depend on uploaded station images.
+000905:     const STATION_BUILDING_TYPE_INFO = {
+000906:         0:  { stationType: 'FIRE',       suffix: '-FS',   label: 'Fire station' },
+000907:         18: { stationType: 'FIRE',       suffix: '-FS',   label: 'Small fire station' },
+000908:         2:  { stationType: 'AMBULANCE',  suffix: '-AS',   label: 'Ambulance station' },
+000909:         20: { stationType: 'AMBULANCE',  suffix: '-AS',   label: 'Small ambulance station' },
+000910:         6:  { stationType: 'POLICE',     suffix: '-PS',   label: 'Police station' },
+000911:         19: { stationType: 'POLICE',     suffix: '-PS',   label: 'Small police station' },
+000912:         5:  { stationType: 'AIR',        suffix: '-AA',   label: 'Air ambulance station' },
+000913:         13: { stationType: 'AIR',        suffix: '-PH',   label: 'Police helicopter station' },
+
+=== BLOCK 3: source lines 9517-9578 ===
+009517:     // V10.2.3 safety reset:
+009518:     // Only clear stale queue flags when Auto Mode is NOT running.
+009519:     // Do NOT clear them during Auto Mode reloads, because the final-dispatch flag
+009520:     // is what stops the last mission being processed/sent twice after MissionChief
+009521:     // leaves the same mission screen open.
+009522:     if (!autoModeRunning) {
+009523:         sessionStorage.removeItem(MF_QUEUE_WAIT_ACTIVE_FLAG);
+009524:         sessionStorage.removeItem(MF_FINAL_QUEUE_DISPATCH_FLAG);
+009525:         sessionStorage.removeItem(MF_QUEUE_OPENING_MISSION_FLAG);
+009526:         sessionStorage.removeItem(
+009527:             MF_AUTO_UPGRADE_PENDING_KEY
+009528:         );
+009529:         localStorage.removeItem(
+009530:             MF_AUTO_UPGRADE_PENDING_KEY
+009531:         );
+009532: 
+009533:     }
+009534: 
+009535: 
+009536:     // V10.6.58: Auto Mode speed optimisation. Attachment fetching now overlaps
+009537:     // vehicle-list stabilisation, Unit Finder no longer repeats that same load
+009538:     // pass, readiness gates are shorter and state-driven, and mission-resume
+009539:     // polling is faster. Manual sources and all selection rules are unchanged.
+009540:     // V10.6.59: Police Helicopter-only requirements now select only type 11;
+009541:     // only explicit Helicopter-or-Drone rows prefer type 91 Drone first. Generic
+009542:     // 4x4 Vehicle(s) rows now use the same type 99 Mountain Rescue / type 93 SAR
+009543:     // 4x4 matcher for selection and final verification, removing false popups.
+009544:     // V10.6.62: Unit Finder now combines the mission-help attachment with
+009545:     // visible current-patient "We need:" requirements. General Live Mission
+009546:     // Requirements remain exclusive to the Mission Update workflow.
+009547:     // V10.6.63: Mission Update now converts Cars to tow in pairs (1-2 cars =
+009548:     // one Flatbed Recovery Vehicle, 3-4 = two) and current linked patient-card
+009549:     // We need alerts override a stale/zero live-panel patient row for that patient.
+009550:     // V10.6.67: Inspector and Public Order IRVs are now matched by exact
+009551:     // vehicle ID and current per-vehicle assignment-page training only. This
+009552:     // blocks duplicate generic names such as "IRV" from copying one vehicle's
+009553:     // training to another and prevents an untrained IRV from being selected.
+009554:     // Public Order qualification now requires only the L1/L2/Sergeant codes
+009555:     // actually requested by the current mission.
+009556:     // V10.6.69: Strict Inspector/Public Order verification now uses the exact
+009557:     // Personnel Assignment registry vehicle IDs as priority hints, then rechecks
+009558:     // those precise /zuweisung pages before selection. This prevents trained
+009559:     // IRVs being missed when they are outside the first arrival-sorted scan batch.
+009560:     // V10.6.71: Normal Police Car/Police Officer requirements now protect
+009561:     // exact-ID IRVs carrying specialist-trained staff, live-verify ordinary IRVs
+009562:     // before selection, and exclude known trained IRVs from ordinary attendance.
+009563:     // Auto Mode now waits for a complete, non-zero, ID-stable vehicle list with
+009564:     // no remaining load control or spinner before Unit Finder may select units.
+009565:     // V10.6.72: Exact assignment-page scans no longer require a permanent binding
+009566:     // before an untrained IRV may satisfy ordinary Police attendance. Police Medic
+009567:     // and Railway Police Officer requirements now use exact trained IRVs with two
+009568:     // qualified personnel, and ATV Carrier uses an authoritative type-30 matcher.
+009569:     // V10.6.83: Mission Control now uses an iOS Safari-only safe-area layout,
+009570:     // horizontal collapse state, visual-viewport placement and pointer dragging.
+009571:     // Desktop positioning, sizing and mouse dragging remain unchanged.
+009572:     // V10.6.86: Firefighters convert to Rescue Pumps at nine personnel
+009573:     // per vehicle; Car Recovery maps to the existing Flatbed Recovery
+009574:     // Vehicle; RIV-or-Major-Foam-Tender wording uses RIV first and only
+009575:     // falls back to a Major Foam Tender when no eligible RIV is available.
+009576:     // V10.6.85: Fire cross-reference now maps the exact "Road Rail Unit"
+009577:     // wording to the established RRU route.
+009578:     // V10.6.84: the exact mission wording "Fire, rescue or aerial appliance"
+
+=== BLOCK 4: source lines 10587-10648 ===
+010587:         });
+010588: 
+010589:         document.querySelectorAll('#control-panel').forEach(panel => {
+010590:             if (!panel.closest('#mission-finder-wrapper')) {
+010591:                 panel.remove();
+010592:             }
+010593:         });
+010594:     }
+010595: 
+010596:     const crossReference = {
+010597:         /*************************************************
+010598:          * FIRE
+010599:          *************************************************/
+010600:         "Pumps": "Fire Engine R/PUMP x 1",
+010601:         "Pump": "Fire Engine R/PUMP x 1",
+010602:         "Fire engine": "Fire Engine R/PUMP x 1",
+010603:         "Fire engines": "Fire Engine R/PUMP x 1",
+010604:         "Fire Engine": "Fire Engine R/PUMP x 1",
+010605:         "Fire Engines": "Fire Engine R/PUMP x 1",
+010606:         "Aerial Appliance": "CARP",
+010607:         "Aerial Appliances": "CARP",
+010608:         "Aerial Appliance Truck": "CARP",
+010609:         "Aerial Appliance Trucks": "CARP",
+010610:         "Fire, rescue or aerial appliance": "Rescue Pump",
+010611:         "Road Rail Unit": "Road Rail Unit",
+010612:         "Road Rail Units": "Road Rail Unit",
+010613:         "Firefighter": "Rescue Pump",
+010614:         "Firefighters": "Rescue Pump",
+010615:         "Required Firefighter": "Rescue Pump",
+010616:         "Required Firefighters": "Rescue Pump",
+010617:         "Car Recovery": "Flatbed Recovery Vehicle",
+010618:         "Required Car Recovery": "Flatbed Recovery Vehicle",
+010619:         "ICCU or Ambulance Control Unit": "ICCU/ACU",
+010620:         "ICCU or Ambulance Control Units": "ICCU/ACU",
+010621:         "ICCUs or Ambulance Control Units": "ICCU/ACU",
+010622:         "Fire Officer": "Fire Officer",
+010623:         "Fire Officers": "Fire Officer",
+010624:         "Rescue Support Unit": "Fire Engine R/PUMP x 1",
+010625:         "Rescue Support Units": "Fire Engine R/PUMP x 1",
+010626:         "Rescue Support Vehicle": "Fire Engine R/PUMP x 1",
+010627:         "Rescue Support Vehicles": "Fire Engine R/PUMP x 1",
+010628:         "Rescue Support Unit or Rescue Pump": "Fire Engine R/PUMP x 1",
+010629:         "Rescue Support Units or Rescue Pumps": "Fire Engine R/PUMP x 1",
+010630:         "Fire Engines or Rescue Support Vehicles": "Fire Engine R/PUMP x 1",
+010631:         "Fire Engines, Rescue Support Vehicles or Aerial Appliance Trucks": "Fire Engine R/PUMP x 1",
+010632:         "Foam Unit": "RP CAFS",
+010633:         "Foam Units": "RP CAFS",
+010634:         "Water Carrier": "Water Carrier",
+010635:         "Water Carriers": "Water Carrier",
+010636:         "Welfare Vehicles x1": "Welfare Vehicle",
+010637: 
+010638:         /*************************************************
+010639:          * POLICE
+010640:          *************************************************/
+010641:         "Police Car": "Police Car",
+010642:         "Police Cars": "Police Car",
+010643:         "Police car": "Police Car",
+010644:         "Police cars": "Police Car",
+010645:         "Police Officer": "Police Car",
+010646:         "Police Officers": "Police Car",
+010647:         "Traffic Car": "Police ATC",
+010648:         "Traffic Cars": "Police ATC",
+
+=== BLOCK 5: source lines 10787-10856 ===
+010787:         "RIVs": "RIV",
+010788:         "Rapid Intervention Vehicle": "RIV",
+010789:         "Rapid Intervention Vehicles": "RIV",
+010790:         "Major Foam Tender": "Major Foam Tender",
+010791:         "Major Foam Tenders": "Major Foam Tender",
+010792:         "RIVs or Major Foam Tenders": "RIV",
+010793:         "RIV or Major Foam Tender": "RIV",
+010794:         "Required RIV or Major Foam Tender": "RIV",
+010795:         "Required RIVs or Major Foam Tenders": "RIV",
+010796:         "Fire Engines, RIVs or Major Foam Tenders": "Major Foam Tender",
+010797:         "Fire Engines or Major Foam Tenders": "Major Foam Tender",
+010798:         "Airfield Operations Supervisor": "Airfield Operations Supervisors",
+010799:         "Airfield Operations Supervisors": "Airfield Operations Supervisors",
+010800:         "Airfield Firefighting Command Vehicle": "Airfield FF Command Vehicle",
+010801:         "ICCU or Ambulance Control Units or Airfield Firefighting Command Vehicles": "Airfield FF Command Vehicle",
+010802:         "Fire Officers or Airfield Firefighting Command Vehicles": "Fire Officer",
+010803: 
+010804:         /*************************************************
+010805:          * SEARCH & RESCUE / FLOOD / RECOVERY / BOMB
+010806:          *************************************************/
+010807:         "Flood Rescue Unit": "Flood Rescue Unit (Trailer)",
+010808:         "4x4 Vehicle": "4x4 Units",
+010809:         "4x4 Vehicles": "4x4 Units",
+010810:         "Mountain Rescue 4x4 or SAR 4x4": "4x4 Units",
+010811:         "Mountain Rescue 4x4s or SAR 4x4s": "4x4 Units",
+010812: 
+010813:         // Special Search Technician vehicle selector.
+010814:         // Matching is handled by the dedicated displayed-name-prefix rule.
+010815:         "SARTEC": "SARTEC",
+010816: 
+010817:         "modules.missionHelper.prerequisites.tow_trucks_large": "Flatbed Recovery Vehicle",
+010818:         "modules.missionHelper.prerequisites.tow_trucks": "Flatbed Recovery Vehicle",
+010819:         "1 car to tow": "Flatbed Recovery Vehicle",
+010820:         "Cars to tow": "Flatbed Recovery Vehicle",
+010821:         "Car to tow": "Flatbed Recovery Vehicle",
+010822:         "Maximum amount of cars to tow": "Flatbed Recovery Vehicle",
+010823:         "Minimum amount of cars to tow": "Flatbed Recovery Vehicle",
+010824:         "Tow Trucks Large": "Flatbed Recovery Vehicle",
+010825:         "Flatbed Recovery Vehicle": "Flatbed Recovery Vehicle",
+010826:         "Flatbed Recovery Vehicles": "Flatbed Recovery Vehicle",
+010827:         "modules.missionHelper.vehicles.captions.bomb_disposal_crew": "Bomb Disposal crew x1",
+010828:         "Support Units": "Support Unit",
+010829:         "Breathing Apparatus Support Unit": "OSU",
+010830:         "Breathing Apparatus Support Units": "OSU",
+010831:         "Breathing Apparatus Support Vehicle": "OSU",
+010832:         "Breathing Apparatus Support Vehicles": "OSU",
+010833:         "BASU": "OSU",
+010834:         "BASUs": "OSU",
+010835:         "Welfare": "OSU",
+010836:         "Welfare Unit": "OSU",
+010837:         "Welfare Units": "OSU",
+010838:         "Welfare Vehicle": "OSU",
+010839:         "Welfare Vehicles": "OSU",
+010840:         "HazMat": "OSU",
+010841:         "Hazmat": "OSU",
+010842:         "HazMat Unit": "OSU",
+010843:         "HazMat Units": "OSU",
+010844:         "Hazmat Unit": "OSU",
+010845:         "Hazmat Units": "OSU",
+010846:         "HazMat Unit or CBRN Vehicle": "OSU",
+010847:         "HazMat Units or CBRN Vehicles": "OSU",
+010848:         "Hazmat Unit or CBRN Vehicle": "OSU",
+010849:         "Hazmat Units or CBRN Vehicles": "OSU",
+010850:         "CBRN Vehicle": "OSU",
+010851:         "CBRN Vehicles": "OSU",
+010852:         "Operational Support Unit": "OSU",
+010853:         "Operational Support Units": "OSU",
+010854:         "Fire Operational Support Unit": "OSU",
+010855:         "Fire Operational Support Units": "OSU",
+010856:         "Breathing Apparatus Support Unit x1": "OSU",
+
+=== BLOCK 6: source lines 20824-20884 ===
+020824: 
+020825:             if (
+020826:                 headings.some(heading =>
+020827:                     /^Vehicle and Personnel Requirements$/i
+020828:                         .test(heading)
+020829:                 )
+020830:             ) {
+020831:                 score += 10000;
+020832:             } else if (
+020833:                 /Vehicle/i.test(headingText) &&
+020834:                 /Personnel/i.test(headingText) &&
+020835:                 /Requirements?/i.test(headingText)
+020836:             ) {
+020837:                 score += 8000;
+020838:             }
+020839: 
+020840:             let actionableRows = 0;
+020841: 
+020842:             table.querySelectorAll(
+020843:                 'tbody tr, tr'
+020844:             ).forEach(row => {
+020845:                 const cells = Array.from(
+020846:                     row.querySelectorAll('td')
+020847:                 ).map(cell => normalise(
+020848:                     cell.textContent
+020849:                 ));
+020850: 
+020851:                 if (cells.length < 2) return;
+020852: 
+020853:                 if (
+020854:                     /^(?:Required\s+|Maximum amount of cars to tow|Cars to tow)/i
+020855:                         .test(cells[0]) &&
+020856:                     /\d/.test(cells[1])
+020857:                 ) {
+020858:                     actionableRows += 1;
+020859:                 }
+020860:             });
+020861: 
+020862:             if (actionableRows > 0) {
+020863:                 score += 100 +
+020864:                     actionableRows;
+020865:             }
+020866: 
+020867:             if (score > bestScore) {
+020868:                 bestScore = score;
+020869:                 bestTable = table;
+020870:             }
+020871:         });
+020872: 
+020873:         return bestTable;
+020874:     }
+020875: 
+020876:     function extractLiveMissionRequirementRows(html) {
+020877:         const doc = new DOMParser().parseFromString(html, 'text/html');
+020878: 
+020879:         const candidateTables =
+020880:             Array.from(
+020881:                 doc.querySelectorAll(
+020882:                     'table.table, table'
+020883:                 )
+020884:             );
+
+=== BLOCK 7: source lines 21088-21208 ===
+021088:             Object.defineProperties(
+021089:                 mergedRows,
+021090:                 {
+021091:                     missionRequirementTableFound: {
+021092:                         value: Boolean(table),
+021093:                         enumerable: false
+021094:                     },
+021095:                     missionRequirementTableCount: {
+021096:                         value: candidateTables.length,
+021097:                         enumerable: false
+021098:                     }
+021099:                 }
+021100:             );
+021101:         } catch (_error) {}
+021102: 
+021103:         return mergedRows;
+021104:     }
+021105: 
+021106:     function extractTowCarRequirementRows(doc) {
+021107:         const rows = [];
+021108:         let maximumCarsToTow = 0;
+021109: 
+021110:         doc.querySelectorAll('table.table, table').forEach(table => {
+021111:             table.querySelectorAll('tbody tr, tr').forEach(tr => {
+021112:                 const cells = Array.from(tr.querySelectorAll('td')).map(td => td.textContent.replace(/\s+/g, ' ').trim());
+021113:                 if (cells.length < 2) return;
+021114: 
+021115:                 const label = cleanRequirementName(cells[0]);
+021116:                 const valueText = cells[1].replace(/\s+/g, ' ').trim();
+021117: 
+021118:                 if (!/^Maximum amount of cars to tow$/i.test(label)) return;
+021119: 
+021120:                 const cars = parseInt(valueText, 10);
+021121:                 if (Number.isFinite(cars) && cars > maximumCarsToTow) {
+021122:                     maximumCarsToTow = cars;
+021123:                 }
+021124:             });
+021125:         });
+021126: 
+021127:         if (maximumCarsToTow > 0) {
+021128:             // The user's fleet uses the larger flatbed recovery vehicle, which can tow 2 cars.
+021129:             // 1-2 cars = 1 flatbed, 3-4 cars = 2 flatbeds, etc.
+021130:             const flatbedsNeeded = Math.ceil(maximumCarsToTow / 2);
+021131: 
+021132:             rows.push({
+021133:                 unitName: 'Cars to tow',
+021134:                 stillNeeded: flatbedsNeeded
+021135:             });
+021136: 
+021137:             if (mfDebugEnabled) {
+021138:                 debugLog('LIVE TOW', `Maximum cars to tow=${maximumCarsToTow} -> Flatbed Recovery Vehicle x${flatbedsNeeded}`);
+021139:             }
+021140:         }
+021141: 
+021142:         return rows;
+021143:     }
+021144: 
+021145:     function isCarsToTowRequirementName(value) {
+021146:         const cleaned = String(value || '')
+021147:             .replace(/\s+/g, ' ')
+021148:             .trim();
+021149: 
+021150:         return /^(?:Required\s+)?(?:\d+\s+)?car(?:s)?\s+to\s+tow$/i.test(cleaned) ||
+021151:             /^(?:Required\s+)?(?:Maximum|Minimum)\s+amount\s+of\s+cars\s+to\s+tow$/i.test(cleaned);
+021152:     }
+021153: 
+021154:     function getCarsToTowVehicleRequirement(unitName, carsRequired) {
+021155:         if (!isCarsToTowRequirementName(unitName)) {
+021156:             return null;
+021157:         }
+021158: 
+021159:         const embeddedCount = String(unitName || '')
+021160:             .replace(/,/g, '')
+021161:             .match(/^(?:Required\s+)?(\d+)\s+car(?:s)?\s+to\s+tow$/i);
+021162: 
+021163:         const amountMatch = String(
+021164:             embeddedCount ? embeddedCount[1] : (carsRequired ?? '')
+021165:         )
+021166:             .replace(/,/g, '')
+021167:             .match(/\d+/);
+021168: 
+021169:         const cars = amountMatch
+021170:             ? Math.max(0, parseInt(amountMatch[0], 10) || 0)
+021171:             : 0;
+021172: 
+021173:         if (cars <= 0) {
+021174:             return null;
+021175:         }
+021176: 
+021177:         return {
+021178:             unitName: 'Cars to tow',
+021179:             carsRequired: cars,
+021180:             stillNeeded: Math.ceil(cars / 2)
+021181:         };
+021182:     }
+021183: 
+021184: 
+021185:     function normaliseVehicleRequirementCount(
+021186:         originalName,
+021187:         mappedName,
+021188:         amount
+021189:     ) {
+021190:         const required =
+021191:             Math.max(
+021192:                 0,
+021193:                 parseInt(
+021194:                     amount,
+021195:                     10
+021196:                 ) || 0
+021197:             );
+021198: 
+021199:         const raw =
+021200:             String(
+021201:                 originalName || ''
+021202:             )
+021203:                 .replace(
+021204:                     /\s+/g,
+021205:                     ' '
+021206:                 )
+021207:                 .trim();
+021208: 
+
+=== BLOCK 8: source lines 28861-28921 ===
+028861:                 isPoliceSergeantPersonnelRequirementName(
+028862:                     unitName
+028863:                 ) ||
+028864:                 isPoliceInspectorPersonnelRequirementName(
+028865:                     unitName
+028866:                 );
+028867: 
+028868:             const isTrustedUnresolvedSarPersonnel =
+028869:                 required !== null &&
+028870:                 !!getSarPersonnelVehicleRequirement(
+028871:                     unitName,
+028872:                     required
+028873:                 );
+028874: 
+028875:             const isTrustedUnresolvedTowRequirement =
+028876:                 required !== null &&
+028877:                 isCarsToTowRequirementName(
+028878:                     unitName
+028879:                 );
+028880: 
+028881:             if (
+028882:                 (
+028883:                     isTrustedUnresolvedPublicOrderPersonnel ||
+028884:                     isTrustedUnresolvedSarPersonnel ||
+028885:                     isTrustedUnresolvedTowRequirement
+028886:                 ) &&
+028887:                 required !==
+028888:                     null
+028889:             ) {
+028890:                 // V10.6.61/V10.6.63: Supported SAR/Public Order personnel and
+028891:                 // Cars to tow scalar rows can legitimately stay unresolved as
+028892:                 // "Need ?" while still showing an explicit Required count.
+028893:                 // Trust only those narrow rules. Every other unresolved row
+028894:                 // remains zero so Mission Update cannot resend the complete
+028895:                 // original mission load.
+028896:                 stillNeeded =
+028897:                     Math.max(
+028898:                         0,
+028899:                         required
+028900:                     );
+028901:             } else {
+028902:                 // A '?' / unresolved general row is not a confirmed shortage.
+028903:                 // Do not substitute the full Required value because that can
+028904:                 // make Mission Update resend the entire original mission load.
+028905:                 stillNeeded = 0;
+028906:             }
+028907:         }
+028908: 
+028909:         if (
+028910:             stillNeeded ===
+028911:                 null &&
+028912:             !requiresConfirmation &&
+028913:             required !==
+028914:                 null &&
+028915:             selected !==
+028916:                 null
+028917:         ) {
+028918:             stillNeeded =
+028919:                 Math.max(
+028920:                     0,
+028921:                     required -
+
+=== BLOCK 9: source lines 29774-29834 ===
+029774:                             ) ||
+029775:                             0
+029776:                             : 0
+029777:                     );
+029778: 
+029779:                 if (
+029780:                     !cleanedName ||
+029781:                     needed <=
+029782:                     0
+029783:                 ) {
+029784:                     return;
+029785:                 }
+029786: 
+029787:                 if (shouldIgnoreRequiredMinimumRequirement(cleanedName)) {
+029788:                     return;
+029789:                 }
+029790: 
+029791:                 const towRequirement =
+029792:                     getCarsToTowVehicleRequirement(
+029793:                         cleanedName,
+029794:                         needed
+029795:                     );
+029796: 
+029797:                 if (towRequirement) {
+029798:                     if (
+029799:                         mfDebugEnabled &&
+029800:                         !silent
+029801:                     ) {
+029802:                         debugLog(
+029803:                             'UPDATE TOW CONVERSION',
+029804:                             `${towRequirement.carsRequired} car(s) to tow -> Flatbed Recovery Vehicle x${towRequirement.stillNeeded} | source=${source}`
+029805:                         );
+029806:                     }
+029807: 
+029808:                     cleanedName =
+029809:                         towRequirement.unitName;
+029810: 
+029811:                     needed =
+029812:                         towRequirement.stillNeeded;
+029813: 
+029814:                     details = {
+029815:                         ...(
+029816:                             details ||
+029817:                             {}
+029818:                         ),
+029819:                         towRequirement
+029820:                     };
+029821:                 }
+029822: 
+029823:                 const patientRequirement =
+029824:                     normaliseMissionUpdatePatientRequirement(
+029825:                         cleanedName,
+029826:                         needed
+029827:                     );
+029828: 
+029829:                 if (
+029830:                     patientRequirement.type
+029831:                 ) {
+029832:                     if (
+029833:                         mfDebugEnabled &&
+029834:                         !silent
+
+=== BLOCK 10: source lines 30430-30490 ===
+030430: 
+030431:                 if (
+030432:                     mfDebugEnabled &&
+030433:                     !silent
+030434:                 ) {
+030435:                     debugLog(
+030436:                         'UPDATE GENERIC VEHICLE',
+030437:                         `${row.unitName} x${row.stillNeeded}`
+030438:                     );
+030439:                 }
+030440:             });
+030441: 
+030442:             const lowerText = text.toLowerCase();
+030443: 
+030444:             const carToTowMatch = lowerText.match(
+030445:                 /(\d+)\s+car(?:s)?\s+to\s+tow/
+030446:             );
+030447: 
+030448:             if (carToTowMatch) {
+030449:                 const amount = parseInt(
+030450:                     carToTowMatch[1],
+030451:                     10
+030452:                 );
+030453: 
+030454:                 if (
+030455:                     Number.isFinite(amount) &&
+030456:                     amount > 0
+030457:                 ) {
+030458:                     const towRequirement =
+030459:                         getCarsToTowVehicleRequirement(
+030460:                             'Cars to tow',
+030461:                             amount
+030462:                         );
+030463: 
+030464:                     if (towRequirement) {
+030465:                         recordUpdateRequirement(
+030466:                             towRequirement.unitName,
+030467:                             towRequirement.stillNeeded,
+030468:                             'visible-missing-vehicles-alert',
+030469:                             {
+030470:                                 dispatchTargetMode: 'total',
+030471:                                 explicitMissingVehicles: true,
+030472:                                 towCarsRequired:
+030473:                                     towRequirement.carsRequired
+030474:                             }
+030475:                         );
+030476:                     }
+030477:                 }
+030478:             }
+030479: 
+030480:             // MissionChief can expose Police Air only in the red
+030481:             // Missing Vehicles alert rather than the update table.
+030482:             // Convert it to a normal update row. The existing strict
+030483:             // Police Air matcher then prefers Drone Vehicle
+030484:             // (Police Station), with Police Helicopter as fallback.
+030485:             const policeAirMatches = Array.from(
+030486:                 text.matchAll(
+030487:                     /(\d+)\s*(?:x\s*)?Police\s+Helicopter(?:s)?\s+or\s+Drone(?:s)?/gi
+030488:                 )
+030489:             );
+030490: 
+
+=== FULL CONSTANTS ===
+
+=== CONSTANT crossReference: source lines 10596-10868 ===
+    const crossReference = {
+        /*************************************************
+         * FIRE
+         *************************************************/
+        "Pumps": "Fire Engine R/PUMP x 1",
+        "Pump": "Fire Engine R/PUMP x 1",
+        "Fire engine": "Fire Engine R/PUMP x 1",
+        "Fire engines": "Fire Engine R/PUMP x 1",
+        "Fire Engine": "Fire Engine R/PUMP x 1",
+        "Fire Engines": "Fire Engine R/PUMP x 1",
+        "Aerial Appliance": "CARP",
+        "Aerial Appliances": "CARP",
+        "Aerial Appliance Truck": "CARP",
+        "Aerial Appliance Trucks": "CARP",
+        "Fire, rescue or aerial appliance": "Rescue Pump",
+        "Road Rail Unit": "Road Rail Unit",
+        "Road Rail Units": "Road Rail Unit",
+        "Firefighter": "Rescue Pump",
+        "Firefighters": "Rescue Pump",
+        "Required Firefighter": "Rescue Pump",
+        "Required Firefighters": "Rescue Pump",
+        "Car Recovery": "Flatbed Recovery Vehicle",
+        "Required Car Recovery": "Flatbed Recovery Vehicle",
+        "ICCU or Ambulance Control Unit": "ICCU/ACU",
+        "ICCU or Ambulance Control Units": "ICCU/ACU",
+        "ICCUs or Ambulance Control Units": "ICCU/ACU",
+        "Fire Officer": "Fire Officer",
+        "Fire Officers": "Fire Officer",
+        "Rescue Support Unit": "Fire Engine R/PUMP x 1",
+        "Rescue Support Units": "Fire Engine R/PUMP x 1",
+        "Rescue Support Vehicle": "Fire Engine R/PUMP x 1",
+        "Rescue Support Vehicles": "Fire Engine R/PUMP x 1",
+        "Rescue Support Unit or Rescue Pump": "Fire Engine R/PUMP x 1",
+        "Rescue Support Units or Rescue Pumps": "Fire Engine R/PUMP x 1",
+        "Fire Engines or Rescue Support Vehicles": "Fire Engine R/PUMP x 1",
+        "Fire Engines, Rescue Support Vehicles or Aerial Appliance Trucks": "Fire Engine R/PUMP x 1",
+        "Foam Unit": "RP CAFS",
+        "Foam Units": "RP CAFS",
+        "Water Carrier": "Water Carrier",
+        "Water Carriers": "Water Carrier",
+        "Welfare Vehicles x1": "Welfare Vehicle",
+
+        /*************************************************
+         * POLICE
+         *************************************************/
+        "Police Car": "Police Car",
+        "Police Cars": "Police Car",
+        "Police car": "Police Car",
+        "Police cars": "Police Car",
+        "Police Officer": "Police Car",
+        "Police Officers": "Police Car",
+        "Traffic Car": "Police ATC",
+        "Traffic Cars": "Police ATC",
+        "Police Cars or Armed Response Vehicles (ARVs)": "Police ATC",
+        "Armed Response Personnel (In Armed Vehicles)": "Police ATC",
+        "Dog Support Unit (DSU)": "Police DSU",
+        "Dog Support Units (DSU)": "Police DSU",
+        "Dog Support Units (DSUs)": "Police DSU",
+        "Mounted Unit": "Mounted Unit",
+        "Mounted Units": "Mounted Unit",
+        "Police Inspector": "Police Inspector",
+        "Police Sergeant": "Police Sergeant",
+        "Cell Van": "Cell Van",
+        "Police Helicopter": "Police Helicopter",
+        "Police Helicopters": "Police Helicopter",
+        "Police Helicopter or Drone": "Police Helicopter",
+        "Police Helicopter or Drones": "Police Helicopter",
+        "Police Helicopters or Drone": "Police Helicopter",
+        "Police Helicopters or Drones": "Police Helicopter",
+        "Required Police Helicopter or Drone": "Police Helicopter",
+        "Required Police Helicopter or Drones": "Police Helicopter",
+        "Required Police Helicopters or Drone": "Police Helicopter",
+        "Required Police Helicopters or Drones": "Police Helicopter",
+        "Police Drone": "Police Helicopter",
+        "Police Drones": "Police Helicopter",
+        "Policehelicopter": "Police Helicopter",
+        "Policehelicopters": "Police Helicopter",
+        "modules.missionHelper.vehicles.captions.railway_police": "railway police",
+        "modules.missionHelper.prerequisites.railway_police": "EIU",
+        "modules.missionHelper.prerequisites.railway_police_command": "EIU",
+
+        /*************************************************
+         * AMBULANCE
+         *************************************************/
+        "Ambulance": "Ambulance",
+        "Ambulances": "Ambulance",
+        "Ambulance Officer": "Ambulance Officer",
+        "Ambulance Officers": "Ambulance Officer",
+        "Required Ambulance Officer": "Ambulance Officer",
+        "Required Ambulance Officers": "Ambulance Officer",
+        "Primary Response Vehicle": "PRV",
+        "Primary Response Vehicles": "PRV",
+        "PRVs": "PRV",
+        "Secondary Response Vehicle": "SRV",
+        "Secondary Response Vehicles": "SRV",
+        "SRVs": "SRV",
+        "Operational Team Leader": "OTL",
+        "Operational Team Leaders": "OTL",
+        "Mass Casualty Equipment": "Mass Casualty Equipment",
+        "Mass Casualty Equipment Unit": "Mass Casualty Equipment",
+        "Mass Casualty Equipment Units": "Mass Casualty Equipment",
+        "Critical Care": "Critical Care",
+        "Critical Care Team": "Critical Care",
+        "Critical Care Teams": "Critical Care",
+        "Required Critical Care": "Critical Care",
+        "Required Critical Care Team": "Critical Care",
+        "Required Critical Care Teams": "Critical Care",
+        "ATV Carrier": "ATV Carrier",
+        "ATV Carriers": "ATV Carrier",
+        "ATC Carrier": "ATV Carrier",
+        "ATC Carriers": "ATV Carrier",
+        "RRV": "RRV",
+        "RRVs": "RRV",
+        "Required RRV": "RRV",
+        "Required RRVs": "RRV",
+        "Specialist Paramedic RRV": "RRV",
+        "Specialist Paramedic RRVs": "RRV",
+        "Required Specialist Paramedic RRV": "RRV",
+        "Required Specialist Paramedic RRVs": "RRV",
+        "RRV or Specialist Paramedic RRV": "RRV",
+        "RRVs or Specialist Paramedic RRVs": "RRV",
+        "Required RRV or Specialist Paramedic RRV": "RRV",
+        "Required RRVs or Specialist Paramedic RRVs": "RRV",
+        "Community Midwife": "Community Midwife",
+        "Community Midwifes": "Community Midwife",
+
+        /*************************************************
+         * COASTGUARD / LIFEBOAT
+         *************************************************/
+        "CRV": "CRV",
+        "CRVs": "CRV",
+        "Inland Rescue Boat (Trailer)": "Inland Rescue Boat (Trailer)",
+        "Boat Trailer or Inland Rescue Boat": "Boat Trailer",
+        "Seagoing Vessel": "ALB",
+        "Seagoing Vessels": "ALB",
+        "Coastguard Rescue Helicopter": "CG Rescue Helicopter (Large)",
+        "Coastguard Rescue Helicopters": "CG Rescue Helicopter (Large)",
+        "Coastguard Rescue Helicopter (20%)": "CG Rescue Helicopter (Large)",
+        "ILBs or ALBs": "ALB",
+        "ALBs": "ALB",
+        "ALB": "ALB",
+        "ILBs": "ILB",
+        "ILB": "ILB",
+        "Control Van": "Control Van",
+        "Control Vans": "Control Van",
+        "SAR Commander": "Control Van",
+        "SAR Commanders": "Control Van",
+        "Required SAR Commander": "Control Van",
+        "Required SAR Commanders": "Control Van",
+        "Search Advisor": "Control Van",
+        "Search Advisors": "Control Van",
+        "HEMS": "Air Ambulance",
+        "HEMS Helicopter": "Air Ambulance",
+        "HEMS Helicopters": "Air Ambulance",
+        "Operational Support Van": "Operational Support Van",
+        "Operational Support Vans": "Operational Support Van",
+        "Operational Support or SAR Vehicle": "Operational Support Van",
+        "Operational Support or SAR Vehicles": "Operational Support Van",
+        "Operational Support or SAR Vehicle x1": "Operational Support Van",
+        "Operational Support Van or SAR Vehicle": "Operational Support Van",
+        "Operational Support Vans or SAR Vehicles": "Operational Support Van",
+        "Operational Support Vehicle or SAR Vehicle": "Operational Support Van",
+        "Operational Support Vehicles or SAR Vehicles": "Operational Support Van",
+        "Operational Support or Personal SAR Vehicle": "Operational Support Van",
+        "Operational Support or Personal SAR Vehicles": "Operational Support Van",
+        "Required Operational Support or SAR Vehicle": "Operational Support Van",
+        "Required Operational Support or SAR Vehicles": "Operational Support Van",
+        "Operational Support Van, Trailer or Personal SAR Vehicle": "Operational Support Van",
+        "Operational Support Vans, Trailers or Personal SAR Vehicles": "Operational Support Van",
+        "Operational Support Van Trailer or Personal SAR Vehicle": "Operational Support Van",
+        "Operational Support Vans Trailers or Personal SAR Vehicles": "Operational Support Van",
+        "Operational Support Van or Personal SAR Vehicle": "Operational Support Van",
+        "Operational Support Vans or Personal SAR Vehicles": "Operational Support Van",
+        "OSV": "Operational Support Van",
+        "OSVs": "Operational Support Van",
+        "Hovercraft (trailer)": "Hovercraft (trailer)",
+        "Coastguard Mud Rescue Unit": "Coastguard Mud Rescue Unit",
+        "Coastguard Mud Rescue Units": "Coastguard Mud Rescue Unit",
+        "Mud Decontamination Unit": "Mud Decontamination Unit",
+        "Mud Decontamination Units": "Mud Decontamination Unit",
+        "Coastguard Commander": "CG Commander",
+        "Flood Rescue Units":"Flood Rescue",
+
+        /*************************************************
+         * AIRFIELD OPS
+         *************************************************/
+        "Airfield Operations Vehicle": "Airfield Operations Vehicle",
+        "Airfield Operations Vehicles": "Airfield Operations Vehicle",
+        "Aerial Appliance Trucks or Rescue Stairs": "Rescue Stairs",
+        "Fire Engines or RIVs": "RIV",
+        "RIV": "RIV",
+        "RIVs": "RIV",
+        "Rapid Intervention Vehicle": "RIV",
+        "Rapid Intervention Vehicles": "RIV",
+        "Major Foam Tender": "Major Foam Tender",
+        "Major Foam Tenders": "Major Foam Tender",
+        "RIVs or Major Foam Tenders": "RIV",
+        "RIV or Major Foam Tender": "RIV",
+        "Required RIV or Major Foam Tender": "RIV",
+        "Required RIVs or Major Foam Tenders": "RIV",
+        "Fire Engines, RIVs or Major Foam Tenders": "Major Foam Tender",
+        "Fire Engines or Major Foam Tenders": "Major Foam Tender",
+        "Airfield Operations Supervisor": "Airfield Operations Supervisors",
+        "Airfield Operations Supervisors": "Airfield Operations Supervisors",
+        "Airfield Firefighting Command Vehicle": "Airfield FF Command Vehicle",
+        "ICCU or Ambulance Control Units or Airfield Firefighting Command Vehicles": "Airfield FF Command Vehicle",
+        "Fire Officers or Airfield Firefighting Command Vehicles": "Fire Officer",
+
+        /*************************************************
+         * SEARCH & RESCUE / FLOOD / RECOVERY / BOMB
+         *************************************************/
+        "Flood Rescue Unit": "Flood Rescue Unit (Trailer)",
+        "4x4 Vehicle": "4x4 Units",
+        "4x4 Vehicles": "4x4 Units",
+        "Mountain Rescue 4x4 or SAR 4x4": "4x4 Units",
+        "Mountain Rescue 4x4s or SAR 4x4s": "4x4 Units",
+
+        // Special Search Technician vehicle selector.
+        // Matching is handled by the dedicated displayed-name-prefix rule.
+        "SARTEC": "SARTEC",
+
+        "modules.missionHelper.prerequisites.tow_trucks_large": "Flatbed Recovery Vehicle",
+        "modules.missionHelper.prerequisites.tow_trucks": "Flatbed Recovery Vehicle",
+        "1 car to tow": "Flatbed Recovery Vehicle",
+        "Cars to tow": "Flatbed Recovery Vehicle",
+        "Car to tow": "Flatbed Recovery Vehicle",
+        "Maximum amount of cars to tow": "Flatbed Recovery Vehicle",
+        "Minimum amount of cars to tow": "Flatbed Recovery Vehicle",
+        "Tow Trucks Large": "Flatbed Recovery Vehicle",
+        "Flatbed Recovery Vehicle": "Flatbed Recovery Vehicle",
+        "Flatbed Recovery Vehicles": "Flatbed Recovery Vehicle",
+        "modules.missionHelper.vehicles.captions.bomb_disposal_crew": "Bomb Disposal crew x1",
+        "Support Units": "Support Unit",
+        "Breathing Apparatus Support Unit": "OSU",
+        "Breathing Apparatus Support Units": "OSU",
+        "Breathing Apparatus Support Vehicle": "OSU",
+        "Breathing Apparatus Support Vehicles": "OSU",
+        "BASU": "OSU",
+        "BASUs": "OSU",
+        "Welfare": "OSU",
+        "Welfare Unit": "OSU",
+        "Welfare Units": "OSU",
+        "Welfare Vehicle": "OSU",
+        "Welfare Vehicles": "OSU",
+        "HazMat": "OSU",
+        "Hazmat": "OSU",
+        "HazMat Unit": "OSU",
+        "HazMat Units": "OSU",
+        "Hazmat Unit": "OSU",
+        "Hazmat Units": "OSU",
+        "HazMat Unit or CBRN Vehicle": "OSU",
+        "HazMat Units or CBRN Vehicles": "OSU",
+        "Hazmat Unit or CBRN Vehicle": "OSU",
+        "Hazmat Units or CBRN Vehicles": "OSU",
+        "CBRN Vehicle": "OSU",
+        "CBRN Vehicles": "OSU",
+        "Operational Support Unit": "OSU",
+        "Operational Support Units": "OSU",
+        "Fire Operational Support Unit": "OSU",
+        "Fire Operational Support Units": "OSU",
+        "Breathing Apparatus Support Unit x1": "OSU",
+        "Breathing Apparatus Support Units x1": "OSU",
+        "BASU x1": "OSU",
+        "BASUs x1": "OSU",
+        "Welfare Vehicle x1": "OSU",
+        "Welfare Vehicles x1": "OSU",
+        "HazMat Unit or CBRN Vehicle x1": "OSU",
+        "HazMat Units or CBRN Vehicles x1": "OSU",
+        "Operational Support Unit x1": "OSU",
+        "Operational Support Units x1": "OSU",
+    };
+
+=== FULL TOP-LEVEL FUNCTIONS ===
+
+=== FUNCTION getCarsToTowVehicleRequirement: source lines 21154-21185 ===
+    function getCarsToTowVehicleRequirement(unitName, carsRequired) {
+        if (!isCarsToTowRequirementName(unitName)) {
+            return null;
+        }
+
+        const embeddedCount = String(unitName || '')
+            .replace(/,/g, '')
+            .match(/^(?:Required\s+)?(\d+)\s+car(?:s)?\s+to\s+tow$/i);
+
+        const amountMatch = String(
+            embeddedCount ? embeddedCount[1] : (carsRequired ?? '')
+        )
+            .replace(/,/g, '')
+            .match(/\d+/);
+
+        const cars = amountMatch
+            ? Math.max(0, parseInt(amountMatch[0], 10) || 0)
+            : 0;
+
+        if (cars <= 0) {
+            return null;
+        }
+
+        return {
+            unitName: 'Cars to tow',
+            carsRequired: cars,
+            stillNeeded: Math.ceil(cars / 2)
+        };
+    }
+
+=== FUNCTION isFlatbedRecoveryVehicleRequirement: NOT FOUND ===
+
+=== FUNCTION isFlatbedRecoveryVehicleCheckbox: NOT FOUND ===
+
+=== FUNCTION getAllMatchingVehicleCheckboxes: source lines 13055-13649 ===
+    function getAllMatchingVehicleCheckboxes(originalName, mappedName, includeChecked) {
+        // BASU, Welfare and HazMat share the same selected exact type-39 Fire OSU.
+        if (isFireOperationalSupportRequirement(originalName, mappedName)) {
+            return sortVehicleCheckboxesByBestArrival(getVehicleCheckboxSnapshot().filter(input => {
+                if (input.disabled) return false;
+                if (!includeChecked && input.checked) return false;
+                return isFireOperationalSupportUnitCheckbox(input);
+            }));
+        }
+        if (isFireEngineRequirement(originalName, mappedName)) {
+            return sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) return false;
+                    if (!includeChecked && input.checked) return false;
+                    return isFireEngineVehicleCheckbox(input);
+                })
+            );
+        }
+
+        const candidates = getVehicleMatchCandidates(originalName, mappedName);
+        const strictExactOnly = isAmbulanceTransportRequest(originalName, mappedName);
+        const sartecPrefixOnly = isSartecRequirement(
+            originalName,
+            mappedName
+        );
+
+        const rrvTypeOnly =
+            isRrvRequirement(
+                originalName,
+                mappedName
+            );
+
+        const rivTypeOnly =
+            isRivRequirement(
+                originalName,
+                mappedName
+            );
+
+        const rivOrMajorFoamTenderPreferred =
+            isRivOrMajorFoamTenderRequirement(
+                originalName,
+                mappedName
+            );
+
+        const policeAirMode =
+            getPoliceAirRequirementMode(
+                originalName,
+                mappedName
+            );
+
+        const policeCarOnly =
+            isPoliceCarRequirement(
+                originalName,
+                mappedName
+            );
+
+        const roadRailOnly =
+            isRoadRailUnitRequirement(
+                originalName,
+                mappedName
+            );
+
+        const crvOnly =
+            isCrvRequirement(
+                originalName,
+                mappedName
+            );
+
+        const controlVanOnly =
+            isControlVanRequirement(
+                originalName,
+                mappedName
+            );
+
+        const airAmbulanceOnly =
+            isAirAmbulanceRequirement(
+                originalName,
+                mappedName
+            );
+
+        const criticalCareTransferOnly =
+            isCriticalCareTransferAmbulanceRequirement(
+                originalName,
+                mappedName
+            );
+
+        const genericCriticalCare =
+            isGenericCriticalCareRequirement(
+                originalName,
+                mappedName
+            );
+
+        const atvCarrierOnly =
+            isAtvCarrierRequirement(
+                originalName,
+                mappedName
+            );
+
+        const seagoingVesselOnly =
+            isSeagoingVesselRequirement(
+                originalName,
+                mappedName
+            );
+
+        const dogSupportOnly =
+            isDogSupportUnitRequirement(
+                originalName,
+                mappedName
+            );
+
+        const operationalSupportOnly =
+            isOperationalSupportOrSarVehicleRequirement(
+                originalName,
+                mappedName
+            );
+
+        const generic4x4Only =
+            isGeneric4x4VehicleRequirement(
+                originalName,
+                mappedName
+            );
+
+        const mountainRescue4x4Preferred =
+            isMountainRescueOrSar4x4Requirement(
+                originalName,
+                mappedName
+            );
+
+        const iccuPreferred =
+            isIccuOrAmbulanceControlRequirement(
+                originalName,
+                mappedName
+            );
+
+
+        if (roadRailOnly) {
+            return sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) return false;
+                    if (!includeChecked && input.checked) return false;
+                    return isRoadRailUnitVehicleCheckbox(input);
+                })
+            );
+        }
+
+        if (crvOnly) {
+            return sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) return false;
+                    if (!includeChecked && input.checked) return false;
+                    return isCrvVehicleCheckbox(input);
+                })
+            );
+        }
+
+        if (controlVanOnly) {
+            return sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) return false;
+                    if (!includeChecked && input.checked) return false;
+                    return isControlVanVehicleCheckbox(input);
+                })
+            );
+        }
+
+        if (airAmbulanceOnly) {
+            return sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) return false;
+                    if (!includeChecked && input.checked) return false;
+                    return isAirAmbulanceVehicleCheckbox(input);
+                })
+            );
+        }
+
+        if (criticalCareTransferOnly) {
+            return sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) return false;
+                    if (!includeChecked && input.checked) return false;
+                    return isCriticalCareTransferAmbulanceCheckbox(input);
+                })
+            );
+        }
+
+        if (genericCriticalCare) {
+            const registry = readPersonnelTrainingRegistry();
+            return sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) return false;
+                    if (!includeChecked && input.checked) return false;
+                    return isGenericCriticalCareVehicleCheckbox(input, registry);
+                })
+            );
+        }
+
+        if (seagoingVesselOnly) {
+            return sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) return false;
+                    if (!includeChecked && input.checked) return false;
+                    return isSeagoingVesselCheckbox(input);
+                })
+            );
+        }
+
+
+        if (
+            rivOrMajorFoamTenderPreferred
+        ) {
+            const eligible =
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) {
+                        return false;
+                    }
+
+                    if (
+                        !includeChecked &&
+                        input.checked
+                    ) {
+                        return false;
+                    }
+
+                    return (
+                        isRivVehicleCheckbox(
+                            input
+                        ) ||
+                        isMajorFoamTenderVehicleCheckbox(
+                            input
+                        )
+                    );
+                });
+
+            const rivMatches =
+                sortVehicleCheckboxesByBestArrival(
+                    eligible.filter(
+                        isRivVehicleCheckbox
+                    )
+                );
+
+            if (
+                rivMatches.length >
+                0
+            ) {
+                return rivMatches;
+            }
+
+            return sortVehicleCheckboxesByBestArrival(
+                eligible.filter(
+                    isMajorFoamTenderVehicleCheckbox
+                )
+            );
+        }
+
+        if (atvCarrierOnly) {
+            return sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) {
+                        return false;
+                    }
+
+                    if (
+                        !includeChecked &&
+                        input.checked
+                    ) {
+                        return false;
+                    }
+
+                    return isAtvCarrierCheckbox(
+                        input
+                    );
+                })
+            );
+        }
+
+        if (dogSupportOnly) {
+            return sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) {
+                        return false;
+                    }
+
+                    if (
+                        !includeChecked &&
+                        input.checked
+                    ) {
+                        return false;
+                    }
+
+                    return isDogSupportUnitCheckbox(
+                        input
+                    );
+                })
+            );
+        }
+
+        if (operationalSupportOnly) {
+            return sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) return false;
+                    if (!includeChecked && input.checked) return false;
+                    return isOperationalSupportVanCheckbox(input);
+                })
+            );
+        }
+
+        if (iccuPreferred) {
+            const eligible =
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) {
+                        return false;
+                    }
+
+                    if (
+                        !includeChecked &&
+                        input.checked
+                    ) {
+                        return false;
+                    }
+
+                    return (
+                        isIccuVehicleCheckbox(
+                            input
+                        ) ||
+                        isAmbulanceControlUnitCheckbox(
+                            input
+                        )
+                    );
+                });
+
+            const iccuMatches =
+                sortVehicleCheckboxesByBestArrival(
+                    eligible.filter(
+                        isIccuVehicleCheckbox
+                    )
+                );
+
+            const ambulanceControlFallbackMatches =
+                sortVehicleCheckboxesByBestArrival(
+                    eligible.filter(
+                        input =>
+                            !isIccuVehicleCheckbox(input) &&
+                            isAmbulanceControlUnitCheckbox(input)
+                    )
+                );
+
+            return [
+                ...iccuMatches,
+                ...ambulanceControlFallbackMatches
+            ];
+        }
+
+        if (generic4x4Only) {
+            return sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) {
+                        return false;
+                    }
+
+                    if (
+                        !includeChecked &&
+                        input.checked
+                    ) {
+                        return false;
+                    }
+
+                    return isGeneric4x4VehicleCheckbox(
+                        input
+                    );
+                })
+            );
+        }
+
+        if (mountainRescue4x4Preferred) {
+            const eligible =
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) {
+                        return false;
+                    }
+
+                    if (
+                        !includeChecked &&
+                        input.checked
+                    ) {
+                        return false;
+                    }
+
+                    return (
+                        isMountainRescue4x4Checkbox(
+                            input
+                        ) ||
+                        isSar4x4Checkbox(
+                            input
+                        )
+                    );
+                });
+
+            const mountainRescueMatches =
+                sortVehicleCheckboxesByBestArrival(
+                    eligible.filter(
+                        isMountainRescue4x4Checkbox
+                    )
+                );
+
+            const sarFallbackMatches =
+                sortVehicleCheckboxesByBestArrival(
+                    eligible.filter(
+                        isSar4x4Checkbox
+                    )
+                );
+
+            const orderedMatches = [
+                ...mountainRescueMatches,
+                ...sarFallbackMatches
+            ];
+
+            if (mfDebugEnabled) {
+                debugLog(
+                    'MOUNTAIN 4X4 PRIORITY',
+                    `${originalName} -> ${mappedName} | Mountain Rescue 4x4 matches=${mountainRescueMatches.length} first | SAR 4x4 matches=${sarFallbackMatches.length} fallback | returned=${orderedMatches.length}`
+                );
+            }
+
+            return orderedMatches;
+        }
+
+        if (policeAirMode) {
+            const eligible =
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) {
+                        return false;
+                    }
+
+                    if (
+                        !includeChecked &&
+                        input.checked
+                    ) {
+                        return false;
+                    }
+
+                    if (policeAirMode === 'helicopter') {
+                        return isPoliceHelicopterCheckbox(input);
+                    }
+
+                    if (policeAirMode === 'drone') {
+                        return isPoliceDroneCheckbox(input);
+                    }
+
+                    return (
+                        isPoliceHelicopterCheckbox(input) ||
+                        isPoliceDroneCheckbox(input)
+                    );
+                });
+
+            if (policeAirMode === 'helicopter') {
+                return sortVehicleCheckboxesByBestArrival(
+                    eligible.filter(
+                        isPoliceHelicopterCheckbox
+                    )
+                );
+            }
+
+            if (policeAirMode === 'drone') {
+                return sortVehicleCheckboxesByBestArrival(
+                    eligible.filter(
+                        isPoliceDroneCheckbox
+                    )
+                );
+            }
+
+            const sortedDroneMatches =
+                sortVehicleCheckboxesByBestArrival(
+                    eligible.filter(
+                        isPoliceDroneCheckbox
+                    )
+                );
+
+            const sortedHelicopterMatches =
+                sortVehicleCheckboxesByBestArrival(
+                    eligible.filter(
+                        isPoliceHelicopterCheckbox
+                    )
+                );
+
+            // Flexible wording only: Drone first, Police Helicopter fallback.
+            return [
+                ...sortedDroneMatches,
+                ...sortedHelicopterMatches
+            ];
+        }
+
+        if (policeCarOnly) {
+            const registry =
+                readPersonnelTrainingRegistry();
+
+            const policeCarCandidates =
+                sortVehicleCheckboxesByBestArrival(
+                    getVehicleCheckboxSnapshot().filter(input => {
+                        if (input.disabled) return false;
+                        if (!includeChecked && input.checked) return false;
+
+                        return isOrdinaryPoliceIrvCheckboxEligible(
+                            input,
+                            registry,
+                            {
+                                allowUnknown: true,
+                                allowProtected: true
+                            }
+                        );
+                    })
+                );
+
+            return orderOrdinaryPoliceIrvCandidates(
+                policeCarCandidates,
+                registry
+            );
+        }
+
+        const matches = getVehicleCheckboxSnapshot().filter(input => {
+            if (input.disabled) return false;
+            if (!includeChecked && input.checked) return false;
+
+            if (sartecPrefixOnly) {
+                return isSartecVehicleCheckbox(
+                    input
+                );
+            }
+
+            if (rrvTypeOnly) {
+                return isRrvVehicleCheckbox(
+                    input
+                );
+            }
+
+            if (rivTypeOnly) {
+                return isRivVehicleCheckbox(
+                    input
+                );
+            }
+
+            if (policeCarOnly) {
+                return isPoliceCarVehicleCheckbox(
+                    input
+                );
+            }
+
+            const values = getCheckboxVehicleValues(input);
+            return vehicleValuesMatchCandidates(values, candidates, strictExactOnly);
+        });
+
+        if (mfDebugEnabled && strictExactOnly) {
+            debugLog('AMBULANCE STRICT', `${originalName} -> ${mappedName} | exact-match boxes=${matches.length}`);
+        }
+
+        if (mfDebugEnabled && sartecPrefixOnly) {
+            debugLog(
+                'SARTEC PREFIX',
+                `${originalName} -> ${mappedName} | displayed-name-prefix boxes=${matches.length}`
+            );
+        }
+
+        if (
+            mfDebugEnabled &&
+            rrvTypeOnly
+        ) {
+            debugLog(
+                'RRV STRICT',
+                `${originalName} -> ${mappedName} | RRV type boxes=${matches.length}`
+            );
+        }
+
+        if (
+            mfDebugEnabled &&
+            rivTypeOnly
+        ) {
+            debugLog(
+                'RIV STRICT',
+                `${originalName} -> ${mappedName} | RIV type boxes=${matches.length}`
+            );
+        }
+
+        if (
+            mfDebugEnabled &&
+            policeCarOnly
+        ) {
+            debugLog(
+                'POLICE CAR STRICT',
+                `${originalName} -> ${mappedName} | Police Car/IRV type boxes=${matches.length}`
+            );
+        }
+
+        return sortVehicleCheckboxesByBestArrival(matches);
+    }
+
+=== FUNCTION getMatchingVehicleCheckboxes: source lines 13649-13653 ===
+    function getMatchingVehicleCheckboxes(originalName, mappedName) {
+        return getAllMatchingVehicleCheckboxes(originalName, mappedName, false);
+    }
+
+=== FUNCTION countSelectedMatchingVehicles: source lines 13653-13817 ===
+    function countSelectedMatchingVehicles(originalName, mappedName) {
+        if (isFireOperationalSupportRequirement(originalName, mappedName)) {
+            return getVehicleCheckboxSnapshot().filter(input =>
+                input.checked && isFireOperationalSupportUnitCheckbox(input)).length;
+        }
+        if (isFireEngineRequirement(originalName, mappedName)) {
+            return getVehicleCheckboxSnapshot().filter(input => (
+                input.checked &&
+                isFireEngineVehicleCheckbox(input)
+            )).length;
+        }
+
+        const candidates = getVehicleMatchCandidates(originalName, mappedName);
+        const strictExactOnly = isAmbulanceTransportRequest(originalName, mappedName);
+        const sartecPrefixOnly = isSartecRequirement(originalName, mappedName);
+        const rrvTypeOnly = isRrvRequirement(originalName, mappedName);
+        const rivTypeOnly = isRivRequirement(originalName, mappedName);
+
+        const rivOrMajorFoamTenderPreferred =
+            isRivOrMajorFoamTenderRequirement(
+                originalName,
+                mappedName
+            );
+        const policeAirMode = getPoliceAirRequirementMode(originalName, mappedName);
+        const policeCarOnly = isPoliceCarRequirement(originalName, mappedName);
+        const roadRailOnly = isRoadRailUnitRequirement(originalName, mappedName);
+        const crvOnly = isCrvRequirement(originalName, mappedName);
+        const controlVanOnly = isControlVanRequirement(originalName, mappedName);
+        const airAmbulanceOnly = isAirAmbulanceRequirement(originalName, mappedName);
+        const criticalCareTransferOnly = isCriticalCareTransferAmbulanceRequirement(originalName, mappedName);
+        const genericCriticalCare = isGenericCriticalCareRequirement(originalName, mappedName);
+        const criticalCareRegistry = genericCriticalCare ? readPersonnelTrainingRegistry() : null;
+        const atvCarrierOnly = isAtvCarrierRequirement(originalName, mappedName);
+        const seagoingVesselOnly = isSeagoingVesselRequirement(originalName, mappedName);
+        const dogSupportOnly = isDogSupportUnitRequirement(originalName, mappedName);
+        const operationalSupportOnly =
+            isOperationalSupportOrSarVehicleRequirement(
+                originalName,
+                mappedName
+            );
+
+        const generic4x4Only =
+            isGeneric4x4VehicleRequirement(
+                originalName,
+                mappedName
+            );
+
+        const mountainRescue4x4Preferred =
+            isMountainRescueOrSar4x4Requirement(
+                originalName,
+                mappedName
+            );
+        const iccuPreferred =
+            isIccuOrAmbulanceControlRequirement(
+                originalName,
+                mappedName
+            );
+
+        if (
+            rivOrMajorFoamTenderPreferred
+        ) {
+            const selected =
+                getVehicleCheckboxSnapshot().filter(
+                    input =>
+                        input.checked
+                );
+
+            const selectedRivs =
+                selected.filter(
+                    isRivVehicleCheckbox
+                ).length;
+
+            if (
+                selectedRivs >
+                0
+            ) {
+                return selectedRivs;
+            }
+
+            return selected.filter(
+                isMajorFoamTenderVehicleCheckbox
+            ).length;
+        }
+
+        let count = 0;
+
+        for (const input of getVehicleCheckboxSnapshot()) {
+            // A vehicle that is already checked still counts toward the
+            // requirement even when MissionChief disables its checkbox after
+            // selection. V10.6.48 skipped disabled checked boxes, which made a
+            // successfully selected vehicle look missing during verification.
+            if (!input.checked) continue;
+
+            let matches = false;
+
+            if (roadRailOnly) {
+                matches = isRoadRailUnitVehicleCheckbox(input);
+            } else if (crvOnly) {
+                matches = isCrvVehicleCheckbox(input);
+            } else if (controlVanOnly) {
+                matches = isControlVanVehicleCheckbox(input);
+            } else if (airAmbulanceOnly) {
+                matches = isAirAmbulanceVehicleCheckbox(input);
+            } else if (criticalCareTransferOnly) {
+                matches = isCriticalCareTransferAmbulanceCheckbox(input);
+            } else if (genericCriticalCare) {
+                matches = isGenericCriticalCareVehicleCheckbox(input, criticalCareRegistry);
+            } else if (seagoingVesselOnly) {
+                matches = isSeagoingVesselCheckbox(
+                    input
+                );
+            } else if (atvCarrierOnly) {
+                matches = isAtvCarrierCheckbox(
+                    input
+                );
+            } else if (dogSupportOnly) {
+                matches = isDogSupportUnitCheckbox(
+                    input
+                );
+            } else if (operationalSupportOnly) {
+                matches = isOperationalSupportVanCheckbox(input);
+            } else if (iccuPreferred) {
+                matches =
+                    isIccuVehicleCheckbox(input) ||
+                    isAmbulanceControlUnitCheckbox(input);
+            } else if (generic4x4Only) {
+                matches = isGeneric4x4VehicleCheckbox(input);
+            } else if (mountainRescue4x4Preferred) {
+                matches =
+                    isMountainRescue4x4Checkbox(input) ||
+                    isSar4x4Checkbox(input);
+            } else if (policeAirMode === 'helicopter') {
+                matches = isPoliceHelicopterCheckbox(input);
+            } else if (policeAirMode === 'drone') {
+                matches = isPoliceDroneCheckbox(input);
+            } else if (policeAirMode === 'flexible') {
+                matches =
+                    isPoliceHelicopterCheckbox(input) ||
+                    isPoliceDroneCheckbox(input);
+            } else if (sartecPrefixOnly) {
+                matches = isSartecVehicleCheckbox(input);
+            } else if (rrvTypeOnly) {
+                matches = isRrvVehicleCheckbox(input);
+            } else if (rivTypeOnly) {
+                matches = isRivVehicleCheckbox(input);
+            } else if (policeCarOnly) {
+                // Any selected exact type-8 IRV satisfies generic Police
+                // attendance. Training data controls preference only; named
+                // specialist requirements still use their strict selectors.
+                matches = isPoliceCarVehicleCheckbox(input);
+            } else {
+                matches = vehicleValuesMatchCandidates(
+                    getCheckboxVehicleValues(input),
+                    candidates,
+                    strictExactOnly
+                );
+            }
+
+            if (matches) count += 1;
+        }
+
+        return count;
+    }
+
+=== FUNCTION readMissionUpdateRows: source lines 29575-31416 ===
+    function readMissionUpdateRows(options = {}) {
+        if (!isCurrentMissionExecutionOwner('Mission Update requirement read')) {
+            return [];
+        }
+
+        synchroniseMissionInstanceState('Mission Update read');
+
+        const silent = !!(options && options.silent);
+        const now = Date.now();
+        const missionKey = getLocalMissionInstanceKey();
+
+        if (
+            silent &&
+            missionKey === mfMissionUpdateRowsCache.missionKey &&
+            now < mfMissionUpdateRowsCache.expiresAt
+        ) {
+            return mfMissionUpdateRowsCache.rows;
+        }
+
+        const missingRows = [];
+
+        const missionUpdateContexts =
+            getActiveMissionRequirementContexts();
+
+        const missionUpdateRoots =
+            Array.from(
+                new Set(
+                    missionUpdateContexts
+                        .map(
+                            context =>
+                                context.root
+                        )
+                )
+            );
+
+        let tableLevel1PublicOrderRequired =
+            0;
+
+        let tableLevel2PublicOrderRequired =
+            0;
+
+        let tablePoliceSergeantRequired =
+            0;
+
+        let tablePoliceInspectorRequired =
+            0;
+
+        let tablePoliceMedicRequired =
+            0;
+
+        let tableRailwayPoliceRequired =
+            0;
+
+        let tableArmedResponseRequired =
+            0;
+
+        // V10.6.45 patient-source authority guard.
+        // A confirmed Live Mission Requirements row owns that patient unit,
+        // including an explicit/derived Need of 0. This prevents a stale
+        // visible patient "We need" alert from resending Ambulances, Critical
+        // Care, Ambulance Officers or Mass Casualty Equipment after the live
+        // panel has already confirmed that no further unit is required.
+        const livePatientRequirementStates =
+            new Map();
+
+        const discoveredUpdateTables =
+            Array.from(
+                new Set(
+                    missionUpdateRoots
+                        .flatMap(root => {
+                            try {
+                                return Array.from(
+                                    root.querySelectorAll(
+                                        '#mc-map-command-toolkit-mission-requirements[data-mcms-requirements-panel="1"] table[aria-label="Live mission requirements"], ' +
+                                        'section[data-mcms-requirements-panel="1"] table[aria-label="Live mission requirements"], ' +
+                                        'table.table-striped.table-condensed, table.table'
+                                    )
+                                );
+                            } catch (_error) {
+                                return [];
+                            }
+                        })
+                )
+            )
+                .filter(
+                    isMissionUpdateTable
+                )
+                .filter(
+                    table =>
+                        isMissionElementVisible(
+                            table
+                        )
+                );
+
+        const liveRequirementsTables =
+            discoveredUpdateTables.filter(
+                isLiveMissionRequirementsTable
+            );
+
+        const hasLiveRequirementsPanel =
+            liveRequirementsTables.length >
+            0;
+
+        const updateTables =
+            hasLiveRequirementsPanel
+                ? liveRequirementsTables
+                : discoveredUpdateTables;
+
+        if (
+            mfDebugEnabled &&
+            !silent
+        ) {
+            const documentDescriptions =
+                missionUpdateContexts
+                    .map(
+                        (
+                            context,
+                            index
+                        ) => {
+                            const url =
+                                context.document
+                                    ?.URL ||
+                                'unknown';
+
+                            return (
+                                `${index + 1}:${url}` +
+                                ` [${context.reasons.join(',')}]`
+                            );
+                        }
+                    )
+                    .join(' || ');
+
+            debugLog(
+                'UPDATE SCOPE',
+                `contexts=${missionUpdateContexts.length} | ${documentDescriptions}`
+            );
+
+            debugLog(
+                'UPDATE TABLE CHECK',
+                hasLiveRequirementsPanel
+                    ? (
+                        `Live Mission Requirements panel detected. ` +
+                        `Using ${liveRequirementsTables.length} live table(s) as the sole update source; ` +
+                        `${Math.max(0, discoveredUpdateTables.length - liveRequirementsTables.length)} legacy table(s) ignored.`
+                    )
+                    : (
+                        `No Live Mission Requirements panel detected. ` +
+                        `Using ${updateTables.length} legacy update table(s) and alert fallbacks.`
+                    )
+            );
+
+            if (
+                hasLiveRequirementsPanel
+            ) {
+                debugLog(
+                    'LIVE PANEL AUTHORITATIVE',
+                    'Legacy general alerts and parent-page Missing Vehicles/Personnel text are ignored. Explicit patient alerts are fallback-only when the live panel has no confirmed row for that patient unit.'
+                );
+            }
+        }
+
+        const recordUpdateRequirement =
+            (
+                unitName,
+                stillNeeded,
+                source,
+                details = null
+            ) => {
+                let cleanedName =
+                    String(
+                        unitName ||
+                        ''
+                    )
+                        .replace(
+                            /\s+/g,
+                            ' '
+                        )
+                        .trim();
+
+                const neededMatch =
+                    String(
+                        stillNeeded ??
+                        ''
+                    )
+                        .replace(
+                            /,/g,
+                            ''
+                        )
+                        .match(
+                            /\d+/
+                        );
+
+                let needed =
+                    Math.max(
+                        0,
+                        neededMatch
+                            ? parseInt(
+                                neededMatch[0],
+                                10
+                            ) ||
+                            0
+                            : 0
+                    );
+
+                if (
+                    !cleanedName ||
+                    needed <=
+                    0
+                ) {
+                    return;
+                }
+
+                if (shouldIgnoreRequiredMinimumRequirement(cleanedName)) {
+                    return;
+                }
+
+                const towRequirement =
+                    getCarsToTowVehicleRequirement(
+                        cleanedName,
+                        needed
+                    );
+
+                if (towRequirement) {
+                    if (
+                        mfDebugEnabled &&
+                        !silent
+                    ) {
+                        debugLog(
+                            'UPDATE TOW CONVERSION',
+                            `${towRequirement.carsRequired} car(s) to tow -> Flatbed Recovery Vehicle x${towRequirement.stillNeeded} | source=${source}`
+                        );
+                    }
+
+                    cleanedName =
+                        towRequirement.unitName;
+
+                    needed =
+                        towRequirement.stillNeeded;
+
+                    details = {
+                        ...(
+                            details ||
+                            {}
+                        ),
+                        towRequirement
+                    };
+                }
+
+                const patientRequirement =
+                    normaliseMissionUpdatePatientRequirement(
+                        cleanedName,
+                        needed
+                    );
+
+                if (
+                    patientRequirement.type
+                ) {
+                    if (
+                        mfDebugEnabled &&
+                        !silent
+                    ) {
+                        debugLog(
+                            'UPDATE PATIENT RULE',
+                            `${cleanedName} x${needed} -> ${patientRequirement.unitName} x${patientRequirement.stillNeeded}` +
+                            `${patientRequirement.capped ? ' (capped at one)' : ' (required count preserved)'}` +
+                            ` | source=${source}`
+                        );
+                    }
+
+                    cleanedName =
+                        patientRequirement.unitName;
+
+                    needed =
+                        patientRequirement.stillNeeded;
+                }
+
+                if (
+                    needed <=
+                    0
+                ) {
+                    return;
+                }
+
+                const sarPersonnelConversion =
+                    getSarPersonnelVehicleRequirement(
+                        cleanedName,
+                        needed
+                    );
+
+                if (sarPersonnelConversion) {
+                    if (
+                        mfDebugEnabled &&
+                        !silent
+                    ) {
+                        debugLog(
+                            'UPDATE SAR PERSONNEL',
+                            `${sarPersonnelConversion.personnelRequirement} -> ${sarPersonnelConversion.unitName} x${sarPersonnelConversion.stillNeeded} (${sarPersonnelConversion.personnelPerVehicle} personnel per vehicle) | source=${source}`
+                        );
+                    }
+
+                    cleanedName =
+                        sarPersonnelConversion.unitName;
+
+                    needed =
+                        sarPersonnelConversion.stillNeeded;
+
+                    details = {
+                        ...(
+                            details ||
+                            {}
+                        ),
+                        sarPersonnelConversion
+                    };
+                }
+
+                const publicOrderLevel =
+                    getPublicOrderPersonnelLevel(
+                        cleanedName
+                    );
+
+                if (
+                    publicOrderLevel ===
+                    1
+                ) {
+                    tableLevel1PublicOrderRequired =
+                        Math.max(
+                            tableLevel1PublicOrderRequired,
+                            needed
+                        );
+
+                    if (
+                        mfDebugEnabled &&
+                        !silent
+                    ) {
+                        debugLog(
+                            'PUBLIC ORDER TABLE COLLAPSE',
+                            `Level 1 x${needed} captured from ${source} for MAX calculation; not added as a vehicle row.`
+                        );
+                    }
+
+                    return;
+                }
+
+                if (
+                    publicOrderLevel ===
+                    2
+                ) {
+                    tableLevel2PublicOrderRequired =
+                        Math.max(
+                            tableLevel2PublicOrderRequired,
+                            needed
+                        );
+
+                    if (
+                        mfDebugEnabled &&
+                        !silent
+                    ) {
+                        debugLog(
+                            'PUBLIC ORDER TABLE COLLAPSE',
+                            `Level 2 x${needed} captured from ${source} for MAX calculation; not added as a vehicle row.`
+                        );
+                    }
+
+                    return;
+                }
+
+                if (
+                    isPoliceSergeantPersonnelRequirementName(
+                        cleanedName
+                    )
+                ) {
+                    tablePoliceSergeantRequired =
+                        Math.max(
+                            tablePoliceSergeantRequired,
+                            needed
+                        );
+
+                    if (
+                        mfDebugEnabled &&
+                        !silent
+                    ) {
+                        debugLog(
+                            'PUBLIC ORDER TABLE COLLAPSE',
+                            `Police Sergeant x${needed} captured from ${source} for the L1/L2/Sergeant MAX calculation; not added as a normal vehicle row.`
+                        );
+                    }
+
+                    return;
+                }
+
+                if (
+                    isPoliceInspectorPersonnelRequirementName(
+                        cleanedName
+                    )
+                ) {
+                    tablePoliceInspectorRequired =
+                        Math.max(
+                            tablePoliceInspectorRequired,
+                            needed
+                        );
+
+                    if (
+                        mfDebugEnabled &&
+                        !silent
+                    ) {
+                        debugLog(
+                            'POLICE INSPECTOR TABLE COLLAPSE',
+                            `Police Inspector x${needed} captured from ${source}; selecting only exact IRVs live-verified with 2 police_inspector-trained personnel.`
+                        );
+                    }
+
+                    return;
+                }
+
+
+                if (
+                    isPoliceMedicPersonnelRequirementName(
+                        cleanedName
+                    )
+                ) {
+                    tablePoliceMedicRequired =
+                        Math.max(
+                            tablePoliceMedicRequired,
+                            needed
+                        );
+
+                    if (
+                        mfDebugEnabled &&
+                        !silent
+                    ) {
+                        debugLog(
+                            'POLICE MEDIC TABLE COLLAPSE',
+                            `Police Medic x${needed} captured from ${source}; selecting exact IRVs live-verified with 2 police_medic-trained personnel.`
+                        );
+                    }
+
+                    return;
+                }
+
+                if (
+                    isRailwayPolicePersonnelRequirementName(
+                        cleanedName
+                    )
+                ) {
+                    tableRailwayPoliceRequired =
+                        Math.max(
+                            tableRailwayPoliceRequired,
+                            needed
+                        );
+
+                    if (
+                        mfDebugEnabled &&
+                        !silent
+                    ) {
+                        debugLog(
+                            'RAILWAY POLICE TABLE COLLAPSE',
+                            `Railway Police Officer x${needed} captured from ${source}; selecting exact IRVs live-verified with 2 railway_police-trained personnel.`
+                        );
+                    }
+
+                    return;
+                }
+
+
+                if (
+                    isArmedResponsePersonnelRequirementName(
+                        cleanedName
+                    )
+                ) {
+                    tableArmedResponseRequired = Math.max(
+                        tableArmedResponseRequired,
+                        needed
+                    );
+
+                    if (mfDebugEnabled && !silent) {
+                        debugLog(
+                            'ARMED RESPONSE TABLE COLLAPSE',
+                            `Armed Response Personnel x${needed} captured from ${source}; selecting exact type-25 ATCs with 2 officers who each hold traffic_police + swat.`
+                        );
+                    }
+
+                    return;
+                }
+
+                missingRows.push({
+                    unitName:
+                        cleanedName,
+                    stillNeeded:
+                        needed,
+                    updateSource:
+                        source,
+                    liveRequirementDetails:
+                        details,
+                    patientRequirementType:
+                        patientRequirement.type || '',
+                    isPatientAlertFallback:
+                        false,
+                    isTotalPatientRequirement:
+                        false
+                });
+            };
+
+        updateTables.forEach(table => {
+            const liveRequirementsTable =
+                isLiveMissionRequirementsTable(
+                    table
+                );
+
+            table.querySelectorAll(
+                'tbody tr'
+            ).forEach(row => {
+                if (
+                    liveRequirementsTable
+                ) {
+                    const parsed =
+                        readLiveMissionRequirementRow(
+                            row
+                        );
+
+                    if (!parsed) {
+                        return;
+                    }
+
+                    const liveDispatchTarget =
+                        getLiveRequirementDispatchTarget(
+                            parsed
+                        );
+
+                    const liveDispatchTargetMode =
+                        parsed.stillNeededText &&
+                        parsed.stillNeededText !== '?'
+                            ? 'shortage'
+                            : 'total';
+
+                    if (
+                        mfDebugEnabled &&
+                        !silent
+                    ) {
+                        debugLog(
+                            'LIVE REQUIREMENTS ROW',
+                            `${parsed.unitName} | required=${parsed.requiredText || '?'} | ` +
+                            `selected=${parsed.selectedText || '?'} | ` +
+                            `still=${parsed.stillNeededText || '?'} | ` +
+                            `state=${parsed.rowState || 'none'} | ` +
+                            `confirmation=${parsed.requiresConfirmation ? 'yes' : 'no'} | ` +
+                            `using-update-target=${liveDispatchTarget} | ` +
+                            `target-mode=${liveDispatchTargetMode} | ` +
+                            `panel-still=${parsed.stillNeeded}`
+                        );
+                    }
+
+                    const livePatientRule =
+                        getMissionUpdatePatientRequirementRule(
+                            parsed.unitName
+                        );
+
+                    if (livePatientRule) {
+                        const explicitNeed =
+                            parseMissionRequirementNumber(
+                                parsed.stillNeededText
+                            );
+
+                        const requiredValue =
+                            parseMissionRequirementNumber(
+                                parsed.requiredText
+                            );
+
+                        const selectedValue =
+                            parseMissionRequirementNumber(
+                                parsed.selectedText
+                            );
+
+                        const isConfirmed =
+                            !parsed.requiresConfirmation &&
+                            (
+                                explicitNeed !== null ||
+                                (
+                                    requiredValue !== null &&
+                                    selectedValue !== null
+                                )
+                            );
+
+                        if (isConfirmed) {
+                            const existingState =
+                                livePatientRequirementStates.get(
+                                    livePatientRule.type
+                                );
+
+                            const confirmedNeed =
+                                Math.max(
+                                    0,
+                                    parseInt(
+                                        parsed.stillNeeded,
+                                        10
+                                    ) || 0
+                                );
+
+                            livePatientRequirementStates.set(
+                                livePatientRule.type,
+                                {
+                                    type:
+                                        livePatientRule.type,
+                                    unitName:
+                                        livePatientRule.unitName,
+                                    stillNeeded:
+                                        Math.max(
+                                            existingState?.stillNeeded || 0,
+                                            confirmedNeed
+                                        ),
+                                    sources:
+                                        (existingState?.sources || 0) + 1
+                                }
+                            );
+
+                            if (
+                                mfDebugEnabled &&
+                                !silent
+                            ) {
+                                debugLog(
+                                    'LIVE PATIENT AUTHORITY',
+                                    `${livePatientRule.unitName} confirmed by live panel | need=${confirmedNeed} | patient alerts for this unit will be ignored`
+                                );
+                            }
+                        }
+                    }
+
+                    recordUpdateRequirement(
+                        parsed.unitName,
+                        liveDispatchTarget,
+                        'live-requirements-panel',
+                        {
+                            ...parsed,
+                            dispatchTarget:
+                                liveDispatchTarget,
+                            dispatchTargetSource:
+                                liveDispatchTargetMode === 'shortage'
+                                    ? 'reported-still-needed'
+                                    : 'required-fallback-for-unknown',
+                            dispatchTargetMode:
+                                liveDispatchTargetMode
+                        }
+                    );
+
+                    return;
+                }
+
+                const cells =
+                    row.querySelectorAll(
+                        'td'
+                    );
+
+                if (
+                    cells.length <
+                    4
+                ) {
+                    return;
+                }
+
+                const unitName =
+                    (
+                        cells[0].innerText ||
+                        cells[0].textContent ||
+                        ''
+                    )
+                        .replace(
+                            /\s+/g,
+                            ' '
+                        )
+                        .trim();
+
+                const cellTexts =
+                    Array.from(
+                        cells
+                    ).map(cell => {
+                        return (
+                            cell.innerText ||
+                            cell.textContent ||
+                            ''
+                        )
+                            .replace(
+                                /\s+/g,
+                                ' '
+                            )
+                            .trim();
+                    });
+
+                const preferredText =
+                    cellTexts[3] ||
+                    '';
+
+                let stillNeeded =
+                    parseInt(
+                        preferredText,
+                        10
+                    );
+
+                if (
+                    !Number.isFinite(
+                        stillNeeded
+                    ) ||
+                    stillNeeded <=
+                    0
+                ) {
+                    const numericCells =
+                        cellTexts
+                            .map(value => {
+                                return parseInt(
+                                    value,
+                                    10
+                                );
+                            })
+                            .filter(value => {
+                                return (
+                                    Number.isFinite(
+                                        value
+                                    ) &&
+                                    value >
+                                    0
+                                );
+                            });
+
+                    stillNeeded =
+                        numericCells.length
+                            ? numericCells[
+                                numericCells.length -
+                                1
+                            ]
+                            : 0;
+                }
+
+                recordUpdateRequirement(
+                    unitName,
+                    stillNeeded,
+                    'legacy-update-table'
+                );
+            });
+        });
+
+        // Read exact visible problem alerts from the active mission only.
+        // Parent containers and hidden/previous missions are deliberately
+        // excluded to prevent unrelated vehicle selections.
+        const activeMissionProblemTextBlocks =
+            getActiveMissionProblemTextBlocks(
+                missionUpdateRoots
+            );
+
+        const structuredMissingVehicleRows =
+            getStructuredMissingVehicleRows(
+                missionUpdateRoots
+            );
+
+        structuredMissingVehicleRows.forEach(row => {
+            recordUpdateRequirement(
+                row.unitName,
+                row.stillNeeded,
+                'data-requirement-type-vehicles',
+                {
+                    dispatchTargetMode: 'total',
+                    explicitMissingVehicles: true,
+                    structuredMissingVehicles: true
+                }
+            );
+        });
+
+        const pageTextBlocks =
+            hasLiveRequirementsPanel
+                ? []
+                : activeMissionProblemTextBlocks;
+
+        // The live requirements table is authoritative for vehicle rows, but
+        // MissionChief can expose Missing Personnel only in the current visible
+        // alert. Keep that alert actionable without re-enabling legacy Missing
+        // Vehicles parsing or accepting hidden/previous mission content.
+        const personnelTextBlocks =
+            activeMissionProblemTextBlocks.filter(text => {
+                return /Missing\s+Personnel\s*:/i.test(text);
+            });
+
+        if (
+            mfDebugEnabled &&
+            !silent
+        ) {
+            debugLog(
+                'UPDATE ALERT CHECK',
+                hasLiveRequirementsPanel
+                    ? `Skipped legacy alert scan because the Live Mission Requirements panel is authoritative; accepted ${structuredMissingVehicleRows.length} current structured Missing Vehicles row(s).`
+                    : pageTextBlocks.length
+                    ? (
+                        `Found ${pageTextBlocks.length} visible update alert block(s): ` +
+                        pageTextBlocks
+                            .map(
+                                (
+                                    value,
+                                    index
+                                ) =>
+                                    `${index + 1}="${value.slice(0, 300)}"`
+                            )
+                            .join(' || ')
+                    )
+                    : `Found 0 visible update alert blocks across ${missionUpdateRoots.length} root(s).`
+            );
+
+            if (
+                mfHighDebugEnabled &&
+                !hasLiveRequirementsPanel &&
+                pageTextBlocks.length ===
+                    0
+            ) {
+                const bodyMatches =
+                    getMissionAccessibleDocuments()
+                        .filter(
+                            candidateDocument => {
+                                try {
+                                    return /Missing\s+(?:Vehicles?|Personnel):/i
+                                        .test(
+                                            candidateDocument
+                                                .body
+                                                ?.textContent ||
+                                            ''
+                                        );
+                                } catch (_error) {
+                                    return false;
+                                }
+                            }
+                        )
+                        .map(
+                            candidateDocument =>
+                                candidateDocument.URL ||
+                                'unknown'
+                        );
+
+                debugLog(
+                    'UPDATE BODY PROBE',
+                    bodyMatches.length
+                        ? `The phrase exists in document text but no visible alert element was accepted: ${bodyMatches.join(' | ')}`
+                        : 'No accessible document body contains Missing Vehicles/Personnel text.'
+                );
+            }
+        }
+
+        pageTextBlocks.forEach(text => {
+            if (!/Missing Vehicles?:/i.test(text)) return;
+
+            getGenericMissingVehicleRowsFromText(
+                text
+            ).forEach(row => {
+                recordUpdateRequirement(
+                    row.unitName,
+                    row.stillNeeded,
+                    'visible-missing-vehicles-alert',
+                    {
+                        dispatchTargetMode: 'total',
+                        explicitMissingVehicles: true
+                    }
+                );
+
+                if (
+                    mfDebugEnabled &&
+                    !silent
+                ) {
+                    debugLog(
+                        'UPDATE GENERIC VEHICLE',
+                        `${row.unitName} x${row.stillNeeded}`
+                    );
+                }
+            });
+
+            const lowerText = text.toLowerCase();
+
+            const carToTowMatch = lowerText.match(
+                /(\d+)\s+car(?:s)?\s+to\s+tow/
+            );
+
+            if (carToTowMatch) {
+                const amount = parseInt(
+                    carToTowMatch[1],
+                    10
+                );
+
+                if (
+                    Number.isFinite(amount) &&
+                    amount > 0
+                ) {
+                    const towRequirement =
+                        getCarsToTowVehicleRequirement(
+                            'Cars to tow',
+                            amount
+                        );
+
+                    if (towRequirement) {
+                        recordUpdateRequirement(
+                            towRequirement.unitName,
+                            towRequirement.stillNeeded,
+                            'visible-missing-vehicles-alert',
+                            {
+                                dispatchTargetMode: 'total',
+                                explicitMissingVehicles: true,
+                                towCarsRequired:
+                                    towRequirement.carsRequired
+                            }
+                        );
+                    }
+                }
+            }
+
+            // MissionChief can expose Police Air only in the red
+            // Missing Vehicles alert rather than the update table.
+            // Convert it to a normal update row. The existing strict
+            // Police Air matcher then prefers Drone Vehicle
+            // (Police Station), with Police Helicopter as fallback.
+            const policeAirMatches = Array.from(
+                text.matchAll(
+                    /(\d+)\s*(?:x\s*)?Police\s+Helicopter(?:s)?\s+or\s+Drone(?:s)?/gi
+                )
+            );
+
+            policeAirMatches.forEach(match => {
+                const amount =
+                    parseInt(
+                        match[1],
+                        10
+                    );
+
+                if (
+                    !Number.isFinite(amount) ||
+                    amount <= 0
+                ) {
+                    return;
+                }
+
+                recordUpdateRequirement(
+                    'Police Helicopter or Drone',
+                    amount,
+                    'visible-missing-vehicles-alert',
+                    {
+                        dispatchTargetMode: 'total',
+                        explicitMissingVehicles: true
+                    }
+                );
+
+                if (
+                    mfDebugEnabled &&
+                    !silent
+                ) {
+                    debugLog(
+                        'UPDATE POLICE AIR',
+                        `Missing Vehicles text -> Drone Vehicle (Police Station) first, Police Helicopter fallback x${amount}`
+                    );
+                }
+            });
+
+            // MissionChief can place this requirement only inside the
+            // red Missing Vehicles alert rather than the update table.
+            // Convert it to the normal selector row so Update ticks ALB.
+            const seagoingMatches = Array.from(
+                text.matchAll(
+                    /(\d+)\s*(?:x\s*)?Seagoing\s+Vessel(?:s)?/gi
+                )
+            );
+
+            seagoingMatches.forEach(match => {
+                const amount = parseInt(
+                    match[1],
+                    10
+                );
+
+                if (
+                    !Number.isFinite(amount) ||
+                    amount <= 0
+                ) {
+                    return;
+                }
+
+                recordUpdateRequirement(
+                    'Seagoing Vessel',
+                    amount,
+                    'visible-missing-vehicles-alert',
+                    {
+                        dispatchTargetMode: 'total',
+                        explicitMissingVehicles: true
+                    }
+                );
+
+                if (mfDebugEnabled && !silent) {
+                    debugLog(
+                        'UPDATE SEAGOING',
+                        `Missing Vehicles text -> ALB x${amount}`
+                    );
+                }
+            });
+        });
+
+        // Missing Personnel is an actionable mission update, not a
+        // vehicle staffing fault. Supported personnel conversions include:
+        // Search Technicians = 4 per displayed-name-prefix SARTEC vehicle
+        // Search Advisors = 1 per exact type-85 Control Van
+        // SAR Commanders = 2 per Control Van
+        // 3 Police Officers = 2 Police Cars
+        // 6 Mud Rescue Operators = 2 Coastguard Mud Rescue Units
+        // Normal update-table vehicle requirements are selected as well.
+        let maximumSartecUnitsFromPersonnel = 0;
+
+        const trainedPersonnelRequirements =
+            new Map();
+
+        const explicitTrainedPersonnelRequirements =
+            new Map();
+
+        if (
+            tableLevel1PublicOrderRequired >
+                0 ||
+            tableLevel2PublicOrderRequired >
+                0 ||
+            tablePoliceSergeantRequired >
+                0 ||
+            tablePoliceInspectorRequired >
+                0 ||
+            tablePoliceMedicRequired >
+                0 ||
+            tableRailwayPoliceRequired >
+                0 ||
+            tableArmedResponseRequired >
+                0
+        ) {
+            mergeTrainedPersonnelRequirements(
+                trainedPersonnelRequirements,
+                normalisePublicOrderTrainedRequirements([
+                    {
+                        code:
+                            'level_1_public_order',
+                        label:
+                            'Level 1 Public Order Officer',
+                        required:
+                            tableLevel1PublicOrderRequired
+                    },
+                    {
+                        code:
+                            'level_2_public_order',
+                        label:
+                            'Level 2 Public Order Officer',
+                        required:
+                            tableLevel2PublicOrderRequired
+                    },
+                    {
+                        code:
+                            'police_sergeant',
+                        label:
+                            'Police Sergeant',
+                        required:
+                            tablePoliceSergeantRequired
+                    },
+                    {
+                        code:
+                            'police_inspector',
+                        label:
+                            'Police Inspector',
+                        required:
+                            tablePoliceInspectorRequired
+                    },
+                    {
+                        code:
+                            'police_medic',
+                        label:
+                            'Police Medic',
+                        required:
+                            tablePoliceMedicRequired
+                    },
+                    {
+                        code:
+                            'railway_police',
+                        label:
+                            'Railway Police Officer',
+                        required:
+                            tableRailwayPoliceRequired
+                    },
+                    {
+                        code:
+                            'armed_response_personnel',
+                        label:
+                            'Armed Response Personnel',
+                        required:
+                            tableArmedResponseRequired
+                    }
+                ])
+            );
+        }
+
+        personnelTextBlocks.forEach(text => {
+            const explicitTrainedRequirements =
+                getSupportedTrainedPersonnelRequirementsFromText(
+                    text
+                );
+
+            mergeTrainedPersonnelRequirements(
+                trainedPersonnelRequirements,
+                explicitTrainedRequirements
+            );
+
+            mergeTrainedPersonnelRequirements(
+                explicitTrainedPersonnelRequirements,
+                explicitTrainedRequirements
+            );
+
+            const personnelRows =
+                getSupportedMissingPersonnelRowsFromText(
+                    text,
+                    { silent }
+                );
+
+            personnelRows.forEach(row => {
+                if (
+                    normaliseVehicleText(
+                        row.unitName
+                    ) === 'sartec'
+                ) {
+                    maximumSartecUnitsFromPersonnel =
+                        Math.max(
+                            maximumSartecUnitsFromPersonnel,
+                            parseInt(
+                                row.stillNeeded,
+                                10
+                            ) || 0
+                        );
+
+                    return;
+                }
+
+                missingRows.push({
+                    unitName: row.unitName,
+                    stillNeeded: row.stillNeeded,
+                    updateSource:
+                        'visible-missing-personnel-alert',
+                    liveRequirementDetails: {
+                        dispatchTargetMode: 'total',
+                        explicitMissingPersonnel: true
+                    }
+                });
+            });
+        });
+
+        if (
+            maximumSartecUnitsFromPersonnel > 0
+        ) {
+            missingRows.push({
+                unitName: 'SARTEC',
+                stillNeeded:
+                    maximumSartecUnitsFromPersonnel,
+                updateSource:
+                    'visible-missing-personnel-alert',
+                liveRequirementDetails: {
+                    dispatchTargetMode: 'total',
+                    explicitMissingPersonnel: true
+                }
+            });
+        }
+
+        const trainedPersonnelRequirementsForOutput =
+            explicitTrainedPersonnelRequirements.size > 0
+                ? explicitTrainedPersonnelRequirements
+                : trainedPersonnelRequirements;
+
+        if (
+            trainedPersonnelRequirementsForOutput.size >
+            0
+        ) {
+            const requirements =
+                Array.from(
+                    trainedPersonnelRequirementsForOutput
+                        .values()
+                );
+
+            const explicitMissingPersonnel =
+                explicitTrainedPersonnelRequirements.size > 0;
+
+            missingRows.push({
+                unitName:
+                    MF_TRAINED_PERSONNEL_ROW_NAME,
+                stillNeeded:
+                    getTrainedPersonnelVehicleTarget(
+                        requirements
+                    ),
+                isTrainedPersonnelRequirement:
+                    true,
+                personnelTrainingRequirements:
+                    requirements,
+                updateSource:
+                    explicitMissingPersonnel
+                        ? 'visible-missing-personnel-alert'
+                        : 'live-requirements-panel',
+                liveRequirementDetails:
+                    explicitMissingPersonnel
+                        ? {
+                            dispatchTargetMode: 'total',
+                            explicitMissingPersonnel: true
+                        }
+                        : null
+            });
+
+            if (
+                mfDebugEnabled &&
+                !silent
+            ) {
+                debugLog(
+                    'TRAINED PERSONNEL UPDATE',
+                    formatTrainedPersonnelRequirements(
+                        requirements
+                    )
+                );
+            }
+        }
+
+        // Dynamic patient update reader.
+        // Reads the individual items after "We need:" rather than comparing
+        // the whole sentence. This keeps combined requests working.
+        const patientAlertRoots =
+            hasLiveRequirementsPanel
+                ? getCurrentMissionPatientAlertRoots(
+                    liveRequirementsTables,
+                    missionUpdateRoots
+                )
+                : missionUpdateRoots;
+
+        const patientAlertCandidates =
+            Array.from(
+                new Set(
+                    patientAlertRoots
+                        .flatMap(root => {
+                            try {
+                                return Array.from(
+                                    root.querySelectorAll(
+                                        '.mission_patient .alert.alert-danger, ' +
+                                        '.alert.alert-danger[id^="patients_missing_"], ' +
+                                        '[id^="patients_missing_"].alert-danger'
+                                    )
+                                );
+                            } catch (_error) {
+                                return [];
+                            }
+                        })
+                )
+            );
+
+        const visibleCurrentPatientBadgeCount =
+            getVisiblePatientBadgeCountInRoots(
+                patientAlertRoots
+            );
+
+        const patientAlerts =
+            patientAlertCandidates.filter(
+                element =>
+                    isCurrentMissionPatientAlert(
+                        element,
+                        patientAlertRoots,
+                        hasLiveRequirementsPanel,
+                        visibleCurrentPatientBadgeCount
+                    )
+            );
+
+        if (
+            hasLiveRequirementsPanel &&
+            mfDebugEnabled &&
+            !silent
+        ) {
+            debugLog(
+                'PATIENT ALERT SCOPE GUARD',
+                `roots=${patientAlertRoots.length} | candidates=${patientAlertCandidates.length} | accepted=${patientAlerts.length} | rejected=${Math.max(0, patientAlertCandidates.length - patientAlerts.length)} | patientBadge=${visibleCurrentPatientBadgeCount}`
+            );
+        }
+
+        if (
+            hasLiveRequirementsPanel &&
+            mfDebugEnabled &&
+            !silent
+        ) {
+            debugLog(
+                'PATIENT ALERT SOURCE',
+                'Live Mission Requirements remains authoritative for general update rows. Explicit patient We need alerts are read separately, then capped and deduplicated against the panel.'
+            );
+        }
+
+        let ambulanceRequired = 0;
+        let criticalCareRequired = 0;
+        let needsAmbulanceOfficer = false;
+        let needsMassCasualtyEquipment = false;
+
+        const patientGroups =
+            new Map();
+
+        patientAlerts.forEach(
+            (
+                element,
+                alertIndex
+            ) => {
+                const originalText =
+                    normaliseMissionAlertText(
+                        element.textContent ||
+                        element.innerText ||
+                        ''
+                    );
+
+                const lowerText =
+                    originalText
+                        .toLowerCase();
+
+                const needIndex =
+                    lowerText.indexOf(
+                        'we need:'
+                    );
+
+                if (
+                    needIndex ===
+                    -1
+                ) {
+                    return;
+                }
+
+                const prefix =
+                    lowerText.slice(
+                        0,
+                        needIndex
+                    );
+
+                const multiplierMatch =
+                    prefix.match(
+                        /(\d+)\s*x\s*$/
+                    );
+
+                const multiplier =
+                    multiplierMatch
+                        ? Math.max(
+                            1,
+                            parseInt(
+                                multiplierMatch[1],
+                                10
+                            ) ||
+                            1
+                        )
+                        : 1;
+
+                const requirementText =
+                    lowerText
+                        .slice(
+                            needIndex +
+                            'we need:'.length
+                        )
+                        .trim();
+
+                const requirements =
+                    requirementText
+                        .split(/,|;|\s+and\s+/i)
+                        .map(value => {
+                            return value
+                                .replace(
+                                    /[.!;]+$/g,
+                                    ''
+                                )
+                                .replace(
+                                    /\s+/g,
+                                    ' '
+                                )
+                                .trim();
+                        })
+                        .filter(Boolean);
+
+                const groupKey =
+                    getPatientAlertGroupKey(
+                        element,
+                        alertIndex
+                    );
+
+                let group =
+                    patientGroups.get(
+                        groupKey
+                    );
+
+                if (!group) {
+                    group = {
+                        key:
+                            groupKey,
+                        multiplier:
+                            1,
+                        hasAmbulance:
+                            false,
+                        hasCriticalCare:
+                            false,
+                        hasAmbulanceOfficer:
+                            false,
+                        hasMassCasualtyEquipment:
+                            false,
+                        hasLinkedVisiblePatient:
+                            false,
+                        sourceTexts:
+                            new Set()
+                    };
+
+                    patientGroups.set(
+                        groupKey,
+                        group
+                    );
+                }
+
+                group.multiplier =
+                    Math.max(
+                        group.multiplier,
+                        multiplier
+                    );
+
+                group.hasLinkedVisiblePatient =
+                    group.hasLinkedVisiblePatient ||
+                    !!getLinkedVisiblePatientContainer(
+                        element,
+                        patientAlertRoots
+                    );
+
+                group.hasAmbulance =
+                    group.hasAmbulance ||
+                    requirements.some(
+                        value =>
+                            value ===
+                            'ambulance'
+                    );
+
+                group.hasCriticalCare =
+                    group.hasCriticalCare ||
+                    requirements.some(
+                        value =>
+                            value ===
+                                'critical care' ||
+                            value ===
+                                'critical care team'
+                    );
+
+                group.hasAmbulanceOfficer =
+                    group.hasAmbulanceOfficer ||
+                    requirements.some(
+                        value =>
+                            value ===
+                                'ambulance officer' ||
+                            value ===
+                                'ambulance officers'
+                    );
+
+                group.hasMassCasualtyEquipment =
+                    group
+                        .hasMassCasualtyEquipment ||
+                    requirements.some(
+                        value =>
+                            value ===
+                                'mass casualty equipment' ||
+                            value ===
+                                'mass casualty equipment unit'
+                    );
+
+                group.sourceTexts.add(
+                    originalText
+                );
+            }
+        );
+
+        const isPatientAlertOwnedByLivePanel =
+            (type, group) =>
+                livePatientRequirementStates.has(
+                    type
+                ) &&
+                !group?.hasLinkedVisiblePatient;
+
+        patientGroups
+            .forEach(group => {
+                // V10.6.60: MissionChief can show a single patient request as
+                // "We need: Critical Care, Ambulance". This is one transport
+                // requirement, not two separate vehicles. The normal Ambulance
+                // carries the patient, so suppress Critical Care transport only
+                // for a patient group that requests both. A Critical Care-only
+                // patient still selects the required Critical Care vehicle(s).
+                const ambulanceReplacesCriticalCareTransport =
+                    group.hasAmbulance &&
+                    group.hasCriticalCare;
+
+                if (
+                    group.hasAmbulance &&
+                    !isPatientAlertOwnedByLivePanel(
+                        'ambulance',
+                        group
+                    )
+                ) {
+                    ambulanceRequired +=
+                        group.multiplier;
+                }
+
+                if (
+                    group.hasCriticalCare &&
+                    !ambulanceReplacesCriticalCareTransport &&
+                    !isPatientAlertOwnedByLivePanel(
+                        'critical-care',
+                        group
+                    )
+                ) {
+                    criticalCareRequired +=
+                        group.multiplier;
+                }
+
+                if (
+                    group
+                        .hasAmbulanceOfficer &&
+                    !isPatientAlertOwnedByLivePanel(
+                        'ambulance-officer',
+                        group
+                    )
+                ) {
+                    needsAmbulanceOfficer =
+                        true;
+                }
+
+                if (
+                    group
+                        .hasMassCasualtyEquipment &&
+                    !isPatientAlertOwnedByLivePanel(
+                        'mass-casualty-equipment',
+                        group
+                    )
+                ) {
+                    needsMassCasualtyEquipment =
+                        true;
+                }
+
+                if (
+                    mfDebugEnabled &&
+                    !silent
+                ) {
+                    debugLog(
+                        'PATIENT GROUP',
+                        `${group.key} | alerts=${Array.from(group.sourceTexts).join(' + ')} | ` +
+                        `Ambulance=${group.hasAmbulance ? (isPatientAlertOwnedByLivePanel('ambulance', group) ? 'ignored/live-panel-owned' : `x${group.multiplier}`) : 'no'} | ` +
+                        `Critical Care=${group.hasCriticalCare ? (ambulanceReplacesCriticalCareTransport ? 'suppressed/ambulance-is-transport' : (isPatientAlertOwnedByLivePanel('critical-care', group) ? 'ignored/live-panel-owned' : `x${group.multiplier}`)) : 'no'} | ` +
+                        `Officer=${group.hasAmbulanceOfficer ? (isPatientAlertOwnedByLivePanel('ambulance-officer', group) ? 'ignored/live-panel-owned' : 'yes/capped at 1') : 'no'} | ` +
+                        `MCE=${group.hasMassCasualtyEquipment ? (isPatientAlertOwnedByLivePanel('mass-casualty-equipment', group) ? 'ignored/live-panel-owned' : 'yes/capped at 1') : 'no'}`
+                    );
+                }
+            });
+
+        // Patient alerts describe the total current patient demand. Some
+        // MissionChief layouts repeat a "2x We need: Ambulance" message on
+        // each of two patient cards, which previously produced 4 Ambulances.
+        // Cap scalable patient units to the current visible patient total.
+        const currentPatientTotal =
+            visibleCurrentPatientBadgeCount > 0
+                ? visibleCurrentPatientBadgeCount
+                : findPatientCount(true);
+
+        if (currentPatientTotal > 0) {
+            ambulanceRequired =
+                Math.min(
+                    ambulanceRequired,
+                    currentPatientTotal
+                );
+
+            criticalCareRequired =
+                Math.min(
+                    criticalCareRequired,
+                    currentPatientTotal
+                );
+        }
+
+        if (ambulanceRequired > 0) {
+            missingRows.push({
+                unitName: 'Ambulance x 01',
+                stillNeeded: ambulanceRequired,
+                patientRequirementType: 'ambulance',
+                isPatientAlertFallback: true,
+                isTotalPatientRequirement: true,
+                patientCountCap: currentPatientTotal
+            });
+        }
+
+        if (criticalCareRequired > 0) {
+            missingRows.push({
+                unitName: 'Critical Care',
+                stillNeeded: criticalCareRequired,
+                patientRequirementType: 'critical-care',
+                isPatientAlertFallback: true,
+                isTotalPatientRequirement: true,
+                patientCountCap: currentPatientTotal
+            });
+
+            if (mfDebugEnabled && !silent) {
+                debugLog(
+                    'PATIENT CRITICAL CARE',
+                    `Patient alerts require Critical Care x${criticalCareRequired}`
+                );
+            }
+        }
+
+        // Ambulance Officer is capped at one unit total, even when
+        // several patients or a multiplier request it.
+        if (needsAmbulanceOfficer) {
+            missingRows.push({
+                unitName: 'Ambulance Officer',
+                stillNeeded: 1,
+                patientRequirementType: 'ambulance-officer',
+                isPatientAlertFallback: true,
+                isTotalPatientRequirement: true,
+                patientCountCap: currentPatientTotal
+            });
+        }
+
+        // Mass Casualty Equipment remains capped at one unit total,
+        // regardless of how many patient alerts request it.
+        if (needsMassCasualtyEquipment) {
+            missingRows.push({
+                unitName: 'Mass Casualty Equipment',
+                stillNeeded: 1,
+                patientRequirementType: 'mass-casualty-equipment',
+                isPatientAlertFallback: true,
+                isTotalPatientRequirement: true,
+                patientCountCap: currentPatientTotal
+            });
+
+            if (mfDebugEnabled && !silent) {
+                debugLog(
+                    'PATIENT MCE',
+                    'Patient requires Mass Casualty Equipment -> select Mass Casualty Equipment x1'
+                );
+            }
+        }
+
+        const explicitMissingRequirementsPresent =
+            hasExplicitCurrentMissingRequirementRows(
+                missingRows
+            );
+
+        const requirementRowsForDedupe =
+            explicitMissingRequirementsPresent
+                ? missingRows.filter(row => {
+                    if (
+                        isExplicitMissingVehicleRequirementRow(row) ||
+                        isExplicitMissingPersonnelRequirementRow(row)
+                    ) {
+                        return true;
+                    }
+
+                    if (row?.isPatientAlertFallback) {
+                        return true;
+                    }
+
+                    return !!(
+                        row?.patientRequirementType &&
+                        row?.liveRequirementDetails?.dispatchTargetMode ===
+                            'shortage'
+                    );
+                })
+                : missingRows;
+
+        if (
+            explicitMissingRequirementsPresent &&
+            mfDebugEnabled &&
+            !silent
+        ) {
+            debugLog(
+                'MISSING REQUIREMENTS AUTHORITY',
+                `Explicit current Missing Vehicles/Personnel rows own this pass. Retained ${requirementRowsForDedupe.length}/${missingRows.length} row(s); full mission totals were suppressed.`
+            );
+        }
+
+        // De-duplicate requirements. Explicit current Missing Vehicles or
+        // Personnel rows outrank full mission totals even when the total is
+        // numerically larger. Equal-authority duplicates retain the maximum.
+        const dedupedByMappedName =
+            new Map();
+
+        requirementRowsForDedupe.forEach(row => {
+            if (
+                row
+                    .isTrainedPersonnelRequirement
+            ) {
+                const signature =
+                    getTrainedPersonnelRequirementsSignature(
+                        row.personnelTrainingRequirements
+                    );
+
+                if (!signature) {
+                    return;
+                }
+
+                dedupedByMappedName.set(
+                    `trained-personnel:${signature}`,
+                    {
+                        ...row,
+                        stillNeeded:
+                            getTrainedPersonnelVehicleTarget(
+                                row
+                                    .personnelTrainingRequirements
+                            )
+                    }
+                );
+
+                return;
+            }
+
+            const patientRequirement =
+                normaliseMissionUpdatePatientRequirement(
+                    row.unitName,
+                    row.stillNeeded
+                );
+
+            const effectiveUnitName =
+                patientRequirement.unitName ||
+                row.unitName;
+
+            const mappedName =
+                resolveUnitName(
+                    effectiveUnitName
+                );
+
+            const canonicalName =
+                normaliseVehicleText(
+                    mappedName ||
+                    effectiveUnitName
+                );
+
+            const amount =
+                patientRequirement.stillNeeded;
+
+            if (
+                !canonicalName ||
+                amount <= 0
+            ) {
+                return;
+            }
+
+            const existing =
+                dedupedByMappedName.get(
+                    canonicalName
+                );
+
+            const candidateAuthority =
+                getMissionUpdateRowAuthority(
+                    row
+                );
+
+            const existingAuthority =
+                getMissionUpdateRowAuthority(
+                    existing
+                );
+
+            if (
+                !existing ||
+                candidateAuthority > existingAuthority ||
+                (
+                    candidateAuthority === existingAuthority &&
+                    amount > existing.stillNeeded
+                )
+            ) {
+                dedupedByMappedName.set(
+                    canonicalName,
+                    {
+                        ...row,
+                        unitName:
+                            effectiveUnitName,
+                        stillNeeded:
+                            amount,
+                        patientRequirementType:
+                            row.patientRequirementType ||
+                            patientRequirement.type ||
+                            '',
+                        isPatientAlertFallback:
+                            !!row.isPatientAlertFallback,
+                        isTotalPatientRequirement:
+                            !!row.isTotalPatientRequirement
+                    }
+                );
+            }
+        });
+
+        const deduped =
+            Array.from(
+                dedupedByMappedName.values()
+            ).sort(
+                (
+                    left,
+                    right
+                ) => {
+                    const leftPriority =
+                        left
+                            .isTrainedPersonnelRequirement
+                            ? 0
+                            : 1;
+
+                    const rightPriority =
+                        right
+                            .isTrainedPersonnelRequirement
+                            ? 0
+                            : 1;
+
+                    return (
+                        leftPriority -
+                        rightPriority
+                    );
+                }
+            );
+
+        if (
+            mfDebugEnabled &&
+            !silent &&
+            deduped.length >
+                0
+        ) {
+            debugLog(
+                'UPDATE ORDER',
+                deduped
+                    .map(row => {
+                        return row
+                            .isTrainedPersonnelRequirement
+                                ? `TRAINED:${formatTrainedPersonnelRequirements(row.personnelTrainingRequirements)}`
+                                : `GENERAL:${row.unitName} x${row.stillNeeded}`;
+                    })
+                    .join(' -> ')
+            );
+        }
+
+        if (mfDebugEnabled && !silent) {
+            debugLog(
+                'UPDATE ROWS',
+                deduped.length
+                    ? deduped.map(row => {
+                        return row.isTrainedPersonnelRequirement
+                            ? `${row.unitName}: ${formatTrainedPersonnelRequirements(row.personnelTrainingRequirements)}`
+                            : `${row.unitName} x${row.stillNeeded}`;
+                    }).join(' | ')
+                    : 'None'
+            );
+        }
+
+        mfMissionUpdateRowsCache = {
+            expiresAt: Date.now() + 175,
+            missionKey,
+            rows: deduped
+        };
+
+        return deduped;
+    }
+
+=== FUNCTION getGenericMissingVehicleRowsFromText: source lines 28427-28524 ===
+    function getGenericMissingVehicleRowsFromText(
+        text
+    ) {
+        const input =
+            String(
+                text ||
+                ''
+            )
+                .replace(/\u00a0/g, ' ')
+                .replace(
+                    /\s+/g,
+                    ' '
+                )
+                .trim();
+
+        const marker =
+            input.match(
+                /Missing\s+Vehicles?\s*:\s*(.+)$/i
+            );
+
+        if (!marker) return [];
+
+        const requirementText =
+            marker[1]
+                .replace(
+                    /\s+(?:Missing\s+Personnel|We\s+need)\s*:.+$/i,
+                    ''
+                )
+                .trim();
+
+        const rows = [];
+
+        const requirementRegex =
+            /(\d+)\s*(?:x\s*)?([A-Za-z][A-Za-z0-9 /&()'’\-]+?)(?=,\s*\d+\s*(?:x\s*)?|\s+and\s+\d+\s*(?:x\s*)?|$)/gi;
+
+        let match;
+
+        while (
+            (
+                match =
+                    requirementRegex.exec(
+                        requirementText
+                    )
+            )
+        ) {
+            const amount =
+                parseInt(
+                    match[1],
+                    10
+                );
+
+            const name =
+                String(
+                    match[2] ||
+                    ''
+                )
+                    .replace(
+                        /\s+/g,
+                        ' '
+                    )
+                    .trim();
+
+            if (
+                !Number.isFinite(amount) ||
+                amount <= 0 ||
+                !name
+            ) {
+                continue;
+            }
+
+            // These have dedicated conversion logic below.
+            if (
+                /Police\s+Helicopter(?:s)?\s+or\s+Drone(?:s)?/i.test(
+                    name
+                ) ||
+                /Seagoing\s+Vessel/i.test(
+                    name
+                ) ||
+                /car(?:s)?\s+to\s+tow/i.test(
+                    name
+                )
+            ) {
+                continue;
+            }
+
+            rows.push({
+                unitName:
+                    name,
+                stillNeeded:
+                    amount
+            });
+        }
+
+        return rows;
+    }
+
+=== FUNCTION getStructuredMissingVehicleRows: source lines 29215-29269 ===
+    function getStructuredMissingVehicleRows(suppliedRoots) {
+        const roots = Array.isArray(suppliedRoots)
+            ? suppliedRoots
+            : suppliedRoots
+                ? [suppliedRoots]
+                : getActiveMissionRequirementContexts().map(context => context.root);
+
+        const elements = [];
+        Array.from(new Set(roots.filter(Boolean))).forEach(root => {
+            try {
+                if (
+                    root.nodeType !== 9 &&
+                    root.matches?.('[data-requirement-type="vehicles"]')
+                ) {
+                    elements.push(root);
+                }
+                root.querySelectorAll('[data-requirement-type="vehicles"]').forEach(element => {
+                    if (!elements.includes(element)) elements.push(element);
+                });
+            } catch (_error) {}
+        });
+
+        const deduped = new Map();
+
+        elements
+            .filter(element => isMissionElementVisible(element))
+            .forEach(element => {
+                const text = String(
+                    element.innerText ||
+                    element.textContent ||
+                    ''
+                )
+                    .replace(/\u00a0/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+
+                if (!/Missing\s+Vehicles?\s*:/i.test(text)) return;
+
+                getGenericMissingVehicleRowsFromText(text).forEach(row => {
+                    const key = `${normaliseVehicleText(row.unitName)}|${row.stillNeeded}`;
+                    if (!deduped.has(key)) {
+                        deduped.set(key, {
+                            ...row,
+                            source: 'data-requirement-type-vehicles'
+                        });
+                    }
+                });
+            });
+
+        return Array.from(deduped.values());
+    }
+

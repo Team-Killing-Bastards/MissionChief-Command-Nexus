@@ -301,7 +301,7 @@ SOURCE LINES: 39886
 000365:             vehicleTypeIds: ['110'],
 000366:             vehicleLabel: 'EOD Response Vehicle',
 
-=== BLOCK 3: source lines 534-865 ===
+=== BLOCK 3: source lines 534-876 ===
 000534:                     requirement: 'Tactical Command-trained staff',
 000535:                     policy: 'UI preview: command vehicle mappings, capacities and exact training code still need verification.',
 000536:                     live: false,
@@ -634,6 +634,17 @@ SOURCE LINES: 39886
 000863:         ]),
 000864:         AIR: Object.freeze([
 000865:             '9', '11', '65'
+000866:         ]),
+000867:         AIRFIELD: Object.freeze([
+000868:             '73', '75', '76', '77', '78', '79', '80', '81', '107'
+000869:         ]),
+000870:         COASTGUARD: Object.freeze([
+000871:             '57', '58', '59', '60', '61', '62', '63', '65', '66', '70', '71', '72'
+000872:         ]),
+000873:         RNLI: Object.freeze([
+000874:             '67', '68', '69', '70', '74'
+000875:         ]),
+000876:         SAR: Object.freeze([
 
 === BLOCK 4: source lines 1017-1107 ===
 001017:         STATION_STATE.paused = false;
@@ -3449,7 +3460,101 @@ SOURCE LINES: 39886
 009063:     const MF_EVENT_COLLECTIBLE_MAX_TRACKED = 250;
 009064:     const mfEventCollectibleClaimTimes = new Map();
 
-=== BLOCK 18: source lines 9792-9967 ===
+=== BLOCK 18: source lines 9502-9593 ===
+009502:     // separate Next Mission workflows.
+009503:     try {
+009504:         [
+009505:             'mf_auto_upgrade_pending_v10_6_0',
+009506:             'mf_advance_after_dispatch_v10_6_22'
+009507:         ].forEach(key => {
+009508:             sessionStorage.removeItem(key);
+009509:             localStorage.removeItem(key);
+009510:         });
+009511:     } catch (error) {}
+009512: 
+009513:     if (!Number.isFinite(mfQueueRestartThreshold) || mfQueueRestartThreshold < 1) {
+009514:         mfQueueRestartThreshold = 20;
+009515:     }
+009516: 
+009517:     // V10.2.3 safety reset:
+009518:     // Only clear stale queue flags when Auto Mode is NOT running.
+009519:     // Do NOT clear them during Auto Mode reloads, because the final-dispatch flag
+009520:     // is what stops the last mission being processed/sent twice after MissionChief
+009521:     // leaves the same mission screen open.
+009522:     if (!autoModeRunning) {
+009523:         sessionStorage.removeItem(MF_QUEUE_WAIT_ACTIVE_FLAG);
+009524:         sessionStorage.removeItem(MF_FINAL_QUEUE_DISPATCH_FLAG);
+009525:         sessionStorage.removeItem(MF_QUEUE_OPENING_MISSION_FLAG);
+009526:         sessionStorage.removeItem(
+009527:             MF_AUTO_UPGRADE_PENDING_KEY
+009528:         );
+009529:         localStorage.removeItem(
+009530:             MF_AUTO_UPGRADE_PENDING_KEY
+009531:         );
+009532: 
+009533:     }
+009534: 
+009535: 
+009536:     // V10.6.58: Auto Mode speed optimisation. Attachment fetching now overlaps
+009537:     // vehicle-list stabilisation, Unit Finder no longer repeats that same load
+009538:     // pass, readiness gates are shorter and state-driven, and mission-resume
+009539:     // polling is faster. Manual sources and all selection rules are unchanged.
+009540:     // V10.6.59: Police Helicopter-only requirements now select only type 11;
+009541:     // only explicit Helicopter-or-Drone rows prefer type 91 Drone first. Generic
+009542:     // 4x4 Vehicle(s) rows now use the same type 99 Mountain Rescue / type 93 SAR
+009543:     // 4x4 matcher for selection and final verification, removing false popups.
+009544:     // V10.6.62: Unit Finder now combines the mission-help attachment with
+009545:     // visible current-patient "We need:" requirements. General Live Mission
+009546:     // Requirements remain exclusive to the Mission Update workflow.
+009547:     // V10.6.63: Mission Update now converts Cars to tow in pairs (1-2 cars =
+009548:     // one Flatbed Recovery Vehicle, 3-4 = two) and current linked patient-card
+009549:     // We need alerts override a stale/zero live-panel patient row for that patient.
+009550:     // V10.6.67: Inspector and Public Order IRVs are now matched by exact
+009551:     // vehicle ID and current per-vehicle assignment-page training only. This
+009552:     // blocks duplicate generic names such as "IRV" from copying one vehicle's
+009553:     // training to another and prevents an untrained IRV from being selected.
+009554:     // Public Order qualification now requires only the L1/L2/Sergeant codes
+009555:     // actually requested by the current mission.
+009556:     // V10.6.69: Strict Inspector/Public Order verification now uses the exact
+009557:     // Personnel Assignment registry vehicle IDs as priority hints, then rechecks
+009558:     // those precise /zuweisung pages before selection. This prevents trained
+009559:     // IRVs being missed when they are outside the first arrival-sorted scan batch.
+009560:     // V10.6.71: Normal Police Car/Police Officer requirements now protect
+009561:     // exact-ID IRVs carrying specialist-trained staff, live-verify ordinary IRVs
+009562:     // before selection, and exclude known trained IRVs from ordinary attendance.
+009563:     // Auto Mode now waits for a complete, non-zero, ID-stable vehicle list with
+009564:     // no remaining load control or spinner before Unit Finder may select units.
+009565:     // V10.6.72: Exact assignment-page scans no longer require a permanent binding
+009566:     // before an untrained IRV may satisfy ordinary Police attendance. Police Medic
+009567:     // and Railway Police Officer requirements now use exact trained IRVs with two
+009568:     // qualified personnel, and ATV Carrier uses an authoritative type-30 matcher.
+009569:     // V10.6.83: Mission Control now uses an iOS Safari-only safe-area layout,
+009570:     // horizontal collapse state, visual-viewport placement and pointer dragging.
+009571:     // Desktop positioning, sizing and mouse dragging remain unchanged.
+009572:     // V10.6.86: Firefighters convert to Rescue Pumps at nine personnel
+009573:     // per vehicle; Car Recovery maps to the existing Flatbed Recovery
+009574:     // Vehicle; RIV-or-Major-Foam-Tender wording uses RIV first and only
+009575:     // falls back to a Major Foam Tender when no eligible RIV is available.
+009576:     // V10.6.85: Fire cross-reference now maps the exact "Road Rail Unit"
+009577:     // wording to the established RRU route.
+009578:     // V10.6.84: the exact mission wording "Fire, rescue or aerial appliance"
+009579:     // now maps to the existing Rescue Pump route.
+009580:     // V10.6.82: verified Fire profiles staff type-107 RRUs with two Railway Fire
+009581:     // personnel, type-15 ICCUs with three Level 1 Incident Commanders and type-39
+009582:     // Fire OSUs with three HazMat personnel. BASU, Welfare and HazMat share one OSU.
+009583:     // V10.6.81: Operational Support or SAR Vehicle requirements now select and
+009584:     // verify the exact type-86 Operational Support Van. Fire type-39 Operational
+009585:     // Support Units remain excluded from this SAR requirement.
+009586:     // V10.6.80: Critical Care Ambulances now require one trained person per vehicle.
+009587:     // Armed Response personnel use exact type-25 ATCs with two officers who each hold
+009588:     // both Roads Policing and Firearms. Police Officer and Seagoing Vessel upgrade
+009589:     // rows now use shared strict conversions across Unit Finder, Update and Auto.
+009590:     // V10.6.54: Auto Mode no longer waits for post-dispatch upgrades. It now
+009591:     // dispatches and advances immediately, including exact-next continuation
+009592:     // after high-value Dispatch & Share missions.
+009593:     // V10.6.53: ICCU-or-ACU requirements now select an ICCU first and use
+
+=== BLOCK 19: source lines 9792-9967 ===
 009792:         if (target === 'vehicle') {
 009793:             return {
 009794:                 missionCollapsed: true,
@@ -3627,7 +3732,7 @@ SOURCE LINES: 39886
 009966:         );
 009967:     }
 
-=== BLOCK 19: source lines 10207-10344 ===
+=== BLOCK 20: source lines 10207-10344 ===
 010207:     // bound to one mission instance so a still-connected previous mission
 010208:     // iframe/modal cannot contribute requirements to the current mission.
 010209:     let mfCurrentMissionInstanceKey = '';
@@ -3767,7 +3872,101 @@ SOURCE LINES: 39886
 010343:         } catch (error) {}
 010344: 
 
-=== BLOCK 20: source lines 10694-10791 ===
+=== BLOCK 21: source lines 10572-10663 ===
+010572:     async function copyIssueRecorder() {}
+010573:     function captureIssueNow() {}
+010574:     function scanIssueRecorderDangerAlerts() {}
+010575:     function syncIssueRecorderMutationObserver() {}
+010576:     function installIssueRecorderWatchers() {
+010577:         window.mfIssueRecorderInstalled = true;
+010578:     }
+010579: 
+010580:     function cleanupDuplicatePanels() {
+010581:         const wrappers = document.querySelectorAll('#mission-finder-wrapper');
+010582: 
+010583:         wrappers.forEach((wrapper, index) => {
+010584:             if (index > 0) {
+010585:                 wrapper.remove();
+010586:             }
+010587:         });
+010588: 
+010589:         document.querySelectorAll('#control-panel').forEach(panel => {
+010590:             if (!panel.closest('#mission-finder-wrapper')) {
+010591:                 panel.remove();
+010592:             }
+010593:         });
+010594:     }
+010595: 
+010596:     const crossReference = {
+010597:         /*************************************************
+010598:          * FIRE
+010599:          *************************************************/
+010600:         "Pumps": "Fire Engine R/PUMP x 1",
+010601:         "Pump": "Fire Engine R/PUMP x 1",
+010602:         "Fire engine": "Fire Engine R/PUMP x 1",
+010603:         "Fire engines": "Fire Engine R/PUMP x 1",
+010604:         "Fire Engine": "Fire Engine R/PUMP x 1",
+010605:         "Fire Engines": "Fire Engine R/PUMP x 1",
+010606:         "Aerial Appliance": "CARP",
+010607:         "Aerial Appliances": "CARP",
+010608:         "Aerial Appliance Truck": "CARP",
+010609:         "Aerial Appliance Trucks": "CARP",
+010610:         "Fire, rescue or aerial appliance": "Rescue Pump",
+010611:         "Road Rail Unit": "Road Rail Unit",
+010612:         "Road Rail Units": "Road Rail Unit",
+010613:         "Firefighter": "Rescue Pump",
+010614:         "Firefighters": "Rescue Pump",
+010615:         "Required Firefighter": "Rescue Pump",
+010616:         "Required Firefighters": "Rescue Pump",
+010617:         "Car Recovery": "Flatbed Recovery Vehicle",
+010618:         "Required Car Recovery": "Flatbed Recovery Vehicle",
+010619:         "ICCU or Ambulance Control Unit": "ICCU/ACU",
+010620:         "ICCU or Ambulance Control Units": "ICCU/ACU",
+010621:         "ICCUs or Ambulance Control Units": "ICCU/ACU",
+010622:         "Fire Officer": "Fire Officer",
+010623:         "Fire Officers": "Fire Officer",
+010624:         "Rescue Support Unit": "Fire Engine R/PUMP x 1",
+010625:         "Rescue Support Units": "Fire Engine R/PUMP x 1",
+010626:         "Rescue Support Vehicle": "Fire Engine R/PUMP x 1",
+010627:         "Rescue Support Vehicles": "Fire Engine R/PUMP x 1",
+010628:         "Rescue Support Unit or Rescue Pump": "Fire Engine R/PUMP x 1",
+010629:         "Rescue Support Units or Rescue Pumps": "Fire Engine R/PUMP x 1",
+010630:         "Fire Engines or Rescue Support Vehicles": "Fire Engine R/PUMP x 1",
+010631:         "Fire Engines, Rescue Support Vehicles or Aerial Appliance Trucks": "Fire Engine R/PUMP x 1",
+010632:         "Foam Unit": "RP CAFS",
+010633:         "Foam Units": "RP CAFS",
+010634:         "Water Carrier": "Water Carrier",
+010635:         "Water Carriers": "Water Carrier",
+010636:         "Welfare Vehicles x1": "Welfare Vehicle",
+010637: 
+010638:         /*************************************************
+010639:          * POLICE
+010640:          *************************************************/
+010641:         "Police Car": "Police Car",
+010642:         "Police Cars": "Police Car",
+010643:         "Police car": "Police Car",
+010644:         "Police cars": "Police Car",
+010645:         "Police Officer": "Police Car",
+010646:         "Police Officers": "Police Car",
+010647:         "Traffic Car": "Police ATC",
+010648:         "Traffic Cars": "Police ATC",
+010649:         "Police Cars or Armed Response Vehicles (ARVs)": "Police ATC",
+010650:         "Armed Response Personnel (In Armed Vehicles)": "Police ATC",
+010651:         "Dog Support Unit (DSU)": "Police DSU",
+010652:         "Dog Support Units (DSU)": "Police DSU",
+010653:         "Dog Support Units (DSUs)": "Police DSU",
+010654:         "Mounted Unit": "Mounted Unit",
+010655:         "Mounted Units": "Mounted Unit",
+010656:         "Police Inspector": "Police Inspector",
+010657:         "Police Sergeant": "Police Sergeant",
+010658:         "Cell Van": "Cell Van",
+010659:         "Police Helicopter": "Police Helicopter",
+010660:         "Police Helicopters": "Police Helicopter",
+010661:         "Police Helicopter or Drone": "Police Helicopter",
+010662:         "Police Helicopter or Drones": "Police Helicopter",
+010663:         "Police Helicopters or Drone": "Police Helicopter",
+
+=== BLOCK 22: source lines 10694-10871 ===
 010694:         "Mass Casualty Equipment": "Mass Casualty Equipment",
 010695:         "Mass Casualty Equipment Unit": "Mass Casualty Equipment",
 010696:         "Mass Casualty Equipment Units": "Mass Casualty Equipment",
@@ -3866,8 +4065,88 @@ SOURCE LINES: 39886
 010789:         "Rapid Intervention Vehicles": "RIV",
 010790:         "Major Foam Tender": "Major Foam Tender",
 010791:         "Major Foam Tenders": "Major Foam Tender",
+010792:         "RIVs or Major Foam Tenders": "RIV",
+010793:         "RIV or Major Foam Tender": "RIV",
+010794:         "Required RIV or Major Foam Tender": "RIV",
+010795:         "Required RIVs or Major Foam Tenders": "RIV",
+010796:         "Fire Engines, RIVs or Major Foam Tenders": "Major Foam Tender",
+010797:         "Fire Engines or Major Foam Tenders": "Major Foam Tender",
+010798:         "Airfield Operations Supervisor": "Airfield Operations Supervisors",
+010799:         "Airfield Operations Supervisors": "Airfield Operations Supervisors",
+010800:         "Airfield Firefighting Command Vehicle": "Airfield FF Command Vehicle",
+010801:         "ICCU or Ambulance Control Units or Airfield Firefighting Command Vehicles": "Airfield FF Command Vehicle",
+010802:         "Fire Officers or Airfield Firefighting Command Vehicles": "Fire Officer",
+010803: 
+010804:         /*************************************************
+010805:          * SEARCH & RESCUE / FLOOD / RECOVERY / BOMB
+010806:          *************************************************/
+010807:         "Flood Rescue Unit": "Flood Rescue Unit (Trailer)",
+010808:         "4x4 Vehicle": "4x4 Units",
+010809:         "4x4 Vehicles": "4x4 Units",
+010810:         "Mountain Rescue 4x4 or SAR 4x4": "4x4 Units",
+010811:         "Mountain Rescue 4x4s or SAR 4x4s": "4x4 Units",
+010812: 
+010813:         // Special Search Technician vehicle selector.
+010814:         // Matching is handled by the dedicated displayed-name-prefix rule.
+010815:         "SARTEC": "SARTEC",
+010816: 
+010817:         "modules.missionHelper.prerequisites.tow_trucks_large": "Flatbed Recovery Vehicle",
+010818:         "modules.missionHelper.prerequisites.tow_trucks": "Flatbed Recovery Vehicle",
+010819:         "1 car to tow": "Flatbed Recovery Vehicle",
+010820:         "Cars to tow": "Flatbed Recovery Vehicle",
+010821:         "Car to tow": "Flatbed Recovery Vehicle",
+010822:         "Maximum amount of cars to tow": "Flatbed Recovery Vehicle",
+010823:         "Minimum amount of cars to tow": "Flatbed Recovery Vehicle",
+010824:         "Tow Trucks Large": "Flatbed Recovery Vehicle",
+010825:         "Flatbed Recovery Vehicle": "Flatbed Recovery Vehicle",
+010826:         "Flatbed Recovery Vehicles": "Flatbed Recovery Vehicle",
+010827:         "modules.missionHelper.vehicles.captions.bomb_disposal_crew": "Bomb Disposal crew x1",
+010828:         "Support Units": "Support Unit",
+010829:         "Breathing Apparatus Support Unit": "OSU",
+010830:         "Breathing Apparatus Support Units": "OSU",
+010831:         "Breathing Apparatus Support Vehicle": "OSU",
+010832:         "Breathing Apparatus Support Vehicles": "OSU",
+010833:         "BASU": "OSU",
+010834:         "BASUs": "OSU",
+010835:         "Welfare": "OSU",
+010836:         "Welfare Unit": "OSU",
+010837:         "Welfare Units": "OSU",
+010838:         "Welfare Vehicle": "OSU",
+010839:         "Welfare Vehicles": "OSU",
+010840:         "HazMat": "OSU",
+010841:         "Hazmat": "OSU",
+010842:         "HazMat Unit": "OSU",
+010843:         "HazMat Units": "OSU",
+010844:         "Hazmat Unit": "OSU",
+010845:         "Hazmat Units": "OSU",
+010846:         "HazMat Unit or CBRN Vehicle": "OSU",
+010847:         "HazMat Units or CBRN Vehicles": "OSU",
+010848:         "Hazmat Unit or CBRN Vehicle": "OSU",
+010849:         "Hazmat Units or CBRN Vehicles": "OSU",
+010850:         "CBRN Vehicle": "OSU",
+010851:         "CBRN Vehicles": "OSU",
+010852:         "Operational Support Unit": "OSU",
+010853:         "Operational Support Units": "OSU",
+010854:         "Fire Operational Support Unit": "OSU",
+010855:         "Fire Operational Support Units": "OSU",
+010856:         "Breathing Apparatus Support Unit x1": "OSU",
+010857:         "Breathing Apparatus Support Units x1": "OSU",
+010858:         "BASU x1": "OSU",
+010859:         "BASUs x1": "OSU",
+010860:         "Welfare Vehicle x1": "OSU",
+010861:         "Welfare Vehicles x1": "OSU",
+010862:         "HazMat Unit or CBRN Vehicle x1": "OSU",
+010863:         "HazMat Units or CBRN Vehicles x1": "OSU",
+010864:         "Operational Support Unit x1": "OSU",
+010865:         "Operational Support Units x1": "OSU",
+010866:     };
+010867: 
+010868:     const crossReferenceNormalisedLookup = new Map(
+010869:         Object.entries(crossReference).map(([key, value]) => [
+010870:             String(key || '').replace(/\s+/g, ' ').trim().toLowerCase(),
+010871:             value
 
-=== BLOCK 21: source lines 11730-11832 ===
+=== BLOCK 23: source lines 11730-11832 ===
 011730:                     cleaned
 011731:                 )
 011732:             );
@@ -3972,7 +4251,7 @@ SOURCE LINES: 39886
 011831:                 cleaned ===
 011832:                     'police car' ||
 
-=== BLOCK 22: source lines 11852-11963 ===
+=== BLOCK 24: source lines 11852-11963 ===
 011852:         'road rail units',
 011853:         'required road rail unit',
 011854:         'required road rail units'
@@ -4086,7 +4365,7 @@ SOURCE LINES: 39886
 011962:             'cct', 'ccts'
 011963:         ]);
 
-=== BLOCK 23: source lines 12680-12770 ===
+=== BLOCK 25: source lines 12680-12770 ===
 012680: 
 012681:         const cached = mfCheckboxVehicleValueCache.get(input);
 012682:         if (cached) return cached;
@@ -4179,7 +4458,7 @@ SOURCE LINES: 39886
 012769:         }
 012770: 
 
-=== BLOCK 24: source lines 13196-13286 ===
+=== BLOCK 26: source lines 13196-13286 ===
 013196:                 })
 013197:             );
 013198:         }
@@ -4272,7 +4551,7 @@ SOURCE LINES: 39886
 013285:                     );
 013286:                 });
 
-=== BLOCK 25: source lines 13503-13593 ===
+=== BLOCK 27: source lines 13503-13593 ===
 013503:                     return (
 013504:                         isPoliceHelicopterCheckbox(input) ||
 013505:                         isPoliceDroneCheckbox(input)
@@ -4365,7 +4644,7 @@ SOURCE LINES: 39886
 013592:                 );
 013593:             }
 
-=== BLOCK 26: source lines 13639-13729 ===
+=== BLOCK 28: source lines 13639-13729 ===
 013639:         ) {
 013640:             debugLog(
 013641:                 'POLICE CAR STRICT',
@@ -4458,7 +4737,7 @@ SOURCE LINES: 39886
 013728:             ) {
 013729:                 return selectedRivs;
 
-=== BLOCK 27: source lines 15047-15155 ===
+=== BLOCK 29: source lines 15047-15155 ===
 015047:         controlBody.appendChild(statusBox);
 015048: 
 015049:         const iphoneAdvancedToggle =
@@ -4569,7 +4848,7 @@ SOURCE LINES: 39886
 015154:                 mfQueueRestartThreshold;
 015155: 
 
-=== BLOCK 28: source lines 16769-16861 ===
+=== BLOCK 30: source lines 16769-16861 ===
 016769: 
 016770:             panel.style.left = `${
 016771:                 Math.round(
@@ -4664,7 +4943,7 @@ SOURCE LINES: 39886
 016860:         reason,
 016861:         options = {}
 
-=== BLOCK 29: source lines 17162-17297 ===
+=== BLOCK 31: source lines 17162-17297 ===
 017162:         const hours = Math.max(runtimeMs / 3600000, 0.001);
 017163:         const average = completed > 0 ? Math.round(credits / completed) : 0;
 017164:         const creditsPerHour = Math.round(credits / hours);
@@ -4802,7 +5081,7 @@ SOURCE LINES: 39886
 017296:             ),
 017297:             ...Array.from(autoBox.children || [])
 
-=== BLOCK 30: source lines 20513-20678 ===
+=== BLOCK 32: source lines 20513-20678 ===
 020513:             );
 020514: 
 020515:         if (
@@ -4970,7 +5249,134 @@ SOURCE LINES: 39886
 020677:                 ''
 020678:             )
 
-=== BLOCK 31: source lines 20936-21073 ===
+=== BLOCK 33: source lines 20809-21302 ===
+020809:                 .replace(/\s+/g, ' ')
+020810:                 .trim();
+020811:         };
+020812: 
+020813:         tables.forEach(table => {
+020814:             const headings = Array.from(
+020815:                 table.querySelectorAll(
+020816:                     'thead th, thead td, th'
+020817:                 )
+020818:             ).map(cell => normalise(
+020819:                 cell.textContent
+020820:             ));
+020821:             const headingText =
+020822:                 headings.join(' ');
+020823:             let score = 0;
+020824: 
+020825:             if (
+020826:                 headings.some(heading =>
+020827:                     /^Vehicle and Personnel Requirements$/i
+020828:                         .test(heading)
+020829:                 )
+020830:             ) {
+020831:                 score += 10000;
+020832:             } else if (
+020833:                 /Vehicle/i.test(headingText) &&
+020834:                 /Personnel/i.test(headingText) &&
+020835:                 /Requirements?/i.test(headingText)
+020836:             ) {
+020837:                 score += 8000;
+020838:             }
+020839: 
+020840:             let actionableRows = 0;
+020841: 
+020842:             table.querySelectorAll(
+020843:                 'tbody tr, tr'
+020844:             ).forEach(row => {
+020845:                 const cells = Array.from(
+020846:                     row.querySelectorAll('td')
+020847:                 ).map(cell => normalise(
+020848:                     cell.textContent
+020849:                 ));
+020850: 
+020851:                 if (cells.length < 2) return;
+020852: 
+020853:                 if (
+020854:                     /^(?:Required\s+|Maximum amount of cars to tow|Cars to tow)/i
+020855:                         .test(cells[0]) &&
+020856:                     /\d/.test(cells[1])
+020857:                 ) {
+020858:                     actionableRows += 1;
+020859:                 }
+020860:             });
+020861: 
+020862:             if (actionableRows > 0) {
+020863:                 score += 100 +
+020864:                     actionableRows;
+020865:             }
+020866: 
+020867:             if (score > bestScore) {
+020868:                 bestScore = score;
+020869:                 bestTable = table;
+020870:             }
+020871:         });
+020872: 
+020873:         return bestTable;
+020874:     }
+020875: 
+020876:     function extractLiveMissionRequirementRows(html) {
+020877:         const doc = new DOMParser().parseFromString(html, 'text/html');
+020878: 
+020879:         const candidateTables =
+020880:             Array.from(
+020881:                 doc.querySelectorAll(
+020882:                     'table.table, table'
+020883:                 )
+020884:             );
+020885: 
+020886:         const table =
+020887:             findMissionRequirementTable(
+020888:                 doc,
+020889:                 candidateTables
+020890:             );
+020891: 
+020892:         if (
+020893:             mfDebugEnabled
+020894:         ) {
+020895:             debugLog(
+020896:                 'UNIT FINDER ATTACHMENT TABLE',
+020897:                 table
+020898:                     ? 'Found exact Vehicle and Personnel Requirements table.'
+020899:                     : `No exact Vehicle and Personnel Requirements table found among ${candidateTables.length} table(s).`
+020900:             );
+020901:         }
+020902: 
+020903:         const rows = [];
+020904: 
+020905:         if (table) {
+020906:             table.querySelectorAll('tbody tr, tr').forEach(tr => {
+020907:                 const cells = Array.from(tr.querySelectorAll('td')).map(td => td.textContent.replace(/\s+/g, ' ').trim());
+020908:                 if (cells.length < 2) return;
+020909: 
+020910:                 const rawRequirementName = cells[0];
+020911:                 const originalName = cleanRequirementName(rawRequirementName);
+020912:                 const amountText = cells[1].replace(/\s+/g, ' ').trim();
+020913: 
+020914:                 if (
+020915:                     shouldIgnoreRequiredMinimumRequirement(rawRequirementName) ||
+020916:                     shouldIgnoreRequiredMinimumRequirement(originalName)
+020917:                 ) {
+020918:                     return;
+020919:                 }
+020920: 
+020921:                 if (mfDebugEnabled) {
+020922:                     debugLog(
+020923:                         'UNIT FINDER ATTACHMENT ROW',
+020924:                         `${originalName || '(blank)'} | value=${amountText}`
+020925:                     );
+020926:                 }
+020927: 
+020928:                 const towRequirement =
+020929:                     getCarsToTowVehicleRequirement(
+020930:                         originalName,
+020931:                         amountText
+020932:                     );
+020933: 
+020934:                 if (towRequirement) {
+020935:                     rows.push({
 020936:                         unitName:
 020937:                             towRequirement.unitName,
 020938:                         stillNeeded:
@@ -5109,8 +5515,134 @@ SOURCE LINES: 39886
 021071:                 });
 021072: 
 021073:                 if (mfDebugEnabled) {
-
-=== BLOCK 32: source lines 21202-21302 ===
+021074:                     debugLog(
+021075:                         'UNIT FINDER ATTACHMENT ACCEPT',
+021076:                         `${originalName} x${stillNeeded} -> ${resolveUnitName(originalName)}`
+021077:                     );
+021078:                 }
+021079:             });
+021080:         }
+021081: 
+021082:         extractTowCarRequirementRows(doc).forEach(row => rows.push(row));
+021083: 
+021084:         const mergedRows =
+021085:             mergeRequirementRows(rows);
+021086: 
+021087:         try {
+021088:             Object.defineProperties(
+021089:                 mergedRows,
+021090:                 {
+021091:                     missionRequirementTableFound: {
+021092:                         value: Boolean(table),
+021093:                         enumerable: false
+021094:                     },
+021095:                     missionRequirementTableCount: {
+021096:                         value: candidateTables.length,
+021097:                         enumerable: false
+021098:                     }
+021099:                 }
+021100:             );
+021101:         } catch (_error) {}
+021102: 
+021103:         return mergedRows;
+021104:     }
+021105: 
+021106:     function extractTowCarRequirementRows(doc) {
+021107:         const rows = [];
+021108:         let maximumCarsToTow = 0;
+021109: 
+021110:         doc.querySelectorAll('table.table, table').forEach(table => {
+021111:             table.querySelectorAll('tbody tr, tr').forEach(tr => {
+021112:                 const cells = Array.from(tr.querySelectorAll('td')).map(td => td.textContent.replace(/\s+/g, ' ').trim());
+021113:                 if (cells.length < 2) return;
+021114: 
+021115:                 const label = cleanRequirementName(cells[0]);
+021116:                 const valueText = cells[1].replace(/\s+/g, ' ').trim();
+021117: 
+021118:                 if (!/^Maximum amount of cars to tow$/i.test(label)) return;
+021119: 
+021120:                 const cars = parseInt(valueText, 10);
+021121:                 if (Number.isFinite(cars) && cars > maximumCarsToTow) {
+021122:                     maximumCarsToTow = cars;
+021123:                 }
+021124:             });
+021125:         });
+021126: 
+021127:         if (maximumCarsToTow > 0) {
+021128:             // The user's fleet uses the larger flatbed recovery vehicle, which can tow 2 cars.
+021129:             // 1-2 cars = 1 flatbed, 3-4 cars = 2 flatbeds, etc.
+021130:             const flatbedsNeeded = Math.ceil(maximumCarsToTow / 2);
+021131: 
+021132:             rows.push({
+021133:                 unitName: 'Cars to tow',
+021134:                 stillNeeded: flatbedsNeeded
+021135:             });
+021136: 
+021137:             if (mfDebugEnabled) {
+021138:                 debugLog('LIVE TOW', `Maximum cars to tow=${maximumCarsToTow} -> Flatbed Recovery Vehicle x${flatbedsNeeded}`);
+021139:             }
+021140:         }
+021141: 
+021142:         return rows;
+021143:     }
+021144: 
+021145:     function isCarsToTowRequirementName(value) {
+021146:         const cleaned = String(value || '')
+021147:             .replace(/\s+/g, ' ')
+021148:             .trim();
+021149: 
+021150:         return /^(?:Required\s+)?(?:\d+\s+)?car(?:s)?\s+to\s+tow$/i.test(cleaned) ||
+021151:             /^(?:Required\s+)?(?:Maximum|Minimum)\s+amount\s+of\s+cars\s+to\s+tow$/i.test(cleaned);
+021152:     }
+021153: 
+021154:     function getCarsToTowVehicleRequirement(unitName, carsRequired) {
+021155:         if (!isCarsToTowRequirementName(unitName)) {
+021156:             return null;
+021157:         }
+021158: 
+021159:         const embeddedCount = String(unitName || '')
+021160:             .replace(/,/g, '')
+021161:             .match(/^(?:Required\s+)?(\d+)\s+car(?:s)?\s+to\s+tow$/i);
+021162: 
+021163:         const amountMatch = String(
+021164:             embeddedCount ? embeddedCount[1] : (carsRequired ?? '')
+021165:         )
+021166:             .replace(/,/g, '')
+021167:             .match(/\d+/);
+021168: 
+021169:         const cars = amountMatch
+021170:             ? Math.max(0, parseInt(amountMatch[0], 10) || 0)
+021171:             : 0;
+021172: 
+021173:         if (cars <= 0) {
+021174:             return null;
+021175:         }
+021176: 
+021177:         return {
+021178:             unitName: 'Cars to tow',
+021179:             carsRequired: cars,
+021180:             stillNeeded: Math.ceil(cars / 2)
+021181:         };
+021182:     }
+021183: 
+021184: 
+021185:     function normaliseVehicleRequirementCount(
+021186:         originalName,
+021187:         mappedName,
+021188:         amount
+021189:     ) {
+021190:         const required =
+021191:             Math.max(
+021192:                 0,
+021193:                 parseInt(
+021194:                     amount,
+021195:                     10
+021196:                 ) || 0
+021197:             );
+021198: 
+021199:         const raw =
+021200:             String(
+021201:                 originalName || ''
 021202:             )
 021203:                 .replace(
 021204:                     /\s+/g,
@@ -5213,7 +5745,7 @@ SOURCE LINES: 39886
 021301:             const mappedName =
 021302:                 resolveUnitName(
 
-=== BLOCK 33: source lines 21582-21676 ===
+=== BLOCK 34: source lines 21582-21676 ===
 021582:                     sourceDescriptor.missionTypeId,
 021583:                 error:
 021584:                     error?.message ||
@@ -5310,7 +5842,7 @@ SOURCE LINES: 39886
 021675:             input.getAttribute('data-vehicle-id'),
 021676:             row?.getAttribute('vehicle_id'),
 
-=== BLOCK 34: source lines 22895-23065 ===
+=== BLOCK 35: source lines 22895-23065 ===
 022895:                 .assignedTrainingProfiles
 022896:                 .slice(0, maximumCapacity)
 022897:                 .map(profile => {
@@ -5483,7 +6015,7 @@ SOURCE LINES: 39886
 023064:                         requirement
 023065:                     );
 
-=== BLOCK 35: source lines 23261-23352 ===
+=== BLOCK 36: source lines 23261-23352 ===
 023261:         return match
 023262:             ? String(match[1])
 023263:             : '';
@@ -5577,7 +6109,7 @@ SOURCE LINES: 39886
 023351:             const assignedHere = !!(
 023352:                 assignedAction &&
 
-=== BLOCK 36: source lines 23512-23602 ===
+=== BLOCK 37: source lines 23512-23602 ===
 023512:             personnelRowsSeen:
 023513:                 personnelRows.length,
 023514:             detectedVehicleTypeId,
@@ -5670,7 +6202,7 @@ SOURCE LINES: 39886
 023601:                 );
 023602: 
 
-=== BLOCK 37: source lines 23660-23750 ===
+=== BLOCK 38: source lines 23660-23750 ===
 023660:                 .sort((left, right) => {
 023661:                     if (left.score !== right.score) {
 023662:                         return right.score - left.score;
@@ -5763,7 +6295,7 @@ SOURCE LINES: 39886
 023749:                 registry
 023750:             );
 
-=== BLOCK 38: source lines 23973-24063 ===
+=== BLOCK 39: source lines 23973-24063 ===
 023973:                     );
 023974: 
 023975:                     verifiedIds.add(vehicleId);
@@ -5856,7 +6388,7 @@ SOURCE LINES: 39886
 024062:                 armedRequirements,
 024063:                 verifiedCheckboxes,
 
-=== BLOCK 39: source lines 24207-24297 ===
+=== BLOCK 40: source lines 24207-24297 ===
 024207:                 ) {
 024208:                     return total;
 024209:                 }
@@ -5949,7 +6481,7 @@ SOURCE LINES: 39886
 024296:         // Generic Police attendance does not require a qualification check.
 024297:         // The registry is therefore an ordering hint only. Avoid reading every
 
-=== BLOCK 40: source lines 24553-24643 ===
+=== BLOCK 41: source lines 24553-24643 ===
 024553:                     ? requirements
 024554:                     : []
 024555:             ).map(requirement => {
@@ -6042,7 +6574,7 @@ SOURCE LINES: 39886
 024642: 
 024643:         const trainingScore =
 
-=== BLOCK 41: source lines 24667-24762 ===
+=== BLOCK 42: source lines 24667-24762 ===
 024667:             psuTieBreak
 024668:         );
 024669:     }
@@ -6140,7 +6672,7 @@ SOURCE LINES: 39886
 024761:                     countSelectedTrainingVehicles(
 024762:                         requirements,
 
-=== BLOCK 42: source lines 24945-25128 ===
+=== BLOCK 43: source lines 24945-25128 ===
 024945:                     registry
 024946:                 ),
 024947:             remaining,
@@ -6326,7 +6858,7 @@ SOURCE LINES: 39886
 025127:             rows.push({
 025128:                 unitName:
 
-=== BLOCK 43: source lines 25530-25640 ===
+=== BLOCK 44: source lines 25530-25640 ===
 025530:             !suppliedHasExplicitCurrentMissingRequirements
 025531:         ) {
 025532:             requirementRows = readMissionUpdateRows();
@@ -6439,7 +6971,7 @@ SOURCE LINES: 39886
 025639: 
 025640:                 if (!result.trainingSatisfied) {
 
-=== BLOCK 44: source lines 28825-28915 ===
+=== BLOCK 45: source lines 28825-28936 ===
 028825:                 .replace(
 028826:                     /\s+/g,
 028827:                     ' '
@@ -6531,8 +7063,96 @@ SOURCE LINES: 39886
 028913:             required !==
 028914:                 null &&
 028915:             selected !==
+028916:                 null
+028917:         ) {
+028918:             stillNeeded =
+028919:                 Math.max(
+028920:                     0,
+028921:                     required -
+028922:                     selected
+028923:                 );
+028924:         }
+028925: 
+028926:         if (
+028927:             stillNeeded ===
+028928:                 null
+028929:         ) {
+028930:             stillNeeded =
+028931:                 0;
+028932:         }
+028933: 
+028934:         return {
+028935:             unitName,
+028936:             required:
 
-=== BLOCK 45: source lines 29814-29904 ===
+=== BLOCK 46: source lines 29747-29904 ===
+029747:                     )
+029748:                         .replace(
+029749:                             /\s+/g,
+029750:                             ' '
+029751:                         )
+029752:                         .trim();
+029753: 
+029754:                 const neededMatch =
+029755:                     String(
+029756:                         stillNeeded ??
+029757:                         ''
+029758:                     )
+029759:                         .replace(
+029760:                             /,/g,
+029761:                             ''
+029762:                         )
+029763:                         .match(
+029764:                             /\d+/
+029765:                         );
+029766: 
+029767:                 let needed =
+029768:                     Math.max(
+029769:                         0,
+029770:                         neededMatch
+029771:                             ? parseInt(
+029772:                                 neededMatch[0],
+029773:                                 10
+029774:                             ) ||
+029775:                             0
+029776:                             : 0
+029777:                     );
+029778: 
+029779:                 if (
+029780:                     !cleanedName ||
+029781:                     needed <=
+029782:                     0
+029783:                 ) {
+029784:                     return;
+029785:                 }
+029786: 
+029787:                 if (shouldIgnoreRequiredMinimumRequirement(cleanedName)) {
+029788:                     return;
+029789:                 }
+029790: 
+029791:                 const towRequirement =
+029792:                     getCarsToTowVehicleRequirement(
+029793:                         cleanedName,
+029794:                         needed
+029795:                     );
+029796: 
+029797:                 if (towRequirement) {
+029798:                     if (
+029799:                         mfDebugEnabled &&
+029800:                         !silent
+029801:                     ) {
+029802:                         debugLog(
+029803:                             'UPDATE TOW CONVERSION',
+029804:                             `${towRequirement.carsRequired} car(s) to tow -> Flatbed Recovery Vehicle x${towRequirement.stillNeeded} | source=${source}`
+029805:                         );
+029806:                     }
+029807: 
+029808:                     cleanedName =
+029809:                         towRequirement.unitName;
+029810: 
+029811:                     needed =
+029812:                         towRequirement.stillNeeded;
+029813: 
 029814:                     details = {
 029815:                         ...(
 029816:                             details ||
@@ -6625,7 +7245,101 @@ SOURCE LINES: 39886
 029903:                         );
 029904: 
 
-=== BLOCK 46: source lines 30525-30616 ===
+=== BLOCK 47: source lines 30414-30505 ===
+030414: 
+030415:         pageTextBlocks.forEach(text => {
+030416:             if (!/Missing Vehicles?:/i.test(text)) return;
+030417: 
+030418:             getGenericMissingVehicleRowsFromText(
+030419:                 text
+030420:             ).forEach(row => {
+030421:                 recordUpdateRequirement(
+030422:                     row.unitName,
+030423:                     row.stillNeeded,
+030424:                     'visible-missing-vehicles-alert',
+030425:                     {
+030426:                         dispatchTargetMode: 'total',
+030427:                         explicitMissingVehicles: true
+030428:                     }
+030429:                 );
+030430: 
+030431:                 if (
+030432:                     mfDebugEnabled &&
+030433:                     !silent
+030434:                 ) {
+030435:                     debugLog(
+030436:                         'UPDATE GENERIC VEHICLE',
+030437:                         `${row.unitName} x${row.stillNeeded}`
+030438:                     );
+030439:                 }
+030440:             });
+030441: 
+030442:             const lowerText = text.toLowerCase();
+030443: 
+030444:             const carToTowMatch = lowerText.match(
+030445:                 /(\d+)\s+car(?:s)?\s+to\s+tow/
+030446:             );
+030447: 
+030448:             if (carToTowMatch) {
+030449:                 const amount = parseInt(
+030450:                     carToTowMatch[1],
+030451:                     10
+030452:                 );
+030453: 
+030454:                 if (
+030455:                     Number.isFinite(amount) &&
+030456:                     amount > 0
+030457:                 ) {
+030458:                     const towRequirement =
+030459:                         getCarsToTowVehicleRequirement(
+030460:                             'Cars to tow',
+030461:                             amount
+030462:                         );
+030463: 
+030464:                     if (towRequirement) {
+030465:                         recordUpdateRequirement(
+030466:                             towRequirement.unitName,
+030467:                             towRequirement.stillNeeded,
+030468:                             'visible-missing-vehicles-alert',
+030469:                             {
+030470:                                 dispatchTargetMode: 'total',
+030471:                                 explicitMissingVehicles: true,
+030472:                                 towCarsRequired:
+030473:                                     towRequirement.carsRequired
+030474:                             }
+030475:                         );
+030476:                     }
+030477:                 }
+030478:             }
+030479: 
+030480:             // MissionChief can expose Police Air only in the red
+030481:             // Missing Vehicles alert rather than the update table.
+030482:             // Convert it to a normal update row. The existing strict
+030483:             // Police Air matcher then prefers Drone Vehicle
+030484:             // (Police Station), with Police Helicopter as fallback.
+030485:             const policeAirMatches = Array.from(
+030486:                 text.matchAll(
+030487:                     /(\d+)\s*(?:x\s*)?Police\s+Helicopter(?:s)?\s+or\s+Drone(?:s)?/gi
+030488:                 )
+030489:             );
+030490: 
+030491:             policeAirMatches.forEach(match => {
+030492:                 const amount =
+030493:                     parseInt(
+030494:                         match[1],
+030495:                         10
+030496:                     );
+030497: 
+030498:                 if (
+030499:                     !Number.isFinite(amount) ||
+030500:                     amount <= 0
+030501:                 ) {
+030502:                     return;
+030503:                 }
+030504: 
+030505:                 recordUpdateRequirement(
+
+=== BLOCK 48: source lines 30525-30616 ===
 030525: 
 030526:             // MissionChief can place this requirement only inside the
 030527:             // red Missing Vehicles alert rather than the update table.
@@ -6719,7 +7433,7 @@ SOURCE LINES: 39886
 030615:                         required:
 030616:                             tableLevel2PublicOrderRequired
 
-=== BLOCK 47: source lines 30708-30798 ===
+=== BLOCK 49: source lines 30708-30798 ===
 030708:                         dispatchTargetMode: 'total',
 030709:                         explicitMissingPersonnel: true
 030710:                     }
@@ -6812,7 +7526,7 @@ SOURCE LINES: 39886
 030797:         const patientAlertCandidates =
 030798:             Array.from(
 
-=== BLOCK 48: source lines 31205-31308 ===
+=== BLOCK 50: source lines 31205-31308 ===
 031205:         const requirementRowsForDedupe =
 031206:             explicitMissingRequirementsPresent
 031207:                 ? missingRows.filter(row => {
@@ -6918,7 +7632,7 @@ SOURCE LINES: 39886
 031307:                 );
 031308: 
 
-=== BLOCK 49: source lines 31787-31957 ===
+=== BLOCK 51: source lines 31787-31957 ===
 031787: 
 031788:         mfMissionUpdateFirstPassRequired = false;
 031789:         mfMissionUpdateFirstPassCompletedAt = Date.now();
@@ -7091,7 +7805,7 @@ SOURCE LINES: 39886
 031956:                         )
 031957:                     );
 
-=== BLOCK 50: source lines 33129-33219 ===
+=== BLOCK 52: source lines 33129-33219 ===
 033129:                     );
 033130:                 }
 033131: 
@@ -7184,7 +7898,7 @@ SOURCE LINES: 39886
 033218:             const key = `${cleanName.toLowerCase()}|${mappedName}|${required}`;
 033219: 
 
-=== BLOCK 51: source lines 33560-33650 ===
+=== BLOCK 53: source lines 33560-33650 ===
 033560: 
 033561:         if (!Number.isFinite(currentLockUntil) || currentLockUntil < until) {
 033562:             sessionStorage.setItem(MF_MAIN_MISSION_OPEN_LOCK_KEY, String(until));
@@ -7277,7 +7991,7 @@ SOURCE LINES: 39886
 033649:                 `${reason || 'unknown'} | mission content did not become ready within 45 seconds`
 033650:             );
 
-=== BLOCK 52: source lines 37254-37352 ===
+=== BLOCK 54: source lines 37254-37352 ===
 037254:         } catch (error) {}
 037255:     }
 037256: 
@@ -7378,7 +8092,7 @@ SOURCE LINES: 39886
 037351:                     amount
 037352:                 )
 
-=== BLOCK 53: source lines 38621-38780 ===
+=== BLOCK 55: source lines 38621-38780 ===
 038621:             );
 038622: 
 038623:             setTimeout(
@@ -7540,7 +8254,7 @@ SOURCE LINES: 39886
 038779:                 stableSince =
 038780:                     Date.now();
 
-=== BLOCK 54: source lines 39089-39179 ===
+=== BLOCK 56: source lines 39089-39179 ===
 039089: 
 039090:             return {
 039091:                 ...stability,
@@ -7633,7 +8347,7 @@ SOURCE LINES: 39886
 039178:         `${MF_MUTATION_PATIENT_SELECTOR}, ` +
 039179:         `${MF_MUTATION_TRANSPORT_SELECTOR}`;
 
-=== FUNCTION INVENTORY MATCHING PERSONNEL / TRAINING / SEARCH / READY ===
+=== FUNCTION INVENTORY MATCHING PERSONNEL / TRAINING / SEARCH / READY / TOW ===
 000996: registerToolLifecycleCleanup
 001777: initWhenReady
 002715: getPersonnelServiceDefinition
@@ -7799,6 +8513,8 @@ SOURCE LINES: 39886
 020566: getSarPersonnelVehicleRequirement
 020670: getMissingPersonnelSegment
 020705: getNamedPersonnelCount
+021105: extractTowCarRequirementRows
+021144: isCarsToTowRequirementName
 021153: getCarsToTowVehicleRequirement
 021183: normaliseVehicleRequirementCount
 021625: readPersonnelTrainingRegistry
@@ -7869,6 +8585,9 @@ SOURCE LINES: 39886
 027797: allyStealSuccessAlertMatchesVehicle
 028425: getGenericMissingVehicleRowsFromText
 029213: getStructuredMissingVehicleRows
+033818: mfMarkTransportOwner
+033846: mfGetTransportOwnerModal
+033912: mfClearTransportOwner
 033939: mfTransportShellReadyForRehook
 035180: getInlinePersonnelQualificationAlertText
 035709: isVehicleTransportModalVisible
@@ -7909,3 +8628,8 @@ personnel.*register: 46
 vehicle_type_id: 26
 #vehicle_table: 10
 assignmentHref: 12
+Car to tow: 2
+Cars to tow: 12
+Flatbed Recovery Vehicle: 20
+getCarsToTowVehicleRequirement: 4
+tow_trucks: 2
