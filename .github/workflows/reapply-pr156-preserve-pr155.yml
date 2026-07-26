@@ -1,0 +1,142 @@
+name: Reapply PR 156 while preserving PR 155
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/reapply-pr156-preserve-pr155.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  reapply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out current main
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Reapply Personnel Register integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          PR156_BASE='7c00109945f4968ce02501069cc8b479f419a838'
+          PR156_MERGE='7f0a7c279849f034f39c7fc1d47efcce5d650987'
+          SOURCE='src/missionchief-command-nexus.user.js'
+
+          git cat-file -e "${PR156_BASE}^{commit}"
+          git cat-file -e "${PR156_MERGE}^{commit}"
+          git diff --binary "${PR156_BASE}" "${PR156_MERGE}" -- "${SOURCE}" > /tmp/pr156-source.patch
+          test -s /tmp/pr156-source.patch
+          git apply --3way /tmp/pr156-source.patch
+
+          python3 <<'PY'
+          from pathlib import Path
+
+          source_path = Path('src/missionchief-command-nexus.user.js')
+          source = source_path.read_text(encoding='utf-8')
+
+          for token in [
+              "const PERSONNEL_VERSION = '1.3.4';",
+              'Build All Register',
+              'mc-personnel-export-register',
+              'mc-personnel-import-register',
+              'mc-personnel-register-status',
+              'function exportPersonnelTrainingRegistry()',
+              'async function importPersonnelTrainingRegistry(file)',
+              'const registryRetained = getPersonnelTrainingRegistryStats().count;'
+          ]:
+              if token not in source:
+                  raise SystemExit(f'PR #156 token missing after reapply: {token}')
+
+          for token in [
+              ' * MODULE 2: MISSION FINDER V10.6.101',
+              'const MF_PSU_COMPATIBLE_TRAINING_CODES =',
+              "'51': 9",
+              'function applyTrainingCandidateCoverage(',
+              'runSelectionPhase(true);',
+              'runSelectionPhase(false);',
+              'compatible units were still selected and can be sent'
+          ]:
+              if token not in source:
+                  raise SystemExit(f'PR #155 regression detected: {token}')
+
+          if '// @version      1.0.36' not in source:
+              raise SystemExit('Expected current userscript version 1.0.36')
+          source = source.replace('// @version      1.0.36', '// @version      1.0.37', 1)
+          source_path.write_text(source, encoding='utf-8')
+
+          for path in Path('scripts').glob('*.mjs'):
+              text = path.read_text(encoding='utf-8')
+              text = text.replace("requireText('// @version      1.0.36'", "requireText('// @version      1.0.37'")
+              if path.name == 'check-open-issues-batch.mjs':
+                  text = text.replace("const PERSONNEL_VERSION = '1.3.3';", "const PERSONNEL_VERSION = '1.3.4';")
+                  text = text.replace("'Personnel v1.3.3'", "'Personnel v1.3.4'")
+              path.write_text(text, encoding='utf-8')
+
+          readme = Path('README.md')
+          text = readme.read_text(encoding='utf-8')
+          text = text.replace('**Current version:** `1.0.36`', '**Current version:** `1.0.37`', 1)
+          readme.write_text(text, encoding='utf-8')
+
+          src_readme = Path('src/README.md')
+          text = src_readme.read_text(encoding='utf-8')
+          text = text.replace('| Command Nexus version | `1.0.36` |', '| Command Nexus version | `1.0.37` |', 1)
+          src_readme.write_text(text, encoding='utf-8')
+
+          changelog = Path('CHANGELOG.md')
+          text = changelog.read_text(encoding='utf-8')
+          marker = '## [1.0.36] - 2026-07-26'
+          if marker not in text:
+              raise SystemExit('Unable to find v1.0.36 changelog marker')
+          entry = '''## [1.0.37] - 2026-07-26
+
+### Restored
+
+- Reapplied the Personnel Register integration from PR #156 on top of the PR #155 trained-personnel coverage optimiser.
+- Restored Personnel Assignment `1.3.4`, the readable **Build All Register** control, JSON register export/import, saved-register status, and accurate retained-register reporting.
+
+### Preserved
+
+- Retained Mission Finder `V10.6.101`, PSU/IRV trained-personnel coverage optimisation, multi-trained personnel allocation, compatible untrained fallback, and non-blocking training-shortfall reporting from PR #155.
+
+### Validation
+
+- Added release assertions ensuring both PR #156 Personnel Register controls and PR #155 trained-coverage contracts are present together.
+
+'''
+          changelog.write_text(text.replace(marker, entry + marker, 1), encoding='utf-8')
+          PY
+
+      - name: Validate combined source
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          python3 scripts/check_repository.py
+          for check in scripts/check-*.mjs; do
+            echo "Running ${check}"
+            node "${check}"
+          done
+
+      - name: Publish v1.0.37 source and tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm .github/workflows/reapply-pr156-preserve-pr155.yml
+          git config user.name MartyBlyth
+          git config user.email 32400596+Martyblyth@users.noreply.github.com
+          git add src/missionchief-command-nexus.user.js README.md src/README.md CHANGELOG.md scripts
+          git commit -m 'Restore Personnel Register controls without regressing trained coverage'
+          RELEASE_SHA="$(git rev-parse HEAD)"
+          git push origin HEAD:main
+          git tag -a v1.0.37 "${RELEASE_SHA}" -m 'MissionChief Command Nexus 1.0.37'
+          git push origin refs/tags/v1.0.37
