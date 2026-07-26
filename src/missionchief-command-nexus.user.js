@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.48
+// @version      1.0.49
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -38,7 +38,7 @@
 
     const UNIT_VERSION = '3.3.8';
     const STATION_VERSION = '1.3.3';
-    const PERSONNEL_VERSION = '1.3.5';
+    const PERSONNEL_VERSION = '1.3.6';
     const PERSONNEL_TRAINING_CODE = 'critical_care';
     const PERSONNEL_TRAINING_LABEL = 'Critical Care';
     const PERSONNEL_TARGET_VEHICLE_TYPE_ID = '5';
@@ -4749,8 +4749,25 @@
                         continue;
                     }
 
-                    const mergedPersonnel = new Map();
+                    const stationPersonnelEvidence =
+                        parseStationPersonnelAssignmentEvidence(
+                            stationPage.doc,
+                            vehicles
+                        );
+                    const mergedPersonnel = new Map(
+                        stationPersonnelEvidence.map(person => [
+                            String(person.personnelId),
+                            person
+                        ])
+                    );
                     const verifiedVehicles = [];
+
+                    if (stationPersonnelEvidence.length) {
+                        personnelLog(
+                            `Station personnel table supplied ${stationPersonnelEvidence.length} exact assigned-person fallback record(s).`,
+                            'debug'
+                        );
+                    }
 
                     for (let vehicleIndex = 0; vehicleIndex < vehicles.length; vehicleIndex++) {
                         if (PERSONNEL_STATE.stopped) break;
@@ -4826,7 +4843,7 @@
                         station,
                         vehicles: verifiedVehicles,
                         personnel: Array.from(mergedPersonnel.values()),
-                        source: 'personnel-register-exact-all-vehicle-scan-v1',
+                        source: 'personnel-register-exact-all-vehicle-scan-v2',
                         pruneMissingVehicles: false
                     });
 
@@ -4862,6 +4879,7 @@
                 `Registry retained: ${registryRetained}`,
                 '',
                 'Only personnel already assigned to each exact vehicle were recorded.',
+                'Vehicle pages remain authoritative; uniquely matched station-table assignments fill current MissionChief control-markup gaps.',
                 'No personnel assignments were changed.'
             ].join('\n');
 
@@ -7455,14 +7473,129 @@
             '[]';
         try {
             const parsed = JSON.parse(raw);
-            return Array.isArray(parsed) ? parsed.map(String) : [];
+            return Array.isArray(parsed)
+                ? Array.from(new Set(parsed.map(String).filter(Boolean)))
+                : [];
         } catch (_error) {
-            return String(raw)
-                .replace(/[\[\]"']/g, '')
-                .split(',')
-                .map(value => value.trim())
-                .filter(Boolean);
+            const rawText = String(raw || '');
+            const quotedCodes = Array.from(
+                rawText.matchAll(/["']([^"']+)["']/g),
+                match => String(match[1] || '').trim()
+            ).filter(Boolean);
+
+            if (quotedCodes.length) {
+                return Array.from(new Set(quotedCodes));
+            }
+
+            return Array.from(new Set(
+                rawText
+                    .replace(/[\[\]]/g, ' ')
+                    .split(/[\s,]+/)
+                    .map(value => value.replace(/^["']|["']$/g, '').trim())
+                    .filter(Boolean)
+            ));
         }
+    }
+
+    function getStationPersonnelRowId(row) {
+        if (!row) return '';
+
+        const candidates = [
+            row.getAttribute?.('personal_id'),
+            row.getAttribute?.('data-personal-id'),
+            row.id?.match(/personal_(\d+)/)?.[1],
+            row.querySelector?.('input.personal-delete-checkbox[value]')?.value,
+            row.querySelector?.('input.personal-delete-checkbox[value]')?.getAttribute?.('value'),
+            row.querySelector?.('a[href^="/personals/"]')?.getAttribute?.('href')?.match(/\/personals\/(\d+)/)?.[1]
+        ];
+
+        return String(
+            candidates.find(value => /^\d+$/.test(String(value || '').trim())) ||
+            ''
+        );
+    }
+
+    function getUniquePersonnelVehicleNameIndex(vehicles) {
+        const index = new Map();
+
+        (Array.isArray(vehicles) ? vehicles : []).forEach(vehicle => {
+            const key = normalizePersonnelVehicleName(vehicle?.name || '');
+            if (!key || !vehicle?.vehicleId) return;
+
+            if (index.has(key)) {
+                index.set(key, null);
+                return;
+            }
+
+            index.set(key, vehicle);
+        });
+
+        return index;
+    }
+
+    function parseStationPersonnelAssignmentEvidence(doc, vehicles) {
+        if (!doc?.querySelectorAll) return [];
+
+        const vehicleNameIndex =
+            getUniquePersonnelVehicleNameIndex(vehicles);
+
+        return Array.from(
+            doc.querySelectorAll('#personal_table tbody tr')
+        ).map(row => {
+            const cells = Array.from(row.children || []);
+            const hasDeleteCheckbox = !!row.querySelector?.(
+                'input.personal-delete-checkbox'
+            );
+            const nameIndex = hasDeleteCheckbox ? 1 : 0;
+            const trainingIndex = nameIndex + 1;
+            const assignedVehicleIndex = nameIndex + 2;
+            const statusIndex = nameIndex + 3;
+            const assignedVehicleCell = cells[assignedVehicleIndex] || null;
+            const assignedVehicleLink = assignedVehicleCell?.querySelector?.(
+                'a[href^="/vehicles/"]'
+            ) || null;
+            const linkedVehicleId = getVehicleIdFromHref(
+                assignedVehicleLink?.getAttribute?.('href') || ''
+            );
+            const assignedVehicleName = cleanText(
+                assignedVehicleLink?.textContent ||
+                assignedVehicleCell?.textContent ||
+                ''
+            );
+            const matchedVehicle = linkedVehicleId
+                ? null
+                : vehicleNameIndex.get(
+                    normalizePersonnelVehicleName(assignedVehicleName)
+                );
+            const assignedVehicleId = String(
+                linkedVehicleId ||
+                matchedVehicle?.vehicleId ||
+                ''
+            );
+            const statusText = cleanText(
+                cells[statusIndex]?.textContent || ''
+            );
+
+            return {
+                personnelId: getStationPersonnelRowId(row),
+                name: cleanText(cells[nameIndex]?.textContent || ''),
+                trainingText: cleanText(cells[trainingIndex]?.textContent || ''),
+                trainingCodes: parseTrainingCodes(row),
+                assignedHere: false,
+                assignedVehicleId,
+                assignedVehicleName,
+                available: /\bavailable\b/i.test(statusText),
+                assignedElsewhere: false,
+                displayedVehicleId: assignedVehicleId,
+                assignHref: '',
+                stationAssignmentEvidence: true
+            };
+        }).filter(person => {
+            return !!(
+                person.personnelId &&
+                person.assignedVehicleId
+            );
+        });
     }
 
 
@@ -9083,7 +9216,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.112
+         * MODULE 2: MISSION FINDER V10.6.113
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -20699,7 +20832,7 @@ let sessionRuntimeTicker = null;
     }
 
     // V10.6.40 SAR personnel conversion registry.
-    // V10.6.110: Search Advisor requirements use verified assigned training
+    // V10.6.113: Search Advisor requirements use verified assigned training
     // profiles on any exact registered vehicle. Search Technicians remain
     // on the dedicated displayed-name-prefix SARTEC selector.
     // V10.6.66 restores the established two-Inspector-per-IRV rule and live-verifies Inspector bindings when the shared registry is missing or stale.

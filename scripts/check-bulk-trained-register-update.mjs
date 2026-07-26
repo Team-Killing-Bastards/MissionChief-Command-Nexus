@@ -14,11 +14,11 @@ function requireText(token, label) {
 }
 
 for (const [token, label] of [
-  ['// @version      1.0.48', 'v1.0.48 metadata'],
-  [' * MODULE 2: MISSION FINDER V10.6.112', 'Mission Finder V10.6.112'],
-  ["const PERSONNEL_VERSION = '1.3.5';", 'Personnel v1.3.5'],
+  ['// @version      1.0.49', 'v1.0.49 metadata'],
+  [' * MODULE 2: MISSION FINDER V10.6.113', 'Mission Finder V10.6.113'],
+  ["const PERSONNEL_VERSION = '1.3.6';", 'Personnel v1.3.5'],
   ['const DEFAULT_MISSION_READY_DELAY = 1000;', '1000 ms default retained'],
-  ['personnel-register-exact-all-vehicle-scan-v1', 'exact all-vehicle register source'],
+  ['personnel-register-exact-all-vehicle-scan-v2', 'exact all-vehicle register source'],
   ['assignedTrainingProfiles,', 'per-person assigned profiles'],
   ['trainingProfilesComplete: exactVehicleProfileScan', 'complete profile marker'],
   ['MF_EXACT_REGISTER_TRAINING_SOURCE_PREFIX', 'Mission Finder exact register trust'],

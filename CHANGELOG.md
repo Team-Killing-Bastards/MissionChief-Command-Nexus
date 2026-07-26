@@ -32,6 +32,26 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
 
+## [1.0.49] - 2026-07-26
+
+### Fixed
+
+- Personnel training parsing now supports MissionChief's current space-separated quoted `data-filterable-by` format, so `drone` and `search_and_rescue` are stored as separate qualifications instead of one invalid combined value.
+- Build All Register now supplements verified vehicle assignment pages with the station personnel table's persistent **Assigned To** value. This covers Police Search Advisors who are assigned to a Police Drone Vehicle but currently display as **Available**.
+- Station-table vehicle-name fallback is accepted only when it resolves to one unique exact vehicle ID; direct `/vehicles/{id}` links remain authoritative and duplicate names fail closed.
+- Exact assignment-page evidence still overrides station fallback evidence when both are available.
+
+### Safety
+
+- Search Advisor remains a trained-personnel requirement for `search_and_rescue` and may use any selectable exact registered vehicle carrying the assigned officer.
+- Unverified assignments, missing personnel IDs and ambiguous duplicate vehicle names cannot satisfy the requirement.
+- The change does not move personnel or broaden automatic Personnel Assignment target vehicles.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.112` to `V10.6.113`.
+- Personnel Assignment increased from `1.3.5` to `1.3.6`.
+
 ## [1.0.48] - 2026-07-26
 
 ### Changed
