@@ -1,0 +1,1 @@
+Remove every text-based RRU fallback and require exact Fire vehicle type 107 for Road Rail Unit dispatch matching.
