@@ -1,0 +1,127 @@
+name: Inspect Auto Mode prisoner cell flow
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: write
+
+jobs:
+  inspect:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'agent/auto-prisoner-cell-before-unit-finder'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out working branch
+        uses: actions/checkout@v6
+        with:
+          ref: agent/auto-prisoner-cell-before-unit-finder
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Capture current Auto Mode and prisoner handlers
+        shell: bash
+        run: |
+          python3 <<'PY'
+          import re
+          from pathlib import Path
+
+          source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8')
+
+          def extract_function(name):
+              pattern = re.compile(rf'^    (?:async )?function {re.escape(name)}\s*\(', re.MULTILINE)
+              match = pattern.search(source)
+              if not match:
+                  return f'===== {name}: NOT FOUND =====\n'
+              brace = source.find('{', match.end())
+              depth = 0
+              quote = None
+              escaped = False
+              line_comment = False
+              block_comment = False
+              i = brace
+              while i < len(source):
+                  ch = source[i]
+                  nxt = source[i + 1] if i + 1 < len(source) else ''
+                  if line_comment:
+                      if ch == '\n': line_comment = False
+                  elif block_comment:
+                      if ch == '*' and nxt == '/':
+                          block_comment = False
+                          i += 1
+                  elif quote:
+                      if escaped:
+                          escaped = False
+                      elif ch == '\\':
+                          escaped = True
+                      elif ch == quote:
+                          quote = None
+                  else:
+                      if ch == '/' and nxt == '/':
+                          line_comment = True
+                          i += 1
+                      elif ch == '/' and nxt == '*':
+                          block_comment = True
+                          i += 1
+                      elif ch in ('"', "'", '`'):
+                          quote = ch
+                      elif ch == '{':
+                          depth += 1
+                      elif ch == '}':
+                          depth -= 1
+                          if depth == 0:
+                              start_line = source.count('\n', 0, match.start()) + 1
+                              return f'===== {name} @ {start_line} =====\n{source[match.start():i+1]}\n'
+                  i += 1
+              return f'===== {name}: UNTERMINATED =====\n'
+
+          names = [
+              'runAutoModeLoop',
+              'handleTransportRequestsAfterDispatch',
+              'isTransportScreenBlockingQueueRestart',
+              'mfIsPoliceOrPrisonerTransportActive',
+              'findTransportSendButton',
+              'isElementVisible',
+              'realClickForQueueRestart',
+              'getCurrentMissionIdForQueueRestart',
+          ]
+
+          discovered = []
+          for match in re.finditer(r'^    (?:async )?function ([A-Za-z0-9_$]+)\s*\(', source, re.MULTILINE):
+              name = match.group(1)
+              block = extract_function(name)
+              if re.search(r'prison|prisoner|gefangene|gefangener|data-prison-id', block, re.I):
+                  discovered.append(name)
+
+          output = [
+              'Discovered prisoner-related functions: ' + ', '.join(discovered),
+              '',
+          ]
+          for name in dict.fromkeys(names + discovered):
+              output.append(extract_function(name))
+
+          Path('.diagnostics/auto-prisoner-context.txt').write_text('\n'.join(output), encoding='utf-8')
+          PY
+
+      - name: Commit captured context
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name MartyBlyth
+          git config user.email 32400596+Martyblyth@users.noreply.github.com
+          git add .diagnostics/auto-prisoner-context.txt
+          if git diff --cached --quiet; then
+            echo 'Context already current.'
+            exit 0
+          fi
+          git commit -m 'Capture Auto Mode prisoner cell context'
+          git push origin HEAD:agent/auto-prisoner-cell-before-unit-finder
