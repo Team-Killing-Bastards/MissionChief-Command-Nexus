@@ -1,3 +1,4 @@
 Inspect the Fire Road Rail Unit and Coastguard Rope Rescue Unit RRU collision on current main.
 Capture the exact dispatch matcher functions and text-label fallback path.
 Capture candidate generation and substring matching behaviour.
+Apply the exact type-107 Fire matcher and exclude type-59 Coastguard CRRU.
