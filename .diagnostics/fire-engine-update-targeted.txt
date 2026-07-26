@@ -1,16 +1,9 @@
-=== 'Starts from the current mission': 0 hit(s) ===
+=== Starts\s*from\s*the\s*current: 0 ===
 
-=== 'Dispatch after queue': 0 hit(s) ===
+=== Dispatch\s*after\s*queue: 0 ===
 
-=== "includes('0')": 0 hit(s) ===
+=== keeps\s*repeating: 0 ===
 
-=== "includes(\n                '0'": 0 hit(s) ===
+=== Unit\s*Finder\s*[-→>]+\s*Mission\s*Update: 0 ===
 
-=== 'vehicle_type_id="0"': 0 hit(s) ===
-
-=== 'vehicle type 0': 0 hit(s) ===
-
-=== 'Fire Engine type': 0 hit(s) ===
-
-=== 'Fire Engine vehicle type': 0 hit(s) ===
-
+=== Live\s*current-mission\s*source\s*found: 0 ===
