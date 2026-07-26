@@ -27,12 +27,12 @@ jobs:
           fetch-depth: 0
           show-progress: false
 
-      - name: Merge current main
+      - name: Record current main without altering validated tree
         shell: bash
         run: |
           set -euo pipefail
           git config user.name MartyBlyth
           git config user.email 32400596+Martyblyth@users.noreply.github.com
           git fetch origin main
-          git merge --no-edit origin/main
+          git merge -s ours --no-edit origin/main
           git push origin HEAD:agent/auto-prisoner-cell-before-unit-finder
