@@ -32,9 +32,10 @@ jobs:
           fetch-depth: 0
           show-progress: false
 
-      - name: Print Road Rail and RRU source contexts
+      - name: Capture Road Rail and RRU source contexts
         shell: bash
         run: |
+          set -euo pipefail
           python3 <<'PY'
           import re
           from pathlib import Path
@@ -52,14 +53,35 @@ jobs:
               if any(pattern.search(line) for pattern in patterns):
                   matches.append(index)
 
-          print(f'Found {len(matches)} matching line(s).')
+          output = [f'Found {len(matches)} matching line(s).']
+          seen_ranges = set()
           for index in matches:
-              start = max(1, index - 8)
-              end = min(len(lines), index + 8)
-              print(f'\n===== {start}-{end} (match {index}) =====')
+              start = max(1, index - 12)
+              end = min(len(lines), index + 12)
+              key = (start, end)
+              if key in seen_ranges:
+                  continue
+              seen_ranges.add(key)
+              output.append(f'\n===== {start}-{end} (match {index}) =====')
               for number in range(start, end + 1):
-                  print(f'{number}: {lines[number - 1]}')
+                  output.append(f'{number}: {lines[number - 1]}')
 
           if not matches:
               raise SystemExit('No Road Rail or RRU source context found.')
+
+          Path('.diagnostics/road-rail-context.txt').write_text('\n'.join(output) + '\n', encoding='utf-8')
           PY
+
+      - name: Commit captured context
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name MartyBlyth
+          git config user.email 32400596+Martyblyth@users.noreply.github.com
+          git add .diagnostics/road-rail-context.txt
+          if git diff --cached --quiet; then
+            echo 'Context already captured.'
+            exit 0
+          fi
+          git commit -m 'Capture Road Rail Unit mapping context'
+          git push origin HEAD:agent/map-road-rail-unit-to-rru
