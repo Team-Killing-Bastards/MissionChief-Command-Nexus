@@ -1,1 +1,2 @@
 Read-only verification of GitHub release assets, Greasy Fork source parity and Discord receipt.
+Split verification stages enabled.
