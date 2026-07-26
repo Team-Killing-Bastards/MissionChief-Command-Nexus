@@ -10,6 +10,7 @@ on:
 permissions:
   contents: read
   pull-requests: write
+  issues: write
 
 jobs:
   receipt:
@@ -28,6 +29,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           SOURCE_PR: '155'
+          TRACKING_ISSUE: '43'
           RELEASE_TAG: v1.0.36
           RELEASE_SHA: ec1b8785263c45f5b4bf1f72a06debaba79362ac
         shell: bash
@@ -90,3 +92,7 @@ jobs:
           gh pr comment "${SOURCE_PR}" \
             --repo "${GITHUB_REPOSITORY}" \
             --body-file /tmp/v1036-receipt.md
+          gh issue comment "${TRACKING_ISSUE}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --body-file /tmp/v1036-receipt.md
+          cat /tmp/v1036-receipt.md
