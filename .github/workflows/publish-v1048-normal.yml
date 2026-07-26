@@ -1,0 +1,64 @@
+name: Publish v1.0.48 through normal release workflow
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  tag-clean-source:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'diagnostic/publish-v1048'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Create clean v1.0.48 tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          RELEASE_TAG='v1.0.48'
+          RELEASE_SHA='51432f01ef8c58e4b17eb1d2d7e26f6cdc7fd8fe'
+          git fetch origin main --tags --force
+          git cat-file -e "${RELEASE_SHA}^{commit}"
+          test "$(git show "${RELEASE_SHA}:src/missionchief-command-nexus.user.js" | sed -n 's#^//[[:space:]]*@version[[:space:]]*##p' | head -n 1 | xargs)" = '1.0.48'
+          if git show-ref --tags --verify --quiet "refs/tags/${RELEASE_TAG}"; then
+            EXISTING_SHA="$(git rev-list -n 1 "${RELEASE_TAG}")"
+            if [ "${EXISTING_SHA}" = "${RELEASE_SHA}" ]; then
+              echo "${RELEASE_TAG} already targets the clean release commit."
+              exit 0
+            fi
+            echo "Repairing ${RELEASE_TAG}: ${EXISTING_SHA} -> ${RELEASE_SHA}"
+            git push origin ":refs/tags/${RELEASE_TAG}"
+            git tag -d "${RELEASE_TAG}" || true
+          fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git tag -a "${RELEASE_TAG}" "${RELEASE_SHA}" -m 'MissionChief Command Nexus 1.0.48'
+          git push origin "refs/tags/${RELEASE_TAG}"
+
+  publish:
+    needs: tag-clean-source
+    if: needs.tag-clean-source.result == 'success'
+    uses: ./.github/workflows/release.yml
+    with:
+      operation: publish-release
+      release_tag: v1.0.48
+      release_notes: Standard patient and Ambulance demand now compares exact type-5 road Ambulances with exact type-9 HEMS/Air Ambulances by MissionChief ETA before distance, counts either when selected, blocks generic fallback, and preserves strict HEMS, transfer and Critical Care routes.
+    secrets:
+      DISCORD_RELEASE_WEBHOOK: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
