@@ -37,6 +37,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          python3 .diagnostics/repair-fire-engine-builder.py
+          rm -f .diagnostics/repair-fire-engine-builder.py
           python3 .diagnostics/apply-fire-engine-update-fix.py
           rm -f .diagnostics/apply-fire-engine-update-fix.py
 
