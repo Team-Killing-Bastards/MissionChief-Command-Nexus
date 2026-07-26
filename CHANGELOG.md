@@ -32,6 +32,25 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
 
+## [1.0.48] - 2026-07-26
+
+### Changed
+
+- Standard patient and Ambulance demand now compares exact type-5 road Ambulances with exact type-9 HEMS/Air Ambulances in one candidate pool.
+- MissionChief displayed arrival time is the primary ordering metric, so a geographically farther HEMS is selected first whenever its ETA is quicker; distance remains only the equal-ETA tie-breaker.
+- Already-selected HEMS now count toward ordinary Ambulance demand in Unit Finder, Mission Update and Auto Mode.
+
+### Safety
+
+- Explicit HEMS/Air Ambulance requirements remain strict type 9.
+- Critical Care Transfer Ambulance requirements remain strict type 98.
+- Generic Critical Care continues to compare HEMS with only verified Critical Care-trained road Ambulances.
+- Standard Ambulance demand cannot fall through to generic text or quick-select buttons.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.111` to `V10.6.112`.
+
 ## [1.0.47] - 2026-07-26
 
 ### Fixed

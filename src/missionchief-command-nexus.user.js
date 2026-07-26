@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.47
+// @version      1.0.48
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -9083,7 +9083,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.111
+         * MODULE 2: MISSION FINDER V10.6.112
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -12005,6 +12005,21 @@ function isRoadRailUnitVehicleCheckbox(input) {
         });
     }
 
+
+    function isStandardAmbulanceEtaVehicleCheckbox(input) {
+        if (!input) return false;
+
+        // Ordinary patient/Ambulance demand may use either an exact road
+        // Ambulance (type 5) or HEMS/Air Ambulance (type 9). The shared
+        // arrival sorter then compares MissionChief ETA before distance.
+        const typeIdentifiers = getVehicleTypeIdentifiers(input);
+        return (
+            typeIdentifiers.includes('5') ||
+            typeIdentifiers.includes('9')
+        );
+    }
+
+
     function isCriticalCareTransferAmbulanceRequirement(originalName, mappedName) {
         const raw = normaliseVehicleText(originalName);
         const mapped = normaliseVehicleText(mappedName);
@@ -13151,6 +13166,7 @@ function isRoadRailUnitVehicleCheckbox(input) {
 
         const candidates = getVehicleMatchCandidates(originalName, mappedName);
         const strictExactOnly = isAmbulanceTransportRequest(originalName, mappedName);
+        const standardAmbulanceEtaPreferred = strictExactOnly;
         const sartecPrefixOnly = isSartecRequirement(
             originalName,
             mappedName
@@ -13270,6 +13286,32 @@ function isRoadRailUnitVehicleCheckbox(input) {
                 mappedName
             );
 
+
+        if (standardAmbulanceEtaPreferred) {
+            const orderedAmbulanceMatches =
+                sortVehicleCheckboxesByBestArrival(
+                    getVehicleCheckboxSnapshot().filter(input => {
+                        if (input.disabled) return false;
+                        if (!includeChecked && input.checked) return false;
+                        return isStandardAmbulanceEtaVehicleCheckbox(input);
+                    })
+                );
+
+            if (mfDebugEnabled) {
+                const roadCount = orderedAmbulanceMatches.filter(input =>
+                    getVehicleTypeIdentifiers(input).includes('5')
+                ).length;
+                const hemsCount = orderedAmbulanceMatches.filter(input =>
+                    getVehicleTypeIdentifiers(input).includes('9')
+                ).length;
+                debugLog(
+                    'AMBULANCE ETA PRIORITY',
+                    `${originalName} -> ${mappedName} | road=${roadCount} | HEMS=${hemsCount} | first=${orderedAmbulanceMatches[0] ? getVehicleDebugName(orderedAmbulanceMatches[0]) : 'none'}`
+                );
+            }
+
+            return orderedAmbulanceMatches;
+        }
 
         if (roadRailOnly) {
             return sortVehicleCheckboxesByBestArrival(
@@ -13758,6 +13800,7 @@ function isRoadRailUnitVehicleCheckbox(input) {
 
         const candidates = getVehicleMatchCandidates(originalName, mappedName);
         const strictExactOnly = isAmbulanceTransportRequest(originalName, mappedName);
+        const standardAmbulanceEtaPreferred = strictExactOnly;
         const sartecPrefixOnly = isSartecRequirement(originalName, mappedName);
         const rrvTypeOnly = isRrvRequirement(originalName, mappedName);
         const rivTypeOnly = isRivRequirement(originalName, mappedName);
@@ -13841,7 +13884,9 @@ function isRoadRailUnitVehicleCheckbox(input) {
 
             let matches = false;
 
-            if (roadRailOnly) {
+            if (standardAmbulanceEtaPreferred) {
+                matches = isStandardAmbulanceEtaVehicleCheckbox(input);
+            } else if (roadRailOnly) {
                 matches = isRoadRailUnitVehicleCheckbox(input);
             } else if (flatbedRecoveryOnly) {
                 matches = isFlatbedRecoveryVehicleCheckbox(input);
@@ -13943,6 +13988,10 @@ function isRoadRailUnitVehicleCheckbox(input) {
 
 
         if (
+            isAmbulanceTransportRequest(
+                requestedName,
+                mappedName
+            ) ||
             isCrvRequirement(
                 requestedName,
                 mappedName
@@ -25589,6 +25638,7 @@ let sessionRuntimeTicker = null;
         }
 
         const strictVehicleTypeOnly = !!(
+            isAmbulanceTransportRequest(originalName, mappedName) ||
             isFireEngineRequirement(originalName, mappedName) ||
             isFlatbedRecoveryVehicleRequirement(originalName, mappedName)
         );
