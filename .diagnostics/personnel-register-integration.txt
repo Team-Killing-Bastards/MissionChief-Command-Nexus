@@ -1,1 +1,0 @@
-This temporary file triggers the branch integration workflow and will be removed before merge.
