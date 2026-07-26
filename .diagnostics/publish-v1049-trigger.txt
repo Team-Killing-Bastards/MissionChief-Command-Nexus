@@ -1,0 +1,1 @@
+Publish and verify v1.0.49 from clean product merge commit 587db00e2e42bc014f58b57e25bdee679f4a80e3.
