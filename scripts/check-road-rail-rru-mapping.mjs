@@ -9,6 +9,7 @@ function fail(message) {
   process.exit(1);
 }
 
+// Road Rail dispatch must not use names, callsigns or abbreviation fallback.
 for (const [token, label] of [
   ['// @version      1.0.40', 'v1.0.40 metadata'],
   [' * MODULE 2: MISSION FINDER V10.6.104', 'Mission Finder V10.6.104 header'],
