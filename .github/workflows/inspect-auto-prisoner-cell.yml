@@ -50,22 +50,23 @@ jobs:
         run: |
           set +e
           mkdir -p .diagnostics
-          {
+          run_validation() {
             set -x
-            node --check src/missionchief-command-nexus.user.js
-            node scripts/validate-userscript.mjs
-            python3 scripts/check_repository.py
+            node --check src/missionchief-command-nexus.user.js || return $?
+            node scripts/validate-userscript.mjs || return $?
+            python3 scripts/check_repository.py || return $?
             for check in scripts/check-*.mjs; do
               echo "Running ${check}"
-              node "${check}" || exit $?
+              node "${check}" || return $?
             done
-            test ! -e src/personnel-register-tools.user.js
-            grep -Fq '// @version      1.0.41' src/missionchief-command-nexus.user.js
-            grep -Fq ' * MODULE 2: MISSION FINDER V10.6.105' src/missionchief-command-nexus.user.js
-            grep -Fq 'await handleAutoPrisonerCellBeforeUnitFinder();' src/missionchief-command-nexus.user.js
-            grep -Fq 'a.btn.btn-success[data-prison-id][href*="/gefangener/"]' src/missionchief-command-nexus.user.js
-            git diff --check
-          } > .diagnostics/auto-prisoner-validation.log 2>&1
+            test ! -e src/personnel-register-tools.user.js || return $?
+            grep -Fq '// @version      1.0.41' src/missionchief-command-nexus.user.js || return $?
+            grep -Fq ' * MODULE 2: MISSION FINDER V10.6.105' src/missionchief-command-nexus.user.js || return $?
+            grep -Fq 'await handleAutoPrisonerCellBeforeUnitFinder();' src/missionchief-command-nexus.user.js || return $?
+            grep -Fq 'a.btn.btn-success[data-prison-id][href*="/gefangener/"]' src/missionchief-command-nexus.user.js || return $?
+            git diff --check || return $?
+          }
+          run_validation > .diagnostics/auto-prisoner-validation.log 2>&1
           status=$?
           cat .diagnostics/auto-prisoner-validation.log
           if [[ ${status} -ne 0 ]]; then
