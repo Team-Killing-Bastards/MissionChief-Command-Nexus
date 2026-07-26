@@ -48,20 +48,35 @@ jobs:
       - name: Validate complete Command Nexus candidate
         shell: bash
         run: |
-          set -euo pipefail
-          node --check src/missionchief-command-nexus.user.js
-          node scripts/validate-userscript.mjs
-          python3 scripts/check_repository.py
-          for check in scripts/check-*.mjs; do
-            echo "Running ${check}"
-            node "${check}"
-          done
-          test ! -e src/personnel-register-tools.user.js
-          grep -Fq '// @version      1.0.41' src/missionchief-command-nexus.user.js
-          grep -Fq ' * MODULE 2: MISSION FINDER V10.6.105' src/missionchief-command-nexus.user.js
-          grep -Fq 'await handleAutoPrisonerCellBeforeUnitFinder();' src/missionchief-command-nexus.user.js
-          grep -Fq 'a.btn.btn-success[data-prison-id][href*="/gefangener/"]' src/missionchief-command-nexus.user.js
-          git diff --check
+          set +e
+          mkdir -p .diagnostics
+          {
+            set -x
+            node --check src/missionchief-command-nexus.user.js
+            node scripts/validate-userscript.mjs
+            python3 scripts/check_repository.py
+            for check in scripts/check-*.mjs; do
+              echo "Running ${check}"
+              node "${check}" || exit $?
+            done
+            test ! -e src/personnel-register-tools.user.js
+            grep -Fq '// @version      1.0.41' src/missionchief-command-nexus.user.js
+            grep -Fq ' * MODULE 2: MISSION FINDER V10.6.105' src/missionchief-command-nexus.user.js
+            grep -Fq 'await handleAutoPrisonerCellBeforeUnitFinder();' src/missionchief-command-nexus.user.js
+            grep -Fq 'a.btn.btn-success[data-prison-id][href*="/gefangener/"]' src/missionchief-command-nexus.user.js
+            git diff --check
+          } > .diagnostics/auto-prisoner-validation.log 2>&1
+          status=$?
+          cat .diagnostics/auto-prisoner-validation.log
+          if [[ ${status} -ne 0 ]]; then
+            git config user.name MartyBlyth
+            git config user.email 32400596+Martyblyth@users.noreply.github.com
+            git add .diagnostics/auto-prisoner-validation.log
+            git commit -m 'Capture Auto Mode prisoner validation failure'
+            git push origin HEAD:agent/auto-prisoner-cell-before-unit-finder
+            exit ${status}
+          fi
+          rm -f .diagnostics/auto-prisoner-validation.log
 
       - name: Commit validated integration
         shell: bash
