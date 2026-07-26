@@ -14,8 +14,8 @@ function fail(message) {
 }
 
 for (const [token, label] of [
-  ['// @version      1.0.46', 'v1.0.46 metadata'],
-  [' * MODULE 2: MISSION FINDER V10.6.110', 'Mission Finder V10.6.110 header'],
+  ['// @version      1.0.47', 'v1.0.47 metadata'],
+  [' * MODULE 2: MISSION FINDER V10.6.111', 'Mission Finder V10.6.111 header'],
   ['the prisoners should be placed in a cell', 'normalised prisoner alert contract'],
   ['a.btn.btn-success[data-prison-id][href*="/gefangener/"]', 'green prison destination selector'],
   ['a.btn.btn-danger[data-method="post"][href*="/gefangene/entlassen"]', 'exact release fallback selector'],
@@ -30,7 +30,10 @@ for (const [token, label] of [
   ['span.lightbox-close[title="Close"]', 'release-result close selector'],
   ['function getTopmostAutoPrisonerReleaseDismissContext(', 'topmost release-result close chooser'],
   ['function closeAutoPrisonerReleaseDismissAfterClick(', 'release-result dismiss handler'],
-  ['await closeAutoPrisonerReleaseDismissAfterClick();', 'release dismiss invocation'],
+  ['function getAutoPrisonerReleaseOwnerContainer(', 'release iframe to parent modal owner'],
+  ['function resolveAutoPrisonerReleaseDismissContext(', 'live Vue modal reacquisition'],
+  ["getAttribute('data-modal')", 'stable Vue modal identity'],
+  ['await closeAutoPrisonerReleaseDismissAfterClick(context);', 'release dismiss invocation with owner context'],
 ]) {
   if (!source.includes(token)) fail(`Missing Auto prisoner contract: ${label}`);
 }
@@ -102,7 +105,7 @@ if (!source.includes("prisonerReleaseResult === 'stuck'")) {
 }
 
 const releaseClick = finalBody.indexOf('realClickForQueueRestart(releaseLink);');
-const dismissCall = finalBody.indexOf('await closeAutoPrisonerReleaseDismissAfterClick();');
+const dismissCall = finalBody.indexOf('await closeAutoPrisonerReleaseDismissAfterClick(context);');
 const releaseReturn = finalBody.indexOf("return 'clicked';", dismissCall);
 
 if (!(releaseClick >= 0 && dismissCall > releaseClick && releaseReturn > dismissCall)) {
@@ -115,9 +118,11 @@ const dismissBody = source.slice(dismissStart, dismissEnd);
 
 for (const required of [
   'getActivePrisonerCellSelectionContext()',
-  'getTopmostAutoPrisonerReleaseDismissContext()',
+  'getTopmostAutoPrisonerReleaseDismissContext(releaseContext)',
   'realClickForQueueRestart(',
-  'dismissContext.closeButton',
+  'resolveAutoPrisonerReleaseDismissContext(',
+  'current.closeButton',
+  'current.overlay',
   'isAutoPrisonerReleaseDismissContextVisible(',
   "return 'closed';",
 ]) {
@@ -127,12 +132,42 @@ for (const required of [
 }
 
 const prisonerAlertClearCheck = dismissBody.indexOf('getActivePrisonerCellSelectionContext()');
-const resultCloseLookup = dismissBody.indexOf('getTopmostAutoPrisonerReleaseDismissContext()');
-const resultCloseClick = dismissBody.indexOf('dismissContext.closeButton');
+const resultCloseLookup = dismissBody.indexOf('resolveAutoPrisonerReleaseDismissContext(dismissContext)');
+const resultCloseClick = dismissBody.indexOf('realClickForQueueRestart(current.closeButton)');
 const resultCloseVerify = dismissBody.indexOf('isAutoPrisonerReleaseDismissContextVisible(');
 
 if (!(prisonerAlertClearCheck >= 0 && resultCloseLookup > prisonerAlertClearCheck && resultCloseClick > resultCloseLookup && resultCloseVerify > resultCloseClick)) {
   fail('Release result must wait for the prisoner alert to clear, choose the topmost close span, click it and verify disappearance in that order');
 }
 
-console.log('Auto Mode prefers active cells, finishes normal actions when none are available, clicks only the exact current-mission Release Prisoners fallback, closes its direct result lightbox and restarts the mission cycle before dispatch.');
+const visibleContextsStart = source.indexOf('function getVisibleAutoPrisonerReleaseDismissContexts(');
+const visibleContextsEnd = source.indexOf('function getTopmostAutoPrisonerReleaseDismissContext(', visibleContextsStart);
+const visibleContextsBody = source.slice(visibleContextsStart, visibleContextsEnd);
+for (const token of [
+  '#modals-container .vm--container',
+  'getAutoPrisonerReleaseOwnerContainer(',
+  'getAutoPrisonerReleaseContainerKey(',
+  'resolveAutoPrisonerReleaseDismissContext(',
+]) {
+  if (!visibleContextsBody.includes(token)) fail(`Prisoner close owner scoping is missing: ${token}`);
+}
+
+const visibilityStart = source.indexOf('function isAutoPrisonerReleaseDismissContextVisible(');
+const visibilityEnd = source.indexOf('function closeAutoPrisonerReleaseDismissAfterClick(', visibilityStart);
+const visibilityBody = source.slice(visibilityStart, visibilityEnd);
+if (!visibilityBody.includes('resolveAutoPrisonerReleaseDismissContext(context)')) {
+  fail('Close verification must reacquire the current Vue modal instead of trusting the old node');
+}
+if (visibilityBody.includes('context.modal.isConnected === false')) {
+  fail('A disconnected old modal must not prove that its Vue replacement closed');
+}
+
+for (const token of [
+  "['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']",
+  'attempt === 3 && current.overlay',
+  'getTopmostAutoPrisonerReleaseDismissContext(releaseContext)',
+]) {
+  if (!dismissBody.includes(token)) fail(`Scoped prisoner close retry is missing: ${token}`);
+}
+
+console.log('Auto Mode prefers active cells, completes the exact current-mission release fallback, follows the owning Vue vm--container/data-modal identity, reacquires replacement close spans and verifies the current lightbox is gone before restart.');

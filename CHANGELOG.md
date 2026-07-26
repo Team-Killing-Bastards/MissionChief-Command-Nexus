@@ -32,6 +32,18 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
 
+## [1.0.47] - 2026-07-26
+
+### Fixed
+
+- Auto Mode now closes the exact Vue prisoner-release result lightbox after releasing prisoners.
+- The close handler follows the owning `.vm--container` and its `data-modal` identity, reacquires the live close span after Vue replaces modal nodes, and verifies that the current replacement modal is gone before restarting.
+- Scoped pointer and overlay fallbacks run only inside the same prisoner lightbox when the native close click does not dismiss it.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.110` to `V10.6.111`.
+
 ## [1.0.46] - 2026-07-26
 
 ### Changed
