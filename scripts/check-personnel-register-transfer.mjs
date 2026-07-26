@@ -11,9 +11,9 @@ function fail(message) {
 }
 
 for (const [token, label] of [
-  ['// @version      1.0.42', 'v1.0.42 metadata'],
+  ['// @version      1.0.43', 'v1.0.43 metadata'],
   ["const PERSONNEL_VERSION = '1.3.4';", 'Personnel v1.3.4'],
-  [' * MODULE 2: MISSION FINDER V10.6.106', 'latest Mission Finder baseline'],
+  [' * MODULE 2: MISSION FINDER V10.6.107', 'latest Mission Finder baseline'],
   ['Build All Register', 'readable all-station register action'],
   ['id="mc-personnel-export-register"', 'register export control'],
   ['id="mc-personnel-import-register"', 'register import control'],
