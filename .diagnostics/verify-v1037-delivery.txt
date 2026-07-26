@@ -1,3 +1,4 @@
 Read-only verification of GitHub release assets, Greasy Fork source parity and Discord receipt.
 Split verification stages enabled.
 Normal publish-release workflow invoked for v1.0.37.
+Stale temporary-workflow tag repair enabled.
