@@ -42,7 +42,8 @@ matching_lines = [index for index, line in enumerate(lines) if helper in line]
 
 if len(matching_lines) == 1:
     index = matching_lines[0]
-    stripped = lines[index].strip()
+    original_line = lines[index]
+    stripped = original_line.strip()
     helper_only_element = re.fullmatch(
         r'<(?P<tag>div|p|small|span)\b[^>]*>\s*'
         + re.escape(helper)
@@ -53,7 +54,11 @@ if len(matching_lines) == 1:
     if helper_only_element:
         del lines[index]
     else:
-        lines[index] = lines[index].replace(helper, '', 1)
+        replacement = original_line.replace(helper, '', 1)
+        newline = '\n' if replacement.endswith('\n') else ''
+        body = replacement[:-1] if newline else replacement
+        body = body.rstrip(' \t')
+        lines[index] = body + newline if body.strip() else newline
     source = ''.join(lines)
 else:
     source = source.replace(helper, '', 1)
