@@ -9,6 +9,8 @@ function fail(message) {
   process.exit(1);
 }
 
+// Fire Road Rail Unit and Coastguard Rope Rescue Unit share an abbreviation only;
+// their dispatch routes must remain exact type 107 and type 59 respectively.
 for (const [token, label] of [
   ['// @version      1.0.39', 'v1.0.39 metadata'],
   [' * MODULE 2: MISSION FINDER V10.6.103', 'Mission Finder V10.6.103 header'],
