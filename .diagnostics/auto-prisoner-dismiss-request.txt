@@ -1,0 +1,13 @@
+Add a release-specific dismiss-screen close step after the exact Release Prisoners action.
+
+Contract from live HTML:
+<span title="Close" class="lightbox-close">...</span>
+
+Required behaviour:
+- only run after the exact current-mission Release Prisoners link has been clicked
+- wait until the prisoner alert has cleared and the result lightbox is active
+- choose the visible topmost lightbox close span, including layouts without .control-btn-container
+- click it once with the existing native click helper
+- verify the close span/modal disappears
+- clear release state and restart the Auto Mode mission cycle
+- do not alter the normal patient or positive-capacity prison-cell selection order
