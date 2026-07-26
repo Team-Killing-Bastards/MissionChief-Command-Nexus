@@ -6,3 +6,4 @@ Rerun with the corrected Auto Mode source anchor.
 Capture the exact remaining validation failure.
 Persist the validation output before returning failure.
 Write the output as a tracked branch diagnostic.
+Use a tracked text file for the exact failure.
