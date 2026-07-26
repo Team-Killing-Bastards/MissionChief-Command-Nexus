@@ -31,6 +31,18 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Consolidate the two retained control surfaces into one coherent interface.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
+## [1.0.38] - 2026-07-26
+
+### Fixed
+
+- `Missing Vehicles: 2 Road Rail Units` now maps the plural MissionChief wording to the established `RRU` route.
+- Singular `Road Rail Unit` wording remains supported.
+- The route remains restricted to the exact type-107 Road Rail Unit vehicle mapping.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.101` to `V10.6.102`.
+
 ## [1.0.37] - 2026-07-26
 
 ### Restored

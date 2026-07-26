@@ -14,6 +14,7 @@ on:
       - 'scripts/check-open-issues-batch.mjs'
       - 'scripts/check-missing-requirements-priority.mjs'
       - 'scripts/check-trained-coverage-optimizer.mjs'
+      - 'scripts/check-road-rail-rru-mapping.mjs'
       - '.github/workflows/validate-userscript.yml'
   push:
     branches:
@@ -30,6 +31,7 @@ on:
       - 'scripts/check-open-issues-batch.mjs'
       - 'scripts/check-missing-requirements-priority.mjs'
       - 'scripts/check-trained-coverage-optimizer.mjs'
+      - 'scripts/check-road-rail-rru-mapping.mjs'
       - '.github/workflows/validate-userscript.yml'
   workflow_dispatch:
 
@@ -89,6 +91,9 @@ jobs:
 
       - name: Validate trained-personnel coverage optimiser contracts
         run: node scripts/check-trained-coverage-optimizer.mjs
+
+      - name: Validate Road Rail Unit to RRU mapping
+        run: node scripts/check-road-rail-rru-mapping.mjs
 
       - name: Require a version increase when code changes
         if: github.event_name == 'pull_request'
