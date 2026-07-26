@@ -1,0 +1,69 @@
+
+### JavaScript syntax
+
+### Userscript metadata
+Userscript validation passed: version 1.0.45, 1334487 bytes.
+
+### Repository integrity
+Repository integrity checks passed.
+
+### scripts/check-auto-prisoner-cell-gate.mjs
+Auto Mode prefers active cells, finishes normal actions when none are available, clicks only the exact current-mission Release Prisoners fallback, closes its direct result lightbox and restarts the mission cycle before dispatch.
+
+### scripts/check-fire-engine-update-mapping.mjs
+Fire Engine Update selection is restricted to pump-capable Fire types 0/16/17, excludes Ambulance type 5 and removes only the Auto Mode explanatory helper copy beneath the queue checkbox.
+
+### scripts/check-ios-compatibility.mjs
+iOS Safari compatibility regression checks passed.
+
+### scripts/check-ios-mission-requirements-source.mjs
+iOS mission requirement source checks passed.
+
+### scripts/check-ios-unit-finder-selection.mjs
+iOS Safari Unit Finder selection checks passed.
+
+### scripts/check-iphone-mission-ui.mjs
+iPhone Safari Mission Finder UI checks passed.
+
+### scripts/check-missing-requirements-priority.mjs
+Missing-requirements-first priority and duplicate-dispatch regression checks passed.
+
+### scripts/check-open-issues-batch.mjs
+Open issues #126, #123, #121, #117, #115 and #86 regression checks passed.
+
+### scripts/check-personnel-register-transfer.mjs
+Personnel Register transfer and latest trained-coverage contracts passed.
+
+### scripts/check-police-irv-fallback.mjs
+Police IRV fallback and Missing Personnel regression checks passed.
+
+### scripts/check-release-notification-single-delivery.mjs
+Single-delivery Discord release notification checks passed.
+
+### scripts/check-road-rail-rru-mapping.mjs
+Road Rail requirements use only exact Fire type-107; all RRU text fallback and Coastguard type-59 linkage are removed.
+
+### scripts/check-runtime-hardening.mjs
+Runtime performance and lifecycle hardening checks passed.
+
+### scripts/check-saved-position-helper-copy.mjs
+The Keep my saved panel position checkbox remains available while its explanatory helper sentence is absent.
+
+### scripts/check-trained-coverage-optimizer.mjs
+Trained coverage optimiser checks passed.
+
+### Standalone source absence
+
+### Version metadata
+
+### Mission Finder header
+
+### Saved-position label retained
+
+### Saved-position helper absent
+
+### Diff whitespace
+src/missionchief-command-nexus.user.js:15081: trailing whitespace.
++                
+
+FINAL_STATUS=2
