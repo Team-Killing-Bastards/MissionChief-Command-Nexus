@@ -3,3 +3,4 @@ Capture current main flow before applying the integration.
 Capture the exact prisoner transport button chooser and blocking rules.
 Apply and validate the v1.0.41 integration.
 Rerun with the corrected Auto Mode source anchor.
+Capture the exact remaining validation failure.
