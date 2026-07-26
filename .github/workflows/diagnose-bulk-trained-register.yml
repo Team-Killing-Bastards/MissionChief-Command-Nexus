@@ -1,4 +1,4 @@
-name: Diagnose bulk trained register update
+name: Build bulk trained register update
 
 on:
   pull_request:
@@ -13,12 +13,12 @@ permissions:
   contents: write
 
 jobs:
-  diagnose:
+  build:
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.head.ref == 'agent/bulk-trained-register-update'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
 
     steps:
       - name: Check out working branch
@@ -28,19 +28,45 @@ jobs:
           fetch-depth: 0
           show-progress: false
 
-      - name: Collect current implementation context
-        run: python3 .diagnostics/collect-bulk-trained-register-context.py
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
 
-      - name: Commit diagnostic context
+      - name: Apply approved bulk update
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 .diagnostics/apply-bulk-trained-register-update.py
+          rm -rf .diagnostics
+
+      - name: Validate complete candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          python3 scripts/check_repository.py
+          for check in scripts/check-*.mjs; do
+            echo "Running ${check}"
+            node "${check}"
+          done
+          test ! -e src/personnel-register-tools.user.js
+          grep -Fq '// @version      1.0.46' src/missionchief-command-nexus.user.js
+          grep -Fq ' * MODULE 2: MISSION FINDER V10.6.110' src/missionchief-command-nexus.user.js
+          grep -Fq "const PERSONNEL_VERSION = '1.3.5';" src/missionchief-command-nexus.user.js
+          git diff --check
+
+      - name: Commit validated bulk update
         shell: bash
         run: |
           set -euo pipefail
           git config user.name MartyBlyth
           git config user.email 32400596+Martyblyth@users.noreply.github.com
-          git add .diagnostics/*.txt
+          git add -A
           if git diff --cached --quiet; then
-            echo 'Diagnostic context already current.'
+            echo 'Candidate already current.'
             exit 0
           fi
-          git commit -m 'Capture split bulk trained register context'
+          git commit -m 'Apply trained register and recovery bulk update'
           git push origin HEAD:agent/bulk-trained-register-update
