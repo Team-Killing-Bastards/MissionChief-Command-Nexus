@@ -1,0 +1,47 @@
+name: Audit current trained-personnel shortfall logic
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'diagnostic/training-shortfall-audit'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out current main
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Package exact current repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/training-audit
+          cp -a src scripts README.md CHANGELOG.md /tmp/training-audit/
+          mkdir -p /tmp/training-audit/.github
+          cp -a .github/workflows /tmp/training-audit/.github/
+          git rev-parse HEAD > /tmp/training-audit/main-sha.txt
+
+      - name: Upload audit source
+        uses: actions/upload-artifact@v4
+        with:
+          name: current-training-shortfall-audit
+          path: /tmp/training-audit
+          if-no-files-found: error
+          retention-days: 2
