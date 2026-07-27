@@ -53,7 +53,7 @@ jobs:
             echo 'already_built=false' >> "${GITHUB_OUTPUT}"
           fi
 
-      - name: Fetch and verify correction patch
+      - name: Fetch staged correction payload
         if: steps.state.outputs.already_built != 'true'
         env:
           HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
@@ -64,11 +64,27 @@ jobs:
             > /tmp/v1050.patch.gz.b64
           tr -d '\r\n\t ' < /tmp/v1050.patch.gz.b64 \
             > /tmp/v1050.patch.normalized.b64
+          wc -c /tmp/v1050.patch.normalized.b64
           sha256sum /tmp/v1050.patch.normalized.b64
-          base64 --decode /tmp/v1050.patch.normalized.b64 |
-            gzip --decompress > /tmp/v1050.patch
+
+      - name: Decode base64 payload
+        if: steps.state.outputs.already_built != 'true'
+        run: base64 --decode /tmp/v1050.patch.normalized.b64 > /tmp/v1050.patch.gz
+
+      - name: Validate gzip payload
+        if: steps.state.outputs.already_built != 'true'
+        run: gzip --test /tmp/v1050.patch.gz
+
+      - name: Decompress correction patch
+        if: steps.state.outputs.already_built != 'true'
+        run: |
+          gzip --decompress --stdout /tmp/v1050.patch.gz > /tmp/v1050.patch
+          wc -c /tmp/v1050.patch
           sha256sum /tmp/v1050.patch
-          git apply --check /tmp/v1050.patch
+
+      - name: Verify correction applies
+        if: steps.state.outputs.already_built != 'true'
+        run: git apply --check /tmp/v1050.patch
 
       - name: Apply correction and remove one-use workflows
         if: steps.state.outputs.already_built != 'true'
