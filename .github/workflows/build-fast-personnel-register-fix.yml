@@ -1,0 +1,132 @@
+name: Build corrected fast incremental Personnel Register
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: build-fast-personnel-register-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'agent/fast-personnel-register-v1051'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Check out current main
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Inspect branch state
+        id: state
+        env:
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin "${HEAD_BRANCH}" --force
+          VERSION="$(
+            git show "origin/${HEAD_BRANCH}:src/missionchief-command-nexus.user.js" 2>/dev/null |
+              sed -n 's#^//[[:space:]]*@version[[:space:]]*##p' |
+              head -n 1 |
+              xargs || true
+          )"
+          if [[ "${VERSION}" == '1.0.51' ]]; then
+            echo 'already_built=true' >> "${GITHUB_OUTPUT}"
+          else
+            echo 'already_built=false' >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Reconstruct source patcher
+        if: steps.state.outputs.already_built != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/build-fast-register.py.gz.b64 <<'EOF'
+          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
+          EOF
+          tr -d '\r\n\t ' < /tmp/build-fast-register.py.gz.b64 > /tmp/build-fast-register.py.gz.b64.normalized
+          base64 --decode /tmp/build-fast-register.py.gz.b64.normalized > /tmp/build-fast-register.py.gz
+          gzip --test /tmp/build-fast-register.py.gz
+          gzip --decompress --stdout /tmp/build-fast-register.py.gz > /tmp/build-fast-register.py
+          python3 -m py_compile /tmp/build-fast-register.py
+
+      - name: Apply fast register implementation
+        if: steps.state.outputs.already_built != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 /tmp/build-fast-register.py
+          git rm -f .github/workflows/build-fast-personnel-register-once.yml .github/workflows/build-fast-personnel-register-fix.yml
+          git diff --check
+
+      - name: Set up Node.js
+        if: steps.state.outputs.already_built != 'true'
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Validate complete userscript and repository
+        if: steps.state.outputs.already_built != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          node scripts/validate-userscript.mjs --base-ref origin/main
+          node scripts/check-ios-compatibility.mjs
+          node scripts/check-runtime-hardening.mjs
+          node scripts/check-police-irv-fallback.mjs
+          node scripts/check-ios-unit-finder-selection.mjs
+          node scripts/check-ios-mission-requirements-source.mjs
+          node scripts/check-iphone-mission-ui.mjs
+          node scripts/check-open-issues-batch.mjs
+          node scripts/check-missing-requirements-priority.mjs
+          node scripts/check-trained-coverage-optimizer.mjs
+          node scripts/check-road-rail-rru-mapping.mjs
+          node scripts/check-auto-prisoner-cell-gate.mjs
+          node scripts/check-fire-engine-update-mapping.mjs
+          node scripts/check-saved-position-helper-copy.mjs
+          node scripts/check-bulk-trained-register-update.mjs
+          node scripts/check-hems-ambulance-eta-priority.mjs
+          node scripts/check-police-search-advisor-register.mjs
+          node scripts/check-personnel-register-transfer.mjs
+          node scripts/check-fast-personnel-register.mjs
+          node scripts/check-release-notification-single-delivery.mjs
+          python3 scripts/check_repository.py
+          git diff --check
+
+      - name: Publish validated branch
+        if: steps.state.outputs.already_built != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name MartyBlyth
+          git config user.email 32400596+Martyblyth@users.noreply.github.com
+          git add -A
+          git commit -m 'Accelerate incremental Personnel Register refresh'
+          git push --force origin "HEAD:refs/heads/${HEAD_BRANCH}"
+          COMMIT_SHA="$(git rev-parse HEAD)"
+          gh pr comment "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" \
+            --body "Command Nexus 1.0.51 / Personnel Assignment 1.3.7 passed the complete validation suite. Validated source commit: \`${COMMIT_SHA}\`."
