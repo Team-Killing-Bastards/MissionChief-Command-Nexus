@@ -87,8 +87,8 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-requireText('// @version      1.0.49', 'v1.0.49 metadata');
-requireText(' * MODULE 2: MISSION FINDER V10.6.113', 'V10.6.113 header');
+requireText('// @version      1.0.50', 'v1.0.50 metadata');
+requireText(' * MODULE 2: MISSION FINDER V10.6.114', 'V10.6.114 header');
 requireText("const MF_PSU_COMPATIBLE_TRAINING_CODES =", 'PSU-compatible course list');
 requireText("'51': 9", 'type-51 PSU capacity nine');
 requireText("'8': 2", 'type-8 IRV capacity two');
@@ -101,6 +101,9 @@ requireText('applyTrainingCandidateCoverage(', 'profile-aware coverage allocator
 requireText('combinationCounts[combinationKey]', 'multi-course combination count');
 requireText('capacityRemaining:', 'separate nominal vehicle-capacity vector');
 requireText('runSelectionPhase(true);', 'trained coverage phase');
+requireText('trainedPhase\n                        ? requirement.remaining > 0', 'trained phase follows qualification deficits');
+requireText('trainedUseful > 0 ||\n                capacityUseful > 0', 'training remains eligible after nominal seats are covered');
+requireText('...remainingCandidates\n        ];', 'complete ready compatible verification pool');
 requireText('runSelectionPhase(false);', 'correct-type fallback phase');
 requireText('vehicleCoverageSatisfied', 'vehicle coverage result');
 requireText('trainingSatisfied', 'training coverage result');
@@ -305,7 +308,7 @@ if (
   fail('Singly trained staff must cover only their own courses and must not be multiplied as untrained spare seats');
 }
 
-const partiallyTrained = allocationRuntime.applyTrainingCandidateCoverage(
+const firstPartialVehicle = allocationRuntime.applyTrainingCandidateCoverage(
   [remainingRequirement('level_1_public_order', 2)],
   {
     typeId: '8',
@@ -316,8 +319,61 @@ const partiallyTrained = allocationRuntime.applyTrainingCandidateCoverage(
   },
   null
 ).remaining[0];
-if (partiallyTrained.remaining !== 1 || partiallyTrained.capacityRemaining !== 0) {
-  fail('One trained plus one untrained IRV member must send the IRV, cover two seats, and report one trained-person shortfall');
+if (firstPartialVehicle.remaining !== 1 || firstPartialVehicle.capacityRemaining !== 0) {
+  fail('The first partly trained IRV must cover its real trained officer and its two nominal seats');
+}
+
+const secondTrainedVehicle = allocationRuntime.applyTrainingCandidateCoverage(
+  [firstPartialVehicle],
+  {
+    typeId: '8',
+    profiles: [
+      ['level_1_public_order'],
+      [],
+    ],
+  },
+  null
+).remaining[0];
+if (secondTrainedVehicle.remaining !== 0 || secondTrainedVehicle.capacityRemaining !== 0) {
+  fail('A second ready trained IRV must clear the real course deficit even after nominal capacity reached zero');
+}
+
+let mixedLevelOne = remainingRequirement('level_1_public_order', 12);
+mixedLevelOne = allocationRuntime.applyTrainingCandidateCoverage(
+  [mixedLevelOne],
+  {
+    typeId: '51',
+    profiles: [
+      ...Array.from({length: 8}, () => ['level_1_public_order']),
+      [],
+    ],
+  },
+  null
+).remaining[0];
+mixedLevelOne = allocationRuntime.applyTrainingCandidateCoverage(
+  [mixedLevelOne],
+  {
+    typeId: '8',
+    profiles: [
+      ['level_1_public_order'],
+      ['level_1_public_order'],
+    ],
+  },
+  null
+).remaining[0];
+mixedLevelOne = allocationRuntime.applyTrainingCandidateCoverage(
+  [mixedLevelOne],
+  {
+    typeId: '8',
+    profiles: [
+      ['level_1_public_order'],
+      ['level_1_public_order'],
+    ],
+  },
+  null
+).remaining[0];
+if (mixedLevelOne.remaining !== 0 || mixedLevelOne.capacityRemaining !== 0) {
+  fail('One PSU plus the minimum IRV mixture must fully cover a 12-person trained requirement');
 }
 
 const untrainedFallback = allocationRuntime.applyTrainingCandidateCoverage(

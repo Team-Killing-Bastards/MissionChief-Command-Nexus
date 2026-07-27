@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.49
+// @version      1.0.50
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -9216,7 +9216,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.113
+         * MODULE 2: MISSION FINDER V10.6.114
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -10018,7 +10018,6 @@
     // an exact vehicle ID that has been verified from that vehicle's current
     // /zuweisung page. Unsafe name-based registry matching is never used.
     const MF_LIVE_TRAINING_VERIFY_CACHE_MS = 10 * 60 * 1000;
-    const MF_LIVE_TRAINING_VERIFY_MAX_PAGES = 48;
     const MF_LIVE_TRAINING_VERIFY_BATCH_SIZE = 6;
     const MF_STRICT_TRAINING_SOURCE_PREFIX =
         'mission-finder-live-strict-';
@@ -10027,6 +10026,13 @@
     const MF_EXACT_REGISTER_TRAINING_MAX_AGE_MS =
         180 * 24 * 60 * 60 * 1000;
 
+    // V10.6.114: trained-personnel allocation now continues through every
+    // ready compatible vehicle that can reduce an actual course deficit.
+    // Vehicle-seat coverage and qualification coverage are tracked separately,
+    // so a partly trained PSU/IRV cannot prematurely end the trained search.
+    // Live verification now walks the complete ready compatible pool in batches
+    // and stops only after the real per-course quantities are covered or the pool
+    // is exhausted. Only then is a genuine training shortfall reported.
     // V10.6.110: trained-personnel selection now optimises exact vehicle
     // coverage instead of treating full qualification as a dispatch gate.
     // Multi-trained crews reduce every matching course, type-51 PSUs provide
@@ -24217,16 +24223,12 @@ let sessionRuntimeTicker = null;
                 return !hintedSet.has(checkbox);
             });
 
+        // Search the full ready compatible pool, ordered by existing
+        // register hints and arrival. Batching and the satisfaction check below
+        // stop the scan as soon as the actual course quantities are covered.
         const pagesToRead = [
             ...registryHintedCandidates,
-            ...remainingCandidates.slice(
-                0,
-                Math.max(
-                    0,
-                    MF_LIVE_TRAINING_VERIFY_MAX_PAGES -
-                    registryHintedCandidates.length
-                )
-            )
+            ...remainingCandidates
         ];
 
         let pagesRead = 0;
@@ -24471,7 +24473,7 @@ let sessionRuntimeTicker = null;
         const pagesToRead = [
             ...hinted,
             ...unverified.filter(checkbox => !hintedSet.has(checkbox))
-        ].slice(0, MF_LIVE_TRAINING_VERIFY_MAX_PAGES);
+        ];
 
         let pagesRead = 0;
         let changed = false;
@@ -24820,24 +24822,25 @@ let sessionRuntimeTicker = null;
         });
 
         profiles.forEach(profile => {
-            const eligible =
+            const compatible =
                 next.filter(requirement => {
-                    return !!(
-                        requirement.capacityRemaining > 0 &&
-                        isCheckboxEligibleForTrainingRequirement(
-                            checkbox,
-                            requirement,
-                            registryEntry
-                        )
+                    return isCheckboxEligibleForTrainingRequirement(
+                        checkbox,
+                        requirement,
+                        registryEntry
                     );
                 });
 
-            if (!eligible.length) {
+            if (!compatible.length) {
                 return;
             }
 
+            // Qualification coverage is independent of nominal vehicle-seat
+            // coverage. A later trained person must still reduce a real course
+            // deficit even when an earlier partly trained vehicle has already
+            // filled the nominal seat target for that course.
             const qualifying =
-                eligible.filter(requirement => {
+                compatible.filter(requirement => {
                     return !!(
                         requirement.remaining > 0 &&
                         doesTrainingProfileSatisfyRequirement(
@@ -24854,13 +24857,17 @@ let sessionRuntimeTicker = null;
                             0,
                             requirement.remaining - 1
                         );
-                    requirement.capacityRemaining =
-                        Math.max(
-                            0,
-                            requirement.capacityRemaining - 1
-                        );
+
+                    if (requirement.capacityRemaining > 0) {
+                        requirement.capacityRemaining =
+                            Math.max(
+                                0,
+                                requirement.capacityRemaining - 1
+                            );
+                        capacityUseful += 1;
+                    }
+
                     trainedUseful += 1;
-                    capacityUseful += 1;
                     coveredCodes.add(requirement.code);
                 });
                 usedProfiles += 1;
@@ -24869,10 +24876,13 @@ let sessionRuntimeTicker = null;
 
             // A person without a currently useful course can still occupy one
             // correct-type fallback seat. Allocate that seat to exactly one
-            // unmet requirement; never multiply an untrained person across
-            // several course counts.
+            // unmet capacity requirement; never multiply an untrained person
+            // across several course counts.
             const fallbackRequirement =
-                eligible
+                compatible
+                    .filter(requirement => {
+                        return requirement.capacityRemaining > 0;
+                    })
                     .slice()
                     .sort((left, right) => {
                         if (
@@ -24917,6 +24927,7 @@ let sessionRuntimeTicker = null;
                 ),
             isPsu,
             eligible:
+                trainedUseful > 0 ||
                 capacityUseful > 0
         };
     }
@@ -25113,23 +25124,30 @@ let sessionRuntimeTicker = null;
                 registry
             );
 
-        const initiallyCovered =
+        const initiallyVehicleCovered =
             remaining.every(requirement => {
                 return requirement.capacityRemaining <= 0;
             });
 
-        if (initiallyCovered) {
-            const trainingSatisfied =
-                remaining.every(requirement => {
-                    return requirement.remaining <= 0;
-                });
+        const initiallyTrainingCovered =
+            remaining.every(requirement => {
+                return requirement.remaining <= 0;
+            });
 
+        // Do not return merely because nominal seats are covered. If a course
+        // deficit remains, continue through the ready trained pool so a second
+        // PSU/IRV can replace a false shortfall with real qualified coverage.
+        if (
+            initiallyVehicleCovered &&
+            initiallyTrainingCovered
+        ) {
             return {
                 satisfied:
                     true,
                 vehicleCoverageSatisfied:
                     true,
-                trainingSatisfied,
+                trainingSatisfied:
+                    true,
                 selectedVehicles:
                     0,
                 trainedVehicles:
@@ -25194,11 +25212,15 @@ let sessionRuntimeTicker = null;
         let fallbackVehicles = 0;
 
         const runSelectionPhase = trainedPhase => {
-            while (
-                remaining.some(requirement => {
-                    return requirement.capacityRemaining > 0;
-                })
-            ) {
+            const hasRemainingPhaseNeed = () => {
+                return remaining.some(requirement => {
+                    return trainedPhase
+                        ? requirement.remaining > 0
+                        : requirement.capacityRemaining > 0;
+                });
+            };
+
+            while (hasRemainingPhaseNeed()) {
                 let bestCheckbox = null;
                 let bestEntry = null;
                 let bestMetrics = null;

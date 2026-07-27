@@ -85,8 +85,8 @@ function extractFunction(name) {
   fail(`Unable to extract function ${name}`);
 }
 
-requireText('// @version      1.0.49', 'v1.0.49 metadata');
-requireText(' * MODULE 2: MISSION FINDER V10.6.113', 'V10.6.113 module header');
+requireText('// @version      1.0.50', 'v1.0.50 metadata');
+requireText(' * MODULE 2: MISSION FINDER V10.6.114', 'V10.6.114 module header');
 requireText('function isExplicitMissingVehicleRequirementRow(', 'explicit Missing Vehicles classifier');
 requireText('function isExplicitMissingPersonnelRequirementRow(', 'explicit Missing Personnel classifier');
 requireText('function getMissionUpdateRowAuthority(', 'current-row authority ordering');
