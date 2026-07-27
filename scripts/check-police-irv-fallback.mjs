@@ -24,8 +24,8 @@ function extractBetween(startText, endText, label) {
   return source.slice(start, end);
 }
 
-requireText('// @version      1.0.49', 'v1.0.49 metadata');
-requireText(' * MODULE 2: MISSION FINDER V10.6.113', 'V10.6.113 module header');
+requireText('// @version      1.0.50', 'v1.0.50 metadata');
+requireText(' * MODULE 2: MISSION FINDER V10.6.114', 'V10.6.114 module header');
 requireText('allowUnknown: true', 'unknown or stale type-8 IRV fallback');
 requireText('allowProtected: true', 'known specialist type-8 IRV final fallback');
 requireText('protectedFallback.push(checkbox)', 'specialist fallback partition');

@@ -25,9 +25,9 @@ function extractFunction(name) {
 }
 
 for (const [token, label] of [
-  ['// @version      1.0.49', 'v1.0.49 metadata'],
+  ['// @version      1.0.50', 'v1.0.50 metadata'],
   ["const PERSONNEL_VERSION = '1.3.6';", 'Personnel v1.3.6'],
-  [' * MODULE 2: MISSION FINDER V10.6.113', 'Mission Finder V10.6.113'],
+  [' * MODULE 2: MISSION FINDER V10.6.114', 'Mission Finder V10.6.114'],
   ['personnel-register-exact-all-vehicle-scan-v2', 'second-generation exact register source'],
   ['function parseStationPersonnelAssignmentEvidence(', 'station personnel assignment fallback'],
   ['function getUniquePersonnelVehicleNameIndex(', 'unique vehicle-name fail-closed index'],

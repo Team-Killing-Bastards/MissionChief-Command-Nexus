@@ -32,6 +32,27 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
 
+## [1.0.50] - 2026-07-27
+
+### Fixed
+
+- Trained-personnel selection now continues through all ready compatible vehicles until the actual quantity for every required training course is covered or no useful trained unit remains.
+- Nominal vehicle-seat coverage and qualification coverage are tracked independently. A partly trained PSU or IRV can no longer reduce seat demand to zero and prematurely trigger a false training shortfall while another ready trained unit is available.
+- A trained officer on a later vehicle still reduces the correct course deficit even when earlier selected vehicles already provide enough nominal seats.
+- Live assignment verification now walks the complete ready compatible vehicle pool in ordered batches and stops as soon as the real per-course demand is covered, instead of imposing a 48-page blind spot.
+- Multi-trained personnel continue to satisfy every required course they hold. Singly trained personnel count only toward their own course.
+- Type-51 PSUs remain preferred for useful high-capacity Public Order blocks, with type-8 IRVs filling smaller remainders. Correct-type untrained fallback units are selected only after trained coverage is exhausted.
+- A training shortfall is now reported only after the complete ready trained pool has been checked. Compatible vehicle-capacity shortages remain separately blocking.
+
+### Validation
+
+- Added regression coverage for a second trained IRV clearing a deficit after nominal seats are already covered, and for a 12-person requirement fulfilled by one PSU plus the minimum IRV mixture.
+- Existing register, Search Advisor, Public Order, Armed Response, iOS Safari, mission-requirement, release and repository contracts remain enabled.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.113` to `V10.6.114`.
+
 ## [1.0.49] - 2026-07-26
 
 ### Fixed
