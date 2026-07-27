@@ -1,0 +1,231 @@
+name: Publish and verify v1.0.50
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: publish-v1.0.50-once
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    name: Tag clean v1.0.50 source
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'release/publish-v1050'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Create or verify clean release tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: v1.0.50
+          RELEASE_SHA: 3a8351b15bdd61f393195f3f72f80f2fc65ca249
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --tags --force
+          git cat-file -e "${RELEASE_SHA}^{commit}"
+          git merge-base --is-ancestor "${RELEASE_SHA}" origin/main
+
+          VERSION="$(
+            git show "${RELEASE_SHA}:src/missionchief-command-nexus.user.js" |
+              sed -n 's#^//[[:space:]]*@version[[:space:]]*##p' |
+              head -n 1 |
+              xargs
+          )"
+          [[ "${VERSION}" == '1.0.50' ]]
+
+          TEMPORARY_WORKFLOWS="$(
+            git ls-tree -r --name-only "${RELEASE_SHA}" .github/workflows |
+              grep -E '^\.github/workflows/(temporary-|publish-v1050-once).*\.ya?ml$' || true
+          )"
+          if [[ -n "${TEMPORARY_WORKFLOWS}" ]]; then
+            echo 'Release source contains one-use workflows:'
+            echo "${TEMPORARY_WORKFLOWS}"
+            exit 1
+          fi
+
+          if git show-ref --tags --verify --quiet "refs/tags/${RELEASE_TAG}"; then
+            CURRENT_SHA="$(git rev-list -n 1 "${RELEASE_TAG}")"
+            if [[ "${CURRENT_SHA}" != "${RELEASE_SHA}" ]]; then
+              if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+                echo "Published ${RELEASE_TAG} points to ${CURRENT_SHA}; refusing to retag."
+                exit 1
+              fi
+              git push origin ":refs/tags/${RELEASE_TAG}"
+              git tag -d "${RELEASE_TAG}" || true
+            fi
+          fi
+
+          if ! git show-ref --tags --verify --quiet "refs/tags/${RELEASE_TAG}"; then
+            git config user.name MartyBlyth
+            git config user.email 32400596+Martyblyth@users.noreply.github.com
+            git tag -a "${RELEASE_TAG}" "${RELEASE_SHA}" \
+              -m 'MissionChief Command Nexus 1.0.50'
+            git push origin "refs/tags/${RELEASE_TAG}"
+          fi
+
+          [[ "$(git rev-list -n 1 "${RELEASE_TAG}")" == "${RELEASE_SHA}" ]]
+
+  publish:
+    name: Publish through permanent release workflow
+    needs: tag
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: ./.github/workflows/release.yml
+    with:
+      operation: publish-release
+      release_tag: v1.0.50
+      release_notes: Corrects trained-personnel allocation so qualification coverage is tracked separately from nominal seats, all ready compatible trained vehicles are checked, useful PSUs lead larger Public Order blocks, IRVs fill remainders, oversending is avoided and only genuine shortfalls are reported.
+    secrets: inherit
+
+  receipt:
+    name: Verify GitHub Greasy Fork and Discord delivery
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Verify final release receipt
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GREASYFORK_INSTALL_URL: ${{ vars.GREASYFORK_INSTALL_URL }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          RELEASE_TAG: v1.0.50
+          RELEASE_SHA: 3a8351b15bdd61f393195f3f72f80f2fc65ca249
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --tags --force
+
+          ASSET='MissionChief-Command-Nexus-1.0.50.user.js'
+          CHECKSUM_ASSET="${ASSET}.sha256"
+          gh release view "${RELEASE_TAG}" \
+            --json url,isDraft,isPrerelease,assets > /tmp/v1050-release.json
+
+          [[ "$(jq -r '.isDraft' /tmp/v1050-release.json)" == 'false' ]]
+          [[ "$(jq -r '.isPrerelease' /tmp/v1050-release.json)" == 'false' ]]
+          RELEASE_URL="$(jq -r '.url' /tmp/v1050-release.json)"
+
+          for name in "${ASSET}" "${CHECKSUM_ASSET}"; do
+            [[ "$(jq -r --arg name "${name}" '[.assets[] | select(.name == $name)] | length' /tmp/v1050-release.json)" == '1' ]]
+          done
+
+          RECEIPT_COUNT="$(
+            jq -r '[.assets[] | select(.name | startswith("Command-Nexus-Discord-Receipt-v1.0.50-"))] | length' \
+              /tmp/v1050-release.json
+          )"
+          [[ "${RECEIPT_COUNT}" == '1' ]]
+          RECEIPT_NAME="$(
+            jq -r '.assets[] | select(.name | startswith("Command-Nexus-Discord-Receipt-v1.0.50-")) | .name' \
+              /tmp/v1050-release.json
+          )"
+
+          TAG_SHA="$(git rev-list -n 1 "${RELEASE_TAG}")"
+          [[ "${TAG_SHA}" == "${RELEASE_SHA}" ]]
+
+          rm -rf /tmp/v1050-release-check
+          mkdir -p /tmp/v1050-release-check
+          gh release download "${RELEASE_TAG}" \
+            --pattern "${ASSET}" \
+            --pattern "${CHECKSUM_ASSET}" \
+            --dir /tmp/v1050-release-check \
+            --clobber
+          (
+            cd /tmp/v1050-release-check
+            sha256sum -c "${CHECKSUM_ASSET}"
+          )
+
+          git show "${TAG_SHA}:src/missionchief-command-nexus.user.js" > /tmp/v1050-expected.user.js
+          cmp --silent /tmp/v1050-expected.user.js "/tmp/v1050-release-check/${ASSET}"
+
+          [[ -n "${GREASYFORK_INSTALL_URL}" ]]
+          URL_SEPARATOR='?'
+          [[ "${GREASYFORK_INSTALL_URL}" == *'?'* ]] && URL_SEPARATOR='&'
+          GREASY_OK='false'
+          for attempt in $(seq 1 60); do
+            CHECK_URL="${GREASYFORK_INSTALL_URL}${URL_SEPARATOR}mc_release_check=$(date +%s)-${attempt}"
+            if curl --fail --location --silent --show-error --retry 2 --max-time 30 \
+              -H 'Cache-Control: no-cache' "${CHECK_URL}" -o /tmp/v1050-greasy.user.js; then
+              if cmp --silent /tmp/v1050-expected.user.js /tmp/v1050-greasy.user.js; then
+                GREASY_OK='true'
+                break
+              fi
+            fi
+            sleep 5
+          done
+          [[ "${GREASY_OK}" == 'true' ]]
+
+          CHECKSUM="$(sha256sum /tmp/v1050-expected.user.js | awk '{print $1}')"
+          cat > /tmp/v1050-receipt.md <<EOF
+          ## v1.0.50 release verified
+
+          - GitHub release: ${RELEASE_URL}
+          - GitHub userscript and checksum assets: verified
+          - Greasy Fork: exact source parity confirmed
+          - Discord: one delivery receipt confirmed as \`${RECEIPT_NAME}\`
+          - Source commit: \`${TAG_SHA}\`
+          - SHA-256: \`${CHECKSUM}\`
+          EOF
+          gh pr comment "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --body-file /tmp/v1050-receipt.md
+
+  finish:
+    name: Close one-use publisher
+    needs:
+      - tag
+      - publish
+      - receipt
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Close publisher branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          TAG_RESULT: ${{ needs.tag.result }}
+          PUBLISH_RESULT: ${{ needs.publish.result }}
+          RECEIPT_RESULT: ${{ needs.receipt.result }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${TAG_RESULT}" == 'success' && \
+                "${PUBLISH_RESULT}" == 'success' && \
+                "${RECEIPT_RESULT}" == 'success' ]]; then
+            gh pr close "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" \
+              --comment 'v1.0.50 was published and verified across GitHub, Greasy Fork and Discord.'
+            gh api --method DELETE \
+              "repos/${GITHUB_REPOSITORY}/git/refs/heads/release/publish-v1050" || true
+          else
+            gh pr comment "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" \
+              --body "v1.0.50 publication stopped: tag=${TAG_RESULT}, publish=${PUBLISH_RESULT}, receipt=${RECEIPT_RESULT}."
+            exit 1
+          fi
