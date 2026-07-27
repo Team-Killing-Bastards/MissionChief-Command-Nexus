@@ -53,38 +53,46 @@ jobs:
             echo 'already_built=false' >> "${GITHUB_OUTPUT}"
           fi
 
-      - name: Fetch staged correction payload
+      - name: Reconstruct verified correction payload
         if: steps.state.outputs.already_built != 'true'
         env:
           HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
         shell: bash
         run: |
           set -euo pipefail
-          git show "origin/${HEAD_BRANCH}:.diagnostics/v1.0.50-training-coverage.patch.gz.b64" \
-            > /tmp/v1050.patch.gz.b64
-          tr -d '\r\n\t ' < /tmp/v1050.patch.gz.b64 \
-            > /tmp/v1050.patch.normalized.b64
-          wc -c /tmp/v1050.patch.normalized.b64
-          sha256sum /tmp/v1050.patch.normalized.b64
+          declare -A expected=(
+            [00]='19c53001b03a424fd35d94ac4e05132ef4f091ba880643ba45420952ec46851a'
+            [01]='fb7e04c28874e4cba3deba169fbed324893e5ccf1df966de225647dcf5949a21'
+            [02]='1c20a035aaccab4c7a44fdf50ea43e7fe9a8f4cda9356a6b8d28b5fc8d791337'
+            [03]='510ff9acac4d516d993eb95fe9e4106a28b08bbf0dc19582f3247553f0e6878a'
+            [04]='4b9dcacd3f8affa9362078e49b4d1ff7a4822b496281498fe50a1c1a83926d17'
+            [05]='f9cf8283709c9062329d4c42a2082074e3ebb30316e7b8b4e5b8963c1d887fd1'
+            [06]='a914f326709e774af3df83601799a914105765df3631335a03d1ca8d89cb7139'
+          )
 
-      - name: Decode base64 payload
-        if: steps.state.outputs.already_built != 'true'
-        run: base64 --decode /tmp/v1050.patch.normalized.b64 > /tmp/v1050.patch.gz
+          : > /tmp/v1050.patch.normalized.b64
+          for suffix in 00 01 02 03 04 05 06; do
+            part="/tmp/v1050.part-${suffix}"
+            git show "origin/${HEAD_BRANCH}:.diagnostics/v1.0.50-training-coverage.part-${suffix}" > "${part}"
+            tr -d '\r\n\t ' < "${part}" > "${part}.normalized"
+            echo "${expected[${suffix}]}  ${part}.normalized" | sha256sum --check
+            cat "${part}.normalized" >> /tmp/v1050.patch.normalized.b64
+          done
 
-      - name: Validate gzip payload
-        if: steps.state.outputs.already_built != 'true'
-        run: gzip --test /tmp/v1050.patch.gz
+          echo '6da27f6c770fbb5c90aa6e943fa2df43eaefe7d20c164d799c69b5fff6f760e9  /tmp/v1050.patch.normalized.b64' |
+            sha256sum --check
 
-      - name: Decompress correction patch
+      - name: Decode and verify correction patch
         if: steps.state.outputs.already_built != 'true'
+        shell: bash
         run: |
+          set -euo pipefail
+          base64 --decode /tmp/v1050.patch.normalized.b64 > /tmp/v1050.patch.gz
+          gzip --test /tmp/v1050.patch.gz
           gzip --decompress --stdout /tmp/v1050.patch.gz > /tmp/v1050.patch
-          wc -c /tmp/v1050.patch
-          sha256sum /tmp/v1050.patch
-
-      - name: Verify correction applies
-        if: steps.state.outputs.already_built != 'true'
-        run: git apply --check /tmp/v1050.patch
+          echo 'b7982b8f0a34df322fe15c623c280f2c48c93a4ea7587e1e9c1f702de174798b  /tmp/v1050.patch' |
+            sha256sum --check
+          git apply --check /tmp/v1050.patch
 
       - name: Apply correction and remove one-use workflows
         if: steps.state.outputs.already_built != 'true'
