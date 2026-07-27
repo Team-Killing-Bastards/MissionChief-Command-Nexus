@@ -64,8 +64,7 @@ jobs:
             > /tmp/v1050.patch.gz.b64
           tr -d '\r\n\t ' < /tmp/v1050.patch.gz.b64 \
             > /tmp/v1050.patch.normalized.b64
-          echo '6da27f6c770fbb5c90aa6e943fa2df43eaefe7d20c164d799c69b5fff6f760e9  /tmp/v1050.patch.normalized.b64' |
-            sha256sum --check
+          sha256sum /tmp/v1050.patch.normalized.b64
           base64 --decode /tmp/v1050.patch.normalized.b64 |
             gzip --decompress > /tmp/v1050.patch
           echo 'b7982b8f0a34df322fe15c623c280f2c48c93a4ea7587e1e9c1f702de174798b  /tmp/v1050.patch' |
