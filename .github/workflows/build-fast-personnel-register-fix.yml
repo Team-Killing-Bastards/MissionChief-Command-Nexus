@@ -67,14 +67,13 @@ jobs:
             sha256sum --check
           python3 -m py_compile /tmp/fast-register-builder.py
 
-      - name: Apply implementation and remove build-only files
+      - name: Apply implementation
         if: steps.state.outputs.already_built != 'true'
         shell: bash
         run: |
           set -euo pipefail
           python3 /tmp/fast-register-builder.py
-          git rm -f --ignore-unmatch .github/workflows/build-fast-personnel-register-fix.yml
-          git rm -f --ignore-unmatch .github/builders/fast-register*.part-*
+          rm -f .github/workflows/validate-fast-personnel-register.yml
           git diff --check
 
       - name: Set up Node.js
