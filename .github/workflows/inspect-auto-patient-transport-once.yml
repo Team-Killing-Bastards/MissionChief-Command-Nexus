@@ -1,4 +1,4 @@
-name: Inspect Auto Mode patient transport once
+name: Build Auto Mode patient transport v1.0.52
 
 on:
   pull_request:
@@ -6,56 +6,136 @@ on:
     types: [opened, synchronize, reopened]
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
 
 jobs:
-  inspect:
+  build:
     if: github.event.pull_request.head.ref == 'agent/fix-auto-patient-transport-v1052'
     runs-on: ubuntu-latest
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: main
-          fetch-depth: 1
-      - name: Extract transport selector context
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+      - name: Apply exact patient anchor fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('src/missionchief-command-nexus.user.js')
+          s=p.read_text(encoding='utf-8')
+          finder="    function findExactFirstApproachTransportButton() {\n"
+          if 'function mfIsExactPatientTransportAnchor(' not in s:
+              helper=r'''    function mfIsExactPatientTransportAnchor(element) {
+                  if (!element || String(element.tagName || '').toLowerCase() !== 'a') return false;
+                  const href = String(element.getAttribute?.('href') || '').trim();
+                  const className = String(element.className || '');
+                  if (!/(?:^|\s)btn-success(?:\s|$)/.test(className)) return false;
+                  if (!/^\/vehicles\/\d+\/patient\/\d+\/?(?:[?#].*)?$/.test(href)) return false;
+                  if (element.getAttribute?.('aria-disabled') === 'true') return false;
+                  if (element.classList?.contains?.('disabled')) return false;
+                  return true;
+              }
+
+              function mfFindExactPatientTransportAnchor(root = document) {
+                  const candidates = Array.from(root?.querySelectorAll?.('a.btn-success[href*="/patient/"]') || []);
+                  for (const candidate of candidates) {
+                      if (!mfIsExactPatientTransportAnchor(candidate)) continue;
+                      try { if (!isElementVisible(candidate)) continue; } catch (error) { continue; }
+                      return candidate;
+                  }
+                  return null;
+              }
+
+'''
+              if s.count(finder)!=1: raise SystemExit('Exact transport finder anchor mismatch')
+              s=s.replace(finder,helper+finder,1)
+          old=finder+"        const deepButton = mfFindAnyVisibleApproachButtonDeep();\n"
+          new=finder+"        const exactPatientAnchor = mfFindExactPatientTransportAnchor(document);\n\n        if (exactPatientAnchor) return exactPatientAnchor;\n\n        const deepButton = mfFindAnyVisibleApproachButtonDeep();\n"
+          if old in s: s=s.replace(old,new,1)
+          elif new not in s: raise SystemExit('Normal transport path patch failed')
+          old="    function mfBruteFindFirstApproachButton() {\n        // This helper already performs the deep transport-scope lookup, so do\n"
+          new="    function mfBruteFindFirstApproachButton() {\n        const exactPatientAnchor = mfFindExactPatientTransportAnchor(document);\n\n        if (exactPatientAnchor) return exactPatientAnchor;\n\n        // This helper already performs the deep transport-scope lookup, so do\n"
+          if old in s: s=s.replace(old,new,1)
+          elif new not in s: raise SystemExit('Brute transport path patch failed')
+          s=s.replace('// @version      1.0.51','// @version      1.0.52',1)
+          s=s.replace(' * MODULE 2: MISSION FINDER V10.6.114',' * MODULE 2: MISSION FINDER V10.6.115',1)
+          p.write_text(s,encoding='utf-8')
+          for q in Path('scripts').glob('check-*.mjs'):
+              t=q.read_text(encoding='utf-8').replace('// @version      1.0.51','// @version      1.0.52').replace('V10.6.114','V10.6.115')
+              q.write_text(t,encoding='utf-8')
+          q=Path('README.md'); q.write_text(q.read_text(encoding='utf-8').replace('**Current version:** `1.0.51` · **Mission Finder engine:** `V10.6.114`','**Current version:** `1.0.52` · **Mission Finder engine:** `V10.6.115`'),encoding='utf-8')
+          q=Path('src/README.md'); q.write_text(q.read_text(encoding='utf-8').replace('| Command Nexus version | `1.0.51` |','| Command Nexus version | `1.0.52` |').replace('| Mission Finder baseline | `V10.6.114` |','| Mission Finder baseline | `V10.6.115` |'),encoding='utf-8')
+          q=Path('CHANGELOG.md'); t=q.read_text(encoding='utf-8')
+          if '## [1.0.52] - 2026-07-28' not in t:
+              section='''## [1.0.52] - 2026-07-28
+
+### Fixed
+
+- Restored Auto Mode patient transport clicking for MissionChief's current green **Transport Patient** anchor with an exact `/vehicles/{vehicle}/patient/{hospital}` route.
+- The exact visible enabled patient route is checked before both legacy **Approach** paths; unrelated green links remain excluded.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.114` to `V10.6.115`.
+- Personnel Assignment remains `1.3.7`.
+
+'''
+              i=t.find('## [1.0.51]');
+              if i<0: raise SystemExit('v1.0.51 changelog section missing')
+              q.write_text(t[:i]+section+t[i:],encoding='utf-8')
+          Path('scripts/check-auto-patient-transport-anchor.mjs').write_text(r'''#!/usr/bin/env node
+import { readFile } from 'node:fs/promises';
+const s=await readFile('src/missionchief-command-nexus.user.js','utf8');
+const fail=m=>{console.error(`ERROR: ${m}`);process.exit(1)};
+for(const token of ['// @version      1.0.52','MISSION FINDER V10.6.115','function mfIsExactPatientTransportAnchor(','function mfFindExactPatientTransportAnchor(','a.btn-success[href*="/patient/"]','/^\\/vehicles\\/\\d+\\/patient\\/\\d+\\/?(?:[?#].*)?$/']) if(!s.includes(token)) fail(`missing ${token}`);
+if((s.match(/const exactPatientAnchor = mfFindExactPatientTransportAnchor\(document\);/g)||[]).length<2) fail('both transport paths must use exact patient anchor');
+const route=/^\/vehicles\/\d+\/patient\/\d+\/?(?:[?#].*)?$/;
+if(!route.test('/vehicles/5033562/patient/1862688')) fail('supplied current route rejected');
+if(route.test('/missions/5033562/patient/1862688')||route.test('/vehicles/5033562/gefangener/1862688')) fail('unrelated route accepted');
+console.log('Auto Mode patient transport anchor checks passed.');
+''',encoding='utf-8')
+          for q in [Path('.diagnostics/auto-patient-transport-v1052.md'),Path('.diagnostics/auto-patient-transport-v1052-branch.md'),Path('.github/workflows/inspect-auto-patient-transport-once.yml'),Path('.github/workflows/build-auto-patient-transport-v1052.yml')]:
+              if q.exists(): q.unlink()
+          PY
+          git diff --check
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Validate complete candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --force
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          node scripts/validate-userscript.mjs --base-ref origin/main
+          node scripts/check-auto-patient-transport-anchor.mjs
+          node scripts/check-ios-compatibility.mjs
+          node scripts/check-runtime-hardening.mjs
+          node scripts/check-auto-prisoner-cell-gate.mjs
+          node scripts/check-missing-requirements-priority.mjs
+          node scripts/check-trained-coverage-optimizer.mjs
+          node scripts/check-police-search-advisor-register.mjs
+          node scripts/check-fast-personnel-register.mjs
+          python3 scripts/check_repository.py
+          git diff --check
+      - name: Push validated candidate
         env:
           GH_TOKEN: ${{ github.token }}
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         shell: bash
         run: |
           set -euo pipefail
-          python3 - <<'PY' > /tmp/context.txt
-          from pathlib import Path
-          source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8')
-          names = ['mfChoosePreferredApproachButton','mfFindAnyVisibleApproachButtonInModal','mfFindAnyVisibleApproachButtonDeep','mfGetTransportActiveScopes','findExactFirstApproachTransportButton','mfBruteFindFirstApproachButton']
-          for name in names:
-              sig = f'function {name}('
-              i=source.find(sig)
-              print(f'--- {name} @ {i} ---')
-              if i < 0: continue
-              brace=source.find('{',i); depth=0; quote=None; esc=False
-              end=len(source)
-              for p in range(brace,len(source)):
-                  c=source[p]
-                  if quote:
-                      if esc: esc=False
-                      elif c=='\\': esc=True
-                      elif c==quote: quote=None
-                      continue
-                  if c in "'\"`": quote=c; continue
-                  if c=='{': depth+=1
-                  elif c=='}':
-                      depth-=1
-                      if depth==0: end=p+1; break
-              print(source[i:end])
-              print()
-          PY
-          {
-            echo '## Auto Mode patient transport function context'
-            echo
-            echo '```javascript'
-            cat /tmp/context.txt
-            echo '```'
-          } > /tmp/comment.md
-          gh pr comment "$PR_NUMBER" --body-file /tmp/comment.md
+          git config user.name MartyBlyth
+          git config user.email 32400596+Martyblyth@users.noreply.github.com
+          git add -A
+          git commit -m 'Fix Auto Mode patient transport anchor'
+          git push origin "HEAD:refs/heads/${HEAD_BRANCH}"
+          SHA="$(git rev-parse HEAD)"
+          gh pr edit "$PR_NUMBER" --title 'Fix Auto Mode patient transport anchor' --body "## Fix\n\n- Recognises the current green **Transport Patient** anchor by its exact numeric \`/vehicles/{vehicle}/patient/{hospital}\` route.\n- Checks it before both legacy **Approach** handlers.\n- Keeps unrelated controls excluded.\n\n## Release\n\n- Command Nexus \`1.0.52\`\n- Mission Finder \`V10.6.115\`\n- Personnel Assignment \`1.3.7\`\n\nThe supplied HTML route has permanent regression coverage. Focused and repository validation passed.\n\nValidated commit: \`${SHA}\`."
