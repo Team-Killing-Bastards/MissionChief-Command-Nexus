@@ -1,4 +1,4 @@
-name: Publish and verify v1.0.51
+name: Verify published v1.0.51
 
 on:
   pull_request:
@@ -6,11 +6,11 @@ on:
     types: [opened, synchronize, reopened]
 
 permissions:
-  contents: write
+  contents: read
   pull-requests: write
 
 concurrency:
-  group: publish-v1.0.51-once
+  group: verify-v1.0.51-once
   cancel-in-progress: false
 
 jobs:
@@ -72,22 +72,9 @@ jobs:
             --jq 'select(.isDraft == false and .isPrerelease == false) | true' |
             grep -Fx true
 
-  publish:
-    name: Reconcile through permanent release workflow
-    needs: tag
-    permissions:
-      contents: write
-      pull-requests: write
-    uses: ./.github/workflows/release.yml
-    with:
-      operation: publish-release
-      release_tag: v1.0.51
-      release_notes: Adds Quick Refresh Register for repeated incremental scans, preserves Full Verify Register for complete audits, verifies changed or unsafe exact vehicle pages through a bounded worker pool, reuses only safely confirmed complete records, and fails closed on incomplete station pages or changed vehicles whose exact verification fails.
-    secrets: inherit
-
   receipt:
     name: Verify GitHub Greasy Fork and Discord delivery
-    needs: publish
+    needs: tag
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -184,32 +171,30 @@ jobs:
           gh pr comment "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --body-file /tmp/v1051-receipt.md
 
   finish:
-    name: Close one-use publisher
-    needs: [tag, publish, receipt]
+    name: Close one-use verifier
+    needs: [tag, receipt]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
     steps:
-      - name: Close publisher branch
+      - name: Close verifier branch
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           TAG_RESULT: ${{ needs.tag.result }}
-          PUBLISH_RESULT: ${{ needs.publish.result }}
           RECEIPT_RESULT: ${{ needs.receipt.result }}
         shell: bash
         run: |
           set -euo pipefail
           if [[ "${TAG_RESULT}" == 'success' && \
-                "${PUBLISH_RESULT}" == 'success' && \
                 "${RECEIPT_RESULT}" == 'success' ]]; then
             gh pr close "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" \
-              --comment 'v1.0.51 was published and verified across GitHub, Greasy Fork and Discord.'
+              --comment 'v1.0.51 is verified across GitHub, Greasy Fork and Discord.'
             gh api --method DELETE \
               "repos/${GITHUB_REPOSITORY}/git/refs/heads/release/publish-v1051" || true
           else
             gh pr comment "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" \
-              --body "v1.0.51 verification stopped: tag=${TAG_RESULT}, publish=${PUBLISH_RESULT}, receipt=${RECEIPT_RESULT}."
+              --body "v1.0.51 verification stopped: tag=${TAG_RESULT}, receipt=${RECEIPT_RESULT}."
             exit 1
           fi
