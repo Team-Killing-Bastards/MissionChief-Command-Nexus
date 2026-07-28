@@ -6,6 +6,7 @@ on:
     types: [opened, synchronize, reopened]
 
 permissions:
+  actions: write
   contents: write
   pull-requests: write
 
@@ -14,18 +15,16 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  tag:
+  publish:
     if: github.event.pull_request.head.ref == 'release/publish-v1052'
     runs-on: ubuntu-latest
-    outputs:
-      release_sha: ${{ steps.tag.outputs.release_sha }}
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v6
         with:
           ref: main
           fetch-depth: 0
       - name: Create or verify clean v1.0.52 tag
-        id: tag
         env:
           CLEAN_SHA: 09b7bbd4502430c9458dbae42751c741dbcc9385
         shell: bash
@@ -43,28 +42,39 @@ jobs:
             git tag -a v1.0.52 "$CLEAN_SHA" -m 'MissionChief Command Nexus 1.0.52'
             git push origin refs/tags/v1.0.52
           fi
-          echo "release_sha=$CLEAN_SHA" >> "$GITHUB_OUTPUT"
-
-  publish:
-    needs: tag
-    if: needs.tag.result == 'success'
-    uses: ./.github/workflows/create-release.yml
-    with:
-      operation: publish-release
-      release_tag: v1.0.52
-      release_notes: 'Restore Auto Mode patient transport clicking for current exact vehicle/patient destination anchors.'
-    secrets: inherit
-
-  close:
-    needs: [tag, publish]
-    if: always() && github.event.pull_request.head.ref == 'release/publish-v1052'
-    runs-on: ubuntu-latest
-    steps:
+      - name: Dispatch permanent publisher
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          BEFORE="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow create-release.yml --limit 1 --json databaseId --jq '.[0].databaseId // 0')"
+          gh workflow run create-release.yml --repo "$GITHUB_REPOSITORY" --ref main \
+            -f operation=publish-release \
+            -f release_tag=v1.0.52 \
+            -f release_notes='Restore Auto Mode patient transport clicking for current exact vehicle/patient destination anchors.'
+          RUN_ID=''
+          for attempt in $(seq 1 30); do
+            RUN_ID="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow create-release.yml --limit 5 --json databaseId,event,status --jq "map(select(.event == \"workflow_dispatch\" and .databaseId != ${BEFORE})) | .[0].databaseId // empty")"
+            test -n "$RUN_ID" && break
+            sleep 2
+          done
+          test -n "$RUN_ID"
+          gh run watch "$RUN_ID" --repo "$GITHUB_REPOSITORY" --exit-status
+      - name: Verify release exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release view v1.0.52 --repo "$GITHUB_REPOSITORY" --json isDraft,isPrerelease,assets,url --jq 'select(.isDraft == false and .isPrerelease == false) | .url'
+          gh release view v1.0.52 --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -Fx 'MissionChief-Command-Nexus-1.0.52.user.js'
+          gh release view v1.0.52 --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -Fx 'MissionChief-Command-Nexus-1.0.52.user.js.sha256'
       - name: Report result
+        if: always()
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          TAG_RESULT: ${{ needs.tag.result }}
-          PUBLISH_RESULT: ${{ needs.publish.result }}
+          JOB_STATUS: ${{ job.status }}
         run: |
-          gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --body "v1.0.52 publication result: tag=${TAG_RESULT}, publish=${PUBLISH_RESULT}."
+          gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --body "v1.0.52 publication workflow completed with status: ${JOB_STATUS}."
