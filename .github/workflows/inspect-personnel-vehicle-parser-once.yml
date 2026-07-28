@@ -1,0 +1,49 @@
+name: Inspect Personnel vehicle parser once
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  inspect:
+    if: github.event.pull_request.head.ref == 'agent/fast-personnel-register-v1051'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+          show-progress: false
+      - name: Extract parser contracts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        shell: bash
+        run: |
+          python3 - <<'PY' > /tmp/parser.txt
+          from pathlib import Path
+          import re
+          source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8')
+          for name in ('getPersonnelVehicleQueue', 'getPersonnelVehicleTypeIdFromRow'):
+              match = re.search(rf'^    (?:async\s+)?function\s+{name}\s*\(', source, re.M)
+              if not match:
+                  print(f'NOT FOUND: {name}')
+                  continue
+              nxt = re.search(r'^    (?:async\s+)?function\s+[A-Za-z0-9_$]+\s*\(', source[match.end():], re.M)
+              end = match.end() + nxt.start() if nxt else len(source)
+              print(source[match.start():end].rstrip())
+              print('\n---\n')
+          PY
+          {
+            echo '## Personnel vehicle parser contracts'
+            echo
+            echo '```javascript'
+            cat /tmp/parser.txt
+            echo '```'
+          } > /tmp/comment.md
+          gh pr comment "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --body-file /tmp/comment.md
