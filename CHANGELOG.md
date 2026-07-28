@@ -32,6 +32,27 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
 
+## [1.0.51] - 2026-07-28
+
+### Changed
+
+- Replaced the single slow mass-register action with **Quick Refresh Register** and **Full Verify Register**.
+- Quick Refresh reads every station snapshot but reuses a vehicle's previous complete exact record when its exact ID, type, assigned personnel count and complete per-person training profiles are unchanged.
+- Changed, new, expired or ambiguous vehicles automatically fall back to their exact `/vehicles/{id}/zuweisung` page; unsafe station evidence can never qualify for reuse.
+- Full Verify retains the complete audit path and opens every exact vehicle assignment page.
+- Exact vehicle pages now run through a bounded pool of three desktop workers or two iPhone/iPad workers, with one controlled retry, instead of a strictly serial loop.
+- Deleted vehicles are removed only after their station page is read successfully, and stopped or failed work preserves older exact records that were not safely replaced.
+
+### Interface and reporting
+
+- Progress reports now separate exact pages read, exact records reused, unsafe stations, deleted vehicles and final retained-register size.
+- Unchanged records retain their original exact verification timestamp and receive a separate station-confirmation timestamp.
+
+### Changed engine baseline
+
+- Personnel Assignment increased from `1.3.6` to `1.3.7`.
+- Mission Finder remains `V10.6.114`.
+
 ## [1.0.50] - 2026-07-27
 
 ### Fixed
