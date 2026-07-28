@@ -4886,6 +4886,7 @@
         const verifiedVehicles = [];
         let exactPagesRead = 0;
         let failedVehicles = 0;
+        const failedVehicleIds = [];
         let cursor = 0;
         let nextLaunchAt = 0;
         let launchChain = Promise.resolve();
@@ -4953,6 +4954,7 @@
 
                 if (!parsed) {
                     failedVehicles += 1;
+                    failedVehicleIds.push(String(vehicle.vehicleId || ''));
                     personnelLog(
                         `Exact vehicle scan failed for ${vehicle.name || vehicle.vehicleId}: ${finalError?.message || finalError}`,
                         'error'
@@ -4976,11 +4978,21 @@
             station,
             verifiedVehicles,
             exactPagesRead,
-            failedVehicles
+            failedVehicles,
+            failedVehicleIds
         };
     }
 
     async function buildPersonnelTrainingRegisterOneClick(options = {}) {
+        if (STATE.running || STATION_STATE.running) {
+            personnelLog(
+                'A naming tool is currently running. Stop it before refreshing the Personnel Register.',
+                'error'
+            );
+            setPersonnelUiValue('status', 'Blocked by naming tool');
+            return;
+        }
+
         if (PERSONNEL_STATE.running || PERSONNEL_STATE.registerBuilding) {
             personnelLog(
                 'Personnel Assignment or a register build is already running.',
@@ -5085,6 +5097,11 @@
                         station.href,
                         14000
                     );
+                    if (!stationPage.doc.querySelector('#vehicle_table')) {
+                        throw new Error(
+                            'Vehicle table was not present on the station page.'
+                        );
+                    }
                     const vehicles = getPersonnelVehicleQueue(
                         stationPage.doc,
                         []
@@ -5182,6 +5199,16 @@
                         });
                     exactPagesRead += verification.exactPagesRead;
                     failedVehicles += verification.failedVehicles;
+                    verification.failedVehicleIds.forEach(vehicleId => {
+                        const existingEntry = registry.vehicles?.[vehicleId];
+                        if (!existingEntry) return;
+                        existingEntry.assignmentScanComplete = false;
+                        existingEntry.trainingProfilesComplete = false;
+                        existingEntry.source =
+                            'personnel-register-refresh-failed-v1';
+                        existingEntry.refreshFailedAt = Date.now();
+                        PERSONNEL_TRAINING_REGISTRY_DIRTY = true;
+                    });
 
                     if (verification.verifiedVehicles.length) {
                         const published =

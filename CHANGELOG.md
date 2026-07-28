@@ -42,6 +42,9 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Full Verify retains the complete audit path and opens every exact vehicle assignment page.
 - Exact vehicle pages now run through a bounded pool of three desktop workers or two iPhone/iPad workers, with one controlled retry, instead of a strictly serial loop.
 - Deleted vehicles are removed only after their station page is read successfully, and stopped or failed work preserves older exact records that were not safely replaced.
+- Unit or Station Naming runs now block a register refresh, preserving the existing single-tool safety boundary.
+- Station records are pruned only when the authoritative `#vehicle_table` is present; an incomplete or unexpected station page fails closed.
+- When a changed vehicle exact page fails, its previous record is retained for diagnosis but marked incomplete and non-exact, so a known-changed vehicle cannot remain authoritative.
 
 ### Interface and reporting
 

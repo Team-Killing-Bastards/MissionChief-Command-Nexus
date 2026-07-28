@@ -33,6 +33,10 @@ for (const [token, label] of [
   ['Exact vehicles reused unchanged:', 'reuse reporting'],
   ['const registryRetained = getPersonnelTrainingRegistryStats().count;', 'accurate retained count'],
   ['Vehicle pages remain authoritative', 'authority report'],
+  ['STATE.running || STATION_STATE.running', 'naming tools block concurrent register work'],
+  ["querySelector('#vehicle_table')", 'station table required before pruning'],
+  ['failedVehicleIds', 'failed exact page tracking'],
+  ['personnel-register-refresh-failed-v1', 'failed exact records become untrusted'],
 ]) {
   if (!source.includes(token)) fail(`Missing fast-register contract: ${label}`);
 }
