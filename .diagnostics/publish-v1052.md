@@ -1,1 +1,1 @@
-Trigger clean v1.0.52 tag and permanent release workflow publication after publisher correction.
+Trigger direct immutable-tag publication, asset verification, Greasy Fork parity and Discord receipt.
