@@ -1,0 +1,70 @@
+name: Publish and verify v1.0.52
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: publish-v1.0.52-once
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    if: github.event.pull_request.head.ref == 'release/publish-v1052'
+    runs-on: ubuntu-latest
+    outputs:
+      release_sha: ${{ steps.tag.outputs.release_sha }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Create or verify clean v1.0.52 tag
+        id: tag
+        env:
+          CLEAN_SHA: 09b7bbd4502430c9458dbae42751c741dbcc9385
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --tags --force
+          VERSION="$(git show "${CLEAN_SHA}:src/missionchief-command-nexus.user.js" | sed -n 's#^//[[:space:]]*@version[[:space:]]*##p' | head -n1 | xargs)"
+          test "$VERSION" = '1.0.52'
+          test -z "$(git ls-tree -r --name-only "$CLEAN_SHA" | grep -E '^\.github/workflows/(publish-v1052-once|inspect-auto-patient|build-auto-patient)' || true)"
+          if git show-ref --tags --verify --quiet refs/tags/v1.0.52; then
+            test "$(git rev-list -n1 v1.0.52)" = "$CLEAN_SHA"
+          else
+            git config user.name github-actions[bot]
+            git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+            git tag -a v1.0.52 "$CLEAN_SHA" -m 'MissionChief Command Nexus 1.0.52'
+            git push origin refs/tags/v1.0.52
+          fi
+          echo "release_sha=$CLEAN_SHA" >> "$GITHUB_OUTPUT"
+
+  publish:
+    needs: tag
+    if: needs.tag.result == 'success'
+    uses: ./.github/workflows/create-release.yml
+    with:
+      operation: publish-release
+      release_tag: v1.0.52
+      release_notes: 'Restore Auto Mode patient transport clicking for current exact vehicle/patient destination anchors.'
+    secrets: inherit
+
+  close:
+    needs: [tag, publish]
+    if: always() && github.event.pull_request.head.ref == 'release/publish-v1052'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report result
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          TAG_RESULT: ${{ needs.tag.result }}
+          PUBLISH_RESULT: ${{ needs.publish.result }}
+        run: |
+          gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --body "v1.0.52 publication result: tag=${TAG_RESULT}, publish=${PUBLISH_RESULT}."
