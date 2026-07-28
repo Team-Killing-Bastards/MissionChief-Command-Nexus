@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.52
+// @version      1.0.53
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -9616,7 +9616,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.115
+         * MODULE 2: MISSION FINDER V10.6.116
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -36667,8 +36667,48 @@ async function handleAutoPrisonerReleaseAfterActions() {
         return null;
     }
 
+    function mfGetExactPatientTransportRoots() {
+        const roots = [];
+        const seenDocuments = new Set();
+
+        const addDocument = candidate => {
+            let doc = null;
+            if (candidate?.nodeType === 9) {
+                doc = candidate;
+            } else if (candidate?.ownerDocument?.nodeType === 9) {
+                doc = candidate.ownerDocument;
+            }
+            if (!doc || seenDocuments.has(doc)) return;
+            seenDocuments.add(doc);
+            roots.push(doc);
+
+            for (const frame of Array.from(doc.querySelectorAll?.('iframe') || [])) {
+                try {
+                    if (frame.contentDocument) addDocument(frame.contentDocument);
+                } catch (error) {
+                    // Cross-origin or unavailable frames fail closed.
+                }
+            }
+        };
+
+        addDocument(document);
+        for (const scope of mfGetTransportActiveScopes()) {
+            addDocument(scope);
+        }
+
+        return roots;
+    }
+
+    function mfFindExactPatientTransportAnchorDeep() {
+        for (const root of mfGetExactPatientTransportRoots()) {
+            const anchor = mfFindExactPatientTransportAnchor(root);
+            if (anchor) return anchor;
+        }
+        return null;
+    }
+
     function findExactFirstApproachTransportButton() {
-        const exactPatientAnchor = mfFindExactPatientTransportAnchor(document);
+        const exactPatientAnchor = mfFindExactPatientTransportAnchorDeep();
 
         if (exactPatientAnchor) return exactPatientAnchor;
 
@@ -37376,7 +37416,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
 
 
     function mfBruteFindFirstApproachButton() {
-        const exactPatientAnchor = mfFindExactPatientTransportAnchor(document);
+        const exactPatientAnchor = mfFindExactPatientTransportAnchorDeep();
 
         if (exactPatientAnchor) return exactPatientAnchor;
 

@@ -32,6 +32,19 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
 
+## [1.0.53] - 2026-07-28
+
+### Fixed
+
+- Auto Mode patient transport now searches the top-level page, active transport scopes and recursively accessible same-origin iframe documents.
+- Current green **Transport Patient** anchors with exact `/vehicles/{vehicle}/patient/{hospital}` routes are found inside nested vehicle lightbox iframes.
+- Cross-origin or unavailable frames fail closed, and unrelated green controls remain excluded.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.115` to `V10.6.116`.
+- Personnel Assignment remains `1.3.7`.
+
 ## [1.0.52] - 2026-07-28
 
 ### Fixed
