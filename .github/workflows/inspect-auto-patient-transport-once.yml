@@ -1,0 +1,58 @@
+name: Inspect Auto Mode patient transport once
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  inspect:
+    if: github.event.pull_request.head.ref == 'agent/fix-auto-patient-transport-v1052'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 1
+      - name: Extract transport selector context
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' > /tmp/context.txt
+          from pathlib import Path
+          source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8')
+          needles = ['button.btn.btn-success', 'btn_approach', 'Transport Patient', '/patient/', 'Approach']
+          seen=[]
+          for needle in needles:
+              start=0
+              while True:
+                  i=source.find(needle,start)
+                  if i<0: break
+                  a=max(0, source.rfind('\n',0,max(0,i-1800)))
+                  b=source.find('\n',min(len(source),i+2200))
+                  if b<0: b=len(source)
+                  chunk=source[a:b]
+                  key=(a,b)
+                  if key not in seen:
+                      seen.append(key)
+                      print(f'--- {needle} @ {i} ---')
+                      print(chunk)
+                  start=i+len(needle)
+          PY
+          head -c 55000 /tmp/context.txt > /tmp/context-short.txt
+          {
+            echo '## Auto Mode patient transport source context'
+            echo
+            echo '```javascript'
+            cat /tmp/context-short.txt
+            echo
+            echo '```'
+          } > /tmp/comment.md
+          gh pr comment "$PR_NUMBER" --body-file /tmp/comment.md
