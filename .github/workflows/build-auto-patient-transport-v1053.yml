@@ -1,0 +1,181 @@
+name: Build Auto Mode patient transport v1.0.53
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  build:
+    if: >-
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '/build-patient-transport-v1053')
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Resolve pull request branch
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          HEAD_BRANCH="$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json headRefName --jq .headRefName)"
+          test "$HEAD_BRANCH" = 'agent/fix-auto-patient-transport-v1053'
+          echo "head_branch=$HEAD_BRANCH" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ steps.pr.outputs.head_branch }}
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Apply iframe-aware patient transport fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('src/missionchief-command-nexus.user.js')
+          s=p.read_text(encoding='utf-8')
+          anchor='    function findExactFirstApproachTransportButton() {\n'
+          helper=r'''    function mfGetExactPatientTransportRoots() {
+              const roots = [];
+              const seenDocuments = new Set();
+
+              const addDocument = candidate => {
+                  let doc = null;
+                  if (candidate?.nodeType === 9) {
+                      doc = candidate;
+                  } else if (candidate?.ownerDocument?.nodeType === 9) {
+                      doc = candidate.ownerDocument;
+                  }
+                  if (!doc || seenDocuments.has(doc)) return;
+                  seenDocuments.add(doc);
+                  roots.push(doc);
+
+                  const frames = Array.from(doc.querySelectorAll?.('iframe') || []);
+                  for (const frame of frames) {
+                      try {
+                          if (frame.contentDocument) addDocument(frame.contentDocument);
+                      } catch (error) {
+                          // Cross-origin or unavailable frames fail closed.
+                      }
+                  }
+              };
+
+              addDocument(document);
+              for (const scope of mfGetTransportActiveScopes()) {
+                  addDocument(scope);
+              }
+
+              return roots;
+          }
+
+          function mfFindExactPatientTransportAnchorDeep() {
+              for (const root of mfGetExactPatientTransportRoots()) {
+                  const anchor = mfFindExactPatientTransportAnchor(root);
+                  if (anchor) return anchor;
+              }
+              return null;
+          }
+
+'''
+          if 'function mfFindExactPatientTransportAnchorDeep(' not in s:
+              if s.count(anchor)!=1: raise SystemExit('transport finder anchor mismatch')
+              s=s.replace(anchor,helper+anchor,1)
+          old='const exactPatientAnchor = mfFindExactPatientTransportAnchor(document);'
+          new='const exactPatientAnchor = mfFindExactPatientTransportAnchorDeep();'
+          count=s.count(old)
+          if count:
+              s=s.replace(old,new)
+          elif s.count(new)<2:
+              raise SystemExit('deep patient anchor calls missing')
+          s=s.replace('// @version      1.0.52','// @version      1.0.53',1)
+          s=s.replace(' * MODULE 2: MISSION FINDER V10.6.115',' * MODULE 2: MISSION FINDER V10.6.116',1)
+          p.write_text(s,encoding='utf-8')
+
+          for q in Path('scripts').glob('check-*.mjs'):
+              t=q.read_text(encoding='utf-8').replace('// @version      1.0.52','// @version      1.0.53').replace('V10.6.115','V10.6.116')
+              q.write_text(t,encoding='utf-8')
+
+          q=Path('README.md')
+          q.write_text(q.read_text(encoding='utf-8').replace('**Current version:** `1.0.52` · **Mission Finder engine:** `V10.6.115`','**Current version:** `1.0.53` · **Mission Finder engine:** `V10.6.116`'),encoding='utf-8')
+          q=Path('src/README.md')
+          q.write_text(q.read_text(encoding='utf-8').replace('| Command Nexus version | `1.0.52` |','| Command Nexus version | `1.0.53` |').replace('| Mission Finder baseline | `V10.6.115` |','| Mission Finder baseline | `V10.6.116` |'),encoding='utf-8')
+
+          q=Path('CHANGELOG.md'); t=q.read_text(encoding='utf-8')
+          if '## [1.0.53] - 2026-07-28' not in t:
+              section='''## [1.0.53] - 2026-07-28
+
+### Fixed
+
+- Auto Mode patient transport now searches the top-level page, active transport scopes and recursively accessible same-origin iframe documents.
+- Current green **Transport Patient** anchors with exact `/vehicles/{vehicle}/patient/{hospital}` routes are found even when MissionChief renders the destination screen inside a nested vehicle lightbox iframe.
+- Cross-origin or unavailable frames fail closed, and unrelated green controls remain excluded.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.115` to `V10.6.116`.
+- Personnel Assignment remains `1.3.7`.
+
+'''
+              i=t.find('## [1.0.52]')
+              if i<0: raise SystemExit('v1.0.52 changelog section missing')
+              q.write_text(t[:i]+section+t[i:],encoding='utf-8')
+
+          Path('scripts/check-auto-patient-transport-iframe.mjs').write_text(r'''#!/usr/bin/env node
+import { readFile } from 'node:fs/promises';
+const s=await readFile('src/missionchief-command-nexus.user.js','utf8');
+const fail=m=>{console.error(`ERROR: ${m}`);process.exit(1)};
+for(const token of ['// @version      1.0.53','MISSION FINDER V10.6.116','function mfGetExactPatientTransportRoots(','function mfFindExactPatientTransportAnchorDeep(','frame.contentDocument','mfGetTransportActiveScopes()','const exactPatientAnchor = mfFindExactPatientTransportAnchorDeep();']) if(!s.includes(token)) fail(`missing ${token}`);
+if((s.match(/const exactPatientAnchor = mfFindExactPatientTransportAnchorDeep\(\);/g)||[]).length<2) fail('both transport paths must use the deep finder');
+const route=/^\/vehicles\/\d+\/patient\/\d+\/?(?:[?#].*)?$/;
+if(!route.test('/vehicles/5372808/patient/1856401')) fail('supplied patient route rejected');
+if(route.test('/vehicles/5372808/gefangener/1856401')) fail('prisoner route accepted');
+console.log('Iframe-aware patient transport checks passed.');
+''',encoding='utf-8')
+
+          for q in [Path('.diagnostics/auto-patient-transport-v1053.md')]:
+              if q.exists(): q.unlink()
+          PY
+          git diff --check
+      - name: Validate candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --force
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          node scripts/validate-userscript.mjs --base-ref origin/main
+          node scripts/check-auto-patient-transport-anchor.mjs
+          node scripts/check-auto-patient-transport-iframe.mjs
+          node scripts/check-ios-compatibility.mjs
+          node scripts/check-runtime-hardening.mjs
+          node scripts/check-auto-prisoner-cell-gate.mjs
+          node scripts/check-missing-requirements-priority.mjs
+          node scripts/check-trained-coverage-optimizer.mjs
+          node scripts/check-police-search-advisor-register.mjs
+          node scripts/check-fast-personnel-register.mjs
+          python3 scripts/check_repository.py
+          git diff --check
+      - name: Push validated candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          HEAD_BRANCH: ${{ steps.pr.outputs.head_branch }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name MartyBlyth
+          git config user.email 32400596+Martyblyth@users.noreply.github.com
+          git add -A
+          git commit -m 'Fix Auto Mode patient transport iframe search'
+          git push origin "HEAD:refs/heads/${HEAD_BRANCH}"
+          SHA="$(git rev-parse HEAD)"
+          gh pr edit "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --title 'Fix Auto Mode patient transport iframe search' --body "## Fix\n\n- Searches the top-level page, active transport scopes and recursively accessible same-origin iframe documents.\n- Finds current green **Transport Patient** anchors by the exact numeric \`/vehicles/{vehicle}/patient/{hospital}\` route.\n- Keeps prisoner routes, mission links and unrelated green controls excluded.\n\n## Release\n\n- Command Nexus \`1.0.53\`\n- Mission Finder \`V10.6.116\`\n- Personnel Assignment \`1.3.7\`\n\nThe supplied \`/vehicles/5372808/patient/1856401\` route and nested iframe path have permanent regression coverage. Validation passed.\n\nValidated commit: \`${SHA}\`."
