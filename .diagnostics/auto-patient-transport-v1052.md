@@ -1,1 +1,0 @@
-Trigger the one-use Auto Mode patient transport selector inspection and validated v1.0.52 build.

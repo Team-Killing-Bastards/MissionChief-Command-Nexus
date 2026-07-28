@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.51
+// @version      1.0.52
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -9616,7 +9616,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.114
+         * MODULE 2: MISSION FINDER V10.6.115
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -36646,7 +36646,32 @@ async function handleAutoPrisonerReleaseAfterActions() {
     }
 
 
+    function mfIsExactPatientTransportAnchor(element) {
+        if (!element || String(element.tagName || '').toLowerCase() !== 'a') return false;
+        const href = String(element.getAttribute?.('href') || '').trim();
+        const className = String(element.className || '');
+        if (!/(?:^|\s)btn-success(?:\s|$)/.test(className)) return false;
+        if (!/^\/vehicles\/\d+\/patient\/\d+\/?(?:[?#].*)?$/.test(href)) return false;
+        if (element.getAttribute?.('aria-disabled') === 'true') return false;
+        if (element.classList?.contains?.('disabled')) return false;
+        return true;
+    }
+
+    function mfFindExactPatientTransportAnchor(root = document) {
+        const candidates = Array.from(root?.querySelectorAll?.('a.btn-success[href*="/patient/"]') || []);
+        for (const candidate of candidates) {
+            if (!mfIsExactPatientTransportAnchor(candidate)) continue;
+            try { if (!isElementVisible(candidate)) continue; } catch (error) { continue; }
+            return candidate;
+        }
+        return null;
+    }
+
     function findExactFirstApproachTransportButton() {
+        const exactPatientAnchor = mfFindExactPatientTransportAnchor(document);
+
+        if (exactPatientAnchor) return exactPatientAnchor;
+
         const deepButton = mfFindAnyVisibleApproachButtonDeep();
 
         if (deepButton) return deepButton;
@@ -37351,6 +37376,10 @@ async function handleAutoPrisonerReleaseAfterActions() {
 
 
     function mfBruteFindFirstApproachButton() {
+        const exactPatientAnchor = mfFindExactPatientTransportAnchor(document);
+
+        if (exactPatientAnchor) return exactPatientAnchor;
+
         // This helper already performs the deep transport-scope lookup, so do
         // not run the same deep scan once before calling it.
         const simpleButton = mfFindAnyVisibleApproachButtonInModal();
