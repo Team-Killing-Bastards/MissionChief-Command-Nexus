@@ -32,6 +32,18 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
 
+## [1.0.52] - 2026-07-28
+
+### Fixed
+
+- Restored Auto Mode patient transport clicking for MissionChief's current green **Transport Patient** anchor with an exact `/vehicles/{vehicle}/patient/{hospital}` route.
+- The exact visible enabled patient route is checked before both legacy **Approach** paths; unrelated green links remain excluded.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.114` to `V10.6.115`.
+- Personnel Assignment remains `1.3.7`.
+
 ## [1.0.51] - 2026-07-28
 
 ### Changed
