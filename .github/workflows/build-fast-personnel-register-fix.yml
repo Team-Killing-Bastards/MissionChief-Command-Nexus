@@ -123,11 +123,30 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git config user.name MartyBlyth
-          git config user.email 32400596+Martyblyth@users.noreply.github.com
-          git add -A
-          git commit -m 'Accelerate incremental Personnel Register refresh'
-          git push --force origin "HEAD:refs/heads/${HEAD_BRANCH}"
+          set +e
+          {
+            git status --short
+            git config user.name MartyBlyth
+            git config user.email 32400596+Martyblyth@users.noreply.github.com
+            git add -A
+            git commit -m 'Accelerate incremental Personnel Register refresh'
+            git push --force origin "HEAD:refs/heads/${HEAD_BRANCH}"
+          } > /tmp/publish.log 2>&1
+          STATUS=$?
+          set -e
+          if [[ ${STATUS} -ne 0 ]]; then
+            {
+              echo '## Fast Personnel Register branch publication failure'
+              echo
+              echo '```text'
+              tail -100 /tmp/publish.log
+              echo '```'
+            } > /tmp/publish-failure.md
+            gh pr comment "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --body-file /tmp/publish-failure.md
+            cat /tmp/publish.log
+            exit ${STATUS}
+          fi
+          cat /tmp/publish.log
           COMMIT_SHA="$(git rev-parse HEAD)"
           gh pr comment "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" \
             --body "Command Nexus 1.0.51 / Personnel Assignment 1.3.7 passed the complete validation suite. Validated source commit: \`${COMMIT_SHA}\`."
