@@ -1,0 +1,1 @@
+Trigger clean v1.0.52 tag, GitHub release, Greasy Fork parity verification and Discord release receipt.
