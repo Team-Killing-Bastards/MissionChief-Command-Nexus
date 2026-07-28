@@ -28,31 +28,34 @@ jobs:
           python3 - <<'PY' > /tmp/context.txt
           from pathlib import Path
           source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8')
-          needles = ['button.btn.btn-success', 'btn_approach', 'Transport Patient', '/patient/', 'Approach']
-          seen=[]
-          for needle in needles:
-              start=0
-              while True:
-                  i=source.find(needle,start)
-                  if i<0: break
-                  a=max(0, source.rfind('\n',0,max(0,i-1800)))
-                  b=source.find('\n',min(len(source),i+2200))
-                  if b<0: b=len(source)
-                  chunk=source[a:b]
-                  key=(a,b)
-                  if key not in seen:
-                      seen.append(key)
-                      print(f'--- {needle} @ {i} ---')
-                      print(chunk)
-                  start=i+len(needle)
+          names = ['mfChoosePreferredApproachButton','mfFindAnyVisibleApproachButtonInModal','mfFindAnyVisibleApproachButtonDeep','mfGetTransportActiveScopes','findExactFirstApproachTransportButton','mfBruteFindFirstApproachButton']
+          for name in names:
+              sig = f'function {name}('
+              i=source.find(sig)
+              print(f'--- {name} @ {i} ---')
+              if i < 0: continue
+              brace=source.find('{',i); depth=0; quote=None; esc=False
+              end=len(source)
+              for p in range(brace,len(source)):
+                  c=source[p]
+                  if quote:
+                      if esc: esc=False
+                      elif c=='\\': esc=True
+                      elif c==quote: quote=None
+                      continue
+                  if c in "'\"`": quote=c; continue
+                  if c=='{': depth+=1
+                  elif c=='}':
+                      depth-=1
+                      if depth==0: end=p+1; break
+              print(source[i:end])
+              print()
           PY
-          head -c 55000 /tmp/context.txt > /tmp/context-short.txt
           {
-            echo '## Auto Mode patient transport source context'
+            echo '## Auto Mode patient transport function context'
             echo
             echo '```javascript'
-            cat /tmp/context-short.txt
-            echo
+            cat /tmp/context.txt
             echo '```'
           } > /tmp/comment.md
           gh pr comment "$PR_NUMBER" --body-file /tmp/comment.md
