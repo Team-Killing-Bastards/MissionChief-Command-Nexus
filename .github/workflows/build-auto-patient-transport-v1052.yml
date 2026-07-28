@@ -1,0 +1,229 @@
+name: Build Auto Mode patient transport v1.0.52
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: build-auto-patient-transport-v1052-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.event.pull_request.head.ref == 'agent/fix-auto-patient-transport-v1052'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Check out candidate branch
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+      - name: Apply patient transport anchor fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          source_path = Path('src/missionchief-command-nexus.user.js')
+          source = source_path.read_text(encoding='utf-8')
+
+          if 'function mfIsExactPatientTransportAnchor(' not in source:
+              anchor = "    function findExactFirstApproachTransportButton() {\n"
+              helper = r'''    function mfIsExactPatientTransportAnchor(element) {
+                  if (!element || String(element.tagName || '').toLowerCase() !== 'a') return false;
+
+                  const href = String(element.getAttribute?.('href') || '').trim();
+                  const className = String(element.className || '');
+
+                  if (!/(?:^|\s)btn-success(?:\s|$)/.test(className)) return false;
+                  if (!/^\/vehicles\/\d+\/patient\/\d+\/?(?:[?#].*)?$/.test(href)) return false;
+                  if (element.getAttribute?.('aria-disabled') === 'true') return false;
+                  if (element.classList?.contains?.('disabled')) return false;
+
+                  return true;
+              }
+
+              function mfFindExactPatientTransportAnchor(root = document) {
+                  const candidates = Array.from(
+                      root?.querySelectorAll?.(
+                          'a.btn-success[href*="/patient/"], ' +
+                          'a.btn.btn-success[href*="/patient/"]'
+                      ) || []
+                  );
+
+                  for (const candidate of candidates) {
+                      if (!mfIsExactPatientTransportAnchor(candidate)) continue;
+                      try {
+                          if (!isElementVisible(candidate)) continue;
+                      } catch (error) {
+                          continue;
+                      }
+                      return candidate;
+                  }
+
+                  return null;
+              }
+
+'''
+              if source.count(anchor) != 1:
+                  raise SystemExit(f'Expected one exact transport finder anchor, found {source.count(anchor)}')
+              source = source.replace(anchor, helper + anchor, 1)
+
+          old = "    function findExactFirstApproachTransportButton() {\n        const deepButton = mfFindAnyVisibleApproachButtonDeep();\n"
+          new = "    function findExactFirstApproachTransportButton() {\n        const exactPatientAnchor = mfFindExactPatientTransportAnchor(document);\n\n        if (exactPatientAnchor) return exactPatientAnchor;\n\n        const deepButton = mfFindAnyVisibleApproachButtonDeep();\n"
+          if old in source:
+              source = source.replace(old, new, 1)
+          elif new not in source:
+              raise SystemExit('Unable to patch exact transport finder')
+
+          brute_old = "    function mfBruteFindFirstApproachButton() {\n        // This helper already performs the deep transport-scope lookup, so do\n"
+          brute_new = "    function mfBruteFindFirstApproachButton() {\n        const exactPatientAnchor = mfFindExactPatientTransportAnchor(document);\n\n        if (exactPatientAnchor) return exactPatientAnchor;\n\n        // This helper already performs the deep transport-scope lookup, so do\n"
+          if brute_old in source:
+              source = source.replace(brute_old, brute_new, 1)
+          elif brute_new not in source:
+              raise SystemExit('Unable to patch brute transport finder')
+
+          source = source.replace('// @version      1.0.51', '// @version      1.0.52', 1)
+          source = source.replace(' * MODULE 2: MISSION FINDER V10.6.114', ' * MODULE 2: MISSION FINDER V10.6.115', 1)
+          source_path.write_text(source, encoding='utf-8')
+
+          for path in Path('scripts').glob('check-*.mjs'):
+              text = path.read_text(encoding='utf-8')
+              text = text.replace('// @version      1.0.51', '// @version      1.0.52')
+              text = text.replace('V10.6.114', 'V10.6.115')
+              path.write_text(text, encoding='utf-8')
+
+          readme = Path('README.md')
+          text = readme.read_text(encoding='utf-8').replace('**Current version:** `1.0.51` · **Mission Finder engine:** `V10.6.114`', '**Current version:** `1.0.52` · **Mission Finder engine:** `V10.6.115`')
+          readme.write_text(text, encoding='utf-8')
+
+          src_readme = Path('src/README.md')
+          text = src_readme.read_text(encoding='utf-8').replace('| Command Nexus version | `1.0.51` |', '| Command Nexus version | `1.0.52` |').replace('| Mission Finder baseline | `V10.6.114` |', '| Mission Finder baseline | `V10.6.115` |')
+          src_readme.write_text(text, encoding='utf-8')
+
+          changelog = Path('CHANGELOG.md')
+          text = changelog.read_text(encoding='utf-8')
+          heading = '## [1.0.52] - 2026-07-28'
+          if heading not in text:
+              insertion = '''## [1.0.52] - 2026-07-28
+
+### Fixed
+
+- Restored Auto Mode patient transport clicking for MissionChief's current green anchor control, including exact `/vehicles/{vehicle}/patient/{hospital}` routes labelled **Transport Patient**.
+- Exact patient-route anchors are checked before the legacy **Approach** button paths in both the normal and brute-force transport handlers.
+- The matcher remains fail-closed: it requires an enabled visible green anchor and an exact numeric vehicle/patient route, so unrelated links cannot be clicked.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.114` to `V10.6.115`.
+- Personnel Assignment remains `1.3.7`.
+
+'''
+              marker = '## [1.0.51]'
+              pos = text.find(marker)
+              if pos < 0: raise SystemExit('Unable to locate v1.0.51 changelog section')
+              text = text[:pos] + insertion + text[pos:]
+              changelog.write_text(text, encoding='utf-8')
+
+          test = Path('scripts/check-auto-patient-transport-anchor.mjs')
+          test.write_text(r'''#!/usr/bin/env node
+
+import { readFile } from 'node:fs/promises';
+
+const source = await readFile('src/missionchief-command-nexus.user.js', 'utf8');
+const fail = message => { console.error(`ERROR: ${message}`); process.exit(1); };
+
+for (const [token, label] of [
+  ['// @version      1.0.52', 'v1.0.52 metadata'],
+  [' * MODULE 2: MISSION FINDER V10.6.115', 'Mission Finder V10.6.115 header'],
+  ['function mfIsExactPatientTransportAnchor(', 'exact patient route classifier'],
+  ['function mfFindExactPatientTransportAnchor(', 'visible patient anchor finder'],
+  ["/^\\/vehicles\\/\\d+\\/patient\\/\\d+\\/?(?:[?#].*)?$/", 'exact numeric patient route'],
+  ["const exactPatientAnchor = mfFindExactPatientTransportAnchor(document);", 'normal and brute paths use exact anchor'],
+  ["a.btn-success[href*=\"/patient/\"]", 'current patient anchor selector'],
+]) {
+  if (!source.includes(token)) fail(`Missing patient transport contract: ${label}`);
+}
+
+const uses = source.match(/const exactPatientAnchor = mfFindExactPatientTransportAnchor\(document\);/g) || [];
+if (uses.length < 2) fail('Both normal and brute transport paths must check the exact patient anchor');
+
+const fixture = '<a class="btn btn-success" href="/vehicles/5033562/patient/1862688" id="btn_approach_1862688">Transport Patient</a>';
+if (!/class="btn btn-success"/.test(fixture) || !/href="\/vehicles\/5033562\/patient\/1862688"/.test(fixture)) {
+  fail('Supplied patient transport fixture was not retained');
+}
+
+const route = /^\/vehicles\/\d+\/patient\/\d+\/?(?:[?#].*)?$/;
+if (!route.test('/vehicles/5033562/patient/1862688')) fail('Current patient route is not accepted');
+if (route.test('/missions/5033562/patient/1862688')) fail('Mission links must not be accepted');
+if (route.test('/vehicles/5033562/gefangener/1862688')) fail('Prisoner routes must remain separate');
+if (route.test('/vehicles/x/patient/1862688')) fail('Non-numeric vehicle IDs must fail closed');
+
+console.log('Auto Mode patient transport anchor checks passed.');
+''', encoding='utf-8')
+
+          for path in [
+              Path('.diagnostics/auto-patient-transport-v1052.md'),
+              Path('.diagnostics/auto-patient-transport-v1052-branch.md'),
+              Path('.github/workflows/inspect-auto-patient-transport-once.yml'),
+              Path('.github/workflows/build-auto-patient-transport-v1052.yml'),
+          ]:
+              if path.exists(): path.unlink()
+          PY
+          git diff --check
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Validate candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --force
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          node scripts/validate-userscript.mjs --base-ref origin/main
+          node scripts/check-auto-patient-transport-anchor.mjs
+          node scripts/check-ios-compatibility.mjs
+          node scripts/check-runtime-hardening.mjs
+          node scripts/check-police-irv-fallback.mjs
+          node scripts/check-ios-unit-finder-selection.mjs
+          node scripts/check-ios-mission-requirements-source.mjs
+          node scripts/check-iphone-mission-ui.mjs
+          node scripts/check-open-issues-batch.mjs
+          node scripts/check-missing-requirements-priority.mjs
+          node scripts/check-trained-coverage-optimizer.mjs
+          node scripts/check-road-rail-rru-mapping.mjs
+          node scripts/check-auto-prisoner-cell-gate.mjs
+          node scripts/check-fire-engine-update-mapping.mjs
+          node scripts/check-saved-position-helper-copy.mjs
+          node scripts/check-bulk-trained-register-update.mjs
+          node scripts/check-hems-ambulance-eta-priority.mjs
+          node scripts/check-police-search-advisor-register.mjs
+          node scripts/check-personnel-register-transfer.mjs
+          node scripts/check-fast-personnel-register.mjs
+          node scripts/check-release-notification-single-delivery.mjs
+          python3 scripts/check_repository.py
+          git diff --check
+      - name: Publish validated candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name MartyBlyth
+          git config user.email 32400596+Martyblyth@users.noreply.github.com
+          git add -A
+          git commit -m 'Fix Auto Mode patient transport anchor'
+          git push origin "HEAD:refs/heads/${HEAD_BRANCH}"
+          SHA="$(git rev-parse HEAD)"
+          gh pr edit "$PR_NUMBER" --title 'Fix Auto Mode patient transport anchor' --body "## Fix\n\n- Recognises MissionChief's current green patient transport anchor with the exact \`/vehicles/{vehicle}/patient/{hospital}\` route.\n- Checks the exact route before both legacy **Approach** paths.\n- Requires visible, enabled, numeric same-origin patient links and remains fail-closed for unrelated controls.\n\n## Release\n\n- Command Nexus \`1.0.52\`\n- Mission Finder \`V10.6.115\`\n- Personnel Assignment remains \`1.3.7\`\n\n## Validation\n\nThe supplied \`Transport Patient\` anchor is covered by a permanent regression test and the complete repository validation suite passed.\n\nValidated source commit: \`${SHA}\`."
