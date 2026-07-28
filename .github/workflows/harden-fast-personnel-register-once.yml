@@ -33,115 +33,140 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
 
+          def block(value: str) -> str:
+              lines = []
+              for line in value.splitlines():
+                  if '|' not in line:
+                      continue
+                  lines.append(line.split('|', 1)[1])
+              return '\n'.join(lines) + '\n'
+
+          def replace_once(text: str, old: str, new: str, label: str) -> str:
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'Expected one {label} anchor, found {count}')
+              return text.replace(old, new, 1)
+
           source_path = Path('src/missionchief-command-nexus.user.js')
           source = source_path.read_text(encoding='utf-8')
           if 'personnel-register-refresh-failed-v1' in source:
               print('Hardening already applied.')
           else:
-              replacements = [
-                  (
-                      """    async function buildPersonnelTrainingRegisterOneClick(options = {}) {
-                  if (PERSONNEL_STATE.running || PERSONNEL_STATE.registerBuilding) {
-          """,
-                      """    async function buildPersonnelTrainingRegisterOneClick(options = {}) {
-                  if (STATE.running || STATION_STATE.running) {
-                      personnelLog(
-                          'A naming tool is currently running. Stop it before refreshing the Personnel Register.',
-                          'error'
-                      );
-                      setPersonnelUiValue('status', 'Blocked by naming tool');
-                      return;
-                  }
-
-                  if (PERSONNEL_STATE.running || PERSONNEL_STATE.registerBuilding) {
-          """,
-                      'naming-tool guard',
-                  ),
-                  (
-                      """        let exactPagesRead = 0;
-                  let failedVehicles = 0;
-                  let cursor = 0;
-          """,
-                      """        let exactPagesRead = 0;
-                  let failedVehicles = 0;
-                  const failedVehicleIds = [];
-                  let cursor = 0;
-          """,
-                      'failed vehicle tracking',
-                  ),
-                  (
-                      """                if (!parsed) {
-                      failedVehicles += 1;
-                      personnelLog(
-          """,
-                      """                if (!parsed) {
-                      failedVehicles += 1;
-                      failedVehicleIds.push(String(vehicle.vehicleId || ''));
-                      personnelLog(
-          """,
-                      'failed vehicle ID capture',
-                  ),
-                  (
-                      """            exactPagesRead,
-                  failedVehicles
-              };
-          """,
-                      """            exactPagesRead,
-                  failedVehicles,
-                  failedVehicleIds
-              };
-          """,
-                      'failed vehicle result',
-                  ),
-                  (
-                      """                    const stationPage = await personnelFetchDocument(
-                          station.href,
-                          14000
-                      );
-                      const vehicles = getPersonnelVehicleQueue(
-          """,
-                      """                    const stationPage = await personnelFetchDocument(
-                          station.href,
-                          14000
-                      );
-                      if (!stationPage.doc.querySelector('#vehicle_table')) {
-                          throw new Error(
-                              'Vehicle table was not present on the station page.'
-                          );
-                      }
-                      const vehicles = getPersonnelVehicleQueue(
-          """,
-                      'station vehicle-table gate',
-                  ),
-                  (
-                      """                    exactPagesRead += verification.exactPagesRead;
-                      failedVehicles += verification.failedVehicles;
-
-                      if (verification.verifiedVehicles.length) {
-          """,
-                      """                    exactPagesRead += verification.exactPagesRead;
-                      failedVehicles += verification.failedVehicles;
-                      verification.failedVehicleIds.forEach(vehicleId => {
-                          const existingEntry = registry.vehicles?.[vehicleId];
-                          if (!existingEntry) return;
-                          existingEntry.assignmentScanComplete = false;
-                          existingEntry.trainingProfilesComplete = false;
-                          existingEntry.source =
-                              'personnel-register-refresh-failed-v1';
-                          existingEntry.refreshFailedAt = Date.now();
-                          PERSONNEL_TRAINING_REGISTRY_DIRTY = true;
-                      });
-
-                      if (verification.verifiedVehicles.length) {
-          """,
-                      'failed exact record invalidation',
-                  ),
-              ]
-              for old, new, label in replacements:
-                  count = source.count(old)
-                  if count != 1:
-                      raise SystemExit(f'Expected one {label} anchor, found {count}')
-                  source = source.replace(old, new, 1)
+              source = replace_once(
+                  source,
+                  block('''
+                  |    async function buildPersonnelTrainingRegisterOneClick(options = {}) {
+                  |        if (PERSONNEL_STATE.running || PERSONNEL_STATE.registerBuilding) {
+                  '''),
+                  block('''
+                  |    async function buildPersonnelTrainingRegisterOneClick(options = {}) {
+                  |        if (STATE.running || STATION_STATE.running) {
+                  |            personnelLog(
+                  |                'A naming tool is currently running. Stop it before refreshing the Personnel Register.',
+                  |                'error'
+                  |            );
+                  |            setPersonnelUiValue('status', 'Blocked by naming tool');
+                  |            return;
+                  |        }
+                  |
+                  |        if (PERSONNEL_STATE.running || PERSONNEL_STATE.registerBuilding) {
+                  '''),
+                  'naming-tool guard',
+              )
+              source = replace_once(
+                  source,
+                  block('''
+                  |        let exactPagesRead = 0;
+                  |        let failedVehicles = 0;
+                  |        let cursor = 0;
+                  '''),
+                  block('''
+                  |        let exactPagesRead = 0;
+                  |        let failedVehicles = 0;
+                  |        const failedVehicleIds = [];
+                  |        let cursor = 0;
+                  '''),
+                  'failed vehicle tracking',
+              )
+              source = replace_once(
+                  source,
+                  block('''
+                  |                if (!parsed) {
+                  |                    failedVehicles += 1;
+                  |                    personnelLog(
+                  '''),
+                  block('''
+                  |                if (!parsed) {
+                  |                    failedVehicles += 1;
+                  |                    failedVehicleIds.push(String(vehicle.vehicleId || ''));
+                  |                    personnelLog(
+                  '''),
+                  'failed vehicle ID capture',
+              )
+              source = replace_once(
+                  source,
+                  block('''
+                  |            exactPagesRead,
+                  |            failedVehicles
+                  |        };
+                  '''),
+                  block('''
+                  |            exactPagesRead,
+                  |            failedVehicles,
+                  |            failedVehicleIds
+                  |        };
+                  '''),
+                  'failed vehicle result',
+              )
+              source = replace_once(
+                  source,
+                  block('''
+                  |                    const stationPage = await personnelFetchDocument(
+                  |                        station.href,
+                  |                        14000
+                  |                    );
+                  |                    const vehicles = getPersonnelVehicleQueue(
+                  '''),
+                  block('''
+                  |                    const stationPage = await personnelFetchDocument(
+                  |                        station.href,
+                  |                        14000
+                  |                    );
+                  |                    if (!stationPage.doc.querySelector('#vehicle_table')) {
+                  |                        throw new Error(
+                  |                            'Vehicle table was not present on the station page.'
+                  |                        );
+                  |                    }
+                  |                    const vehicles = getPersonnelVehicleQueue(
+                  '''),
+                  'station vehicle-table gate',
+              )
+              source = replace_once(
+                  source,
+                  block('''
+                  |                    exactPagesRead += verification.exactPagesRead;
+                  |                    failedVehicles += verification.failedVehicles;
+                  |
+                  |                    if (verification.verifiedVehicles.length) {
+                  '''),
+                  block('''
+                  |                    exactPagesRead += verification.exactPagesRead;
+                  |                    failedVehicles += verification.failedVehicles;
+                  |                    verification.failedVehicleIds.forEach(vehicleId => {
+                  |                        const existingEntry = registry.vehicles?.[vehicleId];
+                  |                        if (!existingEntry) return;
+                  |                        existingEntry.assignmentScanComplete = false;
+                  |                        existingEntry.trainingProfilesComplete = false;
+                  |                        existingEntry.source =
+                  |                            'personnel-register-refresh-failed-v1';
+                  |                        existingEntry.refreshFailedAt = Date.now();
+                  |                        PERSONNEL_TRAINING_REGISTRY_DIRTY = true;
+                  |                    });
+                  |
+                  |                    if (verification.verifiedVehicles.length) {
+                  '''),
+                  'failed exact record invalidation',
+              )
               source_path.write_text(source, encoding='utf-8')
 
           check_path = Path('scripts/check-fast-personnel-register.mjs')
@@ -156,8 +181,10 @@ jobs:
               )
               if anchor not in check:
                   raise SystemExit('Unable to extend fast register regression tokens')
-              check = check.replace(anchor, anchor + addition, 1)
-              check_path.write_text(check, encoding='utf-8')
+              check_path.write_text(
+                  check.replace(anchor, anchor + addition, 1),
+                  encoding='utf-8',
+              )
 
           changelog_path = Path('CHANGELOG.md')
           changelog = changelog_path.read_text(encoding='utf-8')
@@ -170,8 +197,10 @@ jobs:
               )
               if anchor not in changelog:
                   raise SystemExit('Unable to extend v1.0.51 changelog')
-              changelog = changelog.replace(anchor, anchor + addition, 1)
-              changelog_path.write_text(changelog, encoding='utf-8')
+              changelog_path.write_text(
+                  changelog.replace(anchor, anchor + addition, 1),
+                  encoding='utf-8',
+              )
           PY
           git diff --check
 
