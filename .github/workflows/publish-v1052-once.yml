@@ -1,9 +1,8 @@
 name: Publish and verify v1.0.52
 
 on:
-  pull_request:
-    branches: [main]
-    types: [opened, synchronize, reopened]
+  issue_comment:
+    types: [created]
 
 permissions:
   contents: write
@@ -15,7 +14,10 @@ concurrency:
 
 jobs:
   publish:
-    if: github.event.pull_request.head.ref == 'release/publish-v1052'
+    if: >-
+      github.event.issue.pull_request &&
+      github.event.issue.number == 194 &&
+      contains(github.event.comment.body, '/publish-v1052')
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -106,6 +108,5 @@ jobs:
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
           JOB_STATUS: ${{ job.status }}
-        run: gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --body "v1.0.52 direct publication completed with status: ${JOB_STATUS}."
+        run: gh pr comment 194 --repo "$GITHUB_REPOSITORY" --body "v1.0.52 direct publication completed with status: ${JOB_STATUS}."
