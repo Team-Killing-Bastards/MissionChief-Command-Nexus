@@ -1,4 +1,4 @@
-name: Inspect Auto Mode patient transport once
+name: Build Auto Mode patient transport v1.0.52
 
 on:
   pull_request:
@@ -6,53 +6,55 @@ on:
     types: [opened, synchronize, reopened]
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
 
 jobs:
-  inspect:
+  build:
     if: github.event.pull_request.head.ref == 'agent/fix-auto-patient-transport-v1052'
     runs-on: ubuntu-latest
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: main
-          fetch-depth: 1
-      - name: Extract transport selector context
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+      - name: Apply fix
+        run: python3 scripts/apply-auto-patient-transport-v1052.py
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Validate candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --force
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          node scripts/validate-userscript.mjs --base-ref origin/main
+          node scripts/check-auto-patient-transport-anchor.mjs
+          node scripts/check-ios-compatibility.mjs
+          node scripts/check-runtime-hardening.mjs
+          node scripts/check-auto-prisoner-cell-gate.mjs
+          node scripts/check-missing-requirements-priority.mjs
+          node scripts/check-trained-coverage-optimizer.mjs
+          node scripts/check-police-search-advisor-register.mjs
+          node scripts/check-fast-personnel-register.mjs
+          python3 scripts/check_repository.py
+          git diff --check
+      - name: Push validated candidate
         env:
           GH_TOKEN: ${{ github.token }}
+          HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         shell: bash
         run: |
           set -euo pipefail
-          python3 - <<'PY' > /tmp/context.txt
-          from pathlib import Path
-          source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8')
-          needles = ['button.btn.btn-success', 'btn_approach', 'Transport Patient', '/patient/', 'Approach']
-          seen=[]
-          for needle in needles:
-              start=0
-              while True:
-                  i=source.find(needle,start)
-                  if i<0: break
-                  a=max(0, source.rfind('\n',0,max(0,i-1800)))
-                  b=source.find('\n',min(len(source),i+2200))
-                  if b<0: b=len(source)
-                  chunk=source[a:b]
-                  key=(a,b)
-                  if key not in seen:
-                      seen.append(key)
-                      print(f'--- {needle} @ {i} ---')
-                      print(chunk)
-                  start=i+len(needle)
-          PY
-          head -c 55000 /tmp/context.txt > /tmp/context-short.txt
-          {
-            echo '## Auto Mode patient transport source context'
-            echo
-            echo '```javascript'
-            cat /tmp/context-short.txt
-            echo
-            echo '```'
-          } > /tmp/comment.md
-          gh pr comment "$PR_NUMBER" --body-file /tmp/comment.md
+          git config user.name MartyBlyth
+          git config user.email 32400596+Martyblyth@users.noreply.github.com
+          git add -A
+          git commit -m 'Fix Auto Mode patient transport anchor'
+          git push origin "HEAD:refs/heads/${HEAD_BRANCH}"
+          SHA="$(git rev-parse HEAD)"
+          gh pr edit "$PR_NUMBER" --title 'Fix Auto Mode patient transport anchor' --body "## Fix\n\n- Recognises the current green **Transport Patient** anchor by its exact numeric \`/vehicles/{vehicle}/patient/{hospital}\` route.\n- Checks it before both legacy **Approach** handlers.\n- Keeps unrelated controls excluded.\n\n## Release\n\n- Command Nexus \`1.0.52\`\n- Mission Finder \`V10.6.115\`\n- Personnel Assignment \`1.3.7\`\n\nThe supplied HTML route has permanent regression coverage. Validation passed.\n\nValidated commit: \`${SHA}\`."
