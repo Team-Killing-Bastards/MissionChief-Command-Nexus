@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   tag:
-    name: Tag clean v1.0.51 source
+    name: Verify published v1.0.51 tag source
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.head.ref == 'release/publish-v1051'
@@ -30,70 +30,50 @@ jobs:
           fetch-depth: 0
           show-progress: false
 
-      - name: Create or verify clean release tag
+      - name: Verify existing published tag and clean-source parity
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: v1.0.51
-          RELEASE_SHA: 9d92e2028dc228ab58251f84a294f15c41a7a0b9
+          RELEASE_SHA: 3f22ad048dca6e4abc0eaacc9abef6e023845606
+          CLEAN_SHA: 9d92e2028dc228ab58251f84a294f15c41a7a0b9
         shell: bash
         run: |
           set -euo pipefail
           git fetch origin main --tags --force
           git cat-file -e "${RELEASE_SHA}^{commit}"
-          git merge-base --is-ancestor "${RELEASE_SHA}" origin/main
-
-          VERSION="$(
-            git show "${RELEASE_SHA}:src/missionchief-command-nexus.user.js" |
-              sed -n 's#^//[[:space:]]*@version[[:space:]]*##p' |
-              head -n 1 |
-              xargs
-          )"
-          [[ "${VERSION}" == '1.0.51' ]]
-
-          PERSONNEL_VERSION="$(
-            git show "${RELEASE_SHA}:src/missionchief-command-nexus.user.js" |
-              sed -n "s#^[[:space:]]*const PERSONNEL_VERSION = '\([^']*\)';#\1#p" |
-              head -n 1 |
-              xargs
-          )"
-          [[ "${PERSONNEL_VERSION}" == '1.3.7' ]]
-
-          TEMPORARY_SOURCE="$({
-            git ls-tree -r --name-only "${RELEASE_SHA}" .github/workflows |
-              grep -E '^\.github/workflows/(temporary-|publish-v1051-once).*\.ya?ml$' || true
-            git ls-tree -r --name-only "${RELEASE_SHA}" .github/builders |
-              grep -E '^\.github/builders/fast-register' || true
-          } | sed '/^$/d')"
-          if [[ -n "${TEMPORARY_SOURCE}" ]]; then
-            echo 'Release source contains build-only files:'
-            echo "${TEMPORARY_SOURCE}"
-            exit 1
-          fi
-
-          if git show-ref --tags --verify --quiet "refs/tags/${RELEASE_TAG}"; then
-            CURRENT_SHA="$(git rev-list -n 1 "${RELEASE_TAG}")"
-            if [[ "${CURRENT_SHA}" != "${RELEASE_SHA}" ]]; then
-              if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
-                echo "Published ${RELEASE_TAG} points to ${CURRENT_SHA}; refusing to retag."
-                exit 1
-              fi
-              git push origin ":refs/tags/${RELEASE_TAG}"
-              git tag -d "${RELEASE_TAG}" || true
-            fi
-          fi
-
-          if ! git show-ref --tags --verify --quiet "refs/tags/${RELEASE_TAG}"; then
-            git config user.name MartyBlyth
-            git config user.email 32400596+Martyblyth@users.noreply.github.com
-            git tag -a "${RELEASE_TAG}" "${RELEASE_SHA}" \
-              -m 'MissionChief Command Nexus 1.0.51'
-            git push origin "refs/tags/${RELEASE_TAG}"
-          fi
-
+          git cat-file -e "${CLEAN_SHA}^{commit}"
+          git merge-base --is-ancestor "${RELEASE_SHA}" "${CLEAN_SHA}"
           [[ "$(git rev-list -n 1 "${RELEASE_TAG}")" == "${RELEASE_SHA}" ]]
 
+          git show "${RELEASE_SHA}:src/missionchief-command-nexus.user.js" > /tmp/tag.user.js
+          git show "${CLEAN_SHA}:src/missionchief-command-nexus.user.js" > /tmp/clean.user.js
+          cmp --silent /tmp/tag.user.js /tmp/clean.user.js
+          grep -Fq '// @version      1.0.51' /tmp/tag.user.js
+          grep -Fq "const PERSONNEL_VERSION = '1.3.7';" /tmp/tag.user.js
+
+          git diff --name-only "${RELEASE_SHA}" "${CLEAN_SHA}" > /tmp/release-cleanup-files.txt
+          while IFS= read -r path; do
+            [[ -z "${path}" ]] && continue
+            case "${path}" in
+              .github/workflows/build-fast-personnel-register-fix.yml|\
+              .github/workflows/harden-fast-personnel-register-once.yml|\
+              .github/builders/fast-register.part-*|\
+              .github/builders/fast-register-v2.part-*)
+                ;;
+              *)
+                echo "Unexpected product difference between published and cleaned source: ${path}"
+                exit 1
+                ;;
+            esac
+          done < /tmp/release-cleanup-files.txt
+
+          gh release view "${RELEASE_TAG}" \
+            --json isDraft,isPrerelease \
+            --jq 'select(.isDraft == false and .isPrerelease == false) | true' |
+            grep -Fx true
+
   publish:
-    name: Publish through permanent release workflow
+    name: Reconcile through permanent release workflow
     needs: tag
     permissions:
       contents: write
@@ -125,7 +105,7 @@ jobs:
           GREASYFORK_INSTALL_URL: ${{ vars.GREASYFORK_INSTALL_URL }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           RELEASE_TAG: v1.0.51
-          RELEASE_SHA: 9d92e2028dc228ab58251f84a294f15c41a7a0b9
+          RELEASE_SHA: 3f22ad048dca6e4abc0eaacc9abef6e023845606
         shell: bash
         run: |
           set -euo pipefail
@@ -197,7 +177,8 @@ jobs:
           - GitHub userscript and checksum assets: verified
           - Greasy Fork: exact source parity confirmed
           - Discord: one delivery receipt confirmed as \`${RECEIPT_NAME}\`
-          - Source commit: \`${TAG_SHA}\`
+          - Published source commit: \`${TAG_SHA}\`
+          - Post-release cleanup source: \`9d92e2028dc228ab58251f84a294f15c41a7a0b9\` (identical userscript)
           - SHA-256: \`${CHECKSUM}\`
           EOF
           gh pr comment "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --body-file /tmp/v1051-receipt.md
@@ -229,6 +210,6 @@ jobs:
               "repos/${GITHUB_REPOSITORY}/git/refs/heads/release/publish-v1051" || true
           else
             gh pr comment "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" \
-              --body "v1.0.51 publication stopped: tag=${TAG_RESULT}, publish=${PUBLISH_RESULT}, receipt=${RECEIPT_RESULT}."
+              --body "v1.0.51 verification stopped: tag=${TAG_RESULT}, publish=${PUBLISH_RESULT}, receipt=${RECEIPT_RESULT}."
             exit 1
           fi
