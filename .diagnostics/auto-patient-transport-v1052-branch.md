@@ -1,1 +1,1 @@
-Branch marker for Auto Mode patient transport v1.0.52. Trigger registered validated builder.
+Branch marker for Auto Mode patient transport v1.0.52. Execute branch builder workflow.
