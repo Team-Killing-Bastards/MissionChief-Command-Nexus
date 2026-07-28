@@ -1,1 +1,1 @@
-Publish and verify Command Nexus v1.0.53 from clean merge commit f5b981d810bf2cd0b0148d6e93eef9089262de73.
+Publish and verify Command Nexus v1.0.53 from clean merge commit f5b981d810bf2cd0b0148d6e93eef9089262de73 after publisher registration.
