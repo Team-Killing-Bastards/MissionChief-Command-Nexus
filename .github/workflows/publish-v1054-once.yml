@@ -1,4 +1,5 @@
 name: Publish and verify v1.0.54
+# Registered after the clean v1.0.54 feature merge.
 
 on:
   pull_request:
