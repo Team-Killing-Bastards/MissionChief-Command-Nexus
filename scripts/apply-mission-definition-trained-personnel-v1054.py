@@ -1,1 +1,1 @@
-# Temporary trigger placeholder. The boundary-corrected pull-request builder replaces and deletes this file.
+# Temporary trigger placeholder. The adjacent-quantity builder replaces and deletes this file.
