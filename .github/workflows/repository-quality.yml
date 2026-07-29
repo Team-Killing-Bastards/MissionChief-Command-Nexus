@@ -21,11 +21,13 @@ jobs:
   build-v1055:
     name: Apply and validate v1.0.55 trained-personnel fix
     if: >-
-      github.event_name == 'push' &&
-      github.ref_name == 'main' &&
-      contains(github.event.head_commit.message, 'Preserve initial trained personnel requirements')
+      github.event_name == 'pull_request_target' &&
+      github.event.action == 'closed' &&
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.ref == 'release/apply-v1055'
     permissions:
       contents: write
+      pull-requests: write
     runs-on: ubuntu-latest
     timeout-minutes: 40
 
@@ -107,7 +109,8 @@ jobs:
     if: >-
       (github.event_name == 'pull_request_target' &&
        github.event.action == 'closed' &&
-       github.event.pull_request.merged == true) ||
+       github.event.pull_request.merged == true &&
+       github.event.pull_request.head.ref != 'release/apply-v1055') ||
       github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 10
