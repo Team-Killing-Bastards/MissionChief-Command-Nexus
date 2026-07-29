@@ -1,5 +1,5 @@
 name: Validate userscript
-# Includes mission-definition trained-personnel parsing and diagnostic export coverage.
+# Includes mission-definition trained-personnel, diagnostic export and dispatch-correction coverage.
 
 on:
   pull_request:
@@ -17,6 +17,7 @@ on:
       - 'scripts/check-trained-coverage-optimizer.mjs'
       - 'scripts/check-mission-definition-trained-personnel.mjs'
       - 'scripts/check-unit-finder-diagnostic-export.mjs'
+      - 'scripts/check-auto-dispatch-eod-required-personnel.mjs'
       - 'scripts/check-road-rail-rru-mapping.mjs'
       - 'scripts/check-auto-prisoner-cell-gate.mjs'
       - 'scripts/check-fire-engine-update-mapping.mjs'
@@ -42,6 +43,7 @@ on:
       - 'scripts/check-trained-coverage-optimizer.mjs'
       - 'scripts/check-mission-definition-trained-personnel.mjs'
       - 'scripts/check-unit-finder-diagnostic-export.mjs'
+      - 'scripts/check-auto-dispatch-eod-required-personnel.mjs'
       - 'scripts/check-road-rail-rru-mapping.mjs'
       - 'scripts/check-auto-prisoner-cell-gate.mjs'
       - 'scripts/check-fire-engine-update-mapping.mjs'
@@ -114,6 +116,9 @@ jobs:
 
       - name: Validate Unit Finder diagnostic export
         run: node scripts/check-unit-finder-diagnostic-export.mjs
+
+      - name: Validate Auto Mode EOD and composite personnel corrections
+        run: node scripts/check-auto-dispatch-eod-required-personnel.mjs
 
       - name: Validate Road Rail Unit to RRU mapping
         run: node scripts/check-road-rail-rru-mapping.mjs
