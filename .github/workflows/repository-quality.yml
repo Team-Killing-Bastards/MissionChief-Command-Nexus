@@ -22,10 +22,13 @@ jobs:
   build-v1056:
     name: Build Unit Finder diagnostic export v1.0.56
     if: >-
-      github.event_name == 'pull_request_target' &&
-      github.event.action == 'closed' &&
-      github.event.pull_request.merged == true &&
-      github.event.pull_request.head.ref == 'release/apply-v1056'
+      (github.event_name == 'pull_request_target' &&
+       github.event.action == 'closed' &&
+       github.event.pull_request.merged == true &&
+       github.event.pull_request.head.ref == 'release/apply-v1056') ||
+      (github.event_name == 'push' &&
+       github.ref_name == 'main' &&
+       contains(github.event.head_commit.message, 'Run v1.0.56 diagnostic export'))
     permissions:
       contents: write
       pull-requests: write
