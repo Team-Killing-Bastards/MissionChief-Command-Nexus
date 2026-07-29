@@ -3,7 +3,7 @@ from pathlib import Path
 
 path = Path('scripts/check-mission-definition-trained-personnel.mjs')
 text = path.read_text(encoding='utf-8')
-old = '''requireText("source:\n                            'mission-definition-required-personnel'", 'mission-definition source marker');'''
+old = r'''requireText("source:\n                            'mission-definition-required-personnel'", 'mission-definition source marker');'''
 new = '''requireText("'mission-definition-required-personnel'", 'mission-definition source marker');'''
 if old not in text:
     raise SystemExit('Expected formatting-sensitive mission-definition assertion was not found.')
