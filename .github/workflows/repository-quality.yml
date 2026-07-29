@@ -34,7 +34,6 @@ jobs:
        contains(github.event.head_commit.message, 'Run v1.0.56 diagnostic export')) ||
       (github.event_name == 'issue_comment' &&
        github.event.issue.pull_request &&
-       github.event.issue.number == 203 &&
        contains(github.event.comment.body, '/run-v1056-diagnostic-export'))
     permissions:
       contents: write
@@ -84,7 +83,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           JOB_STATUS: ${{ job.status }}
-        run: gh pr comment 203 --repo "$GITHUB_REPOSITORY" --body "v1.0.56 diagnostic export builder completed with status: ${JOB_STATUS}."
+          PR_NUMBER: ${{ github.event.issue.number }}
+        run: gh pr comment "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --body "v1.0.56 diagnostic export builder completed with status: ${JOB_STATUS}."
 
   publish-v1056:
     name: Publish and verify v1.0.56
