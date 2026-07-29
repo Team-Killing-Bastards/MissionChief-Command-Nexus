@@ -1,1 +1,2 @@
 Publish MissionChief Command Nexus v1.0.54 from clean merge commit 61924af48dd3d9bcec83a5b2a08ba692d718f314.
+Trigger after publisher registration.
