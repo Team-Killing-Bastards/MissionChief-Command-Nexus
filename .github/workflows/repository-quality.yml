@@ -8,6 +8,8 @@ on:
   pull_request_target:
     types:
       - closed
+      - synchronize
+      - reopened
   workflow_dispatch:
 
 permissions:
@@ -38,6 +40,60 @@ jobs:
 
       - name: Validate single-delivery Discord release notifications
         run: node scripts/check-release-notification-single-delivery.mjs
+
+  build-v1055:
+    name: Build and validate v1.0.55 trained-personnel fix
+    if: >-
+      github.event_name == 'pull_request_target' &&
+      github.event.pull_request.head.ref == 'agent/preserve-initial-trained-personnel-v1055' &&
+      github.event.pull_request.number == 199
+    permissions:
+      contents: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Check out candidate branch
+        uses: actions/checkout@v6
+        with:
+          ref: agent/preserve-initial-trained-personnel-v1055
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Apply trained-personnel authority fix
+        run: python3 scripts/apply-preserve-initial-trained-personnel-v1055.py
+
+      - name: Validate complete candidate
+        run: |
+          set -euo pipefail
+          git fetch origin main --force
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          node scripts/validate-userscript.mjs --base-ref origin/main
+          for test in scripts/check-*.mjs; do
+            echo "Running ${test}"
+            node "$test"
+          done
+          python3 scripts/check_repository.py
+          git diff --check
+
+      - name: Commit and push validated product code
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config user.name MartyBlyth
+          git config user.email 32400596+Martyblyth@users.noreply.github.com
+          git add src/missionchief-command-nexus.user.js README.md src/README.md CHANGELOG.md scripts/check-initial-trained-personnel-authority.mjs
+          git commit -m 'Preserve initial trained personnel requirements'
+          git push origin HEAD:refs/heads/agent/preserve-initial-trained-personnel-v1055
+          gh pr edit 199 --repo "$GITHUB_REPOSITORY" --body "## Fix\n\nPreserves mission-definition trained-personnel rows during the initial manual Unit Finder and Automatic Unit Finder pass. A rendered live-requirements panel can no longer replace these rows unless MissionChief reports an explicit current Missing Personnel or Missing Vehicles shortage.\n\n## Coverage\n\nLevel 1/2 Public Order, Police Sergeant, Police Medic, Police Inspector, Railway Police Officer, Search Advisor and Armed Response Personnel.\n\n## Release\n\n- Command Nexus \`1.0.55\`\n- Mission Finder \`V10.6.118\`\n- Personnel Assignment \`1.3.7\`\n\nFull validation passed."
 
   release-state:
     name: Detect unpublished canonical version
