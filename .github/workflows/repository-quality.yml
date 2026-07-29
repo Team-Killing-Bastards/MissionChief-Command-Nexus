@@ -18,71 +18,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-v1055:
-    name: Apply and validate v1.0.55 trained-personnel fix
-    if: >-
-      github.event_name == 'pull_request_target' &&
-      github.event.action == 'closed' &&
-      github.event.pull_request.merged == true &&
-      startsWith(github.event.pull_request.head.ref, 'release/apply-v1055')
-    permissions:
-      contents: write
-      pull-requests: write
-    runs-on: ubuntu-latest
-    timeout-minutes: 40
-
-    steps:
-      - name: Check out trusted main
-        uses: actions/checkout@v6
-        with:
-          ref: main
-          fetch-depth: 0
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '24'
-          package-manager-cache: false
-
-      - name: Apply trained-personnel authority fix
-        run: python3 scripts/apply-preserve-initial-trained-personnel-v1055.py
-
-      - name: Validate complete candidate
-        run: |
-          set -euo pipefail
-          node --check src/missionchief-command-nexus.user.js
-          node scripts/validate-userscript.mjs
-          for test in scripts/check-*.mjs; do
-            echo "Running ${test}"
-            node "$test"
-          done
-          python3 scripts/check_repository.py
-          git diff --check
-
-      - name: Commit validated product release
-        run: |
-          set -euo pipefail
-          git config user.name MartyBlyth
-          git config user.email 32400596+Martyblyth@users.noreply.github.com
-          git add -A
-          git commit -m 'Release v1.0.55 trained-personnel authority fix'
-          git push origin HEAD:refs/heads/main
-
-  publish-v1055:
-    name: Publish and verify v1.0.55
-    needs: build-v1055
-    if: needs.build-v1055.result == 'success'
-    permissions:
-      contents: write
-      pull-requests: write
-    uses: ./.github/workflows/release.yml
-    with:
-      operation: publish-release
-      release_tag: v1.0.55
-      release_notes: Preserve mission-definition trained personnel during initial Unit Finder and Automatic Unit Finder dispatch.
-    secrets:
-      DISCORD_RELEASE_WEBHOOK: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
-
   integrity:
     name: Repository integrity
     if: github.event_name != 'pull_request_target'
@@ -109,8 +44,7 @@ jobs:
     if: >-
       (github.event_name == 'pull_request_target' &&
        github.event.action == 'closed' &&
-       github.event.pull_request.merged == true &&
-       !startsWith(github.event.pull_request.head.ref, 'release/apply-v1055')) ||
+       github.event.pull_request.merged == true) ||
       github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 10
