@@ -146,6 +146,5 @@ for (const token of [
 console.log('Initial mission-definition trained-personnel authority checks passed.');
 '''
 Path('scripts/check-initial-trained-personnel-authority.mjs').write_text(check, encoding='utf-8')
-
+Path('.v1055-builder-trigger').unlink(missing_ok=True)
 Path('scripts/apply-preserve-initial-trained-personnel-v1055.py').unlink(missing_ok=True)
-# trigger trusted workflow after registration
