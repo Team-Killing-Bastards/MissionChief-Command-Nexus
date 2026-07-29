@@ -70,7 +70,7 @@ jobs:
           gh release view "${RELEASE_TAG}" \
             --json isDraft,isPrerelease \
             --jq 'select(.isDraft == false and .isPrerelease == false) | true' |
-            grep -Fx true
+          grep -Fx true
 
   receipt:
     name: Verify GitHub Greasy Fork and Discord delivery
