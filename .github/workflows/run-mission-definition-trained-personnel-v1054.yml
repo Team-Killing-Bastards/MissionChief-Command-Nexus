@@ -122,13 +122,17 @@ jobs:
           python3 scripts/check_repository.py
           git diff --check
 
-      - name: Commit and push validated candidate
+      - name: Commit and push validated product code
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         shell: bash
         run: |
           set -euo pipefail
+          git checkout HEAD -- \
+            .github/workflows/validate-userscript.yml \
+            .github/workflows/build-mission-definition-trained-personnel-v1054.yml \
+            .github/workflows/publish-v1053-once.yml
           if git diff --quiet && git diff --cached --quiet; then
             echo 'Validated candidate already exists; no new commit required.'
             exit 0
@@ -139,4 +143,4 @@ jobs:
           git commit -m 'Use mission definition trained personnel in Unit Finder'
           git push origin HEAD:refs/heads/agent/mission-definition-trained-personnel-v1054
           SHA="$(git rev-parse HEAD)"
-          gh pr edit "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --body "## Purpose\n\nUse the mission-definition **Required Personnel** row during initial manual Unit Finder and Automatic Unit Finder selection.\n\n## Supplied fixture\n\n- 22x Level 2 Public Order Officer\n- 4x Police Medic\n- 5x Police Sergeant\n- 2x Police Inspector\n\n## Behaviour\n\n- Parses the combined cell into the existing trained-profile optimiser.\n- Uses the authoritative Personnel Register and actual assigned training profiles.\n- Counts multi-trained staff toward every matching course.\n- Prevents a postfix personnel label from stealing the next `5x ...` requirement quantity.\n- Keeps later upgrades governed by current live Missing Personnel/Vehicle rows, preventing the static totals being applied twice.\n\n## Release\n\n- Command Nexus `1.0.54`\n- Mission Finder `V10.6.117`\n- Personnel Assignment `1.3.7`\n\nThe supplied HTML fixture and shared manual/automatic path have permanent regression coverage. Full repository validation passed.\n\nValidated commit: `${SHA}`."
+          gh pr edit "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --body "## Purpose\n\nUse the mission-definition **Required Personnel** row during initial manual Unit Finder and Automatic Unit Finder selection.\n\n## Supplied fixture\n\n- 22x Level 2 Public Order Officer\n- 4x Police Medic\n- 5x Police Sergeant\n- 2x Police Inspector\n\n## Behaviour\n\n- Parses the combined cell into the existing trained-profile optimiser.\n- Uses the authoritative Personnel Register and actual assigned training profiles.\n- Counts multi-trained staff toward every matching course.\n- Prevents a postfix personnel label from stealing the next `5x ...` requirement quantity.\n- Keeps later upgrades governed by current live Missing Personnel/Vehicle rows, preventing the static totals being applied twice.\n\n## Release\n\n- Command Nexus `1.0.54`\n- Mission Finder `V10.6.117`\n- Personnel Assignment `1.3.7`\n\nThe supplied HTML fixture and shared manual/automatic path have permanent regression coverage. Full repository validation passed.\n\nValidated product-code commit: `${SHA}`. Workflow registration and temporary-workflow cleanup are applied separately through the repository connector."
