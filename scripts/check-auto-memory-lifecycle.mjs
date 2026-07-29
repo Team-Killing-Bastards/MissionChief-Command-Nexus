@@ -87,7 +87,15 @@ const pageHide = source.slice(
   source.indexOf('mfRuntimePageHideHandler = event =>'),
   source.indexOf('mfRuntimePageShowHandler = event =>')
 );
-expect(pageHide.includes('stopMissionEventCollectibleCollector();'), 'bfcache suspension must stop the collector');
+const suspendRuntime = extractFunction('suspendMissionFinderRuntimeForPageHide');
+expect(
+  pageHide.includes('stopMissionEventCollectibleCollector();') ||
+    (
+      pageHide.includes('suspendMissionFinderRuntimeForPageHide(') &&
+      suspendRuntime.includes('stopMissionEventCollectibleCollector();')
+    ),
+  'bfcache suspension must stop the collector'
+);
 
 const reconcile = extractFunction('reconcileMissionFinderAfterPageShow');
 expect(reconcile.includes('startMissionEventCollectibleCollector();'), 'bfcache restoration must restart the collector');
