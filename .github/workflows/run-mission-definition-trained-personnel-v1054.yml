@@ -36,6 +36,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          if grep -q '^// @version      1\.0\.54$' src/missionchief-command-nexus.user.js; then
+            echo 'Candidate is already built; validating the existing 1.0.54 source.'
+            exit 0
+          fi
           python3 - <<'PY'
           import base64
           import gzip
@@ -52,6 +56,106 @@ jobs:
           patcher.write_bytes(payload)
           PY
           python3 scripts/apply-mission-definition-trained-personnel-v1054.py
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/missionchief-command-nexus.user.js')
+          source = path.read_text(encoding='utf-8')
+          function_start = source.index('    function getTrainedPersonnelRequirementsFromFreeText(\n')
+          function_end = source.index('\n\n    function getMissionDefinitionTrainedPersonnelRequirements(', function_start)
+          block = source[function_start:function_end]
+
+          old_signature = '''    function getTrainedPersonnelRequirementsFromFreeText(
+              text
+          ) {
+          '''
+          new_signature = '''    function getTrainedPersonnelRequirementsFromFreeText(
+              text,
+              options = {}
+          ) {
+              const prefixQuantitiesOnly =
+                  Boolean(
+                      options?.prefixQuantitiesOnly
+                  );
+          '''
+          if old_signature not in block:
+              raise SystemExit('Generated free-text parser signature was not found')
+          block = block.replace(old_signature, new_signature, 1)
+
+          old_iteration = '''                definition.patterns
+                      .forEach(pattern => {
+                          pattern.lastIndex = 0;
+          '''
+          new_iteration = '''                definition.patterns
+                      .filter(pattern => {
+                          return (
+                              !prefixQuantitiesOnly ||
+                              pattern.source.startsWith(
+                                  '(\\\\d+)'
+                              )
+                          );
+                      })
+                      .forEach(pattern => {
+                          pattern.lastIndex = 0;
+          '''
+          if old_iteration not in block:
+              raise SystemExit('Generated pattern iteration was not found')
+          block = block.replace(old_iteration, new_iteration, 1)
+
+          old_match_body = '''                            ) {
+                              const required =
+          '''
+          new_match_body = '''                            ) {
+                              const patternIsPrefix =
+                                  pattern.source.startsWith(
+                                      '(\\\\d+)'
+                                  );
+                              const trailingText =
+                                  input.slice(
+                                      pattern.lastIndex
+                                  );
+
+                              if (
+                                  !patternIsPrefix &&
+                                  /^\\s*x(?=\\s|[A-Za-z])/i.test(
+                                      trailingText
+                                  )
+                              ) {
+                                  continue;
+                              }
+
+                              const required =
+          '''
+          if old_match_body not in block:
+              raise SystemExit('Generated match body was not found')
+          block = block.replace(old_match_body, new_match_body, 1)
+          source = source[:function_start] + block + source[function_end:]
+
+          old_call = '''        return getTrainedPersonnelRequirementsFromFreeText(
+              personnelText
+          );
+          '''
+          new_call = '''        return getTrainedPersonnelRequirementsFromFreeText(
+              personnelText,
+              {
+                  prefixQuantitiesOnly:
+                      true
+              }
+          );
+          '''
+          if old_call not in source:
+              raise SystemExit('Mission-definition parser call was not found')
+          source = source.replace(old_call, new_call, 1)
+          path.write_text(source, encoding='utf-8')
+
+          regression = Path('scripts/check-mission-definition-trained-personnel.mjs')
+          test = regression.read_text(encoding='utf-8')
+          token = "requireText('function getMissionDefinitionTrainedPersonnelRequirements(', 'mission-definition row classifier');\n"
+          addition = token + "requireText('prefixQuantitiesOnly', 'prefix quantity boundary');\n"
+          if token not in test:
+              raise SystemExit('Mission-definition regression insertion point was not found')
+          regression.write_text(test.replace(token, addition, 1), encoding='utf-8')
+          PY
           git diff --check
 
       - name: Validate complete candidate
@@ -76,6 +180,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          if git diff --quiet && git diff --cached --quiet; then
+            echo 'Validated candidate already exists; no new commit required.'
+            exit 0
+          fi
           git config user.name MartyBlyth
           git config user.email 32400596+Martyblyth@users.noreply.github.com
           git add -A
