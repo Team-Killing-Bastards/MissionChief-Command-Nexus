@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - agent/preserve-initial-trained-personnel-v1055
   pull_request:
   pull_request_target:
     types:
@@ -20,49 +19,67 @@ concurrency:
 
 jobs:
   build-v1055:
-    name: Build initial trained personnel v1.0.55
+    name: Apply and validate v1.0.55 trained-personnel fix
     if: >-
       github.event_name == 'push' &&
-      github.ref_name == 'agent/preserve-initial-trained-personnel-v1055' &&
-      contains(github.event.head_commit.message, 'Run preserve initial trained personnel builder')
+      github.ref_name == 'main' &&
+      contains(github.event.head_commit.message, 'Preserve initial trained personnel requirements')
     permissions:
       contents: write
     runs-on: ubuntu-latest
     timeout-minutes: 40
+
     steps:
-      - name: Check out candidate branch
+      - name: Check out trusted main
         uses: actions/checkout@v6
         with:
-          ref: agent/preserve-initial-trained-personnel-v1055
+          ref: main
           fetch-depth: 0
+
       - name: Set up Node.js
         uses: actions/setup-node@v6
         with:
           node-version: '24'
           package-manager-cache: false
-      - name: Apply fix
+
+      - name: Apply trained-personnel authority fix
         run: python3 scripts/apply-preserve-initial-trained-personnel-v1055.py
+
       - name: Validate complete candidate
         run: |
           set -euo pipefail
-          git fetch origin main --force
           node --check src/missionchief-command-nexus.user.js
           node scripts/validate-userscript.mjs
-          node scripts/validate-userscript.mjs --base-ref origin/main
           for test in scripts/check-*.mjs; do
             echo "Running ${test}"
             node "$test"
           done
           python3 scripts/check_repository.py
           git diff --check
-      - name: Commit and push validated product code
+
+      - name: Commit validated product release
         run: |
           set -euo pipefail
           git config user.name MartyBlyth
           git config user.email 32400596+Martyblyth@users.noreply.github.com
-          git add src/missionchief-command-nexus.user.js README.md src/README.md CHANGELOG.md scripts/check-initial-trained-personnel-authority.mjs
-          git commit -m 'Preserve initial trained personnel requirements'
-          git push origin HEAD:refs/heads/agent/preserve-initial-trained-personnel-v1055
+          git add -A
+          git commit -m 'Release v1.0.55 trained-personnel authority fix'
+          git push origin HEAD:refs/heads/main
+
+  publish-v1055:
+    name: Publish and verify v1.0.55
+    needs: build-v1055
+    if: needs.build-v1055.result == 'success'
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: ./.github/workflows/release.yml
+    with:
+      operation: publish-release
+      release_tag: v1.0.55
+      release_notes: Preserve mission-definition trained personnel during initial Unit Finder and Automatic Unit Finder dispatch.
+    secrets:
+      DISCORD_RELEASE_WEBHOOK: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
 
   integrity:
     name: Repository integrity
