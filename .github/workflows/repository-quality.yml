@@ -18,6 +18,73 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # BEGIN TEMP V1056 DIAGNOSTIC EXPORT
+  build-v1056:
+    name: Build Unit Finder diagnostic export v1.0.56
+    if: >-
+      github.event_name == 'pull_request_target' &&
+      github.event.action == 'closed' &&
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.ref == 'release/apply-v1056'
+    permissions:
+      contents: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Check out trusted main
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Apply diagnostic export feature
+        run: python3 scripts/apply-unit-finder-diagnostic-export-v1056.py
+
+      - name: Validate complete release candidate
+        run: |
+          set -euo pipefail
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          for test in scripts/check-*.mjs; do
+            echo "Running ${test}"
+            node "$test"
+          done
+          python3 scripts/check_repository.py
+          git diff --check
+
+      - name: Commit validated product release
+        run: |
+          set -euo pipefail
+          git config user.name MartyBlyth
+          git config user.email 32400596+Martyblyth@users.noreply.github.com
+          git add -A
+          git commit -m 'Add Unit Finder diagnostic export'
+          git push origin HEAD:refs/heads/main
+
+  publish-v1056:
+    name: Publish and verify v1.0.56
+    needs: build-v1056
+    if: needs.build-v1056.result == 'success'
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: ./.github/workflows/release.yml
+    with:
+      operation: publish-release
+      release_tag: v1.0.56
+      release_notes: Add exportable Unit Finder and Mission Update requirement and selection diagnostics.
+    secrets:
+      DISCORD_RELEASE_WEBHOOK: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
+  # END TEMP V1056 DIAGNOSTIC EXPORT
+
   integrity:
     name: Repository integrity
     if: github.event_name != 'pull_request_target'
@@ -44,7 +111,8 @@ jobs:
     if: >-
       (github.event_name == 'pull_request_target' &&
        github.event.action == 'closed' &&
-       github.event.pull_request.merged == true) ||
+       github.event.pull_request.merged == true &&
+       github.event.pull_request.head.ref != 'release/apply-v1056') ||
       github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 10
