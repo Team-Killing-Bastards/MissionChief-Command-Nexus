@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 
 // Permanent regression for bounded Auto Mode timer, frame and cache ownership.
+// This test is intentionally dispatch-agnostic so matching behaviour stays unchanged.
 const source = fs.readFileSync('src/missionchief-command-nexus.user.js', 'utf8');
 
 function fail(message) {
