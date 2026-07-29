@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
 
+// Permanent v1.0.57 regression for Auto Mode, EOD subtype separation and composite personnel.
 const source = fs.readFileSync('src/missionchief-command-nexus.user.js', 'utf8');
 
 function fail(message) {
