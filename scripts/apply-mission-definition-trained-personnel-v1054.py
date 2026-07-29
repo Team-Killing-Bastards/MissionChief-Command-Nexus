@@ -1,1 +1,1 @@
-# Temporary trigger placeholder. The adjacent-quantity builder replaces and deletes this file.
+# Temporary trigger placeholder. The workflow-safe builder replaces and deletes this file.
