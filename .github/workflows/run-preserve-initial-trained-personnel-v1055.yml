@@ -1,0 +1,54 @@
+name: Run preserve initial trained personnel v1.0.55 builder
+
+on:
+  pull_request_target:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: preserve-initial-trained-personnel-v1055-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.event.pull_request.head.ref == 'agent/preserve-initial-trained-personnel-v1055'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Check out candidate branch
+        uses: actions/checkout@v6
+        with:
+          ref: agent/preserve-initial-trained-personnel-v1055
+          fetch-depth: 0
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Apply fix
+        run: python3 scripts/apply-preserve-initial-trained-personnel-v1055.py
+      - name: Validate complete candidate
+        run: |
+          set -euo pipefail
+          git fetch origin main --force
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          node scripts/validate-userscript.mjs --base-ref origin/main
+          for test in scripts/check-*.mjs; do
+            echo "Running ${test}"
+            node "$test"
+          done
+          python3 scripts/check_repository.py
+          git diff --check
+      - name: Commit and push validated product code
+        run: |
+          set -euo pipefail
+          git config user.name MartyBlyth
+          git config user.email 32400596+Martyblyth@users.noreply.github.com
+          git add src/missionchief-command-nexus.user.js README.md src/README.md CHANGELOG.md scripts/check-initial-trained-personnel-authority.mjs
+          git commit -m 'Preserve initial trained personnel requirements'
+          git push origin HEAD:refs/heads/agent/preserve-initial-trained-personnel-v1055
