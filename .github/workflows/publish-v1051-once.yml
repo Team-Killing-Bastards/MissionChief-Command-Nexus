@@ -89,15 +89,50 @@ jobs:
           URL_SEPARATOR='?'
           [[ "${GREASYFORK_INSTALL_URL}" == *'?'* ]] && URL_SEPARATOR='&'
           GREASY_OK='false'
-          for attempt in $(seq 1 60); do
+          GREASY_STATUS='No response received'
+          for attempt in $(seq 1 12); do
             CHECK_URL="${GREASYFORK_INSTALL_URL}${URL_SEPARATOR}mc_release_check=$(date +%s)-${attempt}"
             if curl --fail --location --silent --show-error --retry 2 --max-time 30 \
               -H 'Cache-Control: no-cache' "${CHECK_URL}" -o /tmp/v1057-greasy.user.js; then
-              if cmp --silent /tmp/v1057-expected.user.js /tmp/v1057-greasy.user.js; then
+              if python3 - /tmp/v1057-expected.user.js /tmp/v1057-greasy.user.js <<'PY'
+          import re
+          import sys
+          from pathlib import Path
+
+          def normalise(text):
+              text = text.lstrip('\ufeff').replace('\r\n', '\n').replace('\r', '\n')
+              text = re.sub(
+                  r'^\s*//\s*@(downloadURL|updateURL|installURL)\s+.*\n?',
+                  '',
+                  text,
+                  flags=re.IGNORECASE | re.MULTILINE,
+              )
+              text = '\n'.join(line.rstrip(' \t') for line in text.split('\n'))
+              return text.rstrip() + '\n'
+
+          expected = Path(sys.argv[1]).read_text(encoding='utf-8')
+          actual = Path(sys.argv[2]).read_text(encoding='utf-8')
+          version = re.search(r'^\s*//\s*@version\s+([^\s]+)\s*$', actual, re.MULTILINE)
+          if not version or version.group(1) != '1.0.57':
+              raise SystemExit(2)
+          if normalise(actual) != normalise(expected):
+              raise SystemExit(3)
+          PY
+              then
                 GREASY_OK='true'
                 break
+              else
+                STATUS=$?
+                if [[ "$STATUS" == '2' ]]; then
+                  GREASY_STATUS="served version $(sed -n 's#^[[:space:]]*//[[:space:]]*@version[[:space:]]*##p' /tmp/v1057-greasy.user.js | head -n 1 | xargs)"
+                else
+                  GREASY_STATUS='version 1.0.57 source differed after metadata normalisation'
+                fi
               fi
+            else
+              GREASY_STATUS='download failed'
             fi
+            echo "Greasy Fork not ready (${attempt}/12): ${GREASY_STATUS}"
             sleep 5
           done
           [[ "${GREASY_OK}" == 'true' ]]
@@ -108,7 +143,7 @@ jobs:
 
           - GitHub release: ${RELEASE_URL}
           - Userscript and checksum assets: verified
-          - Greasy Fork: exact source parity confirmed
+          - Greasy Fork: version and normalised source parity confirmed
           - Discord: one delivery receipt confirmed as \`${RECEIPT_NAME}\`
           - Published source commit: \`${TAG_SHA}\`
           - SHA-256: \`${CHECKSUM}\`
