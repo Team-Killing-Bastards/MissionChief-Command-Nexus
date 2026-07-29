@@ -47,7 +47,10 @@ jobs:
 
       - name: Apply dispatch corrections
         if: steps.state.outputs.should_build == 'true'
-        run: python3 scripts/apply-auto-dispatch-eod-personnel-v1057.py
+        shell: bash
+        run: |
+          python3 scripts/apply-auto-dispatch-eod-personnel-v1057.py
+          python3 scripts/fix-v1057-regression.py
 
       - name: Validate complete candidate
         if: steps.state.outputs.should_build == 'true'
@@ -71,6 +74,7 @@ jobs:
         run: |
           set -euo pipefail
           rm scripts/apply-auto-dispatch-eod-personnel-v1057.py
+          rm scripts/fix-v1057-regression.py
           git config user.name MartyBlyth
           git config user.email 32400596+Martyblyth@users.noreply.github.com
           git add -A
