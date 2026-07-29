@@ -1,0 +1,68 @@
+name: Build mission-definition trained personnel v1.0.54
+
+on:
+  push:
+    branches:
+      - agent/mission-definition-trained-personnel-v1054
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mission-definition-trained-personnel-v1054
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.event.head_commit.message == 'Run mission definition trained personnel builder'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Check out candidate branch
+        uses: actions/checkout@v6
+        with:
+          ref: agent/mission-definition-trained-personnel-v1054
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Apply mission-definition trained-personnel change
+        env:
+          PATCH_B64: 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
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "$PATCH_B64" | base64 --decode | gzip --decompress > scripts/apply-mission-definition-trained-personnel-v1054.py
+          python3 scripts/apply-mission-definition-trained-personnel-v1054.py
+          git diff --check
+
+      - name: Validate complete candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --force
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          node scripts/validate-userscript.mjs --base-ref origin/main
+          for test in scripts/check-*.mjs; do
+            echo "Running ${test}"
+            node "$test"
+          done
+          python3 scripts/check_repository.py
+          git diff --check
+
+      - name: Commit and push validated candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name MartyBlyth
+          git config user.email 32400596+Martyblyth@users.noreply.github.com
+          git add -A
+          git commit -m 'Use mission definition trained personnel in Unit Finder'
+          git push origin HEAD:refs/heads/agent/mission-definition-trained-personnel-v1054
+          echo "Validated commit: $(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
