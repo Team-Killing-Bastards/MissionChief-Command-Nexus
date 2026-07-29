@@ -10,8 +10,8 @@ function fail(message) {
 }
 
 for (const [token, label] of [
-  ['// @version      1.0.53', 'v1.0.51 metadata'],
-  [' * MODULE 2: MISSION FINDER V10.6.116', 'Mission Finder V10.6.116 header'],
+  ['// @version      1.0.54', 'v1.0.51 metadata'],
+  [' * MODULE 2: MISSION FINDER V10.6.117', 'Mission Finder V10.6.117 header'],
   ['Keep my saved panel position', 'saved-position checkbox label'],
 ]) {
   if (!source.includes(token)) fail(`Missing saved-position contract: ${label}`);

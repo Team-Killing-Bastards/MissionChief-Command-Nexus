@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.53
+// @version      1.0.54
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -9616,7 +9616,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.116
+         * MODULE 2: MISSION FINDER V10.6.117
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -21628,6 +21628,44 @@ let sessionRuntimeTicker = null;
                     );
                 }
 
+                const missionDefinitionPersonnelRequirements =
+                    getMissionDefinitionTrainedPersonnelRequirements(
+                        rawRequirementName,
+                        amountText
+                    );
+
+                if (
+                    missionDefinitionPersonnelRequirements.length > 0
+                ) {
+                    rows.push({
+                        unitName:
+                            MF_TRAINED_PERSONNEL_ROW_NAME,
+                        stillNeeded:
+                            getTrainedPersonnelVehicleTarget(
+                                missionDefinitionPersonnelRequirements
+                            ),
+                        isTrainedPersonnelRequirement:
+                            true,
+                        personnelTrainingRequirements:
+                            missionDefinitionPersonnelRequirements,
+                        missionDefinitionRequiredPersonnel:
+                            true,
+                        source:
+                            'mission-definition-required-personnel'
+                    });
+
+                    if (mfDebugEnabled) {
+                        debugLog(
+                            'UNIT FINDER REQUIRED PERSONNEL',
+                            formatTrainedPersonnelRequirements(
+                                missionDefinitionPersonnelRequirements
+                            )
+                        );
+                    }
+
+                    return;
+                }
+
                 const towRequirement =
                     getCarsToTowVehicleRequirement(
                         originalName,
@@ -22572,7 +22610,7 @@ let sessionRuntimeTicker = null;
         ]);
     }
 
-    function getSupportedTrainedPersonnelRequirementsFromText(
+    function getTrainedPersonnelRequirementsFromFreeText(
         text
     ) {
         const input =
@@ -22581,17 +22619,16 @@ let sessionRuntimeTicker = null;
                 ''
             )
                 .replace(
+                    /[×✕]/g,
+                    'x'
+                )
+                .replace(
                     /\s+/g,
                     ' '
                 )
                 .trim();
 
-        if (
-            !input ||
-            !/Missing\s+Personnel:/i.test(
-                input
-            )
-        ) {
+        if (!input) {
             return [];
         }
 
@@ -22607,7 +22644,6 @@ let sessionRuntimeTicker = null;
                         pattern.lastIndex = 0;
 
                         let match;
-
                         while (
                             (
                                 match =
@@ -22616,6 +22652,24 @@ let sessionRuntimeTicker = null;
                                     )
                             )
                         ) {
+                            const patternIsPrefix =
+                                pattern.source.startsWith(
+                                    '(\\d+)'
+                                );
+                            const trailingText =
+                                input.slice(
+                                    pattern.lastIndex
+                                );
+
+                            if (
+                                !patternIsPrefix &&
+                                /^\s*x(?=\s|[A-Za-z])/i.test(
+                                    trailingText
+                                )
+                            ) {
+                                continue;
+                            }
+
                             const required =
                                 Math.max(
                                     0,
@@ -22656,6 +22710,63 @@ let sessionRuntimeTicker = null;
             )
         );
     }
+
+
+    function getMissionDefinitionTrainedPersonnelRequirements(
+        requirementName,
+        personnelText
+    ) {
+        const cleanedName =
+            cleanRequirementName(
+                requirementName
+            );
+
+        if (
+            !/^Personnel(?:\s+Requirements?)?$/i.test(
+                cleanedName
+            )
+        ) {
+            return [];
+        }
+
+        return getTrainedPersonnelRequirementsFromFreeText(
+            personnelText
+        );
+    }
+
+
+    function getSupportedTrainedPersonnelRequirementsFromText(
+        text
+    ) {
+        const input =
+            String(
+                text ||
+                ''
+            )
+                .replace(
+                    /[×✕]/g,
+                    'x'
+                )
+                .replace(
+                    /\s+/g,
+                    ' '
+                )
+                .trim();
+
+        if (
+            !input ||
+            !/Missing\s+Personnel:/i.test(
+                input
+            )
+        ) {
+            return [];
+        }
+
+        return getTrainedPersonnelRequirementsFromFreeText(
+            input
+        );
+    }
+
 
     function normalisePublicOrderTrainedRequirements(
         requirements
