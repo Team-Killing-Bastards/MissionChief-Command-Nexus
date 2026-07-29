@@ -32,6 +32,24 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
 
+## [1.0.57] - 2026-07-29
+
+### Fixed
+
+- Auto Mode now runs the mission-definition requirement set once. Its post-Unit Finder Mission Update pass accepts only explicit current **Missing Vehicles** or **Missing Personnel** rows, preventing complete double dispatches.
+- Normal **EOD Response Vehicles** use exact MissionChief vehicle type `110`; **Marine EOD Response Vehicles** remain separate on type `113` and can no longer satisfy one another through substring matching.
+- Composite **Required Personnel** rows now retain Search Advisor trained-profile demand while also converting Search Technicians and SAR Commanders to their established SARTEC and Control Van capacities.
+- **Required Personnel Available** remains a mission precondition and is deliberately excluded from dispatch demand.
+
+### Diagnostics
+
+- Empty post-selection Mission Update snapshots are no longer stored, and diagnostic history capacity increased from 12 to 24 useful attempts.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.119` to `V10.6.120`.
+- Personnel Assignment remains `1.3.7`.
+
 ## [1.0.56] - 2026-07-29
 
 ### Added

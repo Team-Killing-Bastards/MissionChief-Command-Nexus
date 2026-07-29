@@ -70,14 +70,14 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-requireText('// @version      1.0.56', 'v1.0.55 metadata');
-requireText(' * MODULE 2: MISSION FINDER V10.6.119', 'Mission Finder V10.6.119 header');
+requireText('// @version      1.0.57', 'v1.0.55 metadata');
+requireText(' * MODULE 2: MISSION FINDER V10.6.120', 'Mission Finder V10.6.120 header');
 requireText('function getTrainedPersonnelRequirementsFromFreeText(', 'free-text trained-personnel parser');
 requireText('function getMissionDefinitionTrainedPersonnelRequirements(', 'mission-definition row classifier');
 requireText('const trailingText =', 'adjacent quantity boundary');
-requireText("source:\n                            'mission-definition-required-personnel'", 'mission-definition source marker');
+requireText("'mission-definition-required-personnel'", 'mission-definition source marker');
 requireText('missionDefinitionRequiredPersonnel:', 'mission-definition trained row marker');
-requireText('getTrainedPersonnelVehicleTarget(\n                                missionDefinitionPersonnelRequirements', 'shared trained optimiser target');
+requireText('getTrainedPersonnelVehicleTarget(', 'shared trained optimiser target');
 
 const patternStart = source.indexOf('    const MF_TRAINED_PERSONNEL_PATTERNS =');
 const patternEnd = source.indexOf('\n\n    let mfKeepPanelPosition', patternStart);

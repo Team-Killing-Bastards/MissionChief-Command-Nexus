@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.56
+// @version      1.0.57
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -9616,7 +9616,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.119
+         * MODULE 2: MISSION FINDER V10.6.120
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -11475,7 +11475,7 @@
 
     const MF_UNIT_FINDER_DIAGNOSTICS_KEY =
         'mf_unit_finder_diagnostics_v1';
-    const MF_UNIT_FINDER_DIAGNOSTICS_LIMIT = 12;
+    const MF_UNIT_FINDER_DIAGNOSTICS_LIMIT = 24;
     let mfUnitFinderDiagnosticContext = {
         missionKey: '',
         mode: 'idle',
@@ -11786,8 +11786,8 @@
             capturedAtUnix: Date.now(),
             reason: String(reason || 'manual-export'),
             versions: {
-                commandNexus: '1.0.56',
-                missionFinder: 'V10.6.119',
+                commandNexus: '1.0.57',
+                missionFinder: 'V10.6.120',
                 personnelAssignment: '1.3.7'
             },
             mission: {
@@ -11875,6 +11875,17 @@
         );
 
         if (!hasUsefulData) return snapshot;
+
+        const emptyMissionUpdateSnapshot =
+            reason === 'not-ready' &&
+            snapshot.requirementContext.mode === 'mission-update' &&
+            snapshot.requirementContext.suppliedRows.length === 0 &&
+            snapshot.requirementContext.processedRows.length === 0 &&
+            snapshot.requirementContext.currentLiveRequirementRows.length === 0 &&
+            snapshot.requirementContext.visibleAlerts.length === 0 &&
+            snapshot.selectionSummary.vehicleLoadState.rows.length === 0;
+
+        if (emptyMissionUpdateSnapshot) return snapshot;
 
         const signature = JSON.stringify({
             mission: snapshot.mission.missionKey || snapshot.mission.missionId,
@@ -14120,6 +14131,61 @@ function isRoadRailUnitVehicleCheckbox(input) {
         return matches;
     }
 
+    function getEodResponseRequirementMode(
+        originalName,
+        mappedName
+    ) {
+        const values = [
+            originalName,
+            mappedName
+        ].map(normaliseVehicleText);
+
+        const normalEod = new Set([
+            'eod response vehicle',
+            'eod response vehicles',
+            'required eod response vehicle',
+            'required eod response vehicles'
+        ]);
+        const marineEod = new Set([
+            'marine eod response vehicle',
+            'marine eod response vehicles',
+            'required marine eod response vehicle',
+            'required marine eod response vehicles'
+        ]);
+
+        if (values.some(value => marineEod.has(value))) {
+            return 'marine';
+        }
+        if (values.some(value => normalEod.has(value))) {
+            return 'normal';
+        }
+        return '';
+    }
+
+    function isEodResponseVehicleCheckbox(input) {
+        if (!input) return false;
+        const typeIds = getVehicleTypeIdentifiers(input);
+        if (typeIds.includes('110')) return true;
+        if (typeIds.length > 0) return false;
+        return getExtendedVehicleValues(input).some(value => {
+            const normalised = normaliseVehicleText(value);
+            return normalised === 'eod response vehicle' ||
+                normalised === 'eod response vehicles';
+        });
+    }
+
+    function isMarineEodResponseVehicleCheckbox(input) {
+        if (!input) return false;
+        const typeIds = getVehicleTypeIdentifiers(input);
+        if (typeIds.includes('113')) return true;
+        if (typeIds.length > 0) return false;
+        return getExtendedVehicleValues(input).some(value => {
+            const normalised = normaliseVehicleText(value);
+            return normalised === 'marine eod response vehicle' ||
+                normalised === 'marine eod response vehicles';
+        });
+    }
+
     function getAllMatchingVehicleCheckboxes(originalName, mappedName, includeChecked) {
         // BASU, Welfare and HazMat share the same selected exact type-39 Fire OSU.
         if (isFireOperationalSupportRequirement(originalName, mappedName)) {
@@ -14135,6 +14201,24 @@ function isRoadRailUnitVehicleCheckbox(input) {
                     if (input.disabled) return false;
                     if (!includeChecked && input.checked) return false;
                     return isFireEngineVehicleCheckbox(input);
+                })
+            );
+        }
+
+        const eodResponseMode =
+            getEodResponseRequirementMode(
+                originalName,
+                mappedName
+            );
+
+        if (eodResponseMode) {
+            return sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) return false;
+                    if (!includeChecked && input.checked) return false;
+                    return eodResponseMode === 'marine'
+                        ? isMarineEodResponseVehicleCheckbox(input)
+                        : isEodResponseVehicleCheckbox(input);
                 })
             );
         }
@@ -14771,6 +14855,21 @@ function isRoadRailUnitVehicleCheckbox(input) {
                 input.checked &&
                 isFireEngineVehicleCheckbox(input)
             )).length;
+        }
+
+        const eodResponseMode =
+            getEodResponseRequirementMode(
+                originalName,
+                mappedName
+            );
+
+        if (eodResponseMode) {
+            return getVehicleCheckboxSnapshot().filter(input => {
+                if (!input.checked) return false;
+                return eodResponseMode === 'marine'
+                    ? isMarineEodResponseVehicleCheckbox(input)
+                    : isEodResponseVehicleCheckbox(input);
+            }).length;
         }
 
         const candidates = getVehicleMatchCandidates(originalName, mappedName);
@@ -21798,6 +21897,86 @@ let sessionRuntimeTicker = null;
         };
     }
 
+    function getMissionDefinitionSarPersonnelVehicleRequirements(
+        requirementName,
+        personnelText
+    ) {
+        const cleanedName =
+            cleanRequirementName(requirementName);
+
+        // Only the mission-definition "Required Personnel" row is actionable.
+        // "Required Personnel Available" belongs to Reward and Precondition and
+        // must never create dispatch demand.
+        if (!/^Personnel(?:\s+Requirements?)?$/i.test(cleanedName)) {
+            return [];
+        }
+
+        const input = String(personnelText || '')
+            .replace(/[×✕]/g, 'x')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        if (!input) return [];
+
+        const definitions = [
+            {
+                name: 'Search Technician',
+                patterns: [
+                    /(\d+)\s*(?:x\s*)?Search\s+Technician(?:s)?/gi,
+                    /Search\s+Technician(?:s)?\s*(?:x\s*)?(\d+)/gi
+                ]
+            },
+            {
+                name: 'SAR Commander',
+                patterns: [
+                    /(\d+)\s*(?:x\s*)?SAR\s+Commander(?:s)?/gi,
+                    /SAR\s+Commander(?:s)?\s*(?:x\s*)?(\d+)/gi
+                ]
+            }
+        ];
+
+        const conversions = [];
+
+        definitions.forEach(definition => {
+            let maximumRequired = 0;
+
+            definition.patterns.forEach(pattern => {
+                pattern.lastIndex = 0;
+                let match;
+
+                while ((match = pattern.exec(input))) {
+                    const patternIsPrefix =
+                        pattern.source.startsWith('(\\d+)');
+                    const trailingText = input.slice(pattern.lastIndex);
+
+                    if (
+                        !patternIsPrefix &&
+                        /^\s*x(?=\s|[A-Za-z])/i.test(trailingText)
+                    ) {
+                        continue;
+                    }
+
+                    maximumRequired = Math.max(
+                        maximumRequired,
+                        Math.max(0, parseInt(match[1], 10) || 0)
+                    );
+                }
+            });
+
+            if (maximumRequired <= 0) return;
+
+            const conversion =
+                getSarPersonnelVehicleRequirement(
+                    definition.name,
+                    maximumRequired
+                );
+
+            if (conversion) conversions.push(conversion);
+        });
+
+        return conversions;
+    }
+
     function getSearchAdvisorTrainedVehicleRequirement(
         requirementName,
         personnelAmount
@@ -22108,33 +22287,73 @@ let sessionRuntimeTicker = null;
                         rawRequirementName,
                         amountText
                     );
+                const missionDefinitionSarPersonnelRequirements =
+                    getMissionDefinitionSarPersonnelVehicleRequirements(
+                        rawRequirementName,
+                        amountText
+                    );
 
                 if (
-                    missionDefinitionPersonnelRequirements.length > 0
+                    missionDefinitionPersonnelRequirements.length > 0 ||
+                    missionDefinitionSarPersonnelRequirements.length > 0
                 ) {
-                    rows.push({
-                        unitName:
-                            MF_TRAINED_PERSONNEL_ROW_NAME,
-                        stillNeeded:
-                            getTrainedPersonnelVehicleTarget(
-                                missionDefinitionPersonnelRequirements
-                            ),
-                        isTrainedPersonnelRequirement:
-                            true,
-                        personnelTrainingRequirements:
-                            missionDefinitionPersonnelRequirements,
-                        missionDefinitionRequiredPersonnel:
-                            true,
-                        source:
-                            'mission-definition-required-personnel'
-                    });
+                    if (
+                        missionDefinitionPersonnelRequirements.length > 0
+                    ) {
+                        rows.push({
+                            unitName:
+                                MF_TRAINED_PERSONNEL_ROW_NAME,
+                            stillNeeded:
+                                getTrainedPersonnelVehicleTarget(
+                                    missionDefinitionPersonnelRequirements
+                                ),
+                            isTrainedPersonnelRequirement:
+                                true,
+                            personnelTrainingRequirements:
+                                missionDefinitionPersonnelRequirements,
+                            missionDefinitionRequiredPersonnel:
+                                true,
+                            source:
+                                'mission-definition-required-personnel'
+                        });
+                    }
+
+                    missionDefinitionSarPersonnelRequirements
+                        .forEach(conversion => {
+                            rows.push({
+                                unitName:
+                                    conversion.unitName,
+                                stillNeeded:
+                                    conversion.stillNeeded,
+                                personnelRequirement:
+                                    conversion.personnelRequirement,
+                                missionDefinitionRequiredPersonnel:
+                                    true,
+                                source:
+                                    'mission-definition-required-personnel'
+                            });
+                        });
 
                     if (mfDebugEnabled) {
+                        const parts = [];
+                        if (
+                            missionDefinitionPersonnelRequirements.length > 0
+                        ) {
+                            parts.push(
+                                formatTrainedPersonnelRequirements(
+                                    missionDefinitionPersonnelRequirements
+                                )
+                            );
+                        }
+                        missionDefinitionSarPersonnelRequirements
+                            .forEach(conversion => {
+                                parts.push(
+                                    `${conversion.personnelRequirement} -> ${conversion.unitName} x${conversion.stillNeeded}`
+                                );
+                            });
                         debugLog(
                             'UNIT FINDER REQUIRED PERSONNEL',
-                            formatTrainedPersonnelRequirements(
-                                missionDefinitionPersonnelRequirements
-                            )
+                            parts.join(' | ')
                         );
                     }
 
@@ -39899,35 +40118,50 @@ async function handleAutoPrisonerReleaseAfterActions() {
                     'Auto Mode checking the manual Mission Update source...'
                 );
 
-                // Use one fixed snapshot, exactly as the manual Mission Update
-                // button does when clicked.
+                // Only an explicit current Missing Vehicles/Personnel row may
+                // add units after the initial attachment pass. A visible copy of the
+                // full mission-definition table is not a Mission Update and must not
+                // select the complete requirement set for a second time.
                 const postUnitFinderUpdateRows =
                     readMissionUpdateRows();
-
-                autoMissionUpdateRowsHandled =
-                    postUnitFinderUpdateRows.length;
-
-                clearSelectionGuards();
-
-                await preparePoliceVehicleSafetyForRows(
-                    postUnitFinderUpdateRows,
-                    'AUTO MISSION UPDATE'
-                );
-
-                const updated =
-                    handleMissionUpdateUnits(
-                        false,
+                const postUnitFinderExplicitMissingRows =
+                    getExplicitCurrentMissingRequirementRows(
                         postUnitFinderUpdateRows
                     );
 
-                if (updated) {
-                    await waitForFastDispatchReadiness(
-                        'mission update fix',
-                        {
-                            minimumWait: 100,
-                            stableFor: 250,
-                            timeout: 900
-                        }
+                autoMissionUpdateRowsHandled =
+                    postUnitFinderExplicitMissingRows.length;
+
+                if (
+                    postUnitFinderExplicitMissingRows.length > 0
+                ) {
+                    clearSelectionGuards();
+
+                    await preparePoliceVehicleSafetyForRows(
+                        postUnitFinderExplicitMissingRows,
+                        'AUTO MISSION UPDATE'
+                    );
+
+                    const updated =
+                        handleMissionUpdateUnits(
+                            false,
+                            postUnitFinderExplicitMissingRows
+                        );
+
+                    if (updated) {
+                        await waitForFastDispatchReadiness(
+                            'mission update fix',
+                            {
+                                minimumWait: 100,
+                                stableFor: 250,
+                                timeout: 900
+                            }
+                        );
+                    }
+                } else if (mfDebugEnabled) {
+                    debugLog(
+                        'AUTO MISSION UPDATE SKIP',
+                        'No explicit current Missing Vehicles/Personnel rows; the full definition table was not reprocessed.'
                     );
                 }
             }
