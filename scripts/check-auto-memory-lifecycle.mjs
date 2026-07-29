@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 
+// Permanent regression for bounded Auto Mode timer, frame and cache ownership.
 const source = fs.readFileSync('src/missionchief-command-nexus.user.js', 'utf8');
 
 function fail(message) {
