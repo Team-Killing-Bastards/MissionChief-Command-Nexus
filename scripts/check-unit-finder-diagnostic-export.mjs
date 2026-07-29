@@ -13,8 +13,8 @@ function requireText(token, label) {
   if (!source.includes(token)) fail(`Missing diagnostic-export contract: ${label}`);
 }
 
-requireText('// @version      1.0.56', 'v1.0.56 metadata');
-requireText(' * MODULE 2: MISSION FINDER V10.6.119', 'Mission Finder V10.6.119');
+requireText('// @version      1.0.57', 'v1.0.57 metadata');
+requireText(' * MODULE 2: MISSION FINDER V10.6.120', 'Mission Finder V10.6.120');
 requireText("'mf_unit_finder_diagnostics_v1'", 'diagnostic history storage');
 requireText('function mfSetUnitFinderDiagnosticContext(', 'requirement context capture');
 requireText('function mfBuildUnitFinderDiagnosticSnapshot(', 'snapshot builder');
