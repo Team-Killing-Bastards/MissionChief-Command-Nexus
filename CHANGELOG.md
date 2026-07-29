@@ -32,6 +32,24 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
 
+## [1.0.58] - 2026-07-29
+
+### Fixed
+
+- Seasonal collectible scanning now has one top-window owner instead of starting a one-second recursive iframe scanner in every MissionChief frame.
+- The collector now starts only after the Mission Finder duplicate-instance guard and is stopped during runtime cleanup and Safari back-forward-cache suspension, then restarted safely on restoration.
+- This removes a confirmed long-session timer and frame-retention path without changing Unit Finder, Mission Update, vehicle matching or Auto Mode dispatch decisions.
+
+### Diagnostics
+
+- Existing Unit Finder exports now include an on-demand browser memory snapshot with JavaScript heap figures when supported, accessible document/frame counts, DOM and vehicle-checkbox totals, active timer/observer state and bounded cache sizes.
+- Memory evidence is collected only when Export Diagnostics is clicked; no new polling timer is introduced.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.120` to `V10.6.121`.
+- Personnel Assignment remains `1.3.7`.
+
 ## [1.0.57] - 2026-07-29
 
 ### Fixed
