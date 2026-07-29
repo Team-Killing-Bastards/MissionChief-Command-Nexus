@@ -1,1 +1,1 @@
-Verify v1.0.57 GitHub, Greasy Fork and Discord delivery.
+Verify v1.0.57 GitHub, Greasy Fork and Discord delivery with metadata normalisation.
