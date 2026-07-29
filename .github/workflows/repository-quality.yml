@@ -8,6 +8,9 @@ on:
   pull_request_target:
     types:
       - closed
+  issue_comment:
+    types:
+      - created
   workflow_dispatch:
 
 permissions:
@@ -28,7 +31,11 @@ jobs:
        github.event.pull_request.head.ref == 'release/apply-v1056') ||
       (github.event_name == 'push' &&
        github.ref_name == 'main' &&
-       contains(github.event.head_commit.message, 'Run v1.0.56 diagnostic export'))
+       contains(github.event.head_commit.message, 'Run v1.0.56 diagnostic export')) ||
+      (github.event_name == 'issue_comment' &&
+       github.event.issue.pull_request &&
+       github.event.issue.number == 203 &&
+       contains(github.event.comment.body, '/run-v1056-diagnostic-export'))
     permissions:
       contents: write
       pull-requests: write
@@ -71,6 +78,13 @@ jobs:
           git add -A
           git commit -m 'Add Unit Finder diagnostic export'
           git push origin HEAD:refs/heads/main
+
+      - name: Report v1.0.56 builder result
+        if: always() && github.event_name == 'issue_comment'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          JOB_STATUS: ${{ job.status }}
+        run: gh pr comment 203 --repo "$GITHUB_REPOSITORY" --body "v1.0.56 diagnostic export builder completed with status: ${JOB_STATUS}."
 
   publish-v1056:
     name: Publish and verify v1.0.56
