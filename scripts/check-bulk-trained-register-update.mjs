@@ -14,8 +14,8 @@ function requireText(token, label) {
 }
 
 for (const [token, label] of [
-  ['// @version      1.0.55', 'v1.0.51 metadata'],
-  [' * MODULE 2: MISSION FINDER V10.6.118', 'Mission Finder V10.6.118'],
+  ['// @version      1.0.56', 'v1.0.51 metadata'],
+  [' * MODULE 2: MISSION FINDER V10.6.119', 'Mission Finder V10.6.119'],
   ["const PERSONNEL_VERSION = '1.3.7';", 'Personnel v1.3.5'],
   ['const DEFAULT_MISSION_READY_DELAY = 1000;', '1000 ms default retained'],
   ['personnel-register-exact-all-vehicle-scan-v2', 'exact all-vehicle register source'],

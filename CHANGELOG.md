@@ -32,6 +32,24 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
 
+## [1.0.56] - 2026-07-29
+
+### Added
+
+- Added **Export Diagnostics** to Mission Finder. It downloads a JSON report containing the raw mission-definition rows, supplied and processed Unit Finder requirements, current live missing requirements, visible shortage alerts and the vehicles actually selected.
+- The report retains the latest 12 Unit Finder and Mission Update attempts so Automatic Unit Finder problems can still be exported after Auto Mode advances to another mission.
+- Selected trained vehicles include exact Personnel Register evidence such as training counts, per-person training-code profiles, scan-completeness flags and evidence source. Personnel names, cookies and passwords are not included.
+
+### Diagnostics
+
+- Ready, not-ready, normal Dispatch and Dispatch & Share states create diagnostic snapshots.
+- Reports distinguish the original requirement source from any replacement source and include the aggregate selected/required rows shown in the Vehicle Load List.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.118` to `V10.6.119`.
+- Personnel Assignment remains `1.3.7`.
+
 ## [1.0.55] - 2026-07-29
 
 ### Fixed
