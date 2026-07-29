@@ -43,6 +43,73 @@ jobs:
           if grep -Fq '// @version      1.0.58' src/missionchief-command-nexus.user.js; then
             echo 'v1.0.58 product source already present.'
           else
+            python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('scripts/apply-auto-memory-v1058.py')
+          text = path.read_text(encoding='utf-8')
+
+          old_cleanup = """    source = replace_once(
+                  source,
+                  '''        stopSessionRuntimeTicker();
+                  cleanupMissionFinderIphoneNativePickerSurfaces();
+          ''',
+                  '''        stopSessionRuntimeTicker();
+                  stopMissionEventCollectibleCollector();
+                  cleanupMissionFinderIphoneNativePickerSurfaces();
+          ''',
+                  'runtime collector cleanup'
+              )
+          """
+          new_cleanup = """    cleanup_start = source.index(
+                  '    function cleanupMissionFinderRuntime() {'
+              )
+              cleanup_end = source.index(
+                  '    function shouldPreserveMissionFinderRuntimeOnPageHide(',
+                  cleanup_start
+              )
+              cleanup_block = source[cleanup_start:cleanup_end]
+              old_cleanup_lines = '''        stopSessionRuntimeTicker();
+                  cleanupMissionFinderIphoneNativePickerSurfaces();
+          '''
+              new_cleanup_lines = '''        stopSessionRuntimeTicker();
+                  stopMissionEventCollectibleCollector();
+                  cleanupMissionFinderIphoneNativePickerSurfaces();
+          '''
+              if cleanup_block.count(old_cleanup_lines) != 1:
+                  raise SystemExit(
+                      'runtime collector cleanup: target was not unique inside cleanupMissionFinderRuntime'
+                  )
+              cleanup_block = cleanup_block.replace(
+                  old_cleanup_lines,
+                  new_cleanup_lines,
+                  1
+              )
+              source = (
+                  source[:cleanup_start] +
+                  cleanup_block +
+                  source[cleanup_end:]
+              )
+          """
+          if old_cleanup not in text:
+              raise SystemExit('Unable to locate broad runtime cleanup patcher block')
+          text = text.replace(old_cleanup, new_cleanup, 1)
+
+          duplicate_ci = """if \"scripts/check-auto-memory-lifecycle.mjs\" not in text:
+              text = text.replace(path_token, path_insert)
+              # The path occurs in both pull_request and push lists.
+              text = text.replace(path_token, path_insert, 1)
+          """
+          corrected_ci = """if \"scripts/check-auto-memory-lifecycle.mjs\" not in text:
+              # Register once in each existing pull_request and push path list.
+              text = text.replace(path_token, path_insert)
+          """
+          if duplicate_ci not in text:
+              raise SystemExit('Unable to locate duplicate CI registration patcher block')
+          text = text.replace(duplicate_ci, corrected_ci, 1)
+
+          path.write_text(text, encoding='utf-8')
+          PY
             python3 scripts/apply-auto-memory-v1058.py
           fi
           rm -f scripts/apply-auto-memory-v1058.py
