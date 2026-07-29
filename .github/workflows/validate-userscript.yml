@@ -1,4 +1,5 @@
 name: Validate userscript
+# Includes mission-definition trained-personnel parsing coverage.
 
 on:
   pull_request:
