@@ -137,3 +137,19 @@ jobs:
       release_notes: Automatic verified release after merge to main.
     secrets:
       DISCORD_RELEASE_WEBHOOK: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
+
+  reconcile-v1054:
+    name: Reconcile and verify v1.0.54 test release
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.ref == 'release/publish-v1054'
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: ./.github/workflows/release.yml
+    with:
+      operation: publish-release
+      release_tag: v1.0.54
+      release_notes: Use mission-definition Required Personnel totals during initial Unit Finder and Automatic Unit Finder dispatch.
+    secrets:
+      DISCORD_RELEASE_WEBHOOK: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
