@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.58
+// @version      1.0.59
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -9616,7 +9616,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.121
+         * MODULE 2: MISSION FINDER V10.6.122
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -10690,6 +10690,15 @@
     let mfRuntimePageShowHandler = null;
     let mfBackgroundWatcherSupervisorTimer = null;
     let mfBackgroundStorageHandler = null;
+    let mfRuntimeSuspendedForPageHide = false;
+    const MF_AUTO_MEMORY_RECYCLE_STATE_KEY =
+        'mf_auto_memory_recycle_state_v1';
+    const MF_AUTO_MEMORY_RECYCLE_HEAP_THRESHOLD_BYTES =
+        640 * 1024 * 1024;
+    const MF_AUTO_MEMORY_RECYCLE_COOLDOWN_MS =
+        4 * 60 * 1000;
+    const MF_AUTO_MEMORY_RECYCLE_MAX_STATE_AGE_MS =
+        20 * 60 * 1000;
     const mfMissingUnitRetryIntervals = new Set();
 
     let mfVehicleCheckboxCache = {
@@ -11911,7 +11920,13 @@
                 mainMutationObserverActive:
                     mfMainMutationObserver !== null,
                 backgroundSupervisorActive:
-                    mfBackgroundWatcherSupervisorTimer !== null
+                    mfBackgroundWatcherSupervisorTimer !== null,
+                sessionRuntimeTickerActive:
+                    sessionRuntimeTicker !== null,
+                runtimeSuspendedForPageHide:
+                    mfRuntimeSuspendedForPageHide === true,
+                autoMemoryRecycle:
+                    getAutoMemoryRecycleDiagnosticState()
             },
             caches: {
                 liveTrainingVerifyEntries:
@@ -11979,8 +11994,8 @@
             capturedAtUnix: Date.now(),
             reason: String(reason || 'manual-export'),
             versions: {
-                commandNexus: '1.0.58',
-                missionFinder: 'V10.6.121',
+                commandNexus: '1.0.59',
+                missionFinder: 'V10.6.122',
                 personnelAssignment: '1.3.7'
             },
             mission: {
@@ -40074,6 +40089,236 @@ async function handleAutoPrisonerReleaseAfterActions() {
     }
 
 
+
+    function getAutoMemoryHeapSnapshot() {
+        try {
+            const memory = performance.memory;
+            if (!memory) return null;
+
+            const usedJSHeapSize =
+                Number(memory.usedJSHeapSize || 0);
+            const totalJSHeapSize =
+                Number(memory.totalJSHeapSize || 0);
+            const jsHeapSizeLimit =
+                Number(memory.jsHeapSizeLimit || 0);
+
+            if (!Number.isFinite(usedJSHeapSize) || usedJSHeapSize <= 0) {
+                return null;
+            }
+
+            return {
+                usedJSHeapSize,
+                totalJSHeapSize,
+                jsHeapSizeLimit
+            };
+        } catch (_error) {
+            return null;
+        }
+    }
+
+    function readAutoMemoryRecycleState() {
+        let state = null;
+
+        try {
+            state = JSON.parse(
+                sessionStorage.getItem(
+                    MF_AUTO_MEMORY_RECYCLE_STATE_KEY
+                ) || 'null'
+            );
+        } catch (_error) {
+            state = null;
+        }
+
+        if (!state || typeof state !== 'object') {
+            return null;
+        }
+
+        const lastRecycleAt =
+            Number(state.lastRecycleAt || 0);
+        const age = Date.now() - lastRecycleAt;
+
+        if (
+            !Number.isFinite(age) ||
+            age < 0 ||
+            age > MF_AUTO_MEMORY_RECYCLE_MAX_STATE_AGE_MS
+        ) {
+            try {
+                sessionStorage.removeItem(
+                    MF_AUTO_MEMORY_RECYCLE_STATE_KEY
+                );
+            } catch (_error) {}
+            return null;
+        }
+
+        return state;
+    }
+
+    function writeAutoMemoryRecycleState(state) {
+        try {
+            sessionStorage.setItem(
+                MF_AUTO_MEMORY_RECYCLE_STATE_KEY,
+                JSON.stringify(state)
+            );
+            return true;
+        } catch (_error) {
+            return false;
+        }
+    }
+
+    function getAutoMemoryRecycleDiagnosticState() {
+        const state = readAutoMemoryRecycleState();
+        if (!state) return null;
+
+        return {
+            lastRecycleAt:
+                Number(state.lastRecycleAt || 0),
+            recycleCount:
+                Math.max(0, parseInt(state.recycleCount, 10) || 0),
+            missionId:
+                String(state.missionId || ''),
+            usedJSHeapSize:
+                Math.max(0, Number(state.usedJSHeapSize || 0)),
+            resumePending:
+                state.resumePending === true,
+            reason:
+                String(state.reason || '')
+        };
+    }
+
+    function hasSelectedMissionVehiclesForMemoryRecycle() {
+        try {
+            return getVehicleCheckboxSnapshot(true)
+                .some(input => input?.checked === true);
+        } catch (_error) {
+            return false;
+        }
+    }
+
+    function shouldRecycleAutoMissionMemoryBeforeSelection() {
+        if (
+            !autoModeRunning ||
+            isManualAutoStopActive() ||
+            !isMissionPage() ||
+            document.visibilityState === 'hidden' ||
+            vehicleLoadState.ready ||
+            processedSelectionKeys.size > 0 ||
+            hasSelectedMissionVehiclesForMemoryRecycle() ||
+            readAutoAdvanceAfterDispatchState() ||
+            readAllyStealPendingState() ||
+            readAutoPostDispatchUpgradeState() ||
+            isPostTransportRehookPending()
+        ) {
+            return null;
+        }
+
+        const heap = getAutoMemoryHeapSnapshot();
+        if (
+            !heap ||
+            heap.usedJSHeapSize <
+                MF_AUTO_MEMORY_RECYCLE_HEAP_THRESHOLD_BYTES
+        ) {
+            return null;
+        }
+
+        const previous = readAutoMemoryRecycleState();
+        if (
+            previous &&
+            Date.now() - Number(previous.lastRecycleAt || 0) <
+                MF_AUTO_MEMORY_RECYCLE_COOLDOWN_MS
+        ) {
+            return null;
+        }
+
+        return heap;
+    }
+
+    function requestAutoMissionMemoryRecycle(
+        reason = 'high JavaScript heap before selection'
+    ) {
+        const heap =
+            shouldRecycleAutoMissionMemoryBeforeSelection();
+        if (!heap) return false;
+
+        const previous = readAutoMemoryRecycleState();
+        const state = {
+            lastRecycleAt: Date.now(),
+            recycleCount:
+                Math.max(
+                    0,
+                    parseInt(previous?.recycleCount, 10) || 0
+                ) + 1,
+            missionId:
+                getCurrentMissionIdForQueueRestart() || '',
+            href:
+                String(window.location.href || ''),
+            usedJSHeapSize:
+                heap.usedJSHeapSize,
+            totalJSHeapSize:
+                heap.totalJSHeapSize,
+            resumePending: true,
+            reason:
+                String(reason || '')
+        };
+
+        if (!writeAutoMemoryRecycleState(state)) {
+            return false;
+        }
+
+        updateStatusBox(
+            `Auto Mode memory guard: recycling the mission frame before selection (${Math.round(heap.usedJSHeapSize / 1048576)} MiB heap)...`
+        );
+
+        suspendMissionFinderRuntimeForPageHide(
+            'automatic high-heap mission recycle'
+        );
+
+        const href = String(window.location.href || '');
+        window.setTimeout(() => {
+            if (!href) return;
+            try {
+                window.location.replace(href);
+            } catch (_error) {
+                window.location.href = href;
+            }
+        }, 60);
+
+        return true;
+    }
+
+    function scheduleAutoMemoryRecycleResume() {
+        const state = readAutoMemoryRecycleState();
+
+        if (
+            !state ||
+            state.resumePending !== true ||
+            !autoModeRunning ||
+            isManualAutoStopActive() ||
+            !isMissionPage()
+        ) {
+            return false;
+        }
+
+        state.resumePending = false;
+        state.resumedAt = Date.now();
+        writeAutoMemoryRecycleState(state);
+
+        window.setTimeout(() => {
+            if (
+                autoModeRunning &&
+                !isManualAutoStopActive() &&
+                isMissionPage() &&
+                !autoModeLoopActive
+            ) {
+                requireMissionUpdateFirstPass(
+                    'automatic memory recycle resume'
+                );
+                runAutoModeLoop();
+            }
+        }, 700);
+
+        return true;
+    }
+
     async function runAutoModeLoop() {
         if (isManualAutoStopActive()) return;
         if (autoModeLoopActive) return;
@@ -40129,6 +40374,16 @@ async function handleAutoPrisonerReleaseAfterActions() {
 
             const autoCycleMissionId =
                 getCurrentMissionIdForQueueRestart();
+
+            if (
+                requestAutoMissionMemoryRecycle(
+                    'high JavaScript heap before Unit Finder'
+                )
+            ) {
+                autoModeLoopActive = false;
+                updateAutoModeButton();
+                return;
+            }
 
             const prisonerCellGate =
                 await handleAutoPrisonerCellBeforeUnitFinder();
@@ -41737,6 +41992,81 @@ async function handleAutoPrisonerReleaseAfterActions() {
         );
     }
 
+
+    function suspendMissionFinderRuntimeForPageHide(
+        reason = ''
+    ) {
+        if (mfMainMutationObserver) {
+            mfMainMutationObserver.disconnect();
+            mfMainMutationObserver = null;
+        }
+
+        if (mfIssueRecorderObserver) {
+            mfIssueRecorderObserver.disconnect();
+            mfIssueRecorderObserver = null;
+        }
+
+        if (mfMainMutationFlushTimer) {
+            clearTimeout(mfMainMutationFlushTimer);
+            mfMainMutationFlushTimer = null;
+        }
+
+        if (mfAutoLoopResumeTimer) {
+            clearTimeout(mfAutoLoopResumeTimer);
+            mfAutoLoopResumeTimer = null;
+        }
+
+        if (mfIssueRecorderMutationTimer) {
+            clearTimeout(mfIssueRecorderMutationTimer);
+            mfIssueRecorderMutationTimer = null;
+        }
+
+        if (mfDebugRenderFrame !== null) {
+            try {
+                cancelAnimationFrame(mfDebugRenderFrame);
+            } catch (_error) {}
+            clearTimeout(mfDebugRenderFrame);
+            mfDebugRenderFrame = null;
+        }
+
+        if (mfVehicleLoadRenderFrame !== null) {
+            try {
+                cancelAnimationFrame(mfVehicleLoadRenderFrame);
+            } catch (_error) {}
+            clearTimeout(mfVehicleLoadRenderFrame);
+            mfVehicleLoadRenderFrame = null;
+        }
+
+        stopSessionRuntimeTicker();
+        stopMissionEventCollectibleCollector();
+        stopBackgroundWatcherIntervalsOnly();
+
+        if (mfBackgroundWatcherSupervisorTimer) {
+            clearInterval(mfBackgroundWatcherSupervisorTimer);
+            mfBackgroundWatcherSupervisorTimer = null;
+        }
+
+        mfMissingUnitRetryIntervals.forEach(intervalId => {
+            clearInterval(intervalId);
+        });
+        mfMissingUnitRetryIntervals.clear();
+
+        invalidateVehicleCheckboxCache();
+        invalidateMissionContextCaches();
+        invalidatePatientCountCache();
+        invalidateTransportCaches();
+        mfVehicleMatchCandidateCache.clear();
+        resetMainMutationFlags();
+        mfRuntimeSuspendedForPageHide = true;
+
+        if (mfDebugEnabled && reason) {
+            debugLog(
+                'RUNTIME SUSPEND',
+                reason
+            );
+        }
+    }
+
     function cleanupMissionFinderRuntime() {
         if (mfMainMutationObserver) {
             mfMainMutationObserver.disconnect();
@@ -41867,6 +42197,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
     }
 
     function reconcileMissionFinderAfterPageShow() {
+        mfRuntimeSuspendedForPageHide = false;
         startMissionEventCollectibleCollector();
         invalidateVehicleCheckboxCache();
         invalidateMissionContextCaches();
@@ -41900,6 +42231,14 @@ async function handleAutoPrisonerReleaseAfterActions() {
             0
         );
         syncBackgroundAutomationWatchers();
+
+        if (
+            document.getElementById(
+                'session-panel-content'
+            )
+        ) {
+            startSessionRuntimeTicker();
+        }
     }
 
     function installMissionFinderRuntimeCleanup() {
@@ -41912,12 +42251,9 @@ async function handleAutoPrisonerReleaseAfterActions() {
                     event?.persisted
                 )
             ) {
-                stopMissionEventCollectibleCollector();
-                invalidateVehicleCheckboxCache();
-                invalidateMissionContextCaches();
-                invalidatePatientCountCache();
-                invalidateTransportCaches();
-                resetMainMutationFlags();
+                suspendMissionFinderRuntimeForPageHide(
+                    'browser back-forward cache pagehide'
+                );
                 return;
             }
 
@@ -41977,6 +42313,8 @@ async function handleAutoPrisonerReleaseAfterActions() {
             childList: true,
             subtree: true
         });
+
+        scheduleAutoMemoryRecycleResume();
     }
 
     if (document.body) {

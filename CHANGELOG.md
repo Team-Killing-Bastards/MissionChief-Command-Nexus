@@ -32,6 +32,23 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
 
+## [1.0.59] - 2026-07-29
+
+### Fixed
+
+- Browser back-forward-cache transitions now suspend the complete Mission Finder runtime instead of retaining the main subtree observer, session ticker, automation timers and DOM caches with the old mission document.
+- Auto Mode now has a high-heap circuit breaker. Before any Unit Finder selection, an Edge/Chromium mission frame using at least 640 MiB of JavaScript heap is reloaded once with `location.replace`, then Auto Mode resumes on the same mission.
+- The recycle is guarded by current selection, dispatch-transition, transport and cooldown checks, so it cannot interrupt selected vehicles or change mission requirements.
+
+### Diagnostics
+
+- Memory exports now include runtime suspension state, session ticker state and the bounded automatic recycle receipt.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.121` to `V10.6.122`.
+- Personnel Assignment remains `1.3.7`.
+
 ## [1.0.58] - 2026-07-29
 
 ### Fixed
