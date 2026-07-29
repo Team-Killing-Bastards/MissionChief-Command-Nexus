@@ -1,1 +1,1 @@
-# Temporary trigger placeholder. The PR-target builder replaces and deletes this file.
+# Temporary trigger placeholder. The normal pull-request builder replaces and deletes this file.
