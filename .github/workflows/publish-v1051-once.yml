@@ -50,10 +50,12 @@ jobs:
           python3 scripts/check_repository.py
           git diff --check
 
-      - name: Restore active verifier and commit product source
+      - name: Restore workflows and commit product source
         run: |
           set -euo pipefail
+          git show 22aaa070398684273338f5b5d03488f147e5d29a:.github/workflows/repository-quality.yml > .github/workflows/repository-quality.yml
           git show 9b13210a83abbba1828cba7677e685a0faf4ced9:.github/workflows/publish-v1051-once.yml > .github/workflows/publish-v1051-once.yml
+          git show HEAD:.github/workflows/validate-userscript.yml > .github/workflows/validate-userscript.yml
           git config user.name MartyBlyth
           git config user.email 32400596+Martyblyth@users.noreply.github.com
           git add -A
