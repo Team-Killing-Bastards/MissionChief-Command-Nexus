@@ -150,3 +150,4 @@ Path('scripts/check-initial-trained-personnel-authority.mjs').write_text(check, 
 Path('scripts/apply-preserve-initial-trained-personnel-v1055.py').unlink(missing_ok=True)
 # trigger registered builder
 # push-triggered run
+# workflow now present on candidate branch
