@@ -42,8 +42,8 @@ function extractFunction(name) {
   fail(`Unterminated function ${name}`);
 }
 
-expect(source.includes('// @version      1.0.57'), 'Expected Command Nexus 1.0.57');
-expect(source.includes('MISSION FINDER V10.6.120'), 'Expected Mission Finder V10.6.120');
+expect(source.includes('// @version      1.0.58'), 'Expected Command Nexus 1.0.57');
+expect(source.includes('MISSION FINDER V10.6.121'), 'Expected Mission Finder V10.6.120');
 expect(source.includes('getExplicitCurrentMissingRequirementRows(\n                        postUnitFinderUpdateRows'),
   'Auto Mode must filter the post-Unit Finder snapshot to explicit missing rows');
 expect(source.includes('postUnitFinderExplicitMissingRows.length > 0'),

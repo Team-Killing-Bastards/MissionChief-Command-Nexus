@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.57
+// @version      1.0.58
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -9616,7 +9616,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.120
+         * MODULE 2: MISSION FINDER V10.6.121
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -9878,7 +9878,10 @@
     }
 
     function startMissionEventCollectibleCollector() {
-        if (mfEventCollectibleScanTimer !== null) {
+        if (
+            !MF_IS_TOP_WINDOW ||
+            mfEventCollectibleScanTimer !== null
+        ) {
             return;
         }
 
@@ -9893,8 +9896,17 @@
             );
     }
 
-    startMissionEventCollectibleCollector();
+    function stopMissionEventCollectibleCollector() {
+        if (mfEventCollectibleScanTimer !== null) {
+            window.clearInterval(
+                mfEventCollectibleScanTimer
+            );
+            mfEventCollectibleScanTimer = null;
+        }
 
+        mfEventCollectibleScanRunning = false;
+        mfEventCollectibleClaimTimes.clear();
+    }
 
 
     const MF_IS_TOP_WINDOW = (() => {
@@ -9913,6 +9925,8 @@
 
     window.missionFinder2026Initialized = true;
     window.missionFinderInitialized = true;
+
+    startMissionEventCollectibleCollector();
 
     let autoModeRunning =
         sessionStorage.getItem('mf_auto_mode_running') === 'true' ||
@@ -11769,6 +11783,185 @@
         return Array.from(new Set(values));
     }
 
+
+    function mfCollectMemoryDiagnostics() {
+        const documents = [];
+        const addDocument = candidateDocument => {
+            try {
+                if (
+                    candidateDocument?.documentElement &&
+                    !documents.includes(candidateDocument)
+                ) {
+                    documents.push(candidateDocument);
+                }
+            } catch (_error) {}
+        };
+
+        try {
+            getMissionAccessibleDocuments(true)
+                .forEach(addDocument);
+        } catch (_error) {
+            addDocument(document);
+        }
+
+        if (documents.length === 0) {
+            addDocument(document);
+        }
+
+        const documentSnapshots = documents
+            .slice(0, 24)
+            .map((candidateDocument, index) => {
+                let ownerFrame = null;
+                let ownerFrameVisible = true;
+                let ownerFrameConnected = true;
+
+                try {
+                    ownerFrame =
+                        candidateDocument.defaultView?.frameElement ||
+                        null;
+                    ownerFrameConnected = ownerFrame
+                        ? ownerFrame.isConnected !== false
+                        : true;
+                    ownerFrameVisible = ownerFrame
+                        ? isMissionElementVisible(ownerFrame)
+                        : true;
+                } catch (_error) {}
+
+                const count = selector => {
+                    try {
+                        return candidateDocument
+                            .querySelectorAll(selector)
+                            .length;
+                    } catch (_error) {
+                        return 0;
+                    }
+                };
+
+                let elementCount = 0;
+                try {
+                    elementCount = candidateDocument
+                        .getElementsByTagName('*')
+                        .length;
+                } catch (_error) {}
+
+                let pageUrl = '';
+                try {
+                    pageUrl = String(
+                        candidateDocument.location?.href ||
+                        ''
+                    );
+                } catch (_error) {}
+
+                return {
+                    index,
+                    pageUrl,
+                    title: String(candidateDocument.title || '')
+                        .slice(0, 160),
+                    isCurrentDocument:
+                        candidateDocument === document,
+                    ownerFrameConnected,
+                    ownerFrameVisible,
+                    elementCount,
+                    iframeCount: count('iframe'),
+                    vehicleCheckboxCount:
+                        count('input.vehicle_checkbox'),
+                    selectedVehicleCheckboxCount:
+                        count('input.vehicle_checkbox:checked'),
+                    missionPanelCount:
+                        count('#mission-finder-wrapper'),
+                    missionGeneralInfoCount:
+                        count('#mission_general_info')
+                };
+            });
+
+        let heap = null;
+        try {
+            const memory = performance.memory;
+            if (memory) {
+                heap = {
+                    usedJSHeapSize:
+                        Number(memory.usedJSHeapSize || 0),
+                    totalJSHeapSize:
+                        Number(memory.totalJSHeapSize || 0),
+                    jsHeapSizeLimit:
+                        Number(memory.jsHeapSizeLimit || 0)
+                };
+            }
+        } catch (_error) {}
+
+        const cachedVehicleNodes = Array.isArray(
+            mfVehicleCheckboxCache?.nodes
+        )
+            ? mfVehicleCheckboxCache.nodes
+            : [];
+
+        return {
+            capturedAt: new Date().toISOString(),
+            heap,
+            runtime: {
+                isTopWindow: MF_IS_TOP_WINDOW,
+                autoModeRunning:
+                    autoModeRunning === true,
+                eventCollectorTimerActive:
+                    mfEventCollectibleScanTimer !== null,
+                eventCollectorScanRunning:
+                    mfEventCollectibleScanRunning === true,
+                eventCollectorTrackedClaims:
+                    mfEventCollectibleClaimTimes.size,
+                mainMutationObserverActive:
+                    mfMainMutationObserver !== null,
+                backgroundSupervisorActive:
+                    mfBackgroundWatcherSupervisorTimer !== null
+            },
+            caches: {
+                liveTrainingVerifyEntries:
+                    mfLiveTrainingVerifyCache.size,
+                vehicleMatchCandidateEntries:
+                    mfVehicleMatchCandidateCache.size,
+                cachedVehicleCheckboxes:
+                    cachedVehicleNodes.length,
+                detachedCachedVehicleCheckboxes:
+                    cachedVehicleNodes.filter(node =>
+                        node?.isConnected === false
+                    ).length,
+                missionDocuments:
+                    mfMissionDocumentCache.documents.length,
+                missionContexts:
+                    mfMissionContextCache.contexts.length,
+                transportDocuments:
+                    mfTransportDocumentCache.documents.length,
+                transportScopes:
+                    mfTransportScopeCache.scopes.length,
+                iphoneNativePickerDocuments:
+                    mfIphoneNativePickerDocuments.size
+            },
+            documents: {
+                accessibleCount: documents.length,
+                sampledCount: documentSnapshots.length,
+                totalElements: documentSnapshots.reduce(
+                    (total, item) =>
+                        total + item.elementCount,
+                    0
+                ),
+                totalVehicleCheckboxes:
+                    documentSnapshots.reduce(
+                        (total, item) =>
+                            total + item.vehicleCheckboxCount,
+                        0
+                    ),
+                hiddenOwnerFrames:
+                    documentSnapshots.filter(item =>
+                        !item.ownerFrameVisible
+                    ).length,
+                detachedOwnerFrames:
+                    documentSnapshots.filter(item =>
+                        !item.ownerFrameConnected
+                    ).length,
+                samples: documentSnapshots
+            }
+        };
+    }
+
     function mfBuildUnitFinderDiagnosticSnapshot(reason) {
         let liveRows = [];
 
@@ -11786,8 +11979,8 @@
             capturedAtUnix: Date.now(),
             reason: String(reason || 'manual-export'),
             versions: {
-                commandNexus: '1.0.57',
-                missionFinder: 'V10.6.120',
+                commandNexus: '1.0.58',
+                missionFinder: 'V10.6.121',
                 personnelAssignment: '1.3.7'
             },
             mission: {
@@ -11938,7 +12131,9 @@
             exportVersion: 1,
             exportedAt: new Date().toISOString(),
             privacyNote:
-                'Contains mission IDs, vehicle names and training-code evidence. It does not include cookies, passwords or personnel names.',
+                'Contains mission IDs, vehicle names, training-code evidence and browser memory/DOM counts. It does not include cookies, passwords or personnel names.',
+            memoryDiagnostics:
+                mfCollectMemoryDiagnostics(),
             current,
             history
         };
@@ -41585,6 +41780,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
         }
 
         stopSessionRuntimeTicker();
+        stopMissionEventCollectibleCollector();
         cleanupMissionFinderIphoneNativePickerSurfaces();
 
         mfMissingUnitRetryIntervals.forEach(intervalId => {
@@ -41671,6 +41867,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
     }
 
     function reconcileMissionFinderAfterPageShow() {
+        startMissionEventCollectibleCollector();
         invalidateVehicleCheckboxCache();
         invalidateMissionContextCaches();
         invalidatePatientCountCache();
@@ -41715,6 +41912,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
                     event?.persisted
                 )
             ) {
+                stopMissionEventCollectibleCollector();
                 invalidateVehicleCheckboxCache();
                 invalidateMissionContextCaches();
                 invalidatePatientCountCache();
