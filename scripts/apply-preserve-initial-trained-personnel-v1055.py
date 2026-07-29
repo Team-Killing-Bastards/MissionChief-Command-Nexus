@@ -56,6 +56,12 @@ for path_name in ('README.md', 'src/README.md'):
         raise SystemExit(f'No 1.0.54 version found in {path_name}')
     path.write_text(text.replace('1.0.54', '1.0.55'), encoding='utf-8')
 
+for path in Path('scripts').glob('check-*.mjs'):
+    text = path.read_text(encoding='utf-8')
+    updated = text.replace('1.0.54', '1.0.55').replace('V10.6.117', 'V10.6.118')
+    if updated != text:
+        path.write_text(updated, encoding='utf-8')
+
 changelog_path = Path('CHANGELOG.md')
 changelog = changelog_path.read_text(encoding='utf-8')
 anchor = '## [1.0.54] - 2026-07-29\n'
@@ -147,5 +153,5 @@ console.log('Initial mission-definition trained-personnel authority checks passe
 '''
 Path('scripts/check-initial-trained-personnel-authority.mjs').write_text(check, encoding='utf-8')
 Path('.v1055-builder-trigger').unlink(missing_ok=True)
+Path('.release-apply-v1055').unlink(missing_ok=True)
 Path('scripts/apply-preserve-initial-trained-personnel-v1055.py').unlink(missing_ok=True)
-# explicit trusted-main trigger
