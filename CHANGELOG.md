@@ -32,6 +32,23 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
 
+## [1.0.55] - 2026-07-29
+
+### Fixed
+
+- Initial Unit Finder and Automatic Unit Finder now preserve mission-definition trained-personnel rows when MissionChief has rendered a live-requirements panel but has not reported an explicit current shortage.
+- The generic authority guard applies to every supported mission-definition training type: Level 1 and Level 2 Public Order, Police Sergeant, Police Medic, Police Inspector, Railway Police Officer, Search Advisor and Armed Response Personnel.
+- Railway Police and other trained requirements can no longer disappear between successful definition parsing and the trained-profile optimiser. Mission Update continues to use explicit live Missing Personnel and Missing Vehicles shortages.
+
+### Validation
+
+- Added regression coverage for all supported definition-trained codes and for the initial-dispatch authority boundary.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.117` to `V10.6.118`.
+- Personnel Assignment remains `1.3.7`.
+
 ## [1.0.54] - 2026-07-29
 
 ### Added

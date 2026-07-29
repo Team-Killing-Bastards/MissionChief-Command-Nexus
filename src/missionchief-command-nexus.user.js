@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.54
+// @version      1.0.55
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -9616,7 +9616,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.117
+         * MODULE 2: MISSION FINDER V10.6.118
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -26468,10 +26468,21 @@ let sessionRuntimeTicker = null;
                 requirementRows
             );
 
+        const suppliedHasMissionDefinitionPersonnel =
+            (Array.isArray(requirementRows) ? requirementRows : [])
+                .some(row => {
+                    return !!(
+                        row?.missionDefinitionRequiredPersonnel ||
+                        row?.source ===
+                            'mission-definition-required-personnel'
+                    );
+                });
+
         if (
             hasAuthoritativeLiveMissionRequirementsPanel() &&
             sourceLabel !== 'live mission requirements' &&
-            !suppliedHasExplicitCurrentMissingRequirements
+            !suppliedHasExplicitCurrentMissingRequirements &&
+            !suppliedHasMissionDefinitionPersonnel
         ) {
             requirementRows = readMissionUpdateRows();
             sourceLabel = 'live mission requirements';
