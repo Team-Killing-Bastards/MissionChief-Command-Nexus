@@ -1,5 +1,5 @@
 name: Validate userscript
-# Includes mission-definition trained-personnel, diagnostic export and dispatch-correction coverage.
+# Includes mission-definition trained-personnel, diagnostic export, dispatch-correction and memory-lifecycle coverage.
 
 on:
   pull_request:
@@ -17,6 +17,7 @@ on:
       - 'scripts/check-trained-coverage-optimizer.mjs'
       - 'scripts/check-mission-definition-trained-personnel.mjs'
       - 'scripts/check-unit-finder-diagnostic-export.mjs'
+      - 'scripts/check-auto-memory-lifecycle.mjs'
       - 'scripts/check-auto-dispatch-eod-required-personnel.mjs'
       - 'scripts/check-road-rail-rru-mapping.mjs'
       - 'scripts/check-auto-prisoner-cell-gate.mjs'
@@ -43,6 +44,7 @@ on:
       - 'scripts/check-trained-coverage-optimizer.mjs'
       - 'scripts/check-mission-definition-trained-personnel.mjs'
       - 'scripts/check-unit-finder-diagnostic-export.mjs'
+      - 'scripts/check-auto-memory-lifecycle.mjs'
       - 'scripts/check-auto-dispatch-eod-required-personnel.mjs'
       - 'scripts/check-road-rail-rru-mapping.mjs'
       - 'scripts/check-auto-prisoner-cell-gate.mjs'
@@ -116,6 +118,9 @@ jobs:
 
       - name: Validate Unit Finder diagnostic export
         run: node scripts/check-unit-finder-diagnostic-export.mjs
+
+      - name: Validate Auto Mode memory lifecycle
+        run: node scripts/check-auto-memory-lifecycle.mjs
 
       - name: Validate Auto Mode EOD and composite personnel corrections
         run: node scripts/check-auto-dispatch-eod-required-personnel.mjs
