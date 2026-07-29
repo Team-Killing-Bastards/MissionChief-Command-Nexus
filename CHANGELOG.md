@@ -32,6 +32,25 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
 
+## [1.0.54] - 2026-07-29
+
+### Added
+
+- Unit Finder and Automatic Unit Finder now read the mission definition's composite **Required Personnel** row before the initial dispatch.
+- Supported trained-personnel totals are combined with ordinary vehicle requirements and resolved through the existing exact Personnel Register optimiser.
+- Level 1/2 Public Order, Police Medic, Police Sergeant, Police Inspector, Railway Police, Search Advisor and Armed Response personnel labels use their existing exact training mappings.
+
+### Behaviour
+
+- Multi-trained personnel count toward every matching course they hold, while singly trained personnel count only toward their own qualification.
+- The initial mission definition supplies full personnel totals; later mission upgrades continue to use current live **Missing Personnel** shortages, preventing the definition totals from being dispatched twice.
+- Unknown personnel labels remain ignored rather than being guessed, and vehicle selection still fails closed when trusted register evidence is unavailable.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.116` to `V10.6.117`.
+- Personnel Assignment remains `1.3.7`.
+
 ## [1.0.53] - 2026-07-28
 
 ### Fixed

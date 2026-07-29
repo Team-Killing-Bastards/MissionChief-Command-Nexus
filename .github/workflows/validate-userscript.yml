@@ -1,4 +1,5 @@
 name: Validate userscript
+# Includes mission-definition trained-personnel parsing coverage.
 
 on:
   pull_request:
@@ -14,6 +15,7 @@ on:
       - 'scripts/check-open-issues-batch.mjs'
       - 'scripts/check-missing-requirements-priority.mjs'
       - 'scripts/check-trained-coverage-optimizer.mjs'
+      - 'scripts/check-mission-definition-trained-personnel.mjs'
       - 'scripts/check-road-rail-rru-mapping.mjs'
       - 'scripts/check-auto-prisoner-cell-gate.mjs'
       - 'scripts/check-fire-engine-update-mapping.mjs'
@@ -37,6 +39,7 @@ on:
       - 'scripts/check-open-issues-batch.mjs'
       - 'scripts/check-missing-requirements-priority.mjs'
       - 'scripts/check-trained-coverage-optimizer.mjs'
+      - 'scripts/check-mission-definition-trained-personnel.mjs'
       - 'scripts/check-road-rail-rru-mapping.mjs'
       - 'scripts/check-auto-prisoner-cell-gate.mjs'
       - 'scripts/check-fire-engine-update-mapping.mjs'
@@ -103,6 +106,9 @@ jobs:
 
       - name: Validate trained-personnel coverage optimiser contracts
         run: node scripts/check-trained-coverage-optimizer.mjs
+
+      - name: Validate mission-definition trained-personnel parsing
+        run: node scripts/check-mission-definition-trained-personnel.mjs
 
       - name: Validate Road Rail Unit to RRU mapping
         run: node scripts/check-road-rail-rru-mapping.mjs
