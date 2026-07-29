@@ -61,8 +61,8 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-expect(source.includes('// @version      1.0.58'), 'Expected Command Nexus 1.0.58');
-expect(source.includes('MISSION FINDER V10.6.121'), 'Expected Mission Finder V10.6.121');
+expect(source.includes('// @version      1.0.59'), 'Expected Command Nexus 1.0.58');
+expect(source.includes('MISSION FINDER V10.6.122'), 'Expected Mission Finder V10.6.121');
 
 const startCollector = extractFunction('startMissionEventCollectibleCollector');
 expect(startCollector.includes('!MF_IS_TOP_WINDOW'), 'Collectible scanner must be top-window only');
@@ -87,7 +87,15 @@ const pageHide = source.slice(
   source.indexOf('mfRuntimePageHideHandler = event =>'),
   source.indexOf('mfRuntimePageShowHandler = event =>')
 );
-expect(pageHide.includes('stopMissionEventCollectibleCollector();'), 'bfcache suspension must stop the collector');
+const suspendRuntime = extractFunction('suspendMissionFinderRuntimeForPageHide');
+expect(
+  pageHide.includes('stopMissionEventCollectibleCollector();') ||
+    (
+      pageHide.includes('suspendMissionFinderRuntimeForPageHide(') &&
+      suspendRuntime.includes('stopMissionEventCollectibleCollector();')
+    ),
+  'bfcache suspension must stop the collector'
+);
 
 const reconcile = extractFunction('reconcileMissionFinderAfterPageShow');
 expect(reconcile.includes('startMissionEventCollectibleCollector();'), 'bfcache restoration must restart the collector');
