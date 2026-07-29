@@ -134,6 +134,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # Workflow registration is applied separately through the repository API.
+          # Keep this bot-authored product commit free of workflow changes.
+          git checkout HEAD -- .github/workflows/validate-userscript.yml
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
