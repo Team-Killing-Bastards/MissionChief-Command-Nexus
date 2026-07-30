@@ -4,7 +4,7 @@ from pathlib import Path
 path = Path(__file__).with_name('apply-missing-on-mission-authority-v1060.py')
 text = path.read_text(encoding='utf-8')
 old = "source = replace_once(source, legacy_parse_anchor, legacy_parse_replacement, 'legacy table row authority')"
-new = r'''if legacy_parse_anchor in source:
+new = r"""if legacy_parse_anchor in source:
     source = replace_once(source, legacy_parse_anchor, legacy_parse_replacement, 'legacy table row authority')
 else:
     legacy_condition_anchor = '''                if (
@@ -90,7 +90,7 @@ else:
         legacy_record_anchor,
         legacy_record_replacement,
         'legacy table current-selection target'
-    )'''
+    )"""
 
 if text.count(old) != 1:
     raise SystemExit(f'patcher repair anchor count={text.count(old)}')
