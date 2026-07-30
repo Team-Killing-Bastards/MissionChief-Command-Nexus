@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.60
+// @version      1.0.61
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -9616,7 +9616,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.123
+         * MODULE 2: MISSION FINDER V10.6.124
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -29196,6 +29196,16 @@ let sessionRuntimeTicker = null;
                 ? options.attachmentRowsPromise
                 : null;
 
+        const selectionRunState =
+            options.selectionRunState &&
+            typeof options.selectionRunState === 'object'
+                ? options.selectionRunState
+                : null;
+
+        if (selectionRunState) {
+            selectionRunState.usedCurrentMissionUpdateAuthority = false;
+        }
+
         resetVehicleLoadState();
         resetStaffingBlockForCurrentMission(
             'Unit Finder start'
@@ -29313,6 +29323,11 @@ let sessionRuntimeTicker = null;
                 useCurrentMissionUpdateAuthority =
                     true;
             }
+        }
+
+        if (selectionRunState) {
+            selectionRunState.usedCurrentMissionUpdateAuthority =
+                useCurrentMissionUpdateAuthority;
         }
 
         if (
@@ -40501,6 +40516,13 @@ async function handleAutoPrisonerReleaseAfterActions() {
         return true;
     }
 
+    function shouldRunPostSelectionMissionUpdate(selectionRunState) {
+        return !Boolean(
+            selectionRunState?.usedCurrentMissionUpdateAuthority
+        );
+    }
+
+
     async function runAutoModeLoop() {
         if (isManualAutoStopActive()) return;
         if (autoModeLoopActive) return;
@@ -40695,6 +40717,10 @@ async function handleAutoPrisonerReleaseAfterActions() {
             // missing quantities are current-selection totals so the same alert
             // cannot add the shortage twice before Dispatch.
             let autoMissionUpdateRowsHandled = 0;
+            const autoSelectionRunState = {
+                usedCurrentMissionUpdateAuthority:
+                    hasEarlyCurrentMissionUpdateAuthority
+            };
 
             if (
                 earlyUpdateRows.length > 0 &&
@@ -40726,7 +40752,8 @@ async function handleAutoPrisonerReleaseAfterActions() {
                     await withTimeout(
                         handleCombinedLogic({
                             vehicleListAlreadyLoaded: true,
-                            attachmentRowsPromise: prefetchedAttachmentRowsPromise
+                            attachmentRowsPromise: prefetchedAttachmentRowsPromise,
+                            selectionRunState: autoSelectionRunState
                         }),
                         45000,
                         'Auto Mode Unit Finder'
@@ -40755,55 +40782,74 @@ async function handleAutoPrisonerReleaseAfterActions() {
 
                 if (!autoModeRunning) break;
 
-                updateStatusBox(
-                    'Auto Mode checking the manual Mission Update source...'
-                );
-
-                // Only an explicit current Missing Vehicles/Personnel row may
-                // add units after the initial attachment pass. A visible copy of the
-                // full mission-definition table is not a Mission Update and must not
-                // select the complete requirement set for a second time.
-                const postUnitFinderUpdateRows =
-                    readMissionUpdateRows();
-                const postUnitFinderExplicitMissingRows =
-                    getExplicitCurrentMissingRequirementRows(
-                        postUnitFinderUpdateRows
-                    );
-
-                autoMissionUpdateRowsHandled =
-                    postUnitFinderExplicitMissingRows.length;
-
                 if (
-                    postUnitFinderExplicitMissingRows.length > 0
+                    shouldRunPostSelectionMissionUpdate(
+                        autoSelectionRunState
+                    )
                 ) {
-                    clearSelectionGuards();
-
-                    await preparePoliceVehicleSafetyForRows(
-                        postUnitFinderExplicitMissingRows,
-                        'AUTO MISSION UPDATE'
+                    updateStatusBox(
+                        'Auto Mode checking the manual Mission Update source...'
                     );
 
-                    const updated =
-                        handleMissionUpdateUnits(
-                            false,
-                            postUnitFinderExplicitMissingRows
+                    // A fresh Unit Finder mission may receive a genuinely new
+                    // Missing Vehicles/Personnel row while selection is running.
+                    // Re-read only in that fresh-mission route. A cycle that already
+                    // used Mission Update authority must never process the same table
+                    // a second time.
+                    const postUnitFinderUpdateRows =
+                        readMissionUpdateRows();
+                    const postUnitFinderExplicitMissingRows =
+                        getExplicitCurrentMissingRequirementRows(
+                            postUnitFinderUpdateRows
                         );
 
-                    if (updated) {
-                        await waitForFastDispatchReadiness(
-                            'mission update fix',
-                            {
-                                minimumWait: 100,
-                                stableFor: 250,
-                                timeout: 900
-                            }
+                    autoMissionUpdateRowsHandled =
+                        postUnitFinderExplicitMissingRows.length;
+
+                    if (
+                        postUnitFinderExplicitMissingRows.length > 0
+                    ) {
+                        clearSelectionGuards();
+
+                        await preparePoliceVehicleSafetyForRows(
+                            postUnitFinderExplicitMissingRows,
+                            'AUTO MISSION UPDATE'
+                        );
+
+                        const updated =
+                            handleMissionUpdateUnits(
+                                false,
+                                postUnitFinderExplicitMissingRows
+                            );
+
+                        if (updated) {
+                            await waitForFastDispatchReadiness(
+                                'mission update fix',
+                                {
+                                    minimumWait: 100,
+                                    stableFor: 250,
+                                    timeout: 900
+                                }
+                            );
+                        }
+                    } else if (mfDebugEnabled) {
+                        debugLog(
+                            'AUTO MISSION UPDATE SKIP',
+                            'No explicit current Missing Vehicles/Personnel rows; the full definition table was not reprocessed.'
                         );
                     }
-                } else if (mfDebugEnabled) {
-                    debugLog(
-                        'AUTO MISSION UPDATE SKIP',
-                        'No explicit current Missing Vehicles/Personnel rows; the full definition table was not reprocessed.'
+                } else {
+                    autoMissionUpdateRowsHandled = Math.max(
+                        1,
+                        earlyUpdateRows.length
                     );
+
+                    if (mfDebugEnabled) {
+                        debugLog(
+                            'AUTO MISSION UPDATE SINGLE PASS',
+                            'Current Mission Update authority was already processed during the main selection pass; duplicate post-selection processing was suppressed.'
+                        );
+                    }
                 }
             }
 

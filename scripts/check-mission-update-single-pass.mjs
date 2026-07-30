@@ -62,7 +62,7 @@ for (const token of [
 
 const autoLoop = sliceBetween(
   '    async function runAutoModeLoop() {',
-  '\n    function getCurrentAutoDispatchSelectionState()',
+  '\n    function suspendMissionFinderRuntimeForPageHide(',
   'runAutoModeLoop'
 );
 for (const token of [
@@ -97,7 +97,7 @@ const updateHandler = sliceBetween(
   'handleMissionUpdateUnits'
 );
 for (const token of [
-  'item.isTrainedPersonnelRequirement',
+  'isTrainedPersonnelRequirement',
   'selectVehiclesForTrainedPersonnelRequirements(',
   "'UPDATE'",
   'personnelTrainingRequirements',
