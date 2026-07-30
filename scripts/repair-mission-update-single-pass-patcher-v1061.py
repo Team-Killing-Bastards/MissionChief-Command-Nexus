@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from pathlib import Path
 
+# Retry marker: target only the final pre-selection mission-change guard.
 path = Path(__file__).with_name('apply-mission-update-single-pass-v1061.py')
 text = path.read_text(encoding='utf-8')
 old = "combined = replace_once(combined, route_state_anchor, route_state_replacement, 'selection route receipt')"
