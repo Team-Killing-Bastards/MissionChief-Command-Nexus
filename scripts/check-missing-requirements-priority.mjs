@@ -9,15 +9,22 @@ function fail(message) {
   process.exit(1);
 }
 
-function requireText(token, label) {
-  if (!source.includes(token)) {
+function requireText(text, token, label) {
+  if (!text.includes(token)) {
     fail(`Missing current-requirements priority contract: ${label} (${token})`);
   }
 }
 
-function requireOrdered(first, second, label) {
-  const firstIndex = source.indexOf(first);
-  const secondIndex = source.indexOf(second);
+function section(startToken, endToken, label) {
+  const start = source.indexOf(startToken);
+  const end = source.indexOf(endToken, start + startToken.length);
+  if (start < 0 || end <= start) fail(`Unable to locate ${label}`);
+  return source.slice(start, end);
+}
+
+function requireOrdered(text, first, second, label) {
+  const firstIndex = text.indexOf(first);
+  const secondIndex = text.indexOf(second);
   if (firstIndex < 0 || secondIndex < 0 || firstIndex >= secondIndex) {
     fail(`Current-requirements priority ordering failed: ${label}`);
   }
@@ -46,44 +53,73 @@ for (const [token, label] of [
   ["'missing-on-mission-table'", 'Mission Update table row source'],
   ["dispatchTargetMode: 'total'", 'current-selection total mode'],
   ['explicitMissingVehicles: true', 'current Missing Vehicles authority marker'],
+  ['suppliedHasExplicitCurrentMissingRequirements', 'explicit supplied-row protection'],
+  ["targetMode === 'shortage'", 'legacy shortage mode preservation'],
+]) {
+  requireText(source, token, label);
+}
+
+const combined = section(
+  'async function handleCombinedLogic(',
+  'function getActiveMissionInfoForAllySteal(',
+  'Unit Finder combined logic'
+);
+for (const [token, label] of [
   ['let useCurrentMissionUpdateAuthority =', 'combined current-state authority switch'],
   ['hasVisibleCurrentMissingOnMissionTable()', 'combined Missing on mission authority check'],
   ['const refreshedMissingOnMissionTableAuthority =', 'late Missing on mission refresh'],
   ['Current Missing on mission table found with no positive Still needed rows', 'zero-shortage existing-mission route'],
   ['currentUpdateRows', 'current Mission Update rows retained for processing'],
   ["'CURRENT MISSING REQUIREMENTS'", 'current rows passed to Mission Update processing'],
-  ['const hasEarlyMissingOnMissionTableAuthority =', 'early Auto Mode table authority'],
-  ['const hasEarlyCurrentMissionUpdateAuthority =', 'early combined authority'],
-  ['hasEarlyCurrentMissionUpdateAuthority\n                        ? null\n                        : readLiveMissionRequirements()', 'attachment prefetch suppression'],
-  ['Patient-only alerts never suppress the attachment route.', 'patient-only new-mission rule'],
   ['handleUnitFinderPatientRequirements()', 'patient requirement subrule preservation'],
-  ['postUnitFinderExplicitMissingRows', 'post-selection explicit shortage recheck'],
-  ['suppliedHasExplicitCurrentMissingRequirements', 'explicit supplied-row protection'],
-  ["targetMode === 'shortage'", 'legacy shortage mode preservation'],
 ]) {
-  requireText(token, label);
+  requireText(combined, token, label);
 }
-
 requireOrdered(
-  'readMissionUpdateRows({\n                silent: true',
-  'await readLiveMissionRequirements()',
+  combined,
+  'readMissionUpdateRows(',
+  'readLiveMissionRequirements()',
   'Unit Finder must read current Mission Update state before the mission definition'
 );
 requireOrdered(
+  combined,
   'let useCurrentMissionUpdateAuthority =',
   'const attachmentRows =',
   'authority must be decided before attachment selection'
 );
+
+const autoLoop = section(
+  'async function runAutoModeLoop(',
+  'function initialize(',
+  'Auto Mode loop'
+);
+for (const [token, label] of [
+  ['const hasEarlyMissingOnMissionTableAuthority =', 'early Auto Mode table authority'],
+  ['const hasEarlyCurrentMissionUpdateAuthority =', 'early combined authority'],
+  ['prefetchedAttachmentRowsPromise', 'attachment prefetch control'],
+  ['readLiveMissionRequirements()', 'mission definition prefetch'],
+  ['Patient-only alerts never suppress the attachment route.', 'patient-only new-mission rule'],
+  ['postUnitFinderExplicitMissingRows', 'post-selection explicit shortage recheck'],
+]) {
+  requireText(autoLoop, token, label);
+}
 requireOrdered(
+  autoLoop,
   'const hasEarlyCurrentMissionUpdateAuthority =',
-  'prefetchedAttachmentRowsPromise =',
+  'prefetchedAttachmentRowsPromise',
   'Auto Mode must decide current-state authority before prefetching the definition'
+);
+requireOrdered(
+  autoLoop,
+  'hasEarlyCurrentMissionUpdateAuthority',
+  'readLiveMissionRequirements()',
+  'current Mission Update authority must suppress the definition prefetch'
 );
 
 if (source.includes('let useExplicitMissingRequirements =')) {
   fail('Legacy explicit-alert-only authority switch remains');
 }
-if (source.includes("explicitMissingRows,\n                    'CURRENT MISSING REQUIREMENTS'")) {
+if (combined.includes("explicitMissingRows,\n                    'CURRENT MISSING REQUIREMENTS'")) {
   fail('Unit Finder drops retained patient shortages by processing only the explicit subset');
 }
 if (source.includes("'data-requirement-type-vehicles',\n                {\n                    dispatchTargetMode: 'shortage'")) {
