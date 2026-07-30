@@ -1,5 +1,5 @@
 name: Validate userscript
-# Includes mission-definition trained-personnel, diagnostic export, dispatch-correction, memory lifecycle/recycle, Missing-on-mission authority and single-pass update coverage.
+# Includes mission-definition trained-personnel, selected-trained-personnel UI, diagnostic export, dispatch-correction, memory lifecycle/recycle, Missing-on-mission authority and single-pass update coverage.
 
 on:
   pull_request:
@@ -16,6 +16,7 @@ on:
       - 'scripts/check-missing-requirements-priority.mjs'
       - 'scripts/check-missing-on-mission-authority.mjs'
       - 'scripts/check-mission-update-single-pass.mjs'
+      - 'scripts/check-trained-personnel-panel.mjs'
       - 'scripts/check-trained-coverage-optimizer.mjs'
       - 'scripts/check-mission-definition-trained-personnel.mjs'
       - 'scripts/check-unit-finder-diagnostic-export.mjs'
@@ -46,6 +47,7 @@ on:
       - 'scripts/check-missing-requirements-priority.mjs'
       - 'scripts/check-missing-on-mission-authority.mjs'
       - 'scripts/check-mission-update-single-pass.mjs'
+      - 'scripts/check-trained-personnel-panel.mjs'
       - 'scripts/check-trained-coverage-optimizer.mjs'
       - 'scripts/check-mission-definition-trained-personnel.mjs'
       - 'scripts/check-unit-finder-diagnostic-export.mjs'
@@ -121,6 +123,9 @@ jobs:
 
       - name: Validate Mission Update single-pass selection
         run: node scripts/check-mission-update-single-pass.mjs
+
+      - name: Validate selected trained-personnel panel
+        run: node scripts/check-trained-personnel-panel.mjs
 
       - name: Validate trained-personnel coverage optimiser contracts
         run: node scripts/check-trained-coverage-optimizer.mjs
