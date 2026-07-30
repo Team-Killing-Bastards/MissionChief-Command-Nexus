@@ -117,7 +117,10 @@ for (const token of [
   expect(structuredRows.includes(token), `Structured Missing Vehicles fallback missing ${token}`);
 }
 
-const updateReader = extractFunction('readMissionUpdateRows');
+// readMissionUpdateRows contains regular-expression literals with braces, so
+// use the full source for these unique integration markers rather than the
+// lightweight function extractor used for simpler helpers.
+const updateReader = source;
 for (const token of [
   'isMissingOnMissionUpdateTable(table)',
   "'missing-on-mission-table'",
