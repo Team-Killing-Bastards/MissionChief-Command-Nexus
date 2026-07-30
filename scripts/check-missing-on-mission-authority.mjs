@@ -59,6 +59,13 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
+function sourceSlice(startToken, endToken, label) {
+  const start = source.indexOf(startToken);
+  const end = source.indexOf(endToken, start + startToken.length);
+  if (start < 0 || end <= start) fail(`Unable to locate ${label} source slice`);
+  return source.slice(start, end);
+}
+
 expect(source.includes('// @version      1.0.60'), 'Expected Command Nexus 1.0.60');
 expect(source.includes('MISSION FINDER V10.6.123'), 'Expected Mission Finder V10.6.123');
 
@@ -117,10 +124,11 @@ for (const token of [
   expect(structuredRows.includes(token), `Structured Missing Vehicles fallback missing ${token}`);
 }
 
-// readMissionUpdateRows contains regular-expression literals with braces, so
-// use the full source for these unique integration markers rather than the
-// lightweight function extractor used for simpler helpers.
-const updateReader = source;
+const updateReader = sourceSlice(
+  'function readMissionUpdateRows(',
+  'function handleMissionUpdateUnits(',
+  'Mission Update reader'
+);
 for (const token of [
   'isMissingOnMissionUpdateTable(table)',
   "'missing-on-mission-table'",
@@ -136,7 +144,11 @@ expect(
   'Zero Still needed rows must not fall back to another positive table cell'
 );
 
-const combined = extractFunction('handleCombinedLogic');
+const combined = sourceSlice(
+  'async function handleCombinedLogic(',
+  'function getActiveMissionInfoForAllySteal(',
+  'Unit Finder combined logic'
+);
 for (const token of [
   'hasVisibleCurrentMissingOnMissionTable()',
   'useCurrentMissionUpdateAuthority',
@@ -154,7 +166,11 @@ expect(
   'Patient subrules must remain active under the authority correction'
 );
 
-const autoLoop = extractFunction('runAutoModeLoop');
+const autoLoop = sourceSlice(
+  'async function runAutoModeLoop(',
+  'function initialize(',
+  'Auto Mode loop'
+);
 for (const token of [
   'hasEarlyMissingOnMissionTableAuthority',
   'hasEarlyCurrentMissionUpdateAuthority',
