@@ -175,7 +175,7 @@ expect(
 
 const unitFinderRows = sliceBetween(
   '    async function processRequirementRows(requirementRows, sourceLabel) {',
-  '\n    async function waitForMissingUnitsAndRetry',
+  '\n    async function processVehicles(vehicleList) {',
   'Unit Finder requirement processing'
 );
 for (const token of [
