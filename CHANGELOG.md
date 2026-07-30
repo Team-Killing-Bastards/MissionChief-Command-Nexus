@@ -32,6 +32,19 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
 
+## [1.0.63] - 2026-07-31
+
+### Fixed
+
+- Fixed Issue #215 by mapping singular, plural and `Required` HazMat-unit captions directly to the Fire Operational Support Unit.
+- HazMat-unit requirements now accept only exact MissionChief vehicle type `39` OSUs; type `7` HazMat Units, type `86` Operational Support Vans and other support vehicles cannot satisfy the requirement.
+- OSU requirements are now strict no-fallback selections in Unit Finder, Mission Update/Upgrade and Auto Mode while preserving exact quantities and counting already selected OSUs.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.125` to `V10.6.126`.
+- Personnel Assignment remains `1.3.7`.
+
 ## [1.0.62] - 2026-07-30
 
 ### Added
