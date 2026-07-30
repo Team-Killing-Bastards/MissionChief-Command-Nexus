@@ -32,6 +32,19 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
 
+## [1.0.61] - 2026-07-30
+
+### Fixed
+
+- Auto Mode now records whether the main selection pass used current Mission Update authority and suppresses the post-selection Mission Update re-read for that same cycle.
+- Fresh Unit Finder missions still retain the late Missing Vehicles/Personnel check, so genuinely new shortages appearing during initial selection remain actionable.
+- Trained-personnel Mission Update selection remains on the established exact-register route and is executed once rather than being repopulated by a duplicate update pass.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.123` to `V10.6.124`.
+- Personnel Assignment remains `1.3.7`.
+
 ## [1.0.60] - 2026-07-30
 
 ### Fixed

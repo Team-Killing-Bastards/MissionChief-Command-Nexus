@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-// Permanent v1.0.57 regression for Auto Mode, EOD subtype separation and composite personnel.
+// Permanent regression for Auto Mode, EOD subtype separation and composite personnel.
 const source = fs.readFileSync('src/missionchief-command-nexus.user.js', 'utf8');
 
 function fail(message) {
@@ -42,16 +42,30 @@ function extractFunction(name) {
   fail(`Unterminated function ${name}`);
 }
 
-expect(source.includes('// @version      1.0.60'), 'Expected Command Nexus 1.0.57');
-expect(source.includes('MISSION FINDER V10.6.123'), 'Expected Mission Finder V10.6.120');
-expect(source.includes('getExplicitCurrentMissingRequirementRows(\n                        postUnitFinderUpdateRows'),
-  'Auto Mode must filter the post-Unit Finder snapshot to explicit missing rows');
-expect(source.includes('postUnitFinderExplicitMissingRows.length > 0'),
-  'Auto Mode must skip its update pass when there is no explicit shortage');
-expect(source.includes('postUnitFinderExplicitMissingRows\n                        );'),
-  'Auto Mode must pass only explicit missing rows to Mission Update');
-expect(!source.includes('handleMissionUpdateUnits(\n                        false,\n                        postUnitFinderUpdateRows'),
-  'Auto Mode must not reprocess the full post-Unit Finder table');
+expect(source.includes('// @version      1.0.61'), 'Expected current Command Nexus version');
+expect(source.includes('MISSION FINDER V10.6.124'), 'Expected current Mission Finder version');
+
+const autoLoop = extractFunction('runAutoModeLoop');
+expect(
+  /getExplicitCurrentMissingRequirementRows\s*\(\s*postUnitFinderUpdateRows\s*\)/s.test(autoLoop),
+  'Auto Mode must filter the post-Unit Finder snapshot to explicit missing rows'
+);
+expect(
+  /postUnitFinderExplicitMissingRows\.length\s*>\s*0/s.test(autoLoop),
+  'Auto Mode must skip its update pass when there is no explicit shortage'
+);
+expect(
+  /handleMissionUpdateUnits\s*\(\s*false\s*,\s*postUnitFinderExplicitMissingRows\s*\)/s.test(autoLoop),
+  'Auto Mode must pass only explicit missing rows to Mission Update'
+);
+expect(
+  !/handleMissionUpdateUnits\s*\(\s*false\s*,\s*postUnitFinderUpdateRows\s*\)/s.test(autoLoop),
+  'Auto Mode must not reprocess the full post-Unit Finder table'
+);
+expect(
+  /shouldRunPostSelectionMissionUpdate\s*\(\s*autoSelectionRunState\s*\)/s.test(autoLoop),
+  'Auto Mode must suppress the post-selection pass when current Mission Update authority was already processed'
+);
 
 const eodMode = vm.runInNewContext(`(${extractFunction('getEodResponseRequirementMode')})`, {
   normaliseVehicleText: value => String(value || '').toLowerCase().replace(/\s+/g, ' ').trim(),
@@ -100,4 +114,4 @@ expect(source.includes('const MF_UNIT_FINDER_DIAGNOSTICS_LIMIT = 24;'),
 expect(source.includes('emptyMissionUpdateSnapshot'),
   'Empty Mission Update diagnostic snapshots must be suppressed');
 
-console.log('Auto duplicate, EOD separation and Required Personnel regression passed.');
+console.log('Auto single-pass, EOD separation and Required Personnel regression passed.');
