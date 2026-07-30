@@ -32,6 +32,20 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
 
+## [1.0.62] - 2026-07-30
+
+### Added
+
+- Added an independently minimisable **Trained Personnel** panel to the right of Vehicle Load List on desktop and the stacked iPad layout.
+- The panel shows only personnel training attached to currently selected vehicles, using exact vehicle-ID Personnel Register evidence.
+- Complete register evidence is shown as numbered personnel profiles with their courses; summary-only evidence falls back to per-course counts.
+- The compact iPhone two-button layout is unchanged and the additional sibling panel is hidden there to prevent overlap.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.124` to `V10.6.125`.
+- Personnel Assignment remains `1.3.7`.
+
 ## [1.0.61] - 2026-07-30
 
 ### Fixed

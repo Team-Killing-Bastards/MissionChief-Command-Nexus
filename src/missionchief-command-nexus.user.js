@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.61
+// @version      1.0.62
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -9616,7 +9616,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.124
+         * MODULE 2: MISSION FINDER V10.6.125
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -10278,6 +10278,10 @@
             : isMissionFinderIosSafariWebsite()
                 ? 'mf_vehicle_load_collapsed_ios_v1'
                 : 'mf_vehicle_load_collapsed_v9';
+    const MF_TRAINED_PERSONNEL_COLLAPSED_KEY =
+        isMissionFinderIosSafariWebsite()
+            ? 'mf_trained_personnel_collapsed_ios_v1'
+            : 'mf_trained_personnel_collapsed_v1';
     const MF_IPHONE_ADVANCED_EXPANDED_KEY =
         'mf_iphone_advanced_expanded_v2';
     const MF_IPHONE_COLLAPSE_DEFAULTS_MIGRATION_KEY =
@@ -10400,6 +10404,10 @@
         localStorage.getItem(
             MF_VEHICLE_LOAD_COLLAPSED_KEY
         );
+    const savedTrainedPersonnelCollapsed =
+        localStorage.getItem(
+            MF_TRAINED_PERSONNEL_COLLAPSED_KEY
+        );
     const savedMissionControlCollapsed =
         localStorage.getItem(
             MF_CONTROL_COLLAPSED_KEY
@@ -10409,6 +10417,10 @@
         savedVehicleLoadCollapsed == null
             ? isMissionFinderIosSafariWebsite()
             : savedVehicleLoadCollapsed === 'true';
+    let mfTrainedPersonnelCollapsed =
+        savedTrainedPersonnelCollapsed == null
+            ? true
+            : savedTrainedPersonnelCollapsed === 'true';
     let mfMissionControlCollapsed =
         savedMissionControlCollapsed == null
             ? isMissionFinderIphoneSafariWebsite()
@@ -10557,6 +10569,7 @@
 
         mfPersonnelRegistryUpdatedHandler = () => {
             mfLiveTrainingVerifyCache.clear();
+            renderSelectedTrainedPersonnelPanel();
         };
 
         window.addEventListener(
@@ -15741,6 +15754,48 @@ function isRoadRailUnitVehicleCheckbox(input) {
                 padding-right: 4px;
             }
 
+
+            #trained-personnel-content {
+                max-height: 280px;
+                overflow-y: auto;
+                padding-right: 4px;
+            }
+
+            .mf2026-training-vehicle {
+                padding: 7px 0;
+                border-bottom: 1px solid rgba(255,255,255,0.1);
+            }
+
+            .mf2026-training-vehicle:last-child {
+                border-bottom: none;
+            }
+
+            .mf2026-training-vehicle-name {
+                margin-bottom: 5px;
+                color: #fff;
+                font-weight: bold;
+            }
+
+            .mf2026-training-person {
+                display: grid;
+                grid-template-columns: auto minmax(0, 1fr);
+                gap: 8px;
+                align-items: start;
+                padding: 3px 0;
+            }
+
+            .mf2026-training-person-label {
+                color: #42ff75;
+                font-weight: bold;
+                white-space: nowrap;
+            }
+
+            .mf2026-training-course-list {
+                color: #ddd;
+                text-align: right;
+                overflow-wrap: anywhere;
+            }
+
             #mf-mission-ready-delay-input {
                 width: 100%;
                 color: black;
@@ -15813,6 +15868,11 @@ function isRoadRailUnitVehicleCheckbox(input) {
             }
 
             #vehicle-load-list-box {
+                width: 300px;
+            }
+
+
+            #trained-personnel-box {
                 width: 300px;
             }
 
@@ -15895,6 +15955,43 @@ function isRoadRailUnitVehicleCheckbox(input) {
                 color: white;
             }
 
+
+            #trained-personnel-box.mf2026-trained-collapsed {
+                width: 44px;
+                min-height: 0;
+                padding: 6px;
+                overflow: hidden;
+            }
+
+            #trained-personnel-box.mf2026-trained-collapsed .mf-trained-body {
+                display: none;
+            }
+
+            #trained-personnel-box.mf2026-trained-collapsed .mf2026-header {
+                writing-mode: vertical-rl;
+                text-orientation: mixed;
+                min-height: 145px;
+                padding: 8px 4px;
+                cursor: pointer;
+            }
+
+            .mf2026-trained-header-row {
+                display: flex;
+                gap: 6px;
+                align-items: center;
+            }
+
+            .mf2026-trained-header-row .mf2026-header {
+                flex: 1;
+            }
+
+            #mf-trained-minimize {
+                width: 34px;
+                padding: 6px 0;
+                background: #6c757d;
+                color: white;
+            }
+
             .mf2026-button-row {
                 display: grid;
                 grid-template-columns: 1fr 1fr;
@@ -15959,7 +16056,8 @@ function isRoadRailUnitVehicleCheckbox(input) {
 
             #mission-finder-wrapper.mf2026-ios-safari .mf2026-panel,
             #mission-finder-wrapper.mf2026-ios-safari #control-panel,
-            #mission-finder-wrapper.mf2026-ios-safari #vehicle-load-list-box {
+            #mission-finder-wrapper.mf2026-ios-safari #vehicle-load-list-box,
+            #mission-finder-wrapper.mf2026-ios-safari #trained-personnel-box {
                 width: 100%;
                 max-width: none;
                 flex: 0 0 auto;
@@ -15986,7 +16084,9 @@ function isRoadRailUnitVehicleCheckbox(input) {
 
             #mission-finder-wrapper.mf2026-ios-safari .mf-control-body,
             #mission-finder-wrapper.mf2026-ios-safari .mf-load-body,
+            #mission-finder-wrapper.mf2026-ios-safari .mf-trained-body,
             #mission-finder-wrapper.mf2026-ios-safari #vehicle-load-list-content,
+            #mission-finder-wrapper.mf2026-ios-safari #trained-personnel-content,
             #mission-finder-wrapper.mf2026-ios-safari #session-panel-content {
                 -webkit-overflow-scrolling: touch;
             }
@@ -16051,6 +16151,25 @@ function isRoadRailUnitVehicleCheckbox(input) {
 
             #mission-finder-wrapper.mf2026-ios-safari
             #vehicle-load-list-box.mf2026-load-collapsed
+            .mf2026-header {
+                writing-mode: horizontal-tb;
+                text-orientation: mixed;
+                min-height: 42px;
+                padding: 8px 10px;
+                justify-content: flex-start;
+                text-align: left;
+            }
+
+            #mission-finder-wrapper.mf2026-ios-safari
+            #trained-personnel-box.mf2026-trained-collapsed {
+                width: 100%;
+                min-height: 0;
+                padding: 6px;
+                overflow: hidden;
+            }
+
+            #mission-finder-wrapper.mf2026-ios-safari
+            #trained-personnel-box.mf2026-trained-collapsed
             .mf2026-header {
                 writing-mode: horizontal-tb;
                 text-orientation: mixed;
@@ -16177,6 +16296,11 @@ function isRoadRailUnitVehicleCheckbox(input) {
                         - env(safe-area-inset-bottom, 0px)
                     );
                 }
+            }
+
+            #mission-finder-wrapper.mf2026-iphone-safari
+            #trained-personnel-box {
+                display: none !important;
             }
 
             #mission-finder-wrapper.mf2026-iphone-safari
@@ -16973,11 +17097,38 @@ function isRoadRailUnitVehicleCheckbox(input) {
             </div>
         `;
 
+        const trainedPanel = document.createElement('div');
+        trainedPanel.id = 'trained-personnel-box';
+        trainedPanel.className = `mf2026-panel ${mfTrainedPersonnelCollapsed ? 'mf2026-trained-collapsed' : ''}`;
+        trainedPanel.innerHTML = `
+            <div class="mf2026-trained-header-row">
+                <div id="mf-trained-title" class="mf2026-header">Trained Personnel</div>
+                <button id="mf-trained-minimize" type="button" class="mf2026-button" title="Minimize / expand trained personnel">${mfTrainedPersonnelCollapsed ? '+' : '−'}</button>
+            </div>
+
+            <div id="mf-trained-body" class="mf-trained-body">
+                <div class="mf2026-box">
+                    <div class="mf2026-section-title">Selected Training Coverage</div>
+                    <div id="trained-personnel-summary" class="mf2026-small">
+                        No selected trained personnel yet.
+                    </div>
+                </div>
+
+                <div class="mf2026-box">
+                    <div class="mf2026-section-title">Personnel and Courses</div>
+                    <div id="trained-personnel-content" class="mf2026-small">
+                        Selected trained personnel will appear here.
+                    </div>
+                </div>
+            </div>
+        `;
+
         if (missionFinderIphoneSafari) {
             wrapper.appendChild(iphoneLauncher);
         }
         wrapper.appendChild(panel);
         wrapper.appendChild(loadPanel);
+        wrapper.appendChild(trainedPanel);
         document.body.appendChild(wrapper);
 
         function syncVehicleLoadCollapseState() {
@@ -17066,6 +17217,93 @@ function isRoadRailUnitVehicleCheckbox(input) {
         const loadTitle = loadPanel.querySelector('#mf-load-title');
 
         syncVehicleLoadCollapseState();
+
+        function syncTrainedPersonnelCollapseState() {
+            const expanded = !mfTrainedPersonnelCollapsed;
+            trainedPanel.classList.toggle(
+                'mf2026-trained-collapsed',
+                mfTrainedPersonnelCollapsed
+            );
+
+            const minimizeButton =
+                trainedPanel.querySelector('#mf-trained-minimize');
+            const title =
+                trainedPanel.querySelector('#mf-trained-title');
+
+            if (minimizeButton) {
+                minimizeButton.textContent = expanded ? '−' : '+';
+                minimizeButton.title = expanded
+                    ? 'Collapse Trained Personnel'
+                    : 'Expand Trained Personnel';
+                minimizeButton.setAttribute(
+                    'aria-label',
+                    minimizeButton.title
+                );
+                minimizeButton.setAttribute(
+                    'aria-controls',
+                    'mf-trained-body'
+                );
+                minimizeButton.setAttribute(
+                    'aria-expanded',
+                    String(expanded)
+                );
+            }
+
+            if (title) {
+                title.setAttribute(
+                    'aria-controls',
+                    'mf-trained-body'
+                );
+                title.setAttribute(
+                    'aria-expanded',
+                    String(expanded)
+                );
+            }
+
+            trainedPanel.dataset.collapsed =
+                String(mfTrainedPersonnelCollapsed);
+        }
+
+        function toggleTrainedPersonnelCollapsed() {
+            mfTrainedPersonnelCollapsed =
+                !mfTrainedPersonnelCollapsed;
+            localStorage.setItem(
+                MF_TRAINED_PERSONNEL_COLLAPSED_KEY,
+                String(mfTrainedPersonnelCollapsed)
+            );
+            syncTrainedPersonnelCollapseState();
+            renderSelectedTrainedPersonnelPanel();
+
+            requestAnimationFrame(() => {
+                keepMissionFinderWindowOnScreen(wrapper);
+            });
+        }
+
+        const trainedMinimizeButton =
+            trainedPanel.querySelector('#mf-trained-minimize');
+        const trainedTitle =
+            trainedPanel.querySelector('#mf-trained-title');
+
+        syncTrainedPersonnelCollapseState();
+
+        if (trainedMinimizeButton) {
+            trainedMinimizeButton.addEventListener(
+                'click',
+                function(event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    toggleTrainedPersonnelCollapsed();
+                }
+            );
+        }
+
+        if (trainedTitle) {
+            trainedTitle.addEventListener('click', function() {
+                if (mfTrainedPersonnelCollapsed) {
+                    toggleTrainedPersonnelCollapsed();
+                }
+            });
+        }
 
         function persistIphoneLauncherPanelState() {
             localStorage.setItem(
@@ -18869,6 +19107,201 @@ let sessionRuntimeTicker = null;
         }
     }
 
+    const MF_SELECTED_TRAINING_LABEL_OVERRIDES =
+        Object.freeze({
+            critical_care: 'Critical Care',
+            traffic_police: 'Roads Policing',
+            swat: 'Firearms',
+            police_horse: 'Mounted Officer',
+            k9: 'Dog Handler',
+            drone: 'Drone Operator',
+            polizeihubschrauber: 'Police Aviation',
+            railway_police_command: 'Mobile Operations Management',
+            bomb_disposal_command: 'EOD Commander',
+            bomb_disposal: 'Bomb Disposal',
+            bomb_disposal_diver: 'Marine Bomb Disposal',
+            elw2: 'Level 1 Incident Commander',
+            gw_gefahrgut: 'HazMat',
+            railway_fire: 'Railway Fire'
+        });
+
+
+    function getSelectedTrainingDisplayLabel(trainingCode) {
+        const code = String(trainingCode || '').trim();
+        if (!code) return 'Unknown training';
+
+        const supportedDefinition =
+            MF_TRAINED_PERSONNEL_PATTERNS.find(definition => {
+                return String(definition?.code || '') === code;
+            });
+
+        if (supportedDefinition?.label) {
+            return supportedDefinition.label;
+        }
+
+        if (MF_SELECTED_TRAINING_LABEL_OVERRIDES[code]) {
+            return MF_SELECTED_TRAINING_LABEL_OVERRIDES[code];
+        }
+
+        return code
+            .replace(/[_-]+/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .replace(/\b\w/g, character => character.toUpperCase());
+    }
+
+
+    function getSelectedTrainedPersonnelPanelModel() {
+        let registry = { vehicles: {} };
+
+        try {
+            registry = readPersonnelTrainingRegistry();
+        } catch (_error) {}
+
+        return getVehicleCheckboxSnapshot(true)
+            .filter(input => input?.checked)
+            .map(input => {
+                let registryMatch = null;
+
+                try {
+                    registryMatch = getRegistryEntryForMissionCheckbox(
+                        input,
+                        registry
+                    );
+                } catch (_error) {}
+
+                const entry = registryMatch?.entry || null;
+                if (!entry) return null;
+
+                const profiles = (
+                    Array.isArray(entry.assignedTrainingProfiles)
+                        ? entry.assignedTrainingProfiles
+                        : []
+                ).map(profile => {
+                    return Array.from(new Set(
+                        (Array.isArray(profile) ? profile : [])
+                            .map(value => String(value || '').trim())
+                            .filter(Boolean)
+                    ));
+                }).filter(profile => profile.length > 0);
+
+                const trainingCounts = Object.entries(
+                    entry.trainingCounts &&
+                    typeof entry.trainingCounts === 'object'
+                        ? entry.trainingCounts
+                        : {}
+                ).map(([code, value]) => {
+                    return {
+                        code: String(code || ''),
+                        label: getSelectedTrainingDisplayLabel(code),
+                        count: Math.max(0, parseInt(value, 10) || 0)
+                    };
+                }).filter(item => item.code && item.count > 0)
+                    .sort((left, right) => {
+                        return left.label.localeCompare(right.label);
+                    });
+
+                if (profiles.length === 0 && trainingCounts.length === 0) {
+                    return null;
+                }
+
+                return {
+                    vehicleId: getMissionVehicleId(input),
+                    vehicleName: getVehicleDebugName(input),
+                    profiles,
+                    profilesComplete:
+                        entry.trainingProfilesComplete === true,
+                    trainingCounts
+                };
+            })
+            .filter(Boolean)
+            .sort((left, right) => {
+                return String(left.vehicleName || '')
+                    .localeCompare(String(right.vehicleName || ''));
+            });
+    }
+
+
+    function renderSelectedTrainedPersonnelPanel() {
+        const summary =
+            document.getElementById('trained-personnel-summary');
+        const content =
+            document.getElementById('trained-personnel-content');
+
+        if (!summary || !content) return;
+
+        const selectedVehicles =
+            getSelectedTrainedPersonnelPanelModel();
+        const completeProfiles = selectedVehicles.reduce(
+            (total, vehicle) => {
+                return total + (
+                    vehicle.profilesComplete
+                        ? vehicle.profiles.length
+                        : 0
+                );
+            },
+            0
+        );
+        const aggregateOnlyVehicles = selectedVehicles.filter(vehicle => {
+            return !vehicle.profilesComplete;
+        }).length;
+
+        if (selectedVehicles.length === 0) {
+            summary.textContent =
+                'No selected vehicle has trained-personnel register evidence.';
+            content.innerHTML =
+                '<span class="mf2026-small">Selected trained personnel will appear here.</span>';
+            return;
+        }
+
+        summary.innerHTML = `
+            <div><strong>${selectedVehicles.length}</strong> selected trained vehicle${selectedVehicles.length === 1 ? '' : 's'}</div>
+            <div><strong>${completeProfiles}</strong> trained personnel profile${completeProfiles === 1 ? '' : 's'}${aggregateOnlyVehicles ? ` · ${aggregateOnlyVehicles} aggregate-only` : ''}</div>
+        `;
+
+        content.innerHTML = selectedVehicles.map(vehicle => {
+            const vehicleName =
+                vehicle.vehicleName ||
+                (vehicle.vehicleId
+                    ? `Vehicle ${vehicle.vehicleId}`
+                    : 'Selected vehicle');
+            const profileMarkup =
+                vehicle.profilesComplete &&
+                vehicle.profiles.length > 0
+                    ? vehicle.profiles.map((profile, index) => {
+                        const labels = profile
+                            .map(getSelectedTrainingDisplayLabel)
+                            .sort((left, right) => left.localeCompare(right));
+
+                        return `
+                            <div class="mf2026-training-person">
+                                <span class="mf2026-training-person-label">Person ${index + 1}</span>
+                                <span class="mf2026-training-course-list">${labels.map(escapeHtml).join(', ')}</span>
+                            </div>
+                        `;
+                    }).join('')
+                    : vehicle.trainingCounts.map(item => {
+                        return `
+                            <div class="mf2026-training-person">
+                                <span class="mf2026-training-person-label">${item.count}×</span>
+                                <span class="mf2026-training-course-list">${escapeHtml(item.label)}</span>
+                            </div>
+                        `;
+                    }).join('');
+
+            return `
+                <div class="mf2026-training-vehicle">
+                    <div class="mf2026-training-vehicle-name">
+                        ${escapeHtml(vehicleName)}
+                        ${vehicle.vehicleId ? `<span class="mf2026-small"> #${escapeHtml(vehicle.vehicleId)}</span>` : ''}
+                    </div>
+                    ${profileMarkup}
+                </div>
+            `;
+        }).join('');
+    }
+
+
     function renderVehicleLoadListNow() {
         const listContent = document.getElementById('vehicle-load-list-content');
         const patientContent = document.getElementById('vehicle-patient-content');
@@ -18941,6 +19374,9 @@ let sessionRuntimeTicker = null;
                 <div class="mf2026-count mf2026-warn">Live requirements only</div>
             </div>
         `;
+
+
+        renderSelectedTrainedPersonnelPanel();
     }
 
     function renderVehicleLoadList() {
