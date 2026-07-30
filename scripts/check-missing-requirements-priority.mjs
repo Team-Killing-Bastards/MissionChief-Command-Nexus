@@ -18,7 +18,7 @@ function requireText(text, label) {
 
 function extractFunction(name) {
   const pattern = new RegExp(
-    `(?:^|\\n)[ \\t]*(?:async[ \\t]+)?function[ \\t]+${name}[ \\t]*\\([^)]*\\)[ \\t]*\\{`,
+    `(?:^|\n)[ \t]*(?:async[ \t]+)?function[ \t]+${name}[ \t]*\([^)]*\)[ \t]*\{`,
     'm'
   );
   const match = pattern.exec(source);
@@ -92,6 +92,7 @@ requireText('function isExplicitMissingPersonnelRequirementRow(', 'explicit Miss
 requireText('function getMissionUpdateRowAuthority(', 'current-row authority ordering');
 requireText('function hasExplicitCurrentMissingRequirementRows(', 'explicit-current-row gate');
 requireText('function getExplicitCurrentMissingRequirementRows(', 'explicit-current-row extractor');
+requireText('function hasVisibleCurrentMissingOnMissionTable(', 'Missing on mission table authority gate');
 
 const helperFactory = Function(
   `"use strict";\n${extractFunction('isExplicitMissingVehicleRequirementRow')}\n${extractFunction('isExplicitMissingPersonnelRequirementRow')}\n${extractFunction('getMissionUpdateRowAuthority')}\n${extractFunction('hasExplicitCurrentMissingRequirementRows')}\n${extractFunction('getExplicitCurrentMissingRequirementRows')}\nreturn { isExplicitMissingVehicleRequirementRow, isExplicitMissingPersonnelRequirementRow, getMissionUpdateRowAuthority, hasExplicitCurrentMissingRequirementRows, getExplicitCurrentMissingRequirementRows };`
@@ -105,6 +106,18 @@ const explicitVehicle = {
   liveRequirementDetails: {
     dispatchTargetMode: 'total',
     explicitMissingVehicles: true
+  }
+};
+const missingOnMission = {
+  unitName: 'Traffic Cars',
+  stillNeeded: 2,
+  updateSource: 'missing-on-mission-table',
+  liveRequirementDetails: {
+    dispatchTargetMode: 'total',
+    explicitMissingVehicles: true,
+    missingOnMissionTable: true,
+    reportedStillNeeded: 2,
+    selected: 0
   }
 };
 const explicitPersonnel = {
@@ -133,6 +146,9 @@ const patientOnly = {
 if (!helpers.isExplicitMissingVehicleRequirementRow(explicitVehicle)) {
   fail('Structured Missing Vehicles row was not authoritative');
 }
+if (!helpers.isExplicitMissingVehicleRequirementRow(missingOnMission)) {
+  fail('Missing on mission table row was not authoritative');
+}
 if (!helpers.isExplicitMissingPersonnelRequirementRow(explicitPersonnel)) {
   fail('Visible Missing Personnel row was not authoritative');
 }
@@ -142,19 +158,22 @@ if (helpers.isExplicitMissingVehicleRequirementRow(liveTotal)) {
 if (helpers.hasExplicitCurrentMissingRequirementRows([patientOnly])) {
   fail('Patient-only alerts must not suppress the normal mission-help route');
 }
-if (!helpers.hasExplicitCurrentMissingRequirementRows([patientOnly, explicitVehicle])) {
-  fail('Explicit Missing Vehicles must suppress the full mission requirement set');
+if (!helpers.hasExplicitCurrentMissingRequirementRows([patientOnly, missingOnMission])) {
+  fail('Missing on mission table must suppress the full mission requirement set');
 }
-if (helpers.getExplicitCurrentMissingRequirementRows([patientOnly, explicitVehicle]).length !== 1) {
+if (helpers.getExplicitCurrentMissingRequirementRows([patientOnly, missingOnMission]).length !== 1) {
   fail('Explicit current-row extraction returned the wrong rows');
 }
-if (!(helpers.getMissionUpdateRowAuthority(explicitVehicle) > helpers.getMissionUpdateRowAuthority(liveTotal))) {
-  fail('Explicit current shortage must outrank a larger full/live requirement total');
+if (!(helpers.getMissionUpdateRowAuthority(missingOnMission) > helpers.getMissionUpdateRowAuthority(liveTotal))) {
+  fail('Missing on mission shortage must outrank a larger full/live requirement total');
 }
 
 const structuredParser = extractFunction('getStructuredMissingVehicleRows');
 if (!structuredParser.includes(".replace(/\\u00a0/g, ' ')")) {
   fail('Structured Missing Vehicles parser lost non-breaking-space normalisation');
+}
+if (!structuredParser.includes("root.querySelectorAll('[data-raw-html]')")) {
+  fail('Escaped data-raw-html Missing Vehicles fallback is missing');
 }
 
 const updateRows = extractFunction('readMissionUpdateRows');
@@ -162,6 +181,8 @@ for (const token of [
   "dispatchTargetMode: 'total'",
   'explicitMissingVehicles: true',
   'explicitMissingPersonnel: true',
+  "'missing-on-mission-table'",
+  'selected + reportedStillNeeded',
   'const explicitMissingRequirementsPresent =',
   'const requirementRowsForDedupe =',
   'candidateAuthority > existingAuthority',
@@ -194,7 +215,8 @@ if (updateReadIndex < 0 || attachmentReadIndex < 0 || updateReadIndex > attachme
   fail('Unit Finder does not check current missing requirements before the full attachment');
 }
 for (const token of [
-  'let useExplicitMissingRequirements =',
+  'let useCurrentMissionUpdateAuthority =',
+  'hasVisibleCurrentMissingOnMissionTable()',
   'const refreshedUpdateRows =',
   'Full mission requirements were not reloaded.',
   "currentUpdateRows,\n                    'CURRENT MISSING REQUIREMENTS'"
@@ -210,7 +232,8 @@ if (unitFinder.includes("explicitMissingRows,\n                    'CURRENT MISS
 const autoLoop = extractFunction('runAutoModeLoop');
 for (const token of [
   'const hasEarlyExplicitMissingRequirements =',
-  'hasEarlyExplicitMissingRequirements\n                        ? null\n                        : readLiveMissionRequirements()',
+  'const hasEarlyCurrentMissionUpdateAuthority =',
+  'hasEarlyCurrentMissionUpdateAuthority\n                        ? null\n                        : readLiveMissionRequirements()',
   'Patient-only alerts never suppress the attachment route.'
 ]) {
   if (!autoLoop.includes(token)) {
@@ -218,13 +241,4 @@ for (const token of [
   }
 }
 
-// The structured Missing Vehicles number is a target for the currently checked
-// unsent selection. This is what prevents a second pass from selecting two more.
-const requiredTarget = 2;
-const alreadySelected = 1;
-const remaining = Math.max(0, requiredTarget - Math.min(alreadySelected, requiredTarget));
-if (remaining !== 1) {
-  fail('Current selected vehicles no longer reduce an explicit Missing Vehicles target');
-}
-
-console.log('Missing-requirements-first priority and duplicate-dispatch regression checks passed.');
+console.log('Current Missing Vehicles/Personnel and Missing on mission tables outrank full mission totals, patient-only rows remain additive, and Auto Mode preserves the new-mission versus Mission Update routing rule.');
