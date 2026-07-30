@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.62
+// @version      1.0.63
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -9616,7 +9616,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.125
+         * MODULE 2: MISSION FINDER V10.6.126
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -11472,6 +11472,16 @@
         "HazMat Units": "OSU",
         "Hazmat Unit": "OSU",
         "Hazmat Units": "OSU",
+        "Required HazMat": "OSU",
+        "Required Hazmat": "OSU",
+        "Required HazMat Unit": "OSU",
+        "Required HazMat Units": "OSU",
+        "Required Hazmat Unit": "OSU",
+        "Required Hazmat Units": "OSU",
+        "Required HazMat Unit x1": "OSU",
+        "Required HazMat Units x1": "OSU",
+        "Required Hazmat Unit x1": "OSU",
+        "Required Hazmat Units x1": "OSU",
         "HazMat Unit or CBRN Vehicle": "OSU",
         "HazMat Units or CBRN Vehicles": "OSU",
         "Hazmat Unit or CBRN Vehicle": "OSU",
@@ -13496,17 +13506,52 @@ function isRoadRailUnitVehicleCheckbox(input) {
         });
     }
 
+    const MF_FIRE_OPERATIONAL_SUPPORT_TYPE_ID = '39';
+
+    const MF_HAZMAT_OSU_REQUIREMENT_NAMES = new Set([
+        'hazmat',
+        'hazmat unit',
+        'hazmat units',
+        'required hazmat',
+        'required hazmat unit',
+        'required hazmat units',
+        'hazmat unit or cbrn vehicle',
+        'hazmat units or cbrn vehicles',
+        'required hazmat unit or cbrn vehicle',
+        'required hazmat units or cbrn vehicles'
+    ]);
+
+    function isHazMatOsuRequirement(originalName, mappedName) {
+        const raw = normaliseVehicleText(originalName)
+            .replace(/\s+x\s*1$/i, '')
+            .trim();
+        const mapped = normaliseVehicleText(mappedName);
+
+        return (
+            MF_HAZMAT_OSU_REQUIREMENT_NAMES.has(raw) ||
+            (
+                (mapped === 'osu' || mapped === 'operational support unit') &&
+                /\bhazmat\b/i.test(raw)
+            )
+        );
+    }
+
     function isFireOperationalSupportRequirement(originalName, mappedName) {
         const raw = normaliseVehicleText(originalName);
         const mapped = normaliseVehicleText(mappedName);
-        return mapped === 'osu' || mapped === 'operational support unit' ||
-            /\b(?:basus?|breathing apparatus support (?:units?|vehicles?)|welfare(?: units?| vehicles?)?|hazmat(?: units?)?|cbrn vehicles?|fire operational support units?)\b/i.test(raw);
+        return isHazMatOsuRequirement(originalName, mappedName) ||
+            mapped === 'osu' || mapped === 'operational support unit' ||
+            /\b(?:basus?|breathing apparatus support (?:units?|vehicles?)|welfare(?: units?| vehicles?)?|cbrn vehicles?|fire operational support units?)\b/i.test(raw);
     }
 
     function isFireOperationalSupportUnitCheckbox(input) {
         if (!input) return false;
         const ids = getVehicleTypeIdentifiers(input);
-        if (ids.length > 0) return ids.includes('39');
+        if (ids.length > 0) {
+            return ids.includes(
+                MF_FIRE_OPERATIONAL_SUPPORT_TYPE_ID
+            );
+        }
 
         // Name fallback is used only when MissionChief exposes no type ID.
         // Any known non-39 type, including type-7 HazMat Units, type-29/115
@@ -27646,7 +27691,8 @@ let sessionRuntimeTicker = null;
         const strictVehicleTypeOnly = !!(
             isAmbulanceTransportRequest(originalName, mappedName) ||
             isFireEngineRequirement(originalName, mappedName) ||
-            isFlatbedRecoveryVehicleRequirement(originalName, mappedName)
+            isFlatbedRecoveryVehicleRequirement(originalName, mappedName) ||
+            isFireOperationalSupportRequirement(originalName, mappedName)
         );
 
         if (
