@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 from pathlib import Path
 
-# Retry marker: target only the final pre-selection mission-change guard.
-path = Path(__file__).with_name('apply-mission-update-single-pass-v1061.py')
-text = path.read_text(encoding='utf-8')
+# Repair the temporary patcher and its regression before applying the product diff.
+patcher = Path(__file__).with_name('apply-mission-update-single-pass-v1061.py')
+text = patcher.read_text(encoding='utf-8')
 old = "combined = replace_once(combined, route_state_anchor, route_state_replacement, 'selection route receipt')"
 new = '''route_state_index = combined.rfind(route_state_anchor)
 if route_state_index < 0:
@@ -15,5 +15,22 @@ combined = (
 )'''
 if text.count(old) != 1:
     raise SystemExit(f'repair anchor count={text.count(old)}')
-path.write_text(text.replace(old, new, 1), encoding='utf-8')
-print('Narrowed v1.0.61 route receipt to final pre-selection mission guard.')
+text = text.replace(old, new, 1)
+old_boundary = "'\\n    function getCurrentAutoDispatchSelectionState()',"
+new_boundary = "'\\n    function suspendMissionFinderRuntimeForPageHide(',"
+if text.count(old_boundary) != 1:
+    raise SystemExit(f'patcher boundary count={text.count(old_boundary)}')
+patcher.write_text(text.replace(old_boundary, new_boundary, 1), encoding='utf-8')
+
+regression = Path(__file__).with_name('check-mission-update-single-pass.mjs')
+regression_text = regression.read_text(encoding='utf-8')
+old_test_boundary = "'\\n    function getCurrentAutoDispatchSelectionState()',"
+new_test_boundary = "'\\n    function suspendMissionFinderRuntimeForPageHide(',"
+if regression_text.count(old_test_boundary) != 1:
+    raise SystemExit(f'regression boundary count={regression_text.count(old_test_boundary)}')
+regression.write_text(
+    regression_text.replace(old_test_boundary, new_test_boundary, 1),
+    encoding='utf-8'
+)
+
+print('Narrowed route receipt and switched Auto Mode slicing to the stable runtime boundary.')
