@@ -105,7 +105,7 @@ expect(
 );
 
 const styleBlock = sliceBetween(
-  "        style.textContent = `",
+  "        style.id = 'mission-finder-2026-styles';",
   '\n        document.head.appendChild(style);',
   'Mission Finder style block'
 );
