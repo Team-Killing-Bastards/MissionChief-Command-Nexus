@@ -1,0 +1,1 @@
+Verify GitHub release assets, Greasy Fork source parity and Discord receipt for v1.0.60.
