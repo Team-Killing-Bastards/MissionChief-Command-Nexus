@@ -28,9 +28,14 @@ old_test_boundary = "'\\n    function getCurrentAutoDispatchSelectionState()',"
 new_test_boundary = "'\\n    function suspendMissionFinderRuntimeForPageHide(',"
 if regression_text.count(old_test_boundary) != 1:
     raise SystemExit(f'regression boundary count={regression_text.count(old_test_boundary)}')
-regression.write_text(
-    regression_text.replace(old_test_boundary, new_test_boundary, 1),
-    encoding='utf-8'
+regression_text = regression_text.replace(old_test_boundary, new_test_boundary, 1)
+if regression_text.count("'item.isTrainedPersonnelRequirement',") != 1:
+    raise SystemExit('trained-personnel token repair anchor missing')
+regression_text = regression_text.replace(
+    "'item.isTrainedPersonnelRequirement',",
+    "'isTrainedPersonnelRequirement',",
+    1
 )
+regression.write_text(regression_text, encoding='utf-8')
 
-print('Narrowed route receipt and switched Auto Mode slicing to the stable runtime boundary.')
+print('Narrowed route receipt, switched to the stable Auto boundary and normalised the trained-personnel assertion.')
