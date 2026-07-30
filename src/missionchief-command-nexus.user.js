@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.59
+// @version      1.0.60
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -9616,7 +9616,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.122
+         * MODULE 2: MISSION FINDER V10.6.123
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -27296,6 +27296,8 @@ let sessionRuntimeTicker = null;
             details?.explicitMissingVehicles ||
             details?.structuredMissingVehicles ||
             source === 'data-requirement-type-vehicles' ||
+            source === 'data-raw-html-missing-vehicles' ||
+            source === 'missing-on-mission-table' ||
             source === 'visible-missing-vehicles-alert' ||
             source === 'visible-structured-missing-vehicles'
         );
@@ -29268,11 +29270,15 @@ let sessionRuntimeTicker = null;
                 currentUpdateRows
             );
 
-        let useExplicitMissingRequirements =
-            explicitMissingRows.length > 0;
+        let hasMissingOnMissionTableAuthority =
+            hasVisibleCurrentMissingOnMissionTable();
+
+        let useCurrentMissionUpdateAuthority =
+            explicitMissingRows.length > 0 ||
+            hasMissingOnMissionTableAuthority;
 
         const attachmentRows =
-            useExplicitMissingRequirements
+            useCurrentMissionUpdateAuthority
                 ? []
                 : suppliedAttachmentPromise
                     ? await suppliedAttachmentPromise
@@ -29282,7 +29288,7 @@ let sessionRuntimeTicker = null;
         // mission-help request is in flight. Re-read the current mission once
         // before acting so a late authoritative shortage still suppresses the
         // full static requirement set.
-        if (!useExplicitMissingRequirements) {
+        if (!useCurrentMissionUpdateAuthority) {
             const refreshedUpdateRows =
                 readMissionUpdateRows();
 
@@ -29291,14 +29297,20 @@ let sessionRuntimeTicker = null;
                     refreshedUpdateRows
                 );
 
-            if (refreshedExplicitMissingRows.length > 0) {
+            const refreshedMissingOnMissionTableAuthority =
+                hasVisibleCurrentMissingOnMissionTable();
+
+            if (
+                refreshedExplicitMissingRows.length > 0 ||
+                refreshedMissingOnMissionTableAuthority
+            ) {
                 currentUpdateRows =
                     refreshedUpdateRows;
-
                 explicitMissingRows =
                     refreshedExplicitMissingRows;
-
-                useExplicitMissingRequirements =
+                hasMissingOnMissionTableAuthority =
+                    refreshedMissingOnMissionTableAuthority;
+                useCurrentMissionUpdateAuthority =
                     true;
             }
         }
@@ -29314,7 +29326,7 @@ let sessionRuntimeTicker = null;
         }
 
         const requirementReadFailure =
-            useExplicitMissingRequirements
+            useCurrentMissionUpdateAuthority
                 ? null
                 : getMissionRequirementReadFailure(
                     missionKeyAtStart
@@ -29354,17 +29366,21 @@ let sessionRuntimeTicker = null;
             return result;
         };
 
-        if (useExplicitMissingRequirements) {
+        if (useCurrentMissionUpdateAuthority) {
             updateStatusBox(
-                `Current missing requirements found: ${explicitMissingRows.length} row(s). Full mission requirements were not reloaded.`
+                explicitMissingRows.length > 0
+                    ? `Current missing requirements found: ${explicitMissingRows.length} row(s). Full mission requirements were not reloaded.`
+                    : 'Current Missing on mission table found with no positive Still needed rows. Full mission requirements were not reloaded.'
             );
 
             if (mfDebugEnabled) {
                 debugLog(
                     'UNIT FINDER MISSING AUTHORITY',
-                    explicitMissingRows
-                        .map(row => `${row.unitName} x${row.stillNeeded}`)
-                        .join(' | ')
+                    explicitMissingRows.length > 0
+                        ? explicitMissingRows
+                            .map(row => `${row.unitName} x${row.stillNeeded}`)
+                            .join(' | ')
+                        : 'Missing on mission table is authoritative with zero additional vehicle shortage.'
                 );
             }
 
@@ -29372,15 +29388,20 @@ let sessionRuntimeTicker = null;
             // totals while retaining current patient shortages. Process that
             // authoritative set rather than dropping patient rows by passing
             // only the explicit vehicle/personnel subset.
-            const missionRequirementsSatisfied =
-                await processRequirementRows(
-                    currentUpdateRows,
-                    'CURRENT MISSING REQUIREMENTS'
-                );
+            if (currentUpdateRows.length > 0) {
+                const missionRequirementsSatisfied =
+                    await processRequirementRows(
+                        currentUpdateRows,
+                        'CURRENT MISSING REQUIREMENTS'
+                    );
 
-            return preservePatientFailure(
-                missionRequirementsSatisfied
-            );
+                return preservePatientFailure(
+                    missionRequirementsSatisfied
+                );
+            }
+
+            changeDispatchBoxColor(true);
+            return preservePatientFailure(true);
         }
 
         if (attachmentRows.length > 0) {
@@ -30876,6 +30897,89 @@ let sessionRuntimeTicker = null;
     }
 
 
+    function getMissionUpdateTableHeaderTexts(table) {
+        if (!table) return [];
+
+        try {
+            return Array.from(
+                table.querySelectorAll('thead th')
+            ).map(header => {
+                return String(
+                    header.getAttribute?.('title') ||
+                    header.textContent ||
+                    header.innerText ||
+                    ''
+                )
+                    .replace(/\s+/g, ' ')
+                    .trim()
+                    .toLowerCase();
+            }).filter(Boolean);
+        } catch (_error) {
+            return [];
+        }
+    }
+
+
+    function isMissingOnMissionUpdateTable(table) {
+        const headers = getMissionUpdateTableHeaderTexts(table);
+        return (
+            headers.includes('missing on mission') &&
+            headers.some(header =>
+                header === 'still needed' ||
+                header === 'still required'
+            )
+        );
+    }
+
+
+    function hasVisibleCurrentMissingOnMissionTable() {
+        return getActiveMissionRequirementContexts().some(context => {
+            const root = context?.root;
+            if (!root) return false;
+
+            try {
+                return Array.from(
+                    root.querySelectorAll('table.table-striped.table-condensed, table.table')
+                ).some(table => {
+                    return (
+                        isMissionUpdateTable(table) &&
+                        isMissingOnMissionUpdateTable(table) &&
+                        isMissionElementVisible(table)
+                    );
+                });
+            } catch (_error) {
+                return false;
+            }
+        });
+    }
+
+
+    function normaliseEscapedMissionHtmlText(value) {
+        const decoded = String(value || '')
+            .replace(/&lt;/gi, '<')
+            .replace(/&gt;/gi, '>')
+            .replace(/&quot;/gi, '"')
+            .replace(/&#0*39;|&apos;/gi, "'")
+            .replace(/&amp;/gi, '&');
+
+        try {
+            if (typeof DOMParser === 'function') {
+                const parsed = new DOMParser().parseFromString(decoded, 'text/html');
+                return String(parsed?.body?.textContent || '')
+                    .replace(/\u00a0/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+            }
+        } catch (_error) {}
+
+        return decoded
+            .replace(/<[^>]*>/g, ' ')
+            .replace(/\u00a0/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+
     function normaliseMissionAlertText(
         value
     ) {
@@ -31171,6 +31275,38 @@ let sessionRuntimeTicker = null;
                     }
                 });
             });
+
+        Array.from(new Set(roots.filter(Boolean))).forEach(root => {
+            let rawHtmlHosts = [];
+            try {
+                rawHtmlHosts = Array.from(
+                    root.querySelectorAll('[data-raw-html]')
+                );
+            } catch (_error) {}
+
+            rawHtmlHosts
+                .filter(element => isMissionElementVisible(element))
+                .forEach(element => {
+                    const rawHtml = String(
+                        element.getAttribute?.('data-raw-html') ||
+                        ''
+                    );
+                    if (!/Missing\s+Vehicles?\s*:/i.test(rawHtml)) return;
+
+                    const text = normaliseEscapedMissionHtmlText(rawHtml);
+                    if (!/Missing\s+Vehicles?\s*:/i.test(text)) return;
+
+                    getGenericMissingVehicleRowsFromText(text).forEach(row => {
+                        const key = `${normaliseVehicleText(row.unitName)}|${row.stillNeeded}`;
+                        if (!deduped.has(key)) {
+                            deduped.set(key, {
+                                ...row,
+                                source: 'data-raw-html-missing-vehicles'
+                            });
+                        }
+                    });
+                });
+        });
 
         return Array.from(deduped.values());
     }
@@ -32016,6 +32152,9 @@ let sessionRuntimeTicker = null;
                 isLiveMissionRequirementsTable(
                     table
                 );
+            const missingOnMissionTable =
+                !liveRequirementsTable &&
+                isMissingOnMissionUpdateTable(table);
 
             table.querySelectorAll(
                 'tbody tr'
@@ -32206,11 +32345,14 @@ let sessionRuntimeTicker = null;
                     );
 
                 if (
-                    !Number.isFinite(
-                        stillNeeded
-                    ) ||
-                    stillNeeded <=
-                    0
+                    (
+                        !Number.isFinite(
+                            stillNeeded
+                        ) ||
+                        stillNeeded <=
+                        0
+                    ) &&
+                    !missingOnMissionTable
                 ) {
                     const numericCells =
                         cellTexts
@@ -32237,6 +32379,46 @@ let sessionRuntimeTicker = null;
                                 1
                             ]
                             : 0;
+                }
+
+                if (missingOnMissionTable) {
+                    const missingOnMission = Math.max(
+                        0,
+                        parseInt(cellTexts[1], 10) || 0
+                    );
+                    const enRoute = Math.max(
+                        0,
+                        parseInt(cellTexts[2], 10) || 0
+                    );
+                    const selected = Math.max(
+                        0,
+                        parseInt(cellTexts[4], 10) || 0
+                    );
+                    const reportedStillNeeded = Math.max(
+                        0,
+                        Number.isFinite(stillNeeded)
+                            ? stillNeeded
+                            : 0
+                    );
+
+                    // The table's Still needed value is the additional shortage.
+                    // Convert it to a current-selection target so a second read of
+                    // the same table cannot select the shortage twice.
+                    recordUpdateRequirement(
+                        unitName,
+                        selected + reportedStillNeeded,
+                        'missing-on-mission-table',
+                        {
+                            dispatchTargetMode: 'total',
+                            explicitMissingVehicles: true,
+                            missingOnMissionTable: true,
+                            missingOnMission,
+                            enRoute,
+                            selected,
+                            reportedStillNeeded
+                        }
+                    );
+                    return;
                 }
 
                 recordUpdateRequirement(
@@ -40454,6 +40636,11 @@ async function handleAutoPrisonerReleaseAfterActions() {
 
             const hasEarlyExplicitMissingRequirements =
                 earlyExplicitMissingRows.length > 0;
+            const hasEarlyMissingOnMissionTableAuthority =
+                hasVisibleCurrentMissingOnMissionTable();
+            const hasEarlyCurrentMissionUpdateAuthority =
+                hasEarlyExplicitMissingRequirements ||
+                hasEarlyMissingOnMissionTableAuthority;
 
             let prefetchedAttachmentRowsPromise = null;
 
@@ -40469,7 +40656,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
                 // stabilising the vehicle rows. This keeps the exact same data
                 // source but removes a serial network wait from Auto Mode.
                 prefetchedAttachmentRowsPromise =
-                    hasEarlyExplicitMissingRequirements
+                    hasEarlyCurrentMissionUpdateAuthority
                         ? null
                         : readLiveMissionRequirements();
 
@@ -40515,9 +40702,13 @@ async function handleAutoPrisonerReleaseAfterActions() {
             ) {
                 debugLog(
                     'AUTO SOURCE PRIORITY',
-                    hasEarlyExplicitMissingRequirements
-                        ? `Explicit missing requirements detected (${earlyExplicitMissingRows.length} row(s)); full attachment prefetch suppressed.`
-                        : `Early update snapshot contained no explicit Missing Vehicles/Personnel authority; normal attachment route retained.`
+                    hasEarlyCurrentMissionUpdateAuthority
+                        ? (
+                            hasEarlyExplicitMissingRequirements
+                                ? `Explicit missing requirements detected (${earlyExplicitMissingRows.length} row(s)); full attachment prefetch suppressed.`
+                                : 'Missing on mission table detected; full attachment prefetch suppressed even though no positive Still needed row exists.'
+                        )
+                        : `Early update snapshot contained no Missing on mission table or explicit Missing Vehicles/Personnel authority; normal attachment route retained.`
                 );
             }
 

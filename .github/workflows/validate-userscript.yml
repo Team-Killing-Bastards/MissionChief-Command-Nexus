@@ -1,5 +1,5 @@
 name: Validate userscript
-# Includes mission-definition trained-personnel, diagnostic export, dispatch-correction and memory lifecycle/recycle coverage.
+# Includes mission-definition trained-personnel, diagnostic export, dispatch-correction, memory lifecycle/recycle and Missing-on-mission authority coverage.
 
 on:
   pull_request:
@@ -14,6 +14,7 @@ on:
       - 'scripts/check-iphone-mission-ui.mjs'
       - 'scripts/check-open-issues-batch.mjs'
       - 'scripts/check-missing-requirements-priority.mjs'
+      - 'scripts/check-missing-on-mission-authority.mjs'
       - 'scripts/check-trained-coverage-optimizer.mjs'
       - 'scripts/check-mission-definition-trained-personnel.mjs'
       - 'scripts/check-unit-finder-diagnostic-export.mjs'
@@ -42,6 +43,7 @@ on:
       - 'scripts/check-iphone-mission-ui.mjs'
       - 'scripts/check-open-issues-batch.mjs'
       - 'scripts/check-missing-requirements-priority.mjs'
+      - 'scripts/check-missing-on-mission-authority.mjs'
       - 'scripts/check-trained-coverage-optimizer.mjs'
       - 'scripts/check-mission-definition-trained-personnel.mjs'
       - 'scripts/check-unit-finder-diagnostic-export.mjs'
@@ -111,6 +113,9 @@ jobs:
 
       - name: Validate current missing-requirements priority contracts
         run: node scripts/check-missing-requirements-priority.mjs
+
+      - name: Validate Missing on mission authority
+        run: node scripts/check-missing-on-mission-authority.mjs
 
       - name: Validate trained-personnel coverage optimiser contracts
         run: node scripts/check-trained-coverage-optimizer.mjs
