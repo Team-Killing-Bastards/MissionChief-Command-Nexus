@@ -32,6 +32,21 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
 
+## [1.0.60] - 2026-07-30
+
+### Fixed
+
+- Auto Mode once again treats a visible `Missing on mission / En-route / Still needed / Selected` table as Mission Update authority and suppresses the full mission-definition Unit Finder route.
+- Positive `Still needed` values are converted to a current-selection target using the table's `Selected` value, preventing the same shortage from being selected twice during the post-selection recheck.
+- A visible Missing-on-mission table with zero positive shortages remains authoritative, so an existing fully supplied mission cannot be mistaken for a fresh mission.
+- MissionChief's escaped `data-raw-html` Missing Vehicles alert is now parsed as a scoped fallback when the structured child exists only inside the attribute.
+- Existing patient, trained-personnel, prisoner, transport and memory lifecycle rules are unchanged.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.122` to `V10.6.123`.
+- Personnel Assignment remains `1.3.7`.
+
 ## [1.0.59] - 2026-07-29
 
 ### Fixed
