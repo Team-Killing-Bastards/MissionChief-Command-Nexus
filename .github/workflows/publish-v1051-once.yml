@@ -1,4 +1,4 @@
-name: Verify published v1.0.63
+name: Verify published v1.0.51
 
 on:
   pull_request:
@@ -10,15 +10,71 @@ permissions:
   pull-requests: write
 
 concurrency:
-  group: verify-v1.0.63-once
+  group: verify-v1.0.51-once
   cancel-in-progress: false
 
 jobs:
-  verify:
-    name: Verify GitHub Greasy Fork and Discord delivery
+  tag:
+    name: Verify published v1.0.51 tag source
     if: >-
       github.event.pull_request.head.repo.full_name == github.repository &&
-      github.event.pull_request.head.ref == 'release/verify-v1063'
+      github.event.pull_request.head.ref == 'release/publish-v1051'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Verify existing published tag and clean-source parity
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: v1.0.51
+          RELEASE_SHA: 3f22ad048dca6e4abc0eaacc9abef6e023845606
+          CLEAN_SHA: 9d92e2028dc228ab58251f84a294f15c41a7a0b9
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --tags --force
+          git cat-file -e "${RELEASE_SHA}^{commit}"
+          git cat-file -e "${CLEAN_SHA}^{commit}"
+          git merge-base --is-ancestor "${RELEASE_SHA}" "${CLEAN_SHA}"
+          [[ "$(git rev-list -n 1 "${RELEASE_TAG}")" == "${RELEASE_SHA}" ]]
+
+          git show "${RELEASE_SHA}:src/missionchief-command-nexus.user.js" > /tmp/tag.user.js
+          git show "${CLEAN_SHA}:src/missionchief-command-nexus.user.js" > /tmp/clean.user.js
+          cmp --silent /tmp/tag.user.js /tmp/clean.user.js
+          grep -Fq '// @version      1.0.51' /tmp/tag.user.js
+          grep -Fq "const PERSONNEL_VERSION = '1.3.7';" /tmp/tag.user.js
+
+          git diff --name-only "${RELEASE_SHA}" "${CLEAN_SHA}" > /tmp/release-cleanup-files.txt
+          while IFS= read -r path; do
+            [[ -z "${path}" ]] && continue
+            case "${path}" in
+              .github/workflows/build-fast-personnel-register-fix.yml|\
+              .github/workflows/harden-fast-personnel-register-once.yml|\
+              .github/builders/fast-register.part-*|\
+              .github/builders/fast-register-v2.part-*)
+                ;;
+              *)
+                echo "Unexpected product difference between published and cleaned source: ${path}"
+                exit 1
+                ;;
+            esac
+          done < /tmp/release-cleanup-files.txt
+
+          gh release view "${RELEASE_TAG}" \
+            --json isDraft,isPrerelease \
+            --jq 'select(.isDraft == false and .isPrerelease == false) | true' |
+          grep -Fx true
+
+  receipt:
+    name: Verify GitHub Greasy Fork and Discord delivery
+    needs: tag
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -30,62 +86,58 @@ jobs:
           fetch-depth: 0
           show-progress: false
 
-      - name: Verify published v1.0.63
+      - name: Verify final release receipt
         env:
           GH_TOKEN: ${{ github.token }}
           GREASYFORK_INSTALL_URL: ${{ vars.GREASYFORK_INSTALL_URL }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
-          RELEASE_TAG: v1.0.63
-          RELEASE_SHA: 8aea6b8f058b4ce89a31b71d488a3ece552c0e52
+          RELEASE_TAG: v1.0.51
+          RELEASE_SHA: 3f22ad048dca6e4abc0eaacc9abef6e023845606
         shell: bash
         run: |
           set -euo pipefail
           git fetch origin main --tags --force
 
-          TAG_SHA="$(git rev-list -n 1 "${RELEASE_TAG}")"
-          [[ "${TAG_SHA}" == "${RELEASE_SHA}" ]]
-
-          git show "${TAG_SHA}:src/missionchief-command-nexus.user.js" > /tmp/expected.user.js
-          grep -Fq '// @version      1.0.63' /tmp/expected.user.js
-          grep -Fq 'MISSION FINDER V10.6.126' /tmp/expected.user.js
-          grep -Fq "const MF_FIRE_OPERATIONAL_SUPPORT_TYPE_ID = '39';" /tmp/expected.user.js
-          grep -Fq 'isHazMatOsuRequirement' /tmp/expected.user.js
-
-          ASSET='MissionChief-Command-Nexus-1.0.63.user.js'
+          ASSET='MissionChief-Command-Nexus-1.0.51.user.js'
           CHECKSUM_ASSET="${ASSET}.sha256"
           gh release view "${RELEASE_TAG}" \
-            --json url,isDraft,isPrerelease,assets > /tmp/release.json
+            --json url,isDraft,isPrerelease,assets > /tmp/v1051-release.json
 
-          [[ "$(jq -r '.isDraft' /tmp/release.json)" == 'false' ]]
-          [[ "$(jq -r '.isPrerelease' /tmp/release.json)" == 'false' ]]
-          RELEASE_URL="$(jq -r '.url' /tmp/release.json)"
+          [[ "$(jq -r '.isDraft' /tmp/v1051-release.json)" == 'false' ]]
+          [[ "$(jq -r '.isPrerelease' /tmp/v1051-release.json)" == 'false' ]]
+          RELEASE_URL="$(jq -r '.url' /tmp/v1051-release.json)"
 
           for name in "${ASSET}" "${CHECKSUM_ASSET}"; do
-            [[ "$(jq -r --arg name "${name}" '[.assets[] | select(.name == $name)] | length' /tmp/release.json)" == '1' ]]
+            [[ "$(jq -r --arg name "${name}" '[.assets[] | select(.name == $name)] | length' /tmp/v1051-release.json)" == '1' ]]
           done
 
           RECEIPT_COUNT="$(
-            jq -r '[.assets[] | select(.name | startswith("Command-Nexus-Discord-Receipt-v1.0.63-"))] | length' \
-              /tmp/release.json
+            jq -r '[.assets[] | select(.name | startswith("Command-Nexus-Discord-Receipt-v1.0.51-"))] | length' \
+              /tmp/v1051-release.json
           )"
           [[ "${RECEIPT_COUNT}" == '1' ]]
           RECEIPT_NAME="$(
-            jq -r '.assets[] | select(.name | startswith("Command-Nexus-Discord-Receipt-v1.0.63-")) | .name' \
-              /tmp/release.json
+            jq -r '.assets[] | select(.name | startswith("Command-Nexus-Discord-Receipt-v1.0.51-")) | .name' \
+              /tmp/v1051-release.json
           )"
 
-          rm -rf /tmp/release-check
-          mkdir -p /tmp/release-check
+          TAG_SHA="$(git rev-list -n 1 "${RELEASE_TAG}")"
+          [[ "${TAG_SHA}" == "${RELEASE_SHA}" ]]
+
+          rm -rf /tmp/v1051-release-check
+          mkdir -p /tmp/v1051-release-check
           gh release download "${RELEASE_TAG}" \
             --pattern "${ASSET}" \
             --pattern "${CHECKSUM_ASSET}" \
-            --dir /tmp/release-check \
+            --dir /tmp/v1051-release-check \
             --clobber
           (
-            cd /tmp/release-check
+            cd /tmp/v1051-release-check
             sha256sum -c "${CHECKSUM_ASSET}"
           )
-          cmp --silent /tmp/expected.user.js "/tmp/release-check/${ASSET}"
+
+          git show "${TAG_SHA}:src/missionchief-command-nexus.user.js" > /tmp/v1051-expected.user.js
+          cmp --silent /tmp/v1051-expected.user.js "/tmp/v1051-release-check/${ASSET}"
 
           [[ -n "${GREASYFORK_INSTALL_URL}" ]]
           URL_SEPARATOR='?'
@@ -94,25 +146,8 @@ jobs:
           for attempt in $(seq 1 60); do
             CHECK_URL="${GREASYFORK_INSTALL_URL}${URL_SEPARATOR}mc_release_check=$(date +%s)-${attempt}"
             if curl --fail --location --silent --show-error --retry 2 --max-time 30 \
-              -H 'Cache-Control: no-cache' "${CHECK_URL}" -o /tmp/greasy.user.js; then
-              python3 - <<'PY'
-          from pathlib import Path
-
-          def normalise(path):
-              text = Path(path).read_text(encoding='utf-8-sig').replace('\r\n', '\n').replace('\r', '\n')
-              lines = []
-              for line in text.split('\n'):
-                  stripped = line.strip()
-                  if stripped.startswith('// @downloadURL') or stripped.startswith('// @updateURL'):
-                      continue
-                  lines.append(line.rstrip())
-              return '\n'.join(lines).strip() + '\n'
-
-          expected = normalise('/tmp/expected.user.js')
-          greasy = normalise('/tmp/greasy.user.js')
-          raise SystemExit(0 if expected == greasy else 1)
-          PY
-              if [[ "$?" == '0' ]]; then
+              -H 'Cache-Control: no-cache' "${CHECK_URL}" -o /tmp/v1051-greasy.user.js; then
+              if cmp --silent /tmp/v1051-expected.user.js /tmp/v1051-greasy.user.js; then
                 GREASY_OK='true'
                 break
               fi
@@ -121,25 +156,45 @@ jobs:
           done
           [[ "${GREASY_OK}" == 'true' ]]
 
-          CHECKSUM="$(sha256sum /tmp/expected.user.js | awk '{print $1}')"
-          cat > /tmp/receipt.md <<EOF
-          ## v1.0.63 release verified
+          CHECKSUM="$(sha256sum /tmp/v1051-expected.user.js | awk '{print $1}')"
+          cat > /tmp/v1051-receipt.md <<EOF
+          ## v1.0.51 release verified
 
           - GitHub release: ${RELEASE_URL}
-          - Userscript and checksum assets: verified
-          - Greasy Fork: version and normalised source parity confirmed
+          - GitHub userscript and checksum assets: verified
+          - Greasy Fork: exact source parity confirmed
           - Discord: one delivery receipt confirmed as \`${RECEIPT_NAME}\`
           - Published source commit: \`${TAG_SHA}\`
+          - Post-release cleanup source: \`9d92e2028dc228ab58251f84a294f15c41a7a0b9\` (identical userscript)
           - SHA-256: \`${CHECKSUM}\`
           EOF
-          gh pr comment "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --body-file /tmp/receipt.md
+          gh pr comment "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" --body-file /tmp/v1051-receipt.md
 
-      - name: Close verifier PR
-        if: success()
+  finish:
+    name: Close one-use verifier
+    needs: [tag, receipt]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Close verifier branch
         env:
           GH_TOKEN: ${{ github.token }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          TAG_RESULT: ${{ needs.tag.result }}
+          RECEIPT_RESULT: ${{ needs.receipt.result }}
         shell: bash
         run: |
-          gh pr close "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" \
-            --comment 'v1.0.63 is verified across GitHub, Greasy Fork and Discord.'
+          set -euo pipefail
+          if [[ "${TAG_RESULT}" == 'success' && \
+                "${RECEIPT_RESULT}" == 'success' ]]; then
+            gh pr close "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" \
+              --comment 'v1.0.51 is verified across GitHub, Greasy Fork and Discord.'
+            gh api --method DELETE \
+              "repos/${GITHUB_REPOSITORY}/git/refs/heads/release/publish-v1051" || true
+          else
+            gh pr comment "${PR_NUMBER}" --repo "${GITHUB_REPOSITORY}" \
+              --body "v1.0.51 verification stopped: tag=${TAG_RESULT}, receipt=${RECEIPT_RESULT}."
+            exit 1
+          fi
