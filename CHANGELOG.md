@@ -32,6 +32,21 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
 
+## [1.0.67] - 2026-07-31
+
+### Fixed
+
+- Restored automatic mission-load preloading for the trained `Required Personnel` row.
+- Moved the preload trigger out of the trained-personnel renderer and into the mission-panel mount lifecycle, preventing recursion while still loading requirements before Unit Finder runs.
+- The trained-personnel panel now starts with requirement coverage such as `0 / 2` and refreshes to `2 / 2` when matching trained units are selected.
+- Added a regression contract requiring the mission UI lifecycle to start preloading while permanently forbidding the renderer from doing so.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.129` to `V10.6.130`.
+- Personnel Assignment remains `1.3.8`.
+
+
 ## [1.0.66] - 2026-07-31
 
 ### Fixed

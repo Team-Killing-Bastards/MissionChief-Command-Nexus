@@ -61,8 +61,8 @@ function extractFunction(name, asyncFunction = false) {
   fail(`Unable to extract ${name}`);
 }
 
-requireText('// @version      1.0.66', 'Command Nexus version');
-requireText(' * MODULE 2: MISSION FINDER V10.6.129', 'Mission Finder version');
+requireText('// @version      1.0.67', 'Command Nexus version');
+requireText(' * MODULE 2: MISSION FINDER V10.6.130', 'Mission Finder version');
 requireText('function scheduleMissionRequiredPersonnelPreload(', 'mission-load scheduler');
 requireText('function preloadMissionRequiredPersonnel(', 'authoritative preload runner');
 requireText('function getPreloadedMissionTrainedPersonnelRequirements(', 'required-course panel model');
@@ -97,6 +97,31 @@ if (panel.includes('scheduleMissionRequiredPersonnelPreload(')) {
 }
 if (!panel.includes('panel cache read failed')) {
   fail('Trained-personnel rendering must isolate preload-cache failures');
+}
+
+const mountStart = source.indexOf('        wrapper.appendChild(loadPanel);');
+const mountEnd = source.indexOf(
+  '        function syncVehicleLoadCollapseState() {',
+  mountStart
+);
+if (mountStart < 0 || mountEnd < 0) {
+  fail('Unable to isolate the mission-panel mount lifecycle');
+}
+const mountLifecycle = source.slice(mountStart, mountEnd);
+for (const token of [
+  'wrapper.appendChild(trainedPanel);',
+  'document.body.appendChild(wrapper);',
+  'scheduleMissionRequiredPersonnelPreload(0);',
+]) {
+  if (!mountLifecycle.includes(token)) {
+    fail(`Mission-panel mount lifecycle missing ${token}`);
+  }
+}
+if (
+  mountLifecycle.indexOf('scheduleMissionRequiredPersonnelPreload(0);') <
+  mountLifecycle.indexOf('document.body.appendChild(wrapper);')
+) {
+  fail('Required Personnel preload must start after the mission panels mount');
 }
 
 const fixture = `
