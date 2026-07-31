@@ -36,22 +36,52 @@ jobs:
           node-version: '22'
 
       - name: Apply Required Personnel preload
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
         shell: bash
         run: |
           set -euo pipefail
 
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git fetch origin main --force
+          git merge --no-edit origin/main
+
           if ! grep -Fq '// @version      1.0.65' src/missionchief-command-nexus.user.js; then
-            base64 -d .github/builders/apply-required-personnel-preload-v1065.py.gz.b64 |
-              gzip -d > /tmp/apply-required-personnel-preload-v1065.py
-            python3 /tmp/apply-required-personnel-preload-v1065.py
+            cat .github/builders/required-personnel-v1065.part-* |
+              tr -d '\r\n ' > /tmp/apply-required-personnel-preload-v1065.py.gz.b64
+
+            echo '5b664b2c4f9f39c9503cb9e6bf1dae70289200a46246ccd85118899a6526dbb2  /tmp/apply-required-personnel-preload-v1065.py.gz.b64' |
+              sha256sum -c -
+
+            base64 -d /tmp/apply-required-personnel-preload-v1065.py.gz.b64 |
+              gzip -d > scripts/apply-required-personnel-preload-v1065.py
+
+            echo 'a71ab7d745e69e0c4992d492f0542a760ecf4c26c0d9d3850db866e764784ba3  scripts/apply-required-personnel-preload-v1065.py' |
+              sha256sum -c -
+
+            python3 -m py_compile scripts/apply-required-personnel-preload-v1065.py
+            python3 scripts/apply-required-personnel-preload-v1065.py
           fi
 
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('scripts/check-mission-definition-personnel-preload.mjs')
+          text = path.read_text(encoding='utf-8')
+          old = "  const bodyStart = source.indexOf('{', start);"
+          new = """  const signatureEnd = source.indexOf(') {', start);
+            if (signatureEnd < 0) fail(`Unable to find ${name} body`);
+            const bodyStart = signatureEnd + 2;"""
+          if old in text:
+              text = text.replace(old, new, 1)
+              path.write_text(text, encoding='utf-8')
+          PY
+
+          git checkout origin/main -- .github/workflows/validate-userscript.yml
+          rm -rf scripts/__pycache__
+          rm -f scripts/apply-required-personnel-preload-v1065.py
           rm -f .github/builders/apply-required-personnel-preload-v1065.py.gz.b64
+          rm -f .github/builders/required-personnel-v1065.part-*
           rm -f .github/builders/preload-required-personnel-v1065.txt
-          git show "${BASE_SHA}^:.github/workflows/publish-v1051-once.yml" > \
-            .github/workflows/publish-v1051-once.yml
 
       - name: Validate complete candidate
         shell: bash
