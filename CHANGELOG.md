@@ -4,6 +4,28 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.69] - 2026-07-31
+
+### Redesigned
+
+- Replaced the three legacy floating mission surfaces with the integrated MissionChief Nexus dashboard approved for Mission Control.
+- Added a slim Mission, Settings and Diagnostics side-tab rail while preserving all existing operational control IDs and handlers.
+- Moved Control Window Position, Mission Ready Delay and V10 Queue Restart into Settings.
+- Moved Export Diagnostics into Diagnostics and added a persistent Event Scanner switch controlling the real mission-event collectible collector.
+- Added the live footer `MissionChief Nexus V1.0.69 · MIT · Martblyth`.
+
+### Safety
+
+- Vehicle Load List, trained-personnel coverage, Required Personnel preload, Unit Finder, Mission Update, Auto Mode and dispatch logic remain on their established execution paths.
+- iPhone/iOS mission surfaces retain their existing compact lifecycle while desktop receives the integrated dashboard presentation.
+- Added permanent dashboard ownership, collector-gate and footer regression coverage.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.131` to `V10.6.132`.
+- Personnel Assignment remains `1.3.8`.
+
+
 ## [1.0.68] - 2026-07-31
 
 ### Fixed

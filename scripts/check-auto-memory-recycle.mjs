@@ -59,8 +59,8 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-expect(source.includes('// @version      1.0.68'), 'Expected Command Nexus 1.0.60');
-expect(source.includes('MISSION FINDER V10.6.131'), 'Expected Mission Finder V10.6.123');
+expect(source.includes('// @version      1.0.69'), 'Expected Command Nexus 1.0.60');
+expect(source.includes('MISSION FINDER V10.6.132'), 'Expected Mission Finder V10.6.123');
 expect(source.includes('640 * 1024 * 1024'), 'Expected the 640 MiB high-heap threshold');
 expect(source.includes('4 * 60 * 1000'), 'Expected a bounded recycle cooldown');
 

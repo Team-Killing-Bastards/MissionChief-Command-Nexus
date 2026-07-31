@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.68
+// @version      1.0.69
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -9616,7 +9616,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.131
+         * MODULE 2: MISSION FINDER V10.6.132
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -9639,6 +9639,12 @@
     const mfEventCollectibleClaimTimes = new Map();
     let mfEventCollectibleScanTimer = null;
     let mfEventCollectibleScanRunning = false;
+    const MF_EVENT_SCANNER_ENABLED_KEY =
+        'mf_event_scanner_enabled_v1';
+    let mfEventScannerEnabled =
+        localStorage.getItem(
+            MF_EVENT_SCANNER_ENABLED_KEY
+        ) !== 'false';
 
     function getMissionEventCollectibleDocuments() {
         const documents = [];
@@ -9880,6 +9886,7 @@
     function startMissionEventCollectibleCollector() {
         if (
             !MF_IS_TOP_WINDOW ||
+            !mfEventScannerEnabled ||
             mfEventCollectibleScanTimer !== null
         ) {
             return;
@@ -16512,6 +16519,327 @@ function isRoadRailUnitVehicleCheckbox(input) {
                 max-height: 12vh;
                 padding-right: 0;
             }
+
+
+            /* MissionChief Nexus integrated mission dashboard (V10.6.132). */
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) {
+                display: grid;
+                grid-template-columns: 66px repeat(3, minmax(235px, 1fr));
+                grid-template-areas:
+                    "rail control load trained"
+                    "footer footer footer footer";
+                align-items: stretch;
+                gap: 10px;
+                width: min(1360px, calc(100vw - 32px));
+                max-width: calc(100vw - 32px);
+                max-height: calc(100vh - 32px);
+                padding: 10px;
+                overflow: auto;
+                box-sizing: border-box;
+                border: 1px solid rgba(82, 155, 255, 0.24);
+                border-radius: 14px;
+                background:
+                    radial-gradient(circle at 8% 0%, rgba(20, 92, 170, 0.18), transparent 34%),
+                    linear-gradient(145deg, rgba(5, 16, 29, 0.98), rgba(4, 21, 38, 0.98));
+                box-shadow: 0 18px 55px rgba(0, 0, 0, 0.55);
+                color: #eaf2ff;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari) {
+                grid-template-columns: 66px minmax(250px, 285px) repeat(3, minmax(225px, 1fr));
+                grid-template-areas:
+                    "rail utility control load trained"
+                    "footer footer footer footer footer";
+                width: min(1580px, calc(100vw - 32px));
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-panel {
+                width: auto;
+                min-width: 0;
+                max-height: calc(100vh - 96px);
+                padding: 0;
+                gap: 0;
+                overflow: hidden;
+                border: 1px solid rgba(126, 167, 218, 0.18);
+                border-radius: 12px;
+                background: linear-gradient(155deg, rgba(18, 32, 48, 0.97), rgba(7, 23, 39, 0.97));
+                box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035), 0 10px 30px rgba(0, 0, 0, 0.24);
+                font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #control-panel { grid-area: control; }
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #vehicle-load-list-box { grid-area: load; }
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #trained-personnel-box { grid-area: trained; }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-control-header-row,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-load-header-row,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-trained-header-row {
+                min-height: 48px;
+                padding: 8px 10px;
+                border-bottom: 1px solid rgba(126, 167, 218, 0.14);
+                background: rgba(9, 23, 38, 0.72);
+                box-sizing: border-box;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-header {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 0;
+                text-align: left;
+                text-transform: uppercase;
+                letter-spacing: 0.035em;
+                background: transparent;
+                color: #f4f8ff;
+                font-size: 13px;
+                font-weight: 800;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mf-control-title::before {
+                content: "◎";
+                display: grid;
+                place-items: center;
+                width: 28px;
+                height: 28px;
+                border-radius: 8px;
+                background: linear-gradient(145deg, #0d6efd, #063f91);
+                color: white;
+                box-shadow: 0 0 16px rgba(13, 110, 253, 0.36);
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mf-load-title::before {
+                content: "▣";
+                color: #49a4ff;
+                font-size: 21px;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mf-trained-title::before {
+                content: "♙";
+                color: #c86cff;
+                font-size: 22px;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf-control-body,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf-load-body,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf-trained-body {
+                display: flex;
+                flex-direction: column;
+                gap: 9px;
+                padding: 10px;
+                overflow-y: auto;
+                min-height: 0;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-box {
+                padding: 10px;
+                border: 1px solid rgba(126, 167, 218, 0.13);
+                border-radius: 9px;
+                background: rgba(255, 255, 255, 0.025);
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #status-box {
+                min-height: 52px;
+                background: rgba(6, 20, 34, 0.72);
+                color: #dce8f7;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-section-title {
+                color: #eff6ff;
+                font-size: 12px;
+                letter-spacing: 0.01em;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-small {
+                color: #aebdd0;
+                line-height: 1.4;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-primary-actions {
+                gap: 8px;
+                margin-top: auto;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-primary-actions .mf2026-button,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mf-export-unit-finder-diagnostics {
+                min-height: 42px;
+                border: 1px solid rgba(255, 255, 255, 0.11);
+                border-radius: 8px;
+                color: #fff !important;
+                box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10), 0 5px 14px rgba(0, 0, 0, 0.22);
+                transition: transform 120ms ease, filter 120ms ease, box-shadow 120ms ease;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-button:hover {
+                filter: brightness(1.1);
+                transform: translateY(-1px);
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #unit-finder-box {
+                background: linear-gradient(145deg, #f2a900, #b96d00) !important;
+            }
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mf-ally-steal {
+                background: linear-gradient(145deg, #d42b86, #861653) !important;
+            }
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mission-update-box {
+                background: linear-gradient(145deg, #1268da, #08418e) !important;
+            }
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #dispatch-box {
+                background: linear-gradient(145deg, #526273, #303b47) !important;
+            }
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #dispatch-share-box {
+                background: linear-gradient(145deg, #13864e, #07582f) !important;
+            }
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #auto-mode-box {
+                background: linear-gradient(145deg, #743bc0, #452178) !important;
+            }
+
+            #mf-dashboard-rail {
+                grid-area: rail;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                padding: 6px;
+                border: 1px solid rgba(126, 167, 218, 0.16);
+                border-radius: 11px;
+                background: rgba(6, 19, 33, 0.88);
+            }
+
+            .mf-dashboard-tab {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 4px;
+                min-height: 72px;
+                padding: 7px 4px;
+                border: 1px solid transparent;
+                border-radius: 9px;
+                background: transparent;
+                color: #9fb1c8;
+                font-size: 10px;
+                font-weight: 700;
+                cursor: pointer;
+            }
+
+            .mf-dashboard-tab:hover,
+            .mf-dashboard-tab.mf-dashboard-tab-active {
+                border-color: rgba(34, 137, 255, 0.58);
+                background: linear-gradient(145deg, rgba(21, 104, 204, 0.58), rgba(7, 48, 96, 0.66));
+                color: #fff;
+                box-shadow: 0 0 18px rgba(13, 110, 253, 0.20);
+            }
+
+            .mf-dashboard-tab-icon {
+                font-size: 22px;
+                line-height: 1;
+                color: #55a9ff;
+            }
+
+            #mf-dashboard-utility {
+                grid-area: utility;
+                min-width: 0;
+                max-height: calc(100vh - 96px);
+                overflow: hidden;
+                border: 1px solid rgba(126, 167, 218, 0.18);
+                border-radius: 12px;
+                background: linear-gradient(155deg, rgba(18, 32, 48, 0.97), rgba(7, 23, 39, 0.97));
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.24);
+            }
+
+            #mf-dashboard-utility[hidden],
+            .mf-dashboard-utility-pane[hidden] {
+                display: none !important;
+            }
+
+            .mf-dashboard-utility-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                min-height: 48px;
+                padding: 8px 11px;
+                border-bottom: 1px solid rgba(126, 167, 218, 0.14);
+                color: #f4f8ff;
+                text-transform: uppercase;
+                letter-spacing: 0.04em;
+                font-size: 13px;
+                font-weight: 800;
+                box-sizing: border-box;
+            }
+
+            #mf-dashboard-utility-close {
+                width: 30px;
+                height: 30px;
+                border: 0;
+                border-radius: 7px;
+                background: rgba(255, 255, 255, 0.08);
+                color: #dce8f7;
+                cursor: pointer;
+            }
+
+            .mf-dashboard-utility-pane {
+                display: flex;
+                flex-direction: column;
+                gap: 9px;
+                padding: 10px;
+                overflow-y: auto;
+                max-height: calc(100vh - 154px);
+                box-sizing: border-box;
+            }
+
+            #mf-dashboard-settings-pane .mf-control-advanced {
+                display: flex;
+                gap: 9px;
+            }
+
+            #mf-dashboard-settings-pane input,
+            #mf-dashboard-diagnostics-pane input {
+                color: #f4f8ff !important;
+                background: rgba(2, 13, 25, 0.78) !important;
+                border: 1px solid rgba(126, 167, 218, 0.20) !important;
+                border-radius: 7px !important;
+                min-height: 38px;
+                padding: 7px 9px !important;
+                box-sizing: border-box;
+            }
+
+            .mf-dashboard-toggle-row {
+                align-items: flex-start;
+            }
+
+            #mf-event-scanner-state {
+                margin-top: 7px;
+            }
+
+            #mf-dashboard-diagnostics-pane #mf-export-unit-finder-diagnostics {
+                width: 100%;
+                background: linear-gradient(145deg, #27394d, #172638) !important;
+            }
+
+            #mf-dashboard-footer {
+                grid-area: footer;
+                padding: 4px 10px 0;
+                text-align: center;
+                color: #7f91a8;
+                font-size: 11px;
+                letter-spacing: 0.02em;
+            }
+
+            @media (max-width: 1180px) and (min-width: 701px) {
+                #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari),
+                #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari) {
+                    grid-template-columns: 62px repeat(2, minmax(250px, 1fr));
+                    grid-template-areas:
+                        "rail control load"
+                        "rail trained trained"
+                        "utility utility utility"
+                        "footer footer footer";
+                    width: min(920px, calc(100vw - 24px));
+                }
+
+                #mf-dashboard-utility {
+                    max-height: 310px;
+                }
+            }
         `;
         document.head.appendChild(style);
     }
@@ -16532,6 +16860,7 @@ function isRoadRailUnitVehicleCheckbox(input) {
 
         const wrapper = document.createElement('div');
         wrapper.id = 'mission-finder-wrapper';
+        wrapper.classList.add('mf-nexus-dashboard');
 
         const missionFinderIosSafari =
             isMissionFinderIosSafariWebsite();
@@ -16653,6 +16982,110 @@ function isRoadRailUnitVehicleCheckbox(input) {
         controlBody.className = 'mf-control-body';
         controlBody.id = 'mf-control-body';
 
+        const dashboardRail = document.createElement('nav');
+        dashboardRail.id = 'mf-dashboard-rail';
+        dashboardRail.setAttribute('aria-label', 'MissionChief Nexus dashboard');
+        dashboardRail.innerHTML = `
+            <button type="button" class="mf-dashboard-tab mf-dashboard-tab-active" data-mf-dashboard-tab="mission" aria-pressed="true">
+                <span class="mf-dashboard-tab-icon">◎</span>
+                <span>Mission</span>
+            </button>
+            <button type="button" class="mf-dashboard-tab" data-mf-dashboard-tab="settings" aria-pressed="false">
+                <span class="mf-dashboard-tab-icon">⚙</span>
+                <span>Settings</span>
+            </button>
+            <button type="button" class="mf-dashboard-tab" data-mf-dashboard-tab="diagnostics" aria-pressed="false">
+                <span class="mf-dashboard-tab-icon">⌁</span>
+                <span>Diagnostics</span>
+            </button>
+        `;
+
+        const dashboardUtility = document.createElement('aside');
+        dashboardUtility.id = 'mf-dashboard-utility';
+        dashboardUtility.hidden = true;
+        dashboardUtility.innerHTML = `
+            <div class="mf-dashboard-utility-header">
+                <span id="mf-dashboard-utility-title">Settings</span>
+                <button id="mf-dashboard-utility-close" type="button" aria-label="Close utility panel">×</button>
+            </div>
+        `;
+
+        const settingsPane = document.createElement('div');
+        settingsPane.id = 'mf-dashboard-settings-pane';
+        settingsPane.className = 'mf-dashboard-utility-pane';
+
+        const diagnosticsPane = document.createElement('div');
+        diagnosticsPane.id = 'mf-dashboard-diagnostics-pane';
+        diagnosticsPane.className = 'mf-dashboard-utility-pane';
+        diagnosticsPane.hidden = true;
+
+        dashboardUtility.appendChild(settingsPane);
+        dashboardUtility.appendChild(diagnosticsPane);
+
+        const dashboardUtilityTitle =
+            dashboardUtility.querySelector('#mf-dashboard-utility-title');
+        const dashboardUtilityClose =
+            dashboardUtility.querySelector('#mf-dashboard-utility-close');
+        const dashboardTabs = Array.from(
+            dashboardRail.querySelectorAll('[data-mf-dashboard-tab]')
+        );
+
+        function setMissionDashboardTab(tabName) {
+            const nextTab = ['settings', 'diagnostics'].includes(tabName)
+                ? tabName
+                : 'mission';
+            const utilityOpen = nextTab !== 'mission';
+
+            wrapper.classList.toggle(
+                'mf-dashboard-utility-open',
+                utilityOpen
+            );
+            dashboardUtility.hidden = !utilityOpen;
+            settingsPane.hidden = nextTab !== 'settings';
+            diagnosticsPane.hidden = nextTab !== 'diagnostics';
+
+            if (dashboardUtilityTitle) {
+                dashboardUtilityTitle.textContent =
+                    nextTab === 'diagnostics'
+                        ? 'Diagnostics'
+                        : 'Settings';
+            }
+
+            dashboardTabs.forEach(button => {
+                const active =
+                    button.dataset.mfDashboardTab === nextTab;
+                button.classList.toggle(
+                    'mf-dashboard-tab-active',
+                    active
+                );
+                button.setAttribute(
+                    'aria-pressed',
+                    String(active)
+                );
+            });
+
+            localStorage.setItem(
+                'mf_nexus_dashboard_tab_v1',
+                nextTab
+            );
+
+            requestAnimationFrame(() => {
+                keepMissionFinderWindowOnScreen(wrapper);
+            });
+        }
+
+        dashboardTabs.forEach(button => {
+            button.addEventListener('click', function() {
+                setMissionDashboardTab(
+                    this.dataset.mfDashboardTab
+                );
+            });
+        });
+
+        dashboardUtilityClose?.addEventListener('click', function() {
+            setMissionDashboardTab('mission');
+        });
+
         const statusBox = document.createElement('div');
         statusBox.id = 'status-box';
         statusBox.className = 'mf2026-box';
@@ -16676,8 +17109,10 @@ function isRoadRailUnitVehicleCheckbox(input) {
             controlBody.appendChild(
                 iphoneAdvancedToggle
             );
+            controlBody.appendChild(advancedBody);
+        } else {
+            settingsPane.appendChild(advancedBody);
         }
-        controlBody.appendChild(advancedBody);
 
         const positionBox = document.createElement('div');
         positionBox.id = 'mf-control-position-box';
@@ -16788,6 +17223,69 @@ function isRoadRailUnitVehicleCheckbox(input) {
                 saveQueueRestartThresholdInput(true);
             }
         );
+
+        const eventScannerBox = document.createElement('div');
+        eventScannerBox.id = 'mf-event-scanner-box';
+        eventScannerBox.className = 'mf2026-box';
+        eventScannerBox.innerHTML = `
+            <div class="mf2026-section-title">Event Scanner</div>
+            <label class="mf2026-checkbox-row mf-dashboard-toggle-row">
+                <input id="mf-event-scanner-toggle"
+                       type="checkbox"
+                       ${mfEventScannerEnabled ? 'checked' : ''}>
+                <span>Automatically collect mission event items</span>
+            </label>
+            <div id="mf-event-scanner-state" class="mf2026-small"></div>
+        `;
+
+        const eventScannerToggle =
+            eventScannerBox.querySelector('#mf-event-scanner-toggle');
+        const eventScannerState =
+            eventScannerBox.querySelector('#mf-event-scanner-state');
+
+        function syncEventScannerControl() {
+            if (eventScannerToggle) {
+                eventScannerToggle.checked =
+                    mfEventScannerEnabled;
+            }
+            if (eventScannerState) {
+                eventScannerState.textContent =
+                    mfEventScannerEnabled
+                        ? 'Scanner is on.'
+                        : 'Scanner is off.';
+                eventScannerState.classList.toggle(
+                    'mf2026-good',
+                    mfEventScannerEnabled
+                );
+            }
+        }
+
+        eventScannerToggle?.addEventListener('change', function() {
+            mfEventScannerEnabled = this.checked;
+            localStorage.setItem(
+                MF_EVENT_SCANNER_ENABLED_KEY,
+                String(mfEventScannerEnabled)
+            );
+
+            if (mfEventScannerEnabled) {
+                startMissionEventCollectibleCollector();
+            } else {
+                stopMissionEventCollectibleCollector();
+            }
+
+            syncEventScannerControl();
+            updateStatusBox(
+                `Event Scanner ${mfEventScannerEnabled ? 'enabled' : 'disabled'}.`
+            );
+        });
+
+        syncEventScannerControl();
+
+        const diagnosticsHost =
+            missionFinderIphoneSafari
+                ? advancedBody
+                : diagnosticsPane;
+        diagnosticsHost.appendChild(eventScannerBox);
 
 
         const unitFinderBtn = document.createElement('button');
@@ -16944,7 +17442,13 @@ function isRoadRailUnitVehicleCheckbox(input) {
         primaryActions.appendChild(dispatchBtn);
         primaryActions.appendChild(dispatchShareBtn);
         primaryActions.appendChild(autoModeBtn);
-        primaryActions.appendChild(diagnosticsBtn);
+
+        if (missionFinderIphoneSafari) {
+            primaryActions.appendChild(diagnosticsBtn);
+        } else {
+            diagnosticsPane.appendChild(diagnosticsBtn);
+        }
+
         controlBody.appendChild(primaryActions);
 
         function syncIphoneAdvancedToggle() {
@@ -17181,8 +17685,27 @@ function isRoadRailUnitVehicleCheckbox(input) {
             </div>
         `;
 
+        const dashboardFooter = document.createElement('footer');
+        dashboardFooter.id = 'mf-dashboard-footer';
+        const dashboardVersion =
+            typeof GM_info !== 'undefined' &&
+            GM_info?.script?.version
+                ? GM_info.script.version
+                : '1.0.69';
+        dashboardFooter.textContent =
+            `MissionChief Nexus V${dashboardVersion} · MIT · Martblyth`;
+
         if (missionFinderIphoneSafari) {
             wrapper.appendChild(iphoneLauncher);
+        } else {
+            wrapper.appendChild(dashboardRail);
+            wrapper.appendChild(dashboardUtility);
+            wrapper.appendChild(dashboardFooter);
+            setMissionDashboardTab(
+                localStorage.getItem(
+                    'mf_nexus_dashboard_tab_v1'
+                ) || 'mission'
+            );
         }
         wrapper.appendChild(panel);
         wrapper.appendChild(loadPanel);
