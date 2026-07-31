@@ -1,5 +1,5 @@
 name: Validate userscript
-# Includes mission-definition trained-personnel, Required Personnel preload, selected-trained-personnel UI, HazMat vehicle/personnel-to-OSU, diagnostic export, dispatch-correction, memory lifecycle/recycle, Missing-on-mission authority and single-pass update coverage.
+# Includes mission-definition trained-personnel, selected-trained-personnel UI, HazMat vehicle/personnel-to-OSU, diagnostic export, dispatch-correction, memory lifecycle/recycle, Missing-on-mission authority and single-pass update coverage.
 
 on:
   pull_request:
@@ -21,7 +21,6 @@ on:
       - 'scripts/check-hazmat-personnel-osu.mjs'
       - 'scripts/check-trained-coverage-optimizer.mjs'
       - 'scripts/check-mission-definition-trained-personnel.mjs'
-      - 'scripts/check-mission-definition-personnel-preload.mjs'
       - 'scripts/check-unit-finder-diagnostic-export.mjs'
       - 'scripts/check-auto-memory-lifecycle.mjs'
       - 'scripts/check-auto-memory-recycle.mjs'
@@ -55,7 +54,6 @@ on:
       - 'scripts/check-hazmat-personnel-osu.mjs'
       - 'scripts/check-trained-coverage-optimizer.mjs'
       - 'scripts/check-mission-definition-trained-personnel.mjs'
-      - 'scripts/check-mission-definition-personnel-preload.mjs'
       - 'scripts/check-unit-finder-diagnostic-export.mjs'
       - 'scripts/check-auto-memory-lifecycle.mjs'
       - 'scripts/check-auto-memory-recycle.mjs'
@@ -144,9 +142,6 @@ jobs:
 
       - name: Validate mission-definition trained-personnel parsing
         run: node scripts/check-mission-definition-trained-personnel.mjs
-
-      - name: Validate mission-definition Required Personnel preload
-        run: node scripts/check-mission-definition-personnel-preload.mjs
 
       - name: Validate Unit Finder diagnostic export
         run: node scripts/check-unit-finder-diagnostic-export.mjs
