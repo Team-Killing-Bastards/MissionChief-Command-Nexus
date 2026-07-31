@@ -1,0 +1,60 @@
+name: Extract Nexus UI source slices
+
+on:
+  push:
+    branches:
+      - feature/nexus-ui-system-v1070
+    paths:
+      - '.github/workflows/extract-nexus-ui-slices.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: feature/nexus-ui-system-v1070
+      - name: Extract source slices
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8')
+          lines = source.splitlines()
+          out = Path('.nexus-ui-context')
+          out.mkdir(exist_ok=True)
+
+          slices = {
+              'naming-shell-0001-1200.txt': (1, 1200),
+              'naming-tools-1678-3246.txt': (1678, 3246),
+              'unit-naming-8650-9900.txt': (8650, 9900),
+              'dashboard-css-16500-16845.txt': (16500, 16845),
+              'dashboard-dom-16847-17295.txt': (16847, 17295),
+              'dashboard-actions-17296-17619.txt': (17296, 17619),
+              'dashboard-data-panels-17620-18094.txt': (17620, 18094),
+          }
+
+          for filename, (start, end) in slices.items():
+              text = '\n'.join(
+                  f'{index + 1:05d}: {lines[index]}'
+                  for index in range(start - 1, min(end, len(lines)))
+              ) + '\n'
+              (out / filename).write_text(text, encoding='utf-8')
+          PY
+      - name: Commit slices and remove workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git rm .github/workflows/extract-nexus-ui-slices.yml
+          git add .nexus-ui-context
+          git commit -m 'Capture Nexus UI source slices'
+          git push origin HEAD:feature/nexus-ui-system-v1070
