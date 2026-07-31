@@ -1,0 +1,62 @@
+name: Capture compact Nexus UI V1.0.71 builder status
+
+on:
+  push:
+    branches:
+      - feature/compact-nexus-ui-v1071
+    paths:
+      - '.github/workflows/status-compact-nexus-ui-v1071.yml'
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: feature/compact-nexus-ui-v1071
+      - name: Capture latest compact builder
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          RUN_ID=""
+          for attempt in $(seq 1 90); do
+            RUN_ID="$({
+              gh api "repos/${GITHUB_REPOSITORY}/actions/runs?branch=feature%2Fcompact-nexus-ui-v1071&per_page=100" \
+                --jq '.workflow_runs[] | select(.name == "Build compact Command Nexus UI V1.0.71") | .id'
+            } | head -n1)"
+            if [[ -n "${RUN_ID}" ]]; then
+              STATUS="$(gh run view "${RUN_ID}" --json status --jq '.status')"
+              if [[ "${STATUS}" == "completed" ]]; then
+                break
+              fi
+            fi
+            sleep 5
+          done
+          {
+            echo "run_id=${RUN_ID}"
+            if [[ -n "${RUN_ID}" ]]; then
+              gh run view "${RUN_ID}" --json name,status,conclusion,url,headSha
+              echo '=== jobs ==='
+              gh run view "${RUN_ID}" --json jobs --jq '.jobs[] | {name,status,conclusion,steps}'
+              echo '=== log tail ==='
+              gh run view "${RUN_ID}" --log 2>&1 | tail -n 360
+            fi
+          } > .compact-nexus-ui-v1071-builder-status.txt
+      - name: Commit status and remove workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git rm .github/workflows/status-compact-nexus-ui-v1071.yml
+          git add .compact-nexus-ui-v1071-builder-status.txt
+          git commit -m 'Capture compact Nexus UI V1.0.71 builder status'
+          git push origin HEAD:feature/compact-nexus-ui-v1071
