@@ -1,0 +1,37 @@
+name: Extract mission dashboard v1.0.69
+
+on:
+  push:
+    branches:
+      - feature/mission-command-dashboard-v1069
+
+permissions:
+  contents: write
+
+concurrency:
+  group: extract-mission-dashboard-v1069
+  cancel-in-progress: false
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: feature/mission-command-dashboard-v1069
+          fetch-depth: 0
+      - name: Extract live dashboard construction
+        run: python3 .github/builders/extract-mission-dashboard-v1069.py
+      - name: Commit diagnostics
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add .github/diagnostics/mission-dashboard-v1069.txt
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git commit -m 'Extract live mission dashboard construction'
+          git push origin HEAD:feature/mission-command-dashboard-v1069
