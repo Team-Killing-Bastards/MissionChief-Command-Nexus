@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.70
+// @version      1.0.71
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -2109,6 +2109,188 @@
         document.body.appendChild(panel);
         ensureSingleNamingToolsPanel(panel);
 
+        const compactDisclosureStoragePrefix =
+            'mc_compact_disclosure_v1071_';
+
+        function createCompactDisclosure(
+            id,
+            label,
+            targets,
+            defaultOpen = false
+        ) {
+            const nodes = (Array.isArray(targets) ? targets : [targets])
+                .filter(node => node?.isConnected);
+            if (!nodes.length) return null;
+
+            const details = document.createElement('details');
+            details.id = id;
+            details.className = 'mc-compact-disclosure';
+
+            const storageKey =
+                `${compactDisclosureStoragePrefix}${id}`;
+            let savedState = null;
+            try {
+                savedState = localStorage.getItem(storageKey);
+            } catch (_error) {}
+            details.open = savedState == null
+                ? Boolean(defaultOpen)
+                : savedState === 'true';
+
+            const summary = document.createElement('summary');
+            summary.className = 'mc-compact-disclosure-summary';
+            summary.innerHTML = `
+                <span>${label}</span>
+                <span class="mc-compact-summary-mark" aria-hidden="true"></span>
+            `;
+
+            const body = document.createElement('div');
+            body.className = 'mc-compact-disclosure-body';
+
+            nodes[0].parentNode.insertBefore(details, nodes[0]);
+            details.appendChild(summary);
+            details.appendChild(body);
+            nodes.forEach(node => body.appendChild(node));
+
+            details.addEventListener('toggle', () => {
+                try {
+                    localStorage.setItem(
+                        storageKey,
+                        String(details.open)
+                    );
+                } catch (_error) {}
+                requestAnimationFrame(() => {
+                    clampToolPanelToViewport(panel);
+                });
+            });
+
+            return details;
+        }
+
+        function createCompactActionDisclosure(
+            container,
+            selectors,
+            label,
+            id
+        ) {
+            if (!container) return null;
+            const buttons = selectors
+                .map(selector => container.querySelector(selector))
+                .filter(Boolean);
+            if (!buttons.length) return null;
+
+            const details = createCompactDisclosure(
+                id,
+                label,
+                buttons,
+                false
+            );
+            if (!details) return null;
+            details.classList.add('mc-compact-action-disclosure');
+            container.appendChild(details);
+            return details;
+        }
+
+        const compactUnitView = panel.querySelector('#mc-unit-view');
+        const compactStationView = panel.querySelector('#mc-station-view');
+        const compactPersonnelView = panel.querySelector('#mc-personnel-view');
+
+        createCompactActionDisclosure(
+            compactUnitView?.querySelector('.mc-nexus-action-bar'),
+            ['#mc-namer-debug', '#mc-namer-clear'],
+            'More',
+            'mc-compact-unit-tools'
+        );
+        createCompactDisclosure(
+            'mc-compact-unit-status',
+            'Status',
+            compactUnitView?.querySelector('.mc-nexus-status-card'),
+            false
+        );
+        createCompactDisclosure(
+            'mc-compact-unit-log',
+            'Activity log',
+            compactUnitView?.querySelector('#mc-namer-log'),
+            false
+        );
+
+        createCompactActionDisclosure(
+            compactStationView?.querySelector('.mc-nexus-action-bar'),
+            ['#mc-station-debug', '#mc-station-clear'],
+            'More',
+            'mc-compact-station-tools'
+        );
+        createCompactDisclosure(
+            'mc-compact-station-status',
+            'Status',
+            compactStationView?.querySelector('.mc-nexus-status-card'),
+            false
+        );
+        createCompactDisclosure(
+            'mc-compact-station-log',
+            'Activity log',
+            compactStationView?.querySelector('#mc-station-log'),
+            false
+        );
+
+        createCompactDisclosure(
+            'mc-compact-personnel-profile',
+            'Profile details',
+            [
+                compactPersonnelView?.querySelector('.mc-personnel-fixed-grid'),
+                compactPersonnelView?.querySelector('#mc-personnel-policy-summary')
+            ],
+            false
+        );
+        createCompactActionDisclosure(
+            compactPersonnelView?.querySelector('.mc-nexus-action-bar'),
+            [
+                '#mc-personnel-build-register',
+                '#mc-personnel-full-register',
+                '#mc-personnel-export-register',
+                '#mc-personnel-import-register',
+                '#mc-personnel-view-station-report',
+                '#mc-personnel-copy-station',
+                '#mc-personnel-copy',
+                '#mc-personnel-debug',
+                '#mc-personnel-clear'
+            ],
+            'Tools and reports',
+            'mc-compact-personnel-tools'
+        );
+        createCompactDisclosure(
+            'mc-compact-personnel-status',
+            'Status',
+            compactPersonnelView?.querySelector('.mc-nexus-status-card'),
+            false
+        );
+        createCompactDisclosure(
+            'mc-compact-personnel-report-display',
+            'Report display',
+            compactPersonnelView?.querySelector('.mc-nexus-report-controls'),
+            false
+        );
+        createCompactDisclosure(
+            'mc-compact-personnel-station-report',
+            'Station report',
+            compactPersonnelView?.querySelector('#mc-personnel-after-action-section'),
+            false
+        );
+        createCompactDisclosure(
+            'mc-compact-personnel-overall-report',
+            'Overall report',
+            compactPersonnelView?.querySelector('#mc-personnel-overall-report-section'),
+            false
+        );
+        createCompactDisclosure(
+            'mc-compact-personnel-log',
+            'Activity log',
+            [
+                compactPersonnelView?.querySelector('.mc-personnel-log-heading'),
+                compactPersonnelView?.querySelector('#mc-personnel-log')
+            ],
+            false
+        );
+
         const style = document.createElement('style');
         style.dataset.mcNamerStyle = 'true';
         style.textContent = `
@@ -3192,6 +3374,313 @@
                     grid-column: 1 !important;
                     grid-row: auto !important;
                     grid-area: auto !important;
+                }
+            }
+
+
+            /* Command Nexus compact operations panel V1.0.71. */
+            #mc-namer-panel:not(.mc-ios-safari) {
+                top: 54px;
+                right: 10px;
+                width: min(360px, calc(100vw - 20px));
+                max-width: calc(100vw - 20px);
+                max-height: calc(100vh - 64px);
+                border-radius: 9px;
+                box-shadow: 0 12px 34px rgba(0, 0, 0, 0.42);
+                font-size: 11px;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari)[data-active-tool="personnel"] {
+                width: min(390px, calc(100vw - 20px));
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) #mc-namer-header {
+                min-height: 34px;
+                padding: 4px 5px;
+                gap: 5px;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-brand-block {
+                gap: 5px;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-mark {
+                width: 23px;
+                height: 23px;
+                flex-basis: 23px;
+                border-radius: 6px;
+                font-size: 8px;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-eyebrow,
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-tab-index {
+                display: none;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) #mc-namer-header-title {
+                font-size: 11px;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-version-chip {
+                padding: 3px 5px;
+                font-size: 8px;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) #mc-namer-collapse {
+                width: 25px;
+                height: 25px;
+                flex-basis: 25px;
+                border-radius: 6px;
+                font-size: 14px;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari).mc-namer-collapsed {
+                width: min(205px, calc(100vw - 20px));
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-namer-tabs {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 2px;
+                padding: 3px;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-namer-tab {
+                min-height: 27px;
+                padding: 4px 5px;
+                border-radius: 5px;
+                font-size: 9.5px;
+                line-height: 1.1;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-tool-view,
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-tool-grid,
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-personnel-grid {
+                grid-template-columns: minmax(0, 1fr);
+                grid-template-areas: none;
+                gap: 4px;
+                padding: 4px;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-tool-grid > *,
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-personnel-grid > * {
+                grid-column: 1 !important;
+                grid-row: auto !important;
+                grid-area: auto !important;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-config-card,
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-status-card,
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-alert-card,
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-report-controls,
+            #mc-namer-panel:not(.mc-ios-safari) .mc-personnel-report-section {
+                padding: 5px;
+                border-radius: 6px;
+                line-height: 1.3;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) label[style] {
+                margin-top: 3px !important;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) label,
+            #mc-namer-panel:not(.mc-ios-safari) .mc-personnel-navigation-title {
+                font-size: 9px;
+                letter-spacing: 0.02em;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) select,
+            #mc-namer-panel:not(.mc-ios-safari)
+            input:not([type="checkbox"]):not([type="file"]) {
+                min-height: 28px;
+                margin-top: 2px;
+                padding: 4px 6px;
+                border-radius: 5px;
+                font-size: 11px;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-action-bar {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: 3px;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-action-bar button {
+                min-height: 28px;
+                padding: 4px 5px;
+                border-radius: 5px;
+                font-size: 9.5px;
+                line-height: 1.1;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-compact-disclosure {
+                min-width: 0;
+                margin: 0;
+                border: 1px solid var(--nx-border);
+                border-radius: 6px;
+                background: var(--nx-surface);
+                overflow: hidden;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari)
+            .mc-compact-disclosure-summary {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 6px;
+                min-height: 27px;
+                padding: 4px 6px;
+                color: var(--nx-text-2);
+                font-size: 9.5px;
+                font-weight: 700;
+                line-height: 1.1;
+                cursor: pointer;
+                list-style: none;
+                user-select: none;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari)
+            .mc-compact-disclosure-summary::-webkit-details-marker {
+                display: none;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari)
+            .mc-compact-summary-mark::before {
+                content: "+";
+                color: var(--nx-muted);
+                font-size: 13px;
+                line-height: 1;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari)
+            .mc-compact-disclosure[open]
+            > .mc-compact-disclosure-summary
+            .mc-compact-summary-mark::before {
+                content: "−";
+                color: var(--nx-accent);
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari)
+            .mc-compact-disclosure[open]
+            > .mc-compact-disclosure-summary {
+                border-bottom: 1px solid var(--nx-border);
+                color: var(--nx-text);
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari)
+            .mc-compact-disclosure-body {
+                min-width: 0;
+                padding: 4px;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari)
+            .mc-compact-action-disclosure {
+                grid-column: 1 / -1 !important;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari)
+            .mc-compact-action-disclosure
+            .mc-compact-disclosure-body {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 3px;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari)
+            .mc-compact-action-disclosure button {
+                width: 100%;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-status-card {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr);
+                gap: 2px;
+                padding: 0;
+                border: 0;
+                background: transparent;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari)
+            .mc-nexus-status-card > div {
+                display: grid;
+                grid-template-columns: minmax(74px, 0.42fr) minmax(0, 1fr);
+                gap: 5px;
+                align-items: start;
+                min-height: 0;
+                padding: 3px 4px;
+                border: 0;
+                border-radius: 4px;
+                background: var(--nx-surface-2);
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari)
+            .mc-nexus-status-card > div > b {
+                display: block;
+                margin: 0;
+                font-size: 8px;
+                letter-spacing: 0.04em;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari)
+            .mc-nexus-status-card > div > span {
+                font-size: 9.5px;
+                line-height: 1.2;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-personnel-fixed-grid,
+            #mc-namer-panel:not(.mc-ios-safari)
+            .mc-personnel-report-toggle-grid {
+                grid-template-columns: minmax(0, 1fr);
+                gap: 3px;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari)
+            .mc-personnel-fixed-grid > div,
+            #mc-namer-panel:not(.mc-ios-safari)
+            .mc-personnel-report-toggle {
+                padding: 4px 5px;
+                border-radius: 4px;
+                text-align: left;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari)
+            .mc-personnel-profile-banner,
+            #mc-namer-panel:not(.mc-ios-safari)
+            .mc-personnel-policy-summary {
+                margin: 4px 0;
+                padding: 4px 5px;
+                font-size: 9.5px;
+                line-height: 1.25;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari)
+            .mc-personnel-training-shortfall-section {
+                padding: 5px;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari)
+            .mc-personnel-log-heading {
+                display: none;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-log,
+            #mc-namer-panel:not(.mc-ios-safari) #mc-personnel-report,
+            #mc-namer-panel:not(.mc-ios-safari) #mc-personnel-after-action {
+                max-height: 170px;
+                min-height: 0;
+                margin: 0;
+                padding: 5px;
+                border-radius: 4px;
+                font-size: 9px;
+                line-height: 1.35;
+            }
+
+            @media (max-width: 700px) {
+                #mc-namer-panel:not(.mc-ios-safari),
+                #mc-namer-panel:not(.mc-ios-safari)[data-active-tool="personnel"] {
+                    top: 8px;
+                    right: 8px;
+                    width: calc(100vw - 16px);
+                    max-width: calc(100vw - 16px);
+                    max-height: calc(100vh - 16px);
                 }
             }
         `;
@@ -10207,7 +10696,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.133
+         * MODULE 2: MISSION FINDER V10.6.134
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -10872,17 +11361,17 @@
             ? 'mf_control_collapsed_iphone_v3'
             : isMissionFinderIosSafariWebsite()
                 ? 'mf_control_collapsed_ios_v1'
-                : 'mf_control_collapsed_v9';
+                : 'mf_control_collapsed_v10';
     const MF_VEHICLE_LOAD_COLLAPSED_KEY =
         isMissionFinderIphoneSafariWebsite()
             ? 'mf_vehicle_load_collapsed_iphone_v3'
             : isMissionFinderIosSafariWebsite()
                 ? 'mf_vehicle_load_collapsed_ios_v1'
-                : 'mf_vehicle_load_collapsed_v9';
+                : 'mf_vehicle_load_collapsed_v10';
     const MF_TRAINED_PERSONNEL_COLLAPSED_KEY =
         isMissionFinderIosSafariWebsite()
             ? 'mf_trained_personnel_collapsed_ios_v1'
-            : 'mf_trained_personnel_collapsed_v1';
+            : 'mf_trained_personnel_collapsed_v2';
     const MF_IPHONE_ADVANCED_EXPANDED_KEY =
         'mf_iphone_advanced_expanded_v2';
     const MF_IPHONE_COLLAPSE_DEFAULTS_MIGRATION_KEY =
@@ -11016,7 +11505,7 @@
 
     let mfVehicleLoadCollapsed =
         savedVehicleLoadCollapsed == null
-            ? isMissionFinderIosSafariWebsite()
+            ? true
             : savedVehicleLoadCollapsed === 'true';
     let mfTrainedPersonnelCollapsed =
         savedTrainedPersonnelCollapsed == null
@@ -18048,6 +18537,259 @@ function isRoadRailUnitVehicleCheckbox(input) {
                     padding-inline: 5px;
                 }
             }
+
+
+            /* Command Nexus compact mission shell V1.0.71. */
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) {
+                grid-template-columns: minmax(0, 1fr);
+                grid-template-areas:
+                    "rail"
+                    "control"
+                    "load"
+                    "trained"
+                    "utility"
+                    "footer";
+                gap: 4px;
+                width: min(390px, calc(100vw - 20px));
+                max-width: calc(100vw - 20px);
+                max-height: calc(100vh - 20px);
+                padding: 5px;
+                border-radius: 9px;
+                box-shadow: 0 12px 34px rgba(0, 0, 0, 0.44);
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari) {
+                grid-template-columns: minmax(0, 1fr);
+                grid-template-areas:
+                    "rail"
+                    "utility"
+                    "footer";
+                width: min(390px, calc(100vw - 20px));
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #mf-dashboard-brand {
+                display: none !important;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #mf-dashboard-rail {
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 2px;
+                padding: 3px;
+                border-radius: 6px;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf-dashboard-tab {
+                min-height: 27px;
+                padding: 4px 5px;
+                border-radius: 5px;
+                font-size: 9.5px;
+                line-height: 1.1;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf-dashboard-tab-icon {
+                display: none;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf2026-panel,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #mf-dashboard-utility {
+                max-height: none;
+                border-radius: 7px;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari)
+            :is(#control-panel, #vehicle-load-list-box, #trained-personnel-box) {
+                display: none !important;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf2026-control-header-row,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf2026-load-header-row,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf2026-trained-header-row,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf-dashboard-utility-header {
+                min-height: 32px;
+                padding: 3px 5px;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf2026-header,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #mf-dashboard-utility-title {
+                font-size: 9.5px;
+                letter-spacing: 0.04em;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf-control-body,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf-load-body,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf-trained-body,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf-dashboard-utility-pane {
+                gap: 4px;
+                padding: 5px;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf-load-body,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf-trained-body {
+                max-height: min(280px, calc(100vh - 150px));
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf2026-box {
+                padding: 5px;
+                border-radius: 5px;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #status-box {
+                min-height: 34px;
+                font-size: 10px;
+                line-height: 1.3;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf2026-section-title {
+                margin-bottom: 3px;
+                font-size: 8.5px;
+                letter-spacing: 0.04em;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf2026-small,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf2026-name,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf2026-training-course-list {
+                font-size: 9.5px;
+                line-height: 1.3;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf2026-primary-actions {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 3px;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf2026-primary-actions #dispatch-share-box,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf2026-primary-actions #auto-mode-box {
+                grid-column: auto;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf2026-primary-actions .mf2026-button,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #mf-export-unit-finder-diagnostics,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #mf-control-centre,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #mf-control-minimize,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #mf-load-minimize,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #mf-trained-minimize,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #mf-dashboard-utility-close {
+                min-height: 28px;
+                padding: 4px 5px;
+                border-radius: 5px;
+                font-size: 9px;
+                line-height: 1.1;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #mf-control-centre,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #mf-control-minimize,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #mf-load-minimize,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #mf-trained-minimize,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #mf-dashboard-utility-close {
+                width: 26px;
+                min-width: 26px;
+                flex-basis: 26px;
+                padding: 0;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            input,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            select {
+                min-height: 28px;
+                padding: 4px 6px !important;
+                border-radius: 5px !important;
+                font-size: 10px;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #control-panel.mf2026-control-collapsed,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #vehicle-load-list-box.mf2026-load-collapsed,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #trained-personnel-box.mf2026-trained-collapsed {
+                min-height: 32px;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #mf-dashboard-footer {
+                padding: 0 2px;
+                font-size: 7.5px;
+                line-height: 1.2;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard.mf-compact-shell-collapsed:not(.mf2026-ios-safari) {
+                width: min(205px, calc(100vw - 20px));
+                max-height: 34px;
+                padding: 0;
+                gap: 0;
+                overflow: hidden;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard.mf-compact-shell-collapsed:not(.mf2026-ios-safari)
+            :is(#mf-dashboard-brand, #mf-dashboard-rail, #vehicle-load-list-box,
+                #trained-personnel-box, #mf-dashboard-utility, #mf-dashboard-footer) {
+                display: none !important;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard.mf-compact-shell-collapsed:not(.mf2026-ios-safari)
+            #control-panel {
+                display: block !important;
+                width: 100%;
+                min-height: 32px;
+                border: 0;
+                border-radius: 7px;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard.mf-compact-shell-collapsed:not(.mf2026-ios-safari)
+            .mf2026-control-header-row {
+                border-bottom: 0;
+            }
+
+            @media (max-width: 700px) {
+                #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari),
+                #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari) {
+                    width: calc(100vw - 16px);
+                    max-width: calc(100vw - 16px);
+                    max-height: calc(100vh - 16px);
+                    padding: 4px;
+                }
+            }
         `;
         document.head.appendChild(style);
     }
@@ -18751,6 +19493,13 @@ function isRoadRailUnitVehicleCheckbox(input) {
             panel.dataset.collapsed =
                 String(mfMissionControlCollapsed);
 
+            if (!missionFinderIosSafari) {
+                wrapper.classList.toggle(
+                    'mf-compact-shell-collapsed',
+                    mfMissionControlCollapsed
+                );
+            }
+
             if (missionFinderIphoneSafari) {
                 const expanded =
                     !mfMissionControlCollapsed;
@@ -18914,7 +19663,7 @@ function isRoadRailUnitVehicleCheckbox(input) {
             typeof GM_info !== 'undefined' &&
             GM_info?.script?.version
                 ? GM_info.script.version
-                : '1.0.70';
+                : '1.0.71';
         dashboardFooter.textContent =
             `MissionChief Nexus V${dashboardVersion} · MIT · Martblyth`;
 
