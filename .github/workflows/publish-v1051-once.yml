@@ -53,15 +53,16 @@ jobs:
               sha256sum -c -
 
             base64 -d /tmp/apply-required-personnel-preload-v1065.py.gz.b64 |
-              gzip -d > /tmp/apply-required-personnel-preload-v1065.py
+              gzip -d > scripts/apply-required-personnel-preload-v1065.py
 
-            echo 'a71ab7d745e69e0c4992d492f0542a760ecf4c26c0d9d3850db866e764784ba3  /tmp/apply-required-personnel-preload-v1065.py' |
+            echo 'a71ab7d745e69e0c4992d492f0542a760ecf4c26c0d9d3850db866e764784ba3  scripts/apply-required-personnel-preload-v1065.py' |
               sha256sum -c -
 
-            python3 -m py_compile /tmp/apply-required-personnel-preload-v1065.py
-            python3 /tmp/apply-required-personnel-preload-v1065.py
+            python3 -m py_compile scripts/apply-required-personnel-preload-v1065.py
+            python3 scripts/apply-required-personnel-preload-v1065.py
           fi
 
+          rm -f scripts/apply-required-personnel-preload-v1065.py
           rm -f .github/builders/apply-required-personnel-preload-v1065.py.gz.b64
           rm -f .github/builders/required-personnel-v1065.part-*
           rm -f .github/builders/preload-required-personnel-v1065.txt
