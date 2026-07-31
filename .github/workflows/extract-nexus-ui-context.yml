@@ -1,0 +1,226 @@
+name: Extract current Nexus UI implementation context
+
+on:
+  push:
+    branches:
+      - feature/nexus-ui-system-v1070
+    paths:
+      - '.github/workflows/extract-nexus-ui-context.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: feature/nexus-ui-system-v1070
+
+      - name: Extract UI functions, styles and DOM contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          source_path = Path('src/missionchief-command-nexus.user.js')
+          source = source_path.read_text(encoding='utf-8')
+          lines = source.splitlines()
+          out = Path('.nexus-ui-context')
+          out.mkdir(exist_ok=True)
+
+          def line_number(offset):
+              return source.count('\n', 0, offset) + 1
+
+          def find_end(opening):
+              depth = 0
+              state = 'code'
+              quote = ''
+              escaped = False
+              index = opening
+              while index < len(source):
+                  char = source[index]
+                  nxt = source[index + 1] if index + 1 < len(source) else ''
+                  if state == 'line':
+                      if char == '\n': state = 'code'
+                      index += 1
+                      continue
+                  if state == 'block':
+                      if char == '*' and nxt == '/':
+                          state = 'code'
+                          index += 2
+                          continue
+                      index += 1
+                      continue
+                  if state in {'string', 'template'}:
+                      if escaped:
+                          escaped = False
+                      elif char == '\\':
+                          escaped = True
+                      elif char == quote:
+                          state = 'code'
+                          quote = ''
+                      index += 1
+                      continue
+                  if char == '/' and nxt == '/':
+                      state = 'line'; index += 2; continue
+                  if char == '/' and nxt == '*':
+                      state = 'block'; index += 2; continue
+                  if char in {'\'', '"'}:
+                      state = 'string'; quote = char; index += 1; continue
+                  if char == '`':
+                      state = 'template'; quote = char; index += 1; continue
+                  if char == '{': depth += 1
+                  elif char == '}':
+                      depth -= 1
+                      if depth == 0: return index
+                  index += 1
+              return None
+
+          patterns = [
+              re.compile(r'(?m)^[ \t]*(?:async[ \t]+)?function[ \t]+([A-Za-z_$][\w$]*)[ \t]*\([^)]*\)[ \t]*\{'),
+              re.compile(r'(?m)^[ \t]*(?:const|let|var)[ \t]+([A-Za-z_$][\w$]*)[ \t]*=[ \t]*(?:async[ \t]*)?\([^)]*\)[ \t]*=>[ \t]*\{'),
+          ]
+          definitions = []
+          for pattern in patterns:
+              for match in pattern.finditer(source):
+                  opening = source.rfind('{', match.start(), match.end())
+                  ending = find_end(opening)
+                  if ending is None:
+                      continue
+                  definitions.append({
+                      'name': match.group(1),
+                      'start': match.start(),
+                      'end': ending + 1,
+                      'start_line': line_number(match.start()),
+                      'end_line': line_number(ending),
+                  })
+          definitions.sort(key=lambda item: item['start'])
+
+          exact = {
+              'injectStyles',
+              'createControlPanel',
+              'createUnitNamingPanel',
+              'createStationNamingPanel',
+              'createPersonnelAssignmentPanel',
+              'createPersonnelPanel',
+              'createNamingPanel',
+              'initialize',
+              'cleanupMissionFinderRuntime',
+              'applySavedMissionFinderWindowPosition',
+              'keepMissionFinderWindowOnScreen',
+              'installMissionFinderResizeHandler',
+              'renderVehicleLoadList',
+              'renderTrainedPersonnelPanel',
+              'renderSessionPanel',
+              'renderPersonnelPanel',
+          }
+          keywords = (
+              'naming', 'personnel', 'dashboard', 'controlpanel', 'toolpanel',
+              'station', 'unitpanel', 'assignment', 'tab', 'modal', 'window',
+          )
+          selected = [
+              item for item in definitions
+              if item['name'] in exact
+              or any(keyword in item['name'].lower() for keyword in keywords)
+          ]
+
+          index_lines = ['# Function index', '']
+          for item in selected:
+              index_lines.append(
+                  f"- {item['name']} — {item['start_line']}-{item['end_line']}"
+              )
+          (out / 'function-index.txt').write_text(
+              '\n'.join(index_lines) + '\n', encoding='utf-8'
+          )
+
+          for item in selected:
+              content = '\n'.join(
+                  f'{line_index + 1:05d}: {lines[line_index]}'
+                  for line_index in range(
+                      item['start_line'] - 1,
+                      min(item['end_line'], len(lines))
+                  )
+              ) + '\n'
+              safe_name = re.sub(r'[^A-Za-z0-9_.-]+', '-', item['name'])
+              (out / f'function-{safe_name}.txt').write_text(
+                  content, encoding='utf-8'
+              )
+
+          # Extract the style template from injectStyles separately without line prefixes.
+          inject = next((item for item in definitions if item['name'] == 'injectStyles'), None)
+          if inject:
+              inject_text = source[inject['start']:inject['end']]
+              (out / 'injectStyles.raw.js').write_text(inject_text, encoding='utf-8')
+
+          # Capture every UI id/class token and nearby context.
+          token_patterns = [
+              r"\.id\s*=\s*['\"]([^'\"]+)['\"]",
+              r"\.className\s*=\s*['\"]([^'\"]+)['\"]",
+              r"setAttribute\(\s*['\"]data-[^'\"]+['\"]\s*,\s*['\"]([^'\"]+)['\"]",
+              r"querySelector\(\s*['\"]([^'\"]+)['\"]",
+          ]
+          tokens = []
+          for pattern in token_patterns:
+              for match in re.finditer(pattern, source):
+                  token = match.group(1)
+                  if token not in tokens:
+                      tokens.append(token)
+          (out / 'ui-tokens.txt').write_text(
+              '\n'.join(tokens) + '\n', encoding='utf-8'
+          )
+
+          anchors = [
+              'mf-dashboard-rail',
+              'mf-dashboard-settings-pane',
+              'mf-dashboard-diagnostics-pane',
+              'mf-dashboard-footer',
+              'unit-naming',
+              'station-naming',
+              'personnel-assignment',
+              'naming-tool',
+              'personnel-panel',
+              'mf2026-panel',
+              'control-panel',
+              'vehicle-load-list-box',
+              'trained-personnel-panel',
+              'mf-dashboard-utility-open',
+          ]
+          context = []
+          for anchor in anchors:
+              matches = [index for index, line in enumerate(lines) if anchor in line]
+              context.extend([f'# {anchor} — {len(matches)} matches', ''])
+              for occurrence, index in enumerate(matches, 1):
+                  start = max(0, index - 28)
+                  end = min(len(lines), index + 52)
+                  context.extend([
+                      f'## occurrence {occurrence} at line {index + 1}',
+                      *[
+                          f'{line_index + 1:05d}: {lines[line_index]}'
+                          for line_index in range(start, end)
+                      ],
+                      '',
+                  ])
+          (out / 'ui-anchor-context.txt').write_text(
+              '\n'.join(context), encoding='utf-8'
+          )
+
+          print(f'Captured {len(selected)} UI-related functions.')
+          PY
+
+      - name: Commit extracted context and remove workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git rm .github/workflows/extract-nexus-ui-context.yml
+          git add .nexus-ui-context
+          git commit -m 'Capture current Nexus UI implementation context'
+          git push origin HEAD:feature/nexus-ui-system-v1070
