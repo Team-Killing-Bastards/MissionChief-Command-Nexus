@@ -1,0 +1,177 @@
+name: Verify Command Nexus v1.0.71 production delivery
+
+on:
+  push:
+    branches:
+      - agent/verify-v1.0.71-release
+    paths:
+      - '.github/workflows/verify-v1.0.71-release.yml'
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: agent/verify-v1.0.71-release
+
+      - name: Verify immutable production delivery
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          VERSION="1.0.71"
+          TAG="v${VERSION}"
+          EXPECTED_SHA="4029b049f9a3c2d79d8279b17355adb5778e242d"
+          ASSET="MissionChief-Command-Nexus-${VERSION}.user.js"
+          CHECKSUM="${ASSET}.sha256"
+          RECEIPT_PREFIX="Command-Nexus-Discord-Receipt-${TAG}-"
+          GREASY_URL="https://update.greasyfork.org/scripts/587702/MissionChief%20Command%20Nexus.user.js"
+
+          git fetch origin main --tags --force
+          MAIN_SHA="$(git rev-parse origin/main)"
+          [[ "${MAIN_SHA}" == "${EXPECTED_SHA}" ]]
+
+          RELEASE_JSON=""
+          for attempt in $(seq 1 180); do
+            if RELEASE_JSON="$(gh release view "${TAG}" --json tagName,targetCommitish,isDraft,isPrerelease,publishedAt,url,assets 2>/dev/null)"; then
+              break
+            fi
+            sleep 5
+          done
+          [[ -n "${RELEASE_JSON}" ]]
+          [[ "$(jq -r '.tagName' <<<"${RELEASE_JSON}")" == "${TAG}" ]]
+          [[ "$(jq -r '.targetCommitish' <<<"${RELEASE_JSON}")" == "${EXPECTED_SHA}" ]]
+          [[ "$(jq -r '.isDraft' <<<"${RELEASE_JSON}")" == "false" ]]
+          [[ "$(jq -r '.isPrerelease' <<<"${RELEASE_JSON}")" == "false" ]]
+
+          git fetch origin "refs/tags/${TAG}:refs/tags/${TAG}" --force
+          TAG_SHA="$(git rev-list -n1 "${TAG}")"
+          [[ "${TAG_SHA}" == "${EXPECTED_SHA}" ]]
+
+          rm -rf /tmp/v1071-release
+          mkdir -p /tmp/v1071-release
+          gh release download "${TAG}" \
+            --dir /tmp/v1071-release \
+            --pattern "${ASSET}" \
+            --pattern "${CHECKSUM}"
+          git show "${EXPECTED_SHA}:src/missionchief-command-nexus.user.js" \
+            > /tmp/v1071-release/source.user.js
+
+          SOURCE_SHA="$(sha256sum /tmp/v1071-release/source.user.js | awk '{print $1}')"
+          ASSET_SHA="$(sha256sum "/tmp/v1071-release/${ASSET}" | awk '{print $1}')"
+          CHECKSUM_SHA="$(awk '{print $1}' "/tmp/v1071-release/${CHECKSUM}")"
+          [[ "${SOURCE_SHA}" == "${ASSET_SHA}" ]]
+          [[ "${SOURCE_SHA}" == "${CHECKSUM_SHA}" ]]
+
+          GREASY_VERSION=""
+          GREASY_SHA=""
+          GREASY_ATTEMPT=""
+          for attempt in $(seq 1 120); do
+            curl -fsSL \
+              -H 'Cache-Control: no-cache' \
+              "${GREASY_URL}?verify=${GITHUB_RUN_ID}-${attempt}" \
+              -o /tmp/v1071-release/greasy.user.js || true
+            GREASY_VERSION="$(sed -n 's#^//[[:space:]]*@version[[:space:]]*##p' /tmp/v1071-release/greasy.user.js 2>/dev/null | head -n1 | xargs || true)"
+            GREASY_SHA="$(sha256sum /tmp/v1071-release/greasy.user.js 2>/dev/null | awk '{print $1}' || true)"
+            if [[ "${GREASY_VERSION}" == "${VERSION}" && "${GREASY_SHA}" == "${SOURCE_SHA}" ]]; then
+              GREASY_ATTEMPT="${attempt}"
+              break
+            fi
+            sleep 5
+          done
+          [[ "${GREASY_VERSION}" == "${VERSION}" ]]
+          [[ "${GREASY_SHA}" == "${SOURCE_SHA}" ]]
+
+          PUBLISHER_RUN=""
+          DISCORD_LINE=""
+          WEBHOOK_LINE=""
+          GREASY_LINE=""
+          IMMUTABLE_LINE=""
+          MATCHING_PUBLISHERS=0
+
+          mapfile -t RUN_IDS < <(
+            gh api "repos/${GITHUB_REPOSITORY}/actions/runs?per_page=100" \
+              --jq '.workflow_runs[] | select(.name == "Create GitHub release") | .id'
+          )
+
+          for run_id in "${RUN_IDS[@]}"; do
+            log_file="/tmp/v1071-release/publisher-${run_id}.log"
+            gh run view "${run_id}" --log > "${log_file}" 2>/dev/null || continue
+            candidate="$(grep -F "Discord release notification posted for ${TAG}" "${log_file}" | tail -n1 || true)"
+            if [[ -n "${candidate}" ]]; then
+              MATCHING_PUBLISHERS=$((MATCHING_PUBLISHERS + 1))
+              PUBLISHER_RUN="${run_id}"
+              DISCORD_LINE="${candidate}"
+              WEBHOOK_LINE="$(grep -F 'Discord webhook target verified' "${log_file}" | tail -n1 || true)"
+              GREASY_LINE="$(grep -F 'Greasy Fork verified' "${log_file}" | tail -n1 || true)"
+              IMMUTABLE_LINE="$(grep -F 'GitHub immutable source verified' "${log_file}" | tail -n1 || true)"
+            fi
+          done
+
+          [[ "${MATCHING_PUBLISHERS}" == "1" ]]
+          [[ -n "${PUBLISHER_RUN}" ]]
+          [[ -n "${DISCORD_LINE}" ]]
+          [[ -n "${WEBHOOK_LINE}" ]]
+          [[ -n "${GREASY_LINE}" ]]
+          [[ -n "${IMMUTABLE_LINE}" ]]
+
+          RECEIPT_COUNT="$(jq --arg prefix "${RECEIPT_PREFIX}" '[.assets[] | select(.name | startswith($prefix))] | length' <<<"${RELEASE_JSON}")"
+          if [[ "${RECEIPT_COUNT}" == "0" ]]; then
+            for attempt in $(seq 1 60); do
+              RELEASE_JSON="$(gh release view "${TAG}" --json tagName,targetCommitish,isDraft,isPrerelease,publishedAt,url,assets)"
+              RECEIPT_COUNT="$(jq --arg prefix "${RECEIPT_PREFIX}" '[.assets[] | select(.name | startswith($prefix))] | length' <<<"${RELEASE_JSON}")"
+              [[ "${RECEIPT_COUNT}" != "0" ]] && break
+              sleep 3
+            done
+          fi
+          [[ "${RECEIPT_COUNT}" == "1" ]]
+
+          RECEIPT_NAME="$(jq -r --arg prefix "${RECEIPT_PREFIX}" '.assets[] | select(.name | startswith($prefix)) | .name' <<<"${RELEASE_JSON}")"
+          DISCORD_MESSAGE_ID="$(sed -n 's/.*message_id=\([0-9][0-9]*\).*/\1/p' <<<"${DISCORD_LINE}" | tail -n1)"
+          DISCORD_CHANNEL_ID="$(sed -n 's/.*channel_id=\([0-9][0-9]*\).*/\1/p' <<<"${DISCORD_LINE}" | tail -n1)"
+          [[ -n "${DISCORD_MESSAGE_ID}" ]]
+          [[ -n "${DISCORD_CHANNEL_ID}" ]]
+          [[ "${RECEIPT_NAME}" == "${RECEIPT_PREFIX}${DISCORD_MESSAGE_ID}.json" ]]
+
+          {
+            echo "release_tag=${TAG}"
+            echo "main_sha=${MAIN_SHA}"
+            echo "tag_sha=${TAG_SHA}"
+            echo "publisher_run=${PUBLISHER_RUN}"
+            echo "matching_discord_publishers=${MATCHING_PUBLISHERS}"
+            echo "source_sha256=${SOURCE_SHA}"
+            echo "release_asset_sha256=${ASSET_SHA}"
+            echo "checksum_sha256=${CHECKSUM_SHA}"
+            echo "greasy_version=${GREASY_VERSION}"
+            echo "greasy_sha256=${GREASY_SHA}"
+            echo "greasy_attempt=${GREASY_ATTEMPT}"
+            echo "discord_message_id=${DISCORD_MESSAGE_ID}"
+            echo "discord_channel_id=${DISCORD_CHANNEL_ID}"
+            echo "discord_receipt_asset=${RECEIPT_NAME}"
+            echo "${IMMUTABLE_LINE}"
+            echo "${GREASY_LINE}"
+            echo "${WEBHOOK_LINE}"
+            echo "${DISCORD_LINE}"
+            echo "release_json=${RELEASE_JSON}"
+          } > .release-v1.0.71-receipt.txt
+
+      - name: Commit verification receipt and remove workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git rm .github/workflows/verify-v1.0.71-release.yml
+          git add .release-v1.0.71-receipt.txt
+          git commit -m 'Record verified v1.0.71 production delivery'
+          git push origin HEAD:agent/verify-v1.0.71-release
