@@ -161,10 +161,16 @@ jobs:
           git checkout origin/main -- .github/workflows/validate-userscript.yml
 
           rm -rf .nexus-ui-context
+          rm -f .nexus-ui-v1070-builder-status.txt
+          rm -f .nexus-ui-v1070-rerun-status.txt
           rm -f .github/nexus-ui-v1070-patch.py
           rm -f .github/workflows/build-nexus-ui-v1070.yml
           rm -f .github/workflows/extract-nexus-ui-context.yml
           rm -f .github/workflows/extract-nexus-ui-slices.yml
+          rm -f .github/workflows/status-nexus-ui-v1070.yml
+          rm -f .github/workflows/status-nexus-ui-v1070-v2.yml
+          rm -f .github/workflows/retrigger-nexus-ui-builder-v1070.yml
+          rm -f .github/workflows/repair-nexus-ui-patcher-v1070.yml
 
           git config user.name Conroy1988
           git config user.email 27301455+Conroy1988@users.noreply.github.com
@@ -181,4 +187,4 @@ jobs:
           git push --force origin \
             "${CLEAN_COMMIT}:refs/heads/feature/nexus-ui-system-v1070-clean"
 
-# registration refresh
+# repaired patcher rerun
