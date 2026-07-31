@@ -25,7 +25,6 @@ function extractFunction(name) {
   let depth = 0;
   let quote = '';
   let escaped = false;
-  let templateExpressionDepth = 0;
 
   for (let index = bodyStart; index < source.length; index += 1) {
     const character = source[index];
@@ -40,16 +39,7 @@ function extractFunction(name) {
         escaped = true;
         continue;
       }
-      if (quote === '`' && character === '$' && next === '{') {
-        templateExpressionDepth += 1;
-        depth += 1;
-        index += 1;
-        continue;
-      }
-      if (character === quote && templateExpressionDepth === 0) quote = '';
-      if (quote === '`' && character === '}' && templateExpressionDepth > 0) {
-        templateExpressionDepth -= 1;
-      }
+      if (character === quote) quote = '';
       continue;
     }
 

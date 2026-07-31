@@ -42,8 +42,8 @@ function extractFunction(name) {
   fail(`Unterminated function ${name}`);
 }
 
-expect(source.includes('// @version      1.0.63'), 'Expected current Command Nexus version');
-expect(source.includes('MISSION FINDER V10.6.126'), 'Expected current Mission Finder version');
+expect(source.includes('// @version      1.0.64'), 'Expected current Command Nexus version');
+expect(source.includes('MISSION FINDER V10.6.127'), 'Expected current Mission Finder version');
 
 const autoLoop = extractFunction('runAutoModeLoop');
 expect(

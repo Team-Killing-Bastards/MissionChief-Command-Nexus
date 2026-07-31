@@ -32,6 +32,20 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
 
+## [1.0.64] - 2026-07-31
+
+### Fixed
+
+- `Missing Personnel: Nx HazMat Unit` is now interpreted as a HazMat-trained personnel shortage rather than an ordinary vehicle quantity.
+- HazMat personnel demand now uses six `gw_gefahrgut`-trained staff per exact type-39 Fire Operational Support Unit, so four missing staff select one OSU and seven select two.
+- The Fire HazMat Personnel Assignment profile now fills six trained staff per OSU, keeping the verified Personnel Register and Mission Finder coverage calculation aligned.
+- Ordinary HazMat vehicle requirements remain separate, retain their exact vehicle quantity and continue to reject type-7 HazMat Units and type-86 Operational Support Vans.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.126` to `V10.6.127`.
+- Personnel Assignment increased from `1.3.7` to `1.3.8`.
+
 ## [1.0.63] - 2026-07-31
 
 ### Fixed
