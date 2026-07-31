@@ -1,0 +1,182 @@
+name: Build Command Nexus visual system V1.0.70
+
+on:
+  push:
+    branches:
+      - feature/nexus-ui-system-v1070
+    paths:
+      - '.github/workflows/build-nexus-ui-v1070.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: command-nexus-ui-v1070-builder
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    steps:
+      - name: Check out development branch
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: feature/nexus-ui-system-v1070
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Reset candidate to exact production main
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp .github/nexus-ui-v1070-patch.py /tmp/nexus-ui-v1070-patch.py
+          git fetch origin main --force
+          git reset --hard origin/main
+
+          EXPECTED_SHA="a316061a1b7f167c375adeb6ebd76878531836ab"
+          ACTUAL_SHA="$(git rev-parse HEAD)"
+          if [[ "${ACTUAL_SHA}" != "${EXPECTED_SHA}" ]]; then
+            echo "Expected production main ${EXPECTED_SHA}, found ${ACTUAL_SHA}"
+            exit 1
+          fi
+
+          VERSION="$(node scripts/validate-userscript.mjs --print-version)"
+          if [[ "${VERSION}" != "1.0.69" ]]; then
+            echo "Expected Command Nexus 1.0.69, found ${VERSION}"
+            exit 1
+          fi
+
+          grep -Fq 'MISSION FINDER V10.6.132' src/missionchief-command-nexus.user.js
+          cp /tmp/nexus-ui-v1070-patch.py .github/nexus-ui-v1070-patch.py
+
+      - name: Apply Nexus visual system overhaul
+        run: python3 .github/nexus-ui-v1070-patch.py
+
+      - name: Validate complete userscript and permanent checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check src/missionchief-command-nexus.user.js
+          node --check scripts/check-nexus-visual-system-v1070.mjs
+          node scripts/validate-userscript.mjs
+          node scripts/validate-userscript.mjs --base-ref origin/main
+
+          for checker in scripts/check-*.mjs; do
+            echo "::group::${checker}"
+            node "${checker}"
+            echo "::endgroup::"
+          done
+
+          python3 scripts/check_repository.py
+          git diff --check
+
+      - name: Confirm visual-system and ownership scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+
+          source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8')
+          required = [
+              '// @version      1.0.70',
+              ' * MODULE 2: MISSION FINDER V10.6.133',
+              "dashboardBrand.id = 'mf-dashboard-brand'",
+              'Operational command surface',
+              'mc-nexus-brand-block',
+              '<span class="mc-nexus-tab-index">01</span><span>Unit Naming</span>',
+              'mc-nexus-personnel-grid',
+              '--nx-bg: #080d14',
+              '--nx-accent: #5fc3e4',
+              '@media (max-width: 1180px)',
+              '@media (max-width: 900px)',
+              '@media (max-width: 700px)',
+              '#mc-namer-panel:not(.mc-ios-safari)',
+              '#mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)',
+              'scheduleMissionRequiredPersonnelPreload(0);',
+              "unitFinderBtn.addEventListener('click'",
+              'triggerDispatchClick();',
+              'triggerDispatchShareClick();',
+              'toggleAutoMode();',
+              'startMissionEventCollectibleCollector();',
+              'stopMissionEventCollectibleCollector();',
+          ]
+          missing = [token for token in required if token not in source]
+          if missing:
+              raise SystemExit('Missing V1.0.70 contracts: ' + ', '.join(missing))
+
+          forbidden = [
+              '🚒 Unit Naming Tool',
+              '🏢 Station Naming Tool',
+              '👥 Personnel Assignment',
+          ]
+          present = [token for token in forbidden if token in source]
+          if present:
+              raise SystemExit('Legacy decorative labels remain: ' + ', '.join(present))
+
+          changed = set(subprocess.check_output(
+              ['git', 'diff', '--name-only', 'origin/main'],
+              text=True,
+          ).splitlines())
+
+          fixed_allowed = {
+              '.github/workflows/validate-userscript.yml',
+              'CHANGELOG.md',
+              'README.md',
+              'src/README.md',
+              'src/missionchief-command-nexus.user.js',
+              'scripts/check-nexus-visual-system-v1070.mjs',
+          }
+          unexpected = sorted(
+              path for path in changed
+              if path
+              and path not in fixed_allowed
+              and not (path.startswith('scripts/check-') and path.endswith('.mjs'))
+          )
+          if unexpected:
+              raise SystemExit('Unexpected permanent files: ' + ', '.join(unexpected))
+
+          if not Path('scripts/check-nexus-visual-system-v1070.mjs').exists():
+              raise SystemExit('Permanent visual-system checker missing')
+
+          print('V1.0.70 visual-system scope and locked ownership confirmed.')
+          PY
+
+      - name: Publish clean validated branch and workflow snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p .nexus-ui-workflow-output
+          cp .github/workflows/validate-userscript.yml \
+            .nexus-ui-workflow-output/validate-userscript.yml
+          git checkout origin/main -- .github/workflows/validate-userscript.yml
+
+          rm -rf .nexus-ui-context
+          rm -f .github/nexus-ui-v1070-patch.py
+          rm -f .github/workflows/build-nexus-ui-v1070.yml
+          rm -f .github/workflows/extract-nexus-ui-context.yml
+          rm -f .github/workflows/extract-nexus-ui-slices.yml
+
+          git config user.name Conroy1988
+          git config user.email 27301455+Conroy1988@users.noreply.github.com
+          git add -A
+
+          TREE_SHA="$(git write-tree)"
+          CLEAN_COMMIT="$({
+            printf '%s\n\n%s\n' \
+              'Introduce the Command Nexus visual system' \
+              'Redesign desktop mission, naming and personnel surfaces while preserving all operational ownership and iOS geometry.' |
+              git commit-tree "${TREE_SHA}" -p "$(git rev-parse origin/main)"
+          })"
+
+          git push --force origin \
+            "${CLEAN_COMMIT}:refs/heads/feature/nexus-ui-system-v1070-clean"
