@@ -1,6 +1,11 @@
 name: Build v1.0.66 trained-personnel render isolation
 
 on:
+  push:
+    branches:
+      - fix/trained-personnel-render-isolation-v1066
+    paths:
+      - '.github/workflows/apply-trained-personnel-render-isolation-v1066.yml'
   workflow_dispatch:
 
 permissions:
