@@ -1,6 +1,11 @@
 name: Build v1.0.66 trained-personnel render isolation
 
 on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/apply-trained-personnel-render-isolation-v1066.yml'
   push:
     branches:
       - fix/trained-personnel-render-isolation-v1066
@@ -25,7 +30,7 @@ jobs:
       - name: Check out candidate branch
         uses: actions/checkout@v6
         with:
-          ref: ${{ github.ref_name }}
+          ref: ${{ github.head_ref || github.ref_name }}
           fetch-depth: 0
 
       - name: Set up Node.js
@@ -71,7 +76,7 @@ jobs:
 
       - name: Commit validated product patch
         env:
-          TARGET_BRANCH: ${{ github.ref_name }}
+          TARGET_BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
