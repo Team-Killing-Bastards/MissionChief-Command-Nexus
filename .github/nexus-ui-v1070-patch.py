@@ -1992,7 +1992,13 @@ source_note = '''
 Desktop mission and naming/assignment surfaces share one low-glare tokenised design system. The Mission dashboard uses a numbered horizontal Mission, Settings and Diagnostics strip with responsive three-, two- and one-column layouts. Unit Naming, Station Naming and Personnel Assignment use responsive configuration, action, status, analysis, report and log regions. Existing IDs and handlers remain authoritative. All new desktop selectors explicitly exclude the established iPhone/iOS geometry.
 '''
 if '### Nexus visual system' not in src_readme:
-    src_readme = src_readme.rstrip() + source_note + '\n'
+    src_readme = (
+        src_readme.rstrip()
+        + source_note.rstrip()
+        + '\n'
+    )
+else:
+    src_readme = src_readme.rstrip() + '\n'
 src_readme_path.write_text(src_readme, encoding='utf-8', newline='\n')
 
 print('Command Nexus V1.0.70 visual-system patch applied.')
