@@ -4,6 +4,37 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.70] - 2026-07-31
+
+### Redesigned
+
+- Introduced one low-glare, tokenised Nexus visual system across Mission Control, Vehicle Load, Trained Personnel, Unit Naming, Station Naming and Personnel Assignment.
+- Replaced the desktop Mission dashboard's vertical utility rail with a compact numbered horizontal Mission, Settings and Diagnostics navigation strip.
+- Added a restrained Nexus identity header and responsive three-column, two-column and one-column information layouts.
+- Rebuilt the naming and assignment workspace around clear configuration, action, status, analysis, report and log regions while preserving every existing control ID and handler.
+- Converted dense operational status text into responsive metric grids with safe wrapping, tabular counts and bounded internal scrolling.
+- Removed decorative emoji navigation labels and high-saturation action gradients in favour of precise plain labels and restrained semantic state colour.
+
+### Accessibility and adaptability
+
+- Added visible keyboard focus, consistent disabled states, safe long-label wrapping, `min-width: 0` grid containment and `overflow-wrap: anywhere` across operational surfaces.
+- Added responsive layout contracts at 1180px, 900px and 700px while retaining the established iPhone/iOS geometry and lifecycle.
+- Collapsed desktop mission cards now remain horizontal compact headers instead of using vertical text.
+
+### Safety
+
+- Mission-definition Required Personnel preload, mission identity validation, Unit Finder, Mission Update, Ally Steal, dispatch, Dispatch & Share, Auto Mode, Event Scanner, Vehicle Load, trained-personnel optimisation and Personnel Register authority remain unchanged.
+- Unit Naming, Station Naming and Personnel Assignment execution, storage and lifecycle paths remain unchanged.
+- Added permanent visual-system, responsive-layout, iOS-isolation and operational-ownership regression coverage.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.132` to `V10.6.133`.
+- Unit Naming remains `3.3.8`.
+- Station Naming remains `1.3.3`.
+- Personnel Assignment remains `1.3.8`.
+
+
 ## [1.0.69] - 2026-07-31
 
 ### Redesigned

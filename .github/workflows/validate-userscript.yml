@@ -24,6 +24,7 @@ on:
       - 'scripts/check-mission-definition-personnel-preload.mjs'
       - 'scripts/check-unit-finder-diagnostic-export.mjs'
       - 'scripts/check-mission-dashboard-v1069.mjs'
+      - 'scripts/check-nexus-visual-system-v1070.mjs'
       - 'scripts/check-auto-memory-lifecycle.mjs'
       - 'scripts/check-auto-memory-recycle.mjs'
       - 'scripts/check-auto-dispatch-eod-required-personnel.mjs'
@@ -59,6 +60,7 @@ on:
       - 'scripts/check-mission-definition-personnel-preload.mjs'
       - 'scripts/check-unit-finder-diagnostic-export.mjs'
       - 'scripts/check-mission-dashboard-v1069.mjs'
+      - 'scripts/check-nexus-visual-system-v1070.mjs'
       - 'scripts/check-auto-memory-lifecycle.mjs'
       - 'scripts/check-auto-memory-recycle.mjs'
       - 'scripts/check-auto-dispatch-eod-required-personnel.mjs'
@@ -155,6 +157,9 @@ jobs:
 
       - name: Validate integrated MissionChief Nexus dashboard
         run: node scripts/check-mission-dashboard-v1069.mjs
+
+      - name: Validate Command Nexus visual system
+        run: node scripts/check-nexus-visual-system-v1070.mjs
 
       - name: Validate Auto Mode memory lifecycle
         run: node scripts/check-auto-memory-lifecycle.mjs

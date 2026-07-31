@@ -10,8 +10,8 @@ src/missionchief-command-nexus.user.js
 
 | Item | Value |
 |---|---|
-| Command Nexus version | `1.0.69` |
-| Mission Finder baseline | `V10.6.132` |
+| Command Nexus version | `1.0.70` |
+| Mission Finder baseline | `V10.6.133` |
 | Unit, Station & Personnel baseline | `V4.2.8` |
 | Licence | MIT |
 | Developer and source-code owner | **MartyBlyth** |
@@ -71,3 +71,7 @@ Before publishing a source change:
 Changes involving dispatch, patient demand, trained-personnel matching, personnel assignment, bulk naming, storage migration, queue continuation or lifecycle cleanup require explicit evidence and rollback notes.
 
 Start with [Developer Handoff](../docs/DEVELOPER_HANDOFF.md). Publication details are in [Greasy Fork Automated Release Setup](../docs/GREASY_FORK_SETUP.md).
+
+### Nexus visual system
+
+Desktop mission and naming/assignment surfaces share one low-glare tokenised design system. The Mission dashboard uses a numbered horizontal Mission, Settings and Diagnostics strip with responsive three-, two- and one-column layouts. Unit Naming, Station Naming and Personnel Assignment use responsive configuration, action, status, analysis, report and log regions. Existing IDs and handlers remain authoritative. All new desktop selectors explicitly exclude the established iPhone/iOS geometry.
