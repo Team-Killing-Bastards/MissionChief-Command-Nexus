@@ -27,6 +27,13 @@ jobs:
           fetch-depth: 0
       - name: Extract live dashboard construction
         run: python3 .github/builders/extract-mission-dashboard-v1069.py
+      - name: Upload dashboard extraction
+        uses: actions/upload-artifact@v4
+        with:
+          name: mission-dashboard-v1069
+          path: .github/diagnostics/mission-dashboard-v1069.txt
+          if-no-files-found: error
+          retention-days: 1
       - name: Commit diagnostics
         if: github.event_name == 'push'
         shell: bash
