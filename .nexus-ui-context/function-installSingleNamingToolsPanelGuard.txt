@@ -1,0 +1,167 @@
+01511:     function installSingleNamingToolsPanelGuard() {
+01512:         if (NAMING_TOOLS_PANEL_GUARD_INSTALLED) {
+01513:             syncNamingToolsPanelLifecycle();
+01514:             return;
+01515:         }
+01516:         NAMING_TOOLS_PANEL_GUARD_INSTALLED = true;
+01517: 
+01518:         let pendingFrame = null;
+01519:         let navigationTimer = null;
+01520: 
+01521:         const enforce = () => {
+01522:             if (pendingFrame != null) return;
+01523:             pendingFrame = requestAnimationFrame(() => {
+01524:                 pendingFrame = null;
+01525:                 syncNamingToolsPanelLifecycle();
+01526:             });
+01527:         };
+01528: 
+01529:         const isRelevantLifecycleNode = node => {
+01530:             if (
+01531:                 !node ||
+01532:                 node.nodeType !== Node.ELEMENT_NODE
+01533:             ) {
+01534:                 return false;
+01535:             }
+01536: 
+01537:             return Boolean(
+01538:                 node.matches?.(
+01539:                     '#mc-namer-panel, .building_list, .building_list_li'
+01540:                 ) ||
+01541:                 node.querySelector?.(
+01542:                     '#mc-namer-panel, .building_list, .building_list_li'
+01543:                 )
+01544:             );
+01545:         };
+01546: 
+01547:         const observer = new MutationObserver(records => {
+01548:             const relevantMutation = records.some(record => {
+01549:                 const target =
+01550:                     record.target?.nodeType ===
+01551:                     Node.ELEMENT_NODE
+01552:                         ? record.target
+01553:                         : record.target?.parentElement;
+01554: 
+01555:                 if (target?.closest?.('#mc-namer-panel')) {
+01556:                     return false;
+01557:                 }
+01558: 
+01559:                 if (
+01560:                     target?.matches?.(
+01561:                         '.building_list, .building_list_li'
+01562:                     ) ||
+01563:                     target?.closest?.(
+01564:                         '.building_list, .building_list_li'
+01565:                     )
+01566:                 ) {
+01567:                     return true;
+01568:                 }
+01569: 
+01570:                 return [
+01571:                     ...record.addedNodes,
+01572:                     ...record.removedNodes
+01573:                 ].some(isRelevantLifecycleNode);
+01574:             });
+01575: 
+01576:             if (relevantMutation) enforce();
+01577:         });
+01578: 
+01579:         const handleNavigationClick = event => {
+01580:             const control = event.target?.closest?.(
+01581:                 'a, button'
+01582:             );
+01583: 
+01584:             if (
+01585:                 !control ||
+01586:                 control.closest?.('#mc-namer-panel')
+01587:             ) {
+01588:                 return;
+01589:             }
+01590: 
+01591:             enforce();
+01592: 
+01593:             if (navigationTimer != null) {
+01594:                 clearTimeout(navigationTimer);
+01595:             }
+01596: 
+01597:             navigationTimer = setTimeout(() => {
+01598:                 navigationTimer = null;
+01599:                 enforce();
+01600:             }, 250);
+01601:         };
+01602: 
+01603:         const handleVisibilityChange = () => {
+01604:             if (!document.hidden) enforce();
+01605:         };
+01606: 
+01607:         observer.observe(
+01608:             document.body || document.documentElement,
+01609:             {
+01610:                 childList: true,
+01611:                 subtree: true
+01612:             }
+01613:         );
+01614:         window.addEventListener(
+01615:             'pageshow',
+01616:             enforce,
+01617:             { passive: true }
+01618:         );
+01619:         window.addEventListener(
+01620:             'popstate',
+01621:             enforce,
+01622:             { passive: true }
+01623:         );
+01624:         window.addEventListener(
+01625:             'hashchange',
+01626:             enforce,
+01627:             { passive: true }
+01628:         );
+01629:         document.addEventListener(
+01630:             'visibilitychange',
+01631:             handleVisibilityChange,
+01632:             { passive: true }
+01633:         );
+01634:         document.addEventListener(
+01635:             'click',
+01636:             handleNavigationClick,
+01637:             true
+01638:         );
+01639: 
+01640:         const cleanup = () => {
+01641:             if (pendingFrame != null) {
+01642:                 cancelAnimationFrame(pendingFrame);
+01643:                 pendingFrame = null;
+01644:             }
+01645:             if (navigationTimer != null) {
+01646:                 clearTimeout(navigationTimer);
+01647:                 navigationTimer = null;
+01648:             }
+01649:             observer.disconnect();
+01650:             window.removeEventListener(
+01651:                 'pageshow',
+01652:                 enforce
+01653:             );
+01654:             window.removeEventListener(
+01655:                 'popstate',
+01656:                 enforce
+01657:             );
+01658:             window.removeEventListener(
+01659:                 'hashchange',
+01660:                 enforce
+01661:             );
+01662:             document.removeEventListener(
+01663:                 'visibilitychange',
+01664:                 handleVisibilityChange
+01665:             );
+01666:             document.removeEventListener(
+01667:                 'click',
+01668:                 handleNavigationClick,
+01669:                 true
+01670:             );
+01671:             NAMING_TOOLS_PANEL_GUARD_INSTALLED = false;
+01672:             TOOL_LIFECYCLE_CLEANUPS.delete(cleanup);
+01673:         };
+01674: 
+01675:         registerToolLifecycleCleanup(cleanup);
+01676:         enforce();
+01677:     }

@@ -1,0 +1,5 @@
+02730:     function getPersonnelProfileDefinition(serviceId = PERSONNEL_STATE.service, profileId = PERSONNEL_STATE.profile) {
+02731:         const service = getPersonnelServiceDefinition(serviceId);
+02732:         return service.profiles.find(profile => profile.id === profileId)
+02733:             || service.profiles[0];
+02734:     }

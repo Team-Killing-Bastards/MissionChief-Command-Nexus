@@ -1,0 +1,13 @@
+07762:     async function personnelFetchDocument(url, timeoutMs = 12000) {
+07763:         const response = await personnelFetchResponse(url, {
+07764:             headers: {
+07765:                 'Accept': 'text/html,application/xhtml+xml'
+07766:             }
+07767:         }, timeoutMs);
+07768: 
+07769:         if (!response.ok) throw new Error(`Request returned HTTP ${response.status}: ${url}`);
+07770: 
+07771:         const html = await response.text();
+07772:         const doc = new DOMParser().parseFromString(html, 'text/html');
+07773:         return { response, doc, href: new URL(response.url || url, location.origin).pathname };
+07774:     }

@@ -1,0 +1,8 @@
+39867:     function isAnyTransportModalOrApproachVisible() {
+39868:         return !!(
+39869:             findExactFirstApproachTransportButton() ||
+39870:             (typeof mfBruteFindFirstApproachButton === 'function' && mfBruteFindFirstApproachButton()) ||
+39871:             (typeof mfBruteFindVehicleTransportModal === 'function' && mfBruteFindVehicleTransportModal()) ||
+39872:             (typeof isVehicleTransportModalVisible === 'function' && isVehicleTransportModalVisible())
+39873:         );
+39874:     }

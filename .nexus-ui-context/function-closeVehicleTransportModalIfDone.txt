@@ -1,0 +1,3 @@
+40337:     function closeVehicleTransportModalIfDone(reason) {
+40338:         return false;
+40339:     }

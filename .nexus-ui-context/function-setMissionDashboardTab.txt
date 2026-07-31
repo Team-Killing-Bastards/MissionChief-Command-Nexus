@@ -1,0 +1,43 @@
+17033:         function setMissionDashboardTab(tabName) {
+17034:             const nextTab = ['settings', 'diagnostics'].includes(tabName)
+17035:                 ? tabName
+17036:                 : 'mission';
+17037:             const utilityOpen = nextTab !== 'mission';
+17038: 
+17039:             wrapper.classList.toggle(
+17040:                 'mf-dashboard-utility-open',
+17041:                 utilityOpen
+17042:             );
+17043:             dashboardUtility.hidden = !utilityOpen;
+17044:             settingsPane.hidden = nextTab !== 'settings';
+17045:             diagnosticsPane.hidden = nextTab !== 'diagnostics';
+17046: 
+17047:             if (dashboardUtilityTitle) {
+17048:                 dashboardUtilityTitle.textContent =
+17049:                     nextTab === 'diagnostics'
+17050:                         ? 'Diagnostics'
+17051:                         : 'Settings';
+17052:             }
+17053: 
+17054:             dashboardTabs.forEach(button => {
+17055:                 const active =
+17056:                     button.dataset.mfDashboardTab === nextTab;
+17057:                 button.classList.toggle(
+17058:                     'mf-dashboard-tab-active',
+17059:                     active
+17060:                 );
+17061:                 button.setAttribute(
+17062:                     'aria-pressed',
+17063:                     String(active)
+17064:                 );
+17065:             });
+17066: 
+17067:             localStorage.setItem(
+17068:                 'mf_nexus_dashboard_tab_v1',
+17069:                 nextTab
+17070:             );
+17071: 
+17072:             requestAnimationFrame(() => {
+17073:                 keepMissionFinderWindowOnScreen(wrapper);
+17074:             });
+17075:         }

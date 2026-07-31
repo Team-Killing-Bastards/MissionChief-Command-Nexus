@@ -1,0 +1,33 @@
+19414:     function renderSessionPanel() {
+19415:         const container = document.getElementById('session-panel-content');
+19416:         if (!container) return;
+19417: 
+19418:         const stats = loadSessionStats();
+19419:         const runtimeMs = Date.now() - Number(stats.startedAt || Date.now());
+19420:         const completed = Number(stats.completed || 0);
+19421:         const skipped = Number(stats.skipped || 0);
+19422:         const updates = Number(stats.updates || 0);
+19423:         const credits = Number(stats.credits || 0);
+19424:         const hours = Math.max(runtimeMs / 3600000, 0.001);
+19425:         const average = completed > 0 ? Math.round(credits / completed) : 0;
+19426:         const creditsPerHour = Math.round(credits / hours);
+19427:         const missionsPerHour = Math.round(completed / hours);
+19428: 
+19429:         const successRate = (completed + skipped) > 0
+19430:             ? (((completed / (completed + skipped)) * 100).toFixed(1) + '%')
+19431:             : '----';
+19432: 
+19433:         container.innerHTML = `
+19434:             <div class="mf2026-stat-grid">
+19435:                 <span>Runtime</span><strong>${formatRuntime(runtimeMs)}</strong>
+19436:                 <span>Completed</span><strong>${completed}</strong>
+19437:                 <span>Skipped</span><strong>${skipped}</strong>
+19438:                 <span>Updates</span><strong>${updates}</strong>
+19439:                 <span>Credits</span><strong>${formatMoney(credits)}</strong>
+19440:                 <span>Average</span><strong>${completed > 0 ? formatMoney(average) : '----'}</strong>
+19441:                 <span>Credits/hr</span><strong>${completed > 0 ? formatMoney(creditsPerHour) : '----'}</strong>
+19442:                 <span>Missions/hr</span><strong>${completed > 0 ? missionsPerHour : '----'}</strong>
+19443:                 <span>Success</span><strong>${successRate}</strong>
+19444:             </div>
+19445:         `;
+19446:     }

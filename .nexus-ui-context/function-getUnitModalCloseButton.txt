@@ -1,0 +1,21 @@
+08838:     function getUnitModalCloseButton(iframe) {
+08839:         const modal = iframe?.closest?.(
+08840:             '.vm--modal, [role="dialog"], .lightbox, .modal'
+08841:         );
+08842: 
+08843:         const scoped = modal?.querySelector?.(
+08844:             'span.lightbox-close, button.lightbox-close, .vm--modal-close, button.close'
+08845:         );
+08846: 
+08847:         if (scoped) return scoped;
+08848: 
+08849:         const candidates = [
+08850:             ...document.querySelectorAll(
+08851:                 'span.lightbox-close, button.lightbox-close, .vm--modal-close, button.close'
+08852:             )
+08853:         ];
+08854: 
+08855:         return candidates.reverse().find(button => {
+08856:             return button.offsetParent !== null;
+08857:         }) || candidates[0] || null;
+08858:     }

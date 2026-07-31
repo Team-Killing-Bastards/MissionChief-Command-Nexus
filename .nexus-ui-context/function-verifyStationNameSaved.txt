@@ -1,0 +1,30 @@
+04185:     async function verifyStationNameSaved(stationHref, expectedName) {
+04186:         for (let attempt = 1; attempt <= 14; attempt++) {
+04187:             if (STATION_STATE.stopped) return false;
+04188: 
+04189:             await sleep(attempt === 1 ? 500 : 350);
+04190: 
+04191:             try {
+04192:                 const response = await stationFetchWithTimeout(`${stationHref}/edit`, {
+04193:                     credentials: 'same-origin',
+04194:                     cache: 'no-store'
+04195:                 }, 10000);
+04196: 
+04197:                 if (!response.ok) {
+04198:                     stationDebug(`Save verification HTTP ${response.status}, attempt ${attempt}.`);
+04199:                     continue;
+04200:                 }
+04201: 
+04202:                 const html = await response.text();
+04203:                 const doc = new DOMParser().parseFromString(html, 'text/html');
+04204:                 const savedName = String(doc.querySelector('#building_name')?.value || '').trim();
+04205:                 stationDebug(`Save verification attempt ${attempt}: "${savedName}"`);
+04206: 
+04207:                 if (savedName === expectedName) return true;
+04208:             } catch (error) {
+04209:                 stationDebug(`Save verification attempt ${attempt} failed: ${error?.message || error}`);
+04210:             }
+04211:         }
+04212: 
+04213:         return false;
+04214:     }

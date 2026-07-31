@@ -1,0 +1,19 @@
+02760:     function formatPersonnelUnitsFulfilled() {
+02761:         if (isPersonnelPerStationTargetMode()) {
+02762:             const target = PERSONNEL_STATE.unitsRequired;
+02763:             const latestFulfilled = PERSONNEL_STATE.lastStationReport
+02764:                 && !PERSONNEL_STATE.lastStationReport.error
+02765:                     ? Math.min(
+02766:                         target,
+02767:                         Number(
+02768:                             PERSONNEL_STATE.lastStationReport.fulfilledUnits
+02769:                             || 0
+02770:                         )
+02771:                     )
+02772:                     : 0;
+02773: 
+02774:             return `${PERSONNEL_STATE.stationsTargetMet} / ${PERSONNEL_STATE.completedStations} stations met | latest ${latestFulfilled}/${target}`;
+02775:         }
+02776: 
+02777:         return `${PERSONNEL_STATE.unitsFulfilled} / All`;
+02778:     }

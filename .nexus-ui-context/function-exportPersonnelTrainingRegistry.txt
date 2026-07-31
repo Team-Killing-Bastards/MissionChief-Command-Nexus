@@ -1,0 +1,23 @@
+04584:     function exportPersonnelTrainingRegistry() {
+04585:         if (PERSONNEL_STATE.running) {
+04586:             window.alert('Finish or stop the active Personnel operation before exporting the register.');
+04587:             return;
+04588:         }
+04589:         flushPersonnelTrainingRegistry(false);
+04590:         const registry = readPersonnelTrainingRegistry();
+04591:         const stats = getPersonnelTrainingRegistryStats(registry);
+04592:         if (!stats.count) {
+04593:             window.alert('The Personnel Register is empty. Build or import a register before exporting.');
+04594:             return;
+04595:         }
+04596:         const exportedAt = new Date().toISOString();
+04597:         downloadPersonnelTrainingRegistryJson(`missionchief-personnel-register-${exportedAt.slice(0, 10)}.json`, {
+04598:             format: PERSONNEL_TRAINING_REGISTRY_EXPORT_FORMAT,
+04599:             exportVersion: PERSONNEL_TRAINING_REGISTRY_EXPORT_VERSION,
+04600:             exportedAt,
+04601:             origin: location.origin,
+04602:             vehicleCount: stats.count,
+04603:             registry
+04604:         });
+04605:         personnelLog(`Personnel Register exported: ${stats.count} vehicle(s).`, 'done');
+04606:     }

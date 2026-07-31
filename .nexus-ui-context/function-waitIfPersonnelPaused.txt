@@ -1,0 +1,5 @@
+08595:     async function waitIfPersonnelPaused() {
+08596:         while (PERSONNEL_STATE.paused && !PERSONNEL_STATE.stopped) {
+08597:             await sleep(250);
+08598:         }
+08599:     }

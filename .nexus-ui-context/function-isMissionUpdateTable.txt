@@ -1,0 +1,27 @@
+32713:     function isMissionUpdateTable(table) {
+32714:         if (!table) return false;
+32715: 
+32716:         if (
+32717:             isLiveMissionRequirementsTable(
+32718:                 table
+32719:             )
+32720:         ) {
+32721:             return true;
+32722:         }
+32723: 
+32724:         const text = (table.textContent || '')
+32725:             .replace(/\s+/g, ' ')
+32726:             .trim()
+32727:             .toLowerCase();
+32728: 
+32729:         // Hard block the official mission help / full requirement table.
+32730:         // Mission Update must only read the live missing-units table on the mission page.
+32731:         if (text.includes('vehicle and personnel requirements')) return false;
+32732:         if (text.includes('average credits')) return false;
+32733:         if (text.includes('possible missions')) return false;
+32734: 
+32735:         // The update table contains a Still Needed / Still required style column.
+32736:         return text.includes('still needed')
+32737:             || text.includes('still required')
+32738:             || text.includes('needed') && text.includes('required');
+32739:     }

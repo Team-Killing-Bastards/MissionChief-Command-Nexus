@@ -1,0 +1,25 @@
+18516:     function setMissionFinderIphoneStablePixelProperty(
+18517:         element,
+18518:         property,
+18519:         value,
+18520:         tolerance = 2
+18521:     ) {
+18522:         if (!element?.style) return false;
+18523:         const next = Math.round(Number(value) || 0);
+18524:         const previous = parseFloat(
+18525:             element.style.getPropertyValue(property)
+18526:         );
+18527: 
+18528:         if (
+18529:             Number.isFinite(previous) &&
+18530:             Math.abs(previous - next) <= tolerance
+18531:         ) {
+18532:             return false;
+18533:         }
+18534: 
+18535:         element.style.setProperty(
+18536:             property,
+18537:             `${next}px`
+18538:         );
+18539:         return true;
+18540:     }

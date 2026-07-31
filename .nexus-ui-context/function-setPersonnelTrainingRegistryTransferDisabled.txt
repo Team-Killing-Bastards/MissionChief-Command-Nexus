@@ -1,0 +1,6 @@
+04473:     function setPersonnelTrainingRegistryTransferDisabled(disabled) {
+04474:         ['#mc-personnel-export-register', '#mc-personnel-import-register'].forEach(selector => {
+04475:             const button = document.querySelector(selector);
+04476:             if (button) button.disabled = Boolean(disabled);
+04477:         });
+04478:     }

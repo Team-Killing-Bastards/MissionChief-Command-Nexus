@@ -1,0 +1,19 @@
+01296:     function activateStationOverviewEntry(entry) {
+01297:         const link = entry?.link;
+01298:         if (!link?.isConnected) return false;
+01299: 
+01300:         if (!isIosSafariWebsite() || link.classList.contains('lightbox-open')) {
+01301:             link.click();
+01302:             return true;
+01303:         }
+01304: 
+01305:         // Responsive iOS markup may expose a normal Details link without the
+01306:         // desktop lightbox class. Temporarily opt that exact building link into
+01307:         // MissionChief's delegated lightbox handler while preventing navigation.
+01308:         link.classList.add('lightbox-open');
+01309:         const preventNavigation = event => event.preventDefault();
+01310:         link.addEventListener('click', preventNavigation, { capture: true, once: true });
+01311:         link.click();
+01312:         setTimeout(() => link.classList.remove('lightbox-open'), 0);
+01313:         return true;
+01314:     }

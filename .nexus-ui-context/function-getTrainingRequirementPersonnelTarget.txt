@@ -1,0 +1,28 @@
+25979:     function getTrainingRequirementPersonnelTarget(requirement) {
+25980:         if (!requirement) return 0;
+25981: 
+25982:         const explicitPersonnelTargets = [
+25983:             requirement.personnelRequired,
+25984:             requirement.inspectorsRequired
+25985:         ]
+25986:             .map(value => Math.max(0, parseInt(value, 10) || 0))
+25987:             .filter(value => value > 0);
+25988: 
+25989:         if (explicitPersonnelTargets.length > 0) {
+25990:             return Math.max(...explicitPersonnelTargets);
+25991:         }
+25992: 
+25993:         const requiredVehicles =
+25994:             Math.max(0, parseInt(requirement.required, 10) || 0);
+25995: 
+25996:         const personnelPerVehicle =
+25997:             Math.max(
+25998:                 1,
+25999:                 parseInt(
+26000:                     requirement.personnelPerVehicle,
+26001:                     10
+26002:                 ) || 1
+26003:             );
+26004: 
+26005:         return requiredVehicles * personnelPerVehicle;
+26006:     }

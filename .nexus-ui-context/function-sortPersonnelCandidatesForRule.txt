@@ -1,0 +1,11 @@
+06427:     function sortPersonnelCandidatesForRule(candidates, rule) {
+06428:         return candidates.slice().sort((left, right) => {
+06429:             const leftReserved = rule.preferWithout.some(code => left.trainingCodes.includes(code)) ? 1 : 0;
+06430:             const rightReserved = rule.preferWithout.some(code => right.trainingCodes.includes(code)) ? 1 : 0;
+06431:             if (leftReserved !== rightReserved) return leftReserved - rightReserved;
+06432: 
+06433:             const extraDifference = left.trainingCodes.length - right.trainingCodes.length;
+06434:             if (extraDifference) return extraDifference;
+06435:             return String(left.name || '').localeCompare(String(right.name || ''), 'en-GB', { numeric: true });
+06436:         });
+06437:     }

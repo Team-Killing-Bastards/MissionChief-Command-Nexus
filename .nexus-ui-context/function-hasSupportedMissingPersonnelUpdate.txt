@@ -1,0 +1,11 @@
+28851:     function hasSupportedMissingPersonnelUpdate(text) {
+28852:         return (
+28853:             getSupportedMissingPersonnelRowsFromText(
+28854:                 text,
+28855:                 { silent: true }
+28856:             ).length > 0 ||
+28857:             getSupportedTrainedPersonnelRequirementsFromText(
+28858:                 text
+28859:             ).length > 0
+28860:         );
+28861:     }

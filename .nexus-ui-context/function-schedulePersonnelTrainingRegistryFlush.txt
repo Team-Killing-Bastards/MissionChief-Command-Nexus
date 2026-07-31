@@ -1,0 +1,8 @@
+06016:     function schedulePersonnelTrainingRegistryFlush() {
+06017:         if (PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER != null) return;
+06018: 
+06019:         PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER = setTimeout(() => {
+06020:             PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER = null;
+06021:             flushPersonnelTrainingRegistry(false);
+06022:         }, PERSONNEL_TRAINING_REGISTRY_FLUSH_DELAY_MS);
+06023:     }

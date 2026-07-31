@@ -1,0 +1,37 @@
+09341:     function getVehicleQueueFromTable(doc) {
+09342:         return [...doc.querySelectorAll('#vehicle_table tbody tr')]
+09343:             .map((row, index) => {
+09344:                 const img = row.querySelector('img[vehicle_type_id]');
+09345:                 const vehicleTypeId = img?.getAttribute('vehicle_type_id') || '';
+09346:                 const vehicleType = TYPE_ID_TO_VEHICLE_TYPE[vehicleTypeId] || '';
+09347: 
+09348:                 const allLinks = [...row.querySelectorAll('a[href^="/vehicles/"]')];
+09349: 
+09350:                 const editLink = allLinks.find(a => {
+09351:                     const href = a.getAttribute('href') || '';
+09352:                     return href.endsWith('/edit');
+09353:                 });
+09354: 
+09355:                 const vehicleLink = allLinks.find(a => {
+09356:                     const href = a.getAttribute('href') || '';
+09357:                     return !href.endsWith('/edit') && !href.includes('/zuweisung');
+09358:                 });
+09359: 
+09360:                 const vehicleHref = vehicleLink?.getAttribute('href') || '';
+09361:                 const editHref = editLink?.getAttribute('href') || '';
+09362:                 const vehicleId = getVehicleIdFromHref(editHref || vehicleHref);
+09363:                 const currentName = cleanText(vehicleLink?.textContent || '');
+09364: 
+09365:                 return {
+09366:                     tableIndex: index,
+09367:                     vehicleId,
+09368:                     vehicleTypeId,
+09369:                     vehicleType,
+09370:                     currentName,
+09371:                     vehicleHref,
+09372:                     editHref
+09373:                 };
+09374:             })
+09375:             .filter(v => v.editHref && v.vehicleId)
+09376:             .filter(vehicleMatchesSelectedUnitClass);
+09377:     }

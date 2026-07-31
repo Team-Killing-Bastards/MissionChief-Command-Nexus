@@ -1,0 +1,69 @@
+19737:     function getSelectedTrainedPersonnelPanelModel() {
+19738:         let registry = { vehicles: {} };
+19739: 
+19740:         try {
+19741:             registry = readPersonnelTrainingRegistry();
+19742:         } catch (_error) {}
+19743: 
+19744:         return getVehicleCheckboxSnapshot(true)
+19745:             .filter(input => input?.checked)
+19746:             .map(input => {
+19747:                 let registryMatch = null;
+19748: 
+19749:                 try {
+19750:                     registryMatch = getRegistryEntryForMissionCheckbox(
+19751:                         input,
+19752:                         registry
+19753:                     );
+19754:                 } catch (_error) {}
+19755: 
+19756:                 const entry = registryMatch?.entry || null;
+19757:                 if (!entry) return null;
+19758: 
+19759:                 const profiles = (
+19760:                     Array.isArray(entry.assignedTrainingProfiles)
+19761:                         ? entry.assignedTrainingProfiles
+19762:                         : []
+19763:                 ).map(profile => {
+19764:                     return Array.from(new Set(
+19765:                         (Array.isArray(profile) ? profile : [])
+19766:                             .map(value => String(value || '').trim())
+19767:                             .filter(Boolean)
+19768:                     ));
+19769:                 }).filter(profile => profile.length > 0);
+19770: 
+19771:                 const trainingCounts = Object.entries(
+19772:                     entry.trainingCounts &&
+19773:                     typeof entry.trainingCounts === 'object'
+19774:                         ? entry.trainingCounts
+19775:                         : {}
+19776:                 ).map(([code, value]) => {
+19777:                     return {
+19778:                         code: String(code || ''),
+19779:                         label: getSelectedTrainingDisplayLabel(code),
+19780:                         count: Math.max(0, parseInt(value, 10) || 0)
+19781:                     };
+19782:                 }).filter(item => item.code && item.count > 0)
+19783:                     .sort((left, right) => {
+19784:                         return left.label.localeCompare(right.label);
+19785:                     });
+19786: 
+19787:                 if (profiles.length === 0 && trainingCounts.length === 0) {
+19788:                     return null;
+19789:                 }
+19790: 
+19791:                 return {
+19792:                     vehicleId: getMissionVehicleId(input),
+19793:                     vehicleName: getVehicleDebugName(input),
+19794:                     profiles,
+19795:                     profilesComplete:
+19796:                         entry.trainingProfilesComplete === true,
+19797:                     trainingCounts
+19798:                 };
+19799:             })
+19800:             .filter(Boolean)
+19801:             .sort((left, right) => {
+19802:                 return String(left.vehicleName || '')
+19803:                     .localeCompare(String(right.vehicleName || ''));
+19804:             });
+19805:     }

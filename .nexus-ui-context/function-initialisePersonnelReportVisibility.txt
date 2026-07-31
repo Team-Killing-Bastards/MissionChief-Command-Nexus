@@ -1,0 +1,17 @@
+03171:     function initialisePersonnelReportVisibility() {
+03172:         const stationCheckbox = document.querySelector('#mc-personnel-show-station-report');
+03173:         const overallCheckbox = document.querySelector('#mc-personnel-show-overall-report');
+03174:         if (!stationCheckbox || !overallCheckbox) return;
+03175: 
+03176:         let showStation = true;
+03177:         let showOverall = true;
+03178: 
+03179:         try {
+03180:             showStation = localStorage.getItem(PERSONNEL_STATION_REPORT_VISIBLE_KEY) !== 'false';
+03181:             showOverall = localStorage.getItem(PERSONNEL_OVERALL_REPORT_VISIBLE_KEY) !== 'false';
+03182:         } catch (_error) {}
+03183: 
+03184:         stationCheckbox.checked = showStation;
+03185:         overallCheckbox.checked = showOverall;
+03186:         updatePersonnelReportVisibility(false);
+03187:     }

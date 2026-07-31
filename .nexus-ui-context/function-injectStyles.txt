@@ -1,0 +1,1153 @@
+15693:     function injectStyles() {
+15694:         if (document.getElementById('mission-finder-2026-styles')) return;
+15695: 
+15696:         const style = document.createElement('style');
+15697:         style.id = 'mission-finder-2026-styles';
+15698:         style.textContent = `
+15699:             #mission-finder-wrapper {
+15700:                 position: fixed;
+15701:                 z-index: 999999;
+15702:                 display: flex;
+15703:                 gap: 8px;
+15704:                 align-items: flex-start;
+15705:                 font-family: Arial, Helvetica, sans-serif;
+15706:             }
+15707: 
+15708:             .mf2026-panel {
+15709:                 width: 270px;
+15710:                 min-height: 0;
+15711:                 padding: 8px;
+15712:                 background: rgba(0, 0, 0, 0.88);
+15713:                 color: white;
+15714:                 font-size: 13px;
+15715:                 border: 2px solid white;
+15716:                 border-radius: 8px;
+15717:                 box-sizing: border-box;
+15718:                 display: flex;
+15719:                 flex-direction: column;
+15720:                 gap: 7px;
+15721:                 box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+15722:             }
+15723: 
+15724:             .mf2026-header {
+15725:                 font-size: 15px;
+15726:                 font-weight: bold;
+15727:                 text-align: center;
+15728:                 background: #555;
+15729:                 padding: 6px;
+15730:                 border-radius: 4px;
+15731:             }
+15732: 
+15733:             .mf2026-drag {
+15734:                 cursor: move;
+15735:             }
+15736: 
+15737:             .mf2026-box {
+15738:                 background: #444;
+15739:                 padding: 7px;
+15740:                 border-radius: 5px;
+15741:             }
+15742: 
+15743:             #status-box {
+15744:                 min-height: 44px;
+15745:                 line-height: 1.35;
+15746:                 overflow-wrap: break-word;
+15747:             }
+15748: 
+15749:             .mf2026-button {
+15750:                 padding: 7px;
+15751:                 border: none;
+15752:                 border-radius: 5px;
+15753:                 cursor: pointer;
+15754:                 font-weight: bold;
+15755:             }
+15756: 
+15757:             .mf2026-section-title {
+15758:                 font-size: 13px;
+15759:                 font-weight: bold;
+15760:                 margin-bottom: 5px;
+15761:                 color: #ddd;
+15762:             }
+15763: 
+15764:             .mf2026-row {
+15765:                 display: flex;
+15766:                 justify-content: space-between;
+15767:                 gap: 8px;
+15768:                 padding: 4px 0;
+15769:                 border-bottom: 1px solid rgba(255,255,255,0.08);
+15770:             }
+15771: 
+15772:             .mf2026-row:last-child {
+15773:                 border-bottom: none;
+15774:             }
+15775: 
+15776:             .mf2026-name {
+15777:                 flex: 1;
+15778:             }
+15779: 
+15780:             .mf2026-count {
+15781:                 white-space: nowrap;
+15782:                 font-weight: bold;
+15783:             }
+15784: 
+15785:             .mf2026-good {
+15786:                 color: #42ff75;
+15787:             }
+15788: 
+15789:             .mf2026-bad {
+15790:                 color: #ff6666;
+15791:             }
+15792: 
+15793:             .mf2026-warn {
+15794:                 color: #ffd166;
+15795:             }
+15796: 
+15797:             .mf2026-small {
+15798:                 font-size: 12px;
+15799:                 color: #ccc;
+15800:             }
+15801: 
+15802:             .mf2026-progress-wrap {
+15803:                 background: #222;
+15804:                 border-radius: 6px;
+15805:                 overflow: hidden;
+15806:                 height: 10px;
+15807:             }
+15808: 
+15809:             .mf2026-progress-bar {
+15810:                 height: 10px;
+15811:                 width: 0%;
+15812:                 background: #42ff75;
+15813:                 transition: width 0.25s ease;
+15814:             }
+15815: 
+15816:             #vehicle-load-list-content {
+15817:                 max-height: 210px;
+15818:                 overflow-y: auto;
+15819:                 padding-right: 4px;
+15820:             }
+15821: 
+15822: 
+15823:             #trained-personnel-content {
+15824:                 max-height: 280px;
+15825:                 overflow-y: auto;
+15826:                 padding-right: 4px;
+15827:             }
+15828: 
+15829:             .mf2026-training-vehicle {
+15830:                 padding: 7px 0;
+15831:                 border-bottom: 1px solid rgba(255,255,255,0.1);
+15832:             }
+15833: 
+15834:             .mf2026-training-vehicle:last-child {
+15835:                 border-bottom: none;
+15836:             }
+15837: 
+15838:             .mf2026-training-vehicle-name {
+15839:                 margin-bottom: 5px;
+15840:                 color: #fff;
+15841:                 font-weight: bold;
+15842:             }
+15843: 
+15844:             .mf2026-training-person {
+15845:                 display: grid;
+15846:                 grid-template-columns: auto minmax(0, 1fr);
+15847:                 gap: 8px;
+15848:                 align-items: start;
+15849:                 padding: 3px 0;
+15850:             }
+15851: 
+15852:             .mf2026-training-person-label {
+15853:                 color: #42ff75;
+15854:                 font-weight: bold;
+15855:                 white-space: nowrap;
+15856:             }
+15857: 
+15858:             .mf2026-training-course-list {
+15859:                 color: #ddd;
+15860:                 text-align: right;
+15861:                 overflow-wrap: anywhere;
+15862:             }
+15863: 
+15864:             #mf-mission-ready-delay-input {
+15865:                 width: 100%;
+15866:                 color: black;
+15867:                 padding: 4px;
+15868:                 border-radius: 4px;
+15869:                 border: none;
+15870:                 box-sizing: border-box;
+15871:             }
+15872: 
+15873:             .mf2026-checkbox-row {
+15874:                 display: flex;
+15875:                 align-items: center;
+15876:                 gap: 8px;
+15877:                 cursor: pointer;
+15878:                 user-select: none;
+15879:             }
+15880: 
+15881:             .mf2026-checkbox-row input {
+15882:                 width: 17px;
+15883:                 height: 17px;
+15884:                 margin: 0;
+15885:                 flex: 0 0 auto;
+15886:             }
+15887: 
+15888:             #session-panel-content {
+15889:                 max-height: 180px;
+15890:                 overflow-y: auto;
+15891:                 padding-right: 4px;
+15892:             }
+15893: 
+15894:             .mf2026-stat-grid {
+15895:                 display: grid;
+15896:                 grid-template-columns: 1fr auto;
+15897:                 gap: 4px 8px;
+15898:                 font-size: 12px;
+15899:                 color: #ccc;
+15900:             }
+15901: 
+15902:             .mf2026-stat-grid strong {
+15903:                 color: white;
+15904:             }
+15905: 
+15906:             .mf2026-log-row {
+15907:                 display: grid;
+15908:                 grid-template-columns: 1fr auto;
+15909:                 gap: 8px;
+15910:                 padding: 4px 0;
+15911:                 border-bottom: 1px solid rgba(255,255,255,0.08);
+15912:                 font-size: 12px;
+15913:             }
+15914: 
+15915:             .mf2026-log-row:last-child {
+15916:                 border-bottom: none;
+15917:             }
+15918: 
+15919:             .mf2026-log-main {
+15920:                 overflow: hidden;
+15921:                 text-overflow: ellipsis;
+15922:                 white-space: nowrap;
+15923:             }
+15924: 
+15925:             .mf2026-log-value {
+15926:                 white-space: nowrap;
+15927:                 font-weight: bold;
+15928:             }
+15929: 
+15930: 
+15931:             #control-panel {
+15932:                 width: 260px;
+15933:             }
+15934: 
+15935:             #vehicle-load-list-box {
+15936:                 width: 300px;
+15937:             }
+15938: 
+15939: 
+15940:             #trained-personnel-box {
+15941:                 width: 300px;
+15942:             }
+15943: 
+15944:             #control-panel.mf2026-control-collapsed {
+15945:                 width: 44px;
+15946:                 min-height: 0;
+15947:                 padding: 6px;
+15948:                 overflow: hidden;
+15949:             }
+15950: 
+15951:             #control-panel.mf2026-control-collapsed .mf-control-body {
+15952:                 display: none;
+15953:             }
+15954: 
+15955:             #control-panel.mf2026-control-collapsed .mf2026-header {
+15956:                 writing-mode: vertical-rl;
+15957:                 text-orientation: mixed;
+15958:                 min-height: 120px;
+15959:                 padding: 8px 4px;
+15960:                 cursor: pointer;
+15961:             }
+15962: 
+15963:             .mf2026-control-header-row {
+15964:                 display: flex;
+15965:                 gap: 6px;
+15966:                 align-items: center;
+15967:             }
+15968: 
+15969:             .mf2026-control-header-row .mf2026-header {
+15970:                 flex: 1;
+15971:             }
+15972: 
+15973:             #mf-control-centre,
+15974:             #mf-control-minimize {
+15975:                 width: 34px;
+15976:                 padding: 6px 0;
+15977:                 background: #6c757d;
+15978:                 color: white;
+15979:                 flex: 0 0 34px;
+15980:             }
+15981: 
+15982:             #mf-control-centre {
+15983:                 background: #0d6efd;
+15984:             }
+15985: 
+15986: 
+15987:             #vehicle-load-list-box.mf2026-load-collapsed {
+15988:                 width: 44px;
+15989:                 min-height: 0;
+15990:                 padding: 6px;
+15991:                 overflow: hidden;
+15992:             }
+15993: 
+15994:             #vehicle-load-list-box.mf2026-load-collapsed .mf-load-body {
+15995:                 display: none;
+15996:             }
+15997: 
+15998:             #vehicle-load-list-box.mf2026-load-collapsed .mf2026-header {
+15999:                 writing-mode: vertical-rl;
+16000:                 text-orientation: mixed;
+16001:                 min-height: 130px;
+16002:                 padding: 8px 4px;
+16003:                 cursor: pointer;
+16004:             }
+16005: 
+16006:             .mf2026-load-header-row {
+16007:                 display: flex;
+16008:                 gap: 6px;
+16009:                 align-items: center;
+16010:             }
+16011: 
+16012:             .mf2026-load-header-row .mf2026-header {
+16013:                 flex: 1;
+16014:             }
+16015: 
+16016:             #mf-load-minimize {
+16017:                 width: 34px;
+16018:                 padding: 6px 0;
+16019:                 background: #6c757d;
+16020:                 color: white;
+16021:             }
+16022: 
+16023: 
+16024:             #trained-personnel-box.mf2026-trained-collapsed {
+16025:                 width: 44px;
+16026:                 min-height: 0;
+16027:                 padding: 6px;
+16028:                 overflow: hidden;
+16029:             }
+16030: 
+16031:             #trained-personnel-box.mf2026-trained-collapsed .mf-trained-body {
+16032:                 display: none;
+16033:             }
+16034: 
+16035:             #trained-personnel-box.mf2026-trained-collapsed .mf2026-header {
+16036:                 writing-mode: vertical-rl;
+16037:                 text-orientation: mixed;
+16038:                 min-height: 145px;
+16039:                 padding: 8px 4px;
+16040:                 cursor: pointer;
+16041:             }
+16042: 
+16043:             .mf2026-trained-header-row {
+16044:                 display: flex;
+16045:                 gap: 6px;
+16046:                 align-items: center;
+16047:             }
+16048: 
+16049:             .mf2026-trained-header-row .mf2026-header {
+16050:                 flex: 1;
+16051:             }
+16052: 
+16053:             #mf-trained-minimize {
+16054:                 width: 34px;
+16055:                 padding: 6px 0;
+16056:                 background: #6c757d;
+16057:                 color: white;
+16058:             }
+16059: 
+16060:             .mf2026-button-row {
+16061:                 display: grid;
+16062:                 grid-template-columns: 1fr 1fr;
+16063:                 gap: 6px;
+16064:             }
+16065: 
+16066:             .mf2026-primary-actions {
+16067:                 display: grid;
+16068:                 grid-template-columns: 1fr 1fr;
+16069:                 gap: 6px;
+16070:             }
+16071: 
+16072:             .mf2026-primary-actions #dispatch-share-box,
+16073:             .mf2026-primary-actions #auto-mode-box {
+16074:                 grid-column: 1 / -1;
+16075:             }
+16076: 
+16077:             .mf-control-advanced {
+16078:                 display: flex;
+16079:                 flex-direction: column;
+16080:                 gap: 7px;
+16081:             }
+16082: 
+16083:             #mf-iphone-advanced-toggle {
+16084:                 display: none;
+16085:             }
+16086: 
+16087:             #mission-finder-wrapper.mf2026-ios-safari {
+16088:                 top: calc(8px + env(safe-area-inset-top, 0px));
+16089:                 right: calc(8px + env(safe-area-inset-right, 0px));
+16090:                 left: calc(8px + env(safe-area-inset-left, 0px));
+16091:                 width: auto;
+16092:                 max-width: none;
+16093:                 max-height: calc(
+16094:                     100vh
+16095:                     - 16px
+16096:                     - env(safe-area-inset-top, 0px)
+16097:                     - env(safe-area-inset-bottom, 0px)
+16098:                 );
+16099:                 display: flex;
+16100:                 flex-direction: column;
+16101:                 align-items: stretch;
+16102:                 gap: 6px;
+16103:                 overflow-x: hidden;
+16104:                 overflow-y: auto;
+16105:                 overscroll-behavior: contain;
+16106:                 -webkit-overflow-scrolling: touch;
+16107:                 -webkit-transform: translateZ(0);
+16108:                 box-sizing: border-box;
+16109:             }
+16110: 
+16111:             @supports (height: 100dvh) {
+16112:                 #mission-finder-wrapper.mf2026-ios-safari {
+16113:                     max-height: calc(
+16114:                         100dvh
+16115:                         - 16px
+16116:                         - env(safe-area-inset-top, 0px)
+16117:                         - env(safe-area-inset-bottom, 0px)
+16118:                     );
+16119:                 }
+16120:             }
+16121: 
+16122:             #mission-finder-wrapper.mf2026-ios-safari .mf2026-panel,
+16123:             #mission-finder-wrapper.mf2026-ios-safari #control-panel,
+16124:             #mission-finder-wrapper.mf2026-ios-safari #vehicle-load-list-box,
+16125:             #mission-finder-wrapper.mf2026-ios-safari #trained-personnel-box {
+16126:                 width: 100%;
+16127:                 max-width: none;
+16128:                 flex: 0 0 auto;
+16129:             }
+16130: 
+16131:             #mission-finder-wrapper.mf2026-ios-safari .mf2026-header {
+16132:                 min-height: 42px;
+16133:                 display: flex;
+16134:                 align-items: center;
+16135:                 justify-content: center;
+16136:                 box-sizing: border-box;
+16137:             }
+16138: 
+16139:             #mission-finder-wrapper.mf2026-ios-safari .mf2026-drag {
+16140:                 cursor: grab;
+16141:                 touch-action: none;
+16142:                 -webkit-user-select: none;
+16143:                 user-select: none;
+16144:             }
+16145: 
+16146:             #mission-finder-wrapper.mf2026-ios-safari .mf2026-drag:active {
+16147:                 cursor: grabbing;
+16148:             }
+16149: 
+16150:             #mission-finder-wrapper.mf2026-ios-safari .mf-control-body,
+16151:             #mission-finder-wrapper.mf2026-ios-safari .mf-load-body,
+16152:             #mission-finder-wrapper.mf2026-ios-safari .mf-trained-body,
+16153:             #mission-finder-wrapper.mf2026-ios-safari #vehicle-load-list-content,
+16154:             #mission-finder-wrapper.mf2026-ios-safari #trained-personnel-content,
+16155:             #mission-finder-wrapper.mf2026-ios-safari #session-panel-content {
+16156:                 -webkit-overflow-scrolling: touch;
+16157:             }
+16158: 
+16159:             #mission-finder-wrapper.mf2026-ios-safari .mf2026-button {
+16160:                 min-height: 42px;
+16161:                 font-size: 14px;
+16162:                 touch-action: manipulation;
+16163:             }
+16164: 
+16165:             #mission-finder-wrapper.mf2026-ios-safari input,
+16166:             #mission-finder-wrapper.mf2026-ios-safari select {
+16167:                 min-height: 38px;
+16168:                 font-size: 16px;
+16169:             }
+16170: 
+16171:             #mission-finder-wrapper.mf2026-ios-safari #mf-control-position-box,
+16172:             #mission-finder-wrapper.mf2026-ios-safari #mf-control-centre {
+16173:                 display: none;
+16174:             }
+16175: 
+16176:             #mission-finder-wrapper.mf2026-ios-safari #mf-control-minimize {
+16177:                 width: 44px;
+16178:                 flex: 0 0 44px;
+16179:                 padding: 6px 0;
+16180:                 font-size: 20px;
+16181:                 line-height: 1;
+16182:             }
+16183: 
+16184:             #mission-finder-wrapper.mf2026-ios-safari
+16185:             #control-panel.mf2026-control-collapsed {
+16186:                 width: 100%;
+16187:                 min-height: 0;
+16188:                 padding: 6px;
+16189:                 overflow: hidden;
+16190:             }
+16191: 
+16192:             #mission-finder-wrapper.mf2026-ios-safari
+16193:             #control-panel.mf2026-control-collapsed
+16194:             .mf2026-control-header-row {
+16195:                 width: 100%;
+16196:             }
+16197: 
+16198:             #mission-finder-wrapper.mf2026-ios-safari
+16199:             #control-panel.mf2026-control-collapsed
+16200:             .mf2026-header {
+16201:                 writing-mode: horizontal-tb;
+16202:                 text-orientation: mixed;
+16203:                 min-height: 42px;
+16204:                 padding: 8px 10px;
+16205:                 justify-content: flex-start;
+16206:                 text-align: left;
+16207:             }
+16208: 
+16209:             #mission-finder-wrapper.mf2026-ios-safari
+16210:             #vehicle-load-list-box.mf2026-load-collapsed {
+16211:                 width: 100%;
+16212:                 min-height: 0;
+16213:                 padding: 6px;
+16214:                 overflow: hidden;
+16215:             }
+16216: 
+16217:             #mission-finder-wrapper.mf2026-ios-safari
+16218:             #vehicle-load-list-box.mf2026-load-collapsed
+16219:             .mf2026-header {
+16220:                 writing-mode: horizontal-tb;
+16221:                 text-orientation: mixed;
+16222:                 min-height: 42px;
+16223:                 padding: 8px 10px;
+16224:                 justify-content: flex-start;
+16225:                 text-align: left;
+16226:             }
+16227: 
+16228:             #mission-finder-wrapper.mf2026-ios-safari
+16229:             #trained-personnel-box.mf2026-trained-collapsed {
+16230:                 width: 100%;
+16231:                 min-height: 0;
+16232:                 padding: 6px;
+16233:                 overflow: hidden;
+16234:             }
+16235: 
+16236:             #mission-finder-wrapper.mf2026-ios-safari
+16237:             #trained-personnel-box.mf2026-trained-collapsed
+16238:             .mf2026-header {
+16239:                 writing-mode: horizontal-tb;
+16240:                 text-orientation: mixed;
+16241:                 min-height: 42px;
+16242:                 padding: 8px 10px;
+16243:                 justify-content: flex-start;
+16244:                 text-align: left;
+16245:             }
+16246: 
+16247:             /* iPhone Safari only. iPad remains on the established iOS layout. */
+16248:             #mission-finder-wrapper.mf2026-iphone-safari {
+16249:                 --mf-iphone-close-gutter: 48px;
+16250:                 --mf-iphone-launcher-top: 0px;
+16251:                 --mf-iphone-launcher-right: 112px;
+16252:                 --mf-iphone-launcher-max-width: calc(100% - 120px);
+16253:                 --mf-iphone-panel-top: 42px;
+16254:                 top: calc(4px + env(safe-area-inset-top, 0px));
+16255:                 right: calc(4px + env(safe-area-inset-right, 0px));
+16256:                 left: calc(4px + env(safe-area-inset-left, 0px));
+16257:                 display: block;
+16258:                 gap: 0;
+16259:                 pointer-events: none;
+16260:                 max-height: calc(
+16261:                     100vh
+16262:                     - 8px
+16263:                     - env(safe-area-inset-top, 0px)
+16264:                     - env(safe-area-inset-bottom, 0px)
+16265:                 );
+16266:                 overflow: visible;
+16267:                 scrollbar-width: none;
+16268:             }
+16269: 
+16270:             #mission-finder-wrapper.mf2026-iphone-safari::-webkit-scrollbar,
+16271:             #mission-finder-wrapper.mf2026-iphone-safari *::-webkit-scrollbar {
+16272:                 display: none;
+16273:             }
+16274: 
+16275:             @supports (height: 100dvh) {
+16276:                 #mission-finder-wrapper.mf2026-iphone-safari {
+16277:                     max-height: calc(
+16278:                         100dvh
+16279:                         - 8px
+16280:                         - env(safe-area-inset-top, 0px)
+16281:                         - env(safe-area-inset-bottom, 0px)
+16282:                     );
+16283:                 }
+16284:             }
+16285: 
+16286:             #mission-finder-wrapper.mf2026-iphone-safari
+16287:             #mf-iphone-panel-launcher {
+16288:                 position: absolute;
+16289:                 top: var(--mf-iphone-launcher-top, 0px);
+16290:                 right: var(--mf-iphone-launcher-right, 52px);
+16291:                 z-index: 4;
+16292:                 display: flex;
+16293:                 align-items: center;
+16294:                 justify-content: flex-end;
+16295:                 gap: 4px;
+16296:                 max-width: var(
+16297:                     --mf-iphone-launcher-max-width,
+16298:                     calc(100% - 60px)
+16299:                 );
+16300:                 pointer-events: auto;
+16301:                 padding: 3px;
+16302:                 border: 1px solid rgba(255, 255, 255, 0.22);
+16303:                 border-radius: 11px;
+16304:                 background: rgba(28, 28, 30, 0.96);
+16305:                 box-shadow: 0 5px 16px rgba(0, 0, 0, 0.32);
+16306:                 -webkit-backdrop-filter: blur(16px) saturate(135%);
+16307:                 backdrop-filter: blur(16px) saturate(135%);
+16308:             }
+16309: 
+16310:             #mission-finder-wrapper.mf2026-iphone-safari
+16311:             .mf-iphone-launcher-button {
+16312:                 min-width: 66px;
+16313:                 min-height: 34px;
+16314:                 padding: 6px 10px;
+16315:                 border: 0;
+16316:                 border-radius: 8px;
+16317:                 background: rgba(118, 118, 128, 0.28);
+16318:                 color: #f2f2f7;
+16319:                 font-size: 12px;
+16320:                 font-weight: 750;
+16321:                 line-height: 1;
+16322:                 white-space: nowrap;
+16323:                 touch-action: manipulation;
+16324:                 -webkit-tap-highlight-color: transparent;
+16325:             }
+16326: 
+16327:             #mission-finder-wrapper.mf2026-iphone-safari
+16328:             .mf-iphone-launcher-button.mf2026-active,
+16329:             #mission-finder-wrapper.mf2026-iphone-safari
+16330:             .mf-iphone-launcher-button[aria-pressed="true"] {
+16331:                 background: #0a84ff;
+16332:                 color: #fff;
+16333:                 box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+16334:             }
+16335: 
+16336:             #mission-finder-wrapper.mf2026-iphone-safari > .mf2026-panel {
+16337:                 position: absolute;
+16338:                 top: var(--mf-iphone-panel-top, 42px);
+16339:                 right: 0;
+16340:                 left: 0;
+16341:                 width: 100%;
+16342:                 max-width: 100%;
+16343:                 max-height: calc(
+16344:                     100vh
+16345:                     - var(--mf-iphone-panel-top, 42px)
+16346:                     - 8px
+16347:                     - env(safe-area-inset-bottom, 0px)
+16348:                 );
+16349:                 pointer-events: auto;
+16350:                 overflow-y: auto;
+16351:                 overscroll-behavior: contain;
+16352:                 -webkit-overflow-scrolling: touch;
+16353:             }
+16354: 
+16355:             @supports (height: 100dvh) {
+16356:                 #mission-finder-wrapper.mf2026-iphone-safari > .mf2026-panel {
+16357:                     max-height: calc(
+16358:                         100dvh
+16359:                         - var(--mf-iphone-panel-top, 42px)
+16360:                         - 8px
+16361:                         - env(safe-area-inset-bottom, 0px)
+16362:                     );
+16363:                 }
+16364:             }
+16365: 
+16366:             #mission-finder-wrapper.mf2026-iphone-safari
+16367:             #trained-personnel-box {
+16368:                 display: none !important;
+16369:             }
+16370: 
+16371:             #mission-finder-wrapper.mf2026-iphone-safari
+16372:             #control-panel.mf2026-control-collapsed,
+16373:             #mission-finder-wrapper.mf2026-iphone-safari
+16374:             #vehicle-load-list-box.mf2026-load-collapsed {
+16375:                 display: none !important;
+16376:             }
+16377: 
+16378:             #mission-finder-wrapper.mf2026-iphone-safari
+16379:             .mf2026-control-header-row,
+16380:             #mission-finder-wrapper.mf2026-iphone-safari
+16381:             .mf2026-load-header-row {
+16382:                 display: none !important;
+16383:             }
+16384: 
+16385:             #mission-finder-wrapper.mf2026-iphone-safari .mf2026-panel {
+16386:                 padding: 5px;
+16387:                 gap: 4px;
+16388:                 border: 1px solid rgba(255, 255, 255, 0.24);
+16389:                 border-radius: 14px;
+16390:                 background: rgba(28, 28, 30, 0.96);
+16391:                 box-shadow: 0 8px 24px rgba(0, 0, 0, 0.36);
+16392:                 -webkit-backdrop-filter: blur(16px) saturate(135%);
+16393:                 backdrop-filter: blur(16px) saturate(135%);
+16394:             }
+16395: 
+16396:             #mission-finder-wrapper.mf2026-iphone-safari .mf-control-body {
+16397:                 display: flex;
+16398:                 flex-direction: column;
+16399:                 gap: 5px;
+16400:             }
+16401: 
+16402:             #mission-finder-wrapper.mf2026-iphone-safari #status-box {
+16403:                 min-height: 0;
+16404:                 max-height: 54px;
+16405:                 overflow-y: auto;
+16406:                 padding: 7px 9px;
+16407:                 border-radius: 10px;
+16408:                 font-size: 12px;
+16409:                 line-height: 1.25;
+16410:                 background: rgba(118, 118, 128, 0.20);
+16411:             }
+16412: 
+16413:             #mission-finder-wrapper.mf2026-iphone-safari
+16414:             #mf-iphone-advanced-toggle {
+16415:                 display: flex;
+16416:                 align-items: center;
+16417:                 justify-content: space-between;
+16418:                 width: 100%;
+16419:                 min-height: 34px;
+16420:                 padding: 6px 10px;
+16421:                 border: 0;
+16422:                 border-radius: 10px;
+16423:                 background: rgba(118, 118, 128, 0.24);
+16424:                 color: #f2f2f7;
+16425:                 font-size: 12px;
+16426:                 font-weight: 700;
+16427:                 touch-action: manipulation;
+16428:             }
+16429: 
+16430:             #mission-finder-wrapper.mf2026-iphone-safari
+16431:             .mf-control-advanced {
+16432:                 display: none;
+16433:                 gap: 5px;
+16434:             }
+16435: 
+16436:             #mission-finder-wrapper.mf2026-iphone-safari
+16437:             .mf-control-advanced.mf2026-expanded {
+16438:                 display: flex;
+16439:             }
+16440: 
+16441:             #mission-finder-wrapper.mf2026-iphone-safari
+16442:             .mf-control-advanced .mf2026-box {
+16443:                 padding: 7px;
+16444:                 border-radius: 10px;
+16445:             }
+16446: 
+16447:             #mission-finder-wrapper.mf2026-iphone-safari
+16448:             .mf2026-section-title {
+16449:                 margin-bottom: 3px;
+16450:                 font-size: 12px;
+16451:             }
+16452: 
+16453:             #mission-finder-wrapper.mf2026-iphone-safari .mf2026-small {
+16454:                 font-size: 11px;
+16455:                 line-height: 1.25;
+16456:             }
+16457: 
+16458:             #mission-finder-wrapper.mf2026-iphone-safari input,
+16459:             #mission-finder-wrapper.mf2026-iphone-safari select {
+16460:                 min-height: 34px;
+16461:                 font-size: 16px;
+16462:             }
+16463: 
+16464:             #mission-finder-wrapper.mf2026-iphone-safari
+16465:             .mf2026-primary-actions {
+16466:                 grid-template-columns: repeat(2, minmax(0, 1fr));
+16467:                 gap: 5px;
+16468:             }
+16469: 
+16470:             #mission-finder-wrapper.mf2026-iphone-safari
+16471:             .mf2026-primary-actions #dispatch-share-box,
+16472:             #mission-finder-wrapper.mf2026-iphone-safari
+16473:             .mf2026-primary-actions #auto-mode-box {
+16474:                 grid-column: auto;
+16475:             }
+16476: 
+16477:             #mission-finder-wrapper.mf2026-iphone-safari
+16478:             .mf2026-primary-actions .mf2026-button {
+16479:                 min-width: 0;
+16480:                 min-height: 38px;
+16481:                 padding: 6px 7px;
+16482:                 border-radius: 10px;
+16483:                 font-size: 12.5px;
+16484:                 line-height: 1.15;
+16485:                 white-space: normal;
+16486:                 touch-action: manipulation;
+16487:             }
+16488: 
+16489:             #mission-finder-wrapper.mf2026-iphone-safari .mf-load-body {
+16490:                 display: flex;
+16491:                 flex-direction: column;
+16492:                 gap: 4px;
+16493:                 max-height: 42vh;
+16494:                 overflow-y: auto;
+16495:                 overscroll-behavior: contain;
+16496:                 -webkit-overflow-scrolling: touch;
+16497:             }
+16498: 
+16499:             @supports (height: 100dvh) {
+16500:                 #mission-finder-wrapper.mf2026-iphone-safari .mf-load-body {
+16501:                     max-height: 42dvh;
+16502:                 }
+16503:             }
+16504: 
+16505:             #mission-finder-wrapper.mf2026-iphone-safari
+16506:             .mf-load-body .mf2026-box {
+16507:                 padding: 6px;
+16508:                 border-radius: 10px;
+16509:             }
+16510: 
+16511:             #mission-finder-wrapper.mf2026-iphone-safari
+16512:             #vehicle-load-list-content {
+16513:                 max-height: 22vh;
+16514:                 padding-right: 0;
+16515:             }
+16516: 
+16517:             #mission-finder-wrapper.mf2026-iphone-safari
+16518:             #session-panel-content {
+16519:                 max-height: 12vh;
+16520:                 padding-right: 0;
+16521:             }
+16522: 
+16523: 
+16524:             /* MissionChief Nexus integrated mission dashboard (V10.6.132). */
+16525:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) {
+16526:                 display: grid;
+16527:                 grid-template-columns: 66px repeat(3, minmax(235px, 1fr));
+16528:                 grid-template-areas:
+16529:                     "rail control load trained"
+16530:                     "footer footer footer footer";
+16531:                 align-items: stretch;
+16532:                 gap: 10px;
+16533:                 width: min(1360px, calc(100vw - 32px));
+16534:                 max-width: calc(100vw - 32px);
+16535:                 max-height: calc(100vh - 32px);
+16536:                 padding: 10px;
+16537:                 overflow: auto;
+16538:                 box-sizing: border-box;
+16539:                 border: 1px solid rgba(82, 155, 255, 0.24);
+16540:                 border-radius: 14px;
+16541:                 background:
+16542:                     radial-gradient(circle at 8% 0%, rgba(20, 92, 170, 0.18), transparent 34%),
+16543:                     linear-gradient(145deg, rgba(5, 16, 29, 0.98), rgba(4, 21, 38, 0.98));
+16544:                 box-shadow: 0 18px 55px rgba(0, 0, 0, 0.55);
+16545:                 color: #eaf2ff;
+16546:             }
+16547: 
+16548:             #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari) {
+16549:                 grid-template-columns: 66px minmax(250px, 285px) repeat(3, minmax(225px, 1fr));
+16550:                 grid-template-areas:
+16551:                     "rail utility control load trained"
+16552:                     "footer footer footer footer footer";
+16553:                 width: min(1580px, calc(100vw - 32px));
+16554:             }
+16555: 
+16556:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-panel {
+16557:                 width: auto;
+16558:                 min-width: 0;
+16559:                 max-height: calc(100vh - 96px);
+16560:                 padding: 0;
+16561:                 gap: 0;
+16562:                 overflow: hidden;
+16563:                 border: 1px solid rgba(126, 167, 218, 0.18);
+16564:                 border-radius: 12px;
+16565:                 background: linear-gradient(155deg, rgba(18, 32, 48, 0.97), rgba(7, 23, 39, 0.97));
+16566:                 box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035), 0 10px 30px rgba(0, 0, 0, 0.24);
+16567:                 font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+16568:             }
+16569: 
+16570:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #control-panel { grid-area: control; }
+16571:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #vehicle-load-list-box { grid-area: load; }
+16572:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #trained-personnel-box { grid-area: trained; }
+16573: 
+16574:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-control-header-row,
+16575:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-load-header-row,
+16576:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-trained-header-row {
+16577:                 min-height: 48px;
+16578:                 padding: 8px 10px;
+16579:                 border-bottom: 1px solid rgba(126, 167, 218, 0.14);
+16580:                 background: rgba(9, 23, 38, 0.72);
+16581:                 box-sizing: border-box;
+16582:             }
+16583: 
+16584:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-header {
+16585:                 display: flex;
+16586:                 align-items: center;
+16587:                 gap: 8px;
+16588:                 padding: 0;
+16589:                 text-align: left;
+16590:                 text-transform: uppercase;
+16591:                 letter-spacing: 0.035em;
+16592:                 background: transparent;
+16593:                 color: #f4f8ff;
+16594:                 font-size: 13px;
+16595:                 font-weight: 800;
+16596:             }
+16597: 
+16598:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mf-control-title::before {
+16599:                 content: "◎";
+16600:                 display: grid;
+16601:                 place-items: center;
+16602:                 width: 28px;
+16603:                 height: 28px;
+16604:                 border-radius: 8px;
+16605:                 background: linear-gradient(145deg, #0d6efd, #063f91);
+16606:                 color: white;
+16607:                 box-shadow: 0 0 16px rgba(13, 110, 253, 0.36);
+16608:             }
+16609: 
+16610:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mf-load-title::before {
+16611:                 content: "▣";
+16612:                 color: #49a4ff;
+16613:                 font-size: 21px;
+16614:             }
+16615: 
+16616:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mf-trained-title::before {
+16617:                 content: "♙";
+16618:                 color: #c86cff;
+16619:                 font-size: 22px;
+16620:             }
+16621: 
+16622:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf-control-body,
+16623:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf-load-body,
+16624:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf-trained-body {
+16625:                 display: flex;
+16626:                 flex-direction: column;
+16627:                 gap: 9px;
+16628:                 padding: 10px;
+16629:                 overflow-y: auto;
+16630:                 min-height: 0;
+16631:             }
+16632: 
+16633:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-box {
+16634:                 padding: 10px;
+16635:                 border: 1px solid rgba(126, 167, 218, 0.13);
+16636:                 border-radius: 9px;
+16637:                 background: rgba(255, 255, 255, 0.025);
+16638:             }
+16639: 
+16640:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #status-box {
+16641:                 min-height: 52px;
+16642:                 background: rgba(6, 20, 34, 0.72);
+16643:                 color: #dce8f7;
+16644:             }
+16645: 
+16646:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-section-title {
+16647:                 color: #eff6ff;
+16648:                 font-size: 12px;
+16649:                 letter-spacing: 0.01em;
+16650:             }
+16651: 
+16652:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-small {
+16653:                 color: #aebdd0;
+16654:                 line-height: 1.4;
+16655:             }
+16656: 
+16657:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-primary-actions {
+16658:                 gap: 8px;
+16659:                 margin-top: auto;
+16660:             }
+16661: 
+16662:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-primary-actions .mf2026-button,
+16663:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mf-export-unit-finder-diagnostics {
+16664:                 min-height: 42px;
+16665:                 border: 1px solid rgba(255, 255, 255, 0.11);
+16666:                 border-radius: 8px;
+16667:                 color: #fff !important;
+16668:                 box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10), 0 5px 14px rgba(0, 0, 0, 0.22);
+16669:                 transition: transform 120ms ease, filter 120ms ease, box-shadow 120ms ease;
+16670:             }
+16671: 
+16672:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-button:hover {
+16673:                 filter: brightness(1.1);
+16674:                 transform: translateY(-1px);
+16675:             }
+16676: 
+16677:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #unit-finder-box {
+16678:                 background: linear-gradient(145deg, #f2a900, #b96d00) !important;
+16679:             }
+16680:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mf-ally-steal {
+16681:                 background: linear-gradient(145deg, #d42b86, #861653) !important;
+16682:             }
+16683:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mission-update-box {
+16684:                 background: linear-gradient(145deg, #1268da, #08418e) !important;
+16685:             }
+16686:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #dispatch-box {
+16687:                 background: linear-gradient(145deg, #526273, #303b47) !important;
+16688:             }
+16689:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #dispatch-share-box {
+16690:                 background: linear-gradient(145deg, #13864e, #07582f) !important;
+16691:             }
+16692:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #auto-mode-box {
+16693:                 background: linear-gradient(145deg, #743bc0, #452178) !important;
+16694:             }
+16695: 
+16696:             #mf-dashboard-rail {
+16697:                 grid-area: rail;
+16698:                 display: flex;
+16699:                 flex-direction: column;
+16700:                 gap: 8px;
+16701:                 padding: 6px;
+16702:                 border: 1px solid rgba(126, 167, 218, 0.16);
+16703:                 border-radius: 11px;
+16704:                 background: rgba(6, 19, 33, 0.88);
+16705:             }
+16706: 
+16707:             .mf-dashboard-tab {
+16708:                 display: flex;
+16709:                 flex-direction: column;
+16710:                 align-items: center;
+16711:                 justify-content: center;
+16712:                 gap: 4px;
+16713:                 min-height: 72px;
+16714:                 padding: 7px 4px;
+16715:                 border: 1px solid transparent;
+16716:                 border-radius: 9px;
+16717:                 background: transparent;
+16718:                 color: #9fb1c8;
+16719:                 font-size: 10px;
+16720:                 font-weight: 700;
+16721:                 cursor: pointer;
+16722:             }
+16723: 
+16724:             .mf-dashboard-tab:hover,
+16725:             .mf-dashboard-tab.mf-dashboard-tab-active {
+16726:                 border-color: rgba(34, 137, 255, 0.58);
+16727:                 background: linear-gradient(145deg, rgba(21, 104, 204, 0.58), rgba(7, 48, 96, 0.66));
+16728:                 color: #fff;
+16729:                 box-shadow: 0 0 18px rgba(13, 110, 253, 0.20);
+16730:             }
+16731: 
+16732:             .mf-dashboard-tab-icon {
+16733:                 font-size: 22px;
+16734:                 line-height: 1;
+16735:                 color: #55a9ff;
+16736:             }
+16737: 
+16738:             #mf-dashboard-utility {
+16739:                 grid-area: utility;
+16740:                 min-width: 0;
+16741:                 max-height: calc(100vh - 96px);
+16742:                 overflow: hidden;
+16743:                 border: 1px solid rgba(126, 167, 218, 0.18);
+16744:                 border-radius: 12px;
+16745:                 background: linear-gradient(155deg, rgba(18, 32, 48, 0.97), rgba(7, 23, 39, 0.97));
+16746:                 box-shadow: 0 10px 30px rgba(0, 0, 0, 0.24);
+16747:             }
+16748: 
+16749:             #mf-dashboard-utility[hidden],
+16750:             .mf-dashboard-utility-pane[hidden] {
+16751:                 display: none !important;
+16752:             }
+16753: 
+16754:             .mf-dashboard-utility-header {
+16755:                 display: flex;
+16756:                 align-items: center;
+16757:                 justify-content: space-between;
+16758:                 min-height: 48px;
+16759:                 padding: 8px 11px;
+16760:                 border-bottom: 1px solid rgba(126, 167, 218, 0.14);
+16761:                 color: #f4f8ff;
+16762:                 text-transform: uppercase;
+16763:                 letter-spacing: 0.04em;
+16764:                 font-size: 13px;
+16765:                 font-weight: 800;
+16766:                 box-sizing: border-box;
+16767:             }
+16768: 
+16769:             #mf-dashboard-utility-close {
+16770:                 width: 30px;
+16771:                 height: 30px;
+16772:                 border: 0;
+16773:                 border-radius: 7px;
+16774:                 background: rgba(255, 255, 255, 0.08);
+16775:                 color: #dce8f7;
+16776:                 cursor: pointer;
+16777:             }
+16778: 
+16779:             .mf-dashboard-utility-pane {
+16780:                 display: flex;
+16781:                 flex-direction: column;
+16782:                 gap: 9px;
+16783:                 padding: 10px;
+16784:                 overflow-y: auto;
+16785:                 max-height: calc(100vh - 154px);
+16786:                 box-sizing: border-box;
+16787:             }
+16788: 
+16789:             #mf-dashboard-settings-pane .mf-control-advanced {
+16790:                 display: flex;
+16791:                 gap: 9px;
+16792:             }
+16793: 
+16794:             #mf-dashboard-settings-pane input,
+16795:             #mf-dashboard-diagnostics-pane input {
+16796:                 color: #f4f8ff !important;
+16797:                 background: rgba(2, 13, 25, 0.78) !important;
+16798:                 border: 1px solid rgba(126, 167, 218, 0.20) !important;
+16799:                 border-radius: 7px !important;
+16800:                 min-height: 38px;
+16801:                 padding: 7px 9px !important;
+16802:                 box-sizing: border-box;
+16803:             }
+16804: 
+16805:             .mf-dashboard-toggle-row {
+16806:                 align-items: flex-start;
+16807:             }
+16808: 
+16809:             #mf-event-scanner-state {
+16810:                 margin-top: 7px;
+16811:             }
+16812: 
+16813:             #mf-dashboard-diagnostics-pane #mf-export-unit-finder-diagnostics {
+16814:                 width: 100%;
+16815:                 background: linear-gradient(145deg, #27394d, #172638) !important;
+16816:             }
+16817: 
+16818:             #mf-dashboard-footer {
+16819:                 grid-area: footer;
+16820:                 padding: 4px 10px 0;
+16821:                 text-align: center;
+16822:                 color: #7f91a8;
+16823:                 font-size: 11px;
+16824:                 letter-spacing: 0.02em;
+16825:             }
+16826: 
+16827:             @media (max-width: 1180px) and (min-width: 701px) {
+16828:                 #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari),
+16829:                 #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari) {
+16830:                     grid-template-columns: 62px repeat(2, minmax(250px, 1fr));
+16831:                     grid-template-areas:
+16832:                         "rail control load"
+16833:                         "rail trained trained"
+16834:                         "utility utility utility"
+16835:                         "footer footer footer";
+16836:                     width: min(920px, calc(100vw - 24px));
+16837:                 }
+16838: 
+16839:                 #mf-dashboard-utility {
+16840:                     max-height: 310px;
+16841:                 }
+16842:             }
+16843:         `;
+16844:         document.head.appendChild(style);
+16845:     }

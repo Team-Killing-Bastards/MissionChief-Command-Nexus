@@ -1,0 +1,74 @@
+04496:     function normaliseImportedPersonnelTrainingRegistry(candidate) {
+04497:         const source = candidate?.registry && typeof candidate.registry === 'object' ? candidate.registry : candidate;
+04498:         if (!source || typeof source !== 'object' || Array.isArray(source)) {
+04499:             throw new Error('The selected file does not contain a Personnel Register object.');
+04500:         }
+04501:         const schemaVersion = source.schemaVersion == null
+04502:             ? PERSONNEL_TRAINING_REGISTRY_SCHEMA_VERSION
+04503:             : Number(source.schemaVersion);
+04504:         if (schemaVersion !== PERSONNEL_TRAINING_REGISTRY_SCHEMA_VERSION) {
+04505:             throw new Error(`Unsupported Personnel Register schema version: ${schemaVersion}.`);
+04506:         }
+04507:         if (!source.vehicles || typeof source.vehicles !== 'object' || Array.isArray(source.vehicles)) {
+04508:             throw new Error('The selected file does not contain a valid vehicles register.');
+04509:         }
+04510:         const entries = Object.entries(source.vehicles);
+04511:         if (entries.length > PERSONNEL_TRAINING_REGISTRY_MAX_VEHICLES) {
+04512:             throw new Error(`The file contains ${entries.length} vehicles; the supported maximum is ${PERSONNEL_TRAINING_REGISTRY_MAX_VEHICLES}.`);
+04513:         }
+04514:         const vehicles = Object.create(null);
+04515:         entries.forEach(([rawVehicleId, rawEntry]) => {
+04516:             const vehicleId = String(rawVehicleId || '').slice(0, 80);
+04517:             if (isUnsafePersonnelTrainingRegistryKey(vehicleId)) throw new Error('The file contains an invalid vehicle identifier.');
+04518:             if (!rawEntry || typeof rawEntry !== 'object' || Array.isArray(rawEntry)) {
+04519:                 throw new Error(`Vehicle ${vehicleId} does not contain a valid register entry.`);
+04520:             }
+04521:             const safeCount = value => {
+04522:                 const count = Number(value || 0);
+04523:                 return Number.isFinite(count) && count >= 0 ? Math.floor(count) : 0;
+04524:             };
+04525:             const safeTimestamp = value => {
+04526:                 const timestamp = Number(value || 0);
+04527:                 return Number.isFinite(timestamp) && timestamp >= 0 ? timestamp : 0;
+04528:             };
+04529:             const assignedTrainingProfiles = Array.isArray(rawEntry.assignedTrainingProfiles)
+04530:                 ? rawEntry.assignedTrainingProfiles.slice(0, 250).map(profile => {
+04531:                     return Array.from(new Set(
+04532:                         (Array.isArray(profile) ? profile : [])
+04533:                             .slice(0, 80)
+04534:                             .map(value => String(value || '').slice(0, 120))
+04535:                             .filter(Boolean)
+04536:                     )).sort();
+04537:                 })
+04538:                 : [];
+04539:             vehicles[vehicleId] = {
+04540:                 vehicleId,
+04541:                 vehicleName: String(rawEntry.vehicleName || '').slice(0, 500),
+04542:                 vehicleTypeId: String(rawEntry.vehicleTypeId || '').slice(0, 80),
+04543:                 stationName: String(rawEntry.stationName || '').slice(0, 500),
+04544:                 stationHref: String(rawEntry.stationHref || '').slice(0, 1000),
+04545:                 assignedPersonnelCount: safeCount(rawEntry.assignedPersonnelCount),
+04546:                 assignmentScanComplete: rawEntry.assignmentScanComplete === true,
+04547:                 personnelRowsSeen: safeCount(rawEntry.personnelRowsSeen),
+04548:                 trainingCounts: normalisePersonnelTrainingRegistryCountMap(rawEntry.trainingCounts),
+04549:                 trainingCombinationCounts: normalisePersonnelTrainingRegistryCountMap(rawEntry.trainingCombinationCounts),
+04550:                 assignedTrainingProfiles,
+04551:                 trainingProfilesComplete:
+04552:                     rawEntry.trainingProfilesComplete === true &&
+04553:                     Array.isArray(rawEntry.assignedTrainingProfiles),
+04554:                 updatedAt: safeTimestamp(rawEntry.updatedAt),
+04555:                 source: String(rawEntry.source || '').slice(0, 250)
+04556:             };
+04557:         });
+04558:         const safeRegistryTimestamp = value => {
+04559:             const timestamp = Number(value || 0);
+04560:             return Number.isFinite(timestamp) && timestamp >= 0 ? timestamp : 0;
+04561:         };
+04562:         return {
+04563:             schemaVersion: PERSONNEL_TRAINING_REGISTRY_SCHEMA_VERSION,
+04564:             sourceVersion: String(source.sourceVersion || '').slice(0, 80),
+04565:             updatedAt: safeRegistryTimestamp(source.updatedAt),
+04566:             lastPrunedAt: safeRegistryTimestamp(source.lastPrunedAt),
+04567:             vehicles
+04568:         };
+04569:     }

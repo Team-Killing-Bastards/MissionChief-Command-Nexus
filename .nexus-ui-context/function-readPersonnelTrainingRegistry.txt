@@ -1,0 +1,32 @@
+25069:     function readPersonnelTrainingRegistry() {
+25070:         try {
+25071:             const parsed = JSON.parse(
+25072:                 localStorage.getItem(
+25073:                     MF_PERSONNEL_TRAINING_REGISTRY_KEY
+25074:                 ) ||
+25075:                 'null'
+25076:             );
+25077: 
+25078:             if (
+25079:                 !parsed ||
+25080:                 typeof parsed !== 'object' ||
+25081:                 typeof parsed.vehicles !== 'object'
+25082:             ) {
+25083:                 return {
+25084:                     updatedAt:
+25085:                         0,
+25086:                     vehicles:
+25087:                         {}
+25088:                 };
+25089:             }
+25090: 
+25091:             return parsed;
+25092:         } catch (_error) {
+25093:             return {
+25094:                 updatedAt:
+25095:                     0,
+25096:                 vehicles:
+25097:                     {}
+25098:             };
+25099:         }
+25100:     }

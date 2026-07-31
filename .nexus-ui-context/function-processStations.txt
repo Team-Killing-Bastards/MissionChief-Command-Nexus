@@ -1,0 +1,92 @@
+09153:     async function processStations(runId) {
+09154:         try {
+09155:             while (STATE.stationIndex < STATE.filteredStations.length) {
+09156:                 if (STATE.stopped || runId !== STATE.runId) break;
+09157: 
+09158:                 await waitIfPaused(runId);
+09159:                 if (STATE.stopped || runId !== STATE.runId) break;
+09160: 
+09161:                 const station = STATE.filteredStations[STATE.stationIndex];
+09162: 
+09163:                 setStatus('Opening station');
+09164:                 setStation(station.displayName);
+09165:                 setVehicle('None');
+09166:                 setProgress(STATE.stationIndex, STATE.filteredStations.length);
+09167: 
+09168:                 log(`Station: ${station.displayName}`, 'station');
+09169: 
+09170:                 const stationEntry = findStationOverviewEntry(station.href);
+09171:                 const stationLink = stationEntry?.link || null;
+09172: 
+09173:                 if (!stationLink) {
+09174:                     log(`Station link not found, skipped: ${station.displayName}`, 'error');
+09175:                     STATE.stationIndex++;
+09176:                     continue;
+09177:                 }
+09178: 
+09179:                 const iframe = await openStationWorkflowIframe(
+09180:                     stationEntry,
+09181:                     'unit-naming',
+09182:                     waitForStationIframe
+09183:                 );
+09184: 
+09185:                 if (iframe) {
+09186:                     STATE.activeIframe = iframe;
+09187:                 }
+09188: 
+09189:                 if (!iframe) {
+09190:                     log(`Station iframe not found, skipped: ${station.displayName}`, 'error');
+09191:                     STATE.skippedCount++;
+09192:                     updateCounters();
+09193:                     await closeStationModal(iframe);
+09194:                     STATE.stationIndex++;
+09195:                     continue;
+09196:                 }
+09197: 
+09198:                 const vehicleTableReady = await waitForVehicleTable(iframe);
+09199: 
+09200:                 if (!vehicleTableReady) {
+09201:                     log(`Vehicle table did not load, skipped: ${station.displayName}`, 'error');
+09202:                     STATE.skippedCount++;
+09203:                     updateCounters();
+09204:                     await closeStationModal(iframe);
+09205:                     STATE.stationIndex++;
+09206:                     continue;
+09207:                 }
+09208: 
+09209:                 await processStationVehicleQueue(iframe, station);
+09210:                 await closeStationModal(iframe);
+09211: 
+09212:                 if (STATE.mode === 'single') {
+09213:                     log('Single station mode complete.', 'done');
+09214:                     break;
+09215:                 }
+09216: 
+09217:                 STATE.stationIndex++;
+09218:             }
+09219:         } finally {
+09220:             if (STATE.activeIframe) {
+09221:                 await closeStationModal(STATE.activeIframe);
+09222:             }
+09223: 
+09224:             if (runId !== STATE.runId) return;
+09225: 
+09226:             STATE.running = false;
+09227:             STATE.paused = false;
+09228:             document.querySelector('#mc-namer-pause').textContent = 'Pause';
+09229: 
+09230:             if (STATE.stopped) {
+09231:                 setStatus('Stopped');
+09232:                 log(`Stopped. Renamed ${STATE.renamedCount}. Skipped ${STATE.skippedCount}.`, 'error');
+09233:             } else {
+09234:                 setStatus('Finished');
+09235:                 setStation('None');
+09236:                 setVehicle('None');
+09237:                 setProgress(
+09238:                     STATE.mode === 'single' ? 1 : STATE.filteredStations.length,
+09239:                     STATE.mode === 'single' ? 1 : STATE.filteredStations.length
+09240:                 );
+09241:                 log(`Finished. Renamed ${STATE.renamedCount}. Skipped ${STATE.skippedCount}.`, 'done');
+09242:             }
+09243:         }
+09244:     }

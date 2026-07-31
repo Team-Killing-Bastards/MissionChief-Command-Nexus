@@ -1,0 +1,10 @@
+08584:     function scrollPersonnelTo(sectionId) {
+08585:         const body = document.querySelector('#mc-namer-body');
+08586:         const section = document.getElementById(sectionId);
+08587:         if (!body || !section) return;
+08588: 
+08589:         const bodyRect = body.getBoundingClientRect();
+08590:         const sectionRect = section.getBoundingClientRect();
+08591:         const targetTop = body.scrollTop + sectionRect.top - bodyRect.top - 38;
+08592:         body.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
+08593:     }

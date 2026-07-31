@@ -1,0 +1,23 @@
+06223:     function getPersonnelAssignedToVehicle(personnel, vehicle) {
+06224:         if (!Array.isArray(personnel) || !vehicle) return [];
+06225: 
+06226:         const index = getPersonnelAssignmentIndex(personnel);
+06227:         const vehicleId = String(vehicle.vehicleId || '');
+06228:         const vehicleNameKey = normalizePersonnelVehicleName(vehicle.name || '');
+06229:         const byId = vehicleId ? (index.byVehicleId.get(vehicleId) || []) : [];
+06230:         const byName = vehicleNameKey ? (index.byVehicleName.get(vehicleNameKey) || []) : [];
+06231: 
+06232:         if (!byId.length) return byName;
+06233:         if (!byName.length || byName === byId) return byId;
+06234: 
+06235:         const result = byId.slice();
+06236:         const seen = new Set(result.map(person => String(person.personnelId || '')));
+06237:         byName.forEach(person => {
+06238:             const personnelId = String(person.personnelId || '');
+06239:             if (!seen.has(personnelId)) {
+06240:                 seen.add(personnelId);
+06241:                 result.push(person);
+06242:             }
+06243:         });
+06244:         return result;
+06245:     }

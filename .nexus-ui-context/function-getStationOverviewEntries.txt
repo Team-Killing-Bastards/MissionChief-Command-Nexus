@@ -1,0 +1,34 @@
+01255:     function getStationOverviewEntries(root = document) {
+01256:         const groups = new Map();
+01257: 
+01258:         root.querySelectorAll(STATION_OVERVIEW_LINK_SELECTOR).forEach(link => {
+01259:             if (link.closest?.('#mc-namer-panel')) return;
+01260:             const href = normaliseStationOverviewHref(link.getAttribute?.('href'));
+01261:             if (!href) return;
+01262: 
+01263:             const container = getStationOverviewContainer(link);
+01264:             if (!container && !link.matches?.('.lightbox-open.list-group-item.active')) return;
+01265: 
+01266:             const candidates = groups.get(href) || [];
+01267:             candidates.push({ link, container });
+01268:             groups.set(href, candidates);
+01269:         });
+01270: 
+01271:         return [...groups.entries()].map(([href, candidates], index) => {
+01272:             candidates.sort((a, b) =>
+01273:                 scoreStationOverviewLink(b.link, href) -
+01274:                 scoreStationOverviewLink(a.link, href)
+01275:             );
+01276:             const selected = candidates[0];
+01277:             const container = selected.container || getStationOverviewContainer(selected.link);
+01278:             return {
+01279:                 index,
+01280:                 href,
+01281:                 buildingId: getBuildingIdFromHref(href),
+01282:                 displayName: readStationOverviewName(selected.link, container, href),
+01283:                 buildingTypeId: readStationBuildingTypeId(selected.link, container),
+01284:                 link: selected.link,
+01285:                 container
+01286:             };
+01287:         });
+01288:     }

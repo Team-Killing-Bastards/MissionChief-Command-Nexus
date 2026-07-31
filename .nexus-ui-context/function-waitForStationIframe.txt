@@ -1,0 +1,60 @@
+09246:     async function waitForStationIframe(stationHref, preferredIframe = null, maximumAttempts = 80) {
+09247:         const expectedHref = String(stationHref || '');
+09248:         const expectedBuildingId = getBuildingIdFromHref(expectedHref);
+09249: 
+09250:         for (let i = 0; i < maximumAttempts; i++) {
+09251:             if (STATE.stopped) return null;
+09252: 
+09253:             const candidates = [
+09254:                 preferredIframe,
+09255:                 ...document.querySelectorAll(
+09256:                     'iframe.lightbox_iframe, iframe#lssmv4-redesign-lightbox-iframe, ' +
+09257:                     '.vm--modal iframe[src*="/buildings/"], ' +
+09258:                     'iframe.mc-namer-managed-station-iframe'
+09259:                 )
+09260:             ].filter(Boolean);
+09261: 
+09262:             for (const iframe of candidates.reverse()) {
+09263:                 try {
+09264:                     const doc = iframe.contentDocument;
+09265:                     if (!doc) continue;
+09266: 
+09267:                     const currentPath = iframe.contentWindow?.location?.pathname || '';
+09268:                     const sourcePath = iframe.getAttribute('src') || '';
+09269:                     const currentBuildingId = getBuildingIdFromHref(currentPath || sourcePath);
+09270: 
+09271:                     const exactStationMatch = Boolean(
+09272:                         expectedHref && (
+09273:                             currentPath.startsWith(expectedHref) ||
+09274:                             sourcePath.startsWith(expectedHref) ||
+09275:                             sourcePath.includes(expectedHref)
+09276:                         )
+09277:                     );
+09278: 
+09279:                     const buildingIdMatch = Boolean(
+09280:                         expectedBuildingId && currentBuildingId === expectedBuildingId
+09281:                     );
+09282: 
+09283:                     const documentMatch = Boolean(
+09284:                         expectedHref && (
+09285:                             doc.querySelector(`#vehicle_table`) ||
+09286:                             doc.querySelector(`a[href="${expectedHref}/edit"]`) ||
+09287:                             doc.querySelector(`a[href="${expectedHref}/move"]`) ||
+09288:                             doc.querySelector(`form[action="${expectedHref}"]`)
+09289:                         )
+09290:                     );
+09291: 
+09292:                     if (exactStationMatch || buildingIdMatch || documentMatch) {
+09293:                         debug(`Station iframe found: ${currentPath || sourcePath || 'unknown path'}`);
+09294:                         return iframe;
+09295:                     }
+09296:                 } catch (error) {
+09297:                     debug(`Station iframe access retry: ${error?.message || error}`);
+09298:                 }
+09299:             }
+09300: 
+09301:             await sleep(250);
+09302:         }
+09303: 
+09304:         return null;
+09305:     }

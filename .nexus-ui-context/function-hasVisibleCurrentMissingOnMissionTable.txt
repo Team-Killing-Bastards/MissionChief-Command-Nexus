@@ -1,0 +1,20 @@
+32777:     function hasVisibleCurrentMissingOnMissionTable() {
+32778:         return getActiveMissionRequirementContexts().some(context => {
+32779:             const root = context?.root;
+32780:             if (!root) return false;
+32781: 
+32782:             try {
+32783:                 return Array.from(
+32784:                     root.querySelectorAll('table.table-striped.table-condensed, table.table')
+32785:                 ).some(table => {
+32786:                     return (
+32787:                         isMissionUpdateTable(table) &&
+32788:                         isMissingOnMissionUpdateTable(table) &&
+32789:                         isMissionElementVisible(table)
+32790:                     );
+32791:                 });
+32792:             } catch (_error) {
+32793:                 return false;
+32794:             }
+32795:         });
+32796:     }

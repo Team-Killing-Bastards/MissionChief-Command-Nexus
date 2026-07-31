@@ -1,0 +1,12 @@
+04449:     function formatPersonnelTrainingRegistryTimestamp(timestamp) {
+04450:         const value = Number(timestamp || 0);
+04451:         if (!Number.isFinite(value) || value <= 0) return 'never';
+04452:         try {
+04453:             return new Intl.DateTimeFormat('en-GB', {
+04454:                 dateStyle: 'medium',
+04455:                 timeStyle: 'short'
+04456:             }).format(new Date(value));
+04457:         } catch (_error) {
+04458:             return new Date(value).toLocaleString();
+04459:         }
+04460:     }

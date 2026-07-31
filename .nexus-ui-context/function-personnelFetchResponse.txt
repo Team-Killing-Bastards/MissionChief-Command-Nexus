@@ -1,0 +1,24 @@
+07737:     async function personnelFetchResponse(url, options = {}, timeoutMs = 12000) {
+07738:         await waitForPersonnelRequestSlot();
+07739: 
+07740:         const controller = new AbortController();
+07741:         PERSONNEL_STATE.activeController = controller;
+07742:         const timer = setTimeout(() => controller.abort(), timeoutMs);
+07743: 
+07744:         try {
+07745:             const response = await fetch(url, {
+07746:                 credentials: 'same-origin',
+07747:                 cache: 'no-store',
+07748:                 redirect: 'follow',
+07749:                 ...options,
+07750:                 signal: controller.signal
+07751:             });
+07752:             PERSONNEL_STATE.lastRequestAt = Date.now();
+07753:             return response;
+07754:         } finally {
+07755:             clearTimeout(timer);
+07756:             if (PERSONNEL_STATE.activeController === controller) {
+07757:                 PERSONNEL_STATE.activeController = null;
+07758:             }
+07759:         }
+07760:     }

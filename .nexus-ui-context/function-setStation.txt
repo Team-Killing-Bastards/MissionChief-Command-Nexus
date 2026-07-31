@@ -1,0 +1,4 @@
+09553:     function setStation(text) {
+09554:         const el = getToolElementById('mc-namer-station');
+09555:         if (el) el.textContent = text;
+09556:     }

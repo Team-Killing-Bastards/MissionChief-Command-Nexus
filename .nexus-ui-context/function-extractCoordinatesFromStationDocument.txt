@@ -1,0 +1,35 @@
+03845:     function extractCoordinatesFromStationDocument(doc) {
+03846:         if (!doc) return null;
+03847: 
+03848:         const latitudeInput = doc.querySelector('#building_latitude, input[name="building[latitude]"]');
+03849:         const longitudeInput = doc.querySelector('#building_longitude, input[name="building[longitude]"]');
+03850:         const direct = normalizeCoordinates(latitudeInput?.value, longitudeInput?.value);
+03851:         if (direct) return direct;
+03852: 
+03853:         const dataElement = doc.querySelector('[data-latitude][data-longitude], [data-lat][data-lng]');
+03854:         if (dataElement) {
+03855:             const dataCoordinates = normalizeCoordinates(
+03856:                 dataElement.getAttribute('data-latitude') ?? dataElement.getAttribute('data-lat'),
+03857:                 dataElement.getAttribute('data-longitude') ?? dataElement.getAttribute('data-lng')
+03858:             );
+03859:             if (dataCoordinates) return dataCoordinates;
+03860:         }
+03861: 
+03862:         const patterns = [
+03863:             /(?:setView|L\.marker)\s*\(\s*\[\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\]/i,
+03864:             /latitude\s*[:=]\s*["']?(-?\d+(?:\.\d+)?)["']?[\s\S]{0,160}?longitude\s*[:=]\s*["']?(-?\d+(?:\.\d+)?)/i
+03865:         ];
+03866: 
+03867:         for (const script of doc.scripts) {
+03868:             const scriptText = script.textContent || '';
+03869:             if (!scriptText) continue;
+03870: 
+03871:             for (const pattern of patterns) {
+03872:                 const match = scriptText.match(pattern);
+03873:                 const parsed = normalizeCoordinates(match?.[1], match?.[2]);
+03874:                 if (parsed) return parsed;
+03875:             }
+03876:         }
+03877: 
+03878:         return null;
+03879:     }

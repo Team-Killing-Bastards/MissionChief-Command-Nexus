@@ -1,0 +1,9 @@
+03213:     function showAndViewPersonnelStationReport() {
+03214:         const checkbox = document.querySelector('#mc-personnel-show-station-report');
+03215:         if (checkbox && !checkbox.checked) {
+03216:             checkbox.checked = true;
+03217:             updatePersonnelReportVisibility(true);
+03218:         }
+03219: 
+03220:         requestAnimationFrame(() => scrollPersonnelTo('mc-personnel-after-action-section'));
+03221:     }

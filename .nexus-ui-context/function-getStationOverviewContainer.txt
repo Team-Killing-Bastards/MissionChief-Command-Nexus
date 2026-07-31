@@ -1,0 +1,6 @@
+01160:     function getStationOverviewContainer(link) {
+01161:         return link?.closest?.(
+01162:             '.building_list_li, .building_list, [building_type_id], ' +
+01163:             '[data-building-type-id], [data-building-id], [id^="building_"]'
+01164:         ) || link?.closest?.('li, .panel, .card, .well') || link?.parentElement || null;
+01165:     }

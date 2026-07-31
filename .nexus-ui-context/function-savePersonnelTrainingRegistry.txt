@@ -1,0 +1,16 @@
+27175:     function savePersonnelTrainingRegistry(registry) {
+27176:         if (!registry || typeof registry !== 'object') {
+27177:             return false;
+27178:         }
+27179: 
+27180:         try {
+27181:             registry.updatedAt = Date.now();
+27182:             localStorage.setItem(
+27183:                 MF_PERSONNEL_TRAINING_REGISTRY_KEY,
+27184:                 JSON.stringify(registry)
+27185:             );
+27186:             return true;
+27187:         } catch (_error) {
+27188:             return false;
+27189:         }
+27190:     }

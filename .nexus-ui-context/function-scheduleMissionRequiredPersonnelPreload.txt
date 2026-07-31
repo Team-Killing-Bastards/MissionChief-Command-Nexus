@@ -1,0 +1,19 @@
+24663:     function scheduleMissionRequiredPersonnelPreload(
+24664:         delay = 0
+24665:     ) {
+24666:         if (!isMissionPage()) return;
+24667: 
+24668:         synchroniseMissionRequirementPreloadCache();
+24669: 
+24670:         if (
+24671:             mfMissionRequirementPreloadCache.status === 'loaded' ||
+24672:             mfMissionRequirementPreloadTimer
+24673:         ) {
+24674:             return;
+24675:         }
+24676: 
+24677:         mfMissionRequirementPreloadTimer = setTimeout(() => {
+24678:             mfMissionRequirementPreloadTimer = null;
+24679:             preloadMissionRequiredPersonnel();
+24680:         }, Math.max(0, parseInt(delay, 10) || 0));
+24681:     }

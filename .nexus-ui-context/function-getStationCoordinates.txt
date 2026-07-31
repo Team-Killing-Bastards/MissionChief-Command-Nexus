@@ -1,0 +1,13 @@
+03831:     async function getStationCoordinates(station, stationDoc) {
+03832:         const fromPageCache = findBuildingCoordinatesInPageCaches(station.buildingId);
+03833:         if (fromPageCache) return { ...fromPageCache, source: 'MissionChief building marker cache' };
+03834: 
+03835:         const fromDocument = extractCoordinatesFromStationDocument(stationDoc);
+03836:         if (fromDocument) return { ...fromDocument, source: 'station page' };
+03837: 
+03838:         await loadMissionChiefBuildingCoordinates();
+03839:         const fromLoadedData = STATION_STATE.buildingCoordinateCache.get(String(station.buildingId));
+03840:         if (fromLoadedData) return { ...fromLoadedData, source: 'MissionChief buildings data' };
+03841: 
+03842:         return null;
+03843:     }

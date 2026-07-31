@@ -1,0 +1,52 @@
+02981:     function initialisePersonnelProfileNavigation() {
+02982:         const serviceSelect = document.querySelector('#mc-personnel-service');
+02983:         if (!serviceSelect) return;
+02984: 
+02985:         let savedService = 'medical';
+02986:         let savedProfile = 'critical_care';
+02987:         let savedUnitsRequired = 0;
+02988: 
+02989:         try {
+02990:             savedService = localStorage.getItem(PERSONNEL_SERVICE_STORAGE_KEY) || 'medical';
+02991:             savedProfile = localStorage.getItem(PERSONNEL_PROFILE_STORAGE_KEY) || 'critical_care';
+02992:             savedUnitsRequired = normalisePersonnelUnitsRequired(localStorage.getItem(PERSONNEL_UNITS_REQUIRED_STORAGE_KEY) || 0);
+02993:         } catch (_error) {}
+02994: 
+02995:         // Migrate the two service options that were combined in v4.1.2.
+02996:         if (savedService === 'mountain') savedService = 'coastguard';
+02997:         if (savedService === 'airport') savedService = 'fire';
+02998:         if (!PERSONNEL_SERVICE_DEFINITIONS[savedService]) savedService = 'medical';
+02999: 
+03000:         PERSONNEL_STATE.service = savedService;
+03001:         PERSONNEL_STATE.profile =
+03002:             savedProfile;
+03003: 
+03004:         PERSONNEL_STATE
+03005:             .configuredUnitsRequired =
+03006:                 savedUnitsRequired;
+03007: 
+03008:         PERSONNEL_STATE.unitsRequired =
+03009:             0;
+03010: 
+03011:         PERSONNEL_STATE.unitsFulfilled =
+03012:             0;
+03013: 
+03014:         PERSONNEL_STATE.mode =
+03015:             document.querySelector(
+03016:                 '#mc-personnel-mode'
+03017:             )?.value ||
+03018:             'all';
+03019: 
+03020:         serviceSelect.value =
+03021:             savedService;
+03022: 
+03023:         populatePersonnelProfileSelect(
+03024:             savedProfile
+03025:         );
+03026: 
+03027:         updatePersonnelProfileUi(
+03028:             false
+03029:         );
+03030: 
+03031:         updatePersonnelModeUi();
+03032:     }

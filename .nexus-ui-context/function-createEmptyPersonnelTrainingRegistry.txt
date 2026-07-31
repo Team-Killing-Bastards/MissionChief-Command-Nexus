@@ -1,0 +1,9 @@
+05929:     function createEmptyPersonnelTrainingRegistry() {
+05930:         return {
+05931:             schemaVersion: PERSONNEL_TRAINING_REGISTRY_SCHEMA_VERSION,
+05932:             sourceVersion: PERSONNEL_VERSION,
+05933:             updatedAt: 0,
+05934:             lastPrunedAt: 0,
+05935:             vehicles: {}
+05936:         };
+05937:     }

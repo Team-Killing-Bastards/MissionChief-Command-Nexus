@@ -1,0 +1,6 @@
+07791:     function normalizePersonnelVehicleName(value) {
+07792:         return cleanText(value)
+07793:             .replace(/\s+/g, ' ')
+07794:             .trim()
+07795:             .toUpperCase();
+07796:     }

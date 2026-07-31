@@ -1,0 +1,291 @@
+05536:     async function processPersonnelQueue() {
+05537:         try {
+05538:             while (
+05539:                 PERSONNEL_STATE.stationIndex <
+05540:                 PERSONNEL_STATE.queue.length
+05541:             ) {
+05542:                 if (PERSONNEL_STATE.stopped) break;
+05543: 
+05544:                 await waitIfPersonnelPaused();
+05545:                 if (PERSONNEL_STATE.stopped) break;
+05546: 
+05547:                 const station =
+05548:                     PERSONNEL_STATE.queue[
+05549:                         PERSONNEL_STATE.stationIndex
+05550:                     ];
+05551: 
+05552:                 const displayPosition =
+05553:                     PERSONNEL_STATE.stationIndex + 1;
+05554: 
+05555:                 setPersonnelUiValue(
+05556:                     'progress',
+05557:                     `${displayPosition} / ${PERSONNEL_STATE.queue.length}`
+05558:                 );
+05559:                 setPersonnelUiValue(
+05560:                     'current',
+05561:                     station.displayName
+05562:                 );
+05563:                 setPersonnelUiValue(
+05564:                     'vehicle',
+05565:                     'None'
+05566:                 );
+05567:                 setPersonnelUiValue(
+05568:                     'status',
+05569:                     'Scanning station'
+05570:                 );
+05571: 
+05572:                 personnelLog(
+05573:                     `Station ${displayPosition}/${PERSONNEL_STATE.queue.length}: ${station.displayName}`,
+05574:                     'station'
+05575:                 );
+05576: 
+05577:                 let completedReport;
+05578: 
+05579:                 try {
+05580:                     completedReport =
+05581:                         await processOnePersonnelStation(
+05582:                             station
+05583:                         );
+05584: 
+05585:                     if (isPersonnelPerStationTargetMode()) {
+05586:                         const stationTarget =
+05587:                             PERSONNEL_STATE.unitsRequired;
+05588: 
+05589:                         const stationFulfilled =
+05590:                             Math.min(
+05591:                                 stationTarget,
+05592:                                 Number(
+05593:                                     completedReport.fulfilledUnits
+05594:                                     || 0
+05595:                                 )
+05596:                             );
+05597: 
+05598:                         completedReport.stationTarget =
+05599:                             stationTarget;
+05600:                         completedReport.stationTargetFulfilled =
+05601:                             stationFulfilled;
+05602:                         completedReport.stationTargetMet =
+05603:                             stationFulfilled >= stationTarget;
+05604:                         completedReport.stationTargetShortfallUnits =
+05605:                             Math.max(
+05606:                                 0,
+05607:                                 stationTarget - stationFulfilled
+05608:                             );
+05609: 
+05610:                         if (completedReport.stationTargetMet) {
+05611:                             PERSONNEL_STATE.stationsTargetMet++;
+05612:                         } else {
+05613:                             PERSONNEL_STATE.stationsTargetShort++;
+05614:                         }
+05615: 
+05616:                         PERSONNEL_STATE.unitsFulfilled +=
+05617:                             stationFulfilled;
+05618:                     } else {
+05619:                         PERSONNEL_STATE.unitsFulfilled +=
+05620:                             Number(
+05621:                                 completedReport.fulfilledUnits
+05622:                                 || 0
+05623:                             );
+05624:                     }
+05625: 
+05626:                     PERSONNEL_STATE.reports.push(
+05627:                         completedReport
+05628:                     );
+05629:                     PERSONNEL_STATE.completedStations++;
+05630:                     PERSONNEL_STATE.checkedVehicles +=
+05631:                         completedReport.vehiclesChecked;
+05632:                     PERSONNEL_STATE.plannedCount +=
+05633:                         completedReport.planned;
+05634:                     PERSONNEL_STATE.assignedCount +=
+05635:                         completedReport.assigned;
+05636:                     PERSONNEL_STATE.trainingShortfall +=
+05637:                         completedReport.trainingShortfall;
+05638:                     PERSONNEL_STATE.assignmentShortfall +=
+05639:                         completedReport.assignmentShortfall;
+05640: 
+05641:                     const targetText =
+05642:                         isPersonnelPerStationTargetMode()
+05643:                             ? (
+05644:                                 completedReport.stationTargetMet
+05645:                                     ? ` | target PASSED ${completedReport.stationTargetFulfilled}/${completedReport.stationTarget}`
+05646:                                     : ` | target SHORT ${completedReport.stationTargetFulfilled}/${completedReport.stationTarget}`
+05647:                             )
+05648:                             : '';
+05649: 
+05650:                     personnelLog(
+05651:                         `${station.displayName}: vehicles=${completedReport.vehicleCount ?? completedReport.ambulances ?? 0}, units fulfilled=${Number(completedReport.fulfilledUnits || 0)}, qualified=${completedReport.trained}, need training=${completedReport.trainingShortfall}, unfilled=${completedReport.assignmentShortfall}${targetText}.`,
+05652:                         (
+05653:                             completedReport.trainingShortfall
+05654:                             || completedReport.assignmentShortfall
+05655:                             || (
+05656:                                 isPersonnelPerStationTargetMode()
+05657:                                 && !completedReport.stationTargetMet
+05658:                             )
+05659:                         )
+05660:                             ? 'error'
+05661:                             : 'done'
+05662:                     );
+05663:                 } catch (error) {
+05664:                     if (
+05665:                         PERSONNEL_STATE.stopped
+05666:                         && error?.name === 'AbortError'
+05667:                     ) {
+05668:                         personnelLog(
+05669:                             'Active Personnel request cancelled.',
+05670:                             'debug'
+05671:                         );
+05672:                         break;
+05673:                     }
+05674: 
+05675:                     PERSONNEL_STATE.skippedStations++;
+05676: 
+05677:                     completedReport = {
+05678:                         stationName: station.displayName,
+05679:                         error: error?.message || String(error),
+05680:                         vehicleCount: 0,
+05681:                         ambulances: 0,
+05682:                         required: 0,
+05683:                         trained: 0,
+05684:                         availableAtScan: 0,
+05685:                         availableAtEnd: 0,
+05686:                         initialQualifiedFilled: 0,
+05687:                         finalQualifiedFilled: 0,
+05688:                         initialCriticalFilled: 0,
+05689:                         finalCriticalFilled: 0,
+05690:                         trainingShortfall: 0,
+05691:                         assignmentShortfall: 0,
+05692:                         planned: 0,
+05693:                         assigned: 0,
+05694:                         fulfilledUnits: 0,
+05695:                         vehiclesChecked: 0,
+05696:                         afterActionVerified: false,
+05697:                         verificationError:
+05698:                             error?.message || String(error),
+05699:                         vehicles: []
+05700:                     };
+05701: 
+05702:                     if (isPersonnelPerStationTargetMode()) {
+05703:                         completedReport.stationTarget =
+05704:                             PERSONNEL_STATE.unitsRequired;
+05705:                         completedReport.stationTargetFulfilled = 0;
+05706:                         completedReport.stationTargetMet = false;
+05707:                         completedReport.stationTargetShortfallUnits =
+05708:                             PERSONNEL_STATE.unitsRequired;
+05709:                         PERSONNEL_STATE.stationsTargetShort++;
+05710:                     }
+05711: 
+05712:                     PERSONNEL_STATE.reports.push(
+05713:                         completedReport
+05714:                     );
+05715: 
+05716:                     personnelLog(
+05717:                         `Skipped ${station.displayName}: ${error?.message || error}`,
+05718:                         'error'
+05719:                     );
+05720:                     personnelDebug(
+05721:                         error?.stack || String(error)
+05722:                     );
+05723:                 }
+05724: 
+05725:                 PERSONNEL_STATE.lastStationReport =
+05726:                     completedReport;
+05727: 
+05728:                 flushPersonnelTrainingRegistry(true);
+05729: 
+05730:                 renderPersonnelAfterAction(
+05731:                     completedReport
+05732:                 );
+05733: 
+05734:                 PERSONNEL_STATE.stationIndex++;
+05735:                 updatePersonnelCounters();
+05736:                 buildAndRenderPersonnelReport();
+05737: 
+05738:                 if (PERSONNEL_STATE.mode === 'single') {
+05739:                     scrollPersonnelTo(
+05740:                         'mc-personnel-after-action-section'
+05741:                     );
+05742:                 }
+05743: 
+05744:                 if (!PERSONNEL_STATE.stopped) {
+05745:                     await waitPersonnelDelay(
+05746:                         PERSONNEL_STATION_GAP_MS
+05747:                     );
+05748:                 }
+05749:             }
+05750:         } finally {
+05751:             PERSONNEL_STATE.running = false;
+05752:             PERSONNEL_STATE.paused = false;
+05753: 
+05754:             document.querySelector(
+05755:                 '#mc-personnel-pause'
+05756:             ).textContent = 'Pause';
+05757: 
+05758:             buildAndRenderPersonnelReport();
+05759:             flushPersonnelTrainingRegistry(true);
+05760:             PERSONNEL_TRAINING_REGISTRY_CACHE = null;
+05761: 
+05762:             if (PERSONNEL_STATE.stopped) {
+05763:                 setPersonnelUiValue(
+05764:                     'status',
+05765:                     'Stopped'
+05766:                 );
+05767:                 personnelLog(
+05768:                     'Stopped. The reports contain all stations completed before the stop request.',
+05769:                     'error'
+05770:                 );
+05771:                 return;
+05772:             }
+05773: 
+05774:             const targetMode =
+05775:                 isPersonnelPerStationTargetMode();
+05776: 
+05777:             const hasTargetShortfall =
+05778:                 targetMode
+05779:                 && PERSONNEL_STATE.stationsTargetShort > 0;
+05780: 
+05781:             setPersonnelUiValue(
+05782:                 'status',
+05783:                 targetMode
+05784:                     ? (
+05785:                         hasTargetShortfall
+05786:                             ? 'Finished - some station targets not met'
+05787:                             : 'Finished - every station target met'
+05788:                     )
+05789:                     : 'Finished - report ready'
+05790:             );
+05791: 
+05792:             setPersonnelUiValue(
+05793:                 'progress',
+05794:                 `${PERSONNEL_STATE.queue.length} / ${PERSONNEL_STATE.queue.length}`
+05795:             );
+05796: 
+05797:             if (targetMode) {
+05798:                 personnelLog(
+05799:                     `Finished. Target ${PERSONNEL_STATE.unitsRequired} per station: ${PERSONNEL_STATE.stationsTargetMet}/${PERSONNEL_STATE.completedStations} station(s) met; ${PERSONNEL_STATE.stationsTargetShort} short.`,
+05800:                     hasTargetShortfall
+05801:                         ? 'error'
+05802:                         : 'done'
+05803:                 );
+05804:             }
+05805: 
+05806:             personnelLog(
+05807:                 `Finished. Stations ${PERSONNEL_STATE.completedStations}, vehicles ${PERSONNEL_STATE.checkedVehicles}, units fulfilled ${PERSONNEL_STATE.unitsFulfilled}, ${PERSONNEL_STATE.action === 'assign' ? 'assigned' : 'planned'} ${PERSONNEL_STATE.action === 'assign' ? PERSONNEL_STATE.assignedCount : PERSONNEL_STATE.plannedCount}, need training ${PERSONNEL_STATE.trainingShortfall}, unfilled ${PERSONNEL_STATE.assignmentShortfall}.`,
+05808:                 (
+05809:                     hasTargetShortfall
+05810:                     || PERSONNEL_STATE.trainingShortfall
+05811:                     || PERSONNEL_STATE.assignmentShortfall
+05812:                 )
+05813:                     ? 'error'
+05814:                     : 'done'
+05815:             );
+05816: 
+05817:             if (
+05818:                 PERSONNEL_STATE.mode === 'single'
+05819:                 && PERSONNEL_STATE.lastStationReport
+05820:             ) {
+05821:                 scrollPersonnelTo(
+05822:                     'mc-personnel-after-action-section'
+05823:                 );
+05824:             }
+05825:         }
+05826:     }

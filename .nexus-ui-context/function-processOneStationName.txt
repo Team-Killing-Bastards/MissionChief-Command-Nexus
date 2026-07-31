@@ -1,0 +1,143 @@
+03598:     async function processOneStationName(station) {
+03599:         if (!station.suffix) {
+03600:             stationLog(`Skipped: no safe naming rule exists for building_type_id=${station.buildingTypeId ?? 'unknown'}.`, 'error');
+03601:             return 'skipped';
+03602:         }
+03603: 
+03604:         const stationEntry = findStationOverviewEntry(station.href);
+03605:         const stationLink = stationEntry?.link || null;
+03606:         if (!stationLink) {
+03607:             stationLog(`Skipped: station link no longer exists for ${station.href}.`, 'error');
+03608:             return 'skipped';
+03609:         }
+03610: 
+03611:         let iframe = null;
+03612: 
+03613:         try {
+03614:             iframe = await openStationWorkflowIframe(
+03615:                 stationEntry,
+03616:                 'station-naming',
+03617:                 waitForStationNamingIframe
+03618:             );
+03619:             STATION_STATE.activeIframe = iframe;
+03620: 
+03621:             if (!iframe) throw new Error('Station lightbox iframe did not open.');
+03622: 
+03623:             let doc = await waitForStationNamingDocument(
+03624:                 iframe,
+03625:                 currentDoc => currentDoc.querySelector(`a[href="${station.href}/edit"]`),
+03626:                 'normal station page'
+03627:             );
+03628: 
+03629:             if (!doc) throw new Error('Normal station page did not finish loading.');
+03630:             if (STATION_STATE.stopped) return 'skipped';
+03631: 
+03632:             await waitIfStationNamingPaused();
+03633:             setStationUiValue('status', 'Reading station address');
+03634: 
+03635:             // Do not depend on clicking Move building. MissionChief can block that page
+03636:             // while vehicles are away. First try a read-only background request; when
+03637:             // that is unavailable, use the station coordinates and MissionChief's own
+03638:             // /reverse_address endpoint. The Move form is never submitted.
+03639:             const addressResult = await resolveStationAddress(station, doc);
+03640:             const address = String(addressResult.address || '').trim();
+03641: 
+03642:             if (!address) {
+03643:                 throw new Error(addressResult.error || 'Station address could not be read from the Move page or coordinate fallback.');
+03644:             }
+03645: 
+03646:             setStationUiValue('address', address);
+03647:             stationLog(`Address: ${address}`, 'info');
+03648:             stationLog(`Address source: ${addressResult.source}`, 'debug');
+03649: 
+03650:             const parsed = extractStationArea(address);
+03651:             if (!parsed.postcode) throw new Error('No UK postcode could be extracted from the address.');
+03652:             if (!parsed.area) throw new Error(`No local area was found after postcode ${parsed.postcode}.`);
+03653: 
+03654:             const formattedArea = formatStationArea(parsed.area);
+03655:             if (!formattedArea) throw new Error('The detected local area became empty after formatting.');
+03656: 
+03657:             setStationUiValue('town', formattedArea);
+03658:             stationLog(`Postcode: ${parsed.postcode}`, 'info');
+03659:             stationLog(`Detected area: ${formattedArea}`, 'after');
+03660: 
+03661:             let proposedName = buildStationName(formattedArea, station.suffix, station.displayName);
+03662:             setStationUiValue('after', proposedName);
+03663:             stationLog(`BEFORE: ${station.displayName}`, 'before');
+03664:             stationLog(`AFTER : ${proposedName}`, 'after');
+03665: 
+03666:             if (STATION_STATE.action !== 'save') {
+03667:                 setStationUiValue('status', 'Preview complete');
+03668:                 stationLog('Preview only: nothing was saved.', 'info');
+03669:                 return 'previewed';
+03670:             }
+03671: 
+03672:             if (STATION_STATE.stopped) return 'skipped';
+03673:             await waitIfStationNamingPaused();
+03674: 
+03675:             // The iframe is still on the normal station page because address reading
+03676:             // now happens in the background. Open Edit directly from this page.
+03677:             if (STATION_STATE.stopped) return 'skipped';
+03678: 
+03679:             setStationUiValue('status', 'Opening Edit');
+03680:             const editLink = doc.querySelector(`a[href="${station.href}/edit"]`);
+03681:             if (!editLink) throw new Error('Edit button was not found.');
+03682: 
+03683:             stationDebug(`Clicking Edit: ${editLink.getAttribute('href')}`);
+03684:             editLink.click();
+03685: 
+03686:             doc = await waitForStationNamingDocument(
+03687:                 iframe,
+03688:                 currentDoc => currentDoc.querySelector('#building_name')
+03689:                     && currentDoc.querySelector(`form[action="${station.href}"] input[name="_method"][value="patch"]`),
+03690:                 'Edit station page'
+03691:             );
+03692: 
+03693:             if (!doc) throw new Error('Edit station page or #building_name did not load.');
+03694: 
+03695:             const nameInput = doc.querySelector('#building_name');
+03696:             const saveButton = doc.querySelector('input.btn-success[type="submit"][value="Save"], button.btn-success[type="submit"]');
+03697:             if (!nameInput || !saveButton) throw new Error('Station name field or Save button was not found.');
+03698: 
+03699:             const actualBefore = String(nameInput.value || '').trim();
+03700:             proposedName = buildStationName(formattedArea, station.suffix, actualBefore);
+03701:             setStationUiValue('before', actualBefore || station.displayName);
+03702:             setStationUiValue('after', proposedName);
+03703: 
+03704:             if (actualBefore === proposedName) {
+03705:                 stationLog(`Already correct: ${proposedName}`, 'info');
+03706:                 setStationUiValue('status', 'Already correct');
+03707:                 return 'skipped';
+03708:             }
+03709: 
+03710:             if (STATION_STATE.stopped) return 'skipped';
+03711:             await waitIfStationNamingPaused();
+03712: 
+03713:             nameInput.focus();
+03714:             nameInput.value = proposedName;
+03715:             nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+03716:             nameInput.dispatchEvent(new Event('change', { bubbles: true }));
+03717: 
+03718:             stationLog(`EDIT BEFORE: ${actualBefore}`, 'before');
+03719:             stationLog(`EDIT AFTER : ${proposedName}`, 'after');
+03720:             setStationUiValue('status', 'Saving station');
+03721: 
+03722:             saveButton.click();
+03723: 
+03724:             const saved = await verifyStationNameSaved(station.href, proposedName);
+03725:             if (!saved) throw new Error('Save could not be verified. The script did not count this station as renamed.');
+03726: 
+03727:             station.displayName = proposedName;
+03728:             updateStationListName(station.href, proposedName);
+03729:             setStationUiValue('status', 'Saved');
+03730:             stationLog(`Saved and verified: ${proposedName}`, 'done');
+03731:             return 'renamed';
+03732:         } catch (error) {
+03733:             stationLog(`Skipped ${station.displayName}: ${error?.message || error}`, 'error');
+03734:             stationDebug(error?.stack || String(error));
+03735:             return 'skipped';
+03736:         } finally {
+03737:             await closeStationNamingModal();
+03738:             STATION_STATE.activeIframe = null;
+03739:         }
+03740:     }

@@ -1,0 +1,91 @@
+06517:     function sortPersonnelVehiclesForStationTarget(
+06518:         vehicles,
+06519:         personnel,
+06520:         rule
+06521:     ) {
+06522:         return (
+06523:             Array.isArray(vehicles)
+06524:                 ? vehicles.slice()
+06525:                 : []
+06526:         ).sort((left, right) => {
+06527:             const getState = vehicle => {
+06528:                 const assigned =
+06529:                     getPersonnelAssignedToVehicle(
+06530:                         personnel,
+06531:                         vehicle
+06532:                     );
+06533: 
+06534:                 const qualified =
+06535:                     assigned.filter(
+06536:                         person =>
+06537:                             personnelMatchesRule(
+06538:                                 person,
+06539:                                 rule
+06540:                             )
+06541:                     ).length;
+06542: 
+06543:                 const total = assigned.length;
+06544:                 const capacity =
+06545:                     Math.max(
+06546:                         rule.target,
+06547:                         Number(vehicle.maxCount)
+06548:                         || rule.target
+06549:                     );
+06550: 
+06551:                 return {
+06552:                     covered:
+06553:                         qualified >= rule.target,
+06554:                     qualified,
+06555:                     total,
+06556:                     seatsAvailable:
+06557:                         Math.max(
+06558:                             0,
+06559:                             capacity - total
+06560:                         )
+06561:                 };
+06562:             };
+06563: 
+06564:             const leftState = getState(left);
+06565:             const rightState = getState(right);
+06566: 
+06567:             const leftRank =
+06568:                 leftState.covered
+06569:                     ? 0
+06570:                     : leftState.seatsAvailable > 0
+06571:                         ? 1
+06572:                         : 2;
+06573: 
+06574:             const rightRank =
+06575:                 rightState.covered
+06576:                     ? 0
+06577:                     : rightState.seatsAvailable > 0
+06578:                         ? 1
+06579:                         : 2;
+06580: 
+06581:             if (leftRank !== rightRank) {
+06582:                 return leftRank - rightRank;
+06583:             }
+06584: 
+06585:             if (
+06586:                 leftState.qualified
+06587:                 !== rightState.qualified
+06588:             ) {
+06589:                 return (
+06590:                     rightState.qualified
+06591:                     - leftState.qualified
+06592:                 );
+06593:             }
+06594: 
+06595:             if (leftState.total !== rightState.total) {
+06596:                 return leftState.total - rightState.total;
+06597:             }
+06598: 
+06599:             return String(
+06600:                 left.name || ''
+06601:             ).localeCompare(
+06602:                 String(right.name || ''),
+06603:                 'en-GB',
+06604:                 { numeric: true }
+06605:             );
+06606:         });
+06607:     }

@@ -1,0 +1,5 @@
+02740:     function normalisePersonnelUnitsRequired(value) {
+02741:         const parsed = Number.parseInt(String(value ?? '').trim(), 10);
+02742:         if (!Number.isFinite(parsed) || parsed < 0) return 0;
+02743:         return Math.min(9999, parsed);
+02744:     }

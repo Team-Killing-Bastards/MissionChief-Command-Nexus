@@ -1,0 +1,4 @@
+01155:     function isGenericStationActionText(value) {
+01156:         return /^(?:details?|open|show|view|edit|move|vehicles?|personnel|education|extensions?)$/i
+01157:             .test(cleanText(value));
+01158:     }

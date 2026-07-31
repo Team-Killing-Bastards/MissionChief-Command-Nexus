@@ -1,0 +1,12 @@
+03056:     function handlePersonnelServiceChange() {
+03057:         if (PERSONNEL_STATE.running) {
+03058:             personnelLog('Stop Personnel Assignment before changing Service.', 'error');
+03059:             const select = document.querySelector('#mc-personnel-service');
+03060:             if (select) select.value = PERSONNEL_STATE.service;
+03061:             return;
+03062:         }
+03063: 
+03064:         PERSONNEL_STATE.service = document.querySelector('#mc-personnel-service')?.value || 'medical';
+03065:         populatePersonnelProfileSelect('');
+03066:         updatePersonnelProfileUi(true);
+03067:     }

@@ -1,0 +1,31 @@
+25439:     function getSupportedTrainedPersonnelRequirementsFromText(
+25440:         text
+25441:     ) {
+25442:         const input =
+25443:             String(
+25444:                 text ||
+25445:                 ''
+25446:             )
+25447:                 .replace(
+25448:                     /[×✕]/g,
+25449:                     'x'
+25450:                 )
+25451:                 .replace(
+25452:                     /\s+/g,
+25453:                     ' '
+25454:                 )
+25455:                 .trim();
+25456: 
+25457:         if (
+25458:             !input ||
+25459:             !/Missing\s+Personnel:/i.test(
+25460:                 input
+25461:             )
+25462:         ) {
+25463:             return [];
+25464:         }
+25465: 
+25466:         return getTrainedPersonnelRequirementsFromFreeText(
+25467:             input
+25468:         );
+25469:     }

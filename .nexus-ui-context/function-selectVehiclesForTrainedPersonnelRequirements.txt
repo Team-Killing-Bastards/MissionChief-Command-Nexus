@@ -1,0 +1,254 @@
+28343:     function selectVehiclesForTrainedPersonnelRequirements(
+28344:         requirements,
+28345:         source = 'UPDATE'
+28346:     ) {
+28347:         const registry =
+28348:             readPersonnelTrainingRegistry();
+28349: 
+28350:         const registryVehicleCount =
+28351:             Object.keys(
+28352:                 registry.vehicles ||
+28353:                 {}
+28354:             ).length;
+28355: 
+28356:         const selected =
+28357:             getVehicleCheckboxSnapshot().filter(
+28358:                 checkbox => checkbox.checked
+28359:             );
+28360: 
+28361:         let remaining =
+28362:             getRemainingTrainedPersonnelRequirements(
+28363:                 requirements,
+28364:                 selected,
+28365:                 registry
+28366:             );
+28367: 
+28368:         const initiallyVehicleCovered =
+28369:             remaining.every(requirement => {
+28370:                 return requirement.capacityRemaining <= 0;
+28371:             });
+28372: 
+28373:         const initiallyTrainingCovered =
+28374:             remaining.every(requirement => {
+28375:                 return requirement.remaining <= 0;
+28376:             });
+28377: 
+28378:         // Do not return merely because nominal seats are covered. If a course
+28379:         // deficit remains, continue through the ready trained pool so a second
+28380:         // PSU/IRV can replace a false shortfall with real qualified coverage.
+28381:         if (
+28382:             initiallyVehicleCovered &&
+28383:             initiallyTrainingCovered
+28384:         ) {
+28385:             return {
+28386:                 satisfied:
+28387:                     true,
+28388:                 vehicleCoverageSatisfied:
+28389:                     true,
+28390:                 trainingSatisfied:
+28391:                     true,
+28392:                 selectedVehicles:
+28393:                     0,
+28394:                 trainedVehicles:
+28395:                     0,
+28396:                 fallbackVehicles:
+28397:                     0,
+28398:                 selectedVehicleCount:
+28399:                     countSelectedTrainingVehicles(
+28400:                         requirements,
+28401:                         registry
+28402:                     ),
+28403:                 remaining,
+28404:                 trainingRemaining:
+28405:                     remaining,
+28406:                 capacityRemaining:
+28407:                     remaining,
+28408:                 registryVehicleCount
+28409:             };
+28410:         }
+28411: 
+28412:         const readyCandidates =
+28413:             sortVehicleCheckboxesByBestArrival(
+28414:                 getVehicleCheckboxSnapshot().filter(checkbox => {
+28415:                     if (
+28416:                         checkbox.disabled ||
+28417:                         checkbox.checked
+28418:                     ) {
+28419:                         return false;
+28420:                     }
+28421: 
+28422:                     const registryMatch =
+28423:                         getRegistryEntryForMissionCheckbox(
+28424:                             checkbox,
+28425:                             registry
+28426:                         );
+28427: 
+28428:                     return (
+28429:                         Array.isArray(requirements)
+28430:                             ? requirements
+28431:                             : []
+28432:                     ).some(requirement => {
+28433:                         return isCheckboxEligibleForTrainingRequirement(
+28434:                             checkbox,
+28435:                             requirement,
+28436:                             registryMatch.entry
+28437:                         );
+28438:                     });
+28439:                 })
+28440:             );
+28441: 
+28442:         const arrivalIndex =
+28443:             new Map(
+28444:                 readyCandidates.map((checkbox, index) => [
+28445:                     checkbox,
+28446:                     index
+28447:                 ])
+28448:             );
+28449: 
+28450:         const used = new Set();
+28451:         let selectedVehicles = 0;
+28452:         let trainedVehicles = 0;
+28453:         let fallbackVehicles = 0;
+28454: 
+28455:         const runSelectionPhase = trainedPhase => {
+28456:             const hasRemainingPhaseNeed = () => {
+28457:                 return remaining.some(requirement => {
+28458:                     return trainedPhase
+28459:                         ? requirement.remaining > 0
+28460:                         : requirement.capacityRemaining > 0;
+28461:                 });
+28462:             };
+28463: 
+28464:             while (hasRemainingPhaseNeed()) {
+28465:                 let bestCheckbox = null;
+28466:                 let bestEntry = null;
+28467:                 let bestMetrics = null;
+28468:                 let bestScore =
+28469:                     Number.NEGATIVE_INFINITY;
+28470: 
+28471:                 readyCandidates.forEach(checkbox => {
+28472:                     if (used.has(checkbox)) {
+28473:                         return;
+28474:                     }
+28475: 
+28476:                     const registryMatch =
+28477:                         getRegistryEntryForMissionCheckbox(
+28478:                             checkbox,
+28479:                             registry
+28480:                         );
+28481: 
+28482:                     const metrics =
+28483:                         getTrainedCandidateMetrics(
+28484:                             remaining,
+28485:                             checkbox,
+28486:                             registryMatch.entry
+28487:                         );
+28488: 
+28489:                     const score =
+28490:                         getTrainedVehicleSelectionScore(
+28491:                             metrics,
+28492:                             trainedPhase
+28493:                         );
+28494: 
+28495:                     if (
+28496:                         score > bestScore ||
+28497:                         (
+28498:                             score === bestScore &&
+28499:                             bestCheckbox &&
+28500:                             arrivalIndex.get(checkbox) <
+28501:                                 arrivalIndex.get(bestCheckbox)
+28502:                         )
+28503:                     ) {
+28504:                         bestCheckbox = checkbox;
+28505:                         bestEntry = registryMatch.entry;
+28506:                         bestMetrics = metrics;
+28507:                         bestScore = score;
+28508:                     }
+28509:                 });
+28510: 
+28511:                 if (
+28512:                     !bestCheckbox ||
+28513:                     !bestMetrics?.eligible ||
+28514:                     (
+28515:                         trainedPhase &&
+28516:                         bestMetrics.trainedUseful <= 0
+28517:                     )
+28518:                 ) {
+28519:                     break;
+28520:                 }
+28521: 
+28522:                 used.add(bestCheckbox);
+28523: 
+28524:                 if (!clickVehicleElement(bestCheckbox)) {
+28525:                     continue;
+28526:                 }
+28527: 
+28528:                 selectedVehicles += 1;
+28529: 
+28530:                 if (bestMetrics.trainedUseful > 0) {
+28531:                     trainedVehicles += 1;
+28532:                 } else {
+28533:                     fallbackVehicles += 1;
+28534:                 }
+28535: 
+28536:                 remaining =
+28537:                     applyTrainingCandidateToRemaining(
+28538:                         remaining,
+28539:                         bestCheckbox,
+28540:                         bestEntry
+28541:                     );
+28542: 
+28543:                 if (mfDebugEnabled) {
+28544:                     debugLog(
+28545:                         trainedPhase
+28546:                             ? 'TRAINED COVERAGE CLICK'
+28547:                             : 'TRAINING FALLBACK CLICK',
+28548:                         `${source} | ${getVehicleDebugName(bestCheckbox)} | ` +
+28549:                         `trained=${bestMetrics.trainedUseful} | ` +
+28550:                         `capacity=${bestMetrics.capacityUseful} | ` +
+28551:                         `overshoot=${bestMetrics.overshoot} | ` +
+28552:                         `training remaining=${remaining.map(item => `${item.label}:${item.remaining}`).join(', ')} | ` +
+28553:                         `capacity remaining=${remaining.map(item => `${item.label}:${item.capacityRemaining}`).join(', ')}`
+28554:                     );
+28555:                 }
+28556:             }
+28557:         };
+28558: 
+28559:         // Phase one chooses the best available trained coverage. Phase two is
+28560:         // deliberately allowed to select correct-type vehicles with no verified
+28561:         // training so the mission can still be sent; the training deficit is
+28562:         // returned separately and never hidden.
+28563:         runSelectionPhase(true);
+28564:         runSelectionPhase(false);
+28565: 
+28566:         const vehicleCoverageSatisfied =
+28567:             remaining.every(requirement => {
+28568:                 return requirement.capacityRemaining <= 0;
+28569:             });
+28570: 
+28571:         const trainingSatisfied =
+28572:             remaining.every(requirement => {
+28573:                 return requirement.remaining <= 0;
+28574:             });
+28575: 
+28576:         return {
+28577:             satisfied:
+28578:                 vehicleCoverageSatisfied,
+28579:             vehicleCoverageSatisfied,
+28580:             trainingSatisfied,
+28581:             selectedVehicles,
+28582:             trainedVehicles,
+28583:             fallbackVehicles,
+28584:             selectedVehicleCount:
+28585:                 countSelectedTrainingVehicles(
+28586:                     requirements,
+28587:                     registry
+28588:                 ),
+28589:             remaining,
+28590:             trainingRemaining:
+28591:                 remaining,
+28592:             capacityRemaining:
+28593:                 remaining,
+28594:             registryVehicleCount
+28595:         };
+28596:     }

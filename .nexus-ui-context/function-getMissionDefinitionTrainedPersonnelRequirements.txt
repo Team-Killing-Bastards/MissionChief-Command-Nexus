@@ -1,0 +1,21 @@
+25416:     function getMissionDefinitionTrainedPersonnelRequirements(
+25417:         requirementName,
+25418:         personnelText
+25419:     ) {
+25420:         const cleanedName =
+25421:             cleanRequirementName(
+25422:                 requirementName
+25423:             );
+25424: 
+25425:         if (
+25426:             !/^Personnel(?:\s+Requirements?)?$/i.test(
+25427:                 cleanedName
+25428:             )
+25429:         ) {
+25430:             return [];
+25431:         }
+25432: 
+25433:         return getTrainedPersonnelRequirementsFromFreeText(
+25434:             personnelText
+25435:         );
+25436:     }

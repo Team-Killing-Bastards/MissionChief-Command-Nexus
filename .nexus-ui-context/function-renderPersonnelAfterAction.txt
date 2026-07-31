@@ -1,0 +1,5 @@
+08297:     function renderPersonnelAfterAction(report) {
+08298:         PERSONNEL_STATE.lastStationReport = report || null;
+08299:         PERSONNEL_STATE.currentStationReport = buildStationAfterActionText(report);
+08300:         renderPersonnelAfterActionText(PERSONNEL_STATE.currentStationReport);
+08301:     }

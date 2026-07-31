@@ -1,0 +1,33 @@
+39243:     function getInlinePersonnelQualificationAlertText() {
+39244:         const scopes = getCurrentMissionAlertScopes();
+39245: 
+39246:         if (!scopes.length) return '';
+39247: 
+39248:         const alerts = [];
+39249: 
+39250:         scopes.forEach(scope => {
+39251:             scope.querySelectorAll('.alert-danger, div[id^="alert_danger_"]').forEach(alert => {
+39252:                 if (!alerts.includes(alert)) alerts.push(alert);
+39253:             });
+39254:         });
+39255: 
+39256:         for (const alert of alerts) {
+39257:             const text = (alert.innerText || alert.textContent || '').replace(/\s+/g, ' ').trim();
+39258: 
+39259:             if (!text) continue;
+39260: 
+39261:             const lower = text.toLowerCase();
+39262: 
+39263:             if (lower.includes('has not enough personal') ||
+39264:                 lower.includes('not enough personal') ||
+39265:                 lower.includes('has not enough personnel') ||
+39266:                 lower.includes('not enough personnel') ||
+39267:                 lower.includes("doesn't have the right qualification") ||
+39268:                 lower.includes('does not have the right qualification') ||
+39269:                 lower.includes('right qualification')) {
+39270:                 return text;
+39271:             }
+39272:         }
+39273: 
+39274:         return '';
+39275:     }

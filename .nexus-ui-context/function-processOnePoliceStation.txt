@@ -1,0 +1,557 @@
+06675:     async function processOnePoliceStation(station, profile) {
+06676:         const stationPage = await personnelFetchDocument(station.href, 14000);
+06677:         const rules = Array.isArray(profile.rules) ? profile.rules : [];
+06678:         const targetTypeIds = [...new Set(rules.flatMap(rule => rule.vehicleTypeIds))];
+06679:         const allVehicles = getPersonnelVehicleQueue(stationPage.doc, targetTypeIds);
+06680: 
+06681:         if (!allVehicles.length) {
+06682:             personnelLog('No vehicles mapped to the selected Police profile were found at this station.', 'debug');
+06683:             return {
+06684:                 stationName: station.displayName,
+06685:                 stationHref: station.href,
+06686:                 profileLabel: profile.label,
+06687:                 noTargetVehicles: true,
+06688:                 vehicleCount: 0,
+06689:                 ambulances: 0,
+06690:                 required: 0,
+06691:                 trained: 0,
+06692:                 availableAtScan: 0,
+06693:                 availableAtEnd: 0,
+06694:                 initialQualifiedFilled: 0,
+06695:                 finalQualifiedFilled: 0,
+06696:                 initialCriticalFilled: 0,
+06697:                 finalCriticalFilled: 0,
+06698:                 trainingShortfall: 0,
+06699:                 assignmentShortfall: 0,
+06700:                 planned: 0,
+06701:                 assigned: 0,
+06702:                 fulfilledUnits: 0,
+06703:                 vehiclesChecked: 0,
+06704:                 afterActionVerified: true,
+06705:                 verificationError: '',
+06706:                 rules: [],
+06707:                 vehicles: []
+06708:             };
+06709:         }
+06710: 
+06711:         const baselinePage = await personnelFetchDocument(allVehicles[0].assignmentHref, 14000);
+06712:         const baselineAssignment = parseVehicleAssignmentPage(baselinePage.doc, allVehicles[0].vehicleId);
+06713:         const personnel = baselineAssignment.rows;
+06714: 
+06715:         publishPersonnelVehicleTrainingRegistry({
+06716:             station,
+06717:             vehicles:
+06718:                 allVehicles,
+06719:             personnel,
+06720:             source:
+06721:                 'police-station-scan'
+06722:         });
+06723: 
+06724:         const reservedPersonnelIds = new Set();
+06725:         const claimedVehicleIds = new Set();
+06726:         const vehicleReports = [];
+06727:         const ruleReports = [];
+06728:         let required = 0;
+06729:         let trainingShortfall = 0;
+06730:         const qualificationSlots = [];
+06731:         let stationPlanned = 0;
+06732:         let stationAssigned = 0;
+06733:         let stationAssignmentShortfall = 0;
+06734:         let projectedFulfilledUnits = 0;
+06735: 
+06736:         const stationUnitsNeeded = getPersonnelUnitsRemaining();
+06737:         const stationUnitTargetReached = () =>
+06738:             Number.isFinite(stationUnitsNeeded)
+06739:             && projectedFulfilledUnits >= stationUnitsNeeded;
+06740: 
+06741:         const unionQualified = personnel.filter(person => rules.some(rule => personnelMatchesRule(person, rule)));
+06742:         const availableAtScan = unionQualified.filter(person => person.available).length;
+06743: 
+06744:         personnelLog(`Mapped Police vehicles at station: ${allVehicles.length}`, 'info');
+06745:         personnelLog(`Profile rule groups: ${rules.length} | Qualified personnel visible: ${unionQualified.length}`, 'info');
+06746:         if (Number.isFinite(stationUnitsNeeded)) {
+06747:             personnelLog(`Units still required before this station: ${stationUnitsNeeded}. Only fully covered vehicles count.`, 'info');
+06748:         }
+06749: 
+06750:         for (const rule of rules) {
+06751:             if (PERSONNEL_STATE.stopped || stationUnitTargetReached()) break;
+06752:             await waitIfPersonnelPaused();
+06753:             if (PERSONNEL_STATE.stopped || stationUnitTargetReached()) break;
+06754: 
+06755:             let ruleVehicles = selectPoliceRuleVehicles({
+06756:                 rule,
+06757:                 allVehicles,
+06758:                 personnel,
+06759:                 reservedPersonnelIds,
+06760:                 claimedVehicleIds,
+06761:                 batch: profile.batch === true
+06762:             });
+06763: 
+06764:             if (isPersonnelPerStationTargetMode()) {
+06765:                 ruleVehicles =
+06766:                     sortPersonnelVehiclesForStationTarget(
+06767:                         ruleVehicles,
+06768:                         personnel,
+06769:                         rule
+06770:                     );
+06771:             }
+06772: 
+06773:             if (!ruleVehicles.length) {
+06774:                 personnelDebug(`${rule.label}: no allocated ${rule.vehicleLabel} vehicles at ${station.displayName}.`);
+06775:                 continue;
+06776:             }
+06777: 
+06778:             const ruleTrained = personnel.filter(person => personnelMatchesRule(person, rule)).length;
+06779:             const ruleReport = {
+06780:                 ruleId: rule.id,
+06781:                 label: rule.label,
+06782:                 vehicleLabel: rule.vehicleLabel,
+06783:                 target: rule.target,
+06784:                 trainingLabel: rule.trainingLabel,
+06785:                 vehicleCount: 0,
+06786:                 required: 0,
+06787:                 trained: ruleTrained,
+06788:                 trainingShortfall: 0,
+06789:                 trainingGaps: []
+06790:             };
+06791: 
+06792:             personnelLog(`${rule.label}: ${ruleVehicles.length} available ${rule.vehicleLabel}(s), target ${rule.target} per vehicle.`, 'station');
+06793: 
+06794:             for (let vehicleIndex = 0; vehicleIndex < ruleVehicles.length; vehicleIndex++) {
+06795:                 if (PERSONNEL_STATE.stopped || stationUnitTargetReached()) break;
+06796:                 await waitIfPersonnelPaused();
+06797:                 if (PERSONNEL_STATE.stopped || stationUnitTargetReached()) break;
+06798: 
+06799:                 const vehicle = ruleVehicles[vehicleIndex];
+06800:                 claimedVehicleIds.add(vehicle.vehicleId);
+06801:                 ruleReport.vehicleCount++;
+06802:                 ruleReport.required += rule.target;
+06803:                 required += rule.target;
+06804:                 for (let slotIndex = 0; slotIndex < rule.target; slotIndex++) qualificationSlots.push(rule);
+06805: 
+06806:                 setPersonnelUiValue('vehicle', vehicle.name || vehicle.vehicleId);
+06807:                 setPersonnelUiValue('status', PERSONNEL_STATE.action === 'assign' ? 'Checking Police vehicle' : 'Building Police preview');
+06808:                 personnelLog(`${rule.label} vehicle ${vehicleIndex + 1}/${ruleVehicles.length}: ${vehicle.name}`, 'station');
+06809: 
+06810:                 const baselineAssigned =
+06811:                     getPersonnelAssignedToVehicle(
+06812:                         personnel,
+06813:                         vehicle
+06814:                     );
+06815: 
+06816:                 let beforeTotal =
+06817:                     baselineAssigned.length;
+06818: 
+06819:                 let beforeQualified =
+06820:                     baselineAssigned.filter(
+06821:                         person =>
+06822:                             personnelMatchesRule(
+06823:                                 person,
+06824:                                 rule
+06825:                             )
+06826:                     ).length;
+06827: 
+06828:                 let occupantTrainingGaps =
+06829:                     baselineAssigned
+06830:                         .map(person => {
+06831:                             return {
+06832:                                 name:
+06833:                                     String(
+06834:                                         person.name ||
+06835:                                         person.personnelId ||
+06836:                                         'Assigned person'
+06837:                                     ),
+06838:                                 missingTraining:
+06839:                                     getPersonnelMissingTrainingForRule(
+06840:                                         person,
+06841:                                         rule
+06842:                                     )
+06843:                             };
+06844:                         })
+06845:                         .filter(
+06846:                             entry =>
+06847:                                 entry
+06848:                                     .missingTraining
+06849:                                     .length >
+06850:                                 0
+06851:                         );
+06852: 
+06853:                 const plannedNames = [];
+06854:                 const assignedNames = [];
+06855:                 let liveAssignment = null;
+06856: 
+06857:                 if (PERSONNEL_STATE.action === 'assign' && beforeQualified < rule.target) {
+06858:                     const livePage = await personnelFetchDocument(vehicle.assignmentHref, 14000);
+06859:                     liveAssignment = parseVehicleAssignmentPage(livePage.doc, vehicle.vehicleId);
+06860: 
+06861:                     if (!rule.vehicleTypeIds.includes(liveAssignment.vehicleTypeId)) {
+06862:                         personnelLog(`Skipped unexpected vehicle_type_id=${liveAssignment.vehicleTypeId || 'unknown'} for ${rule.label}.`, 'error');
+06863:                         const unfilled = Math.max(0, rule.target - beforeQualified);
+06864:                         stationAssignmentShortfall += unfilled;
+06865:                         vehicleReports.push({
+06866:                             vehicleId: vehicle.vehicleId,
+06867:                             vehicleTypeId: vehicle.vehicleTypeId,
+06868:                             name: vehicle.name,
+06869:                             ruleId: rule.id,
+06870:                             ruleLabel: rule.label,
+06871:                             trainingLabel: rule.trainingLabel,
+06872:                             target: rule.target,
+06873:                             beforeQualified,
+06874:                             beforeCritical: beforeQualified,
+06875:                             beforeTotal,
+06876:                             afterQualified: beforeQualified,
+06877:                             afterCritical: beforeQualified,
+06878:                             afterTotal: beforeTotal,
+06879:                             finalQualified: beforeQualified,
+06880:                             finalCritical: beforeQualified,
+06881:                             finalTotal: beforeTotal,
+06882:                             plannedNames,
+06883:                             assignedNames,
+06884:                             unfilled,
+06885:                             occupiedSeatBlock: 0,
+06886:                             verificationStatus: 'skipped'
+06887:                         });
+06888:                         continue;
+06889:                     }
+06890: 
+06891:                     beforeTotal = liveAssignment.totalAssigned.length;
+06892:                     beforeQualified = liveAssignment.totalAssigned.filter(person => personnelMatchesRule(person, rule)).length;
+06893:                 }
+06894: 
+06895:                 if (beforeQualified >= rule.target) {
+06896:                     personnelLog(`Already covered: ${beforeQualified}/${rule.target} ${rule.trainingLabel}.`, 'done');
+06897:                 } else {
+06898:                     const seatCapacity = Math.max(rule.target, Number(vehicle.maxCount) || rule.target);
+06899:                     const seatsAvailable = Math.max(0, seatCapacity - beforeTotal);
+06900:                     const targetGap = Math.max(0, rule.target - beforeQualified);
+06901:                     const attemptCount = Math.min(targetGap, seatsAvailable);
+06902: 
+06903:                     if (!attemptCount && targetGap) {
+06904:                         personnelLog(`Cannot top up safely: ${beforeTotal}/${seatCapacity} seats are occupied and ${targetGap} qualified position(s) remain. Existing staff were preserved.`, 'error');
+06905:                     }
+06906: 
+06907:                     const sourceRows = PERSONNEL_STATE.action === 'assign' ? (liveAssignment?.rows || []) : personnel;
+06908:                     const candidates = sortPersonnelCandidatesForRule(
+06909:                         sourceRows.filter(person =>
+06910:                             person.available
+06911:                             && !reservedPersonnelIds.has(person.personnelId)
+06912:                             && personnelMatchesRule(person, rule)
+06913:                         ),
+06914:                         rule
+06915:                     ).slice(0, attemptCount);
+06916: 
+06917:                     candidates.forEach(person => reservedPersonnelIds.add(person.personnelId));
+06918: 
+06919:                     if (PERSONNEL_STATE.action === 'preview') {
+06920:                         candidates.forEach(person => plannedNames.push(person.name));
+06921:                         stationPlanned += candidates.length;
+06922:                         if (candidates.length) personnelLog(`Would assign: ${candidates.map(person => person.name).join(', ')}`, 'after');
+06923:                     } else {
+06924:                         const submittedCandidates = [];
+06925:                         for (const candidate of candidates) {
+06926:                             if (PERSONNEL_STATE.stopped) break;
+06927:                             await waitIfPersonnelPaused();
+06928:                             if (PERSONNEL_STATE.stopped) break;
+06929: 
+06930:                             personnelLog(`Assigning ${candidate.name} to ${vehicle.name}...`, 'after');
+06931:                             if (await submitPersonnelAssignment(candidate)) {
+06932:                                 submittedCandidates.push(candidate);
+06933:                                 personnelLog(`Assignment submitted: ${candidate.name}`, 'info');
+06934:                             } else {
+06935:                                 personnelLog(`Assignment request failed: ${candidate.name}`, 'error');
+06936:                             }
+06937:                         }
+06938: 
+06939:                         if (submittedCandidates.length && !PERSONNEL_STATE.stopped) {
+06940:                             await waitPersonnelDelay(250);
+06941:                             const verificationPage = await personnelFetchDocument(vehicle.assignmentHref, 14000);
+06942:                             const verification = parseVehicleAssignmentPage(verificationPage.doc, vehicle.vehicleId);
+06943: 
+06944:                             publishPersonnelVehicleTrainingRegistry({
+06945:                                 station,
+06946:                                 vehicles:
+06947:                                     allVehicles,
+06948:                                 personnel:
+06949:                                     verification.rows,
+06950:                                 source:
+06951:                                     'police-vehicle-verification'
+06952:                             });
+06953: 
+06954:                             const verifiedIds = new Set(
+06955:                                 verification.rows
+06956:                                     .filter(person => person.assignedHere && personnelMatchesRule(person, rule))
+06957:                                     .map(person => person.personnelId)
+06958:                             );
+06959: 
+06960:                             submittedCandidates.forEach(candidate => {
+06961:                                 if (verifiedIds.has(candidate.personnelId)) {
+06962:                                     assignedNames.push(candidate.name);
+06963:                                     stationAssigned++;
+06964:                                     personnelLog(`Assigned and verified: ${candidate.name}`, 'done');
+06965:                                 } else {
+06966:                                     personnelLog(`Assignment could not be verified: ${candidate.name}`, 'error');
+06967:                                 }
+06968:                             });
+06969:                         }
+06970:                     }
+06971:                 }
+06972: 
+06973:                 const addedCount = PERSONNEL_STATE.action === 'preview' ? plannedNames.length : assignedNames.length;
+06974:                 const afterQualified = Math.min(rule.target, beforeQualified + addedCount);
+06975:                 const afterTotal = beforeTotal + addedCount;
+06976:                 const unfilled = Math.max(0, rule.target - afterQualified);
+06977:                 const seatCapacity = Math.max(rule.target, Number(vehicle.maxCount) || rule.target);
+06978:                 const occupiedSeatBlock = Math.max(0, Math.min(rule.target - beforeQualified, Math.max(0, beforeTotal - beforeQualified) - Math.max(0, seatCapacity - rule.target)));
+06979:                 stationAssignmentShortfall += unfilled;
+06980: 
+06981:                 personnelLog(unfilled ? `Unfilled ${rule.trainingLabel} positions: ${unfilled}` : `Coverage complete: ${afterQualified}/${rule.target}`, unfilled ? 'error' : 'done');
+06982: 
+06983:                 vehicleReports.push({
+06984:                     vehicleId: vehicle.vehicleId,
+06985:                     vehicleTypeId: vehicle.vehicleTypeId,
+06986:                     name: vehicle.name,
+06987:                     ruleId: rule.id,
+06988:                     ruleLabel: rule.label,
+06989:                     trainingLabel: rule.trainingLabel,
+06990:                     target: rule.target,
+06991:                     beforeQualified,
+06992:                     beforeCritical: beforeQualified,
+06993:                     beforeTotal,
+06994:                     afterQualified,
+06995:                     afterCritical: afterQualified,
+06996:                     afterTotal,
+06997:                     finalQualified: afterQualified,
+06998:                     finalCritical: afterQualified,
+06999:                     finalTotal: afterTotal,
+07000:                     plannedNames,
+07001:                     assignedNames,
+07002:                     unfilled,
+07003:                     occupiedSeatBlock,
+07004:                     occupantTrainingGaps,
+07005:                     verificationStatus: PERSONNEL_STATE.action === 'preview' ? 'projected' : 'individually-verified'
+07006:                 });
+07007: 
+07008:                 if (unfilled === 0) {
+07009:                     projectedFulfilledUnits++;
+07010:                     personnelLog(
+07011:                         Number.isFinite(stationUnitsNeeded)
+07012:                             ? `Unit target progress at this station: ${projectedFulfilledUnits}/${stationUnitsNeeded}.`
+07013:                             : `Fully covered units at this station: ${projectedFulfilledUnits}.`,
+07014:                         'done'
+07015:                     );
+07016:                 }
+07017:             }
+07018: 
+07019:             if (ruleReport.vehicleCount) {
+07020:                 ruleReport.trainingShortfall =
+07021:                     Math.max(
+07022:                         0,
+07023:                         ruleReport.required -
+07024:                         ruleTrained
+07025:                     );
+07026: 
+07027:                 ruleReport.trainingGaps =
+07028:                     buildPoliceRuleTrainingGapSummary(
+07029:                         personnel,
+07030:                         rule,
+07031:                         ruleReport.required
+07032:                     );
+07033: 
+07034:                 ruleReports.push(
+07035:                     ruleReport
+07036:                 );
+07037:                 if (ruleReport.trainingShortfall) {
+07038:                     personnelLog(
+07039:                         `${rule.label} training shortfall estimate for processed units: ${ruleReport.trainingShortfall}. Missing: ${formatPoliceTrainingGapSummary(ruleReport.trainingGaps)}.`,
+07040:                         'error'
+07041:                     );
+07042:                 }
+07043:             }
+07044:         }
+07045: 
+07046:         let afterActionVerified = PERSONNEL_STATE.action === 'preview';
+07047:         let verificationError = '';
+07048:         let availableAtEnd = Math.max(0, availableAtScan - (PERSONNEL_STATE.action === 'preview' ? stationPlanned : stationAssigned));
+07049: 
+07050:         if (PERSONNEL_STATE.action === 'assign' && !PERSONNEL_STATE.stopped && vehicleReports.length) {
+07051:             setPersonnelUiValue('status', 'Final Police station verification');
+07052:             setPersonnelUiValue('vehicle', 'All mapped Police vehicles');
+07053:             personnelLog('Running final station-wide Police verification...', 'info');
+07054: 
+07055:             try {
+07056:                 await waitPersonnelDelay(900);
+07057:                 const finalPage = await personnelFetchDocument(allVehicles[0].assignmentHref, 14000);
+07058:                 const finalAssignment = parseVehicleAssignmentPage(finalPage.doc, allVehicles[0].vehicleId);
+07059: 
+07060:                 publishPersonnelVehicleTrainingRegistry({
+07061:                     station,
+07062:                     vehicles:
+07063:                         allVehicles,
+07064:                     personnel:
+07065:                         finalAssignment.rows,
+07066:                     source:
+07067:                         'police-final-verification'
+07068:                 });
+07069: 
+07070:                 availableAtEnd = finalAssignment.rows.filter(person => person.available && rules.some(rule => personnelMatchesRule(person, rule))).length;
+07071:                 stationAssignmentShortfall = 0;
+07072: 
+07073:                 vehicleReports.forEach(vehicleReport => {
+07074:                     const rule = rules.find(item => item.id === vehicleReport.ruleId);
+07075:                     const actualAssigned = getPersonnelAssignedToVehicle(finalAssignment.rows, vehicleReport);
+07076:                     const actualQualified = rule ? actualAssigned.filter(person => personnelMatchesRule(person, rule)).length : 0;
+07077:                     vehicleReport.afterQualified = actualQualified;
+07078:                     vehicleReport.afterCritical = actualQualified;
+07079:                     vehicleReport.finalQualified = actualQualified;
+07080:                     vehicleReport.finalCritical = actualQualified;
+07081:                     vehicleReport.afterTotal = actualAssigned.length;
+07082:                     vehicleReport.finalTotal = actualAssigned.length;
+07083:                     vehicleReport.unfilled =
+07084:                         Math.max(
+07085:                             0,
+07086:                             vehicleReport.target -
+07087:                             actualQualified
+07088:                         );
+07089: 
+07090:                     vehicleReport.occupantTrainingGaps =
+07091:                         rule
+07092:                             ? actualAssigned
+07093:                                 .map(person => {
+07094:                                     return {
+07095:                                         name:
+07096:                                             String(
+07097:                                                 person.name ||
+07098:                                                 person.personnelId ||
+07099:                                                 'Assigned person'
+07100:                                             ),
+07101:                                         missingTraining:
+07102:                                             getPersonnelMissingTrainingForRule(
+07103:                                                 person,
+07104:                                                 rule
+07105:                                             )
+07106:                                     };
+07107:                                 })
+07108:                                 .filter(
+07109:                                     entry =>
+07110:                                         entry
+07111:                                             .missingTraining
+07112:                                             .length >
+07113:                                         0
+07114:                                 )
+07115:                             : [];
+07116: 
+07117:                     vehicleReport.verificationStatus = 'final-verified';
+07118:                     stationAssignmentShortfall += vehicleReport.unfilled;
+07119:                 });
+07120: 
+07121:                 afterActionVerified = true;
+07122:                 personnelLog(`Final Police station verification passed. Unfilled positions: ${stationAssignmentShortfall}.`, stationAssignmentShortfall ? 'error' : 'done');
+07123:             } catch (error) {
+07124:                 verificationError = error?.message || String(error);
+07125:                 vehicleReports.forEach(vehicleReport => {
+07126:                     if (vehicleReport.verificationStatus !== 'skipped') vehicleReport.verificationStatus = 'individual-verification-only';
+07127:                 });
+07128:                 personnelLog(`Final Police station verification failed: ${verificationError}`, 'error');
+07129:             }
+07130:         }
+07131: 
+07132:         trainingShortfall = calculatePersonnelQualificationShortfall(personnel, qualificationSlots);
+07133: 
+07134:         let initialQualifiedFilled = vehicleReports.reduce((sum, vehicle) => sum + Number(vehicle.beforeQualified || 0), 0);
+07135:         let finalQualifiedFilled = vehicleReports.reduce((sum, vehicle) => sum + Number(vehicle.afterQualified || 0), 0);
+07136:         let fulfilledUnits = vehicleReports.filter(vehicle => Number(vehicle.unfilled || 0) === 0).length;
+07137: 
+07138:         const stationTarget =
+07139:             isPersonnelPerStationTargetMode()
+07140:                 ? PERSONNEL_STATE.unitsRequired
+07141:                 : 0;
+07142: 
+07143:         if (stationTarget > 0) {
+07144:             fulfilledUnits =
+07145:                 Math.min(
+07146:                     stationTarget,
+07147:                     fulfilledUnits
+07148:                 );
+07149: 
+07150:             if (rules.length === 1) {
+07151:                 const targetPositions =
+07152:                     stationTarget * rules[0].target;
+07153: 
+07154:                 required = targetPositions;
+07155:                 trainingShortfall =
+07156:                     Math.max(
+07157:                         0,
+07158:                         targetPositions - unionQualified.length
+07159:                     );
+07160:                 stationAssignmentShortfall =
+07161:                     Math.max(
+07162:                         0,
+07163:                         (
+07164:                             stationTarget - fulfilledUnits
+07165:                         ) * rules[0].target
+07166:                     );
+07167:                 initialQualifiedFilled =
+07168:                     Math.min(
+07169:                         targetPositions,
+07170:                         initialQualifiedFilled
+07171:                     );
+07172:                 finalQualifiedFilled =
+07173:                     Math.min(
+07174:                         targetPositions,
+07175:                         finalQualifiedFilled
+07176:                     );
+07177:             }
+07178:         }
+07179: 
+07180:         return {
+07181:             stationName: station.displayName,
+07182:             stationHref: station.href,
+07183:             personnelPageHref: baselinePage.href,
+07184:             profileLabel: profile.label,
+07185:             qualificationLabel: profile.batch ? 'Mapped Police qualifications' : (rules[0]?.trainingLabel || profile.label),
+07186:             vehicleCount: vehicleReports.length,
+07187:             ambulances: vehicleReports.length,
+07188:             required,
+07189:             trained: unionQualified.length,
+07190:             availableAtScan,
+07191:             availableAtEnd,
+07192:             initialQualifiedFilled,
+07193:             finalQualifiedFilled,
+07194:             initialCriticalFilled: initialQualifiedFilled,
+07195:             finalCriticalFilled: finalQualifiedFilled,
+07196:             trainingShortfall,
+07197:             assignmentShortfall: stationAssignmentShortfall,
+07198:             planned: stationPlanned,
+07199:             assigned: stationAssigned,
+07200:             fulfilledUnits,
+07201:             stationTarget,
+07202:             stationTargetFulfilled:
+07203:                 stationTarget > 0
+07204:                     ? fulfilledUnits
+07205:                     : 0,
+07206:             stationTargetMet:
+07207:                 stationTarget > 0
+07208:                     ? fulfilledUnits >= stationTarget
+07209:                     : null,
+07210:             stationTargetShortfallUnits:
+07211:                 stationTarget > 0
+07212:                     ? Math.max(
+07213:                         0,
+07214:                         stationTarget - fulfilledUnits
+07215:                     )
+07216:                     : 0,
+07217:             vehiclesChecked: vehicleReports.length,
+07218:             afterActionVerified,
+07219:             verificationError,
+07220:             missingTrainingSummary:
+07221:                 ruleReports
+07222:                     .flatMap(
+07223:                         ruleReport =>
+07224:                             ruleReport
+07225:                                 .trainingGaps ||
+07226:                             []
+07227:                     ),
+07228:             rules: ruleReports,
+07229:             vehicles: vehicleReports
+07230:         };
+07231:     }

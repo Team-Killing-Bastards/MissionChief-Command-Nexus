@@ -1,0 +1,156 @@
+23538:     function extractMissionDefinitionRequiredPersonnelRows(
+23539:         doc,
+23540:         excludedTable = null
+23541:     ) {
+23542:         const rows = [];
+23543:         const rawRows = [];
+23544:         let requiredPersonnelRowFound = false;
+23545: 
+23546:         if (!doc) {
+23547:             return rows;
+23548:         }
+23549: 
+23550:         Array.from(
+23551:             doc.querySelectorAll(
+23552:                 'table tbody tr, table tr'
+23553:             )
+23554:         ).forEach(tr => {
+23555:             if (
+23556:                 excludedTable &&
+23557:                 excludedTable.contains(tr)
+23558:             ) {
+23559:                 return;
+23560:             }
+23561: 
+23562:             const cells = Array.from(
+23563:                 tr.querySelectorAll('td')
+23564:             ).map(td => {
+23565:                 return String(td.textContent || '')
+23566:                     .replace(/\s+/g, ' ')
+23567:                     .trim();
+23568:             });
+23569: 
+23570:             if (cells.length < 2) return;
+23571: 
+23572:             const rawRequirementName = cells[0];
+23573:             const cleanedName =
+23574:                 cleanRequirementName(
+23575:                     rawRequirementName
+23576:                 );
+23577: 
+23578:             // This exact gate accepts Required Personnel (including a
+23579:             // percentage suffix normalised by cleanRequirementName) while
+23580:             // rejecting the Reward and Precondition row Required Personnel
+23581:             // Available.
+23582:             if (
+23583:                 !/^Personnel(?:\s+Requirements?)?$/i.test(
+23584:                     cleanedName
+23585:                 )
+23586:             ) {
+23587:                 return;
+23588:             }
+23589: 
+23590:             requiredPersonnelRowFound = true;
+23591: 
+23592:             const amountText = String(cells[1] || '')
+23593:                 .replace(/\s+/g, ' ')
+23594:                 .trim();
+23595: 
+23596:             rawRows.push({
+23597:                 label: rawRequirementName,
+23598:                 value: amountText
+23599:             });
+23600: 
+23601:             const trainedRequirements =
+23602:                 getMissionDefinitionTrainedPersonnelRequirements(
+23603:                     rawRequirementName,
+23604:                     amountText
+23605:                 );
+23606:             const sarRequirements =
+23607:                 getMissionDefinitionSarPersonnelVehicleRequirements(
+23608:                     rawRequirementName,
+23609:                     amountText
+23610:                 );
+23611: 
+23612:             if (trainedRequirements.length > 0) {
+23613:                 rows.push({
+23614:                     unitName:
+23615:                         MF_TRAINED_PERSONNEL_ROW_NAME,
+23616:                     stillNeeded:
+23617:                         getTrainedPersonnelVehicleTarget(
+23618:                             trainedRequirements
+23619:                         ),
+23620:                     isTrainedPersonnelRequirement:
+23621:                         true,
+23622:                     personnelTrainingRequirements:
+23623:                         trainedRequirements,
+23624:                     missionDefinitionRequiredPersonnel:
+23625:                         true,
+23626:                     source:
+23627:                         'mission-definition-required-personnel'
+23628:                 });
+23629:             }
+23630: 
+23631:             sarRequirements.forEach(conversion => {
+23632:                 rows.push({
+23633:                     unitName:
+23634:                         conversion.unitName,
+23635:                     stillNeeded:
+23636:                         conversion.stillNeeded,
+23637:                     personnelRequirement:
+23638:                         conversion.personnelRequirement,
+23639:                     missionDefinitionRequiredPersonnel:
+23640:                         true,
+23641:                     source:
+23642:                         'mission-definition-required-personnel'
+23643:                 });
+23644:             });
+23645: 
+23646:             if (
+23647:                 mfDebugEnabled &&
+23648:                 (
+23649:                     trainedRequirements.length > 0 ||
+23650:                     sarRequirements.length > 0
+23651:                 )
+23652:             ) {
+23653:                 const parts = [];
+23654: 
+23655:                 if (trainedRequirements.length > 0) {
+23656:                     parts.push(
+23657:                         formatTrainedPersonnelRequirements(
+23658:                             trainedRequirements
+23659:                         )
+23660:                     );
+23661:                 }
+23662: 
+23663:                 sarRequirements.forEach(conversion => {
+23664:                     parts.push(
+23665:                         `${conversion.personnelRequirement} -> ${conversion.unitName} x${conversion.stillNeeded}`
+23666:                     );
+23667:                 });
+23668: 
+23669:                 debugLog(
+23670:                     'UNIT FINDER OTHER INFORMATION REQUIRED PERSONNEL',
+23671:                     parts.join(' | ')
+23672:                 );
+23673:             }
+23674:         });
+23675: 
+23676:         try {
+23677:             Object.defineProperties(
+23678:                 rows,
+23679:                 {
+23680:                     missionDefinitionRequiredPersonnelFound: {
+23681:                         value: requiredPersonnelRowFound,
+23682:                         enumerable: false
+23683:                     },
+23684:                     rawMissionDefinitionRequiredPersonnelRows: {
+23685:                         value: rawRows,
+23686:                         enumerable: false
+23687:                     }
+23688:                 }
+23689:             );
+23690:         } catch (_error) {}
+23691: 
+23692:         return rows;
+23693:     }

@@ -1,0 +1,21 @@
+03034:     function populatePersonnelProfileSelect(preferredProfileId = '') {
+03035:         const select = document.querySelector('#mc-personnel-profile');
+03036:         if (!select) return;
+03037: 
+03038:         const service = getPersonnelServiceDefinition();
+03039:         select.innerHTML = '';
+03040: 
+03041:         service.profiles.forEach(profile => {
+03042:             const option = document.createElement('option');
+03043:             option.value = profile.id;
+03044:             option.textContent = `${profile.label}${profile.live ? ' — LIVE' : ' — UI preview'}`;
+03045:             select.appendChild(option);
+03046:         });
+03047: 
+03048:         const validPreferred = service.profiles.some(profile => profile.id === preferredProfileId)
+03049:             ? preferredProfileId
+03050:             : service.profiles[0]?.id || '';
+03051: 
+03052:         PERSONNEL_STATE.profile = validPreferred;
+03053:         select.value = validPreferred;
+03054:     }

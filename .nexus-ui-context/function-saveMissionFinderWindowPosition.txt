@@ -1,0 +1,25 @@
+18166:     function saveMissionFinderWindowPosition(panel, reason) {
+18167:         if (
+18168:             !panel
+18169:             || !mfKeepPanelPosition
+18170:             || isMissionFinderIosSafariWebsite()
+18171:         ) return;
+18172: 
+18173:         keepMissionFinderWindowOnScreen(panel);
+18174: 
+18175:         const left = panel.style.left ||
+18176:             `${Math.round(panel.getBoundingClientRect().left)}px`;
+18177: 
+18178:         const top = panel.style.top ||
+18179:             `${Math.round(panel.getBoundingClientRect().top)}px`;
+18180: 
+18181:         localStorage.setItem(MF_PANEL_LEFT_KEY, left);
+18182:         localStorage.setItem(MF_PANEL_TOP_KEY, top);
+18183: 
+18184:         if (mfDebugEnabled) {
+18185:             debugLog(
+18186:                 'CONTROL WINDOW',
+18187:                 `Saved position | reason=${reason || 'unknown'} | left=${left} | top=${top}`
+18188:             );
+18189:         }
+18190:     }

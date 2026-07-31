@@ -1,0 +1,8 @@
+25261:     function isArmedResponsePersonnelRequirementName(value) {
+25262:         const cleaned = String(value || '')
+25263:             .replace(/\s+/g, ' ')
+25264:             .trim();
+25265: 
+25266:         return /^(?:Required\s+)?Armed(?:\s+Response)?\s+Personnel(?:\s*\(\s*In\s+Armed\s+Vehicles\s*\))?$/i
+25267:             .test(cleaned);
+25268:     }

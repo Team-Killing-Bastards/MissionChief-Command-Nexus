@@ -1,0 +1,9 @@
+04424:     function updatePersonnelSelectionPreview() {
+04425:         const selectedHref = document.querySelector('#mc-personnel-startfrom')?.value || '';
+04426:         const station = PERSONNEL_STATE.filteredStations.find(item => item.href === selectedHref);
+04427: 
+04428:         PERSONNEL_STATE.selectedHref = selectedHref;
+04429:         setPersonnelUiValue('current', station?.displayName || 'None');
+04430:         setPersonnelUiValue('vehicle', 'None');
+04431:         personnelDebug(`Selected station: ${station?.displayName || 'none'} | href=${selectedHref}`);
+04432:     }

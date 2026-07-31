@@ -1,0 +1,14 @@
+07776:     function parsePersonnelVehicleOccupancy(row) {
+07777:         const text = String(row?.textContent || '');
+07778:         const matches = [...text.matchAll(/\(\s*(\d+)\s*\/\s*(\d+)\s*\)/g)];
+07779:         const match = matches.at(-1);
+07780: 
+07781:         if (!match) {
+07782:             return { assignedCount: null, maxCount: null };
+07783:         }
+07784: 
+07785:         return {
+07786:             assignedCount: Number(match[1]),
+07787:             maxCount: Number(match[2])
+07788:         };
+07789:     }

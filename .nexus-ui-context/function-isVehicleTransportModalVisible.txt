@@ -1,0 +1,26 @@
+39839:     function isVehicleTransportModalVisible() {
+39840:         if (mfFindAnyVisibleApproachButtonDeep()) return true;
+39841: 
+39842:         const modal = document.querySelector('.vm--modal');
+39843:         if (!modal || !isElementVisible(modal)) return false;
+39844: 
+39845:         const modalText = (modal.innerText || '').replace(/\s+/g, ' ').trim().toLowerCase();
+39846: 
+39847:         return (
+39848:             !!modal.querySelector('.vehicle-window, .redesign-wrapper[type="vehicle"]') ||
+39849:             modalText.includes('approach') ||
+39850:             modalText.includes('prisoner') ||
+39851:             modalText.includes('police cell') ||
+39852:             modalText.includes('cell') ||
+39853:             modalText.includes('custody')
+39854:         ) && (
+39855:             modalText.includes('patient / prisoner handoff') ||
+39856:             modalText.includes('hospital') ||
+39857:             modalText.includes('free beds') ||
+39858:             modalText.includes('approach') ||
+39859:             modalText.includes('prisoner') ||
+39860:             modalText.includes('police cell') ||
+39861:             modalText.includes('cell') ||
+39862:             modalText.includes('custody')
+39863:         );
+39864:     }

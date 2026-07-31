@@ -1,0 +1,19 @@
+01355:     async function openStationWorkflowIframe(entry, purpose, waitForIframe) {
+01356:         if (!entry?.link?.isConnected) return null;
+01357: 
+01358:         if (isIosSafariWebsite() && !entry.link.classList.contains('lightbox-open')) {
+01359:             const managed = createManagedStationIframe(entry.href, purpose);
+01360:             return managed ? await waitForIframe(entry.href, managed) : null;
+01361:         }
+01362: 
+01363:         activateStationOverviewEntry(entry);
+01364:         const normal = await waitForIframe(entry.href, null, 24);
+01365:         if (normal || !isIosSafariWebsite()) return normal;
+01366: 
+01367:         // Safari can render a responsive Details link while MissionChief's
+01368:         // lightbox binding is unavailable. Fall back to a same-origin managed
+01369:         // iframe so naming and personnel-safe station reads still work without
+01370:         // navigating away from the Stations tab.
+01371:         const managed = createManagedStationIframe(entry.href, purpose);
+01372:         return managed ? await waitForIframe(entry.href, managed) : null;
+01373:     }

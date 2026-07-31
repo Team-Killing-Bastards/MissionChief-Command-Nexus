@@ -1,0 +1,10 @@
+05971:     function dispatchPersonnelTrainingRegistryUpdate(eventDetail) {
+05972:         if (!eventDetail) return;
+05973: 
+05974:         try {
+05975:             window.dispatchEvent(new CustomEvent(
+05976:                 'mc-personnel-training-registry-updated',
+05977:                 { detail: eventDetail }
+05978:             ));
+05979:         } catch (_eventError) {}
+05980:     }

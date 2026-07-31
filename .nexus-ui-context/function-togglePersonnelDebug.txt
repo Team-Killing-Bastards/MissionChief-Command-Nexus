@@ -1,0 +1,5 @@
+08628:     function togglePersonnelDebug() {
+08629:         PERSONNEL_STATE.debug = !PERSONNEL_STATE.debug;
+08630:         document.querySelector('#mc-personnel-debug').textContent = PERSONNEL_STATE.debug ? 'Debug: ON' : 'Debug: OFF';
+08631:         personnelLog(`Debug ${PERSONNEL_STATE.debug ? 'enabled' : 'disabled'}.`, 'debug');
+08632:     }

@@ -1,0 +1,20 @@
+03522:     function stopStationNamingRun() {
+03523:         if (!STATION_STATE.running) {
+03524:             stationLog('Nothing is currently running.', 'debug');
+03525:             return;
+03526:         }
+03527: 
+03528:         STATION_STATE.stopped = true;
+03529:         STATION_STATE.paused = false;
+03530:         document.querySelector('#mc-station-pause').textContent = 'Pause';
+03531:         setStationUiValue('status', 'Stopping...');
+03532: 
+03533:         for (const controller of STATION_STATE.activeControllers) {
+03534:             try {
+03535:                 controller.abort();
+03536:             } catch (_error) {}
+03537:         }
+03538:         STATION_STATE.activeControllers.clear();
+03539: 
+03540:         stationLog('Stop requested. Active station requests were cancelled and no further station will be saved.', 'error');
+03541:     }

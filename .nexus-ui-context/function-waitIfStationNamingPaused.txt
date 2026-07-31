@@ -1,0 +1,5 @@
+04258:     async function waitIfStationNamingPaused() {
+04259:         while (STATION_STATE.paused && !STATION_STATE.stopped) {
+04260:             await sleep(250);
+04261:         }
+04262:     }

@@ -1,0 +1,52 @@
+04608:     async function importPersonnelTrainingRegistry(file) {
+04609:         if (!file) return;
+04610:         if (PERSONNEL_STATE.running) {
+04611:             window.alert('Finish or stop the active Personnel operation before importing a register.');
+04612:             return;
+04613:         }
+04614:         if (Number(file.size || 0) > PERSONNEL_TRAINING_REGISTRY_IMPORT_MAX_BYTES) {
+04615:             window.alert('Personnel Register import failed: the selected file is larger than 10 MB.');
+04616:             return;
+04617:         }
+04618:         let registry;
+04619:         try {
+04620:             const parsed = JSON.parse(await file.text());
+04621:             if (parsed?.format && parsed.format !== PERSONNEL_TRAINING_REGISTRY_EXPORT_FORMAT) {
+04622:                 throw new Error(`Unsupported export format: ${String(parsed.format).slice(0, 120)}`);
+04623:             }
+04624:             registry = normaliseImportedPersonnelTrainingRegistry(parsed);
+04625:         } catch (error) {
+04626:             personnelLog(`Personnel Register import failed: ${error?.message || error}`, 'error');
+04627:             window.alert(`Personnel Register import failed: ${error?.message || error}`);
+04628:             return;
+04629:         }
+04630:         const importedCount = Object.keys(registry.vehicles).length;
+04631:         if (!importedCount) {
+04632:             window.alert('The selected file contains an empty Personnel Register. Nothing was imported.');
+04633:             return;
+04634:         }
+04635:         const existingCount = getPersonnelTrainingRegistryStats().count;
+04636:         if (!window.confirm(
+04637:             `Import ${importedCount.toLocaleString('en-GB')} vehicle register entries?\n\n` +
+04638:             `This replaces the ${existingCount.toLocaleString('en-GB')} entries currently stored in this browser.`
+04639:         )) return;
+04640:         try {
+04641:             if (PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER != null) {
+04642:                 clearTimeout(PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER);
+04643:                 PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER = null;
+04644:             }
+04645:             localStorage.setItem(PERSONNEL_TRAINING_REGISTRY_STORAGE_KEY, JSON.stringify(registry));
+04646:             PERSONNEL_TRAINING_REGISTRY_CACHE = registry;
+04647:             PERSONNEL_TRAINING_REGISTRY_DIRTY = false;
+04648:             PERSONNEL_TRAINING_REGISTRY_PENDING_EVENT = null;
+04649:         } catch (error) {
+04650:             personnelLog(`Personnel Register import could not be saved: ${error?.message || error}`, 'error');
+04651:             window.alert(`Personnel Register could not be saved: ${error?.message || error}`);
+04652:             return;
+04653:         }
+04654:         dispatchPersonnelTrainingRegistryUpdate({ imported: true, vehicleCount: importedCount, updatedAt: Date.now() });
+04655:         updatePersonnelTrainingRegistryStatus();
+04656:         personnelLog(`Personnel Register imported: ${importedCount} vehicle(s). Existing browser register replaced.`, 'done');
+04657:         setPersonnelUiValue('status', 'Personnel register imported');
+04658:         window.alert(`Personnel Register imported successfully: ${importedCount.toLocaleString('en-GB')} vehicle entries.`);
+04659:     }

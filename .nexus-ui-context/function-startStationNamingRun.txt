@@ -1,0 +1,64 @@
+03445:     function startStationNamingRun() {
+03446:         if (PERSONNEL_STATE.running) {
+03447:             stationLog('Personnel Assignment is currently running. Stop it before starting Station Naming.', 'error');
+03448:             setStationUiValue('status', 'Blocked by Personnel Assignment');
+03449:             return;
+03450:         }
+03451: 
+03452:         if (STATE.running) {
+03453:             stationLog('Unit Naming is currently running. Stop it before starting Station Naming.', 'error');
+03454:             setStationUiValue('status', 'Blocked by Unit Naming');
+03455:             return;
+03456:         }
+03457: 
+03458:         if (STATION_STATE.running) {
+03459:             stationLog('Station Naming is already running.', 'debug');
+03460:             return;
+03461:         }
+03462: 
+03463:         if (!STATION_STATE.filteredStations.length) {
+03464:             stationLog('No matching stations loaded. Press Refresh Stations first.', 'error');
+03465:             setStationUiValue('status', 'Refresh required');
+03466:             return;
+03467:         }
+03468: 
+03469:         const selectedHref = document.querySelector('#mc-station-startfrom')?.value || '';
+03470:         const startIndex = STATION_STATE.filteredStations.findIndex(station => station.href === selectedHref);
+03471: 
+03472:         if (startIndex < 0) {
+03473:             stationLog(`Selected start station not found: ${selectedHref || 'none'}`, 'error');
+03474:             setStationUiValue('status', 'Invalid start station');
+03475:             return;
+03476:         }
+03477: 
+03478:         STATION_STATE.mode = document.querySelector('#mc-station-mode')?.value || 'all';
+03479:         STATION_STATE.action = document.querySelector('#mc-station-action')?.value || 'preview';
+03480:         STATION_STATE.queue = STATION_STATE.mode === 'single'
+03481:             ? [STATION_STATE.filteredStations[startIndex]]
+03482:             : STATION_STATE.filteredStations.slice(startIndex);
+03483:         STATION_STATE.running = true;
+03484:         STATION_STATE.paused = false;
+03485:         STATION_STATE.stopped = false;
+03486:         STATION_STATE.stationIndex = 0;
+03487:         STATION_STATE.renamedCount = 0;
+03488:         STATION_STATE.skippedCount = 0;
+03489:         STATION_STATE.previewedCount = 0;
+03490:         STATION_STATE.activeIframe = null;
+03491: 
+03492:         document.querySelector('#mc-station-pause').textContent = 'Pause';
+03493:         updateStationCounters();
+03494:         setStationUiValue('progress', `0 / ${STATION_STATE.queue.length}`);
+03495:         setStationUiValue('status', STATION_STATE.action === 'save' ? 'Starting rename run' : 'Starting preview');
+03496: 
+03497:         stationLog(`Mode: ${STATION_STATE.mode === 'single' ? 'Selected station only' : 'All matching stations from selected start point'}`, 'info');
+03498:         stationLog(`Action: ${STATION_STATE.action === 'save' ? 'RENAME AND SAVE' : 'PREVIEW ONLY - no names will be saved'}`, STATION_STATE.action === 'save' ? 'after' : 'info');
+03499:         stationLog(`Starting from: ${STATION_STATE.queue[0]?.displayName || 'None'}`, 'info');
+03500: 
+03501:         processStationNamingQueue().catch(error => {
+03502:             stationLog(`Station Naming stopped after an unexpected error: ${error?.message || error}`, 'error');
+03503:             stationDebug(error?.stack || String(error));
+03504:             STATION_STATE.stopped = true;
+03505:             STATION_STATE.running = false;
+03506:             setStationUiValue('status', 'Error');
+03507:         });
+03508:     }

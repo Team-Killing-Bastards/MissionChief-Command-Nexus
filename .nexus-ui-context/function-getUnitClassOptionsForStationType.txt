@@ -1,0 +1,40 @@
+08860:     function getUnitClassOptionsForStationType(stationType) {
+08861:         const selectedStationType = String(stationType || 'ALL');
+08862:         const configuredTypeIds =
+08863:             UNIT_CLASS_TYPE_IDS_BY_STATION_TYPE[selectedStationType];
+08864: 
+08865:         const typeIds =
+08866:             Array.isArray(configuredTypeIds)
+08867:                 ? configuredTypeIds
+08868:                 : Object.keys(TYPE_ID_TO_VEHICLE_TYPE);
+08869: 
+08870:         const byVehicleType = new Map();
+08871: 
+08872:         typeIds.forEach(vehicleTypeId => {
+08873:             const vehicleType =
+08874:                 TYPE_ID_TO_VEHICLE_TYPE[String(vehicleTypeId)] || '';
+08875:             const info = VEHICLE_INFO[vehicleType];
+08876: 
+08877:             if (!vehicleType || !info || byVehicleType.has(vehicleType)) {
+08878:                 return;
+08879:             }
+08880: 
+08881:             byVehicleType.set(vehicleType, {
+08882:                 vehicleType,
+08883:                 vehicleTypeId: String(vehicleTypeId),
+08884:                 label:
+08885:                     `${info.icon ? `${info.icon} ` : ''}${vehicleType} (${info.code})`
+08886:             });
+08887:         });
+08888: 
+08889:         return Array.from(byVehicleType.values()).sort((left, right) => {
+08890:             return left.vehicleType.localeCompare(
+08891:                 right.vehicleType,
+08892:                 'en-GB',
+08893:                 {
+08894:                     numeric: true,
+08895:                     sensitivity: 'base'
+08896:                 }
+08897:             );
+08898:         });
+08899:     }

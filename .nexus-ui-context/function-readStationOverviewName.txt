@@ -1,0 +1,57 @@
+01197:     function readStationOverviewName(link, container, href) {
+01198:         const values = [];
+01199:         const add = value => {
+01200:             const cleaned = cleanText(value);
+01201:             if (!cleaned || isGenericStationActionText(cleaned)) return;
+01202:             if (!values.includes(cleaned)) values.push(cleaned);
+01203:         };
+01204: 
+01205:         add(container?.getAttribute?.('search_attribute'));
+01206:         add(container?.getAttribute?.('data-building-name'));
+01207:         add(container?.dataset?.buildingName);
+01208: 
+01209:         const sameBuildingLinks = container
+01210:             ? [...container.querySelectorAll('a[href]')]
+01211:                 .filter(candidate => normaliseStationOverviewHref(candidate.getAttribute('href')) === href)
+01212:                 .sort((a, b) => scoreStationOverviewLink(b, href) - scoreStationOverviewLink(a, href))
+01213:             : [link];
+01214: 
+01215:         sameBuildingLinks.forEach(candidate => {
+01216:             add(candidate.getAttribute?.('aria-label'));
+01217:             add(candidate.getAttribute?.('title'));
+01218:             add(candidate.textContent);
+01219:         });
+01220: 
+01221:         const nameSelectors = [
+01222:             '[data-building-name]',
+01223:             '.building_list_title',
+01224:             '.building-list-title',
+01225:             '.building_name',
+01226:             '.building-name',
+01227:             '.panel-heading',
+01228:             '.card-title',
+01229:             'h1', 'h2', 'h3', 'h4'
+01230:         ];
+01231: 
+01232:         for (const selector of nameSelectors) {
+01233:             container?.querySelectorAll?.(selector).forEach(node => {
+01234:                 add(node.getAttribute?.('data-building-name'));
+01235:                 add(node.textContent);
+01236:             });
+01237:         }
+01238: 
+01239:         if (!values.length && container) {
+01240:             const clone = container.cloneNode(true);
+01241:             clone.querySelectorAll(
+01242:                 'button, .btn, table, tbody, .vehicle, .vehicle_list, ' +
+01243:                 '[vehicle_id], [data-vehicle-id], a[href*="/vehicles/"]'
+01244:             ).forEach(node => node.remove());
+01245:             String(clone.textContent || '')
+01246:                 .split(/[\r\n]+/)
+01247:                 .map(value => cleanText(value))
+01248:                 .filter(Boolean)
+01249:                 .forEach(add);
+01250:         }
+01251: 
+01252:         return values[0] || `Building ${getBuildingIdFromHref(href) || ''}`.trim();
+01253:     }

@@ -1,0 +1,12 @@
+08571:     async function copyPersonnelStationReport() {
+08572:         if (!PERSONNEL_STATE.currentStationReport && PERSONNEL_STATE.lastStationReport) {
+08573:             renderPersonnelAfterAction(PERSONNEL_STATE.lastStationReport);
+08574:         }
+08575: 
+08576:         if (!PERSONNEL_STATE.currentStationReport) {
+08577:             personnelLog('No completed station report is available to copy.', 'error');
+08578:             return;
+08579:         }
+08580: 
+08581:         await copyTextToClipboard(PERSONNEL_STATE.currentStationReport, 'Station after-action report copied to clipboard.');
+08582:     }

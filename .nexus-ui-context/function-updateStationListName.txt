@@ -1,0 +1,25 @@
+04216:     function updateStationListName(href, newName) {
+04217:         const entry = findStationOverviewEntry(href);
+04218:         const link = entry?.link;
+04219:         const container = entry?.container || getStationOverviewContainer(link);
+04220:         if (!link) return;
+04221: 
+04222:         const sameBuildingLinks = container
+04223:             ? [...container.querySelectorAll('a[href]')]
+04224:                 .filter(candidate => normaliseStationOverviewHref(candidate.getAttribute('href')) === entry.href)
+04225:             : [link];
+04226:         const nameLink = sameBuildingLinks.find(candidate => {
+04227:             const label = cleanText(candidate.textContent);
+04228:             return label && !isGenericStationActionText(label);
+04229:         });
+04230:         const nameNode = nameLink || container?.querySelector(
+04231:             '[data-building-name], .building_list_title, .building-list-title, ' +
+04232:             '.building_name, .building-name, .panel-heading, .card-title'
+04233:         );
+04234: 
+04235:         if (nameNode) {
+04236:             nameNode.textContent = newName;
+04237:             nameNode.setAttribute?.('data-building-name', newName);
+04238:         }
+04239:         if (container) container.setAttribute('search_attribute', newName);
+04240:     }

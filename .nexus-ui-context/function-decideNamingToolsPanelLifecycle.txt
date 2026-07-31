@@ -1,0 +1,9 @@
+01432:     function decideNamingToolsPanelLifecycle(
+01433:         iosSafari,
+01434:         stationOverview,
+01435:         hasPanel
+01436:     ) {
+01437:         if (!iosSafari) return hasPanel ? 'dedupe' : 'wait';
+01438:         if (!stationOverview) return hasPanel ? 'hide' : 'wait';
+01439:         return hasPanel ? 'show' : 'create';
+01440:     }

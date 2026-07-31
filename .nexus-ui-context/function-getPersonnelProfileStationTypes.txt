@@ -1,0 +1,4 @@
+04312:     function getPersonnelProfileStationTypes() {
+04313:         const profile = getPersonnelProfileDefinition();
+04314:         return Array.isArray(profile?.stationTypes) ? profile.stationTypes.map(String) : [];
+04315:     }

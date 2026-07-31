@@ -1,0 +1,21 @@
+32742:     function getMissionUpdateTableHeaderTexts(table) {
+32743:         if (!table) return [];
+32744: 
+32745:         try {
+32746:             return Array.from(
+32747:                 table.querySelectorAll('thead th')
+32748:             ).map(header => {
+32749:                 return String(
+32750:                     header.getAttribute?.('title') ||
+32751:                     header.textContent ||
+32752:                     header.innerText ||
+32753:                     ''
+32754:                 )
+32755:                     .replace(/\s+/g, ' ')
+32756:                     .trim()
+32757:                     .toLowerCase();
+32758:             }).filter(Boolean);
+32759:         } catch (_error) {
+32760:             return [];
+32761:         }
+32762:     }

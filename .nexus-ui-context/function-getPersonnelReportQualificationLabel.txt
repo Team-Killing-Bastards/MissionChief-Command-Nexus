@@ -1,0 +1,3 @@
+08179:     function getPersonnelReportQualificationLabel(report) {
+08180:         return report?.qualificationLabel || getPersonnelProfileDefinition()?.label || 'Required qualification';
+08181:     }

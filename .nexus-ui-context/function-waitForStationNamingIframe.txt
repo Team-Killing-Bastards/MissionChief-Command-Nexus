@@ -1,0 +1,30 @@
+04134:     async function waitForStationNamingIframe(stationHref, preferredIframe = null, maximumAttempts = 80) {
+04135:         for (let i = 0; i < maximumAttempts; i++) {
+04136:             if (STATION_STATE.stopped) return null;
+04137: 
+04138:             const candidates = [
+04139:                 preferredIframe,
+04140:                 ...document.querySelectorAll(
+04141:                     'iframe.lightbox_iframe[src^="/buildings/"], ' +
+04142:                     'iframe#lssmv4-redesign-lightbox-iframe, ' +
+04143:                     'iframe.mc-namer-managed-station-iframe'
+04144:                 )
+04145:             ].filter(Boolean);
+04146: 
+04147:             for (const iframe of candidates.reverse()) {
+04148:                 try {
+04149:                     const doc = iframe.contentDocument;
+04150:                     const currentPath = iframe.contentWindow?.location?.pathname || iframe.getAttribute('src') || '';
+04151:                     if (doc && (currentPath.startsWith(stationHref) || doc.querySelector(`a[href="${stationHref}/move"], form[action="${stationHref}"], form[action="${stationHref}/move_do"]`))) {
+04152:                         return iframe;
+04153:                     }
+04154:                 } catch (error) {
+04155:                     stationDebug(`Iframe access retry: ${error?.message || error}`);
+04156:                 }
+04157:             }
+04158: 
+04159:             await sleep(250);
+04160:         }
+04161: 
+04162:         return null;
+04163:     }

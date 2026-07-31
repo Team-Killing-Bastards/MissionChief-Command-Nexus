@@ -1,0 +1,11 @@
+05503:     function togglePersonnelPause() {
+05504:         if (!PERSONNEL_STATE.running) {
+05505:             personnelLog('Nothing is currently running.', 'debug');
+05506:             return;
+05507:         }
+05508: 
+05509:         PERSONNEL_STATE.paused = !PERSONNEL_STATE.paused;
+05510:         document.querySelector('#mc-personnel-pause').textContent = PERSONNEL_STATE.paused ? 'Resume' : 'Pause';
+05511:         setPersonnelUiValue('status', PERSONNEL_STATE.paused ? 'Paused' : 'Running');
+05512:         personnelLog(PERSONNEL_STATE.paused ? 'Paused. The current safe request will finish before waiting.' : 'Resumed.', 'debug');
+05513:     }

@@ -1,0 +1,7 @@
+07722:     async function waitPersonnelDelay(delayMs) {
+07723:         const endAt = Date.now() + Math.max(0, Number(delayMs) || 0);
+07724:         while (Date.now() < endAt) {
+07725:             if (PERSONNEL_STATE.stopped) return;
+07726:             await sleep(Math.min(100, endAt - Date.now()));
+07727:         }
+07728:     }

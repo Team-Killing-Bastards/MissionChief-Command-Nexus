@@ -1,0 +1,25 @@
+27149:     function parseLivePoliceInspectorAssignments(
+27150:         html,
+27151:         currentVehicleId
+27152:     ) {
+27153:         const parsed =
+27154:             parseLivePoliceTrainingAssignments(
+27155:                 html,
+27156:                 currentVehicleId
+27157:             );
+27158: 
+27159:         return {
+27160:             countsByVehicleId: {
+27161:                 [String(currentVehicleId || '')]:
+27162:                     Number(
+27163:                         parsed.trainingCounts
+27164:                             ?.police_inspector ||
+27165:                         0
+27166:                     )
+27167:             },
+27168:             detectedVehicleTypeId:
+27169:                 parsed.detectedVehicleTypeId,
+27170:             document:
+27171:                 parsed.document
+27172:         };
+27173:     }

@@ -1,0 +1,9 @@
+06063:     function getPersonnelAssignedTrainingProfiles(assignedPersonnel) {
+06064:         return (Array.isArray(assignedPersonnel) ? assignedPersonnel : [])
+06065:             .map(person => Array.from(new Set(
+06066:                 (Array.isArray(person?.trainingCodes) ? person.trainingCodes : [])
+06067:                     .map(String)
+06068:                     .filter(Boolean)
+06069:             )).sort())
+06070:             .filter(profile => Array.isArray(profile));
+06071:     }

@@ -1,0 +1,5 @@
+02753:     function getPersonnelUnitsRemaining() {
+02754:         return isPersonnelPerStationTargetMode()
+02755:             ? PERSONNEL_STATE.unitsRequired
+02756:             : Number.POSITIVE_INFINITY;
+02757:     }

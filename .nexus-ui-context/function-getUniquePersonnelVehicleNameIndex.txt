@@ -1,0 +1,17 @@
+07918:     function getUniquePersonnelVehicleNameIndex(vehicles) {
+07919:         const index = new Map();
+07920: 
+07921:         (Array.isArray(vehicles) ? vehicles : []).forEach(vehicle => {
+07922:             const key = normalizePersonnelVehicleName(vehicle?.name || '');
+07923:             if (!key || !vehicle?.vehicleId) return;
+07924: 
+07925:             if (index.has(key)) {
+07926:                 index.set(key, null);
+07927:                 return;
+07928:             }
+07929: 
+07930:             index.set(key, vehicle);
+07931:         });
+07932: 
+07933:         return index;
+07934:     }

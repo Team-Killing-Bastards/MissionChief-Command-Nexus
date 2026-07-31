@@ -1,0 +1,19 @@
+25199:     function isPoliceInspectorPersonnelRequirementName(
+25200:         value
+25201:     ) {
+25202:         const cleaned =
+25203:             String(
+25204:                 value ||
+25205:                 ''
+25206:             )
+25207:                 .replace(
+25208:                     /\s+/g,
+25209:                     ' '
+25210:                 )
+25211:                 .trim();
+25212: 
+25213:         return /^(?:Required\s+)?Police\s+Inspector(?:s)?$/i
+25214:             .test(
+25215:                 cleaned
+25216:             );
+25217:     }

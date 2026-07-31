@@ -1,0 +1,29 @@
+04077:     function extractStationArea(address) {
+04078:         const input = String(address || '').trim();
+04079:         const postcodeRegex = /\b(GIR\s?0AA|(?:[A-PR-UWYZ][0-9][0-9A-HJKPSTUW]?|[A-PR-UWYZ][A-HK-Y][0-9][0-9ABEHMNPRV-Y]?)\s?[0-9][ABD-HJLNP-UW-Z]{2})\b/i;
+04080:         const match = input.match(postcodeRegex);
+04081: 
+04082:         if (!match || match.index == null) {
+04083:             return { postcode: '', afterPostcode: '', area: '' };
+04084:         }
+04085: 
+04086:         const postcode = match[1].toUpperCase().replace(/\s+/g, ' ').trim();
+04087:         const afterPostcode = input
+04088:             .slice(match.index + match[0].length)
+04089:             .replace(/^[\s,;:\-]+/, '')
+04090:             .trim();
+04091: 
+04092:         const parts = afterPostcode
+04093:             .split(',')
+04094:             .map(part => part.trim())
+04095:             .filter(Boolean);
+04096: 
+04097:         const countryOnly = /^(UNITED KINGDOM|UK|SCOTLAND|ENGLAND|WALES|NORTHERN IRELAND)$/i;
+04098:         while (parts.length > 1 && countryOnly.test(parts[parts.length - 1])) parts.pop();
+04099: 
+04100:         return {
+04101:             postcode,
+04102:             afterPostcode,
+04103:             area: parts.at(-1) || afterPostcode
+04104:         };
+04105:     }

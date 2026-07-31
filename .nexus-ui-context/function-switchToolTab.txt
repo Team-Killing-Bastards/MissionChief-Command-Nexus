@@ -1,0 +1,52 @@
+03247:     function switchToolTab(tabName, force = false) {
+03248:         const targetTab = ['unit', 'station', 'personnel'].includes(tabName) ? tabName : 'unit';
+03249:         const unitView = document.querySelector('#mc-unit-view');
+03250:         const stationView = document.querySelector('#mc-station-view');
+03251:         const personnelView = document.querySelector('#mc-personnel-view');
+03252:         const unitTab = document.querySelector('#mc-tab-unit');
+03253:         const stationTab = document.querySelector('#mc-tab-station');
+03254:         const personnelTab = document.querySelector('#mc-tab-personnel');
+03255:         const headerTitle = document.querySelector('#mc-namer-header-title');
+03256: 
+03257:         if (!unitView || !stationView || !personnelView || !unitTab || !stationTab || !personnelTab || !headerTitle) return;
+03258: 
+03259:         if (!force && STATE.running && targetTab !== 'unit') {
+03260:             log('Stop the Unit Naming Tool before switching tabs.', 'error');
+03261:             return;
+03262:         }
+03263: 
+03264:         if (!force && STATION_STATE.running && targetTab !== 'station') {
+03265:             stationLog('Stop the Station Naming Tool before switching tabs.', 'error');
+03266:             return;
+03267:         }
+03268: 
+03269:         if (!force && PERSONNEL_STATE.running && targetTab !== 'personnel') {
+03270:             personnelLog('Stop Personnel Assignment before switching tabs.', 'error');
+03271:             return;
+03272:         }
+03273: 
+03274:         const showUnit = targetTab === 'unit';
+03275:         const showStation = targetTab === 'station';
+03276:         const showPersonnel = targetTab === 'personnel';
+03277: 
+03278:         unitView.style.display = showUnit ? 'block' : 'none';
+03279:         stationView.style.display = showStation ? 'block' : 'none';
+03280:         personnelView.style.display = showPersonnel ? 'block' : 'none';
+03281: 
+03282:         unitTab.classList.toggle('active', showUnit);
+03283:         stationTab.classList.toggle('active', showStation);
+03284:         personnelTab.classList.toggle('active', showPersonnel);
+03285:         unitTab.setAttribute('aria-selected', showUnit ? 'true' : 'false');
+03286:         stationTab.setAttribute('aria-selected', showStation ? 'true' : 'false');
+03287:         personnelTab.setAttribute('aria-selected', showPersonnel ? 'true' : 'false');
+03288: 
+03289:         headerTitle.textContent = showUnit
+03290:             ? `🚒 Unit Naming Tool v${UNIT_VERSION}`
+03291:             : showStation
+03292:                 ? `🏢 Station Naming Tool v${STATION_VERSION}`
+03293:                 : `👥 Personnel Assignment v${PERSONNEL_VERSION}`;
+03294: 
+03295:         try {
+03296:             localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, targetTab);
+03297:         } catch (e) {}
+03298:     }

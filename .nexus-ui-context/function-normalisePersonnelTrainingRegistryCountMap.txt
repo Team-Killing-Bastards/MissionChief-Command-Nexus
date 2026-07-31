@@ -1,0 +1,11 @@
+04484:     function normalisePersonnelTrainingRegistryCountMap(value) {
+04485:         const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+04486:         const result = Object.create(null);
+04487:         Object.entries(source).forEach(([rawKey, rawCount]) => {
+04488:             const key = String(rawKey || '').slice(0, 150);
+04489:             const count = Number(rawCount || 0);
+04490:             if (isUnsafePersonnelTrainingRegistryKey(key) || !Number.isFinite(count) || count < 0) return;
+04491:             result[key] = Math.floor(count);
+04492:         });
+04493:         return result;
+04494:     }

@@ -1,0 +1,6 @@
+02746:     function isPersonnelPerStationTargetMode() {
+02747:         return (
+02748:             PERSONNEL_STATE.mode === 'target'
+02749:             && PERSONNEL_STATE.unitsRequired > 0
+02750:         );
+02751:     }

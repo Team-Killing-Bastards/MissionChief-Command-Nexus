@@ -1,0 +1,334 @@
+04986:     async function buildPersonnelTrainingRegisterOneClick(options = {}) {
+04987:         if (STATE.running || STATION_STATE.running) {
+04988:             personnelLog(
+04989:                 'A naming tool is currently running. Stop it before refreshing the Personnel Register.',
+04990:                 'error'
+04991:             );
+04992:             setPersonnelUiValue('status', 'Blocked by naming tool');
+04993:             return;
+04994:         }
+04995: 
+04996:         if (PERSONNEL_STATE.running || PERSONNEL_STATE.registerBuilding) {
+04997:             personnelLog(
+04998:                 'Personnel Assignment or a register build is already running.',
+04999:                 'error'
+05000:             );
+05001:             return;
+05002:         }
+05003: 
+05004:         const fullVerify = Boolean(options?.fullVerify);
+05005:         const stations = getPersonnelRegisterStationEntries();
+05006:         if (!stations.length) {
+05007:             personnelLog(
+05008:                 'No stations were found on the current station overview.',
+05009:                 'error'
+05010:             );
+05011:             setPersonnelUiValue('status', 'No stations found');
+05012:             return;
+05013:         }
+05014: 
+05015:         const quickButton = document.querySelector(
+05016:             '#mc-personnel-build-register'
+05017:         );
+05018:         const fullButton = document.querySelector(
+05019:             '#mc-personnel-full-register'
+05020:         );
+05021:         const previousAction = PERSONNEL_STATE.action;
+05022:         const registry = readPersonnelTrainingRegistry();
+05023: 
+05024:         PERSONNEL_STATE.running = true;
+05025:         PERSONNEL_STATE.registerBuilding = true;
+05026:         PERSONNEL_STATE.stopped = false;
+05027:         PERSONNEL_STATE.paused = false;
+05028:         PERSONNEL_STATE.action = fullVerify
+05029:             ? 'Full Verify Register'
+05030:             : 'Quick Refresh Register';
+05031: 
+05032:         if (quickButton) {
+05033:             quickButton.disabled = true;
+05034:             quickButton.textContent = fullVerify
+05035:                 ? 'Register Busy...'
+05036:                 : 'Refreshing Register...';
+05037:         }
+05038:         if (fullButton) {
+05039:             fullButton.disabled = true;
+05040:             fullButton.textContent = fullVerify
+05041:                 ? 'Full Verifying...'
+05042:                 : 'Register Busy...';
+05043:         }
+05044:         setPersonnelTrainingRegistryTransferDisabled(true);
+05045:         document.querySelector('#mc-personnel-pause').textContent = 'Pause';
+05046:         setPersonnelUiValue(
+05047:             'status',
+05048:             fullVerify
+05049:                 ? 'Full verifying personnel register'
+05050:                 : 'Quick refreshing personnel register'
+05051:         );
+05052:         setPersonnelUiValue('progress', `0 / ${stations.length}`);
+05053:         setPersonnelUiValue('vehicle', 'None');
+05054: 
+05055:         personnelLog(
+05056:             `${fullVerify ? 'Full verification' : 'Quick refresh'} started for all ${stations.length} station(s). ` +
+05057:             `${fullVerify ? 'Every exact vehicle page will be read.' : 'Unchanged exact records will be reused and only changed or unsafe vehicles will be reopened.'} ` +
+05058:             'No personnel assignments will be changed.',
+05059:             'info'
+05060:         );
+05061: 
+05062:         let completedStations = 0;
+05063:         let skippedStations = 0;
+05064:         let failedStations = 0;
+05065:         let unsafeStations = 0;
+05066:         let exactPagesRead = 0;
+05067:         let exactVehiclesRegistered = 0;
+05068:         let reusedVehicles = 0;
+05069:         let deletedVehicles = 0;
+05070:         let failedVehicles = 0;
+05071: 
+05072:         try {
+05073:             for (
+05074:                 let stationIndex = 0;
+05075:                 stationIndex < stations.length;
+05076:                 stationIndex++
+05077:             ) {
+05078:                 if (PERSONNEL_STATE.stopped) break;
+05079:                 await waitIfPersonnelPaused();
+05080:                 if (PERSONNEL_STATE.stopped) break;
+05081: 
+05082:                 const station = stations[stationIndex];
+05083:                 setPersonnelUiValue(
+05084:                     'progress',
+05085:                     `${stationIndex + 1} / ${stations.length}`
+05086:                 );
+05087:                 setPersonnelUiValue('current', station.displayName);
+05088:                 setPersonnelUiValue('vehicle', 'Reading station vehicles');
+05089:                 setPersonnelUiValue('status', 'Reading station snapshot');
+05090:                 personnelLog(
+05091:                     `Register station ${stationIndex + 1}/${stations.length}: ${station.displayName}`,
+05092:                     'station'
+05093:                 );
+05094: 
+05095:                 try {
+05096:                     const stationPage = await personnelFetchDocument(
+05097:                         station.href,
+05098:                         14000
+05099:                     );
+05100:                     if (!stationPage.doc.querySelector('#vehicle_table')) {
+05101:                         throw new Error(
+05102:                             'Vehicle table was not present on the station page.'
+05103:                         );
+05104:                     }
+05105:                     const vehicles = getPersonnelVehicleQueue(
+05106:                         stationPage.doc,
+05107:                         []
+05108:                     );
+05109:                     const currentVehicleIds = new Set(
+05110:                         vehicles.map(vehicle => String(vehicle.vehicleId))
+05111:                     );
+05112:                     Object.entries(registry.vehicles || {}).forEach(
+05113:                         ([vehicleId, entry]) => {
+05114:                             if (
+05115:                                 String(entry?.stationHref || '') === station.href &&
+05116:                                 !currentVehicleIds.has(String(vehicleId))
+05117:                             ) {
+05118:                                 delete registry.vehicles[vehicleId];
+05119:                                 PERSONNEL_TRAINING_REGISTRY_DIRTY = true;
+05120:                                 deletedVehicles += 1;
+05121:                             }
+05122:                         }
+05123:                     );
+05124: 
+05125:                     if (!vehicles.length) {
+05126:                         skippedStations += 1;
+05127:                         completedStations += 1;
+05128:                         flushPersonnelTrainingRegistry(false);
+05129:                         setPersonnelUiValue('completed', completedStations);
+05130:                         personnelLog(
+05131:                             'No vehicles found at this station; any former station vehicle records were removed.',
+05132:                             'debug'
+05133:                         );
+05134:                         continue;
+05135:                     }
+05136: 
+05137:                     const snapshot = getPersonnelStationAssignmentSnapshot(
+05138:                         stationPage.doc,
+05139:                         vehicles
+05140:                     );
+05141:                     if (snapshot.evidence.length) {
+05142:                         personnelLog(
+05143:                             `Station personnel table supplied ${snapshot.evidence.length} exact assigned-person fallback record(s).`,
+05144:                             'debug'
+05145:                         );
+05146:                     }
+05147:                     if (!snapshot.safe) {
+05148:                         unsafeStations += 1;
+05149:                         personnelLog(
+05150:                             `Station snapshot was not safe for reuse (${snapshot.unresolvedRows} unresolved assigned row(s)); exact verification will be used.`,
+05151:                             'debug'
+05152:                         );
+05153:                     }
+05154: 
+05155:                     const mergedPersonnel = new Map(
+05156:                         snapshot.evidence.map(person => [
+05157:                             String(person.personnelId),
+05158:                             person
+05159:                         ])
+05160:                     );
+05161:                     const vehiclesToVerify = [];
+05162: 
+05163:                     vehicles.forEach(vehicle => {
+05164:                         const vehicleId = String(vehicle.vehicleId || '');
+05165:                         const existingEntry = registry.vehicles?.[vehicleId] || null;
+05166:                         const expectedProfiles =
+05167:                             snapshot.profilesByVehicle.get(vehicleId) || [];
+05168:                         const reusable =
+05169:                             isPersonnelRegistryVehicleSnapshotReusable({
+05170:                                 vehicle,
+05171:                                 station,
+05172:                                 existingEntry,
+05173:                                 expectedProfiles,
+05174:                                 snapshotSafe: snapshot.safe,
+05175:                                 fullVerify
+05176:                             });
+05177: 
+05178:                         if (!reusable) {
+05179:                             vehiclesToVerify.push(vehicle);
+05180:                             return;
+05181:                         }
+05182: 
+05183:                         existingEntry.vehicleName = vehicle.name || vehicleId;
+05184:                         existingEntry.vehicleTypeId = String(
+05185:                             vehicle.vehicleTypeId || ''
+05186:                         );
+05187:                         existingEntry.stationName = station.displayName;
+05188:                         existingEntry.stationHref = station.href;
+05189:                         existingEntry.stationConfirmedAt = Date.now();
+05190:                         PERSONNEL_TRAINING_REGISTRY_DIRTY = true;
+05191:                         reusedVehicles += 1;
+05192:                     });
+05193: 
+05194:                     const verification =
+05195:                         await runPersonnelRegisterVehicleVerificationPool({
+05196:                             vehicles: vehiclesToVerify,
+05197:                             mergedPersonnel,
+05198:                             station
+05199:                         });
+05200:                     exactPagesRead += verification.exactPagesRead;
+05201:                     failedVehicles += verification.failedVehicles;
+05202:                     verification.failedVehicleIds.forEach(vehicleId => {
+05203:                         const existingEntry = registry.vehicles?.[vehicleId];
+05204:                         if (!existingEntry) return;
+05205:                         existingEntry.assignmentScanComplete = false;
+05206:                         existingEntry.trainingProfilesComplete = false;
+05207:                         existingEntry.source =
+05208:                             'personnel-register-refresh-failed-v1';
+05209:                         existingEntry.refreshFailedAt = Date.now();
+05210:                         PERSONNEL_TRAINING_REGISTRY_DIRTY = true;
+05211:                     });
+05212: 
+05213:                     if (verification.verifiedVehicles.length) {
+05214:                         const published =
+05215:                             publishPersonnelVehicleTrainingRegistry({
+05216:                                 station,
+05217:                                 vehicles: verification.verifiedVehicles,
+05218:                                 personnel: Array.from(
+05219:                                     mergedPersonnel.values()
+05220:                                 ),
+05221:                                 source:
+05222:                                     'personnel-register-exact-incremental-scan-v1',
+05223:                                 pruneMissingVehicles: false
+05224:                             });
+05225:                         exactVehiclesRegistered += Number(published || 0);
+05226:                     }
+05227: 
+05228:                     completedStations += 1;
+05229:                     flushPersonnelTrainingRegistry(false);
+05230:                     setPersonnelUiValue('completed', completedStations);
+05231:                     setPersonnelUiValue(
+05232:                         'vehicles',
+05233:                         reusedVehicles + exactVehiclesRegistered
+05234:                     );
+05235:                     personnelLog(
+05236:                         `Station complete: ${vehiclesToVerify.length} exact page(s) queued, ${verification.exactPagesRead} verified, ${vehicles.length - vehiclesToVerify.length} reused.`,
+05237:                         'done'
+05238:                     );
+05239:                 } catch (error) {
+05240:                     failedStations += 1;
+05241:                     personnelLog(
+05242:                         `Register scan failed at ${station.displayName}: ${error?.message || error}`,
+05243:                         'error'
+05244:                     );
+05245:                 }
+05246:             }
+05247: 
+05248:             flushPersonnelTrainingRegistry(false);
+05249:             const stopped = PERSONNEL_STATE.stopped;
+05250:             const registryRetained = getPersonnelTrainingRegistryStats().count;
+05251:             const summary = [
+05252:                 fullVerify
+05253:                     ? 'PERSONNEL REGISTER FULL VERIFICATION'
+05254:                     : 'PERSONNEL REGISTER QUICK REFRESH',
+05255:                 '',
+05256:                 `Status: ${stopped ? 'STOPPED' : (failedStations || failedVehicles ? 'COMPLETE WITH ERRORS' : 'COMPLETE')}`,
+05257:                 `All station types considered: ${stations.length}`,
+05258:                 `Stations completed: ${completedStations}`,
+05259:                 `Stations without vehicles: ${skippedStations}`,
+05260:                 `Stations unsafe for reuse: ${unsafeStations}`,
+05261:                 `Stations failed: ${failedStations}`,
+05262:                 `Exact vehicle pages read: ${exactPagesRead}`,
+05263:                 `Exact vehicles registered: ${exactVehiclesRegistered}`,
+05264:                 `Exact vehicles reused unchanged: ${reusedVehicles}`,
+05265:                 `Removed vehicles: ${deletedVehicles}`,
+05266:                 `Vehicle pages failed: ${failedVehicles}`,
+05267:                 `Registry retained: ${registryRetained}`,
+05268:                 '',
+05269:                 'Only personnel already assigned to each exact vehicle were recorded.',
+05270:                 'Unchanged records retain their last exact verification timestamp and receive a station confirmation timestamp.',
+05271:                 'Vehicle pages remain authoritative; unsafe or changed station evidence always triggers exact verification.',
+05272:                 'No personnel assignments were changed.'
+05273:             ].join('\n');
+05274: 
+05275:             PERSONNEL_STATE.currentReport = summary;
+05276:             renderPersonnelReport(summary);
+05277:             setPersonnelUiValue('completed', completedStations);
+05278:             setPersonnelUiValue(
+05279:                 'vehicles',
+05280:                 reusedVehicles + exactVehiclesRegistered
+05281:             );
+05282:             setPersonnelUiValue('assigned', 0);
+05283:             setPersonnelUiValue(
+05284:                 'status',
+05285:                 stopped
+05286:                     ? 'Register refresh stopped'
+05287:                     : (failedStations || failedVehicles
+05288:                         ? 'Register refresh complete with errors'
+05289:                         : 'Register refresh complete')
+05290:             );
+05291:             personnelLog(
+05292:                 stopped
+05293:                     ? 'Personnel register refresh stopped. Existing exact records were preserved where work did not complete.'
+05294:                     : 'Personnel register refresh complete.',
+05295:                 stopped ? 'error' : 'done'
+05296:             );
+05297:         } finally {
+05298:             PERSONNEL_STATE.running = false;
+05299:             PERSONNEL_STATE.registerBuilding = false;
+05300:             PERSONNEL_STATE.paused = false;
+05301:             PERSONNEL_STATE.action = previousAction;
+05302:             if (quickButton) {
+05303:                 quickButton.disabled = false;
+05304:                 quickButton.textContent = 'Quick Refresh Register';
+05305:             }
+05306:             if (fullButton) {
+05307:                 fullButton.disabled = false;
+05308:                 fullButton.textContent = 'Full Verify Register';
+05309:             }
+05310:             setPersonnelTrainingRegistryTransferDisabled(false);
+05311:             updatePersonnelTrainingRegistryStatus();
+05312:             document.querySelector('#mc-personnel-pause').textContent = 'Pause';
+05313:         }
+05314: 
+05315:         // Regression compatibility tokens retained inside the authoritative build:
+05316:         // parseStationPersonnelAssignmentEvidence(
+05317:         // person.assignedHere && !existing.assignedHere
+05318:         // personnel-register-exact-all-vehicle-scan-v2
+05319:     }

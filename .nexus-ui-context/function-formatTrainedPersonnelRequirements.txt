@@ -1,0 +1,48 @@
+26674:     function formatTrainedPersonnelRequirements(
+26675:         requirements
+26676:     ) {
+26677:         return (
+26678:             Array.isArray(requirements)
+26679:                 ? requirements
+26680:                 : []
+26681:         )
+26682:             .map(requirement => {
+26683:                 const personnelTarget =
+26684:                     getTrainingRequirementPersonnelTarget(
+26685:                         requirement
+26686:                     );
+26687: 
+26688:                 const types =
+26689:                     getTrainingRequirementEligibleTypeIds(
+26690:                         requirement
+26691:                     );
+26692: 
+26693:                 const capacityText =
+26694:                     types
+26695:                         .map(typeId => {
+26696:                             const label =
+26697:                                 typeId === '51'
+26698:                                     ? 'PSU'
+26699:                                     : typeId === '8'
+26700:                                         ? 'IRV'
+26701:                                         : typeId === '25'
+26702:                                             ? 'ATC'
+26703:                                             : `type ${typeId}`;
+26704: 
+26705:                             return (
+26706:                                 `${label} ` +
+26707:                                 `${getTrainingRequirementVehicleCapacity(requirement, typeId)}`
+26708:                             );
+26709:                         })
+26710:                         .join(', ');
+26711: 
+26712:                 return (
+26713:                     `${requirement.label} ` +
+26714:                     `(${personnelTarget} trained personnel required; ` +
+26715:                     `${capacityText || 'exact compatible vehicle'}; ` +
+26716:                     `best available training is preferred and any residual ` +
+26717:                     `shortfall is reported without blocking correct-type units)`
+26718:                 );
+26719:             })
+26720:             .join(', ');
+26721:     }

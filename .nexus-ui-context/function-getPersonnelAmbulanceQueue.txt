@@ -1,0 +1,70 @@
+07798:     function getPersonnelAmbulanceQueue(doc) {
+07799:         const seen = new Set();
+07800:         const queue = [];
+07801:         const rows = [...doc.querySelectorAll('#vehicle_table tr')];
+07802:         let ambulanceRows = 0;
+07803: 
+07804:         for (const row of rows) {
+07805:             const image = row.querySelector('img[vehicle_type_id]');
+07806:             const vehicleTypeId = image?.getAttribute('vehicle_type_id') || '';
+07807:             if (vehicleTypeId !== PERSONNEL_TARGET_VEHICLE_TYPE_ID) continue;
+07808: 
+07809:             ambulanceRows++;
+07810: 
+07811:             const vehicleLinks = [...row.querySelectorAll('a[href*="/vehicles/"]')];
+07812:             const plainVehicleLink = vehicleLinks.find(link => {
+07813:                 const href = link.getAttribute('href') || '';
+07814:                 return /^\/vehicles\/\d+\/?(?:[?#].*)?$/.test(href);
+07815:             });
+07816:             const editLink = vehicleLinks.find(link => {
+07817:                 const href = link.getAttribute('href') || '';
+07818:                 return /\/vehicles\/\d+\/edit(?:[/?#]|$)/.test(href);
+07819:             });
+07820:             const directAssignmentLink = vehicleLinks.find(link => {
+07821:                 const href = link.getAttribute('href') || '';
+07822:                 return /\/vehicles\/\d+\/zuweisung(?:[/?#]|$)/.test(href);
+07823:             });
+07824: 
+07825:             // Prefer the normal vehicle-name link because it is tied directly to the
+07826:             // displayed row. Edit and personnel links are safe fallbacks.
+07827:             const idCandidates = [plainVehicleLink, editLink, directAssignmentLink]
+07828:                 .map(link => getVehicleIdFromHref(link?.getAttribute('href') || ''))
+07829:                 .filter(Boolean);
+07830:             const vehicleId = idCandidates[0] || '';
+07831: 
+07832:             if (!vehicleId || seen.has(vehicleId)) continue;
+07833:             seen.add(vehicleId);
+07834: 
+07835:             const distinctIds = [...new Set(idCandidates)];
+07836:             if (distinctIds.length > 1) {
+07837:                 personnelDebug(`Ambulance row contains conflicting vehicle IDs (${distinctIds.join(', ')}). Using ${vehicleId}.`);
+07838:             }
+07839: 
+07840:             const assignmentHref = directAssignmentLink?.getAttribute('href') || `/vehicles/${vehicleId}/zuweisung`;
+07841:             const nameSource = plainVehicleLink
+07842:                 || vehicleLinks.find(link => cleanText(link.textContent || ''))
+07843:                 || null;
+07844:             const name = cleanText(nameSource?.textContent || row.textContent || '') || `Ambulance ${vehicleId}`;
+07845:             const occupancy = parsePersonnelVehicleOccupancy(row);
+07846: 
+07847:             queue.push({
+07848:                 vehicleId,
+07849:                 name,
+07850:                 assignmentHref,
+07851:                 assignedCount: occupancy.assignedCount,
+07852:                 maxCount: occupancy.maxCount
+07853:             });
+07854:         }
+07855: 
+07856:         queue.sort((a, b) => a.name.localeCompare(b.name, undefined, {
+07857:             numeric: true,
+07858:             sensitivity: 'base'
+07859:         }));
+07860: 
+07861:         personnelDebug(`Vehicle table scan: ${rows.length} row(s), ${ambulanceRows} Ambulance row(s), ${queue.length} usable assignment route(s).`);
+07862:         queue.forEach(vehicle => {
+07863:             personnelDebug(`Ambulance detected: ${vehicle.name} | ID=${vehicle.vehicleId} | table occupancy=${vehicle.assignedCount ?? '?'} / ${vehicle.maxCount ?? '?'}`);
+07864:         });
+07865: 
+07866:         return queue;
+07867:     }

@@ -1,0 +1,29 @@
+08135:     async function submitPersonnelAssignment(candidate) {
+08136:         if (!candidate.assignHref || PERSONNEL_STATE.stopped) return false;
+08137: 
+08138:         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+08139:         const headers = {
+08140:             'Accept': 'text/html,application/xhtml+xml',
+08141:             'X-Requested-With': 'XMLHttpRequest'
+08142:         };
+08143:         if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
+08144: 
+08145:         const response = await personnelFetchResponse(candidate.assignHref, {
+08146:             method: 'POST',
+08147:             headers
+08148:         }, 12000);
+08149: 
+08150:         if (!response.ok) {
+08151:             personnelDebug(`Assignment request HTTP ${response.status}: ${candidate.assignHref}`);
+08152:             return false;
+08153:         }
+08154: 
+08155:         // Consume the response so the request finishes cleanly. MissionChief normally
+08156:         // returns the updated personnel-row HTML, but the batch is verified using one
+08157:         // fresh vehicle page after all required people have been submitted.
+08158:         try {
+08159:             await response.text();
+08160:         } catch (_error) {}
+08161: 
+08162:         return true;
+08163:     }

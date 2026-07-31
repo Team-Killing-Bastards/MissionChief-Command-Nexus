@@ -1,0 +1,11 @@
+03069:     function handlePersonnelProfileChange() {
+03070:         if (PERSONNEL_STATE.running) {
+03071:             personnelLog('Stop Personnel Assignment before changing Training profile.', 'error');
+03072:             const select = document.querySelector('#mc-personnel-profile');
+03073:             if (select) select.value = PERSONNEL_STATE.profile;
+03074:             return;
+03075:         }
+03076: 
+03077:         PERSONNEL_STATE.profile = document.querySelector('#mc-personnel-profile')?.value || 'critical_care';
+03078:         updatePersonnelProfileUi(true);
+03079:     }

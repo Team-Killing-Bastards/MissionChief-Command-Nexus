@@ -1,0 +1,24 @@
+06085:     function countPersonnelTrainingCombinations(assignedPersonnel) {
+06086:         const combinations = [
+06087:             ['traffic_police', 'swat']
+06088:         ];
+06089:         const counts = {};
+06090: 
+06091:         combinations.forEach(requiredCodes => {
+06092:             const key = getPersonnelTrainingCombinationKey(requiredCodes);
+06093:             counts[key] = (
+06094:                 Array.isArray(assignedPersonnel)
+06095:                     ? assignedPersonnel
+06096:                     : []
+06097:             ).filter(person => {
+06098:                 const trainingSet = new Set(
+06099:                     Array.isArray(person?.trainingCodes)
+06100:                         ? person.trainingCodes.map(String)
+06101:                         : []
+06102:                 );
+06103:                 return requiredCodes.every(code => trainingSet.has(code));
+06104:             }).length;
+06105:         });
+06106: 
+06107:         return counts;
+06108:     }

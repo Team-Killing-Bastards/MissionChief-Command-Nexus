@@ -1,0 +1,4 @@
+04117:     function buildStationName(formattedArea, suffix, currentName) {
+04118:         const sequence = getExistingStationSequence(currentName, suffix);
+04119:         return `${formattedArea}${suffix}${sequence}`;
+04120:     }

@@ -1,0 +1,23 @@
+40436:     function mfFindAnyVisibleApproachButtonInModal() {
+40437:         const deepButton = mfFindAnyVisibleApproachButtonDeep();
+40438: 
+40439:         if (deepButton) return deepButton;
+40440: 
+40441:         const modals = Array.from(document.querySelectorAll(
+40442:             '.vm--modal, .modal, .lightbox, .vehicle-window, .redesign-wrapper[type="vehicle"]'
+40443:         )).filter(modal => {
+40444:             try {
+40445:                 return mfIsVisibleInOwnDocument(modal);
+40446:             } catch (error) {
+40447:                 return false;
+40448:             }
+40449:         });
+40450: 
+40451:         for (const modal of modals) {
+40452:             const button = mfChoosePreferredApproachButton(modal);
+40453: 
+40454:             if (button) return button;
+40455:         }
+40456: 
+40457:         return null;
+40458:     }

@@ -1,0 +1,19 @@
+01833:     function isStationOverviewScreen() {
+01834:         const entries = getStationOverviewEntries();
+01835:         if (!entries.length) return false;
+01836: 
+01837:         const desktopStationSelector =
+01838:             'a.lightbox-open.list-group-item.active[href*="/buildings/"]';
+01839: 
+01840:         if (!isIosSafariWebsite()) {
+01841:             return entries.some(entry =>
+01842:                 entry.link?.matches?.(
+01843:                     desktopStationSelector
+01844:                 )
+01845:             );
+01846:         }
+01847: 
+01848:         return entries.some(entry =>
+01849:             isRenderedStationOverviewEntry(entry)
+01850:         );
+01851:     }

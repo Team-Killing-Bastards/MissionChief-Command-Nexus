@@ -1,0 +1,252 @@
+26892:     function parseLivePoliceTrainingAssignments(
+26893:         html,
+26894:         currentVehicleId
+26895:     ) {
+26896:         const doc = new DOMParser()
+26897:             .parseFromString(
+26898:                 String(html || ''),
+26899:                 'text/html'
+26900:             );
+26901: 
+26902:         const currentId =
+26903:             String(currentVehicleId || '');
+26904: 
+26905:         const supportedCodes =
+26906:             new Set(
+26907:                 MF_PROTECTED_ORDINARY_IRV_TRAINING_CODES
+26908:             );
+26909: 
+26910:         const trainingCounts = {};
+26911:         const trainingCombinationCounts = {};
+26912:         const assignedTrainingProfiles = [];
+26913:         let assignedPersonnelCount = 0;
+26914: 
+26915:         const personnelTable =
+26916:             doc.querySelector(
+26917:                 '#personal_table'
+26918:             );
+26919: 
+26920:         const personnelRows =
+26921:             personnelTable
+26922:                 ? Array.from(
+26923:                     personnelTable.querySelectorAll(
+26924:                         'tbody tr[data-filterable-by], tbody tr'
+26925:                     )
+26926:                 )
+26927:                 : [];
+26928: 
+26929:         const detectedVehicleTypeId =
+26930:             String(
+26931:                 doc.querySelector(
+26932:                     '.vehicle_image_reload[vehicle_type_id]'
+26933:                 )?.getAttribute('vehicle_type_id') ||
+26934:                 ''
+26935:             );
+26936: 
+26937:         personnelRows.forEach(row => {
+26938:             const assignmentActions =
+26939:                 Array.from(
+26940:                     row.querySelectorAll(
+26941:                         'a[href*="/zuweisungDo/"], button, input[type="submit"], input[type="button"]'
+26942:                     )
+26943:                 );
+26944: 
+26945:             const assignedAction =
+26946:                 assignmentActions.find(action => {
+26947:                     const actionText =
+26948:                         String(
+26949:                             action?.innerText ||
+26950:                             action?.textContent ||
+26951:                             action?.value ||
+26952:                             ''
+26953:                         )
+26954:                             .replace(/\s+/g, ' ')
+26955:                             .trim();
+26956: 
+26957:                     return !!(
+26958:                         action?.classList?.contains(
+26959:                             'btn-assigned'
+26960:                         ) ||
+26961:                         /remove\s+binding/i.test(
+26962:                             actionText
+26963:                         )
+26964:                     );
+26965:                 }) || null;
+26966: 
+26967:             const assignedText =
+26968:                 String(
+26969:                     assignedAction?.innerText ||
+26970:                     assignedAction?.textContent ||
+26971:                     assignedAction?.value ||
+26972:                     ''
+26973:                 )
+26974:                     .replace(/\s+/g, ' ')
+26975:                     .trim();
+26976: 
+26977:             const assignedHere = !!(
+26978:                 assignedAction &&
+26979:                 (
+26980:                     assignedAction.classList?.contains(
+26981:                         'btn-assigned'
+26982:                     ) ||
+26983:                     /remove\s+binding/i.test(
+26984:                         assignedText
+26985:                     )
+26986:                 )
+26987:             );
+26988: 
+26989:             if (!assignedHere) return;
+26990: 
+26991:             // On /vehicles/{id}/zuweisung a btn-assigned row belongs to the
+26992:             // current vehicle. Do not infer ownership from the displayed name.
+26993:             const actionVehicleId =
+26994:                 parseVehicleIdFromAssignmentLink(
+26995:                     assignedAction.getAttribute('href') ||
+26996:                     assignedAction.href ||
+26997:                     ''
+26998:                 );
+26999: 
+27000:             if (
+27001:                 currentId &&
+27002:                 actionVehicleId &&
+27003:                 actionVehicleId !== currentId
+27004:             ) {
+27005:                 return;
+27006:             }
+27007: 
+27008:             assignedPersonnelCount += 1;
+27009: 
+27010:             const filterText = String(
+27011:                 row.getAttribute('data-filterable-by') ||
+27012:                 ''
+27013:             );
+27014: 
+27015:             const rowText = String(
+27016:                 row.innerText ||
+27017:                 row.textContent ||
+27018:                 ''
+27019:             )
+27020:                 .replace(/\s+/g, ' ')
+27021:                 .trim();
+27022: 
+27023:             const rowCodes = new Set(
+27024:                 (
+27025:                     filterText.match(
+27026:                         /[a-z][a-z0-9_]+/gi
+27027:                     ) ||
+27028:                     []
+27029:                 )
+27030:                     .map(code => code.toLowerCase())
+27031:                     .filter(code => supportedCodes.has(code))
+27032:             );
+27033: 
+27034:             if (/Level\s*1\s+Public\s+Order/i.test(rowText)) {
+27035:                 rowCodes.add('level_1_public_order');
+27036:             }
+27037: 
+27038:             if (/Level\s*2\s+Public\s+Order/i.test(rowText)) {
+27039:                 rowCodes.add('level_2_public_order');
+27040:             }
+27041: 
+27042:             if (/\bPolice\s+Sergeant\b/i.test(rowText)) {
+27043:                 rowCodes.add('police_sergeant');
+27044:             }
+27045: 
+27046:             if (/\bPolice\s+Medic\b/i.test(rowText)) {
+27047:                 rowCodes.add('police_medic');
+27048:             }
+27049: 
+27050:             if (/\bPolice\s+Inspector\b/i.test(rowText)) {
+27051:                 rowCodes.add('police_inspector');
+27052:             }
+27053: 
+27054:             if (
+27055:                 /\bRailway\s+Police\s+Officer\b/i.test(
+27056:                     rowText
+27057:                 ) ||
+27058:                 /\bRailway\s+Policing\b/i.test(
+27059:                     rowText
+27060:                 )
+27061:             ) {
+27062:                 rowCodes.add('railway_police');
+27063:             }
+27064: 
+27065:             const trainingProfile =
+27066:                 Array.from(rowCodes)
+27067:                     .map(String)
+27068:                     .filter(Boolean)
+27069:                     .sort();
+27070: 
+27071:             assignedTrainingProfiles.push(
+27072:                 trainingProfile
+27073:             );
+27074: 
+27075:             rowCodes.forEach(code => {
+27076:                 trainingCounts[code] =
+27077:                     Number(
+27078:                         trainingCounts[code] ||
+27079:                         0
+27080:                     ) + 1;
+27081:             });
+27082: 
+27083:             if (trainingProfile.length > 1) {
+27084:                 const exactProfileKey =
+27085:                     getMissionTrainingCombinationKey(
+27086:                         trainingProfile
+27087:                     );
+27088: 
+27089:                 trainingCombinationCounts[exactProfileKey] =
+27090:                     Number(
+27091:                         trainingCombinationCounts[exactProfileKey] ||
+27092:                         0
+27093:                     ) + 1;
+27094:             }
+27095: 
+27096:             const roadsFirearmsKey =
+27097:                 getMissionTrainingCombinationKey([
+27098:                     'traffic_police',
+27099:                     'swat'
+27100:                 ]);
+27101: 
+27102:             if (
+27103:                 rowCodes.has('traffic_police') &&
+27104:                 rowCodes.has('swat') &&
+27105:                 getMissionTrainingCombinationKey(
+27106:                     trainingProfile
+27107:                 ) !== roadsFirearmsKey
+27108:             ) {
+27109:                 trainingCombinationCounts[roadsFirearmsKey] =
+27110:                     Number(
+27111:                         trainingCombinationCounts[roadsFirearmsKey] ||
+27112:                         0
+27113:                     ) + 1;
+27114:             }
+27115:         });
+27116: 
+27117:         supportedCodes.forEach(code => {
+27118:             if (
+27119:                 !Object.prototype.hasOwnProperty.call(
+27120:                     trainingCounts,
+27121:                     code
+27122:                 )
+27123:             ) {
+27124:                 trainingCounts[code] = 0;
+27125:             }
+27126:         });
+27127: 
+27128:         return {
+27129:             vehicleId: currentId,
+27130:             trainingCounts,
+27131:             trainingCombinationCounts,
+27132:             assignedTrainingProfiles,
+27133:             trainingProfilesComplete:
+27134:                 Boolean(personnelTable),
+27135:             assignedPersonnelCount,
+27136:             assignmentScanComplete:
+27137:                 Boolean(personnelTable),
+27138:             personnelRowsSeen:
+27139:                 personnelRows.length,
+27140:             detectedVehicleTypeId,
+27141:             document: doc
+27142:         };
+27143:     }

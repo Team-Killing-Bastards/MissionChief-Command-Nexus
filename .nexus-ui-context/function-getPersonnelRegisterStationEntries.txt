@@ -1,0 +1,47 @@
+04676:     function getPersonnelRegisterStationEntries() {
+04677:         const fallbackLinks = Array.from(
+04678:             document.querySelectorAll(
+04679:                 'a.lightbox-open.list-group-item.active[href^="/buildings/"]'
+04680:             )
+04681:         ).map(link => ({
+04682:             link,
+04683:             container: link.closest(
+04684:                 '.building_list_li[building_type_id], .building_list[building_type_id]'
+04685:             )
+04686:         }));
+04687:         const entries =
+04688:             typeof getStationOverviewEntries === 'function'
+04689:                 ? getStationOverviewEntries()
+04690:                 : fallbackLinks;
+04691: 
+04692:         return entries
+04693:             .map((entry, index) => {
+04694:                 const link = entry?.link || entry;
+04695:                 const href = link?.getAttribute?.('href') || '';
+04696:                 const displayName = cleanText(link?.textContent || '');
+04697:                 const container =
+04698:                     entry?.container ||
+04699:                     link?.closest?.(
+04700:                         '.building_list_li[building_type_id], .building_list[building_type_id]'
+04701:                     );
+04702:                 const rawTypeId =
+04703:                     container?.getAttribute?.('building_type_id') ??
+04704:                     container?.getAttribute?.('data-building-type-id') ??
+04705:                     '';
+04706:                 const buildingTypeId =
+04707:                     rawTypeId === '' ? null : Number(rawTypeId);
+04708:                 const stationType =
+04709:                     STATION_BUILDING_TYPE_INFO[buildingTypeId]?.stationType ||
+04710:                     detectStationType(displayName);
+04711: 
+04712:                 return {
+04713:                     index,
+04714:                     href,
+04715:                     buildingId: getBuildingIdFromHref(href),
+04716:                     displayName,
+04717:                     buildingTypeId,
+04718:                     stationType
+04719:                 };
+04720:             })
+04721:             .filter(station => station.href && station.buildingId);
+04722:     }

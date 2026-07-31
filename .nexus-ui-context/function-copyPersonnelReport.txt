@@ -1,0 +1,4 @@
+08566:     async function copyPersonnelReport() {
+08567:         if (!PERSONNEL_STATE.currentReport) buildAndRenderPersonnelReport();
+08568:         await copyTextToClipboard(PERSONNEL_STATE.currentReport || '', 'Overall report copied to clipboard.');
+08569:     }

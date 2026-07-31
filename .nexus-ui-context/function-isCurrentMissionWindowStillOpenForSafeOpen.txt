@@ -1,0 +1,37 @@
+39277:     function isCurrentMissionWindowStillOpenForSafeOpen(reason) {
+39278:         const missionInfo = document.querySelector('#mission_general_info');
+39279:         const closeInside = document.querySelector('#lightbox_close_inside');
+39280:         const insideContainer = document.querySelector('#iframe-inside-container');
+39281: 
+39282:         const missionInfoVisible = missionInfo && isVisibleForQueueRestart(missionInfo);
+39283:         const closeInsideVisible = closeInside && isVisibleForQueueRestart(closeInside);
+39284:         const insideContainerVisible = insideContainer && isVisibleForQueueRestart(insideContainer);
+39285:         const personnelAlertText = getInlinePersonnelQualificationAlertText();
+39286: 
+39287:         const blocking =
+39288:             !!missionInfoVisible ||
+39289:             !!closeInsideVisible ||
+39290:             (!!insideContainerVisible && !!missionInfo) ||
+39291:             !!personnelAlertText;
+39292: 
+39293:         if (blocking && mfDebugEnabled) {
+39294:             debugLog(
+39295:                 'SAFE OPEN BLOCK',
+39296:                 `${reason || 'check'} | missionInfo=${missionInfoVisible ? 'yes' : 'no'} | close=${closeInsideVisible ? 'yes' : 'no'} | inside=${insideContainerVisible ? 'yes' : 'no'} | personnelAlert=${personnelAlertText ? 'yes' : 'no'}`
+39297:             );
+39298:         }
+39299: 
+39300:         if (blocking) {
+39301:             try {
+39302:                 recordIssueEvent('SAFE OPEN BLOCKED', {
+39303:                     reason: reason || 'unknown',
+39304:                     missionInfoVisible: !!missionInfoVisible,
+39305:                     closeInsideVisible: !!closeInsideVisible,
+39306:                     insideContainerVisible: !!insideContainerVisible,
+39307:                     personnelAlertText: personnelAlertText ? personnelAlertText.slice(0, 350) : ''
+39308:                 }, true);
+39309:             } catch (error) {}
+39310:         }
+39311: 
+39312:         return blocking;
+39313:     }

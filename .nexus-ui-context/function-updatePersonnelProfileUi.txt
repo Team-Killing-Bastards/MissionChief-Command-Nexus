@@ -1,0 +1,89 @@
+03081:     function updatePersonnelProfileUi(save = true) {
+03082:         const service = getPersonnelServiceDefinition();
+03083:         const profile = getPersonnelProfileDefinition();
+03084:         const live = isLivePersonnelProfile();
+03085: 
+03086:         const training = document.querySelector('#mc-personnel-profile-training');
+03087:         const vehicle = document.querySelector('#mc-personnel-profile-vehicle');
+03088:         const requirement = document.querySelector('#mc-personnel-profile-requirement');
+03089:         const policy = document.querySelector('#mc-personnel-policy-summary');
+03090:         const banner = document.querySelector('#mc-personnel-profile-banner');
+03091:         const modeAll = document.querySelector('#mc-personnel-mode-all-option');
+03092:         const start = document.querySelector('#mc-personnel-start');
+03093:         const refresh = document.querySelector('#mc-personnel-refresh');
+03094:         const mode = document.querySelector('#mc-personnel-mode');
+03095:         const action = document.querySelector('#mc-personnel-action');
+03096:         const unitsRequired = document.querySelector('#mc-personnel-units-required');
+03097:         const startFrom = document.querySelector('#mc-personnel-startfrom');
+03098: 
+03099:         if (training) training.textContent = profile.label;
+03100:         if (vehicle) vehicle.textContent = profile.vehicle;
+03101:         if (requirement) requirement.textContent = profile.requirement;
+03102:         if (policy) {
+03103:             policy.innerHTML = `<strong>${service.icon} ${service.label} policy:</strong> ${profile.policy}`;
+03104:         }
+03105: 
+03106:         if (banner) {
+03107:             banner.classList.toggle('is-live', live);
+03108:             banner.classList.toggle('is-preview', !live);
+03109:             banner.textContent = live
+03110:                 ? '● LIVE PROFILE — the selected assignment engine is enabled.'
+03111:                 : '◐ UI PREVIEW ONLY — assignment controls are safely disabled for this profile.';
+03112:         }
+03113: 
+03114:         if (modeAll) {
+03115:             modeAll.textContent = live
+03116:                 ? `All ${getPersonnelStationScopeLabel()} from selected start point`
+03117:                 : `All relevant ${service.label} stations from selected start point`;
+03118:         }
+03119: 
+03120:         [start, refresh, mode, action, startFrom].forEach(control => {
+03121:             if (control) control.disabled = !live;
+03122:         });
+03123: 
+03124:         if (unitsRequired) {
+03125:             unitsRequired.disabled =
+03126:                 !live ||
+03127:                 (
+03128:                     document.querySelector(
+03129:                         '#mc-personnel-mode'
+03130:                     )?.value ||
+03131:                     'all'
+03132:                 ) !== 'target';
+03133:         }
+03134: 
+03135:         if (start) {
+03136:             start.title = live
+03137:                 ? 'Start the selected Personnel Assignment profile'
+03138:                 : 'This profile is a UI preview and cannot make assignments yet';
+03139:         }
+03140: 
+03141:         if (live) {
+03142:             setPersonnelUiValue('status', PERSONNEL_STATE.filteredStations.length ? 'Ready' : 'Refresh required');
+03143:         } else {
+03144:             setPersonnelUiValue('status', 'Profile UI preview');
+03145:             setPersonnelUiValue('vehicle', 'Not enabled');
+03146:         }
+03147: 
+03148:         if (save) {
+03149:             PERSONNEL_STATE.stations = [];
+03150:             PERSONNEL_STATE.filteredStations = [];
+03151:             PERSONNEL_STATE.queue = [];
+03152:             PERSONNEL_STATE.selectedHref = '';
+03153:             PERSONNEL_STATE.unitsFulfilled = 0;
+03154:             PERSONNEL_STATE.unitTargetReached = false;
+03155:             setPersonnelUiValue('unitsFulfilled', PERSONNEL_STATE.unitsRequired > 0 ? `0 / ${PERSONNEL_STATE.unitsRequired}` : '0 / All');
+03156:             populatePersonnelStartDropdown();
+03157:             setPersonnelUiValue('status', live ? 'Refresh required' : 'Profile UI preview');
+03158:             setPersonnelUiValue('vehicle', live ? 'None' : 'Not enabled');
+03159: 
+03160:             try {
+03161:                 localStorage.setItem(PERSONNEL_SERVICE_STORAGE_KEY, PERSONNEL_STATE.service);
+03162:                 localStorage.setItem(PERSONNEL_PROFILE_STORAGE_KEY, PERSONNEL_STATE.profile);
+03163:             } catch (_error) {}
+03164: 
+03165:             personnelLog(`${service.icon} Service: ${service.label} | Training profile: ${profile.label}${live ? ' (LIVE)' : ' (UI preview only)'}`, live ? 'info' : 'debug');
+03166:         }
+03167: 
+03168:         updatePersonnelModeUi();
+03169:     }

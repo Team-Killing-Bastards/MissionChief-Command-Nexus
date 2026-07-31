@@ -1,0 +1,45 @@
+17804:         function syncTrainedPersonnelCollapseState() {
+17805:             const expanded = !mfTrainedPersonnelCollapsed;
+17806:             trainedPanel.classList.toggle(
+17807:                 'mf2026-trained-collapsed',
+17808:                 mfTrainedPersonnelCollapsed
+17809:             );
+17810: 
+17811:             const minimizeButton =
+17812:                 trainedPanel.querySelector('#mf-trained-minimize');
+17813:             const title =
+17814:                 trainedPanel.querySelector('#mf-trained-title');
+17815: 
+17816:             if (minimizeButton) {
+17817:                 minimizeButton.textContent = expanded ? '−' : '+';
+17818:                 minimizeButton.title = expanded
+17819:                     ? 'Collapse Trained Personnel'
+17820:                     : 'Expand Trained Personnel';
+17821:                 minimizeButton.setAttribute(
+17822:                     'aria-label',
+17823:                     minimizeButton.title
+17824:                 );
+17825:                 minimizeButton.setAttribute(
+17826:                     'aria-controls',
+17827:                     'mf-trained-body'
+17828:                 );
+17829:                 minimizeButton.setAttribute(
+17830:                     'aria-expanded',
+17831:                     String(expanded)
+17832:                 );
+17833:             }
+17834: 
+17835:             if (title) {
+17836:                 title.setAttribute(
+17837:                     'aria-controls',
+17838:                     'mf-trained-body'
+17839:                 );
+17840:                 title.setAttribute(
+17841:                     'aria-expanded',
+17842:                     String(expanded)
+17843:                 );
+17844:             }
+17845: 
+17846:             trainedPanel.dataset.collapsed =
+17847:                 String(mfTrainedPersonnelCollapsed);
+17848:         }

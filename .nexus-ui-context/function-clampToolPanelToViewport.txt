@@ -1,0 +1,42 @@
+01696:     function clampToolPanelToViewport(panel) {
+01697:         if (!panel?.isConnected) return;
+01698: 
+01699:         // Before the first drag, iOS Safari is positioned entirely by the
+01700:         // safe-area CSS below. Only clamp an explicitly dragged mobile panel.
+01701:         if (
+01702:             panel.classList.contains('mc-ios-safari')
+01703:             && !panel.style.left
+01704:         ) {
+01705:             return;
+01706:         }
+01707: 
+01708:         const bounds = getToolViewportBounds();
+01709:         let rect = panel.getBoundingClientRect();
+01710:         const maximumWidth = Math.max(260, bounds.width - 16);
+01711: 
+01712:         if (rect.width > maximumWidth) {
+01713:             panel.style.width = `${maximumWidth}px`;
+01714:             rect = panel.getBoundingClientRect();
+01715:         }
+01716: 
+01717:         const maximumLeft = Math.max(
+01718:             bounds.left,
+01719:             bounds.right - rect.width
+01720:         );
+01721:         const maximumTop = Math.max(
+01722:             bounds.top,
+01723:             bounds.bottom - rect.height
+01724:         );
+01725:         const nextLeft = Math.min(
+01726:             maximumLeft,
+01727:             Math.max(bounds.left, rect.left)
+01728:         );
+01729:         const nextTop = Math.min(
+01730:             maximumTop,
+01731:             Math.max(bounds.top, rect.top)
+01732:         );
+01733: 
+01734:         panel.style.left = `${nextLeft}px`;
+01735:         panel.style.top = `${nextTop}px`;
+01736:         panel.style.right = 'auto';
+01737:     }

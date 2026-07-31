@@ -1,0 +1,29 @@
+01442:     function setNamingToolsPanelVisibility(
+01443:         panel,
+01444:         visible
+01445:     ) {
+01446:         if (!panel?.isConnected) return null;
+01447: 
+01448:         panel.hidden = !visible;
+01449:         panel.setAttribute(
+01450:             'aria-hidden',
+01451:             visible ? 'false' : 'true'
+01452:         );
+01453: 
+01454:         if (visible) {
+01455:             panel.style.removeProperty('display');
+01456:             requestAnimationFrame(() => {
+01457:                 if (panel.isConnected && !panel.hidden) {
+01458:                     clampToolPanelToViewport(panel);
+01459:                 }
+01460:             });
+01461:         } else {
+01462:             panel.style.setProperty(
+01463:                 'display',
+01464:                 'none',
+01465:                 'important'
+01466:             );
+01467:         }
+01468: 
+01469:         return panel;
+01470:     }

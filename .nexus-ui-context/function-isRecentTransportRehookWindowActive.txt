@@ -1,0 +1,14 @@
+39902:     function isRecentTransportRehookWindowActive() {
+39903:         if (isManualAutoStopActive()) return false;
+39904: 
+39905:         const until = Math.max(
+39906:             parseInt(sessionStorage.getItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY) || '0', 10) || 0,
+39907:             parseInt(localStorage.getItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY) || '0', 10) || 0
+39908:         );
+39909: 
+39910:         if (until > Date.now()) return true;
+39911: 
+39912:         sessionStorage.removeItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY);
+39913:         localStorage.removeItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY);
+39914:         return false;
+39915:     }

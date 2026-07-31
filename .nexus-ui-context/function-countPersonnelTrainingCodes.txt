@@ -1,0 +1,36 @@
+06025:     function countPersonnelTrainingCodes(
+06026:         assignedPersonnel
+06027:     ) {
+06028:         const counts = {};
+06029: 
+06030:         (
+06031:             Array.isArray(
+06032:                 assignedPersonnel
+06033:             )
+06034:                 ? assignedPersonnel
+06035:                 : []
+06036:         ).forEach(person => {
+06037:             const uniqueCodes =
+06038:                 new Set(
+06039:                     (
+06040:                         Array.isArray(
+06041:                             person?.trainingCodes
+06042:                         )
+06043:                             ? person.trainingCodes
+06044:                             : []
+06045:                     )
+06046:                         .map(String)
+06047:                         .filter(Boolean)
+06048:                 );
+06049: 
+06050:             uniqueCodes.forEach(code => {
+06051:                 counts[code] =
+06052:                     Number(
+06053:                         counts[code] ||
+06054:                         0
+06055:                     ) + 1;
+06056:             });
+06057:         });
+06058: 
+06059:         return counts;
+06060:     }

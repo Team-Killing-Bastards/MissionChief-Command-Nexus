@@ -1,0 +1,28 @@
+27943:     async function prepareTrainedPersonnelRegistryForRows(
+27944:         rows,
+27945:         source = 'UPDATE'
+27946:     ) {
+27947:         const requirements = [];
+27948: 
+27949:         (Array.isArray(rows) ? rows : []).forEach(row => {
+27950:             if (!row?.isTrainedPersonnelRequirement) return;
+27951:             (row.personnelTrainingRequirements || []).forEach(requirement => {
+27952:                 requirements.push(requirement);
+27953:             });
+27954:         });
+27955: 
+27956:         const trained =
+27957:             await refreshPoliceInspectorRegistryFromLiveVehicles(
+27958:                 requirements,
+27959:                 source
+27960:             );
+27961: 
+27962:         return {
+27963:             irv:
+27964:                 trained,
+27965:             armedResponse:
+27966:                 trained,
+27967:             all:
+27968:                 trained
+27969:         };
+27970:     }

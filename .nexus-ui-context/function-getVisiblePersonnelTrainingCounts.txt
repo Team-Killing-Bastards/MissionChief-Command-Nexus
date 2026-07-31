@@ -1,0 +1,16 @@
+06402:     function getVisiblePersonnelTrainingCounts(personnel) {
+06403:         if (!Array.isArray(personnel)) return new Map();
+06404: 
+06405:         const cached = PERSONNEL_VISIBLE_TRAINING_COUNTS_CACHE.get(personnel);
+06406:         if (cached) return cached;
+06407: 
+06408:         const counts = new Map();
+06409:         personnel.forEach(person => {
+06410:             getPersonnelTrainingSet(person).forEach(code => {
+06411:                 counts.set(code, Number(counts.get(code) || 0) + 1);
+06412:             });
+06413:         });
+06414: 
+06415:         PERSONNEL_VISIBLE_TRAINING_COUNTS_CACHE.set(personnel, counts);
+06416:         return counts;
+06417:     }

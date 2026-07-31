@@ -1,0 +1,181 @@
+05321:     function startPersonnelRun() {
+05322:         if (!isLivePersonnelProfile()) {
+05323:             const service = getPersonnelServiceDefinition();
+05324:             const profile = getPersonnelProfileDefinition();
+05325:             personnelLog(`${service.label} > ${profile.label} is shown for UI review only. Assignment has been safely blocked until that profile is implemented and tested.`, 'error');
+05326:             setPersonnelUiValue('status', 'Profile UI preview');
+05327:             return;
+05328:         }
+05329: 
+05330:         if (STATE.running || STATION_STATE.running) {
+05331:             personnelLog('A naming tool is currently running. Stop it before starting Personnel Assignment.', 'error');
+05332:             setPersonnelUiValue('status', 'Blocked by naming tool');
+05333:             return;
+05334:         }
+05335: 
+05336:         if (PERSONNEL_STATE.running) {
+05337:             personnelLog('Personnel Assignment is already running.', 'debug');
+05338:             return;
+05339:         }
+05340: 
+05341:         if (!PERSONNEL_STATE.filteredStations.length) {
+05342:             personnelLog(`No ${getPersonnelStationScopeLabel()} loaded. Press Refresh Stations first.`, 'error');
+05343:             setPersonnelUiValue('status', 'Refresh required');
+05344:             return;
+05345:         }
+05346: 
+05347:         const selectedHref = document.querySelector('#mc-personnel-startfrom')?.value || '';
+05348:         const startIndex = PERSONNEL_STATE.filteredStations.findIndex(station => station.href === selectedHref);
+05349: 
+05350:         if (startIndex < 0) {
+05351:             personnelLog(`Selected start station not found: ${selectedHref || 'none'}`, 'error');
+05352:             setPersonnelUiValue('status', 'Invalid start station');
+05353:             return;
+05354:         }
+05355: 
+05356:         PERSONNEL_STATE.mode =
+05357:             document.querySelector(
+05358:                 '#mc-personnel-mode'
+05359:             )?.value ||
+05360:             'all';
+05361: 
+05362:         PERSONNEL_STATE.action =
+05363:             document.querySelector(
+05364:                 '#mc-personnel-action'
+05365:             )?.value ||
+05366:             'preview';
+05367: 
+05368:         const unitsInput =
+05369:             document.querySelector(
+05370:                 '#mc-personnel-units-required'
+05371:             );
+05372: 
+05373:         if (
+05374:             PERSONNEL_STATE.mode ===
+05375:             'target'
+05376:         ) {
+05377:             const configuredTarget =
+05378:                 normalisePersonnelUnitsRequired(
+05379:                     unitsInput?.value ||
+05380:                     PERSONNEL_STATE
+05381:                         .configuredUnitsRequired ||
+05382:                     0
+05383:                 );
+05384: 
+05385:             if (
+05386:                 configuredTarget <=
+05387:                 0
+05388:             ) {
+05389:                 personnelLog(
+05390:                     'Target-units mode requires a Units required value greater than 0.',
+05391:                     'error'
+05392:                 );
+05393: 
+05394:                 setPersonnelUiValue(
+05395:                     'status',
+05396:                     'Enter a units target'
+05397:                 );
+05398: 
+05399:                 unitsInput?.focus();
+05400:                 return;
+05401:             }
+05402: 
+05403:             PERSONNEL_STATE
+05404:                 .configuredUnitsRequired =
+05405:                     configuredTarget;
+05406: 
+05407:             PERSONNEL_STATE.unitsRequired =
+05408:                 configuredTarget;
+05409: 
+05410:             if (unitsInput) {
+05411:                 unitsInput.value =
+05412:                     String(configuredTarget);
+05413:             }
+05414: 
+05415:             try {
+05416:                 localStorage.setItem(
+05417:                     PERSONNEL_UNITS_REQUIRED_STORAGE_KEY,
+05418:                     String(configuredTarget)
+05419:                 );
+05420:             } catch (_error) {}
+05421:         } else {
+05422:             // All Stations and Selected Station modes always process their
+05423:             // complete station scope. A saved target cannot stop them.
+05424:             PERSONNEL_STATE.unitsRequired =
+05425:                 0;
+05426: 
+05427:             if (unitsInput) {
+05428:                 unitsInput.value =
+05429:                     '0';
+05430:             }
+05431:         }
+05432: 
+05433:         PERSONNEL_STATE.queue = PERSONNEL_STATE.mode === 'single'
+05434:             ? [PERSONNEL_STATE.filteredStations[startIndex]]
+05435:             : PERSONNEL_STATE.filteredStations.slice(startIndex);
+05436:         PERSONNEL_STATE.running = true;
+05437:         PERSONNEL_STATE.paused = false;
+05438:         PERSONNEL_STATE.stopped = false;
+05439:         PERSONNEL_STATE.unitsFulfilled = 0;
+05440:         PERSONNEL_STATE.unitTargetReached = false;
+05441:         PERSONNEL_STATE.stationsTargetMet = 0;
+05442:         PERSONNEL_STATE.stationsTargetShort = 0;
+05443:         PERSONNEL_STATE.stationIndex = 0;
+05444:         PERSONNEL_STATE.completedStations = 0;
+05445:         PERSONNEL_STATE.skippedStations = 0;
+05446:         PERSONNEL_STATE.checkedVehicles = 0;
+05447:         PERSONNEL_STATE.plannedCount = 0;
+05448:         PERSONNEL_STATE.assignedCount = 0;
+05449:         PERSONNEL_STATE.trainingShortfall = 0;
+05450:         PERSONNEL_STATE.assignmentShortfall = 0;
+05451:         PERSONNEL_STATE.reports = [];
+05452:         PERSONNEL_STATE.currentReport = '';
+05453:         PERSONNEL_STATE.currentStationReport = '';
+05454:         PERSONNEL_STATE.lastStationReport = null;
+05455:         PERSONNEL_STATE.activeController = null;
+05456:         PERSONNEL_STATE.lastRequestAt = 0;
+05457:         PERSONNEL_SHORTFALL_CACHE = [];
+05458:         PERSONNEL_SHORTFALL_CACHE_SIZE = -1;
+05459: 
+05460:         document.querySelector('#mc-personnel-pause').textContent = 'Pause';
+05461:         updatePersonnelCounters();
+05462:         renderPersonnelAfterActionText('The latest completed station report will appear here.');
+05463:         renderPersonnelReport('Scanning has started. The completed overall report will appear here.');
+05464:         updatePersonnelTrainingShortfallHighlights();
+05465:         setPersonnelUiValue('progress', `0 / ${PERSONNEL_STATE.queue.length}`);
+05466:         setPersonnelUiValue('status', PERSONNEL_STATE.action === 'assign' ? 'Starting assignment run' : 'Starting preview');
+05467: 
+05468:         personnelLog(`Service/Profile: ${getPersonnelServiceDefinition().label} > ${getPersonnelProfileDefinition().label}`, 'info');
+05469:         personnelLog(
+05470:             `Mode: ${
+05471:                 PERSONNEL_STATE.mode ===
+05472:                     'single'
+05473:                     ? 'Selected station only — scan the entire selected station'
+05474:                     : PERSONNEL_STATE.mode ===
+05475:                         'target'
+05476:                         ? `Ensure each ${getPersonnelStationScopeLabel().replace(/s$/, '')} has ${PERSONNEL_STATE.unitsRequired} fully staffed unit(s)`
+05477:                         : `All ${getPersonnelStationScopeLabel()} from selected start point — scan every station`
+05478:             }`,
+05479:             'info'
+05480:         );
+05481:         personnelLog(`Action: ${PERSONNEL_STATE.action === 'assign' ? 'ASSIGN AND VERIFY' : 'PREVIEW ONLY - no assignments will change'}`, PERSONNEL_STATE.action === 'assign' ? 'after' : 'info');
+05482:         personnelLog(
+05483:             PERSONNEL_STATE.mode ===
+05484:                 'target'
+05485:                 ? `Units required at every station: ${PERSONNEL_STATE.unitsRequired}. Existing fully covered units count first; only the station's remaining target will be planned or assigned before moving to the next station.`
+05486:                 : PERSONNEL_STATE.mode ===
+05487:                     'single'
+05488:                     ? 'Units required: not used. Every matching unit at the selected station will be processed.'
+05489:                     : 'Units required: not used. Every relevant station and matching unit from the selected start point will be processed.',
+05490:             'info'
+05491:         );
+05492:         personnelLog(`Rule: ${getPersonnelProfileDefinition().requirement}.`, 'info');
+05493: 
+05494:         processPersonnelQueue().catch(error => {
+05495:             personnelLog(`Personnel Assignment stopped after an unexpected error: ${error?.message || error}`, 'error');
+05496:             personnelDebug(error?.stack || String(error));
+05497:             PERSONNEL_STATE.stopped = true;
+05498:             PERSONNEL_STATE.running = false;
+05499:             setPersonnelUiValue('status', 'Error');
+05500:         });
+05501:     }

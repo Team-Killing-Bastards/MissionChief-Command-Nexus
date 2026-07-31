@@ -1,0 +1,4 @@
+04264:     function updateStationCounters() {
+04265:         setStationUiValue('renamed', STATION_STATE.renamedCount);
+04266:         setStationUiValue('skipped', STATION_STATE.skippedCount);
+04267:     }

@@ -1,0 +1,100 @@
+25314:     function getTrainedPersonnelRequirementsFromFreeText(
+25315:         text
+25316:     ) {
+25317:         const input =
+25318:             String(
+25319:                 text ||
+25320:                 ''
+25321:             )
+25322:                 .replace(
+25323:                     /[×✕]/g,
+25324:                     'x'
+25325:                 )
+25326:                 .replace(
+25327:                     /\s+/g,
+25328:                     ' '
+25329:                 )
+25330:                 .trim();
+25331: 
+25332:         if (!input) {
+25333:             return [];
+25334:         }
+25335: 
+25336:         const requirements =
+25337:             new Map();
+25338: 
+25339:         MF_TRAINED_PERSONNEL_PATTERNS
+25340:             .forEach(definition => {
+25341:                 let maximumRequired = 0;
+25342: 
+25343:                 definition.patterns
+25344:                     .forEach(pattern => {
+25345:                         pattern.lastIndex = 0;
+25346: 
+25347:                         let match;
+25348:                         while (
+25349:                             (
+25350:                                 match =
+25351:                                     pattern.exec(
+25352:                                         input
+25353:                                     )
+25354:                             )
+25355:                         ) {
+25356:                             const patternIsPrefix =
+25357:                                 pattern.source.startsWith(
+25358:                                     '(\\d+)'
+25359:                                 );
+25360:                             const trailingText =
+25361:                                 input.slice(
+25362:                                     pattern.lastIndex
+25363:                                 );
+25364: 
+25365:                             if (
+25366:                                 !patternIsPrefix &&
+25367:                                 /^\s*x(?=\s|[A-Za-z])/i.test(
+25368:                                     trailingText
+25369:                                 )
+25370:                             ) {
+25371:                                 continue;
+25372:                             }
+25373: 
+25374:                             const required =
+25375:                                 Math.max(
+25376:                                     0,
+25377:                                     parseInt(
+25378:                                         match[1],
+25379:                                         10
+25380:                                     ) || 0
+25381:                                 );
+25382: 
+25383:                             maximumRequired =
+25384:                                 Math.max(
+25385:                                     maximumRequired,
+25386:                                     required
+25387:                                 );
+25388:                         }
+25389:                     });
+25390: 
+25391:                 if (
+25392:                     maximumRequired > 0
+25393:                 ) {
+25394:                     requirements.set(
+25395:                         definition.code,
+25396:                         {
+25397:                             code:
+25398:                                 definition.code,
+25399:                             label:
+25400:                                 definition.label,
+25401:                             required:
+25402:                                 maximumRequired
+25403:                         }
+25404:                     );
+25405:                 }
+25406:             });
+25407: 
+25408:         return normalisePublicOrderTrainedRequirements(
+25409:             Array.from(
+25410:                 requirements.values()
+25411:             )
+25412:         );
+25413:     }

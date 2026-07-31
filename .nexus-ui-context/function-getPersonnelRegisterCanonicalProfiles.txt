@@ -1,0 +1,14 @@
+04661:     function getPersonnelRegisterCanonicalProfiles(profiles) {
+04662:         return (Array.isArray(profiles) ? profiles : [])
+04663:             .map(profile => {
+04664:                 return Array.from(
+04665:                     new Set(
+04666:                         (Array.isArray(profile) ? profile : [])
+04667:                             .map(String)
+04668:                             .filter(Boolean)
+04669:                     )
+04670:                 ).sort().join('+');
+04671:             })
+04672:             .sort()
+04673:             .join('|');
+04674:     }

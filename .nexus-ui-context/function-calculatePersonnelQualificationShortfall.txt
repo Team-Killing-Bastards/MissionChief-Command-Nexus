@@ -1,0 +1,38 @@
+06636:     function calculatePersonnelQualificationShortfall(personnel, slotRules) {
+06637:         const people = (personnel || []).filter(person => person?.personnelId);
+06638:         const slots = Array.isArray(slotRules) ? slotRules : [];
+06639:         const personToSlot = new Map();
+06640:         const candidatesByRule = new Map();
+06641: 
+06642:         const getCandidates = rule => {
+06643:             if (!candidatesByRule.has(rule)) {
+06644:                 candidatesByRule.set(
+06645:                     rule,
+06646:                     people.filter(person => personnelMatchesRule(person, rule))
+06647:                 );
+06648:             }
+06649:             return candidatesByRule.get(rule);
+06650:         };
+06651: 
+06652:         const tryFillSlot = (slotIndex, seenPersonnel) => {
+06653:             const rule = slots[slotIndex];
+06654:             for (const person of getCandidates(rule)) {
+06655:                 if (seenPersonnel.has(person.personnelId)) continue;
+06656:                 seenPersonnel.add(person.personnelId);
+06657: 
+06658:                 const previousSlot = personToSlot.get(person.personnelId);
+06659:                 if (previousSlot === undefined || tryFillSlot(previousSlot, seenPersonnel)) {
+06660:                     personToSlot.set(person.personnelId, slotIndex);
+06661:                     return true;
+06662:                 }
+06663:             }
+06664:             return false;
+06665:         };
+06666: 
+06667:         let matched = 0;
+06668:         for (let slotIndex = 0; slotIndex < slots.length; slotIndex++) {
+06669:             if (tryFillSlot(slotIndex, new Set())) matched++;
+06670:         }
+06671: 
+06672:         return Math.max(0, slots.length - matched);
+06673:     }

@@ -1,0 +1,3 @@
+08187:     function getPersonnelReportInitialFilled(report) {
+08188:         return Number(report?.initialQualifiedFilled ?? report?.initialCriticalFilled ?? 0);
+08189:     }

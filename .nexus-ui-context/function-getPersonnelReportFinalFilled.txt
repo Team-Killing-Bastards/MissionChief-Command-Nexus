@@ -1,0 +1,3 @@
+08191:     function getPersonnelReportFinalFilled(report) {
+08192:         return Number(report?.finalQualifiedFilled ?? report?.finalCriticalFilled ?? 0);
+08193:     }

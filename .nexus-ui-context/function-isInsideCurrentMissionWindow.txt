@@ -1,0 +1,7 @@
+39235:     function isInsideCurrentMissionWindow(element) {
+39236:         if (!element || !element.closest) return false;
+39237: 
+39238:         return !!element.closest(
+39239:             '#mission_general_info, #mission_caption, #missionH1, #iframe-inside-container, #mission_content, .mission_content, #lightbox_box, .lightbox, .vm--modal, .modal'
+39240:         );
+39241:     }

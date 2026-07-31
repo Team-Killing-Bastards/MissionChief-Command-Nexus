@@ -1,0 +1,15 @@
+04061:     async function stationFetchWithTimeout(url, options = {}, timeoutMs = 10000) {
+04062:         const controller = new AbortController();
+04063:         STATION_STATE.activeControllers.add(controller);
+04064:         const timer = setTimeout(() => controller.abort(), timeoutMs);
+04065: 
+04066:         try {
+04067:             return await fetch(url, {
+04068:                 ...options,
+04069:                 signal: controller.signal
+04070:             });
+04071:         } finally {
+04072:             clearTimeout(timer);
+04073:             STATION_STATE.activeControllers.delete(controller);
+04074:         }
+04075:     }

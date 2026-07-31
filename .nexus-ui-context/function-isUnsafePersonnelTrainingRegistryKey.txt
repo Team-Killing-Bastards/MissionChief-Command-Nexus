@@ -1,0 +1,3 @@
+04480:     function isUnsafePersonnelTrainingRegistryKey(value) {
+04481:         return !value || value === '__proto__' || value === 'constructor' || value === 'prototype';
+04482:     }

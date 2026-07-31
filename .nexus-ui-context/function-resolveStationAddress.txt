@@ -1,0 +1,33 @@
+03742:     async function resolveStationAddress(station, stationDoc) {
+03743:         const movePageResult = await fetchStationMoveAddress(station);
+03744:         if (movePageResult.address) return movePageResult;
+03745: 
+03746:         stationDebug(`Move-page address unavailable for ${station.displayName}: ${movePageResult.error || 'no #building_address returned'}`);
+03747: 
+03748:         const coordinates = await getStationCoordinates(station, stationDoc);
+03749:         if (!coordinates) {
+03750:             return {
+03751:                 address: '',
+03752:                 source: 'none',
+03753:                 error: 'Move building is unavailable and no station coordinates could be found for the address fallback.'
+03754:             };
+03755:         }
+03756: 
+03757:         stationDebug(`Coordinate fallback: ${coordinates.latitude}, ${coordinates.longitude} (${coordinates.source})`);
+03758: 
+03759:         const reverseResult = await fetchMissionChiefReverseAddress(coordinates.latitude, coordinates.longitude);
+03760:         if (!reverseResult.address) {
+03761:             return {
+03762:                 address: '',
+03763:                 source: coordinates.source,
+03764:                 error: reverseResult.error || 'MissionChief reverse-address lookup returned no address.'
+03765:             };
+03766:         }
+03767: 
+03768:         return {
+03769:             address: reverseResult.address,
+03770:             source: `MissionChief reverse address via ${coordinates.source}`,
+03771:             latitude: coordinates.latitude,
+03772:             longitude: coordinates.longitude
+03773:         };
+03774:     }

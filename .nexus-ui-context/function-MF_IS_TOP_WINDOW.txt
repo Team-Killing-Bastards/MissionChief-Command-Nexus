@@ -1,0 +1,7 @@
+09919:     const MF_IS_TOP_WINDOW = (() => {
+09920:         try {
+09921:             return window.top === window.self;
+09922:         } catch (error) {
+09923:             return true;
+09924:         }
+09925:     })();

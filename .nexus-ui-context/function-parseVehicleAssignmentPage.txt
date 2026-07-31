@@ -1,0 +1,132 @@
+08002:     function parseVehicleAssignmentPage(doc, vehicleId) {
+08003:         const currentVehicleId = String(vehicleId || '');
+08004:         const vehicleTypeElement = doc.querySelector(
+08005:             '.vehicle_image_reload[vehicle_type_id], ' +
+08006:             '[vehicle_type_id], [data-vehicle-type-id]'
+08007:         );
+08008:         const vehicleTypeId = String(
+08009:             vehicleTypeElement?.getAttribute('vehicle_type_id') ||
+08010:             vehicleTypeElement?.getAttribute('data-vehicle-type-id') ||
+08011:             ''
+08012:         );
+08013: 
+08014:         const rows = [...doc.querySelectorAll('#personal_table tbody tr')]
+08015:             .map(row => {
+08016:                 const cells = [...row.children];
+08017:                 const actionControls = [...row.querySelectorAll(
+08018:                     'a[href*="/zuweisungDo/"], button, ' +
+08019:                     'input[type="submit"], input[type="button"], ' +
+08020:                     '[personal_id], [data-personal-id], .btn-assigned'
+08021:                 )];
+08022:                 const visibleActionControls = actionControls.filter(control => {
+08023:                     const style = String(control.getAttribute?.('style') || '').toLowerCase();
+08024:                     const hiddenByClass = control.classList?.contains('hidden') ||
+08025:                         control.classList?.contains('d-none');
+08026:                     return !(
+08027:                         control.hidden ||
+08028:                         control.getAttribute?.('aria-hidden') === 'true' ||
+08029:                         hiddenByClass ||
+08030:                         /display\s*:\s*none|visibility\s*:\s*hidden/.test(style)
+08031:                     );
+08032:                 });
+08033: 
+08034:                 const exactActionLink = actionControls.find(control => {
+08035:                     const href = control.getAttribute?.('href') || '';
+08036:                     return href.includes(`/vehicles/${currentVehicleId}/zuweisungDo/`);
+08037:                 });
+08038: 
+08039:                 const assignedControl = visibleActionControls.find(control => {
+08040:                     const text = cleanText(
+08041:                         control?.innerText ||
+08042:                         control?.textContent ||
+08043:                         control?.value ||
+08044:                         ''
+08045:                     );
+08046:                     return !!(
+08047:                         control?.classList?.contains('btn-assigned') ||
+08048:                         /remove\s+binding/i.test(text)
+08049:                     );
+08050:                 });
+08051: 
+08052:                 const statusControl = assignedControl || exactActionLink || actionControls[0] || null;
+08053:                 const actionLink = exactActionLink || actionControls.find(control => control.tagName === 'A') || null;
+08054: 
+08055:                 const personnelIdCandidates = [
+08056:                     statusControl?.getAttribute?.('personal_id'),
+08057:                     statusControl?.getAttribute?.('data-personal-id'),
+08058:                     actionLink?.getAttribute?.('personal_id'),
+08059:                     actionLink?.getAttribute?.('data-personal-id'),
+08060:                     row.getAttribute?.('personal_id'),
+08061:                     row.getAttribute?.('data-personal-id'),
+08062:                     row.id?.match(/personal_(\d+)/)?.[1],
+08063:                     actionLink?.getAttribute?.('href')?.match(/\/zuweisungDo\/(\d+)/)?.[1],
+08064:                     statusControl?.getAttribute?.('formaction')?.match(/\/zuweisungDo\/(\d+)/)?.[1]
+08065:                 ];
+08066: 
+08067:                 const personnelId = String(
+08068:                     personnelIdCandidates.find(value => /^\d+$/.test(String(value || '').trim())) ||
+08069:                     ''
+08070:                 );
+08071: 
+08072:                 const assignedVehicleLink = [...row.querySelectorAll('a[href^="/vehicles/"]')].find(link => {
+08073:                     const href = link.getAttribute('href') || '';
+08074:                     return /^\/vehicles\/\d+\/?(?:[?#].*)?$/.test(href);
+08075:                 });
+08076:                 const detectedAssignedVehicleId = getVehicleIdFromHref(
+08077:                     assignedVehicleLink?.getAttribute('href') || ''
+08078:                 );
+08079: 
+08080:                 const assignedHere = visibleActionControls.some(control => {
+08081:                     const text = cleanText(
+08082:                         control?.innerText ||
+08083:                         control?.textContent ||
+08084:                         control?.value ||
+08085:                         ''
+08086:                     );
+08087:                     return !!(
+08088:                         control?.classList?.contains('btn-assigned') ||
+08089:                         /remove\s+binding/i.test(text)
+08090:                     );
+08091:                 });
+08092:                 const assignedElsewhere = !assignedHere && visibleActionControls.some(
+08093:                     control => control?.classList?.contains('btn-warning')
+08094:                 );
+08095:                 const available = !assignedHere && !assignedElsewhere && visibleActionControls.some(
+08096:                     control => control?.classList?.contains('btn-success')
+08097:                 );
+08098: 
+08099:                 const assignedVehicleId = assignedHere
+08100:                     ? currentVehicleId
+08101:                     : (assignedElsewhere ? detectedAssignedVehicleId : '');
+08102: 
+08103:                 const assignHref = String(
+08104:                     exactActionLink?.getAttribute?.('href') ||
+08105:                     actionLink?.getAttribute?.('href') ||
+08106:                     statusControl?.getAttribute?.('formaction') ||
+08107:                     ''
+08108:                 );
+08109: 
+08110:                 return {
+08111:                     personnelId,
+08112:                     name: cleanText(cells[0]?.textContent || ''),
+08113:                     trainingText: cleanText(cells[1]?.textContent || ''),
+08114:                     trainingCodes: parseTrainingCodes(row),
+08115:                     assignedHere,
+08116:                     assignedVehicleId,
+08117:                     assignedVehicleName: assignedVehicleId ? cleanText(assignedVehicleLink?.textContent || '') : '',
+08118:                     available,
+08119:                     assignedElsewhere,
+08120:                     displayedVehicleId: detectedAssignedVehicleId,
+08121:                     assignHref
+08122:                 };
+08123:             })
+08124:             .filter(person => person.personnelId);
+08125: 
+08126:         return {
+08127:             vehicleTypeId,
+08128:             rows,
+08129:             totalAssigned: rows.filter(person => person.assignedVehicleId === currentVehicleId),
+08130:             criticalAssigned: rows.filter(person => person.assignedVehicleId === currentVehicleId && person.trainingCodes.includes(PERSONNEL_TRAINING_CODE)),
+08131:             availableCritical: rows.filter(person => person.available && person.trainingCodes.includes(PERSONNEL_TRAINING_CODE))
+08132:         };
+08133:     }

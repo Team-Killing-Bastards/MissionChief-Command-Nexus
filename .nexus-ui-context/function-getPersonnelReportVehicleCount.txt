@@ -1,0 +1,3 @@
+08183:     function getPersonnelReportVehicleCount(report) {
+08184:         return Number(report?.vehicleCount ?? report?.ambulances ?? report?.vehiclesChecked ?? 0);
+08185:     }

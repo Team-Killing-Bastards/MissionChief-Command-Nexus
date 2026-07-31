@@ -1,0 +1,6 @@
+04122:     function getExistingStationSequence(currentName, suffix) {
+04123:         if (!suffix) return '';
+04124:         const escapedSuffix = suffix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+04125:         const match = String(currentName || '').trim().match(new RegExp(`${escapedSuffix}\\s*(\\d+)$`, 'i'));
+04126:         return match ? match[1] : '';
+04127:     }

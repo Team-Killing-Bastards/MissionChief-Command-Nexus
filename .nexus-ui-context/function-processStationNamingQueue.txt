@@ -1,0 +1,54 @@
+03543:     async function processStationNamingQueue() {
+03544:         try {
+03545:             while (STATION_STATE.stationIndex < STATION_STATE.queue.length) {
+03546:                 if (STATION_STATE.stopped) break;
+03547: 
+03548:                 await waitIfStationNamingPaused();
+03549:                 if (STATION_STATE.stopped) break;
+03550: 
+03551:                 const station = STATION_STATE.queue[STATION_STATE.stationIndex];
+03552:                 const displayPosition = STATION_STATE.stationIndex + 1;
+03553: 
+03554:                 setStationUiValue('progress', `${displayPosition} / ${STATION_STATE.queue.length}`);
+03555:                 setStationUiValue('current', station.displayName);
+03556:                 setStationUiValue('address', 'Opening station...');
+03557:                 setStationUiValue('town', 'Waiting...');
+03558:                 setStationUiValue('before', station.displayName);
+03559:                 setStationUiValue('after', 'Waiting...');
+03560:                 setStationUiValue('status', 'Opening station');
+03561: 
+03562:                 stationLog(`Station ${displayPosition}/${STATION_STATE.queue.length}: ${station.displayName}`, 'station');
+03563:                 stationLog(`Type: ${station.typeLabel} | building_type_id=${station.buildingTypeId ?? 'unknown'} | suffix=${station.suffix || 'none'}`, 'info');
+03564: 
+03565:                 const result = await processOneStationName(station);
+03566: 
+03567:                 if (result === 'renamed') {
+03568:                     STATION_STATE.renamedCount++;
+03569:                 } else if (result === 'previewed') {
+03570:                     STATION_STATE.previewedCount++;
+03571:                 } else {
+03572:                     STATION_STATE.skippedCount++;
+03573:                 }
+03574: 
+03575:                 updateStationCounters();
+03576:                 STATION_STATE.stationIndex++;
+03577: 
+03578:                 if (!STATION_STATE.stopped) await sleep(350);
+03579:             }
+03580:         } finally {
+03581:             await closeStationNamingModal();
+03582:             STATION_STATE.activeIframe = null;
+03583:             STATION_STATE.running = false;
+03584:             STATION_STATE.paused = false;
+03585:             document.querySelector('#mc-station-pause').textContent = 'Pause';
+03586: 
+03587:             if (STATION_STATE.stopped) {
+03588:                 setStationUiValue('status', 'Stopped');
+03589:                 stationLog(`Stopped. Renamed ${STATION_STATE.renamedCount}, previewed ${STATION_STATE.previewedCount}, skipped ${STATION_STATE.skippedCount}.`, 'error');
+03590:             } else {
+03591:                 setStationUiValue('status', 'Finished');
+03592:                 setStationUiValue('progress', `${STATION_STATE.queue.length} / ${STATION_STATE.queue.length}`);
+03593:                 stationLog(`Finished. Renamed ${STATION_STATE.renamedCount}, previewed ${STATION_STATE.previewedCount}, skipped ${STATION_STATE.skippedCount}.`, 'done');
+03594:             }
+03595:         }
+03596:     }

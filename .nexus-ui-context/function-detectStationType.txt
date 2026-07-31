@@ -1,0 +1,16 @@
+08782:     function detectStationType(name) {
+08783:         const n = cleanText(name).toUpperCase();
+08784: 
+08785:         if (n.includes('AIRMED') || n.includes('AIR AMB')) return 'AIR';
+08786:         if (n.includes('AIRPORT')) return 'AIRFIELD';
+08787:         if (n.includes('BOMB') || n.includes('EOD')) return 'EOD';
+08788:         if (n.includes('RECOVERY')) return 'RECOVERY';
+08789:         if (n.includes('SAR')) return 'SAR';
+08790:         if (n.includes('RNLI') || n.includes('-LB') || n.includes('LIFEBOAT')) return 'RNLI';
+08791:         if (n.includes('-CG') || n.includes('COASTGUARD')) return 'COASTGUARD';
+08792:         if (n.includes('-PS') || n.includes('POLICE')) return 'POLICE';
+08793:         if (n.includes('-AS') || n.includes('AO STATION') || n.includes('AMBULANCE')) return 'AMBULANCE';
+08794:         if (n.includes('-FS') || n.includes('FIRE')) return 'FIRE';
+08795: 
+08796:         return 'OTHER';
+08797:     }

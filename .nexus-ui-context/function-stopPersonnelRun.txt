@@ -1,0 +1,20 @@
+05515:     function stopPersonnelRun() {
+05516:         if (!PERSONNEL_STATE.running) {
+05517:             personnelLog('Nothing is currently running.', 'debug');
+05518:             return;
+05519:         }
+05520: 
+05521:         PERSONNEL_STATE.stopped = true;
+05522:         PERSONNEL_STATE.paused = false;
+05523:         document.querySelector('#mc-personnel-pause').textContent = 'Pause';
+05524:         setPersonnelUiValue('status', 'Stopping...');
+05525: 
+05526:         if (PERSONNEL_STATE.activeController) {
+05527:             try {
+05528:                 PERSONNEL_STATE.activeController.abort();
+05529:             } catch (_error) {}
+05530:             PERSONNEL_STATE.activeController = null;
+05531:         }
+05532: 
+05533:         personnelLog('Stop requested. The active Personnel request was cancelled and no further work will run.', 'error');
+05534:     }

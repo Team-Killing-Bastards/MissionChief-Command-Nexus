@@ -1,0 +1,83 @@
+08313:     function buildPersonnelOverallStationBlock(report, isAssign) {
+08314:         if (!report) return '';
+08315: 
+08316:         const cached = PERSONNEL_REPORT_BLOCK_CACHE.get(report);
+08317:         if (cached && cached.isAssign === isAssign) return cached.text;
+08318: 
+08319:         const lines = [];
+08320:         const stationHeading = Number(report.trainingShortfall || 0) > 0
+08321:             ? `⚠ ${report.stationName.toUpperCase()} — ESTIMATED TRAINING SHORTFALL ${report.trainingShortfall} ⚠`
+08322:             : report.stationName.toUpperCase();
+08323:         lines.push(stationHeading);
+08324: 
+08325:         if (report.error) {
+08326:             lines.push('  Result: ERROR', `  ERROR: ${report.error}`);
+08327:         } else if (report.noTargetVehicles) {
+08328:             lines.push('  Result: NO TARGET VEHICLES');
+08329:         } else {
+08330:             lines.push(
+08331:                 `  Result: ${getPersonnelReportResult(report)}`,
+08332:                 `  Final verification: ${isAssign ? (report.afterActionVerified ? 'PASSED' : 'PARTIAL / FAILED') : 'PREVIEW PROJECTION'}`,
+08333:                 `  Mapped vehicles: ${getPersonnelReportVehicleCount(report)}`,
+08334:                 ...(
+08335:                     Number(report.stationTarget || 0) > 0
+08336:                         ? [
+08337:                             `  Station target: ${report.stationTarget}`,
+08338:                             `  Station target result: ${report.stationTargetMet ? 'PASSED' : 'SHORT'} (${Number(report.stationTargetFulfilled || 0)}/${report.stationTarget})`,
+08339:                             `  Additional units required: ${Number(report.stationTargetShortfallUnits || 0)}`
+08340:                         ]
+08341:                         : []
+08342:                 ),
+08343:                 `  Units fully covered: ${Number(report.fulfilledUnits || 0)}`,
+08344:                 `  Required qualified positions: ${Number(report.required || 0)}`,
+08345:                 `  Qualified personnel visible: ${Number(report.trained || 0)}`,
+08346:                 `  Available qualified before: ${Number(report.availableAtScan || 0)}`,
+08347:                 `  Available qualified after: ${Number(report.availableAtEnd || 0)}`,
+08348:                 `  Qualified positions before: ${getPersonnelReportInitialFilled(report)}/${Number(report.required || 0)}`,
+08349:                 `  ${isAssign ? 'Qualified positions after' : 'Projected qualified positions'}: ${getPersonnelReportFinalFilled(report)}/${Number(report.required || 0)}`,
+08350:                 `  Qualification shortfall estimate: ${Number(report.trainingShortfall || 0)}`,
+08351:                 `  Missing training by qualification: ${formatPoliceTrainingGapSummary(report.missingTrainingSummary)}`,
+08352:                 `  ${isAssign ? 'Personnel assigned' : 'Assignments planned'}: ${isAssign ? Number(report.assigned || 0) : Number(report.planned || 0)}`,
+08353:                 `  Unfilled required positions after action: ${Number(report.assignmentShortfall || 0)}`
+08354:             );
+08355: 
+08356:             if (report.verificationError) lines.push(`  Verification warning: ${report.verificationError}`);
+08357: 
+08358:             if (Array.isArray(report.rules) && report.rules.length > 1) {
+08359:                 report.rules.forEach(rule => {
+08360:                     lines.push(
+08361:                         `    Rule: ${rule.label} | vehicles ${rule.vehicleCount} | target ${rule.target} | required ${rule.required} | trained ${rule.trained} | shortfall ${rule.trainingShortfall} | missing ${formatPoliceTrainingGapSummary(rule.trainingGaps)}`
+08362:                     );
+08363:                 });
+08364:             }
+08365: 
+08366:             report.vehicles.forEach(vehicle => {
+08367:                 const actionNames = isAssign ? vehicle.assignedNames : vehicle.plannedNames;
+08368:                 const actionText = actionNames?.length
+08369:                     ? ` | ${isAssign ? 'assigned' : 'planned'}: ${actionNames.join(', ')}`
+08370:                     : '';
+08371:                 const seatText = vehicle.occupiedSeatBlock
+08372:                     ? ` | ${vehicle.occupiedSeatBlock} required position(s) blocked by existing occupants`
+08373:                     : '';
+08374:                 const afterLabel = isAssign
+08375:                     ? (vehicle.verificationStatus === 'final-verified' ? 'final verified' : 'after action')
+08376:                     : 'projected';
+08377:                 const target = Number(vehicle.target || PERSONNEL_TARGET_PER_VEHICLE);
+08378:                 const beforeQualified = Number(vehicle.beforeQualified ?? vehicle.beforeCritical ?? 0);
+08379:                 const afterQualified = Number(vehicle.afterQualified ?? vehicle.afterCritical ?? 0);
+08380:                 const ruleText = vehicle.ruleLabel ? ` [${vehicle.ruleLabel}]` : '';
+08381:                 const occupantGapText = formatVehicleOccupantTrainingGaps(vehicle.occupantTrainingGaps);
+08382:                 const missingTrainingText = occupantGapText
+08383:                     ? ` | existing occupants missing: ${occupantGapText}`
+08384:                     : '';
+08385: 
+08386:                 lines.push(
+08387:                     `    - ${vehicle.name}${ruleText}: before ${beforeQualified}/${target} -> ${afterLabel} ${afterQualified}/${target} | unfilled ${Number(vehicle.unfilled || 0)}${actionText}${seatText}${missingTrainingText}`
+08388:                 );
+08389:             });
+08390:         }
+08391: 
+08392:         const text = lines.join('\n');
+08393:         PERSONNEL_REPORT_BLOCK_CACHE.set(report, { isAssign, text });
+08394:         return text;
+08395:     }

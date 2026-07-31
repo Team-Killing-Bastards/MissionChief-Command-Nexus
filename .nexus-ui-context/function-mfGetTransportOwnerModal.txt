@@ -1,0 +1,65 @@
+37825:     function mfGetTransportOwnerModal() {
+37826:         if (mfTransportOwnerModal && mfTransportOwnerModal.isConnected) {
+37827:             return mfTransportOwnerModal;
+37828:         }
+37829: 
+37830:         for (const doc of mfGetAccessibleDocumentsForTransport()) {
+37831:             try {
+37832:                 const marked = doc.querySelector(
+37833:                     '[data-mf-transport-owner="true"]'
+37834:                 );
+37835: 
+37836:                 if (marked) {
+37837:                     mfTransportOwnerModal = marked;
+37838:                     return marked;
+37839:                 }
+37840:             } catch (error) {}
+37841:         }
+37842: 
+37843:         const lastClickAt = mfGetSharedTransportLastClickAt();
+37844: 
+37845:         if (
+37846:             isPostTransportRehookPending() &&
+37847:             lastClickAt > 0 &&
+37848:             Date.now() - lastClickAt < 30000
+37849:         ) {
+37850:             for (const doc of mfGetAccessibleDocumentsForTransport()) {
+37851:                 try {
+37852:                     const modals = Array.from(
+37853:                         doc.querySelectorAll('.vm--modal, .modal, .lightbox')
+37854:                     ).filter(modal => {
+37855:                         if (!mfIsVisibleInOwnDocument(modal)) return false;
+37856: 
+37857:                         const modalText = (
+37858:                             modal.innerText ||
+37859:                             modal.textContent ||
+37860:                             ''
+37861:                         ).replace(/\s+/g, ' ').trim();
+37862: 
+37863:                         const hasMission = !!modal.querySelector(
+37864:                             '#mission_general_info, #mission_content, #mission_caption, #missionH1'
+37865:                         );
+37866: 
+37867:                         const hasApproach =
+37868:                             mfGetExactVisibleApproachButtons(modal).length > 0;
+37869: 
+37870:                         return !hasMission &&
+37871:                             !hasApproach &&
+37872:                             modalText.length < 160;
+37873:                     });
+37874: 
+37875:                     if (modals.length) {
+37876:                         const modal = modals[modals.length - 1];
+37877:                         modal.setAttribute(
+37878:                             'data-mf-transport-owner',
+37879:                             'true'
+37880:                         );
+37881:                         mfTransportOwnerModal = modal;
+37882:                         return modal;
+37883:                     }
+37884:                 } catch (error) {}
+37885:             }
+37886:         }
+37887: 
+37888:         return null;
+37889:     }

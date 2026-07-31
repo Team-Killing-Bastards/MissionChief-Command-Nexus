@@ -1,0 +1,36 @@
+18192:     function applySavedMissionFinderWindowPosition(panel, reason) {
+18193:         if (
+18194:             !panel
+18195:             || isMissionFinderIosSafariWebsite()
+18196:         ) return false;
+18197: 
+18198:         const left = localStorage.getItem(MF_PANEL_LEFT_KEY);
+18199:         const top = localStorage.getItem(MF_PANEL_TOP_KEY);
+18200: 
+18201:         if (!mfKeepPanelPosition || !left || !top) {
+18202:             return false;
+18203:         }
+18204: 
+18205:         panel.style.left = left;
+18206:         panel.style.top = top;
+18207:         panel.style.right = 'auto';
+18208:         panel.style.bottom = 'auto';
+18209:         panel.style.visibility = 'visible';
+18210: 
+18211:         requestAnimationFrame(() => {
+18212:             keepMissionFinderWindowOnScreen(panel);
+18213:             saveMissionFinderWindowPosition(
+18214:                 panel,
+18215:                 reason || 'apply saved position'
+18216:             );
+18217:         });
+18218: 
+18219:         if (mfDebugEnabled) {
+18220:             debugLog(
+18221:                 'CONTROL WINDOW',
+18222:                 `Applied saved position | reason=${reason || 'unknown'} | left=${left} | top=${top}`
+18223:             );
+18224:         }
+18225: 
+18226:         return true;
+18227:     }

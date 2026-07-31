@@ -1,0 +1,42 @@
+08986:     function refreshStations() {
+08987:         if (PERSONNEL_STATE.running) {
+08988:             log('Personnel Assignment is currently running. Stop it before refreshing Unit Naming.', 'error');
+08989:             return;
+08990:         }
+08991: 
+08992:         if (STATE.running) {
+08993:             log('Cannot refresh while running. Stop first.', 'error');
+08994:             return;
+08995:         }
+08996: 
+08997:         populateUnitClassDropdown();
+08998:         STATE.selectedUnitClass = getSelectedUnitClass();
+08999:         setStatus('Refreshing stations...');
+09000:         log('Refreshing station list...', 'info');
+09001:         log(`Unit class filter: ${getUnitClassDisplayLabel()}`, 'info');
+09002: 
+09003:         const stationEntries = getStationOverviewEntries();
+09004: 
+09005:         STATE.stations = stationEntries.map((entry, index) => ({
+09006:             index,
+09007:             href: entry.href,
+09008:             displayName: entry.displayName,
+09009:             callsignBase: createCallsignBase(entry.displayName),
+09010:             stationType:
+09011:                 STATION_BUILDING_TYPE_INFO[entry.buildingTypeId]?.stationType ||
+09012:                 detectStationType(entry.displayName)
+09013:         }));
+09014: 
+09015:         populateStartDropdown();
+09016: 
+09017:         setStatus('Ready');
+09018:         setProgress(0, STATE.filteredStations.length);
+09019: 
+09020:         log(`Stations found: ${STATE.stations.length}`, 'info');
+09021:         log(`Matching filter: ${STATE.filteredStations.length}`, 'info');
+09022: 
+09023:         if (STATE.filteredStations.length) {
+09024:             log(`First match: ${STATE.filteredStations[0].displayName}`, 'info');
+09025:             log(`Last match : ${STATE.filteredStations[STATE.filteredStations.length - 1].displayName}`, 'info');
+09026:         }
+09027:     }

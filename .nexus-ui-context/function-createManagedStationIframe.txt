@@ -1,0 +1,27 @@
+01316:     function createManagedStationIframe(stationHref, purpose = 'station') {
+01317:         const href = normaliseStationOverviewHref(stationHref);
+01318:         if (!href) return null;
+01319: 
+01320:         document.querySelectorAll(
+01321:             `iframe.mc-namer-managed-station-iframe[data-mc-purpose="${purpose}"]`
+01322:         ).forEach(frame => frame.remove());
+01323: 
+01324:         const iframe = document.createElement('iframe');
+01325:         iframe.className = 'mc-namer-managed-station-iframe';
+01326:         iframe.dataset.mcPurpose = purpose;
+01327:         iframe.src = href;
+01328:         iframe.setAttribute('aria-hidden', 'true');
+01329:         iframe.tabIndex = -1;
+01330:         Object.assign(iframe.style, {
+01331:             position: 'fixed',
+01332:             left: '-10000px',
+01333:             top: '0',
+01334:             width: '2px',
+01335:             height: '2px',
+01336:             opacity: '0.01',
+01337:             pointerEvents: 'none',
+01338:             border: '0'
+01339:         });
+01340:         document.body.appendChild(iframe);
+01341:         return iframe;
+01342:     }

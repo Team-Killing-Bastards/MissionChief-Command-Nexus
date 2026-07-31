@@ -1,0 +1,16 @@
+03428:     function updateStationNamingSelectionPreview() {
+03429:         const select = document.querySelector('#mc-station-startfrom');
+03430:         const selectedHref = select?.value || '';
+03431:         const station = STATION_STATE.filteredStations.find(item => item.href === selectedHref);
+03432: 
+03433:         STATION_STATE.selectedHref = selectedHref;
+03434:         setStationUiValue('current', station?.displayName || 'None');
+03435:         setStationUiValue('address', 'Not read yet');
+03436:         setStationUiValue('town', 'Not extracted yet');
+03437:         setStationUiValue('before', station?.displayName || 'None');
+03438:         setStationUiValue('after', 'Not generated yet');
+03439: 
+03440:         if (station) {
+03441:             stationDebug(`Selected: ${station.displayName} | href=${selectedHref} | building_type_id=${station.buildingTypeId} | rule=${station.typeLabel} ${station.suffix}`);
+03442:         }
+03443:     }

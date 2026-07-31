@@ -1,0 +1,10 @@
+32765:     function isMissingOnMissionUpdateTable(table) {
+32766:         const headers = getMissionUpdateTableHeaderTexts(table);
+32767:         return (
+32768:             headers.includes('missing on mission') &&
+32769:             headers.some(header =>
+32770:                 header === 'still needed' ||
+32771:                 header === 'still required'
+32772:             )
+32773:         );
+32774:     }

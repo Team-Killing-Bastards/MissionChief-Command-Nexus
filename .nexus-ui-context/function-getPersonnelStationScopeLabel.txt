@@ -1,0 +1,10 @@
+04317:     function getPersonnelStationScopeLabel() {
+04318:         const service = getPersonnelServiceDefinition();
+04319:         const stationTypes = getPersonnelProfileStationTypes();
+04320: 
+04321:         if (service === PERSONNEL_SERVICE_DEFINITIONS.medical) return 'ambulance stations';
+04322:         if (stationTypes.length === 1 && stationTypes[0] === 'AIR') return 'police aviation stations';
+04323:         if (stationTypes.length === 1 && stationTypes[0] === 'EOD') return 'EOD / bomb disposal stations';
+04324:         if (service === PERSONNEL_SERVICE_DEFINITIONS.police) return 'relevant Police stations';
+04325:         return `relevant ${service.label} stations`;
+04326:     }

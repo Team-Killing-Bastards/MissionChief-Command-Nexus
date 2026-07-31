@@ -1,0 +1,35 @@
+24537:     function getSelectedTrainedPersonnelCountForCode(
+24538:         selectedVehicles,
+24539:         trainingCode
+24540:     ) {
+24541:         const code = String(trainingCode || '').trim();
+24542:         if (!code) return 0;
+24543: 
+24544:         return (Array.isArray(selectedVehicles) ? selectedVehicles : [])
+24545:             .reduce((total, vehicle) => {
+24546:                 if (vehicle?.profilesComplete) {
+24547:                     return total + vehicle.profiles.reduce(
+24548:                         (vehicleTotal, profile) => {
+24549:                             return vehicleTotal + (
+24550:                                 Array.isArray(profile) &&
+24551:                                 profile.includes(code)
+24552:                                     ? 1
+24553:                                     : 0
+24554:                             );
+24555:                         },
+24556:                         0
+24557:                     );
+24558:                 }
+24559: 
+24560:                 const aggregate =
+24561:                     (Array.isArray(vehicle?.trainingCounts)
+24562:                         ? vehicle.trainingCounts
+24563:                         : []
+24564:                     ).find(item => item.code === code);
+24565: 
+24566:                 return total + Math.max(
+24567:                     0,
+24568:                     parseInt(aggregate?.count, 10) || 0
+24569:                 );
+24570:             }, 0);
+24571:     }

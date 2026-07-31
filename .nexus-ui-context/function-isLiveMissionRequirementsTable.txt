@@ -1,0 +1,17 @@
+32275:     function isLiveMissionRequirementsTable(
+32276:         table
+32277:     ) {
+32278:         if (!table) {
+32279:             return false;
+32280:         }
+32281: 
+32282:         return !!(
+32283:             table.matches?.(
+32284:                 'table[aria-label="Live mission requirements"]'
+32285:             ) &&
+32286:             table.closest?.(
+32287:                 '#mc-map-command-toolkit-mission-requirements[data-mcms-requirements-panel="1"], ' +
+32288:                 'section[data-mcms-requirements-panel="1"]'
+32289:             )
+32290:         );
+32291:     }

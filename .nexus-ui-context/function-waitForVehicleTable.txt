@@ -1,0 +1,16 @@
+09307:     async function waitForVehicleTable(iframe) {
+09308:         for (let i = 0; i < 80; i++) {
+09309:             if (STATE.stopped) return false;
+09310: 
+09311:             try {
+09312:                 const doc = iframe.contentDocument;
+09313:                 if (doc && doc.querySelector('#vehicle_table tbody tr')) {
+09314:                     await sleep(300);
+09315:                     return true;
+09316:                 }
+09317:             } catch (e) {}
+09318: 
+09319:             await sleep(250);
+09320:         }
+09321:         return false;
+09322:     }

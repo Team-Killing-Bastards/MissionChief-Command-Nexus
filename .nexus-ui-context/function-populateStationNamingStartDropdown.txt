@@ -1,0 +1,36 @@
+03391:     function populateStationNamingStartDropdown() {
+03392:         const select = document.querySelector('#mc-station-startfrom');
+03393:         if (!select) return;
+03394: 
+03395:         const selectedType = document.querySelector('#mc-station-type')?.value || 'ALL';
+03396: 
+03397:         STATION_STATE.filteredStations = STATION_STATE.stations.filter(station => {
+03398:             return selectedType === 'ALL' || station.stationType === selectedType;
+03399:         });
+03400: 
+03401:         select.innerHTML = '';
+03402: 
+03403:         if (!STATION_STATE.filteredStations.length) {
+03404:             select.innerHTML = '<option value="">No matching stations found</option>';
+03405:             STATION_STATE.selectedHref = '';
+03406:             setStationUiValue('current', 'None');
+03407:             setStationUiValue('progress', '0 / 0');
+03408:             return;
+03409:         }
+03410: 
+03411:         const firstOption = document.createElement('option');
+03412:         firstOption.value = STATION_STATE.filteredStations[0].href;
+03413:         firstOption.textContent = 'Start from first matching station';
+03414:         select.appendChild(firstOption);
+03415: 
+03416:         STATION_STATE.filteredStations.forEach(station => {
+03417:             const option = document.createElement('option');
+03418:             option.value = station.href;
+03419:             option.textContent = `${station.displayName} [${STATION_TYPES[station.stationType] || station.stationType} | type ${station.buildingTypeId ?? '?'}]`;
+03420:             select.appendChild(option);
+03421:         });
+03422: 
+03423:         STATION_STATE.selectedHref = select.value;
+03424:         setStationUiValue('progress', `0 / ${STATION_STATE.filteredStations.length}`);
+03425:         updateStationNamingSelectionPreview();
+03426:     }

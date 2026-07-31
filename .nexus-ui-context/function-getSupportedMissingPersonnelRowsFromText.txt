@@ -1,0 +1,151 @@
+28699:     function getSupportedMissingPersonnelRowsFromText(
+28700:         text,
+28701:         options = {}
+28702:     ) {
+28703:         const silent = !!(options && options.silent);
+28704: 
+28705:         const personnelSegment =
+28706:             getMissingPersonnelSegment(
+28707:                 text
+28708:             );
+28709: 
+28710:         if (!personnelSegment) {
+28711:             return [];
+28712:         }
+28713: 
+28714:         const rows = [];
+28715: 
+28716:         const sarPersonnelDefinitions = [
+28717:             {
+28718:                 displayName:
+28719:                     'Search Technicians',
+28720:                 namePattern:
+28721:                     'search\\s+technician(?:s)?'
+28722:             },
+28723:             {
+28724:                 displayName:
+28725:                     'Search Advisors',
+28726:                 namePattern:
+28727:                     'search\\s+advisor(?:s)?'
+28728:             },
+28729:             {
+28730:                 displayName:
+28731:                     'SAR Commanders',
+28732:                 namePattern:
+28733:                     'sar\\s+commander(?:s)?'
+28734:             }
+28735:         ];
+28736: 
+28737:         sarPersonnelDefinitions.forEach(
+28738:             definition => {
+28739:                 const personnelRequired =
+28740:                     getNamedPersonnelCount(
+28741:                         personnelSegment,
+28742:                         definition.namePattern
+28743:                     );
+28744: 
+28745:                 if (personnelRequired <= 0) {
+28746:                     return;
+28747:                 }
+28748: 
+28749:                 const conversion =
+28750:                     getSarPersonnelVehicleRequirement(
+28751:                         definition.displayName,
+28752:                         personnelRequired
+28753:                     );
+28754: 
+28755:                 if (!conversion) {
+28756:                     return;
+28757:                 }
+28758: 
+28759:                 rows.push({
+28760:                     unitName:
+28761:                         conversion.unitName,
+28762:                     stillNeeded:
+28763:                         conversion.stillNeeded,
+28764:                     personnelRequirement:
+28765:                         conversion.personnelRequirement
+28766:                 });
+28767: 
+28768:                 if (
+28769:                     mfDebugEnabled &&
+28770:                     !silent
+28771:                 ) {
+28772:                     debugLog(
+28773:                         'UPDATE PERSONNEL',
+28774:                         `${conversion.personnelRequirement} -> select ${conversion.unitName} x${conversion.stillNeeded} (${conversion.personnelPerVehicle} personnel per vehicle)`
+28775:                     );
+28776:                 }
+28777:             }
+28778:         );
+28779: 
+28780:         // Police Cars normally carry 2 Police Officers.
+28781:         const policeOfficersNeeded =
+28782:             getNamedPersonnelCount(
+28783:                 personnelSegment,
+28784:                 'police\\s+officer(?:s)?'
+28785:             );
+28786: 
+28787:         if (policeOfficersNeeded > 0) {
+28788:             const policeCarsNeeded =
+28789:                 Math.ceil(
+28790:                     policeOfficersNeeded /
+28791:                     2
+28792:                 );
+28793: 
+28794:             rows.push({
+28795:                 unitName:
+28796:                     'Police Car',
+28797:                 stillNeeded:
+28798:                     policeCarsNeeded,
+28799:                 personnelRequirement:
+28800:                     `${policeOfficersNeeded} Police Officer${policeOfficersNeeded === 1 ? '' : 's'}`
+28801:             });
+28802: 
+28803:             if (
+28804:                 mfDebugEnabled &&
+28805:                 !silent
+28806:             ) {
+28807:                 debugLog(
+28808:                     'UPDATE PERSONNEL',
+28809:                     `${policeOfficersNeeded} Police Officer${policeOfficersNeeded === 1 ? '' : 's'} -> select Police Car x${policeCarsNeeded}`
+28810:                 );
+28811:             }
+28812:         }
+28813: 
+28814:         // Coastguard Mud Rescue Units carry 5 Mud Rescue Operators each.
+28815:         const mudRescueOperatorsNeeded =
+28816:             getNamedPersonnelCount(
+28817:                 personnelSegment,
+28818:                 'mud\\s+rescue\\s+operator(?:s)?'
+28819:             );
+28820: 
+28821:         if (mudRescueOperatorsNeeded > 0) {
+28822:             const mudRescueUnitsNeeded =
+28823:                 Math.ceil(
+28824:                     mudRescueOperatorsNeeded /
+28825:                     5
+28826:                 );
+28827: 
+28828:             rows.push({
+28829:                 unitName:
+28830:                     'Coastguard Mud Rescue Unit',
+28831:                 stillNeeded:
+28832:                     mudRescueUnitsNeeded,
+28833:                 personnelRequirement:
+28834:                     `${mudRescueOperatorsNeeded} Mud Rescue Operator${mudRescueOperatorsNeeded === 1 ? '' : 's'}`
+28835:             });
+28836: 
+28837:             if (
+28838:                 mfDebugEnabled &&
+28839:                 !silent
+28840:             ) {
+28841:                 debugLog(
+28842:                     'UPDATE PERSONNEL',
+28843:                     `${mudRescueOperatorsNeeded} Mud Rescue Operator${mudRescueOperatorsNeeded === 1 ? '' : 's'} -> select Coastguard Mud Rescue Unit x${mudRescueUnitsNeeded}`
+28844:                 );
+28845:             }
+28846:         }
+28847: 
+28848:         return rows;
+28849:     }

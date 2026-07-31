@@ -1,0 +1,35 @@
+03355:     function getStationNamingTypeInfo(buildingTypeId, displayName) {
+03356:         const name = cleanText(displayName).toUpperCase();
+03357: 
+03358:         // Airport fire stations share MissionChief's normal fire-station type IDs.
+03359:         // Use an explicit existing name marker only for this special case.
+03360:         if ((buildingTypeId === 0 || buildingTypeId === 18)
+03361:             && (/\bAIRPORT\b|\bAIRFIELD\b/.test(name) || /-AF\d*$/.test(name))) {
+03362:             return { stationType: 'AIRFIELD', suffix: '-AF', label: 'Airfield station' };
+03363:         }
+03364: 
+03365:         const mapped = STATION_BUILDING_TYPE_INFO[buildingTypeId];
+03366:         if (mapped) return mapped;
+03367: 
+03368:         const detectedType = detectStationType(displayName);
+03369:         const fallbackByType = {
+03370:             FIRE: { stationType: 'FIRE', suffix: '-FS', label: 'Fire station' },
+03371:             AMBULANCE: { stationType: 'AMBULANCE', suffix: '-AS', label: 'Ambulance station' },
+03372:             POLICE: { stationType: 'POLICE', suffix: '-PS', label: 'Police station' },
+03373:             RNLI: { stationType: 'RNLI', suffix: '-RNLI', label: 'RNLI / lifeboat station' },
+03374:             COASTGUARD: { stationType: 'COASTGUARD', suffix: '-CG', label: 'Coastguard station' },
+03375:             SAR: { stationType: 'SAR', suffix: '-SAR', label: 'Search and rescue station' },
+03376:             AIRFIELD: { stationType: 'AIRFIELD', suffix: '-AF', label: 'Airfield station' },
+03377:             EOD: { stationType: 'EOD', suffix: '-EOD', label: 'EOD / bomb disposal station' },
+03378:             RECOVERY: { stationType: 'RECOVERY', suffix: '-REC', label: 'Recovery station' }
+03379:         };
+03380: 
+03381:         if (detectedType === 'AIR') {
+03382:             return /POLICE/i.test(name)
+03383:                 ? { stationType: 'AIR', suffix: '-PH', label: 'Police helicopter station' }
+03384:                 : { stationType: 'AIR', suffix: '-AA', label: 'Air ambulance station' };
+03385:         }
+03386: 
+03387:         return fallbackByType[detectedType]
+03388:             || { stationType: 'OTHER', suffix: '', label: `Unsupported building type ${buildingTypeId ?? 'unknown'}` };
+03389:     }

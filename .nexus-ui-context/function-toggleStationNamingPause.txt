@@ -1,0 +1,11 @@
+03510:     function toggleStationNamingPause() {
+03511:         if (!STATION_STATE.running) {
+03512:             stationLog('Nothing is currently running.', 'debug');
+03513:             return;
+03514:         }
+03515: 
+03516:         STATION_STATE.paused = !STATION_STATE.paused;
+03517:         document.querySelector('#mc-station-pause').textContent = STATION_STATE.paused ? 'Resume' : 'Pause';
+03518:         setStationUiValue('status', STATION_STATE.paused ? 'Paused' : 'Running');
+03519:         stationLog(STATION_STATE.paused ? 'Paused. The current safe step will finish before waiting.' : 'Resumed.', 'debug');
+03520:     }

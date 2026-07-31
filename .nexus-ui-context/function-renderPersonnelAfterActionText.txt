@@ -1,0 +1,9 @@
+08303:     function renderPersonnelAfterActionText(text) {
+08304:         const report = getToolElementById('mc-personnel-after-action');
+08305:         if (!report) return;
+08306: 
+08307:         const wasNearBottom = report.scrollHeight - report.scrollTop - report.clientHeight < 28;
+08308:         const oldScrollTop = report.scrollTop;
+08309:         report.textContent = String(text || '');
+08310:         report.scrollTop = wasNearBottom ? report.scrollHeight : oldScrollTop;
+08311:     }

@@ -1,0 +1,16 @@
+08456:     function getPersonnelTrainingShortfallReports() {
+08457:         if (PERSONNEL_SHORTFALL_CACHE_SIZE === PERSONNEL_STATE.reports.length) {
+08458:             return PERSONNEL_SHORTFALL_CACHE;
+08459:         }
+08460: 
+08461:         PERSONNEL_SHORTFALL_CACHE = PERSONNEL_STATE.reports
+08462:             .filter(report => !report?.error && Number(report?.trainingShortfall || 0) > 0)
+08463:             .slice()
+08464:             .sort((left, right) => {
+08465:                 const shortfallDifference = Number(right.trainingShortfall || 0) - Number(left.trainingShortfall || 0);
+08466:                 if (shortfallDifference) return shortfallDifference;
+08467:                 return String(left.stationName || '').localeCompare(String(right.stationName || ''), 'en-GB', { numeric: true });
+08468:             });
+08469:         PERSONNEL_SHORTFALL_CACHE_SIZE = PERSONNEL_STATE.reports.length;
+08470:         return PERSONNEL_SHORTFALL_CACHE;
+08471:     }

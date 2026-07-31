@@ -1,0 +1,4 @@
+08648:     function personnelDebug(message) {
+08649:         if (!PERSONNEL_STATE.debug) return;
+08650:         personnelLog(`[DEBUG] ${message}`, 'debug');
+08651:     }

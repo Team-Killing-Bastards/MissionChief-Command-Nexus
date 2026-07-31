@@ -1,0 +1,28 @@
+06283:     function getPersonnelMissingTrainingForRule(
+06284:         person,
+06285:         rule
+06286:     ) {
+06287:         const codes =
+06288:             new Set(
+06289:                 Array.isArray(
+06290:                     person?.trainingCodes
+06291:                 )
+06292:                     ? person.trainingCodes
+06293:                     : []
+06294:             );
+06295: 
+06296:         return (
+06297:             Array.isArray(
+06298:                 rule?.trainingAll
+06299:             )
+06300:                 ? rule.trainingAll
+06301:                 : []
+06302:         )
+06303:             .filter(
+06304:                 code =>
+06305:                     !codes.has(code)
+06306:             )
+06307:             .map(
+06308:                 getPoliceTrainingLabel
+06309:             );
+06310:     }

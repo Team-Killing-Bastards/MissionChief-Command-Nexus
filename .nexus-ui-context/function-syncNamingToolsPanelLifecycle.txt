@@ -1,0 +1,38 @@
+01472:     function syncNamingToolsPanelLifecycle(
+01473:         preferredPanel = null
+01474:     ) {
+01475:         let panel = ensureSingleNamingToolsPanel(
+01476:             preferredPanel?.isConnected
+01477:                 ? preferredPanel
+01478:                 : null
+01479:         );
+01480:         const iosSafari = isIosSafariWebsite();
+01481:         const stationOverview = isStationOverviewScreen();
+01482:         let action = decideNamingToolsPanelLifecycle(
+01483:             iosSafari,
+01484:             stationOverview,
+01485:             Boolean(panel)
+01486:         );
+01487: 
+01488:         if (action === 'create') {
+01489:             init();
+01490:             panel = ensureSingleNamingToolsPanel();
+01491:             action = panel ? 'show' : 'wait';
+01492:         }
+01493: 
+01494:         if (action === 'hide') {
+01495:             return setNamingToolsPanelVisibility(
+01496:                 panel,
+01497:                 false
+01498:             );
+01499:         }
+01500: 
+01501:         if (action === 'show') {
+01502:             return setNamingToolsPanelVisibility(
+01503:                 panel,
+01504:                 true
+01505:             );
+01506:         }
+01507: 
+01508:         return panel;
+01509:     }

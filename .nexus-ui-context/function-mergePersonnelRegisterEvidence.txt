@@ -1,0 +1,14 @@
+04865:     function mergePersonnelRegisterEvidence(target, person) {
+04866:         const personnelId = String(person?.personnelId || '');
+04867:         if (!personnelId) return;
+04868:         const existing = target.get(personnelId);
+04869:         const newHasExactBinding = Boolean(person?.assignedVehicleId);
+04870:         const existingHasExactBinding = Boolean(existing?.assignedVehicleId);
+04871:         if (
+04872:             !existing ||
+04873:             (person.assignedHere && !existing.assignedHere) ||
+04874:             (newHasExactBinding && !existingHasExactBinding)
+04875:         ) {
+04876:             target.set(personnelId, person);
+04877:         }
+04878:     }

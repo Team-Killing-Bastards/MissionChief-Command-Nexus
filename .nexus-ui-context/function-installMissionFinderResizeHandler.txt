@@ -1,0 +1,69 @@
+18096:     function installMissionFinderResizeHandler() {
+18097:         if (mfMissionFinderResizeHandler) return;
+18098: 
+18099:         mfMissionFinderResizeHandler = function(event) {
+18100:             const activeWrapper =
+18101:                 document.getElementById(
+18102:                     'mission-finder-wrapper'
+18103:                 );
+18104: 
+18105:             if (!activeWrapper) return;
+18106: 
+18107:             if (
+18108:                 isMissionFinderIosSafariWebsite()
+18109:                 && (
+18110:                     event?.type === 'orientationchange'
+18111:                     || event?.type === 'pageshow'
+18112:                 )
+18113:             ) {
+18114:                 resetMissionFinderIosPosition(
+18115:                     activeWrapper,
+18116:                     event.type
+18117:                 );
+18118:                 return;
+18119:             }
+18120: 
+18121:             keepMissionFinderWindowOnScreen(
+18122:                 activeWrapper
+18123:             );
+18124: 
+18125:             if (
+18126:                 !isMissionFinderIosSafariWebsite()
+18127:                 && mfKeepPanelPosition
+18128:             ) {
+18129:                 saveMissionFinderWindowPosition(
+18130:                     activeWrapper,
+18131:                     'browser resized'
+18132:                 );
+18133:             }
+18134:         };
+18135: 
+18136:         window.addEventListener(
+18137:             'resize',
+18138:             mfMissionFinderResizeHandler,
+18139:             { passive: true }
+18140:         );
+18141: 
+18142:         if (isMissionFinderIosSafariWebsite()) {
+18143:             window.addEventListener(
+18144:                 'orientationchange',
+18145:                 mfMissionFinderResizeHandler,
+18146:                 { passive: true }
+18147:             );
+18148:             window.addEventListener(
+18149:                 'pageshow',
+18150:                 mfMissionFinderResizeHandler,
+18151:                 { passive: true }
+18152:             );
+18153:             window.visualViewport?.addEventListener(
+18154:                 'resize',
+18155:                 mfMissionFinderResizeHandler,
+18156:                 { passive: true }
+18157:             );
+18158:             window.visualViewport?.addEventListener(
+18159:                 'scroll',
+18160:                 mfMissionFinderResizeHandler,
+18161:                 { passive: true }
+18162:             );
+18163:         }
+18164:     }

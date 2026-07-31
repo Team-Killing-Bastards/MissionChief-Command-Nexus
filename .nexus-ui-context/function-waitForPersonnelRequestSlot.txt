@@ -1,0 +1,6 @@
+07730:     async function waitForPersonnelRequestSlot() {
+07731:         const elapsed = Date.now() - (PERSONNEL_STATE.lastRequestAt || 0);
+07732:         const waitMs = Math.max(0, PERSONNEL_REQUEST_GAP_MS - elapsed);
+07733:         if (waitMs) await waitPersonnelDelay(waitMs);
+07734:         if (PERSONNEL_STATE.stopped) throw new DOMException('Personnel run stopped', 'AbortError');
+07735:     }

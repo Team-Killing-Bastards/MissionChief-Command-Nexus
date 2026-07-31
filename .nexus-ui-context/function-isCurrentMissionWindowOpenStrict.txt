@@ -1,0 +1,27 @@
+37274:     function isCurrentMissionWindowOpenStrict(reason) {
+37275:         const selectors = [
+37276:             '#lightbox_close_inside',
+37277:             '#mission_general_info',
+37278:             '#mission_content',
+37279:             '#iframe-inside-container',
+37280:             '#mission_caption',
+37281:             '#missionH1'
+37282:         ];
+37283: 
+37284:         const visible = selectors.some(selector => {
+37285:             const element = document.querySelector(selector);
+37286:             if (!element) return false;
+37287: 
+37288:             try {
+37289:                 return isElementVisible(element);
+37290:             } catch (error) {
+37291:                 return true;
+37292:             }
+37293:         });
+37294: 
+37295:         if (visible && mfDebugEnabled) {
+37296:             debugLog('QUEUE OPEN GUARD', `${reason || 'check'} | current mission window still visible`);
+37297:         }
+37298: 
+37299:         return visible;
+37300:     }

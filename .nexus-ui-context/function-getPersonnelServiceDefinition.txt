@@ -1,0 +1,4 @@
+02725:     function getPersonnelServiceDefinition(serviceId = PERSONNEL_STATE.service) {
+02726:         return PERSONNEL_SERVICE_DEFINITIONS[serviceId]
+02727:             || PERSONNEL_SERVICE_DEFINITIONS.medical;
+02728:     }

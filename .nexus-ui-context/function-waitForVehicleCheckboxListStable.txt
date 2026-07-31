@@ -1,0 +1,79 @@
+43171:     async function waitForVehicleCheckboxListStable(
+43172:         timeoutMs = 6000,
+43173:         stableForMs = 800,
+43174:         options = {}
+43175:     ) {
+43176:         const startedAt =
+43177:             Date.now();
+43178: 
+43179:         const minimumWaitMs = Number.isFinite(
+43180:             options.minimumWaitMs
+43181:         )
+43182:             ? Math.max(0, options.minimumWaitMs)
+43183:             : 0;
+43184: 
+43185:         const requireNonZero =
+43186:             options.requireNonZero === true;
+43187: 
+43188:         let lastSignature = '';
+43189:         let stableSince =
+43190:             Date.now();
+43191: 
+43192:         while (
+43193:             Date.now() - startedAt <
+43194:             timeoutMs
+43195:         ) {
+43196:             const snapshot =
+43197:                 getVehicleCheckboxListSignature();
+43198: 
+43199:             if (
+43200:                 snapshot.signature !==
+43201:                 lastSignature
+43202:             ) {
+43203:                 lastSignature =
+43204:                     snapshot.signature;
+43205:                 stableSince =
+43206:                     Date.now();
+43207:             }
+43208: 
+43209:             const elapsed =
+43210:                 Date.now() - startedAt;
+43211: 
+43212:             const stableElapsed =
+43213:                 Date.now() - stableSince;
+43214: 
+43215:             const loadControlVisible =
+43216:                 isVehicleListLoadControlVisible();
+43217: 
+43218:             const loadingIndicatorVisible =
+43219:                 isVehicleListLoadingIndicatorVisible();
+43220: 
+43221:             if (
+43222:                 elapsed >= minimumWaitMs &&
+43223:                 stableElapsed >= stableForMs &&
+43224:                 !loadControlVisible &&
+43225:                 !loadingIndicatorVisible &&
+43226:                 (!requireNonZero || snapshot.boxes.length > 0)
+43227:             ) {
+43228:                 return {
+43229:                     ready: true,
+43230:                     count: snapshot.boxes.length,
+43231:                     signature: snapshot.signature,
+43232:                     elapsed
+43233:                 };
+43234:             }
+43235: 
+43236:             await wait(125);
+43237:         }
+43238: 
+43239:         const finalSnapshot =
+43240:             getVehicleCheckboxListSignature();
+43241: 
+43242:         return {
+43243:             ready: false,
+43244:             count: finalSnapshot.boxes.length,
+43245:             signature: finalSnapshot.signature,
+43246:             elapsed: Date.now() - startedAt,
+43247:             timedOut: true
+43248:         };
+43249:     }

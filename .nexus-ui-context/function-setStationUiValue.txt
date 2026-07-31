@@ -1,0 +1,16 @@
+04279:     function setStationUiValue(field, value) {
+04280:         const map = {
+04281:             status: 'mc-station-status',
+04282:             current: 'mc-station-current',
+04283:             address: 'mc-station-address',
+04284:             town: 'mc-station-town',
+04285:             before: 'mc-station-before',
+04286:             after: 'mc-station-after',
+04287:             progress: 'mc-station-progress',
+04288:             renamed: 'mc-station-renamed',
+04289:             skipped: 'mc-station-skipped'
+04290:         };
+04291: 
+04292:         const el = getToolElementById(map[field]);
+04293:         if (el) el.textContent = String(value);
+04294:     }

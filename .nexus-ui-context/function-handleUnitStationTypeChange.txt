@@ -1,0 +1,4 @@
+08963:     function handleUnitStationTypeChange() {
+08964:         populateUnitClassDropdown();
+08965:         populateStartDropdown();
+08966:     }

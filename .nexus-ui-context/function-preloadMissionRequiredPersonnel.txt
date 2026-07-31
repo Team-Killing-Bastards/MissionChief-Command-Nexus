@@ -1,0 +1,89 @@
+24573:     async function preloadMissionRequiredPersonnel() {
+24574:         if (
+24575:             !isMissionPage() ||
+24576:             !isCurrentMissionExecutionOwner(
+24577:                 'required personnel preload'
+24578:             )
+24579:         ) {
+24580:             return [];
+24581:         }
+24582: 
+24583:         const missionKey =
+24584:             synchroniseMissionRequirementPreloadCache();
+24585:         if (!missionKey) return [];
+24586: 
+24587:         const sourceDescriptor =
+24588:             getMissionRequirementSource(false);
+24589:         const cachedRows =
+24590:             getCachedMissionRequirementRows(sourceDescriptor);
+24591: 
+24592:         if (cachedRows !== null) {
+24593:             return cachedRows;
+24594:         }
+24595: 
+24596:         if (
+24597:             mfMissionRequirementPreloadPromise &&
+24598:             mfMissionRequirementPreloadPromiseKey === missionKey
+24599:         ) {
+24600:             return mfMissionRequirementPreloadPromise;
+24601:         }
+24602: 
+24603:         mfMissionRequirementPreloadCache.status = 'loading';
+24604:         mfMissionRequirementPreloadCache.attempts += 1;
+24605:         mfMissionRequirementPreloadCache.error = '';
+24606:         mfMissionRequirementPreloadPromiseKey = missionKey;
+24607: 
+24608:         const preloadPromise =
+24609:             readLiveMissionRequirements({
+24610:                 silent: true,
+24611:                 allowCached: true,
+24612:                 preload: true,
+24613:                 forceRefresh: false
+24614:             })
+24615:                 .then(rows => {
+24616:                     if (
+24617:                         missionKey ===
+24618:                         getMissionRequirementPreloadMissionKey()
+24619:                     ) {
+24620:                         renderSelectedTrainedPersonnelPanel();
+24621:                     }
+24622: 
+24623:                     return cloneMissionRequirementRows(rows);
+24624:                 })
+24625:                 .catch(error => {
+24626:                     if (
+24627:                         missionKey ===
+24628:                         getMissionRequirementPreloadMissionKey()
+24629:                     ) {
+24630:                         mfMissionRequirementPreloadCache.status = 'error';
+24631:                         mfMissionRequirementPreloadCache.error =
+24632:                             error?.message || String(error);
+24633:                     }
+24634: 
+24635:                     return [];
+24636:                 })
+24637:                 .finally(() => {
+24638:                     if (
+24639:                         mfMissionRequirementPreloadPromise === preloadPromise
+24640:                     ) {
+24641:                         mfMissionRequirementPreloadPromise = null;
+24642:                         mfMissionRequirementPreloadPromiseKey = '';
+24643:                     }
+24644: 
+24645:                     const cache =
+24646:                         getMissionRequirementPreloadState();
+24647: 
+24648:                     if (
+24649:                         cache.missionKey === missionKey &&
+24650:                         cache.status !== 'loaded' &&
+24651:                         cache.attempts < 6
+24652:                     ) {
+24653:                         scheduleMissionRequiredPersonnelPreload(
+24654:                             350 * cache.attempts
+24655:                         );
+24656:                     }
+24657:                 });
+24658: 
+24659:         mfMissionRequirementPreloadPromise = preloadPromise;
+24660:         return preloadPromise;
+24661:     }

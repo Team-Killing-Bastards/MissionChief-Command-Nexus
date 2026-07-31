@@ -1,0 +1,95 @@
+42981:     function initialize() {
+42982:         if (!isMissionPage()) return;
+42983: 
+42984:         if (!claimCurrentMissionExecutionOwnership('initialize')) {
+42985:             document.getElementById('mission-finder-wrapper')?.remove();
+42986:             return;
+42987:         }
+42988: 
+42989:         synchroniseMissionInstanceState('initialize');
+42990:         cleanupDuplicatePanels();
+42991:         scheduleMissionFinderIphoneNativePickerSync(
+42992:             'initialize',
+42993:             0,
+42994:             0
+42995:         );
+42996: 
+42997:         if (document.getElementById('mission-finder-wrapper')) {
+42998:             if (readAllyStealPendingState()) {
+42999:                 setTimeout(
+43000:                     function() {
+43001:                         resumeAllyStealAfterDispatchRefresh(
+43002:                             'existing initialized panel'
+43003:                         );
+43004:                     },
+43005:                     150
+43006:                 );
+43007:             } else if (
+43008:                 readAutoAdvanceAfterDispatchState()
+43009:             ) {
+43010:                 setTimeout(
+43011:                     function() {
+43012:                         resumeAutoAdvanceAfterDispatch(
+43013:                             'existing initialized panel'
+43014:                         );
+43015:                     },
+43016:                     150
+43017:                 );
+43018:             }
+43019: 
+43020:             return;
+43021:         }
+43022: 
+43023:         createControlPanel();
+43024: 
+43025:         if (readAllyStealPendingState()) {
+43026:             updateStatusBox(
+43027:                 'Ally Steal: dispatch refresh detected. Resuming confirmation...'
+43028:             );
+43029: 
+43030:             setTimeout(
+43031:                 function() {
+43032:                     resumeAllyStealAfterDispatchRefresh(
+43033:                         'mission initialize after reload'
+43034:                     );
+43035:                 },
+43036:                 150
+43037:             );
+43038: 
+43039:             return;
+43040:         }
+43041: 
+43042:         if (
+43043:             readAutoAdvanceAfterDispatchState()
+43044:         ) {
+43045:             updateStatusBox(
+43046:                 'Dispatch & Share transition detected. Confirming the next mission...'
+43047:             );
+43048: 
+43049:             setTimeout(
+43050:                 function() {
+43051:                     resumeAutoAdvanceAfterDispatch(
+43052:                         'mission initialize after reload'
+43053:                     );
+43054:                 },
+43055:                 150
+43056:             );
+43057: 
+43058:             return;
+43059:         }
+43060: 
+43061:         if (autoModeRunning) {
+43062:             requireMissionUpdateFirstPass(
+43063:                 'mission panel initialized'
+43064:             );
+43065: 
+43066:             if (mfDebugEnabled) {
+43067:                 debugLog(
+43068:                     'UPDATE FIRST GATE',
+43069:                     'Deferred automatic full vehicle-list loading until the mission update precheck completes.'
+43070:                 );
+43071:             }
+43072:         } else {
+43073:             clickVehicleDisplayBarImmediately();
+43074:         }
+43075:     }

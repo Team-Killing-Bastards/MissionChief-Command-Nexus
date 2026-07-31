@@ -1,0 +1,37 @@
+40465:     function mfBruteFindVehicleTransportModal() {
+40466:         const simpleButton = mfFindAnyVisibleApproachButtonInModal();
+40467: 
+40468:         if (simpleButton) {
+40469:             return simpleButton.closest('.vm--modal, .modal, .lightbox, .vehicle-window, body') || null;
+40470:         }
+40471: 
+40472:         const scopes = mfGetTransportActiveScopes();
+40473: 
+40474:         if (scopes.length) {
+40475:             return scopes[0];
+40476:         }
+40477: 
+40478:         const modals = Array.from(document.querySelectorAll('.vm--modal'));
+40479: 
+40480:         for (const modal of modals) {
+40481:             const modalText = mfBruteNormaliseText(modal.innerText).toLowerCase();
+40482: 
+40483:             const hasVehicleWindow = !!modal.querySelector('.vehicle-window, .redesign-wrapper[type="vehicle"]');
+40484:             const hasTransportWords =
+40485:                 modalText.includes('hospital') ||
+40486:                 modalText.includes('free beds') ||
+40487:                 modalText.includes('patient') ||
+40488:                 modalText.includes('handoff') ||
+40489:                 modalText.includes('prisoner') ||
+40490:                 modalText.includes('police cell') ||
+40491:                 modalText.includes('cell') ||
+40492:                 modalText.includes('custody') ||
+40493:                 modalText.includes('transport');
+40494: 
+40495:             if ((hasVehicleWindow && hasTransportWords) || modalText.includes('approach')) {
+40496:                 return modal;
+40497:             }
+40498:         }
+40499: 
+40500:         return null;
+40501:     }

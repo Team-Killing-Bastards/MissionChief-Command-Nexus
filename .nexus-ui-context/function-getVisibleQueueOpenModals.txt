@@ -1,0 +1,23 @@
+37449:     function getVisibleQueueOpenModals() {
+37450:         const candidates = Array.from(document.querySelectorAll(
+37451:             '.vm--modal, .modal, .lightbox, #lightbox_box'
+37452:         ));
+37453: 
+37454:         return candidates.filter(element => {
+37455:             try {
+37456:                 return isVisibleForQueueRestart(element);
+37457:             } catch (error) {
+37458:                 try {
+37459:                     const rect = element.getBoundingClientRect();
+37460:                     const style = window.getComputedStyle(element);
+37461: 
+37462:                     return rect.width > 0 &&
+37463:                         rect.height > 0 &&
+37464:                         style.display !== 'none' &&
+37465:                         style.visibility !== 'hidden';
+37466:                 } catch (innerError) {
+37467:                     return false;
+37468:                 }
+37469:             }
+37470:         });
+37471:     }

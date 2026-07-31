@@ -1,0 +1,101 @@
+08195:     function buildStationAfterActionText(report) {
+08196:         if (!report) return 'No station report is available yet.';
+08197: 
+08198:         const isAssign = PERSONNEL_STATE.action === 'assign';
+08199:         const service = getPersonnelServiceDefinition();
+08200:         const profile = getPersonnelProfileDefinition();
+08201:         const result = getPersonnelReportResult(report);
+08202:         const qualificationLabel = getPersonnelReportQualificationLabel(report);
+08203:         const lines = [
+08204:             `${service.label.toUpperCase()} — ${profile.label.toUpperCase()} ${isAssign ? 'STATION AFTER-ACTION REPORT' : 'STATION PREVIEW REPORT'}`,
+08205:             `Station: ${report.stationName || 'Unknown'}`,
+08206:             `Result: ${result}`,
+08207:             `Generated: ${new Date().toLocaleString('en-GB')}`,
+08208:             ''
+08209:         ];
+08210: 
+08211:         if (report.error) {
+08212:             lines.push(`ERROR: ${report.error}`);
+08213:             return lines.join('\n');
+08214:         }
+08215: 
+08216:         if (report.noTargetVehicles) {
+08217:             lines.push('No vehicles mapped to this profile were found at the station. No assignments were changed.');
+08218:             return lines.join('\n');
+08219:         }
+08220: 
+08221:         const verificationText = isAssign
+08222:             ? (report.afterActionVerified ? 'PASSED - final station state re-read' : `PARTIAL - ${report.verificationError || 'final station re-read was not verified'}`)
+08223:             : 'PREVIEW PROJECTION - no assignments changed';
+08224: 
+08225:         lines.push(
+08226:             `Final verification: ${verificationText}`,
+08227:             `Mapped vehicles checked: ${getPersonnelReportVehicleCount(report)}`,
+08228:             ...(
+08229:                 Number(report.stationTarget || 0) > 0
+08230:                     ? [
+08231:                         `Station unit target: ${report.stationTarget}`,
+08232:                         `Station target result: ${report.stationTargetMet ? 'PASSED' : 'SHORT'} — ${Number(report.stationTargetFulfilled || 0)}/${report.stationTarget}`,
+08233:                         `Additional fully staffed units needed: ${Number(report.stationTargetShortfallUnits || 0)}`
+08234:                     ]
+08235:                     : []
+08236:             ),
+08237:             `Units fully covered at this station: ${Number(report.fulfilledUnits || 0)}`,
+08238:             `Required qualified positions: ${Number(report.required || 0)}`,
+08239:             `${qualificationLabel} personnel visible: ${Number(report.trained || 0)}`,
+08240:             `Available qualified before action: ${Number(report.availableAtScan || 0)}`,
+08241:             `Available qualified after action: ${Number(report.availableAtEnd || 0)}`,
+08242:             `Qualified positions before: ${getPersonnelReportInitialFilled(report)}/${Number(report.required || 0)}`,
+08243:             `${isAssign ? 'Qualified positions after' : 'Projected qualified positions'}: ${getPersonnelReportFinalFilled(report)}/${Number(report.required || 0)}`,
+08244:             `${isAssign ? 'Personnel assigned and verified' : 'Assignments planned'}: ${isAssign ? Number(report.assigned || 0) : Number(report.planned || 0)}`,
+08245:             `Qualification shortfall estimate: ${Number(report.trainingShortfall || 0)}`,
+08246:             `Missing training by qualification: ${formatPoliceTrainingGapSummary(report.missingTrainingSummary)}`,
+08247:             `Unfilled required positions after action: ${Number(report.assignmentShortfall || 0)}`
+08248:         );
+08249: 
+08250:         if (Array.isArray(report.rules) && report.rules.length > 1) {
+08251:             lines.push('', 'RULE GROUPS');
+08252:             report.rules.forEach(rule => {
+08253:                 lines.push(
+08254:                     `  - ${rule.label}: ${rule.vehicleCount} ${rule.vehicleLabel}(s) | target ${rule.target} each | required ${rule.required} | trained ${rule.trained} | training shortfall ${rule.trainingShortfall} | missing ${formatPoliceTrainingGapSummary(rule.trainingGaps)}`
+08255:                 );
+08256:             });
+08257:         }
+08258: 
+08259:         lines.push('', 'VEHICLE RESULTS');
+08260: 
+08261:         report.vehicles.forEach(vehicle => {
+08262:             const names = isAssign ? vehicle.assignedNames : vehicle.plannedNames;
+08263:             const afterLabel = isAssign
+08264:                 ? (vehicle.verificationStatus === 'final-verified' ? 'final verified' : 'after action')
+08265:                 : 'projected';
+08266:             const target = Number(vehicle.target || PERSONNEL_TARGET_PER_VEHICLE);
+08267:             const beforeQualified = Number(vehicle.beforeQualified ?? vehicle.beforeCritical ?? 0);
+08268:             const afterQualified = Number(vehicle.afterQualified ?? vehicle.afterCritical ?? 0);
+08269:             const vehicleResult = Number(vehicle.unfilled || 0) ? `SHORTFALL ${vehicle.unfilled}` : 'COMPLETE';
+08270:             const nameText = names?.length
+08271:                 ? ` | ${isAssign ? 'assigned' : 'planned'}: ${names.join(', ')}`
+08272:                 : '';
+08273:             const blockText = vehicle.occupiedSeatBlock
+08274:                 ? ` | ${vehicle.occupiedSeatBlock} required position(s) blocked by existing occupants`
+08275:                 : '';
+08276:             const ruleText = vehicle.ruleLabel ? ` [${vehicle.ruleLabel}]` : '';
+08277: 
+08278:             const occupantGapText =
+08279:                 formatVehicleOccupantTrainingGaps(
+08280:                     vehicle
+08281:                         .occupantTrainingGaps
+08282:                 );
+08283: 
+08284:             const missingTrainingText =
+08285:                 occupantGapText
+08286:                     ? ` | existing occupants missing: ${occupantGapText}`
+08287:                     : '';
+08288: 
+08289:             lines.push(
+08290:                 `  - ${vehicle.name}${ruleText}: before ${beforeQualified}/${target} -> ${afterLabel} ${afterQualified}/${target} ${vehicle.trainingLabel || qualificationLabel} | ${vehicleResult}${nameText}${blockText}${missingTrainingText}`
+08291:             );
+08292:         });
+08293: 
+08294:         return lines.join('\n');
+08295:     }

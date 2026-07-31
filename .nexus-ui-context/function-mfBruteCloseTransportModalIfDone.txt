@@ -1,0 +1,3 @@
+40607:     function mfBruteCloseTransportModalIfDone() {
+40608:         return false;
+40609:     }

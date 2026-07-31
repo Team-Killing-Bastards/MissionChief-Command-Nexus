@@ -1,0 +1,58 @@
+08397:     function buildAndRenderPersonnelReport() {
+08398:         const isAssign = PERSONNEL_STATE.action === 'assign';
+08399:         const actionLabel = isAssign ? 'ASSIGN AND VERIFY' : 'PREVIEW ONLY';
+08400:         const actionCount = isAssign ? PERSONNEL_STATE.assignedCount : PERSONNEL_STATE.plannedCount;
+08401:         const service = getPersonnelServiceDefinition();
+08402:         const profile = getPersonnelProfileDefinition();
+08403:         const lines = [
+08404:             `${service.label.toUpperCase()} — ${profile.label.toUpperCase()} ${isAssign ? 'PERSONNEL AFTER-ACTION REPORT' : 'PERSONNEL PREVIEW REPORT'}`,
+08405:             `Action: ${actionLabel}`,
+08406:             `Generated: ${new Date().toLocaleString('en-GB')}`,
+08407:             `Rule: ${profile.requirement}`,
+08408:             `${isPersonnelPerStationTargetMode() ? 'Units requested at every station' : 'Units requested'}: ${isPersonnelPerStationTargetMode() ? PERSONNEL_STATE.unitsRequired : 'ALL MATCHING UNITS'}`,
+08409:             `${isPersonnelPerStationTargetMode() ? 'Station targets' : 'Units fulfilled'}: ${formatPersonnelUnitsFulfilled()}`,
+08410:             ''
+08411:         ];
+08412: 
+08413:         const trainingShortfallReports = getPersonnelTrainingShortfallReports();
+08414: 
+08415:         if (trainingShortfallReports.length) {
+08416:             lines.push(`⚠ QUALIFICATION SHORTFALL STATIONS (${trainingShortfallReports.length}) ⚠`);
+08417:             trainingShortfallReports.forEach(report => {
+08418:                 lines.push(
+08419:                     `  ⚠ ${report.stationName.toUpperCase()}: ESTIMATED SHORTFALL ${report.trainingShortfall} | required ${report.required} | qualified visible ${report.trained} | missing ${formatPoliceTrainingGapSummary(report.missingTrainingSummary)}`
+08420:                 );
+08421:             });
+08422:             lines.push('');
+08423:         } else if (PERSONNEL_STATE.reports.some(report => !report.error && !report.noTargetVehicles)) {
+08424:             lines.push('QUALIFICATION SHORTFALL STATIONS: NONE', '');
+08425:         }
+08426: 
+08427:         PERSONNEL_STATE.reports.forEach(report => {
+08428:             lines.push(buildPersonnelOverallStationBlock(report, isAssign), '');
+08429:         });
+08430: 
+08431:         lines.push(
+08432:             'TOTALS',
+08433:             `  Stations completed: ${PERSONNEL_STATE.completedStations}`,
+08434:             `  Stations skipped: ${PERSONNEL_STATE.skippedStations}`,
+08435:             `  Vehicles checked: ${PERSONNEL_STATE.checkedVehicles}`,
+08436:             `  ${isPersonnelPerStationTargetMode() ? 'Units required at every station' : 'Units requested'}: ${isPersonnelPerStationTargetMode() ? PERSONNEL_STATE.unitsRequired : 'ALL'}`,
+08437:             `  ${isPersonnelPerStationTargetMode() ? 'Station targets' : 'Units fulfilled'}: ${formatPersonnelUnitsFulfilled()}`,
+08438:             ...(
+08439:                 isPersonnelPerStationTargetMode()
+08440:                     ? [
+08441:                         `  Stations meeting target: ${PERSONNEL_STATE.stationsTargetMet}`,
+08442:                         `  Stations below target: ${PERSONNEL_STATE.stationsTargetShort}`
+08443:                     ]
+08444:                     : []
+08445:             ),
+08446:             `  ${isAssign ? 'Personnel assigned' : 'Assignments planned'}: ${actionCount}`,
+08447:             `  Qualification shortfall estimate: ${PERSONNEL_STATE.trainingShortfall}`,
+08448:             `  Unfilled required positions after action: ${PERSONNEL_STATE.assignmentShortfall}`
+08449:         );
+08450: 
+08451:         PERSONNEL_STATE.currentReport = lines.join('\n');
+08452:         renderPersonnelReport(PERSONNEL_STATE.currentReport);
+08453:         updatePersonnelTrainingShortfallHighlights();
+08454:     }

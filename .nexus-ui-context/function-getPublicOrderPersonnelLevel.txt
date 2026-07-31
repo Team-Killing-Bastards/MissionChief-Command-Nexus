@@ -1,0 +1,34 @@
+25133:     function getPublicOrderPersonnelLevel(
+25134:         value
+25135:     ) {
+25136:         const cleaned =
+25137:             String(
+25138:                 value ||
+25139:                 ''
+25140:             )
+25141:                 .replace(
+25142:                     /\s+/g,
+25143:                     ' '
+25144:                 )
+25145:                 .trim();
+25146: 
+25147:         if (
+25148:             /^(?:Required\s+)?(?:Level\s*1\s+Public\s+Order|Public\s+Order\s+Level\s*1)\s+Officer(?:s)?$/i
+25149:                 .test(
+25150:                     cleaned
+25151:                 )
+25152:         ) {
+25153:             return 1;
+25154:         }
+25155: 
+25156:         if (
+25157:             /^(?:Required\s+)?(?:Level\s*2\s+Public\s+Order|Public\s+Order\s+Level\s*2)\s+Officer(?:s)?$/i
+25158:                 .test(
+25159:                     cleaned
+25160:                 )
+25161:         ) {
+25162:             return 2;
+25163:         }
+25164: 
+25165:         return 0;
+25166:     }

@@ -1,0 +1,3 @@
+02736:     function isLivePersonnelProfile() {
+02737:         return getPersonnelProfileDefinition()?.live === true;
+02738:     }

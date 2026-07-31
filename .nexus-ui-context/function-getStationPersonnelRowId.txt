@@ -1,0 +1,17 @@
+07900:     function getStationPersonnelRowId(row) {
+07901:         if (!row) return '';
+07902: 
+07903:         const candidates = [
+07904:             row.getAttribute?.('personal_id'),
+07905:             row.getAttribute?.('data-personal-id'),
+07906:             row.id?.match(/personal_(\d+)/)?.[1],
+07907:             row.querySelector?.('input.personal-delete-checkbox[value]')?.value,
+07908:             row.querySelector?.('input.personal-delete-checkbox[value]')?.getAttribute?.('value'),
+07909:             row.querySelector?.('a[href^="/personals/"]')?.getAttribute?.('href')?.match(/\/personals\/(\d+)/)?.[1]
+07910:         ];
+07911: 
+07912:         return String(
+07913:             candidates.find(value => /^\d+$/.test(String(value || '').trim())) ||
+07914:             ''
+07915:         );
+07916:     }

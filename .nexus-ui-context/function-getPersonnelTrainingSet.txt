@@ -1,0 +1,14 @@
+06387:     function getPersonnelTrainingSet(person) {
+06388:         if (!person || typeof person !== 'object') return new Set();
+06389: 
+06390:         const cached = PERSONNEL_TRAINING_SET_CACHE.get(person);
+06391:         if (cached) return cached;
+06392: 
+06393:         const trainingSet = new Set(
+06394:             Array.isArray(person.trainingCodes)
+06395:                 ? person.trainingCodes.map(String)
+06396:                 : []
+06397:         );
+06398:         PERSONNEL_TRAINING_SET_CACHE.set(person, trainingSet);
+06399:         return trainingSet;
+06400:     }

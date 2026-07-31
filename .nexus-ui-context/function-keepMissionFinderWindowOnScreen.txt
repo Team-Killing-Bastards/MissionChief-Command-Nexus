@@ -1,0 +1,74 @@
+18733:     function keepMissionFinderWindowOnScreen(panel) {
+18734:         if (!panel) return;
+18735: 
+18736:         if (
+18737:             isMissionFinderIosSafariWebsite()
+18738:             && !panel.style.left
+18739:             && !panel.style.top
+18740:         ) {
+18741:             syncMissionFinderIphoneCloseControlClearance(panel);
+18742:             panel.style.visibility = 'visible';
+18743:             return;
+18744:         }
+18745: 
+18746:         const rect = panel.getBoundingClientRect();
+18747:         const margin = 8;
+18748:         const missionFinderIosSafari =
+18749:             isMissionFinderIosSafariWebsite();
+18750:         const bounds = missionFinderIosSafari
+18751:             ? getMissionFinderViewportBounds()
+18752:             : {
+18753:                 left: 0,
+18754:                 top: 0,
+18755:                 right: window.innerWidth,
+18756:                 bottom: window.innerHeight,
+18757:                 width: window.innerWidth,
+18758:                 height: window.innerHeight
+18759:             };
+18760: 
+18761:         const maxLeft = Math.max(
+18762:             bounds.left + margin,
+18763:             bounds.right - rect.width - margin
+18764:         );
+18765: 
+18766:         const maxTop = missionFinderIosSafari
+18767:             ? Math.max(
+18768:                 bounds.top + margin,
+18769:                 bounds.bottom - 48
+18770:             )
+18771:             : Math.max(
+18772:                 margin,
+18773:                 window.innerHeight - Math.min(
+18774:                     rect.height,
+18775:                     window.innerHeight - margin
+18776:                 )
+18777:             );
+18778: 
+18779:         const currentLeft = parseFloat(panel.style.left);
+18780:         const currentTop = parseFloat(panel.style.top);
+18781: 
+18782:         const safeLeft = Math.min(
+18783:             maxLeft,
+18784:             Math.max(
+18785:                 bounds.left + margin,
+18786:                 Number.isFinite(currentLeft)
+18787:                     ? currentLeft
+18788:                     : rect.left
+18789:             )
+18790:         );
+18791: 
+18792:         const safeTop = Math.min(
+18793:             maxTop,
+18794:             Math.max(
+18795:                 bounds.top + margin,
+18796:                 Number.isFinite(currentTop)
+18797:                     ? currentTop
+18798:                     : rect.top
+18799:             )
+18800:         );
+18801: 
+18802:         panel.style.left = `${Math.round(safeLeft)}px`;
+18803:         panel.style.top = `${Math.round(safeTop)}px`;
+18804:         panel.style.right = 'auto';
+18805:         panel.style.visibility = 'visible';
+18806:     }

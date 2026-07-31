@@ -1,0 +1,54 @@
+03776:     async function fetchStationMoveAddress(station) {
+03777:         const url = `${station.href}/move`;
+03778: 
+03779:         try {
+03780:             const response = await stationFetchWithTimeout(url, {
+03781:                 credentials: 'same-origin',
+03782:                 cache: 'no-store'
+03783:             }, 9000);
+03784: 
+03785:             if (!response.ok) {
+03786:                 return {
+03787:                     address: '',
+03788:                     source: 'Move building page',
+03789:                     error: `Move building request returned HTTP ${response.status}.`
+03790:                 };
+03791:             }
+03792: 
+03793:             const html = await response.text();
+03794:             const doc = new DOMParser().parseFromString(html, 'text/html');
+03795:             const address = String(doc.querySelector('#building_address')?.value || '').trim();
+03796: 
+03797:             if (address) {
+03798:                 return {
+03799:                     address,
+03800:                     source: 'Move building page (background read only)'
+03801:                 };
+03802:             }
+03803: 
+03804:             const pageMessage = cleanText(
+03805:                 doc.querySelector('.alert-danger, .alert-warning, #infoBox, .toast-message')?.textContent || ''
+03806:             );
+03807:             const responsePath = (() => {
+03808:                 try {
+03809:                     return new URL(response.url, location.origin).pathname;
+03810:                 } catch (_error) {
+03811:                     return response.url || url;
+03812:                 }
+03813:             })();
+03814: 
+03815:             return {
+03816:                 address: '',
+03817:                 source: 'Move building page',
+03818:                 error: pageMessage
+03819:                     ? `${pageMessage} (response path: ${responsePath})`
+03820:                     : `No #building_address was returned (response path: ${responsePath}).`
+03821:             };
+03822:         } catch (error) {
+03823:             return {
+03824:                 address: '',
+03825:                 source: 'Move building page',
+03826:                 error: `Move building request failed: ${error?.message || error}`
+03827:             };
+03828:         }
+03829:     }

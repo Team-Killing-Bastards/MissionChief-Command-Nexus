@@ -1,0 +1,10 @@
+25168:     function isPublicOrderPersonnelRequirementName(
+25169:         value
+25170:     ) {
+25171:         return (
+25172:             getPublicOrderPersonnelLevel(
+25173:                 value
+25174:             ) >
+25175:             0
+25176:         );
+25177:     }

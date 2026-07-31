@@ -1,0 +1,94 @@
+23126:     function getSarPersonnelVehicleRequirement(
+23127:         requirementName,
+23128:         personnelAmount
+23129:     ) {
+23130:         const cleanedName =
+23131:             cleanRequirementName(
+23132:                 requirementName
+23133:             );
+23134: 
+23135:         const amountMatch =
+23136:             String(
+23137:                 personnelAmount ??
+23138:                 ''
+23139:             )
+23140:                 .replace(
+23141:                     /,/g,
+23142:                     ''
+23143:                 )
+23144:                 .match(
+23145:                     /\d+/
+23146:                 );
+23147: 
+23148:         const personnelRequired =
+23149:             amountMatch
+23150:                 ? parseInt(
+23151:                     amountMatch[0],
+23152:                     10
+23153:                 )
+23154:                 : 0;
+23155: 
+23156:         if (
+23157:             !cleanedName ||
+23158:             !Number.isFinite(
+23159:                 personnelRequired
+23160:             ) ||
+23161:             personnelRequired <= 0
+23162:         ) {
+23163:             return null;
+23164:         }
+23165: 
+23166:         const definitions = [
+23167:             {
+23168:                 pattern:
+23169:                     /^search\s+technician(?:s)?$/i,
+23170:                 personnelLabel:
+23171:                     'Search Technician',
+23172:                 unitName:
+23173:                     'SARTEC',
+23174:                 personnelPerVehicle:
+23175:                     4
+23176:             },
+23177:             {
+23178:                 pattern:
+23179:                     /^sar\s+commander(?:s)?$/i,
+23180:                 personnelLabel:
+23181:                     'SAR Commander',
+23182:                 unitName:
+23183:                     'Control Van',
+23184:                 personnelPerVehicle:
+23185:                     2
+23186:             }
+23187:         ];
+23188: 
+23189:         const definition =
+23190:             definitions.find(item =>
+23191:                 item.pattern.test(
+23192:                     cleanedName
+23193:                 )
+23194:             );
+23195: 
+23196:         if (!definition) {
+23197:             return null;
+23198:         }
+23199: 
+23200:         const vehicleRequired =
+23201:             Math.ceil(
+23202:                 personnelRequired /
+23203:                 definition.personnelPerVehicle
+23204:             );
+23205: 
+23206:         return {
+23207:             sourceName:
+23208:                 cleanedName,
+23209:             personnelRequired,
+23210:             personnelRequirement:
+23211:                 `${personnelRequired} ${definition.personnelLabel}${personnelRequired === 1 ? '' : 's'}`,
+23212:             personnelPerVehicle:
+23213:                 definition.personnelPerVehicle,
+23214:             unitName:
+23215:                 definition.unitName,
+23216:             stillNeeded:
+23217:                 vehicleRequired
+23218:         };
+23219:     }

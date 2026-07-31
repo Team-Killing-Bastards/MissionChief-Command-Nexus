@@ -1,0 +1,19 @@
+25220:     function isPoliceMedicPersonnelRequirementName(
+25221:         value
+25222:     ) {
+25223:         const cleaned =
+25224:             String(
+25225:                 value ||
+25226:                 ''
+25227:             )
+25228:                 .replace(
+25229:                     /\s+/g,
+25230:                     ' '
+25231:                 )
+25232:                 .trim();
+25233: 
+25234:         return /^(?:Required\s+)?Police\s+Medic(?:s)?$/i
+25235:             .test(
+25236:                 cleaned
+25237:             );
+25238:     }

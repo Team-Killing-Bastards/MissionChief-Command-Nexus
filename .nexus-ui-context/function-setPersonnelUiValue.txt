@@ -1,0 +1,17 @@
+08610:     function setPersonnelUiValue(field, value) {
+08611:         const map = {
+08612:             status: 'mc-personnel-status',
+08613:             current: 'mc-personnel-current',
+08614:             vehicle: 'mc-personnel-vehicle',
+08615:             progress: 'mc-personnel-progress',
+08616:             completed: 'mc-personnel-completed',
+08617:             vehicles: 'mc-personnel-vehicles',
+08618:             unitsFulfilled: 'mc-personnel-units-fulfilled',
+08619:             assigned: 'mc-personnel-assigned',
+08620:             trainingShortfall: 'mc-personnel-training-shortfall',
+08621:             assignmentShortfall: 'mc-personnel-assignment-shortfall'
+08622:         };
+08623: 
+08624:         const el = getToolElementById(map[field]);
+08625:         if (el) el.textContent = String(value);
+08626:     }

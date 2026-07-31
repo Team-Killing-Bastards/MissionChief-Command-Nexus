@@ -1,0 +1,16 @@
+29133:     function isExplicitMissingPersonnelRequirementRow(item) {
+29134:         const details =
+29135:             item?.liveRequirementDetails ||
+29136:             null;
+29137: 
+29138:         const source = String(
+29139:             item?.updateSource ||
+29140:             item?.source ||
+29141:             ''
+29142:         ).trim();
+29143: 
+29144:         return !!(
+29145:             details?.explicitMissingPersonnel ||
+29146:             source === 'visible-missing-personnel-alert'
+29147:         );
+29148:     }

@@ -1,0 +1,3 @@
+04275:     function clearStationLog() {
+04276:         clearBoundedToolLog(getToolElementById('mc-station-log'));
+04277:     }

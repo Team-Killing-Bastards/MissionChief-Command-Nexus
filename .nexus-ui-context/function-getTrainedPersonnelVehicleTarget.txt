@@ -1,0 +1,23 @@
+26566:     function getTrainedPersonnelVehicleTarget(
+26567:         requirements
+26568:     ) {
+26569:         const targets =
+26570:             (
+26571:                 Array.isArray(requirements)
+26572:                     ? requirements
+26573:                     : []
+26574:             )
+26575:                 .map(requirement => {
+26576:                     return getPreferredTrainedVehicleCountForRequirement(
+26577:                         requirement
+26578:                     );
+26579:                 })
+26580:                 .filter(target => target > 0);
+26581: 
+26582:         // Compatible multi-trained staff can satisfy several requirement rows
+26583:         // from the same vehicle, so the shared target is the largest individual
+26584:         // vehicle plan rather than the sum of every course plan.
+26585:         return targets.length
+26586:             ? Math.max(...targets)
+26587:             : 1;
+26588:     }

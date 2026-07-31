@@ -1,0 +1,8 @@
+26883:     function parseVehicleIdFromAssignmentLink(value) {
+26884:         const match = String(value || '')
+26885:             .match(/\/vehicles\/(\d+)(?:\/|$|[?#])/i);
+26886: 
+26887:         return match
+26888:             ? String(match[1])
+26889:             : '';
+26890:     }

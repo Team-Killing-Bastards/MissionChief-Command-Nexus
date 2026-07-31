@@ -1,0 +1,171 @@
+19808:     function renderSelectedTrainedPersonnelPanel() {
+19809:         const summary =
+19810:             document.getElementById('trained-personnel-summary');
+19811:         const content =
+19812:             document.getElementById('trained-personnel-content');
+19813: 
+19814:         if (!summary || !content) return;
+19815: 
+19816: 
+19817:         let preloadState = { status: 'idle' };
+19818:         let requiredPersonnel = [];
+19819: 
+19820:         try {
+19821:             preloadState =
+19822:                 getMissionRequirementPreloadState();
+19823:             requiredPersonnel =
+19824:                 getPreloadedMissionTrainedPersonnelRequirements();
+19825:         } catch (error) {
+19826:             if (mfDebugEnabled) {
+19827:                 debugLog(
+19828:                     'MISSION PERSONNEL PRELOAD',
+19829:                     `panel cache read failed: ${error?.message || error}`
+19830:                 );
+19831:             }
+19832:         }
+19833:         const selectedVehicles =
+19834:             getSelectedTrainedPersonnelPanelModel();
+19835:         const completeProfiles = selectedVehicles.reduce(
+19836:             (total, vehicle) => {
+19837:                 return total + (
+19838:                     vehicle.profilesComplete
+19839:                         ? vehicle.profiles.length
+19840:                         : 0
+19841:                 );
+19842:             },
+19843:             0
+19844:         );
+19845:         const aggregateOnlyVehicles = selectedVehicles.filter(vehicle => {
+19846:             return !vehicle.profilesComplete;
+19847:         }).length;
+19848:         const requiredTotal = requiredPersonnel.reduce(
+19849:             (total, requirement) => {
+19850:                 return total + requirement.required;
+19851:             },
+19852:             0
+19853:         );
+19854:         const coveredTotal = requiredPersonnel.reduce(
+19855:             (total, requirement) => {
+19856:                 return total + Math.min(
+19857:                     requirement.required,
+19858:                     getSelectedTrainedPersonnelCountForCode(
+19859:                         selectedVehicles,
+19860:                         requirement.code
+19861:                     )
+19862:                 );
+19863:             },
+19864:             0
+19865:         );
+19866: 
+19867:         if (
+19868:             requiredPersonnel.length === 0 &&
+19869:             selectedVehicles.length === 0
+19870:         ) {
+19871:             if (preloadState.status === 'loading') {
+19872:                 summary.textContent =
+19873:                     'Loading mission Required Personnel...';
+19874:                 content.innerHTML =
+19875:                     '<span class="mf2026-small">Reading the mission requirement table before unit selection.</span>';
+19876:                 return;
+19877:             }
+19878: 
+19879:             summary.textContent =
+19880:                 'No required or selected trained-personnel evidence is available.';
+19881:             content.innerHTML =
+19882:                 '<span class="mf2026-small">Mission Required Personnel and selected trained personnel will appear here.</span>';
+19883:             return;
+19884:         }
+19885: 
+19886:         const summaryParts = [];
+19887: 
+19888:         if (requiredPersonnel.length > 0) {
+19889:             summaryParts.push(`
+19890:                 <div><strong>${requiredPersonnel.length}</strong> required course${requiredPersonnel.length === 1 ? '' : 's'}</div>
+19891:                 <div><strong>${coveredTotal}</strong> / <strong>${requiredTotal}</strong> required trained-personnel coverage</div>
+19892:             `);
+19893:         }
+19894: 
+19895:         if (selectedVehicles.length > 0) {
+19896:             summaryParts.push(`
+19897:                 <div><strong>${selectedVehicles.length}</strong> selected trained vehicle${selectedVehicles.length === 1 ? '' : 's'}</div>
+19898:                 <div><strong>${completeProfiles}</strong> trained personnel profile${completeProfiles === 1 ? '' : 's'}${aggregateOnlyVehicles ? ` · ${aggregateOnlyVehicles} aggregate-only` : ''}</div>
+19899:             `);
+19900:         }
+19901: 
+19902:         summary.innerHTML = summaryParts.join('');
+19903: 
+19904:         const requiredMarkup = requiredPersonnel.length > 0
+19905:             ? `
+19906:                 <div class="mf2026-training-vehicle">
+19907:                     <div class="mf2026-training-vehicle-name">
+19908:                         Mission Required Personnel
+19909:                     </div>
+19910:                     ${requiredPersonnel.map(requirement => {
+19911:                         const selected = Math.min(
+19912:                             requirement.required,
+19913:                             getSelectedTrainedPersonnelCountForCode(
+19914:                                 selectedVehicles,
+19915:                                 requirement.code
+19916:                             )
+19917:                         );
+19918:                         const remaining = Math.max(
+19919:                             0,
+19920:                             requirement.required - selected
+19921:                         );
+19922: 
+19923:                         return `
+19924:                             <div class="mf2026-training-person">
+19925:                                 <span class="mf2026-training-person-label">${selected} / ${requirement.required}</span>
+19926:                                 <span class="mf2026-training-course-list">${escapeHtml(requirement.label)}${remaining > 0 ? ` · ${remaining} still needed` : ' · covered'}</span>
+19927:                             </div>
+19928:                         `;
+19929:                     }).join('')}
+19930:                 </div>
+19931:             `
+19932:             : '';
+19933: 
+19934:         const selectedMarkup = selectedVehicles.map(vehicle => {
+19935:             const vehicleName =
+19936:                 vehicle.vehicleName ||
+19937:                 (vehicle.vehicleId
+19938:                     ? `Vehicle ${vehicle.vehicleId}`
+19939:                     : 'Selected vehicle');
+19940:             const profileMarkup =
+19941:                 vehicle.profilesComplete &&
+19942:                 vehicle.profiles.length > 0
+19943:                     ? vehicle.profiles.map((profile, index) => {
+19944:                         const labels = profile
+19945:                             .map(getSelectedTrainingDisplayLabel)
+19946:                             .sort((left, right) => left.localeCompare(right));
+19947: 
+19948:                         return `
+19949:                             <div class="mf2026-training-person">
+19950:                                 <span class="mf2026-training-person-label">Person ${index + 1}</span>
+19951:                                 <span class="mf2026-training-course-list">${labels.map(escapeHtml).join(', ')}</span>
+19952:                             </div>
+19953:                         `;
+19954:                     }).join('')
+19955:                     : vehicle.trainingCounts.map(item => {
+19956:                         return `
+19957:                             <div class="mf2026-training-person">
+19958:                                 <span class="mf2026-training-person-label">${item.count}×</span>
+19959:                                 <span class="mf2026-training-course-list">${escapeHtml(item.label)}</span>
+19960:                             </div>
+19961:                         `;
+19962:                     }).join('');
+19963: 
+19964:             return `
+19965:                 <div class="mf2026-training-vehicle">
+19966:                     <div class="mf2026-training-vehicle-name">
+19967:                         ${escapeHtml(vehicleName)}
+19968:                         ${vehicle.vehicleId ? `<span class="mf2026-small"> #${escapeHtml(vehicle.vehicleId)}</span>` : ''}
+19969:                     </div>
+19970:                     ${profileMarkup}
+19971:                 </div>
+19972:             `;
+19973:         }).join('');
+19974: 
+19975:         content.innerHTML =
+19976:             requiredMarkup +
+19977:             selectedMarkup;
+19978:     }

@@ -1,0 +1,122 @@
+44134:     function cleanupMissionFinderRuntime() {
+44135:         if (mfMainMutationObserver) {
+44136:             mfMainMutationObserver.disconnect();
+44137:             mfMainMutationObserver = null;
+44138:         }
+44139: 
+44140:         if (mfIssueRecorderObserver) {
+44141:             mfIssueRecorderObserver.disconnect();
+44142:             mfIssueRecorderObserver = null;
+44143:         }
+44144: 
+44145:         if (mfMainMutationFlushTimer) {
+44146:             clearTimeout(mfMainMutationFlushTimer);
+44147:             mfMainMutationFlushTimer = null;
+44148:         }
+44149: 
+44150:         if (mfAutoLoopResumeTimer) {
+44151:             clearTimeout(mfAutoLoopResumeTimer);
+44152:             mfAutoLoopResumeTimer = null;
+44153:         }
+44154: 
+44155:         if (mfIssueRecorderMutationTimer) {
+44156:             clearTimeout(mfIssueRecorderMutationTimer);
+44157:             mfIssueRecorderMutationTimer = null;
+44158:         }
+44159: 
+44160:         if (mfDebugRenderFrame !== null) {
+44161:             try {
+44162:                 cancelAnimationFrame(mfDebugRenderFrame);
+44163:             } catch (_error) {}
+44164:             clearTimeout(mfDebugRenderFrame);
+44165:             mfDebugRenderFrame = null;
+44166:         }
+44167: 
+44168:         if (mfVehicleLoadRenderFrame !== null) {
+44169:             try {
+44170:                 cancelAnimationFrame(mfVehicleLoadRenderFrame);
+44171:             } catch (_error) {}
+44172:             clearTimeout(mfVehicleLoadRenderFrame);
+44173:             mfVehicleLoadRenderFrame = null;
+44174:         }
+44175: 
+44176:         stopSessionRuntimeTicker();
+44177:         stopMissionEventCollectibleCollector();
+44178:         cleanupMissionFinderIphoneNativePickerSurfaces();
+44179: 
+44180:         mfMissingUnitRetryIntervals.forEach(intervalId => {
+44181:             clearInterval(intervalId);
+44182:         });
+44183:         mfMissingUnitRetryIntervals.clear();
+44184: 
+44185:         stopBackgroundWatcherIntervalsOnly();
+44186: 
+44187:         if (mfBackgroundWatcherSupervisorTimer) {
+44188:             clearInterval(mfBackgroundWatcherSupervisorTimer);
+44189:             mfBackgroundWatcherSupervisorTimer = null;
+44190:         }
+44191: 
+44192:         if (mfBackgroundStorageHandler) {
+44193:             window.removeEventListener(
+44194:                 'storage',
+44195:                 mfBackgroundStorageHandler
+44196:             );
+44197:             mfBackgroundStorageHandler = null;
+44198:         }
+44199: 
+44200:         if (mfMissionFinderResizeHandler) {
+44201:             window.removeEventListener(
+44202:                 'resize',
+44203:                 mfMissionFinderResizeHandler
+44204:             );
+44205:             window.removeEventListener(
+44206:                 'orientationchange',
+44207:                 mfMissionFinderResizeHandler
+44208:             );
+44209:             window.removeEventListener(
+44210:                 'pageshow',
+44211:                 mfMissionFinderResizeHandler
+44212:             );
+44213:             window.visualViewport?.removeEventListener(
+44214:                 'resize',
+44215:                 mfMissionFinderResizeHandler
+44216:             );
+44217:             window.visualViewport?.removeEventListener(
+44218:                 'scroll',
+44219:                 mfMissionFinderResizeHandler
+44220:             );
+44221:             mfMissionFinderResizeHandler = null;
+44222:         }
+44223: 
+44224:         if (mfPersonnelRegistryUpdatedHandler) {
+44225:             window.removeEventListener(
+44226:                 'mc-personnel-training-registry-updated',
+44227:                 mfPersonnelRegistryUpdatedHandler
+44228:             );
+44229:             mfPersonnelRegistryUpdatedHandler = null;
+44230:         }
+44231: 
+44232:         if (mfRuntimePageHideHandler) {
+44233:             window.removeEventListener(
+44234:                 'pagehide',
+44235:                 mfRuntimePageHideHandler
+44236:             );
+44237:             mfRuntimePageHideHandler = null;
+44238:         }
+44239: 
+44240:         if (mfRuntimePageShowHandler) {
+44241:             window.removeEventListener(
+44242:                 'pageshow',
+44243:                 mfRuntimePageShowHandler
+44244:             );
+44245:             mfRuntimePageShowHandler = null;
+44246:         }
+44247: 
+44248:         invalidateVehicleCheckboxCache();
+44249:         invalidateMissionContextCaches();
+44250:         invalidatePatientCountCache();
+44251:         invalidateTransportCaches();
+44252:         mfVehicleMatchCandidateCache.clear();
+44253:         resetMainMutationFlags();
+44254:         mfRuntimeCleanupInstalled = false;
+44255:     }

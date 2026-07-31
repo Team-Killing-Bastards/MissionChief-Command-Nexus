@@ -1,0 +1,21 @@
+28225:     function areTrainedPersonnelRequirementsSatisfied(
+28226:         requirements
+28227:     ) {
+28228:         const registry =
+28229:             readPersonnelTrainingRegistry();
+28230: 
+28231:         const selected =
+28232:             getVehicleCheckboxSnapshot().filter(
+28233:                 checkbox => checkbox.checked
+28234:             );
+28235: 
+28236:         // Correct-type vehicle coverage is the dispatch gate. A training
+28237:         // shortage remains visible but does not block the selected units.
+28238:         return getRemainingTrainedPersonnelRequirements(
+28239:             requirements,
+28240:             selected,
+28241:             registry
+28242:         ).every(requirement => {
+28243:             return requirement.capacityRemaining <= 0;
+28244:         });
+28245:     }

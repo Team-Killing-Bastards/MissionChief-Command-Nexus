@@ -1,0 +1,17 @@
+01375:     function ensureSingleNamingToolsPanel(preferredPanel = null) {
+01376:         const panels = [...document.querySelectorAll('#mc-namer-panel')];
+01377:         const keeper = preferredPanel?.isConnected
+01378:             ? preferredPanel
+01379:             : panels[0] || null;
+01380: 
+01381:         panels.forEach(panel => {
+01382:             if (panel !== keeper) panel.remove();
+01383:         });
+01384: 
+01385:         const styles = [...document.querySelectorAll('style[data-mc-namer-style="true"]')];
+01386:         styles.forEach((style, index) => {
+01387:             if (index > 0) style.remove();
+01388:         });
+01389: 
+01390:         return keeper;
+01391:     }

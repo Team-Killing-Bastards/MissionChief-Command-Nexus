@@ -1,0 +1,82 @@
+06110:     function publishPersonnelVehicleTrainingRegistry({
+06111:         station,
+06112:         vehicles,
+06113:         personnel,
+06114:         source = 'scan',
+06115:         pruneMissingVehicles = true
+06116:     }) {
+06117:         const stationVehicles = Array.isArray(vehicles)
+06118:             ? vehicles.filter(vehicle => vehicle?.vehicleId)
+06119:             : [];
+06120: 
+06121:         if (!stationVehicles.length) return 0;
+06122: 
+06123:         const registry = readPersonnelTrainingRegistry();
+06124:         const now = Date.now();
+06125:         const currentVehicleIds = new Set(
+06126:             stationVehicles.map(vehicle => String(vehicle.vehicleId))
+06127:         );
+06128:         const processedTypeIds = new Set(
+06129:             stationVehicles.map(vehicle => String(vehicle.vehicleTypeId || ''))
+06130:         );
+06131: 
+06132:         if (pruneMissingVehicles) {
+06133:             Object.entries(registry.vehicles).forEach(([vehicleId, entry]) => {
+06134:                 if (String(entry?.stationHref || '') !== String(station?.href || '')) return;
+06135:                 if (!processedTypeIds.has(String(entry?.vehicleTypeId || ''))) return;
+06136:                 if (!currentVehicleIds.has(String(vehicleId))) delete registry.vehicles[vehicleId];
+06137:             });
+06138:         }
+06139: 
+06140:         stationVehicles.forEach(vehicle => {
+06141:             const vehicleId = String(vehicle.vehicleId);
+06142:             const exactVehicleProfileScan =
+06143:                 String(source || '').startsWith('personnel-register-exact-');
+06144:             const assignedPersonnel = exactVehicleProfileScan
+06145:                 ? (Array.isArray(personnel) ? personnel : []).filter(person => {
+06146:                     return String(person?.assignedVehicleId || '') === vehicleId;
+06147:                 })
+06148:                 : getPersonnelAssignedToVehicle(personnel, vehicle);
+06149:             const assignedTrainingProfiles =
+06150:                 getPersonnelAssignedTrainingProfiles(assignedPersonnel);
+06151: 
+06152:             registry.vehicles[vehicleId] = {
+06153:                 vehicleId,
+06154:                 vehicleName: String(vehicle.name || ''),
+06155:                 vehicleTypeId: String(vehicle.vehicleTypeId || ''),
+06156:                 stationName: String(station?.displayName || station?.stationName || ''),
+06157:                 stationHref: String(station?.href || ''),
+06158:                 assignedPersonnelCount: assignedPersonnel.length,
+06159:                 assignmentScanComplete: true,
+06160:                 personnelRowsSeen: Number.isFinite(vehicle.assignmentPersonnelRowsSeen)
+06161:                     ? Math.max(0, vehicle.assignmentPersonnelRowsSeen)
+06162:                     : (Array.isArray(personnel) ? personnel.length : 0),
+06163:                 trainingCounts: countPersonnelTrainingCodes(assignedPersonnel),
+06164:                 trainingCombinationCounts: countPersonnelTrainingCombinations(assignedPersonnel),
+06165:                 assignedTrainingProfiles,
+06166:                 trainingProfilesComplete: exactVehicleProfileScan,
+06167:                 updatedAt: now,
+06168:                 source: String(source)
+06169:             };
+06170:         });
+06171: 
+06172:         registry.schemaVersion = PERSONNEL_TRAINING_REGISTRY_SCHEMA_VERSION;
+06173:         registry.sourceVersion = PERSONNEL_VERSION;
+06174:         registry.updatedAt = now;
+06175:         PERSONNEL_TRAINING_REGISTRY_DIRTY = true;
+06176:         PERSONNEL_TRAINING_REGISTRY_PENDING_EVENT = {
+06177:             stationName: station?.displayName || '',
+06178:             vehicleCount: stationVehicles.length,
+06179:             updatedAt: now
+06180:         };
+06181: 
+06182:         const finalSnapshot = /final-verification|station-complete/i.test(String(source));
+06183:         if (finalSnapshot) flushPersonnelTrainingRegistry(false);
+06184:         else schedulePersonnelTrainingRegistryFlush();
+06185: 
+06186:         personnelDebug(
+06187:             `Shared training register cache updated: ${stationVehicles.length} vehicle(s) at ${station?.displayName || 'station'} | source=${source}${finalSnapshot ? ' | flushed' : ' | write queued'}`
+06188:         );
+06189: 
+06190:         return stationVehicles.length;
+06191:     }

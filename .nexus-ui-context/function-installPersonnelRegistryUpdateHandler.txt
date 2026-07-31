@@ -1,0 +1,13 @@
+10577:     function installPersonnelRegistryUpdateHandler() {
+10578:         if (mfPersonnelRegistryUpdatedHandler) return;
+10579: 
+10580:         mfPersonnelRegistryUpdatedHandler = () => {
+10581:             mfLiveTrainingVerifyCache.clear();
+10582:             renderSelectedTrainedPersonnelPanel();
+10583:         };
+10584: 
+10585:         window.addEventListener(
+10586:             'mc-personnel-training-registry-updated',
+10587:             mfPersonnelRegistryUpdatedHandler
+10588:         );
+10589:     }

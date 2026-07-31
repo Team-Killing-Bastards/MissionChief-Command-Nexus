@@ -1,0 +1,5 @@
+01290:     function findStationOverviewEntry(href) {
+01291:         const expected = normaliseStationOverviewHref(href);
+01292:         if (!expected) return null;
+01293:         return getStationOverviewEntries().find(entry => entry.href === expected) || null;
+01294:     }

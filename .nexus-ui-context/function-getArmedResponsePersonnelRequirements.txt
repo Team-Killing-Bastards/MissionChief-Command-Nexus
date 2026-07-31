@@ -1,0 +1,43 @@
+25270:     function getArmedResponsePersonnelRequirements(
+25271:         requirementName,
+25272:         personnelAmount
+25273:     ) {
+25274:         if (
+25275:             !isArmedResponsePersonnelRequirementName(
+25276:                 requirementName
+25277:             )
+25278:         ) {
+25279:             return [];
+25280:         }
+25281: 
+25282:         const amountMatch = String(
+25283:             personnelAmount ?? ''
+25284:         )
+25285:             .replace(/,/g, '')
+25286:             .match(/\d+/);
+25287: 
+25288:         const personnelRequired = amountMatch
+25289:             ? Math.max(
+25290:                 0,
+25291:                 parseInt(
+25292:                     amountMatch[0],
+25293:                     10
+25294:                 ) || 0
+25295:             )
+25296:             : 0;
+25297: 
+25298:         if (personnelRequired <= 0) {
+25299:             return [];
+25300:         }
+25301: 
+25302:         return normalisePublicOrderTrainedRequirements([
+25303:             {
+25304:                 code:
+25305:                     'armed_response_personnel',
+25306:                 label:
+25307:                     'Armed Response Personnel',
+25308:                 required:
+25309:                     personnelRequired
+25310:             }
+25311:         ]);
+25312:     }

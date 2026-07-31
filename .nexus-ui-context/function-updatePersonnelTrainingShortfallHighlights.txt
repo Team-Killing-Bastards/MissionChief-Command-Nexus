@@ -1,0 +1,63 @@
+08473:     function updatePersonnelTrainingShortfallHighlights() {
+08474:         const section = getToolElementById('mc-personnel-training-shortfall-section');
+08475:         const count = getToolElementById('mc-personnel-training-shortfall-station-count');
+08476:         const list = getToolElementById('mc-personnel-training-shortfall-list');
+08477:         const shortages = getPersonnelTrainingShortfallReports();
+08478: 
+08479:         if (section && count && list) {
+08480:             count.textContent = String(shortages.length);
+08481:             section.hidden = shortages.length === 0;
+08482:             const fragment = document.createDocumentFragment();
+08483: 
+08484:             shortages.forEach(report => {
+08485:                 const row = document.createElement('div');
+08486:                 row.className = 'mc-personnel-training-shortfall-row';
+08487: 
+08488:                 const name = document.createElement('span');
+08489:                 name.className = 'mc-personnel-training-shortfall-name';
+08490:                 name.textContent = report.stationName || 'Unknown station';
+08491: 
+08492:                 const value = document.createElement('span');
+08493:                 value.className = 'mc-personnel-training-shortfall-value';
+08494:                 value.textContent = `Need ${report.trainingShortfall}`;
+08495: 
+08496:                 row.append(name, value);
+08497:                 fragment.appendChild(row);
+08498:             });
+08499: 
+08500:             list.replaceChildren(fragment);
+08501:         }
+08502: 
+08503:         const shortageByHref = new Map(
+08504:             shortages
+08505:                 .filter(report => report.stationHref)
+08506:                 .map(report => [String(report.stationHref), Number(report.trainingShortfall || 0)])
+08507:         );
+08508: 
+08509:         PERSONNEL_STATE.filteredStations.forEach(station => {
+08510:             const option = PERSONNEL_START_OPTION_BY_HREF.get(String(station.href));
+08511:             if (!option) return;
+08512: 
+08513:             const stationShortfall = shortageByHref.get(String(station.href)) || 0;
+08514:             option.textContent = stationShortfall > 0
+08515:                 ? `⚠ ${station.displayName} — NEEDS ${stationShortfall} TRAINING`
+08516:                 : `${station.displayName} [building type ${station.buildingTypeId ?? '?'}]`;
+08517:         });
+08518: 
+08519:         for (const link of PERSONNEL_HIGHLIGHTED_STATION_LINKS) {
+08520:             link.classList.remove('mc-personnel-training-shortfall-station');
+08521:             link.removeAttribute('data-mc-personnel-training-shortfall');
+08522:             if (link.title?.includes('qualification shortfall:')) link.removeAttribute('title');
+08523:         }
+08524:         PERSONNEL_HIGHLIGHTED_STATION_LINKS.clear();
+08525: 
+08526:         shortages.forEach(report => {
+08527:             const stationLink = PERSONNEL_STATION_LINK_BY_HREF.get(String(report.stationHref || ''));
+08528:             if (!stationLink?.isConnected) return;
+08529: 
+08530:             stationLink.classList.add('mc-personnel-training-shortfall-station');
+08531:             stationLink.dataset.mcPersonnelTrainingShortfall = String(report.trainingShortfall);
+08532:             stationLink.title = `${getPersonnelProfileDefinition().label} qualification shortfall: ${report.trainingShortfall} additional qualified staff estimated`;
+08533:             PERSONNEL_HIGHLIGHTED_STATION_LINKS.add(stationLink);
+08534:         });
+08535:     }

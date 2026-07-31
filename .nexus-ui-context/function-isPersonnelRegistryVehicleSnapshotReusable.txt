@@ -1,0 +1,47 @@
+04817:     function isPersonnelRegistryVehicleSnapshotReusable({
+04818:         vehicle,
+04819:         station,
+04820:         existingEntry,
+04821:         expectedProfiles,
+04822:         snapshotSafe,
+04823:         fullVerify
+04824:     }) {
+04825:         if (fullVerify || !snapshotSafe || !existingEntry) return false;
+04826:         if (
+04827:             !existingEntry.assignmentScanComplete ||
+04828:             !existingEntry.trainingProfilesComplete
+04829:         ) {
+04830:             return false;
+04831:         }
+04832:         if (
+04833:             !String(existingEntry.source || '').startsWith(
+04834:                 'personnel-register-exact-'
+04835:             )
+04836:         ) {
+04837:             return false;
+04838:         }
+04839:         const verifiedAt = Number(existingEntry.updatedAt || 0);
+04840:         if (
+04841:             !Number.isFinite(verifiedAt) ||
+04842:             verifiedAt <= 0 ||
+04843:             Date.now() - verifiedAt > PERSONNEL_REGISTER_REVERIFY_AGE_MS
+04844:         ) {
+04845:             return false;
+04846:         }
+04847:         if (
+04848:             String(existingEntry.vehicleId || '') !== String(vehicle.vehicleId) ||
+04849:             String(existingEntry.vehicleTypeId || '') !== String(vehicle.vehicleTypeId || '') ||
+04850:             String(existingEntry.stationHref || '') !== String(station.href || '')
+04851:         ) {
+04852:             return false;
+04853:         }
+04854:         if (
+04855:             Number(existingEntry.assignedPersonnelCount || 0) !==
+04856:             expectedProfiles.length
+04857:         ) {
+04858:             return false;
+04859:         }
+04860:         return getPersonnelRegisterCanonicalProfiles(
+04861:             existingEntry.assignedTrainingProfiles
+04862:         ) === getPersonnelRegisterCanonicalProfiles(expectedProfiles);
+04863:     }

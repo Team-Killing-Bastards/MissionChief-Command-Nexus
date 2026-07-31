@@ -1,0 +1,64 @@
+07936:     function parseStationPersonnelAssignmentEvidence(doc, vehicles) {
+07937:         if (!doc?.querySelectorAll) return [];
+07938: 
+07939:         const vehicleNameIndex =
+07940:             getUniquePersonnelVehicleNameIndex(vehicles);
+07941: 
+07942:         return Array.from(
+07943:             doc.querySelectorAll('#personal_table tbody tr')
+07944:         ).map(row => {
+07945:             const cells = Array.from(row.children || []);
+07946:             const hasDeleteCheckbox = !!row.querySelector?.(
+07947:                 'input.personal-delete-checkbox'
+07948:             );
+07949:             const nameIndex = hasDeleteCheckbox ? 1 : 0;
+07950:             const trainingIndex = nameIndex + 1;
+07951:             const assignedVehicleIndex = nameIndex + 2;
+07952:             const statusIndex = nameIndex + 3;
+07953:             const assignedVehicleCell = cells[assignedVehicleIndex] || null;
+07954:             const assignedVehicleLink = assignedVehicleCell?.querySelector?.(
+07955:                 'a[href^="/vehicles/"]'
+07956:             ) || null;
+07957:             const linkedVehicleId = getVehicleIdFromHref(
+07958:                 assignedVehicleLink?.getAttribute?.('href') || ''
+07959:             );
+07960:             const assignedVehicleName = cleanText(
+07961:                 assignedVehicleLink?.textContent ||
+07962:                 assignedVehicleCell?.textContent ||
+07963:                 ''
+07964:             );
+07965:             const matchedVehicle = linkedVehicleId
+07966:                 ? null
+07967:                 : vehicleNameIndex.get(
+07968:                     normalizePersonnelVehicleName(assignedVehicleName)
+07969:                 );
+07970:             const assignedVehicleId = String(
+07971:                 linkedVehicleId ||
+07972:                 matchedVehicle?.vehicleId ||
+07973:                 ''
+07974:             );
+07975:             const statusText = cleanText(
+07976:                 cells[statusIndex]?.textContent || ''
+07977:             );
+07978: 
+07979:             return {
+07980:                 personnelId: getStationPersonnelRowId(row),
+07981:                 name: cleanText(cells[nameIndex]?.textContent || ''),
+07982:                 trainingText: cleanText(cells[trainingIndex]?.textContent || ''),
+07983:                 trainingCodes: parseTrainingCodes(row),
+07984:                 assignedHere: false,
+07985:                 assignedVehicleId,
+07986:                 assignedVehicleName,
+07987:                 available: /\bavailable\b/i.test(statusText),
+07988:                 assignedElsewhere: false,
+07989:                 displayedVehicleId: assignedVehicleId,
+07990:                 assignHref: '',
+07991:                 stationAssignmentEvidence: true
+07992:             };
+07993:         }).filter(person => {
+07994:             return !!(
+07995:                 person.personnelId &&
+07996:                 person.assignedVehicleId
+07997:             );
+07998:         });
+07999:     }

@@ -1,0 +1,68 @@
+24468:     function getPreloadedMissionTrainedPersonnelRequirements() {
+24469:         const cache =
+24470:             getMissionRequirementPreloadState();
+24471: 
+24472:         if (
+24473:             cache.status !== 'loaded' ||
+24474:             !Array.isArray(cache.rows)
+24475:         ) {
+24476:             return [];
+24477:         }
+24478: 
+24479:         const requirements = new Map();
+24480: 
+24481:         cache.rows
+24482:             .filter(row => {
+24483:                 return (
+24484:                     row?.isTrainedPersonnelRequirement === true &&
+24485:                     row?.missionDefinitionRequiredPersonnel === true &&
+24486:                     Array.isArray(row?.personnelTrainingRequirements)
+24487:                 );
+24488:             })
+24489:             .forEach(row => {
+24490:                 row.personnelTrainingRequirements
+24491:                     .forEach(requirement => {
+24492:                         const requiredTrainingCodes =
+24493:                             Array.isArray(requirement?.requiredTrainingCodes)
+24494:                                 ? requirement.requiredTrainingCodes
+24495:                                     .map(value => String(value || '').trim())
+24496:                                     .filter(Boolean)
+24497:                                 : [];
+24498:                         const code =
+24499:                             requiredTrainingCodes[0] ||
+24500:                             String(requirement?.code || '')
+24501:                                 .replace(/_vehicle$/i, '')
+24502:                                 .trim();
+24503:                         const required = Math.max(
+24504:                             0,
+24505:                             parseInt(
+24506:                                 requirement?.personnelRequired ??
+24507:                                 requirement?.required,
+24508:                                 10
+24509:                             ) || 0
+24510:                         );
+24511: 
+24512:                         if (!code || required <= 0) return;
+24513: 
+24514:                         const existing =
+24515:                             requirements.get(code);
+24516: 
+24517:                         if (
+24518:                             !existing ||
+24519:                             required > existing.required
+24520:                         ) {
+24521:                             requirements.set(code, {
+24522:                                 code,
+24523:                                 label:
+24524:                                     getSelectedTrainingDisplayLabel(code),
+24525:                                 required
+24526:                             });
+24527:                         }
+24528:                     });
+24529:             });
+24530: 
+24531:         return Array.from(requirements.values())
+24532:             .sort((left, right) => {
+24533:                 return left.label.localeCompare(right.label);
+24534:             });
+24535:     }

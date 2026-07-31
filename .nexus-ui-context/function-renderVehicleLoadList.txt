@@ -1,0 +1,14 @@
+20057:     function renderVehicleLoadList() {
+20058:         if (mfVehicleLoadRenderFrame !== null) return;
+20059: 
+20060:         const run = () => {
+20061:             mfVehicleLoadRenderFrame = null;
+20062:             renderVehicleLoadListNow();
+20063:         };
+20064: 
+20065:         if (typeof requestAnimationFrame === 'function') {
+20066:             mfVehicleLoadRenderFrame = requestAnimationFrame(run);
+20067:         } else {
+20068:             mfVehicleLoadRenderFrame = setTimeout(run, 50);
+20069:         }
+20070:     }

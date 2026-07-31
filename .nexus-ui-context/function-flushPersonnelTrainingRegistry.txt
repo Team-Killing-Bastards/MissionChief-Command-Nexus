@@ -1,0 +1,33 @@
+05982:     function flushPersonnelTrainingRegistry(silent = false) {
+05983:         if (PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER != null) {
+05984:             clearTimeout(PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER);
+05985:             PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER = null;
+05986:         }
+05987: 
+05988:         if (!PERSONNEL_TRAINING_REGISTRY_DIRTY || !PERSONNEL_TRAINING_REGISTRY_CACHE) {
+05989:             return { saved: false, pruned: 0, retained: 0, quotaRetry: false };
+05990:         }
+05991: 
+05992:         try {
+05993:             const registrySave = savePersonnelTrainingRegistry(PERSONNEL_TRAINING_REGISTRY_CACHE);
+05994:             PERSONNEL_TRAINING_REGISTRY_DIRTY = false;
+05995: 
+05996:             const pendingEvent = PERSONNEL_TRAINING_REGISTRY_PENDING_EVENT;
+05997:             PERSONNEL_TRAINING_REGISTRY_PENDING_EVENT = null;
+05998:             dispatchPersonnelTrainingRegistryUpdate(pendingEvent);
+05999:             updatePersonnelTrainingRegistryStatus();
+06000: 
+06001:             if (!silent) {
+06002:                 personnelDebug(
+06003:                     `Shared training register saved: retained=${registrySave.retained} | pruned=${registrySave.pruned}${registrySave.quotaRetry ? ' | quota retry used' : ''}`
+06004:                 );
+06005:             }
+06006: 
+06007:             return registrySave;
+06008:         } catch (error) {
+06009:             if (!silent) {
+06010:                 personnelLog(`Shared training register could not be saved: ${error?.message || error}`, 'error');
+06011:             }
+06012:             return { saved: false, pruned: 0, retained: 0, quotaRetry: false, error };
+06013:         }
+06014:     }

@@ -1,0 +1,34 @@
+23331:     function getMissingPersonnelSegment(
+23332:         text
+23333:     ) {
+23334:         const input =
+23335:             String(
+23336:                 text ||
+23337:                 ''
+23338:             )
+23339:                 .replace(
+23340:                     /\s+/g,
+23341:                     ' '
+23342:                 )
+23343:                 .trim();
+23344: 
+23345:         const marker =
+23346:             /Missing\s+Personnel\s*:/i.exec(
+23347:                 input
+23348:             );
+23349: 
+23350:         if (!marker) {
+23351:             return '';
+23352:         }
+23353: 
+23354:         return input
+23355:             .slice(
+23356:                 marker.index +
+23357:                 marker[0].length
+23358:             )
+23359:             .replace(
+23360:                 /\s+(?:Missing\s+Vehicles?|We\s+need)\s*:.+$/i,
+23361:                 ''
+23362:             )
+23363:             .trim();
+23364:     }

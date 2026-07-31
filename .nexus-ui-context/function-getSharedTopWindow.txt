@@ -1,0 +1,7 @@
+20876:     function getSharedTopWindow() {
+20877:         try {
+20878:             return window.top || window;
+20879:         } catch (_error) {
+20880:             return window;
+20881:         }
+20882:     }

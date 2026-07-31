@@ -1,0 +1,9 @@
+08638:     function personnelLog(message, type = 'info') {
+08639:         const logBox = getToolElementById('mc-personnel-log');
+08640:         if (!logBox) return;
+08641: 
+08642:         const line = document.createElement('div');
+08643:         line.className = `mc-log-${type}`;
+08644:         line.textContent = message;
+08645:         appendBoundedToolLog(logBox, line);
+08646:     }

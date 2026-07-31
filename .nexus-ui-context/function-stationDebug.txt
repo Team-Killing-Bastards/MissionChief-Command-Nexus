@@ -1,0 +1,4 @@
+04306:     function stationDebug(message) {
+04307:         if (!STATION_STATE.debug) return;
+04308:         stationLog(`[DEBUG] ${message}`, 'debug');
+04309:     }

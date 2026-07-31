@@ -1,0 +1,5 @@
+04269:     function toggleStationDebug() {
+04270:         STATION_STATE.debug = !STATION_STATE.debug;
+04271:         document.querySelector('#mc-station-debug').textContent = STATION_STATE.debug ? 'Debug: ON' : 'Debug: OFF';
+04272:         stationLog(`Debug ${STATION_STATE.debug ? 'enabled' : 'disabled'}.`, 'debug');
+04273:     }

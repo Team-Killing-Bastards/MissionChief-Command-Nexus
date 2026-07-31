@@ -1,0 +1,9 @@
+04296:     function stationLog(message, type = 'info') {
+04297:         const logBox = getToolElementById('mc-station-log');
+04298:         if (!logBox) return;
+04299: 
+04300:         const line = document.createElement('div');
+04301:         line.className = `mc-log-${type}`;
+04302:         line.textContent = message;
+04303:         appendBoundedToolLog(logBox, line);
+04304:     }

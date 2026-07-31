@@ -1,0 +1,8 @@
+08601:     function updatePersonnelCounters() {
+08602:         setPersonnelUiValue('completed', PERSONNEL_STATE.completedStations);
+08603:         setPersonnelUiValue('vehicles', PERSONNEL_STATE.checkedVehicles);
+08604:         setPersonnelUiValue('unitsFulfilled', formatPersonnelUnitsFulfilled());
+08605:         setPersonnelUiValue('assigned', PERSONNEL_STATE.action === 'assign' ? PERSONNEL_STATE.assignedCount : PERSONNEL_STATE.plannedCount);
+08606:         setPersonnelUiValue('trainingShortfall', PERSONNEL_STATE.trainingShortfall);
+08607:         setPersonnelUiValue('assignmentShortfall', PERSONNEL_STATE.assignmentShortfall);
+08608:     }

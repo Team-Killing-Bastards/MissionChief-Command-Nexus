@@ -1,0 +1,10 @@
+01186:     function scoreStationOverviewLink(link, href) {
+01187:         let score = 0;
+01188:         if (link.classList?.contains('lightbox-open')) score += 100;
+01189:         if (link.matches?.('.list-group-item.active')) score += 70;
+01190:         if (normaliseStationOverviewHref(link.getAttribute?.('href')) === href) score += 40;
+01191:         const label = cleanText(link.textContent || link.getAttribute?.('aria-label') || '');
+01192:         if (label && !isGenericStationActionText(label)) score += 35;
+01193:         if (link.offsetParent !== null) score += 10;
+01194:         return score;
+01195:     }

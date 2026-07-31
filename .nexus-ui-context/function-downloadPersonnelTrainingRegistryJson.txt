@@ -1,0 +1,12 @@
+04571:     function downloadPersonnelTrainingRegistryJson(filename, payload) {
+04572:         const blob = new Blob([`${JSON.stringify(payload, null, 2)}\n`], { type: 'application/json;charset=utf-8' });
+04573:         const url = URL.createObjectURL(blob);
+04574:         const link = document.createElement('a');
+04575:         link.href = url;
+04576:         link.download = filename;
+04577:         link.hidden = true;
+04578:         document.body.appendChild(link);
+04579:         link.click();
+04580:         link.remove();
+04581:         setTimeout(() => URL.revokeObjectURL(url), 1000);
+04582:     }

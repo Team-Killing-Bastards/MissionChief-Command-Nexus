@@ -1,0 +1,48 @@
+23366:     function getNamedPersonnelCount(
+23367:         personnelSegment,
+23368:         namePatternSource
+23369:     ) {
+23370:         const segment =
+23371:             String(
+23372:                 personnelSegment ||
+23373:                 ''
+23374:             );
+23375: 
+23376:         if (
+23377:             !segment ||
+23378:             !namePatternSource
+23379:         ) {
+23380:             return 0;
+23381:         }
+23382: 
+23383:         const pattern =
+23384:             new RegExp(
+23385:                 `(?:\\b(\\d+)\\s*(?:x\\s*)?${namePatternSource}\\b|\\b${namePatternSource}\\b\\s*(?::|=|-)?\\s*(?:x\\s*)?(\\d+))`,
+23386:                 'gi'
+23387:             );
+23388: 
+23389:         let maximum = 0;
+23390:         let match;
+23391: 
+23392:         while (
+23393:             (
+23394:                 match =
+23395:                     pattern.exec(
+23396:                         segment
+23397:                     )
+23398:             )
+23399:         ) {
+23400:             maximum =
+23401:                 Math.max(
+23402:                     maximum,
+23403:                     parseInt(
+23404:                         match[1] ||
+23405:                         match[2],
+23406:                         10
+23407:                     ) ||
+23408:                     0
+23409:                 );
+23410:         }
+23411: 
+23412:         return maximum;
+23413:     }

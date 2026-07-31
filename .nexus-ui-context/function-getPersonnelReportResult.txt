@@ -1,0 +1,13 @@
+08165:     function getPersonnelReportResult(report) {
+08166:         if (report?.error) return 'ERROR';
+08167: 
+08168:         if (Number(report?.stationTarget || 0) > 0) {
+08169:             return report?.stationTargetMet
+08170:                 ? 'TARGET MET'
+08171:                 : 'TARGET SHORTFALL';
+08172:         }
+08173: 
+08174:         if (report?.noTargetVehicles) return 'NO TARGET VEHICLES';
+08175:         if (Number(report?.assignmentShortfall || 0) > 0) return 'SHORTFALL';
+08176:         return 'COMPLETE';
+08177:     }

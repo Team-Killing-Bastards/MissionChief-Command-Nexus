@@ -1,0 +1,10 @@
+04462:     function updatePersonnelTrainingRegistryStatus() {
+04463:         const target = document.querySelector('#mc-personnel-register-status');
+04464:         if (!target) return;
+04465:         try {
+04466:             const stats = getPersonnelTrainingRegistryStats();
+04467:             target.textContent = `${stats.count.toLocaleString('en-GB')} vehicle${stats.count === 1 ? '' : 's'} stored; updated ${formatPersonnelTrainingRegistryTimestamp(stats.updatedAt)}`;
+04468:         } catch (error) {
+04469:             target.textContent = `Register unavailable: ${error?.message || error}`;
+04470:         }
+04471:     }

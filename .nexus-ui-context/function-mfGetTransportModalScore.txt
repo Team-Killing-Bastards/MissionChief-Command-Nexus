@@ -1,0 +1,18 @@
+38224:     function mfGetTransportModalScore(modal) {
+38225:         if (!modal) return -1;
+38226: 
+38227:         let score = 0;
+38228: 
+38229:         try {
+38230:             const style = modal.ownerDocument.defaultView.getComputedStyle(modal);
+38231:             const zIndex = parseInt(style.zIndex || '0', 10);
+38232:             if (Number.isFinite(zIndex)) score += zIndex * 1000;
+38233:         } catch (error) {}
+38234: 
+38235:         try {
+38236:             const siblings = Array.from(modal.ownerDocument.querySelectorAll('.vm--modal, .modal, .lightbox'));
+38237:             score += Math.max(0, siblings.indexOf(modal));
+38238:         } catch (error) {}
+38239: 
+38240:         return score;
+38241:     }

@@ -1,0 +1,52 @@
+02928:     function handlePersonnelModeChange() {
+02929:         if (PERSONNEL_STATE.running) {
+02930:             const select =
+02931:                 document.querySelector(
+02932:                     '#mc-personnel-mode'
+02933:                 );
+02934: 
+02935:             if (select) {
+02936:                 select.value =
+02937:                     PERSONNEL_STATE.mode ||
+02938:                     'all';
+02939:             }
+02940: 
+02941:             personnelLog(
+02942:                 'Stop Personnel Assignment before changing Mode.',
+02943:                 'error'
+02944:             );
+02945: 
+02946:             return;
+02947:         }
+02948: 
+02949:         PERSONNEL_STATE.mode =
+02950:             document.querySelector(
+02951:                 '#mc-personnel-mode'
+02952:             )?.value ||
+02953:             'all';
+02954: 
+02955:         PERSONNEL_STATE.unitsRequired =
+02956:             0;
+02957: 
+02958:         PERSONNEL_STATE.unitsFulfilled =
+02959:             0;
+02960: 
+02961:         PERSONNEL_STATE.unitTargetReached =
+02962:             false;
+02963: 
+02964:         updatePersonnelModeUi();
+02965: 
+02966:         const modeMessage =
+02967:             PERSONNEL_STATE.mode ===
+02968:                 'target'
+02969:                 ? 'Mode set to enforce the Units required target independently at every station.'
+02970:                 : PERSONNEL_STATE.mode ===
+02971:                     'single'
+02972:                     ? 'Mode set to Selected station only.'
+02973:                     : 'Mode set to All relevant stations. Every station in scope will be scanned.';
+02974: 
+02975:         personnelLog(
+02976:             modeMessage,
+02977:             'debug'
+02978:         );
+02979:     }

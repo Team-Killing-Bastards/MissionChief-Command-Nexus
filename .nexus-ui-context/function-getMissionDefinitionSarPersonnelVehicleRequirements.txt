@@ -1,0 +1,79 @@
+23221:     function getMissionDefinitionSarPersonnelVehicleRequirements(
+23222:         requirementName,
+23223:         personnelText
+23224:     ) {
+23225:         const cleanedName =
+23226:             cleanRequirementName(requirementName);
+23227: 
+23228:         // Only the mission-definition "Required Personnel" row is actionable.
+23229:         // "Required Personnel Available" belongs to Reward and Precondition and
+23230:         // must never create dispatch demand.
+23231:         if (!/^Personnel(?:\s+Requirements?)?$/i.test(cleanedName)) {
+23232:             return [];
+23233:         }
+23234: 
+23235:         const input = String(personnelText || '')
+23236:             .replace(/[×✕]/g, 'x')
+23237:             .replace(/\s+/g, ' ')
+23238:             .trim();
+23239: 
+23240:         if (!input) return [];
+23241: 
+23242:         const definitions = [
+23243:             {
+23244:                 name: 'Search Technician',
+23245:                 patterns: [
+23246:                     /(\d+)\s*(?:x\s*)?Search\s+Technician(?:s)?/gi,
+23247:                     /Search\s+Technician(?:s)?\s*(?:x\s*)?(\d+)/gi
+23248:                 ]
+23249:             },
+23250:             {
+23251:                 name: 'SAR Commander',
+23252:                 patterns: [
+23253:                     /(\d+)\s*(?:x\s*)?SAR\s+Commander(?:s)?/gi,
+23254:                     /SAR\s+Commander(?:s)?\s*(?:x\s*)?(\d+)/gi
+23255:                 ]
+23256:             }
+23257:         ];
+23258: 
+23259:         const conversions = [];
+23260: 
+23261:         definitions.forEach(definition => {
+23262:             let maximumRequired = 0;
+23263: 
+23264:             definition.patterns.forEach(pattern => {
+23265:                 pattern.lastIndex = 0;
+23266:                 let match;
+23267: 
+23268:                 while ((match = pattern.exec(input))) {
+23269:                     const patternIsPrefix =
+23270:                         pattern.source.startsWith('(\\d+)');
+23271:                     const trailingText = input.slice(pattern.lastIndex);
+23272: 
+23273:                     if (
+23274:                         !patternIsPrefix &&
+23275:                         /^\s*x(?=\s|[A-Za-z])/i.test(trailingText)
+23276:                     ) {
+23277:                         continue;
+23278:                     }
+23279: 
+23280:                     maximumRequired = Math.max(
+23281:                         maximumRequired,
+23282:                         Math.max(0, parseInt(match[1], 10) || 0)
+23283:                     );
+23284:                 }
+23285:             });
+23286: 
+23287:             if (maximumRequired <= 0) return;
+23288: 
+23289:             const conversion =
+23290:                 getSarPersonnelVehicleRequirement(
+23291:                     definition.name,
+23292:                     maximumRequired
+23293:                 );
+23294: 
+23295:             if (conversion) conversions.push(conversion);
+23296:         });
+23297: 
+23298:         return conversions;
+23299:     }

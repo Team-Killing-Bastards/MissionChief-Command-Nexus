@@ -1,0 +1,44 @@
+09497:     async function closeStationModal(iframe = STATE.activeIframe) {
+09498:         setStatus('Closing station');
+09499: 
+09500:         const activeIframe = iframe || STATE.activeIframe;
+09501:         if (STATE.activeIframe === activeIframe) {
+09502:             STATE.activeIframe = null;
+09503:         }
+09504: 
+09505:         if (removeManagedStationIframe(activeIframe)) {
+09506:             await sleep(50);
+09507:             return;
+09508:         }
+09509: 
+09510:         const closeBtn = getUnitModalCloseButton(activeIframe);
+09511: 
+09512:         if (closeBtn) {
+09513:             closeBtn.click();
+09514: 
+09515:             // Give the framework a short opportunity to detach or hide the
+09516:             // correct modal before its iframe document is cleared.
+09517:             for (let attempt = 0; attempt < 15; attempt++) {
+09518:                 const modal = activeIframe?.closest?.(
+09519:                     '.vm--modal, [role="dialog"], .lightbox, .modal'
+09520:                 );
+09521: 
+09522:                 if (
+09523:                     !activeIframe?.isConnected ||
+09524:                     (modal && modal.offsetParent === null)
+09525:                 ) {
+09526:                     break;
+09527:                 }
+09528: 
+09529:                 await sleep(100);
+09530:             }
+09531:         } else {
+09532:             log('Close button not found.', 'error');
+09533:         }
+09534: 
+09535:         // MissionChief may hide and reuse the modal instead of removing it.
+09536:         // Blank the associated iframe so its station/edit documents and history
+09537:         // become collectible before the next station is opened.
+09538:         releaseUnitIframeDocument(activeIframe);
+09539:         await sleep(150);
+09540:     }

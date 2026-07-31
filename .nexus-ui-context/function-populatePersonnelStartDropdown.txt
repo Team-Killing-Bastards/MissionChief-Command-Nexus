@@ -1,0 +1,39 @@
+04384:     function populatePersonnelStartDropdown() {
+04385:         const select = getToolElementById('mc-personnel-startfrom');
+04386:         if (!select) return;
+04387: 
+04388:         select.replaceChildren();
+04389:         PERSONNEL_START_OPTION_BY_HREF.clear();
+04390: 
+04391:         if (!PERSONNEL_STATE.filteredStations.length) {
+04392:             const option = document.createElement('option');
+04393:             option.value = '';
+04394:             option.textContent = `No ${getPersonnelStationScopeLabel()} found`;
+04395:             select.appendChild(option);
+04396:             PERSONNEL_STATE.selectedHref = '';
+04397:             setPersonnelUiValue('current', 'None');
+04398:             setPersonnelUiValue('progress', '0 / 0');
+04399:             return;
+04400:         }
+04401: 
+04402:         const fragment = document.createDocumentFragment();
+04403:         const firstOption = document.createElement('option');
+04404:         firstOption.value = PERSONNEL_STATE.filteredStations[0].href;
+04405:         firstOption.textContent = `Start from first ${getPersonnelStationScopeLabel().replace(/s$/, '')}`;
+04406:         firstOption.dataset.personnelStartOption = 'true';
+04407:         fragment.appendChild(firstOption);
+04408: 
+04409:         PERSONNEL_STATE.filteredStations.forEach(station => {
+04410:             const option = document.createElement('option');
+04411:             option.value = station.href;
+04412:             option.dataset.personnelStationOption = 'true';
+04413:             option.textContent = `${station.displayName} [building type ${station.buildingTypeId ?? '?'}]`;
+04414:             PERSONNEL_START_OPTION_BY_HREF.set(String(station.href), option);
+04415:             fragment.appendChild(option);
+04416:         });
+04417: 
+04418:         select.appendChild(fragment);
+04419:         PERSONNEL_STATE.selectedHref = select.value;
+04420:         setPersonnelUiValue('progress', `0 / ${PERSONNEL_STATE.filteredStations.length}`);
+04421:         updatePersonnelSelectionPreview();
+04422:     }

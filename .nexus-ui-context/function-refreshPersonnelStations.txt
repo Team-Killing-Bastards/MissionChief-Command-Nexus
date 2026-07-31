@@ -1,0 +1,55 @@
+04328:     function refreshPersonnelStations() {
+04329:         if (!isLivePersonnelProfile()) {
+04330:             const service = getPersonnelServiceDefinition();
+04331:             const profile = getPersonnelProfileDefinition();
+04332:             personnelLog(`${service.label} > ${profile.label} is currently a UI preview only. No station scan was started.`, 'error');
+04333:             setPersonnelUiValue('status', 'Profile UI preview');
+04334:             return;
+04335:         }
+04336: 
+04337:         if (STATE.running || STATION_STATE.running) {
+04338:             personnelLog('A naming tool is currently running. Stop it before refreshing Personnel Assignment.', 'error');
+04339:             setPersonnelUiValue('status', 'Blocked by naming tool');
+04340:             return;
+04341:         }
+04342: 
+04343:         if (PERSONNEL_STATE.running) {
+04344:             personnelLog('Stop Personnel Assignment before refreshing the station list.', 'error');
+04345:             return;
+04346:         }
+04347: 
+04348:         const allowedStationTypes = new Set(getPersonnelProfileStationTypes());
+04349:         const scopeLabel = getPersonnelStationScopeLabel();
+04350:         setPersonnelUiValue('status', `Refreshing ${scopeLabel}...`);
+04351:         personnelLog(`Refreshing ${scopeLabel}...`, 'info');
+04352: 
+04353:         const stationEntries = getStationOverviewEntries();
+04354: 
+04355:         PERSONNEL_STATION_LINK_BY_HREF.clear();
+04356:         stationEntries.forEach(entry => {
+04357:             if (entry.href) PERSONNEL_STATION_LINK_BY_HREF.set(entry.href, entry.link);
+04358:         });
+04359: 
+04360:         PERSONNEL_STATE.stations = stationEntries
+04361:             .map((entry, index) => ({
+04362:                 index,
+04363:                 href: entry.href,
+04364:                 buildingId: entry.buildingId,
+04365:                 displayName: entry.displayName,
+04366:                 buildingTypeId: entry.buildingTypeId,
+04367:                 stationType:
+04368:                     STATION_BUILDING_TYPE_INFO[entry.buildingTypeId]?.stationType ||
+04369:                     detectStationType(entry.displayName)
+04370:             }))
+04371:             .filter(station => station.href && station.buildingId && allowedStationTypes.has(station.stationType));
+04372: 
+04373:         PERSONNEL_STATE.filteredStations = [...PERSONNEL_STATE.stations];
+04374:         populatePersonnelStartDropdown();
+04375:         setPersonnelUiValue('status', 'Ready');
+04376: 
+04377:         personnelLog(`${scopeLabel.replace(/^./, value => value.toUpperCase())} found: ${PERSONNEL_STATE.filteredStations.length}`, 'info');
+04378:         if (PERSONNEL_STATE.filteredStations.length) {
+04379:             personnelLog(`First: ${PERSONNEL_STATE.filteredStations[0].displayName}`, 'info');
+04380:             personnelLog(`Last : ${PERSONNEL_STATE.filteredStations[PERSONNEL_STATE.filteredStations.length - 1].displayName}`, 'info');
+04381:         }
+04382:     }

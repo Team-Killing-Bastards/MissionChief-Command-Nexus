@@ -1,0 +1,13 @@
+37473:     function hasVisibleQueueOpenModal(reason) {
+37474:         const modals = getVisibleQueueOpenModals();
+37475:         const visible = modals.length > 0;
+37476: 
+37477:         if (visible && mfDebugEnabled) {
+37478:             debugLog(
+37479:                 'MISSION OPEN MODAL GUARD',
+37480:                 `${reason || 'check'} | visible loading/modal window(s)=${modals.length}`
+37481:             );
+37482:         }
+37483: 
+37484:         return visible;
+37485:     }

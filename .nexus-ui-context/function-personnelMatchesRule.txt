@@ -1,0 +1,7 @@
+06419:     function personnelMatchesRule(person, rule) {
+06420:         const requiredCodes = Array.isArray(rule?.trainingAll) ? rule.trainingAll : [];
+06421:         if (!requiredCodes.length) return true;
+06422: 
+06423:         const trainingSet = getPersonnelTrainingSet(person);
+06424:         return requiredCodes.every(code => trainingSet.has(code));
+06425:     }

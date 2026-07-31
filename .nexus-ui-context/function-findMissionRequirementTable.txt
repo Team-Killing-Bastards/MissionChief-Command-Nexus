@@ -1,0 +1,84 @@
+23451:     function findMissionRequirementTable(
+23452:         doc,
+23453:         suppliedTables = null
+23454:     ) {
+23455:         if (!doc) return null;
+23456: 
+23457:         const tables = Array.isArray(suppliedTables)
+23458:             ? suppliedTables
+23459:             : Array.from(
+23460:                 doc.querySelectorAll(
+23461:                     'table.table, table'
+23462:                 )
+23463:             );
+23464:         let bestTable = null;
+23465:         let bestScore = 0;
+23466: 
+23467:         const normalise = value => {
+23468:             return String(value || '')
+23469:                 .replace(/\s+/g, ' ')
+23470:                 .trim();
+23471:         };
+23472: 
+23473:         tables.forEach(table => {
+23474:             const headings = Array.from(
+23475:                 table.querySelectorAll(
+23476:                     'thead th, thead td, th'
+23477:                 )
+23478:             ).map(cell => normalise(
+23479:                 cell.textContent
+23480:             ));
+23481:             const headingText =
+23482:                 headings.join(' ');
+23483:             let score = 0;
+23484: 
+23485:             if (
+23486:                 headings.some(heading =>
+23487:                     /^Vehicle and Personnel Requirements$/i
+23488:                         .test(heading)
+23489:                 )
+23490:             ) {
+23491:                 score += 10000;
+23492:             } else if (
+23493:                 /Vehicle/i.test(headingText) &&
+23494:                 /Personnel/i.test(headingText) &&
+23495:                 /Requirements?/i.test(headingText)
+23496:             ) {
+23497:                 score += 8000;
+23498:             }
+23499: 
+23500:             let actionableRows = 0;
+23501: 
+23502:             table.querySelectorAll(
+23503:                 'tbody tr, tr'
+23504:             ).forEach(row => {
+23505:                 const cells = Array.from(
+23506:                     row.querySelectorAll('td')
+23507:                 ).map(cell => normalise(
+23508:                     cell.textContent
+23509:                 ));
+23510: 
+23511:                 if (cells.length < 2) return;
+23512: 
+23513:                 if (
+23514:                     /^(?:Required\s+|Maximum amount of cars to tow|Cars to tow)/i
+23515:                         .test(cells[0]) &&
+23516:                     /\d/.test(cells[1])
+23517:                 ) {
+23518:                     actionableRows += 1;
+23519:                 }
+23520:             });
+23521: 
+23522:             if (actionableRows > 0) {
+23523:                 score += 100 +
+23524:                     actionableRows;
+23525:             }
+23526: 
+23527:             if (score > bestScore) {
+23528:                 bestScore = score;
+23529:                 bestTable = table;
+23530:             }
+23531:         });
+23532: 
+23533:         return bestTable;
+23534:     }

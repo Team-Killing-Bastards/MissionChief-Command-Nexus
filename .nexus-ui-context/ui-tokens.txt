@@ -1,0 +1,173 @@
+mc-namer-panel
+mission-finder-2026-styles
+mission-finder-wrapper
+mf-iphone-panel-launcher
+mf-iphone-mission-launcher
+mf-iphone-vehicle-launcher
+control-panel
+mf-control-title
+mf-control-centre
+mf-control-minimize
+mf-control-body
+mf-dashboard-rail
+mf-dashboard-utility
+mf-dashboard-settings-pane
+mf-dashboard-diagnostics-pane
+status-box
+mf-iphone-advanced-toggle
+mf-control-position-box
+mf-event-scanner-box
+unit-finder-box
+mf-ally-steal
+mission-update-box
+dispatch-box
+dispatch-share-box
+auto-mode-box
+mf-export-unit-finder-diagnostics
+mf-iphone-advanced-body
+vehicle-load-list-box
+trained-personnel-box
+mf-dashboard-footer
+mc-namer-managed-station-iframe
+mc-personnel-training-shortfall-row
+mc-personnel-training-shortfall-name
+mc-personnel-training-shortfall-value
+mf-iphone-launcher-button
+mf2026-control-header-row
+mf2026-header mf2026-drag
+mf2026-button
+mf-dashboard-utility-pane
+mf2026-box
+mf2026-primary-actions
+true
+#mc-tab-unit
+#mc-tab-station
+#mc-tab-personnel
+#mc-namer-collapse
+#mc-namer-refresh
+#mc-namer-start
+#mc-namer-pause
+#mc-namer-stop
+#mc-namer-debug
+#mc-namer-clear
+#mc-namer-station-type
+#mc-namer-unit-class
+#mc-station-refresh
+#mc-station-start
+#mc-station-pause
+#mc-station-stop
+#mc-station-debug
+#mc-station-clear
+#mc-station-type
+#mc-station-startfrom
+#mc-station-mode
+#mc-station-action
+#mc-personnel-service
+#mc-personnel-profile
+#mc-personnel-units-required
+#mc-personnel-refresh
+#mc-personnel-build-register
+#mc-personnel-full-register
+#mc-personnel-export-register
+#mc-personnel-import-register
+#mc-personnel-import-register-file
+#mc-personnel-start
+#mc-personnel-pause
+#mc-personnel-stop
+#mc-personnel-view-station-report
+#mc-personnel-copy-station
+#mc-personnel-copy
+#mc-personnel-debug
+#mc-personnel-clear
+#mc-personnel-startfrom
+#mc-personnel-mode
+#mc-personnel-action
+#mc-personnel-show-station-report
+#mc-personnel-show-overall-report
+#mc-namer-header
+#mc-personnel-units-required-note
+#mc-personnel-units-fulfilled-label
+#mc-personnel-profile-training
+#mc-personnel-profile-vehicle
+#mc-personnel-profile-requirement
+#mc-personnel-policy-summary
+#mc-personnel-profile-banner
+#mc-personnel-mode-all-option
+#mc-personnel-after-action-section
+#mc-personnel-overall-report-section
+#mc-namer-panel
+#mc-unit-view
+#mc-station-view
+#mc-personnel-view
+#mc-namer-header-title
+#building_name
+input.btn-success[type=
+#building_address
+.alert-danger, .alert-warning, #infoBox, .toast-message
+#building_latitude, input[name=
+#building_longitude, input[name=
+[data-latitude][data-longitude], [data-lat][data-lng]
+[data-building-name], .building_list_title, .building-list-title, 
+#mc-personnel-register-status
+#personal_table
+#vehicle_table
+img[vehicle_type_id]
+.vehicle_image_reload[vehicle_type_id], 
+meta[name=
+#mc-namer-body
+#mc-namer-startfrom
+#mc-namer-mode
+#vehicle_table tbody tr
+#vehicle_caption
+input[type=
+#mission_general_info
+.vehicle-window
+h1,h2,h3,.modal-title
+td:nth-child(2)
+td[vehicle_type_id]
+#mf-dashboard-utility-title
+#mf-dashboard-utility-close
+#mf-keep-panel-position
+#mf-mission-ready-delay-input
+#mf-next-queue-restart-toggle
+#mf-next-queue-restart-threshold
+#mf-event-scanner-toggle
+#mf-event-scanner-state
+#mf-load-minimize
+#mf-load-title
+#mf-trained-minimize
+#mf-trained-title
+#missionH1
+#mission_general_info, #mission_content, #iframe-inside-container
+a[search_attribute]
+.alert, .patient_name, [id^=
+input[name=
+ul.nav, .nav-tabs, [role=
+#mission_general_info, #mission_alarm_btn, #alarm_button, input.vehicle_checkbox, #mission_help
+#mission_alarm_btn, #alarm_button, input.vehicle_checkbox, #mission_general_info
+.vehicle_image_reload[vehicle_type_id]
+a.btn-warning.missing_vehicles_load
+button#lightbox_close_inside[aria-label=
+#lightbox_close_inside
+.control-btn-container span.lightbox-close[title=
+span.lightbox-close[title=
+a[href^=
+#vehicle_amount
+a.alert_next_alliance
+#alarm_button, #mission_alarm_btn, input[type=
+a[search_attribute], input[type=
+a[href*=
+#mission_next_mission_btn
+.vehicle-window, .redesign-wrapper[type=
+[data-mf-transport-owner=
+#mission_general_info, #mission_content, #mission_caption, #missionH1
+.vm--overlay[data-modal]
+#iframe-inside-container
+a#mission_select_unattended[data-state-filter=
+:scope > span.counter
+span.counter
+.counter
+#mission_select_unattended
+.vm--modal
+h1
+a#mission_next_mission_btn

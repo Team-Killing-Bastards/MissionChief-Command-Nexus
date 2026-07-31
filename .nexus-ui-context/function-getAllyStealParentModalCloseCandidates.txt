@@ -1,0 +1,108 @@
+30283:     function getAllyStealParentModalCloseCandidates() {
+30284:         const candidates = [];
+30285:         const seen = new Set();
+30286: 
+30287:         const addCandidate = element => {
+30288:             if (
+30289:                 !element ||
+30290:                 seen.has(element)
+30291:             ) {
+30292:                 return;
+30293:             }
+30294: 
+30295:             seen.add(element);
+30296:             candidates.push(element);
+30297:         };
+30298: 
+30299:         // Strongest match: the modal that directly contains this mission
+30300:         // frame. The log showed the Close control is outside the mission
+30301:         // document, in this parent Vue modal.
+30302:         try {
+30303:             const frameElement =
+30304:                 window.frameElement;
+30305: 
+30306:             const frameModal =
+30307:                 frameElement?.closest(
+30308:                     '.vm--modal, .modal, .lightbox'
+30309:                 );
+30310: 
+30311:             // Current MissionChief close control.
+30312:             addCandidate(
+30313:                 frameModal?.querySelector(
+30314:                     'button#lightbox_close_inside[aria-label="Close"]'
+30315:                 )
+30316:             );
+30317: 
+30318:             addCandidate(
+30319:                 frameModal?.querySelector(
+30320:                     '#lightbox_close_inside'
+30321:                 )
+30322:             );
+30323: 
+30324:             // Older MissionChief close controls retained as fallbacks.
+30325:             addCandidate(
+30326:                 frameModal?.querySelector(
+30327:                     '.control-btn-container span.lightbox-close[title="Close"]'
+30328:                 )
+30329:             );
+30330: 
+30331:             addCandidate(
+30332:                 frameModal?.querySelector(
+30333:                     'span.lightbox-close[title="Close"]'
+30334:                 )
+30335:             );
+30336:         } catch (error) {}
+30337: 
+30338:         getAllyStealAccessibleDocuments()
+30339:             .forEach(searchDocument => {
+30340:                 try {
+30341:                     searchDocument
+30342:                         .querySelectorAll(
+30343:                             'button#lightbox_close_inside[aria-label="Close"], ' +
+30344:                             '#lightbox_close_inside, ' +
+30345:                             '.vm--modal button.close[aria-label="Close"], ' +
+30346:                             '.vm--modal .control-btn-container span.lightbox-close[title="Close"], ' +
+30347:                             '.vm--modal span.lightbox-close[title="Close"], ' +
+30348:                             '.control-btn-container span.lightbox-close[title="Close"], ' +
+30349:                             'span.lightbox-close[title="Close"]'
+30350:                         )
+30351:                         .forEach(addCandidate);
+30352: 
+30353:                     // Last-resort locator for the visual × icon. Click its
+30354:                     // surrounding button rather than the inner span.
+30355:                     Array.from(
+30356:                         searchDocument.querySelectorAll(
+30357:                             'span[aria-hidden="true"]'
+30358:                         )
+30359:                     )
+30360:                         .filter(
+30361:                             icon =>
+30362:                                 (
+30363:                                     icon.textContent ||
+30364:                                     ''
+30365:                                 ).trim() === '×'
+30366:                         )
+30367:                         .map(
+30368:                             icon =>
+30369:                                 icon.closest(
+30370:                                     'button#lightbox_close_inside, button.close[aria-label="Close"]'
+30371:                                 )
+30372:                         )
+30373:                         .forEach(addCandidate);
+30374:                 } catch (error) {}
+30375:             });
+30376: 
+30377:         return candidates.sort(
+30378:             (left, right) =>
+30379:                 Number(
+30380:                     isAllyStealElementVisible(
+30381:                         right
+30382:                     )
+30383:                 ) -
+30384:                 Number(
+30385:                     isAllyStealElementVisible(
+30386:                         left
+30387:                     )
+30388:                 )
+30389:         );
+30390:     }

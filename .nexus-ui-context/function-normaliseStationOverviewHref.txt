@@ -1,0 +1,10 @@
+01144:     function normaliseStationOverviewHref(value) {
+01145:         try {
+01146:             const url = new URL(String(value || ''), location.origin);
+01147:             if (url.origin !== location.origin) return '';
+01148:             const match = url.pathname.match(/^\/buildings\/(\d+)\/?$/);
+01149:             return match ? `/buildings/${match[1]}` : '';
+01150:         } catch (_error) {
+01151:             return '';
+01152:         }
+01153:     }

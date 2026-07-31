@@ -1,0 +1,19 @@
+25240:     function isRailwayPolicePersonnelRequirementName(
+25241:         value
+25242:     ) {
+25243:         const cleaned =
+25244:             String(
+25245:                 value ||
+25246:                 ''
+25247:             )
+25248:                 .replace(
+25249:                     /\s+/g,
+25250:                     ' '
+25251:                 )
+25252:                 .trim();
+25253: 
+25254:         return /^(?:Required\s+)?Railway\s+Police\s+Officer(?:s)?$/i
+25255:             .test(
+25256:                 cleaned
+25257:             );
+25258:     }

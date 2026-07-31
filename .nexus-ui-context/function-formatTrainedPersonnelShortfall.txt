@@ -1,0 +1,28 @@
+26723:     function formatTrainedPersonnelShortfall(
+26724:         requirements
+26725:     ) {
+26726:         return (
+26727:             Array.isArray(requirements)
+26728:                 ? requirements
+26729:                 : []
+26730:         )
+26731:             .filter(requirement => {
+26732:                 return (
+26733:                     Math.max(
+26734:                         0,
+26735:                         parseInt(
+26736:                             requirement?.remaining,
+26737:                             10
+26738:                         ) || 0
+26739:                     ) > 0
+26740:                 );
+26741:             })
+26742:             .map(requirement => {
+26743:                 return (
+26744:                     `${requirement.label}: ` +
+26745:                     `${requirement.remaining} trained ` +
+26746:                     `personnel short`
+26747:                 );
+26748:             })
+26749:             .join(', ');
+26750:     }

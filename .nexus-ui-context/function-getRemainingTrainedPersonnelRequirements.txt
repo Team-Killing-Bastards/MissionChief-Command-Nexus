@@ -1,0 +1,48 @@
+28176:     function getRemainingTrainedPersonnelRequirements(
+28177:         requirements,
+28178:         selectedCheckboxes,
+28179:         registry
+28180:     ) {
+28181:         let remaining =
+28182:             (
+28183:                 Array.isArray(requirements)
+28184:                     ? requirements
+28185:                     : []
+28186:             ).map(requirement => {
+28187:                 const personnelTarget =
+28188:                     getTrainingRequirementPersonnelTarget(
+28189:                         requirement
+28190:                     );
+28191: 
+28192:                 return {
+28193:                     ...requirement,
+28194:                     remaining:
+28195:                         personnelTarget,
+28196:                     capacityRemaining:
+28197:                         personnelTarget
+28198:                 };
+28199:             });
+28200: 
+28201:         (
+28202:             Array.isArray(selectedCheckboxes)
+28203:                 ? selectedCheckboxes
+28204:                 : []
+28205:         ).forEach(checkbox => {
+28206:             const {
+28207:                 entry
+28208:             } =
+28209:                 getRegistryTrainingCountsForCheckbox(
+28210:                     checkbox,
+28211:                     registry
+28212:                 );
+28213: 
+28214:             remaining =
+28215:                 applyTrainingCandidateCoverage(
+28216:                     remaining,
+28217:                     checkbox,
+28218:                     entry
+28219:                 ).remaining;
+28220:         });
+28221: 
+28222:         return remaining;
+28223:     }

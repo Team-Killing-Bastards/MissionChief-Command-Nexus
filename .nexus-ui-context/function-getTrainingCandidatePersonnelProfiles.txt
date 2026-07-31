@@ -1,0 +1,57 @@
+26488:     function getTrainingCandidatePersonnelProfiles(
+26489:         requirements,
+26490:         checkbox,
+26491:         registryEntry = null
+26492:     ) {
+26493:         let maximumCapacity = 0;
+26494: 
+26495:         (
+26496:             Array.isArray(requirements)
+26497:                 ? requirements
+26498:                 : []
+26499:         ).forEach(requirement => {
+26500:             maximumCapacity =
+26501:                 Math.max(
+26502:                     maximumCapacity,
+26503:                     getTrainingRequirementNominalCapacity(
+26504:                         requirement,
+26505:                         checkbox,
+26506:                         registryEntry
+26507:                     )
+26508:                 );
+26509:         });
+26510: 
+26511:         if (maximumCapacity <= 0) {
+26512:             return [];
+26513:         }
+26514: 
+26515:         if (
+26516:             isAuthoritativeLivePoliceTrainingEntry(
+26517:                 registryEntry
+26518:             )
+26519:         ) {
+26520:             return registryEntry
+26521:                 .assignedTrainingProfiles
+26522:                 .slice(0, maximumCapacity)
+26523:                 .map(profile => {
+26524:                     return Array.from(
+26525:                         new Set(
+26526:                             (
+26527:                                 Array.isArray(profile)
+26528:                                     ? profile
+26529:                                     : []
+26530:                             )
+26531:                                 .map(String)
+26532:                                 .filter(Boolean)
+26533:                         )
+26534:                     );
+26535:                 });
+26536:         }
+26537: 
+26538:         // Unknown/stale candidates remain usable as untrained fallback. Their
+26539:         // exact vehicle type defines the maximum nominal personnel capacity.
+26540:         return Array.from(
+26541:             { length: maximumCapacity },
+26542:             () => []
+26543:         );
+26544:     }

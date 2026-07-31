@@ -1,0 +1,92 @@
+04724:     function getPersonnelStationAssignmentSnapshot(doc, vehicles) {
+04725:         const evidence = parseStationPersonnelAssignmentEvidence(doc, vehicles);
+04726:         const rows = Array.from(
+04727:             doc?.querySelectorAll?.('#personal_table tbody tr') || []
+04728:         );
+04729:         const vehicleNameIndex = getUniquePersonnelVehicleNameIndex(vehicles);
+04730:         const stationVehicleIds = new Set(
+04731:             (Array.isArray(vehicles) ? vehicles : [])
+04732:                 .map(vehicle => String(vehicle?.vehicleId || ''))
+04733:                 .filter(Boolean)
+04734:         );
+04735:         let assignedRows = 0;
+04736:         let unresolvedRows = 0;
+04737: 
+04738:         rows.forEach(row => {
+04739:             const cells = Array.from(row.children || []);
+04740:             const hasDeleteCheckbox = !!row.querySelector?.(
+04741:                 'input.personal-delete-checkbox'
+04742:             );
+04743:             const nameIndex = hasDeleteCheckbox ? 1 : 0;
+04744:             const assignedVehicleCell = cells[nameIndex + 2] || null;
+04745:             const assignedVehicleLink = assignedVehicleCell?.querySelector?.(
+04746:                 'a[href^="/vehicles/"]'
+04747:             ) || null;
+04748:             const linkedVehicleId = getVehicleIdFromHref(
+04749:                 assignedVehicleLink?.getAttribute?.('href') || ''
+04750:             );
+04751:             const assignedVehicleName = cleanText(
+04752:                 assignedVehicleLink?.textContent ||
+04753:                 assignedVehicleCell?.textContent ||
+04754:                 ''
+04755:             );
+04756:             const normalizedVehicleName = normalizePersonnelVehicleName(
+04757:                 assignedVehicleName
+04758:             );
+04759:             const matchedVehicle = linkedVehicleId
+04760:                 ? null
+04761:                 : vehicleNameIndex.get(normalizedVehicleName);
+04762:             const resolvedVehicleId = String(
+04763:                 linkedVehicleId ||
+04764:                 matchedVehicle?.vehicleId ||
+04765:                 ''
+04766:             );
+04767:             const hasAssignmentText = Boolean(
+04768:                 assignedVehicleName &&
+04769:                 !/^(?:-|none|no vehicle|not assigned|unassigned)$/i.test(
+04770:                     assignedVehicleName
+04771:                 )
+04772:             );
+04773: 
+04774:             if (!hasAssignmentText) return;
+04775:             assignedRows += 1;
+04776:             if (
+04777:                 !getStationPersonnelRowId(row) ||
+04778:                 !resolvedVehicleId ||
+04779:                 !stationVehicleIds.has(resolvedVehicleId)
+04780:             ) {
+04781:                 unresolvedRows += 1;
+04782:             }
+04783:         });
+04784: 
+04785:         const profilesByVehicle = new Map();
+04786:         evidence.forEach(person => {
+04787:             const vehicleId = String(person?.assignedVehicleId || '');
+04788:             if (!vehicleId) return;
+04789:             const profiles = profilesByVehicle.get(vehicleId) || [];
+04790:             profiles.push(
+04791:                 Array.from(
+04792:                     new Set(
+04793:                         (Array.isArray(person?.trainingCodes)
+04794:                             ? person.trainingCodes
+04795:                             : []
+04796:                         ).map(String).filter(Boolean)
+04797:                     )
+04798:                 ).sort()
+04799:             );
+04800:             profilesByVehicle.set(vehicleId, profiles);
+04801:         });
+04802: 
+04803:         return {
+04804:             evidence,
+04805:             profilesByVehicle,
+04806:             personnelRowsSeen: rows.length,
+04807:             assignedRows,
+04808:             unresolvedRows,
+04809:             safe: Boolean(
+04810:                 rows.length > 0 &&
+04811:                 unresolvedRows === 0 &&
+04812:                 evidence.length === assignedRows
+04813:             )
+04814:         };
+04815:     }

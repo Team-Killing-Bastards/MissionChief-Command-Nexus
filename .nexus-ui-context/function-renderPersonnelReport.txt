@@ -1,0 +1,9 @@
+08537:     function renderPersonnelReport(text) {
+08538:         const report = getToolElementById('mc-personnel-report');
+08539:         if (!report) return;
+08540: 
+08541:         const wasNearBottom = report.scrollHeight - report.scrollTop - report.clientHeight < 28;
+08542:         const oldScrollTop = report.scrollTop;
+08543:         report.textContent = String(text || '');
+08544:         report.scrollTop = wasNearBottom ? report.scrollHeight : oldScrollTop;
+08545:     }

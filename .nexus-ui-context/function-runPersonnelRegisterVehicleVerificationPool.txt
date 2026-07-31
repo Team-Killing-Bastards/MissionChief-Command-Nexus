@@ -1,0 +1,105 @@
+04880:     async function runPersonnelRegisterVehicleVerificationPool({
+04881:         vehicles,
+04882:         mergedPersonnel,
+04883:         station
+04884:     }) {
+04885:         const queue = Array.isArray(vehicles) ? vehicles.slice() : [];
+04886:         const verifiedVehicles = [];
+04887:         let exactPagesRead = 0;
+04888:         let failedVehicles = 0;
+04889:         const failedVehicleIds = [];
+04890:         let cursor = 0;
+04891:         let nextLaunchAt = 0;
+04892:         let launchChain = Promise.resolve();
+04893:         const waitForLaunchSlot = () => {
+04894:             const scheduled = launchChain.then(async () => {
+04895:                 const delay = Math.max(0, nextLaunchAt - Date.now());
+04896:                 if (delay > 0) {
+04897:                     await new Promise(resolve => setTimeout(resolve, delay));
+04898:                 }
+04899:                 nextLaunchAt = Date.now() +
+04900:                     PERSONNEL_REGISTER_LAUNCH_GAP_MS;
+04901:             });
+04902:             launchChain = scheduled.catch(() => {});
+04903:             return scheduled;
+04904:         };
+04905:         const concurrency = Math.max(
+04906:             1,
+04907:             Math.min(
+04908:                 isIosSafariWebsite() ? 2 : PERSONNEL_REGISTER_MAX_CONCURRENCY,
+04909:                 queue.length || 1
+04910:             )
+04911:         );
+04912: 
+04913:         const worker = async () => {
+04914:             while (true) {
+04915:                 if (PERSONNEL_STATE.stopped) return;
+04916:                 await waitIfPersonnelPaused();
+04917:                 if (PERSONNEL_STATE.stopped) return;
+04918:                 const index = cursor;
+04919:                 cursor += 1;
+04920:                 if (index >= queue.length) return;
+04921:                 const vehicle = queue[index];
+04922:                 setPersonnelUiValue(
+04923:                     'vehicle',
+04924:                     `${vehicle.name || vehicle.vehicleId} (${index + 1}/${queue.length})`
+04925:                 );
+04926:                 setPersonnelUiValue('status', 'Reading exact vehicle assignments');
+04927: 
+04928:                 let parsed = null;
+04929:                 let finalError = null;
+04930:                 for (let attempt = 0; attempt < 2; attempt++) {
+04931:                     try {
+04932:                         await waitForLaunchSlot();
+04933:                         const assignmentPage = await personnelFetchDocument(
+04934:                             vehicle.assignmentHref,
+04935:                             14000
+04936:                         );
+04937:                         if (!assignmentPage.doc.querySelector('#personal_table')) {
+04938:                             throw new Error(
+04939:                                 'Personnel table was not present on the assignment page.'
+04940:                             );
+04941:                         }
+04942:                         parsed = parseVehicleAssignmentPage(
+04943:                             assignmentPage.doc,
+04944:                             vehicle.vehicleId
+04945:                         );
+04946:                         break;
+04947:                     } catch (error) {
+04948:                         finalError = error;
+04949:                         if (attempt === 0 && !PERSONNEL_STATE.stopped) {
+04950:                             await new Promise(resolve => setTimeout(resolve, 900));
+04951:                         }
+04952:                     }
+04953:                 }
+04954: 
+04955:                 if (!parsed) {
+04956:                     failedVehicles += 1;
+04957:                     failedVehicleIds.push(String(vehicle.vehicleId || ''));
+04958:                     personnelLog(
+04959:                         `Exact vehicle scan failed for ${vehicle.name || vehicle.vehicleId}: ${finalError?.message || finalError}`,
+04960:                         'error'
+04961:                     );
+04962:                     continue;
+04963:                 }
+04964: 
+04965:                 parsed.rows.forEach(person => {
+04966:                     mergePersonnelRegisterEvidence(mergedPersonnel, person);
+04967:                 });
+04968:                 verifiedVehicles.push(vehicle);
+04969:                 exactPagesRead += 1;
+04970:             }
+04971:         };
+04972: 
+04973:         await Promise.all(
+04974:             Array.from({ length: concurrency }, () => worker())
+04975:         );
+04976: 
+04977:         return {
+04978:             station,
+04979:             verifiedVehicles,
+04980:             exactPagesRead,
+04981:             failedVehicles,
+04982:             failedVehicleIds
+04983:         };
+04984:     }

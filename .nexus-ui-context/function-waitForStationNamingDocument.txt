@@ -1,0 +1,19 @@
+04165:     async function waitForStationNamingDocument(iframe, predicate, label) {
+04166:         for (let i = 0; i < 100; i++) {
+04167:             if (STATION_STATE.stopped) return null;
+04168: 
+04169:             try {
+04170:                 const doc = iframe?.contentDocument;
+04171:                 if (doc && doc.readyState !== 'loading' && predicate(doc)) {
+04172:                     stationDebug(`${label} ready at ${iframe.contentWindow?.location?.pathname || iframe.getAttribute('src') || 'unknown path'}`);
+04173:                     return doc;
+04174:                 }
+04175:             } catch (error) {
+04176:                 stationDebug(`${label} wait retry: ${error?.message || error}`);
+04177:             }
+04178: 
+04179:             await sleep(200);
+04180:         }
+04181: 
+04182:         return null;
+04183:     }

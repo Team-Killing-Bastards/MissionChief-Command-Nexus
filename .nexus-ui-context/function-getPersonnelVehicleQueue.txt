@@ -1,0 +1,36 @@
+06480:     function getPersonnelVehicleQueue(doc, allowedTypeIds) {
+06481:         const allowed = new Set((allowedTypeIds || []).map(String));
+06482:         const allowAllVehicleTypes = allowed.size === 0;
+06483:         const seen = new Set();
+06484:         const queue = [];
+06485: 
+06486:         for (const row of [...doc.querySelectorAll('#vehicle_table tr')]) {
+06487:             const vehicleTypeId = getPersonnelVehicleTypeIdFromRow(row);
+06488:             if (!allowAllVehicleTypes && !allowed.has(vehicleTypeId)) continue;
+06489: 
+06490:             const vehicleLinks = [...row.querySelectorAll('a[href*="/vehicles/"]')];
+06491:             const plainVehicleLink = vehicleLinks.find(link => /^\/vehicles\/\d+\/?(?:[?#].*)?$/.test(link.getAttribute('href') || ''));
+06492:             const editLink = vehicleLinks.find(link => /\/vehicles\/\d+\/edit(?:[/?#]|$)/.test(link.getAttribute('href') || ''));
+06493:             const directAssignmentLink = vehicleLinks.find(link => /\/vehicles\/\d+\/zuweisung(?:[/?#]|$)/.test(link.getAttribute('href') || ''));
+06494:             const vehicleId = [plainVehicleLink, editLink, directAssignmentLink]
+06495:                 .map(link => getVehicleIdFromHref(link?.getAttribute('href') || ''))
+06496:                 .find(Boolean) || '';
+06497: 
+06498:             if (!vehicleId || seen.has(vehicleId)) continue;
+06499:             seen.add(vehicleId);
+06500: 
+06501:             const occupancy = parsePersonnelVehicleOccupancy(row);
+06502:             const nameSource = plainVehicleLink || vehicleLinks.find(link => cleanText(link.textContent || ''));
+06503:             queue.push({
+06504:                 vehicleId,
+06505:                 vehicleTypeId,
+06506:                 name: cleanText(nameSource?.textContent || row.textContent || '') || `${TYPE_ID_TO_VEHICLE_TYPE[vehicleTypeId] || 'Vehicle'} ${vehicleId}`,
+06507:                 assignmentHref: directAssignmentLink?.getAttribute('href') || `/vehicles/${vehicleId}/zuweisung`,
+06508:                 assignedCount: occupancy.assignedCount,
+06509:                 maxCount: occupancy.maxCount
+06510:             });
+06511:         }
+06512: 
+06513:         queue.sort((left, right) => left.name.localeCompare(right.name, 'en-GB', { numeric: true, sensitivity: 'base' }));
+06514:         return queue;
+06515:     }

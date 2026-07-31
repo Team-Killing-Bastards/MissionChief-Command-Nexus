@@ -1,0 +1,30 @@
+06192:     function getPersonnelAssignmentIndex(personnel) {
+06193:         if (!Array.isArray(personnel)) {
+06194:             return { byVehicleId: new Map(), byVehicleName: new Map() };
+06195:         }
+06196: 
+06197:         const cached = PERSONNEL_ASSIGNMENT_INDEX_CACHE.get(personnel);
+06198:         if (cached) return cached;
+06199: 
+06200:         const byVehicleId = new Map();
+06201:         const byVehicleName = new Map();
+06202: 
+06203:         personnel.forEach(person => {
+06204:             const vehicleId = String(person?.assignedVehicleId || '');
+06205:             const vehicleName = normalizePersonnelVehicleName(person?.assignedVehicleName || '');
+06206: 
+06207:             if (vehicleId) {
+06208:                 if (!byVehicleId.has(vehicleId)) byVehicleId.set(vehicleId, []);
+06209:                 byVehicleId.get(vehicleId).push(person);
+06210:             }
+06211: 
+06212:             if (vehicleName) {
+06213:                 if (!byVehicleName.has(vehicleName)) byVehicleName.set(vehicleName, []);
+06214:                 byVehicleName.get(vehicleName).push(person);
+06215:             }
+06216:         });
+06217: 
+06218:         const index = { byVehicleId, byVehicleName };
+06219:         PERSONNEL_ASSIGNMENT_INDEX_CACHE.set(personnel, index);
+06220:         return index;
+06221:     }

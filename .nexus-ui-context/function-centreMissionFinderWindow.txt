@@ -1,0 +1,71 @@
+18661:     function centreMissionFinderWindow(panel, reason) {
+18662:         if (!panel) return;
+18663: 
+18664:         if (
+18665:             resetMissionFinderIosPosition(
+18666:                 panel,
+18667:                 reason || 'centre requested'
+18668:             )
+18669:         ) {
+18670:             return;
+18671:         }
+18672: 
+18673:         const applyCentre = () => {
+18674:             const rect = panel.getBoundingClientRect();
+18675:             const margin = 8;
+18676: 
+18677:             const availableWidth = Math.max(
+18678:                 0,
+18679:                 window.innerWidth - rect.width
+18680:             );
+18681: 
+18682:             const availableHeight = Math.max(
+18683:                 0,
+18684:                 window.innerHeight - rect.height
+18685:             );
+18686: 
+18687:             const left = Math.max(
+18688:                 margin,
+18689:                 Math.round(availableWidth / 2)
+18690:             );
+18691: 
+18692:             const top = Math.max(
+18693:                 margin,
+18694:                 Math.round(availableHeight / 2)
+18695:             );
+18696: 
+18697:             panel.style.left = `${left}px`;
+18698:             panel.style.top = `${top}px`;
+18699:             panel.style.right = 'auto';
+18700:             panel.style.bottom = 'auto';
+18701:             panel.style.visibility = 'visible';
+18702: 
+18703:             localStorage.removeItem('panel-left');
+18704:             localStorage.removeItem('panel-top');
+18705: 
+18706:             if (mfKeepPanelPosition) {
+18707:                 localStorage.setItem(
+18708:                     MF_PANEL_LEFT_KEY,
+18709:                     panel.style.left
+18710:                 );
+18711:                 localStorage.setItem(
+18712:                     MF_PANEL_TOP_KEY,
+18713:                     panel.style.top
+18714:                 );
+18715:             } else {
+18716:                 localStorage.removeItem(MF_PANEL_LEFT_KEY);
+18717:                 localStorage.removeItem(MF_PANEL_TOP_KEY);
+18718:             }
+18719: 
+18720:             if (mfDebugEnabled) {
+18721:                 debugLog(
+18722:                     'CONTROL WINDOW',
+18723:                     `Centred | reason=${reason || 'unknown'} | left=${left}px | top=${top}px`
+18724:                 );
+18725:             }
+18726:         };
+18727: 
+18728:         requestAnimationFrame(() => {
+18729:             requestAnimationFrame(applyCentre);
+18730:         });
+18731:     }

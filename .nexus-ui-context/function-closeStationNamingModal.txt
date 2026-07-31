@@ -1,0 +1,15 @@
+04242:     async function closeStationNamingModal(iframe = STATION_STATE.activeIframe) {
+04243:         if (removeManagedStationIframe(iframe)) {
+04244:             if (STATION_STATE.activeIframe === iframe) STATION_STATE.activeIframe = null;
+04245:             await sleep(50);
+04246:             return;
+04247:         }
+04248: 
+04249:         const closeButtons = [...document.querySelectorAll('span.lightbox-close')];
+04250:         const closeButton = closeButtons.reverse().find(button => button.offsetParent !== null) || closeButtons[0];
+04251: 
+04252:         if (closeButton) {
+04253:             closeButton.click();
+04254:             await sleep(450);
+04255:         }
+04256:     }

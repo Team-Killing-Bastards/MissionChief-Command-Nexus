@@ -1,0 +1,9 @@
+04107:     function formatStationArea(area) {
+04108:         return String(area || '')
+04109:             .replace(/\band\b/gi, '&')
+04110:             .replace(/\s*&\s*/g, ' & ')
+04111:             .replace(/^[\s,;:\-]+|[\s,;:\-]+$/g, '')
+04112:             .replace(/\s+/g, ' ')
+04113:             .trim()
+04114:             .toUpperCase();
+04115:     }

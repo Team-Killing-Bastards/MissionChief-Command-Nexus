@@ -1,0 +1,27 @@
+26646:     function getTrainedPersonnelRequirementsSignature(
+26647:         requirements
+26648:     ) {
+26649:         return (
+26650:             Array.isArray(requirements)
+26651:                 ? requirements
+26652:                 : []
+26653:         )
+26654:             .map(requirement => {
+26655:                 return [
+26656:                     String(
+26657:                         requirement?.code ||
+26658:                         ''
+26659:                     ),
+26660:                     Math.max(
+26661:                         0,
+26662:                         parseInt(
+26663:                             requirement?.required,
+26664:                             10
+26665:                         ) || 0
+26666:                     )
+26667:                 ].join(':');
+26668:             })
+26669:             .filter(Boolean)
+26670:             .sort()
+26671:             .join(',');
+26672:     }

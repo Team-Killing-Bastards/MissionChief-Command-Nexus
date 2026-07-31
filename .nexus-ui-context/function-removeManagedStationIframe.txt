@@ -1,0 +1,10 @@
+01344:     function removeManagedStationIframe(iframe) {
+01345:         if (!iframe?.classList?.contains('mc-namer-managed-station-iframe')) {
+01346:             return false;
+01347:         }
+01348:         try {
+01349:             iframe.src = 'about:blank';
+01350:         } catch (_error) {}
+01351:         iframe.remove();
+01352:         return true;
+01353:     }

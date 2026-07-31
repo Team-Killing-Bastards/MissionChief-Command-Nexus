@@ -1,0 +1,117 @@
+09379:     async function processStationVehicleQueue(iframe, station) {
+09380:         setStatus('Building vehicle queue');
+09381: 
+09382:         // Build a lightweight string-only queue and release the station document
+09383:         // before the first navigation. Holding the original document across every
+09384:         // awaited edit page kept the full station DOM alive for the whole run.
+09385:         const queue = getVehicleQueueFromTable(
+09386:             iframe.contentDocument
+09387:         );
+09388: 
+09389:         debug(`Vehicle queue built for ${station.displayName}: ${queue.length}`);
+09390: 
+09391:         if (!queue.length) {
+09392:             log(`No ${getUnitClassDisplayLabel(STATE.selectedUnitClass)} vehicles found in ${station.displayName}.`, 'debug');
+09393:             return;
+09394:         }
+09395: 
+09396:         const counts = {};
+09397: 
+09398:         for (const item of queue) {
+09399:             if (STATE.stopped) return;
+09400: 
+09401:             await waitIfPaused();
+09402:             if (STATE.stopped) return;
+09403: 
+09404:             if (!item.vehicleType) {
+09405:                 log(`Unknown vehicle_type_id skipped: ${item.vehicleTypeId} | ${item.editHref}`, 'error');
+09406:                 STATE.skippedCount++;
+09407:                 updateCounters();
+09408:                 continue;
+09409:             }
+09410: 
+09411:             const info = VEHICLE_INFO[item.vehicleType];
+09412: 
+09413:             if (!info) {
+09414:                 log(`No naming rule skipped: "${item.vehicleType}"`, 'error');
+09415:                 STATE.skippedCount++;
+09416:                 updateCounters();
+09417:                 continue;
+09418:             }
+09419: 
+09420:             counts[item.vehicleType] = (counts[item.vehicleType] || 0) + 1;
+09421: 
+09422:             const newName = makeVehicleName(
+09423:                 station,
+09424:                 item.vehicleType,
+09425:                 counts[item.vehicleType]
+09426:             );
+09427: 
+09428:             setStatus('Opening edit page');
+09429:             setVehicle(item.editHref);
+09430: 
+09431:             // Replace rather than append to the iframe history. This prevents a
+09432:             // long rename run from retaining one browsing-history document for
+09433:             // every vehicle edit page.
+09434:             if (!navigateUnitIframe(iframe, item.editHref)) {
+09435:                 log(`Could not navigate to vehicle edit page: ${item.editHref}`, 'error');
+09436:                 STATE.skippedCount++;
+09437:                 updateCounters();
+09438:                 continue;
+09439:             }
+09440: 
+09441:             const editPageReady = await waitForEditPage(iframe);
+09442: 
+09443:             if (!editPageReady) {
+09444:                 log(`Vehicle edit page did not load: ${item.editHref}`, 'error');
+09445:                 STATE.skippedCount++;
+09446:                 updateCounters();
+09447:                 continue;
+09448:             }
+09449: 
+09450:             let editDoc = iframe.contentDocument;
+09451:             let captionInput = editDoc?.querySelector('#vehicle_caption') || null;
+09452:             let saveBtn = editDoc?.querySelector(
+09453:                 'input[type="submit"][value="Save"], button[type="submit"]'
+09454:             ) || null;
+09455: 
+09456:             if (!captionInput || !saveBtn) {
+09457:                 log(`Caption or Save missing: ${item.editHref}`, 'error');
+09458:                 STATE.skippedCount++;
+09459:                 updateCounters();
+09460:                 editDoc = null;
+09461:                 captionInput = null;
+09462:                 saveBtn = null;
+09463:                 continue;
+09464:             }
+09465: 
+09466:             const before = captionInput.value;
+09467: 
+09468:             setStatus('Saving vehicle');
+09469:             setVehicle(newName);
+09470: 
+09471:             captionInput.value = newName;
+09472:             captionInput.dispatchEvent(new Event('input', { bubbles: true }));
+09473:             captionInput.dispatchEvent(new Event('change', { bubbles: true }));
+09474: 
+09475:             log(`BEFORE: ${before}`, 'before');
+09476:             log(`AFTER : ${newName}`, 'after');
+09477: 
+09478:             saveBtn.click();
+09479: 
+09480:             STATE.renamedCount++;
+09481:             updateCounters();
+09482: 
+09483:             // Do not retain the completed edit document or its form controls
+09484:             // during the post-save wait.
+09485:             editDoc = null;
+09486:             captionInput = null;
+09487:             saveBtn = null;
+09488: 
+09489:             await sleep(700);
+09490:         }
+09491: 
+09492:         navigateUnitIframe(iframe, station.href);
+09493:         await waitForVehicleTable(iframe);
+09494:         await sleep(300);
+09495:     }

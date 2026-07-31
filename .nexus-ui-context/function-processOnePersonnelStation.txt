@@ -1,0 +1,7 @@
+06247:     async function processOnePersonnelStation(station) {
+06248:         const profile = getPersonnelProfileDefinition();
+06249:         if (profile?.engine === 'police') {
+06250:             return processOnePoliceStation(station, profile);
+06251:         }
+06252:         return processOneMedicalCriticalCareStation(station);
+06253:     }

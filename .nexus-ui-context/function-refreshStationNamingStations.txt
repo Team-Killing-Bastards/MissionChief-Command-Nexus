@@ -1,0 +1,54 @@
+03300:     function refreshStationNamingStations() {
+03301:         if (PERSONNEL_STATE.running) {
+03302:             stationLog('Personnel Assignment is currently running. Stop it before refreshing Station Naming.', 'error');
+03303:             setStationUiValue('status', 'Blocked by Personnel Assignment');
+03304:             return;
+03305:         }
+03306: 
+03307:         if (STATE.running) {
+03308:             stationLog('Unit Naming is currently running. Stop it before refreshing Station Naming.', 'error');
+03309:             setStationUiValue('status', 'Blocked by Unit Naming');
+03310:             return;
+03311:         }
+03312: 
+03313:         if (STATION_STATE.running) {
+03314:             stationLog('Stop Station Naming before refreshing the station list.', 'error');
+03315:             return;
+03316:         }
+03317: 
+03318:         setStationUiValue('status', 'Refreshing stations...');
+03319:         stationLog('Refreshing station list and reading MissionChief building type IDs...', 'info');
+03320: 
+03321:         const stationEntries = getStationOverviewEntries();
+03322: 
+03323:         STATION_STATE.stations = stationEntries
+03324:             .map((entry, index) => {
+03325:                 const typeInfo = getStationNamingTypeInfo(
+03326:                     entry.buildingTypeId,
+03327:                     entry.displayName
+03328:                 );
+03329: 
+03330:                 return {
+03331:                     index,
+03332:                     href: entry.href,
+03333:                     buildingId: entry.buildingId,
+03334:                     displayName: entry.displayName,
+03335:                     buildingTypeId: entry.buildingTypeId,
+03336:                     stationType: typeInfo.stationType,
+03337:                     suffix: typeInfo.suffix,
+03338:                     typeLabel: typeInfo.label
+03339:                 };
+03340:             })
+03341:             .filter(station => station.href && station.buildingId);
+03342: 
+03343:         populateStationNamingStartDropdown();
+03344:         setStationUiValue('status', 'Ready');
+03345: 
+03346:         stationLog(`Stations found: ${STATION_STATE.stations.length}`, 'info');
+03347:         stationLog(`Matching filter: ${STATION_STATE.filteredStations.length}`, 'info');
+03348: 
+03349:         if (STATION_STATE.filteredStations.length) {
+03350:             stationLog(`First match: ${STATION_STATE.filteredStations[0].displayName}`, 'info');
+03351:             stationLog(`Last match : ${STATION_STATE.filteredStations[STATION_STATE.filteredStations.length - 1].displayName}`, 'info');
+03352:         }
+03353:     }

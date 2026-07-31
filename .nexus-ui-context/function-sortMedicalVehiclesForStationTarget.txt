@@ -1,0 +1,81 @@
+07233:     function sortMedicalVehiclesForStationTarget(
+07234:         vehicles,
+07235:         personnel
+07236:     ) {
+07237:         return (
+07238:             Array.isArray(vehicles)
+07239:                 ? vehicles.slice()
+07240:                 : []
+07241:         ).sort((left, right) => {
+07242:             const getState = vehicle => {
+07243:                 const assigned =
+07244:                     getPersonnelAssignedToVehicle(
+07245:                         personnel,
+07246:                         vehicle
+07247:                     );
+07248: 
+07249:                 const critical =
+07250:                     assigned.filter(
+07251:                         person =>
+07252:                             person.trainingCodes.includes(
+07253:                                 PERSONNEL_TRAINING_CODE
+07254:                             )
+07255:                     ).length;
+07256: 
+07257:                 const total = assigned.length;
+07258: 
+07259:                 return {
+07260:                     covered:
+07261:                         critical >=
+07262:                         PERSONNEL_TARGET_PER_VEHICLE,
+07263:                     critical,
+07264:                     total,
+07265:                     seatsAvailable:
+07266:                         Math.max(
+07267:                             0,
+07268:                             PERSONNEL_TARGET_PER_VEHICLE
+07269:                             - total
+07270:                         )
+07271:                 };
+07272:             };
+07273: 
+07274:             const leftState = getState(left);
+07275:             const rightState = getState(right);
+07276: 
+07277:             const leftRank =
+07278:                 leftState.covered
+07279:                     ? 0
+07280:                     : leftState.seatsAvailable > 0
+07281:                         ? 1
+07282:                         : 2;
+07283: 
+07284:             const rightRank =
+07285:                 rightState.covered
+07286:                     ? 0
+07287:                     : rightState.seatsAvailable > 0
+07288:                         ? 1
+07289:                         : 2;
+07290: 
+07291:             if (leftRank !== rightRank) {
+07292:                 return leftRank - rightRank;
+07293:             }
+07294: 
+07295:             if (
+07296:                 leftState.critical
+07297:                 !== rightState.critical
+07298:             ) {
+07299:                 return (
+07300:                     rightState.critical
+07301:                     - leftState.critical
+07302:                 );
+07303:             }
+07304: 
+07305:             return String(
+07306:                 left.name || ''
+07307:             ).localeCompare(
+07308:                 String(right.name || ''),
+07309:                 'en-GB',
+07310:                 { numeric: true }
+07311:             );
+07312:         });
+07313:     }

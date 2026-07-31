@@ -1,0 +1,38 @@
+01393:     function isRenderedStationOverviewEntry(entry) {
+01394:         const container = entry?.container;
+01395:         const responsiveList = container?.matches?.(
+01396:             '.building_list_li, .building_list'
+01397:         )
+01398:             ? container
+01399:             : entry?.link?.closest?.(
+01400:                 '.building_list_li, .building_list'
+01401:             );
+01402: 
+01403:         if (!responsiveList?.isConnected) return false;
+01404:         if (
+01405:             responsiveList.closest?.(
+01406:                 '[hidden], [aria-hidden="true"]'
+01407:             )
+01408:         ) {
+01409:             return false;
+01410:         }
+01411: 
+01412:         const style = window.getComputedStyle?.(
+01413:             responsiveList
+01414:         );
+01415: 
+01416:         if (
+01417:             style && (
+01418:                 style.display === 'none' ||
+01419:                 style.visibility === 'hidden' ||
+01420:                 style.visibility === 'collapse'
+01421:             )
+01422:         ) {
+01423:             return false;
+01424:         }
+01425: 
+01426:         const rectangles =
+01427:             responsiveList.getClientRects?.();
+01428: 
+01429:         return !rectangles || rectangles.length > 0;
+01430:     }

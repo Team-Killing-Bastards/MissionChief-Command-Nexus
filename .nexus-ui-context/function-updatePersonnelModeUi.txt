@@ -1,0 +1,80 @@
+02847:     function updatePersonnelModeUi() {
+02848:         const modeSelect =
+02849:             document.querySelector(
+02850:                 '#mc-personnel-mode'
+02851:             );
+02852: 
+02853:         const input =
+02854:             document.querySelector(
+02855:                 '#mc-personnel-units-required'
+02856:             );
+02857: 
+02858:         const note =
+02859:             document.querySelector(
+02860:                 '#mc-personnel-units-required-note'
+02861:             );
+02862: 
+02863:         const live =
+02864:             isLivePersonnelProfile();
+02865: 
+02866:         const mode =
+02867:             modeSelect?.value ||
+02868:             PERSONNEL_STATE.mode ||
+02869:             'all';
+02870: 
+02871:         PERSONNEL_STATE.mode =
+02872:             mode;
+02873: 
+02874:         const targetMode =
+02875:             mode === 'target';
+02876: 
+02877:         const fulfilledLabel =
+02878:             document.querySelector(
+02879:                 '#mc-personnel-units-fulfilled-label'
+02880:             );
+02881: 
+02882:         if (fulfilledLabel) {
+02883:             fulfilledLabel.textContent =
+02884:                 targetMode
+02885:                     ? 'Station targets met:'
+02886:                     : 'Units fulfilled:';
+02887:         }
+02888: 
+02889:         if (input) {
+02890:             input.disabled =
+02891:                 !live ||
+02892:                 !targetMode;
+02893: 
+02894:             input.value =
+02895:                 targetMode
+02896:                     ? String(
+02897:                         PERSONNEL_STATE
+02898:                             .configuredUnitsRequired ||
+02899:                         0
+02900:                     )
+02901:                     : '0';
+02902:         }
+02903: 
+02904:         if (note) {
+02905:             note.textContent =
+02906:                 targetMode
+02907:                     ? 'Enter the number of fully staffed units required at every station. Existing covered units count first; only the missing units are topped up.'
+02908:                     : mode === 'single'
+02909:                         ? 'Selected Station mode scans every matching unit at that one station. Units required is not used.'
+02910:                         : 'All Stations mode always scans every relevant station from the selected start point. Units required is not used.';
+02911:         }
+02912: 
+02913:         if (
+02914:             !PERSONNEL_STATE.running
+02915:         ) {
+02916:             setPersonnelUiValue(
+02917:                 'unitsFulfilled',
+02918:                 targetMode &&
+02919:                 PERSONNEL_STATE
+02920:                     .configuredUnitsRequired >
+02921:                     0
+02922:                     ? `0 / ${PERSONNEL_STATE.configuredUnitsRequired}`
+02923:                     : '0 / All'
+02924:             );
+02925:         }
+02926:     }

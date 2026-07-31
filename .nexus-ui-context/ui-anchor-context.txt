@@ -1,0 +1,4209 @@
+# mf-dashboard-rail — 2 matches
+
+## occurrence 1 at line 16696
+16668:                 box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10), 0 5px 14px rgba(0, 0, 0, 0.22);
+16669:                 transition: transform 120ms ease, filter 120ms ease, box-shadow 120ms ease;
+16670:             }
+16671: 
+16672:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-button:hover {
+16673:                 filter: brightness(1.1);
+16674:                 transform: translateY(-1px);
+16675:             }
+16676: 
+16677:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #unit-finder-box {
+16678:                 background: linear-gradient(145deg, #f2a900, #b96d00) !important;
+16679:             }
+16680:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mf-ally-steal {
+16681:                 background: linear-gradient(145deg, #d42b86, #861653) !important;
+16682:             }
+16683:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mission-update-box {
+16684:                 background: linear-gradient(145deg, #1268da, #08418e) !important;
+16685:             }
+16686:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #dispatch-box {
+16687:                 background: linear-gradient(145deg, #526273, #303b47) !important;
+16688:             }
+16689:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #dispatch-share-box {
+16690:                 background: linear-gradient(145deg, #13864e, #07582f) !important;
+16691:             }
+16692:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #auto-mode-box {
+16693:                 background: linear-gradient(145deg, #743bc0, #452178) !important;
+16694:             }
+16695: 
+16696:             #mf-dashboard-rail {
+16697:                 grid-area: rail;
+16698:                 display: flex;
+16699:                 flex-direction: column;
+16700:                 gap: 8px;
+16701:                 padding: 6px;
+16702:                 border: 1px solid rgba(126, 167, 218, 0.16);
+16703:                 border-radius: 11px;
+16704:                 background: rgba(6, 19, 33, 0.88);
+16705:             }
+16706: 
+16707:             .mf-dashboard-tab {
+16708:                 display: flex;
+16709:                 flex-direction: column;
+16710:                 align-items: center;
+16711:                 justify-content: center;
+16712:                 gap: 4px;
+16713:                 min-height: 72px;
+16714:                 padding: 7px 4px;
+16715:                 border: 1px solid transparent;
+16716:                 border-radius: 9px;
+16717:                 background: transparent;
+16718:                 color: #9fb1c8;
+16719:                 font-size: 10px;
+16720:                 font-weight: 700;
+16721:                 cursor: pointer;
+16722:             }
+16723: 
+16724:             .mf-dashboard-tab:hover,
+16725:             .mf-dashboard-tab.mf-dashboard-tab-active {
+16726:                 border-color: rgba(34, 137, 255, 0.58);
+16727:                 background: linear-gradient(145deg, rgba(21, 104, 204, 0.58), rgba(7, 48, 96, 0.66));
+16728:                 color: #fff;
+16729:                 box-shadow: 0 0 18px rgba(13, 110, 253, 0.20);
+16730:             }
+16731: 
+16732:             .mf-dashboard-tab-icon {
+16733:                 font-size: 22px;
+16734:                 line-height: 1;
+16735:                 color: #55a9ff;
+16736:             }
+16737: 
+16738:             #mf-dashboard-utility {
+16739:                 grid-area: utility;
+16740:                 min-width: 0;
+16741:                 max-height: calc(100vh - 96px);
+16742:                 overflow: hidden;
+16743:                 border: 1px solid rgba(126, 167, 218, 0.18);
+16744:                 border-radius: 12px;
+16745:                 background: linear-gradient(155deg, rgba(18, 32, 48, 0.97), rgba(7, 23, 39, 0.97));
+16746:                 box-shadow: 0 10px 30px rgba(0, 0, 0, 0.24);
+16747:             }
+
+## occurrence 2 at line 16986
+16958:         controlHeaderRow.className = 'mf2026-control-header-row';
+16959: 
+16960:         const dragHandle = document.createElement('div');
+16961:         dragHandle.id = 'mf-control-title';
+16962:         dragHandle.textContent = 'Mission Control';
+16963:         dragHandle.className = 'mf2026-header mf2026-drag';
+16964: 
+16965:         const controlCentreBtn = document.createElement('button');
+16966:         controlCentreBtn.id = 'mf-control-centre';
+16967:         controlCentreBtn.className = 'mf2026-button';
+16968:         controlCentreBtn.title = 'Move Mission Control back to the centre';
+16969:         controlCentreBtn.textContent = '◎';
+16970: 
+16971:         const controlMinimizeBtn = document.createElement('button');
+16972:         controlMinimizeBtn.id = 'mf-control-minimize';
+16973:         controlMinimizeBtn.className = 'mf2026-button';
+16974:         controlMinimizeBtn.type = 'button';
+16975: 
+16976:         controlHeaderRow.appendChild(dragHandle);
+16977:         controlHeaderRow.appendChild(controlCentreBtn);
+16978:         controlHeaderRow.appendChild(controlMinimizeBtn);
+16979:         panel.appendChild(controlHeaderRow);
+16980: 
+16981:         const controlBody = document.createElement('div');
+16982:         controlBody.className = 'mf-control-body';
+16983:         controlBody.id = 'mf-control-body';
+16984: 
+16985:         const dashboardRail = document.createElement('nav');
+16986:         dashboardRail.id = 'mf-dashboard-rail';
+16987:         dashboardRail.setAttribute('aria-label', 'MissionChief Nexus dashboard');
+16988:         dashboardRail.innerHTML = `
+16989:             <button type="button" class="mf-dashboard-tab mf-dashboard-tab-active" data-mf-dashboard-tab="mission" aria-pressed="true">
+16990:                 <span class="mf-dashboard-tab-icon">◎</span>
+16991:                 <span>Mission</span>
+16992:             </button>
+16993:             <button type="button" class="mf-dashboard-tab" data-mf-dashboard-tab="settings" aria-pressed="false">
+16994:                 <span class="mf-dashboard-tab-icon">⚙</span>
+16995:                 <span>Settings</span>
+16996:             </button>
+16997:             <button type="button" class="mf-dashboard-tab" data-mf-dashboard-tab="diagnostics" aria-pressed="false">
+16998:                 <span class="mf-dashboard-tab-icon">⌁</span>
+16999:                 <span>Diagnostics</span>
+17000:             </button>
+17001:         `;
+17002: 
+17003:         const dashboardUtility = document.createElement('aside');
+17004:         dashboardUtility.id = 'mf-dashboard-utility';
+17005:         dashboardUtility.hidden = true;
+17006:         dashboardUtility.innerHTML = `
+17007:             <div class="mf-dashboard-utility-header">
+17008:                 <span id="mf-dashboard-utility-title">Settings</span>
+17009:                 <button id="mf-dashboard-utility-close" type="button" aria-label="Close utility panel">×</button>
+17010:             </div>
+17011:         `;
+17012: 
+17013:         const settingsPane = document.createElement('div');
+17014:         settingsPane.id = 'mf-dashboard-settings-pane';
+17015:         settingsPane.className = 'mf-dashboard-utility-pane';
+17016: 
+17017:         const diagnosticsPane = document.createElement('div');
+17018:         diagnosticsPane.id = 'mf-dashboard-diagnostics-pane';
+17019:         diagnosticsPane.className = 'mf-dashboard-utility-pane';
+17020:         diagnosticsPane.hidden = true;
+17021: 
+17022:         dashboardUtility.appendChild(settingsPane);
+17023:         dashboardUtility.appendChild(diagnosticsPane);
+17024: 
+17025:         const dashboardUtilityTitle =
+17026:             dashboardUtility.querySelector('#mf-dashboard-utility-title');
+17027:         const dashboardUtilityClose =
+17028:             dashboardUtility.querySelector('#mf-dashboard-utility-close');
+17029:         const dashboardTabs = Array.from(
+17030:             dashboardRail.querySelectorAll('[data-mf-dashboard-tab]')
+17031:         );
+17032: 
+17033:         function setMissionDashboardTab(tabName) {
+17034:             const nextTab = ['settings', 'diagnostics'].includes(tabName)
+17035:                 ? tabName
+17036:                 : 'mission';
+17037:             const utilityOpen = nextTab !== 'mission';
+
+# mf-dashboard-settings-pane — 3 matches
+
+## occurrence 1 at line 16789
+16761:                 color: #f4f8ff;
+16762:                 text-transform: uppercase;
+16763:                 letter-spacing: 0.04em;
+16764:                 font-size: 13px;
+16765:                 font-weight: 800;
+16766:                 box-sizing: border-box;
+16767:             }
+16768: 
+16769:             #mf-dashboard-utility-close {
+16770:                 width: 30px;
+16771:                 height: 30px;
+16772:                 border: 0;
+16773:                 border-radius: 7px;
+16774:                 background: rgba(255, 255, 255, 0.08);
+16775:                 color: #dce8f7;
+16776:                 cursor: pointer;
+16777:             }
+16778: 
+16779:             .mf-dashboard-utility-pane {
+16780:                 display: flex;
+16781:                 flex-direction: column;
+16782:                 gap: 9px;
+16783:                 padding: 10px;
+16784:                 overflow-y: auto;
+16785:                 max-height: calc(100vh - 154px);
+16786:                 box-sizing: border-box;
+16787:             }
+16788: 
+16789:             #mf-dashboard-settings-pane .mf-control-advanced {
+16790:                 display: flex;
+16791:                 gap: 9px;
+16792:             }
+16793: 
+16794:             #mf-dashboard-settings-pane input,
+16795:             #mf-dashboard-diagnostics-pane input {
+16796:                 color: #f4f8ff !important;
+16797:                 background: rgba(2, 13, 25, 0.78) !important;
+16798:                 border: 1px solid rgba(126, 167, 218, 0.20) !important;
+16799:                 border-radius: 7px !important;
+16800:                 min-height: 38px;
+16801:                 padding: 7px 9px !important;
+16802:                 box-sizing: border-box;
+16803:             }
+16804: 
+16805:             .mf-dashboard-toggle-row {
+16806:                 align-items: flex-start;
+16807:             }
+16808: 
+16809:             #mf-event-scanner-state {
+16810:                 margin-top: 7px;
+16811:             }
+16812: 
+16813:             #mf-dashboard-diagnostics-pane #mf-export-unit-finder-diagnostics {
+16814:                 width: 100%;
+16815:                 background: linear-gradient(145deg, #27394d, #172638) !important;
+16816:             }
+16817: 
+16818:             #mf-dashboard-footer {
+16819:                 grid-area: footer;
+16820:                 padding: 4px 10px 0;
+16821:                 text-align: center;
+16822:                 color: #7f91a8;
+16823:                 font-size: 11px;
+16824:                 letter-spacing: 0.02em;
+16825:             }
+16826: 
+16827:             @media (max-width: 1180px) and (min-width: 701px) {
+16828:                 #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari),
+16829:                 #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari) {
+16830:                     grid-template-columns: 62px repeat(2, minmax(250px, 1fr));
+16831:                     grid-template-areas:
+16832:                         "rail control load"
+16833:                         "rail trained trained"
+16834:                         "utility utility utility"
+16835:                         "footer footer footer";
+16836:                     width: min(920px, calc(100vw - 24px));
+16837:                 }
+16838: 
+16839:                 #mf-dashboard-utility {
+16840:                     max-height: 310px;
+
+## occurrence 2 at line 16794
+16766:                 box-sizing: border-box;
+16767:             }
+16768: 
+16769:             #mf-dashboard-utility-close {
+16770:                 width: 30px;
+16771:                 height: 30px;
+16772:                 border: 0;
+16773:                 border-radius: 7px;
+16774:                 background: rgba(255, 255, 255, 0.08);
+16775:                 color: #dce8f7;
+16776:                 cursor: pointer;
+16777:             }
+16778: 
+16779:             .mf-dashboard-utility-pane {
+16780:                 display: flex;
+16781:                 flex-direction: column;
+16782:                 gap: 9px;
+16783:                 padding: 10px;
+16784:                 overflow-y: auto;
+16785:                 max-height: calc(100vh - 154px);
+16786:                 box-sizing: border-box;
+16787:             }
+16788: 
+16789:             #mf-dashboard-settings-pane .mf-control-advanced {
+16790:                 display: flex;
+16791:                 gap: 9px;
+16792:             }
+16793: 
+16794:             #mf-dashboard-settings-pane input,
+16795:             #mf-dashboard-diagnostics-pane input {
+16796:                 color: #f4f8ff !important;
+16797:                 background: rgba(2, 13, 25, 0.78) !important;
+16798:                 border: 1px solid rgba(126, 167, 218, 0.20) !important;
+16799:                 border-radius: 7px !important;
+16800:                 min-height: 38px;
+16801:                 padding: 7px 9px !important;
+16802:                 box-sizing: border-box;
+16803:             }
+16804: 
+16805:             .mf-dashboard-toggle-row {
+16806:                 align-items: flex-start;
+16807:             }
+16808: 
+16809:             #mf-event-scanner-state {
+16810:                 margin-top: 7px;
+16811:             }
+16812: 
+16813:             #mf-dashboard-diagnostics-pane #mf-export-unit-finder-diagnostics {
+16814:                 width: 100%;
+16815:                 background: linear-gradient(145deg, #27394d, #172638) !important;
+16816:             }
+16817: 
+16818:             #mf-dashboard-footer {
+16819:                 grid-area: footer;
+16820:                 padding: 4px 10px 0;
+16821:                 text-align: center;
+16822:                 color: #7f91a8;
+16823:                 font-size: 11px;
+16824:                 letter-spacing: 0.02em;
+16825:             }
+16826: 
+16827:             @media (max-width: 1180px) and (min-width: 701px) {
+16828:                 #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari),
+16829:                 #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari) {
+16830:                     grid-template-columns: 62px repeat(2, minmax(250px, 1fr));
+16831:                     grid-template-areas:
+16832:                         "rail control load"
+16833:                         "rail trained trained"
+16834:                         "utility utility utility"
+16835:                         "footer footer footer";
+16836:                     width: min(920px, calc(100vw - 24px));
+16837:                 }
+16838: 
+16839:                 #mf-dashboard-utility {
+16840:                     max-height: 310px;
+16841:                 }
+16842:             }
+16843:         `;
+16844:         document.head.appendChild(style);
+16845:     }
+
+## occurrence 3 at line 17014
+16986:         dashboardRail.id = 'mf-dashboard-rail';
+16987:         dashboardRail.setAttribute('aria-label', 'MissionChief Nexus dashboard');
+16988:         dashboardRail.innerHTML = `
+16989:             <button type="button" class="mf-dashboard-tab mf-dashboard-tab-active" data-mf-dashboard-tab="mission" aria-pressed="true">
+16990:                 <span class="mf-dashboard-tab-icon">◎</span>
+16991:                 <span>Mission</span>
+16992:             </button>
+16993:             <button type="button" class="mf-dashboard-tab" data-mf-dashboard-tab="settings" aria-pressed="false">
+16994:                 <span class="mf-dashboard-tab-icon">⚙</span>
+16995:                 <span>Settings</span>
+16996:             </button>
+16997:             <button type="button" class="mf-dashboard-tab" data-mf-dashboard-tab="diagnostics" aria-pressed="false">
+16998:                 <span class="mf-dashboard-tab-icon">⌁</span>
+16999:                 <span>Diagnostics</span>
+17000:             </button>
+17001:         `;
+17002: 
+17003:         const dashboardUtility = document.createElement('aside');
+17004:         dashboardUtility.id = 'mf-dashboard-utility';
+17005:         dashboardUtility.hidden = true;
+17006:         dashboardUtility.innerHTML = `
+17007:             <div class="mf-dashboard-utility-header">
+17008:                 <span id="mf-dashboard-utility-title">Settings</span>
+17009:                 <button id="mf-dashboard-utility-close" type="button" aria-label="Close utility panel">×</button>
+17010:             </div>
+17011:         `;
+17012: 
+17013:         const settingsPane = document.createElement('div');
+17014:         settingsPane.id = 'mf-dashboard-settings-pane';
+17015:         settingsPane.className = 'mf-dashboard-utility-pane';
+17016: 
+17017:         const diagnosticsPane = document.createElement('div');
+17018:         diagnosticsPane.id = 'mf-dashboard-diagnostics-pane';
+17019:         diagnosticsPane.className = 'mf-dashboard-utility-pane';
+17020:         diagnosticsPane.hidden = true;
+17021: 
+17022:         dashboardUtility.appendChild(settingsPane);
+17023:         dashboardUtility.appendChild(diagnosticsPane);
+17024: 
+17025:         const dashboardUtilityTitle =
+17026:             dashboardUtility.querySelector('#mf-dashboard-utility-title');
+17027:         const dashboardUtilityClose =
+17028:             dashboardUtility.querySelector('#mf-dashboard-utility-close');
+17029:         const dashboardTabs = Array.from(
+17030:             dashboardRail.querySelectorAll('[data-mf-dashboard-tab]')
+17031:         );
+17032: 
+17033:         function setMissionDashboardTab(tabName) {
+17034:             const nextTab = ['settings', 'diagnostics'].includes(tabName)
+17035:                 ? tabName
+17036:                 : 'mission';
+17037:             const utilityOpen = nextTab !== 'mission';
+17038: 
+17039:             wrapper.classList.toggle(
+17040:                 'mf-dashboard-utility-open',
+17041:                 utilityOpen
+17042:             );
+17043:             dashboardUtility.hidden = !utilityOpen;
+17044:             settingsPane.hidden = nextTab !== 'settings';
+17045:             diagnosticsPane.hidden = nextTab !== 'diagnostics';
+17046: 
+17047:             if (dashboardUtilityTitle) {
+17048:                 dashboardUtilityTitle.textContent =
+17049:                     nextTab === 'diagnostics'
+17050:                         ? 'Diagnostics'
+17051:                         : 'Settings';
+17052:             }
+17053: 
+17054:             dashboardTabs.forEach(button => {
+17055:                 const active =
+17056:                     button.dataset.mfDashboardTab === nextTab;
+17057:                 button.classList.toggle(
+17058:                     'mf-dashboard-tab-active',
+17059:                     active
+17060:                 );
+17061:                 button.setAttribute(
+17062:                     'aria-pressed',
+17063:                     String(active)
+17064:                 );
+17065:             });
+
+# mf-dashboard-diagnostics-pane — 3 matches
+
+## occurrence 1 at line 16795
+16767:             }
+16768: 
+16769:             #mf-dashboard-utility-close {
+16770:                 width: 30px;
+16771:                 height: 30px;
+16772:                 border: 0;
+16773:                 border-radius: 7px;
+16774:                 background: rgba(255, 255, 255, 0.08);
+16775:                 color: #dce8f7;
+16776:                 cursor: pointer;
+16777:             }
+16778: 
+16779:             .mf-dashboard-utility-pane {
+16780:                 display: flex;
+16781:                 flex-direction: column;
+16782:                 gap: 9px;
+16783:                 padding: 10px;
+16784:                 overflow-y: auto;
+16785:                 max-height: calc(100vh - 154px);
+16786:                 box-sizing: border-box;
+16787:             }
+16788: 
+16789:             #mf-dashboard-settings-pane .mf-control-advanced {
+16790:                 display: flex;
+16791:                 gap: 9px;
+16792:             }
+16793: 
+16794:             #mf-dashboard-settings-pane input,
+16795:             #mf-dashboard-diagnostics-pane input {
+16796:                 color: #f4f8ff !important;
+16797:                 background: rgba(2, 13, 25, 0.78) !important;
+16798:                 border: 1px solid rgba(126, 167, 218, 0.20) !important;
+16799:                 border-radius: 7px !important;
+16800:                 min-height: 38px;
+16801:                 padding: 7px 9px !important;
+16802:                 box-sizing: border-box;
+16803:             }
+16804: 
+16805:             .mf-dashboard-toggle-row {
+16806:                 align-items: flex-start;
+16807:             }
+16808: 
+16809:             #mf-event-scanner-state {
+16810:                 margin-top: 7px;
+16811:             }
+16812: 
+16813:             #mf-dashboard-diagnostics-pane #mf-export-unit-finder-diagnostics {
+16814:                 width: 100%;
+16815:                 background: linear-gradient(145deg, #27394d, #172638) !important;
+16816:             }
+16817: 
+16818:             #mf-dashboard-footer {
+16819:                 grid-area: footer;
+16820:                 padding: 4px 10px 0;
+16821:                 text-align: center;
+16822:                 color: #7f91a8;
+16823:                 font-size: 11px;
+16824:                 letter-spacing: 0.02em;
+16825:             }
+16826: 
+16827:             @media (max-width: 1180px) and (min-width: 701px) {
+16828:                 #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari),
+16829:                 #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari) {
+16830:                     grid-template-columns: 62px repeat(2, minmax(250px, 1fr));
+16831:                     grid-template-areas:
+16832:                         "rail control load"
+16833:                         "rail trained trained"
+16834:                         "utility utility utility"
+16835:                         "footer footer footer";
+16836:                     width: min(920px, calc(100vw - 24px));
+16837:                 }
+16838: 
+16839:                 #mf-dashboard-utility {
+16840:                     max-height: 310px;
+16841:                 }
+16842:             }
+16843:         `;
+16844:         document.head.appendChild(style);
+16845:     }
+16846: 
+
+## occurrence 2 at line 16813
+16785:                 max-height: calc(100vh - 154px);
+16786:                 box-sizing: border-box;
+16787:             }
+16788: 
+16789:             #mf-dashboard-settings-pane .mf-control-advanced {
+16790:                 display: flex;
+16791:                 gap: 9px;
+16792:             }
+16793: 
+16794:             #mf-dashboard-settings-pane input,
+16795:             #mf-dashboard-diagnostics-pane input {
+16796:                 color: #f4f8ff !important;
+16797:                 background: rgba(2, 13, 25, 0.78) !important;
+16798:                 border: 1px solid rgba(126, 167, 218, 0.20) !important;
+16799:                 border-radius: 7px !important;
+16800:                 min-height: 38px;
+16801:                 padding: 7px 9px !important;
+16802:                 box-sizing: border-box;
+16803:             }
+16804: 
+16805:             .mf-dashboard-toggle-row {
+16806:                 align-items: flex-start;
+16807:             }
+16808: 
+16809:             #mf-event-scanner-state {
+16810:                 margin-top: 7px;
+16811:             }
+16812: 
+16813:             #mf-dashboard-diagnostics-pane #mf-export-unit-finder-diagnostics {
+16814:                 width: 100%;
+16815:                 background: linear-gradient(145deg, #27394d, #172638) !important;
+16816:             }
+16817: 
+16818:             #mf-dashboard-footer {
+16819:                 grid-area: footer;
+16820:                 padding: 4px 10px 0;
+16821:                 text-align: center;
+16822:                 color: #7f91a8;
+16823:                 font-size: 11px;
+16824:                 letter-spacing: 0.02em;
+16825:             }
+16826: 
+16827:             @media (max-width: 1180px) and (min-width: 701px) {
+16828:                 #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari),
+16829:                 #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari) {
+16830:                     grid-template-columns: 62px repeat(2, minmax(250px, 1fr));
+16831:                     grid-template-areas:
+16832:                         "rail control load"
+16833:                         "rail trained trained"
+16834:                         "utility utility utility"
+16835:                         "footer footer footer";
+16836:                     width: min(920px, calc(100vw - 24px));
+16837:                 }
+16838: 
+16839:                 #mf-dashboard-utility {
+16840:                     max-height: 310px;
+16841:                 }
+16842:             }
+16843:         `;
+16844:         document.head.appendChild(style);
+16845:     }
+16846: 
+16847:     function createControlPanel() {
+16848:         if (!isMissionPage()) return;
+16849: 
+16850:         if (!claimCurrentMissionExecutionOwnership('create control panel')) {
+16851:             document.getElementById('mission-finder-wrapper')?.remove();
+16852:             return;
+16853:         }
+16854: 
+16855:         cleanupDuplicatePanels();
+16856: 
+16857:         if (document.getElementById('mission-finder-wrapper')) return;
+16858: 
+16859:         injectStyles();
+16860: 
+16861:         const wrapper = document.createElement('div');
+16862:         wrapper.id = 'mission-finder-wrapper';
+16863:         wrapper.classList.add('mf-nexus-dashboard');
+16864: 
+
+## occurrence 3 at line 17018
+16990:                 <span class="mf-dashboard-tab-icon">◎</span>
+16991:                 <span>Mission</span>
+16992:             </button>
+16993:             <button type="button" class="mf-dashboard-tab" data-mf-dashboard-tab="settings" aria-pressed="false">
+16994:                 <span class="mf-dashboard-tab-icon">⚙</span>
+16995:                 <span>Settings</span>
+16996:             </button>
+16997:             <button type="button" class="mf-dashboard-tab" data-mf-dashboard-tab="diagnostics" aria-pressed="false">
+16998:                 <span class="mf-dashboard-tab-icon">⌁</span>
+16999:                 <span>Diagnostics</span>
+17000:             </button>
+17001:         `;
+17002: 
+17003:         const dashboardUtility = document.createElement('aside');
+17004:         dashboardUtility.id = 'mf-dashboard-utility';
+17005:         dashboardUtility.hidden = true;
+17006:         dashboardUtility.innerHTML = `
+17007:             <div class="mf-dashboard-utility-header">
+17008:                 <span id="mf-dashboard-utility-title">Settings</span>
+17009:                 <button id="mf-dashboard-utility-close" type="button" aria-label="Close utility panel">×</button>
+17010:             </div>
+17011:         `;
+17012: 
+17013:         const settingsPane = document.createElement('div');
+17014:         settingsPane.id = 'mf-dashboard-settings-pane';
+17015:         settingsPane.className = 'mf-dashboard-utility-pane';
+17016: 
+17017:         const diagnosticsPane = document.createElement('div');
+17018:         diagnosticsPane.id = 'mf-dashboard-diagnostics-pane';
+17019:         diagnosticsPane.className = 'mf-dashboard-utility-pane';
+17020:         diagnosticsPane.hidden = true;
+17021: 
+17022:         dashboardUtility.appendChild(settingsPane);
+17023:         dashboardUtility.appendChild(diagnosticsPane);
+17024: 
+17025:         const dashboardUtilityTitle =
+17026:             dashboardUtility.querySelector('#mf-dashboard-utility-title');
+17027:         const dashboardUtilityClose =
+17028:             dashboardUtility.querySelector('#mf-dashboard-utility-close');
+17029:         const dashboardTabs = Array.from(
+17030:             dashboardRail.querySelectorAll('[data-mf-dashboard-tab]')
+17031:         );
+17032: 
+17033:         function setMissionDashboardTab(tabName) {
+17034:             const nextTab = ['settings', 'diagnostics'].includes(tabName)
+17035:                 ? tabName
+17036:                 : 'mission';
+17037:             const utilityOpen = nextTab !== 'mission';
+17038: 
+17039:             wrapper.classList.toggle(
+17040:                 'mf-dashboard-utility-open',
+17041:                 utilityOpen
+17042:             );
+17043:             dashboardUtility.hidden = !utilityOpen;
+17044:             settingsPane.hidden = nextTab !== 'settings';
+17045:             diagnosticsPane.hidden = nextTab !== 'diagnostics';
+17046: 
+17047:             if (dashboardUtilityTitle) {
+17048:                 dashboardUtilityTitle.textContent =
+17049:                     nextTab === 'diagnostics'
+17050:                         ? 'Diagnostics'
+17051:                         : 'Settings';
+17052:             }
+17053: 
+17054:             dashboardTabs.forEach(button => {
+17055:                 const active =
+17056:                     button.dataset.mfDashboardTab === nextTab;
+17057:                 button.classList.toggle(
+17058:                     'mf-dashboard-tab-active',
+17059:                     active
+17060:                 );
+17061:                 button.setAttribute(
+17062:                     'aria-pressed',
+17063:                     String(active)
+17064:                 );
+17065:             });
+17066: 
+17067:             localStorage.setItem(
+17068:                 'mf_nexus_dashboard_tab_v1',
+17069:                 nextTab
+
+# mf-dashboard-footer — 2 matches
+
+## occurrence 1 at line 16818
+16790:                 display: flex;
+16791:                 gap: 9px;
+16792:             }
+16793: 
+16794:             #mf-dashboard-settings-pane input,
+16795:             #mf-dashboard-diagnostics-pane input {
+16796:                 color: #f4f8ff !important;
+16797:                 background: rgba(2, 13, 25, 0.78) !important;
+16798:                 border: 1px solid rgba(126, 167, 218, 0.20) !important;
+16799:                 border-radius: 7px !important;
+16800:                 min-height: 38px;
+16801:                 padding: 7px 9px !important;
+16802:                 box-sizing: border-box;
+16803:             }
+16804: 
+16805:             .mf-dashboard-toggle-row {
+16806:                 align-items: flex-start;
+16807:             }
+16808: 
+16809:             #mf-event-scanner-state {
+16810:                 margin-top: 7px;
+16811:             }
+16812: 
+16813:             #mf-dashboard-diagnostics-pane #mf-export-unit-finder-diagnostics {
+16814:                 width: 100%;
+16815:                 background: linear-gradient(145deg, #27394d, #172638) !important;
+16816:             }
+16817: 
+16818:             #mf-dashboard-footer {
+16819:                 grid-area: footer;
+16820:                 padding: 4px 10px 0;
+16821:                 text-align: center;
+16822:                 color: #7f91a8;
+16823:                 font-size: 11px;
+16824:                 letter-spacing: 0.02em;
+16825:             }
+16826: 
+16827:             @media (max-width: 1180px) and (min-width: 701px) {
+16828:                 #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari),
+16829:                 #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari) {
+16830:                     grid-template-columns: 62px repeat(2, minmax(250px, 1fr));
+16831:                     grid-template-areas:
+16832:                         "rail control load"
+16833:                         "rail trained trained"
+16834:                         "utility utility utility"
+16835:                         "footer footer footer";
+16836:                     width: min(920px, calc(100vw - 24px));
+16837:                 }
+16838: 
+16839:                 #mf-dashboard-utility {
+16840:                     max-height: 310px;
+16841:                 }
+16842:             }
+16843:         `;
+16844:         document.head.appendChild(style);
+16845:     }
+16846: 
+16847:     function createControlPanel() {
+16848:         if (!isMissionPage()) return;
+16849: 
+16850:         if (!claimCurrentMissionExecutionOwnership('create control panel')) {
+16851:             document.getElementById('mission-finder-wrapper')?.remove();
+16852:             return;
+16853:         }
+16854: 
+16855:         cleanupDuplicatePanels();
+16856: 
+16857:         if (document.getElementById('mission-finder-wrapper')) return;
+16858: 
+16859:         injectStyles();
+16860: 
+16861:         const wrapper = document.createElement('div');
+16862:         wrapper.id = 'mission-finder-wrapper';
+16863:         wrapper.classList.add('mf-nexus-dashboard');
+16864: 
+16865:         const missionFinderIosSafari =
+16866:             isMissionFinderIosSafariWebsite();
+16867:         const missionFinderIphoneSafari =
+16868:             isMissionFinderIphoneSafariWebsite();
+16869: 
+
+## occurrence 2 at line 17689
+17661: 
+17662:         const trainedPanel = document.createElement('div');
+17663:         trainedPanel.id = 'trained-personnel-box';
+17664:         trainedPanel.className = `mf2026-panel ${mfTrainedPersonnelCollapsed ? 'mf2026-trained-collapsed' : ''}`;
+17665:         trainedPanel.innerHTML = `
+17666:             <div class="mf2026-trained-header-row">
+17667:                 <div id="mf-trained-title" class="mf2026-header">Trained Personnel</div>
+17668:                 <button id="mf-trained-minimize" type="button" class="mf2026-button" title="Minimize / expand trained personnel">${mfTrainedPersonnelCollapsed ? '+' : '−'}</button>
+17669:             </div>
+17670: 
+17671:             <div id="mf-trained-body" class="mf-trained-body">
+17672:                 <div class="mf2026-box">
+17673:                     <div class="mf2026-section-title">Selected Training Coverage</div>
+17674:                     <div id="trained-personnel-summary" class="mf2026-small">
+17675:                         No selected trained personnel yet.
+17676:                     </div>
+17677:                 </div>
+17678: 
+17679:                 <div class="mf2026-box">
+17680:                     <div class="mf2026-section-title">Personnel and Courses</div>
+17681:                     <div id="trained-personnel-content" class="mf2026-small">
+17682:                         Selected trained personnel will appear here.
+17683:                     </div>
+17684:                 </div>
+17685:             </div>
+17686:         `;
+17687: 
+17688:         const dashboardFooter = document.createElement('footer');
+17689:         dashboardFooter.id = 'mf-dashboard-footer';
+17690:         const dashboardVersion =
+17691:             typeof GM_info !== 'undefined' &&
+17692:             GM_info?.script?.version
+17693:                 ? GM_info.script.version
+17694:                 : '1.0.69';
+17695:         dashboardFooter.textContent =
+17696:             `MissionChief Nexus V${dashboardVersion} · MIT · Martblyth`;
+17697: 
+17698:         if (missionFinderIphoneSafari) {
+17699:             wrapper.appendChild(iphoneLauncher);
+17700:         } else {
+17701:             wrapper.appendChild(dashboardRail);
+17702:             wrapper.appendChild(dashboardUtility);
+17703:             wrapper.appendChild(dashboardFooter);
+17704:             setMissionDashboardTab(
+17705:                 localStorage.getItem(
+17706:                     'mf_nexus_dashboard_tab_v1'
+17707:                 ) || 'mission'
+17708:             );
+17709:         }
+17710:         wrapper.appendChild(panel);
+17711:         wrapper.appendChild(loadPanel);
+17712:         wrapper.appendChild(trainedPanel);
+17713:         document.body.appendChild(wrapper);
+17714: 
+17715:         scheduleMissionRequiredPersonnelPreload(0);
+17716: 
+17717:         function syncVehicleLoadCollapseState() {
+17718:             const expanded = !mfVehicleLoadCollapsed;
+17719:             loadPanel.classList.toggle(
+17720:                 'mf2026-load-collapsed',
+17721:                 mfVehicleLoadCollapsed
+17722:             );
+17723: 
+17724:             const minimizeButton =
+17725:                 loadPanel.querySelector('#mf-load-minimize');
+17726:             const title =
+17727:                 loadPanel.querySelector('#mf-load-title');
+17728: 
+17729:             if (minimizeButton) {
+17730:                 minimizeButton.textContent =
+17731:                     missionFinderIphoneSafari
+17732:                         ? (expanded ? '▴' : '▾')
+17733:                         : (expanded ? '−' : '+');
+17734:                 minimizeButton.title = expanded
+17735:                     ? 'Collapse Vehicle Load List'
+17736:                     : 'Expand Vehicle Load List';
+17737:                 minimizeButton.setAttribute(
+17738:                     'aria-label',
+17739:                     minimizeButton.title
+17740:                 );
+
+# unit-naming — 1 matches
+
+## occurrence 1 at line 9181
+09153:     async function processStations(runId) {
+09154:         try {
+09155:             while (STATE.stationIndex < STATE.filteredStations.length) {
+09156:                 if (STATE.stopped || runId !== STATE.runId) break;
+09157: 
+09158:                 await waitIfPaused(runId);
+09159:                 if (STATE.stopped || runId !== STATE.runId) break;
+09160: 
+09161:                 const station = STATE.filteredStations[STATE.stationIndex];
+09162: 
+09163:                 setStatus('Opening station');
+09164:                 setStation(station.displayName);
+09165:                 setVehicle('None');
+09166:                 setProgress(STATE.stationIndex, STATE.filteredStations.length);
+09167: 
+09168:                 log(`Station: ${station.displayName}`, 'station');
+09169: 
+09170:                 const stationEntry = findStationOverviewEntry(station.href);
+09171:                 const stationLink = stationEntry?.link || null;
+09172: 
+09173:                 if (!stationLink) {
+09174:                     log(`Station link not found, skipped: ${station.displayName}`, 'error');
+09175:                     STATE.stationIndex++;
+09176:                     continue;
+09177:                 }
+09178: 
+09179:                 const iframe = await openStationWorkflowIframe(
+09180:                     stationEntry,
+09181:                     'unit-naming',
+09182:                     waitForStationIframe
+09183:                 );
+09184: 
+09185:                 if (iframe) {
+09186:                     STATE.activeIframe = iframe;
+09187:                 }
+09188: 
+09189:                 if (!iframe) {
+09190:                     log(`Station iframe not found, skipped: ${station.displayName}`, 'error');
+09191:                     STATE.skippedCount++;
+09192:                     updateCounters();
+09193:                     await closeStationModal(iframe);
+09194:                     STATE.stationIndex++;
+09195:                     continue;
+09196:                 }
+09197: 
+09198:                 const vehicleTableReady = await waitForVehicleTable(iframe);
+09199: 
+09200:                 if (!vehicleTableReady) {
+09201:                     log(`Vehicle table did not load, skipped: ${station.displayName}`, 'error');
+09202:                     STATE.skippedCount++;
+09203:                     updateCounters();
+09204:                     await closeStationModal(iframe);
+09205:                     STATE.stationIndex++;
+09206:                     continue;
+09207:                 }
+09208: 
+09209:                 await processStationVehicleQueue(iframe, station);
+09210:                 await closeStationModal(iframe);
+09211: 
+09212:                 if (STATE.mode === 'single') {
+09213:                     log('Single station mode complete.', 'done');
+09214:                     break;
+09215:                 }
+09216: 
+09217:                 STATE.stationIndex++;
+09218:             }
+09219:         } finally {
+09220:             if (STATE.activeIframe) {
+09221:                 await closeStationModal(STATE.activeIframe);
+09222:             }
+09223: 
+09224:             if (runId !== STATE.runId) return;
+09225: 
+09226:             STATE.running = false;
+09227:             STATE.paused = false;
+09228:             document.querySelector('#mc-namer-pause').textContent = 'Pause';
+09229: 
+09230:             if (STATE.stopped) {
+09231:                 setStatus('Stopped');
+09232:                 log(`Stopped. Renamed ${STATE.renamedCount}. Skipped ${STATE.skippedCount}.`, 'error');
+
+# station-naming — 1 matches
+
+## occurrence 1 at line 3616
+03588:                 setStationUiValue('status', 'Stopped');
+03589:                 stationLog(`Stopped. Renamed ${STATION_STATE.renamedCount}, previewed ${STATION_STATE.previewedCount}, skipped ${STATION_STATE.skippedCount}.`, 'error');
+03590:             } else {
+03591:                 setStationUiValue('status', 'Finished');
+03592:                 setStationUiValue('progress', `${STATION_STATE.queue.length} / ${STATION_STATE.queue.length}`);
+03593:                 stationLog(`Finished. Renamed ${STATION_STATE.renamedCount}, previewed ${STATION_STATE.previewedCount}, skipped ${STATION_STATE.skippedCount}.`, 'done');
+03594:             }
+03595:         }
+03596:     }
+03597: 
+03598:     async function processOneStationName(station) {
+03599:         if (!station.suffix) {
+03600:             stationLog(`Skipped: no safe naming rule exists for building_type_id=${station.buildingTypeId ?? 'unknown'}.`, 'error');
+03601:             return 'skipped';
+03602:         }
+03603: 
+03604:         const stationEntry = findStationOverviewEntry(station.href);
+03605:         const stationLink = stationEntry?.link || null;
+03606:         if (!stationLink) {
+03607:             stationLog(`Skipped: station link no longer exists for ${station.href}.`, 'error');
+03608:             return 'skipped';
+03609:         }
+03610: 
+03611:         let iframe = null;
+03612: 
+03613:         try {
+03614:             iframe = await openStationWorkflowIframe(
+03615:                 stationEntry,
+03616:                 'station-naming',
+03617:                 waitForStationNamingIframe
+03618:             );
+03619:             STATION_STATE.activeIframe = iframe;
+03620: 
+03621:             if (!iframe) throw new Error('Station lightbox iframe did not open.');
+03622: 
+03623:             let doc = await waitForStationNamingDocument(
+03624:                 iframe,
+03625:                 currentDoc => currentDoc.querySelector(`a[href="${station.href}/edit"]`),
+03626:                 'normal station page'
+03627:             );
+03628: 
+03629:             if (!doc) throw new Error('Normal station page did not finish loading.');
+03630:             if (STATION_STATE.stopped) return 'skipped';
+03631: 
+03632:             await waitIfStationNamingPaused();
+03633:             setStationUiValue('status', 'Reading station address');
+03634: 
+03635:             // Do not depend on clicking Move building. MissionChief can block that page
+03636:             // while vehicles are away. First try a read-only background request; when
+03637:             // that is unavailable, use the station coordinates and MissionChief's own
+03638:             // /reverse_address endpoint. The Move form is never submitted.
+03639:             const addressResult = await resolveStationAddress(station, doc);
+03640:             const address = String(addressResult.address || '').trim();
+03641: 
+03642:             if (!address) {
+03643:                 throw new Error(addressResult.error || 'Station address could not be read from the Move page or coordinate fallback.');
+03644:             }
+03645: 
+03646:             setStationUiValue('address', address);
+03647:             stationLog(`Address: ${address}`, 'info');
+03648:             stationLog(`Address source: ${addressResult.source}`, 'debug');
+03649: 
+03650:             const parsed = extractStationArea(address);
+03651:             if (!parsed.postcode) throw new Error('No UK postcode could be extracted from the address.');
+03652:             if (!parsed.area) throw new Error(`No local area was found after postcode ${parsed.postcode}.`);
+03653: 
+03654:             const formattedArea = formatStationArea(parsed.area);
+03655:             if (!formattedArea) throw new Error('The detected local area became empty after formatting.');
+03656: 
+03657:             setStationUiValue('town', formattedArea);
+03658:             stationLog(`Postcode: ${parsed.postcode}`, 'info');
+03659:             stationLog(`Detected area: ${formattedArea}`, 'after');
+03660: 
+03661:             let proposedName = buildStationName(formattedArea, station.suffix, station.displayName);
+03662:             setStationUiValue('after', proposedName);
+03663:             stationLog(`BEFORE: ${station.displayName}`, 'before');
+03664:             stationLog(`AFTER : ${proposedName}`, 'after');
+03665: 
+03666:             if (STATION_STATE.action !== 'save') {
+03667:                 setStationUiValue('status', 'Preview complete');
+
+# personnel-assignment — 2 matches
+
+## occurrence 1 at line 2055
+02027:                 <div class="mc-namer-buttons">
+02028:                     <button id="mc-personnel-refresh">Refresh Stations</button>
+02029:                     <button id="mc-personnel-build-register" title="Quickly refresh every station. Unchanged exact vehicle records are reused; only changed or unsafe vehicles are reopened. No personnel assignments are changed.">Quick Refresh Register</button>
+02030:                     <button id="mc-personnel-full-register" title="Build All Register by reading every exact vehicle assignment page. Use this for a periodic full audit. No personnel assignments are changed.">Full Verify Register</button>
+02031:                     <button id="mc-personnel-export-register" title="Download the saved Personnel Register as a JSON backup.">Export Register</button>
+02032:                     <button id="mc-personnel-import-register" title="Replace the saved Personnel Register with a validated JSON backup.">Import Register</button>
+02033:                     <input id="mc-personnel-import-register-file" type="file" accept="application/json,.json" hidden>
+02034:                     <button id="mc-personnel-start">Start</button>
+02035:                     <button id="mc-personnel-pause">Pause</button>
+02036:                     <button id="mc-personnel-stop">Stop</button>
+02037:                     <button id="mc-personnel-view-station-report">View Station Report</button>
+02038:                     <button id="mc-personnel-copy-station">Copy Station Report</button>
+02039:                     <button id="mc-personnel-copy">Copy Overall Report</button>
+02040:                     <button id="mc-personnel-debug">Debug: OFF</button>
+02041:                     <button id="mc-personnel-clear">Clear Log</button>
+02042:                 </div>
+02043: 
+02044:                 <div class="mc-namer-section">
+02045:                     <div><b>Status:</b> <span id="mc-personnel-status">Idle</span></div>
+02046:                     <div><b>Station:</b> <span id="mc-personnel-current">None</span></div>
+02047:                     <div><b>Vehicle:</b> <span id="mc-personnel-vehicle">None</span></div>
+02048:                     <div><b>Station progress:</b> <span id="mc-personnel-progress">0 / 0</span></div>
+02049:                     <div><b>Stations completed:</b> <span id="mc-personnel-completed">0</span></div>
+02050:                     <div><b>Vehicles checked:</b> <span id="mc-personnel-vehicles">0</span></div>
+02051:                     <div><b>Register:</b> <span id="mc-personnel-register-status">No saved vehicles</span></div>
+02052:                     <div><b id="mc-personnel-units-fulfilled-label">Units fulfilled:</b> <span id="mc-personnel-units-fulfilled">0 / All</span></div>
+02053:                     <div><b>Planned / assigned:</b> <span id="mc-personnel-assigned">0</span></div>
+02054:                     <div><b>Need training:</b> <span id="mc-personnel-training-shortfall">0</span></div>
+02055:                     <div><b>Unfilled positions:</b> <span id="mc-personnel-assignment-shortfall">0</span></div>
+02056:                 </div>
+02057: 
+02058:                 <div id="mc-personnel-training-shortfall-section" class="mc-namer-section mc-personnel-training-shortfall-section" hidden>
+02059:                     <div class="mc-personnel-training-shortfall-heading">
+02060:                         ⚠ Stations needing additional qualified personnel:
+02061:                         <span id="mc-personnel-training-shortfall-station-count">0</span>
+02062:                     </div>
+02063:                     <div class="mc-personnel-training-shortfall-note">
+02064:                         This only shows genuine training shortages. Assignment or verification problems are kept separate.
+02065:                     </div>
+02066:                     <div id="mc-personnel-training-shortfall-list" class="mc-personnel-training-shortfall-list"></div>
+02067:                 </div>
+02068: 
+02069:                 <div class="mc-namer-section mc-personnel-report-options">
+02070:                     <b>Report display:</b>
+02071:                     <div class="mc-personnel-report-toggle-grid">
+02072:                         <label class="mc-personnel-report-toggle">
+02073:                             <input id="mc-personnel-show-station-report" type="checkbox" checked>
+02074:                             <span>Latest station report</span>
+02075:                         </label>
+02076:                         <label class="mc-personnel-report-toggle">
+02077:                             <input id="mc-personnel-show-overall-report" type="checkbox" checked>
+02078:                             <span>Overall run report</span>
+02079:                         </label>
+02080:                     </div>
+02081:                     <div class="mc-personnel-report-note">The short status and shortfall figures above always remain visible.</div>
+02082:                 </div>
+02083: 
+02084:                 <div id="mc-personnel-after-action-section" class="mc-namer-section mc-personnel-report-section">
+02085:                     <b>Latest Station After-Action Report</b>
+02086:                     <pre id="mc-personnel-after-action">Run a station preview or assignment to create the station report.</pre>
+02087:                 </div>
+02088: 
+02089:                 <div id="mc-personnel-overall-report-section" class="mc-namer-section mc-personnel-report-section">
+02090:                     <b>Overall Run Report</b>
+02091:                     <pre id="mc-personnel-report">Run a preview or assignment to create the overall report.</pre>
+02092:                 </div>
+02093: 
+02094:                 <div class="mc-personnel-log-heading">Live Activity Log</div>
+02095:                 <div id="mc-personnel-log"></div>
+02096:             </div>
+02097:             </div>
+02098:         `;
+02099: 
+02100:         document.body.appendChild(panel);
+02101:         ensureSingleNamingToolsPanel(panel);
+02102: 
+02103:         const style = document.createElement('style');
+02104:         style.dataset.mcNamerStyle = 'true';
+02105:         style.textContent = `
+02106:             #mc-namer-panel {
+
+## occurrence 2 at line 8621
+08593:     }
+08594: 
+08595:     async function waitIfPersonnelPaused() {
+08596:         while (PERSONNEL_STATE.paused && !PERSONNEL_STATE.stopped) {
+08597:             await sleep(250);
+08598:         }
+08599:     }
+08600: 
+08601:     function updatePersonnelCounters() {
+08602:         setPersonnelUiValue('completed', PERSONNEL_STATE.completedStations);
+08603:         setPersonnelUiValue('vehicles', PERSONNEL_STATE.checkedVehicles);
+08604:         setPersonnelUiValue('unitsFulfilled', formatPersonnelUnitsFulfilled());
+08605:         setPersonnelUiValue('assigned', PERSONNEL_STATE.action === 'assign' ? PERSONNEL_STATE.assignedCount : PERSONNEL_STATE.plannedCount);
+08606:         setPersonnelUiValue('trainingShortfall', PERSONNEL_STATE.trainingShortfall);
+08607:         setPersonnelUiValue('assignmentShortfall', PERSONNEL_STATE.assignmentShortfall);
+08608:     }
+08609: 
+08610:     function setPersonnelUiValue(field, value) {
+08611:         const map = {
+08612:             status: 'mc-personnel-status',
+08613:             current: 'mc-personnel-current',
+08614:             vehicle: 'mc-personnel-vehicle',
+08615:             progress: 'mc-personnel-progress',
+08616:             completed: 'mc-personnel-completed',
+08617:             vehicles: 'mc-personnel-vehicles',
+08618:             unitsFulfilled: 'mc-personnel-units-fulfilled',
+08619:             assigned: 'mc-personnel-assigned',
+08620:             trainingShortfall: 'mc-personnel-training-shortfall',
+08621:             assignmentShortfall: 'mc-personnel-assignment-shortfall'
+08622:         };
+08623: 
+08624:         const el = getToolElementById(map[field]);
+08625:         if (el) el.textContent = String(value);
+08626:     }
+08627: 
+08628:     function togglePersonnelDebug() {
+08629:         PERSONNEL_STATE.debug = !PERSONNEL_STATE.debug;
+08630:         document.querySelector('#mc-personnel-debug').textContent = PERSONNEL_STATE.debug ? 'Debug: ON' : 'Debug: OFF';
+08631:         personnelLog(`Debug ${PERSONNEL_STATE.debug ? 'enabled' : 'disabled'}.`, 'debug');
+08632:     }
+08633: 
+08634:     function clearPersonnelLog() {
+08635:         clearBoundedToolLog(getToolElementById('mc-personnel-log'));
+08636:     }
+08637: 
+08638:     function personnelLog(message, type = 'info') {
+08639:         const logBox = getToolElementById('mc-personnel-log');
+08640:         if (!logBox) return;
+08641: 
+08642:         const line = document.createElement('div');
+08643:         line.className = `mc-log-${type}`;
+08644:         line.textContent = message;
+08645:         appendBoundedToolLog(logBox, line);
+08646:     }
+08647: 
+08648:     function personnelDebug(message) {
+08649:         if (!PERSONNEL_STATE.debug) return;
+08650:         personnelLog(`[DEBUG] ${message}`, 'debug');
+08651:     }
+08652: 
+08653:     function makePanelDraggable(panel, handle) {
+08654:         let dragging = false;
+08655:         let activePointerId = null;
+08656:         let startX = 0;
+08657:         let startY = 0;
+08658:         let startLeft = 0;
+08659:         let startTop = 0;
+08660: 
+08661:         const endDrag = event => {
+08662:             if (
+08663:                 activePointerId != null
+08664:                 && event?.pointerId != null
+08665:                 && event.pointerId !== activePointerId
+08666:             ) {
+08667:                 return;
+08668:             }
+08669: 
+08670:             dragging = false;
+08671:             if (
+08672:                 activePointerId != null
+
+# naming-tool — 0 matches
+
+# personnel-panel — 0 matches
+
+# mf2026-panel — 9 matches
+
+## occurrence 1 at line 15708
+15680:             return vehicleValuesMatchCandidates(values, candidates, strictExactOnly);
+15681:         });
+15682: 
+15683:         if (checkbox) return checkbox;
+15684: 
+15685:         const button = queryVehicleSelectionElements('a[search_attribute]').find(anchor => {
+15686:             const value = normaliseVehicleText(anchor.getAttribute('search_attribute'));
+15687:             return candidates.some(candidate => value === candidate || value.includes(candidate));
+15688:         });
+15689: 
+15690:         return button || null;
+15691:     }
+15692: 
+15693:     function injectStyles() {
+15694:         if (document.getElementById('mission-finder-2026-styles')) return;
+15695: 
+15696:         const style = document.createElement('style');
+15697:         style.id = 'mission-finder-2026-styles';
+15698:         style.textContent = `
+15699:             #mission-finder-wrapper {
+15700:                 position: fixed;
+15701:                 z-index: 999999;
+15702:                 display: flex;
+15703:                 gap: 8px;
+15704:                 align-items: flex-start;
+15705:                 font-family: Arial, Helvetica, sans-serif;
+15706:             }
+15707: 
+15708:             .mf2026-panel {
+15709:                 width: 270px;
+15710:                 min-height: 0;
+15711:                 padding: 8px;
+15712:                 background: rgba(0, 0, 0, 0.88);
+15713:                 color: white;
+15714:                 font-size: 13px;
+15715:                 border: 2px solid white;
+15716:                 border-radius: 8px;
+15717:                 box-sizing: border-box;
+15718:                 display: flex;
+15719:                 flex-direction: column;
+15720:                 gap: 7px;
+15721:                 box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+15722:             }
+15723: 
+15724:             .mf2026-header {
+15725:                 font-size: 15px;
+15726:                 font-weight: bold;
+15727:                 text-align: center;
+15728:                 background: #555;
+15729:                 padding: 6px;
+15730:                 border-radius: 4px;
+15731:             }
+15732: 
+15733:             .mf2026-drag {
+15734:                 cursor: move;
+15735:             }
+15736: 
+15737:             .mf2026-box {
+15738:                 background: #444;
+15739:                 padding: 7px;
+15740:                 border-radius: 5px;
+15741:             }
+15742: 
+15743:             #status-box {
+15744:                 min-height: 44px;
+15745:                 line-height: 1.35;
+15746:                 overflow-wrap: break-word;
+15747:             }
+15748: 
+15749:             .mf2026-button {
+15750:                 padding: 7px;
+15751:                 border: none;
+15752:                 border-radius: 5px;
+15753:                 cursor: pointer;
+15754:                 font-weight: bold;
+15755:             }
+15756: 
+15757:             .mf2026-section-title {
+15758:                 font-size: 13px;
+15759:                 font-weight: bold;
+
+## occurrence 2 at line 16122
+16094:                     100vh
+16095:                     - 16px
+16096:                     - env(safe-area-inset-top, 0px)
+16097:                     - env(safe-area-inset-bottom, 0px)
+16098:                 );
+16099:                 display: flex;
+16100:                 flex-direction: column;
+16101:                 align-items: stretch;
+16102:                 gap: 6px;
+16103:                 overflow-x: hidden;
+16104:                 overflow-y: auto;
+16105:                 overscroll-behavior: contain;
+16106:                 -webkit-overflow-scrolling: touch;
+16107:                 -webkit-transform: translateZ(0);
+16108:                 box-sizing: border-box;
+16109:             }
+16110: 
+16111:             @supports (height: 100dvh) {
+16112:                 #mission-finder-wrapper.mf2026-ios-safari {
+16113:                     max-height: calc(
+16114:                         100dvh
+16115:                         - 16px
+16116:                         - env(safe-area-inset-top, 0px)
+16117:                         - env(safe-area-inset-bottom, 0px)
+16118:                     );
+16119:                 }
+16120:             }
+16121: 
+16122:             #mission-finder-wrapper.mf2026-ios-safari .mf2026-panel,
+16123:             #mission-finder-wrapper.mf2026-ios-safari #control-panel,
+16124:             #mission-finder-wrapper.mf2026-ios-safari #vehicle-load-list-box,
+16125:             #mission-finder-wrapper.mf2026-ios-safari #trained-personnel-box {
+16126:                 width: 100%;
+16127:                 max-width: none;
+16128:                 flex: 0 0 auto;
+16129:             }
+16130: 
+16131:             #mission-finder-wrapper.mf2026-ios-safari .mf2026-header {
+16132:                 min-height: 42px;
+16133:                 display: flex;
+16134:                 align-items: center;
+16135:                 justify-content: center;
+16136:                 box-sizing: border-box;
+16137:             }
+16138: 
+16139:             #mission-finder-wrapper.mf2026-ios-safari .mf2026-drag {
+16140:                 cursor: grab;
+16141:                 touch-action: none;
+16142:                 -webkit-user-select: none;
+16143:                 user-select: none;
+16144:             }
+16145: 
+16146:             #mission-finder-wrapper.mf2026-ios-safari .mf2026-drag:active {
+16147:                 cursor: grabbing;
+16148:             }
+16149: 
+16150:             #mission-finder-wrapper.mf2026-ios-safari .mf-control-body,
+16151:             #mission-finder-wrapper.mf2026-ios-safari .mf-load-body,
+16152:             #mission-finder-wrapper.mf2026-ios-safari .mf-trained-body,
+16153:             #mission-finder-wrapper.mf2026-ios-safari #vehicle-load-list-content,
+16154:             #mission-finder-wrapper.mf2026-ios-safari #trained-personnel-content,
+16155:             #mission-finder-wrapper.mf2026-ios-safari #session-panel-content {
+16156:                 -webkit-overflow-scrolling: touch;
+16157:             }
+16158: 
+16159:             #mission-finder-wrapper.mf2026-ios-safari .mf2026-button {
+16160:                 min-height: 42px;
+16161:                 font-size: 14px;
+16162:                 touch-action: manipulation;
+16163:             }
+16164: 
+16165:             #mission-finder-wrapper.mf2026-ios-safari input,
+16166:             #mission-finder-wrapper.mf2026-ios-safari select {
+16167:                 min-height: 38px;
+16168:                 font-size: 16px;
+16169:             }
+16170: 
+16171:             #mission-finder-wrapper.mf2026-ios-safari #mf-control-position-box,
+16172:             #mission-finder-wrapper.mf2026-ios-safari #mf-control-centre {
+16173:                 display: none;
+
+## occurrence 3 at line 16336
+16308:             }
+16309: 
+16310:             #mission-finder-wrapper.mf2026-iphone-safari
+16311:             .mf-iphone-launcher-button {
+16312:                 min-width: 66px;
+16313:                 min-height: 34px;
+16314:                 padding: 6px 10px;
+16315:                 border: 0;
+16316:                 border-radius: 8px;
+16317:                 background: rgba(118, 118, 128, 0.28);
+16318:                 color: #f2f2f7;
+16319:                 font-size: 12px;
+16320:                 font-weight: 750;
+16321:                 line-height: 1;
+16322:                 white-space: nowrap;
+16323:                 touch-action: manipulation;
+16324:                 -webkit-tap-highlight-color: transparent;
+16325:             }
+16326: 
+16327:             #mission-finder-wrapper.mf2026-iphone-safari
+16328:             .mf-iphone-launcher-button.mf2026-active,
+16329:             #mission-finder-wrapper.mf2026-iphone-safari
+16330:             .mf-iphone-launcher-button[aria-pressed="true"] {
+16331:                 background: #0a84ff;
+16332:                 color: #fff;
+16333:                 box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+16334:             }
+16335: 
+16336:             #mission-finder-wrapper.mf2026-iphone-safari > .mf2026-panel {
+16337:                 position: absolute;
+16338:                 top: var(--mf-iphone-panel-top, 42px);
+16339:                 right: 0;
+16340:                 left: 0;
+16341:                 width: 100%;
+16342:                 max-width: 100%;
+16343:                 max-height: calc(
+16344:                     100vh
+16345:                     - var(--mf-iphone-panel-top, 42px)
+16346:                     - 8px
+16347:                     - env(safe-area-inset-bottom, 0px)
+16348:                 );
+16349:                 pointer-events: auto;
+16350:                 overflow-y: auto;
+16351:                 overscroll-behavior: contain;
+16352:                 -webkit-overflow-scrolling: touch;
+16353:             }
+16354: 
+16355:             @supports (height: 100dvh) {
+16356:                 #mission-finder-wrapper.mf2026-iphone-safari > .mf2026-panel {
+16357:                     max-height: calc(
+16358:                         100dvh
+16359:                         - var(--mf-iphone-panel-top, 42px)
+16360:                         - 8px
+16361:                         - env(safe-area-inset-bottom, 0px)
+16362:                     );
+16363:                 }
+16364:             }
+16365: 
+16366:             #mission-finder-wrapper.mf2026-iphone-safari
+16367:             #trained-personnel-box {
+16368:                 display: none !important;
+16369:             }
+16370: 
+16371:             #mission-finder-wrapper.mf2026-iphone-safari
+16372:             #control-panel.mf2026-control-collapsed,
+16373:             #mission-finder-wrapper.mf2026-iphone-safari
+16374:             #vehicle-load-list-box.mf2026-load-collapsed {
+16375:                 display: none !important;
+16376:             }
+16377: 
+16378:             #mission-finder-wrapper.mf2026-iphone-safari
+16379:             .mf2026-control-header-row,
+16380:             #mission-finder-wrapper.mf2026-iphone-safari
+16381:             .mf2026-load-header-row {
+16382:                 display: none !important;
+16383:             }
+16384: 
+16385:             #mission-finder-wrapper.mf2026-iphone-safari .mf2026-panel {
+16386:                 padding: 5px;
+16387:                 gap: 4px;
+
+## occurrence 4 at line 16356
+16328:             .mf-iphone-launcher-button.mf2026-active,
+16329:             #mission-finder-wrapper.mf2026-iphone-safari
+16330:             .mf-iphone-launcher-button[aria-pressed="true"] {
+16331:                 background: #0a84ff;
+16332:                 color: #fff;
+16333:                 box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+16334:             }
+16335: 
+16336:             #mission-finder-wrapper.mf2026-iphone-safari > .mf2026-panel {
+16337:                 position: absolute;
+16338:                 top: var(--mf-iphone-panel-top, 42px);
+16339:                 right: 0;
+16340:                 left: 0;
+16341:                 width: 100%;
+16342:                 max-width: 100%;
+16343:                 max-height: calc(
+16344:                     100vh
+16345:                     - var(--mf-iphone-panel-top, 42px)
+16346:                     - 8px
+16347:                     - env(safe-area-inset-bottom, 0px)
+16348:                 );
+16349:                 pointer-events: auto;
+16350:                 overflow-y: auto;
+16351:                 overscroll-behavior: contain;
+16352:                 -webkit-overflow-scrolling: touch;
+16353:             }
+16354: 
+16355:             @supports (height: 100dvh) {
+16356:                 #mission-finder-wrapper.mf2026-iphone-safari > .mf2026-panel {
+16357:                     max-height: calc(
+16358:                         100dvh
+16359:                         - var(--mf-iphone-panel-top, 42px)
+16360:                         - 8px
+16361:                         - env(safe-area-inset-bottom, 0px)
+16362:                     );
+16363:                 }
+16364:             }
+16365: 
+16366:             #mission-finder-wrapper.mf2026-iphone-safari
+16367:             #trained-personnel-box {
+16368:                 display: none !important;
+16369:             }
+16370: 
+16371:             #mission-finder-wrapper.mf2026-iphone-safari
+16372:             #control-panel.mf2026-control-collapsed,
+16373:             #mission-finder-wrapper.mf2026-iphone-safari
+16374:             #vehicle-load-list-box.mf2026-load-collapsed {
+16375:                 display: none !important;
+16376:             }
+16377: 
+16378:             #mission-finder-wrapper.mf2026-iphone-safari
+16379:             .mf2026-control-header-row,
+16380:             #mission-finder-wrapper.mf2026-iphone-safari
+16381:             .mf2026-load-header-row {
+16382:                 display: none !important;
+16383:             }
+16384: 
+16385:             #mission-finder-wrapper.mf2026-iphone-safari .mf2026-panel {
+16386:                 padding: 5px;
+16387:                 gap: 4px;
+16388:                 border: 1px solid rgba(255, 255, 255, 0.24);
+16389:                 border-radius: 14px;
+16390:                 background: rgba(28, 28, 30, 0.96);
+16391:                 box-shadow: 0 8px 24px rgba(0, 0, 0, 0.36);
+16392:                 -webkit-backdrop-filter: blur(16px) saturate(135%);
+16393:                 backdrop-filter: blur(16px) saturate(135%);
+16394:             }
+16395: 
+16396:             #mission-finder-wrapper.mf2026-iphone-safari .mf-control-body {
+16397:                 display: flex;
+16398:                 flex-direction: column;
+16399:                 gap: 5px;
+16400:             }
+16401: 
+16402:             #mission-finder-wrapper.mf2026-iphone-safari #status-box {
+16403:                 min-height: 0;
+16404:                 max-height: 54px;
+16405:                 overflow-y: auto;
+16406:                 padding: 7px 9px;
+16407:                 border-radius: 10px;
+
+## occurrence 5 at line 16385
+16357:                     max-height: calc(
+16358:                         100dvh
+16359:                         - var(--mf-iphone-panel-top, 42px)
+16360:                         - 8px
+16361:                         - env(safe-area-inset-bottom, 0px)
+16362:                     );
+16363:                 }
+16364:             }
+16365: 
+16366:             #mission-finder-wrapper.mf2026-iphone-safari
+16367:             #trained-personnel-box {
+16368:                 display: none !important;
+16369:             }
+16370: 
+16371:             #mission-finder-wrapper.mf2026-iphone-safari
+16372:             #control-panel.mf2026-control-collapsed,
+16373:             #mission-finder-wrapper.mf2026-iphone-safari
+16374:             #vehicle-load-list-box.mf2026-load-collapsed {
+16375:                 display: none !important;
+16376:             }
+16377: 
+16378:             #mission-finder-wrapper.mf2026-iphone-safari
+16379:             .mf2026-control-header-row,
+16380:             #mission-finder-wrapper.mf2026-iphone-safari
+16381:             .mf2026-load-header-row {
+16382:                 display: none !important;
+16383:             }
+16384: 
+16385:             #mission-finder-wrapper.mf2026-iphone-safari .mf2026-panel {
+16386:                 padding: 5px;
+16387:                 gap: 4px;
+16388:                 border: 1px solid rgba(255, 255, 255, 0.24);
+16389:                 border-radius: 14px;
+16390:                 background: rgba(28, 28, 30, 0.96);
+16391:                 box-shadow: 0 8px 24px rgba(0, 0, 0, 0.36);
+16392:                 -webkit-backdrop-filter: blur(16px) saturate(135%);
+16393:                 backdrop-filter: blur(16px) saturate(135%);
+16394:             }
+16395: 
+16396:             #mission-finder-wrapper.mf2026-iphone-safari .mf-control-body {
+16397:                 display: flex;
+16398:                 flex-direction: column;
+16399:                 gap: 5px;
+16400:             }
+16401: 
+16402:             #mission-finder-wrapper.mf2026-iphone-safari #status-box {
+16403:                 min-height: 0;
+16404:                 max-height: 54px;
+16405:                 overflow-y: auto;
+16406:                 padding: 7px 9px;
+16407:                 border-radius: 10px;
+16408:                 font-size: 12px;
+16409:                 line-height: 1.25;
+16410:                 background: rgba(118, 118, 128, 0.20);
+16411:             }
+16412: 
+16413:             #mission-finder-wrapper.mf2026-iphone-safari
+16414:             #mf-iphone-advanced-toggle {
+16415:                 display: flex;
+16416:                 align-items: center;
+16417:                 justify-content: space-between;
+16418:                 width: 100%;
+16419:                 min-height: 34px;
+16420:                 padding: 6px 10px;
+16421:                 border: 0;
+16422:                 border-radius: 10px;
+16423:                 background: rgba(118, 118, 128, 0.24);
+16424:                 color: #f2f2f7;
+16425:                 font-size: 12px;
+16426:                 font-weight: 700;
+16427:                 touch-action: manipulation;
+16428:             }
+16429: 
+16430:             #mission-finder-wrapper.mf2026-iphone-safari
+16431:             .mf-control-advanced {
+16432:                 display: none;
+16433:                 gap: 5px;
+16434:             }
+16435: 
+16436:             #mission-finder-wrapper.mf2026-iphone-safari
+
+## occurrence 6 at line 16556
+16528:                 grid-template-areas:
+16529:                     "rail control load trained"
+16530:                     "footer footer footer footer";
+16531:                 align-items: stretch;
+16532:                 gap: 10px;
+16533:                 width: min(1360px, calc(100vw - 32px));
+16534:                 max-width: calc(100vw - 32px);
+16535:                 max-height: calc(100vh - 32px);
+16536:                 padding: 10px;
+16537:                 overflow: auto;
+16538:                 box-sizing: border-box;
+16539:                 border: 1px solid rgba(82, 155, 255, 0.24);
+16540:                 border-radius: 14px;
+16541:                 background:
+16542:                     radial-gradient(circle at 8% 0%, rgba(20, 92, 170, 0.18), transparent 34%),
+16543:                     linear-gradient(145deg, rgba(5, 16, 29, 0.98), rgba(4, 21, 38, 0.98));
+16544:                 box-shadow: 0 18px 55px rgba(0, 0, 0, 0.55);
+16545:                 color: #eaf2ff;
+16546:             }
+16547: 
+16548:             #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari) {
+16549:                 grid-template-columns: 66px minmax(250px, 285px) repeat(3, minmax(225px, 1fr));
+16550:                 grid-template-areas:
+16551:                     "rail utility control load trained"
+16552:                     "footer footer footer footer footer";
+16553:                 width: min(1580px, calc(100vw - 32px));
+16554:             }
+16555: 
+16556:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-panel {
+16557:                 width: auto;
+16558:                 min-width: 0;
+16559:                 max-height: calc(100vh - 96px);
+16560:                 padding: 0;
+16561:                 gap: 0;
+16562:                 overflow: hidden;
+16563:                 border: 1px solid rgba(126, 167, 218, 0.18);
+16564:                 border-radius: 12px;
+16565:                 background: linear-gradient(155deg, rgba(18, 32, 48, 0.97), rgba(7, 23, 39, 0.97));
+16566:                 box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035), 0 10px 30px rgba(0, 0, 0, 0.24);
+16567:                 font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+16568:             }
+16569: 
+16570:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #control-panel { grid-area: control; }
+16571:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #vehicle-load-list-box { grid-area: load; }
+16572:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #trained-personnel-box { grid-area: trained; }
+16573: 
+16574:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-control-header-row,
+16575:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-load-header-row,
+16576:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-trained-header-row {
+16577:                 min-height: 48px;
+16578:                 padding: 8px 10px;
+16579:                 border-bottom: 1px solid rgba(126, 167, 218, 0.14);
+16580:                 background: rgba(9, 23, 38, 0.72);
+16581:                 box-sizing: border-box;
+16582:             }
+16583: 
+16584:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-header {
+16585:                 display: flex;
+16586:                 align-items: center;
+16587:                 gap: 8px;
+16588:                 padding: 0;
+16589:                 text-align: left;
+16590:                 text-transform: uppercase;
+16591:                 letter-spacing: 0.035em;
+16592:                 background: transparent;
+16593:                 color: #f4f8ff;
+16594:                 font-size: 13px;
+16595:                 font-weight: 800;
+16596:             }
+16597: 
+16598:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mf-control-title::before {
+16599:                 content: "◎";
+16600:                 display: grid;
+16601:                 place-items: center;
+16602:                 width: 28px;
+16603:                 height: 28px;
+16604:                 border-radius: 8px;
+16605:                 background: linear-gradient(145deg, #0d6efd, #063f91);
+16606:                 color: white;
+16607:                 box-shadow: 0 0 16px rgba(13, 110, 253, 0.36);
+
+## occurrence 7 at line 16955
+16927:         );
+16928: 
+16929:         const savedPanelLeft =
+16930:             localStorage.getItem(MF_PANEL_LEFT_KEY);
+16931: 
+16932:         const savedPanelTop =
+16933:             localStorage.getItem(MF_PANEL_TOP_KEY);
+16934: 
+16935:         if (!missionFinderIosSafari) {
+16936:             wrapper.style.left =
+16937:                 mfKeepPanelPosition && savedPanelLeft
+16938:                     ? savedPanelLeft
+16939:                     : '20px';
+16940: 
+16941:             wrapper.style.top =
+16942:                 mfKeepPanelPosition && savedPanelTop
+16943:                     ? savedPanelTop
+16944:                     : '20px';
+16945:         }
+16946: 
+16947:         wrapper.style.visibility = 'hidden';
+16948: 
+16949:         // Remove coordinates used by the older panel-position versions.
+16950:         localStorage.removeItem('panel-left');
+16951:         localStorage.removeItem('panel-top');
+16952: 
+16953:         const panel = document.createElement('div');
+16954:         panel.id = 'control-panel';
+16955:         panel.className = `mf2026-panel ${mfMissionControlCollapsed ? 'mf2026-control-collapsed' : ''}`;
+16956: 
+16957:         const controlHeaderRow = document.createElement('div');
+16958:         controlHeaderRow.className = 'mf2026-control-header-row';
+16959: 
+16960:         const dragHandle = document.createElement('div');
+16961:         dragHandle.id = 'mf-control-title';
+16962:         dragHandle.textContent = 'Mission Control';
+16963:         dragHandle.className = 'mf2026-header mf2026-drag';
+16964: 
+16965:         const controlCentreBtn = document.createElement('button');
+16966:         controlCentreBtn.id = 'mf-control-centre';
+16967:         controlCentreBtn.className = 'mf2026-button';
+16968:         controlCentreBtn.title = 'Move Mission Control back to the centre';
+16969:         controlCentreBtn.textContent = '◎';
+16970: 
+16971:         const controlMinimizeBtn = document.createElement('button');
+16972:         controlMinimizeBtn.id = 'mf-control-minimize';
+16973:         controlMinimizeBtn.className = 'mf2026-button';
+16974:         controlMinimizeBtn.type = 'button';
+16975: 
+16976:         controlHeaderRow.appendChild(dragHandle);
+16977:         controlHeaderRow.appendChild(controlCentreBtn);
+16978:         controlHeaderRow.appendChild(controlMinimizeBtn);
+16979:         panel.appendChild(controlHeaderRow);
+16980: 
+16981:         const controlBody = document.createElement('div');
+16982:         controlBody.className = 'mf-control-body';
+16983:         controlBody.id = 'mf-control-body';
+16984: 
+16985:         const dashboardRail = document.createElement('nav');
+16986:         dashboardRail.id = 'mf-dashboard-rail';
+16987:         dashboardRail.setAttribute('aria-label', 'MissionChief Nexus dashboard');
+16988:         dashboardRail.innerHTML = `
+16989:             <button type="button" class="mf-dashboard-tab mf-dashboard-tab-active" data-mf-dashboard-tab="mission" aria-pressed="true">
+16990:                 <span class="mf-dashboard-tab-icon">◎</span>
+16991:                 <span>Mission</span>
+16992:             </button>
+16993:             <button type="button" class="mf-dashboard-tab" data-mf-dashboard-tab="settings" aria-pressed="false">
+16994:                 <span class="mf-dashboard-tab-icon">⚙</span>
+16995:                 <span>Settings</span>
+16996:             </button>
+16997:             <button type="button" class="mf-dashboard-tab" data-mf-dashboard-tab="diagnostics" aria-pressed="false">
+16998:                 <span class="mf-dashboard-tab-icon">⌁</span>
+16999:                 <span>Diagnostics</span>
+17000:             </button>
+17001:         `;
+17002: 
+17003:         const dashboardUtility = document.createElement('aside');
+17004:         dashboardUtility.id = 'mf-dashboard-utility';
+17005:         dashboardUtility.hidden = true;
+17006:         dashboardUtility.innerHTML = `
+
+## occurrence 8 at line 17622
+17594:                 consumeIphoneDisclosureEvent(event);
+17595:                 toggleMissionControlCollapsed();
+17596:                 return;
+17597:             }
+17598: 
+17599:             if (mfMissionControlCollapsed) {
+17600:                 toggleMissionControlCollapsed();
+17601:             }
+17602:         });
+17603: 
+17604:         if (missionFinderIphoneSafari) {
+17605:             dragHandle.setAttribute('role', 'button');
+17606:             dragHandle.tabIndex = 0;
+17607:             dragHandle.addEventListener('keydown', function(event) {
+17608:                 if (
+17609:                     event.key !== 'Enter' &&
+17610:                     event.key !== ' '
+17611:                 ) {
+17612:                     return;
+17613:                 }
+17614: 
+17615:                 consumeIphoneDisclosureEvent(event);
+17616:                 toggleMissionControlCollapsed();
+17617:             });
+17618:         }
+17619: 
+17620:         const loadPanel = document.createElement('div');
+17621:         loadPanel.id = 'vehicle-load-list-box';
+17622:         loadPanel.className = `mf2026-panel ${mfVehicleLoadCollapsed ? 'mf2026-load-collapsed' : ''}`;
+17623: 
+17624:         loadPanel.innerHTML = `
+17625:             <div class="mf2026-load-header-row">
+17626:                 <div id="mf-load-title" class="mf2026-header">Vehicle Load List</div>
+17627:                 <button id="mf-load-minimize" type="button" class="mf2026-button" title="Minimize / expand vehicle load list">${missionFinderIphoneSafari ? (mfVehicleLoadCollapsed ? '▾' : '▴') : (mfVehicleLoadCollapsed ? '+' : '−')}</button>
+17628:             </div>
+17629: 
+17630:             <div id="mf-load-body" class="mf-load-body">
+17631:                 <div class="mf2026-box">
+17632:                     <div class="mf2026-section-title">Progress</div>
+17633:                     <div id="vehicle-load-summary" class="mf2026-small">No mission loaded</div>
+17634:                     <div class="mf2026-progress-wrap" style="margin-top:6px;">
+17635:                         <div id="vehicle-load-progress" class="mf2026-progress-bar"></div>
+17636:                     </div>
+17637:                 </div>
+17638: 
+17639:                 <div class="mf2026-box">
+17640:                     <div class="mf2026-section-title">Required Vehicles <span class="mf2026-small">(selected / required)</span></div>
+17641:                     <div id="vehicle-load-list-content" class="mf2026-small">
+17642:                         Click Unit Finder to load vehicles.
+17643:                     </div>
+17644:                 </div>
+17645: 
+17646:                 <div class="mf2026-box">
+17647:                     <div class="mf2026-section-title">Patients</div>
+17648:                     <div id="vehicle-patient-content" class="mf2026-small">
+17649:                         No patients checked yet.
+17650:                     </div>
+17651:                 </div>
+17652: 
+17653:                 <div class="mf2026-box">
+17654:                     <div class="mf2026-section-title">Session</div>
+17655:                     <div id="session-panel-content" class="mf2026-small">
+17656:                         No session data yet.
+17657:                     </div>
+17658:                 </div>
+17659:             </div>
+17660:         `;
+17661: 
+17662:         const trainedPanel = document.createElement('div');
+17663:         trainedPanel.id = 'trained-personnel-box';
+17664:         trainedPanel.className = `mf2026-panel ${mfTrainedPersonnelCollapsed ? 'mf2026-trained-collapsed' : ''}`;
+17665:         trainedPanel.innerHTML = `
+17666:             <div class="mf2026-trained-header-row">
+17667:                 <div id="mf-trained-title" class="mf2026-header">Trained Personnel</div>
+17668:                 <button id="mf-trained-minimize" type="button" class="mf2026-button" title="Minimize / expand trained personnel">${mfTrainedPersonnelCollapsed ? '+' : '−'}</button>
+17669:             </div>
+17670: 
+17671:             <div id="mf-trained-body" class="mf-trained-body">
+17672:                 <div class="mf2026-box">
+17673:                     <div class="mf2026-section-title">Selected Training Coverage</div>
+
+## occurrence 9 at line 17664
+17636:                     </div>
+17637:                 </div>
+17638: 
+17639:                 <div class="mf2026-box">
+17640:                     <div class="mf2026-section-title">Required Vehicles <span class="mf2026-small">(selected / required)</span></div>
+17641:                     <div id="vehicle-load-list-content" class="mf2026-small">
+17642:                         Click Unit Finder to load vehicles.
+17643:                     </div>
+17644:                 </div>
+17645: 
+17646:                 <div class="mf2026-box">
+17647:                     <div class="mf2026-section-title">Patients</div>
+17648:                     <div id="vehicle-patient-content" class="mf2026-small">
+17649:                         No patients checked yet.
+17650:                     </div>
+17651:                 </div>
+17652: 
+17653:                 <div class="mf2026-box">
+17654:                     <div class="mf2026-section-title">Session</div>
+17655:                     <div id="session-panel-content" class="mf2026-small">
+17656:                         No session data yet.
+17657:                     </div>
+17658:                 </div>
+17659:             </div>
+17660:         `;
+17661: 
+17662:         const trainedPanel = document.createElement('div');
+17663:         trainedPanel.id = 'trained-personnel-box';
+17664:         trainedPanel.className = `mf2026-panel ${mfTrainedPersonnelCollapsed ? 'mf2026-trained-collapsed' : ''}`;
+17665:         trainedPanel.innerHTML = `
+17666:             <div class="mf2026-trained-header-row">
+17667:                 <div id="mf-trained-title" class="mf2026-header">Trained Personnel</div>
+17668:                 <button id="mf-trained-minimize" type="button" class="mf2026-button" title="Minimize / expand trained personnel">${mfTrainedPersonnelCollapsed ? '+' : '−'}</button>
+17669:             </div>
+17670: 
+17671:             <div id="mf-trained-body" class="mf-trained-body">
+17672:                 <div class="mf2026-box">
+17673:                     <div class="mf2026-section-title">Selected Training Coverage</div>
+17674:                     <div id="trained-personnel-summary" class="mf2026-small">
+17675:                         No selected trained personnel yet.
+17676:                     </div>
+17677:                 </div>
+17678: 
+17679:                 <div class="mf2026-box">
+17680:                     <div class="mf2026-section-title">Personnel and Courses</div>
+17681:                     <div id="trained-personnel-content" class="mf2026-small">
+17682:                         Selected trained personnel will appear here.
+17683:                     </div>
+17684:                 </div>
+17685:             </div>
+17686:         `;
+17687: 
+17688:         const dashboardFooter = document.createElement('footer');
+17689:         dashboardFooter.id = 'mf-dashboard-footer';
+17690:         const dashboardVersion =
+17691:             typeof GM_info !== 'undefined' &&
+17692:             GM_info?.script?.version
+17693:                 ? GM_info.script.version
+17694:                 : '1.0.69';
+17695:         dashboardFooter.textContent =
+17696:             `MissionChief Nexus V${dashboardVersion} · MIT · Martblyth`;
+17697: 
+17698:         if (missionFinderIphoneSafari) {
+17699:             wrapper.appendChild(iphoneLauncher);
+17700:         } else {
+17701:             wrapper.appendChild(dashboardRail);
+17702:             wrapper.appendChild(dashboardUtility);
+17703:             wrapper.appendChild(dashboardFooter);
+17704:             setMissionDashboardTab(
+17705:                 localStorage.getItem(
+17706:                     'mf_nexus_dashboard_tab_v1'
+17707:                 ) || 'mission'
+17708:             );
+17709:         }
+17710:         wrapper.appendChild(panel);
+17711:         wrapper.appendChild(loadPanel);
+17712:         wrapper.appendChild(trainedPanel);
+17713:         document.body.appendChild(wrapper);
+17714: 
+17715:         scheduleMissionRequiredPersonnelPreload(0);
+
+# control-panel — 14 matches
+
+## occurrence 1 at line 11240
+11212:             visibleButtons: getRecorderVisibleButtons(),
+11213:             debugTail: (mfDebugRows || []).slice(0, 60)
+11214:         };
+11215:     }
+11216: 
+11217:     // V10.6.52: Issue Recorder removed. These no-op stubs preserve compatibility
+11218:     // with existing safety/error paths without installing observers or listeners.
+11219:     function recordIssueEvent() {}
+11220:     function renderRecorderStatus() {}
+11221:     function setIssueRecorderEnabled() {}
+11222:     function clearIssueRecorder() {}
+11223:     async function copyIssueRecorder() {}
+11224:     function captureIssueNow() {}
+11225:     function scanIssueRecorderDangerAlerts() {}
+11226:     function syncIssueRecorderMutationObserver() {}
+11227:     function installIssueRecorderWatchers() {
+11228:         window.mfIssueRecorderInstalled = true;
+11229:     }
+11230: 
+11231:     function cleanupDuplicatePanels() {
+11232:         const wrappers = document.querySelectorAll('#mission-finder-wrapper');
+11233: 
+11234:         wrappers.forEach((wrapper, index) => {
+11235:             if (index > 0) {
+11236:                 wrapper.remove();
+11237:             }
+11238:         });
+11239: 
+11240:         document.querySelectorAll('#control-panel').forEach(panel => {
+11241:             if (!panel.closest('#mission-finder-wrapper')) {
+11242:                 panel.remove();
+11243:             }
+11244:         });
+11245:     }
+11246: 
+11247:     const crossReference = {
+11248:         /*************************************************
+11249:          * FIRE
+11250:          *************************************************/
+11251:         "Pumps": "Fire Engine R/PUMP x 1",
+11252:         "Pump": "Fire Engine R/PUMP x 1",
+11253:         "Fire engine": "Fire Engine R/PUMP x 1",
+11254:         "Fire engines": "Fire Engine R/PUMP x 1",
+11255:         "Fire Engine": "Fire Engine R/PUMP x 1",
+11256:         "Fire Engines": "Fire Engine R/PUMP x 1",
+11257:         "Aerial Appliance": "CARP",
+11258:         "Aerial Appliances": "CARP",
+11259:         "Aerial Appliance Truck": "CARP",
+11260:         "Aerial Appliance Trucks": "CARP",
+11261:         "Fire, rescue or aerial appliance": "Rescue Pump",
+11262:         "Road Rail Unit": "Road Rail Unit",
+11263:         "Road Rail Units": "Road Rail Unit",
+11264:         "Firefighter": "Rescue Pump",
+11265:         "Firefighters": "Rescue Pump",
+11266:         "Required Firefighter": "Rescue Pump",
+11267:         "Required Firefighters": "Rescue Pump",
+11268:         "Car Recovery": "Flatbed Recovery Vehicle",
+11269:         "Required Car Recovery": "Flatbed Recovery Vehicle",
+11270:         "ICCU or Ambulance Control Unit": "ICCU/ACU",
+11271:         "ICCU or Ambulance Control Units": "ICCU/ACU",
+11272:         "ICCUs or Ambulance Control Units": "ICCU/ACU",
+11273:         "Fire Officer": "Fire Officer",
+11274:         "Fire Officers": "Fire Officer",
+11275:         "Rescue Support Unit": "Fire Engine R/PUMP x 1",
+11276:         "Rescue Support Units": "Fire Engine R/PUMP x 1",
+11277:         "Rescue Support Vehicle": "Fire Engine R/PUMP x 1",
+11278:         "Rescue Support Vehicles": "Fire Engine R/PUMP x 1",
+11279:         "Rescue Support Unit or Rescue Pump": "Fire Engine R/PUMP x 1",
+11280:         "Rescue Support Units or Rescue Pumps": "Fire Engine R/PUMP x 1",
+11281:         "Fire Engines or Rescue Support Vehicles": "Fire Engine R/PUMP x 1",
+11282:         "Fire Engines, Rescue Support Vehicles or Aerial Appliance Trucks": "Fire Engine R/PUMP x 1",
+11283:         "Foam Unit": "RP CAFS",
+11284:         "Foam Units": "RP CAFS",
+11285:         "Water Carrier": "Water Carrier",
+11286:         "Water Carriers": "Water Carrier",
+11287:         "Welfare Vehicles x1": "Welfare Vehicle",
+11288: 
+11289:         /*************************************************
+11290:          * POLICE
+11291:          *************************************************/
+
+## occurrence 2 at line 15931
+15903:                 color: white;
+15904:             }
+15905: 
+15906:             .mf2026-log-row {
+15907:                 display: grid;
+15908:                 grid-template-columns: 1fr auto;
+15909:                 gap: 8px;
+15910:                 padding: 4px 0;
+15911:                 border-bottom: 1px solid rgba(255,255,255,0.08);
+15912:                 font-size: 12px;
+15913:             }
+15914: 
+15915:             .mf2026-log-row:last-child {
+15916:                 border-bottom: none;
+15917:             }
+15918: 
+15919:             .mf2026-log-main {
+15920:                 overflow: hidden;
+15921:                 text-overflow: ellipsis;
+15922:                 white-space: nowrap;
+15923:             }
+15924: 
+15925:             .mf2026-log-value {
+15926:                 white-space: nowrap;
+15927:                 font-weight: bold;
+15928:             }
+15929: 
+15930: 
+15931:             #control-panel {
+15932:                 width: 260px;
+15933:             }
+15934: 
+15935:             #vehicle-load-list-box {
+15936:                 width: 300px;
+15937:             }
+15938: 
+15939: 
+15940:             #trained-personnel-box {
+15941:                 width: 300px;
+15942:             }
+15943: 
+15944:             #control-panel.mf2026-control-collapsed {
+15945:                 width: 44px;
+15946:                 min-height: 0;
+15947:                 padding: 6px;
+15948:                 overflow: hidden;
+15949:             }
+15950: 
+15951:             #control-panel.mf2026-control-collapsed .mf-control-body {
+15952:                 display: none;
+15953:             }
+15954: 
+15955:             #control-panel.mf2026-control-collapsed .mf2026-header {
+15956:                 writing-mode: vertical-rl;
+15957:                 text-orientation: mixed;
+15958:                 min-height: 120px;
+15959:                 padding: 8px 4px;
+15960:                 cursor: pointer;
+15961:             }
+15962: 
+15963:             .mf2026-control-header-row {
+15964:                 display: flex;
+15965:                 gap: 6px;
+15966:                 align-items: center;
+15967:             }
+15968: 
+15969:             .mf2026-control-header-row .mf2026-header {
+15970:                 flex: 1;
+15971:             }
+15972: 
+15973:             #mf-control-centre,
+15974:             #mf-control-minimize {
+15975:                 width: 34px;
+15976:                 padding: 6px 0;
+15977:                 background: #6c757d;
+15978:                 color: white;
+15979:                 flex: 0 0 34px;
+15980:             }
+15981: 
+15982:             #mf-control-centre {
+
+## occurrence 3 at line 15944
+15916:                 border-bottom: none;
+15917:             }
+15918: 
+15919:             .mf2026-log-main {
+15920:                 overflow: hidden;
+15921:                 text-overflow: ellipsis;
+15922:                 white-space: nowrap;
+15923:             }
+15924: 
+15925:             .mf2026-log-value {
+15926:                 white-space: nowrap;
+15927:                 font-weight: bold;
+15928:             }
+15929: 
+15930: 
+15931:             #control-panel {
+15932:                 width: 260px;
+15933:             }
+15934: 
+15935:             #vehicle-load-list-box {
+15936:                 width: 300px;
+15937:             }
+15938: 
+15939: 
+15940:             #trained-personnel-box {
+15941:                 width: 300px;
+15942:             }
+15943: 
+15944:             #control-panel.mf2026-control-collapsed {
+15945:                 width: 44px;
+15946:                 min-height: 0;
+15947:                 padding: 6px;
+15948:                 overflow: hidden;
+15949:             }
+15950: 
+15951:             #control-panel.mf2026-control-collapsed .mf-control-body {
+15952:                 display: none;
+15953:             }
+15954: 
+15955:             #control-panel.mf2026-control-collapsed .mf2026-header {
+15956:                 writing-mode: vertical-rl;
+15957:                 text-orientation: mixed;
+15958:                 min-height: 120px;
+15959:                 padding: 8px 4px;
+15960:                 cursor: pointer;
+15961:             }
+15962: 
+15963:             .mf2026-control-header-row {
+15964:                 display: flex;
+15965:                 gap: 6px;
+15966:                 align-items: center;
+15967:             }
+15968: 
+15969:             .mf2026-control-header-row .mf2026-header {
+15970:                 flex: 1;
+15971:             }
+15972: 
+15973:             #mf-control-centre,
+15974:             #mf-control-minimize {
+15975:                 width: 34px;
+15976:                 padding: 6px 0;
+15977:                 background: #6c757d;
+15978:                 color: white;
+15979:                 flex: 0 0 34px;
+15980:             }
+15981: 
+15982:             #mf-control-centre {
+15983:                 background: #0d6efd;
+15984:             }
+15985: 
+15986: 
+15987:             #vehicle-load-list-box.mf2026-load-collapsed {
+15988:                 width: 44px;
+15989:                 min-height: 0;
+15990:                 padding: 6px;
+15991:                 overflow: hidden;
+15992:             }
+15993: 
+15994:             #vehicle-load-list-box.mf2026-load-collapsed .mf-load-body {
+15995:                 display: none;
+
+## occurrence 4 at line 15951
+15923:             }
+15924: 
+15925:             .mf2026-log-value {
+15926:                 white-space: nowrap;
+15927:                 font-weight: bold;
+15928:             }
+15929: 
+15930: 
+15931:             #control-panel {
+15932:                 width: 260px;
+15933:             }
+15934: 
+15935:             #vehicle-load-list-box {
+15936:                 width: 300px;
+15937:             }
+15938: 
+15939: 
+15940:             #trained-personnel-box {
+15941:                 width: 300px;
+15942:             }
+15943: 
+15944:             #control-panel.mf2026-control-collapsed {
+15945:                 width: 44px;
+15946:                 min-height: 0;
+15947:                 padding: 6px;
+15948:                 overflow: hidden;
+15949:             }
+15950: 
+15951:             #control-panel.mf2026-control-collapsed .mf-control-body {
+15952:                 display: none;
+15953:             }
+15954: 
+15955:             #control-panel.mf2026-control-collapsed .mf2026-header {
+15956:                 writing-mode: vertical-rl;
+15957:                 text-orientation: mixed;
+15958:                 min-height: 120px;
+15959:                 padding: 8px 4px;
+15960:                 cursor: pointer;
+15961:             }
+15962: 
+15963:             .mf2026-control-header-row {
+15964:                 display: flex;
+15965:                 gap: 6px;
+15966:                 align-items: center;
+15967:             }
+15968: 
+15969:             .mf2026-control-header-row .mf2026-header {
+15970:                 flex: 1;
+15971:             }
+15972: 
+15973:             #mf-control-centre,
+15974:             #mf-control-minimize {
+15975:                 width: 34px;
+15976:                 padding: 6px 0;
+15977:                 background: #6c757d;
+15978:                 color: white;
+15979:                 flex: 0 0 34px;
+15980:             }
+15981: 
+15982:             #mf-control-centre {
+15983:                 background: #0d6efd;
+15984:             }
+15985: 
+15986: 
+15987:             #vehicle-load-list-box.mf2026-load-collapsed {
+15988:                 width: 44px;
+15989:                 min-height: 0;
+15990:                 padding: 6px;
+15991:                 overflow: hidden;
+15992:             }
+15993: 
+15994:             #vehicle-load-list-box.mf2026-load-collapsed .mf-load-body {
+15995:                 display: none;
+15996:             }
+15997: 
+15998:             #vehicle-load-list-box.mf2026-load-collapsed .mf2026-header {
+15999:                 writing-mode: vertical-rl;
+16000:                 text-orientation: mixed;
+16001:                 min-height: 130px;
+16002:                 padding: 8px 4px;
+
+## occurrence 5 at line 15955
+15927:                 font-weight: bold;
+15928:             }
+15929: 
+15930: 
+15931:             #control-panel {
+15932:                 width: 260px;
+15933:             }
+15934: 
+15935:             #vehicle-load-list-box {
+15936:                 width: 300px;
+15937:             }
+15938: 
+15939: 
+15940:             #trained-personnel-box {
+15941:                 width: 300px;
+15942:             }
+15943: 
+15944:             #control-panel.mf2026-control-collapsed {
+15945:                 width: 44px;
+15946:                 min-height: 0;
+15947:                 padding: 6px;
+15948:                 overflow: hidden;
+15949:             }
+15950: 
+15951:             #control-panel.mf2026-control-collapsed .mf-control-body {
+15952:                 display: none;
+15953:             }
+15954: 
+15955:             #control-panel.mf2026-control-collapsed .mf2026-header {
+15956:                 writing-mode: vertical-rl;
+15957:                 text-orientation: mixed;
+15958:                 min-height: 120px;
+15959:                 padding: 8px 4px;
+15960:                 cursor: pointer;
+15961:             }
+15962: 
+15963:             .mf2026-control-header-row {
+15964:                 display: flex;
+15965:                 gap: 6px;
+15966:                 align-items: center;
+15967:             }
+15968: 
+15969:             .mf2026-control-header-row .mf2026-header {
+15970:                 flex: 1;
+15971:             }
+15972: 
+15973:             #mf-control-centre,
+15974:             #mf-control-minimize {
+15975:                 width: 34px;
+15976:                 padding: 6px 0;
+15977:                 background: #6c757d;
+15978:                 color: white;
+15979:                 flex: 0 0 34px;
+15980:             }
+15981: 
+15982:             #mf-control-centre {
+15983:                 background: #0d6efd;
+15984:             }
+15985: 
+15986: 
+15987:             #vehicle-load-list-box.mf2026-load-collapsed {
+15988:                 width: 44px;
+15989:                 min-height: 0;
+15990:                 padding: 6px;
+15991:                 overflow: hidden;
+15992:             }
+15993: 
+15994:             #vehicle-load-list-box.mf2026-load-collapsed .mf-load-body {
+15995:                 display: none;
+15996:             }
+15997: 
+15998:             #vehicle-load-list-box.mf2026-load-collapsed .mf2026-header {
+15999:                 writing-mode: vertical-rl;
+16000:                 text-orientation: mixed;
+16001:                 min-height: 130px;
+16002:                 padding: 8px 4px;
+16003:                 cursor: pointer;
+16004:             }
+16005: 
+16006:             .mf2026-load-header-row {
+
+## occurrence 6 at line 16123
+16095:                     - 16px
+16096:                     - env(safe-area-inset-top, 0px)
+16097:                     - env(safe-area-inset-bottom, 0px)
+16098:                 );
+16099:                 display: flex;
+16100:                 flex-direction: column;
+16101:                 align-items: stretch;
+16102:                 gap: 6px;
+16103:                 overflow-x: hidden;
+16104:                 overflow-y: auto;
+16105:                 overscroll-behavior: contain;
+16106:                 -webkit-overflow-scrolling: touch;
+16107:                 -webkit-transform: translateZ(0);
+16108:                 box-sizing: border-box;
+16109:             }
+16110: 
+16111:             @supports (height: 100dvh) {
+16112:                 #mission-finder-wrapper.mf2026-ios-safari {
+16113:                     max-height: calc(
+16114:                         100dvh
+16115:                         - 16px
+16116:                         - env(safe-area-inset-top, 0px)
+16117:                         - env(safe-area-inset-bottom, 0px)
+16118:                     );
+16119:                 }
+16120:             }
+16121: 
+16122:             #mission-finder-wrapper.mf2026-ios-safari .mf2026-panel,
+16123:             #mission-finder-wrapper.mf2026-ios-safari #control-panel,
+16124:             #mission-finder-wrapper.mf2026-ios-safari #vehicle-load-list-box,
+16125:             #mission-finder-wrapper.mf2026-ios-safari #trained-personnel-box {
+16126:                 width: 100%;
+16127:                 max-width: none;
+16128:                 flex: 0 0 auto;
+16129:             }
+16130: 
+16131:             #mission-finder-wrapper.mf2026-ios-safari .mf2026-header {
+16132:                 min-height: 42px;
+16133:                 display: flex;
+16134:                 align-items: center;
+16135:                 justify-content: center;
+16136:                 box-sizing: border-box;
+16137:             }
+16138: 
+16139:             #mission-finder-wrapper.mf2026-ios-safari .mf2026-drag {
+16140:                 cursor: grab;
+16141:                 touch-action: none;
+16142:                 -webkit-user-select: none;
+16143:                 user-select: none;
+16144:             }
+16145: 
+16146:             #mission-finder-wrapper.mf2026-ios-safari .mf2026-drag:active {
+16147:                 cursor: grabbing;
+16148:             }
+16149: 
+16150:             #mission-finder-wrapper.mf2026-ios-safari .mf-control-body,
+16151:             #mission-finder-wrapper.mf2026-ios-safari .mf-load-body,
+16152:             #mission-finder-wrapper.mf2026-ios-safari .mf-trained-body,
+16153:             #mission-finder-wrapper.mf2026-ios-safari #vehicle-load-list-content,
+16154:             #mission-finder-wrapper.mf2026-ios-safari #trained-personnel-content,
+16155:             #mission-finder-wrapper.mf2026-ios-safari #session-panel-content {
+16156:                 -webkit-overflow-scrolling: touch;
+16157:             }
+16158: 
+16159:             #mission-finder-wrapper.mf2026-ios-safari .mf2026-button {
+16160:                 min-height: 42px;
+16161:                 font-size: 14px;
+16162:                 touch-action: manipulation;
+16163:             }
+16164: 
+16165:             #mission-finder-wrapper.mf2026-ios-safari input,
+16166:             #mission-finder-wrapper.mf2026-ios-safari select {
+16167:                 min-height: 38px;
+16168:                 font-size: 16px;
+16169:             }
+16170: 
+16171:             #mission-finder-wrapper.mf2026-ios-safari #mf-control-position-box,
+16172:             #mission-finder-wrapper.mf2026-ios-safari #mf-control-centre {
+16173:                 display: none;
+16174:             }
+
+## occurrence 7 at line 16185
+16157:             }
+16158: 
+16159:             #mission-finder-wrapper.mf2026-ios-safari .mf2026-button {
+16160:                 min-height: 42px;
+16161:                 font-size: 14px;
+16162:                 touch-action: manipulation;
+16163:             }
+16164: 
+16165:             #mission-finder-wrapper.mf2026-ios-safari input,
+16166:             #mission-finder-wrapper.mf2026-ios-safari select {
+16167:                 min-height: 38px;
+16168:                 font-size: 16px;
+16169:             }
+16170: 
+16171:             #mission-finder-wrapper.mf2026-ios-safari #mf-control-position-box,
+16172:             #mission-finder-wrapper.mf2026-ios-safari #mf-control-centre {
+16173:                 display: none;
+16174:             }
+16175: 
+16176:             #mission-finder-wrapper.mf2026-ios-safari #mf-control-minimize {
+16177:                 width: 44px;
+16178:                 flex: 0 0 44px;
+16179:                 padding: 6px 0;
+16180:                 font-size: 20px;
+16181:                 line-height: 1;
+16182:             }
+16183: 
+16184:             #mission-finder-wrapper.mf2026-ios-safari
+16185:             #control-panel.mf2026-control-collapsed {
+16186:                 width: 100%;
+16187:                 min-height: 0;
+16188:                 padding: 6px;
+16189:                 overflow: hidden;
+16190:             }
+16191: 
+16192:             #mission-finder-wrapper.mf2026-ios-safari
+16193:             #control-panel.mf2026-control-collapsed
+16194:             .mf2026-control-header-row {
+16195:                 width: 100%;
+16196:             }
+16197: 
+16198:             #mission-finder-wrapper.mf2026-ios-safari
+16199:             #control-panel.mf2026-control-collapsed
+16200:             .mf2026-header {
+16201:                 writing-mode: horizontal-tb;
+16202:                 text-orientation: mixed;
+16203:                 min-height: 42px;
+16204:                 padding: 8px 10px;
+16205:                 justify-content: flex-start;
+16206:                 text-align: left;
+16207:             }
+16208: 
+16209:             #mission-finder-wrapper.mf2026-ios-safari
+16210:             #vehicle-load-list-box.mf2026-load-collapsed {
+16211:                 width: 100%;
+16212:                 min-height: 0;
+16213:                 padding: 6px;
+16214:                 overflow: hidden;
+16215:             }
+16216: 
+16217:             #mission-finder-wrapper.mf2026-ios-safari
+16218:             #vehicle-load-list-box.mf2026-load-collapsed
+16219:             .mf2026-header {
+16220:                 writing-mode: horizontal-tb;
+16221:                 text-orientation: mixed;
+16222:                 min-height: 42px;
+16223:                 padding: 8px 10px;
+16224:                 justify-content: flex-start;
+16225:                 text-align: left;
+16226:             }
+16227: 
+16228:             #mission-finder-wrapper.mf2026-ios-safari
+16229:             #trained-personnel-box.mf2026-trained-collapsed {
+16230:                 width: 100%;
+16231:                 min-height: 0;
+16232:                 padding: 6px;
+16233:                 overflow: hidden;
+16234:             }
+16235: 
+16236:             #mission-finder-wrapper.mf2026-ios-safari
+
+## occurrence 8 at line 16193
+16165:             #mission-finder-wrapper.mf2026-ios-safari input,
+16166:             #mission-finder-wrapper.mf2026-ios-safari select {
+16167:                 min-height: 38px;
+16168:                 font-size: 16px;
+16169:             }
+16170: 
+16171:             #mission-finder-wrapper.mf2026-ios-safari #mf-control-position-box,
+16172:             #mission-finder-wrapper.mf2026-ios-safari #mf-control-centre {
+16173:                 display: none;
+16174:             }
+16175: 
+16176:             #mission-finder-wrapper.mf2026-ios-safari #mf-control-minimize {
+16177:                 width: 44px;
+16178:                 flex: 0 0 44px;
+16179:                 padding: 6px 0;
+16180:                 font-size: 20px;
+16181:                 line-height: 1;
+16182:             }
+16183: 
+16184:             #mission-finder-wrapper.mf2026-ios-safari
+16185:             #control-panel.mf2026-control-collapsed {
+16186:                 width: 100%;
+16187:                 min-height: 0;
+16188:                 padding: 6px;
+16189:                 overflow: hidden;
+16190:             }
+16191: 
+16192:             #mission-finder-wrapper.mf2026-ios-safari
+16193:             #control-panel.mf2026-control-collapsed
+16194:             .mf2026-control-header-row {
+16195:                 width: 100%;
+16196:             }
+16197: 
+16198:             #mission-finder-wrapper.mf2026-ios-safari
+16199:             #control-panel.mf2026-control-collapsed
+16200:             .mf2026-header {
+16201:                 writing-mode: horizontal-tb;
+16202:                 text-orientation: mixed;
+16203:                 min-height: 42px;
+16204:                 padding: 8px 10px;
+16205:                 justify-content: flex-start;
+16206:                 text-align: left;
+16207:             }
+16208: 
+16209:             #mission-finder-wrapper.mf2026-ios-safari
+16210:             #vehicle-load-list-box.mf2026-load-collapsed {
+16211:                 width: 100%;
+16212:                 min-height: 0;
+16213:                 padding: 6px;
+16214:                 overflow: hidden;
+16215:             }
+16216: 
+16217:             #mission-finder-wrapper.mf2026-ios-safari
+16218:             #vehicle-load-list-box.mf2026-load-collapsed
+16219:             .mf2026-header {
+16220:                 writing-mode: horizontal-tb;
+16221:                 text-orientation: mixed;
+16222:                 min-height: 42px;
+16223:                 padding: 8px 10px;
+16224:                 justify-content: flex-start;
+16225:                 text-align: left;
+16226:             }
+16227: 
+16228:             #mission-finder-wrapper.mf2026-ios-safari
+16229:             #trained-personnel-box.mf2026-trained-collapsed {
+16230:                 width: 100%;
+16231:                 min-height: 0;
+16232:                 padding: 6px;
+16233:                 overflow: hidden;
+16234:             }
+16235: 
+16236:             #mission-finder-wrapper.mf2026-ios-safari
+16237:             #trained-personnel-box.mf2026-trained-collapsed
+16238:             .mf2026-header {
+16239:                 writing-mode: horizontal-tb;
+16240:                 text-orientation: mixed;
+16241:                 min-height: 42px;
+16242:                 padding: 8px 10px;
+16243:                 justify-content: flex-start;
+16244:                 text-align: left;
+
+## occurrence 9 at line 16199
+16171:             #mission-finder-wrapper.mf2026-ios-safari #mf-control-position-box,
+16172:             #mission-finder-wrapper.mf2026-ios-safari #mf-control-centre {
+16173:                 display: none;
+16174:             }
+16175: 
+16176:             #mission-finder-wrapper.mf2026-ios-safari #mf-control-minimize {
+16177:                 width: 44px;
+16178:                 flex: 0 0 44px;
+16179:                 padding: 6px 0;
+16180:                 font-size: 20px;
+16181:                 line-height: 1;
+16182:             }
+16183: 
+16184:             #mission-finder-wrapper.mf2026-ios-safari
+16185:             #control-panel.mf2026-control-collapsed {
+16186:                 width: 100%;
+16187:                 min-height: 0;
+16188:                 padding: 6px;
+16189:                 overflow: hidden;
+16190:             }
+16191: 
+16192:             #mission-finder-wrapper.mf2026-ios-safari
+16193:             #control-panel.mf2026-control-collapsed
+16194:             .mf2026-control-header-row {
+16195:                 width: 100%;
+16196:             }
+16197: 
+16198:             #mission-finder-wrapper.mf2026-ios-safari
+16199:             #control-panel.mf2026-control-collapsed
+16200:             .mf2026-header {
+16201:                 writing-mode: horizontal-tb;
+16202:                 text-orientation: mixed;
+16203:                 min-height: 42px;
+16204:                 padding: 8px 10px;
+16205:                 justify-content: flex-start;
+16206:                 text-align: left;
+16207:             }
+16208: 
+16209:             #mission-finder-wrapper.mf2026-ios-safari
+16210:             #vehicle-load-list-box.mf2026-load-collapsed {
+16211:                 width: 100%;
+16212:                 min-height: 0;
+16213:                 padding: 6px;
+16214:                 overflow: hidden;
+16215:             }
+16216: 
+16217:             #mission-finder-wrapper.mf2026-ios-safari
+16218:             #vehicle-load-list-box.mf2026-load-collapsed
+16219:             .mf2026-header {
+16220:                 writing-mode: horizontal-tb;
+16221:                 text-orientation: mixed;
+16222:                 min-height: 42px;
+16223:                 padding: 8px 10px;
+16224:                 justify-content: flex-start;
+16225:                 text-align: left;
+16226:             }
+16227: 
+16228:             #mission-finder-wrapper.mf2026-ios-safari
+16229:             #trained-personnel-box.mf2026-trained-collapsed {
+16230:                 width: 100%;
+16231:                 min-height: 0;
+16232:                 padding: 6px;
+16233:                 overflow: hidden;
+16234:             }
+16235: 
+16236:             #mission-finder-wrapper.mf2026-ios-safari
+16237:             #trained-personnel-box.mf2026-trained-collapsed
+16238:             .mf2026-header {
+16239:                 writing-mode: horizontal-tb;
+16240:                 text-orientation: mixed;
+16241:                 min-height: 42px;
+16242:                 padding: 8px 10px;
+16243:                 justify-content: flex-start;
+16244:                 text-align: left;
+16245:             }
+16246: 
+16247:             /* iPhone Safari only. iPad remains on the established iOS layout. */
+16248:             #mission-finder-wrapper.mf2026-iphone-safari {
+16249:                 --mf-iphone-close-gutter: 48px;
+16250:                 --mf-iphone-launcher-top: 0px;
+
+## occurrence 10 at line 16372
+16344:                     100vh
+16345:                     - var(--mf-iphone-panel-top, 42px)
+16346:                     - 8px
+16347:                     - env(safe-area-inset-bottom, 0px)
+16348:                 );
+16349:                 pointer-events: auto;
+16350:                 overflow-y: auto;
+16351:                 overscroll-behavior: contain;
+16352:                 -webkit-overflow-scrolling: touch;
+16353:             }
+16354: 
+16355:             @supports (height: 100dvh) {
+16356:                 #mission-finder-wrapper.mf2026-iphone-safari > .mf2026-panel {
+16357:                     max-height: calc(
+16358:                         100dvh
+16359:                         - var(--mf-iphone-panel-top, 42px)
+16360:                         - 8px
+16361:                         - env(safe-area-inset-bottom, 0px)
+16362:                     );
+16363:                 }
+16364:             }
+16365: 
+16366:             #mission-finder-wrapper.mf2026-iphone-safari
+16367:             #trained-personnel-box {
+16368:                 display: none !important;
+16369:             }
+16370: 
+16371:             #mission-finder-wrapper.mf2026-iphone-safari
+16372:             #control-panel.mf2026-control-collapsed,
+16373:             #mission-finder-wrapper.mf2026-iphone-safari
+16374:             #vehicle-load-list-box.mf2026-load-collapsed {
+16375:                 display: none !important;
+16376:             }
+16377: 
+16378:             #mission-finder-wrapper.mf2026-iphone-safari
+16379:             .mf2026-control-header-row,
+16380:             #mission-finder-wrapper.mf2026-iphone-safari
+16381:             .mf2026-load-header-row {
+16382:                 display: none !important;
+16383:             }
+16384: 
+16385:             #mission-finder-wrapper.mf2026-iphone-safari .mf2026-panel {
+16386:                 padding: 5px;
+16387:                 gap: 4px;
+16388:                 border: 1px solid rgba(255, 255, 255, 0.24);
+16389:                 border-radius: 14px;
+16390:                 background: rgba(28, 28, 30, 0.96);
+16391:                 box-shadow: 0 8px 24px rgba(0, 0, 0, 0.36);
+16392:                 -webkit-backdrop-filter: blur(16px) saturate(135%);
+16393:                 backdrop-filter: blur(16px) saturate(135%);
+16394:             }
+16395: 
+16396:             #mission-finder-wrapper.mf2026-iphone-safari .mf-control-body {
+16397:                 display: flex;
+16398:                 flex-direction: column;
+16399:                 gap: 5px;
+16400:             }
+16401: 
+16402:             #mission-finder-wrapper.mf2026-iphone-safari #status-box {
+16403:                 min-height: 0;
+16404:                 max-height: 54px;
+16405:                 overflow-y: auto;
+16406:                 padding: 7px 9px;
+16407:                 border-radius: 10px;
+16408:                 font-size: 12px;
+16409:                 line-height: 1.25;
+16410:                 background: rgba(118, 118, 128, 0.20);
+16411:             }
+16412: 
+16413:             #mission-finder-wrapper.mf2026-iphone-safari
+16414:             #mf-iphone-advanced-toggle {
+16415:                 display: flex;
+16416:                 align-items: center;
+16417:                 justify-content: space-between;
+16418:                 width: 100%;
+16419:                 min-height: 34px;
+16420:                 padding: 6px 10px;
+16421:                 border: 0;
+16422:                 border-radius: 10px;
+16423:                 background: rgba(118, 118, 128, 0.24);
+
+## occurrence 11 at line 16570
+16542:                     radial-gradient(circle at 8% 0%, rgba(20, 92, 170, 0.18), transparent 34%),
+16543:                     linear-gradient(145deg, rgba(5, 16, 29, 0.98), rgba(4, 21, 38, 0.98));
+16544:                 box-shadow: 0 18px 55px rgba(0, 0, 0, 0.55);
+16545:                 color: #eaf2ff;
+16546:             }
+16547: 
+16548:             #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari) {
+16549:                 grid-template-columns: 66px minmax(250px, 285px) repeat(3, minmax(225px, 1fr));
+16550:                 grid-template-areas:
+16551:                     "rail utility control load trained"
+16552:                     "footer footer footer footer footer";
+16553:                 width: min(1580px, calc(100vw - 32px));
+16554:             }
+16555: 
+16556:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-panel {
+16557:                 width: auto;
+16558:                 min-width: 0;
+16559:                 max-height: calc(100vh - 96px);
+16560:                 padding: 0;
+16561:                 gap: 0;
+16562:                 overflow: hidden;
+16563:                 border: 1px solid rgba(126, 167, 218, 0.18);
+16564:                 border-radius: 12px;
+16565:                 background: linear-gradient(155deg, rgba(18, 32, 48, 0.97), rgba(7, 23, 39, 0.97));
+16566:                 box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035), 0 10px 30px rgba(0, 0, 0, 0.24);
+16567:                 font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+16568:             }
+16569: 
+16570:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #control-panel { grid-area: control; }
+16571:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #vehicle-load-list-box { grid-area: load; }
+16572:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #trained-personnel-box { grid-area: trained; }
+16573: 
+16574:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-control-header-row,
+16575:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-load-header-row,
+16576:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-trained-header-row {
+16577:                 min-height: 48px;
+16578:                 padding: 8px 10px;
+16579:                 border-bottom: 1px solid rgba(126, 167, 218, 0.14);
+16580:                 background: rgba(9, 23, 38, 0.72);
+16581:                 box-sizing: border-box;
+16582:             }
+16583: 
+16584:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-header {
+16585:                 display: flex;
+16586:                 align-items: center;
+16587:                 gap: 8px;
+16588:                 padding: 0;
+16589:                 text-align: left;
+16590:                 text-transform: uppercase;
+16591:                 letter-spacing: 0.035em;
+16592:                 background: transparent;
+16593:                 color: #f4f8ff;
+16594:                 font-size: 13px;
+16595:                 font-weight: 800;
+16596:             }
+16597: 
+16598:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mf-control-title::before {
+16599:                 content: "◎";
+16600:                 display: grid;
+16601:                 place-items: center;
+16602:                 width: 28px;
+16603:                 height: 28px;
+16604:                 border-radius: 8px;
+16605:                 background: linear-gradient(145deg, #0d6efd, #063f91);
+16606:                 color: white;
+16607:                 box-shadow: 0 0 16px rgba(13, 110, 253, 0.36);
+16608:             }
+16609: 
+16610:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mf-load-title::before {
+16611:                 content: "▣";
+16612:                 color: #49a4ff;
+16613:                 font-size: 21px;
+16614:             }
+16615: 
+16616:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mf-trained-title::before {
+16617:                 content: "♙";
+16618:                 color: #c86cff;
+16619:                 font-size: 22px;
+16620:             }
+16621: 
+
+## occurrence 12 at line 16954
+16926:             iphoneVehicleLauncherButton
+16927:         );
+16928: 
+16929:         const savedPanelLeft =
+16930:             localStorage.getItem(MF_PANEL_LEFT_KEY);
+16931: 
+16932:         const savedPanelTop =
+16933:             localStorage.getItem(MF_PANEL_TOP_KEY);
+16934: 
+16935:         if (!missionFinderIosSafari) {
+16936:             wrapper.style.left =
+16937:                 mfKeepPanelPosition && savedPanelLeft
+16938:                     ? savedPanelLeft
+16939:                     : '20px';
+16940: 
+16941:             wrapper.style.top =
+16942:                 mfKeepPanelPosition && savedPanelTop
+16943:                     ? savedPanelTop
+16944:                     : '20px';
+16945:         }
+16946: 
+16947:         wrapper.style.visibility = 'hidden';
+16948: 
+16949:         // Remove coordinates used by the older panel-position versions.
+16950:         localStorage.removeItem('panel-left');
+16951:         localStorage.removeItem('panel-top');
+16952: 
+16953:         const panel = document.createElement('div');
+16954:         panel.id = 'control-panel';
+16955:         panel.className = `mf2026-panel ${mfMissionControlCollapsed ? 'mf2026-control-collapsed' : ''}`;
+16956: 
+16957:         const controlHeaderRow = document.createElement('div');
+16958:         controlHeaderRow.className = 'mf2026-control-header-row';
+16959: 
+16960:         const dragHandle = document.createElement('div');
+16961:         dragHandle.id = 'mf-control-title';
+16962:         dragHandle.textContent = 'Mission Control';
+16963:         dragHandle.className = 'mf2026-header mf2026-drag';
+16964: 
+16965:         const controlCentreBtn = document.createElement('button');
+16966:         controlCentreBtn.id = 'mf-control-centre';
+16967:         controlCentreBtn.className = 'mf2026-button';
+16968:         controlCentreBtn.title = 'Move Mission Control back to the centre';
+16969:         controlCentreBtn.textContent = '◎';
+16970: 
+16971:         const controlMinimizeBtn = document.createElement('button');
+16972:         controlMinimizeBtn.id = 'mf-control-minimize';
+16973:         controlMinimizeBtn.className = 'mf2026-button';
+16974:         controlMinimizeBtn.type = 'button';
+16975: 
+16976:         controlHeaderRow.appendChild(dragHandle);
+16977:         controlHeaderRow.appendChild(controlCentreBtn);
+16978:         controlHeaderRow.appendChild(controlMinimizeBtn);
+16979:         panel.appendChild(controlHeaderRow);
+16980: 
+16981:         const controlBody = document.createElement('div');
+16982:         controlBody.className = 'mf-control-body';
+16983:         controlBody.id = 'mf-control-body';
+16984: 
+16985:         const dashboardRail = document.createElement('nav');
+16986:         dashboardRail.id = 'mf-dashboard-rail';
+16987:         dashboardRail.setAttribute('aria-label', 'MissionChief Nexus dashboard');
+16988:         dashboardRail.innerHTML = `
+16989:             <button type="button" class="mf-dashboard-tab mf-dashboard-tab-active" data-mf-dashboard-tab="mission" aria-pressed="true">
+16990:                 <span class="mf-dashboard-tab-icon">◎</span>
+16991:                 <span>Mission</span>
+16992:             </button>
+16993:             <button type="button" class="mf-dashboard-tab" data-mf-dashboard-tab="settings" aria-pressed="false">
+16994:                 <span class="mf-dashboard-tab-icon">⚙</span>
+16995:                 <span>Settings</span>
+16996:             </button>
+16997:             <button type="button" class="mf-dashboard-tab" data-mf-dashboard-tab="diagnostics" aria-pressed="false">
+16998:                 <span class="mf-dashboard-tab-icon">⌁</span>
+16999:                 <span>Diagnostics</span>
+17000:             </button>
+17001:         `;
+17002: 
+17003:         const dashboardUtility = document.createElement('aside');
+17004:         dashboardUtility.id = 'mf-dashboard-utility';
+17005:         dashboardUtility.hidden = true;
+
+## occurrence 13 at line 43577
+43549:             autoModeRunning ||
+43550:             sessionStorage.getItem('mf_auto_mode_running') === 'true' ||
+43551:             localStorage.getItem('mf_auto_mode_running') === 'true' ||
+43552:             sessionStorage.getItem(MF_QUEUE_WAIT_ACTIVE_FLAG) === 'true' ||
+43553:             sessionStorage.getItem(MF_FINAL_QUEUE_DISPATCH_FLAG) === 'true' ||
+43554:             isPostTransportRehookPending() ||
+43555:             isRecentTransportRehookWindowActive()
+43556:         );
+43557:     }
+43558: 
+43559:     const MF_MUTATION_VEHICLE_SELECTOR =
+43560:         'input.vehicle_checkbox, #vehicle_table, .vehicle_select_table_tr, ' +
+43561:         'a[search_attribute], a.missing_vehicles_load, .missing_vehicles_load';
+43562: 
+43563:     const MF_MUTATION_MISSION_SELECTOR =
+43564:         '#mission_general_info, #mission_help, #mission_content, ' +
+43565:         '#iframe-inside-container, .mission_content, ' +
+43566:         '#mc-map-command-toolkit-mission-requirements, ' +
+43567:         '[data-mcms-requirements-panel="1"], ' +
+43568:         'table[aria-label="Live mission requirements"], ' +
+43569:         '.alert-danger, [role="alert"], .mission_update, ' +
+43570:         '.mission_update_info, #mission_alarm_btn, #alarm_button, ' +
+43571:         '.vm--modal, .modal, .lightbox, iframe';
+43572: 
+43573:     const MF_MUTATION_PATIENT_SELECTOR =
+43574:         '.mission_patient, [id^="patient_"], [data-patient-id], .badge';
+43575: 
+43576:     const MF_MUTATION_PANEL_SELECTOR =
+43577:         '#mission-finder-wrapper, #control-panel, ' +
+43578:         '#vehicle-load-list-box';
+43579: 
+43580:     const MF_MUTATION_TRANSPORT_SELECTOR =
+43581:         '.vehicle-window, .redesign-wrapper[type="vehicle"], ' +
+43582:         '.vm--modal button.btn-success, .modal button.btn-success, ' +
+43583:         '.lightbox button.btn-success, iframe';
+43584: 
+43585:     const MF_MUTATION_MISSION_TARGET_SELECTOR =
+43586:         '#mission_general_info, #mission_help, #mission_content, ' +
+43587:         '#iframe-inside-container, .mission_content, ' +
+43588:         '#mc-map-command-toolkit-mission-requirements, ' +
+43589:         '[data-mcms-requirements-panel="1"], ' +
+43590:         'table[aria-label="Live mission requirements"], ' +
+43591:         '.alert-danger, [role="alert"], .mission_update, ' +
+43592:         '.mission_update_info, #mission_alarm_btn, #alarm_button';
+43593: 
+43594:     const MF_MUTATION_RELEVANT_SELECTOR =
+43595:         `${MF_MUTATION_VEHICLE_SELECTOR}, ` +
+43596:         `${MF_MUTATION_MISSION_SELECTOR}, ` +
+43597:         `${MF_MUTATION_PATIENT_SELECTOR}, ` +
+43598:         `${MF_MUTATION_PANEL_SELECTOR}, ` +
+43599:         `${MF_MUTATION_TRANSPORT_SELECTOR}`;
+43600: 
+43601:     const MF_MUTATION_RELEVANT_TARGET_SELECTOR =
+43602:         `${MF_MUTATION_VEHICLE_SELECTOR}, ` +
+43603:         `${MF_MUTATION_MISSION_TARGET_SELECTOR}, ` +
+43604:         `${MF_MUTATION_PATIENT_SELECTOR}, ` +
+43605:         `${MF_MUTATION_TRANSPORT_SELECTOR}`;
+43606: 
+43607:     function resetMainMutationFlags() {
+43608:         mfMainMutationFlags = {
+43609:             relevant: false,
+43610:             vehicleListChanged: false,
+43611:             missionContextChanged: false,
+43612:             patientChanged: false,
+43613:             panelChanged: false,
+43614:             transportChanged: false
+43615:         };
+43616:     }
+43617: 
+43618:     function mutationNodeMatches(node, selector) {
+43619:         if (!node || node.nodeType !== 1) return false;
+43620: 
+43621:         try {
+43622:             return (
+43623:                 node.matches?.(selector) ||
+43624:                 !!node.querySelector?.(selector)
+43625:             );
+43626:         } catch (_error) {
+43627:             return false;
+43628:         }
+
+## occurrence 14 at line 44023
+43995:         const wrapper = document.getElementById('mission-finder-wrapper');
+43996: 
+43997:         if (!missionPage) {
+43998:             cleanupMissionFinderIphoneNativePickerSurfaces();
+43999:         }
+44000: 
+44001:         if (
+44002:             missionPage &&
+44003:             wrapper &&
+44004:             !isCurrentMissionExecutionOwner('mutation ownership check')
+44005:         ) {
+44006:             removeMissionFinderPanelForClosedMission(
+44007:                 'previous mission instance lost ownership'
+44008:             );
+44009:         } else if (missionPage && !wrapper) {
+44010:             initialize();
+44011:         } else if (!missionPage && wrapper) {
+44012:             removeMissionFinderPanelForClosedMission(
+44013:                 'coalesced mission DOM change'
+44014:             );
+44015:         }
+44016: 
+44017:         if (flags.panelChanged) {
+44018:             const wrappers = document.querySelectorAll(
+44019:                 '#mission-finder-wrapper'
+44020:             );
+44021: 
+44022:             const controlPanel = document.getElementById(
+44023:                 'control-panel'
+44024:             );
+44025: 
+44026:             if (
+44027:                 wrappers.length > 1 ||
+44028:                 (
+44029:                     controlPanel &&
+44030:                     !controlPanel.closest('#mission-finder-wrapper')
+44031:                 )
+44032:             ) {
+44033:                 cleanupDuplicatePanels();
+44034:             }
+44035:         }
+44036: 
+44037:         if (autoModeRunning && missionPage && flags.relevant) {
+44038:             scheduleAutoModeLoopResume(
+44039:                 'filtered/coalesced DOM mutation'
+44040:             );
+44041:         }
+44042:     }
+44043: 
+44044:     function scheduleMissionFinderMutationWork(records = []) {
+44045:         const flags = classifyMissionFinderMutations(records);
+44046: 
+44047:         if (!flags.relevant) return;
+44048: 
+44049:         mergeMainMutationFlags(flags);
+44050: 
+44051:         if (mfMainMutationFlushTimer) return;
+44052: 
+44053:         mfMainMutationFlushTimer = setTimeout(
+44054:             flushMissionFinderMutationWork,
+44055:             200
+44056:         );
+44057:     }
+44058: 
+44059: 
+44060:     function suspendMissionFinderRuntimeForPageHide(
+44061:         reason = ''
+44062:     ) {
+44063:         if (mfMainMutationObserver) {
+44064:             mfMainMutationObserver.disconnect();
+44065:             mfMainMutationObserver = null;
+44066:         }
+44067: 
+44068:         if (mfIssueRecorderObserver) {
+44069:             mfIssueRecorderObserver.disconnect();
+44070:             mfIssueRecorderObserver = null;
+44071:         }
+44072: 
+44073:         if (mfMainMutationFlushTimer) {
+44074:             clearTimeout(mfMainMutationFlushTimer);
+
+# vehicle-load-list-box — 11 matches
+
+## occurrence 1 at line 15935
+15907:                 display: grid;
+15908:                 grid-template-columns: 1fr auto;
+15909:                 gap: 8px;
+15910:                 padding: 4px 0;
+15911:                 border-bottom: 1px solid rgba(255,255,255,0.08);
+15912:                 font-size: 12px;
+15913:             }
+15914: 
+15915:             .mf2026-log-row:last-child {
+15916:                 border-bottom: none;
+15917:             }
+15918: 
+15919:             .mf2026-log-main {
+15920:                 overflow: hidden;
+15921:                 text-overflow: ellipsis;
+15922:                 white-space: nowrap;
+15923:             }
+15924: 
+15925:             .mf2026-log-value {
+15926:                 white-space: nowrap;
+15927:                 font-weight: bold;
+15928:             }
+15929: 
+15930: 
+15931:             #control-panel {
+15932:                 width: 260px;
+15933:             }
+15934: 
+15935:             #vehicle-load-list-box {
+15936:                 width: 300px;
+15937:             }
+15938: 
+15939: 
+15940:             #trained-personnel-box {
+15941:                 width: 300px;
+15942:             }
+15943: 
+15944:             #control-panel.mf2026-control-collapsed {
+15945:                 width: 44px;
+15946:                 min-height: 0;
+15947:                 padding: 6px;
+15948:                 overflow: hidden;
+15949:             }
+15950: 
+15951:             #control-panel.mf2026-control-collapsed .mf-control-body {
+15952:                 display: none;
+15953:             }
+15954: 
+15955:             #control-panel.mf2026-control-collapsed .mf2026-header {
+15956:                 writing-mode: vertical-rl;
+15957:                 text-orientation: mixed;
+15958:                 min-height: 120px;
+15959:                 padding: 8px 4px;
+15960:                 cursor: pointer;
+15961:             }
+15962: 
+15963:             .mf2026-control-header-row {
+15964:                 display: flex;
+15965:                 gap: 6px;
+15966:                 align-items: center;
+15967:             }
+15968: 
+15969:             .mf2026-control-header-row .mf2026-header {
+15970:                 flex: 1;
+15971:             }
+15972: 
+15973:             #mf-control-centre,
+15974:             #mf-control-minimize {
+15975:                 width: 34px;
+15976:                 padding: 6px 0;
+15977:                 background: #6c757d;
+15978:                 color: white;
+15979:                 flex: 0 0 34px;
+15980:             }
+15981: 
+15982:             #mf-control-centre {
+15983:                 background: #0d6efd;
+15984:             }
+15985: 
+15986: 
+
+## occurrence 2 at line 15987
+15959:                 padding: 8px 4px;
+15960:                 cursor: pointer;
+15961:             }
+15962: 
+15963:             .mf2026-control-header-row {
+15964:                 display: flex;
+15965:                 gap: 6px;
+15966:                 align-items: center;
+15967:             }
+15968: 
+15969:             .mf2026-control-header-row .mf2026-header {
+15970:                 flex: 1;
+15971:             }
+15972: 
+15973:             #mf-control-centre,
+15974:             #mf-control-minimize {
+15975:                 width: 34px;
+15976:                 padding: 6px 0;
+15977:                 background: #6c757d;
+15978:                 color: white;
+15979:                 flex: 0 0 34px;
+15980:             }
+15981: 
+15982:             #mf-control-centre {
+15983:                 background: #0d6efd;
+15984:             }
+15985: 
+15986: 
+15987:             #vehicle-load-list-box.mf2026-load-collapsed {
+15988:                 width: 44px;
+15989:                 min-height: 0;
+15990:                 padding: 6px;
+15991:                 overflow: hidden;
+15992:             }
+15993: 
+15994:             #vehicle-load-list-box.mf2026-load-collapsed .mf-load-body {
+15995:                 display: none;
+15996:             }
+15997: 
+15998:             #vehicle-load-list-box.mf2026-load-collapsed .mf2026-header {
+15999:                 writing-mode: vertical-rl;
+16000:                 text-orientation: mixed;
+16001:                 min-height: 130px;
+16002:                 padding: 8px 4px;
+16003:                 cursor: pointer;
+16004:             }
+16005: 
+16006:             .mf2026-load-header-row {
+16007:                 display: flex;
+16008:                 gap: 6px;
+16009:                 align-items: center;
+16010:             }
+16011: 
+16012:             .mf2026-load-header-row .mf2026-header {
+16013:                 flex: 1;
+16014:             }
+16015: 
+16016:             #mf-load-minimize {
+16017:                 width: 34px;
+16018:                 padding: 6px 0;
+16019:                 background: #6c757d;
+16020:                 color: white;
+16021:             }
+16022: 
+16023: 
+16024:             #trained-personnel-box.mf2026-trained-collapsed {
+16025:                 width: 44px;
+16026:                 min-height: 0;
+16027:                 padding: 6px;
+16028:                 overflow: hidden;
+16029:             }
+16030: 
+16031:             #trained-personnel-box.mf2026-trained-collapsed .mf-trained-body {
+16032:                 display: none;
+16033:             }
+16034: 
+16035:             #trained-personnel-box.mf2026-trained-collapsed .mf2026-header {
+16036:                 writing-mode: vertical-rl;
+16037:                 text-orientation: mixed;
+16038:                 min-height: 145px;
+
+## occurrence 3 at line 15994
+15966:                 align-items: center;
+15967:             }
+15968: 
+15969:             .mf2026-control-header-row .mf2026-header {
+15970:                 flex: 1;
+15971:             }
+15972: 
+15973:             #mf-control-centre,
+15974:             #mf-control-minimize {
+15975:                 width: 34px;
+15976:                 padding: 6px 0;
+15977:                 background: #6c757d;
+15978:                 color: white;
+15979:                 flex: 0 0 34px;
+15980:             }
+15981: 
+15982:             #mf-control-centre {
+15983:                 background: #0d6efd;
+15984:             }
+15985: 
+15986: 
+15987:             #vehicle-load-list-box.mf2026-load-collapsed {
+15988:                 width: 44px;
+15989:                 min-height: 0;
+15990:                 padding: 6px;
+15991:                 overflow: hidden;
+15992:             }
+15993: 
+15994:             #vehicle-load-list-box.mf2026-load-collapsed .mf-load-body {
+15995:                 display: none;
+15996:             }
+15997: 
+15998:             #vehicle-load-list-box.mf2026-load-collapsed .mf2026-header {
+15999:                 writing-mode: vertical-rl;
+16000:                 text-orientation: mixed;
+16001:                 min-height: 130px;
+16002:                 padding: 8px 4px;
+16003:                 cursor: pointer;
+16004:             }
+16005: 
+16006:             .mf2026-load-header-row {
+16007:                 display: flex;
+16008:                 gap: 6px;
+16009:                 align-items: center;
+16010:             }
+16011: 
+16012:             .mf2026-load-header-row .mf2026-header {
+16013:                 flex: 1;
+16014:             }
+16015: 
+16016:             #mf-load-minimize {
+16017:                 width: 34px;
+16018:                 padding: 6px 0;
+16019:                 background: #6c757d;
+16020:                 color: white;
+16021:             }
+16022: 
+16023: 
+16024:             #trained-personnel-box.mf2026-trained-collapsed {
+16025:                 width: 44px;
+16026:                 min-height: 0;
+16027:                 padding: 6px;
+16028:                 overflow: hidden;
+16029:             }
+16030: 
+16031:             #trained-personnel-box.mf2026-trained-collapsed .mf-trained-body {
+16032:                 display: none;
+16033:             }
+16034: 
+16035:             #trained-personnel-box.mf2026-trained-collapsed .mf2026-header {
+16036:                 writing-mode: vertical-rl;
+16037:                 text-orientation: mixed;
+16038:                 min-height: 145px;
+16039:                 padding: 8px 4px;
+16040:                 cursor: pointer;
+16041:             }
+16042: 
+16043:             .mf2026-trained-header-row {
+16044:                 display: flex;
+16045:                 gap: 6px;
+
+## occurrence 4 at line 15998
+15970:                 flex: 1;
+15971:             }
+15972: 
+15973:             #mf-control-centre,
+15974:             #mf-control-minimize {
+15975:                 width: 34px;
+15976:                 padding: 6px 0;
+15977:                 background: #6c757d;
+15978:                 color: white;
+15979:                 flex: 0 0 34px;
+15980:             }
+15981: 
+15982:             #mf-control-centre {
+15983:                 background: #0d6efd;
+15984:             }
+15985: 
+15986: 
+15987:             #vehicle-load-list-box.mf2026-load-collapsed {
+15988:                 width: 44px;
+15989:                 min-height: 0;
+15990:                 padding: 6px;
+15991:                 overflow: hidden;
+15992:             }
+15993: 
+15994:             #vehicle-load-list-box.mf2026-load-collapsed .mf-load-body {
+15995:                 display: none;
+15996:             }
+15997: 
+15998:             #vehicle-load-list-box.mf2026-load-collapsed .mf2026-header {
+15999:                 writing-mode: vertical-rl;
+16000:                 text-orientation: mixed;
+16001:                 min-height: 130px;
+16002:                 padding: 8px 4px;
+16003:                 cursor: pointer;
+16004:             }
+16005: 
+16006:             .mf2026-load-header-row {
+16007:                 display: flex;
+16008:                 gap: 6px;
+16009:                 align-items: center;
+16010:             }
+16011: 
+16012:             .mf2026-load-header-row .mf2026-header {
+16013:                 flex: 1;
+16014:             }
+16015: 
+16016:             #mf-load-minimize {
+16017:                 width: 34px;
+16018:                 padding: 6px 0;
+16019:                 background: #6c757d;
+16020:                 color: white;
+16021:             }
+16022: 
+16023: 
+16024:             #trained-personnel-box.mf2026-trained-collapsed {
+16025:                 width: 44px;
+16026:                 min-height: 0;
+16027:                 padding: 6px;
+16028:                 overflow: hidden;
+16029:             }
+16030: 
+16031:             #trained-personnel-box.mf2026-trained-collapsed .mf-trained-body {
+16032:                 display: none;
+16033:             }
+16034: 
+16035:             #trained-personnel-box.mf2026-trained-collapsed .mf2026-header {
+16036:                 writing-mode: vertical-rl;
+16037:                 text-orientation: mixed;
+16038:                 min-height: 145px;
+16039:                 padding: 8px 4px;
+16040:                 cursor: pointer;
+16041:             }
+16042: 
+16043:             .mf2026-trained-header-row {
+16044:                 display: flex;
+16045:                 gap: 6px;
+16046:                 align-items: center;
+16047:             }
+16048: 
+16049:             .mf2026-trained-header-row .mf2026-header {
+
+## occurrence 5 at line 16124
+16096:                     - env(safe-area-inset-top, 0px)
+16097:                     - env(safe-area-inset-bottom, 0px)
+16098:                 );
+16099:                 display: flex;
+16100:                 flex-direction: column;
+16101:                 align-items: stretch;
+16102:                 gap: 6px;
+16103:                 overflow-x: hidden;
+16104:                 overflow-y: auto;
+16105:                 overscroll-behavior: contain;
+16106:                 -webkit-overflow-scrolling: touch;
+16107:                 -webkit-transform: translateZ(0);
+16108:                 box-sizing: border-box;
+16109:             }
+16110: 
+16111:             @supports (height: 100dvh) {
+16112:                 #mission-finder-wrapper.mf2026-ios-safari {
+16113:                     max-height: calc(
+16114:                         100dvh
+16115:                         - 16px
+16116:                         - env(safe-area-inset-top, 0px)
+16117:                         - env(safe-area-inset-bottom, 0px)
+16118:                     );
+16119:                 }
+16120:             }
+16121: 
+16122:             #mission-finder-wrapper.mf2026-ios-safari .mf2026-panel,
+16123:             #mission-finder-wrapper.mf2026-ios-safari #control-panel,
+16124:             #mission-finder-wrapper.mf2026-ios-safari #vehicle-load-list-box,
+16125:             #mission-finder-wrapper.mf2026-ios-safari #trained-personnel-box {
+16126:                 width: 100%;
+16127:                 max-width: none;
+16128:                 flex: 0 0 auto;
+16129:             }
+16130: 
+16131:             #mission-finder-wrapper.mf2026-ios-safari .mf2026-header {
+16132:                 min-height: 42px;
+16133:                 display: flex;
+16134:                 align-items: center;
+16135:                 justify-content: center;
+16136:                 box-sizing: border-box;
+16137:             }
+16138: 
+16139:             #mission-finder-wrapper.mf2026-ios-safari .mf2026-drag {
+16140:                 cursor: grab;
+16141:                 touch-action: none;
+16142:                 -webkit-user-select: none;
+16143:                 user-select: none;
+16144:             }
+16145: 
+16146:             #mission-finder-wrapper.mf2026-ios-safari .mf2026-drag:active {
+16147:                 cursor: grabbing;
+16148:             }
+16149: 
+16150:             #mission-finder-wrapper.mf2026-ios-safari .mf-control-body,
+16151:             #mission-finder-wrapper.mf2026-ios-safari .mf-load-body,
+16152:             #mission-finder-wrapper.mf2026-ios-safari .mf-trained-body,
+16153:             #mission-finder-wrapper.mf2026-ios-safari #vehicle-load-list-content,
+16154:             #mission-finder-wrapper.mf2026-ios-safari #trained-personnel-content,
+16155:             #mission-finder-wrapper.mf2026-ios-safari #session-panel-content {
+16156:                 -webkit-overflow-scrolling: touch;
+16157:             }
+16158: 
+16159:             #mission-finder-wrapper.mf2026-ios-safari .mf2026-button {
+16160:                 min-height: 42px;
+16161:                 font-size: 14px;
+16162:                 touch-action: manipulation;
+16163:             }
+16164: 
+16165:             #mission-finder-wrapper.mf2026-ios-safari input,
+16166:             #mission-finder-wrapper.mf2026-ios-safari select {
+16167:                 min-height: 38px;
+16168:                 font-size: 16px;
+16169:             }
+16170: 
+16171:             #mission-finder-wrapper.mf2026-ios-safari #mf-control-position-box,
+16172:             #mission-finder-wrapper.mf2026-ios-safari #mf-control-centre {
+16173:                 display: none;
+16174:             }
+16175: 
+
+## occurrence 6 at line 16210
+16182:             }
+16183: 
+16184:             #mission-finder-wrapper.mf2026-ios-safari
+16185:             #control-panel.mf2026-control-collapsed {
+16186:                 width: 100%;
+16187:                 min-height: 0;
+16188:                 padding: 6px;
+16189:                 overflow: hidden;
+16190:             }
+16191: 
+16192:             #mission-finder-wrapper.mf2026-ios-safari
+16193:             #control-panel.mf2026-control-collapsed
+16194:             .mf2026-control-header-row {
+16195:                 width: 100%;
+16196:             }
+16197: 
+16198:             #mission-finder-wrapper.mf2026-ios-safari
+16199:             #control-panel.mf2026-control-collapsed
+16200:             .mf2026-header {
+16201:                 writing-mode: horizontal-tb;
+16202:                 text-orientation: mixed;
+16203:                 min-height: 42px;
+16204:                 padding: 8px 10px;
+16205:                 justify-content: flex-start;
+16206:                 text-align: left;
+16207:             }
+16208: 
+16209:             #mission-finder-wrapper.mf2026-ios-safari
+16210:             #vehicle-load-list-box.mf2026-load-collapsed {
+16211:                 width: 100%;
+16212:                 min-height: 0;
+16213:                 padding: 6px;
+16214:                 overflow: hidden;
+16215:             }
+16216: 
+16217:             #mission-finder-wrapper.mf2026-ios-safari
+16218:             #vehicle-load-list-box.mf2026-load-collapsed
+16219:             .mf2026-header {
+16220:                 writing-mode: horizontal-tb;
+16221:                 text-orientation: mixed;
+16222:                 min-height: 42px;
+16223:                 padding: 8px 10px;
+16224:                 justify-content: flex-start;
+16225:                 text-align: left;
+16226:             }
+16227: 
+16228:             #mission-finder-wrapper.mf2026-ios-safari
+16229:             #trained-personnel-box.mf2026-trained-collapsed {
+16230:                 width: 100%;
+16231:                 min-height: 0;
+16232:                 padding: 6px;
+16233:                 overflow: hidden;
+16234:             }
+16235: 
+16236:             #mission-finder-wrapper.mf2026-ios-safari
+16237:             #trained-personnel-box.mf2026-trained-collapsed
+16238:             .mf2026-header {
+16239:                 writing-mode: horizontal-tb;
+16240:                 text-orientation: mixed;
+16241:                 min-height: 42px;
+16242:                 padding: 8px 10px;
+16243:                 justify-content: flex-start;
+16244:                 text-align: left;
+16245:             }
+16246: 
+16247:             /* iPhone Safari only. iPad remains on the established iOS layout. */
+16248:             #mission-finder-wrapper.mf2026-iphone-safari {
+16249:                 --mf-iphone-close-gutter: 48px;
+16250:                 --mf-iphone-launcher-top: 0px;
+16251:                 --mf-iphone-launcher-right: 112px;
+16252:                 --mf-iphone-launcher-max-width: calc(100% - 120px);
+16253:                 --mf-iphone-panel-top: 42px;
+16254:                 top: calc(4px + env(safe-area-inset-top, 0px));
+16255:                 right: calc(4px + env(safe-area-inset-right, 0px));
+16256:                 left: calc(4px + env(safe-area-inset-left, 0px));
+16257:                 display: block;
+16258:                 gap: 0;
+16259:                 pointer-events: none;
+16260:                 max-height: calc(
+16261:                     100vh
+
+## occurrence 7 at line 16218
+16190:             }
+16191: 
+16192:             #mission-finder-wrapper.mf2026-ios-safari
+16193:             #control-panel.mf2026-control-collapsed
+16194:             .mf2026-control-header-row {
+16195:                 width: 100%;
+16196:             }
+16197: 
+16198:             #mission-finder-wrapper.mf2026-ios-safari
+16199:             #control-panel.mf2026-control-collapsed
+16200:             .mf2026-header {
+16201:                 writing-mode: horizontal-tb;
+16202:                 text-orientation: mixed;
+16203:                 min-height: 42px;
+16204:                 padding: 8px 10px;
+16205:                 justify-content: flex-start;
+16206:                 text-align: left;
+16207:             }
+16208: 
+16209:             #mission-finder-wrapper.mf2026-ios-safari
+16210:             #vehicle-load-list-box.mf2026-load-collapsed {
+16211:                 width: 100%;
+16212:                 min-height: 0;
+16213:                 padding: 6px;
+16214:                 overflow: hidden;
+16215:             }
+16216: 
+16217:             #mission-finder-wrapper.mf2026-ios-safari
+16218:             #vehicle-load-list-box.mf2026-load-collapsed
+16219:             .mf2026-header {
+16220:                 writing-mode: horizontal-tb;
+16221:                 text-orientation: mixed;
+16222:                 min-height: 42px;
+16223:                 padding: 8px 10px;
+16224:                 justify-content: flex-start;
+16225:                 text-align: left;
+16226:             }
+16227: 
+16228:             #mission-finder-wrapper.mf2026-ios-safari
+16229:             #trained-personnel-box.mf2026-trained-collapsed {
+16230:                 width: 100%;
+16231:                 min-height: 0;
+16232:                 padding: 6px;
+16233:                 overflow: hidden;
+16234:             }
+16235: 
+16236:             #mission-finder-wrapper.mf2026-ios-safari
+16237:             #trained-personnel-box.mf2026-trained-collapsed
+16238:             .mf2026-header {
+16239:                 writing-mode: horizontal-tb;
+16240:                 text-orientation: mixed;
+16241:                 min-height: 42px;
+16242:                 padding: 8px 10px;
+16243:                 justify-content: flex-start;
+16244:                 text-align: left;
+16245:             }
+16246: 
+16247:             /* iPhone Safari only. iPad remains on the established iOS layout. */
+16248:             #mission-finder-wrapper.mf2026-iphone-safari {
+16249:                 --mf-iphone-close-gutter: 48px;
+16250:                 --mf-iphone-launcher-top: 0px;
+16251:                 --mf-iphone-launcher-right: 112px;
+16252:                 --mf-iphone-launcher-max-width: calc(100% - 120px);
+16253:                 --mf-iphone-panel-top: 42px;
+16254:                 top: calc(4px + env(safe-area-inset-top, 0px));
+16255:                 right: calc(4px + env(safe-area-inset-right, 0px));
+16256:                 left: calc(4px + env(safe-area-inset-left, 0px));
+16257:                 display: block;
+16258:                 gap: 0;
+16259:                 pointer-events: none;
+16260:                 max-height: calc(
+16261:                     100vh
+16262:                     - 8px
+16263:                     - env(safe-area-inset-top, 0px)
+16264:                     - env(safe-area-inset-bottom, 0px)
+16265:                 );
+16266:                 overflow: visible;
+16267:                 scrollbar-width: none;
+16268:             }
+16269: 
+
+## occurrence 8 at line 16374
+16346:                     - 8px
+16347:                     - env(safe-area-inset-bottom, 0px)
+16348:                 );
+16349:                 pointer-events: auto;
+16350:                 overflow-y: auto;
+16351:                 overscroll-behavior: contain;
+16352:                 -webkit-overflow-scrolling: touch;
+16353:             }
+16354: 
+16355:             @supports (height: 100dvh) {
+16356:                 #mission-finder-wrapper.mf2026-iphone-safari > .mf2026-panel {
+16357:                     max-height: calc(
+16358:                         100dvh
+16359:                         - var(--mf-iphone-panel-top, 42px)
+16360:                         - 8px
+16361:                         - env(safe-area-inset-bottom, 0px)
+16362:                     );
+16363:                 }
+16364:             }
+16365: 
+16366:             #mission-finder-wrapper.mf2026-iphone-safari
+16367:             #trained-personnel-box {
+16368:                 display: none !important;
+16369:             }
+16370: 
+16371:             #mission-finder-wrapper.mf2026-iphone-safari
+16372:             #control-panel.mf2026-control-collapsed,
+16373:             #mission-finder-wrapper.mf2026-iphone-safari
+16374:             #vehicle-load-list-box.mf2026-load-collapsed {
+16375:                 display: none !important;
+16376:             }
+16377: 
+16378:             #mission-finder-wrapper.mf2026-iphone-safari
+16379:             .mf2026-control-header-row,
+16380:             #mission-finder-wrapper.mf2026-iphone-safari
+16381:             .mf2026-load-header-row {
+16382:                 display: none !important;
+16383:             }
+16384: 
+16385:             #mission-finder-wrapper.mf2026-iphone-safari .mf2026-panel {
+16386:                 padding: 5px;
+16387:                 gap: 4px;
+16388:                 border: 1px solid rgba(255, 255, 255, 0.24);
+16389:                 border-radius: 14px;
+16390:                 background: rgba(28, 28, 30, 0.96);
+16391:                 box-shadow: 0 8px 24px rgba(0, 0, 0, 0.36);
+16392:                 -webkit-backdrop-filter: blur(16px) saturate(135%);
+16393:                 backdrop-filter: blur(16px) saturate(135%);
+16394:             }
+16395: 
+16396:             #mission-finder-wrapper.mf2026-iphone-safari .mf-control-body {
+16397:                 display: flex;
+16398:                 flex-direction: column;
+16399:                 gap: 5px;
+16400:             }
+16401: 
+16402:             #mission-finder-wrapper.mf2026-iphone-safari #status-box {
+16403:                 min-height: 0;
+16404:                 max-height: 54px;
+16405:                 overflow-y: auto;
+16406:                 padding: 7px 9px;
+16407:                 border-radius: 10px;
+16408:                 font-size: 12px;
+16409:                 line-height: 1.25;
+16410:                 background: rgba(118, 118, 128, 0.20);
+16411:             }
+16412: 
+16413:             #mission-finder-wrapper.mf2026-iphone-safari
+16414:             #mf-iphone-advanced-toggle {
+16415:                 display: flex;
+16416:                 align-items: center;
+16417:                 justify-content: space-between;
+16418:                 width: 100%;
+16419:                 min-height: 34px;
+16420:                 padding: 6px 10px;
+16421:                 border: 0;
+16422:                 border-radius: 10px;
+16423:                 background: rgba(118, 118, 128, 0.24);
+16424:                 color: #f2f2f7;
+16425:                 font-size: 12px;
+
+## occurrence 9 at line 16571
+16543:                     linear-gradient(145deg, rgba(5, 16, 29, 0.98), rgba(4, 21, 38, 0.98));
+16544:                 box-shadow: 0 18px 55px rgba(0, 0, 0, 0.55);
+16545:                 color: #eaf2ff;
+16546:             }
+16547: 
+16548:             #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari) {
+16549:                 grid-template-columns: 66px minmax(250px, 285px) repeat(3, minmax(225px, 1fr));
+16550:                 grid-template-areas:
+16551:                     "rail utility control load trained"
+16552:                     "footer footer footer footer footer";
+16553:                 width: min(1580px, calc(100vw - 32px));
+16554:             }
+16555: 
+16556:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-panel {
+16557:                 width: auto;
+16558:                 min-width: 0;
+16559:                 max-height: calc(100vh - 96px);
+16560:                 padding: 0;
+16561:                 gap: 0;
+16562:                 overflow: hidden;
+16563:                 border: 1px solid rgba(126, 167, 218, 0.18);
+16564:                 border-radius: 12px;
+16565:                 background: linear-gradient(155deg, rgba(18, 32, 48, 0.97), rgba(7, 23, 39, 0.97));
+16566:                 box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035), 0 10px 30px rgba(0, 0, 0, 0.24);
+16567:                 font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+16568:             }
+16569: 
+16570:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #control-panel { grid-area: control; }
+16571:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #vehicle-load-list-box { grid-area: load; }
+16572:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #trained-personnel-box { grid-area: trained; }
+16573: 
+16574:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-control-header-row,
+16575:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-load-header-row,
+16576:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-trained-header-row {
+16577:                 min-height: 48px;
+16578:                 padding: 8px 10px;
+16579:                 border-bottom: 1px solid rgba(126, 167, 218, 0.14);
+16580:                 background: rgba(9, 23, 38, 0.72);
+16581:                 box-sizing: border-box;
+16582:             }
+16583: 
+16584:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-header {
+16585:                 display: flex;
+16586:                 align-items: center;
+16587:                 gap: 8px;
+16588:                 padding: 0;
+16589:                 text-align: left;
+16590:                 text-transform: uppercase;
+16591:                 letter-spacing: 0.035em;
+16592:                 background: transparent;
+16593:                 color: #f4f8ff;
+16594:                 font-size: 13px;
+16595:                 font-weight: 800;
+16596:             }
+16597: 
+16598:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mf-control-title::before {
+16599:                 content: "◎";
+16600:                 display: grid;
+16601:                 place-items: center;
+16602:                 width: 28px;
+16603:                 height: 28px;
+16604:                 border-radius: 8px;
+16605:                 background: linear-gradient(145deg, #0d6efd, #063f91);
+16606:                 color: white;
+16607:                 box-shadow: 0 0 16px rgba(13, 110, 253, 0.36);
+16608:             }
+16609: 
+16610:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mf-load-title::before {
+16611:                 content: "▣";
+16612:                 color: #49a4ff;
+16613:                 font-size: 21px;
+16614:             }
+16615: 
+16616:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mf-trained-title::before {
+16617:                 content: "♙";
+16618:                 color: #c86cff;
+16619:                 font-size: 22px;
+16620:             }
+16621: 
+16622:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf-control-body,
+
+## occurrence 10 at line 17621
+17593:             if (missionFinderIphoneSafari) {
+17594:                 consumeIphoneDisclosureEvent(event);
+17595:                 toggleMissionControlCollapsed();
+17596:                 return;
+17597:             }
+17598: 
+17599:             if (mfMissionControlCollapsed) {
+17600:                 toggleMissionControlCollapsed();
+17601:             }
+17602:         });
+17603: 
+17604:         if (missionFinderIphoneSafari) {
+17605:             dragHandle.setAttribute('role', 'button');
+17606:             dragHandle.tabIndex = 0;
+17607:             dragHandle.addEventListener('keydown', function(event) {
+17608:                 if (
+17609:                     event.key !== 'Enter' &&
+17610:                     event.key !== ' '
+17611:                 ) {
+17612:                     return;
+17613:                 }
+17614: 
+17615:                 consumeIphoneDisclosureEvent(event);
+17616:                 toggleMissionControlCollapsed();
+17617:             });
+17618:         }
+17619: 
+17620:         const loadPanel = document.createElement('div');
+17621:         loadPanel.id = 'vehicle-load-list-box';
+17622:         loadPanel.className = `mf2026-panel ${mfVehicleLoadCollapsed ? 'mf2026-load-collapsed' : ''}`;
+17623: 
+17624:         loadPanel.innerHTML = `
+17625:             <div class="mf2026-load-header-row">
+17626:                 <div id="mf-load-title" class="mf2026-header">Vehicle Load List</div>
+17627:                 <button id="mf-load-minimize" type="button" class="mf2026-button" title="Minimize / expand vehicle load list">${missionFinderIphoneSafari ? (mfVehicleLoadCollapsed ? '▾' : '▴') : (mfVehicleLoadCollapsed ? '+' : '−')}</button>
+17628:             </div>
+17629: 
+17630:             <div id="mf-load-body" class="mf-load-body">
+17631:                 <div class="mf2026-box">
+17632:                     <div class="mf2026-section-title">Progress</div>
+17633:                     <div id="vehicle-load-summary" class="mf2026-small">No mission loaded</div>
+17634:                     <div class="mf2026-progress-wrap" style="margin-top:6px;">
+17635:                         <div id="vehicle-load-progress" class="mf2026-progress-bar"></div>
+17636:                     </div>
+17637:                 </div>
+17638: 
+17639:                 <div class="mf2026-box">
+17640:                     <div class="mf2026-section-title">Required Vehicles <span class="mf2026-small">(selected / required)</span></div>
+17641:                     <div id="vehicle-load-list-content" class="mf2026-small">
+17642:                         Click Unit Finder to load vehicles.
+17643:                     </div>
+17644:                 </div>
+17645: 
+17646:                 <div class="mf2026-box">
+17647:                     <div class="mf2026-section-title">Patients</div>
+17648:                     <div id="vehicle-patient-content" class="mf2026-small">
+17649:                         No patients checked yet.
+17650:                     </div>
+17651:                 </div>
+17652: 
+17653:                 <div class="mf2026-box">
+17654:                     <div class="mf2026-section-title">Session</div>
+17655:                     <div id="session-panel-content" class="mf2026-small">
+17656:                         No session data yet.
+17657:                     </div>
+17658:                 </div>
+17659:             </div>
+17660:         `;
+17661: 
+17662:         const trainedPanel = document.createElement('div');
+17663:         trainedPanel.id = 'trained-personnel-box';
+17664:         trainedPanel.className = `mf2026-panel ${mfTrainedPersonnelCollapsed ? 'mf2026-trained-collapsed' : ''}`;
+17665:         trainedPanel.innerHTML = `
+17666:             <div class="mf2026-trained-header-row">
+17667:                 <div id="mf-trained-title" class="mf2026-header">Trained Personnel</div>
+17668:                 <button id="mf-trained-minimize" type="button" class="mf2026-button" title="Minimize / expand trained personnel">${mfTrainedPersonnelCollapsed ? '+' : '−'}</button>
+17669:             </div>
+17670: 
+17671:             <div id="mf-trained-body" class="mf-trained-body">
+17672:                 <div class="mf2026-box">
+
+## occurrence 11 at line 43578
+43550:             sessionStorage.getItem('mf_auto_mode_running') === 'true' ||
+43551:             localStorage.getItem('mf_auto_mode_running') === 'true' ||
+43552:             sessionStorage.getItem(MF_QUEUE_WAIT_ACTIVE_FLAG) === 'true' ||
+43553:             sessionStorage.getItem(MF_FINAL_QUEUE_DISPATCH_FLAG) === 'true' ||
+43554:             isPostTransportRehookPending() ||
+43555:             isRecentTransportRehookWindowActive()
+43556:         );
+43557:     }
+43558: 
+43559:     const MF_MUTATION_VEHICLE_SELECTOR =
+43560:         'input.vehicle_checkbox, #vehicle_table, .vehicle_select_table_tr, ' +
+43561:         'a[search_attribute], a.missing_vehicles_load, .missing_vehicles_load';
+43562: 
+43563:     const MF_MUTATION_MISSION_SELECTOR =
+43564:         '#mission_general_info, #mission_help, #mission_content, ' +
+43565:         '#iframe-inside-container, .mission_content, ' +
+43566:         '#mc-map-command-toolkit-mission-requirements, ' +
+43567:         '[data-mcms-requirements-panel="1"], ' +
+43568:         'table[aria-label="Live mission requirements"], ' +
+43569:         '.alert-danger, [role="alert"], .mission_update, ' +
+43570:         '.mission_update_info, #mission_alarm_btn, #alarm_button, ' +
+43571:         '.vm--modal, .modal, .lightbox, iframe';
+43572: 
+43573:     const MF_MUTATION_PATIENT_SELECTOR =
+43574:         '.mission_patient, [id^="patient_"], [data-patient-id], .badge';
+43575: 
+43576:     const MF_MUTATION_PANEL_SELECTOR =
+43577:         '#mission-finder-wrapper, #control-panel, ' +
+43578:         '#vehicle-load-list-box';
+43579: 
+43580:     const MF_MUTATION_TRANSPORT_SELECTOR =
+43581:         '.vehicle-window, .redesign-wrapper[type="vehicle"], ' +
+43582:         '.vm--modal button.btn-success, .modal button.btn-success, ' +
+43583:         '.lightbox button.btn-success, iframe';
+43584: 
+43585:     const MF_MUTATION_MISSION_TARGET_SELECTOR =
+43586:         '#mission_general_info, #mission_help, #mission_content, ' +
+43587:         '#iframe-inside-container, .mission_content, ' +
+43588:         '#mc-map-command-toolkit-mission-requirements, ' +
+43589:         '[data-mcms-requirements-panel="1"], ' +
+43590:         'table[aria-label="Live mission requirements"], ' +
+43591:         '.alert-danger, [role="alert"], .mission_update, ' +
+43592:         '.mission_update_info, #mission_alarm_btn, #alarm_button';
+43593: 
+43594:     const MF_MUTATION_RELEVANT_SELECTOR =
+43595:         `${MF_MUTATION_VEHICLE_SELECTOR}, ` +
+43596:         `${MF_MUTATION_MISSION_SELECTOR}, ` +
+43597:         `${MF_MUTATION_PATIENT_SELECTOR}, ` +
+43598:         `${MF_MUTATION_PANEL_SELECTOR}, ` +
+43599:         `${MF_MUTATION_TRANSPORT_SELECTOR}`;
+43600: 
+43601:     const MF_MUTATION_RELEVANT_TARGET_SELECTOR =
+43602:         `${MF_MUTATION_VEHICLE_SELECTOR}, ` +
+43603:         `${MF_MUTATION_MISSION_TARGET_SELECTOR}, ` +
+43604:         `${MF_MUTATION_PATIENT_SELECTOR}, ` +
+43605:         `${MF_MUTATION_TRANSPORT_SELECTOR}`;
+43606: 
+43607:     function resetMainMutationFlags() {
+43608:         mfMainMutationFlags = {
+43609:             relevant: false,
+43610:             vehicleListChanged: false,
+43611:             missionContextChanged: false,
+43612:             patientChanged: false,
+43613:             panelChanged: false,
+43614:             transportChanged: false
+43615:         };
+43616:     }
+43617: 
+43618:     function mutationNodeMatches(node, selector) {
+43619:         if (!node || node.nodeType !== 1) return false;
+43620: 
+43621:         try {
+43622:             return (
+43623:                 node.matches?.(selector) ||
+43624:                 !!node.querySelector?.(selector)
+43625:             );
+43626:         } catch (_error) {
+43627:             return false;
+43628:         }
+43629:     }
+
+# trained-personnel-panel — 0 matches
+
+# mf-dashboard-utility-open — 3 matches
+
+## occurrence 1 at line 16548
+16520:                 padding-right: 0;
+16521:             }
+16522: 
+16523: 
+16524:             /* MissionChief Nexus integrated mission dashboard (V10.6.132). */
+16525:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) {
+16526:                 display: grid;
+16527:                 grid-template-columns: 66px repeat(3, minmax(235px, 1fr));
+16528:                 grid-template-areas:
+16529:                     "rail control load trained"
+16530:                     "footer footer footer footer";
+16531:                 align-items: stretch;
+16532:                 gap: 10px;
+16533:                 width: min(1360px, calc(100vw - 32px));
+16534:                 max-width: calc(100vw - 32px);
+16535:                 max-height: calc(100vh - 32px);
+16536:                 padding: 10px;
+16537:                 overflow: auto;
+16538:                 box-sizing: border-box;
+16539:                 border: 1px solid rgba(82, 155, 255, 0.24);
+16540:                 border-radius: 14px;
+16541:                 background:
+16542:                     radial-gradient(circle at 8% 0%, rgba(20, 92, 170, 0.18), transparent 34%),
+16543:                     linear-gradient(145deg, rgba(5, 16, 29, 0.98), rgba(4, 21, 38, 0.98));
+16544:                 box-shadow: 0 18px 55px rgba(0, 0, 0, 0.55);
+16545:                 color: #eaf2ff;
+16546:             }
+16547: 
+16548:             #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari) {
+16549:                 grid-template-columns: 66px minmax(250px, 285px) repeat(3, minmax(225px, 1fr));
+16550:                 grid-template-areas:
+16551:                     "rail utility control load trained"
+16552:                     "footer footer footer footer footer";
+16553:                 width: min(1580px, calc(100vw - 32px));
+16554:             }
+16555: 
+16556:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-panel {
+16557:                 width: auto;
+16558:                 min-width: 0;
+16559:                 max-height: calc(100vh - 96px);
+16560:                 padding: 0;
+16561:                 gap: 0;
+16562:                 overflow: hidden;
+16563:                 border: 1px solid rgba(126, 167, 218, 0.18);
+16564:                 border-radius: 12px;
+16565:                 background: linear-gradient(155deg, rgba(18, 32, 48, 0.97), rgba(7, 23, 39, 0.97));
+16566:                 box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035), 0 10px 30px rgba(0, 0, 0, 0.24);
+16567:                 font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+16568:             }
+16569: 
+16570:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #control-panel { grid-area: control; }
+16571:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #vehicle-load-list-box { grid-area: load; }
+16572:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #trained-personnel-box { grid-area: trained; }
+16573: 
+16574:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-control-header-row,
+16575:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-load-header-row,
+16576:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-trained-header-row {
+16577:                 min-height: 48px;
+16578:                 padding: 8px 10px;
+16579:                 border-bottom: 1px solid rgba(126, 167, 218, 0.14);
+16580:                 background: rgba(9, 23, 38, 0.72);
+16581:                 box-sizing: border-box;
+16582:             }
+16583: 
+16584:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-header {
+16585:                 display: flex;
+16586:                 align-items: center;
+16587:                 gap: 8px;
+16588:                 padding: 0;
+16589:                 text-align: left;
+16590:                 text-transform: uppercase;
+16591:                 letter-spacing: 0.035em;
+16592:                 background: transparent;
+16593:                 color: #f4f8ff;
+16594:                 font-size: 13px;
+16595:                 font-weight: 800;
+16596:             }
+16597: 
+16598:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mf-control-title::before {
+16599:                 content: "◎";
+
+## occurrence 2 at line 16829
+16801:                 padding: 7px 9px !important;
+16802:                 box-sizing: border-box;
+16803:             }
+16804: 
+16805:             .mf-dashboard-toggle-row {
+16806:                 align-items: flex-start;
+16807:             }
+16808: 
+16809:             #mf-event-scanner-state {
+16810:                 margin-top: 7px;
+16811:             }
+16812: 
+16813:             #mf-dashboard-diagnostics-pane #mf-export-unit-finder-diagnostics {
+16814:                 width: 100%;
+16815:                 background: linear-gradient(145deg, #27394d, #172638) !important;
+16816:             }
+16817: 
+16818:             #mf-dashboard-footer {
+16819:                 grid-area: footer;
+16820:                 padding: 4px 10px 0;
+16821:                 text-align: center;
+16822:                 color: #7f91a8;
+16823:                 font-size: 11px;
+16824:                 letter-spacing: 0.02em;
+16825:             }
+16826: 
+16827:             @media (max-width: 1180px) and (min-width: 701px) {
+16828:                 #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari),
+16829:                 #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari) {
+16830:                     grid-template-columns: 62px repeat(2, minmax(250px, 1fr));
+16831:                     grid-template-areas:
+16832:                         "rail control load"
+16833:                         "rail trained trained"
+16834:                         "utility utility utility"
+16835:                         "footer footer footer";
+16836:                     width: min(920px, calc(100vw - 24px));
+16837:                 }
+16838: 
+16839:                 #mf-dashboard-utility {
+16840:                     max-height: 310px;
+16841:                 }
+16842:             }
+16843:         `;
+16844:         document.head.appendChild(style);
+16845:     }
+16846: 
+16847:     function createControlPanel() {
+16848:         if (!isMissionPage()) return;
+16849: 
+16850:         if (!claimCurrentMissionExecutionOwnership('create control panel')) {
+16851:             document.getElementById('mission-finder-wrapper')?.remove();
+16852:             return;
+16853:         }
+16854: 
+16855:         cleanupDuplicatePanels();
+16856: 
+16857:         if (document.getElementById('mission-finder-wrapper')) return;
+16858: 
+16859:         injectStyles();
+16860: 
+16861:         const wrapper = document.createElement('div');
+16862:         wrapper.id = 'mission-finder-wrapper';
+16863:         wrapper.classList.add('mf-nexus-dashboard');
+16864: 
+16865:         const missionFinderIosSafari =
+16866:             isMissionFinderIosSafariWebsite();
+16867:         const missionFinderIphoneSafari =
+16868:             isMissionFinderIphoneSafariWebsite();
+16869: 
+16870:         wrapper.classList.toggle(
+16871:             'mf2026-ios-safari',
+16872:             missionFinderIosSafari
+16873:         );
+16874:         wrapper.classList.toggle(
+16875:             'mf2026-iphone-safari',
+16876:             missionFinderIphoneSafari
+16877:         );
+16878: 
+16879:         const iphoneLauncher =
+16880:             document.createElement('div');
+
+## occurrence 3 at line 17040
+17012: 
+17013:         const settingsPane = document.createElement('div');
+17014:         settingsPane.id = 'mf-dashboard-settings-pane';
+17015:         settingsPane.className = 'mf-dashboard-utility-pane';
+17016: 
+17017:         const diagnosticsPane = document.createElement('div');
+17018:         diagnosticsPane.id = 'mf-dashboard-diagnostics-pane';
+17019:         diagnosticsPane.className = 'mf-dashboard-utility-pane';
+17020:         diagnosticsPane.hidden = true;
+17021: 
+17022:         dashboardUtility.appendChild(settingsPane);
+17023:         dashboardUtility.appendChild(diagnosticsPane);
+17024: 
+17025:         const dashboardUtilityTitle =
+17026:             dashboardUtility.querySelector('#mf-dashboard-utility-title');
+17027:         const dashboardUtilityClose =
+17028:             dashboardUtility.querySelector('#mf-dashboard-utility-close');
+17029:         const dashboardTabs = Array.from(
+17030:             dashboardRail.querySelectorAll('[data-mf-dashboard-tab]')
+17031:         );
+17032: 
+17033:         function setMissionDashboardTab(tabName) {
+17034:             const nextTab = ['settings', 'diagnostics'].includes(tabName)
+17035:                 ? tabName
+17036:                 : 'mission';
+17037:             const utilityOpen = nextTab !== 'mission';
+17038: 
+17039:             wrapper.classList.toggle(
+17040:                 'mf-dashboard-utility-open',
+17041:                 utilityOpen
+17042:             );
+17043:             dashboardUtility.hidden = !utilityOpen;
+17044:             settingsPane.hidden = nextTab !== 'settings';
+17045:             diagnosticsPane.hidden = nextTab !== 'diagnostics';
+17046: 
+17047:             if (dashboardUtilityTitle) {
+17048:                 dashboardUtilityTitle.textContent =
+17049:                     nextTab === 'diagnostics'
+17050:                         ? 'Diagnostics'
+17051:                         : 'Settings';
+17052:             }
+17053: 
+17054:             dashboardTabs.forEach(button => {
+17055:                 const active =
+17056:                     button.dataset.mfDashboardTab === nextTab;
+17057:                 button.classList.toggle(
+17058:                     'mf-dashboard-tab-active',
+17059:                     active
+17060:                 );
+17061:                 button.setAttribute(
+17062:                     'aria-pressed',
+17063:                     String(active)
+17064:                 );
+17065:             });
+17066: 
+17067:             localStorage.setItem(
+17068:                 'mf_nexus_dashboard_tab_v1',
+17069:                 nextTab
+17070:             );
+17071: 
+17072:             requestAnimationFrame(() => {
+17073:                 keepMissionFinderWindowOnScreen(wrapper);
+17074:             });
+17075:         }
+17076: 
+17077:         dashboardTabs.forEach(button => {
+17078:             button.addEventListener('click', function() {
+17079:                 setMissionDashboardTab(
+17080:                     this.dataset.mfDashboardTab
+17081:                 );
+17082:             });
+17083:         });
+17084: 
+17085:         dashboardUtilityClose?.addEventListener('click', function() {
+17086:             setMissionDashboardTab('mission');
+17087:         });
+17088: 
+17089:         const statusBox = document.createElement('div');
+17090:         statusBox.id = 'status-box';
+17091:         statusBox.className = 'mf2026-box';

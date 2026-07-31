@@ -1,0 +1,11 @@
+06073:     function getPersonnelTrainingCombinationKey(trainingCodes) {
+06074:         return Array.from(
+06075:             new Set(
+06076:                 (Array.isArray(trainingCodes) ? trainingCodes : [])
+06077:                     .map(String)
+06078:                     .filter(Boolean)
+06079:             )
+06080:         )
+06081:             .sort()
+06082:             .join('+');
+06083:     }
