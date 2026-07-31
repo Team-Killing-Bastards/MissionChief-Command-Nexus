@@ -180,3 +180,5 @@ jobs:
 
           git push --force origin \
             "${CLEAN_COMMIT}:refs/heads/feature/nexus-ui-system-v1070-clean"
+
+# registration refresh
