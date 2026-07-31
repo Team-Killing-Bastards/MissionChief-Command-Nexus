@@ -1,0 +1,97 @@
+name: Build HazMat personnel OSU v1.0.64
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: build-hazmat-personnel-v1064-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Apply and validate HazMat personnel correction
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'fix/hazmat-personnel-osu-v1064'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out product branch
+        uses: actions/checkout@v6
+        with:
+          ref: fix/hazmat-personnel-osu-v1064
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Apply source, documentation and CI changes
+        run: python scripts/apply-hazmat-personnel-osu-v1064.py
+
+      - name: Validate complete userscript regression suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          node scripts/check-ios-compatibility.mjs
+          node scripts/check-runtime-hardening.mjs
+          node scripts/check-police-irv-fallback.mjs
+          node scripts/check-ios-unit-finder-selection.mjs
+          node scripts/check-ios-mission-requirements-source.mjs
+          node scripts/check-iphone-mission-ui.mjs
+          node scripts/check-open-issues-batch.mjs
+          node scripts/check-missing-requirements-priority.mjs
+          node scripts/check-missing-on-mission-authority.mjs
+          node scripts/check-mission-update-single-pass.mjs
+          node scripts/check-trained-personnel-panel.mjs
+          node scripts/check-hazmat-osu-issue-215.mjs
+          node scripts/check-hazmat-personnel-osu.mjs
+          node scripts/check-trained-coverage-optimizer.mjs
+          node scripts/check-mission-definition-trained-personnel.mjs
+          node scripts/check-unit-finder-diagnostic-export.mjs
+          node scripts/check-auto-memory-lifecycle.mjs
+          node scripts/check-auto-memory-recycle.mjs
+          node scripts/check-auto-dispatch-eod-required-personnel.mjs
+          node scripts/check-road-rail-rru-mapping.mjs
+          node scripts/check-auto-prisoner-cell-gate.mjs
+          node scripts/check-fire-engine-update-mapping.mjs
+          node scripts/check-saved-position-helper-copy.mjs
+          node scripts/check-bulk-trained-register-update.mjs
+          node scripts/check-hems-ambulance-eta-priority.mjs
+          node scripts/check-police-search-advisor-register.mjs
+          python scripts/check_repository.py
+
+      - name: Remove one-use build artifacts
+        run: |
+          rm -f scripts/apply-hazmat-personnel-osu-v1064.py
+          rm -f .github/workflows/temporary-inspect-hazmat-personnel.yml
+          rm -f .github/workflows/temporary-build-hazmat-personnel-v1064.yml
+
+      - name: Commit clean product branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'Martyblyth'
+          git config user.email '32400596+Martyblyth@users.noreply.github.com'
+          git add -A
+          if git diff --cached --quiet; then
+            echo 'No product changes were produced.' >&2
+            exit 1
+          fi
+          git commit -m 'Fix HazMat trained personnel capacity with OSUs'
+          git push origin HEAD:fix/hazmat-personnel-osu-v1064
