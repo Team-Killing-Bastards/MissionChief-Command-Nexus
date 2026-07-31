@@ -1898,18 +1898,15 @@ Path('scripts/check-nexus-visual-system-v1070.mjs').write_text(
 
 workflow_path = Path('.github/workflows/validate-userscript.yml')
 workflow = workflow_path.read_text(encoding='utf-8')
-workflow = replace_once(
-    workflow,
-    "      - 'scripts/check-mission-dashboard-v1069.mjs'\n",
-    "      - 'scripts/check-mission-dashboard-v1069.mjs'\n      - 'scripts/check-nexus-visual-system-v1070.mjs'\n",
-    'validation workflow visual-system path 1',
-)
-workflow = replace_once(
-    workflow,
-    "      - 'scripts/check-mission-dashboard-v1069.mjs'\n",
-    "      - 'scripts/check-mission-dashboard-v1069.mjs'\n      - 'scripts/check-nexus-visual-system-v1070.mjs'\n",
-    'validation workflow visual-system path 2',
-)
+dashboard_path = "      - 'scripts/check-mission-dashboard-v1069.mjs'\n"
+visual_path = dashboard_path + "      - 'scripts/check-nexus-visual-system-v1070.mjs'\n"
+dashboard_path_count = workflow.count(dashboard_path)
+if dashboard_path_count != 2:
+    raise SystemExit(
+        f'validation workflow dashboard path: expected 2 matches, found {dashboard_path_count}'
+    )
+workflow = workflow.replace(dashboard_path, visual_path)
+
 workflow = replace_once(
     workflow,
     '''      - name: Validate integrated MissionChief Nexus dashboard
