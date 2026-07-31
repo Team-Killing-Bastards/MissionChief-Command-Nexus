@@ -27,6 +27,7 @@ on:
       - 'scripts/check-nexus-visual-system-v1070.mjs'
       - 'scripts/check-compact-nexus-ui-v1071.mjs'
       - 'scripts/check-vehicle-load-drawer-v1072.mjs'
+      - 'scripts/check-vehicle-drawer-animation-v1073.mjs'
       - 'scripts/check-auto-memory-lifecycle.mjs'
       - 'scripts/check-auto-memory-recycle.mjs'
       - 'scripts/check-auto-dispatch-eod-required-personnel.mjs'
@@ -65,6 +66,7 @@ on:
       - 'scripts/check-nexus-visual-system-v1070.mjs'
       - 'scripts/check-compact-nexus-ui-v1071.mjs'
       - 'scripts/check-vehicle-load-drawer-v1072.mjs'
+      - 'scripts/check-vehicle-drawer-animation-v1073.mjs'
       - 'scripts/check-auto-memory-lifecycle.mjs'
       - 'scripts/check-auto-memory-recycle.mjs'
       - 'scripts/check-auto-dispatch-eod-required-personnel.mjs'
@@ -170,6 +172,9 @@ jobs:
 
       - name: Validate attached Vehicle Load drawer
         run: node scripts/check-vehicle-load-drawer-v1072.mjs
+
+      - name: Validate top-aligned animated Vehicle drawer and action order
+        run: node scripts/check-vehicle-drawer-animation-v1073.mjs
 
       - name: Validate Auto Mode memory lifecycle
         run: node scripts/check-auto-memory-lifecycle.mjs
