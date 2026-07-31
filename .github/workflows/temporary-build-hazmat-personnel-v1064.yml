@@ -78,14 +78,15 @@ jobs:
           node scripts/check-police-search-advisor-register.mjs
           python scripts/check_repository.py
 
-      - name: Remove one-use build artifacts
+      - name: Keep workflow files token-safe
+        run: git checkout HEAD -- .github/workflows/validate-userscript.yml
+
+      - name: Remove one-use Python build artifacts
         run: |
           rm -f scripts/apply-hazmat-personnel-osu-v1064.py
           rm -f scripts/fix-hazmat-personnel-regression-extractor.py
-          rm -f .github/workflows/temporary-inspect-hazmat-personnel.yml
-          rm -f .github/workflows/temporary-build-hazmat-personnel-v1064.yml
 
-      - name: Commit clean product branch
+      - name: Commit product branch
         shell: bash
         run: |
           set -euo pipefail
