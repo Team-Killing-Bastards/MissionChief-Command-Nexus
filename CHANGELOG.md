@@ -4,6 +4,28 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.72] - 2026-07-31
+
+### Changed
+
+- Converted desktop/tablet Vehicle Load from a detached panel into an attached right-side Mission drawer.
+- Collapsed Vehicle Load is now a slim vertical Vehicle tab sharing the Mission shell edge and border.
+- Expanding Vehicle Load opens outward to the right without resizing or shifting Mission Control.
+- The Vehicle title and collapse control both open and close the drawer.
+- Settings, Diagnostics and whole-shell Mission collapse hide the Vehicle drawer.
+- Expanded Vehicle content remains complete with bounded internal scrolling.
+
+### Compatibility and safety
+
+- The attached drawer is limited to the desktop/tablet compact shell and explicitly excludes the established iPhone/iOS launcher geometry.
+- Vehicle Load rendering, session data and all mission execution paths remain unchanged.
+- Added permanent attached-drawer geometry, disclosure ownership and operational-isolation coverage.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.134` to `V10.6.135`.
+
+
 ## [1.0.71] - 2026-07-31
 
 ### Redesigned
