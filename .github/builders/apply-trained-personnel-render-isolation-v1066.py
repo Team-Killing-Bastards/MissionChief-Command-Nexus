@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -15,6 +16,13 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
     return text.replace(old, new, 1)
 
 
+def replace_regex_once(text: str, pattern: str, replacement: str, label: str) -> str:
+    matches = list(re.finditer(pattern, text, flags=re.MULTILINE))
+    if len(matches) != 1:
+        raise RuntimeError(f'{label}: expected exactly one regex anchor, found {len(matches)}')
+    return re.sub(pattern, replacement, text, count=1, flags=re.MULTILINE)
+
+
 source = SOURCE_PATH.read_text(encoding='utf-8')
 source = replace_once(
     source,
@@ -28,20 +36,18 @@ if engine_count < 1:
     raise RuntimeError('Mission Finder V10.6.128 anchor was not found')
 source = source.replace('V10.6.128', 'V10.6.129')
 
-source = replace_once(
+source = replace_regex_once(
     source,
-    "    function renderSelectedTrainedPersonnelPanel() {\n"
-    "        scheduleMissionRequiredPersonnelPreload(0);\n\n"
-    "        const panel =",
-    "    function renderSelectedTrainedPersonnelPanel() {\n"
-    "        const panel =",
+    r'(    function renderSelectedTrainedPersonnelPanel\(\) \{\n)'
+    r'[ \t\r\n]*scheduleMissionRequiredPersonnelPreload\(\s*0\s*\);[ \t\r\n]*',
+    r'\1',
     'recursive trained-personnel preload trigger',
 )
 
-source = replace_once(
+source = replace_regex_once(
     source,
-    "        const preloadRequirements =\n"
-    "            getPreloadedMissionTrainedPersonnelRequirements();",
+    r'        const preloadRequirements\s*=\s*'
+    r'getPreloadedMissionTrainedPersonnelRequirements\(\);',
     "        let preloadRequirements = [];\n\n"
     "        try {\n"
     "            preloadRequirements =\n"
