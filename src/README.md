@@ -10,8 +10,8 @@ src/missionchief-command-nexus.user.js
 
 | Item | Value |
 |---|---|
-| Command Nexus version | `1.0.72` |
-| Mission Finder baseline | `V10.6.135` |
+| Command Nexus version | `1.0.73` |
+| Mission Finder baseline | `V10.6.136` |
 | Unit, Station & Personnel baseline | `V4.2.8` |
 | Licence | MIT |
 | Developer and source-code owner | **MartyBlyth** |
@@ -83,3 +83,7 @@ Desktop Mission Control is a narrow single-shell interface. Mission actions rema
 ### Attached Vehicle Load drawer
 
 On desktop and tablet, Vehicle Load is attached to the right edge of the compact Mission shell. Its collapsed state is a narrow vertical Vehicle tab sharing the Mission border. Opening the drawer expands it to the right without resizing Mission Control; Settings, Diagnostics and whole-shell collapse hide it. iPhone/iOS vehicle launcher behaviour is unchanged.
+
+### Vehicle drawer motion refinement
+
+The desktop/tablet Vehicle Load drawer is anchored at the top-right edge of Mission Control and uses a short eased transition. Reduced-motion users receive an immediate transition. Mission Update now precedes Ally Steal in the primary action grid; button IDs and handlers remain unchanged.

@@ -4,6 +4,27 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.73] - 2026-07-31
+
+### Refined
+
+- Moved the attached Vehicle Load tab and expanded drawer to the top-right edge of the compact Mission shell.
+- Added a short eased width, transform, opacity and shadow transition so Vehicle Load opens and closes smoothly without shifting Mission Control.
+- Tucked the collapsed tab slightly into the shared shell edge so both surfaces read as one component.
+- Added a reduced-motion override that makes the transition effectively immediate.
+- Swapped Mission Update and Ally Steal in the primary action grid; Mission Update now appears immediately after Unit Finder.
+
+### Compatibility and safety
+
+- Existing action IDs and event handlers remain unchanged.
+- Vehicle Load data, patient/session rendering and collapsed-state ownership remain unchanged.
+- iPhone/iOS Mission and Vehicle launcher geometry remains excluded from the desktop drawer refinement.
+- Added permanent top-alignment, animation, reduced-motion and action-order regression coverage.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.135` to `V10.6.136`.
+
 ## [1.0.72] - 2026-07-31
 
 ### Changed
