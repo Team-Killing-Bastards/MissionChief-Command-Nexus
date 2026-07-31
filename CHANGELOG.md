@@ -4,6 +4,41 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.71] - 2026-07-31
+
+### Redesigned
+
+- Immediately superseded the expansive `1.0.70` presentation with a narrow compact operations interface.
+- Reduced the desktop Mission surface to a single `390px`-class shell instead of a wide multi-column dashboard.
+- Removed the visible identity banner and compressed Mission, Settings and Diagnostics navigation into a small three-button strip.
+- Kept Mission actions and live status immediately available while Vehicle Load and Trained Personnel now start collapsed.
+- Settings and Diagnostics now replace the operational view instead of expanding the shell beside it.
+- Collapsing Mission Control reduces the entire desktop shell to a compact `205px` launcher/header.
+- Reduced Unit Naming and Station Naming to a `360px` compact panel and Personnel Assignment to a `390px` compact panel.
+- Added progressive-disclosure menus for status, activity logs, profile details, register/report tools, report controls and reports.
+
+### Compactness and usability
+
+- Reduced desktop header, tab, input and action heights while retaining clear focus and click targets.
+- Replaced large status metric cards with compact label/value rows.
+- Limited expanded logs and reports to bounded internal scrolling.
+- Retained safe wrapping, tabular values, low-glare surfaces and semantic state colours.
+
+### Safety
+
+- Required Personnel preload, mission identity safety, Unit Finder, Mission Update, Ally Steal, dispatch, sharing, Auto Mode, Event Scanner, Vehicle Load, trained-personnel optimisation and Personnel Register authority remain unchanged.
+- Unit Naming, Station Naming and Personnel Assignment handlers, IDs, storage and execution paths remain unchanged.
+- Existing iPhone/iOS layouts and safe-area behaviour remain isolated from the desktop compact rebuild.
+- Added permanent compact-shell, collapsed-default and progressive-disclosure regression coverage.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.133` to `V10.6.134`.
+- Unit Naming remains `3.3.8`.
+- Station Naming remains `1.3.3`.
+- Personnel Assignment remains `1.3.8`.
+
+
 ## [1.0.70] - 2026-07-31
 
 ### Redesigned

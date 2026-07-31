@@ -10,8 +10,8 @@ src/missionchief-command-nexus.user.js
 
 | Item | Value |
 |---|---|
-| Command Nexus version | `1.0.70` |
-| Mission Finder baseline | `V10.6.133` |
+| Command Nexus version | `1.0.71` |
+| Mission Finder baseline | `V10.6.134` |
 | Unit, Station & Personnel baseline | `V4.2.8` |
 | Licence | MIT |
 | Developer and source-code owner | **MartyBlyth** |
@@ -75,3 +75,7 @@ Start with [Developer Handoff](../docs/DEVELOPER_HANDOFF.md). Publication detail
 ### Nexus visual system
 
 Desktop mission and naming/assignment surfaces share one low-glare tokenised design system. The Mission dashboard uses a numbered horizontal Mission, Settings and Diagnostics strip with responsive three-, two- and one-column layouts. Unit Naming, Station Naming and Personnel Assignment use responsive configuration, action, status, analysis, report and log regions. Existing IDs and handlers remain authoritative. All new desktop selectors explicitly exclude the established iPhone/iOS geometry.
+
+### Compact progressive-disclosure interface
+
+Desktop Mission Control is a narrow single-shell interface. Mission actions remain immediately visible; Vehicle Load and Trained Personnel start collapsed; Settings and Diagnostics replace the mission view rather than expanding beside it. Unit Naming, Station Naming and Personnel Assignment use narrow single-column panels with status, tools, reports and logs behind native disclosure controls. The entire Mission shell and naming panel can collapse to compact headers. Existing IDs, handlers, authoritative data paths and iPhone/iOS geometry remain unchanged.
