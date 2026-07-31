@@ -6,11 +6,13 @@ on:
       - main
     paths:
       - '.github/workflows/apply-trained-personnel-render-isolation-v1066.yml'
+      - '.github/builders/apply-trained-personnel-render-isolation-v1066.py'
   push:
     branches:
       - fix/trained-personnel-render-isolation-v1066
     paths:
       - '.github/workflows/apply-trained-personnel-render-isolation-v1066.yml'
+      - '.github/builders/apply-trained-personnel-render-isolation-v1066.py'
   workflow_dispatch:
 
 permissions:
