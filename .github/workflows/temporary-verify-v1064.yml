@@ -1,0 +1,138 @@
+name: Verify published v1.0.64
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  verify:
+    name: GitHub, Greasy Fork and Discord delivery
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'release/verify-v1064'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out verification branch
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          show-progress: false
+
+      - name: Verify all public delivery channels
+        id: verify
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          TAG: v1.0.64
+          EXPECTED_COMMIT: d4f97936f597a73dd23ca036f2eb7543c9ebafd3
+          GREASY_URL: https://greasyfork.org/scripts/587702-missionchief-command-nexus/code/MissionChief%20Command%20Nexus.user.js
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p verify-assets
+          git fetch --force --tags origin
+
+          tag_commit="$(git rev-parse "refs/tags/${TAG}^{commit}")"
+          test "$tag_commit" = "$EXPECTED_COMMIT"
+
+          release_json=verify-assets/release.json
+          for attempt in $(seq 1 30); do
+            if curl -fsSL --retry 2 --retry-delay 2 \
+              -H 'Accept: application/vnd.github+json' \
+              -H "Authorization: Bearer ${GH_TOKEN}" \
+              -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "https://api.github.com/repos/${REPO}/releases/tags/${TAG}" \
+              -o "$release_json"; then
+              asset_count="$(jq '.assets | length' "$release_json")"
+              receipt_count="$(jq --arg tag "$TAG" '[.assets[].name | select(startswith("Command-Nexus-Discord-Receipt-" + $tag + "-") and endswith(".json"))] | length' "$release_json")"
+              userscript_count="$(jq '[.assets[].name | select(endswith(".user.js"))] | length' "$release_json")"
+              checksum_count="$(jq '[.assets[].name | select(test("sha256|checksum"; "i"))] | length' "$release_json")"
+              if [ "$asset_count" -ge 3 ] && [ "$receipt_count" -eq 1 ] && [ "$userscript_count" -ge 1 ] && [ "$checksum_count" -ge 1 ]; then
+                break
+              fi
+            fi
+            if [ "$attempt" -eq 30 ]; then
+              echo 'Release assets or Discord receipt did not become complete.' >&2
+              cat "$release_json" >&2 || true
+              exit 1
+            fi
+            sleep 10
+          done
+
+          release_url="$(jq -r '.html_url' "$release_json")"
+          while IFS=$'\t' read -r name url; do
+            curl -fsSL --retry 3 --retry-delay 2 "$url" -o "verify-assets/$name"
+          done < <(jq -r '.assets[] | [.name, .browser_download_url] | @tsv' "$release_json")
+
+          userscript_name="$(jq -r '[.assets[].name | select(endswith(".user.js"))][0]' "$release_json")"
+          checksum_name="$(jq -r '[.assets[].name | select(test("sha256|checksum"; "i"))][0]' "$release_json")"
+          receipt_name="$(jq -r --arg tag "$TAG" '[.assets[].name | select(startswith("Command-Nexus-Discord-Receipt-" + $tag + "-") and endswith(".json"))][0]' "$release_json")"
+
+          canonical='src/missionchief-command-nexus.user.js'
+          release_script="verify-assets/$userscript_name"
+          cmp --silent "$canonical" "$release_script"
+          grep -Eq '^// @version[[:space:]]+1\.0\.64[[:space:]]*$' "$release_script"
+          grep -Fq 'MISSION FINDER V10.6.127' "$release_script"
+          grep -Fq "const PERSONNEL_VERSION = '1.3.8';" "$release_script"
+
+          expected_sha="$(sha256sum "$release_script" | awk '{print $1}')"
+          checksum_text="$(cat "verify-assets/$checksum_name")"
+          grep -Fqi "$expected_sha" <<<"$checksum_text"
+
+          jq empty "verify-assets/$receipt_name"
+
+          greasy=verify-assets/greasy.user.js
+          for attempt in $(seq 1 30); do
+            if curl -fsSL --retry 2 --retry-delay 2 "$GREASY_URL" -o "$greasy" && \
+               grep -Eq '^// @version[[:space:]]+1\.0\.64[[:space:]]*$' "$greasy"; then
+              break
+            fi
+            if [ "$attempt" -eq 30 ]; then
+              echo 'Greasy Fork did not publish v1.0.64 in time.' >&2
+              head -30 "$greasy" >&2 || true
+              exit 1
+            fi
+            sleep 10
+          done
+
+          normalize() {
+            sed 's/\r$//' "$1" | awk '
+              /^\/\/ @(downloadURL|updateURL|installURL)[[:space:]]+/ { next }
+              { print }
+            '
+          }
+          normalize "$release_script" > verify-assets/release.normalized.js
+          normalize "$greasy" > verify-assets/greasy.normalized.js
+          if ! cmp --silent verify-assets/release.normalized.js verify-assets/greasy.normalized.js; then
+            diff -u verify-assets/release.normalized.js verify-assets/greasy.normalized.js | head -160 >&2 || true
+            exit 1
+          fi
+
+          body=$(cat <<EOF
+          v1.0.64 delivery verified.
+
+          - Release: ${release_url}
+          - Tag/source commit: \`${tag_commit}\`
+          - GitHub userscript and checksum assets: verified
+          - Greasy Fork version and normalized source parity: verified
+          - Discord receipt: exactly one (\`${receipt_name}\`)
+          - SHA-256: \`${expected_sha}\`
+          EOF
+          )
+          gh pr comment "$PR_NUMBER" --repo "$REPO" --body "$body"
+          echo "release_url=$release_url" >> "$GITHUB_OUTPUT"
+          echo "sha256=$expected_sha" >> "$GITHUB_OUTPUT"
+          echo "receipt_name=$receipt_name" >> "$GITHUB_OUTPUT"
