@@ -13,6 +13,8 @@ TOKENS = [
     'Export Diagnostics',
     'Event Scanner',
     'event scanner',
+    'collectible collector',
+    'mission event collectible',
     'wrapper.appendChild(loadPanel);',
     'wrapper.appendChild(trainedPanel);',
     'const loadPanel',
@@ -20,8 +22,19 @@ TOKENS = [
     'const controlPanel',
     'mf-mission-control',
     'renderSelectedTrainedPersonnelPanel',
-    'createVehicleLoadPanel',
-    'createMissionControl',
+    'startMissionEventCollectibleCollector',
+    'stopMissionEventCollectibleCollector',
+    'collectMissionEventCollectibles',
+    'injectStyles',
+]
+FUNCTION_NAMES = [
+    'createControlPanel',
+    'injectStyles',
+    'startMissionEventCollectibleCollector',
+    'stopMissionEventCollectibleCollector',
+    'collectMissionEventCollectibles',
+    'renderSelectedTrainedPersonnelPanel',
+    'renderVehicleLoadListNow',
 ]
 
 source = SOURCE.read_text(encoding='utf-8')
@@ -44,16 +57,9 @@ def line_number(pos: int) -> int:
     return lo + 1
 
 
-def extract_function_at(pos: int):
-    candidates = []
-    for match in re.finditer(r'(?m)^\s*(?:async\s+)?function\s+([A-Za-z0-9_$]+)\s*\(', source[:pos]):
-        candidates.append(match)
-    if not candidates:
-        return None
-    match = candidates[-1]
-    start = match.start()
-    brace = source.find('{', match.end())
-    if brace < 0 or brace > pos:
+def extract_balanced_function(start: int):
+    brace = source.find('{', start)
+    if brace < 0:
         return None
     depth = 0
     quote = None
@@ -93,7 +99,7 @@ def extract_function_at(pos: int):
             block_comment = True
             i += 2
             continue
-        if ch in ('"', "'", '`'):
+        if ch in ('\"', "'", '`'):
             quote = ch
             i += 1
             continue
@@ -102,11 +108,32 @@ def extract_function_at(pos: int):
         elif ch == '}':
             depth -= 1
             if depth == 0:
-                end = i + 1
-                if start <= pos <= end:
-                    return source[start:end]
-                return None
+                return source[start:i + 1]
         i += 1
+    return None
+
+
+def extract_named_function(name: str):
+    match = re.search(
+        rf'(?m)^\s*(?:async\s+)?function\s+{re.escape(name)}\s*\(',
+        source
+    )
+    if not match:
+        return None
+    return extract_balanced_function(match.start())
+
+
+def extract_function_at(pos: int):
+    candidates = list(re.finditer(
+        r'(?m)^\s*(?:async\s+)?function\s+([A-Za-z0-9_$]+)\s*\(',
+        source[:pos]
+    ))
+    if not candidates:
+        return None
+    match = candidates[-1]
+    function_text = extract_balanced_function(match.start())
+    if function_text and match.start() <= pos <= match.start() + len(function_text):
+        return function_text
     return None
 
 sections = []
@@ -115,7 +142,7 @@ for token in TOKENS:
     sections.append(f'\n\n===== TOKEN: {token} =====\n')
     starts = [m.start() for m in re.finditer(re.escape(token), source, re.IGNORECASE)]
     sections.append(f'Occurrences: {len(starts)}\n')
-    for index, pos in enumerate(starts[:12], 1):
+    for index, pos in enumerate(starts[:20], 1):
         start = max(0, pos - 2200)
         end = min(len(source), pos + len(token) + 3200)
         sections.append(f'\n--- occurrence {index} at line {line_number(pos)} ---\n')
@@ -130,13 +157,25 @@ for token in TOKENS:
                 sections.append(func)
                 sections.append('\n')
 
-# Extract style blocks near the mission UI identifiers.
-for match in re.finditer(r'(?m)^\s*const\s+style\s*=\s*document\.createElement\(["\']style["\']\)', source):
-    pos = match.start()
-    window = source[pos:pos + 30000]
-    if any(token.lower() in window.lower() for token in ['mission control', 'vehicle load list', 'trained personnel', 'mf-control']):
-        sections.append(f'\n\n===== POSSIBLE STYLE BLOCK line {line_number(pos)} =====\n')
-        sections.append(window[:24000])
+for name in FUNCTION_NAMES:
+    sections.append(f'\n\n===== NAMED FUNCTION: {name} =====\n')
+    function_text = extract_named_function(name)
+    if function_text:
+        sections.append(function_text)
+    else:
+        sections.append('MISSING\n')
+
+# Include constants/state close to collectible and dashboard identifiers.
+for pattern in [
+    r'(?mi)^.*(?:COLLECTIBLE|EVENT_COLLECT|EVENT_SCANNER).*$' ,
+    r'(?mi)^.*(?:MF_PANEL_|MF_CONTROL_|MF_VEHICLE_LOAD_|MF_TRAINED_PERSONNEL_).*$'
+]:
+    sections.append(f'\n\n===== MATCHING LINES: {pattern} =====\n')
+    for match in re.finditer(pattern, source):
+        start = max(0, match.start() - 500)
+        end = min(len(source), match.end() + 900)
+        sections.append(source[start:end])
+        sections.append('\n---\n')
 
 OUTPUT.parent.mkdir(parents=True, exist_ok=True)
 OUTPUT.write_text(''.join(sections), encoding='utf-8')
