@@ -1,0 +1,365 @@
+run_id=30669625407
+{"conclusion":"failure","headSha":"8bdfe4a65afcbc892bbd96574debbc9a726dc1ca","name":"Build compact Command Nexus UI V1.0.71","status":"completed","url":"https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/runs/30669625407"}
+=== jobs ===
+{"conclusion":"failure","name":"build","status":"completed","steps":[{"completedAt":"2026-07-31T22:20:34Z","conclusion":"success","name":"Set up job","number":1,"startedAt":"2026-07-31T22:20:32Z","status":"completed"},{"completedAt":"2026-07-31T22:20:35Z","conclusion":"success","name":"Check out development branch","number":2,"startedAt":"2026-07-31T22:20:34Z","status":"completed"},{"completedAt":"2026-07-31T22:20:39Z","conclusion":"success","name":"Set up Node.js","number":3,"startedAt":"2026-07-31T22:20:35Z","status":"completed"},{"completedAt":"2026-07-31T22:20:39Z","conclusion":"success","name":"Reset candidate to exact production main","number":4,"startedAt":"2026-07-31T22:20:39Z","status":"completed"},{"completedAt":"2026-07-31T22:20:39Z","conclusion":"success","name":"Apply compact UI rebuild","number":5,"startedAt":"2026-07-31T22:20:39Z","status":"completed"},{"completedAt":"2026-07-31T22:20:41Z","conclusion":"failure","name":"Validate complete candidate","number":6,"startedAt":"2026-07-31T22:20:39Z","status":"completed"},{"completedAt":"2026-07-31T22:20:41Z","conclusion":"skipped","name":"Confirm compactness and locked ownership","number":7,"startedAt":"2026-07-31T22:20:41Z","status":"completed"},{"completedAt":"2026-07-31T22:20:41Z","conclusion":"skipped","name":"Publish clean validated candidate","number":8,"startedAt":"2026-07-31T22:20:41Z","status":"completed"},{"completedAt":"2026-07-31T22:20:41Z","conclusion":"skipped","name":"Post Set up Node.js","number":15,"startedAt":"2026-07-31T22:20:41Z","status":"completed"},{"completedAt":"2026-07-31T22:20:41Z","conclusion":"success","name":"Post Check out development branch","number":16,"startedAt":"2026-07-31T22:20:41Z","status":"completed"},{"completedAt":"2026-07-31T22:20:41Z","conclusion":"success","name":"Complete job","number":17,"startedAt":"2026-07-31T22:20:41Z","status":"completed"}]}
+=== log tail ===
+build	Check out development branch	2026-07-31T22:20:35.8728774Z  * [new branch]      audit/ios-full-compatibility -> origin/audit/ios-full-compatibility
+build	Check out development branch	2026-07-31T22:20:35.8729847Z  * [new branch]      dependabot/github_actions/github-actions-9b61906d8b -> origin/dependabot/github_actions/github-actions-9b61906d8b
+build	Check out development branch	2026-07-31T22:20:35.8730781Z  * [new branch]      diagnostic/fire-engine-update-route -> origin/diagnostic/fire-engine-update-route
+build	Check out development branch	2026-07-31T22:20:35.8731589Z  * [new branch]      diagnostic/missing-requirements-source -> origin/diagnostic/missing-requirements-source
+build	Check out development branch	2026-07-31T22:20:35.8732375Z  * [new branch]      diagnostic/normal-irv-selection -> origin/diagnostic/normal-irv-selection
+build	Check out development branch	2026-07-31T22:20:35.8733026Z  * [new branch]      diagnostic/publish-v1040 -> origin/diagnostic/publish-v1040
+build	Check out development branch	2026-07-31T22:20:35.8733619Z  * [new branch]      diagnostic/publish-v1041 -> origin/diagnostic/publish-v1041
+build	Check out development branch	2026-07-31T22:20:35.8734209Z  * [new branch]      diagnostic/publish-v1042 -> origin/diagnostic/publish-v1042
+build	Check out development branch	2026-07-31T22:20:35.8734797Z  * [new branch]      diagnostic/publish-v1043 -> origin/diagnostic/publish-v1043
+build	Check out development branch	2026-07-31T22:20:35.8735372Z  * [new branch]      diagnostic/publish-v1044 -> origin/diagnostic/publish-v1044
+build	Check out development branch	2026-07-31T22:20:35.8735949Z  * [new branch]      diagnostic/publish-v1045 -> origin/diagnostic/publish-v1045
+build	Check out development branch	2026-07-31T22:20:35.8736516Z  * [new branch]      diagnostic/publish-v1046 -> origin/diagnostic/publish-v1046
+build	Check out development branch	2026-07-31T22:20:35.8737088Z  * [new branch]      diagnostic/publish-v1047 -> origin/diagnostic/publish-v1047
+build	Check out development branch	2026-07-31T22:20:35.8737664Z  * [new branch]      diagnostic/publish-v1048 -> origin/diagnostic/publish-v1048
+build	Check out development branch	2026-07-31T22:20:35.8738236Z  * [new branch]      diagnostic/publish-v1049 -> origin/diagnostic/publish-v1049
+build	Check out development branch	2026-07-31T22:20:35.8739108Z  * [new branch]      diagnostic/trained-coverage-optimizer -> origin/diagnostic/trained-coverage-optimizer
+build	Check out development branch	2026-07-31T22:20:35.8740152Z  * [new branch]      diagnostic/training-shortfall-audit -> origin/diagnostic/training-shortfall-audit
+build	Check out development branch	2026-07-31T22:20:35.8740927Z  * [new branch]      diagnostic/verify-v1037-delivery -> origin/diagnostic/verify-v1037-delivery
+build	Check out development branch	2026-07-31T22:20:35.8741582Z  * [new branch]      docs/issue-33-validation -> origin/docs/issue-33-validation
+build	Check out development branch	2026-07-31T22:20:35.8742194Z  * [new branch]      docs/refresh-readme-v1.0.6 -> origin/docs/refresh-readme-v1.0.6
+build	Check out development branch	2026-07-31T22:20:35.8742864Z  * [new branch]      feature/compact-nexus-ui-v1071 -> origin/feature/compact-nexus-ui-v1071
+build	Check out development branch	2026-07-31T22:20:35.8743577Z  * [new branch]      feature/ios-safari-stations-menu -> origin/feature/ios-safari-stations-menu
+build	Check out development branch	2026-07-31T22:20:35.8744366Z  * [new branch]      feature/mission-command-dashboard-v1069 -> origin/feature/mission-command-dashboard-v1069
+build	Check out development branch	2026-07-31T22:20:35.8745125Z  * [new branch]      feature/nexus-ui-system-v1070 -> origin/feature/nexus-ui-system-v1070
+build	Check out development branch	2026-07-31T22:20:35.8745841Z  * [new branch]      feature/nexus-ui-system-v1070-clean -> origin/feature/nexus-ui-system-v1070-clean
+build	Check out development branch	2026-07-31T22:20:35.8746653Z  * [new branch]      feature/preload-required-personnel-v1065 -> origin/feature/preload-required-personnel-v1065
+build	Check out development branch	2026-07-31T22:20:35.8747495Z  * [new branch]      feature/trained-personnel-panel-v1062 -> origin/feature/trained-personnel-panel-v1062
+build	Check out development branch	2026-07-31T22:20:35.8748313Z  * [new branch]      fix/auto-duplicate-eod-personnel-v1057 -> origin/fix/auto-duplicate-eod-personnel-v1057
+build	Check out development branch	2026-07-31T22:20:35.8749056Z  * [new branch]      fix/auto-memory-recycle-v1059 -> origin/fix/auto-memory-recycle-v1059
+build	Check out development branch	2026-07-31T22:20:35.8749990Z  * [new branch]      fix/auto-mode-memory-lifecycle-v1058 -> origin/fix/auto-mode-memory-lifecycle-v1058
+build	Check out development branch	2026-07-31T22:20:35.8750759Z  * [new branch]      fix/hazmat-osu-issue-215-v1063 -> origin/fix/hazmat-osu-issue-215-v1063
+build	Check out development branch	2026-07-31T22:20:35.8751450Z  * [new branch]      fix/hazmat-personnel-osu-v1064 -> origin/fix/hazmat-personnel-osu-v1064
+build	Check out development branch	2026-07-31T22:20:35.8752307Z  * [new branch]      fix/ios-stations-only-tools-menu -> origin/fix/ios-stations-only-tools-menu
+build	Check out development branch	2026-07-31T22:20:35.8753174Z  * [new branch]      fix/issue-33-notifier-propagation -> origin/fix/issue-33-notifier-propagation
+build	Check out development branch	2026-07-31T22:20:35.8754046Z  * [new branch]      fix/missing-on-mission-authority-v1060 -> origin/fix/missing-on-mission-authority-v1060
+build	Check out development branch	2026-07-31T22:20:35.8754872Z  * [new branch]      fix/mission-update-single-pass-v1061 -> origin/fix/mission-update-single-pass-v1061
+build	Check out development branch	2026-07-31T22:20:35.8755693Z  * [new branch]      fix/required-personnel-lifecycle-v1067 -> origin/fix/required-personnel-lifecycle-v1067
+build	Check out development branch	2026-07-31T22:20:35.8756474Z  * [new branch]      fix/required-personnel-load-v1068 -> origin/fix/required-personnel-load-v1068
+build	Check out development branch	2026-07-31T22:20:35.8757330Z  * [new branch]      fix/trained-personnel-render-isolation-v1066 -> origin/fix/trained-personnel-render-isolation-v1066
+build	Check out development branch	2026-07-31T22:20:35.8758016Z  * [new branch]      main                   -> origin/main
+build	Check out development branch	2026-07-31T22:20:35.8758497Z  * [new branch]      release/apply-v1055    -> origin/release/apply-v1055
+build	Check out development branch	2026-07-31T22:20:35.8759043Z  * [new branch]      release/apply-v1055-r2 -> origin/release/apply-v1055-r2
+build	Check out development branch	2026-07-31T22:20:35.8759581Z  * [new branch]      release/apply-v1056    -> origin/release/apply-v1056
+build	Check out development branch	2026-07-31T22:20:35.8760362Z  * [new branch]      release/finalize-v1030 -> origin/release/finalize-v1030
+build	Check out development branch	2026-07-31T22:20:35.8760918Z  * [new branch]      release/publish-v1051  -> origin/release/publish-v1051
+build	Check out development branch	2026-07-31T22:20:35.8761455Z  * [new branch]      release/publish-v1052  -> origin/release/publish-v1052
+build	Check out development branch	2026-07-31T22:20:35.8762000Z  * [new branch]      release/publish-v1053  -> origin/release/publish-v1053
+build	Check out development branch	2026-07-31T22:20:35.8762530Z  * [new branch]      release/publish-v1054  -> origin/release/publish-v1054
+build	Check out development branch	2026-07-31T22:20:35.8763302Z  * [new branch]      release/run-v1021-fire-crossref -> origin/release/run-v1021-fire-crossref
+build	Check out development branch	2026-07-31T22:20:35.8763989Z  * [new branch]      release/run-v1056-comment -> origin/release/run-v1056-comment
+build	Check out development branch	2026-07-31T22:20:35.8764529Z  * [new branch]      release/v1.0.2         -> origin/release/v1.0.2
+build	Check out development branch	2026-07-31T22:20:35.8765159Z  * [new branch]      release/v1.0.20-builder-registration -> origin/release/v1.0.20-builder-registration
+build	Check out development branch	2026-07-31T22:20:35.8765869Z  * [new branch]      release/v1.0.20-road-rail-unit -> origin/release/v1.0.20-road-rail-unit
+build	Check out development branch	2026-07-31T22:20:35.8766568Z  * [new branch]      release/v1.0.20-road-rail-unit-final -> origin/release/v1.0.20-road-rail-unit-final
+build	Check out development branch	2026-07-31T22:20:35.8767335Z  * [new branch]      release/v1.0.20-road-rail-unit-trigger -> origin/release/v1.0.20-road-rail-unit-trigger
+build	Check out development branch	2026-07-31T22:20:35.8837115Z  * [new branch]      release/v1.0.21-final-job-registration -> origin/release/v1.0.21-final-job-registration
+build	Check out development branch	2026-07-31T22:20:35.8838206Z  * [new branch]      release/v1.0.21-fire-crossref-dispatch -> origin/release/v1.0.21-fire-crossref-dispatch
+build	Check out development branch	2026-07-31T22:20:35.8839234Z  * [new branch]      release/v1.0.21-fire-crossref-dispatch-pr -> origin/release/v1.0.21-fire-crossref-dispatch-pr
+build	Check out development branch	2026-07-31T22:20:35.8840448Z  * [new branch]      release/v1.0.21-fire-crossref-finalizer -> origin/release/v1.0.21-fire-crossref-finalizer
+build	Check out development branch	2026-07-31T22:20:35.8841365Z  * [new branch]      release/v1.0.21-fire-crossref-trigger -> origin/release/v1.0.21-fire-crossref-trigger
+build	Check out development branch	2026-07-31T22:20:35.8842233Z  * [new branch]      release/v1.0.21-pr-close-dispatcher -> origin/release/v1.0.21-pr-close-dispatcher
+build	Check out development branch	2026-07-31T22:20:35.8843105Z  * [new branch]      release/v1.0.21-trusted-dispatcher -> origin/release/v1.0.21-trusted-dispatcher
+build	Check out development branch	2026-07-31T22:20:35.8843826Z  * [new branch]      release/verify-v1057   -> origin/release/verify-v1057
+build	Check out development branch	2026-07-31T22:20:35.8844418Z  * [new branch]      release/verify-v1061   -> origin/release/verify-v1061
+build	Check out development branch	2026-07-31T22:20:35.8845011Z  * [new branch]      release/verify-v1062   -> origin/release/verify-v1062
+build	Check out development branch	2026-07-31T22:20:35.8845805Z  * [new branch]      release/verify-v1063   -> origin/release/verify-v1063
+build	Check out development branch	2026-07-31T22:20:35.8846383Z  * [new branch]      release/verify-v1064   -> origin/release/verify-v1064
+build	Check out development branch	2026-07-31T22:20:35.8847089Z  * [new branch]      test/discord-pull-notification -> origin/test/discord-pull-notification
+build	Check out development branch	2026-07-31T22:20:35.8847703Z  * [new tag]         v1.0.10                -> v1.0.10
+build	Check out development branch	2026-07-31T22:20:35.8848128Z  * [new tag]         v1.0.11                -> v1.0.11
+build	Check out development branch	2026-07-31T22:20:35.8848545Z  * [new tag]         v1.0.12                -> v1.0.12
+build	Check out development branch	2026-07-31T22:20:35.8848964Z  * [new tag]         v1.0.13                -> v1.0.13
+build	Check out development branch	2026-07-31T22:20:35.8849381Z  * [new tag]         v1.0.14                -> v1.0.14
+build	Check out development branch	2026-07-31T22:20:35.8850013Z  * [new tag]         v1.0.15                -> v1.0.15
+build	Check out development branch	2026-07-31T22:20:35.8850465Z  * [new tag]         v1.0.16                -> v1.0.16
+build	Check out development branch	2026-07-31T22:20:35.8850895Z  * [new tag]         v1.0.17                -> v1.0.17
+build	Check out development branch	2026-07-31T22:20:35.8851304Z  * [new tag]         v1.0.18                -> v1.0.18
+build	Check out development branch	2026-07-31T22:20:35.8851699Z  * [new tag]         v1.0.19                -> v1.0.19
+build	Check out development branch	2026-07-31T22:20:35.8852087Z  * [new tag]         v1.0.2                 -> v1.0.2
+build	Check out development branch	2026-07-31T22:20:35.8852475Z  * [new tag]         v1.0.20                -> v1.0.20
+build	Check out development branch	2026-07-31T22:20:35.8852858Z  * [new tag]         v1.0.21                -> v1.0.21
+build	Check out development branch	2026-07-31T22:20:35.8853242Z  * [new tag]         v1.0.22                -> v1.0.22
+build	Check out development branch	2026-07-31T22:20:35.8853626Z  * [new tag]         v1.0.23                -> v1.0.23
+build	Check out development branch	2026-07-31T22:20:35.8854037Z  * [new tag]         v1.0.24                -> v1.0.24
+build	Check out development branch	2026-07-31T22:20:35.8854439Z  * [new tag]         v1.0.25                -> v1.0.25
+build	Check out development branch	2026-07-31T22:20:35.8854834Z  * [new tag]         v1.0.26                -> v1.0.26
+build	Check out development branch	2026-07-31T22:20:35.8855242Z  * [new tag]         v1.0.27                -> v1.0.27
+build	Check out development branch	2026-07-31T22:20:35.8855635Z  * [new tag]         v1.0.28                -> v1.0.28
+build	Check out development branch	2026-07-31T22:20:35.8856191Z  * [new tag]         v1.0.29                -> v1.0.29
+build	Check out development branch	2026-07-31T22:20:35.8856596Z  * [new tag]         v1.0.3                 -> v1.0.3
+build	Check out development branch	2026-07-31T22:20:35.8856987Z  * [new tag]         v1.0.30                -> v1.0.30
+build	Check out development branch	2026-07-31T22:20:35.8857376Z  * [new tag]         v1.0.31                -> v1.0.31
+build	Check out development branch	2026-07-31T22:20:35.8857757Z  * [new tag]         v1.0.32                -> v1.0.32
+build	Check out development branch	2026-07-31T22:20:35.8858143Z  * [new tag]         v1.0.33                -> v1.0.33
+build	Check out development branch	2026-07-31T22:20:35.8858530Z  * [new tag]         v1.0.34                -> v1.0.34
+build	Check out development branch	2026-07-31T22:20:35.8858916Z  * [new tag]         v1.0.35                -> v1.0.35
+build	Check out development branch	2026-07-31T22:20:35.8859300Z  * [new tag]         v1.0.36                -> v1.0.36
+build	Check out development branch	2026-07-31T22:20:35.8859916Z  * [new tag]         v1.0.37                -> v1.0.37
+build	Check out development branch	2026-07-31T22:20:35.8860336Z  * [new tag]         v1.0.38                -> v1.0.38
+build	Check out development branch	2026-07-31T22:20:35.8860729Z  * [new tag]         v1.0.39                -> v1.0.39
+build	Check out development branch	2026-07-31T22:20:35.8861128Z  * [new tag]         v1.0.4                 -> v1.0.4
+build	Check out development branch	2026-07-31T22:20:35.8861521Z  * [new tag]         v1.0.40                -> v1.0.40
+build	Check out development branch	2026-07-31T22:20:35.8861896Z  * [new tag]         v1.0.41                -> v1.0.41
+build	Check out development branch	2026-07-31T22:20:35.8862267Z  * [new tag]         v1.0.42                -> v1.0.42
+build	Check out development branch	2026-07-31T22:20:35.8862640Z  * [new tag]         v1.0.43                -> v1.0.43
+build	Check out development branch	2026-07-31T22:20:35.8863020Z  * [new tag]         v1.0.44                -> v1.0.44
+build	Check out development branch	2026-07-31T22:20:35.8863403Z  * [new tag]         v1.0.45                -> v1.0.45
+build	Check out development branch	2026-07-31T22:20:35.8863820Z  * [new tag]         v1.0.46                -> v1.0.46
+build	Check out development branch	2026-07-31T22:20:35.8864191Z  * [new tag]         v1.0.47                -> v1.0.47
+build	Check out development branch	2026-07-31T22:20:35.8864564Z  * [new tag]         v1.0.48                -> v1.0.48
+build	Check out development branch	2026-07-31T22:20:35.8864943Z  * [new tag]         v1.0.49                -> v1.0.49
+build	Check out development branch	2026-07-31T22:20:35.8865321Z  * [new tag]         v1.0.5                 -> v1.0.5
+build	Check out development branch	2026-07-31T22:20:35.8865706Z  * [new tag]         v1.0.50                -> v1.0.50
+build	Check out development branch	2026-07-31T22:20:35.8866220Z  * [new tag]         v1.0.51                -> v1.0.51
+build	Check out development branch	2026-07-31T22:20:35.8866588Z  * [new tag]         v1.0.52                -> v1.0.52
+build	Check out development branch	2026-07-31T22:20:35.8866960Z  * [new tag]         v1.0.53                -> v1.0.53
+build	Check out development branch	2026-07-31T22:20:35.8867335Z  * [new tag]         v1.0.54                -> v1.0.54
+build	Check out development branch	2026-07-31T22:20:35.8867701Z  * [new tag]         v1.0.55                -> v1.0.55
+build	Check out development branch	2026-07-31T22:20:35.8868065Z  * [new tag]         v1.0.56                -> v1.0.56
+build	Check out development branch	2026-07-31T22:20:35.8868431Z  * [new tag]         v1.0.57                -> v1.0.57
+build	Check out development branch	2026-07-31T22:20:35.8868795Z  * [new tag]         v1.0.58                -> v1.0.58
+build	Check out development branch	2026-07-31T22:20:35.8869160Z  * [new tag]         v1.0.59                -> v1.0.59
+build	Check out development branch	2026-07-31T22:20:35.8869528Z  * [new tag]         v1.0.6                 -> v1.0.6
+build	Check out development branch	2026-07-31T22:20:35.8870135Z  * [new tag]         v1.0.60                -> v1.0.60
+build	Check out development branch	2026-07-31T22:20:35.8870520Z  * [new tag]         v1.0.61                -> v1.0.61
+build	Check out development branch	2026-07-31T22:20:35.8870892Z  * [new tag]         v1.0.62                -> v1.0.62
+build	Check out development branch	2026-07-31T22:20:35.8871264Z  * [new tag]         v1.0.63                -> v1.0.63
+build	Check out development branch	2026-07-31T22:20:35.8871636Z  * [new tag]         v1.0.64                -> v1.0.64
+build	Check out development branch	2026-07-31T22:20:35.8872009Z  * [new tag]         v1.0.65                -> v1.0.65
+build	Check out development branch	2026-07-31T22:20:35.8872378Z  * [new tag]         v1.0.66                -> v1.0.66
+build	Check out development branch	2026-07-31T22:20:35.8872745Z  * [new tag]         v1.0.67                -> v1.0.67
+build	Check out development branch	2026-07-31T22:20:35.8873112Z  * [new tag]         v1.0.68                -> v1.0.68
+build	Check out development branch	2026-07-31T22:20:35.8873478Z  * [new tag]         v1.0.69                -> v1.0.69
+build	Check out development branch	2026-07-31T22:20:35.8873848Z  * [new tag]         v1.0.7                 -> v1.0.7
+build	Check out development branch	2026-07-31T22:20:35.8874220Z  * [new tag]         v1.0.70                -> v1.0.70
+build	Check out development branch	2026-07-31T22:20:35.8874592Z  * [new tag]         v1.0.8                 -> v1.0.8
+build	Check out development branch	2026-07-31T22:20:35.8875122Z  * [new tag]         v1.0.9                 -> v1.0.9
+build	Check out development branch	2026-07-31T22:20:35.9044071Z ##[endgroup]
+build	Check out development branch	2026-07-31T22:20:35.9045000Z ##[group]Determining the checkout info
+build	Check out development branch	2026-07-31T22:20:35.9045921Z [command]/usr/bin/git branch --list --remote origin/feature/compact-nexus-ui-v1071
+build	Check out development branch	2026-07-31T22:20:35.9085205Z   origin/feature/compact-nexus-ui-v1071
+build	Check out development branch	2026-07-31T22:20:35.9094899Z ##[endgroup]
+build	Check out development branch	2026-07-31T22:20:35.9096701Z [command]/usr/bin/git sparse-checkout disable
+build	Check out development branch	2026-07-31T22:20:35.9153643Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+build	Check out development branch	2026-07-31T22:20:35.9189539Z ##[group]Checking out the ref
+build	Check out development branch	2026-07-31T22:20:35.9193655Z [command]/usr/bin/git checkout --progress --force -B feature/compact-nexus-ui-v1071 refs/remotes/origin/feature/compact-nexus-ui-v1071
+build	Check out development branch	2026-07-31T22:20:35.9373094Z Switched to a new branch 'feature/compact-nexus-ui-v1071'
+build	Check out development branch	2026-07-31T22:20:35.9376670Z branch 'feature/compact-nexus-ui-v1071' set up to track 'origin/feature/compact-nexus-ui-v1071'.
+build	Check out development branch	2026-07-31T22:20:35.9382594Z ##[endgroup]
+build	Check out development branch	2026-07-31T22:20:35.9437458Z [command]/usr/bin/git log -1 --format=%H
+build	Check out development branch	2026-07-31T22:20:35.9474785Z 8bdfe4a65afcbc892bbd96574debbc9a726dc1ca
+build	Set up Node.js	﻿2026-07-31T22:20:35.9751872Z ##[group]Run actions/setup-node@v6
+build	Set up Node.js	2026-07-31T22:20:35.9752238Z with:
+build	Set up Node.js	2026-07-31T22:20:35.9752483Z   node-version: 24
+build	Set up Node.js	2026-07-31T22:20:35.9752772Z   package-manager-cache: false
+build	Set up Node.js	2026-07-31T22:20:35.9753090Z   check-latest: false
+build	Set up Node.js	2026-07-31T22:20:35.9755470Z   token: ***
+build	Set up Node.js	2026-07-31T22:20:35.9755724Z ##[endgroup]
+build	Set up Node.js	2026-07-31T22:20:36.1214537Z Found in cache @ /opt/hostedtoolcache/node/24.18.0/x64
+build	Set up Node.js	2026-07-31T22:20:36.1218882Z ##[group]Environment details
+build	Set up Node.js	2026-07-31T22:20:39.0566991Z node: v24.18.0
+build	Set up Node.js	2026-07-31T22:20:39.0567328Z npm: 11.16.0
+build	Set up Node.js	2026-07-31T22:20:39.0567561Z yarn: 1.22.22
+build	Set up Node.js	2026-07-31T22:20:39.0568399Z ##[endgroup]
+build	Reset candidate to exact production main	﻿2026-07-31T22:20:39.0686851Z ##[group]Run set -euo pipefail
+build	Reset candidate to exact production main	2026-07-31T22:20:39.0687211Z ^[[36;1mset -euo pipefail^[[0m
+build	Reset candidate to exact production main	2026-07-31T22:20:39.0687680Z ^[[36;1mcp .github/compact-nexus-ui-v1071-patch.py /tmp/compact-nexus-ui-v1071-patch.py^[[0m
+build	Reset candidate to exact production main	2026-07-31T22:20:39.0688183Z ^[[36;1mgit fetch origin main --force^[[0m
+build	Reset candidate to exact production main	2026-07-31T22:20:39.0688676Z ^[[36;1mgit reset --hard origin/main^[[0m
+build	Reset candidate to exact production main	2026-07-31T22:20:39.0688946Z ^[[36;1m^[[0m
+build	Reset candidate to exact production main	2026-07-31T22:20:39.0689240Z ^[[36;1mEXPECTED_SHA="a5153a6ce97438232bba8bcd1b78edf6f957d1f8"^[[0m
+build	Reset candidate to exact production main	2026-07-31T22:20:39.0690072Z ^[[36;1mACTUAL_SHA="$(git rev-parse HEAD)"^[[0m
+build	Reset candidate to exact production main	2026-07-31T22:20:39.0690633Z ^[[36;1m[[ "${ACTUAL_SHA}" == "${EXPECTED_SHA}" ]]^[[0m
+build	Reset candidate to exact production main	2026-07-31T22:20:39.0690947Z ^[[36;1m^[[0m
+build	Reset candidate to exact production main	2026-07-31T22:20:39.0691274Z ^[[36;1mVERSION="$(node scripts/validate-userscript.mjs --print-version)"^[[0m
+build	Reset candidate to exact production main	2026-07-31T22:20:39.0691697Z ^[[36;1m[[ "${VERSION}" == "1.0.70" ]]^[[0m
+build	Reset candidate to exact production main	2026-07-31T22:20:39.0692127Z ^[[36;1mgrep -Fq 'MISSION FINDER V10.6.133' src/missionchief-command-nexus.user.js^[[0m
+build	Reset candidate to exact production main	2026-07-31T22:20:39.0692555Z ^[[36;1m^[[0m
+build	Reset candidate to exact production main	2026-07-31T22:20:39.0692965Z ^[[36;1mcp /tmp/compact-nexus-ui-v1071-patch.py .github/compact-nexus-ui-v1071-patch.py^[[0m
+build	Reset candidate to exact production main	2026-07-31T22:20:39.0821059Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+build	Reset candidate to exact production main	2026-07-31T22:20:39.0821527Z ##[endgroup]
+build	Reset candidate to exact production main	2026-07-31T22:20:39.2946947Z From https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
+build	Reset candidate to exact production main	2026-07-31T22:20:39.2947934Z  * branch            main       -> FETCH_HEAD
+build	Reset candidate to exact production main	2026-07-31T22:20:39.3158779Z HEAD is now at a5153a6 Introduce the Command Nexus adaptive visual system (#230)
+build	Apply compact UI rebuild	﻿2026-07-31T22:20:39.3671144Z ##[group]Run python3 .github/compact-nexus-ui-v1071-patch.py
+build	Apply compact UI rebuild	2026-07-31T22:20:39.3671688Z ^[[36;1mpython3 .github/compact-nexus-ui-v1071-patch.py^[[0m
+build	Apply compact UI rebuild	2026-07-31T22:20:39.3719044Z shell: /usr/bin/bash -e {0}
+build	Apply compact UI rebuild	2026-07-31T22:20:39.3719364Z ##[endgroup]
+build	Apply compact UI rebuild	2026-07-31T22:20:39.4088725Z userscript version: matches=1
+build	Apply compact UI rebuild	2026-07-31T22:20:39.4102029Z Mission Finder version: matches=1
+build	Apply compact UI rebuild	2026-07-31T22:20:39.4107626Z desktop mission collapse key: matches=1
+build	Apply compact UI rebuild	2026-07-31T22:20:39.4114280Z desktop vehicle collapse key: matches=1
+build	Apply compact UI rebuild	2026-07-31T22:20:39.4121194Z desktop trained collapse key: matches=1
+build	Apply compact UI rebuild	2026-07-31T22:20:39.4128036Z collapsed-by-default vehicle panel: matches=1
+build	Apply compact UI rebuild	2026-07-31T22:20:39.4135926Z mission dashboard fallback version: matches=1
+build	Apply compact UI rebuild	2026-07-31T22:20:39.4142931Z compact naming disclosure controller: matches=1
+build	Apply compact UI rebuild	2026-07-31T22:20:39.4164808Z compact whole-shell collapse state: matches=1
+build	Apply compact UI rebuild	2026-07-31T22:20:39.4338503Z addPanel: compact CSS inserted
+build	Apply compact UI rebuild	2026-07-31T22:20:39.4619549Z injectStyles: compact CSS inserted
+build	Apply compact UI rebuild	2026-07-31T22:20:39.4704679Z compact workflow validation step: matches=1
+build	Apply compact UI rebuild	2026-07-31T22:20:39.4706244Z v1.0.71 changelog section: matches=1
+build	Apply compact UI rebuild	2026-07-31T22:20:39.4709831Z README version baseline: matches=1
+build	Apply compact UI rebuild	2026-07-31T22:20:39.4714000Z Command Nexus V1.0.71 compact UI patch applied.
+build	Validate complete candidate	﻿2026-07-31T22:20:39.4800287Z ##[group]Run set -euo pipefail
+build	Validate complete candidate	2026-07-31T22:20:39.4800638Z ^[[36;1mset -euo pipefail^[[0m
+build	Validate complete candidate	2026-07-31T22:20:39.4800995Z ^[[36;1mnode --check src/missionchief-command-nexus.user.js^[[0m
+build	Validate complete candidate	2026-07-31T22:20:39.4801465Z ^[[36;1mnode --check scripts/check-compact-nexus-ui-v1071.mjs^[[0m
+build	Validate complete candidate	2026-07-31T22:20:39.4801882Z ^[[36;1mnode scripts/validate-userscript.mjs^[[0m
+build	Validate complete candidate	2026-07-31T22:20:39.4802315Z ^[[36;1mnode scripts/validate-userscript.mjs --base-ref origin/main^[[0m
+build	Validate complete candidate	2026-07-31T22:20:39.4802725Z ^[[36;1m^[[0m
+build	Validate complete candidate	2026-07-31T22:20:39.4802961Z ^[[36;1mfor checker in scripts/check-*.mjs; do^[[0m
+build	Validate complete candidate	2026-07-31T22:20:39.4803289Z ^[[36;1m  echo "::group::${checker}"^[[0m
+build	Validate complete candidate	2026-07-31T22:20:39.4803602Z ^[[36;1m  node "${checker}"^[[0m
+build	Validate complete candidate	2026-07-31T22:20:39.4803859Z ^[[36;1m  echo "::endgroup::"^[[0m
+build	Validate complete candidate	2026-07-31T22:20:39.4804117Z ^[[36;1mdone^[[0m
+build	Validate complete candidate	2026-07-31T22:20:39.4804322Z ^[[36;1m^[[0m
+build	Validate complete candidate	2026-07-31T22:20:39.4804555Z ^[[36;1mpython3 scripts/check_repository.py^[[0m
+build	Validate complete candidate	2026-07-31T22:20:39.4804875Z ^[[36;1mgit diff --check^[[0m
+build	Validate complete candidate	2026-07-31T22:20:39.4853752Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+build	Validate complete candidate	2026-07-31T22:20:39.4854204Z ##[endgroup]
+build	Validate complete candidate	2026-07-31T22:20:39.6010480Z Userscript validation passed: version 1.0.71, 1576678 bytes.
+build	Validate complete candidate	2026-07-31T22:20:39.6504385Z Userscript validation passed: version 1.0.71, 1576678 bytes.
+build	Validate complete candidate	2026-07-31T22:20:39.6552828Z ##[group]scripts/check-auto-dispatch-eod-required-personnel.mjs
+build	Validate complete candidate	2026-07-31T22:20:39.7114559Z Auto single-pass, EOD separation and Required Personnel regression passed.
+build	Validate complete candidate	2026-07-31T22:20:39.7160537Z ##[endgroup]
+build	Validate complete candidate	2026-07-31T22:20:39.7161279Z ##[group]scripts/check-auto-memory-lifecycle.mjs
+build	Validate complete candidate	2026-07-31T22:20:39.7516609Z Auto Mode memory lifecycle and diagnostic checks passed.
+build	Validate complete candidate	2026-07-31T22:20:39.7558939Z ##[endgroup]
+build	Validate complete candidate	2026-07-31T22:20:39.7559921Z ##[group]scripts/check-auto-memory-recycle.mjs
+build	Validate complete candidate	2026-07-31T22:20:39.7939568Z Auto Mode memory recycle and lifecycle suspension checks passed.
+build	Validate complete candidate	2026-07-31T22:20:39.7979948Z ##[endgroup]
+build	Validate complete candidate	2026-07-31T22:20:39.7980650Z ##[group]scripts/check-auto-patient-transport-anchor.mjs
+build	Validate complete candidate	2026-07-31T22:20:39.8324401Z Auto Mode patient transport anchor checks passed.
+build	Validate complete candidate	2026-07-31T22:20:39.8370823Z ##[endgroup]
+build	Validate complete candidate	2026-07-31T22:20:39.8371540Z ##[group]scripts/check-auto-patient-transport-iframe.mjs
+build	Validate complete candidate	2026-07-31T22:20:39.8708346Z Iframe-aware patient transport checks passed.
+build	Validate complete candidate	2026-07-31T22:20:39.8752686Z ##[endgroup]
+build	Validate complete candidate	2026-07-31T22:20:39.8753422Z ##[group]scripts/check-auto-prisoner-cell-gate.mjs
+build	Validate complete candidate	2026-07-31T22:20:39.9158266Z Auto Mode prefers active cells, completes the exact current-mission release fallback, follows the owning Vue vm--container/data-modal identity, reacquires replacement close spans and verifies the current lightbox is gone before restart.
+build	Validate complete candidate	2026-07-31T22:20:39.9209388Z ##[endgroup]
+build	Validate complete candidate	2026-07-31T22:20:39.9211066Z ##[group]scripts/check-bulk-trained-register-update.mjs
+build	Validate complete candidate	2026-07-31T22:20:39.9592963Z Bulk update contracts passed: delay helper removed, all-vehicle exact personnel profiles trusted, Search Advisor uses trained assigned units, and singular/plural towing uses exact type-105 recovery vehicles.
+build	Validate complete candidate	2026-07-31T22:20:39.9637269Z ##[endgroup]
+build	Validate complete candidate	2026-07-31T22:20:39.9638194Z ##[group]scripts/check-compact-nexus-ui-v1071.mjs
+build	Validate complete candidate	2026-07-31T22:20:40.0091375Z Command Nexus V1.0.71 compact shell and progressive disclosure checks passed.
+build	Validate complete candidate	2026-07-31T22:20:40.0138313Z ##[endgroup]
+build	Validate complete candidate	2026-07-31T22:20:40.0138806Z ##[group]scripts/check-fast-personnel-register.mjs
+build	Validate complete candidate	2026-07-31T22:20:40.0491752Z Fast personnel register contracts passed: routine refresh reuses unchanged exact records, unsafe or changed vehicles are verified, full audit remains available and exact page requests are bounded.
+build	Validate complete candidate	2026-07-31T22:20:40.0533304Z ##[endgroup]
+build	Validate complete candidate	2026-07-31T22:20:40.0534144Z ##[group]scripts/check-fire-engine-update-mapping.mjs
+build	Validate complete candidate	2026-07-31T22:20:40.0889932Z Fire Engine Update selection is restricted to pump-capable Fire types 0/16/17, excludes Ambulance type 5 and removes only the Auto Mode explanatory helper copy beneath the queue checkbox.
+build	Validate complete candidate	2026-07-31T22:20:40.0933545Z ##[endgroup]
+build	Validate complete candidate	2026-07-31T22:20:40.0934421Z ##[group]scripts/check-hazmat-osu-issue-215.mjs
+build	Validate complete candidate	2026-07-31T22:20:40.1326128Z Issue #215 regression passed: HazMat requirements preserve quantity, count selected OSUs and accept only exact type-39 Operational Support Units across Unit Finder and Mission Update.
+build	Validate complete candidate	2026-07-31T22:20:40.1374215Z ##[endgroup]
+build	Validate complete candidate	2026-07-31T22:20:40.1374931Z ##[group]scripts/check-hazmat-personnel-osu.mjs
+build	Validate complete candidate	2026-07-31T22:20:40.1796064Z HazMat personnel regression passed: 4 missing gw_gefahrgut-trained staff select one exact type-39 OSU at six personnel per vehicle, while ordinary HazMat vehicle quantities remain separate.
+build	Validate complete candidate	2026-07-31T22:20:40.1843118Z ##[endgroup]
+build	Validate complete candidate	2026-07-31T22:20:40.1843689Z ##[group]scripts/check-hems-ambulance-eta-priority.mjs
+build	Validate complete candidate	2026-07-31T22:20:40.2326896Z HEMS ambulance ETA contracts passed: standard patient demand compares exact type-5 Ambulances and type-9 HEMS by ETA, counts either when selected, blocks generic fallback, and preserves strict HEMS, transfer and Critical Care routes.
+build	Validate complete candidate	2026-07-31T22:20:40.2373527Z ##[endgroup]
+build	Validate complete candidate	2026-07-31T22:20:40.2374297Z ##[group]scripts/check-initial-trained-personnel-authority.mjs
+build	Validate complete candidate	2026-07-31T22:20:40.2724644Z Initial mission-definition trained-personnel authority checks passed.
+build	Validate complete candidate	2026-07-31T22:20:40.2766763Z ##[endgroup]
+build	Validate complete candidate	2026-07-31T22:20:40.2767733Z ##[group]scripts/check-ios-compatibility.mjs
+build	Validate complete candidate	2026-07-31T22:20:40.3136458Z iOS Safari compatibility regression checks passed.
+build	Validate complete candidate	2026-07-31T22:20:40.3181889Z ##[endgroup]
+build	Validate complete candidate	2026-07-31T22:20:40.3182636Z ##[group]scripts/check-ios-mission-requirements-source.mjs
+build	Validate complete candidate	2026-07-31T22:20:40.3781680Z iOS mission requirement source checks passed.
+build	Validate complete candidate	2026-07-31T22:20:40.3827652Z ##[endgroup]
+build	Validate complete candidate	2026-07-31T22:20:40.3828631Z ##[group]scripts/check-ios-unit-finder-selection.mjs
+build	Validate complete candidate	2026-07-31T22:20:40.4703306Z iOS Safari Unit Finder selection checks passed.
+build	Validate complete candidate	2026-07-31T22:20:40.4751869Z ##[endgroup]
+build	Validate complete candidate	2026-07-31T22:20:40.4752390Z ##[group]scripts/check-iphone-mission-ui.mjs
+build	Validate complete candidate	2026-07-31T22:20:40.5475184Z iPhone Safari Mission Finder UI checks passed.
+build	Validate complete candidate	2026-07-31T22:20:40.5527681Z ##[endgroup]
+build	Validate complete candidate	2026-07-31T22:20:40.5528475Z ##[group]scripts/check-missing-on-mission-authority.mjs
+build	Validate complete candidate	2026-07-31T22:20:40.5884938Z Missing on mission authority checks passed: current table shortages own Mission Update, zero-shortage tables suppress fresh-mission Unit Finder, escaped data-raw-html alerts are fallback-only, and patient rules remain active.
+build	Validate complete candidate	2026-07-31T22:20:40.5925246Z ##[endgroup]
+build	Validate complete candidate	2026-07-31T22:20:40.5925837Z ##[group]scripts/check-missing-requirements-priority.mjs
+build	Validate complete candidate	2026-07-31T22:20:40.6345269Z Current Missing Vehicles/Personnel and Missing on mission tables outrank full mission totals, zero-shortage tables preserve existing-mission state, patient-only rows remain additive, and Auto Mode retains the new-mission versus Mission Update routing rule.
+build	Validate complete candidate	2026-07-31T22:20:40.6388965Z ##[endgroup]
+build	Validate complete candidate	2026-07-31T22:20:40.6389955Z ##[group]scripts/check-mission-dashboard-v1069.mjs
+build	Validate complete candidate	2026-07-31T22:20:40.6819490Z Mission dashboard V10.6.132 ownership and lifecycle checks passed.
+build	Validate complete candidate	2026-07-31T22:20:40.6875943Z ##[endgroup]
+build	Validate complete candidate	2026-07-31T22:20:40.6876799Z ##[group]scripts/check-mission-definition-personnel-preload.mjs
+build	Validate complete candidate	2026-07-31T22:20:40.7339290Z Mission Required Personnel preload checks passed.
+build	Validate complete candidate	2026-07-31T22:20:40.7387963Z ##[endgroup]
+build	Validate complete candidate	2026-07-31T22:20:40.7388955Z ##[group]scripts/check-mission-definition-trained-personnel.mjs
+build	Validate complete candidate	2026-07-31T22:20:40.7785448Z Mission-definition trained-personnel checks passed.
+build	Validate complete candidate	2026-07-31T22:20:40.7829447Z ##[endgroup]
+build	Validate complete candidate	2026-07-31T22:20:40.7830668Z ##[group]scripts/check-mission-update-single-pass.mjs
+build	Validate complete candidate	2026-07-31T22:20:40.8204550Z Mission Update single-pass regression passed: existing-mission shortages and trained personnel are selected once, while fresh missions retain the late shortage check.
+build	Validate complete candidate	2026-07-31T22:20:40.8246828Z ##[endgroup]
+build	Validate complete candidate	2026-07-31T22:20:40.8247682Z ##[group]scripts/check-nexus-visual-system-v1070.mjs
+build	Validate complete candidate	2026-07-31T22:20:40.8676966Z Command Nexus V1.0.70 visual system, responsive layout and ownership checks passed.
+build	Validate complete candidate	2026-07-31T22:20:40.8725893Z ##[endgroup]
+build	Validate complete candidate	2026-07-31T22:20:40.8726585Z ##[group]scripts/check-open-issues-batch.mjs
+build	Validate complete candidate	2026-07-31T22:20:40.9115218Z Open issues #126, #123, #121, #117, #115 and #86 regression checks passed.
+build	Validate complete candidate	2026-07-31T22:20:40.9163727Z ##[endgroup]
+build	Validate complete candidate	2026-07-31T22:20:40.9164483Z ##[group]scripts/check-personnel-register-transfer.mjs
+build	Validate complete candidate	2026-07-31T22:20:40.9507641Z Personnel Register transfer and latest trained-coverage contracts passed.
+build	Validate complete candidate	2026-07-31T22:20:40.9553647Z ##[endgroup]
+build	Validate complete candidate	2026-07-31T22:20:40.9554451Z ##[group]scripts/check-police-irv-fallback.mjs
+build	Validate complete candidate	2026-07-31T22:20:40.9941369Z Police IRV fallback and Missing Personnel regression checks passed.
+build	Validate complete candidate	2026-07-31T22:20:40.9984451Z ##[endgroup]
+build	Validate complete candidate	2026-07-31T22:20:40.9985221Z ##[group]scripts/check-police-search-advisor-register.mjs
+build	Validate complete candidate	2026-07-31T22:20:41.0435948Z Police Search Advisor register contracts passed: MissionChief space-separated training codes are parsed, persistent Assigned To bindings survive Available status, unique names resolve exact vehicle IDs, ambiguous names fail closed and Search Advisor remains trained-only on any exact registered vehicle.
+build	Validate complete candidate	2026-07-31T22:20:41.0478508Z ##[endgroup]
+build	Validate complete candidate	2026-07-31T22:20:41.0479362Z ##[group]scripts/check-release-notification-single-delivery.mjs
+build	Validate complete candidate	2026-07-31T22:20:41.0741560Z Single-delivery Discord release notification checks passed.
+build	Validate complete candidate	2026-07-31T22:20:41.0779096Z ##[endgroup]
+build	Validate complete candidate	2026-07-31T22:20:41.0780194Z ##[group]scripts/check-road-rail-rru-mapping.mjs
+build	Validate complete candidate	2026-07-31T22:20:41.1131061Z Road Rail requirements use only exact Fire type-107; all RRU text fallback and Coastguard type-59 linkage are removed.
+build	Validate complete candidate	2026-07-31T22:20:41.1178008Z ##[endgroup]
+build	Validate complete candidate	2026-07-31T22:20:41.1178703Z ##[group]scripts/check-runtime-hardening.mjs
+build	Validate complete candidate	2026-07-31T22:20:41.1575394Z Runtime performance and lifecycle hardening checks passed.
+build	Validate complete candidate	2026-07-31T22:20:41.1625175Z ##[endgroup]
+build	Validate complete candidate	2026-07-31T22:20:41.1626016Z ##[group]scripts/check-saved-position-helper-copy.mjs
+build	Validate complete candidate	2026-07-31T22:20:41.1976743Z The Keep my saved panel position checkbox remains available while its explanatory helper sentence is absent.
+build	Validate complete candidate	2026-07-31T22:20:41.2022906Z ##[endgroup]
+build	Validate complete candidate	2026-07-31T22:20:41.2023524Z ##[group]scripts/check-trained-coverage-optimizer.mjs
+build	Validate complete candidate	2026-07-31T22:20:41.2455373Z Trained coverage optimiser checks passed.
+build	Validate complete candidate	2026-07-31T22:20:41.2502858Z ##[endgroup]
+build	Validate complete candidate	2026-07-31T22:20:41.2503549Z ##[group]scripts/check-trained-personnel-panel.mjs
+build	Validate complete candidate	2026-07-31T22:20:41.2857228Z ERROR: Trained-personnel panel contract missing 'mf_trained_personnel_collapsed_v1'
+build	Validate complete candidate	2026-07-31T22:20:41.2910795Z ##[error]Process completed with exit code 1.
+build	Post Check out development branch	﻿2026-07-31T22:20:41.3053961Z Post job cleanup.
+build	Post Check out development branch	2026-07-31T22:20:41.3906048Z [command]/usr/bin/git version
+build	Post Check out development branch	2026-07-31T22:20:41.3984746Z git version 2.54.0
+build	Post Check out development branch	2026-07-31T22:20:41.4032539Z Temporarily overriding HOME='/home/runner/work/_temp/15f633e0-666d-408a-84ad-14067976f6b4' before making global git config changes
+build	Post Check out development branch	2026-07-31T22:20:41.4034679Z Adding repository directory to the temporary git global config as a safe directory
+build	Post Check out development branch	2026-07-31T22:20:41.4038997Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/MissionChief-Command-Nexus/MissionChief-Command-Nexus
+build	Post Check out development branch	2026-07-31T22:20:41.4072504Z Removing SSH command configuration
+build	Post Check out development branch	2026-07-31T22:20:41.4080411Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+build	Post Check out development branch	2026-07-31T22:20:41.4116638Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+build	Post Check out development branch	2026-07-31T22:20:41.4362349Z Removing HTTP extra header
+build	Post Check out development branch	2026-07-31T22:20:41.4368409Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+build	Post Check out development branch	2026-07-31T22:20:41.4407677Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+build	Post Check out development branch	2026-07-31T22:20:41.4661964Z Removing includeIf entries pointing to credentials config files
+build	Post Check out development branch	2026-07-31T22:20:41.4670840Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+build	Post Check out development branch	2026-07-31T22:20:41.4702814Z includeif.gitdir:/home/runner/work/MissionChief-Command-Nexus/MissionChief-Command-Nexus/.git.path
+build	Post Check out development branch	2026-07-31T22:20:41.4704590Z includeif.gitdir:/home/runner/work/MissionChief-Command-Nexus/MissionChief-Command-Nexus/.git/worktrees/*.path
+build	Post Check out development branch	2026-07-31T22:20:41.4706050Z includeif.gitdir:/github/workspace/.git.path
+build	Post Check out development branch	2026-07-31T22:20:41.4707276Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+build	Post Check out development branch	2026-07-31T22:20:41.4713099Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/MissionChief-Command-Nexus/MissionChief-Command-Nexus/.git.path
+build	Post Check out development branch	2026-07-31T22:20:41.4738925Z /home/runner/work/_temp/git-credentials-d7953ee7-368e-4c36-8135-e5c5676c371a.config
+build	Post Check out development branch	2026-07-31T22:20:41.4752908Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/MissionChief-Command-Nexus/MissionChief-Command-Nexus/.git.path /home/runner/work/_temp/git-credentials-d7953ee7-368e-4c36-8135-e5c5676c371a.config
+build	Post Check out development branch	2026-07-31T22:20:41.4795528Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/MissionChief-Command-Nexus/MissionChief-Command-Nexus/.git/worktrees/*.path
+build	Post Check out development branch	2026-07-31T22:20:41.4822161Z /home/runner/work/_temp/git-credentials-d7953ee7-368e-4c36-8135-e5c5676c371a.config
+build	Post Check out development branch	2026-07-31T22:20:41.4835428Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/MissionChief-Command-Nexus/MissionChief-Command-Nexus/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-d7953ee7-368e-4c36-8135-e5c5676c371a.config
+build	Post Check out development branch	2026-07-31T22:20:41.4878510Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+build	Post Check out development branch	2026-07-31T22:20:41.4906211Z /github/runner_temp/git-credentials-d7953ee7-368e-4c36-8135-e5c5676c371a.config
+build	Post Check out development branch	2026-07-31T22:20:41.4923948Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-d7953ee7-368e-4c36-8135-e5c5676c371a.config
+build	Post Check out development branch	2026-07-31T22:20:41.4996656Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+build	Post Check out development branch	2026-07-31T22:20:41.5041031Z /github/runner_temp/git-credentials-d7953ee7-368e-4c36-8135-e5c5676c371a.config
+build	Post Check out development branch	2026-07-31T22:20:41.5053448Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-d7953ee7-368e-4c36-8135-e5c5676c371a.config
+build	Post Check out development branch	2026-07-31T22:20:41.5097562Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+build	Post Check out development branch	2026-07-31T22:20:41.5345616Z Removing credentials config '/home/runner/work/_temp/git-credentials-d7953ee7-368e-4c36-8135-e5c5676c371a.config'
+build	Complete job	﻿2026-07-31T22:20:41.5518258Z Cleaning up orphan processes
