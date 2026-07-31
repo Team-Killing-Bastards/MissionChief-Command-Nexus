@@ -1,0 +1,161 @@
+name: Build compact Command Nexus UI V1.0.71
+
+on:
+  push:
+    branches:
+      - feature/compact-nexus-ui-v1071
+    paths:
+      - '.github/workflows/build-compact-nexus-ui-v1071.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: compact-command-nexus-ui-v1071
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out development branch
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: feature/compact-nexus-ui-v1071
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Reset candidate to exact production main
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp .github/compact-nexus-ui-v1071-patch.py /tmp/compact-nexus-ui-v1071-patch.py
+          git fetch origin main --force
+          git reset --hard origin/main
+
+          EXPECTED_SHA="a5153a6ce97438232bba8bcd1b78edf6f957d1f8"
+          ACTUAL_SHA="$(git rev-parse HEAD)"
+          [[ "${ACTUAL_SHA}" == "${EXPECTED_SHA}" ]]
+
+          VERSION="$(node scripts/validate-userscript.mjs --print-version)"
+          [[ "${VERSION}" == "1.0.70" ]]
+          grep -Fq 'MISSION FINDER V10.6.133' src/missionchief-command-nexus.user.js
+
+          cp /tmp/compact-nexus-ui-v1071-patch.py .github/compact-nexus-ui-v1071-patch.py
+
+      - name: Apply compact UI rebuild
+        run: python3 .github/compact-nexus-ui-v1071-patch.py
+
+      - name: Validate complete candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check src/missionchief-command-nexus.user.js
+          node --check scripts/check-compact-nexus-ui-v1071.mjs
+          node scripts/validate-userscript.mjs
+          node scripts/validate-userscript.mjs --base-ref origin/main
+
+          for checker in scripts/check-*.mjs; do
+            echo "::group::${checker}"
+            node "${checker}"
+            echo "::endgroup::"
+          done
+
+          python3 scripts/check_repository.py
+          git diff --check
+
+      - name: Confirm compactness and locked ownership
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+
+          source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8')
+          required = [
+              '// @version      1.0.71',
+              ' * MODULE 2: MISSION FINDER V10.6.134',
+              '/* Command Nexus compact operations panel V1.0.71. */',
+              '/* Command Nexus compact mission shell V1.0.71. */',
+              'width: min(360px, calc(100vw - 20px))',
+              'width: min(390px, calc(100vw - 20px))',
+              'width: min(205px, calc(100vw - 20px))',
+              'function createCompactDisclosure(',
+              'function createCompactActionDisclosure(',
+              "'mc-compact-personnel-tools'",
+              "'mf-compact-shell-collapsed'",
+              "'mf_vehicle_load_collapsed_v10'",
+              "'mf_trained_personnel_collapsed_v2'",
+              'scheduleMissionRequiredPersonnelPreload(0);',
+              "unitFinderBtn.addEventListener('click'",
+              'triggerDispatchClick();',
+              'triggerDispatchShareClick();',
+              'toggleAutoMode();',
+              'startMissionEventCollectibleCollector();',
+              'stopMissionEventCollectibleCollector();',
+          ]
+          missing = [token for token in required if token not in source]
+          if missing:
+              raise SystemExit('Missing compact contracts: ' + ', '.join(missing))
+
+          changed = set(subprocess.check_output(
+              ['git', 'diff', '--name-only', 'origin/main'],
+              text=True,
+          ).splitlines())
+          fixed_allowed = {
+              '.github/workflows/validate-userscript.yml',
+              'CHANGELOG.md',
+              'README.md',
+              'src/README.md',
+              'src/missionchief-command-nexus.user.js',
+              'scripts/check-compact-nexus-ui-v1071.mjs',
+          }
+          unexpected = sorted(
+              path for path in changed
+              if path
+              and path not in fixed_allowed
+              and not (path.startswith('scripts/check-') and path.endswith('.mjs'))
+          )
+          if unexpected:
+              raise SystemExit('Unexpected permanent files: ' + ', '.join(unexpected))
+
+          print('Compact UI scope and locked ownership confirmed.')
+          PY
+
+      - name: Publish clean validated candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p .compact-ui-workflow-output
+          cp .github/workflows/validate-userscript.yml \
+            .compact-ui-workflow-output/validate-userscript.yml
+          git checkout origin/main -- .github/workflows/validate-userscript.yml
+
+          rm -rf .compact-ui-context
+          rm -f .github/compact-nexus-ui-v1071-patch.py
+          rm -f .github/workflows/build-compact-nexus-ui-v1071.yml
+          rm -f .github/workflows/extract-compact-ui-v1071.yml
+
+          git config user.name Conroy1988
+          git config user.email 27301455+Conroy1988@users.noreply.github.com
+          git add -A
+
+          TREE_SHA="$(git write-tree)"
+          CLEAN_COMMIT="$({
+            printf '%s\n\n%s\n' \
+              'Rebuild Command Nexus as a compact operations interface' \
+              'Replace the expansive v1.0.70 presentation with narrow progressive-disclosure mission, naming and personnel shells while preserving operational ownership.' |
+              git commit-tree "${TREE_SHA}" -p "$(git rev-parse origin/main)"
+          })"
+
+          git push --force origin \
+            "${CLEAN_COMMIT}:refs/heads/feature/compact-nexus-ui-v1071-clean"
