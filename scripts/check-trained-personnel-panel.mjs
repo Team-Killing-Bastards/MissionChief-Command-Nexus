@@ -20,8 +20,8 @@ function sliceBetween(startToken, endToken, label) {
   return source.slice(start, end);
 }
 
-expect(source.includes('// @version      1.0.65'), 'Expected Command Nexus 1.0.62');
-expect(source.includes(' * MODULE 2: MISSION FINDER V10.6.128'), 'Expected Mission Finder V10.6.125');
+expect(source.includes('// @version      1.0.66'), 'Expected Command Nexus 1.0.62');
+expect(source.includes(' * MODULE 2: MISSION FINDER V10.6.129'), 'Expected Mission Finder V10.6.125');
 
 for (const token of [
   'MF_TRAINED_PERSONNEL_COLLAPSED_KEY',
@@ -83,6 +83,8 @@ for (const token of [
   expect(renderer.includes(token), `Trained-personnel renderer missing ${token}`);
 }
 expect(!renderer.includes('personnelName'), 'Panel must not invent or expose unavailable personnel names');
+expect(!renderer.includes('scheduleMissionRequiredPersonnelPreload('), 'Panel rendering must never schedule requirement preload work');
+expect(renderer.includes('panel cache read failed'), 'Preload-cache failures must not suppress selected trained staff');
 
 const loadRenderer = sliceBetween(
   '    function renderVehicleLoadListNow() {',
