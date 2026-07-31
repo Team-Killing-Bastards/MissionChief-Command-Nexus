@@ -1,0 +1,152 @@
+name: Extract compact Nexus UI context V1.0.71
+
+on:
+  push:
+    branches:
+      - feature/compact-nexus-ui-v1071
+    paths:
+      - '.github/workflows/extract-compact-ui-v1071.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: feature/compact-nexus-ui-v1071
+      - name: Extract current UI context
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8')
+          lines = source.splitlines()
+          out = Path('.compact-ui-context')
+          out.mkdir(exist_ok=True)
+
+          def line_number(offset):
+              return source.count('\n', 0, offset) + 1
+
+          def find_function(name):
+              match = re.search(
+                  rf'(?m)^[ \t]*(?:async[ \t]+)?function[ \t]+{re.escape(name)}[ \t]*\([^)]*\)[ \t]*\{{',
+                  source,
+              )
+              if not match:
+                  return None
+              opening = source.rfind('{', match.start(), match.end())
+              depth = 0
+              state = 'code'
+              quote = ''
+              escaped = False
+              index = opening
+              while index < len(source):
+                  char = source[index]
+                  nxt = source[index + 1] if index + 1 < len(source) else ''
+                  if state == 'line':
+                      if char == '\n': state = 'code'
+                      index += 1
+                      continue
+                  if state == 'block':
+                      if char == '*' and nxt == '/':
+                          state = 'code'; index += 2; continue
+                      index += 1
+                      continue
+                  if state in {'string', 'template'}:
+                      if escaped:
+                          escaped = False
+                      elif char == '\\':
+                          escaped = True
+                      elif char == quote:
+                          state = 'code'; quote = ''
+                      index += 1
+                      continue
+                  if char == '/' and nxt == '/':
+                      state = 'line'; index += 2; continue
+                  if char == '/' and nxt == '*':
+                      state = 'block'; index += 2; continue
+                  if char in {'\'', '"'}:
+                      state = 'string'; quote = char; index += 1; continue
+                  if char == '`':
+                      state = 'template'; quote = char; index += 1; continue
+                  if char == '{': depth += 1
+                  elif char == '}':
+                      depth -= 1
+                      if depth == 0:
+                          return match.start(), index + 1
+                  index += 1
+              return None
+
+          names = [
+              'addPanel',
+              'switchToolTab',
+              'injectStyles',
+              'createControlPanel',
+              'syncVehicleLoadCollapseState',
+              'syncTrainedPersonnelCollapseState',
+              'toggleVehicleLoadCollapsed',
+              'toggleTrainedPersonnelCollapsed',
+          ]
+
+          index_lines = []
+          for name in names:
+              found = find_function(name)
+              if not found:
+                  index_lines.append(f'{name}: not found')
+                  continue
+              start, end = found
+              start_line = line_number(start)
+              end_line = line_number(end)
+              index_lines.append(f'{name}: {start_line}-{end_line}')
+              text = '\n'.join(
+                  f'{i + 1:05d}: {lines[i]}'
+                  for i in range(start_line - 1, min(end_line, len(lines)))
+              ) + '\n'
+              (out / f'{name}.txt').write_text(text, encoding='utf-8')
+
+          (out / 'index.txt').write_text('\n'.join(index_lines) + '\n', encoding='utf-8')
+
+          anchors = [
+              'MF_VEHICLE_LOAD_COLLAPSED_KEY',
+              'MF_TRAINED_PERSONNEL_COLLAPSED_KEY',
+              'MF_CONTROL_COLLAPSED_KEY',
+              'mfVehicleLoadCollapsed',
+              'mfTrainedPersonnelCollapsed',
+              'mfMissionControlCollapsed',
+              'mc-nexus-status-card',
+              'mc-personnel-report-section',
+              'mf-dashboard-brand',
+              'mf-dashboard-rail',
+          ]
+          context = []
+          for anchor in anchors:
+              matches = [i for i, line in enumerate(lines) if anchor in line]
+              context.extend([f'# {anchor} ({len(matches)})', ''])
+              for occurrence, i in enumerate(matches, 1):
+                  start = max(0, i - 24)
+                  end = min(len(lines), i + 42)
+                  context.extend([
+                      f'## occurrence {occurrence} line {i + 1}',
+                      *[f'{j + 1:05d}: {lines[j]}' for j in range(start, end)],
+                      '',
+                  ])
+          (out / 'anchor-context.txt').write_text('\n'.join(context), encoding='utf-8')
+          PY
+      - name: Commit context and remove extractor
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git rm .github/workflows/extract-compact-ui-v1071.yml
+          git add .compact-ui-context
+          git commit -m 'Capture current compact UI context'
+          git push origin HEAD:feature/compact-nexus-ui-v1071
