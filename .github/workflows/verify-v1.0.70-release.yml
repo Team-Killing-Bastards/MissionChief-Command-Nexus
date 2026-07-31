@@ -94,7 +94,6 @@ jobs:
           [[ "${GREASY_SHA}" == "${SOURCE_SHA}" ]]
 
           PUBLISHER_RUN=""
-          PUBLISHER_LOG=""
           DISCORD_LINE=""
           WEBHOOK_LINE=""
           GREASY_LINE=""
@@ -113,7 +112,6 @@ jobs:
             if [[ -n "${candidate}" ]]; then
               MATCHING_PUBLISHERS=$((MATCHING_PUBLISHERS + 1))
               PUBLISHER_RUN="${run_id}"
-              PUBLISHER_LOG="${log_file}"
               DISCORD_LINE="${candidate}"
               WEBHOOK_LINE="$(grep -F 'Discord webhook target verified' "${log_file}" | tail -n1 || true)"
               GREASY_LINE="$(grep -F 'Greasy Fork verified' "${log_file}" | tail -n1 || true)"
@@ -178,3 +176,5 @@ jobs:
           git add .release-v1.0.70-receipt.txt
           git commit -m 'Record verified v1.0.70 production delivery'
           git push origin HEAD:agent/verify-v1.0.70-release
+
+# registration refresh
