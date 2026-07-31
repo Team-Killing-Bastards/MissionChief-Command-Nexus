@@ -61,8 +61,8 @@ function extractFunction(name, asyncFunction = false) {
   fail(`Unable to extract ${name}`);
 }
 
-requireText('// @version      1.0.68', 'Command Nexus version');
-requireText(' * MODULE 2: MISSION FINDER V10.6.131', 'Mission Finder version');
+requireText('// @version      1.0.69', 'Command Nexus version');
+requireText(' * MODULE 2: MISSION FINDER V10.6.132', 'Mission Finder version');
 requireText('function scheduleMissionRequiredPersonnelPreload(', 'mission-load scheduler');
 requireText('function preloadMissionRequiredPersonnel(', 'authoritative preload runner');
 requireText('function getPreloadedMissionTrainedPersonnelRequirements(', 'required-course panel model');
