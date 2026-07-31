@@ -32,6 +32,23 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
 
+## [1.0.65] - 2026-07-31
+
+### Added
+
+- Mission Finder now preloads the authoritative `Required Personnel` row as soon as the mission UI is available, before Unit Finder starts selecting vehicles.
+- The trained-personnel panel now shows each required course with required, selected and still-needed personnel counts, including composite rows such as Level 2 Public Order Officer, Police Medic and Police Sergeant.
+
+### Fixed
+
+- Unit Finder reuses the mission-load requirement snapshot instead of fetching and parsing the same mission definition again, while retaining mission-identity checks and clearing stale requirements when the mission changes.
+- `Required Personnel Available` remains excluded because it is a mission precondition rather than dispatch demand.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.127` to `V10.6.128`.
+- Personnel Assignment remains `1.3.8`.
+
 ## [1.0.64] - 2026-07-31
 
 ### Fixed
