@@ -1,0 +1,66 @@
+name: Repair Nexus UI workflow path patch V1.0.70
+
+on:
+  push:
+    branches:
+      - feature/nexus-ui-system-v1070
+    paths:
+      - '.github/workflows/repair-nexus-ui-workflow-paths-v1070.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: feature/nexus-ui-system-v1070
+      - name: Repair duplicate workflow path insertion
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('.github/nexus-ui-v1070-patch.py')
+          text = path.read_text(encoding='utf-8')
+          start_token = '''workflow = replace_once(
+              workflow,
+              "      - 'scripts/check-mission-dashboard-v1069.mjs'\\n",
+              "      - 'scripts/check-mission-dashboard-v1069.mjs'\\n      - 'scripts/check-nexus-visual-system-v1070.mjs'\\n",
+              'validation workflow visual-system path 1',
+          )'''
+          second_token = '''workflow = replace_once(
+              workflow,
+              "      - 'scripts/check-mission-dashboard-v1069.mjs'\\n",
+              "      - 'scripts/check-mission-dashboard-v1069.mjs'\\n      - 'scripts/check-nexus-visual-system-v1070.mjs'\\n",
+              'validation workflow visual-system path 2',
+          )'''
+          if text.count(start_token) != 1 or text.count(second_token) != 1:
+              raise SystemExit('Unable to locate duplicate workflow path patches')
+          replacement = '''dashboard_path = "      - 'scripts/check-mission-dashboard-v1069.mjs'\\n"
+          visual_path = dashboard_path + "      - 'scripts/check-nexus-visual-system-v1070.mjs'\\n"
+          dashboard_path_count = workflow.count(dashboard_path)
+          if dashboard_path_count != 2:
+              raise SystemExit(
+                  f'validation workflow dashboard path: expected 2 matches, found {dashboard_path_count}'
+              )
+          workflow = workflow.replace(dashboard_path, visual_path)'''
+          text = text.replace(start_token, replacement, 1)
+          text = text.replace(second_token, '', 1)
+          path.write_text(text, encoding='utf-8', newline='\n')
+          PY
+      - name: Commit repair and remove workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git rm .github/workflows/repair-nexus-ui-workflow-paths-v1070.yml
+          git add .github/nexus-ui-v1070-patch.py
+          git commit -m 'Handle both validation workflow path declarations'
+          git push origin HEAD:feature/nexus-ui-system-v1070
