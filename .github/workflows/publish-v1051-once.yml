@@ -76,12 +76,12 @@ jobs:
               path.write_text(text, encoding='utf-8')
           PY
 
+          git checkout origin/main -- .github/workflows/validate-userscript.yml
+          rm -rf scripts/__pycache__
           rm -f scripts/apply-required-personnel-preload-v1065.py
           rm -f .github/builders/apply-required-personnel-preload-v1065.py.gz.b64
           rm -f .github/builders/required-personnel-v1065.part-*
           rm -f .github/builders/preload-required-personnel-v1065.txt
-          git show 94d1f6eb83c33837698880210b4e158bd3c240b0:.github/workflows/publish-v1051-once.yml > \
-            .github/workflows/publish-v1051-once.yml
 
       - name: Validate complete candidate
         shell: bash
