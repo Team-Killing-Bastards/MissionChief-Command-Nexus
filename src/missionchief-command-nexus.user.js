@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.63
+// @version      1.0.64
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -38,7 +38,7 @@
 
     const UNIT_VERSION = '3.3.8';
     const STATION_VERSION = '1.3.3';
-    const PERSONNEL_VERSION = '1.3.7';
+    const PERSONNEL_VERSION = '1.3.8';
     const PERSONNEL_TRAINING_CODE = 'critical_care';
     const PERSONNEL_TRAINING_LABEL = 'Critical Care';
     const PERSONNEL_TARGET_VEHICLE_TYPE_ID = '5';
@@ -420,7 +420,7 @@
         }),
         hazmatOsu: makePoliceRule({
             id: 'fire_hazmat_osu', label: 'HazMat Unit',
-            vehicleTypeIds: ['39'], vehicleLabel: 'Operational Support Unit', target: 3,
+            vehicleTypeIds: ['39'], vehicleLabel: 'Operational Support Unit', target: 6,
             trainingAll: ['gw_gefahrgut'], trainingLabel: 'HazMat Unit'
         }),
         railway: makePoliceRule({
@@ -557,7 +557,7 @@
                 makeServicePreviewProfile('fire_aircraft_rescue', 'Aircraft Rescue and Firefighting', 'Fire'),
                 makeServicePreviewProfile('fire_co_responder', 'Co-Responder Training', 'Fire'),
                 makeServicePreviewProfile('fire_drone_operator', 'Drone Operator Training', 'Fire'),
-                liveFireProfile('fire_hazmat', 'HazMat Unit', 'Operational Support Unit (OSU)', '3 HazMat-trained personnel per OSU', 'LIVE: fills each exact type-39 Fire OSU with 3 gw_gefahrgut-trained personnel. Type-7 HazMat Units are excluded.', [FIRE_RULES.hazmatOsu]),
+                liveFireProfile('fire_hazmat', 'HazMat Unit', 'Operational Support Unit (OSU)', '6 HazMat-trained personnel per OSU', 'LIVE: fills each exact type-39 Fire OSU with 6 gw_gefahrgut-trained personnel. Type-7 HazMat Units are excluded.', [FIRE_RULES.hazmatOsu]),
                 makeServicePreviewProfile('fire_high_volume_pump', 'High Volume Pump Training', 'Fire'),
                 makeServicePreviewProfile('fire_lifeguard', 'Lifeguard Training', 'Fire'),
                 liveFireProfile('fire_mobile_command', 'Level 1 Incident Commander Training', 'Incident Command and Control Unit (ICCU)', '3 Level 1 Incident Commanders per ICCU', "LIVE: fills each exact type-15 ICCU with 3 elw2-trained personnel while preserving its remaining seats.", [FIRE_RULES.incidentCommand]),
@@ -9616,7 +9616,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.126
+         * MODULE 2: MISSION FINDER V10.6.127
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -10162,13 +10162,16 @@
     // per vehicle; Car Recovery maps to the existing Flatbed Recovery
     // Vehicle; RIV-or-Major-Foam-Tender wording uses RIV first and only
     // falls back to a Major Foam Tender when no eligible RIV is available.
+    // V10.6.127: Missing Personnel HazMat Unit quantities are trained staff totals.
+    // Six gw_gefahrgut-trained personnel fit one exact type-39 Fire OSU; ordinary
+    // HazMat vehicle requirements remain separate and keep their vehicle quantity.
     // V10.6.85: Fire cross-reference now maps the exact "Road Rail Unit"
     // wording to the established RRU route.
     // V10.6.84: the exact mission wording "Fire, rescue or aerial appliance"
     // now maps to the existing Rescue Pump route.
     // V10.6.82: verified Fire profiles staff type-107 RRUs with two Railway Fire
     // personnel, type-15 ICCUs with three Level 1 Incident Commanders and type-39
-    // Fire OSUs with three HazMat personnel. BASU, Welfare and HazMat share one OSU.
+    // Fire OSUs with six HazMat personnel. BASU, Welfare and HazMat share one OSU.
     // V10.6.81: Operational Support or SAR Vehicle requirements now select and
     // verify the exact type-86 Operational Support Van. Fire type-39 Operational
     // Support Units remain excluded from this SAR requirement.
@@ -10661,6 +10664,16 @@
                 patterns: [
                     /(\d+)\s*(?:x\s*)?Search\s+Advisor(?:s)?/gi,
                     /Search\s+Advisor(?:s)?\s*(?:x\s*)?(\d+)/gi
+                ]
+            },
+            {
+                code:
+                    'gw_gefahrgut',
+                label:
+                    'HazMat Unit',
+                patterns: [
+                    /(\d+)\s*(?:x\s*)?HazMat\s+Unit(?:s)?/gi,
+                    /HazMat\s+Unit(?:s)?\s*(?:x\s*)?(\d+)/gi
                 ]
             },
             {
@@ -24196,6 +24209,9 @@ let sessionRuntimeTicker = null;
         const searchAdvisorRequired =
             findRequired('search_and_rescue');
 
+        const hazMatRequired =
+            findRequired('gw_gefahrgut');
+
         const normalised =
             source.filter(requirement => {
                 return (
@@ -24214,7 +24230,9 @@ let sessionRuntimeTicker = null;
                     requirement.code !==
                         'armed_response_personnel' &&
                     requirement.code !==
-                        'search_and_rescue'
+                        'search_and_rescue' &&
+                    requirement.code !==
+                        'gw_gefahrgut'
                 );
             });
 
@@ -24391,6 +24409,30 @@ let sessionRuntimeTicker = null;
                 true,
             trainedOnly:
                 true
+        });
+
+
+        addTrainedVehicleRequirement({
+            code:
+                'gw_gefahrgut',
+            label:
+                'HazMat-trained Fire OSU',
+            personnelRequired:
+                hazMatRequired,
+            requirementType:
+                'fire_hazmat_osu_trained_vehicle',
+            eligibleVehicleTypeIds: [
+                '39'
+            ],
+            vehicleCapacityByType: {
+                '39': 6
+            },
+            preferredVehicleTypeIds: [
+                '39'
+            ],
+            requiredTrainingCodes: [
+                'gw_gefahrgut'
+            ]
         });
 
         if (armedResponseRequired > 0) {

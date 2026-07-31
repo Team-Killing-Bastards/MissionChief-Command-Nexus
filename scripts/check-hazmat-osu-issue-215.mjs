@@ -54,8 +54,8 @@ function sliceBetween(startToken, endToken, label) {
   return source.slice(start, end);
 }
 
-expect(source.includes('// @version      1.0.63'), 'Expected Command Nexus 1.0.63');
-expect(source.includes(' * MODULE 2: MISSION FINDER V10.6.126'), 'Expected Mission Finder V10.6.126');
+expect(source.includes('// @version      1.0.64'), 'Expected Command Nexus 1.0.64');
+expect(source.includes(' * MODULE 2: MISSION FINDER V10.6.127'), 'Expected Mission Finder V10.6.127');
 expect(source.includes("const MF_FIRE_OPERATIONAL_SUPPORT_TYPE_ID = '39';"), 'OSU exact type constant missing');
 
 for (const alias of [

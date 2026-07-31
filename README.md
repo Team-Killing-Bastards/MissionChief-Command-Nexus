@@ -17,7 +17,7 @@
 </tr>
 </table>
 
-**Current version:** `1.0.63` · **Mission Finder engine:** `V10.6.126` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
+**Current version:** `1.0.64` · **Mission Finder engine:** `V10.6.127` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)
@@ -214,7 +214,7 @@ Auto Mode validates readiness and final selected-unit state before dispatch. Cro
 
 - Railway Fire: 2 trained personnel per exact type-107 RRU.
 - Level 1 Incident Commander: 3 trained personnel per exact type-15 ICCU.
-- HazMat Unit: 3 trained personnel per exact type-39 Fire OSU.
+- HazMat Unit: 6 trained personnel per exact type-39 Fire OSU.
 - BASU, Welfare, and HazMat reuse one selected Fire OSU; type-86 SAR vans remain separate.
 - `Fire, rescue or aerial appliance` maps to `Rescue Pump`.
 - `Road Rail Unit` maps to `RRU`.

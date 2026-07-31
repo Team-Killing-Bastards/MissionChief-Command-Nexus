@@ -13,8 +13,8 @@ function requireText(token, label) {
   if (!source.includes(token)) fail(`Missing initial trained-personnel contract: ${label}`);
 }
 
-requireText('// @version      1.0.63', 'v1.0.55 metadata');
-requireText(' * MODULE 2: MISSION FINDER V10.6.126', 'Mission Finder V10.6.120 header');
+requireText('// @version      1.0.64', 'v1.0.55 metadata');
+requireText(' * MODULE 2: MISSION FINDER V10.6.127', 'Mission Finder V10.6.120 header');
 requireText('const suppliedHasMissionDefinitionPersonnel =', 'definition-personnel authority detector');
 requireText("row?.source ===\n                            'mission-definition-required-personnel'", 'definition source fallback');
 requireText('!suppliedHasMissionDefinitionPersonnel', 'live-panel replacement exclusion');

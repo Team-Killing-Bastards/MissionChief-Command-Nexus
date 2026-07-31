@@ -1,5 +1,5 @@
 name: Validate userscript
-# Includes mission-definition trained-personnel, selected-trained-personnel UI, HazMat-to-OSU, diagnostic export, dispatch-correction, memory lifecycle/recycle, Missing-on-mission authority and single-pass update coverage.
+# Includes mission-definition trained-personnel, selected-trained-personnel UI, HazMat vehicle/personnel-to-OSU, diagnostic export, dispatch-correction, memory lifecycle/recycle, Missing-on-mission authority and single-pass update coverage.
 
 on:
   pull_request:
@@ -18,6 +18,7 @@ on:
       - 'scripts/check-mission-update-single-pass.mjs'
       - 'scripts/check-trained-personnel-panel.mjs'
       - 'scripts/check-hazmat-osu-issue-215.mjs'
+      - 'scripts/check-hazmat-personnel-osu.mjs'
       - 'scripts/check-trained-coverage-optimizer.mjs'
       - 'scripts/check-mission-definition-trained-personnel.mjs'
       - 'scripts/check-unit-finder-diagnostic-export.mjs'
@@ -50,6 +51,7 @@ on:
       - 'scripts/check-mission-update-single-pass.mjs'
       - 'scripts/check-trained-personnel-panel.mjs'
       - 'scripts/check-hazmat-osu-issue-215.mjs'
+      - 'scripts/check-hazmat-personnel-osu.mjs'
       - 'scripts/check-trained-coverage-optimizer.mjs'
       - 'scripts/check-mission-definition-trained-personnel.mjs'
       - 'scripts/check-unit-finder-diagnostic-export.mjs'
@@ -131,6 +133,9 @@ jobs:
 
       - name: Validate Issue 215 HazMat to exact OSU mapping
         run: node scripts/check-hazmat-osu-issue-215.mjs
+
+      - name: Validate HazMat Missing Personnel OSU capacity
+        run: node scripts/check-hazmat-personnel-osu.mjs
 
       - name: Validate trained-personnel coverage optimiser contracts
         run: node scripts/check-trained-coverage-optimizer.mjs
