@@ -32,6 +32,21 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Create the first formal tagged GitHub release after MartyBlyth approval.
 
 
+## [1.0.66] - 2026-07-31
+
+### Fixed
+
+- Restored the selected trained-personnel display after Unit Finder by separating its renderer from the mission requirement preload scheduler.
+- Removed the render-to-preload recursion introduced in `1.0.65`, so a panel refresh can no longer start another requirement fetch and render cycle.
+- Isolated preload-cache failures from the existing selected-vehicle Personnel Register display; preloading can fail without hiding selected trained staff.
+- Kept mission-load `Required Personnel` preloading in the mission lifecycle and retained reuse of the mission-bound requirement snapshot during Unit Finder.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.128` to `V10.6.129`.
+- Personnel Assignment remains `1.3.8`.
+
+
 ## [1.0.65] - 2026-07-31
 
 ### Added

@@ -61,8 +61,8 @@ function extractFunction(name, asyncFunction = false) {
   fail(`Unable to extract ${name}`);
 }
 
-requireText('// @version      1.0.65', 'Command Nexus version');
-requireText(' * MODULE 2: MISSION FINDER V10.6.128', 'Mission Finder version');
+requireText('// @version      1.0.66', 'Command Nexus version');
+requireText(' * MODULE 2: MISSION FINDER V10.6.129', 'Mission Finder version');
 requireText('function scheduleMissionRequiredPersonnelPreload(', 'mission-load scheduler');
 requireText('function preloadMissionRequiredPersonnel(', 'authoritative preload runner');
 requireText('function getPreloadedMissionTrainedPersonnelRequirements(', 'required-course panel model');
@@ -85,13 +85,18 @@ for (const token of [
 
 const panel = extractFunction('renderSelectedTrainedPersonnelPanel');
 for (const token of [
-  'scheduleMissionRequiredPersonnelPreload(0)',
   'getPreloadedMissionTrainedPersonnelRequirements()',
   'getSelectedTrainedPersonnelCountForCode(',
   'Mission Required Personnel',
   'still needed',
 ]) {
   if (!panel.includes(token)) fail(`Trained-personnel panel missing ${token}`);
+}
+if (panel.includes('scheduleMissionRequiredPersonnelPreload(')) {
+  fail('Trained-personnel rendering must not start another preload cycle');
+}
+if (!panel.includes('panel cache read failed')) {
+  fail('Trained-personnel rendering must isolate preload-cache failures');
 }
 
 const fixture = `

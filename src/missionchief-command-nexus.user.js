@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.65
+// @version      1.0.66
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -9616,7 +9616,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.128
+         * MODULE 2: MISSION FINDER V10.6.129
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -19288,12 +19288,23 @@ let sessionRuntimeTicker = null;
 
         if (!summary || !content) return;
 
-        scheduleMissionRequiredPersonnelPreload(0);
 
-        const preloadState =
-            getMissionRequirementPreloadState();
-        const requiredPersonnel =
-            getPreloadedMissionTrainedPersonnelRequirements();
+        let preloadState = { status: 'idle' };
+        let requiredPersonnel = [];
+
+        try {
+            preloadState =
+                getMissionRequirementPreloadState();
+            requiredPersonnel =
+                getPreloadedMissionTrainedPersonnelRequirements();
+        } catch (error) {
+            if (mfDebugEnabled) {
+                debugLog(
+                    'MISSION PERSONNEL PRELOAD',
+                    `panel cache read failed: ${error?.message || error}`
+                );
+            }
+        }
         const selectedVehicles =
             getSelectedTrainedPersonnelPanelModel();
         const completeProfiles = selectedVehicles.reduce(
