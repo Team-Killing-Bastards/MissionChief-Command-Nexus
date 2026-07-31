@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.69
+// @version      1.0.70
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -1868,25 +1868,34 @@
 
         panel.innerHTML = `
             <div id="mc-namer-header">
-                <span id="mc-namer-header-title">🚒 Unit Naming Tool v${UNIT_VERSION}</span>
-                <button id="mc-namer-collapse" type="button" aria-expanded="true" title="Collapse naming tools">−</button>
+                <div class="mc-nexus-brand-block">
+                    <span class="mc-nexus-mark" aria-hidden="true">NX</span>
+                    <span class="mc-nexus-brand-copy">
+                        <span class="mc-nexus-eyebrow">MISSIONCHIEF COMMAND NEXUS</span>
+                        <span id="mc-namer-header-title">Unit Naming</span>
+                    </span>
+                </div>
+                <div class="mc-nexus-header-actions">
+                    <span id="mc-namer-header-version" class="mc-nexus-version-chip">v${UNIT_VERSION}</span>
+                    <button id="mc-namer-collapse" type="button" aria-expanded="true" title="Collapse Nexus tools">−</button>
+                </div>
             </div>
 
             <div id="mc-namer-body">
-            <div class="mc-namer-tabs" role="tablist" aria-label="Naming tools">
+            <div class="mc-namer-tabs" role="tablist" aria-label="Command Nexus tools">
                 <button id="mc-tab-unit" class="mc-namer-tab active" type="button" role="tab" aria-selected="true">
-                    🚒 Unit Naming Tool
+                    <span class="mc-nexus-tab-index">01</span><span>Unit Naming</span>
                 </button>
                 <button id="mc-tab-station" class="mc-namer-tab" type="button" role="tab" aria-selected="false">
-                    🏢 Station Naming Tool
+                    <span class="mc-nexus-tab-index">02</span><span>Station Naming</span>
                 </button>
                 <button id="mc-tab-personnel" class="mc-namer-tab" type="button" role="tab" aria-selected="false">
-                    👥 Personnel Assignment
+                    <span class="mc-nexus-tab-index">03</span><span>Personnel</span>
                 </button>
             </div>
 
-            <div id="mc-unit-view" class="mc-tool-view">
-                <div class="mc-namer-section">
+            <div id="mc-unit-view" class="mc-tool-view mc-nexus-tool-grid">
+                <div class="mc-namer-section mc-nexus-config-card">
                     <label><b>Station Type:</b></label>
                     <select id="mc-namer-station-type">
                         ${Object.entries(STATION_TYPES).map(([key, label]) => `<option value="${key}">${label}</option>`).join('')}
@@ -1909,7 +1918,7 @@
                     </select>
                 </div>
 
-                <div class="mc-namer-buttons">
+                <div class="mc-namer-buttons mc-nexus-action-bar">
                     <button id="mc-namer-refresh">Refresh Stations</button>
                     <button id="mc-namer-start">Start</button>
                     <button id="mc-namer-pause">Pause</button>
@@ -1918,7 +1927,7 @@
                     <button id="mc-namer-clear">Clear Log</button>
                 </div>
 
-                <div class="mc-namer-section">
+                <div class="mc-namer-section mc-nexus-status-card">
                     <div><b>Status:</b> <span id="mc-namer-status">Idle</span></div>
                     <div><b>Station:</b> <span id="mc-namer-station">None</span></div>
                     <div><b>Vehicle:</b> <span id="mc-namer-vehicle">None</span></div>
@@ -1927,11 +1936,11 @@
                     <div><b>Skipped:</b> <span id="mc-namer-skipped">0</span></div>
                 </div>
 
-                <div id="mc-namer-log"></div>
+                <div id="mc-namer-log" class="mc-nexus-log"></div>
             </div>
 
-            <div id="mc-station-view" class="mc-tool-view" style="display:none;">
-                <div class="mc-namer-section">
+            <div id="mc-station-view" class="mc-tool-view mc-nexus-tool-grid" style="display:none;">
+                <div class="mc-namer-section mc-nexus-config-card">
                     <label><b>Station Type:</b></label>
                     <select id="mc-station-type">
                         ${Object.entries(STATION_TYPES).map(([key, label]) => `<option value="${key}">${label}</option>`).join('')}
@@ -1955,7 +1964,7 @@
                     </select>
                 </div>
 
-                <div class="mc-namer-buttons">
+                <div class="mc-namer-buttons mc-nexus-action-bar">
                     <button id="mc-station-refresh">Refresh Stations</button>
                     <button id="mc-station-start">Start</button>
                     <button id="mc-station-pause">Pause</button>
@@ -1964,7 +1973,7 @@
                     <button id="mc-station-clear">Clear Log</button>
                 </div>
 
-                <div class="mc-namer-section">
+                <div class="mc-namer-section mc-nexus-status-card">
                     <div><b>Status:</b> <span id="mc-station-status">Idle</span></div>
                     <div><b>Station:</b> <span id="mc-station-current">None</span></div>
                     <div><b>Address:</b> <span id="mc-station-address">None</span></div>
@@ -1976,11 +1985,11 @@
                     <div><b>Skipped:</b> <span id="mc-station-skipped">0</span></div>
                 </div>
 
-                <div id="mc-station-log"></div>
+                <div id="mc-station-log" class="mc-nexus-log"></div>
             </div>
 
-            <div id="mc-personnel-view" class="mc-tool-view" style="display:none;">
-                <div class="mc-namer-section mc-personnel-navigation-section">
+            <div id="mc-personnel-view" class="mc-tool-view mc-nexus-tool-grid mc-nexus-personnel-grid" style="display:none;">
+                <div class="mc-namer-section mc-personnel-navigation-section mc-nexus-config-card">
                     <div class="mc-personnel-navigation-title">Assignment Navigator</div>
 
                     <label style="display:block;"><b>Service:</b></label>
@@ -2024,7 +2033,7 @@
                     </select>
                 </div>
 
-                <div class="mc-namer-buttons">
+                <div class="mc-namer-buttons mc-nexus-action-bar">
                     <button id="mc-personnel-refresh">Refresh Stations</button>
                     <button id="mc-personnel-build-register" title="Quickly refresh every station. Unchanged exact vehicle records are reused; only changed or unsafe vehicles are reopened. No personnel assignments are changed.">Quick Refresh Register</button>
                     <button id="mc-personnel-full-register" title="Build All Register by reading every exact vehicle assignment page. Use this for a periodic full audit. No personnel assignments are changed.">Full Verify Register</button>
@@ -2041,7 +2050,7 @@
                     <button id="mc-personnel-clear">Clear Log</button>
                 </div>
 
-                <div class="mc-namer-section">
+                <div class="mc-namer-section mc-nexus-status-card">
                     <div><b>Status:</b> <span id="mc-personnel-status">Idle</span></div>
                     <div><b>Station:</b> <span id="mc-personnel-current">None</span></div>
                     <div><b>Vehicle:</b> <span id="mc-personnel-vehicle">None</span></div>
@@ -2055,7 +2064,7 @@
                     <div><b>Unfilled positions:</b> <span id="mc-personnel-assignment-shortfall">0</span></div>
                 </div>
 
-                <div id="mc-personnel-training-shortfall-section" class="mc-namer-section mc-personnel-training-shortfall-section" hidden>
+                <div id="mc-personnel-training-shortfall-section" class="mc-namer-section mc-personnel-training-shortfall-section mc-nexus-alert-card" hidden>
                     <div class="mc-personnel-training-shortfall-heading">
                         ⚠ Stations needing additional qualified personnel:
                         <span id="mc-personnel-training-shortfall-station-count">0</span>
@@ -2066,7 +2075,7 @@
                     <div id="mc-personnel-training-shortfall-list" class="mc-personnel-training-shortfall-list"></div>
                 </div>
 
-                <div class="mc-namer-section mc-personnel-report-options">
+                <div class="mc-namer-section mc-personnel-report-options mc-nexus-report-controls">
                     <b>Report display:</b>
                     <div class="mc-personnel-report-toggle-grid">
                         <label class="mc-personnel-report-toggle">
@@ -2081,18 +2090,18 @@
                     <div class="mc-personnel-report-note">The short status and shortfall figures above always remain visible.</div>
                 </div>
 
-                <div id="mc-personnel-after-action-section" class="mc-namer-section mc-personnel-report-section">
+                <div id="mc-personnel-after-action-section" class="mc-namer-section mc-personnel-report-section mc-nexus-station-report">
                     <b>Latest Station After-Action Report</b>
                     <pre id="mc-personnel-after-action">Run a station preview or assignment to create the station report.</pre>
                 </div>
 
-                <div id="mc-personnel-overall-report-section" class="mc-namer-section mc-personnel-report-section">
+                <div id="mc-personnel-overall-report-section" class="mc-namer-section mc-personnel-report-section mc-nexus-overall-report">
                     <b>Overall Run Report</b>
                     <pre id="mc-personnel-report">Run a preview or assignment to create the overall report.</pre>
                 </div>
 
-                <div class="mc-personnel-log-heading">Live Activity Log</div>
-                <div id="mc-personnel-log"></div>
+                <div class="mc-personnel-log-heading mc-nexus-log-heading">Live Activity Log</div>
+                <div id="mc-personnel-log" class="mc-nexus-log"></div>
             </div>
             </div>
         `;
@@ -2629,6 +2638,562 @@
                 font-size: 16px;
             }
 
+
+
+            /* Command Nexus visual system V1.0.70 — desktop naming workspace. */
+            #mc-namer-panel:not(.mc-ios-safari) {
+                --nx-bg: #080d14;
+                --nx-surface: #0d141e;
+                --nx-surface-2: #121b27;
+                --nx-surface-3: #172230;
+                --nx-border: rgba(151, 171, 195, 0.18);
+                --nx-border-strong: rgba(95, 195, 228, 0.36);
+                --nx-text: #e7edf4;
+                --nx-text-2: #b1bfce;
+                --nx-muted: #7f8d9c;
+                --nx-accent: #5fc3e4;
+                --nx-accent-soft: rgba(95, 195, 228, 0.12);
+                --nx-success: #62c99a;
+                --nx-warning: #d7ad62;
+                --nx-danger: #db7d83;
+                --nx-radius: 10px;
+                --nx-radius-sm: 7px;
+                --nx-gap: 8px;
+                top: 72px;
+                right: 16px;
+                width: min(860px, calc(100vw - 32px));
+                max-width: calc(100vw - 32px);
+                max-height: calc(100vh - 88px);
+                border: 1px solid var(--nx-border-strong);
+                border-radius: 14px;
+                background: var(--nx-bg);
+                color: var(--nx-text);
+                box-shadow: 0 20px 56px rgba(0, 0, 0, 0.48);
+                font-family: Inter, ui-sans-serif, system-ui, -apple-system,
+                    BlinkMacSystemFont, "Segoe UI", sans-serif;
+                font-size: 12px;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari)[data-active-tool="personnel"] {
+                width: min(1080px, calc(100vw - 32px));
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari),
+            #mc-namer-panel:not(.mc-ios-safari) * {
+                box-sizing: border-box;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) #mc-namer-header {
+                min-height: 54px;
+                padding: 8px 10px;
+                border-bottom: 1px solid var(--nx-border);
+                background: var(--nx-surface);
+                cursor: move;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-brand-block,
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-header-actions {
+                display: flex;
+                align-items: center;
+                min-width: 0;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-brand-block {
+                gap: 9px;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-header-actions {
+                gap: 7px;
+                flex: 0 0 auto;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-mark {
+                display: grid;
+                place-items: center;
+                width: 34px;
+                height: 34px;
+                flex: 0 0 34px;
+                border: 1px solid var(--nx-border-strong);
+                border-radius: 9px;
+                background: var(--nx-accent-soft);
+                color: var(--nx-accent);
+                font: 800 12px/1 ui-monospace, SFMono-Regular, Menlo, Consolas,
+                    monospace;
+                letter-spacing: 0.08em;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-brand-copy {
+                display: flex;
+                flex-direction: column;
+                min-width: 0;
+                gap: 2px;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-eyebrow {
+                color: var(--nx-muted);
+                font-size: 9px;
+                font-weight: 700;
+                letter-spacing: 0.13em;
+                line-height: 1.1;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) #mc-namer-header-title {
+                color: var(--nx-text);
+                font-size: 14px;
+                font-weight: 700;
+                line-height: 1.2;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-version-chip {
+                padding: 4px 7px;
+                border: 1px solid var(--nx-border);
+                border-radius: 999px;
+                background: var(--nx-surface-2);
+                color: var(--nx-text-2);
+                font: 700 10px/1 ui-monospace, SFMono-Regular, Menlo, Consolas,
+                    monospace;
+                white-space: nowrap;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) #mc-namer-collapse {
+                width: 30px;
+                height: 30px;
+                flex-basis: 30px;
+                border: 1px solid var(--nx-border);
+                border-radius: 8px;
+                background: var(--nx-surface-2);
+                color: var(--nx-text-2);
+                font-size: 16px;
+                line-height: 1;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) #mc-namer-collapse:hover,
+            #mc-namer-panel:not(.mc-ios-safari) #mc-namer-collapse:focus-visible {
+                border-color: var(--nx-border-strong);
+                background: var(--nx-accent-soft);
+                color: var(--nx-accent);
+                outline: 2px solid transparent;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari).mc-namer-collapsed {
+                width: min(340px, calc(100vw - 32px));
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) #mc-namer-body {
+                min-height: 0;
+                background: var(--nx-bg);
+                scrollbar-color: rgba(127, 141, 156, 0.48) transparent;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-namer-tabs {
+                position: sticky;
+                top: 0;
+                z-index: 20;
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 4px;
+                padding: 6px;
+                border-bottom: 1px solid var(--nx-border);
+                background: rgba(8, 13, 20, 0.96);
+                backdrop-filter: blur(12px);
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-namer-tab {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 7px;
+                min-width: 0;
+                min-height: 36px;
+                padding: 7px 9px;
+                border: 1px solid transparent;
+                border-radius: 8px;
+                background: transparent;
+                color: var(--nx-text-2);
+                font-size: 11px;
+                font-weight: 650;
+                line-height: 1.2;
+                overflow-wrap: anywhere;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-tab-index {
+                color: var(--nx-muted);
+                font: 700 9px/1 ui-monospace, SFMono-Regular, Menlo, Consolas,
+                    monospace;
+                letter-spacing: 0.08em;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-namer-tab:hover,
+            #mc-namer-panel:not(.mc-ios-safari) .mc-namer-tab:focus-visible {
+                border-color: var(--nx-border);
+                background: var(--nx-surface-2);
+                color: var(--nx-text);
+                outline: none;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-namer-tab.active {
+                border-color: var(--nx-border-strong);
+                background: var(--nx-accent-soft);
+                color: var(--nx-text);
+                box-shadow: none;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-namer-tab.active
+            .mc-nexus-tab-index {
+                color: var(--nx-accent);
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-tool-view {
+                min-width: 0;
+                padding: var(--nx-gap);
+                background: var(--nx-bg);
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-tool-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: var(--nx-gap);
+                align-items: start;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-config-card,
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-status-card,
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-alert-card,
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-report-controls,
+            #mc-namer-panel:not(.mc-ios-safari) .mc-personnel-report-section {
+                min-width: 0;
+                padding: 10px;
+                border: 1px solid var(--nx-border);
+                border-radius: var(--nx-radius);
+                background: var(--nx-surface);
+                line-height: 1.42;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-config-card {
+                grid-column: 1;
+                grid-row: 1;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-status-card {
+                grid-column: 2;
+                grid-row: 1;
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+                gap: 6px;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-status-card > div {
+                min-width: 0;
+                min-height: 56px;
+                padding: 8px;
+                border: 1px solid rgba(151, 171, 195, 0.12);
+                border-radius: var(--nx-radius-sm);
+                background: var(--nx-surface-2);
+                overflow-wrap: anywhere;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-status-card > div > b {
+                display: block;
+                margin-bottom: 4px;
+                color: var(--nx-muted);
+                font-size: 9px;
+                font-weight: 700;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-status-card > div > span {
+                color: var(--nx-text);
+                font-variant-numeric: tabular-nums;
+                font-weight: 650;
+                overflow-wrap: anywhere;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-action-bar {
+                grid-column: 1 / -1;
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(126px, 1fr));
+                gap: 6px;
+                padding: 0;
+                border: 0;
+                background: transparent;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-action-bar button {
+                min-width: 0;
+                min-height: 36px;
+                padding: 7px 9px;
+                border: 1px solid var(--nx-border) !important;
+                border-radius: 8px;
+                background: var(--nx-surface-2) !important;
+                color: var(--nx-text-2) !important;
+                font-size: 11px;
+                font-weight: 650;
+                line-height: 1.2;
+                white-space: normal;
+                overflow-wrap: anywhere;
+                transition: border-color 120ms ease, background 120ms ease,
+                    color 120ms ease, transform 120ms ease;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-action-bar button:hover,
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-action-bar button:focus-visible {
+                border-color: var(--nx-border-strong) !important;
+                background: var(--nx-surface-3) !important;
+                color: var(--nx-text) !important;
+                outline: none;
+                transform: translateY(-1px);
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-action-bar
+            :is(#mc-namer-start, #mc-station-start, #mc-personnel-start) {
+                border-color: rgba(98, 201, 154, 0.42) !important;
+                background: rgba(98, 201, 154, 0.11) !important;
+                color: #b9ead4 !important;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-action-bar
+            :is(#mc-namer-pause, #mc-station-pause, #mc-personnel-pause) {
+                border-color: rgba(215, 173, 98, 0.42) !important;
+                background: rgba(215, 173, 98, 0.10) !important;
+                color: #ead4a8 !important;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-action-bar
+            :is(#mc-namer-stop, #mc-station-stop, #mc-personnel-stop) {
+                border-color: rgba(219, 125, 131, 0.42) !important;
+                background: rgba(219, 125, 131, 0.10) !important;
+                color: #efb9bd !important;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-action-bar
+            :is(#mc-namer-refresh, #mc-station-refresh, #mc-personnel-refresh,
+                #mc-personnel-build-register, #mc-personnel-full-register) {
+                border-color: var(--nx-border-strong) !important;
+                background: var(--nx-accent-soft) !important;
+                color: #bfe8f5 !important;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-log,
+            #mc-namer-panel:not(.mc-ios-safari) #mc-personnel-report,
+            #mc-namer-panel:not(.mc-ios-safari) #mc-personnel-after-action {
+                min-width: 0;
+                border: 1px solid var(--nx-border);
+                border-radius: var(--nx-radius);
+                background: #070b11;
+                color: #c7d3df;
+                font-family: ui-monospace, SFMono-Regular, Menlo, Consolas,
+                    monospace;
+                font-size: 10.5px;
+                line-height: 1.48;
+                overflow-wrap: anywhere;
+                scrollbar-color: rgba(127, 141, 156, 0.48) transparent;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-log {
+                grid-column: 1 / -1;
+                max-height: 240px;
+                padding: 9px 10px;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) label,
+            #mc-namer-panel:not(.mc-ios-safari) .mc-personnel-navigation-title,
+            #mc-namer-panel:not(.mc-ios-safari) .mc-personnel-log-heading,
+            #mc-namer-panel:not(.mc-ios-safari) .mc-personnel-report-section > b,
+            #mc-namer-panel:not(.mc-ios-safari) .mc-personnel-report-options > b {
+                color: var(--nx-text-2);
+                font-size: 10px;
+                font-weight: 700;
+                letter-spacing: 0.04em;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) select,
+            #mc-namer-panel:not(.mc-ios-safari) input:not([type="checkbox"]):not([type="file"]) {
+                width: 100%;
+                min-width: 0;
+                min-height: 36px;
+                margin-top: 4px;
+                padding: 7px 9px;
+                border: 1px solid var(--nx-border);
+                border-radius: 8px;
+                background: var(--nx-surface-2);
+                color: var(--nx-text);
+                font: 500 12px/1.25 Inter, ui-sans-serif, system-ui,
+                    sans-serif;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) select:focus-visible,
+            #mc-namer-panel:not(.mc-ios-safari) input:focus-visible,
+            #mc-namer-panel:not(.mc-ios-safari) button:focus-visible {
+                outline: 2px solid rgba(95, 195, 228, 0.58);
+                outline-offset: 1px;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-personnel-profile-banner,
+            #mc-namer-panel:not(.mc-ios-safari) .mc-personnel-policy-summary,
+            #mc-namer-panel:not(.mc-ios-safari) .mc-personnel-fixed-grid > div,
+            #mc-namer-panel:not(.mc-ios-safari) .mc-personnel-report-toggle {
+                border-color: var(--nx-border);
+                background: var(--nx-surface-2);
+                color: var(--nx-text-2);
+                box-shadow: none;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-personnel-profile-banner.is-live {
+                border-color: rgba(98, 201, 154, 0.42);
+                background: rgba(98, 201, 154, 0.09);
+                color: #b9ead4;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-personnel-profile-banner.is-preview {
+                border-color: rgba(215, 173, 98, 0.42);
+                background: rgba(215, 173, 98, 0.09);
+                color: #ead4a8;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-personnel-policy-summary {
+                border-left: 3px solid var(--nx-accent);
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-personnel-grid {
+                grid-template-columns: minmax(290px, 0.85fr) minmax(0, 1.15fr);
+                grid-template-areas:
+                    "config status"
+                    "actions actions"
+                    "alert alert"
+                    "report-controls report-controls"
+                    "station-report overall-report"
+                    "log-heading log-heading"
+                    "log log";
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-personnel-grid
+            > .mc-nexus-config-card {
+                grid-area: config;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-personnel-grid
+            > .mc-nexus-status-card {
+                grid-area: status;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-personnel-grid
+            > .mc-nexus-action-bar {
+                grid-area: actions;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-personnel-grid
+            > .mc-nexus-alert-card {
+                grid-area: alert;
+                border-color: rgba(219, 125, 131, 0.38);
+                background: rgba(219, 125, 131, 0.07);
+                box-shadow: none;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-personnel-grid
+            > .mc-nexus-report-controls {
+                grid-area: report-controls;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-personnel-grid
+            > .mc-nexus-station-report {
+                grid-area: station-report;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-personnel-grid
+            > .mc-nexus-overall-report {
+                grid-area: overall-report;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-personnel-grid
+            > .mc-nexus-log-heading {
+                grid-area: log-heading;
+                padding: 7px 2px 0;
+                border: 0;
+                background: transparent;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-personnel-grid
+            > .mc-nexus-log {
+                grid-area: log;
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-personnel-report-toggle-grid,
+            #mc-namer-panel:not(.mc-ios-safari) .mc-personnel-fixed-grid {
+                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            }
+
+            #mc-namer-panel:not(.mc-ios-safari) .mc-namer-section,
+            #mc-namer-panel:not(.mc-ios-safari) .mc-personnel-report-note,
+            #mc-namer-panel:not(.mc-ios-safari) .mc-personnel-input-note,
+            #mc-namer-panel:not(.mc-ios-safari) .mc-personnel-training-shortfall-note {
+                overflow-wrap: anywhere;
+            }
+
+            @media (max-width: 1180px) and (min-width: 901px) {
+                #mc-namer-panel:not(.mc-ios-safari),
+                #mc-namer-panel:not(.mc-ios-safari)[data-active-tool="personnel"] {
+                    width: min(780px, calc(100vw - 24px));
+                    right: 12px;
+                }
+
+                #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-personnel-grid {
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                }
+            }
+
+            @media (max-width: 900px) and (min-width: 701px) {
+                #mc-namer-panel:not(.mc-ios-safari),
+                #mc-namer-panel:not(.mc-ios-safari)[data-active-tool="personnel"] {
+                    top: 12px;
+                    right: 12px;
+                    width: calc(100vw - 24px);
+                    max-height: calc(100vh - 24px);
+                }
+
+                #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-tool-grid,
+                #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-personnel-grid {
+                    grid-template-columns: minmax(0, 1fr);
+                    grid-template-areas: none;
+                }
+
+                #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-tool-grid > *,
+                #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-personnel-grid > * {
+                    grid-column: 1 !important;
+                    grid-row: auto !important;
+                    grid-area: auto !important;
+                }
+            }
+
+            @media (max-width: 700px) {
+                #mc-namer-panel:not(.mc-ios-safari),
+                #mc-namer-panel:not(.mc-ios-safari)[data-active-tool="personnel"] {
+                    top: 8px;
+                    right: 8px;
+                    width: calc(100vw - 16px);
+                    max-width: calc(100vw - 16px);
+                    max-height: calc(100vh - 16px);
+                }
+
+                #mc-namer-panel:not(.mc-ios-safari) .mc-namer-tabs {
+                    grid-template-columns: minmax(0, 1fr);
+                }
+
+                #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-tool-grid,
+                #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-personnel-grid {
+                    grid-template-columns: minmax(0, 1fr);
+                    grid-template-areas: none;
+                }
+
+                #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-tool-grid > *,
+                #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-personnel-grid > * {
+                    grid-column: 1 !important;
+                    grid-row: auto !important;
+                    grid-area: auto !important;
+                }
+            }
         `;
 
         document.head.appendChild(style);
@@ -3245,7 +3810,10 @@
     }
 
     function switchToolTab(tabName, force = false) {
-        const targetTab = ['unit', 'station', 'personnel'].includes(tabName) ? tabName : 'unit';
+        const targetTab = ['unit', 'station', 'personnel'].includes(tabName)
+            ? tabName
+            : 'unit';
+        const panel = document.querySelector('#mc-namer-panel');
         const unitView = document.querySelector('#mc-unit-view');
         const stationView = document.querySelector('#mc-station-view');
         const personnelView = document.querySelector('#mc-personnel-view');
@@ -3253,8 +3821,21 @@
         const stationTab = document.querySelector('#mc-tab-station');
         const personnelTab = document.querySelector('#mc-tab-personnel');
         const headerTitle = document.querySelector('#mc-namer-header-title');
+        const headerVersion = document.querySelector('#mc-namer-header-version');
 
-        if (!unitView || !stationView || !personnelView || !unitTab || !stationTab || !personnelTab || !headerTitle) return;
+        if (
+            !panel ||
+            !unitView ||
+            !stationView ||
+            !personnelView ||
+            !unitTab ||
+            !stationTab ||
+            !personnelTab ||
+            !headerTitle ||
+            !headerVersion
+        ) {
+            return;
+        }
 
         if (!force && STATE.running && targetTab !== 'unit') {
             log('Stop the Unit Naming Tool before switching tabs.', 'error');
@@ -3275,9 +3856,9 @@
         const showStation = targetTab === 'station';
         const showPersonnel = targetTab === 'personnel';
 
-        unitView.style.display = showUnit ? 'block' : 'none';
-        stationView.style.display = showStation ? 'block' : 'none';
-        personnelView.style.display = showPersonnel ? 'block' : 'none';
+        unitView.style.display = showUnit ? 'grid' : 'none';
+        stationView.style.display = showStation ? 'grid' : 'none';
+        personnelView.style.display = showPersonnel ? 'grid' : 'none';
 
         unitTab.classList.toggle('active', showUnit);
         stationTab.classList.toggle('active', showStation);
@@ -3287,14 +3868,24 @@
         personnelTab.setAttribute('aria-selected', showPersonnel ? 'true' : 'false');
 
         headerTitle.textContent = showUnit
-            ? `🚒 Unit Naming Tool v${UNIT_VERSION}`
+            ? 'Unit Naming'
             : showStation
-                ? `🏢 Station Naming Tool v${STATION_VERSION}`
-                : `👥 Personnel Assignment v${PERSONNEL_VERSION}`;
+                ? 'Station Naming'
+                : 'Personnel Assignment';
+        headerVersion.textContent = showUnit
+            ? `v${UNIT_VERSION}`
+            : showStation
+                ? `v${STATION_VERSION}`
+                : `v${PERSONNEL_VERSION}`;
+        panel.dataset.activeTool = targetTab;
 
         try {
             localStorage.setItem(ACTIVE_TAB_STORAGE_KEY, targetTab);
-        } catch (e) {}
+        } catch (_error) {}
+
+        requestAnimationFrame(() => {
+            clampToolPanelToViewport(panel);
+        });
     }
 
     function refreshStationNamingStations() {
@@ -9616,7 +10207,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.132
+         * MODULE 2: MISSION FINDER V10.6.133
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -16840,6 +17431,623 @@ function isRoadRailUnitVehicleCheckbox(input) {
                     max-height: 310px;
                 }
             }
+
+
+            /* Command Nexus visual system V1.0.70 — desktop mission surface. */
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) {
+                --nx-bg: #080d14;
+                --nx-surface: #0d141e;
+                --nx-surface-2: #121b27;
+                --nx-surface-3: #172230;
+                --nx-border: rgba(151, 171, 195, 0.18);
+                --nx-border-strong: rgba(95, 195, 228, 0.36);
+                --nx-text: #e7edf4;
+                --nx-text-2: #b1bfce;
+                --nx-muted: #7f8d9c;
+                --nx-accent: #5fc3e4;
+                --nx-accent-soft: rgba(95, 195, 228, 0.12);
+                --nx-success: #62c99a;
+                --nx-warning: #d7ad62;
+                --nx-danger: #db7d83;
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                grid-template-areas:
+                    "brand brand brand"
+                    "rail rail rail"
+                    "control load trained"
+                    "utility utility utility"
+                    "footer footer footer";
+                align-items: start;
+                gap: 8px;
+                width: min(1120px, calc(100vw - 32px));
+                max-width: calc(100vw - 32px);
+                max-height: calc(100vh - 32px);
+                padding: 9px;
+                overflow: auto;
+                border: 1px solid var(--nx-border-strong);
+                border-radius: 14px;
+                background: var(--nx-bg);
+                box-shadow: 0 22px 60px rgba(0, 0, 0, 0.52);
+                color: var(--nx-text);
+                font-family: Inter, ui-sans-serif, system-ui, -apple-system,
+                    BlinkMacSystemFont, "Segoe UI", sans-serif;
+                scrollbar-color: rgba(127, 141, 156, 0.48) transparent;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari) {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                grid-template-areas:
+                    "brand brand brand"
+                    "rail rail rail"
+                    "control load trained"
+                    "utility utility utility"
+                    "footer footer footer";
+                width: min(1120px, calc(100vw - 32px));
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari),
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) * {
+                box-sizing: border-box;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #mf-dashboard-brand {
+                grid-area: brand;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 12px;
+                min-width: 0;
+                min-height: 48px;
+                padding: 7px 9px;
+                border: 1px solid var(--nx-border);
+                border-radius: 10px;
+                background: var(--nx-surface);
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf-dashboard-brand-copy,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf-dashboard-brand-text {
+                display: flex;
+                min-width: 0;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf-dashboard-brand-copy {
+                align-items: center;
+                gap: 9px;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf-dashboard-brand-text {
+                flex-direction: column;
+                gap: 2px;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf-dashboard-brand-mark {
+                display: grid;
+                place-items: center;
+                width: 34px;
+                height: 34px;
+                flex: 0 0 34px;
+                border: 1px solid var(--nx-border-strong);
+                border-radius: 9px;
+                background: var(--nx-accent-soft);
+                color: var(--nx-accent);
+                font: 800 12px/1 ui-monospace, SFMono-Regular, Menlo, Consolas,
+                    monospace;
+                letter-spacing: 0.08em;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf-dashboard-brand-eyebrow {
+                color: var(--nx-muted);
+                font-size: 9px;
+                font-weight: 700;
+                letter-spacing: 0.13em;
+                line-height: 1.1;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf-dashboard-brand-title {
+                color: var(--nx-text);
+                font-size: 14px;
+                font-weight: 700;
+                line-height: 1.2;
+                overflow-wrap: anywhere;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf-dashboard-brand-state {
+                flex: 0 0 auto;
+                padding: 5px 8px;
+                border: 1px solid rgba(98, 201, 154, 0.34);
+                border-radius: 999px;
+                background: rgba(98, 201, 154, 0.08);
+                color: #b9ead4;
+                font: 700 9px/1 ui-monospace, SFMono-Regular, Menlo, Consolas,
+                    monospace;
+                letter-spacing: 0.08em;
+                white-space: nowrap;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #mf-dashboard-rail {
+                grid-area: rail;
+                display: flex;
+                flex-direction: row;
+                align-items: center;
+                gap: 4px;
+                padding: 4px;
+                border: 1px solid var(--nx-border);
+                border-radius: 9px;
+                background: var(--nx-surface);
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf-dashboard-tab {
+                display: flex;
+                flex: 0 1 160px;
+                flex-direction: row;
+                align-items: center;
+                justify-content: center;
+                gap: 7px;
+                min-width: 0;
+                min-height: 34px;
+                padding: 6px 10px;
+                border: 1px solid transparent;
+                border-radius: 7px;
+                background: transparent;
+                color: var(--nx-text-2);
+                font-size: 11px;
+                font-weight: 650;
+                line-height: 1.2;
+                overflow-wrap: anywhere;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf-dashboard-tab-icon {
+                color: var(--nx-muted);
+                font: 700 9px/1 ui-monospace, SFMono-Regular, Menlo, Consolas,
+                    monospace;
+                letter-spacing: 0.08em;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf-dashboard-tab:hover,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf-dashboard-tab:focus-visible {
+                border-color: var(--nx-border);
+                background: var(--nx-surface-2);
+                color: var(--nx-text);
+                outline: none;
+                box-shadow: none;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf-dashboard-tab.mf-dashboard-tab-active {
+                border-color: var(--nx-border-strong);
+                background: var(--nx-accent-soft);
+                color: var(--nx-text);
+                box-shadow: none;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf-dashboard-tab.mf-dashboard-tab-active .mf-dashboard-tab-icon {
+                color: var(--nx-accent);
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf2026-panel,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #mf-dashboard-utility {
+                min-width: 0;
+                width: auto;
+                max-height: calc(100vh - 156px);
+                border: 1px solid var(--nx-border);
+                border-radius: 10px;
+                background: var(--nx-surface);
+                box-shadow: none;
+                overflow: hidden;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #control-panel {
+                grid-area: control;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #vehicle-load-list-box {
+                grid-area: load;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #trained-personnel-box {
+                grid-area: trained;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #mf-dashboard-utility {
+                grid-area: utility;
+                max-height: min(360px, calc(100vh - 180px));
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf2026-control-header-row,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf2026-load-header-row,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf2026-trained-header-row,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf-dashboard-utility-header {
+                min-height: 42px;
+                padding: 6px 8px;
+                border-bottom: 1px solid var(--nx-border);
+                background: var(--nx-surface-2);
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf2026-header,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #mf-dashboard-utility-title {
+                min-width: 0;
+                padding: 0;
+                background: transparent;
+                color: var(--nx-text);
+                font-size: 11px;
+                font-weight: 700;
+                letter-spacing: 0.06em;
+                text-align: left;
+                text-transform: uppercase;
+                overflow-wrap: anywhere;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #mf-control-title::before,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #mf-load-title::before,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #mf-trained-title::before {
+                content: "";
+                width: 5px;
+                height: 5px;
+                flex: 0 0 5px;
+                border-radius: 50%;
+                background: var(--nx-accent);
+                box-shadow: none;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #mf-trained-title::before {
+                background: #b49add;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf-control-body,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf-load-body,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf-trained-body,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf-dashboard-utility-pane {
+                min-width: 0;
+                min-height: 0;
+                padding: 8px;
+                gap: 7px;
+                overflow-y: auto;
+                scrollbar-color: rgba(127, 141, 156, 0.48) transparent;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf2026-box {
+                min-width: 0;
+                padding: 8px;
+                border: 1px solid rgba(151, 171, 195, 0.12);
+                border-radius: 8px;
+                background: var(--nx-surface-2);
+                overflow-wrap: anywhere;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #status-box {
+                min-height: 48px;
+                background: rgba(95, 195, 228, 0.055);
+                color: var(--nx-text-2);
+                line-height: 1.42;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf2026-section-title {
+                margin-bottom: 5px;
+                color: var(--nx-text);
+                font-size: 10px;
+                font-weight: 700;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                overflow-wrap: anywhere;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf2026-small,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf2026-name,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf2026-training-course-list {
+                min-width: 0;
+                color: var(--nx-text-2);
+                line-height: 1.42;
+                overflow-wrap: anywhere;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf2026-count,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf2026-log-value,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf2026-stat-grid strong {
+                font-variant-numeric: tabular-nums;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf2026-row,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf2026-log-row {
+                min-width: 0;
+                border-bottom-color: rgba(151, 171, 195, 0.10);
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf2026-primary-actions {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 6px;
+                margin-top: auto;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf2026-primary-actions .mf2026-button,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #mf-export-unit-finder-diagnostics,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #mf-control-centre,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #mf-control-minimize,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #mf-load-minimize,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #mf-trained-minimize,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #mf-dashboard-utility-close {
+                min-width: 0;
+                min-height: 36px;
+                padding: 7px 8px;
+                border: 1px solid var(--nx-border) !important;
+                border-radius: 8px;
+                background: var(--nx-surface-2) !important;
+                color: var(--nx-text-2) !important;
+                font-size: 10.5px;
+                font-weight: 650;
+                line-height: 1.2;
+                white-space: normal;
+                overflow-wrap: anywhere;
+                box-shadow: none;
+                transition: border-color 120ms ease, background 120ms ease,
+                    color 120ms ease, transform 120ms ease;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf2026-button:hover,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf2026-button:focus-visible,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #mf-dashboard-utility-close:hover,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #mf-dashboard-utility-close:focus-visible {
+                border-color: var(--nx-border-strong) !important;
+                background: var(--nx-surface-3) !important;
+                color: var(--nx-text) !important;
+                filter: none;
+                outline: none;
+                transform: translateY(-1px);
+                box-shadow: none;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            :is(#unit-finder-box, #mission-update-box) {
+                border-color: var(--nx-border-strong) !important;
+                background: var(--nx-accent-soft) !important;
+                color: #c4eaf5 !important;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #mf-ally-steal {
+                border-color: rgba(180, 154, 221, 0.36) !important;
+                background: rgba(180, 154, 221, 0.09) !important;
+                color: #d9c9ef !important;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #dispatch-share-box {
+                border-color: rgba(98, 201, 154, 0.42) !important;
+                background: rgba(98, 201, 154, 0.10) !important;
+                color: #b9ead4 !important;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #auto-mode-box {
+                border-color: rgba(180, 154, 221, 0.38) !important;
+                background: rgba(180, 154, 221, 0.09) !important;
+                color: #d9c9ef !important;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf2026-good {
+                color: var(--nx-success);
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf2026-warn {
+                color: var(--nx-warning);
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf2026-bad {
+                color: var(--nx-danger);
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf2026-progress-wrap {
+                height: 7px;
+                border-radius: 999px;
+                background: #070b11;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            .mf2026-progress-bar {
+                height: 7px;
+                border-radius: 999px;
+                background: var(--nx-success);
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            input,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            select {
+                min-width: 0;
+                min-height: 36px;
+                padding: 7px 9px !important;
+                border: 1px solid var(--nx-border) !important;
+                border-radius: 8px !important;
+                background: var(--nx-surface-2) !important;
+                color: var(--nx-text) !important;
+                font-size: 12px;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            :is(button, input, select):focus-visible {
+                outline: 2px solid rgba(95, 195, 228, 0.58);
+                outline-offset: 1px;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #control-panel.mf2026-control-collapsed,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #vehicle-load-list-box.mf2026-load-collapsed,
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #trained-personnel-box.mf2026-trained-collapsed {
+                width: auto;
+                min-height: 42px;
+                padding: 0;
+                overflow: hidden;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            :is(#control-panel.mf2026-control-collapsed,
+                #vehicle-load-list-box.mf2026-load-collapsed,
+                #trained-personnel-box.mf2026-trained-collapsed)
+            .mf2026-header {
+                min-height: 0;
+                padding: 0;
+                writing-mode: horizontal-tb;
+                text-orientation: mixed;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #mf-dashboard-footer {
+                grid-area: footer;
+                padding: 2px 4px 0;
+                color: var(--nx-muted);
+                font: 600 9px/1.3 ui-monospace, SFMono-Regular, Menlo, Consolas,
+                    monospace;
+                letter-spacing: 0.04em;
+                text-align: right;
+                overflow-wrap: anywhere;
+            }
+
+            @media (max-width: 1180px) and (min-width: 901px) {
+                #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari),
+                #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari) {
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                    grid-template-areas:
+                        "brand brand"
+                        "rail rail"
+                        "control load"
+                        "trained trained"
+                        "utility utility"
+                        "footer footer";
+                    width: min(820px, calc(100vw - 24px));
+                    max-width: calc(100vw - 24px);
+                }
+
+                #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+                .mf2026-panel,
+                #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+                #mf-dashboard-utility {
+                    max-height: min(420px, calc(100vh - 170px));
+                }
+            }
+
+            @media (max-width: 900px) and (min-width: 701px) {
+                #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari),
+                #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari) {
+                    grid-template-columns: minmax(0, 1fr);
+                    grid-template-areas:
+                        "brand"
+                        "rail"
+                        "control"
+                        "load"
+                        "trained"
+                        "utility"
+                        "footer";
+                    width: min(620px, calc(100vw - 24px));
+                    max-width: calc(100vw - 24px);
+                    max-height: calc(100vh - 24px);
+                }
+
+                #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+                .mf2026-panel,
+                #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+                #mf-dashboard-utility {
+                    max-height: none;
+                }
+            }
+
+            @media (max-width: 700px) {
+                #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari),
+                #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari) {
+                    grid-template-columns: minmax(0, 1fr);
+                    grid-template-areas:
+                        "brand"
+                        "rail"
+                        "control"
+                        "load"
+                        "trained"
+                        "utility"
+                        "footer";
+                    width: calc(100vw - 16px);
+                    max-width: calc(100vw - 16px);
+                    max-height: calc(100vh - 16px);
+                    padding: 7px;
+                }
+
+                #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+                #mf-dashboard-brand {
+                    align-items: flex-start;
+                    flex-direction: column;
+                }
+
+                #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+                #mf-dashboard-rail {
+                    display: grid;
+                    grid-template-columns: repeat(3, minmax(0, 1fr));
+                }
+
+                #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+                .mf-dashboard-tab {
+                    padding-inline: 5px;
+                }
+            }
         `;
         document.head.appendChild(style);
     }
@@ -16959,7 +18167,7 @@ function isRoadRailUnitVehicleCheckbox(input) {
 
         const dragHandle = document.createElement('div');
         dragHandle.id = 'mf-control-title';
-        dragHandle.textContent = 'Mission Control';
+        dragHandle.textContent = 'Mission';
         dragHandle.className = 'mf2026-header mf2026-drag';
 
         const controlCentreBtn = document.createElement('button');
@@ -16982,20 +18190,35 @@ function isRoadRailUnitVehicleCheckbox(input) {
         controlBody.className = 'mf-control-body';
         controlBody.id = 'mf-control-body';
 
+
+
+        const dashboardBrand = document.createElement('header');
+        dashboardBrand.id = 'mf-dashboard-brand';
+        dashboardBrand.innerHTML = `
+            <div class="mf-dashboard-brand-copy">
+                <span class="mf-dashboard-brand-mark" aria-hidden="true">NX</span>
+                <span class="mf-dashboard-brand-text">
+                    <span class="mf-dashboard-brand-eyebrow">MISSIONCHIEF COMMAND NEXUS</span>
+                    <span class="mf-dashboard-brand-title">Operational command surface</span>
+                </span>
+            </div>
+            <span class="mf-dashboard-brand-state">LIVE MISSION CONTEXT</span>
+        `;
+
         const dashboardRail = document.createElement('nav');
         dashboardRail.id = 'mf-dashboard-rail';
         dashboardRail.setAttribute('aria-label', 'MissionChief Nexus dashboard');
         dashboardRail.innerHTML = `
             <button type="button" class="mf-dashboard-tab mf-dashboard-tab-active" data-mf-dashboard-tab="mission" aria-pressed="true">
-                <span class="mf-dashboard-tab-icon">◎</span>
+                <span class="mf-dashboard-tab-icon">01</span>
                 <span>Mission</span>
             </button>
             <button type="button" class="mf-dashboard-tab" data-mf-dashboard-tab="settings" aria-pressed="false">
-                <span class="mf-dashboard-tab-icon">⚙</span>
+                <span class="mf-dashboard-tab-icon">02</span>
                 <span>Settings</span>
             </button>
             <button type="button" class="mf-dashboard-tab" data-mf-dashboard-tab="diagnostics" aria-pressed="false">
-                <span class="mf-dashboard-tab-icon">⌁</span>
+                <span class="mf-dashboard-tab-icon">03</span>
                 <span>Diagnostics</span>
             </button>
         `;
@@ -17623,7 +18846,7 @@ function isRoadRailUnitVehicleCheckbox(input) {
 
         loadPanel.innerHTML = `
             <div class="mf2026-load-header-row">
-                <div id="mf-load-title" class="mf2026-header">Vehicle Load List</div>
+                <div id="mf-load-title" class="mf2026-header">Vehicle Load</div>
                 <button id="mf-load-minimize" type="button" class="mf2026-button" title="Minimize / expand vehicle load list">${missionFinderIphoneSafari ? (mfVehicleLoadCollapsed ? '▾' : '▴') : (mfVehicleLoadCollapsed ? '+' : '−')}</button>
             </div>
 
@@ -17691,13 +18914,14 @@ function isRoadRailUnitVehicleCheckbox(input) {
             typeof GM_info !== 'undefined' &&
             GM_info?.script?.version
                 ? GM_info.script.version
-                : '1.0.69';
+                : '1.0.70';
         dashboardFooter.textContent =
             `MissionChief Nexus V${dashboardVersion} · MIT · Martblyth`;
 
         if (missionFinderIphoneSafari) {
             wrapper.appendChild(iphoneLauncher);
         } else {
+            wrapper.appendChild(dashboardBrand);
             wrapper.appendChild(dashboardRail);
             wrapper.appendChild(dashboardUtility);
             wrapper.appendChild(dashboardFooter);
