@@ -159,3 +159,5 @@ jobs:
 
           git push --force origin \
             "${CLEAN_COMMIT}:refs/heads/feature/compact-nexus-ui-v1071-clean"
+
+# registration refresh
