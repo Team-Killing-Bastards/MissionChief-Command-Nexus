@@ -27,11 +27,13 @@ jobs:
           fetch-depth: 0
       - name: Extract live dashboard construction
         run: python3 .github/builders/extract-mission-dashboard-v1069.py
-      - name: Upload dashboard extraction
+      - name: Upload dashboard extraction and source
         uses: actions/upload-artifact@v4
         with:
           name: mission-dashboard-v1069
-          path: .github/diagnostics/mission-dashboard-v1069.txt
+          path: |
+            .github/diagnostics/mission-dashboard-v1069.txt
+            src/missionchief-command-nexus.user.js
           if-no-files-found: error
           retention-days: 1
       - name: Commit diagnostics
