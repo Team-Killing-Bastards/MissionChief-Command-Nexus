@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.64
+// @version      1.0.65
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -9616,7 +9616,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.127
+         * MODULE 2: MISSION FINDER V10.6.128
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -19288,6 +19288,12 @@ let sessionRuntimeTicker = null;
 
         if (!summary || !content) return;
 
+        scheduleMissionRequiredPersonnelPreload(0);
+
+        const preloadState =
+            getMissionRequirementPreloadState();
+        const requiredPersonnel =
+            getPreloadedMissionTrainedPersonnelRequirements();
         const selectedVehicles =
             getSelectedTrainedPersonnelPanelModel();
         const completeProfiles = selectedVehicles.reduce(
@@ -19303,21 +19309,93 @@ let sessionRuntimeTicker = null;
         const aggregateOnlyVehicles = selectedVehicles.filter(vehicle => {
             return !vehicle.profilesComplete;
         }).length;
+        const requiredTotal = requiredPersonnel.reduce(
+            (total, requirement) => {
+                return total + requirement.required;
+            },
+            0
+        );
+        const coveredTotal = requiredPersonnel.reduce(
+            (total, requirement) => {
+                return total + Math.min(
+                    requirement.required,
+                    getSelectedTrainedPersonnelCountForCode(
+                        selectedVehicles,
+                        requirement.code
+                    )
+                );
+            },
+            0
+        );
 
-        if (selectedVehicles.length === 0) {
+        if (
+            requiredPersonnel.length === 0 &&
+            selectedVehicles.length === 0
+        ) {
+            if (preloadState.status === 'loading') {
+                summary.textContent =
+                    'Loading mission Required Personnel...';
+                content.innerHTML =
+                    '<span class="mf2026-small">Reading the mission requirement table before unit selection.</span>';
+                return;
+            }
+
             summary.textContent =
-                'No selected vehicle has trained-personnel register evidence.';
+                'No required or selected trained-personnel evidence is available.';
             content.innerHTML =
-                '<span class="mf2026-small">Selected trained personnel will appear here.</span>';
+                '<span class="mf2026-small">Mission Required Personnel and selected trained personnel will appear here.</span>';
             return;
         }
 
-        summary.innerHTML = `
-            <div><strong>${selectedVehicles.length}</strong> selected trained vehicle${selectedVehicles.length === 1 ? '' : 's'}</div>
-            <div><strong>${completeProfiles}</strong> trained personnel profile${completeProfiles === 1 ? '' : 's'}${aggregateOnlyVehicles ? ` · ${aggregateOnlyVehicles} aggregate-only` : ''}</div>
-        `;
+        const summaryParts = [];
 
-        content.innerHTML = selectedVehicles.map(vehicle => {
+        if (requiredPersonnel.length > 0) {
+            summaryParts.push(`
+                <div><strong>${requiredPersonnel.length}</strong> required course${requiredPersonnel.length === 1 ? '' : 's'}</div>
+                <div><strong>${coveredTotal}</strong> / <strong>${requiredTotal}</strong> required trained-personnel coverage</div>
+            `);
+        }
+
+        if (selectedVehicles.length > 0) {
+            summaryParts.push(`
+                <div><strong>${selectedVehicles.length}</strong> selected trained vehicle${selectedVehicles.length === 1 ? '' : 's'}</div>
+                <div><strong>${completeProfiles}</strong> trained personnel profile${completeProfiles === 1 ? '' : 's'}${aggregateOnlyVehicles ? ` · ${aggregateOnlyVehicles} aggregate-only` : ''}</div>
+            `);
+        }
+
+        summary.innerHTML = summaryParts.join('');
+
+        const requiredMarkup = requiredPersonnel.length > 0
+            ? `
+                <div class="mf2026-training-vehicle">
+                    <div class="mf2026-training-vehicle-name">
+                        Mission Required Personnel
+                    </div>
+                    ${requiredPersonnel.map(requirement => {
+                        const selected = Math.min(
+                            requirement.required,
+                            getSelectedTrainedPersonnelCountForCode(
+                                selectedVehicles,
+                                requirement.code
+                            )
+                        );
+                        const remaining = Math.max(
+                            0,
+                            requirement.required - selected
+                        );
+
+                        return `
+                            <div class="mf2026-training-person">
+                                <span class="mf2026-training-person-label">${selected} / ${requirement.required}</span>
+                                <span class="mf2026-training-course-list">${escapeHtml(requirement.label)}${remaining > 0 ? ` · ${remaining} still needed` : ' · covered'}</span>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `
+            : '';
+
+        const selectedMarkup = selectedVehicles.map(vehicle => {
             const vehicleName =
                 vehicle.vehicleName ||
                 (vehicle.vehicleId
@@ -19357,8 +19435,11 @@ let sessionRuntimeTicker = null;
                 </div>
             `;
         }).join('');
-    }
 
+        content.innerHTML =
+            requiredMarkup +
+            selectedMarkup;
+    }
 
     function renderVehicleLoadListNow() {
         const listContent = document.getElementById('vehicle-load-list-content');
@@ -23493,6 +23574,390 @@ let sessionRuntimeTicker = null;
         );
     }
 
+    let mfMissionRequirementPreloadCache = {
+        missionKey: '',
+        sourceUrl: '',
+        status: 'idle',
+        rows: [],
+        loadedAt: 0,
+        attempts: 0,
+        error: ''
+    };
+    let mfMissionRequirementPreloadPromise = null;
+    let mfMissionRequirementPreloadPromiseKey = '';
+    let mfMissionRequirementPreloadTimer = null;
+
+    function cloneMissionRequirementRows(rows) {
+        return (Array.isArray(rows) ? rows : []).map(row => {
+            const copy = {
+                ...row
+            };
+
+            if (Array.isArray(row?.personnelTrainingRequirements)) {
+                copy.personnelTrainingRequirements =
+                    row.personnelTrainingRequirements.map(requirement => ({
+                        ...requirement,
+                        requiredTrainingCodes:
+                            Array.isArray(requirement?.requiredTrainingCodes)
+                                ? [...requirement.requiredTrainingCodes]
+                                : requirement?.requiredTrainingCodes,
+                        eligibleVehicleTypeIds:
+                            Array.isArray(requirement?.eligibleVehicleTypeIds)
+                                ? [...requirement.eligibleVehicleTypeIds]
+                                : requirement?.eligibleVehicleTypeIds,
+                        preferredVehicleTypeIds:
+                            Array.isArray(requirement?.preferredVehicleTypeIds)
+                                ? [...requirement.preferredVehicleTypeIds]
+                                : requirement?.preferredVehicleTypeIds,
+                        vehicleCapacityByType:
+                            requirement?.vehicleCapacityByType &&
+                            typeof requirement.vehicleCapacityByType === 'object'
+                                ? {
+                                    ...requirement.vehicleCapacityByType
+                                }
+                                : requirement?.vehicleCapacityByType
+                    }));
+            }
+
+            return copy;
+        });
+    }
+
+    function getMissionRequirementPreloadMissionKey() {
+        return String(
+            getPatientSelectionMissionKey() ||
+            getLocalMissionInstanceKey() ||
+            getCurrentMissionIdForQueueRestart() ||
+            getCurrentMissionName() ||
+            ''
+        ).trim();
+    }
+
+    function resetMissionRequirementPreloadCache(reason = '') {
+        if (mfMissionRequirementPreloadTimer) {
+            clearTimeout(mfMissionRequirementPreloadTimer);
+            mfMissionRequirementPreloadTimer = null;
+        }
+
+        mfMissionRequirementPreloadCache = {
+            missionKey:
+                getMissionRequirementPreloadMissionKey(),
+            sourceUrl: '',
+            status: 'idle',
+            rows: [],
+            loadedAt: 0,
+            attempts: 0,
+            error: ''
+        };
+        mfMissionRequirementPreloadPromise = null;
+        mfMissionRequirementPreloadPromiseKey = '';
+
+        if (mfDebugEnabled && reason) {
+            debugLog(
+                'REQUIRED PERSONNEL PRELOAD RESET',
+                reason
+            );
+        }
+    }
+
+    function synchroniseMissionRequirementPreloadCache() {
+        const missionKey =
+            getMissionRequirementPreloadMissionKey();
+
+        if (
+            mfMissionRequirementPreloadCache.missionKey &&
+            mfMissionRequirementPreloadCache.missionKey !== missionKey
+        ) {
+            resetMissionRequirementPreloadCache(
+                `mission changed: ${mfMissionRequirementPreloadCache.missionKey} -> ${missionKey}`
+            );
+        }
+
+        if (!mfMissionRequirementPreloadCache.missionKey) {
+            mfMissionRequirementPreloadCache.missionKey = missionKey;
+        }
+
+        return missionKey;
+    }
+
+    function getMissionRequirementPreloadState() {
+        synchroniseMissionRequirementPreloadCache();
+        return mfMissionRequirementPreloadCache;
+    }
+
+    function getCachedMissionRequirementRows(sourceDescriptor = null) {
+        const missionKey =
+            synchroniseMissionRequirementPreloadCache();
+        const cache = mfMissionRequirementPreloadCache;
+        const sourceUrl = String(
+            sourceDescriptor?.url ||
+            ''
+        );
+
+        if (
+            cache.status !== 'loaded' ||
+            cache.missionKey !== missionKey ||
+            !Array.isArray(cache.rows) ||
+            (
+                sourceUrl &&
+                cache.sourceUrl &&
+                cache.sourceUrl !== sourceUrl
+            )
+        ) {
+            return null;
+        }
+
+        return cloneMissionRequirementRows(cache.rows);
+    }
+
+    function setCachedMissionRequirementRows(
+        missionKey,
+        sourceDescriptor,
+        rows
+    ) {
+        const currentMissionKey =
+            getMissionRequirementPreloadMissionKey();
+
+        if (
+            !missionKey ||
+            missionKey !== currentMissionKey
+        ) {
+            return [];
+        }
+
+        const clonedRows =
+            cloneMissionRequirementRows(rows);
+
+        mfMissionRequirementPreloadCache = {
+            missionKey,
+            sourceUrl:
+                String(sourceDescriptor?.url || ''),
+            status: 'loaded',
+            rows: clonedRows,
+            loadedAt: Date.now(),
+            attempts:
+                mfMissionRequirementPreloadCache.attempts,
+            error: ''
+        };
+
+        return cloneMissionRequirementRows(clonedRows);
+    }
+
+    function getPreloadedMissionTrainedPersonnelRequirements() {
+        const cache =
+            getMissionRequirementPreloadState();
+
+        if (
+            cache.status !== 'loaded' ||
+            !Array.isArray(cache.rows)
+        ) {
+            return [];
+        }
+
+        const requirements = new Map();
+
+        cache.rows
+            .filter(row => {
+                return (
+                    row?.isTrainedPersonnelRequirement === true &&
+                    row?.missionDefinitionRequiredPersonnel === true &&
+                    Array.isArray(row?.personnelTrainingRequirements)
+                );
+            })
+            .forEach(row => {
+                row.personnelTrainingRequirements
+                    .forEach(requirement => {
+                        const requiredTrainingCodes =
+                            Array.isArray(requirement?.requiredTrainingCodes)
+                                ? requirement.requiredTrainingCodes
+                                    .map(value => String(value || '').trim())
+                                    .filter(Boolean)
+                                : [];
+                        const code =
+                            requiredTrainingCodes[0] ||
+                            String(requirement?.code || '')
+                                .replace(/_vehicle$/i, '')
+                                .trim();
+                        const required = Math.max(
+                            0,
+                            parseInt(
+                                requirement?.personnelRequired ??
+                                requirement?.required,
+                                10
+                            ) || 0
+                        );
+
+                        if (!code || required <= 0) return;
+
+                        const existing =
+                            requirements.get(code);
+
+                        if (
+                            !existing ||
+                            required > existing.required
+                        ) {
+                            requirements.set(code, {
+                                code,
+                                label:
+                                    getSelectedTrainingDisplayLabel(code),
+                                required
+                            });
+                        }
+                    });
+            });
+
+        return Array.from(requirements.values())
+            .sort((left, right) => {
+                return left.label.localeCompare(right.label);
+            });
+    }
+
+    function getSelectedTrainedPersonnelCountForCode(
+        selectedVehicles,
+        trainingCode
+    ) {
+        const code = String(trainingCode || '').trim();
+        if (!code) return 0;
+
+        return (Array.isArray(selectedVehicles) ? selectedVehicles : [])
+            .reduce((total, vehicle) => {
+                if (vehicle?.profilesComplete) {
+                    return total + vehicle.profiles.reduce(
+                        (vehicleTotal, profile) => {
+                            return vehicleTotal + (
+                                Array.isArray(profile) &&
+                                profile.includes(code)
+                                    ? 1
+                                    : 0
+                            );
+                        },
+                        0
+                    );
+                }
+
+                const aggregate =
+                    (Array.isArray(vehicle?.trainingCounts)
+                        ? vehicle.trainingCounts
+                        : []
+                    ).find(item => item.code === code);
+
+                return total + Math.max(
+                    0,
+                    parseInt(aggregate?.count, 10) || 0
+                );
+            }, 0);
+    }
+
+    async function preloadMissionRequiredPersonnel() {
+        if (
+            !isMissionPage() ||
+            !isCurrentMissionExecutionOwner(
+                'required personnel preload'
+            )
+        ) {
+            return [];
+        }
+
+        const missionKey =
+            synchroniseMissionRequirementPreloadCache();
+        if (!missionKey) return [];
+
+        const sourceDescriptor =
+            getMissionRequirementSource(false);
+        const cachedRows =
+            getCachedMissionRequirementRows(sourceDescriptor);
+
+        if (cachedRows !== null) {
+            return cachedRows;
+        }
+
+        if (
+            mfMissionRequirementPreloadPromise &&
+            mfMissionRequirementPreloadPromiseKey === missionKey
+        ) {
+            return mfMissionRequirementPreloadPromise;
+        }
+
+        mfMissionRequirementPreloadCache.status = 'loading';
+        mfMissionRequirementPreloadCache.attempts += 1;
+        mfMissionRequirementPreloadCache.error = '';
+        mfMissionRequirementPreloadPromiseKey = missionKey;
+
+        const preloadPromise =
+            readLiveMissionRequirements({
+                silent: true,
+                allowCached: true,
+                preload: true,
+                forceRefresh: false
+            })
+                .then(rows => {
+                    if (
+                        missionKey ===
+                        getMissionRequirementPreloadMissionKey()
+                    ) {
+                        renderSelectedTrainedPersonnelPanel();
+                    }
+
+                    return cloneMissionRequirementRows(rows);
+                })
+                .catch(error => {
+                    if (
+                        missionKey ===
+                        getMissionRequirementPreloadMissionKey()
+                    ) {
+                        mfMissionRequirementPreloadCache.status = 'error';
+                        mfMissionRequirementPreloadCache.error =
+                            error?.message || String(error);
+                    }
+
+                    return [];
+                })
+                .finally(() => {
+                    if (
+                        mfMissionRequirementPreloadPromise === preloadPromise
+                    ) {
+                        mfMissionRequirementPreloadPromise = null;
+                        mfMissionRequirementPreloadPromiseKey = '';
+                    }
+
+                    const cache =
+                        getMissionRequirementPreloadState();
+
+                    if (
+                        cache.missionKey === missionKey &&
+                        cache.status !== 'loaded' &&
+                        cache.attempts < 6
+                    ) {
+                        scheduleMissionRequiredPersonnelPreload(
+                            350 * cache.attempts
+                        );
+                    }
+                });
+
+        mfMissionRequirementPreloadPromise = preloadPromise;
+        return preloadPromise;
+    }
+
+    function scheduleMissionRequiredPersonnelPreload(
+        delay = 0
+    ) {
+        if (!isMissionPage()) return;
+
+        synchroniseMissionRequirementPreloadCache();
+
+        if (
+            mfMissionRequirementPreloadCache.status === 'loaded' ||
+            mfMissionRequirementPreloadTimer
+        ) {
+            return;
+        }
+
+        mfMissionRequirementPreloadTimer = setTimeout(() => {
+            mfMissionRequirementPreloadTimer = null;
+            preloadMissionRequiredPersonnel();
+        }, Math.max(0, parseInt(delay, 10) || 0));
+    }
+
     const MF_REQUIREMENT_SOURCE_FAILURE_STATUSES =
         new Set([
             'missing-source',
@@ -23549,17 +24014,27 @@ let sessionRuntimeTicker = null;
         return state;
     }
 
-    async function readLiveMissionRequirements() {
+    async function readLiveMissionRequirements(
+        options = {}
+    ) {
         if (!isCurrentMissionExecutionOwner('attachment requirement read')) {
             return [];
         }
 
+        const silent = options?.silent === true;
+        const allowCached = options?.allowCached !== false;
+        const reportStatus = message => {
+            if (!silent) updateStatusBox(message);
+        };
+
         synchroniseMissionInstanceState('Unit Finder attachment read');
 
         const missionKeyAtFetchStart =
-            getLocalMissionInstanceKey();
+            synchroniseMissionRequirementPreloadCache();
         const sourceDescriptor =
-            getMissionRequirementSource(true);
+            getMissionRequirementSource(
+                options?.forceRefresh === true
+            );
 
         if (!sourceDescriptor) {
             setMissionRequirementReadState({
@@ -23568,11 +24043,91 @@ let sessionRuntimeTicker = null;
                 error:
                     'Requirements for this Mission source was not found for the active mission.'
             });
-            updateStatusBox(
+            reportStatus(
                 'Unit Finder stopped: Requirements for this Mission source was not found.'
             );
             return [];
         }
+
+        if (allowCached) {
+            const cachedRows =
+                getCachedMissionRequirementRows(
+                    sourceDescriptor
+                );
+
+            if (cachedRows !== null) {
+                setMissionRequirementReadState({
+                    status:
+                        cachedRows.length > 0
+                            ? 'loaded'
+                            : 'loaded-empty',
+                    missionKey:
+                        missionKeyAtFetchStart,
+                    url: sourceDescriptor.url,
+                    missionId:
+                        sourceDescriptor.missionId,
+                    missionTypeId:
+                        sourceDescriptor.missionTypeId,
+                    tableFound: true,
+                    rowCount: cachedRows.length
+                });
+                reportStatus(
+                    cachedRows.length > 0
+                        ? `Mission requirements preloaded: ${cachedRows.length} actionable row(s).`
+                        : 'Mission requirements preloaded: no actionable vehicle rows in the authoritative table.'
+                );
+                return cachedRows;
+            }
+
+            if (
+                options?.preload !== true &&
+                mfMissionRequirementPreloadPromise &&
+                mfMissionRequirementPreloadPromiseKey ===
+                    missionKeyAtFetchStart
+            ) {
+                await mfMissionRequirementPreloadPromise;
+
+                const rowsAfterPreload =
+                    getCachedMissionRequirementRows(
+                        sourceDescriptor
+                    );
+
+                if (rowsAfterPreload !== null) {
+                    setMissionRequirementReadState({
+                        status:
+                            rowsAfterPreload.length > 0
+                                ? 'loaded'
+                                : 'loaded-empty',
+                        missionKey:
+                            missionKeyAtFetchStart,
+                        url: sourceDescriptor.url,
+                        missionId:
+                            sourceDescriptor.missionId,
+                        missionTypeId:
+                            sourceDescriptor.missionTypeId,
+                        tableFound: true,
+                        rowCount:
+                            rowsAfterPreload.length
+                    });
+                    reportStatus(
+                        rowsAfterPreload.length > 0
+                            ? `Mission requirements preloaded: ${rowsAfterPreload.length} actionable row(s).`
+                            : 'Mission requirements preloaded: no actionable vehicle rows in the authoritative table.'
+                    );
+                    return rowsAfterPreload;
+                }
+            }
+        }
+
+        mfMissionRequirementPreloadCache = {
+            ...mfMissionRequirementPreloadCache,
+            missionKey:
+                missionKeyAtFetchStart,
+            sourceUrl:
+                sourceDescriptor.url,
+            status: 'loading',
+            error: ''
+        };
 
         setMissionRequirementReadState({
             status: 'loading',
@@ -23584,7 +24139,7 @@ let sessionRuntimeTicker = null;
         });
 
         try {
-            updateStatusBox(
+            reportStatus(
                 'Reading Requirements for this Mission: Vehicle and Personnel Requirements...'
             );
 
@@ -23628,7 +24183,13 @@ let sessionRuntimeTicker = null;
                     error:
                         'Requirement response URL did not match the active mission.'
                 });
-                updateStatusBox(
+                mfMissionRequirementPreloadCache = {
+                    ...mfMissionRequirementPreloadCache,
+                    status: 'error',
+                    error:
+                        'Requirement response URL did not match the active mission.'
+                };
+                reportStatus(
                     'Unit Finder stopped: requirement response did not match the active mission.'
                 );
                 return [];
@@ -23644,9 +24205,9 @@ let sessionRuntimeTicker = null;
 
             if (
                 missionKeyAtFetchStart !==
-                getLocalMissionInstanceKey()
+                getMissionRequirementPreloadMissionKey()
             ) {
-                updateStatusBox(
+                reportStatus(
                     'Mission changed while requirements were loading. Old requirements ignored.'
                 );
                 return [];
@@ -23676,15 +24237,28 @@ let sessionRuntimeTicker = null;
                     error:
                         'Vehicle and Personnel Requirements table was not present.'
                 });
-                updateStatusBox(
+                mfMissionRequirementPreloadCache = {
+                    ...mfMissionRequirementPreloadCache,
+                    status: 'error',
+                    error:
+                        'Vehicle and Personnel Requirements table was not present.'
+                };
+                reportStatus(
                     'Unit Finder stopped: Vehicle and Personnel Requirements table was not found.'
                 );
                 return [];
             }
 
+            const cachedRows =
+                setCachedMissionRequirementRows(
+                    missionKeyAtFetchStart,
+                    sourceDescriptor,
+                    rows
+                );
+
             setMissionRequirementReadState({
                 status:
-                    rows.length > 0
+                    cachedRows.length > 0
                         ? 'loaded'
                         : 'loaded-empty',
                 missionKey:
@@ -23695,16 +24269,16 @@ let sessionRuntimeTicker = null;
                 missionTypeId:
                     sourceDescriptor.missionTypeId,
                 tableFound: true,
-                rowCount: rows.length
+                rowCount: cachedRows.length
             });
 
-            updateStatusBox(
-                rows.length > 0
-                    ? `Mission requirements loaded: ${rows.length} actionable row(s).`
+            reportStatus(
+                cachedRows.length > 0
+                    ? `Mission requirements loaded: ${cachedRows.length} actionable row(s).`
                     : 'Mission requirements loaded: no actionable vehicle rows in the authoritative table.'
             );
 
-            return rows;
+            return cachedRows;
         } catch (error) {
             console.warn(
                 'Mission Finder requirement fetch failed:',
@@ -23723,7 +24297,14 @@ let sessionRuntimeTicker = null;
                     error?.message ||
                     String(error)
             });
-            updateStatusBox(
+            mfMissionRequirementPreloadCache = {
+                ...mfMissionRequirementPreloadCache,
+                status: 'error',
+                error:
+                    error?.message ||
+                    String(error)
+            };
+            reportStatus(
                 'Unit Finder stopped: authoritative mission requirements could not be loaded.'
             );
             return [];
