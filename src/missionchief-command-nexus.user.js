@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.71
+// @version      1.0.72
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -10696,7 +10696,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.134
+         * MODULE 2: MISSION FINDER V10.6.135
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -18790,6 +18790,171 @@ function isRoadRailUnitVehicleCheckbox(input) {
                     padding: 4px;
                 }
             }
+
+
+            /* Attached Vehicle Load drawer V1.0.72. */
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) {
+                position: fixed;
+                overflow: visible;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #control-panel {
+                position: relative;
+                z-index: 3;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #control-panel:not(.mf2026-control-collapsed)
+            .mf-control-body {
+                max-height: calc(100vh - 92px);
+                overflow-y: auto;
+                overscroll-behavior: contain;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #vehicle-load-list-box {
+                position: absolute;
+                top: 38px;
+                left: calc(100% - 1px);
+                right: auto;
+                z-index: 7;
+                margin: 0;
+                border-left: 0;
+                border-radius: 0 7px 7px 0;
+                box-shadow: 10px 10px 26px rgba(0, 0, 0, 0.34);
+                transform-origin: left top;
+                transition: width 150ms ease, max-height 150ms ease,
+                    box-shadow 150ms ease;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #vehicle-load-list-box.mf2026-load-collapsed {
+                display: block !important;
+                width: 29px;
+                min-width: 29px;
+                max-width: 29px;
+                height: 96px;
+                min-height: 96px;
+                max-height: 96px;
+                padding: 0;
+                overflow: hidden;
+                border-left: 0;
+                border-radius: 0 7px 7px 0;
+                box-shadow: 7px 7px 18px rgba(0, 0, 0, 0.26);
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #vehicle-load-list-box.mf2026-load-collapsed
+            .mf2026-load-header-row {
+                display: flex !important;
+                flex-direction: column;
+                align-items: center;
+                justify-content: space-between;
+                width: 29px;
+                height: 96px;
+                min-height: 96px;
+                padding: 5px 2px 3px;
+                border-bottom: 0;
+                border-radius: 0 7px 7px 0;
+                cursor: pointer;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #vehicle-load-list-box.mf2026-load-collapsed
+            #mf-load-title {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex: 1 1 auto;
+                min-width: 0;
+                padding: 0;
+                writing-mode: vertical-rl;
+                text-orientation: mixed;
+                transform: rotate(180deg);
+                font-size: 8.5px;
+                letter-spacing: 0.06em;
+                white-space: nowrap;
+                cursor: pointer;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #vehicle-load-list-box.mf2026-load-collapsed
+            #mf-load-title::before {
+                display: none;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #vehicle-load-list-box.mf2026-load-collapsed
+            #mf-load-minimize {
+                width: 23px;
+                min-width: 23px;
+                height: 23px;
+                min-height: 23px;
+                flex: 0 0 23px;
+                padding: 0;
+                border-radius: 5px;
+                font-size: 12px;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #vehicle-load-list-box:not(.mf2026-load-collapsed) {
+                display: block !important;
+                width: min(286px, calc(100vw - 430px));
+                min-width: 238px;
+                max-width: 286px;
+                max-height: calc(100vh - 58px);
+                overflow: hidden;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #vehicle-load-list-box:not(.mf2026-load-collapsed)
+            .mf2026-load-header-row {
+                border-radius: 0 7px 0 0;
+                cursor: pointer;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #vehicle-load-list-box:not(.mf2026-load-collapsed)
+            #mf-load-title {
+                cursor: pointer;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #vehicle-load-list-box:not(.mf2026-load-collapsed)
+            .mf-load-body {
+                max-height: calc(100vh - 94px);
+                overflow-y: auto;
+                overscroll-behavior: contain;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari)
+            #vehicle-load-list-box,
+            #mission-finder-wrapper.mf-nexus-dashboard.mf-compact-shell-collapsed:not(.mf2026-ios-safari)
+            #vehicle-load-list-box {
+                display: none !important;
+            }
+
+            @media (max-width: 760px) {
+                #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+                #vehicle-load-list-box:not(.mf2026-load-collapsed) {
+                    left: auto;
+                    right: 0;
+                    top: 38px;
+                    width: min(286px, calc(100vw - 28px));
+                    min-width: 0;
+                    max-width: calc(100vw - 28px);
+                    border-left: 1px solid var(--nx-border);
+                    border-radius: 7px;
+                    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.46);
+                }
+
+                #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+                #vehicle-load-list-box:not(.mf2026-load-collapsed)
+                .mf2026-load-header-row {
+                    border-radius: 7px 7px 0 0;
+                }
+            }
         `;
         document.head.appendChild(style);
     }
@@ -19663,7 +19828,7 @@ function isRoadRailUnitVehicleCheckbox(input) {
             typeof GM_info !== 'undefined' &&
             GM_info?.script?.version
                 ? GM_info.script.version
-                : '1.0.71';
+                : '1.0.72';
         dashboardFooter.textContent =
             `MissionChief Nexus V${dashboardVersion} · MIT · Martblyth`;
 
@@ -19734,6 +19899,13 @@ function isRoadRailUnitVehicleCheckbox(input) {
 
             loadPanel.dataset.collapsed =
                 String(mfVehicleLoadCollapsed);
+
+            if (!missionFinderIosSafari) {
+                wrapper.classList.toggle(
+                    'mf-vehicle-drawer-open',
+                    !mfVehicleLoadCollapsed
+                );
+            }
 
             if (missionFinderIphoneSafari) {
                 const expanded =
@@ -19944,38 +20116,40 @@ function isRoadRailUnitVehicleCheckbox(input) {
         }
 
         if (loadTitle) {
-            if (missionFinderIphoneSafari) {
-                loadTitle.setAttribute('role', 'button');
-                loadTitle.tabIndex = 0;
-            }
+    loadTitle.setAttribute('role', 'button');
+    loadTitle.tabIndex = 0;
 
-            loadTitle.addEventListener('click', function(event) {
-                if (missionFinderIphoneSafari) {
-                    consumeIphoneDisclosureEvent(event);
-                    toggleVehicleLoadCollapsed();
-                    return;
-                }
-
-                if (mfVehicleLoadCollapsed) {
-                    toggleVehicleLoadCollapsed();
-                }
-            });
-
-            loadTitle.addEventListener('keydown', function(event) {
-                if (
-                    !missionFinderIphoneSafari ||
-                    (
-                        event.key !== 'Enter' &&
-                        event.key !== ' '
-                    )
-                ) {
-                    return;
-                }
-
-                consumeIphoneDisclosureEvent(event);
-                toggleVehicleLoadCollapsed();
-            });
+    loadTitle.addEventListener('click', function(event) {
+        if (missionFinderIphoneSafari) {
+            consumeIphoneDisclosureEvent(event);
+            toggleIphoneLauncherPanel('vehicle');
+            return;
         }
+
+        event.preventDefault();
+        event.stopPropagation();
+        toggleVehicleLoadCollapsed();
+    });
+
+    loadTitle.addEventListener('keydown', function(event) {
+        if (
+            event.key !== 'Enter' &&
+            event.key !== ' '
+        ) {
+            return;
+        }
+
+        if (missionFinderIphoneSafari) {
+            consumeIphoneDisclosureEvent(event);
+            toggleIphoneLauncherPanel('vehicle');
+            return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+        toggleVehicleLoadCollapsed();
+    });
+}
 
         keepPanelPositionCheckbox.addEventListener(
             'change',

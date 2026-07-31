@@ -10,8 +10,8 @@ src/missionchief-command-nexus.user.js
 
 | Item | Value |
 |---|---|
-| Command Nexus version | `1.0.71` |
-| Mission Finder baseline | `V10.6.134` |
+| Command Nexus version | `1.0.72` |
+| Mission Finder baseline | `V10.6.135` |
 | Unit, Station & Personnel baseline | `V4.2.8` |
 | Licence | MIT |
 | Developer and source-code owner | **MartyBlyth** |
@@ -79,3 +79,7 @@ Desktop mission and naming/assignment surfaces share one low-glare tokenised des
 ### Compact progressive-disclosure interface
 
 Desktop Mission Control is a narrow single-shell interface. Mission actions remain immediately visible; Vehicle Load and Trained Personnel start collapsed; Settings and Diagnostics replace the mission view rather than expanding beside it. Unit Naming, Station Naming and Personnel Assignment use narrow single-column panels with status, tools, reports and logs behind native disclosure controls. The entire Mission shell and naming panel can collapse to compact headers. Existing IDs, handlers, authoritative data paths and iPhone/iOS geometry remain unchanged.
+
+### Attached Vehicle Load drawer
+
+On desktop and tablet, Vehicle Load is attached to the right edge of the compact Mission shell. Its collapsed state is a narrow vertical Vehicle tab sharing the Mission border. Opening the drawer expands it to the right without resizing Mission Control; Settings, Diagnostics and whole-shell collapse hide it. iPhone/iOS vehicle launcher behaviour is unchanged.
