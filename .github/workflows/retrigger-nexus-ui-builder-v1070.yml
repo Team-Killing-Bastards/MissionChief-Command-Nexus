@@ -1,0 +1,36 @@
+name: Retrigger Nexus UI V1.0.70 builder
+
+on:
+  push:
+    branches:
+      - feature/nexus-ui-system-v1070
+    paths:
+      - '.github/workflows/retrigger-nexus-ui-builder-v1070.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  retrigger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: feature/nexus-ui-system-v1070
+      - name: Refresh registered builder path
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '\n# patcher-anchor refresh\n' >> .github/workflows/build-nexus-ui-v1070.yml
+      - name: Commit refresh and remove retrigger
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git rm .github/workflows/retrigger-nexus-ui-builder-v1070.yml
+          git add .github/workflows/build-nexus-ui-v1070.yml
+          git commit -m 'Retrigger Nexus UI builder after patcher repair'
+          git push origin HEAD:feature/nexus-ui-system-v1070
