@@ -1,0 +1,46 @@
+name: Capture Nexus UI V1.0.70 rerun status
+
+on:
+  push:
+    branches:
+      - feature/nexus-ui-system-v1070
+    paths:
+      - '.github/workflows/status-nexus-ui-v1070-v2.yml'
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: feature/nexus-ui-system-v1070
+      - name: Capture latest workflow runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo '=== builder ==='
+            gh api "repos/${GITHUB_REPOSITORY}/actions/runs?branch=feature%2Fnexus-ui-system-v1070&per_page=100" \
+              --jq '.workflow_runs[] | select(.name == "Build Command Nexus visual system V1.0.70") | {id,status,conclusion,head_sha,created_at,updated_at,html_url}'
+            echo '=== retrigger ==='
+            gh api "repos/${GITHUB_REPOSITORY}/actions/runs?branch=feature%2Fnexus-ui-system-v1070&per_page=100" \
+              --jq '.workflow_runs[] | select(.name == "Retrigger Nexus UI V1.0.70 builder") | {id,status,conclusion,head_sha,created_at,updated_at,html_url}'
+          } > .nexus-ui-v1070-rerun-status.txt
+      - name: Commit status and remove workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git rm .github/workflows/status-nexus-ui-v1070-v2.yml
+          git add .nexus-ui-v1070-rerun-status.txt
+          git commit -m 'Capture Nexus UI V1.0.70 rerun status'
+          git push origin HEAD:feature/nexus-ui-system-v1070
