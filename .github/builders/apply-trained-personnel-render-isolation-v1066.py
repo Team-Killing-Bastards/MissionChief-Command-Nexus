@@ -103,22 +103,27 @@ if preload_schedule_count != 1:
         f'expected exactly one renderer call, found {preload_schedule_count}'
     )
 
-cache_pattern = re.compile(
-    r'(?m)^(?P<indent>[ \t]*)const[ \t]+preloadRequirements[ \t]*=[ \t\r\n]*'
+cache_read_pattern = re.compile(
+    r'(?m)^(?P<indent>[ \t]*)const[ \t]+preloadState[ \t]*=[ \t\r\n]*'
+    r'getMissionRequirementPreloadState\([ \t\r\n]*\);[ \t\r\n]*'
+    r'(?P=indent)const[ \t]+requiredPersonnel[ \t]*=[ \t\r\n]*'
     r'getPreloadedMissionTrainedPersonnelRequirements\([ \t\r\n]*\);'
 )
-cache_matches = list(cache_pattern.finditer(renderer))
+cache_matches = list(cache_read_pattern.finditer(renderer))
 if len(cache_matches) != 1:
     raise RuntimeError(
-        'trained-personnel preload cache read: '
-        f'expected exactly one renderer assignment, found {len(cache_matches)}'
+        'trained-personnel preload cache reads: '
+        f'expected exactly one renderer block, found {len(cache_matches)}'
     )
 
 indent = cache_matches[0].group('indent')
 cache_guard = (
-    f'{indent}let preloadRequirements = [];\n\n'
+    f"{indent}let preloadState = {{ status: 'idle' }};\n"
+    f'{indent}let requiredPersonnel = [];\n\n'
     f'{indent}try {{\n'
-    f'{indent}    preloadRequirements =\n'
+    f'{indent}    preloadState =\n'
+    f'{indent}        getMissionRequirementPreloadState();\n'
+    f'{indent}    requiredPersonnel =\n'
     f'{indent}        getPreloadedMissionTrainedPersonnelRequirements();\n'
     f'{indent}}} catch (error) {{\n'
     f'{indent}    if (mfDebugEnabled) {{\n'
@@ -129,7 +134,7 @@ cache_guard = (
     f'{indent}    }}\n'
     f'{indent}}}'
 )
-renderer = cache_pattern.sub(cache_guard, renderer, count=1)
+renderer = cache_read_pattern.sub(cache_guard, renderer, count=1)
 
 if 'scheduleMissionRequiredPersonnelPreload(' in renderer:
     raise RuntimeError('Trained-personnel renderer still starts preload work')
@@ -137,6 +142,8 @@ if 'getSelectedTrainedPersonnelPanelModel()' not in renderer:
     raise RuntimeError('Legacy selected-trained-personnel model was removed')
 if 'panel cache read failed' not in renderer:
     raise RuntimeError('Preload cache isolation guard was not installed')
+if 'let requiredPersonnel = [];' not in renderer:
+    raise RuntimeError('Required Personnel fallback model was not installed')
 
 source = source[:renderer_start] + renderer + source[renderer_end:]
 SOURCE_PATH.write_text(source, encoding='utf-8')
