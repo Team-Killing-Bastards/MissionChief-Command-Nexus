@@ -130,16 +130,7 @@ source = replace_once(
     ' * MODULE 2: MISSION FINDER V10.6.133',
     'Mission Finder version',
 )
-source = replace_once(
-    source,
-    "    // V10.6.132: Mission Control now uses one integrated MissionChief Nexus",
-    "    // V10.6.133: all desktop Command Nexus surfaces now share one low-glare,\n"
-    "    // tokenised Nexus visual system with responsive information grids, plain\n"
-    "    // operational labels and bounded text/data flow. Existing IDs, handlers,\n"
-    "    // data authority and the established iPhone/iOS lifecycle remain unchanged.\n"
-    "    // V10.6.132: Mission Control now uses one integrated MissionChief Nexus",
-    'V10.6.133 implementation note',
-)
+
 
 # ---------------------------------------------------------------------------
 # Unit / Station / Personnel workspace DOM
