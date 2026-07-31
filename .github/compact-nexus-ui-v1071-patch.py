@@ -948,6 +948,9 @@ for path in Path('scripts').glob('check-*.mjs'):
     text = text.replace('// @version      1.0.70', '// @version      1.0.71')
     text = text.replace('MISSION FINDER V10.6.133', 'MISSION FINDER V10.6.134')
     text = text.replace('Mission Finder V10.6.133', 'Mission Finder V10.6.134')
+    text = text.replace('mf_control_collapsed_v9', 'mf_control_collapsed_v10')
+    text = text.replace('mf_vehicle_load_collapsed_v9', 'mf_vehicle_load_collapsed_v10')
+    text = text.replace('mf_trained_personnel_collapsed_v1', 'mf_trained_personnel_collapsed_v2')
     path.write_text(text, encoding='utf-8', newline='\n')
 
 compact_test = r'''#!/usr/bin/env node
