@@ -1,0 +1,80 @@
+name: Build MissionChief Nexus dashboard v1.0.69
+
+on:
+  push:
+    branches:
+      - feature/mission-command-dashboard-v1069
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-mission-dashboard-v1069-${{ github.event_name }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Apply integrated dashboard release
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -q '^// @version      1.0.69$' src/missionchief-command-nexus.user.js; then
+            echo 'Dashboard release already applied.'
+          else
+            python3 .github/builders/apply-mission-dashboard-v1069.py
+          fi
+
+      - name: Validate dashboard source and metadata
+        run: |
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          node scripts/check-mission-dashboard-v1069.mjs
+
+      - name: Validate preserved mission behaviour
+        run: |
+          node scripts/check-mission-definition-personnel-preload.mjs
+          node scripts/check-mission-definition-trained-personnel.mjs
+          node scripts/check-initial-trained-personnel-authority.mjs
+          node scripts/check-trained-personnel-panel.mjs
+          node scripts/check-trained-coverage-optimizer.mjs
+          node scripts/check-mission-update-single-pass.mjs
+          node scripts/check-unit-finder-diagnostic-export.mjs
+          node scripts/check-ios-mission-requirements-source.mjs
+          node scripts/check-ios-unit-finder-selection.mjs
+          node scripts/check-iphone-mission-ui.mjs
+          node scripts/check-runtime-hardening.mjs
+
+      - name: Validate repository integrity
+        run: python3 scripts/check_repository.py
+
+      - name: Commit validated product release
+        if: github.event_name == 'push'
+        env:
+          TARGET_BRANCH: feature/mission-command-dashboard-v1069
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add src/missionchief-command-nexus.user.js src/README.md README.md CHANGELOG.md scripts .github/workflows/validate-userscript.yml
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git commit -m 'Replace Mission Control with integrated Nexus dashboard'
+          git push origin "HEAD:${TARGET_BRANCH}"
