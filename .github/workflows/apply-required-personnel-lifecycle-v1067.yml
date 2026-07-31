@@ -1,0 +1,85 @@
+name: Build v1.0.67 Required Personnel lifecycle fix
+
+on:
+  push:
+    branches:
+      - fix/required-personnel-lifecycle-v1067
+    paths:
+      - '.github/workflows/apply-required-personnel-lifecycle-v1067.yml'
+      - '.github/builders/apply-required-personnel-lifecycle-v1067.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-v1067-required-personnel-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Patch and validate product
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out candidate branch
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Apply Required Personnel lifecycle fix
+        run: python3 .github/builders/apply-required-personnel-lifecycle-v1067.py
+
+      - name: Validate JavaScript syntax
+        run: node --check src/missionchief-command-nexus.user.js
+
+      - name: Validate userscript metadata
+        run: node scripts/validate-userscript.mjs
+
+      - name: Validate mission Required Personnel preload
+        run: node scripts/check-mission-definition-personnel-preload.mjs
+
+      - name: Validate selected trained-personnel panel
+        run: node scripts/check-trained-personnel-panel.mjs
+
+      - name: Validate mission-definition trained personnel
+        run: node scripts/check-mission-definition-trained-personnel.mjs
+
+      - name: Validate trained-personnel coverage optimiser
+        run: node scripts/check-trained-coverage-optimizer.mjs
+
+      - name: Validate Mission Update single pass
+        run: node scripts/check-mission-update-single-pass.mjs
+
+      - name: Validate iOS mission requirement source
+        run: node scripts/check-ios-mission-requirements-source.mjs
+
+      - name: Validate iOS Unit Finder selection
+        run: node scripts/check-ios-unit-finder-selection.mjs
+
+      - name: Validate runtime lifecycle contracts
+        run: node scripts/check-runtime-hardening.mjs
+
+      - name: Validate repository integrity
+        run: python3 scripts/check_repository.py
+
+      - name: Commit validated product patch
+        env:
+          TARGET_BRANCH: ${{ github.ref_name }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/missionchief-command-nexus.user.js src/README.md README.md CHANGELOG.md scripts/*.mjs
+          if git diff --cached --quiet; then
+            echo 'No product changes were generated.' >&2
+            exit 1
+          fi
+          git commit -m 'Restore Required Personnel preload on mission mount'
+          git push origin "HEAD:${TARGET_BRANCH}"
