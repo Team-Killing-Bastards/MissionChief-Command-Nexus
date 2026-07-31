@@ -1972,12 +1972,7 @@ readme = replace_once(
     '**Current version:** `1.0.70` · **Mission Finder engine:** `V10.6.133`',
     'README version baseline',
 )
-readme = replace_once(
-    readme,
-    'MissionChief Nexus dashboard',
-    'MissionChief Nexus adaptive command surface',
-    'README dashboard terminology',
-)
+
 readme_path.write_text(readme, encoding='utf-8', newline='\n')
 
 src_readme_path = Path('src/README.md')
