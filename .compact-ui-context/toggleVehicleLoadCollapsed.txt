@@ -1,0 +1,15 @@
+19007:         function toggleVehicleLoadCollapsed() {
+19008:             if (missionFinderIphoneSafari) {
+19009:                 toggleIphoneLauncherPanel('vehicle');
+19010:                 return;
+19011:             }
+19012: 
+19013:             mfVehicleLoadCollapsed = !mfVehicleLoadCollapsed;
+19014:             localStorage.setItem(
+19015:                 MF_VEHICLE_LOAD_COLLAPSED_KEY,
+19016:                 String(mfVehicleLoadCollapsed)
+19017:             );
+19018:             syncVehicleLoadCollapseState();
+19019:             renderVehicleLoadList();
+19020:             renderSessionPanel();
+19021:         }

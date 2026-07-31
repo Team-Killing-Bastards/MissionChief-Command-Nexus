@@ -1,0 +1,8 @@
+addPanel: 1862-3288
+switchToolTab: 3812-3889
+injectStyles: 16284-18053
+createControlPanel: 18055-19318
+syncVehicleLoadCollapseState: 18941-19005
+syncTrainedPersonnelCollapseState: 19028-19072
+toggleVehicleLoadCollapsed: 19007-19021
+toggleTrainedPersonnelCollapsed: 19074-19087

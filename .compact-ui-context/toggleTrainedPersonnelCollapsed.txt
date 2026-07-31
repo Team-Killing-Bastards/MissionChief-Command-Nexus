@@ -1,0 +1,14 @@
+19074:         function toggleTrainedPersonnelCollapsed() {
+19075:             mfTrainedPersonnelCollapsed =
+19076:                 !mfTrainedPersonnelCollapsed;
+19077:             localStorage.setItem(
+19078:                 MF_TRAINED_PERSONNEL_COLLAPSED_KEY,
+19079:                 String(mfTrainedPersonnelCollapsed)
+19080:             );
+19081:             syncTrainedPersonnelCollapseState();
+19082:             renderSelectedTrainedPersonnelPanel();
+19083: 
+19084:             requestAnimationFrame(() => {
+19085:                 keepMissionFinderWindowOnScreen(wrapper);
+19086:             });
+19087:         }

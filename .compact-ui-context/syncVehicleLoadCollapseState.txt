@@ -1,0 +1,65 @@
+18941:         function syncVehicleLoadCollapseState() {
+18942:             const expanded = !mfVehicleLoadCollapsed;
+18943:             loadPanel.classList.toggle(
+18944:                 'mf2026-load-collapsed',
+18945:                 mfVehicleLoadCollapsed
+18946:             );
+18947: 
+18948:             const minimizeButton =
+18949:                 loadPanel.querySelector('#mf-load-minimize');
+18950:             const title =
+18951:                 loadPanel.querySelector('#mf-load-title');
+18952: 
+18953:             if (minimizeButton) {
+18954:                 minimizeButton.textContent =
+18955:                     missionFinderIphoneSafari
+18956:                         ? (expanded ? '▴' : '▾')
+18957:                         : (expanded ? '−' : '+');
+18958:                 minimizeButton.title = expanded
+18959:                     ? 'Collapse Vehicle Load List'
+18960:                     : 'Expand Vehicle Load List';
+18961:                 minimizeButton.setAttribute(
+18962:                     'aria-label',
+18963:                     minimizeButton.title
+18964:                 );
+18965:                 minimizeButton.setAttribute(
+18966:                     'aria-controls',
+18967:                     'mf-load-body'
+18968:                 );
+18969:                 minimizeButton.setAttribute(
+18970:                     'aria-expanded',
+18971:                     String(expanded)
+18972:                 );
+18973:             }
+18974: 
+18975:             if (title) {
+18976:                 title.setAttribute(
+18977:                     'aria-controls',
+18978:                     'mf-load-body'
+18979:                 );
+18980:                 title.setAttribute(
+18981:                     'aria-expanded',
+18982:                     String(expanded)
+18983:                 );
+18984:             }
+18985: 
+18986:             loadPanel.dataset.collapsed =
+18987:                 String(mfVehicleLoadCollapsed);
+18988: 
+18989:             if (missionFinderIphoneSafari) {
+18990:                 const expanded =
+18991:                     !mfVehicleLoadCollapsed;
+18992:                 iphoneVehicleLauncherButton.classList.toggle(
+18993:                     'mf2026-active',
+18994:                     expanded
+18995:                 );
+18996:                 iphoneVehicleLauncherButton.setAttribute(
+18997:                     'aria-pressed',
+18998:                     String(expanded)
+18999:                 );
+19000:                 iphoneVehicleLauncherButton.setAttribute(
+19001:                     'aria-expanded',
+19002:                     String(expanded)
+19003:                 );
+19004:             }
+19005:         }
