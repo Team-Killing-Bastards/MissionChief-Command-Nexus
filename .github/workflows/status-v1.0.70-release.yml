@@ -1,0 +1,48 @@
+name: Capture Command Nexus v1.0.70 release status
+
+on:
+  push:
+    branches:
+      - agent/status-v1.0.70-release
+    paths:
+      - '.github/workflows/status-v1.0.70-release.yml'
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: agent/status-v1.0.70-release
+      - name: Capture status
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo '=== verifier branch runs ==='
+            gh api "repos/${GITHUB_REPOSITORY}/actions/runs?branch=agent%2Fverify-v1.0.70-release&per_page=30" \
+              --jq '.workflow_runs[] | {id,name,event,status,conclusion,head_sha,created_at,updated_at,html_url}'
+            echo '=== publisher runs since merge ==='
+            gh api "repos/${GITHUB_REPOSITORY}/actions/runs?per_page=100" \
+              --jq '.workflow_runs[] | select(.name == "Create GitHub release" and .created_at >= "2026-07-31T21:56:00Z") | {id,name,event,status,conclusion,head_sha,created_at,updated_at,html_url}'
+            echo '=== release ==='
+            gh release view v1.0.70 --json tagName,targetCommitish,isDraft,isPrerelease,publishedAt,url,assets 2>&1 || true
+          } > .status-v1.0.70-release.txt
+      - name: Commit status and remove workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git rm .github/workflows/status-v1.0.70-release.yml
+          git add .status-v1.0.70-release.txt
+          git commit -m 'Record v1.0.70 release status'
+          git push origin HEAD:agent/status-v1.0.70-release
