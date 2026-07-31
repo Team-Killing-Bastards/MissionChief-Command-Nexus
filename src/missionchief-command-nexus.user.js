@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.72
+// @version      1.0.73
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -10696,7 +10696,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.135
+         * MODULE 2: MISSION FINDER V10.6.136
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -18955,6 +18955,42 @@ function isRoadRailUnitVehicleCheckbox(input) {
                     border-radius: 7px 7px 0 0;
                 }
             }
+
+
+            /* Vehicle drawer top alignment and motion V1.0.73. */
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #vehicle-load-list-box {
+                top: 0;
+                transform-origin: left top;
+                transition:
+                    width 190ms cubic-bezier(0.22, 1, 0.36, 1),
+                    min-width 190ms cubic-bezier(0.22, 1, 0.36, 1),
+                    max-width 190ms cubic-bezier(0.22, 1, 0.36, 1),
+                    max-height 190ms cubic-bezier(0.22, 1, 0.36, 1),
+                    transform 190ms cubic-bezier(0.22, 1, 0.36, 1),
+                    opacity 140ms ease-out,
+                    box-shadow 190ms ease-out;
+                will-change: width, max-height, transform, opacity;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #vehicle-load-list-box.mf2026-load-collapsed {
+                transform: translateX(-6px) scaleX(0.96);
+                opacity: 0.98;
+            }
+
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+            #vehicle-load-list-box:not(.mf2026-load-collapsed) {
+                transform: translateX(0) scaleX(1);
+                opacity: 1;
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+                #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+                #vehicle-load-list-box {
+                    transition-duration: 1ms !important;
+                }
+            }
         `;
         document.head.appendChild(style);
     }
@@ -19567,8 +19603,8 @@ function isRoadRailUnitVehicleCheckbox(input) {
         primaryActions.className =
             'mf2026-primary-actions';
         primaryActions.appendChild(unitFinderBtn);
-        primaryActions.appendChild(allyStealBtn);
         primaryActions.appendChild(missionUpdateBtn);
+        primaryActions.appendChild(allyStealBtn);
         primaryActions.appendChild(dispatchBtn);
         primaryActions.appendChild(dispatchShareBtn);
         primaryActions.appendChild(autoModeBtn);
@@ -19828,7 +19864,7 @@ function isRoadRailUnitVehicleCheckbox(input) {
             typeof GM_info !== 'undefined' &&
             GM_info?.script?.version
                 ? GM_info.script.version
-                : '1.0.72';
+                : '1.0.73';
         dashboardFooter.textContent =
             `MissionChief Nexus V${dashboardVersion} · MIT · Martblyth`;
 
