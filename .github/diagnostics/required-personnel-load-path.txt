@@ -9,6 +9,92 @@ function cleanRequirementName(value) {
             .trim();
     }
 
+/* ===== findMissionRequirementTable ===== */
+function findMissionRequirementTable(
+        doc,
+        suppliedTables = null
+    ) {
+        if (!doc) return null;
+
+        const tables = Array.isArray(suppliedTables)
+            ? suppliedTables
+            : Array.from(
+                doc.querySelectorAll(
+                    'table.table, table'
+                )
+            );
+        let bestTable = null;
+        let bestScore = 0;
+
+        const normalise = value => {
+            return String(value || '')
+                .replace(/\s+/g, ' ')
+                .trim();
+        };
+
+        tables.forEach(table => {
+            const headings = Array.from(
+                table.querySelectorAll(
+                    'thead th, thead td, th'
+                )
+            ).map(cell => normalise(
+                cell.textContent
+            ));
+            const headingText =
+                headings.join(' ');
+            let score = 0;
+
+            if (
+                headings.some(heading =>
+                    /^Vehicle and Personnel Requirements$/i
+                        .test(heading)
+                )
+            ) {
+                score += 10000;
+            } else if (
+                /Vehicle/i.test(headingText) &&
+                /Personnel/i.test(headingText) &&
+                /Requirements?/i.test(headingText)
+            ) {
+                score += 8000;
+            }
+
+            let actionableRows = 0;
+
+            table.querySelectorAll(
+                'tbody tr, tr'
+            ).forEach(row => {
+                const cells = Array.from(
+                    row.querySelectorAll('td')
+                ).map(cell => normalise(
+                    cell.textContent
+                ));
+
+                if (cells.length < 2) return;
+
+                if (
+                    /^(?:Required\s+|Maximum amount of cars to tow|Cars to tow)/i
+                        .test(cells[0]) &&
+                    /\d/.test(cells[1])
+                ) {
+                    actionableRows += 1;
+                }
+            });
+
+            if (actionableRows > 0) {
+                score += 100 +
+                    actionableRows;
+            }
+
+            if (score > bestScore) {
+                bestScore = score;
+                bestTable = table;
+            }
+        });
+
+        return bestTable;
+    }
+
 /* ===== getMissionDefinitionTrainedPersonnelRequirements ===== */
 function getMissionDefinitionTrainedPersonnelRequirements(
         requirementName,
@@ -30,6 +116,87 @@ function getMissionDefinitionTrainedPersonnelRequirements(
         return getTrainedPersonnelRequirementsFromFreeText(
             personnelText
         );
+    }
+
+/* ===== getMissionDefinitionSarPersonnelVehicleRequirements ===== */
+function getMissionDefinitionSarPersonnelVehicleRequirements(
+        requirementName,
+        personnelText
+    ) {
+        const cleanedName =
+            cleanRequirementName(requirementName);
+
+        // Only the mission-definition "Required Personnel" row is actionable.
+        // "Required Personnel Available" belongs to Reward and Precondition and
+        // must never create dispatch demand.
+        if (!/^Personnel(?:\s+Requirements?)?$/i.test(cleanedName)) {
+            return [];
+        }
+
+        const input = String(personnelText || '')
+            .replace(/[×✕]/g, 'x')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        if (!input) return [];
+
+        const definitions = [
+            {
+                name: 'Search Technician',
+                patterns: [
+                    /(\d+)\s*(?:x\s*)?Search\s+Technician(?:s)?/gi,
+                    /Search\s+Technician(?:s)?\s*(?:x\s*)?(\d+)/gi
+                ]
+            },
+            {
+                name: 'SAR Commander',
+                patterns: [
+                    /(\d+)\s*(?:x\s*)?SAR\s+Commander(?:s)?/gi,
+                    /SAR\s+Commander(?:s)?\s*(?:x\s*)?(\d+)/gi
+                ]
+            }
+        ];
+
+        const conversions = [];
+
+        definitions.forEach(definition => {
+            let maximumRequired = 0;
+
+            definition.patterns.forEach(pattern => {
+                pattern.lastIndex = 0;
+                let match;
+
+                while ((match = pattern.exec(input))) {
+                    const patternIsPrefix =
+                        pattern.source.startsWith('(\\d+)');
+                    const trailingText = input.slice(pattern.lastIndex);
+
+                    if (
+                        !patternIsPrefix &&
+                        /^\s*x(?=\s|[A-Za-z])/i.test(trailingText)
+                    ) {
+                        continue;
+                    }
+
+                    maximumRequired = Math.max(
+                        maximumRequired,
+                        Math.max(0, parseInt(match[1], 10) || 0)
+                    );
+                }
+            });
+
+            if (maximumRequired <= 0) return;
+
+            const conversion =
+                getSarPersonnelVehicleRequirement(
+                    definition.name,
+                    maximumRequired
+                );
+
+            if (conversion) conversions.push(conversion);
+        });
+
+        return conversions;
     }
 
 /* ===== extractLiveMissionRequirementRows ===== */
@@ -359,6 +526,137 @@ function extractLiveMissionRequirementRows(html) {
         return mergedRows;
     }
 
+/* ===== mergeRequirementRows ===== */
+function mergeRequirementRows(rows) {
+        const merged =
+            new Map();
+
+        rows.forEach(row => {
+            if (shouldIgnoreRequiredMinimumRequirement(row?.unitName)) {
+                return;
+            }
+
+            if (
+                row?.isTrainedPersonnelRequirement
+            ) {
+                const requirements =
+                    Array.isArray(
+                        row.personnelTrainingRequirements
+                    )
+                        ? row.personnelTrainingRequirements
+                        : [];
+
+                const signature =
+                    getTrainedPersonnelRequirementsSignature(
+                        requirements
+                    );
+
+                if (!signature) return;
+
+                const key =
+                    `trained-personnel:${signature}`;
+
+                const amount =
+                    getTrainedPersonnelVehicleTarget(
+                        requirements
+                    );
+
+                const existing =
+                    merged.get(key);
+
+                if (
+                    !existing ||
+                    amount >
+                        existing.stillNeeded
+                ) {
+                    merged.set(
+                        key,
+                        {
+                            ...row,
+                            stillNeeded:
+                                amount,
+                            personnelTrainingRequirements:
+                                requirements
+                        }
+                    );
+                }
+
+                return;
+            }
+
+            if (
+                isPublicOrderPersonnelRequirementName(
+                    row?.unitName
+                )
+            ) {
+                if (
+                    mfDebugEnabled
+                ) {
+                    debugLog(
+                        'PUBLIC ORDER VEHICLE GUARD',
+                        `${row.unitName} rejected from the normal vehicle path.`
+                    );
+                }
+
+                return;
+            }
+
+            const mappedName =
+                resolveUnitName(
+                    row.unitName
+                );
+
+            const amount =
+                normaliseVehicleRequirementCount(
+                    row.unitName,
+                    mappedName,
+                    row?.stillNeeded
+                );
+
+            if (amount <= 0) {
+                return;
+            }
+
+            const key =
+                normaliseVehicleText(
+                    mappedName ||
+                    row.unitName
+                );
+
+            if (!key) return;
+
+            const existing =
+                merged.get(
+                    key
+                );
+
+            if (
+                !existing ||
+                amount >
+                existing.stillNeeded
+            ) {
+                merged.set(
+                    key,
+                    {
+                        unitName:
+                            row.unitName,
+                        stillNeeded:
+                            amount
+                    }
+                );
+            } else if (mfDebugEnabled) {
+                debugLog(
+                    'LIVE DEDUPE',
+                    `${row.unitName} -> ${mappedName} x${amount} ignored; existing mapped requirement x${existing.stillNeeded}`
+                );
+            }
+        });
+
+        return Array.from(
+            merged.values()
+        );
+    }
+
 /* ===== getMissionRequirementSource ===== */
 function getMissionRequirementSource(
         forceRefresh = false
@@ -676,6 +974,300 @@ function validateMissionRequirementResponseUrl(
 /* ===== readLiveMissionRequirements ===== */
 async function readLiveMissionRequirements(
         options = {}
+    ) {
+        if (!isCurrentMissionExecutionOwner('attachment requirement read')) {
+            return [];
+        }
+
+        const silent = options?.silent === true;
+        const allowCached = options?.allowCached !== false;
+        const reportStatus = message => {
+            if (!silent) updateStatusBox(message);
+        };
+
+        synchroniseMissionInstanceState('Unit Finder attachment read');
+
+        const missionKeyAtFetchStart =
+            synchroniseMissionRequirementPreloadCache();
+        const sourceDescriptor =
+            getMissionRequirementSource(
+                options?.forceRefresh === true
+            );
+
+        if (!sourceDescriptor) {
+            setMissionRequirementReadState({
+                status: 'missing-source',
+                missionKey: missionKeyAtFetchStart,
+                error:
+                    'Requirements for this Mission source was not found for the active mission.'
+            });
+            reportStatus(
+                'Unit Finder stopped: Requirements for this Mission source was not found.'
+            );
+            return [];
+        }
+
+        if (allowCached) {
+            const cachedRows =
+                getCachedMissionRequirementRows(
+                    sourceDescriptor
+                );
+
+            if (cachedRows !== null) {
+                setMissionRequirementReadState({
+                    status:
+                        cachedRows.length > 0
+                            ? 'loaded'
+                            : 'loaded-empty',
+                    missionKey:
+                        missionKeyAtFetchStart,
+                    url: sourceDescriptor.url,
+                    missionId:
+                        sourceDescriptor.missionId,
+                    missionTypeId:
+                        sourceDescriptor.missionTypeId,
+                    tableFound: true,
+                    rowCount: cachedRows.length
+                });
+                reportStatus(
+                    cachedRows.length > 0
+                        ? `Mission requirements preloaded: ${cachedRows.length} actionable row(s).`
+                        : 'Mission requirements preloaded: no actionable vehicle rows in the authoritative table.'
+                );
+                return cachedRows;
+            }
+
+            if (
+                options?.preload !== true &&
+                mfMissionRequirementPreloadPromise &&
+                mfMissionRequirementPreloadPromiseKey ===
+                    missionKeyAtFetchStart
+            ) {
+                await mfMissionRequirementPreloadPromise;
+
+                const rowsAfterPreload =
+                    getCachedMissionRequirementRows(
+                        sourceDescriptor
+                    );
+
+                if (rowsAfterPreload !== null) {
+                    setMissionRequirementReadState({
+                        status:
+                            rowsAfterPreload.length > 0
+                                ? 'loaded'
+                                : 'loaded-empty',
+                        missionKey:
+                            missionKeyAtFetchStart,
+                        url: sourceDescriptor.url,
+                        missionId:
+                            sourceDescriptor.missionId,
+                        missionTypeId:
+                            sourceDescriptor.missionTypeId,
+                        tableFound: true,
+                        rowCount:
+                            rowsAfterPreload.length
+                    });
+                    reportStatus(
+                        rowsAfterPreload.length > 0
+                            ? `Mission requirements preloaded: ${rowsAfterPreload.length} actionable row(s).`
+                            : 'Mission requirements preloaded: no actionable vehicle rows in the authoritative table.'
+                    );
+                    return rowsAfterPreload;
+                }
+            }
+        }
+
+        mfMissionRequirementPreloadCache = {
+            ...mfMissionRequirementPreloadCache,
+            missionKey:
+                missionKeyAtFetchStart,
+            sourceUrl:
+                sourceDescriptor.url,
+            status: 'loading',
+            error: ''
+        };
+
+        setMissionRequirementReadState({
+            status: 'loading',
+            missionKey: missionKeyAtFetchStart,
+            url: sourceDescriptor.url,
+            missionId: sourceDescriptor.missionId,
+            missionTypeId:
+                sourceDescriptor.missionTypeId
+        });
+
+        try {
+            reportStatus(
+                'Reading Requirements for this Mission: Vehicle and Personnel Requirements...'
+            );
+
+            const response = await fetch(
+                sourceDescriptor.url,
+                {
+                    credentials: 'include',
+                    cache: 'no-store',
+                    redirect: 'follow',
+                    headers: {
+                        Accept:
+                            'text/html,application/xhtml+xml'
+                    }
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(
+                    `${response.status} ${response.statusText}`
+                );
+            }
+
+            if (
+                !validateMissionRequirementResponseUrl(
+                    sourceDescriptor,
+                    response.url ||
+                        sourceDescriptor.url
+                )
+            ) {
+                setMissionRequirementReadState({
+                    status: 'invalid-response',
+                    missionKey:
+                        missionKeyAtFetchStart,
+                    url:
+                        response.url ||
+                        sourceDescriptor.url,
+                    missionId:
+                        sourceDescriptor.missionId,
+                    missionTypeId:
+                        sourceDescriptor.missionTypeId,
+                    error:
+                        'Requirement response URL did not match the active mission.'
+                });
+                mfMissionRequirementPreloadCache = {
+                    ...mfMissionRequirementPreloadCache,
+                    status: 'error',
+                    error:
+                        'Requirement response URL did not match the active mission.'
+                };
+                reportStatus(
+                    'Unit Finder stopped: requirement response did not match the active mission.'
+                );
+                return [];
+            }
+
+            const html = await response.text();
+
+            if (!String(html || '').trim()) {
+                throw new Error(
+                    'Requirement response was empty.'
+                );
+            }
+
+            if (
+                missionKeyAtFetchStart !==
+                getMissionRequirementPreloadMissionKey()
+            ) {
+                reportStatus(
+                    'Mission changed while requirements were loading. Old requirements ignored.'
+                );
+                return [];
+            }
+
+            const rows =
+                extractLiveMissionRequirementRows(
+                    html
+                );
+            const tableFound =
+                rows
+                    .missionRequirementTableFound ===
+                true;
+
+            if (!tableFound) {
+                setMissionRequirementReadState({
+                    status: 'invalid-response',
+                    missionKey:
+                        missionKeyAtFetchStart,
+                    url: sourceDescriptor.url,
+                    missionId:
+                        sourceDescriptor.missionId,
+                    missionTypeId:
+                        sourceDescriptor.missionTypeId,
+                    tableFound: false,
+                    rowCount: 0,
+                    error:
+                        'Vehicle and Personnel Requirements table was not present.'
+                });
+                mfMissionRequirementPreloadCache = {
+                    ...mfMissionRequirementPreloadCache,
+                    status: 'error',
+                    error:
+                        'Vehicle and Personnel Requirements table was not present.'
+                };
+                reportStatus(
+                    'Unit Finder stopped: Vehicle and Personnel Requirements table was not found.'
+                );
+                return [];
+            }
+
+            const cachedRows =
+                setCachedMissionRequirementRows(
+                    missionKeyAtFetchStart,
+                    sourceDescriptor,
+                    rows
+                );
+
+            setMissionRequirementReadState({
+                status:
+                    cachedRows.length > 0
+                        ? 'loaded'
+                        : 'loaded-empty',
+                missionKey:
+                    missionKeyAtFetchStart,
+                url: sourceDescriptor.url,
+                missionId:
+                    sourceDescriptor.missionId,
+                missionTypeId:
+                    sourceDescriptor.missionTypeId,
+                tableFound: true,
+                rowCount: cachedRows.length
+            });
+
+            reportStatus(
+                cachedRows.length > 0
+                    ? `Mission requirements loaded: ${cachedRows.length} actionable row(s).`
+                    : 'Mission requirements loaded: no actionable vehicle rows in the authoritative table.'
+            );
+
+            return cachedRows;
+        } catch (error) {
+            console.warn(
+                'Mission Finder requirement fetch failed:',
+                error
+            );
+            setMissionRequirementReadState({
+                status: 'fetch-failed',
+                missionKey:
+                    missionKeyAtFetchStart,
+                url: sourceDescriptor.url,
+                missionId:
+                    sourceDescriptor.missionId,
+                missionTypeId:
+                    sourceDescriptor.missionTypeId,
+                error:
+                    error?.message ||
+                    String(error)
+            });
+            mfMissionRequirementPreloadCache = {
+                ...mfMissionRequirementPreloadCache,
+                status: 'error',
+                error:
+                    error?.message ||
+                    String(error)
+            };
+            reportStatus(
+                'Unit Finder stopped: authoritative mission requirements could not be loaded.'
+            );
+            return [];
+        }
+    }
 
 /* ===== getPreloadedMissionTrainedPersonnelRequirements ===== */
 function getPreloadedMissionTrainedPersonnelRequirements() {
