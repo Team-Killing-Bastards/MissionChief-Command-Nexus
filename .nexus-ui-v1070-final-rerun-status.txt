@@ -1,0 +1,365 @@
+run_id=30667616690
+{"conclusion":"failure","headSha":"a12b83eb6a1e6ab3f0816bd5d1dd80ae2963e1e8","name":"Build Command Nexus visual system V1.0.70","status":"completed","url":"https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/runs/30667616690"}
+=== jobs ===
+{"conclusion":"failure","name":"build","status":"completed","steps":[{"completedAt":"2026-07-31T21:44:19Z","conclusion":"success","name":"Set up job","number":1,"startedAt":"2026-07-31T21:44:18Z","status":"completed"},{"completedAt":"2026-07-31T21:44:21Z","conclusion":"success","name":"Check out development branch","number":2,"startedAt":"2026-07-31T21:44:19Z","status":"completed"},{"completedAt":"2026-07-31T21:44:22Z","conclusion":"success","name":"Set up Node.js","number":3,"startedAt":"2026-07-31T21:44:21Z","status":"completed"},{"completedAt":"2026-07-31T21:44:22Z","conclusion":"success","name":"Reset candidate to exact production main","number":4,"startedAt":"2026-07-31T21:44:22Z","status":"completed"},{"completedAt":"2026-07-31T21:44:22Z","conclusion":"failure","name":"Apply Nexus visual system overhaul","number":5,"startedAt":"2026-07-31T21:44:22Z","status":"completed"},{"completedAt":"2026-07-31T21:44:22Z","conclusion":"skipped","name":"Validate complete userscript and permanent checks","number":6,"startedAt":"2026-07-31T21:44:22Z","status":"completed"},{"completedAt":"2026-07-31T21:44:22Z","conclusion":"skipped","name":"Confirm visual-system and ownership scope","number":7,"startedAt":"2026-07-31T21:44:22Z","status":"completed"},{"completedAt":"2026-07-31T21:44:22Z","conclusion":"skipped","name":"Publish clean validated branch and workflow snapshot","number":8,"startedAt":"2026-07-31T21:44:22Z","status":"completed"},{"completedAt":"2026-07-31T21:44:22Z","conclusion":"skipped","name":"Post Set up Node.js","number":15,"startedAt":"2026-07-31T21:44:22Z","status":"completed"},{"completedAt":"2026-07-31T21:44:22Z","conclusion":"success","name":"Post Check out development branch","number":16,"startedAt":"2026-07-31T21:44:22Z","status":"completed"},{"completedAt":"2026-07-31T21:44:22Z","conclusion":"success","name":"Complete job","number":17,"startedAt":"2026-07-31T21:44:22Z","status":"completed"}]}
+=== log tail ===
+build	Check out development branch	2026-07-31T21:44:21.3293104Z  * [new branch]      agent/fix-ios-mission-requirements-source -> origin/agent/fix-ios-mission-requirements-source
+build	Check out development branch	2026-07-31T21:44:21.3296496Z  * [new branch]      agent/fix-ios-mission-requirements-source-clean -> origin/agent/fix-ios-mission-requirements-source-clean
+build	Check out development branch	2026-07-31T21:44:21.3299754Z  * [new branch]      agent/fix-ios-unit-finder-selection -> origin/agent/fix-ios-unit-finder-selection
+build	Check out development branch	2026-07-31T21:44:21.3302726Z  * [new branch]      agent/fix-ios-unit-finder-selection-clean -> origin/agent/fix-ios-unit-finder-selection-clean
+build	Check out development branch	2026-07-31T21:44:21.3306018Z  * [new branch]      agent/fix-iphone-collapse-close-overlap-v1031 -> origin/agent/fix-iphone-collapse-close-overlap-v1031
+build	Check out development branch	2026-07-31T21:44:21.3309823Z  * [new branch]      agent/fix-iphone-collapse-close-overlap-v1031-clean -> origin/agent/fix-iphone-collapse-close-overlap-v1031-clean
+build	Check out development branch	2026-07-31T21:44:21.3313511Z  * [new branch]      agent/fix-iphone-desktop-site-detection-v1029 -> origin/agent/fix-iphone-desktop-site-detection-v1029
+build	Check out development branch	2026-07-31T21:44:21.3317257Z  * [new branch]      agent/fix-iphone-desktop-site-detection-v1029-clean -> origin/agent/fix-iphone-desktop-site-detection-v1029-clean
+build	Check out development branch	2026-07-31T21:44:21.3321144Z  * [new branch]      agent/fix-iphone-picker-flicker-clearance-v1033 -> origin/agent/fix-iphone-picker-flicker-clearance-v1033
+build	Check out development branch	2026-07-31T21:44:21.3324847Z  * [new branch]      agent/fix-iphone-picker-flicker-clearance-v1033-clean -> origin/agent/fix-iphone-picker-flicker-clearance-v1033-clean
+build	Check out development branch	2026-07-31T21:44:21.3328399Z  * [new branch]      agent/fix-issue-95-stations-panel-lifecycle -> origin/agent/fix-issue-95-stations-panel-lifecycle
+build	Check out development branch	2026-07-31T21:44:21.3331160Z  * [new branch]      agent/fix-open-issues-batch -> origin/agent/fix-open-issues-batch
+build	Check out development branch	2026-07-31T21:44:21.3333788Z  * [new branch]      agent/fix-operational-support-sar-vehicle -> origin/agent/fix-operational-support-sar-vehicle
+build	Check out development branch	2026-07-31T21:44:21.3336921Z  * [new branch]      agent/fix-police-search-advisor-register -> origin/agent/fix-police-search-advisor-register
+build	Check out development branch	2026-07-31T21:44:21.3340069Z  * [new branch]      agent/fix-prisoner-release-lightbox-close -> origin/agent/fix-prisoner-release-lightbox-close
+build	Check out development branch	2026-07-31T21:44:21.3342737Z  * [new branch]      agent/fix-release-preparation -> origin/agent/fix-release-preparation
+build	Check out development branch	2026-07-31T21:44:21.3345053Z  * [new branch]      agent/fix-sar-requirement-links -> origin/agent/fix-sar-requirement-links
+build	Check out development branch	2026-07-31T21:44:21.3347902Z  * [new branch]      agent/fix-single-discord-release-notification -> origin/agent/fix-single-discord-release-notification
+build	Check out development branch	2026-07-31T21:44:21.3351686Z  * [new branch]      agent/fix-single-discord-release-notification-clean -> origin/agent/fix-single-discord-release-notification-clean
+build	Check out development branch	2026-07-31T21:44:21.3354961Z  * [new branch]      agent/fix-update-required-and-armed-atc -> origin/agent/fix-update-required-and-armed-atc
+build	Check out development branch	2026-07-31T21:44:21.3357841Z  * [new branch]      agent/greasy-fork-sync-test-v1.0.1 -> origin/agent/greasy-fork-sync-test-v1.0.1
+build	Check out development branch	2026-07-31T21:44:21.3360671Z  * [new branch]      agent/inspect-police-personnel-atv -> origin/agent/inspect-police-personnel-atv
+build	Check out development branch	2026-07-31T21:44:21.3363369Z  * [new branch]      agent/inspect-v1.0.4-automatic-release -> origin/agent/inspect-v1.0.4-automatic-release
+build	Check out development branch	2026-07-31T21:44:21.3366232Z  * [new branch]      agent/integrate-personnel-register-main -> origin/agent/integrate-personnel-register-main
+build	Check out development branch	2026-07-31T21:44:21.3368893Z  * [new branch]      agent/iphone-mission-ui-redesign -> origin/agent/iphone-mission-ui-redesign
+build	Check out development branch	2026-07-31T21:44:21.3371659Z  * [new branch]      agent/iphone-mission-ui-redesign-clean -> origin/agent/iphone-mission-ui-redesign-clean
+build	Check out development branch	2026-07-31T21:44:21.3374698Z  * [new branch]      agent/iphone-native-picker-ui-v1028 -> origin/agent/iphone-native-picker-ui-v1028
+build	Check out development branch	2026-07-31T21:44:21.3377546Z  * [new branch]      agent/iphone-native-picker-ui-v1028-clean -> origin/agent/iphone-native-picker-ui-v1028-clean
+build	Check out development branch	2026-07-31T21:44:21.3381018Z  * [new branch]      agent/iphone-two-button-launcher-v1032 -> origin/agent/iphone-two-button-launcher-v1032
+build	Check out development branch	2026-07-31T21:44:21.3384022Z  * [new branch]      agent/iphone-two-button-launcher-v1032-clean -> origin/agent/iphone-two-button-launcher-v1032-clean
+build	Check out development branch	2026-07-31T21:44:21.3387227Z  * [new branch]      agent/issue-57-single-profile-police-training -> origin/agent/issue-57-single-profile-police-training
+build	Check out development branch	2026-07-31T21:44:21.3390642Z  * [new branch]      agent/issue-63-unit-class-trained-fallback -> origin/agent/issue-63-unit-class-trained-fallback
+build	Check out development branch	2026-07-31T21:44:21.3393247Z  * [new branch]      agent/manual-release-trigger -> origin/agent/manual-release-trigger
+build	Check out development branch	2026-07-31T21:44:21.3395898Z  * [new branch]      agent/map-fire-rescue-aerial-to-rescue-pump -> origin/agent/map-fire-rescue-aerial-to-rescue-pump
+build	Check out development branch	2026-07-31T21:44:21.3398608Z  * [new branch]      agent/map-road-rail-unit-to-rru -> origin/agent/map-road-rail-unit-to-rru
+build	Check out development branch	2026-07-31T21:44:21.3401749Z  * [new branch]      agent/mission-definition-trained-personnel-v1054 -> origin/agent/mission-definition-trained-personnel-v1054
+build	Check out development branch	2026-07-31T21:44:21.3405040Z  * [new branch]      agent/organisation-profile-blueprint -> origin/agent/organisation-profile-blueprint
+build	Check out development branch	2026-07-31T21:44:21.3407831Z  * [new branch]      agent/personnel-register-export-import -> origin/agent/personnel-register-export-import
+build	Check out development branch	2026-07-31T21:44:21.3410409Z  * [new branch]      agent/pr156-original-head -> origin/agent/pr156-original-head
+build	Check out development branch	2026-07-31T21:44:21.3413061Z  * [new branch]      agent/preserve-initial-trained-personnel-v1055 -> origin/agent/preserve-initial-trained-personnel-v1055
+build	Check out development branch	2026-07-31T21:44:21.3416399Z  * [new branch]      agent/protect-trained-irvs-auto-readiness-v1.0.3 -> origin/agent/protect-trained-irvs-auto-readiness-v1.0.3
+build	Check out development branch	2026-07-31T21:44:21.3420067Z  * [new branch]      agent/protect-trained-irvs-auto-readiness-v1.0.3-final -> origin/agent/protect-trained-irvs-auto-readiness-v1.0.3-final
+build	Check out development branch	2026-07-31T21:44:21.3423225Z  * [new branch]      agent/reapply-pr156-preserve-pr155 -> origin/agent/reapply-pr156-preserve-pr155
+build	Check out development branch	2026-07-31T21:44:21.3425379Z  * [new branch]      agent/receipt-v1.0.31  -> origin/agent/receipt-v1.0.31
+build	Check out development branch	2026-07-31T21:44:21.3427145Z  * [new branch]      agent/receipt-v1.0.32  -> origin/agent/receipt-v1.0.32
+build	Check out development branch	2026-07-31T21:44:21.3428952Z  * [new branch]      agent/receipt-v1.0.33  -> origin/agent/receipt-v1.0.33
+build	Check out development branch	2026-07-31T21:44:21.3431012Z  * [new branch]      agent/receipt-v1.0.34  -> origin/agent/receipt-v1.0.34
+build	Check out development branch	2026-07-31T21:44:21.3432947Z  * [new branch]      agent/recover-v1.0.3-release -> origin/agent/recover-v1.0.3-release
+build	Check out development branch	2026-07-31T21:44:21.3435147Z  * [new branch]      agent/release-delivery-receipt -> origin/agent/release-delivery-receipt
+build	Check out development branch	2026-07-31T21:44:21.3437589Z  * [new branch]      agent/release-discord-notifications -> origin/agent/release-discord-notifications
+build	Check out development branch	2026-07-31T21:44:21.3440281Z  * [new branch]      agent/release-on-merged-pr-event -> origin/agent/release-on-merged-pr-event
+build	Check out development branch	2026-07-31T21:44:21.3443049Z  * [new branch]      agent/release-personnel-register-v1037 -> origin/agent/release-personnel-register-v1037
+build	Check out development branch	2026-07-31T21:44:21.3445313Z  * [new branch]      agent/release-v1.0.2   -> origin/agent/release-v1.0.2
+build	Check out development branch	2026-07-31T21:44:21.3447055Z  * [new branch]      agent/release-v1.0.25  -> origin/agent/release-v1.0.25
+build	Check out development branch	2026-07-31T21:44:21.3448796Z  * [new branch]      agent/release-v1.0.26  -> origin/agent/release-v1.0.26
+build	Check out development branch	2026-07-31T21:44:21.3450732Z  * [new branch]      agent/release-v1.0.27  -> origin/agent/release-v1.0.27
+build	Check out development branch	2026-07-31T21:44:21.3452523Z  * [new branch]      agent/release-v1.0.28  -> origin/agent/release-v1.0.28
+build	Check out development branch	2026-07-31T21:44:21.3454283Z  * [new branch]      agent/release-v1.0.29  -> origin/agent/release-v1.0.29
+build	Check out development branch	2026-07-31T21:44:21.3456027Z  * [new branch]      agent/release-v1.0.31  -> origin/agent/release-v1.0.31
+build	Check out development branch	2026-07-31T21:44:21.3457746Z  * [new branch]      agent/release-v1.0.32  -> origin/agent/release-v1.0.32
+build	Check out development branch	2026-07-31T21:44:21.3459614Z  * [new branch]      agent/release-v1.0.33  -> origin/agent/release-v1.0.33
+build	Check out development branch	2026-07-31T21:44:21.3461373Z  * [new branch]      agent/release-v1.0.34  -> origin/agent/release-v1.0.34
+build	Check out development branch	2026-07-31T21:44:21.3463762Z  * [new branch]      agent/remove-deployed-org-profile-blueprint -> origin/agent/remove-deployed-org-profile-blueprint
+build	Check out development branch	2026-07-31T21:44:21.3466953Z  * [new branch]      agent/remove-iphone-native-picker-enhancer-v1034 -> origin/agent/remove-iphone-native-picker-enhancer-v1034
+build	Check out development branch	2026-07-31T21:44:21.3470752Z  * [new branch]      agent/remove-iphone-native-picker-enhancer-v1034-clean -> origin/agent/remove-iphone-native-picker-enhancer-v1034-clean
+build	Check out development branch	2026-07-31T21:44:21.3473925Z  * [new branch]      agent/remove-road-rail-text-fallback -> origin/agent/remove-road-rail-text-fallback
+build	Check out development branch	2026-07-31T21:44:21.3476827Z  * [new branch]      agent/remove-saved-position-helper-text -> origin/agent/remove-saved-position-helper-text
+build	Check out development branch	2026-07-31T21:44:21.3479563Z  * [new branch]      agent/remove-stale-v1.0.24-builder -> origin/agent/remove-stale-v1.0.24-builder
+build	Check out development branch	2026-07-31T21:44:21.3482192Z  * [new branch]      agent/repository-foundation-readme -> origin/agent/repository-foundation-readme
+build	Check out development branch	2026-07-31T21:44:21.3484833Z  * [new branch]      agent/restore-v1.0.30-temporary-workflows -> origin/agent/restore-v1.0.30-temporary-workflows
+build	Check out development branch	2026-07-31T21:44:21.3487280Z  * [new branch]      agent/runtime-hardening-v1022 -> origin/agent/runtime-hardening-v1022
+build	Check out development branch	2026-07-31T21:44:21.3489711Z  * [new branch]      agent/runtime-hardening-v1022-clean -> origin/agent/runtime-hardening-v1022-clean
+build	Check out development branch	2026-07-31T21:44:21.3492143Z  * [new branch]      agent/separate-fire-road-rail-rru -> origin/agent/separate-fire-road-rail-rru
+build	Check out development branch	2026-07-31T21:44:21.3494366Z  * [new branch]      agent/test-pr156-native-merge -> origin/agent/test-pr156-native-merge
+build	Check out development branch	2026-07-31T21:44:21.3496637Z  * [new branch]      agent/training-coverage-optimizer -> origin/agent/training-coverage-optimizer
+build	Check out development branch	2026-07-31T21:44:21.3499167Z  * [new branch]      agent/trigger-automatic-v1.0.4-release -> origin/agent/trigger-automatic-v1.0.4-release
+build	Check out development branch	2026-07-31T21:44:21.3501641Z  * [new branch]      agent/trigger-publish-v1.0.3 -> origin/agent/trigger-publish-v1.0.3
+build	Check out development branch	2026-07-31T21:44:21.3503717Z  * [new branch]      agent/trigger-reapply-pr156 -> origin/agent/trigger-reapply-pr156
+build	Check out development branch	2026-07-31T21:44:21.3505586Z  * [new branch]      agent/unit-memory-fix  -> origin/agent/unit-memory-fix
+build	Check out development branch	2026-07-31T21:44:21.3507399Z  * [new branch]      agent/unit-memory-release -> origin/agent/unit-memory-release
+build	Check out development branch	2026-07-31T21:44:21.3509886Z  * [new branch]      agent/use-still-needed-unless-unknown -> origin/agent/use-still-needed-unless-unknown
+build	Check out development branch	2026-07-31T21:44:21.3512547Z  * [new branch]      agent/v1.0.13-live-shortage-authority -> origin/agent/v1.0.13-live-shortage-authority
+build	Check out development branch	2026-07-31T21:44:21.3515214Z  * [new branch]      agent/v1.0.13-live-update-police-officers -> origin/agent/v1.0.13-live-update-police-officers
+build	Check out development branch	2026-07-31T21:44:21.3517602Z  * [new branch]      agent/v1.0.15-ios-safari-menu -> origin/agent/v1.0.15-ios-safari-menu
+build	Check out development branch	2026-07-31T21:44:21.3520424Z  * [new branch]      agent/v1.0.24-police-officer-rescue-support -> origin/agent/v1.0.24-police-officer-rescue-support
+build	Check out development branch	2026-07-31T21:44:21.3523246Z  * [new branch]      agent/v1.0.3-trained-irv-auto-safety-auto -> origin/agent/v1.0.3-trained-irv-auto-safety-auto
+build	Check out development branch	2026-07-31T21:44:21.3526062Z  * [new branch]      agent/v1.0.3-trained-irv-auto-safety-upload -> origin/agent/v1.0.3-trained-irv-auto-safety-upload
+build	Check out development branch	2026-07-31T21:44:21.3528814Z  * [new branch]      agent/v1.0.4-auto-load-limited-vehicles -> origin/agent/v1.0.4-auto-load-limited-vehicles
+build	Check out development branch	2026-07-31T21:44:21.3531557Z  * [new branch]      agent/v1.0.5-police-register-atv-fixes -> origin/agent/v1.0.5-police-register-atv-fixes
+build	Check out development branch	2026-07-31T21:44:21.3533780Z  * [new branch]      agent/v1.0.6-minor-fixes -> origin/agent/v1.0.6-minor-fixes
+build	Check out development branch	2026-07-31T21:44:21.3535867Z  * [new branch]      agent/v1.0.7-live-range-update-fix -> origin/agent/v1.0.7-live-range-update-fix
+build	Check out development branch	2026-07-31T21:44:21.3537848Z  * [new branch]      agent/verify-106       -> origin/agent/verify-106
+build	Check out development branch	2026-07-31T21:44:21.3539546Z  * [new branch]      agent/verify-107       -> origin/agent/verify-107
+build	Check out development branch	2026-07-31T21:44:21.3541241Z  * [new branch]      agent/verify-108       -> origin/agent/verify-108
+build	Check out development branch	2026-07-31T21:44:21.3542896Z  * [new branch]      agent/verify-56-run    -> origin/agent/verify-56-run
+build	Check out development branch	2026-07-31T21:44:21.3545528Z  * [new branch]      agent/verify-v1.0.10-release -> origin/agent/verify-v1.0.10-release
+build	Check out development branch	2026-07-31T21:44:21.3548767Z  * [new branch]      agent/verify-v1.0.11-release -> origin/agent/verify-v1.0.11-release
+build	Check out development branch	2026-07-31T21:44:21.3551221Z  * [new branch]      agent/verify-v1.0.14-release -> origin/agent/verify-v1.0.14-release
+build	Check out development branch	2026-07-31T21:44:21.3553973Z  * [new branch]      agent/verify-v1.0.15-release -> origin/agent/verify-v1.0.15-release
+build	Check out development branch	2026-07-31T21:44:21.3557243Z  * [new branch]      agent/verify-v1.0.5-release -> origin/agent/verify-v1.0.5-release
+build	Check out development branch	2026-07-31T21:44:21.3561084Z  * [new branch]      agent/verify-v1.0.9-release -> origin/agent/verify-v1.0.9-release
+build	Check out development branch	2026-07-31T21:44:21.3564759Z  * [new branch]      audit/ios-full-compatibility -> origin/audit/ios-full-compatibility
+build	Check out development branch	2026-07-31T21:44:21.3569412Z  * [new branch]      dependabot/github_actions/github-actions-9b61906d8b -> origin/dependabot/github_actions/github-actions-9b61906d8b
+build	Check out development branch	2026-07-31T21:44:21.3573758Z  * [new branch]      diagnostic/fire-engine-update-route -> origin/diagnostic/fire-engine-update-route
+build	Check out development branch	2026-07-31T21:44:21.3578243Z  * [new branch]      diagnostic/missing-requirements-source -> origin/diagnostic/missing-requirements-source
+build	Check out development branch	2026-07-31T21:44:21.3582767Z  * [new branch]      diagnostic/normal-irv-selection -> origin/diagnostic/normal-irv-selection
+build	Check out development branch	2026-07-31T21:44:21.3586291Z  * [new branch]      diagnostic/publish-v1040 -> origin/diagnostic/publish-v1040
+build	Check out development branch	2026-07-31T21:44:21.3589652Z  * [new branch]      diagnostic/publish-v1041 -> origin/diagnostic/publish-v1041
+build	Check out development branch	2026-07-31T21:44:21.3592841Z  * [new branch]      diagnostic/publish-v1042 -> origin/diagnostic/publish-v1042
+build	Check out development branch	2026-07-31T21:44:21.3596024Z  * [new branch]      diagnostic/publish-v1043 -> origin/diagnostic/publish-v1043
+build	Check out development branch	2026-07-31T21:44:21.3599191Z  * [new branch]      diagnostic/publish-v1044 -> origin/diagnostic/publish-v1044
+build	Check out development branch	2026-07-31T21:44:21.3602564Z  * [new branch]      diagnostic/publish-v1045 -> origin/diagnostic/publish-v1045
+build	Check out development branch	2026-07-31T21:44:21.3605720Z  * [new branch]      diagnostic/publish-v1046 -> origin/diagnostic/publish-v1046
+build	Check out development branch	2026-07-31T21:44:21.3608866Z  * [new branch]      diagnostic/publish-v1047 -> origin/diagnostic/publish-v1047
+build	Check out development branch	2026-07-31T21:44:21.3612283Z  * [new branch]      diagnostic/publish-v1048 -> origin/diagnostic/publish-v1048
+build	Check out development branch	2026-07-31T21:44:21.3615439Z  * [new branch]      diagnostic/publish-v1049 -> origin/diagnostic/publish-v1049
+build	Check out development branch	2026-07-31T21:44:21.3620127Z  * [new branch]      diagnostic/trained-coverage-optimizer -> origin/diagnostic/trained-coverage-optimizer
+build	Check out development branch	2026-07-31T21:44:21.3624557Z  * [new branch]      diagnostic/training-shortfall-audit -> origin/diagnostic/training-shortfall-audit
+build	Check out development branch	2026-07-31T21:44:21.3628861Z  * [new branch]      diagnostic/verify-v1037-delivery -> origin/diagnostic/verify-v1037-delivery
+build	Check out development branch	2026-07-31T21:44:21.3632826Z  * [new branch]      docs/issue-33-validation -> origin/docs/issue-33-validation
+build	Check out development branch	2026-07-31T21:44:21.3636045Z  * [new branch]      docs/refresh-readme-v1.0.6 -> origin/docs/refresh-readme-v1.0.6
+build	Check out development branch	2026-07-31T21:44:21.3639848Z  * [new branch]      feature/ios-safari-stations-menu -> origin/feature/ios-safari-stations-menu
+build	Check out development branch	2026-07-31T21:44:21.3644178Z  * [new branch]      feature/mission-command-dashboard-v1069 -> origin/feature/mission-command-dashboard-v1069
+build	Check out development branch	2026-07-31T21:44:21.3648279Z  * [new branch]      feature/nexus-ui-system-v1070 -> origin/feature/nexus-ui-system-v1070
+build	Check out development branch	2026-07-31T21:44:21.3652745Z  * [new branch]      feature/preload-required-personnel-v1065 -> origin/feature/preload-required-personnel-v1065
+build	Check out development branch	2026-07-31T21:44:21.3657411Z  * [new branch]      feature/trained-personnel-panel-v1062 -> origin/feature/trained-personnel-panel-v1062
+build	Check out development branch	2026-07-31T21:44:21.3662228Z  * [new branch]      fix/auto-duplicate-eod-personnel-v1057 -> origin/fix/auto-duplicate-eod-personnel-v1057
+build	Check out development branch	2026-07-31T21:44:21.3666353Z  * [new branch]      fix/auto-memory-recycle-v1059 -> origin/fix/auto-memory-recycle-v1059
+build	Check out development branch	2026-07-31T21:44:21.3670540Z  * [new branch]      fix/auto-mode-memory-lifecycle-v1058 -> origin/fix/auto-mode-memory-lifecycle-v1058
+build	Check out development branch	2026-07-31T21:44:21.3674840Z  * [new branch]      fix/hazmat-osu-issue-215-v1063 -> origin/fix/hazmat-osu-issue-215-v1063
+build	Check out development branch	2026-07-31T21:44:21.3678535Z  * [new branch]      fix/hazmat-personnel-osu-v1064 -> origin/fix/hazmat-personnel-osu-v1064
+build	Check out development branch	2026-07-31T21:44:21.3682581Z  * [new branch]      fix/ios-stations-only-tools-menu -> origin/fix/ios-stations-only-tools-menu
+build	Check out development branch	2026-07-31T21:44:21.3686627Z  * [new branch]      fix/issue-33-notifier-propagation -> origin/fix/issue-33-notifier-propagation
+build	Check out development branch	2026-07-31T21:44:21.3691133Z  * [new branch]      fix/missing-on-mission-authority-v1060 -> origin/fix/missing-on-mission-authority-v1060
+build	Check out development branch	2026-07-31T21:44:21.3695622Z  * [new branch]      fix/mission-update-single-pass-v1061 -> origin/fix/mission-update-single-pass-v1061
+build	Check out development branch	2026-07-31T21:44:21.3700440Z  * [new branch]      fix/required-personnel-lifecycle-v1067 -> origin/fix/required-personnel-lifecycle-v1067
+build	Check out development branch	2026-07-31T21:44:21.3704597Z  * [new branch]      fix/required-personnel-load-v1068 -> origin/fix/required-personnel-load-v1068
+build	Check out development branch	2026-07-31T21:44:21.3708078Z  * [new branch]      fix/trained-personnel-render-isolation-v1066 -> origin/fix/trained-personnel-render-isolation-v1066
+build	Check out development branch	2026-07-31T21:44:21.3712244Z  * [new branch]      main                   -> origin/main
+build	Check out development branch	2026-07-31T21:44:21.3714730Z  * [new branch]      release/apply-v1055    -> origin/release/apply-v1055
+build	Check out development branch	2026-07-31T21:44:21.3717606Z  * [new branch]      release/apply-v1055-r2 -> origin/release/apply-v1055-r2
+build	Check out development branch	2026-07-31T21:44:21.3719889Z  * [new branch]      release/apply-v1056    -> origin/release/apply-v1056
+build	Check out development branch	2026-07-31T21:44:21.3721824Z  * [new branch]      release/finalize-v1030 -> origin/release/finalize-v1030
+build	Check out development branch	2026-07-31T21:44:21.3723566Z  * [new branch]      release/publish-v1051  -> origin/release/publish-v1051
+build	Check out development branch	2026-07-31T21:44:21.3725282Z  * [new branch]      release/publish-v1052  -> origin/release/publish-v1052
+build	Check out development branch	2026-07-31T21:44:21.3726995Z  * [new branch]      release/publish-v1053  -> origin/release/publish-v1053
+build	Check out development branch	2026-07-31T21:44:21.3729673Z  * [new branch]      release/publish-v1054  -> origin/release/publish-v1054
+build	Check out development branch	2026-07-31T21:44:21.3732956Z  * [new branch]      release/run-v1021-fire-crossref -> origin/release/run-v1021-fire-crossref
+build	Check out development branch	2026-07-31T21:44:21.3735213Z  * [new branch]      release/run-v1056-comment -> origin/release/run-v1056-comment
+build	Check out development branch	2026-07-31T21:44:21.3736972Z  * [new branch]      release/v1.0.2         -> origin/release/v1.0.2
+build	Check out development branch	2026-07-31T21:44:21.3740037Z  * [new branch]      release/v1.0.20-builder-registration -> origin/release/v1.0.20-builder-registration
+build	Check out development branch	2026-07-31T21:44:21.3742570Z  * [new branch]      release/v1.0.20-road-rail-unit -> origin/release/v1.0.20-road-rail-unit
+build	Check out development branch	2026-07-31T21:44:21.3744829Z  * [new branch]      release/v1.0.20-road-rail-unit-final -> origin/release/v1.0.20-road-rail-unit-final
+build	Check out development branch	2026-07-31T21:44:21.3812047Z  * [new branch]      release/v1.0.20-road-rail-unit-trigger -> origin/release/v1.0.20-road-rail-unit-trigger
+build	Check out development branch	2026-07-31T21:44:21.3816089Z  * [new branch]      release/v1.0.21-final-job-registration -> origin/release/v1.0.21-final-job-registration
+build	Check out development branch	2026-07-31T21:44:21.3820748Z  * [new branch]      release/v1.0.21-fire-crossref-dispatch -> origin/release/v1.0.21-fire-crossref-dispatch
+build	Check out development branch	2026-07-31T21:44:21.3825340Z  * [new branch]      release/v1.0.21-fire-crossref-dispatch-pr -> origin/release/v1.0.21-fire-crossref-dispatch-pr
+build	Check out development branch	2026-07-31T21:44:21.3829182Z  * [new branch]      release/v1.0.21-fire-crossref-finalizer -> origin/release/v1.0.21-fire-crossref-finalizer
+build	Check out development branch	2026-07-31T21:44:21.3832147Z  * [new branch]      release/v1.0.21-fire-crossref-trigger -> origin/release/v1.0.21-fire-crossref-trigger
+build	Check out development branch	2026-07-31T21:44:21.3834616Z  * [new branch]      release/v1.0.21-pr-close-dispatcher -> origin/release/v1.0.21-pr-close-dispatcher
+build	Check out development branch	2026-07-31T21:44:21.3836965Z  * [new branch]      release/v1.0.21-trusted-dispatcher -> origin/release/v1.0.21-trusted-dispatcher
+build	Check out development branch	2026-07-31T21:44:21.3838967Z  * [new branch]      release/verify-v1057   -> origin/release/verify-v1057
+build	Check out development branch	2026-07-31T21:44:21.3840920Z  * [new branch]      release/verify-v1061   -> origin/release/verify-v1061
+build	Check out development branch	2026-07-31T21:44:21.3842607Z  * [new branch]      release/verify-v1062   -> origin/release/verify-v1062
+build	Check out development branch	2026-07-31T21:44:21.3844363Z  * [new branch]      release/verify-v1063   -> origin/release/verify-v1063
+build	Check out development branch	2026-07-31T21:44:21.3846039Z  * [new branch]      release/verify-v1064   -> origin/release/verify-v1064
+build	Check out development branch	2026-07-31T21:44:21.3847956Z  * [new branch]      test/discord-pull-notification -> origin/test/discord-pull-notification
+build	Check out development branch	2026-07-31T21:44:21.3849902Z  * [new tag]         v1.0.10                -> v1.0.10
+build	Check out development branch	2026-07-31T21:44:21.3851127Z  * [new tag]         v1.0.11                -> v1.0.11
+build	Check out development branch	2026-07-31T21:44:21.3852653Z  * [new tag]         v1.0.12                -> v1.0.12
+build	Check out development branch	2026-07-31T21:44:21.3853830Z  * [new tag]         v1.0.13                -> v1.0.13
+build	Check out development branch	2026-07-31T21:44:21.3855025Z  * [new tag]         v1.0.14                -> v1.0.14
+build	Check out development branch	2026-07-31T21:44:21.3856202Z  * [new tag]         v1.0.15                -> v1.0.15
+build	Check out development branch	2026-07-31T21:44:21.3857390Z  * [new tag]         v1.0.16                -> v1.0.16
+build	Check out development branch	2026-07-31T21:44:21.3858567Z  * [new tag]         v1.0.17                -> v1.0.17
+build	Check out development branch	2026-07-31T21:44:21.3859966Z  * [new tag]         v1.0.18                -> v1.0.18
+build	Check out development branch	2026-07-31T21:44:21.3861162Z  * [new tag]         v1.0.19                -> v1.0.19
+build	Check out development branch	2026-07-31T21:44:21.3862332Z  * [new tag]         v1.0.2                 -> v1.0.2
+build	Check out development branch	2026-07-31T21:44:21.3863509Z  * [new tag]         v1.0.20                -> v1.0.20
+build	Check out development branch	2026-07-31T21:44:21.3864693Z  * [new tag]         v1.0.21                -> v1.0.21
+build	Check out development branch	2026-07-31T21:44:21.3865867Z  * [new tag]         v1.0.22                -> v1.0.22
+build	Check out development branch	2026-07-31T21:44:21.3867041Z  * [new tag]         v1.0.23                -> v1.0.23
+build	Check out development branch	2026-07-31T21:44:21.3868220Z  * [new tag]         v1.0.24                -> v1.0.24
+build	Check out development branch	2026-07-31T21:44:21.3869386Z  * [new tag]         v1.0.25                -> v1.0.25
+build	Check out development branch	2026-07-31T21:44:21.3870783Z  * [new tag]         v1.0.26                -> v1.0.26
+build	Check out development branch	2026-07-31T21:44:21.3871951Z  * [new tag]         v1.0.27                -> v1.0.27
+build	Check out development branch	2026-07-31T21:44:21.3873125Z  * [new tag]         v1.0.28                -> v1.0.28
+build	Check out development branch	2026-07-31T21:44:21.3874306Z  * [new tag]         v1.0.29                -> v1.0.29
+build	Check out development branch	2026-07-31T21:44:21.3875474Z  * [new tag]         v1.0.3                 -> v1.0.3
+build	Check out development branch	2026-07-31T21:44:21.3876641Z  * [new tag]         v1.0.30                -> v1.0.30
+build	Check out development branch	2026-07-31T21:44:21.3877806Z  * [new tag]         v1.0.31                -> v1.0.31
+build	Check out development branch	2026-07-31T21:44:21.3879010Z  * [new tag]         v1.0.32                -> v1.0.32
+build	Check out development branch	2026-07-31T21:44:21.3880718Z  * [new tag]         v1.0.33                -> v1.0.33
+build	Check out development branch	2026-07-31T21:44:21.3881900Z  * [new tag]         v1.0.34                -> v1.0.34
+build	Check out development branch	2026-07-31T21:44:21.3883076Z  * [new tag]         v1.0.35                -> v1.0.35
+build	Check out development branch	2026-07-31T21:44:21.3884244Z  * [new tag]         v1.0.36                -> v1.0.36
+build	Check out development branch	2026-07-31T21:44:21.3885425Z  * [new tag]         v1.0.37                -> v1.0.37
+build	Check out development branch	2026-07-31T21:44:21.3886600Z  * [new tag]         v1.0.38                -> v1.0.38
+build	Check out development branch	2026-07-31T21:44:21.3887774Z  * [new tag]         v1.0.39                -> v1.0.39
+build	Check out development branch	2026-07-31T21:44:21.3888950Z  * [new tag]         v1.0.4                 -> v1.0.4
+build	Check out development branch	2026-07-31T21:44:21.3890360Z  * [new tag]         v1.0.40                -> v1.0.40
+build	Check out development branch	2026-07-31T21:44:21.3891543Z  * [new tag]         v1.0.41                -> v1.0.41
+build	Check out development branch	2026-07-31T21:44:21.3892727Z  * [new tag]         v1.0.42                -> v1.0.42
+build	Check out development branch	2026-07-31T21:44:21.3893893Z  * [new tag]         v1.0.43                -> v1.0.43
+build	Check out development branch	2026-07-31T21:44:21.3895063Z  * [new tag]         v1.0.44                -> v1.0.44
+build	Check out development branch	2026-07-31T21:44:21.3896236Z  * [new tag]         v1.0.45                -> v1.0.45
+build	Check out development branch	2026-07-31T21:44:21.3897408Z  * [new tag]         v1.0.46                -> v1.0.46
+build	Check out development branch	2026-07-31T21:44:21.3898572Z  * [new tag]         v1.0.47                -> v1.0.47
+build	Check out development branch	2026-07-31T21:44:21.3899937Z  * [new tag]         v1.0.48                -> v1.0.48
+build	Check out development branch	2026-07-31T21:44:21.3901119Z  * [new tag]         v1.0.49                -> v1.0.49
+build	Check out development branch	2026-07-31T21:44:21.3902286Z  * [new tag]         v1.0.5                 -> v1.0.5
+build	Check out development branch	2026-07-31T21:44:21.3903465Z  * [new tag]         v1.0.50                -> v1.0.50
+build	Check out development branch	2026-07-31T21:44:21.3904650Z  * [new tag]         v1.0.51                -> v1.0.51
+build	Check out development branch	2026-07-31T21:44:21.3905814Z  * [new tag]         v1.0.52                -> v1.0.52
+build	Check out development branch	2026-07-31T21:44:21.3906982Z  * [new tag]         v1.0.53                -> v1.0.53
+build	Check out development branch	2026-07-31T21:44:21.3908156Z  * [new tag]         v1.0.54                -> v1.0.54
+build	Check out development branch	2026-07-31T21:44:21.3909328Z  * [new tag]         v1.0.55                -> v1.0.55
+build	Check out development branch	2026-07-31T21:44:21.3910746Z  * [new tag]         v1.0.56                -> v1.0.56
+build	Check out development branch	2026-07-31T21:44:21.3912084Z  * [new tag]         v1.0.57                -> v1.0.57
+build	Check out development branch	2026-07-31T21:44:21.3913253Z  * [new tag]         v1.0.58                -> v1.0.58
+build	Check out development branch	2026-07-31T21:44:21.3914409Z  * [new tag]         v1.0.59                -> v1.0.59
+build	Check out development branch	2026-07-31T21:44:21.3915570Z  * [new tag]         v1.0.6                 -> v1.0.6
+build	Check out development branch	2026-07-31T21:44:21.3916730Z  * [new tag]         v1.0.60                -> v1.0.60
+build	Check out development branch	2026-07-31T21:44:21.3917888Z  * [new tag]         v1.0.61                -> v1.0.61
+build	Check out development branch	2026-07-31T21:44:21.3919052Z  * [new tag]         v1.0.62                -> v1.0.62
+build	Check out development branch	2026-07-31T21:44:21.3920477Z  * [new tag]         v1.0.63                -> v1.0.63
+build	Check out development branch	2026-07-31T21:44:21.3921653Z  * [new tag]         v1.0.64                -> v1.0.64
+build	Check out development branch	2026-07-31T21:44:21.3922809Z  * [new tag]         v1.0.65                -> v1.0.65
+build	Check out development branch	2026-07-31T21:44:21.3923974Z  * [new tag]         v1.0.66                -> v1.0.66
+build	Check out development branch	2026-07-31T21:44:21.3925136Z  * [new tag]         v1.0.67                -> v1.0.67
+build	Check out development branch	2026-07-31T21:44:21.3926299Z  * [new tag]         v1.0.68                -> v1.0.68
+build	Check out development branch	2026-07-31T21:44:21.3927440Z  * [new tag]         v1.0.69                -> v1.0.69
+build	Check out development branch	2026-07-31T21:44:21.3928599Z  * [new tag]         v1.0.7                 -> v1.0.7
+build	Check out development branch	2026-07-31T21:44:21.3929970Z  * [new tag]         v1.0.8                 -> v1.0.8
+build	Check out development branch	2026-07-31T21:44:21.3931150Z  * [new tag]         v1.0.9                 -> v1.0.9
+build	Check out development branch	2026-07-31T21:44:21.3933991Z ##[endgroup]
+build	Check out development branch	2026-07-31T21:44:21.3935275Z ##[group]Determining the checkout info
+build	Check out development branch	2026-07-31T21:44:21.3936751Z [command]/usr/bin/git branch --list --remote origin/feature/nexus-ui-system-v1070
+build	Check out development branch	2026-07-31T21:44:21.3938278Z   origin/feature/nexus-ui-system-v1070
+build	Check out development branch	2026-07-31T21:44:21.3940985Z ##[endgroup]
+build	Check out development branch	2026-07-31T21:44:21.3941851Z [command]/usr/bin/git sparse-checkout disable
+build	Check out development branch	2026-07-31T21:44:21.3944347Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+build	Check out development branch	2026-07-31T21:44:21.3947433Z ##[group]Checking out the ref
+build	Check out development branch	2026-07-31T21:44:21.3949741Z [command]/usr/bin/git checkout --progress --force -B feature/nexus-ui-system-v1070 refs/remotes/origin/feature/nexus-ui-system-v1070
+build	Check out development branch	2026-07-31T21:44:21.4027795Z Switched to a new branch 'feature/nexus-ui-system-v1070'
+build	Check out development branch	2026-07-31T21:44:21.4030949Z branch 'feature/nexus-ui-system-v1070' set up to track 'origin/feature/nexus-ui-system-v1070'.
+build	Check out development branch	2026-07-31T21:44:21.4039659Z ##[endgroup]
+build	Check out development branch	2026-07-31T21:44:21.4095058Z [command]/usr/bin/git log -1 --format=%H
+build	Check out development branch	2026-07-31T21:44:21.4128531Z a12b83eb6a1e6ab3f0816bd5d1dd80ae2963e1e8
+build	Set up Node.js	﻿2026-07-31T21:44:21.4481166Z ##[group]Run actions/setup-node@v6
+build	Set up Node.js	2026-07-31T21:44:21.4482127Z with:
+build	Set up Node.js	2026-07-31T21:44:21.4482794Z   node-version: 24
+build	Set up Node.js	2026-07-31T21:44:21.4483578Z   package-manager-cache: false
+build	Set up Node.js	2026-07-31T21:44:21.4484460Z   check-latest: false
+build	Set up Node.js	2026-07-31T21:44:21.4492742Z   token: ***
+build	Set up Node.js	2026-07-31T21:44:21.4493464Z ##[endgroup]
+build	Set up Node.js	2026-07-31T21:44:21.5914302Z Found in cache @ /opt/hostedtoolcache/node/24.18.0/x64
+build	Set up Node.js	2026-07-31T21:44:21.5918008Z ##[group]Environment details
+build	Set up Node.js	2026-07-31T21:44:21.9919259Z node: v24.18.0
+build	Set up Node.js	2026-07-31T21:44:21.9920972Z npm: 11.16.0
+build	Set up Node.js	2026-07-31T21:44:21.9922050Z yarn: 1.22.22
+build	Set up Node.js	2026-07-31T21:44:21.9924229Z ##[endgroup]
+build	Reset candidate to exact production main	﻿2026-07-31T21:44:22.0078140Z ##[group]Run set -euo pipefail
+build	Reset candidate to exact production main	2026-07-31T21:44:22.0078996Z ^[[36;1mset -euo pipefail^[[0m
+build	Reset candidate to exact production main	2026-07-31T21:44:22.0080275Z ^[[36;1mcp .github/nexus-ui-v1070-patch.py /tmp/nexus-ui-v1070-patch.py^[[0m
+build	Reset candidate to exact production main	2026-07-31T21:44:22.0081250Z ^[[36;1mgit fetch origin main --force^[[0m
+build	Reset candidate to exact production main	2026-07-31T21:44:22.0082024Z ^[[36;1mgit reset --hard origin/main^[[0m
+build	Reset candidate to exact production main	2026-07-31T21:44:22.0082737Z ^[[36;1m^[[0m
+build	Reset candidate to exact production main	2026-07-31T21:44:22.0083486Z ^[[36;1mEXPECTED_SHA="a316061a1b7f167c375adeb6ebd76878531836ab"^[[0m
+build	Reset candidate to exact production main	2026-07-31T21:44:22.0084361Z ^[[36;1mACTUAL_SHA="$(git rev-parse HEAD)"^[[0m
+build	Reset candidate to exact production main	2026-07-31T21:44:22.0085213Z ^[[36;1mif [[ "${ACTUAL_SHA}" != "${EXPECTED_SHA}" ]]; then^[[0m
+build	Reset candidate to exact production main	2026-07-31T21:44:22.0086190Z ^[[36;1m  echo "Expected production main ${EXPECTED_SHA}, found ${ACTUAL_SHA}"^[[0m
+build	Reset candidate to exact production main	2026-07-31T21:44:22.0087071Z ^[[36;1m  exit 1^[[0m
+build	Reset candidate to exact production main	2026-07-31T21:44:22.0087751Z ^[[36;1mfi^[[0m
+build	Reset candidate to exact production main	2026-07-31T21:44:22.0088372Z ^[[36;1m^[[0m
+build	Reset candidate to exact production main	2026-07-31T21:44:22.0089363Z ^[[36;1mVERSION="$(node scripts/validate-userscript.mjs --print-version)"^[[0m
+build	Reset candidate to exact production main	2026-07-31T21:44:22.0090484Z ^[[36;1mif [[ "${VERSION}" != "1.0.69" ]]; then^[[0m
+build	Reset candidate to exact production main	2026-07-31T21:44:22.0091386Z ^[[36;1m  echo "Expected Command Nexus 1.0.69, found ${VERSION}"^[[0m
+build	Reset candidate to exact production main	2026-07-31T21:44:22.0092187Z ^[[36;1m  exit 1^[[0m
+build	Reset candidate to exact production main	2026-07-31T21:44:22.0092824Z ^[[36;1mfi^[[0m
+build	Reset candidate to exact production main	2026-07-31T21:44:22.0093447Z ^[[36;1m^[[0m
+build	Reset candidate to exact production main	2026-07-31T21:44:22.0094278Z ^[[36;1mgrep -Fq 'MISSION FINDER V10.6.132' src/missionchief-command-nexus.user.js^[[0m
+build	Reset candidate to exact production main	2026-07-31T21:44:22.0095339Z ^[[36;1mcp /tmp/nexus-ui-v1070-patch.py .github/nexus-ui-v1070-patch.py^[[0m
+build	Reset candidate to exact production main	2026-07-31T21:44:22.0155783Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+build	Reset candidate to exact production main	2026-07-31T21:44:22.0156638Z ##[endgroup]
+build	Reset candidate to exact production main	2026-07-31T21:44:22.3176580Z From https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
+build	Reset candidate to exact production main	2026-07-31T21:44:22.3177860Z  * branch            main       -> FETCH_HEAD
+build	Reset candidate to exact production main	2026-07-31T21:44:22.3421941Z HEAD is now at a316061 Replace Mission Control with integrated Nexus dashboard (#228)
+build	Apply Nexus visual system overhaul	﻿2026-07-31T21:44:22.3872244Z ##[group]Run python3 .github/nexus-ui-v1070-patch.py
+build	Apply Nexus visual system overhaul	2026-07-31T21:44:22.3872749Z ^[[36;1mpython3 .github/nexus-ui-v1070-patch.py^[[0m
+build	Apply Nexus visual system overhaul	2026-07-31T21:44:22.3920451Z shell: /usr/bin/bash -e {0}
+build	Apply Nexus visual system overhaul	2026-07-31T21:44:22.3920780Z ##[endgroup]
+build	Apply Nexus visual system overhaul	2026-07-31T21:44:22.4284121Z userscript version: matches=1
+build	Apply Nexus visual system overhaul	2026-07-31T21:44:22.4295423Z Mission Finder version: matches=1
+build	Apply Nexus visual system overhaul	2026-07-31T21:44:22.4301853Z Nexus workspace header: matches=1
+build	Apply Nexus visual system overhaul	2026-07-31T21:44:22.4307398Z plain Nexus workspace tabs: matches=1
+build	Apply Nexus visual system overhaul	2026-07-31T21:44:22.4321664Z Unit Naming workspace classes: matches=1
+build	Apply Nexus visual system overhaul	2026-07-31T21:44:22.4328209Z Unit Naming action bar: matches=1
+build	Apply Nexus visual system overhaul	2026-07-31T21:44:22.4339563Z Unit Naming status card: matches=1
+build	Apply Nexus visual system overhaul	2026-07-31T21:44:22.4351811Z Unit Naming log class: matches=1
+build	Apply Nexus visual system overhaul	2026-07-31T21:44:22.4360009Z Station Naming workspace classes: matches=1
+build	Apply Nexus visual system overhaul	2026-07-31T21:44:22.4371464Z Station Naming action bar: matches=1
+build	Apply Nexus visual system overhaul	2026-07-31T21:44:22.4383646Z Station Naming status card: matches=1
+build	Apply Nexus visual system overhaul	2026-07-31T21:44:22.4390947Z Station Naming log class: matches=1
+build	Apply Nexus visual system overhaul	2026-07-31T21:44:22.4403219Z Personnel workspace classes: matches=1
+build	Apply Nexus visual system overhaul	2026-07-31T21:44:22.4415163Z Personnel action bar: matches=1
+build	Apply Nexus visual system overhaul	2026-07-31T21:44:22.4422476Z Personnel status card: matches=1
+build	Apply Nexus visual system overhaul	2026-07-31T21:44:22.4434328Z Personnel shortfall analysis class: matches=1
+build	Apply Nexus visual system overhaul	2026-07-31T21:44:22.4446670Z Personnel report controls class: matches=1
+build	Apply Nexus visual system overhaul	2026-07-31T21:44:22.4454048Z Personnel station report class: matches=1
+build	Apply Nexus visual system overhaul	2026-07-31T21:44:22.4472694Z Personnel overall report class: matches=1
+build	Apply Nexus visual system overhaul	2026-07-31T21:44:22.4480007Z Personnel log classes: matches=1
+build	Apply Nexus visual system overhaul	2026-07-31T21:44:22.4523217Z switchToolTab: structural replacement
+build	Apply Nexus visual system overhaul	2026-07-31T21:44:22.4544991Z minimal Mission panel title: matches=1
+build	Apply Nexus visual system overhaul	2026-07-31T21:44:22.4555376Z minimal Vehicle panel title: matches=1
+build	Apply Nexus visual system overhaul	2026-07-31T21:44:22.4568648Z Mission dashboard brand header: matches=1
+build	Apply Nexus visual system overhaul	2026-07-31T21:44:22.4593577Z numbered horizontal Mission dashboard navigation: matches=1
+build	Apply Nexus visual system overhaul	2026-07-31T21:44:22.4611099Z Mission dashboard fallback version: matches=1
+build	Apply Nexus visual system overhaul	2026-07-31T21:44:22.4624670Z Mission dashboard brand append order: matches=1
+build	Apply Nexus visual system overhaul	2026-07-31T21:44:22.4732273Z addPanel: visual system CSS inserted
+build	Apply Nexus visual system overhaul	2026-07-31T21:44:22.4967571Z injectStyles: visual system CSS inserted
+build	Apply Nexus visual system overhaul	2026-07-31T21:44:22.5063337Z validation workflow visual-system step: matches=1
+build	Apply Nexus visual system overhaul	2026-07-31T21:44:22.5065035Z v1.0.70 changelog section: matches=1
+build	Apply Nexus visual system overhaul	2026-07-31T21:44:22.5067874Z README version baseline: matches=1
+build	Apply Nexus visual system overhaul	2026-07-31T21:44:22.5069011Z README dashboard terminology: expected one match, found 0
+build	Apply Nexus visual system overhaul	2026-07-31T21:44:22.5070122Z README dashboard terminology: matches=0
+build	Apply Nexus visual system overhaul	2026-07-31T21:44:22.5134569Z ##[error]Process completed with exit code 1.
+build	Post Check out development branch	﻿2026-07-31T21:44:22.5292031Z Post job cleanup.
+build	Post Check out development branch	2026-07-31T21:44:22.6135553Z [command]/usr/bin/git version
+build	Post Check out development branch	2026-07-31T21:44:22.6178703Z git version 2.54.0
+build	Post Check out development branch	2026-07-31T21:44:22.6225022Z Temporarily overriding HOME='/home/runner/work/_temp/c3d53f0e-bdb0-4fdc-a9d5-d1978af23826' before making global git config changes
+build	Post Check out development branch	2026-07-31T21:44:22.6226462Z Adding repository directory to the temporary git global config as a safe directory
+build	Post Check out development branch	2026-07-31T21:44:22.6232016Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/MissionChief-Command-Nexus/MissionChief-Command-Nexus
+build	Post Check out development branch	2026-07-31T21:44:22.6264474Z Removing SSH command configuration
+build	Post Check out development branch	2026-07-31T21:44:22.6272232Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+build	Post Check out development branch	2026-07-31T21:44:22.6310047Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+build	Post Check out development branch	2026-07-31T21:44:22.6581822Z Removing HTTP extra header
+build	Post Check out development branch	2026-07-31T21:44:22.6583020Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+build	Post Check out development branch	2026-07-31T21:44:22.6615644Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+build	Post Check out development branch	2026-07-31T21:44:22.6870904Z Removing includeIf entries pointing to credentials config files
+build	Post Check out development branch	2026-07-31T21:44:22.6878838Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+build	Post Check out development branch	2026-07-31T21:44:22.6916562Z includeif.gitdir:/home/runner/work/MissionChief-Command-Nexus/MissionChief-Command-Nexus/.git.path
+build	Post Check out development branch	2026-07-31T21:44:22.6917910Z includeif.gitdir:/home/runner/work/MissionChief-Command-Nexus/MissionChief-Command-Nexus/.git/worktrees/*.path
+build	Post Check out development branch	2026-07-31T21:44:22.6919135Z includeif.gitdir:/github/workspace/.git.path
+build	Post Check out development branch	2026-07-31T21:44:22.6920856Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+build	Post Check out development branch	2026-07-31T21:44:22.6926972Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/MissionChief-Command-Nexus/MissionChief-Command-Nexus/.git.path
+build	Post Check out development branch	2026-07-31T21:44:22.6953608Z /home/runner/work/_temp/git-credentials-ec5e990c-02cd-4bc7-87c0-246a5cae50ed.config
+build	Post Check out development branch	2026-07-31T21:44:22.6969025Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/MissionChief-Command-Nexus/MissionChief-Command-Nexus/.git.path /home/runner/work/_temp/git-credentials-ec5e990c-02cd-4bc7-87c0-246a5cae50ed.config
+build	Post Check out development branch	2026-07-31T21:44:22.7008509Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/MissionChief-Command-Nexus/MissionChief-Command-Nexus/.git/worktrees/*.path
+build	Post Check out development branch	2026-07-31T21:44:22.7036738Z /home/runner/work/_temp/git-credentials-ec5e990c-02cd-4bc7-87c0-246a5cae50ed.config
+build	Post Check out development branch	2026-07-31T21:44:22.7105265Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/MissionChief-Command-Nexus/MissionChief-Command-Nexus/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-ec5e990c-02cd-4bc7-87c0-246a5cae50ed.config
+build	Post Check out development branch	2026-07-31T21:44:22.7109150Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+build	Post Check out development branch	2026-07-31T21:44:22.7127715Z /github/runner_temp/git-credentials-ec5e990c-02cd-4bc7-87c0-246a5cae50ed.config
+build	Post Check out development branch	2026-07-31T21:44:22.7140673Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-ec5e990c-02cd-4bc7-87c0-246a5cae50ed.config
+build	Post Check out development branch	2026-07-31T21:44:22.7179911Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+build	Post Check out development branch	2026-07-31T21:44:22.7217590Z /github/runner_temp/git-credentials-ec5e990c-02cd-4bc7-87c0-246a5cae50ed.config
+build	Post Check out development branch	2026-07-31T21:44:22.7230524Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-ec5e990c-02cd-4bc7-87c0-246a5cae50ed.config
+build	Post Check out development branch	2026-07-31T21:44:22.7273779Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+build	Post Check out development branch	2026-07-31T21:44:22.7519088Z Removing credentials config '/home/runner/work/_temp/git-credentials-ec5e990c-02cd-4bc7-87c0-246a5cae50ed.config'
+build	Complete job	﻿2026-07-31T21:44:22.7678432Z Cleaning up orphan processes
