@@ -16,11 +16,61 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
     return text.replace(old, new, 1)
 
 
-def replace_regex_once(text: str, pattern: str, replacement: str, label: str) -> str:
-    matches = list(re.finditer(pattern, text, flags=re.MULTILINE))
-    if len(matches) != 1:
-        raise RuntimeError(f'{label}: expected exactly one regex anchor, found {len(matches)}')
-    return re.sub(pattern, replacement, text, count=1, flags=re.MULTILINE)
+def extract_named_function(text: str, signature: str) -> tuple[int, int, str]:
+    start = text.find(signature)
+    if start < 0:
+        raise RuntimeError(f'Unable to find {signature}')
+
+    body_start = text.find('{', start + len(signature))
+    if body_start < 0:
+        raise RuntimeError(f'Unable to find body for {signature}')
+
+    depth = 0
+    quote = ''
+    escaped = False
+    index = body_start
+
+    while index < len(text):
+        character = text[index]
+        next_character = text[index + 1] if index + 1 < len(text) else ''
+
+        if quote:
+            if escaped:
+                escaped = False
+            elif character == '\\':
+                escaped = True
+            elif character == quote:
+                quote = ''
+            index += 1
+            continue
+
+        if character in ('"', "'", '`'):
+            quote = character
+            index += 1
+            continue
+
+        if character == '/' and next_character == '/':
+            line_end = text.find('\n', index + 2)
+            index = len(text) if line_end < 0 else line_end + 1
+            continue
+
+        if character == '/' and next_character == '*':
+            comment_end = text.find('*/', index + 2)
+            if comment_end < 0:
+                raise RuntimeError(f'Unterminated block comment in {signature}')
+            index = comment_end + 2
+            continue
+
+        if character == '{':
+            depth += 1
+        elif character == '}':
+            depth -= 1
+            if depth == 0:
+                return start, index + 1, text[start:index + 1]
+
+        index += 1
+
+    raise RuntimeError(f'Unterminated function {signature}')
 
 
 source = SOURCE_PATH.read_text(encoding='utf-8')
@@ -36,38 +86,51 @@ if engine_count < 1:
     raise RuntimeError('Mission Finder V10.6.128 anchor was not found')
 source = source.replace('V10.6.128', 'V10.6.129')
 
-source = replace_regex_once(
+renderer_start, renderer_end, renderer = extract_named_function(
     source,
-    r'(    function renderSelectedTrainedPersonnelPanel\(\) \{\n)'
-    r'[ \t\r\n]*scheduleMissionRequiredPersonnelPreload\(\s*0\s*\);[ \t\r\n]*',
-    r'\1',
-    'recursive trained-personnel preload trigger',
+    '    function renderSelectedTrainedPersonnelPanel()',
 )
 
-source = replace_regex_once(
-    source,
-    r'        const preloadRequirements\s*=\s*'
-    r'getPreloadedMissionTrainedPersonnelRequirements\(\);',
-    "        let preloadRequirements = [];\n\n"
-    "        try {\n"
-    "            preloadRequirements =\n"
-    "                getPreloadedMissionTrainedPersonnelRequirements();\n"
-    "        } catch (error) {\n"
-    "            if (mfDebugEnabled) {\n"
-    "                debugLog(\n"
-    "                    'MISSION PERSONNEL PRELOAD',\n"
-    "                    `panel cache read failed: ${error?.message || error}`\n"
-    "                );\n"
-    "            }\n"
-    "        }",
-    'trained-personnel preload cache read',
+renderer, preload_schedule_count = re.subn(
+    r'(?ms)^[ \t]*scheduleMissionRequiredPersonnelPreload\(\s*0\s*\);[ \t]*(?:\r?\n)?',
+    '',
+    renderer,
+    count=1,
 )
+if preload_schedule_count != 1:
+    raise RuntimeError(
+        'recursive trained-personnel preload trigger: '
+        f'expected exactly one renderer call, found {preload_schedule_count}'
+    )
 
-renderer_start = source.index('    function renderSelectedTrainedPersonnelPanel() {')
-renderer_end = source.index('\n\n    function renderVehicleLoadListNow() {', renderer_start)
-if renderer_start < 0 or renderer_end < 0:
-    raise RuntimeError('Unable to isolate trained-personnel renderer after patch')
-renderer = source[renderer_start:renderer_end]
+cache_pattern = re.compile(
+    r'(?m)^(?P<indent>[ \t]*)const[ \t]+preloadRequirements[ \t]*=[ \t\r\n]*'
+    r'getPreloadedMissionTrainedPersonnelRequirements\([ \t\r\n]*\);'
+)
+cache_matches = list(cache_pattern.finditer(renderer))
+if len(cache_matches) != 1:
+    raise RuntimeError(
+        'trained-personnel preload cache read: '
+        f'expected exactly one renderer assignment, found {len(cache_matches)}'
+    )
+
+indent = cache_matches[0].group('indent')
+cache_guard = (
+    f'{indent}let preloadRequirements = [];\n\n'
+    f'{indent}try {{\n'
+    f'{indent}    preloadRequirements =\n'
+    f'{indent}        getPreloadedMissionTrainedPersonnelRequirements();\n'
+    f'{indent}}} catch (error) {{\n'
+    f'{indent}    if (mfDebugEnabled) {{\n'
+    f'{indent}        debugLog(\n'
+    f"{indent}            'MISSION PERSONNEL PRELOAD',\n"
+    f'{indent}            `panel cache read failed: ${{error?.message || error}}`\n'
+    f'{indent}        );\n'
+    f'{indent}    }}\n'
+    f'{indent}}}'
+)
+renderer = cache_pattern.sub(cache_guard, renderer, count=1)
+
 if 'scheduleMissionRequiredPersonnelPreload(' in renderer:
     raise RuntimeError('Trained-personnel renderer still starts preload work')
 if 'getSelectedTrainedPersonnelPanelModel()' not in renderer:
@@ -75,6 +138,7 @@ if 'getSelectedTrainedPersonnelPanelModel()' not in renderer:
 if 'panel cache read failed' not in renderer:
     raise RuntimeError('Preload cache isolation guard was not installed')
 
+source = source[:renderer_start] + renderer + source[renderer_end:]
 SOURCE_PATH.write_text(source, encoding='utf-8')
 
 readme = README_PATH.read_text(encoding='utf-8')
