@@ -4,6 +4,22 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.68] - 2026-07-31
+
+### Fixed
+
+- Corrected mission-load trained-personnel extraction to read the exact **Required Personnel** row from the mission definition's separate **Other information** table.
+- Continued to exclude **Required Personnel Available**, which is only a spawn/precondition value and must not create dispatch demand.
+- Merged trained-staff requirements into the same mission-bound preload snapshot as ordinary vehicle requirements, so the Trained Personnel panel can show `0 / required` before Unit Finder runs and update as units are selected.
+- Allowed a valid Required Personnel source to initialise the requirement cache even when no separate Vehicle and Personnel Requirements table exists.
+- Added cross-table regression coverage using distinct Reward and Precondition, Vehicle and Personnel Requirements, and Other information tables.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.130` to `V10.6.131`.
+- Personnel Assignment remains `1.3.8`.
+
+
 ## [Unreleased]
 
 ### Added

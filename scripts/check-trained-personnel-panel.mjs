@@ -20,8 +20,8 @@ function sliceBetween(startToken, endToken, label) {
   return source.slice(start, end);
 }
 
-expect(source.includes('// @version      1.0.67'), 'Expected Command Nexus 1.0.62');
-expect(source.includes(' * MODULE 2: MISSION FINDER V10.6.130'), 'Expected Mission Finder V10.6.125');
+expect(source.includes('// @version      1.0.68'), 'Expected Command Nexus 1.0.62');
+expect(source.includes(' * MODULE 2: MISSION FINDER V10.6.131'), 'Expected Mission Finder V10.6.125');
 
 for (const token of [
   'MF_TRAINED_PERSONNEL_COLLAPSED_KEY',

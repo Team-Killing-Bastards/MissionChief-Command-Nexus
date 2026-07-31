@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.67
+// @version      1.0.68
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -9616,7 +9616,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.130
+         * MODULE 2: MISSION FINDER V10.6.131
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -23010,6 +23010,165 @@ let sessionRuntimeTicker = null;
         return bestTable;
     }
 
+
+
+    function extractMissionDefinitionRequiredPersonnelRows(
+        doc,
+        excludedTable = null
+    ) {
+        const rows = [];
+        const rawRows = [];
+        let requiredPersonnelRowFound = false;
+
+        if (!doc) {
+            return rows;
+        }
+
+        Array.from(
+            doc.querySelectorAll(
+                'table tbody tr, table tr'
+            )
+        ).forEach(tr => {
+            if (
+                excludedTable &&
+                excludedTable.contains(tr)
+            ) {
+                return;
+            }
+
+            const cells = Array.from(
+                tr.querySelectorAll('td')
+            ).map(td => {
+                return String(td.textContent || '')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+            });
+
+            if (cells.length < 2) return;
+
+            const rawRequirementName = cells[0];
+            const cleanedName =
+                cleanRequirementName(
+                    rawRequirementName
+                );
+
+            // This exact gate accepts Required Personnel (including a
+            // percentage suffix normalised by cleanRequirementName) while
+            // rejecting the Reward and Precondition row Required Personnel
+            // Available.
+            if (
+                !/^Personnel(?:\s+Requirements?)?$/i.test(
+                    cleanedName
+                )
+            ) {
+                return;
+            }
+
+            requiredPersonnelRowFound = true;
+
+            const amountText = String(cells[1] || '')
+                .replace(/\s+/g, ' ')
+                .trim();
+
+            rawRows.push({
+                label: rawRequirementName,
+                value: amountText
+            });
+
+            const trainedRequirements =
+                getMissionDefinitionTrainedPersonnelRequirements(
+                    rawRequirementName,
+                    amountText
+                );
+            const sarRequirements =
+                getMissionDefinitionSarPersonnelVehicleRequirements(
+                    rawRequirementName,
+                    amountText
+                );
+
+            if (trainedRequirements.length > 0) {
+                rows.push({
+                    unitName:
+                        MF_TRAINED_PERSONNEL_ROW_NAME,
+                    stillNeeded:
+                        getTrainedPersonnelVehicleTarget(
+                            trainedRequirements
+                        ),
+                    isTrainedPersonnelRequirement:
+                        true,
+                    personnelTrainingRequirements:
+                        trainedRequirements,
+                    missionDefinitionRequiredPersonnel:
+                        true,
+                    source:
+                        'mission-definition-required-personnel'
+                });
+            }
+
+            sarRequirements.forEach(conversion => {
+                rows.push({
+                    unitName:
+                        conversion.unitName,
+                    stillNeeded:
+                        conversion.stillNeeded,
+                    personnelRequirement:
+                        conversion.personnelRequirement,
+                    missionDefinitionRequiredPersonnel:
+                        true,
+                    source:
+                        'mission-definition-required-personnel'
+                });
+            });
+
+            if (
+                mfDebugEnabled &&
+                (
+                    trainedRequirements.length > 0 ||
+                    sarRequirements.length > 0
+                )
+            ) {
+                const parts = [];
+
+                if (trainedRequirements.length > 0) {
+                    parts.push(
+                        formatTrainedPersonnelRequirements(
+                            trainedRequirements
+                        )
+                    );
+                }
+
+                sarRequirements.forEach(conversion => {
+                    parts.push(
+                        `${conversion.personnelRequirement} -> ${conversion.unitName} x${conversion.stillNeeded}`
+                    );
+                });
+
+                debugLog(
+                    'UNIT FINDER OTHER INFORMATION REQUIRED PERSONNEL',
+                    parts.join(' | ')
+                );
+            }
+        });
+
+        try {
+            Object.defineProperties(
+                rows,
+                {
+                    missionDefinitionRequiredPersonnelFound: {
+                        value: requiredPersonnelRowFound,
+                        enumerable: false
+                    },
+                    rawMissionDefinitionRequiredPersonnelRows: {
+                        value: rawRows,
+                        enumerable: false
+                    }
+                }
+            );
+        } catch (_error) {}
+
+        return rows;
+    }
+
     function extractLiveMissionRequirementRows(html) {
         const doc = new DOMParser().parseFromString(html, 'text/html');
 
@@ -23312,6 +23471,29 @@ let sessionRuntimeTicker = null;
             });
         }
 
+
+        const supplementalPersonnelRows =
+            extractMissionDefinitionRequiredPersonnelRows(
+                doc,
+                table
+            );
+
+        supplementalPersonnelRows.forEach(row => {
+            rows.push(row);
+        });
+
+        if (
+            Array.isArray(
+                supplementalPersonnelRows
+                    .rawMissionDefinitionRequiredPersonnelRows
+            )
+        ) {
+            mfLastMissionDefinitionRawRows.push(
+                ...supplementalPersonnelRows
+                    .rawMissionDefinitionRequiredPersonnelRows
+            );
+        }
+
         extractTowCarRequirementRows(doc).forEach(row => rows.push(row));
 
         const mergedRows =
@@ -23322,7 +23504,11 @@ let sessionRuntimeTicker = null;
                 mergedRows,
                 {
                     missionRequirementTableFound: {
-                        value: Boolean(table),
+                        value: Boolean(
+                            table ||
+                            supplementalPersonnelRows
+                                .missionDefinitionRequiredPersonnelFound
+                        ),
                         enumerable: false
                     },
                     missionRequirementTableCount: {
