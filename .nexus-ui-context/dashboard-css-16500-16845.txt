@@ -1,0 +1,346 @@
+16500:                 #mission-finder-wrapper.mf2026-iphone-safari .mf-load-body {
+16501:                     max-height: 42dvh;
+16502:                 }
+16503:             }
+16504: 
+16505:             #mission-finder-wrapper.mf2026-iphone-safari
+16506:             .mf-load-body .mf2026-box {
+16507:                 padding: 6px;
+16508:                 border-radius: 10px;
+16509:             }
+16510: 
+16511:             #mission-finder-wrapper.mf2026-iphone-safari
+16512:             #vehicle-load-list-content {
+16513:                 max-height: 22vh;
+16514:                 padding-right: 0;
+16515:             }
+16516: 
+16517:             #mission-finder-wrapper.mf2026-iphone-safari
+16518:             #session-panel-content {
+16519:                 max-height: 12vh;
+16520:                 padding-right: 0;
+16521:             }
+16522: 
+16523: 
+16524:             /* MissionChief Nexus integrated mission dashboard (V10.6.132). */
+16525:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) {
+16526:                 display: grid;
+16527:                 grid-template-columns: 66px repeat(3, minmax(235px, 1fr));
+16528:                 grid-template-areas:
+16529:                     "rail control load trained"
+16530:                     "footer footer footer footer";
+16531:                 align-items: stretch;
+16532:                 gap: 10px;
+16533:                 width: min(1360px, calc(100vw - 32px));
+16534:                 max-width: calc(100vw - 32px);
+16535:                 max-height: calc(100vh - 32px);
+16536:                 padding: 10px;
+16537:                 overflow: auto;
+16538:                 box-sizing: border-box;
+16539:                 border: 1px solid rgba(82, 155, 255, 0.24);
+16540:                 border-radius: 14px;
+16541:                 background:
+16542:                     radial-gradient(circle at 8% 0%, rgba(20, 92, 170, 0.18), transparent 34%),
+16543:                     linear-gradient(145deg, rgba(5, 16, 29, 0.98), rgba(4, 21, 38, 0.98));
+16544:                 box-shadow: 0 18px 55px rgba(0, 0, 0, 0.55);
+16545:                 color: #eaf2ff;
+16546:             }
+16547: 
+16548:             #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari) {
+16549:                 grid-template-columns: 66px minmax(250px, 285px) repeat(3, minmax(225px, 1fr));
+16550:                 grid-template-areas:
+16551:                     "rail utility control load trained"
+16552:                     "footer footer footer footer footer";
+16553:                 width: min(1580px, calc(100vw - 32px));
+16554:             }
+16555: 
+16556:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-panel {
+16557:                 width: auto;
+16558:                 min-width: 0;
+16559:                 max-height: calc(100vh - 96px);
+16560:                 padding: 0;
+16561:                 gap: 0;
+16562:                 overflow: hidden;
+16563:                 border: 1px solid rgba(126, 167, 218, 0.18);
+16564:                 border-radius: 12px;
+16565:                 background: linear-gradient(155deg, rgba(18, 32, 48, 0.97), rgba(7, 23, 39, 0.97));
+16566:                 box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035), 0 10px 30px rgba(0, 0, 0, 0.24);
+16567:                 font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+16568:             }
+16569: 
+16570:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #control-panel { grid-area: control; }
+16571:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #vehicle-load-list-box { grid-area: load; }
+16572:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #trained-personnel-box { grid-area: trained; }
+16573: 
+16574:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-control-header-row,
+16575:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-load-header-row,
+16576:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-trained-header-row {
+16577:                 min-height: 48px;
+16578:                 padding: 8px 10px;
+16579:                 border-bottom: 1px solid rgba(126, 167, 218, 0.14);
+16580:                 background: rgba(9, 23, 38, 0.72);
+16581:                 box-sizing: border-box;
+16582:             }
+16583: 
+16584:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-header {
+16585:                 display: flex;
+16586:                 align-items: center;
+16587:                 gap: 8px;
+16588:                 padding: 0;
+16589:                 text-align: left;
+16590:                 text-transform: uppercase;
+16591:                 letter-spacing: 0.035em;
+16592:                 background: transparent;
+16593:                 color: #f4f8ff;
+16594:                 font-size: 13px;
+16595:                 font-weight: 800;
+16596:             }
+16597: 
+16598:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mf-control-title::before {
+16599:                 content: "◎";
+16600:                 display: grid;
+16601:                 place-items: center;
+16602:                 width: 28px;
+16603:                 height: 28px;
+16604:                 border-radius: 8px;
+16605:                 background: linear-gradient(145deg, #0d6efd, #063f91);
+16606:                 color: white;
+16607:                 box-shadow: 0 0 16px rgba(13, 110, 253, 0.36);
+16608:             }
+16609: 
+16610:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mf-load-title::before {
+16611:                 content: "▣";
+16612:                 color: #49a4ff;
+16613:                 font-size: 21px;
+16614:             }
+16615: 
+16616:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mf-trained-title::before {
+16617:                 content: "♙";
+16618:                 color: #c86cff;
+16619:                 font-size: 22px;
+16620:             }
+16621: 
+16622:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf-control-body,
+16623:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf-load-body,
+16624:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf-trained-body {
+16625:                 display: flex;
+16626:                 flex-direction: column;
+16627:                 gap: 9px;
+16628:                 padding: 10px;
+16629:                 overflow-y: auto;
+16630:                 min-height: 0;
+16631:             }
+16632: 
+16633:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-box {
+16634:                 padding: 10px;
+16635:                 border: 1px solid rgba(126, 167, 218, 0.13);
+16636:                 border-radius: 9px;
+16637:                 background: rgba(255, 255, 255, 0.025);
+16638:             }
+16639: 
+16640:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #status-box {
+16641:                 min-height: 52px;
+16642:                 background: rgba(6, 20, 34, 0.72);
+16643:                 color: #dce8f7;
+16644:             }
+16645: 
+16646:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-section-title {
+16647:                 color: #eff6ff;
+16648:                 font-size: 12px;
+16649:                 letter-spacing: 0.01em;
+16650:             }
+16651: 
+16652:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-small {
+16653:                 color: #aebdd0;
+16654:                 line-height: 1.4;
+16655:             }
+16656: 
+16657:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-primary-actions {
+16658:                 gap: 8px;
+16659:                 margin-top: auto;
+16660:             }
+16661: 
+16662:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-primary-actions .mf2026-button,
+16663:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mf-export-unit-finder-diagnostics {
+16664:                 min-height: 42px;
+16665:                 border: 1px solid rgba(255, 255, 255, 0.11);
+16666:                 border-radius: 8px;
+16667:                 color: #fff !important;
+16668:                 box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10), 0 5px 14px rgba(0, 0, 0, 0.22);
+16669:                 transition: transform 120ms ease, filter 120ms ease, box-shadow 120ms ease;
+16670:             }
+16671: 
+16672:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-button:hover {
+16673:                 filter: brightness(1.1);
+16674:                 transform: translateY(-1px);
+16675:             }
+16676: 
+16677:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #unit-finder-box {
+16678:                 background: linear-gradient(145deg, #f2a900, #b96d00) !important;
+16679:             }
+16680:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mf-ally-steal {
+16681:                 background: linear-gradient(145deg, #d42b86, #861653) !important;
+16682:             }
+16683:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mission-update-box {
+16684:                 background: linear-gradient(145deg, #1268da, #08418e) !important;
+16685:             }
+16686:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #dispatch-box {
+16687:                 background: linear-gradient(145deg, #526273, #303b47) !important;
+16688:             }
+16689:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #dispatch-share-box {
+16690:                 background: linear-gradient(145deg, #13864e, #07582f) !important;
+16691:             }
+16692:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #auto-mode-box {
+16693:                 background: linear-gradient(145deg, #743bc0, #452178) !important;
+16694:             }
+16695: 
+16696:             #mf-dashboard-rail {
+16697:                 grid-area: rail;
+16698:                 display: flex;
+16699:                 flex-direction: column;
+16700:                 gap: 8px;
+16701:                 padding: 6px;
+16702:                 border: 1px solid rgba(126, 167, 218, 0.16);
+16703:                 border-radius: 11px;
+16704:                 background: rgba(6, 19, 33, 0.88);
+16705:             }
+16706: 
+16707:             .mf-dashboard-tab {
+16708:                 display: flex;
+16709:                 flex-direction: column;
+16710:                 align-items: center;
+16711:                 justify-content: center;
+16712:                 gap: 4px;
+16713:                 min-height: 72px;
+16714:                 padding: 7px 4px;
+16715:                 border: 1px solid transparent;
+16716:                 border-radius: 9px;
+16717:                 background: transparent;
+16718:                 color: #9fb1c8;
+16719:                 font-size: 10px;
+16720:                 font-weight: 700;
+16721:                 cursor: pointer;
+16722:             }
+16723: 
+16724:             .mf-dashboard-tab:hover,
+16725:             .mf-dashboard-tab.mf-dashboard-tab-active {
+16726:                 border-color: rgba(34, 137, 255, 0.58);
+16727:                 background: linear-gradient(145deg, rgba(21, 104, 204, 0.58), rgba(7, 48, 96, 0.66));
+16728:                 color: #fff;
+16729:                 box-shadow: 0 0 18px rgba(13, 110, 253, 0.20);
+16730:             }
+16731: 
+16732:             .mf-dashboard-tab-icon {
+16733:                 font-size: 22px;
+16734:                 line-height: 1;
+16735:                 color: #55a9ff;
+16736:             }
+16737: 
+16738:             #mf-dashboard-utility {
+16739:                 grid-area: utility;
+16740:                 min-width: 0;
+16741:                 max-height: calc(100vh - 96px);
+16742:                 overflow: hidden;
+16743:                 border: 1px solid rgba(126, 167, 218, 0.18);
+16744:                 border-radius: 12px;
+16745:                 background: linear-gradient(155deg, rgba(18, 32, 48, 0.97), rgba(7, 23, 39, 0.97));
+16746:                 box-shadow: 0 10px 30px rgba(0, 0, 0, 0.24);
+16747:             }
+16748: 
+16749:             #mf-dashboard-utility[hidden],
+16750:             .mf-dashboard-utility-pane[hidden] {
+16751:                 display: none !important;
+16752:             }
+16753: 
+16754:             .mf-dashboard-utility-header {
+16755:                 display: flex;
+16756:                 align-items: center;
+16757:                 justify-content: space-between;
+16758:                 min-height: 48px;
+16759:                 padding: 8px 11px;
+16760:                 border-bottom: 1px solid rgba(126, 167, 218, 0.14);
+16761:                 color: #f4f8ff;
+16762:                 text-transform: uppercase;
+16763:                 letter-spacing: 0.04em;
+16764:                 font-size: 13px;
+16765:                 font-weight: 800;
+16766:                 box-sizing: border-box;
+16767:             }
+16768: 
+16769:             #mf-dashboard-utility-close {
+16770:                 width: 30px;
+16771:                 height: 30px;
+16772:                 border: 0;
+16773:                 border-radius: 7px;
+16774:                 background: rgba(255, 255, 255, 0.08);
+16775:                 color: #dce8f7;
+16776:                 cursor: pointer;
+16777:             }
+16778: 
+16779:             .mf-dashboard-utility-pane {
+16780:                 display: flex;
+16781:                 flex-direction: column;
+16782:                 gap: 9px;
+16783:                 padding: 10px;
+16784:                 overflow-y: auto;
+16785:                 max-height: calc(100vh - 154px);
+16786:                 box-sizing: border-box;
+16787:             }
+16788: 
+16789:             #mf-dashboard-settings-pane .mf-control-advanced {
+16790:                 display: flex;
+16791:                 gap: 9px;
+16792:             }
+16793: 
+16794:             #mf-dashboard-settings-pane input,
+16795:             #mf-dashboard-diagnostics-pane input {
+16796:                 color: #f4f8ff !important;
+16797:                 background: rgba(2, 13, 25, 0.78) !important;
+16798:                 border: 1px solid rgba(126, 167, 218, 0.20) !important;
+16799:                 border-radius: 7px !important;
+16800:                 min-height: 38px;
+16801:                 padding: 7px 9px !important;
+16802:                 box-sizing: border-box;
+16803:             }
+16804: 
+16805:             .mf-dashboard-toggle-row {
+16806:                 align-items: flex-start;
+16807:             }
+16808: 
+16809:             #mf-event-scanner-state {
+16810:                 margin-top: 7px;
+16811:             }
+16812: 
+16813:             #mf-dashboard-diagnostics-pane #mf-export-unit-finder-diagnostics {
+16814:                 width: 100%;
+16815:                 background: linear-gradient(145deg, #27394d, #172638) !important;
+16816:             }
+16817: 
+16818:             #mf-dashboard-footer {
+16819:                 grid-area: footer;
+16820:                 padding: 4px 10px 0;
+16821:                 text-align: center;
+16822:                 color: #7f91a8;
+16823:                 font-size: 11px;
+16824:                 letter-spacing: 0.02em;
+16825:             }
+16826: 
+16827:             @media (max-width: 1180px) and (min-width: 701px) {
+16828:                 #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari),
+16829:                 #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari) {
+16830:                     grid-template-columns: 62px repeat(2, minmax(250px, 1fr));
+16831:                     grid-template-areas:
+16832:                         "rail control load"
+16833:                         "rail trained trained"
+16834:                         "utility utility utility"
+16835:                         "footer footer footer";
+16836:                     width: min(920px, calc(100vw - 24px));
+16837:                 }
+16838: 
+16839:                 #mf-dashboard-utility {
+16840:                     max-height: 310px;
+16841:                 }
+16842:             }
+16843:         `;
+16844:         document.head.appendChild(style);
+16845:     }

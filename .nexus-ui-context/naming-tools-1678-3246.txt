@@ -1,0 +1,1569 @@
+01678: 
+01679:     function getToolViewportBounds() {
+01680:         const viewport = window.visualViewport;
+01681:         const left = Math.max(0, Number(viewport?.offsetLeft || 0));
+01682:         const top = Math.max(0, Number(viewport?.offsetTop || 0));
+01683:         const width = Math.max(1, Number(viewport?.width || window.innerWidth || 1));
+01684:         const height = Math.max(1, Number(viewport?.height || window.innerHeight || 1));
+01685: 
+01686:         return {
+01687:             left,
+01688:             top,
+01689:             width,
+01690:             height,
+01691:             right: left + width,
+01692:             bottom: top + height
+01693:         };
+01694:     }
+01695: 
+01696:     function clampToolPanelToViewport(panel) {
+01697:         if (!panel?.isConnected) return;
+01698: 
+01699:         // Before the first drag, iOS Safari is positioned entirely by the
+01700:         // safe-area CSS below. Only clamp an explicitly dragged mobile panel.
+01701:         if (
+01702:             panel.classList.contains('mc-ios-safari')
+01703:             && !panel.style.left
+01704:         ) {
+01705:             return;
+01706:         }
+01707: 
+01708:         const bounds = getToolViewportBounds();
+01709:         let rect = panel.getBoundingClientRect();
+01710:         const maximumWidth = Math.max(260, bounds.width - 16);
+01711: 
+01712:         if (rect.width > maximumWidth) {
+01713:             panel.style.width = `${maximumWidth}px`;
+01714:             rect = panel.getBoundingClientRect();
+01715:         }
+01716: 
+01717:         const maximumLeft = Math.max(
+01718:             bounds.left,
+01719:             bounds.right - rect.width
+01720:         );
+01721:         const maximumTop = Math.max(
+01722:             bounds.top,
+01723:             bounds.bottom - rect.height
+01724:         );
+01725:         const nextLeft = Math.min(
+01726:             maximumLeft,
+01727:             Math.max(bounds.left, rect.left)
+01728:         );
+01729:         const nextTop = Math.min(
+01730:             maximumTop,
+01731:             Math.max(bounds.top, rect.top)
+01732:         );
+01733: 
+01734:         panel.style.left = `${nextLeft}px`;
+01735:         panel.style.top = `${nextTop}px`;
+01736:         panel.style.right = 'auto';
+01737:     }
+01738: 
+01739:     function installToolViewportGuard(panel) {
+01740:         let pendingFrame = null;
+01741: 
+01742:         const requestClamp = () => {
+01743:             if (pendingFrame != null) return;
+01744:             pendingFrame = requestAnimationFrame(() => {
+01745:                 pendingFrame = null;
+01746:                 clampToolPanelToViewport(panel);
+01747:             });
+01748:         };
+01749: 
+01750:         const resetIosPosition = () => {
+01751:             if (panel.classList.contains('mc-ios-safari')) {
+01752:                 panel.style.left = '';
+01753:                 panel.style.top = '';
+01754:                 panel.style.right = '';
+01755:                 panel.style.width = '';
+01756:             }
+01757:             requestClamp();
+01758:         };
+01759: 
+01760:         window.addEventListener('resize', requestClamp, { passive: true });
+01761:         window.addEventListener('orientationchange', resetIosPosition, { passive: true });
+01762:         window.addEventListener('pageshow', requestClamp, { passive: true });
+01763:         window.visualViewport?.addEventListener('resize', requestClamp, { passive: true });
+01764:         window.visualViewport?.addEventListener('scroll', requestClamp, { passive: true });
+01765: 
+01766:         registerToolLifecycleCleanup(() => {
+01767:             if (pendingFrame != null) {
+01768:                 cancelAnimationFrame(pendingFrame);
+01769:                 pendingFrame = null;
+01770:             }
+01771:             window.removeEventListener('resize', requestClamp);
+01772:             window.removeEventListener('orientationchange', resetIosPosition);
+01773:             window.removeEventListener('pageshow', requestClamp);
+01774:             window.visualViewport?.removeEventListener('resize', requestClamp);
+01775:             window.visualViewport?.removeEventListener('scroll', requestClamp);
+01776:         });
+01777: 
+01778:         requestClamp();
+01779:     }
+01780: 
+01781:     function initWhenReady() {
+01782:         installSingleNamingToolsPanelGuard();
+01783: 
+01784:         if (isIosSafariWebsite()) {
+01785:             syncNamingToolsPanelLifecycle();
+01786:             return;
+01787:         }
+01788: 
+01789:         let tries = 0;
+01790:         let timer = null;
+01791:         const maximumTries = 40;
+01792: 
+01793:         const removeReadinessListeners = () => {
+01794:             if (timer != null) {
+01795:                 clearInterval(timer);
+01796:                 timer = null;
+01797:             }
+01798:             TOOL_LIFECYCLE_CLEANUPS.delete(
+01799:                 removeReadinessListeners
+01800:             );
+01801:         };
+01802: 
+01803:         function tryInitialise() {
+01804:             if (ensureSingleNamingToolsPanel()) {
+01805:                 removeReadinessListeners();
+01806:                 return true;
+01807:             }
+01808: 
+01809:             if (!isStationOverviewScreen()) return false;
+01810: 
+01811:             removeReadinessListeners();
+01812:             init();
+01813:             return true;
+01814:         }
+01815: 
+01816:         if (tryInitialise()) return;
+01817: 
+01818:         timer = setInterval(() => {
+01819:             tries++;
+01820:             if (tryInitialise()) return;
+01821:             if (tries >= maximumTries) {
+01822:                 clearInterval(timer);
+01823:                 timer = null;
+01824:             }
+01825:         }, 500);
+01826: 
+01827:         registerToolLifecycleCleanup(
+01828:             removeReadinessListeners
+01829:         );
+01830:     }
+01831: 
+01832: 
+01833:     function isStationOverviewScreen() {
+01834:         const entries = getStationOverviewEntries();
+01835:         if (!entries.length) return false;
+01836: 
+01837:         const desktopStationSelector =
+01838:             'a.lightbox-open.list-group-item.active[href*="/buildings/"]';
+01839: 
+01840:         if (!isIosSafariWebsite()) {
+01841:             return entries.some(entry =>
+01842:                 entry.link?.matches?.(
+01843:                     desktopStationSelector
+01844:                 )
+01845:             );
+01846:         }
+01847: 
+01848:         return entries.some(entry =>
+01849:             isRenderedStationOverviewEntry(entry)
+01850:         );
+01851:     }
+01852: 
+01853: 
+01854:     function init() {
+01855:         addPanel();
+01856:         log(`Unit Naming Tool v${UNIT_VERSION} loaded. Press Refresh Stations first.`, 'info');
+01857:         stationLog(`Station Naming Tool v${STATION_VERSION} loaded. Refresh stations, choose Preview or Rename and Save, then press Start.`, 'info');
+01858:         personnelLog(`Personnel Assignment v${PERSONNEL_VERSION} loaded. Medical Critical Care and the verified Police profiles are live; other services remain in safe UI preview.`, 'info');
+01859:         updatePersonnelTrainingRegistryStatus();
+01860:     }
+01861: 
+01862:     function addPanel() {
+01863:         if (ensureSingleNamingToolsPanel()) return;
+01864: 
+01865:         const panel = document.createElement('div');
+01866:         panel.id = 'mc-namer-panel';
+01867:         panel.classList.toggle('mc-ios-safari', isIosSafariWebsite());
+01868: 
+01869:         panel.innerHTML = `
+01870:             <div id="mc-namer-header">
+01871:                 <span id="mc-namer-header-title">🚒 Unit Naming Tool v${UNIT_VERSION}</span>
+01872:                 <button id="mc-namer-collapse" type="button" aria-expanded="true" title="Collapse naming tools">−</button>
+01873:             </div>
+01874: 
+01875:             <div id="mc-namer-body">
+01876:             <div class="mc-namer-tabs" role="tablist" aria-label="Naming tools">
+01877:                 <button id="mc-tab-unit" class="mc-namer-tab active" type="button" role="tab" aria-selected="true">
+01878:                     🚒 Unit Naming Tool
+01879:                 </button>
+01880:                 <button id="mc-tab-station" class="mc-namer-tab" type="button" role="tab" aria-selected="false">
+01881:                     🏢 Station Naming Tool
+01882:                 </button>
+01883:                 <button id="mc-tab-personnel" class="mc-namer-tab" type="button" role="tab" aria-selected="false">
+01884:                     👥 Personnel Assignment
+01885:                 </button>
+01886:             </div>
+01887: 
+01888:             <div id="mc-unit-view" class="mc-tool-view">
+01889:                 <div class="mc-namer-section">
+01890:                     <label><b>Station Type:</b></label>
+01891:                     <select id="mc-namer-station-type">
+01892:                         ${Object.entries(STATION_TYPES).map(([key, label]) => `<option value="${key}">${label}</option>`).join('')}
+01893:                     </select>
+01894: 
+01895:                     <label style="margin-top:6px; display:block;"><b>Unit Class:</b></label>
+01896:                     <select id="mc-namer-unit-class">
+01897:                         <option value="ALL">All classes</option>
+01898:                     </select>
+01899: 
+01900:                     <label style="margin-top:6px; display:block;"><b>Mode:</b></label>
+01901:                     <select id="mc-namer-mode">
+01902:                         <option value="all">All matching stations from selected start point</option>
+01903:                         <option value="single">Selected station only</option>
+01904:                     </select>
+01905: 
+01906:                     <label style="margin-top:6px; display:block;"><b>Start From:</b></label>
+01907:                     <select id="mc-namer-startfrom">
+01908:                         <option value="">Refresh stations first</option>
+01909:                     </select>
+01910:                 </div>
+01911: 
+01912:                 <div class="mc-namer-buttons">
+01913:                     <button id="mc-namer-refresh">Refresh Stations</button>
+01914:                     <button id="mc-namer-start">Start</button>
+01915:                     <button id="mc-namer-pause">Pause</button>
+01916:                     <button id="mc-namer-stop">Stop</button>
+01917:                     <button id="mc-namer-debug">Debug: OFF</button>
+01918:                     <button id="mc-namer-clear">Clear Log</button>
+01919:                 </div>
+01920: 
+01921:                 <div class="mc-namer-section">
+01922:                     <div><b>Status:</b> <span id="mc-namer-status">Idle</span></div>
+01923:                     <div><b>Station:</b> <span id="mc-namer-station">None</span></div>
+01924:                     <div><b>Vehicle:</b> <span id="mc-namer-vehicle">None</span></div>
+01925:                     <div><b>Progress:</b> <span id="mc-namer-progress">0 / 0</span></div>
+01926:                     <div><b>Renamed:</b> <span id="mc-namer-renamed">0</span></div>
+01927:                     <div><b>Skipped:</b> <span id="mc-namer-skipped">0</span></div>
+01928:                 </div>
+01929: 
+01930:                 <div id="mc-namer-log"></div>
+01931:             </div>
+01932: 
+01933:             <div id="mc-station-view" class="mc-tool-view" style="display:none;">
+01934:                 <div class="mc-namer-section">
+01935:                     <label><b>Station Type:</b></label>
+01936:                     <select id="mc-station-type">
+01937:                         ${Object.entries(STATION_TYPES).map(([key, label]) => `<option value="${key}">${label}</option>`).join('')}
+01938:                     </select>
+01939: 
+01940:                     <label style="margin-top:6px; display:block;"><b>Mode:</b></label>
+01941:                     <select id="mc-station-mode">
+01942:                         <option value="all">All matching stations from selected start point</option>
+01943:                         <option value="single">Selected station only</option>
+01944:                     </select>
+01945: 
+01946:                     <label style="margin-top:6px; display:block;"><b>Action:</b></label>
+01947:                     <select id="mc-station-action">
+01948:                         <option value="preview">Preview only - do not save</option>
+01949:                         <option value="save">Rename and save</option>
+01950:                     </select>
+01951: 
+01952:                     <label style="margin-top:6px; display:block;"><b>Start From:</b></label>
+01953:                     <select id="mc-station-startfrom">
+01954:                         <option value="">Refresh stations first</option>
+01955:                     </select>
+01956:                 </div>
+01957: 
+01958:                 <div class="mc-namer-buttons">
+01959:                     <button id="mc-station-refresh">Refresh Stations</button>
+01960:                     <button id="mc-station-start">Start</button>
+01961:                     <button id="mc-station-pause">Pause</button>
+01962:                     <button id="mc-station-stop">Stop</button>
+01963:                     <button id="mc-station-debug">Debug: OFF</button>
+01964:                     <button id="mc-station-clear">Clear Log</button>
+01965:                 </div>
+01966: 
+01967:                 <div class="mc-namer-section">
+01968:                     <div><b>Status:</b> <span id="mc-station-status">Idle</span></div>
+01969:                     <div><b>Station:</b> <span id="mc-station-current">None</span></div>
+01970:                     <div><b>Address:</b> <span id="mc-station-address">None</span></div>
+01971:                     <div><b>Town:</b> <span id="mc-station-town">None</span></div>
+01972:                     <div><b>Before:</b> <span id="mc-station-before">None</span></div>
+01973:                     <div><b>After:</b> <span id="mc-station-after">None</span></div>
+01974:                     <div><b>Progress:</b> <span id="mc-station-progress">0 / 0</span></div>
+01975:                     <div><b>Renamed:</b> <span id="mc-station-renamed">0</span></div>
+01976:                     <div><b>Skipped:</b> <span id="mc-station-skipped">0</span></div>
+01977:                 </div>
+01978: 
+01979:                 <div id="mc-station-log"></div>
+01980:             </div>
+01981: 
+01982:             <div id="mc-personnel-view" class="mc-tool-view" style="display:none;">
+01983:                 <div class="mc-namer-section mc-personnel-navigation-section">
+01984:                     <div class="mc-personnel-navigation-title">Assignment Navigator</div>
+01985: 
+01986:                     <label style="display:block;"><b>Service:</b></label>
+01987:                     <select id="mc-personnel-service">
+01988:                         ${Object.entries(PERSONNEL_SERVICE_DEFINITIONS).map(([key, service]) => `<option value="${key}">${service.icon} ${service.label}</option>`).join('')}
+01989:                     </select>
+01990: 
+01991:                     <label style="margin-top:6px; display:block;"><b>Training profile:</b></label>
+01992:                     <select id="mc-personnel-profile"></select>
+01993: 
+01994:                     <div id="mc-personnel-profile-banner" class="mc-personnel-profile-banner"></div>
+01995: 
+01996:                     <div class="mc-personnel-fixed-grid">
+01997:                         <div><b>Training:</b><br><span id="mc-personnel-profile-training">${PERSONNEL_TRAINING_LABEL}</span></div>
+01998:                         <div><b>Vehicle:</b><br><span id="mc-personnel-profile-vehicle">${PERSONNEL_TARGET_VEHICLE_LABEL}</span></div>
+01999:                         <div><b>Required:</b><br><span id="mc-personnel-profile-requirement">${PERSONNEL_TARGET_PER_VEHICLE} trained staff per vehicle</span></div>
+02000:                     </div>
+02001: 
+02002:                     <div id="mc-personnel-policy-summary" class="mc-personnel-policy-summary"></div>
+02003: 
+02004:                     <label style="margin-top:8px; display:block;"><b>Mode:</b></label>
+02005:                     <select id="mc-personnel-mode">
+02006:                         <option id="mc-personnel-mode-all-option" value="all">All relevant stations from selected start point — scan every station</option>
+02007:                         <option value="target">Ensure each relevant station has Units required</option>
+02008:                         <option value="single">Selected station only</option>
+02009:                     </select>
+02010: 
+02011:                     <label style="margin-top:6px; display:block;"><b>Action:</b></label>
+02012:                     <select id="mc-personnel-action">
+02013:                         <option value="preview">Preview only - do not change assignments</option>
+02014:                         <option value="assign">Assign and verify</option>
+02015:                     </select>
+02016: 
+02017:                     <label style="margin-top:6px; display:block;"><b>Units required:</b></label>
+02018:                     <input id="mc-personnel-units-required" type="number" min="0" step="1" value="0" inputmode="numeric">
+02019:                     <div id="mc-personnel-units-required-note" class="mc-personnel-input-note">Disabled in All Stations mode. Select the target-units mode to enter a stopping target.</div>
+02020: 
+02021:                     <label style="margin-top:6px; display:block;"><b>Start From:</b></label>
+02022:                     <select id="mc-personnel-startfrom">
+02023:                         <option value="">Refresh stations first</option>
+02024:                     </select>
+02025:                 </div>
+02026: 
+02027:                 <div class="mc-namer-buttons">
+02028:                     <button id="mc-personnel-refresh">Refresh Stations</button>
+02029:                     <button id="mc-personnel-build-register" title="Quickly refresh every station. Unchanged exact vehicle records are reused; only changed or unsafe vehicles are reopened. No personnel assignments are changed.">Quick Refresh Register</button>
+02030:                     <button id="mc-personnel-full-register" title="Build All Register by reading every exact vehicle assignment page. Use this for a periodic full audit. No personnel assignments are changed.">Full Verify Register</button>
+02031:                     <button id="mc-personnel-export-register" title="Download the saved Personnel Register as a JSON backup.">Export Register</button>
+02032:                     <button id="mc-personnel-import-register" title="Replace the saved Personnel Register with a validated JSON backup.">Import Register</button>
+02033:                     <input id="mc-personnel-import-register-file" type="file" accept="application/json,.json" hidden>
+02034:                     <button id="mc-personnel-start">Start</button>
+02035:                     <button id="mc-personnel-pause">Pause</button>
+02036:                     <button id="mc-personnel-stop">Stop</button>
+02037:                     <button id="mc-personnel-view-station-report">View Station Report</button>
+02038:                     <button id="mc-personnel-copy-station">Copy Station Report</button>
+02039:                     <button id="mc-personnel-copy">Copy Overall Report</button>
+02040:                     <button id="mc-personnel-debug">Debug: OFF</button>
+02041:                     <button id="mc-personnel-clear">Clear Log</button>
+02042:                 </div>
+02043: 
+02044:                 <div class="mc-namer-section">
+02045:                     <div><b>Status:</b> <span id="mc-personnel-status">Idle</span></div>
+02046:                     <div><b>Station:</b> <span id="mc-personnel-current">None</span></div>
+02047:                     <div><b>Vehicle:</b> <span id="mc-personnel-vehicle">None</span></div>
+02048:                     <div><b>Station progress:</b> <span id="mc-personnel-progress">0 / 0</span></div>
+02049:                     <div><b>Stations completed:</b> <span id="mc-personnel-completed">0</span></div>
+02050:                     <div><b>Vehicles checked:</b> <span id="mc-personnel-vehicles">0</span></div>
+02051:                     <div><b>Register:</b> <span id="mc-personnel-register-status">No saved vehicles</span></div>
+02052:                     <div><b id="mc-personnel-units-fulfilled-label">Units fulfilled:</b> <span id="mc-personnel-units-fulfilled">0 / All</span></div>
+02053:                     <div><b>Planned / assigned:</b> <span id="mc-personnel-assigned">0</span></div>
+02054:                     <div><b>Need training:</b> <span id="mc-personnel-training-shortfall">0</span></div>
+02055:                     <div><b>Unfilled positions:</b> <span id="mc-personnel-assignment-shortfall">0</span></div>
+02056:                 </div>
+02057: 
+02058:                 <div id="mc-personnel-training-shortfall-section" class="mc-namer-section mc-personnel-training-shortfall-section" hidden>
+02059:                     <div class="mc-personnel-training-shortfall-heading">
+02060:                         ⚠ Stations needing additional qualified personnel:
+02061:                         <span id="mc-personnel-training-shortfall-station-count">0</span>
+02062:                     </div>
+02063:                     <div class="mc-personnel-training-shortfall-note">
+02064:                         This only shows genuine training shortages. Assignment or verification problems are kept separate.
+02065:                     </div>
+02066:                     <div id="mc-personnel-training-shortfall-list" class="mc-personnel-training-shortfall-list"></div>
+02067:                 </div>
+02068: 
+02069:                 <div class="mc-namer-section mc-personnel-report-options">
+02070:                     <b>Report display:</b>
+02071:                     <div class="mc-personnel-report-toggle-grid">
+02072:                         <label class="mc-personnel-report-toggle">
+02073:                             <input id="mc-personnel-show-station-report" type="checkbox" checked>
+02074:                             <span>Latest station report</span>
+02075:                         </label>
+02076:                         <label class="mc-personnel-report-toggle">
+02077:                             <input id="mc-personnel-show-overall-report" type="checkbox" checked>
+02078:                             <span>Overall run report</span>
+02079:                         </label>
+02080:                     </div>
+02081:                     <div class="mc-personnel-report-note">The short status and shortfall figures above always remain visible.</div>
+02082:                 </div>
+02083: 
+02084:                 <div id="mc-personnel-after-action-section" class="mc-namer-section mc-personnel-report-section">
+02085:                     <b>Latest Station After-Action Report</b>
+02086:                     <pre id="mc-personnel-after-action">Run a station preview or assignment to create the station report.</pre>
+02087:                 </div>
+02088: 
+02089:                 <div id="mc-personnel-overall-report-section" class="mc-namer-section mc-personnel-report-section">
+02090:                     <b>Overall Run Report</b>
+02091:                     <pre id="mc-personnel-report">Run a preview or assignment to create the overall report.</pre>
+02092:                 </div>
+02093: 
+02094:                 <div class="mc-personnel-log-heading">Live Activity Log</div>
+02095:                 <div id="mc-personnel-log"></div>
+02096:             </div>
+02097:             </div>
+02098:         `;
+02099: 
+02100:         document.body.appendChild(panel);
+02101:         ensureSingleNamingToolsPanel(panel);
+02102: 
+02103:         const style = document.createElement('style');
+02104:         style.dataset.mcNamerStyle = 'true';
+02105:         style.textContent = `
+02106:             #mc-namer-panel {
+02107:                 position: fixed;
+02108:                 top: 90px;
+02109:                 right: 20px;
+02110:                 width: 470px;
+02111:                 max-height: 760px;
+02112:                 background: #1f2933;
+02113:                 color: #f5f5f5;
+02114:                 z-index: 999999;
+02115:                 border-radius: 8px;
+02116:                 box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+02117:                 font-family: Arial, sans-serif;
+02118:                 font-size: 12px;
+02119:                 overflow: hidden;
+02120:                 display: flex;
+02121:                 flex-direction: column;
+02122:                 max-height: min(760px, calc(100vh - 20px));
+02123:             }
+02124: 
+02125:             #mc-namer-body {
+02126:                 min-height: 0;
+02127:                 overflow-y: auto;
+02128:                 overflow-x: hidden;
+02129:                 overscroll-behavior: contain;
+02130:                 scrollbar-gutter: stable;
+02131:             }
+02132: 
+02133:             #mc-namer-header {
+02134:                 background: #0d6efd;
+02135:                 padding: 7px 8px 7px 10px;
+02136:                 font-weight: bold;
+02137:                 font-size: 14px;
+02138:                 cursor: move;
+02139:                 user-select: none;
+02140:                 display: flex;
+02141:                 align-items: center;
+02142:                 justify-content: space-between;
+02143:                 gap: 8px;
+02144:                 min-height: 34px;
+02145:             }
+02146: 
+02147:             #mc-namer-header-title {
+02148:                 min-width: 0;
+02149:                 overflow: hidden;
+02150:                 white-space: nowrap;
+02151:                 text-overflow: ellipsis;
+02152:             }
+02153: 
+02154:             #mc-namer-collapse {
+02155:                 flex: 0 0 26px;
+02156:                 width: 26px;
+02157:                 height: 24px;
+02158:                 padding: 0;
+02159:                 border: 1px solid rgba(255,255,255,0.45);
+02160:                 border-radius: 5px;
+02161:                 background: rgba(0,0,0,0.18);
+02162:                 color: #ffffff;
+02163:                 font-size: 18px;
+02164:                 font-weight: bold;
+02165:                 line-height: 20px;
+02166:                 cursor: pointer;
+02167:             }
+02168: 
+02169:             #mc-namer-collapse:hover,
+02170:             #mc-namer-collapse:focus-visible {
+02171:                 background: rgba(255,255,255,0.20);
+02172:                 outline: none;
+02173:             }
+02174: 
+02175:             #mc-namer-panel.mc-namer-collapsed {
+02176:                 width: 290px;
+02177:                 max-height: none;
+02178:             }
+02179: 
+02180:             #mc-namer-panel.mc-namer-collapsed #mc-namer-body {
+02181:                 display: none;
+02182:             }
+02183: 
+02184:             .mc-namer-tabs {
+02185:                 display: flex;
+02186:                 gap: 0;
+02187:                 background: #0b1220;
+02188:                 border-bottom: 1px solid #374151;
+02189:                 position: sticky;
+02190:                 top: 0;
+02191:                 z-index: 20;
+02192:             }
+02193: 
+02194:             .mc-namer-tab {
+02195:                 flex: 1;
+02196:                 border: 0;
+02197:                 border-right: 1px solid #374151;
+02198:                 border-radius: 0;
+02199:                 padding: 8px 6px;
+02200:                 background: #1f2937;
+02201:                 color: #cbd5e1;
+02202:                 cursor: pointer;
+02203:                 font-size: 12px;
+02204:                 font-weight: bold;
+02205:             }
+02206: 
+02207:             .mc-namer-tab:last-child {
+02208:                 border-right: 0;
+02209:             }
+02210: 
+02211:             .mc-namer-tab:hover {
+02212:                 background: #273449;
+02213:                 color: #ffffff;
+02214:             }
+02215: 
+02216:             .mc-namer-tab.active {
+02217:                 background: #0d6efd;
+02218:                 color: #ffffff;
+02219:                 box-shadow: inset 0 -3px 0 #93c5fd;
+02220:             }
+02221: 
+02222:             .mc-tool-view {
+02223:                 background: #111827;
+02224:             }
+02225: 
+02226:             .mc-namer-section {
+02227:                 padding: 8px 10px;
+02228:                 background: #111827;
+02229:                 border-bottom: 1px solid #374151;
+02230:                 line-height: 1.5;
+02231:             }
+02232: 
+02233:             #mc-namer-startfrom,
+02234:             #mc-namer-station-type,
+02235:             #mc-namer-unit-class,
+02236:             #mc-namer-mode,
+02237:             #mc-station-startfrom,
+02238:             #mc-station-type,
+02239:             #mc-station-mode,
+02240:             #mc-station-action,
+02241:             #mc-personnel-service,
+02242:             #mc-personnel-profile,
+02243:             #mc-personnel-startfrom,
+02244:             #mc-personnel-mode,
+02245:             #mc-personnel-action,
+02246:             #mc-personnel-units-required {
+02247:                 width: 100%;
+02248:                 margin-top: 4px;
+02249:                 padding: 5px;
+02250:                 color: #111;
+02251:                 border-radius: 4px;
+02252:                 border: 1px solid #555;
+02253:             }
+02254: 
+02255:             .mc-personnel-input-note {
+02256:                 margin-top: 4px;
+02257:                 color: #9ca3af;
+02258:                 font-size: 10px;
+02259:                 line-height: 1.3;
+02260:             }
+02261: 
+02262:             .mc-namer-buttons {
+02263:                 padding: 8px;
+02264:                 display: flex;
+02265:                 gap: 5px;
+02266:                 flex-wrap: wrap;
+02267:                 background: #111827;
+02268:                 border-bottom: 1px solid #374151;
+02269:             }
+02270: 
+02271:             .mc-namer-buttons button {
+02272:                 border: 0;
+02273:                 border-radius: 4px;
+02274:                 padding: 5px 8px;
+02275:                 cursor: pointer;
+02276:                 font-size: 12px;
+02277:             }
+02278: 
+02279:             #mc-namer-refresh,
+02280:             #mc-station-refresh,
+02281:             #mc-personnel-refresh { background: #6c757d; color: white; }
+02282: 
+02283:             #mc-namer-start,
+02284:             #mc-station-start,
+02285:             #mc-personnel-start { background: #198754; color: white; }
+02286: 
+02287:             #mc-namer-pause,
+02288:             #mc-station-pause,
+02289:             #mc-personnel-pause { background: #ffc107; color: #111; }
+02290: 
+02291:             #mc-namer-stop,
+02292:             #mc-station-stop,
+02293:             #mc-personnel-stop { background: #dc3545; color: white; }
+02294: 
+02295:             #mc-personnel-build-register,
+02296:             #mc-personnel-full-register {
+02297:                 background: #0f766e;
+02298:                 color: white;
+02299:                 border: 1px solid #5eead4;
+02300:                 font-weight: bold;
+02301:             }
+02302: 
+02303:             #mc-personnel-export-register { background: #2563eb; color: white; }
+02304:             #mc-personnel-import-register { background: #0e7490; color: white; }
+02305: 
+02306:             #mc-personnel-build-register:disabled,
+02307:             #mc-personnel-full-register:disabled,
+02308:             #mc-personnel-export-register:disabled,
+02309:             #mc-personnel-import-register:disabled {
+02310:                 cursor: not-allowed;
+02311:                 opacity: 0.5;
+02312:             }
+02313: 
+02314:             #mc-personnel-copy,
+02315:             #mc-personnel-copy-station { background: #7c3aed; color: white; }
+02316: 
+02317:             #mc-personnel-view-station-report { background: #2563eb; color: white; }
+02318: 
+02319:             #mc-namer-debug,
+02320:             #mc-station-debug,
+02321:             #mc-personnel-debug { background: #0dcaf0; color: #111; }
+02322: 
+02323:             #mc-namer-clear,
+02324:             #mc-station-clear,
+02325:             #mc-personnel-clear { background: #f8f9fa; color: #111; }
+02326: 
+02327:             #mc-namer-log,
+02328:             #mc-station-log,
+02329:             #mc-personnel-log {
+02330:                 padding: 8px 10px;
+02331:                 max-height: 350px;
+02332:                 overflow-y: auto;
+02333:                 background: #0b1220;
+02334:                 font-family: Consolas, monospace;
+02335:                 white-space: pre-wrap;
+02336:                 line-height: 1.4;
+02337:             }
+02338: 
+02339:             .mc-personnel-navigation-section {
+02340:                 background: linear-gradient(180deg, #111827 0%, #0f172a 100%);
+02341:             }
+02342: 
+02343:             .mc-personnel-navigation-title {
+02344:                 margin-bottom: 7px;
+02345:                 color: #bfdbfe;
+02346:                 font-size: 12px;
+02347:                 font-weight: bold;
+02348:                 letter-spacing: 0.2px;
+02349:             }
+02350: 
+02351:             .mc-personnel-profile-banner {
+02352:                 margin: 7px 0;
+02353:                 padding: 6px 8px;
+02354:                 border: 1px solid #374151;
+02355:                 border-radius: 5px;
+02356:                 background: #0b1220;
+02357:                 font-weight: bold;
+02358:                 line-height: 1.3;
+02359:             }
+02360: 
+02361:             .mc-personnel-profile-banner.is-live {
+02362:                 border-color: #22c55e;
+02363:                 background: rgba(20,83,45,0.32);
+02364:                 color: #bbf7d0;
+02365:             }
+02366: 
+02367:             .mc-personnel-profile-banner.is-preview {
+02368:                 border-color: #f59e0b;
+02369:                 background: rgba(120,53,15,0.28);
+02370:                 color: #fde68a;
+02371:             }
+02372: 
+02373:             .mc-personnel-policy-summary {
+02374:                 margin-top: 7px;
+02375:                 padding: 7px 8px;
+02376:                 border-left: 4px solid #3b82f6;
+02377:                 border-radius: 4px;
+02378:                 background: rgba(30,64,175,0.16);
+02379:                 color: #dbeafe;
+02380:                 font-size: 11px;
+02381:                 line-height: 1.35;
+02382:             }
+02383: 
+02384:             .mc-personnel-policy-summary strong {
+02385:                 color: #ffffff;
+02386:             }
+02387: 
+02388:             #mc-personnel-start:disabled,
+02389:             #mc-personnel-refresh:disabled,
+02390:             #mc-personnel-mode:disabled,
+02391:             #mc-personnel-action:disabled,
+02392:             #mc-personnel-startfrom:disabled {
+02393:                 cursor: not-allowed;
+02394:                 opacity: 0.45;
+02395:                 filter: grayscale(0.35);
+02396:             }
+02397: 
+02398:             .mc-personnel-fixed-grid {
+02399:                 display: grid;
+02400:                 grid-template-columns: repeat(3, minmax(0, 1fr));
+02401:                 gap: 6px;
+02402:             }
+02403: 
+02404:             .mc-personnel-fixed-grid > div {
+02405:                 padding: 6px;
+02406:                 border: 1px solid #374151;
+02407:                 border-radius: 5px;
+02408:                 background: #0b1220;
+02409:                 text-align: center;
+02410:             }
+02411: 
+02412:             .mc-personnel-training-shortfall-section {
+02413:                 border-left: 5px solid #ef4444;
+02414:                 background: #2b1015;
+02415:                 box-shadow: inset 0 0 0 1px rgba(239,68,68,0.28);
+02416:             }
+02417: 
+02418:             .mc-personnel-training-shortfall-heading {
+02419:                 color: #fecaca;
+02420:                 font-weight: bold;
+02421:                 font-size: 12px;
+02422:             }
+02423: 
+02424:             .mc-personnel-training-shortfall-note {
+02425:                 margin-top: 3px;
+02426:                 color: #fca5a5;
+02427:                 font-size: 10px;
+02428:                 line-height: 1.3;
+02429:             }
+02430: 
+02431:             .mc-personnel-training-shortfall-list {
+02432:                 display: grid;
+02433:                 gap: 5px;
+02434:                 max-height: 145px;
+02435:                 margin-top: 7px;
+02436:                 overflow-y: auto;
+02437:                 overscroll-behavior: contain;
+02438:                 scrollbar-gutter: stable;
+02439:             }
+02440: 
+02441:             .mc-personnel-training-shortfall-row {
+02442:                 display: grid;
+02443:                 grid-template-columns: minmax(0, 1fr) auto;
+02444:                 gap: 8px;
+02445:                 align-items: center;
+02446:                 padding: 6px 7px;
+02447:                 border: 1px solid rgba(248,113,113,0.45);
+02448:                 border-radius: 5px;
+02449:                 background: rgba(127,29,29,0.34);
+02450:             }
+02451: 
+02452:             .mc-personnel-training-shortfall-name {
+02453:                 min-width: 0;
+02454:                 color: #fee2e2;
+02455:                 font-weight: bold;
+02456:                 overflow-wrap: anywhere;
+02457:             }
+02458: 
+02459:             .mc-personnel-training-shortfall-value {
+02460:                 color: #ffffff;
+02461:                 font-weight: bold;
+02462:                 white-space: nowrap;
+02463:             }
+02464: 
+02465:             a.mc-personnel-training-shortfall-station {
+02466:                 border-left: 5px solid #ef4444 !important;
+02467:                 box-shadow: inset 0 0 0 1px rgba(239,68,68,0.42) !important;
+02468:                 background-color: rgba(127,29,29,0.24) !important;
+02469:             }
+02470: 
+02471:             .mc-personnel-report-options {
+02472:                 padding-top: 7px;
+02473:                 padding-bottom: 7px;
+02474:             }
+02475: 
+02476:             .mc-personnel-report-toggle-grid {
+02477:                 display: grid;
+02478:                 grid-template-columns: repeat(2, minmax(0, 1fr));
+02479:                 gap: 6px;
+02480:                 margin-top: 6px;
+02481:             }
+02482: 
+02483:             .mc-personnel-report-toggle {
+02484:                 display: flex;
+02485:                 align-items: center;
+02486:                 gap: 6px;
+02487:                 min-width: 0;
+02488:                 padding: 6px 7px;
+02489:                 border: 1px solid #374151;
+02490:                 border-radius: 5px;
+02491:                 background: #0b1220;
+02492:                 cursor: pointer;
+02493:                 user-select: none;
+02494:             }
+02495: 
+02496:             .mc-personnel-report-toggle input {
+02497:                 flex: 0 0 auto;
+02498:                 margin: 0;
+02499:                 cursor: pointer;
+02500:             }
+02501: 
+02502:             .mc-personnel-report-toggle span {
+02503:                 min-width: 0;
+02504:                 line-height: 1.25;
+02505:             }
+02506: 
+02507:             .mc-personnel-report-note {
+02508:                 margin-top: 5px;
+02509:                 color: #9ca3af;
+02510:                 font-size: 11px;
+02511:             }
+02512: 
+02513:             .mc-personnel-report-section {
+02514:                 padding-bottom: 8px;
+02515:                 scroll-margin-top: 42px;
+02516:             }
+02517: 
+02518:             .mc-personnel-report-section[hidden] {
+02519:                 display: none !important;
+02520:             }
+02521: 
+02522:             #mc-personnel-report,
+02523:             #mc-personnel-after-action {
+02524:                 margin: 6px 0 0;
+02525:                 min-height: 130px;
+02526:                 max-height: 280px;
+02527:                 overflow-y: scroll;
+02528:                 overflow-x: auto;
+02529:                 overscroll-behavior: contain;
+02530:                 scrollbar-gutter: stable both-edges;
+02531:                 padding: 8px;
+02532:                 border: 1px solid #374151;
+02533:                 border-radius: 5px;
+02534:                 background: #070d18;
+02535:                 color: #d1fae5;
+02536:                 font: 11px/1.4 Consolas, monospace;
+02537:                 white-space: pre-wrap;
+02538:                 overflow-wrap: anywhere;
+02539:                 user-select: text;
+02540:             }
+02541: 
+02542:             #mc-personnel-after-action {
+02543:                 color: #e0f2fe;
+02544:                 border-color: #2563eb;
+02545:             }
+02546: 
+02547:             #mc-personnel-log {
+02548:                 max-height: 220px;
+02549:                 overflow-y: scroll;
+02550:                 overscroll-behavior: contain;
+02551:                 scrollbar-gutter: stable;
+02552:             }
+02553: 
+02554:             .mc-personnel-log-heading {
+02555:                 padding: 7px 10px;
+02556:                 background: #111827;
+02557:                 border-bottom: 1px solid #374151;
+02558:                 font-weight: bold;
+02559:             }
+02560: 
+02561:             .mc-log-info { color: #93c5fd; }
+02562:             .mc-log-station { color: #bfdbfe; font-weight: bold; margin-top: 8px; }
+02563:             .mc-log-before { color: #fca5a5; }
+02564:             .mc-log-after { color: #86efac; }
+02565:             .mc-log-debug { color: #facc15; }
+02566:             .mc-log-error { color: #f87171; font-weight: bold; }
+02567:             .mc-log-done { color: #22c55e; font-weight: bold; }
+02568: 
+02569:             #mc-namer-panel.mc-ios-safari {
+02570:                 top: calc(8px + env(safe-area-inset-top, 0px));
+02571:                 right: calc(8px + env(safe-area-inset-right, 0px));
+02572:                 left: calc(8px + env(safe-area-inset-left, 0px));
+02573:                 width: auto;
+02574:                 max-width: none;
+02575:                 max-height: calc(
+02576:                     100vh
+02577:                     - 16px
+02578:                     - env(safe-area-inset-top, 0px)
+02579:                     - env(safe-area-inset-bottom, 0px)
+02580:                 );
+02581:                 -webkit-transform: translateZ(0);
+02582:             }
+02583: 
+02584:             @supports (height: 100dvh) {
+02585:                 #mc-namer-panel.mc-ios-safari {
+02586:                     max-height: calc(
+02587:                         100dvh
+02588:                         - 16px
+02589:                         - env(safe-area-inset-top, 0px)
+02590:                         - env(safe-area-inset-bottom, 0px)
+02591:                     );
+02592:                 }
+02593:             }
+02594: 
+02595:             #mc-namer-panel.mc-ios-safari.mc-namer-collapsed {
+02596:                 width: auto;
+02597:             }
+02598: 
+02599:             #mc-namer-panel.mc-ios-safari #mc-namer-header {
+02600:                 cursor: grab;
+02601:                 touch-action: none;
+02602:                 -webkit-user-select: none;
+02603:             }
+02604: 
+02605:             #mc-namer-panel.mc-ios-safari #mc-namer-header:active {
+02606:                 cursor: grabbing;
+02607:             }
+02608: 
+02609:             #mc-namer-panel.mc-ios-safari #mc-namer-body,
+02610:             #mc-namer-panel.mc-ios-safari #mc-namer-log,
+02611:             #mc-namer-panel.mc-ios-safari #mc-station-log,
+02612:             #mc-namer-panel.mc-ios-safari #mc-personnel-log,
+02613:             #mc-namer-panel.mc-ios-safari #mc-personnel-report,
+02614:             #mc-namer-panel.mc-ios-safari #mc-personnel-after-action {
+02615:                 -webkit-overflow-scrolling: touch;
+02616:             }
+02617: 
+02618:             #mc-namer-panel.mc-ios-safari .mc-namer-tab {
+02619:                 min-height: 42px;
+02620:                 padding: 7px 4px;
+02621:                 font-size: 11px;
+02622:                 line-height: 1.2;
+02623:             }
+02624: 
+02625:             #mc-namer-panel.mc-ios-safari .mc-namer-buttons button,
+02626:             #mc-namer-panel.mc-ios-safari select,
+02627:             #mc-namer-panel.mc-ios-safari input {
+02628:                 min-height: 36px;
+02629:                 font-size: 16px;
+02630:             }
+02631: 
+02632:         `;
+02633: 
+02634:         document.head.appendChild(style);
+02635: 
+02636:         document.querySelector('#mc-tab-unit').onclick = () => switchToolTab('unit');
+02637:         document.querySelector('#mc-tab-station').onclick = () => switchToolTab('station');
+02638:         document.querySelector('#mc-tab-personnel').onclick = () => switchToolTab('personnel');
+02639:         document.querySelector('#mc-namer-collapse').onclick = event => {
+02640:             event.preventDefault();
+02641:             event.stopPropagation();
+02642:             togglePanelCollapsed();
+02643:         };
+02644:         document.querySelector('#mc-namer-collapse').onmousedown = event => {
+02645:             event.stopPropagation();
+02646:         };
+02647: 
+02648:         document.querySelector('#mc-namer-refresh').onclick = refreshStations;
+02649:         document.querySelector('#mc-namer-start').onclick = startRun;
+02650:         document.querySelector('#mc-namer-pause').onclick = togglePause;
+02651:         document.querySelector('#mc-namer-stop').onclick = stopRun;
+02652:         document.querySelector('#mc-namer-debug').onclick = toggleDebug;
+02653:         document.querySelector('#mc-namer-clear').onclick = clearLog;
+02654:         document.querySelector('#mc-namer-station-type').onchange = handleUnitStationTypeChange;
+02655:         document.querySelector('#mc-namer-unit-class').onchange = handleUnitClassChange;
+02656:         populateUnitClassDropdown();
+02657: 
+02658:         document.querySelector('#mc-station-refresh').onclick = refreshStationNamingStations;
+02659:         document.querySelector('#mc-station-start').onclick = startStationNamingRun;
+02660:         document.querySelector('#mc-station-pause').onclick = toggleStationNamingPause;
+02661:         document.querySelector('#mc-station-stop').onclick = stopStationNamingRun;
+02662:         document.querySelector('#mc-station-debug').onclick = toggleStationDebug;
+02663:         document.querySelector('#mc-station-clear').onclick = clearStationLog;
+02664:         document.querySelector('#mc-station-type').onchange = populateStationNamingStartDropdown;
+02665:         document.querySelector('#mc-station-startfrom').onchange = updateStationNamingSelectionPreview;
+02666:         document.querySelector('#mc-station-mode').onchange = () => {
+02667:             STATION_STATE.mode = document.querySelector('#mc-station-mode')?.value || 'all';
+02668:         };
+02669:         document.querySelector('#mc-station-action').onchange = () => {
+02670:             STATION_STATE.action = document.querySelector('#mc-station-action')?.value || 'preview';
+02671:         };
+02672: 
+02673:         document.querySelector('#mc-personnel-service').onchange = handlePersonnelServiceChange;
+02674:         document.querySelector('#mc-personnel-profile').onchange = handlePersonnelProfileChange;
+02675:         document.querySelector('#mc-personnel-units-required').onchange = handlePersonnelUnitsRequiredChange;
+02676:         document.querySelector('#mc-personnel-refresh').onclick = refreshPersonnelStations;
+02677:         document.querySelector('#mc-personnel-build-register').onclick = () =>
+02678:             buildPersonnelTrainingRegisterOneClick({ fullVerify: false });
+02679:         document.querySelector('#mc-personnel-full-register').onclick = () =>
+02680:             buildPersonnelTrainingRegisterOneClick({ fullVerify: true });
+02681:         document.querySelector('#mc-personnel-export-register').onclick = exportPersonnelTrainingRegistry;
+02682:         document.querySelector('#mc-personnel-import-register').onclick = () => {
+02683:             document.querySelector('#mc-personnel-import-register-file')?.click();
+02684:         };
+02685:         document.querySelector('#mc-personnel-import-register-file').onchange = async event => {
+02686:             const input = event.currentTarget;
+02687:             const file = input?.files?.[0] || null;
+02688:             if (input) input.value = '';
+02689:             await importPersonnelTrainingRegistry(file);
+02690:         };
+02691:         document.querySelector('#mc-personnel-start').onclick = startPersonnelRun;
+02692:         document.querySelector('#mc-personnel-pause').onclick = togglePersonnelPause;
+02693:         document.querySelector('#mc-personnel-stop').onclick = stopPersonnelRun;
+02694:         document.querySelector('#mc-personnel-view-station-report').onclick = showAndViewPersonnelStationReport;
+02695:         document.querySelector('#mc-personnel-copy-station').onclick = copyPersonnelStationReport;
+02696:         document.querySelector('#mc-personnel-copy').onclick = copyPersonnelReport;
+02697:         document.querySelector('#mc-personnel-debug').onclick = togglePersonnelDebug;
+02698:         document.querySelector('#mc-personnel-clear').onclick = clearPersonnelLog;
+02699:         document.querySelector('#mc-personnel-startfrom').onchange = updatePersonnelSelectionPreview;
+02700:         document.querySelector('#mc-personnel-mode').onchange =
+02701:             handlePersonnelModeChange;
+02702:         document.querySelector('#mc-personnel-action').onchange = () => {
+02703:             PERSONNEL_STATE.action = document.querySelector('#mc-personnel-action')?.value || 'preview';
+02704:         };
+02705:         document.querySelector('#mc-personnel-show-station-report').onchange = () => updatePersonnelReportVisibility(true);
+02706:         document.querySelector('#mc-personnel-show-overall-report').onchange = () => updatePersonnelReportVisibility(true);
+02707: 
+02708:         initialisePersonnelProfileNavigation();
+02709:         initialisePersonnelReportVisibility();
+02710:         makePanelDraggable(panel, document.querySelector('#mc-namer-header'));
+02711:         installToolViewportGuard(panel);
+02712:         syncNamingToolsPanelLifecycle(panel);
+02713: 
+02714:         let savedTab = 'unit';
+02715:         let savedCollapsed = false;
+02716:         try {
+02717:             savedTab = localStorage.getItem(ACTIVE_TAB_STORAGE_KEY) || 'unit';
+02718:             savedCollapsed = localStorage.getItem(COLLAPSED_STORAGE_KEY) === 'true';
+02719:         } catch (e) {}
+02720: 
+02721:         switchToolTab(savedTab === 'station' ? 'station' : savedTab === 'personnel' ? 'personnel' : 'unit', true);
+02722:         setPanelCollapsed(savedCollapsed, false);
+02723:     }
+02724: 
+02725:     function getPersonnelServiceDefinition(serviceId = PERSONNEL_STATE.service) {
+02726:         return PERSONNEL_SERVICE_DEFINITIONS[serviceId]
+02727:             || PERSONNEL_SERVICE_DEFINITIONS.medical;
+02728:     }
+02729: 
+02730:     function getPersonnelProfileDefinition(serviceId = PERSONNEL_STATE.service, profileId = PERSONNEL_STATE.profile) {
+02731:         const service = getPersonnelServiceDefinition(serviceId);
+02732:         return service.profiles.find(profile => profile.id === profileId)
+02733:             || service.profiles[0];
+02734:     }
+02735: 
+02736:     function isLivePersonnelProfile() {
+02737:         return getPersonnelProfileDefinition()?.live === true;
+02738:     }
+02739: 
+02740:     function normalisePersonnelUnitsRequired(value) {
+02741:         const parsed = Number.parseInt(String(value ?? '').trim(), 10);
+02742:         if (!Number.isFinite(parsed) || parsed < 0) return 0;
+02743:         return Math.min(9999, parsed);
+02744:     }
+02745: 
+02746:     function isPersonnelPerStationTargetMode() {
+02747:         return (
+02748:             PERSONNEL_STATE.mode === 'target'
+02749:             && PERSONNEL_STATE.unitsRequired > 0
+02750:         );
+02751:     }
+02752: 
+02753:     function getPersonnelUnitsRemaining() {
+02754:         return isPersonnelPerStationTargetMode()
+02755:             ? PERSONNEL_STATE.unitsRequired
+02756:             : Number.POSITIVE_INFINITY;
+02757:     }
+02758: 
+02759: 
+02760:     function formatPersonnelUnitsFulfilled() {
+02761:         if (isPersonnelPerStationTargetMode()) {
+02762:             const target = PERSONNEL_STATE.unitsRequired;
+02763:             const latestFulfilled = PERSONNEL_STATE.lastStationReport
+02764:                 && !PERSONNEL_STATE.lastStationReport.error
+02765:                     ? Math.min(
+02766:                         target,
+02767:                         Number(
+02768:                             PERSONNEL_STATE.lastStationReport.fulfilledUnits
+02769:                             || 0
+02770:                         )
+02771:                     )
+02772:                     : 0;
+02773: 
+02774:             return `${PERSONNEL_STATE.stationsTargetMet} / ${PERSONNEL_STATE.completedStations} stations met | latest ${latestFulfilled}/${target}`;
+02775:         }
+02776: 
+02777:         return `${PERSONNEL_STATE.unitsFulfilled} / All`;
+02778:     }
+02779: 
+02780:     function handlePersonnelUnitsRequiredChange() {
+02781:         const input =
+02782:             document.querySelector(
+02783:                 '#mc-personnel-units-required'
+02784:             );
+02785: 
+02786:         if (!input) return;
+02787: 
+02788:         if (PERSONNEL_STATE.running) {
+02789:             input.value =
+02790:                 String(
+02791:                     PERSONNEL_STATE
+02792:                         .configuredUnitsRequired ||
+02793:                     0
+02794:                 );
+02795: 
+02796:             personnelLog(
+02797:                 'Stop Personnel Assignment before changing Units required.',
+02798:                 'error'
+02799:             );
+02800: 
+02801:             return;
+02802:         }
+02803: 
+02804:         const configuredTarget =
+02805:             normalisePersonnelUnitsRequired(
+02806:                 input.value
+02807:             );
+02808: 
+02809:         PERSONNEL_STATE
+02810:             .configuredUnitsRequired =
+02811:                 configuredTarget;
+02812: 
+02813:         PERSONNEL_STATE.unitsRequired =
+02814:             0;
+02815: 
+02816:         PERSONNEL_STATE.unitsFulfilled =
+02817:             0;
+02818: 
+02819:         PERSONNEL_STATE.unitTargetReached =
+02820:             false;
+02821: 
+02822:         input.value =
+02823:             String(configuredTarget);
+02824: 
+02825:         try {
+02826:             localStorage.setItem(
+02827:                 PERSONNEL_UNITS_REQUIRED_STORAGE_KEY,
+02828:                 String(configuredTarget)
+02829:             );
+02830:         } catch (_error) {}
+02831: 
+02832:         setPersonnelUiValue(
+02833:             'unitsFulfilled',
+02834:             configuredTarget > 0
+02835:                 ? `0 / ${configuredTarget}`
+02836:                 : '0 / target not set'
+02837:         );
+02838: 
+02839:         personnelLog(
+02840:             configuredTarget > 0
+02841:                 ? `Each-station target is configured for ${configuredTarget} fully staffed unit(s).`
+02842:                 : 'Each-station target has not been entered yet.',
+02843:             'debug'
+02844:         );
+02845:     }
+02846: 
+02847:     function updatePersonnelModeUi() {
+02848:         const modeSelect =
+02849:             document.querySelector(
+02850:                 '#mc-personnel-mode'
+02851:             );
+02852: 
+02853:         const input =
+02854:             document.querySelector(
+02855:                 '#mc-personnel-units-required'
+02856:             );
+02857: 
+02858:         const note =
+02859:             document.querySelector(
+02860:                 '#mc-personnel-units-required-note'
+02861:             );
+02862: 
+02863:         const live =
+02864:             isLivePersonnelProfile();
+02865: 
+02866:         const mode =
+02867:             modeSelect?.value ||
+02868:             PERSONNEL_STATE.mode ||
+02869:             'all';
+02870: 
+02871:         PERSONNEL_STATE.mode =
+02872:             mode;
+02873: 
+02874:         const targetMode =
+02875:             mode === 'target';
+02876: 
+02877:         const fulfilledLabel =
+02878:             document.querySelector(
+02879:                 '#mc-personnel-units-fulfilled-label'
+02880:             );
+02881: 
+02882:         if (fulfilledLabel) {
+02883:             fulfilledLabel.textContent =
+02884:                 targetMode
+02885:                     ? 'Station targets met:'
+02886:                     : 'Units fulfilled:';
+02887:         }
+02888: 
+02889:         if (input) {
+02890:             input.disabled =
+02891:                 !live ||
+02892:                 !targetMode;
+02893: 
+02894:             input.value =
+02895:                 targetMode
+02896:                     ? String(
+02897:                         PERSONNEL_STATE
+02898:                             .configuredUnitsRequired ||
+02899:                         0
+02900:                     )
+02901:                     : '0';
+02902:         }
+02903: 
+02904:         if (note) {
+02905:             note.textContent =
+02906:                 targetMode
+02907:                     ? 'Enter the number of fully staffed units required at every station. Existing covered units count first; only the missing units are topped up.'
+02908:                     : mode === 'single'
+02909:                         ? 'Selected Station mode scans every matching unit at that one station. Units required is not used.'
+02910:                         : 'All Stations mode always scans every relevant station from the selected start point. Units required is not used.';
+02911:         }
+02912: 
+02913:         if (
+02914:             !PERSONNEL_STATE.running
+02915:         ) {
+02916:             setPersonnelUiValue(
+02917:                 'unitsFulfilled',
+02918:                 targetMode &&
+02919:                 PERSONNEL_STATE
+02920:                     .configuredUnitsRequired >
+02921:                     0
+02922:                     ? `0 / ${PERSONNEL_STATE.configuredUnitsRequired}`
+02923:                     : '0 / All'
+02924:             );
+02925:         }
+02926:     }
+02927: 
+02928:     function handlePersonnelModeChange() {
+02929:         if (PERSONNEL_STATE.running) {
+02930:             const select =
+02931:                 document.querySelector(
+02932:                     '#mc-personnel-mode'
+02933:                 );
+02934: 
+02935:             if (select) {
+02936:                 select.value =
+02937:                     PERSONNEL_STATE.mode ||
+02938:                     'all';
+02939:             }
+02940: 
+02941:             personnelLog(
+02942:                 'Stop Personnel Assignment before changing Mode.',
+02943:                 'error'
+02944:             );
+02945: 
+02946:             return;
+02947:         }
+02948: 
+02949:         PERSONNEL_STATE.mode =
+02950:             document.querySelector(
+02951:                 '#mc-personnel-mode'
+02952:             )?.value ||
+02953:             'all';
+02954: 
+02955:         PERSONNEL_STATE.unitsRequired =
+02956:             0;
+02957: 
+02958:         PERSONNEL_STATE.unitsFulfilled =
+02959:             0;
+02960: 
+02961:         PERSONNEL_STATE.unitTargetReached =
+02962:             false;
+02963: 
+02964:         updatePersonnelModeUi();
+02965: 
+02966:         const modeMessage =
+02967:             PERSONNEL_STATE.mode ===
+02968:                 'target'
+02969:                 ? 'Mode set to enforce the Units required target independently at every station.'
+02970:                 : PERSONNEL_STATE.mode ===
+02971:                     'single'
+02972:                     ? 'Mode set to Selected station only.'
+02973:                     : 'Mode set to All relevant stations. Every station in scope will be scanned.';
+02974: 
+02975:         personnelLog(
+02976:             modeMessage,
+02977:             'debug'
+02978:         );
+02979:     }
+02980: 
+02981:     function initialisePersonnelProfileNavigation() {
+02982:         const serviceSelect = document.querySelector('#mc-personnel-service');
+02983:         if (!serviceSelect) return;
+02984: 
+02985:         let savedService = 'medical';
+02986:         let savedProfile = 'critical_care';
+02987:         let savedUnitsRequired = 0;
+02988: 
+02989:         try {
+02990:             savedService = localStorage.getItem(PERSONNEL_SERVICE_STORAGE_KEY) || 'medical';
+02991:             savedProfile = localStorage.getItem(PERSONNEL_PROFILE_STORAGE_KEY) || 'critical_care';
+02992:             savedUnitsRequired = normalisePersonnelUnitsRequired(localStorage.getItem(PERSONNEL_UNITS_REQUIRED_STORAGE_KEY) || 0);
+02993:         } catch (_error) {}
+02994: 
+02995:         // Migrate the two service options that were combined in v4.1.2.
+02996:         if (savedService === 'mountain') savedService = 'coastguard';
+02997:         if (savedService === 'airport') savedService = 'fire';
+02998:         if (!PERSONNEL_SERVICE_DEFINITIONS[savedService]) savedService = 'medical';
+02999: 
+03000:         PERSONNEL_STATE.service = savedService;
+03001:         PERSONNEL_STATE.profile =
+03002:             savedProfile;
+03003: 
+03004:         PERSONNEL_STATE
+03005:             .configuredUnitsRequired =
+03006:                 savedUnitsRequired;
+03007: 
+03008:         PERSONNEL_STATE.unitsRequired =
+03009:             0;
+03010: 
+03011:         PERSONNEL_STATE.unitsFulfilled =
+03012:             0;
+03013: 
+03014:         PERSONNEL_STATE.mode =
+03015:             document.querySelector(
+03016:                 '#mc-personnel-mode'
+03017:             )?.value ||
+03018:             'all';
+03019: 
+03020:         serviceSelect.value =
+03021:             savedService;
+03022: 
+03023:         populatePersonnelProfileSelect(
+03024:             savedProfile
+03025:         );
+03026: 
+03027:         updatePersonnelProfileUi(
+03028:             false
+03029:         );
+03030: 
+03031:         updatePersonnelModeUi();
+03032:     }
+03033: 
+03034:     function populatePersonnelProfileSelect(preferredProfileId = '') {
+03035:         const select = document.querySelector('#mc-personnel-profile');
+03036:         if (!select) return;
+03037: 
+03038:         const service = getPersonnelServiceDefinition();
+03039:         select.innerHTML = '';
+03040: 
+03041:         service.profiles.forEach(profile => {
+03042:             const option = document.createElement('option');
+03043:             option.value = profile.id;
+03044:             option.textContent = `${profile.label}${profile.live ? ' — LIVE' : ' — UI preview'}`;
+03045:             select.appendChild(option);
+03046:         });
+03047: 
+03048:         const validPreferred = service.profiles.some(profile => profile.id === preferredProfileId)
+03049:             ? preferredProfileId
+03050:             : service.profiles[0]?.id || '';
+03051: 
+03052:         PERSONNEL_STATE.profile = validPreferred;
+03053:         select.value = validPreferred;
+03054:     }
+03055: 
+03056:     function handlePersonnelServiceChange() {
+03057:         if (PERSONNEL_STATE.running) {
+03058:             personnelLog('Stop Personnel Assignment before changing Service.', 'error');
+03059:             const select = document.querySelector('#mc-personnel-service');
+03060:             if (select) select.value = PERSONNEL_STATE.service;
+03061:             return;
+03062:         }
+03063: 
+03064:         PERSONNEL_STATE.service = document.querySelector('#mc-personnel-service')?.value || 'medical';
+03065:         populatePersonnelProfileSelect('');
+03066:         updatePersonnelProfileUi(true);
+03067:     }
+03068: 
+03069:     function handlePersonnelProfileChange() {
+03070:         if (PERSONNEL_STATE.running) {
+03071:             personnelLog('Stop Personnel Assignment before changing Training profile.', 'error');
+03072:             const select = document.querySelector('#mc-personnel-profile');
+03073:             if (select) select.value = PERSONNEL_STATE.profile;
+03074:             return;
+03075:         }
+03076: 
+03077:         PERSONNEL_STATE.profile = document.querySelector('#mc-personnel-profile')?.value || 'critical_care';
+03078:         updatePersonnelProfileUi(true);
+03079:     }
+03080: 
+03081:     function updatePersonnelProfileUi(save = true) {
+03082:         const service = getPersonnelServiceDefinition();
+03083:         const profile = getPersonnelProfileDefinition();
+03084:         const live = isLivePersonnelProfile();
+03085: 
+03086:         const training = document.querySelector('#mc-personnel-profile-training');
+03087:         const vehicle = document.querySelector('#mc-personnel-profile-vehicle');
+03088:         const requirement = document.querySelector('#mc-personnel-profile-requirement');
+03089:         const policy = document.querySelector('#mc-personnel-policy-summary');
+03090:         const banner = document.querySelector('#mc-personnel-profile-banner');
+03091:         const modeAll = document.querySelector('#mc-personnel-mode-all-option');
+03092:         const start = document.querySelector('#mc-personnel-start');
+03093:         const refresh = document.querySelector('#mc-personnel-refresh');
+03094:         const mode = document.querySelector('#mc-personnel-mode');
+03095:         const action = document.querySelector('#mc-personnel-action');
+03096:         const unitsRequired = document.querySelector('#mc-personnel-units-required');
+03097:         const startFrom = document.querySelector('#mc-personnel-startfrom');
+03098: 
+03099:         if (training) training.textContent = profile.label;
+03100:         if (vehicle) vehicle.textContent = profile.vehicle;
+03101:         if (requirement) requirement.textContent = profile.requirement;
+03102:         if (policy) {
+03103:             policy.innerHTML = `<strong>${service.icon} ${service.label} policy:</strong> ${profile.policy}`;
+03104:         }
+03105: 
+03106:         if (banner) {
+03107:             banner.classList.toggle('is-live', live);
+03108:             banner.classList.toggle('is-preview', !live);
+03109:             banner.textContent = live
+03110:                 ? '● LIVE PROFILE — the selected assignment engine is enabled.'
+03111:                 : '◐ UI PREVIEW ONLY — assignment controls are safely disabled for this profile.';
+03112:         }
+03113: 
+03114:         if (modeAll) {
+03115:             modeAll.textContent = live
+03116:                 ? `All ${getPersonnelStationScopeLabel()} from selected start point`
+03117:                 : `All relevant ${service.label} stations from selected start point`;
+03118:         }
+03119: 
+03120:         [start, refresh, mode, action, startFrom].forEach(control => {
+03121:             if (control) control.disabled = !live;
+03122:         });
+03123: 
+03124:         if (unitsRequired) {
+03125:             unitsRequired.disabled =
+03126:                 !live ||
+03127:                 (
+03128:                     document.querySelector(
+03129:                         '#mc-personnel-mode'
+03130:                     )?.value ||
+03131:                     'all'
+03132:                 ) !== 'target';
+03133:         }
+03134: 
+03135:         if (start) {
+03136:             start.title = live
+03137:                 ? 'Start the selected Personnel Assignment profile'
+03138:                 : 'This profile is a UI preview and cannot make assignments yet';
+03139:         }
+03140: 
+03141:         if (live) {
+03142:             setPersonnelUiValue('status', PERSONNEL_STATE.filteredStations.length ? 'Ready' : 'Refresh required');
+03143:         } else {
+03144:             setPersonnelUiValue('status', 'Profile UI preview');
+03145:             setPersonnelUiValue('vehicle', 'Not enabled');
+03146:         }
+03147: 
+03148:         if (save) {
+03149:             PERSONNEL_STATE.stations = [];
+03150:             PERSONNEL_STATE.filteredStations = [];
+03151:             PERSONNEL_STATE.queue = [];
+03152:             PERSONNEL_STATE.selectedHref = '';
+03153:             PERSONNEL_STATE.unitsFulfilled = 0;
+03154:             PERSONNEL_STATE.unitTargetReached = false;
+03155:             setPersonnelUiValue('unitsFulfilled', PERSONNEL_STATE.unitsRequired > 0 ? `0 / ${PERSONNEL_STATE.unitsRequired}` : '0 / All');
+03156:             populatePersonnelStartDropdown();
+03157:             setPersonnelUiValue('status', live ? 'Refresh required' : 'Profile UI preview');
+03158:             setPersonnelUiValue('vehicle', live ? 'None' : 'Not enabled');
+03159: 
+03160:             try {
+03161:                 localStorage.setItem(PERSONNEL_SERVICE_STORAGE_KEY, PERSONNEL_STATE.service);
+03162:                 localStorage.setItem(PERSONNEL_PROFILE_STORAGE_KEY, PERSONNEL_STATE.profile);
+03163:             } catch (_error) {}
+03164: 
+03165:             personnelLog(`${service.icon} Service: ${service.label} | Training profile: ${profile.label}${live ? ' (LIVE)' : ' (UI preview only)'}`, live ? 'info' : 'debug');
+03166:         }
+03167: 
+03168:         updatePersonnelModeUi();
+03169:     }
+03170: 
+03171:     function initialisePersonnelReportVisibility() {
+03172:         const stationCheckbox = document.querySelector('#mc-personnel-show-station-report');
+03173:         const overallCheckbox = document.querySelector('#mc-personnel-show-overall-report');
+03174:         if (!stationCheckbox || !overallCheckbox) return;
+03175: 
+03176:         let showStation = true;
+03177:         let showOverall = true;
+03178: 
+03179:         try {
+03180:             showStation = localStorage.getItem(PERSONNEL_STATION_REPORT_VISIBLE_KEY) !== 'false';
+03181:             showOverall = localStorage.getItem(PERSONNEL_OVERALL_REPORT_VISIBLE_KEY) !== 'false';
+03182:         } catch (_error) {}
+03183: 
+03184:         stationCheckbox.checked = showStation;
+03185:         overallCheckbox.checked = showOverall;
+03186:         updatePersonnelReportVisibility(false);
+03187:     }
+03188: 
+03189:     function updatePersonnelReportVisibility(save = true) {
+03190:         const stationCheckbox = document.querySelector('#mc-personnel-show-station-report');
+03191:         const overallCheckbox = document.querySelector('#mc-personnel-show-overall-report');
+03192:         const stationSection = document.querySelector('#mc-personnel-after-action-section');
+03193:         const overallSection = document.querySelector('#mc-personnel-overall-report-section');
+03194: 
+03195:         if (!stationCheckbox || !overallCheckbox || !stationSection || !overallSection) return;
+03196: 
+03197:         const showStation = Boolean(stationCheckbox.checked);
+03198:         const showOverall = Boolean(overallCheckbox.checked);
+03199: 
+03200:         stationSection.hidden = !showStation;
+03201:         overallSection.hidden = !showOverall;
+03202:         stationCheckbox.setAttribute('aria-expanded', showStation ? 'true' : 'false');
+03203:         overallCheckbox.setAttribute('aria-expanded', showOverall ? 'true' : 'false');
+03204: 
+03205:         if (save) {
+03206:             try {
+03207:                 localStorage.setItem(PERSONNEL_STATION_REPORT_VISIBLE_KEY, showStation ? 'true' : 'false');
+03208:                 localStorage.setItem(PERSONNEL_OVERALL_REPORT_VISIBLE_KEY, showOverall ? 'true' : 'false');
+03209:             } catch (_error) {}
+03210:         }
+03211:     }
+03212: 
+03213:     function showAndViewPersonnelStationReport() {
+03214:         const checkbox = document.querySelector('#mc-personnel-show-station-report');
+03215:         if (checkbox && !checkbox.checked) {
+03216:             checkbox.checked = true;
+03217:             updatePersonnelReportVisibility(true);
+03218:         }
+03219: 
+03220:         requestAnimationFrame(() => scrollPersonnelTo('mc-personnel-after-action-section'));
+03221:     }
+03222: 
+03223: 
+03224:     function togglePanelCollapsed() {
+03225:         const panel = document.querySelector('#mc-namer-panel');
+03226:         if (!panel) return;
+03227:         setPanelCollapsed(!panel.classList.contains('mc-namer-collapsed'));
+03228:     }
+03229: 
+03230:     function setPanelCollapsed(collapsed, save = true) {
+03231:         const panel = document.querySelector('#mc-namer-panel');
+03232:         const button = document.querySelector('#mc-namer-collapse');
+03233:         if (!panel || !button) return;
+03234: 
+03235:         panel.classList.toggle('mc-namer-collapsed', Boolean(collapsed));
+03236:         button.textContent = collapsed ? '+' : '−';
+03237:         button.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+03238:         button.title = collapsed ? 'Expand naming tools' : 'Collapse naming tools';
+03239: 
+03240:         if (save) {
+03241:             try {
+03242:                 localStorage.setItem(COLLAPSED_STORAGE_KEY, collapsed ? 'true' : 'false');
+03243:             } catch (e) {}
+03244:         }
+03245:     }
+03246: 

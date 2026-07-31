@@ -1,0 +1,475 @@
+17620:         const loadPanel = document.createElement('div');
+17621:         loadPanel.id = 'vehicle-load-list-box';
+17622:         loadPanel.className = `mf2026-panel ${mfVehicleLoadCollapsed ? 'mf2026-load-collapsed' : ''}`;
+17623: 
+17624:         loadPanel.innerHTML = `
+17625:             <div class="mf2026-load-header-row">
+17626:                 <div id="mf-load-title" class="mf2026-header">Vehicle Load List</div>
+17627:                 <button id="mf-load-minimize" type="button" class="mf2026-button" title="Minimize / expand vehicle load list">${missionFinderIphoneSafari ? (mfVehicleLoadCollapsed ? '▾' : '▴') : (mfVehicleLoadCollapsed ? '+' : '−')}</button>
+17628:             </div>
+17629: 
+17630:             <div id="mf-load-body" class="mf-load-body">
+17631:                 <div class="mf2026-box">
+17632:                     <div class="mf2026-section-title">Progress</div>
+17633:                     <div id="vehicle-load-summary" class="mf2026-small">No mission loaded</div>
+17634:                     <div class="mf2026-progress-wrap" style="margin-top:6px;">
+17635:                         <div id="vehicle-load-progress" class="mf2026-progress-bar"></div>
+17636:                     </div>
+17637:                 </div>
+17638: 
+17639:                 <div class="mf2026-box">
+17640:                     <div class="mf2026-section-title">Required Vehicles <span class="mf2026-small">(selected / required)</span></div>
+17641:                     <div id="vehicle-load-list-content" class="mf2026-small">
+17642:                         Click Unit Finder to load vehicles.
+17643:                     </div>
+17644:                 </div>
+17645: 
+17646:                 <div class="mf2026-box">
+17647:                     <div class="mf2026-section-title">Patients</div>
+17648:                     <div id="vehicle-patient-content" class="mf2026-small">
+17649:                         No patients checked yet.
+17650:                     </div>
+17651:                 </div>
+17652: 
+17653:                 <div class="mf2026-box">
+17654:                     <div class="mf2026-section-title">Session</div>
+17655:                     <div id="session-panel-content" class="mf2026-small">
+17656:                         No session data yet.
+17657:                     </div>
+17658:                 </div>
+17659:             </div>
+17660:         `;
+17661: 
+17662:         const trainedPanel = document.createElement('div');
+17663:         trainedPanel.id = 'trained-personnel-box';
+17664:         trainedPanel.className = `mf2026-panel ${mfTrainedPersonnelCollapsed ? 'mf2026-trained-collapsed' : ''}`;
+17665:         trainedPanel.innerHTML = `
+17666:             <div class="mf2026-trained-header-row">
+17667:                 <div id="mf-trained-title" class="mf2026-header">Trained Personnel</div>
+17668:                 <button id="mf-trained-minimize" type="button" class="mf2026-button" title="Minimize / expand trained personnel">${mfTrainedPersonnelCollapsed ? '+' : '−'}</button>
+17669:             </div>
+17670: 
+17671:             <div id="mf-trained-body" class="mf-trained-body">
+17672:                 <div class="mf2026-box">
+17673:                     <div class="mf2026-section-title">Selected Training Coverage</div>
+17674:                     <div id="trained-personnel-summary" class="mf2026-small">
+17675:                         No selected trained personnel yet.
+17676:                     </div>
+17677:                 </div>
+17678: 
+17679:                 <div class="mf2026-box">
+17680:                     <div class="mf2026-section-title">Personnel and Courses</div>
+17681:                     <div id="trained-personnel-content" class="mf2026-small">
+17682:                         Selected trained personnel will appear here.
+17683:                     </div>
+17684:                 </div>
+17685:             </div>
+17686:         `;
+17687: 
+17688:         const dashboardFooter = document.createElement('footer');
+17689:         dashboardFooter.id = 'mf-dashboard-footer';
+17690:         const dashboardVersion =
+17691:             typeof GM_info !== 'undefined' &&
+17692:             GM_info?.script?.version
+17693:                 ? GM_info.script.version
+17694:                 : '1.0.69';
+17695:         dashboardFooter.textContent =
+17696:             `MissionChief Nexus V${dashboardVersion} · MIT · Martblyth`;
+17697: 
+17698:         if (missionFinderIphoneSafari) {
+17699:             wrapper.appendChild(iphoneLauncher);
+17700:         } else {
+17701:             wrapper.appendChild(dashboardRail);
+17702:             wrapper.appendChild(dashboardUtility);
+17703:             wrapper.appendChild(dashboardFooter);
+17704:             setMissionDashboardTab(
+17705:                 localStorage.getItem(
+17706:                     'mf_nexus_dashboard_tab_v1'
+17707:                 ) || 'mission'
+17708:             );
+17709:         }
+17710:         wrapper.appendChild(panel);
+17711:         wrapper.appendChild(loadPanel);
+17712:         wrapper.appendChild(trainedPanel);
+17713:         document.body.appendChild(wrapper);
+17714: 
+17715:         scheduleMissionRequiredPersonnelPreload(0);
+17716: 
+17717:         function syncVehicleLoadCollapseState() {
+17718:             const expanded = !mfVehicleLoadCollapsed;
+17719:             loadPanel.classList.toggle(
+17720:                 'mf2026-load-collapsed',
+17721:                 mfVehicleLoadCollapsed
+17722:             );
+17723: 
+17724:             const minimizeButton =
+17725:                 loadPanel.querySelector('#mf-load-minimize');
+17726:             const title =
+17727:                 loadPanel.querySelector('#mf-load-title');
+17728: 
+17729:             if (minimizeButton) {
+17730:                 minimizeButton.textContent =
+17731:                     missionFinderIphoneSafari
+17732:                         ? (expanded ? '▴' : '▾')
+17733:                         : (expanded ? '−' : '+');
+17734:                 minimizeButton.title = expanded
+17735:                     ? 'Collapse Vehicle Load List'
+17736:                     : 'Expand Vehicle Load List';
+17737:                 minimizeButton.setAttribute(
+17738:                     'aria-label',
+17739:                     minimizeButton.title
+17740:                 );
+17741:                 minimizeButton.setAttribute(
+17742:                     'aria-controls',
+17743:                     'mf-load-body'
+17744:                 );
+17745:                 minimizeButton.setAttribute(
+17746:                     'aria-expanded',
+17747:                     String(expanded)
+17748:                 );
+17749:             }
+17750: 
+17751:             if (title) {
+17752:                 title.setAttribute(
+17753:                     'aria-controls',
+17754:                     'mf-load-body'
+17755:                 );
+17756:                 title.setAttribute(
+17757:                     'aria-expanded',
+17758:                     String(expanded)
+17759:                 );
+17760:             }
+17761: 
+17762:             loadPanel.dataset.collapsed =
+17763:                 String(mfVehicleLoadCollapsed);
+17764: 
+17765:             if (missionFinderIphoneSafari) {
+17766:                 const expanded =
+17767:                     !mfVehicleLoadCollapsed;
+17768:                 iphoneVehicleLauncherButton.classList.toggle(
+17769:                     'mf2026-active',
+17770:                     expanded
+17771:                 );
+17772:                 iphoneVehicleLauncherButton.setAttribute(
+17773:                     'aria-pressed',
+17774:                     String(expanded)
+17775:                 );
+17776:                 iphoneVehicleLauncherButton.setAttribute(
+17777:                     'aria-expanded',
+17778:                     String(expanded)
+17779:                 );
+17780:             }
+17781:         }
+17782: 
+17783:         function toggleVehicleLoadCollapsed() {
+17784:             if (missionFinderIphoneSafari) {
+17785:                 toggleIphoneLauncherPanel('vehicle');
+17786:                 return;
+17787:             }
+17788: 
+17789:             mfVehicleLoadCollapsed = !mfVehicleLoadCollapsed;
+17790:             localStorage.setItem(
+17791:                 MF_VEHICLE_LOAD_COLLAPSED_KEY,
+17792:                 String(mfVehicleLoadCollapsed)
+17793:             );
+17794:             syncVehicleLoadCollapseState();
+17795:             renderVehicleLoadList();
+17796:             renderSessionPanel();
+17797:         }
+17798: 
+17799:         const loadMinimizeButton = loadPanel.querySelector('#mf-load-minimize');
+17800:         const loadTitle = loadPanel.querySelector('#mf-load-title');
+17801: 
+17802:         syncVehicleLoadCollapseState();
+17803: 
+17804:         function syncTrainedPersonnelCollapseState() {
+17805:             const expanded = !mfTrainedPersonnelCollapsed;
+17806:             trainedPanel.classList.toggle(
+17807:                 'mf2026-trained-collapsed',
+17808:                 mfTrainedPersonnelCollapsed
+17809:             );
+17810: 
+17811:             const minimizeButton =
+17812:                 trainedPanel.querySelector('#mf-trained-minimize');
+17813:             const title =
+17814:                 trainedPanel.querySelector('#mf-trained-title');
+17815: 
+17816:             if (minimizeButton) {
+17817:                 minimizeButton.textContent = expanded ? '−' : '+';
+17818:                 minimizeButton.title = expanded
+17819:                     ? 'Collapse Trained Personnel'
+17820:                     : 'Expand Trained Personnel';
+17821:                 minimizeButton.setAttribute(
+17822:                     'aria-label',
+17823:                     minimizeButton.title
+17824:                 );
+17825:                 minimizeButton.setAttribute(
+17826:                     'aria-controls',
+17827:                     'mf-trained-body'
+17828:                 );
+17829:                 minimizeButton.setAttribute(
+17830:                     'aria-expanded',
+17831:                     String(expanded)
+17832:                 );
+17833:             }
+17834: 
+17835:             if (title) {
+17836:                 title.setAttribute(
+17837:                     'aria-controls',
+17838:                     'mf-trained-body'
+17839:                 );
+17840:                 title.setAttribute(
+17841:                     'aria-expanded',
+17842:                     String(expanded)
+17843:                 );
+17844:             }
+17845: 
+17846:             trainedPanel.dataset.collapsed =
+17847:                 String(mfTrainedPersonnelCollapsed);
+17848:         }
+17849: 
+17850:         function toggleTrainedPersonnelCollapsed() {
+17851:             mfTrainedPersonnelCollapsed =
+17852:                 !mfTrainedPersonnelCollapsed;
+17853:             localStorage.setItem(
+17854:                 MF_TRAINED_PERSONNEL_COLLAPSED_KEY,
+17855:                 String(mfTrainedPersonnelCollapsed)
+17856:             );
+17857:             syncTrainedPersonnelCollapseState();
+17858:             renderSelectedTrainedPersonnelPanel();
+17859: 
+17860:             requestAnimationFrame(() => {
+17861:                 keepMissionFinderWindowOnScreen(wrapper);
+17862:             });
+17863:         }
+17864: 
+17865:         const trainedMinimizeButton =
+17866:             trainedPanel.querySelector('#mf-trained-minimize');
+17867:         const trainedTitle =
+17868:             trainedPanel.querySelector('#mf-trained-title');
+17869: 
+17870:         syncTrainedPersonnelCollapseState();
+17871: 
+17872:         if (trainedMinimizeButton) {
+17873:             trainedMinimizeButton.addEventListener(
+17874:                 'click',
+17875:                 function(event) {
+17876:                     event.preventDefault();
+17877:                     event.stopPropagation();
+17878:                     toggleTrainedPersonnelCollapsed();
+17879:                 }
+17880:             );
+17881:         }
+17882: 
+17883:         if (trainedTitle) {
+17884:             trainedTitle.addEventListener('click', function() {
+17885:                 if (mfTrainedPersonnelCollapsed) {
+17886:                     toggleTrainedPersonnelCollapsed();
+17887:                 }
+17888:             });
+17889:         }
+17890: 
+17891:         function persistIphoneLauncherPanelState() {
+17892:             localStorage.setItem(
+17893:                 MF_CONTROL_COLLAPSED_KEY,
+17894:                 String(mfMissionControlCollapsed)
+17895:             );
+17896:             localStorage.setItem(
+17897:                 MF_VEHICLE_LOAD_COLLAPSED_KEY,
+17898:                 String(mfVehicleLoadCollapsed)
+17899:             );
+17900:         }
+17901: 
+17902:         function toggleIphoneLauncherPanel(target) {
+17903:             if (!missionFinderIphoneSafari) return;
+17904: 
+17905:             const nextState =
+17906:                 getMissionFinderIphonePanelStateForToggle(
+17907:                     target,
+17908:                     mfMissionControlCollapsed,
+17909:                     mfVehicleLoadCollapsed
+17910:                 );
+17911: 
+17912:             mfMissionControlCollapsed =
+17913:                 nextState.missionCollapsed;
+17914:             mfVehicleLoadCollapsed =
+17915:                 nextState.vehicleCollapsed;
+17916: 
+17917:             persistIphoneLauncherPanelState();
+17918: 
+17919:             panel.classList.toggle(
+17920:                 'mf2026-control-collapsed',
+17921:                 mfMissionControlCollapsed
+17922:             );
+17923:             loadPanel.classList.toggle(
+17924:                 'mf2026-load-collapsed',
+17925:                 mfVehicleLoadCollapsed
+17926:             );
+17927: 
+17928:             syncMissionControlCollapseButton();
+17929:             syncVehicleLoadCollapseState();
+17930: 
+17931:             if (!mfVehicleLoadCollapsed) {
+17932:                 renderVehicleLoadList();
+17933:                 renderSessionPanel();
+17934:             }
+17935: 
+17936:             requestAnimationFrame(() => {
+17937:                 syncMissionFinderIphoneLauncherPlacement(
+17938:                     wrapper
+17939:                 );
+17940:                 keepMissionFinderWindowOnScreen(
+17941:                     wrapper
+17942:                 );
+17943:             });
+17944:         }
+17945: 
+17946:         if (missionFinderIphoneSafari) {
+17947:             iphoneMissionLauncherButton.addEventListener(
+17948:                 'click',
+17949:                 function(event) {
+17950:                     consumeIphoneDisclosureEvent(event);
+17951:                     toggleIphoneLauncherPanel('mission');
+17952:                 }
+17953:             );
+17954:             iphoneVehicleLauncherButton.addEventListener(
+17955:                 'click',
+17956:                 function(event) {
+17957:                     consumeIphoneDisclosureEvent(event);
+17958:                     toggleIphoneLauncherPanel('vehicle');
+17959:                 }
+17960:             );
+17961:         }
+17962: 
+17963:         if (loadMinimizeButton) {
+17964:             loadMinimizeButton.addEventListener(
+17965:                 'click',
+17966:                 function(event) {
+17967:                     consumeIphoneDisclosureEvent(event);
+17968:                     toggleVehicleLoadCollapsed();
+17969:                 }
+17970:             );
+17971:         }
+17972: 
+17973:         if (loadTitle) {
+17974:             if (missionFinderIphoneSafari) {
+17975:                 loadTitle.setAttribute('role', 'button');
+17976:                 loadTitle.tabIndex = 0;
+17977:             }
+17978: 
+17979:             loadTitle.addEventListener('click', function(event) {
+17980:                 if (missionFinderIphoneSafari) {
+17981:                     consumeIphoneDisclosureEvent(event);
+17982:                     toggleVehicleLoadCollapsed();
+17983:                     return;
+17984:                 }
+17985: 
+17986:                 if (mfVehicleLoadCollapsed) {
+17987:                     toggleVehicleLoadCollapsed();
+17988:                 }
+17989:             });
+17990: 
+17991:             loadTitle.addEventListener('keydown', function(event) {
+17992:                 if (
+17993:                     !missionFinderIphoneSafari ||
+17994:                     (
+17995:                         event.key !== 'Enter' &&
+17996:                         event.key !== ' '
+17997:                     )
+17998:                 ) {
+17999:                     return;
+18000:                 }
+18001: 
+18002:                 consumeIphoneDisclosureEvent(event);
+18003:                 toggleVehicleLoadCollapsed();
+18004:             });
+18005:         }
+18006: 
+18007:         keepPanelPositionCheckbox.addEventListener(
+18008:             'change',
+18009:             function() {
+18010:                 mfKeepPanelPosition = this.checked;
+18011: 
+18012:                 localStorage.setItem(
+18013:                     MF_KEEP_PANEL_POSITION_KEY,
+18014:                     String(mfKeepPanelPosition)
+18015:                 );
+18016: 
+18017:                 if (mfKeepPanelPosition) {
+18018:                     saveMissionFinderWindowPosition(
+18019:                         wrapper,
+18020:                         'position checkbox enabled'
+18021:                     );
+18022: 
+18023:                     updateStatusBox(
+18024:                         'Saved panel position enabled. Drag it to set the default position.'
+18025:                     );
+18026:                 } else {
+18027:                     localStorage.removeItem(MF_PANEL_LEFT_KEY);
+18028:                     localStorage.removeItem(MF_PANEL_TOP_KEY);
+18029: 
+18030:                     centreMissionFinderWindow(
+18031:                         wrapper,
+18032:                         'position checkbox disabled'
+18033:                     );
+18034: 
+18035:                     updateStatusBox(
+18036:                         'Saved panel position disabled. The panel will open centred.'
+18037:                     );
+18038:                 }
+18039:             }
+18040:         );
+18041: 
+18042:         controlCentreBtn.addEventListener('click', function(event) {
+18043:             event.preventDefault();
+18044:             event.stopPropagation();
+18045: 
+18046:             centreMissionFinderWindow(
+18047:                 wrapper,
+18048:                 'centre button'
+18049:             );
+18050: 
+18051:             updateStatusBox(
+18052:                 mfKeepPanelPosition
+18053:                     ? 'Mission Control centred and saved as the new preset position.'
+18054:                     : 'Mission Control moved back to the centre.'
+18055:             );
+18056:         });
+18057: 
+18058:         if (!missionFinderIphoneSafari) {
+18059:             makePanelDraggable(wrapper, dragHandle);
+18060:         }
+18061: 
+18062:         if (missionFinderIosSafari) {
+18063:             resetMissionFinderIosPosition(
+18064:                 wrapper,
+18065:                 'control window opened'
+18066:             );
+18067:         } else if (
+18068:             !applySavedMissionFinderWindowPosition(
+18069:                 wrapper,
+18070:                 'control window opened'
+18071:             )
+18072:         ) {
+18073:             centreMissionFinderWindow(
+18074:                 wrapper,
+18075:                 'control window opened'
+18076:             );
+18077:         }
+18078: 
+18079:         renderVehicleLoadList();
+18080:         renderSessionPanel();
+18081:         startSessionRuntimeTicker();
+18082:         updateAutoModeButton();
+18083:         renderDebugPanel();
+18084:         renderRecorderStatus();
+18085: 
+18086:         installMissionFinderResizeHandler();
+18087: 
+18088:         if (autoModeRunning && !autoModeLoopActive && !isManualAutoStopActive()) {
+18089:             updateStatusBox('Auto Mode restored after mission load.');
+18090:             scheduleAutoModeLoopResume(
+18091:                 'control panel created'
+18092:             );
+18093:         }
+18094:     }

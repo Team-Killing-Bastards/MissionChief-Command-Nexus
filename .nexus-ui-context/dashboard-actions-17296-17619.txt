@@ -1,0 +1,324 @@
+17296:         unitFinderBtn.style.color = 'black';
+17297:         unitFinderBtn.addEventListener('click', async function() {
+17298:             updateStatusBox('Unit Finder clicked');
+17299:             await handleCombinedLogic();
+17300:         });
+17301: 
+17302:         const allyStealBtn = document.createElement('button');
+17303:         allyStealBtn.id = 'mf-ally-steal';
+17304:         allyStealBtn.textContent = 'Ally Steal';
+17305:         allyStealBtn.className = 'mf2026-button';
+17306:         allyStealBtn.style.backgroundColor = '#ff69b4';
+17307:         allyStealBtn.style.color = 'black';
+17308:         allyStealBtn.addEventListener('click', async function() {
+17309:             if (allyStealBtn.disabled) return;
+17310: 
+17311:             allyStealBtn.disabled = true;
+17312:             allyStealBtn.textContent = 'Sending...';
+17313: 
+17314:             try {
+17315:                 await handleAllySteal();
+17316:             } finally {
+17317:                 allyStealBtn.disabled = false;
+17318:                 allyStealBtn.textContent = 'Ally Steal';
+17319:             }
+17320:         });
+17321: 
+17322:         const missionUpdateBtn = document.createElement('button');
+17323:         missionUpdateBtn.id = 'mission-update-box';
+17324:         missionUpdateBtn.textContent = 'Mission Update';
+17325:         missionUpdateBtn.className = 'mf2026-button';
+17326:         missionUpdateBtn.style.backgroundColor = '#0d6efd';
+17327:         missionUpdateBtn.style.color = 'white';
+17328:         missionUpdateBtn.addEventListener(
+17329:             'click',
+17330:             async function() {
+17331:                 if (
+17332:                     missionUpdateBtn.disabled
+17333:                 ) {
+17334:                     return;
+17335:                 }
+17336: 
+17337:                 missionUpdateBtn.disabled =
+17338:                     true;
+17339: 
+17340:                 const originalText =
+17341:                     missionUpdateBtn.textContent;
+17342: 
+17343:                 missionUpdateBtn.textContent =
+17344:                     'Loading...';
+17345: 
+17346:                 try {
+17347:                     updateStatusBox(
+17348:                         'Mission Update: loading the full available vehicle list...'
+17349:                     );
+17350: 
+17351:                     const manualVehicleLoadState =
+17352:                         await ensureVehicleListLoaded({
+17353:                             requireNonZero: true
+17354:                         });
+17355: 
+17356:                     if (!manualVehicleLoadState.ready) {
+17357:                         vehicleLoadState.ready = false;
+17358:                         changeDispatchBoxColor(false);
+17359:                         updateStatusBox(
+17360:                             'Mission Update stopped: the complete vehicle list did not become stable.'
+17361:                         );
+17362:                         return;
+17363:                     }
+17364: 
+17365:                     // A mission refresh can leave the previous UPDATE
+17366:                     // selection key in memory. Start this manual update as
+17367:                     // a fresh pass so Fire Engine and other repeated update
+17368:                     // requirements are actually searched again.
+17369:                     clearSelectionGuards();
+17370: 
+17371:                     const manualUpdateRows =
+17372:                         readMissionUpdateRows();
+17373: 
+17374:                     await preparePoliceVehicleSafetyForRows(
+17375:                         manualUpdateRows,
+17376:                         'MANUAL UPDATE'
+17377:                     );
+17378: 
+17379:                     handleMissionUpdateUnits(
+17380:                         true,
+17381:                         manualUpdateRows
+17382:                     );
+17383:                 } finally {
+17384:                     missionUpdateBtn.disabled =
+17385:                         false;
+17386: 
+17387:                     missionUpdateBtn.textContent =
+17388:                         originalText;
+17389:                 }
+17390:             }
+17391:         );
+17392: 
+17393:         const dispatchBtn = document.createElement('button');
+17394:         dispatchBtn.id = 'dispatch-box';
+17395:         dispatchBtn.textContent = 'Dispatch';
+17396:         dispatchBtn.className = 'mf2026-button';
+17397:         dispatchBtn.style.backgroundColor = 'grey';
+17398:         dispatchBtn.style.color = 'white';
+17399:         dispatchBtn.addEventListener('click', function() {
+17400:             triggerDispatchClick();
+17401:         });
+17402: 
+17403:         const dispatchShareBtn = document.createElement('button');
+17404:         dispatchShareBtn.id = 'dispatch-share-box';
+17405:         dispatchShareBtn.textContent = 'Dispatch & Share';
+17406:         dispatchShareBtn.className = 'mf2026-button';
+17407:         dispatchShareBtn.style.backgroundColor = '#198754';
+17408:         dispatchShareBtn.style.color = 'white';
+17409:         dispatchShareBtn.addEventListener('click', function() {
+17410:             triggerDispatchShareClick();
+17411:         });
+17412: 
+17413:         const autoModeBtn = document.createElement('button');
+17414:         autoModeBtn.id = 'auto-mode-box';
+17415:         autoModeBtn.textContent = 'Auto Mode: Start';
+17416:         autoModeBtn.className = 'mf2026-button';
+17417:         autoModeBtn.style.backgroundColor = '#6f42c1';
+17418:         autoModeBtn.style.color = 'white';
+17419:         autoModeBtn.addEventListener('click', function() {
+17420:             toggleAutoMode();
+17421:         });
+17422: 
+17423:         const diagnosticsBtn = document.createElement('button');
+17424:         diagnosticsBtn.id = 'mf-export-unit-finder-diagnostics';
+17425:         diagnosticsBtn.textContent = 'Export Diagnostics';
+17426:         diagnosticsBtn.className = 'mf2026-button';
+17427:         diagnosticsBtn.style.backgroundColor = '#495057';
+17428:         diagnosticsBtn.style.color = 'white';
+17429:         diagnosticsBtn.title =
+17430:             'Download recent Unit Finder and Mission Update requirements, selected vehicles and Personnel Register training evidence.';
+17431:         diagnosticsBtn.addEventListener('click', function() {
+17432:             exportUnitFinderDiagnostics();
+17433:         });
+17434: 
+17435:         const primaryActions =
+17436:             document.createElement('div');
+17437:         primaryActions.className =
+17438:             'mf2026-primary-actions';
+17439:         primaryActions.appendChild(unitFinderBtn);
+17440:         primaryActions.appendChild(allyStealBtn);
+17441:         primaryActions.appendChild(missionUpdateBtn);
+17442:         primaryActions.appendChild(dispatchBtn);
+17443:         primaryActions.appendChild(dispatchShareBtn);
+17444:         primaryActions.appendChild(autoModeBtn);
+17445: 
+17446:         if (missionFinderIphoneSafari) {
+17447:             primaryActions.appendChild(diagnosticsBtn);
+17448:         } else {
+17449:             diagnosticsPane.appendChild(diagnosticsBtn);
+17450:         }
+17451: 
+17452:         controlBody.appendChild(primaryActions);
+17453: 
+17454:         function syncIphoneAdvancedToggle() {
+17455:             if (!missionFinderIphoneSafari) return;
+17456: 
+17457:             iphoneAdvancedToggle.textContent =
+17458:                 mfIphoneAdvancedExpanded
+17459:                     ? 'Settings  ▴'
+17460:                     : 'Settings  ▾';
+17461:             iphoneAdvancedToggle.setAttribute(
+17462:                 'aria-expanded',
+17463:                 String(mfIphoneAdvancedExpanded)
+17464:             );
+17465:             iphoneAdvancedToggle.setAttribute(
+17466:                 'aria-controls',
+17467:                 'mf-iphone-advanced-body'
+17468:             );
+17469:             advancedBody.id =
+17470:                 'mf-iphone-advanced-body';
+17471:             advancedBody.classList.toggle(
+17472:                 'mf2026-expanded',
+17473:                 mfIphoneAdvancedExpanded
+17474:             );
+17475:         }
+17476: 
+17477:         if (missionFinderIphoneSafari) {
+17478:             syncIphoneAdvancedToggle();
+17479:             iphoneAdvancedToggle.addEventListener(
+17480:                 'click',
+17481:                 function() {
+17482:                     mfIphoneAdvancedExpanded =
+17483:                         !mfIphoneAdvancedExpanded;
+17484:                     localStorage.setItem(
+17485:                         MF_IPHONE_ADVANCED_EXPANDED_KEY,
+17486:                         String(mfIphoneAdvancedExpanded)
+17487:                     );
+17488:                     syncIphoneAdvancedToggle();
+17489:                     requestAnimationFrame(() => {
+17490:                         keepMissionFinderWindowOnScreen(
+17491:                             wrapper
+17492:                         );
+17493:                     });
+17494:                 }
+17495:             );
+17496:         }
+17497: 
+17498:         panel.appendChild(controlBody);
+17499: 
+17500:         function syncMissionControlCollapseButton() {
+17501:             const expanded = !mfMissionControlCollapsed;
+17502:             controlMinimizeBtn.textContent = missionFinderIosSafari
+17503:                 ? (expanded ? '▴' : '▾')
+17504:                 : (expanded ? '−' : '+');
+17505:             controlMinimizeBtn.title = expanded
+17506:                 ? 'Collapse Mission Control'
+17507:                 : 'Expand Mission Control';
+17508:             controlMinimizeBtn.setAttribute(
+17509:                 'aria-label',
+17510:                 controlMinimizeBtn.title
+17511:             );
+17512:             controlMinimizeBtn.setAttribute(
+17513:                 'aria-controls',
+17514:                 'mf-control-body'
+17515:             );
+17516:             controlMinimizeBtn.setAttribute(
+17517:                 'aria-expanded',
+17518:                 String(expanded)
+17519:             );
+17520:             dragHandle.setAttribute(
+17521:                 'aria-controls',
+17522:                 'mf-control-body'
+17523:             );
+17524:             dragHandle.setAttribute(
+17525:                 'aria-expanded',
+17526:                 String(expanded)
+17527:             );
+17528:             panel.dataset.collapsed =
+17529:                 String(mfMissionControlCollapsed);
+17530: 
+17531:             if (missionFinderIphoneSafari) {
+17532:                 const expanded =
+17533:                     !mfMissionControlCollapsed;
+17534:                 iphoneMissionLauncherButton.classList.toggle(
+17535:                     'mf2026-active',
+17536:                     expanded
+17537:                 );
+17538:                 iphoneMissionLauncherButton.setAttribute(
+17539:                     'aria-pressed',
+17540:                     String(expanded)
+17541:                 );
+17542:                 iphoneMissionLauncherButton.setAttribute(
+17543:                     'aria-expanded',
+17544:                     String(expanded)
+17545:                 );
+17546:             }
+17547:         }
+17548: 
+17549:         function toggleMissionControlCollapsed() {
+17550:             if (missionFinderIphoneSafari) {
+17551:                 toggleIphoneLauncherPanel('mission');
+17552:                 return;
+17553:             }
+17554: 
+17555:             mfMissionControlCollapsed = !mfMissionControlCollapsed;
+17556:             localStorage.setItem(
+17557:                 MF_CONTROL_COLLAPSED_KEY,
+17558:                 String(mfMissionControlCollapsed)
+17559:             );
+17560:             panel.classList.toggle(
+17561:                 'mf2026-control-collapsed',
+17562:                 mfMissionControlCollapsed
+17563:             );
+17564:             syncMissionControlCollapseButton();
+17565: 
+17566:             if (!mfMissionControlCollapsed) {
+17567:                 renderVehicleLoadList();
+17568:             }
+17569: 
+17570:             requestAnimationFrame(() => {
+17571:                 keepMissionFinderWindowOnScreen(wrapper);
+17572:             });
+17573:         }
+17574: 
+17575:         syncMissionControlCollapseButton();
+17576: 
+17577:         function consumeIphoneDisclosureEvent(event) {
+17578:             if (!missionFinderIphoneSafari || !event) return;
+17579:             event.preventDefault();
+17580:             event.stopPropagation();
+17581:             event.stopImmediatePropagation?.();
+17582:         }
+17583: 
+17584:         controlMinimizeBtn.addEventListener(
+17585:             'click',
+17586:             function(event) {
+17587:                 consumeIphoneDisclosureEvent(event);
+17588:                 toggleMissionControlCollapsed();
+17589:             }
+17590:         );
+17591: 
+17592:         dragHandle.addEventListener('click', function(event) {
+17593:             if (missionFinderIphoneSafari) {
+17594:                 consumeIphoneDisclosureEvent(event);
+17595:                 toggleMissionControlCollapsed();
+17596:                 return;
+17597:             }
+17598: 
+17599:             if (mfMissionControlCollapsed) {
+17600:                 toggleMissionControlCollapsed();
+17601:             }
+17602:         });
+17603: 
+17604:         if (missionFinderIphoneSafari) {
+17605:             dragHandle.setAttribute('role', 'button');
+17606:             dragHandle.tabIndex = 0;
+17607:             dragHandle.addEventListener('keydown', function(event) {
+17608:                 if (
+17609:                     event.key !== 'Enter' &&
+17610:                     event.key !== ' '
+17611:                 ) {
+17612:                     return;
+17613:                 }
+17614: 
+17615:                 consumeIphoneDisclosureEvent(event);
+17616:                 toggleMissionControlCollapsed();
+17617:             });
+17618:         }
+17619: 

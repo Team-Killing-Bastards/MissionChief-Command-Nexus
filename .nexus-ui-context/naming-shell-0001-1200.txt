@@ -1,0 +1,1200 @@
+00001: // ==UserScript==
+00002: // @name         MissionChief Command Nexus
+00003: // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
+00004: // @version      1.0.69
+00005: // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
+00006: // @author       MartyBlyth
+00007: // @license      MIT
+00008: // @homepageURL  https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
+00009: // @supportURL   https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues
+00010: // @match        https://www.missionchief.co.uk/*
+00011: // @match        https://police.missionchief.co.uk/*
+00012: // @grant        none
+00013: // @run-at       document-end
+00014: // ==/UserScript==
+00015: 
+00016: (function () {
+00017:     'use strict';
+00018: 
+00019:     // One combined installation guard. Each retained module also keeps its
+00020:     // original guard, so enabling an old standalone copy cannot initialise a
+00021:     // second UI or a second automation engine in the same page context.
+00022:     if (window.__MC_COMPLETE_TOOLS_MERGED_V10668_V428__) return;
+00023:     window.__MC_COMPLETE_TOOLS_MERGED_V10668_V428__ = true;
+00024: 
+00025:     // Runtime isolation preserves the behaviour of two standalone userscripts:
+00026:     // a startup fault in one module is reported without preventing the other
+00027:     // independent module from loading.
+00028:     try {
+00029:         /* ==================================================================
+00030:          * MODULE 1: UNIT, STATION & PERSONNEL TOOLS V4.2.8
+00031:          * Original source retained below, excluding only its metadata block.
+00032:          * ================================================================== */
+00033: (function () {
+00034:     'use strict';
+00035: 
+00036:     if (window.__MC_NAMING_TOOLS_V428__) return;
+00037:     window.__MC_NAMING_TOOLS_V428__ = true;
+00038: 
+00039:     const UNIT_VERSION = '3.3.8';
+00040:     const STATION_VERSION = '1.3.3';
+00041:     const PERSONNEL_VERSION = '1.3.8';
+00042:     const PERSONNEL_TRAINING_CODE = 'critical_care';
+00043:     const PERSONNEL_TRAINING_LABEL = 'Critical Care';
+00044:     const PERSONNEL_TARGET_VEHICLE_TYPE_ID = '5';
+00045:     const PERSONNEL_TARGET_VEHICLE_LABEL = 'Ambulance';
+00046:     const PERSONNEL_TARGET_PER_VEHICLE = 1;
+00047:     const PERSONNEL_REQUEST_GAP_MS = 650;
+00048:     const PERSONNEL_STATION_GAP_MS = 900;
+00049:     const PERSONNEL_REGISTER_MAX_CONCURRENCY = 3;
+00050:     const PERSONNEL_REGISTER_LAUNCH_GAP_MS = 350;
+00051:     const PERSONNEL_REGISTER_REVERIFY_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+00052:     const ACTIVE_TAB_STORAGE_KEY = 'mcNamingToolsActiveTab_v32';
+00053:     const COLLAPSED_STORAGE_KEY = 'mcNamingToolsCollapsed_v36';
+00054:     const PERSONNEL_STATION_REPORT_VISIBLE_KEY = 'mcPersonnelStationReportVisible_v407';
+00055:     const PERSONNEL_OVERALL_REPORT_VISIBLE_KEY = 'mcPersonnelOverallReportVisible_v407';
+00056:     const PERSONNEL_SERVICE_STORAGE_KEY = 'mcPersonnelService_v410';
+00057:     const PERSONNEL_PROFILE_STORAGE_KEY = 'mcPersonnelProfile_v410';
+00058:     const PERSONNEL_UNITS_REQUIRED_STORAGE_KEY = 'mcPersonnelUnitsRequired_v423';
+00059:     const PERSONNEL_TRAINING_REGISTRY_STORAGE_KEY =
+00060:         'mcPersonnelVehicleTrainingRegistry_v1';
+00061:     const PERSONNEL_TRAINING_REGISTRY_SCHEMA_VERSION = 1;
+00062:     const PERSONNEL_TRAINING_REGISTRY_EXPORT_FORMAT =
+00063:         'missionchief-personnel-training-register';
+00064:     const PERSONNEL_TRAINING_REGISTRY_EXPORT_VERSION = 1;
+00065:     const PERSONNEL_TRAINING_REGISTRY_IMPORT_MAX_BYTES = 10 * 1024 * 1024;
+00066:     const TOOL_LOG_MAX_LINES = 400;
+00067:     const TOOL_LOG_TRIM_BUFFER = 40;
+00068:     const PERSONNEL_TRAINING_REGISTRY_MAX_VEHICLES = 5000;
+00069:     const PERSONNEL_TRAINING_REGISTRY_MAX_AGE_MS = 180 * 24 * 60 * 60 * 1000;
+00070:     const PERSONNEL_TRAINING_REGISTRY_QUOTA_RETRY_MAX_VEHICLES = 2500;
+00071:     const PERSONNEL_TRAINING_REGISTRY_FLUSH_DELAY_MS = 1400;
+00072:     const PERSONNEL_TRAINING_REGISTRY_PRUNE_INTERVAL_MS = 6 * 60 * 60 * 1000;
+00073:     const TOOL_LIFECYCLE_CLEANUPS = new Set();
+00074:     const TOOL_LOG_SCROLL_FRAMES = new Map();
+00075:     const TOOL_UI_ELEMENT_CACHE = new Map();
+00076:     const PERSONNEL_ASSIGNMENT_INDEX_CACHE = new WeakMap();
+00077:     const PERSONNEL_TRAINING_SET_CACHE = new WeakMap();
+00078:     const PERSONNEL_VISIBLE_TRAINING_COUNTS_CACHE = new WeakMap();
+00079:     const PERSONNEL_REPORT_BLOCK_CACHE = new WeakMap();
+00080:     const PERSONNEL_STATION_LINK_BY_HREF = new Map();
+00081:     const PERSONNEL_START_OPTION_BY_HREF = new Map();
+00082:     const PERSONNEL_HIGHLIGHTED_STATION_LINKS = new Set();
+00083:     let TOOL_LIFECYCLE_CLEANED = false;
+00084:     let NAMING_TOOLS_PANEL_GUARD_INSTALLED = false;
+00085:     let PERSONNEL_TRAINING_REGISTRY_CACHE = null;
+00086:     let PERSONNEL_TRAINING_REGISTRY_DIRTY = false;
+00087:     let PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER = null;
+00088:     let PERSONNEL_TRAINING_REGISTRY_PENDING_EVENT = null;
+00089:     let PERSONNEL_SHORTFALL_CACHE_SIZE = -1;
+00090:     let PERSONNEL_SHORTFALL_CACHE = [];
+00091: 
+00092:     const makeServicePreviewProfile = (id, label, serviceLabel) => ({
+00093:         id,
+00094:         label,
+00095:         vehicle: `Mapped ${serviceLabel} vehicle(s)`,
+00096:         requirement: `${label} on mapped vehicle seats`,
+00097:         policy: `UI preview: ${label} has been added from the supplied ${serviceLabel} training list. Vehicle mapping and required seat counts still need confirmation before assignment can be enabled.`,
+00098:         live: false,
+00099:         stationTypes: []
+00100:     });
+00101: 
+00102:     const makePoliceRule = ({
+00103:         id,
+00104:         label,
+00105:         vehicleTypeIds,
+00106:         vehicleLabel,
+00107:         target,
+00108:         trainingAll,
+00109:         trainingLabel,
+00110:         preferWithout = [],
+00111:         sharedVehiclePool = false
+00112:     }) => Object.freeze({
+00113:         id,
+00114:         label,
+00115:         vehicleTypeIds: vehicleTypeIds.map(String),
+00116:         vehicleLabel,
+00117:         target: Number(target),
+00118:         trainingAll: trainingAll.map(String),
+00119:         trainingLabel,
+00120:         preferWithout: preferWithout.map(String),
+00121:         sharedVehiclePool: Boolean(sharedVehiclePool)
+00122:     });
+00123: 
+00124:     const POLICE_TRAINING_LABELS =
+00125:         Object.freeze({
+00126:             level_1_public_order:
+00127:                 'Level 1 Public Order',
+00128:             level_2_public_order:
+00129:                 'Level 2 Public Order',
+00130:             police_sergeant:
+00131:                 'Police Sergeant',
+00132:             police_medic:
+00133:                 'Police Medic',
+00134:             police_inspector:
+00135:                 'Police Inspector',
+00136:             traffic_police:
+00137:                 'Roads Policing',
+00138:             swat:
+00139:                 'Firearms',
+00140:             police_horse:
+00141:                 'Mounted Officer',
+00142:             k9:
+00143:                 'Dog Handler',
+00144:             drone:
+00145:                 'Drone Operator',
+00146:             search_and_rescue:
+00147:                 'Police Search Advisor',
+00148:             polizeihubschrauber:
+00149:                 'Police Aviation',
+00150:             railway_police_command:
+00151:                 'Mobile Operations Management',
+00152:             railway_police:
+00153:                 'Railway Police Officer',
+00154:             bomb_disposal_command:
+00155:                 'EOD Commander',
+00156:             bomb_disposal:
+00157:                 'Bomb Disposal',
+00158:             bomb_disposal_diver:
+00159:                 'Marine Bomb Disposal',
+00160:             elw2:
+00161:                 'Level 1 Incident Commander Training',
+00162:             gw_gefahrgut:
+00163:                 'HazMat Unit',
+00164:             railway_fire:
+00165:                 'Railway Fire'
+00166:         });
+00167: 
+00168:     const POLICE_RULES = Object.freeze({
+00169:         publicOrderLevel1: makePoliceRule({
+00170:             id:
+00171:                 'police_public_order_level_1',
+00172:             label:
+00173:                 'Level 1 Public Order',
+00174:             vehicleTypeIds: [
+00175:                 '8'
+00176:             ],
+00177:             vehicleLabel:
+00178:                 'Incident Response Vehicle',
+00179:             target:
+00180:                 2,
+00181:             trainingAll: [
+00182:                 'level_1_public_order'
+00183:             ],
+00184:             trainingLabel:
+00185:                 'Level 1 Public Order',
+00186:             sharedVehiclePool:
+00187:                 true
+00188:         }),
+00189:         publicOrderLevel2: makePoliceRule({
+00190:             id:
+00191:                 'police_public_order_level_2',
+00192:             label:
+00193:                 'Level 2 Public Order',
+00194:             vehicleTypeIds: [
+00195:                 '8'
+00196:             ],
+00197:             vehicleLabel:
+00198:                 'Incident Response Vehicle',
+00199:             target:
+00200:                 2,
+00201:             trainingAll: [
+00202:                 'level_2_public_order'
+00203:             ],
+00204:             trainingLabel:
+00205:                 'Level 2 Public Order',
+00206:             sharedVehiclePool:
+00207:                 true
+00208:         }),
+00209:         publicOrderSergeant: makePoliceRule({
+00210:             id:
+00211:                 'police_public_order_sergeant',
+00212:             label:
+00213:                 'Police Sergeant',
+00214:             vehicleTypeIds: [
+00215:                 '8'
+00216:             ],
+00217:             vehicleLabel:
+00218:                 'Incident Response Vehicle',
+00219:             target:
+00220:                 2,
+00221:             trainingAll: [
+00222:                 'police_sergeant'
+00223:             ],
+00224:             trainingLabel:
+00225:                 'Police Sergeant',
+00226:             sharedVehiclePool:
+00227:                 true
+00228:         }),
+00229:         publicOrderMedic: makePoliceRule({
+00230:             id:
+00231:                 'police_public_order_medic',
+00232:             label:
+00233:                 'Police Medic',
+00234:             vehicleTypeIds: [
+00235:                 '8'
+00236:             ],
+00237:             vehicleLabel:
+00238:                 'Incident Response Vehicle',
+00239:             target:
+00240:                 2,
+00241:             trainingAll: [
+00242:                 'police_medic'
+00243:             ],
+00244:             trainingLabel:
+00245:                 'Police Medic',
+00246:             sharedVehiclePool:
+00247:                 true
+00248:         }),
+00249:         publicOrderCombined: makePoliceRule({
+00250:             id: 'police_public_order_combined',
+00251:             label: 'Public Order L1 + L2 + Sergeant + Police Medic',
+00252:             vehicleTypeIds: ['8'],
+00253:             vehicleLabel: 'Incident Response Vehicle',
+00254:             target: 2,
+00255:             trainingAll: ['level_1_public_order', 'level_2_public_order', 'police_sergeant', 'police_medic'],
+00256:             trainingLabel: 'Level 1 + Level 2 + Sergeant + Police Medic',
+00257:             sharedVehiclePool: true
+00258:         }),
+00259:         inspector: makePoliceRule({
+00260:             id: 'police_inspector',
+00261:             label: 'Police Inspector',
+00262:             vehicleTypeIds: ['8'],
+00263:             vehicleLabel: 'Incident Response Vehicle',
+00264:             target: 2,
+00265:             trainingAll: ['police_inspector'],
+00266:             trainingLabel: 'Police Inspector',
+00267:             sharedVehiclePool: true
+00268:         }),
+00269:         roads: makePoliceRule({
+00270:             id: 'police_roads_firearms',
+00271:             label: 'Roads Policing + Firearms',
+00272:             vehicleTypeIds: ['25'],
+00273:             vehicleLabel: 'Armed Traffic Car',
+00274:             target: 2,
+00275:             trainingAll: ['traffic_police', 'swat'],
+00276:             trainingLabel: 'Roads Policing + Firearms'
+00277:         }),
+00278:         firearms: makePoliceRule({
+00279:             id: 'police_mrav_firearms',
+00280:             label: 'Firearms',
+00281:             vehicleTypeIds: ['56'],
+00282:             vehicleLabel: 'Multi-Role Armoured Vehicle',
+00283:             target: 6,
+00284:             trainingAll: ['swat'],
+00285:             trainingLabel: 'Firearms',
+00286:             preferWithout: ['traffic_police']
+00287:         }),
+00288:         mounted: makePoliceRule({
+00289:             id: 'police_mounted',
+00290:             label: 'Mounted Officers',
+00291:             vehicleTypeIds: ['55'],
+00292:             vehicleLabel: 'Mounted Unit',
+00293:             target: 1,
+00294:             trainingAll: ['police_horse'],
+00295:             trainingLabel: 'Mounted Officers'
+00296:         }),
+00297:         dog: makePoliceRule({
+00298:             id: 'police_dog',
+00299:             label: 'Dog handling',
+00300:             vehicleTypeIds: ['12'],
+00301:             vehicleLabel: 'Dog Support Unit',
+00302:             target: 1,
+00303:             trainingAll: ['k9'],
+00304:             trainingLabel: 'Dog handling'
+00305:         }),
+00306:         searchAdvisor: makePoliceRule({
+00307:             id: 'police_drone_search_advisor',
+00308:             label: 'Drone Operator + Police Search Advisor',
+00309:             vehicleTypeIds: ['91'],
+00310:             vehicleLabel: 'Police Drone Vehicle',
+00311:             target: 2,
+00312:             trainingAll: ['drone', 'search_and_rescue'],
+00313:             trainingLabel: 'Drone Operator + Police Search Advisor',
+00314:             sharedVehiclePool: true
+00315:         }),
+00316:         drone: makePoliceRule({
+00317:             id: 'police_drone',
+00318:             label: 'Drone Operator',
+00319:             vehicleTypeIds: ['91'],
+00320:             vehicleLabel: 'Police Drone Vehicle',
+00321:             target: 2,
+00322:             trainingAll: ['drone'],
+00323:             trainingLabel: 'Drone Operator',
+00324:             preferWithout: ['search_and_rescue'],
+00325:             sharedVehiclePool: true
+00326:         }),
+00327:         aviation: makePoliceRule({
+00328:             id: 'police_aviation',
+00329:             label: 'Police aviation',
+00330:             vehicleTypeIds: ['11'],
+00331:             vehicleLabel: 'Police Helicopter',
+00332:             target: 3,
+00333:             trainingAll: ['polizeihubschrauber'],
+00334:             trainingLabel: 'Police aviation'
+00335:         }),
+00336:         mobileOperations: makePoliceRule({
+00337:             id: 'police_mobile_operations',
+00338:             label: 'Mobile Operations Management',
+00339:             vehicleTypeIds: ['108'],
+00340:             vehicleLabel: 'EIU',
+00341:             target: 2,
+00342:             trainingAll: ['railway_police_command'],
+00343:             trainingLabel: 'Mobile Operations Manager'
+00344:         }),
+00345:         railway: makePoliceRule({
+00346:             id: 'police_railway',
+00347:             label: 'Railway Police Officer',
+00348:             vehicleTypeIds: ['8'],
+00349:             vehicleLabel: 'Railway Policing IRV',
+00350:             target: 2,
+00351:             trainingAll: ['railway_police'],
+00352:             trainingLabel: 'Railway Police Officer',
+00353:             preferWithout: ['railway_police_command'],
+00354:             sharedVehiclePool: true
+00355:         }),
+00356:         eodCommander: makePoliceRule({
+00357:             id: 'police_eod_commander',
+00358:             label: 'EOD Commander',
+00359:             vehicleTypeIds: ['109'],
+00360:             vehicleLabel: 'EOD Commander Vehicle',
+00361:             target: 2,
+00362:             trainingAll: ['bomb_disposal_command'],
+00363:             trainingLabel: 'EOD Commander'
+00364:         }),
+00365:         eodResponse: makePoliceRule({
+00366:             id: 'police_eod_response',
+00367:             label: 'Bomb Disposal',
+00368:             vehicleTypeIds: ['110'],
+00369:             vehicleLabel: 'EOD Response Vehicle',
+00370:             target: 4,
+00371:             trainingAll: ['bomb_disposal'],
+00372:             trainingLabel: 'Bomb Disposal',
+00373:             preferWithout: ['bomb_disposal_command']
+00374:         }),
+00375:         eodMedium: makePoliceRule({
+00376:             id: 'police_eod_medium',
+00377:             label: 'Bomb Disposal',
+00378:             vehicleTypeIds: ['111'],
+00379:             vehicleLabel: 'EOD Medium Equipment Van',
+00380:             target: 3,
+00381:             trainingAll: ['bomb_disposal'],
+00382:             trainingLabel: 'Bomb Disposal',
+00383:             preferWithout: ['bomb_disposal_command']
+00384:         }),
+00385:         eodHeavy: makePoliceRule({
+00386:             id: 'police_eod_heavy',
+00387:             label: 'Bomb Disposal',
+00388:             vehicleTypeIds: ['112'],
+00389:             vehicleLabel: 'EOD Heavy Equipment Vehicle',
+00390:             target: 2,
+00391:             trainingAll: ['bomb_disposal'],
+00392:             trainingLabel: 'Bomb Disposal',
+00393:             preferWithout: ['bomb_disposal_command']
+00394:         }),
+00395:         marineResponse: makePoliceRule({
+00396:             id: 'police_marine_eod_response',
+00397:             label: 'Marine Bomb Disposal',
+00398:             vehicleTypeIds: ['113'],
+00399:             vehicleLabel: 'Marine EOD Response Vehicle',
+00400:             target: 4,
+00401:             trainingAll: ['bomb_disposal_diver'],
+00402:             trainingLabel: 'Marine Bomb Disposal'
+00403:         }),
+00404:         marineEquipment: makePoliceRule({
+00405:             id: 'police_marine_eod_equipment',
+00406:             label: 'Marine Bomb Disposal',
+00407:             vehicleTypeIds: ['114'],
+00408:             vehicleLabel: 'Marine EOD Equipment Van',
+00409:             target: 3,
+00410:             trainingAll: ['bomb_disposal_diver'],
+00411:             trainingLabel: 'Marine Bomb Disposal'
+00412:         })
+00413:     });
+00414: 
+00415:     const FIRE_RULES = Object.freeze({
+00416:         incidentCommand: makePoliceRule({
+00417:             id: 'fire_level_1_incident_command', label: 'Level 1 Incident Commander Training',
+00418:             vehicleTypeIds: ['15'], vehicleLabel: 'Incident Command and Control Unit', target: 3,
+00419:             trainingAll: ['elw2'], trainingLabel: 'Level 1 Incident Commander Training'
+00420:         }),
+00421:         hazmatOsu: makePoliceRule({
+00422:             id: 'fire_hazmat_osu', label: 'HazMat Unit',
+00423:             vehicleTypeIds: ['39'], vehicleLabel: 'Operational Support Unit', target: 6,
+00424:             trainingAll: ['gw_gefahrgut'], trainingLabel: 'HazMat Unit'
+00425:         }),
+00426:         railway: makePoliceRule({
+00427:             id: 'fire_railway', label: 'Railway Fire',
+00428:             vehicleTypeIds: ['107'], vehicleLabel: 'RRU', target: 2,
+00429:             trainingAll: ['railway_fire'], trainingLabel: 'Railway Fire'
+00430:         })
+00431:     });
+00432: 
+00433:     const POLICE_ALL_RULES = Object.freeze([
+00434:         POLICE_RULES.eodCommander,
+00435:         POLICE_RULES.searchAdvisor,
+00436:         POLICE_RULES.mobileOperations,
+00437:         POLICE_RULES.roads,
+00438:         POLICE_RULES.inspector,
+00439:         POLICE_RULES.railway,
+00440:         POLICE_RULES.publicOrderCombined,
+00441:         POLICE_RULES.aviation,
+00442:         POLICE_RULES.marineResponse,
+00443:         POLICE_RULES.marineEquipment,
+00444:         POLICE_RULES.eodResponse,
+00445:         POLICE_RULES.eodMedium,
+00446:         POLICE_RULES.eodHeavy,
+00447:         POLICE_RULES.firearms,
+00448:         POLICE_RULES.mounted,
+00449:         POLICE_RULES.dog,
+00450:         POLICE_RULES.drone
+00451:     ]);
+00452: 
+00453:     const livePoliceProfile = (id, label, vehicle, requirement, policy, rules, stationTypes = ['POLICE']) => ({
+00454:         id,
+00455:         label,
+00456:         vehicle,
+00457:         requirement,
+00458:         policy,
+00459:         live: true,
+00460:         engine: 'police',
+00461:         stationTypes,
+00462:         rules
+00463:     });
+00464: 
+00465:     const liveFireProfile = (id, label, vehicle, requirement, policy, rules) => ({
+00466:         id, label, vehicle, requirement, policy, live: true,
+00467:         engine: 'police', stationTypes: ['FIRE'], rules
+00468:     });
+00469: 
+00470:     // Medical specialist profiles stay in UI preview until their exact vehicle,
+00471:     // capacity and training-code mappings have been captured and verified. Critical
+00472:     // Care remains the proven Medical live engine and is exclusive to normal Ambulances.
+00473:     const PERSONNEL_SERVICE_DEFINITIONS = {
+00474:         medical: {
+00475:             label: 'Medical',
+00476:             icon: '🚑',
+00477:             profiles: [
+00478:                 {
+00479:                     id: 'critical_care',
+00480:                     label: 'Critical Care',
+00481:                     vehicle: 'Normal Ambulance',
+00482:                     requirement: '1 Critical Care-trained staff per Ambulance',
+00483:                     policy: 'LIVE ENGINE: Critical Care is used only for normal Ambulances. Existing assignments are preserved and vehicles are safely topped up to 1 trained staff.',
+00484:                     live: true,
+00485:                     engine: 'medical-critical-care',
+00486:                     stationTypes: ['AMBULANCE']
+00487:                 },
+00488:                 {
+00489:                     id: 'ambulance_officer',
+00490:                     label: 'Ambulance Officer',
+00491:                     vehicle: 'Ambulance Officer vehicle',
+00492:                     requirement: 'Ambulance Officer-trained staff',
+00493:                     policy: 'UI preview: the exact vehicle capacity and training mapping still require a verified assignment-page capture before this profile can safely go live.',
+00494:                     live: false,
+00495:                     stationTypes: ['AMBULANCE']
+00496:                 },
+00497:                 {
+00498:                     id: 'hart',
+00499:                     label: 'HART Training',
+00500:                     vehicle: 'PRV / SRV and mapped HART vehicles',
+00501:                     requirement: 'HART-trained staff',
+00502:                     policy: 'UI preview: HART vehicle-by-vehicle staffing rules still require verified assignment-page captures.',
+00503:                     live: false,
+00504:                     stationTypes: ['AMBULANCE']
+00505:                 },
+00506:                 {
+00507:                     id: 'midwifery',
+00508:                     label: 'Midwifery Training',
+00509:                     vehicle: 'Community Midwife vehicle',
+00510:                     requirement: 'Midwifery-trained staff',
+00511:                     policy: 'UI preview: the Community Midwife vehicle type, capacity and exact training code are not yet verified.',
+00512:                     live: false,
+00513:                     stationTypes: ['AMBULANCE']
+00514:                 },
+00515:                 {
+00516:                     id: 'sort',
+00517:                     label: 'SORT Training',
+00518:                     vehicle: 'Mass Casualty / CBRN medical vehicles',
+00519:                     requirement: 'SORT-trained staff',
+00520:                     policy: 'UI preview: the exact SORT vehicle family, capacities and training code still need verified assignment pages.',
+00521:                     live: false,
+00522:                     stationTypes: ['AMBULANCE']
+00523:                 },
+00524:                 {
+00525:                     id: 'specialist_paramedic',
+00526:                     label: 'Specialist Paramedic Training',
+00527:                     vehicle: 'Specialist Paramedic RRV',
+00528:                     requirement: 'Specialist Paramedic-trained staff',
+00529:                     policy: 'UI preview: the Specialist Paramedic RRV vehicle capacity and exact training code still need verification.',
+00530:                     live: false,
+00531:                     stationTypes: ['AMBULANCE']
+00532:                 },
+00533:                 {
+00534:                     id: 'tactical_command',
+00535:                     label: 'Tactical Command Course',
+00536:                     vehicle: 'Ambulance command vehicles',
+00537:                     requirement: 'Tactical Command-trained staff',
+00538:                     policy: 'UI preview: command vehicle mappings, capacities and exact training code still need verification.',
+00539:                     live: false,
+00540:                     stationTypes: ['AMBULANCE']
+00541:                 },
+00542:                 {
+00543:                     id: 'all_medical',
+00544:                     label: 'Run all Medical profiles',
+00545:                     vehicle: 'All mapped medical vehicle groups',
+00546:                     requirement: 'Specialist profiles first; Critical Care Ambulances last',
+00547:                     policy: 'UI preview: this batch option will be enabled only after every Medical specialist profile is individually verified and live.',
+00548:                     live: false,
+00549:                     stationTypes: ['AMBULANCE']
+00550:                 }
+00551:             ]
+00552:         },
+00553:         fire: {
+00554:             label: 'Fire / Airfield',
+00555:             icon: '🚒✈️',
+00556:             profiles: [
+00557:                 makeServicePreviewProfile('fire_aircraft_rescue', 'Aircraft Rescue and Firefighting', 'Fire'),
+00558:                 makeServicePreviewProfile('fire_co_responder', 'Co-Responder Training', 'Fire'),
+00559:                 makeServicePreviewProfile('fire_drone_operator', 'Drone Operator Training', 'Fire'),
+00560:                 liveFireProfile('fire_hazmat', 'HazMat Unit', 'Operational Support Unit (OSU)', '6 HazMat-trained personnel per OSU', 'LIVE: fills each exact type-39 Fire OSU with 6 gw_gefahrgut-trained personnel. Type-7 HazMat Units are excluded.', [FIRE_RULES.hazmatOsu]),
+00561:                 makeServicePreviewProfile('fire_high_volume_pump', 'High Volume Pump Training', 'Fire'),
+00562:                 makeServicePreviewProfile('fire_lifeguard', 'Lifeguard Training', 'Fire'),
+00563:                 liveFireProfile('fire_mobile_command', 'Level 1 Incident Commander Training', 'Incident Command and Control Unit (ICCU)', '3 Level 1 Incident Commanders per ICCU', "LIVE: fills each exact type-15 ICCU with 3 elw2-trained personnel while preserving its remaining seats.", [FIRE_RULES.incidentCommand]),
+00564:                 liveFireProfile('fire_railway', 'Railway Fire', 'RRU', '2 Railway Fire-trained personnel per RRU', 'LIVE: fills each exact type-107 RRU to 2/2 with railway_fire-trained personnel.', [FIRE_RULES.railway]),
+00565:                 {
+00566:                     id: 'all_fire',
+00567:                     label: 'Run all Fire / Airfield profiles',
+00568:                     vehicle: 'All mapped Fire and Airfield vehicle groups',
+00569:                     requirement: 'Process enabled Fire and Airfield profiles in priority order',
+00570:                     policy: 'Future batch option. Airfield training and vehicles are handled within Fire. It remains disabled until every Fire and Airfield profile has confirmed mappings.',
+00571:                     live: false,
+00572:                     stationTypes: ['FIRE', 'AIRFIELD']
+00573:                 }
+00574:             ]
+00575:         },
+00576:         police: {
+00577:             label: 'Police',
+00578:             icon: '🚓',
+00579:             profiles: [
+00580:                 livePoliceProfile('police_bomb_disposal', 'Bomb Disposal', 'EOD Response, Medium and Heavy vehicles', 'Fill each mapped EOD vehicle to its verified maximum with Bomb Disposal personnel', 'LIVE: EOD Commander vehicles are processed first by Run all Police, then Response 4/4, Medium 3/3 and Heavy 2/2. Existing assignments are preserved.', [POLICE_RULES.eodResponse, POLICE_RULES.eodMedium, POLICE_RULES.eodHeavy], ['EOD']),
+00581:                 livePoliceProfile('police_dog_handling', 'Dog handling', 'Dog Support Unit', 'At least 1 Dog Handler per DSU', 'LIVE: safely meets the game-confirmed minimum of one Dog Handler per DSU without moving existing staff.', [POLICE_RULES.dog]),
+00582:                 livePoliceProfile('police_drone_operator', 'Drone Operator Training', 'Police Drone Vehicle', '2 Drone Operators per Police Drone Vehicle', 'LIVE: fills Police Drone Vehicles to 2/2. Search Advisor dual-trained personnel are preserved where possible.', [POLICE_RULES.drone]),
+00583:                 livePoliceProfile('police_eod_commander', 'EOD Commander', 'EOD Commander Vehicle', '2 EOD Commanders per vehicle', 'LIVE: fills EOD Commander vehicles to 2/2 before general Bomb Disposal vehicles in the full Police run.', [POLICE_RULES.eodCommander], ['EOD']),
+00584:                 livePoliceProfile('police_firearms', 'Firearms training', 'Multi-Role Armoured Vehicle', '6 Firearms-trained officers per MRAV', 'LIVE: fills every MRAV to 6/6 with Firearms-trained personnel and preserves Roads Policing dual-trained officers where possible.', [POLICE_RULES.firearms]),
+00585:                 livePoliceProfile(
+00586:                     'police_public_order_1',
+00587:                     'Level 1 Public Order Training',
+00588:                     'Normal Police IRV',
+00589:                     '2 Level 1 Public Order officers per IRV',
+00590:                     'LIVE INDIVIDUAL PROFILE: checks and assigns Level 1 Public Order training only. Other Police qualifications do not affect this result.',
+00591:                     [
+00592:                         POLICE_RULES
+00593:                             .publicOrderLevel1
+00594:                     ]
+00595:                 ),
+00596:                 livePoliceProfile(
+00597:                     'police_public_order_2',
+00598:                     'Level 2 Public Order Training',
+00599:                     'Normal Police IRV',
+00600:                     '2 Level 2 Public Order officers per IRV',
+00601:                     'LIVE INDIVIDUAL PROFILE: checks and assigns Level 2 Public Order training only. Other Police qualifications do not affect this result.',
+00602:                     [
+00603:                         POLICE_RULES
+00604:                             .publicOrderLevel2
+00605:                     ]
+00606:                 ),
+00607:                 livePoliceProfile('police_marine_bomb_disposal', 'Marine Bomb Disposal', 'Marine EOD Response and Equipment vehicles', 'Response 4/4; Equipment Van 3/3', 'LIVE: fills Marine EOD Response vehicles to 4/4 and Equipment Vans to 3/3 with Marine Bomb Disposal personnel.', [POLICE_RULES.marineResponse, POLICE_RULES.marineEquipment], ['EOD']),
+00608:                 livePoliceProfile('police_mobile_operations_management', 'Mobile Operations Management', 'EIU', '2 Mobile Operations Managers per EIU', 'LIVE: fills each EIU to 2/2 with railway_police_command-trained personnel.', [POLICE_RULES.mobileOperations]),
+00609:                 livePoliceProfile('police_mounted', 'Mounted Training', 'Mounted Unit', 'At least 1 Mounted Officer per vehicle', 'LIVE: meets the verified native minimum of one Mounted Officer per Mounted Unit. It does not fill the remaining passenger seats.', [POLICE_RULES.mounted]),
+00610:                 livePoliceProfile('police_inspector', 'Police Inspector Training', 'Normal Police IRV', '2 Police Inspectors per allocated IRV', 'LIVE: uses normal IRVs and fills allocated vehicles to 2/2 with police_inspector-trained officers.', [POLICE_RULES.inspector]),
+00611:                 livePoliceProfile(
+00612:                     'police_medic',
+00613:                     'Police Medic Training',
+00614:                     'Normal Police IRV',
+00615:                     '2 Police Medics per IRV',
+00616:                     'LIVE INDIVIDUAL PROFILE: checks and assigns Police Medic training only. Run all Police profiles retains the combined four-course crew rule.',
+00617:                     [
+00618:                         POLICE_RULES
+00619:                             .publicOrderMedic
+00620:                     ]
+00621:                 ),
+00622:                 livePoliceProfile('police_search_advisor', 'Police Search Advisor Training', 'Police Drone Vehicle', '2 dual-trained Drone/Search Advisor personnel', 'LIVE: both personnel must hold drone and search_and_rescue training.', [POLICE_RULES.searchAdvisor]),
+00623:                 livePoliceProfile(
+00624:                     'police_sergeant',
+00625:                     'Police Sergeant Training',
+00626:                     'Normal Police IRV',
+00627:                     '2 Police Sergeants per IRV',
+00628:                     'LIVE INDIVIDUAL PROFILE: checks and assigns Police Sergeant training only. Run all Police profiles retains the combined four-course crew rule.',
+00629:                     [
+00630:                         POLICE_RULES
+00631:                             .publicOrderSergeant
+00632:                     ]
+00633:                 ),
+00634:                 livePoliceProfile('police_aviation', 'Police aviation', 'Police Helicopter', '3 Police Aviation personnel per helicopter', 'LIVE: fills each Police Helicopter to 3/3 with polizeihubschrauber-trained personnel.', [POLICE_RULES.aviation], ['AIR']),
+00635:                 livePoliceProfile('police_railway', 'Railway Policing', 'Railway Policing IRV', '2 Railway Police Officers per IRV', 'LIVE: fills Railway Unit IRVs to 2/2 with railway_police-trained personnel and preserves Mobile Operations Managers where possible.', [POLICE_RULES.railway]),
+00636:                 livePoliceProfile('police_roads', 'Roads Policing Officer Training', 'Armed Traffic Car', '2 dual-trained Roads Policing + Firearms officers', 'LIVE: both officers must hold traffic_police and swat.', [POLICE_RULES.roads]),
+00637:                 {
+00638:                     id: 'all_police',
+00639:                     label: 'Run all Police profiles',
+00640:                     vehicle: 'All verified Police, Aviation and EOD vehicle groups',
+00641:                     requirement: 'Process verified profiles in safe reservation order',
+00642:                     policy: 'LIVE BATCH: preserves current assignments, assigns specialist and dual-trained roles first, allocates shared IRV/Drone pools safely, then verifies the station-wide result.',
+00643:                     live: true,
+00644:                     engine: 'police',
+00645:                     stationTypes: ['POLICE', 'AIR', 'EOD'],
+00646:                     rules: POLICE_ALL_RULES,
+00647:                     batch: true
+00648:                 }
+00649:             ]
+00650:         },
+00651:         coastguard: {
+00652:             label: 'SAR / Mountain Rescue / Coastguard',
+00653:             icon: '🌊⛰️',
+00654:             profiles: [
+00655:                 makeServicePreviewProfile('sar_cave_rescue', 'Cave Rescue Training', 'SAR'),
+00656:                 makeServicePreviewProfile('sar_coastal_air_rescue', 'Coastal Air Rescue Operations Training', 'SAR'),
+00657:                 makeServicePreviewProfile('sar_coastal_command', 'Coastal Command Training', 'SAR'),
+00658:                 makeServicePreviewProfile('sar_search_advisor', 'Coastguard Search Advisor Training', 'SAR'),
+00659:                 makeServicePreviewProfile('sar_dog_handling', 'Dog handling', 'SAR'),
+00660:                 makeServicePreviewProfile('sar_drone_operator', 'Drone Operator Training', 'SAR'),
+00661:                 makeServicePreviewProfile('sar_flood_first_responder', 'Flood First Responder Training', 'SAR'),
+00662:                 makeServicePreviewProfile('sar_hovercraft_commander', 'Hovercraft Commander Training', 'SAR'),
+00663:                 makeServicePreviewProfile('sar_jet_ski', 'Jet Ski Handling', 'SAR'),
+00664:                 makeServicePreviewProfile('sar_lifeboat_operations', 'Lifeboat Operations Training', 'SAR'),
+00665:                 makeServicePreviewProfile('sar_lifeguard', 'Lifeguard Training', 'SAR'),
+00666:                 makeServicePreviewProfile('sar_mud_rescue', 'Mud Rescue Training', 'SAR'),
+00667:                 makeServicePreviewProfile('sar_rope_rescue', 'Rope Rescue Training', 'SAR'),
+00668:                 makeServicePreviewProfile('sar_search_management', 'Search Management Training', 'SAR'),
+00669:                 {
+00670:                     id: 'all_sar',
+00671:                     label: 'Run all SAR / Mountain Rescue profiles',
+00672:                     vehicle: 'All mapped SAR, Mountain Rescue, Coastguard and Water Rescue vehicle groups',
+00673:                     requirement: 'Process enabled SAR and Mountain Rescue profiles in priority order',
+00674:                     policy: 'Future batch option. It remains disabled until every SAR profile has confirmed mappings.',
+00675:                     live: false,
+00676:                     stationTypes: ['SAR', 'COASTGUARD', 'RNLI']
+00677:                 }
+00678:             ]
+00679:         },
+00680:         all_services: {
+00681:             label: 'All Services',
+00682:             icon: '🧭',
+00683:             profiles: [{
+00684:                 id: 'all_services_profiles',
+00685:                 label: 'Run all service profiles — future option',
+00686:                 vehicle: 'All supported service vehicles',
+00687:                 requirement: 'Process services and profiles in safe priority order',
+00688:                 policy: 'This future option will only be enabled after each individual service is fully tested and live.',
+00689:                 live: false,
+00690:                 stationTypes: []
+00691:             }]
+00692:         }
+00693:     };
+00694: 
+00695:     const TYPE_ID_TO_VEHICLE_TYPE = {
+00696:         "3": "Fire Officer",
+00697:         "4": "Rescue Support Unit (RSU)",
+00698:         "5": "Ambulance",
+00699:         "6": "Water Carrier",
+00700:         "7": "HazMat Unit",
+00701:         "8": "Police Car",
+00702:         "9": "Air Ambulance",
+00703:         "10": "RRV",
+00704:         "11": "Police Helicopter",
+00705:         "12": "DSU",
+00706:         "15": "Incident Command and Control Unit",
+00707:         "16": "Rescue Pump",
+00708:         "17": "Combined Aerial Rescue Pump",
+00709:         "20": "OTL",
+00710:         "25": "Armed Traffic Car",
+00711:         "26": "Heavy 4x4 Tanker",
+00712:         "27": "PRV",
+00713:         "28": "SRV",
+00714:         "29": "Welfare Vehicle",
+00715:         "30": "ATV",
+00716:         "31": "Ambulance Control Unit",
+00717:         "33": "Mass Casualty Equipment",
+00718:         "34": "Ambulance Officer",
+00719:         "35": "BFU",
+00720:         "36": "F/WrC",
+00721:         "38": "RPF",
+00722:         "39": "Operational Support Unit",
+00723:         "51": "PSU Carrier",
+00724:         "54": "Detention Van",
+00725:         "55": "Mounted Unit",
+00726:         "56": "MRAV",
+00727:         "57": "Coastguard Rescue Vehicle",
+00728:         "58": "Mud Rescue Unit",
+00729:         "59": "Coastguard Rope Rescue Unit",
+00730:         "60": "Coastguard Commander",
+00731:         "61": "Flood Rescue Unit Trailer",
+00732:         "62": "Flood Rescue Unit",
+00733:         "63": "Support Unit",
+00734:         "65": "Coastguard Rescue Helicopter Large",
+00735:         "66": "4x4 Vehicle",
+00736:         "67": "ILB Trainer",
+00737:         "68": "ILB",
+00738:         "69": "ALB",
+00739:         "70": "Rescue Watercraft Trailer",
+00740:         "71": "Hovercraft Trailer",
+00741:         "72": "Hovercraft Transporter",
+00742:         "73": "Light 4x4",
+00743:         "74": "Boat Trailer",
+00744:         "75": "Major Foam Tender",
+00745:         "76": "RIV",
+00746:         "77": "Airfield Command",
+00747:         "78": "Rescue Stairs",
+00748:         "79": "Airfield Operations Vehicle",
+00749:         "80": "Airfield Operations Supervisor",
+00750:         "81": "Medical Equipment Trailer",
+00751:         "85": "Control Van SAR",
+00752:         "86": "Operational Support Van",
+00753:         "87": "Operational Support Trailer",
+00754:         "88": "SAR Flood Rescue Trailer",
+00755:         "89": "Drone Vehicle SAR HQ",
+00756:         "91": "Police Drone Vehicle",
+00757:         "93": "SAR 4x4",
+00758:         "96": "Specialist Paramedic RRV",
+00759:         "97": "Patient Transport Service Ambulance",
+00760:         "98": "Critical Care Transfer Ambulance",
+00761:         "99": "Mountain Rescue 4x4",
+00762:         "102": "Search Dog Unit SAR",
+00763:         "105": "Flatbed Recovery Vehicle",
+00764:         "107": "RRU",
+00765:         "108": "EIU",
+00766:         "109": "EOD Commander",
+00767:         "110": "EOD Response Vehicle",
+00768:         "111": "EOD Medium Equipment Van",
+00769:         "112": "EOD Heavy Equipment Vehicle",
+00770:         "113": "Marine EOD Response Vehicle",
+00771:         "114": "Marine EOD Equipment Van",
+00772:         "115": "Welfare Vehicle",
+00773:         "116": "Cell Van"
+00774:     };
+00775: 
+00776:     const VEHICLE_INFO = {
+00777:         "Ambulance": { code: "AB", icon: "🚑" },
+00778:         "Ambulance Officer": { code: "AO", icon: "🚑🎖️" },
+00779:         "Ambulance Control Unit": { code: "ACU", icon: "🚑📡" },
+00780:         "Air Ambulance": { code: "AA", icon: "🚁" },
+00781:         "Rescue Pump": { code: "RP", icon: "🚒" },
+00782:         "Combined Aerial Rescue Pump": { code: "CARP", icon: "🚒🪜" },
+00783:         "Fire Officer": { code: "FO", icon: "🧑‍🚒" },
+00784:         "Police Car": { code: "PC", icon: "🚔" },
+00785:         "Armed Traffic Car": { code: "ATC", icon: "🚔🔫" },
+00786:         "Operational Support Unit": { code: "OSU", icon: "☢️🤿🦺" },
+00787:         "Mass Casualty Equipment": { code: "MCE", icon: "🏥" },
+00788:         "Welfare Vehicle": { code: "WV", icon: "🚌" },
+00789:         "HazMat Unit": { code: "HMAT", icon: "☢️" },
+00790:         "Water Carrier": { code: "WrC", icon: "🚒💦" },
+00791:         "Incident Command and Control Unit": { code: "ICCU", icon: "🔥🚒🔥" },
+00792:         "Heavy 4x4 Tanker": { code: "H4x4T", icon: "🚒💦" },
+00793:         "Police Helicopter": { code: "POLHELI", icon: "🚔🚁" },
+00794:         "Police Drone Vehicle": { code: "PDV", icon: "🚔🚁" },
+00795:         "EIU": { code: "EIU", icon: "🚔📡" },
+00796:         "PSU Carrier": { code: "PSU", icon: "🚔🚌" },
+00797:         "Detention Van": { code: "DV", icon: "🚔🥅" },
+00798:         "Mounted Unit": { code: "MU", icon: "🚔🐎" },
+00799:         "Coastguard Rescue Vehicle": { code: "CRV", icon: "⚠️🛻" },
+00800:         "Mud Rescue Unit": { code: "MRU", icon: "⚠️🟤" },
+00801:         "Coastguard Rope Rescue Unit": { code: "CRRU", icon: "⚠️🧗" },
+00802:         "Coastguard Commander": { code: "CGC", icon: "⚠️👨‍✈️" },
+00803:         "Coastguard Rescue Helicopter Large": { code: "CGH", icon: "🚁⚠️" },
+00804:         "Flood Rescue Unit Trailer": { code: "FRUT", icon: "🛟" },
+00805:         "Flood Rescue Unit": { code: "FRU", icon: "🛟" },
+00806:         "Support Unit": { code: "SU", icon: "⚠️🚐" },
+00807:         "4x4 Vehicle": { code: "4x4", icon: "🛟" },
+00808:         "ILB Trainer": { code: "ILBT", icon: "🚤" },
+00809:         "ILB": { code: "ILB", icon: "🚤" },
+00810:         "ALB": { code: "ALB", icon: "🚤" },
+00811:         "Boat Trailer": { code: "BT", icon: "🚤" },
+00812:         "Rescue Watercraft Trailer": { code: "RWC", icon: "🚤" },
+00813:         "Hovercraft Trailer": { code: "HCT", icon: "🛥️" },
+00814:         "Hovercraft Transporter": { code: "HCTR", icon: "🛥️" },
+00815:         "Light 4x4": { code: "L4x4", icon: "🚙" },
+00816:         "Major Foam Tender": { code: "MFT", icon: "🚒✈️" },
+00817:         "RIV": { code: "RIV", icon: "🚒✈️" },
+00818:         "Airfield Command": { code: "AirCommand", icon: "🚒✈️" },
+00819:         "Rescue Stairs": { code: "RS", icon: "✈️🪜" },
+00820:         "Airfield Operations Vehicle": { code: "AOV", icon: "✈️🚗" },
+00821:         "Airfield Operations Supervisor": { code: "AOS", icon: "✈️👷" },
+00822:         "Medical Equipment Trailer": { code: "MET", icon: "🚒⚕️" },
+00823:         "Control Van SAR": { code: "CV", icon: "📡" },
+00824:         "Operational Support Van": { code: "OSV", icon: "🛠️" },
+00825:         "Operational Support Trailer": { code: "OST", icon: "🛠️" },
+00826:         "SAR Flood Rescue Trailer": { code: "SFR", icon: "🌊" },
+00827:         "Drone Vehicle SAR HQ": { code: "DRV", icon: "🚁" },
+00828:         "SAR 4x4": { code: "SAR4x4", icon: "🟡" },
+00829:         "Specialist Paramedic RRV": { code: "SP-RRV", icon: "🚑" },
+00830:         "Patient Transport Service Ambulance": { code: "PTS", icon: "🚑" },
+00831:         "Critical Care Transfer Ambulance": { code: "CCT", icon: "🚑❤️" },
+00832:         "Mountain Rescue 4x4": { code: "MR4x4", icon: "🏔️" },
+00833:         "Search Dog Unit SAR": { code: "K9", icon: "🐕" },
+00834:         "Flatbed Recovery Vehicle": { code: "FRV", icon: "🛻" },
+00835:         "RRV": { code: "RRV", icon: "🚑" },
+00836:         "RRU": { code: "RRU", icon: "🚒✈️" },
+00837:         "Rescue Support Unit (RSU)": { code: "RSU", icon: "🚒🛠️" },
+00838:         "DSU": { code: "DSU", icon: "🚔🐕" },
+00839:         "OTL": { code: "OTL", icon: "🚔" },
+00840:         "PRV": { code: "PRV", icon: "🚑1️⃣" },
+00841:         "SRV": { code: "SRV", icon: "🚑2️⃣" },
+00842:         "ATV": { code: "ATV", icon: "🚑🦺" },
+00843:         "BFU": { code: "BFU", icon: "🚒✈️" },
+00844:         "F/WrC": { code: "FWrC", icon: "🚒💦" },
+00845:         "RPF": { code: "RPF", icon: "🚒🫧" },
+00846:         "MRAV": { code: "MRAV", icon: "🚔🔫" },
+00847:         "EOD Commander": { code: "EODC", icon: "💣" },
+00848:         "EOD Response Vehicle": { code: "EOD", icon: "💣🚐" },
+00849:         "EOD Medium Equipment Van": { code: "EODM", icon: "💣🚐" },
+00850:         "EOD Heavy Equipment Vehicle": { code: "EODH", icon: "💣🚚" },
+00851:         "Marine EOD Response Vehicle": { code: "MEOD", icon: "💣🚤" },
+00852:         "Marine EOD Equipment Van": { code: "MEODV", icon: "💣🚐" },
+00853:         "Cell Van": { code: "CVAN", icon: "🚔🚐" }
+00854:     };
+00855: 
+00856:     const UNIT_CLASS_ALL = 'ALL';
+00857:     const UNIT_CLASS_TYPE_IDS_BY_STATION_TYPE = Object.freeze({
+00858:         AMBULANCE: Object.freeze([
+00859:             '5', '10', '27', '28', '30', '31', '33', '34', '96', '97', '98'
+00860:         ]),
+00861:         FIRE: Object.freeze([
+00862:             '3', '4', '6', '7', '15', '16', '17', '26', '29', '35', '36', '38', '39'
+00863:         ]),
+00864:         POLICE: Object.freeze([
+00865:             '8', '11', '12', '20', '25', '51', '54', '55', '56', '91', '108', '115', '116'
+00866:         ]),
+00867:         AIR: Object.freeze([
+00868:             '9', '11', '65'
+00869:         ]),
+00870:         AIRFIELD: Object.freeze([
+00871:             '73', '75', '76', '77', '78', '79', '80', '81', '107'
+00872:         ]),
+00873:         COASTGUARD: Object.freeze([
+00874:             '57', '58', '59', '60', '61', '62', '63', '65', '66', '70', '71', '72'
+00875:         ]),
+00876:         RNLI: Object.freeze([
+00877:             '67', '68', '69', '70', '74'
+00878:         ]),
+00879:         SAR: Object.freeze([
+00880:             '61', '62', '63', '66', '70', '71', '72', '85', '86', '87', '88', '89', '93', '99', '102'
+00881:         ]),
+00882:         EOD: Object.freeze([
+00883:             '109', '110', '111', '112', '113', '114'
+00884:         ]),
+00885:         RECOVERY: Object.freeze([
+00886:             '105'
+00887:         ])
+00888:     });
+00889: 
+00890:     const STATION_TYPES = {
+00891:         ALL: "All station types",
+00892:         AMBULANCE: "Ambulance",
+00893:         FIRE: "Fire",
+00894:         POLICE: "Police",
+00895:         AIR: "Air / Heli",
+00896:         COASTGUARD: "Coastguard",
+00897:         RNLI: "RNLI / Lifeboat",
+00898:         SAR: "SAR",
+00899:         AIRFIELD: "Airfield",
+00900:         EOD: "EOD / Bomb",
+00901:         RECOVERY: "Recovery",
+00902:         OTHER: "Other"
+00903:     };
+00904: 
+00905: 
+00906:     // MissionChief's own building type IDs. These are read from the parent
+00907:     // .building_list_li element and do not depend on uploaded station images.
+00908:     const STATION_BUILDING_TYPE_INFO = {
+00909:         0:  { stationType: 'FIRE',       suffix: '-FS',   label: 'Fire station' },
+00910:         18: { stationType: 'FIRE',       suffix: '-FS',   label: 'Small fire station' },
+00911:         2:  { stationType: 'AMBULANCE',  suffix: '-AS',   label: 'Ambulance station' },
+00912:         20: { stationType: 'AMBULANCE',  suffix: '-AS',   label: 'Small ambulance station' },
+00913:         6:  { stationType: 'POLICE',     suffix: '-PS',   label: 'Police station' },
+00914:         19: { stationType: 'POLICE',     suffix: '-PS',   label: 'Small police station' },
+00915:         5:  { stationType: 'AIR',        suffix: '-AA',   label: 'Air ambulance station' },
+00916:         13: { stationType: 'AIR',        suffix: '-PH',   label: 'Police helicopter station' },
+00917:         27: { stationType: 'RNLI',       suffix: '-RNLI', label: 'RNLI / lifeboat station' },
+00918:         28: { stationType: 'COASTGUARD', suffix: '-CG',   label: 'Coastguard station' },
+00919:         30: { stationType: 'COASTGUARD', suffix: '-CG',   label: 'Coastguard helicopter station' },
+00920:         33: { stationType: 'SAR',        suffix: '-SAR',  label: 'Search and rescue station' },
+00921:         34: { stationType: 'RECOVERY',   suffix: '-REC',  label: 'Recovery station' },
+00922:         35: { stationType: 'EOD',        suffix: '-EOD',  label: 'EOD / bomb disposal station' }
+00923:     };
+00924: 
+00925:     const STATE = {
+00926:         running: false,
+00927:         paused: false,
+00928:         stopped: false,
+00929:         debug: false,
+00930:         stations: [],
+00931:         filteredStations: [],
+00932:         stationIndex: 0,
+00933:         renamedCount: 0,
+00934:         skippedCount: 0,
+00935:         mode: "all",
+00936:         selectedUnitClass: UNIT_CLASS_ALL,
+00937:         runId: 0,
+00938:         activeIframe: null
+00939:     };
+00940: 
+00941:     const STATION_STATE = {
+00942:         running: false,
+00943:         paused: false,
+00944:         stopped: false,
+00945:         debug: false,
+00946:         stations: [],
+00947:         filteredStations: [],
+00948:         queue: [],
+00949:         selectedHref: '',
+00950:         mode: 'all',
+00951:         action: 'preview',
+00952:         stationIndex: 0,
+00953:         renamedCount: 0,
+00954:         skippedCount: 0,
+00955:         previewedCount: 0,
+00956:         activeIframe: null,
+00957:         buildingCoordinateCache: new Map(),
+00958:         buildingDataPromise: null,
+00959:         activeControllers: new Set()
+00960:     };
+00961: 
+00962:     const PERSONNEL_STATE = {
+00963:         running: false,
+00964:         paused: false,
+00965:         stopped: false,
+00966:         debug: false,
+00967:         stations: [],
+00968:         filteredStations: [],
+00969:         queue: [],
+00970:         selectedHref: '',
+00971:         service: 'medical',
+00972:         profile: 'critical_care',
+00973:         mode: 'all',
+00974:         action: 'preview',
+00975:         registerBuilding: false,
+00976:         configuredUnitsRequired: 0,
+00977:         unitsRequired: 0,
+00978:         unitsFulfilled: 0,
+00979:         unitTargetReached: false,
+00980:         stationsTargetMet: 0,
+00981:         stationsTargetShort: 0,
+00982:         stationIndex: 0,
+00983:         completedStations: 0,
+00984:         skippedStations: 0,
+00985:         checkedVehicles: 0,
+00986:         plannedCount: 0,
+00987:         assignedCount: 0,
+00988:         trainingShortfall: 0,
+00989:         assignmentShortfall: 0,
+00990:         reports: [],
+00991:         currentReport: '',
+00992:         currentStationReport: '',
+00993:         lastStationReport: null,
+00994:         activeController: null,
+00995:         lastRequestAt: 0
+00996:     };
+00997: 
+00998:     const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+00999: 
+01000:     function registerToolLifecycleCleanup(cleanup) {
+01001:         if (typeof cleanup === 'function') {
+01002:             TOOL_LIFECYCLE_CLEANUPS.add(cleanup);
+01003:         }
+01004:         return cleanup;
+01005:     }
+01006: 
+01007:     function runToolLifecycleCleanup() {
+01008:         if (TOOL_LIFECYCLE_CLEANED) return;
+01009:         TOOL_LIFECYCLE_CLEANED = true;
+01010: 
+01011:         STATE.stopped = true;
+01012:         STATE.paused = false;
+01013: 
+01014:         const activeUnitIframe = STATE.activeIframe;
+01015:         STATE.activeIframe = null;
+01016:         releaseUnitIframeDocument(activeUnitIframe);
+01017:         STATE.stations = [];
+01018:         STATE.filteredStations = [];
+01019:         STATION_STATE.stopped = true;
+01020:         STATION_STATE.paused = false;
+01021:         PERSONNEL_STATE.stopped = true;
+01022:         PERSONNEL_STATE.paused = false;
+01023: 
+01024:         flushPersonnelTrainingRegistry(true);
+01025: 
+01026:         if (PERSONNEL_STATE.activeController) {
+01027:             try {
+01028:                 PERSONNEL_STATE.activeController.abort();
+01029:             } catch (_error) {}
+01030:             PERSONNEL_STATE.activeController = null;
+01031:         }
+01032: 
+01033:         for (const controller of STATION_STATE.activeControllers) {
+01034:             try {
+01035:                 controller.abort();
+01036:             } catch (_error) {}
+01037:         }
+01038:         STATION_STATE.activeControllers.clear();
+01039: 
+01040:         for (const cleanup of [...TOOL_LIFECYCLE_CLEANUPS]) {
+01041:             try {
+01042:                 cleanup();
+01043:             } catch (_error) {}
+01044:         }
+01045:         TOOL_LIFECYCLE_CLEANUPS.clear();
+01046: 
+01047:         for (const frameId of TOOL_LOG_SCROLL_FRAMES.values()) {
+01048:             try {
+01049:                 cancelAnimationFrame(frameId);
+01050:             } catch (_error) {}
+01051:         }
+01052:         TOOL_LOG_SCROLL_FRAMES.clear();
+01053:         TOOL_UI_ELEMENT_CACHE.clear();
+01054:         PERSONNEL_STATION_LINK_BY_HREF.clear();
+01055:         PERSONNEL_START_OPTION_BY_HREF.clear();
+01056:         PERSONNEL_HIGHLIGHTED_STATION_LINKS.clear();
+01057: 
+01058:         STATION_STATE.activeIframe = null;
+01059:         STATION_STATE.buildingCoordinateCache.clear();
+01060:         STATION_STATE.buildingDataPromise = null;
+01061:         PERSONNEL_STATE.reports = [];
+01062:         PERSONNEL_STATE.lastStationReport = null;
+01063:         PERSONNEL_STATE.currentReport = '';
+01064:         PERSONNEL_STATE.currentStationReport = '';
+01065:         PERSONNEL_TRAINING_REGISTRY_CACHE = null;
+01066:         PERSONNEL_SHORTFALL_CACHE = [];
+01067:         PERSONNEL_SHORTFALL_CACHE_SIZE = -1;
+01068:     }
+01069: 
+01070:     function getToolElementById(id) {
+01071:         const key = String(id || '');
+01072:         if (!key) return null;
+01073: 
+01074:         const cached = TOOL_UI_ELEMENT_CACHE.get(key);
+01075:         if (cached?.isConnected) return cached;
+01076: 
+01077:         const element = document.getElementById(key);
+01078:         if (element) TOOL_UI_ELEMENT_CACHE.set(key, element);
+01079:         else TOOL_UI_ELEMENT_CACHE.delete(key);
+01080:         return element;
+01081:     }
+01082: 
+01083:     function clearBoundedToolLog(logBox) {
+01084:         if (!logBox) return;
+01085: 
+01086:         const frameId = TOOL_LOG_SCROLL_FRAMES.get(logBox);
+01087:         if (frameId != null) {
+01088:             try {
+01089:                 cancelAnimationFrame(frameId);
+01090:             } catch (_error) {}
+01091:             TOOL_LOG_SCROLL_FRAMES.delete(logBox);
+01092:         }
+01093: 
+01094:         logBox.replaceChildren();
+01095:     }
+01096: 
+01097:     function appendBoundedToolLog(logBox, line) {
+01098:         if (!logBox || !line) return;
+01099: 
+01100:         logBox.appendChild(line);
+01101: 
+01102:         if (logBox.childElementCount > TOOL_LOG_MAX_LINES + TOOL_LOG_TRIM_BUFFER) {
+01103:             const removeCount = logBox.childElementCount - TOOL_LOG_MAX_LINES;
+01104:             for (let index = 0; index < removeCount; index++) {
+01105:                 logBox.firstElementChild?.remove();
+01106:             }
+01107:         }
+01108: 
+01109:         if (!TOOL_LOG_SCROLL_FRAMES.has(logBox)) {
+01110:             const frameId = requestAnimationFrame(() => {
+01111:                 TOOL_LOG_SCROLL_FRAMES.delete(logBox);
+01112:                 if (logBox.isConnected) logBox.scrollTop = logBox.scrollHeight;
+01113:             });
+01114:             TOOL_LOG_SCROLL_FRAMES.set(logBox, frameId);
+01115:         }
+01116:     }
+01117: 
+01118:     function isIosSafariWebsite() {
+01119:         const userAgent = String(navigator.userAgent || '');
+01120:         const platform = String(navigator.platform || '');
+01121:         const isIosDevice = /iP(?:ad|hone|od)/i.test(userAgent)
+01122:             || (
+01123:                 platform === 'MacIntel'
+01124:                 && Number(navigator.maxTouchPoints || 0) > 1
+01125:             );
+01126:         const isSafariBrowser = /Safari/i.test(userAgent)
+01127:             && !/(?:CriOS|FxiOS|EdgiOS|OPiOS|DuckDuckGo)/i.test(userAgent);
+01128: 
+01129:         // Native WKWebView/app wrappers normally omit the Safari token. This
+01130:         // deliberately targets the MissionChief website opened in Safari.
+01131:         return isIosDevice
+01132:             && isSafariBrowser
+01133:             && /^https?:$/i.test(String(location.protocol || ''));
+01134:     }
+01135: 
+01136:     const STATION_OVERVIEW_LINK_SELECTOR = [
+01137:         'a.lightbox-open.list-group-item.active[href*="/buildings/"]',
+01138:         'a.lightbox-open[href*="/buildings/"]',
+01139:         '.building_list_li a[href*="/buildings/"]',
+01140:         '.building_list a[href*="/buildings/"]',
+01141:         '[data-building-id] a[href*="/buildings/"]'
+01142:     ].join(',');
+01143: 
+01144:     function normaliseStationOverviewHref(value) {
+01145:         try {
+01146:             const url = new URL(String(value || ''), location.origin);
+01147:             if (url.origin !== location.origin) return '';
+01148:             const match = url.pathname.match(/^\/buildings\/(\d+)\/?$/);
+01149:             return match ? `/buildings/${match[1]}` : '';
+01150:         } catch (_error) {
+01151:             return '';
+01152:         }
+01153:     }
+01154: 
+01155:     function isGenericStationActionText(value) {
+01156:         return /^(?:details?|open|show|view|edit|move|vehicles?|personnel|education|extensions?)$/i
+01157:             .test(cleanText(value));
+01158:     }
+01159: 
+01160:     function getStationOverviewContainer(link) {
+01161:         return link?.closest?.(
+01162:             '.building_list_li, .building_list, [building_type_id], ' +
+01163:             '[data-building-type-id], [data-building-id], [id^="building_"]'
+01164:         ) || link?.closest?.('li, .panel, .card, .well') || link?.parentElement || null;
+01165:     }
+01166: 
+01167:     function readStationBuildingTypeId(link, container = getStationOverviewContainer(link)) {
+01168:         const candidates = [
+01169:             link?.closest?.('[building_type_id], [data-building-type-id]'),
+01170:             container,
+01171:             container?.querySelector?.('[building_type_id], [data-building-type-id]')
+01172:         ].filter(Boolean);
+01173: 
+01174:         for (const candidate of candidates) {
+01175:             const raw =
+01176:                 candidate.getAttribute?.('building_type_id') ??
+01177:                 candidate.getAttribute?.('data-building-type-id') ??
+01178:                 candidate.dataset?.buildingTypeId ??
+01179:                 '';
+01180:             if (raw !== '' && Number.isFinite(Number(raw))) return Number(raw);
+01181:         }
+01182: 
+01183:         return null;
+01184:     }
+01185: 
+01186:     function scoreStationOverviewLink(link, href) {
+01187:         let score = 0;
+01188:         if (link.classList?.contains('lightbox-open')) score += 100;
+01189:         if (link.matches?.('.list-group-item.active')) score += 70;
+01190:         if (normaliseStationOverviewHref(link.getAttribute?.('href')) === href) score += 40;
+01191:         const label = cleanText(link.textContent || link.getAttribute?.('aria-label') || '');
+01192:         if (label && !isGenericStationActionText(label)) score += 35;
+01193:         if (link.offsetParent !== null) score += 10;
+01194:         return score;
+01195:     }
+01196: 
+01197:     function readStationOverviewName(link, container, href) {
+01198:         const values = [];
+01199:         const add = value => {
+01200:             const cleaned = cleanText(value);

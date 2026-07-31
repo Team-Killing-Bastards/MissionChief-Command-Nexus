@@ -1,0 +1,449 @@
+16847:     function createControlPanel() {
+16848:         if (!isMissionPage()) return;
+16849: 
+16850:         if (!claimCurrentMissionExecutionOwnership('create control panel')) {
+16851:             document.getElementById('mission-finder-wrapper')?.remove();
+16852:             return;
+16853:         }
+16854: 
+16855:         cleanupDuplicatePanels();
+16856: 
+16857:         if (document.getElementById('mission-finder-wrapper')) return;
+16858: 
+16859:         injectStyles();
+16860: 
+16861:         const wrapper = document.createElement('div');
+16862:         wrapper.id = 'mission-finder-wrapper';
+16863:         wrapper.classList.add('mf-nexus-dashboard');
+16864: 
+16865:         const missionFinderIosSafari =
+16866:             isMissionFinderIosSafariWebsite();
+16867:         const missionFinderIphoneSafari =
+16868:             isMissionFinderIphoneSafariWebsite();
+16869: 
+16870:         wrapper.classList.toggle(
+16871:             'mf2026-ios-safari',
+16872:             missionFinderIosSafari
+16873:         );
+16874:         wrapper.classList.toggle(
+16875:             'mf2026-iphone-safari',
+16876:             missionFinderIphoneSafari
+16877:         );
+16878: 
+16879:         const iphoneLauncher =
+16880:             document.createElement('div');
+16881:         iphoneLauncher.id =
+16882:             'mf-iphone-panel-launcher';
+16883:         iphoneLauncher.setAttribute(
+16884:             'role',
+16885:             'group'
+16886:         );
+16887:         iphoneLauncher.setAttribute(
+16888:             'aria-label',
+16889:             'Command Nexus panels'
+16890:         );
+16891: 
+16892:         const iphoneMissionLauncherButton =
+16893:             document.createElement('button');
+16894:         iphoneMissionLauncherButton.id =
+16895:             'mf-iphone-mission-launcher';
+16896:         iphoneMissionLauncherButton.type =
+16897:             'button';
+16898:         iphoneMissionLauncherButton.className =
+16899:             'mf-iphone-launcher-button';
+16900:         iphoneMissionLauncherButton.textContent =
+16901:             'Mission';
+16902:         iphoneMissionLauncherButton.setAttribute(
+16903:             'aria-controls',
+16904:             'mf-control-body'
+16905:         );
+16906: 
+16907:         const iphoneVehicleLauncherButton =
+16908:             document.createElement('button');
+16909:         iphoneVehicleLauncherButton.id =
+16910:             'mf-iphone-vehicle-launcher';
+16911:         iphoneVehicleLauncherButton.type =
+16912:             'button';
+16913:         iphoneVehicleLauncherButton.className =
+16914:             'mf-iphone-launcher-button';
+16915:         iphoneVehicleLauncherButton.textContent =
+16916:             'Vehicle';
+16917:         iphoneVehicleLauncherButton.setAttribute(
+16918:             'aria-controls',
+16919:             'mf-load-body'
+16920:         );
+16921: 
+16922:         iphoneLauncher.appendChild(
+16923:             iphoneMissionLauncherButton
+16924:         );
+16925:         iphoneLauncher.appendChild(
+16926:             iphoneVehicleLauncherButton
+16927:         );
+16928: 
+16929:         const savedPanelLeft =
+16930:             localStorage.getItem(MF_PANEL_LEFT_KEY);
+16931: 
+16932:         const savedPanelTop =
+16933:             localStorage.getItem(MF_PANEL_TOP_KEY);
+16934: 
+16935:         if (!missionFinderIosSafari) {
+16936:             wrapper.style.left =
+16937:                 mfKeepPanelPosition && savedPanelLeft
+16938:                     ? savedPanelLeft
+16939:                     : '20px';
+16940: 
+16941:             wrapper.style.top =
+16942:                 mfKeepPanelPosition && savedPanelTop
+16943:                     ? savedPanelTop
+16944:                     : '20px';
+16945:         }
+16946: 
+16947:         wrapper.style.visibility = 'hidden';
+16948: 
+16949:         // Remove coordinates used by the older panel-position versions.
+16950:         localStorage.removeItem('panel-left');
+16951:         localStorage.removeItem('panel-top');
+16952: 
+16953:         const panel = document.createElement('div');
+16954:         panel.id = 'control-panel';
+16955:         panel.className = `mf2026-panel ${mfMissionControlCollapsed ? 'mf2026-control-collapsed' : ''}`;
+16956: 
+16957:         const controlHeaderRow = document.createElement('div');
+16958:         controlHeaderRow.className = 'mf2026-control-header-row';
+16959: 
+16960:         const dragHandle = document.createElement('div');
+16961:         dragHandle.id = 'mf-control-title';
+16962:         dragHandle.textContent = 'Mission Control';
+16963:         dragHandle.className = 'mf2026-header mf2026-drag';
+16964: 
+16965:         const controlCentreBtn = document.createElement('button');
+16966:         controlCentreBtn.id = 'mf-control-centre';
+16967:         controlCentreBtn.className = 'mf2026-button';
+16968:         controlCentreBtn.title = 'Move Mission Control back to the centre';
+16969:         controlCentreBtn.textContent = '◎';
+16970: 
+16971:         const controlMinimizeBtn = document.createElement('button');
+16972:         controlMinimizeBtn.id = 'mf-control-minimize';
+16973:         controlMinimizeBtn.className = 'mf2026-button';
+16974:         controlMinimizeBtn.type = 'button';
+16975: 
+16976:         controlHeaderRow.appendChild(dragHandle);
+16977:         controlHeaderRow.appendChild(controlCentreBtn);
+16978:         controlHeaderRow.appendChild(controlMinimizeBtn);
+16979:         panel.appendChild(controlHeaderRow);
+16980: 
+16981:         const controlBody = document.createElement('div');
+16982:         controlBody.className = 'mf-control-body';
+16983:         controlBody.id = 'mf-control-body';
+16984: 
+16985:         const dashboardRail = document.createElement('nav');
+16986:         dashboardRail.id = 'mf-dashboard-rail';
+16987:         dashboardRail.setAttribute('aria-label', 'MissionChief Nexus dashboard');
+16988:         dashboardRail.innerHTML = `
+16989:             <button type="button" class="mf-dashboard-tab mf-dashboard-tab-active" data-mf-dashboard-tab="mission" aria-pressed="true">
+16990:                 <span class="mf-dashboard-tab-icon">◎</span>
+16991:                 <span>Mission</span>
+16992:             </button>
+16993:             <button type="button" class="mf-dashboard-tab" data-mf-dashboard-tab="settings" aria-pressed="false">
+16994:                 <span class="mf-dashboard-tab-icon">⚙</span>
+16995:                 <span>Settings</span>
+16996:             </button>
+16997:             <button type="button" class="mf-dashboard-tab" data-mf-dashboard-tab="diagnostics" aria-pressed="false">
+16998:                 <span class="mf-dashboard-tab-icon">⌁</span>
+16999:                 <span>Diagnostics</span>
+17000:             </button>
+17001:         `;
+17002: 
+17003:         const dashboardUtility = document.createElement('aside');
+17004:         dashboardUtility.id = 'mf-dashboard-utility';
+17005:         dashboardUtility.hidden = true;
+17006:         dashboardUtility.innerHTML = `
+17007:             <div class="mf-dashboard-utility-header">
+17008:                 <span id="mf-dashboard-utility-title">Settings</span>
+17009:                 <button id="mf-dashboard-utility-close" type="button" aria-label="Close utility panel">×</button>
+17010:             </div>
+17011:         `;
+17012: 
+17013:         const settingsPane = document.createElement('div');
+17014:         settingsPane.id = 'mf-dashboard-settings-pane';
+17015:         settingsPane.className = 'mf-dashboard-utility-pane';
+17016: 
+17017:         const diagnosticsPane = document.createElement('div');
+17018:         diagnosticsPane.id = 'mf-dashboard-diagnostics-pane';
+17019:         diagnosticsPane.className = 'mf-dashboard-utility-pane';
+17020:         diagnosticsPane.hidden = true;
+17021: 
+17022:         dashboardUtility.appendChild(settingsPane);
+17023:         dashboardUtility.appendChild(diagnosticsPane);
+17024: 
+17025:         const dashboardUtilityTitle =
+17026:             dashboardUtility.querySelector('#mf-dashboard-utility-title');
+17027:         const dashboardUtilityClose =
+17028:             dashboardUtility.querySelector('#mf-dashboard-utility-close');
+17029:         const dashboardTabs = Array.from(
+17030:             dashboardRail.querySelectorAll('[data-mf-dashboard-tab]')
+17031:         );
+17032: 
+17033:         function setMissionDashboardTab(tabName) {
+17034:             const nextTab = ['settings', 'diagnostics'].includes(tabName)
+17035:                 ? tabName
+17036:                 : 'mission';
+17037:             const utilityOpen = nextTab !== 'mission';
+17038: 
+17039:             wrapper.classList.toggle(
+17040:                 'mf-dashboard-utility-open',
+17041:                 utilityOpen
+17042:             );
+17043:             dashboardUtility.hidden = !utilityOpen;
+17044:             settingsPane.hidden = nextTab !== 'settings';
+17045:             diagnosticsPane.hidden = nextTab !== 'diagnostics';
+17046: 
+17047:             if (dashboardUtilityTitle) {
+17048:                 dashboardUtilityTitle.textContent =
+17049:                     nextTab === 'diagnostics'
+17050:                         ? 'Diagnostics'
+17051:                         : 'Settings';
+17052:             }
+17053: 
+17054:             dashboardTabs.forEach(button => {
+17055:                 const active =
+17056:                     button.dataset.mfDashboardTab === nextTab;
+17057:                 button.classList.toggle(
+17058:                     'mf-dashboard-tab-active',
+17059:                     active
+17060:                 );
+17061:                 button.setAttribute(
+17062:                     'aria-pressed',
+17063:                     String(active)
+17064:                 );
+17065:             });
+17066: 
+17067:             localStorage.setItem(
+17068:                 'mf_nexus_dashboard_tab_v1',
+17069:                 nextTab
+17070:             );
+17071: 
+17072:             requestAnimationFrame(() => {
+17073:                 keepMissionFinderWindowOnScreen(wrapper);
+17074:             });
+17075:         }
+17076: 
+17077:         dashboardTabs.forEach(button => {
+17078:             button.addEventListener('click', function() {
+17079:                 setMissionDashboardTab(
+17080:                     this.dataset.mfDashboardTab
+17081:                 );
+17082:             });
+17083:         });
+17084: 
+17085:         dashboardUtilityClose?.addEventListener('click', function() {
+17086:             setMissionDashboardTab('mission');
+17087:         });
+17088: 
+17089:         const statusBox = document.createElement('div');
+17090:         statusBox.id = 'status-box';
+17091:         statusBox.className = 'mf2026-box';
+17092:         statusBox.textContent = 'Ready to start...';
+17093:         controlBody.appendChild(statusBox);
+17094: 
+17095:         const iphoneAdvancedToggle =
+17096:             document.createElement('button');
+17097:         iphoneAdvancedToggle.id =
+17098:             'mf-iphone-advanced-toggle';
+17099:         iphoneAdvancedToggle.type = 'button';
+17100:         iphoneAdvancedToggle.className =
+17101:             'mf2026-button';
+17102: 
+17103:         const advancedBody =
+17104:             document.createElement('div');
+17105:         advancedBody.className =
+17106:             `mf-control-advanced ${mfIphoneAdvancedExpanded ? 'mf2026-expanded' : ''}`;
+17107: 
+17108:         if (missionFinderIphoneSafari) {
+17109:             controlBody.appendChild(
+17110:                 iphoneAdvancedToggle
+17111:             );
+17112:             controlBody.appendChild(advancedBody);
+17113:         } else {
+17114:             settingsPane.appendChild(advancedBody);
+17115:         }
+17116: 
+17117:         const positionBox = document.createElement('div');
+17118:         positionBox.id = 'mf-control-position-box';
+17119:         positionBox.className = 'mf2026-box';
+17120:         positionBox.innerHTML = `
+17121:             <div class="mf2026-section-title">Control Window Position</div>
+17122:             <label class="mf2026-checkbox-row">
+17123:                 <input id="mf-keep-panel-position"
+17124:                        type="checkbox"
+17125:                        ${mfKeepPanelPosition ? 'checked' : ''}>
+17126:                 <span>Keep my saved panel position</span>
+17127:             </label>
+17128:             <div class="mf2026-small" style="margin-top:5px;">
+17129: 
+17130:             </div>
+17131:         `;
+17132:         advancedBody.appendChild(positionBox);
+17133: 
+17134:         const keepPanelPositionCheckbox =
+17135:             positionBox.querySelector('#mf-keep-panel-position');
+17136: 
+17137:         const delayBox = document.createElement('div');
+17138:         delayBox.className = 'mf2026-box';
+17139:         delayBox.innerHTML = `
+17140:             <div class="mf2026-section-title">Mission Ready Delay</div>
+17141:             <input id="mf-mission-ready-delay-input"
+17142:                    type="number"
+17143:                    min="500"
+17144:                    max="15000"
+17145:                    step="500"
+17146:                    value="${missionReadyDelayMs}">
+17147:         `;
+17148:         advancedBody.appendChild(delayBox);
+17149: 
+17150:         delayBox.querySelector('#mf-mission-ready-delay-input').addEventListener('change', function() {
+17151:             const value = parseInt(this.value, 10);
+17152:             missionReadyDelayMs = Number.isFinite(value) ? Math.max(500, Math.min(15000, value)) : DEFAULT_MISSION_READY_DELAY;
+17153:             this.value = missionReadyDelayMs;
+17154:             localStorage.setItem('mf_mission_ready_delay_ms', String(missionReadyDelayMs));
+17155:             updateStatusBox(`Mission Ready Delay set to ${missionReadyDelayMs}ms`);
+17156:         });
+17157: 
+17158:         const queueRestartBox = document.createElement('div');
+17159:         queueRestartBox.className = 'mf2026-box';
+17160:         queueRestartBox.innerHTML = `
+17161:             <div class="mf2026-section-title">V10 Queue Restart</div>
+17162:             <button id="mf-next-queue-restart-toggle"
+17163:                     class="mf2026-button"
+17164:                     style="width:100%;background:${mfQueueRestartEnabled ? '#198754' : '#6c757d'};color:white;margin-bottom:6px;">
+17165:                 Queue Restart: ${mfQueueRestartEnabled ? 'On' : 'Off'}
+17166:             </button>
+17167:             <input id="mf-next-queue-restart-threshold"
+17168:                    type="number"
+17169:                    min="1"
+17170:                    max="999"
+17171:                    step="1"
+17172:                    value="${mfQueueRestartThreshold}"
+17173:                    style="width:100%;color:black;padding:4px;border-radius:4px;border:none;box-sizing:border-box;">
+17174:         `;
+17175:         advancedBody.appendChild(queueRestartBox);
+17176: 
+17177:         const queueRestartToggle = queueRestartBox.querySelector('#mf-next-queue-restart-toggle');
+17178:         const queueRestartThresholdInput = queueRestartBox.querySelector('#mf-next-queue-restart-threshold');
+17179: 
+17180:         queueRestartToggle.addEventListener('click', function() {
+17181:             mfQueueRestartEnabled = !mfQueueRestartEnabled;
+17182:             localStorage.setItem('mf_next_queue_restart_enabled_v10', String(mfQueueRestartEnabled));
+17183:             queueRestartToggle.textContent = `Queue Restart: ${mfQueueRestartEnabled ? 'On' : 'Off'}`;
+17184:             queueRestartToggle.style.backgroundColor = mfQueueRestartEnabled ? '#198754' : '#6c757d';
+17185:             updateStatusBox(`Queue Restart ${mfQueueRestartEnabled ? 'enabled' : 'disabled'}.`);
+17186:         });
+17187: 
+17188:         function saveQueueRestartThresholdInput(showStatus) {
+17189:             const value = parseInt(queueRestartThresholdInput.value, 10);
+17190: 
+17191:             if (!Number.isFinite(value)) return;
+17192: 
+17193:             mfQueueRestartThreshold = Math.max(
+17194:                 1,
+17195:                 Math.min(999, value)
+17196:             );
+17197: 
+17198:             queueRestartThresholdInput.value =
+17199:                 mfQueueRestartThreshold;
+17200: 
+17201:             localStorage.setItem(
+17202:                 'mf_next_queue_restart_threshold_v10_1_3',
+17203:                 String(mfQueueRestartThreshold)
+17204:             );
+17205: 
+17206:             if (showStatus) {
+17207:                 updateStatusBox(
+17208:                     `Queue restart threshold set to ${mfQueueRestartThreshold}.`
+17209:                 );
+17210:             }
+17211:         }
+17212: 
+17213:         queueRestartThresholdInput.addEventListener(
+17214:             'input',
+17215:             function() {
+17216:                 saveQueueRestartThresholdInput(false);
+17217:             }
+17218:         );
+17219: 
+17220:         queueRestartThresholdInput.addEventListener(
+17221:             'change',
+17222:             function() {
+17223:                 saveQueueRestartThresholdInput(true);
+17224:             }
+17225:         );
+17226: 
+17227:         const eventScannerBox = document.createElement('div');
+17228:         eventScannerBox.id = 'mf-event-scanner-box';
+17229:         eventScannerBox.className = 'mf2026-box';
+17230:         eventScannerBox.innerHTML = `
+17231:             <div class="mf2026-section-title">Event Scanner</div>
+17232:             <label class="mf2026-checkbox-row mf-dashboard-toggle-row">
+17233:                 <input id="mf-event-scanner-toggle"
+17234:                        type="checkbox"
+17235:                        ${mfEventScannerEnabled ? 'checked' : ''}>
+17236:                 <span>Automatically collect mission event items</span>
+17237:             </label>
+17238:             <div id="mf-event-scanner-state" class="mf2026-small"></div>
+17239:         `;
+17240: 
+17241:         const eventScannerToggle =
+17242:             eventScannerBox.querySelector('#mf-event-scanner-toggle');
+17243:         const eventScannerState =
+17244:             eventScannerBox.querySelector('#mf-event-scanner-state');
+17245: 
+17246:         function syncEventScannerControl() {
+17247:             if (eventScannerToggle) {
+17248:                 eventScannerToggle.checked =
+17249:                     mfEventScannerEnabled;
+17250:             }
+17251:             if (eventScannerState) {
+17252:                 eventScannerState.textContent =
+17253:                     mfEventScannerEnabled
+17254:                         ? 'Scanner is on.'
+17255:                         : 'Scanner is off.';
+17256:                 eventScannerState.classList.toggle(
+17257:                     'mf2026-good',
+17258:                     mfEventScannerEnabled
+17259:                 );
+17260:             }
+17261:         }
+17262: 
+17263:         eventScannerToggle?.addEventListener('change', function() {
+17264:             mfEventScannerEnabled = this.checked;
+17265:             localStorage.setItem(
+17266:                 MF_EVENT_SCANNER_ENABLED_KEY,
+17267:                 String(mfEventScannerEnabled)
+17268:             );
+17269: 
+17270:             if (mfEventScannerEnabled) {
+17271:                 startMissionEventCollectibleCollector();
+17272:             } else {
+17273:                 stopMissionEventCollectibleCollector();
+17274:             }
+17275: 
+17276:             syncEventScannerControl();
+17277:             updateStatusBox(
+17278:                 `Event Scanner ${mfEventScannerEnabled ? 'enabled' : 'disabled'}.`
+17279:             );
+17280:         });
+17281: 
+17282:         syncEventScannerControl();
+17283: 
+17284:         const diagnosticsHost =
+17285:             missionFinderIphoneSafari
+17286:                 ? advancedBody
+17287:                 : diagnosticsPane;
+17288:         diagnosticsHost.appendChild(eventScannerBox);
+17289: 
+17290: 
+17291:         const unitFinderBtn = document.createElement('button');
+17292:         unitFinderBtn.id = 'unit-finder-box';
+17293:         unitFinderBtn.textContent = 'Unit Finder';
+17294:         unitFinderBtn.className = 'mf2026-button';
+17295:         unitFinderBtn.style.backgroundColor = 'orange';
