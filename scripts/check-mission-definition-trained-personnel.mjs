@@ -70,8 +70,8 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-requireText('// @version      1.0.67', 'v1.0.55 metadata');
-requireText(' * MODULE 2: MISSION FINDER V10.6.130', 'Mission Finder V10.6.120 header');
+requireText('// @version      1.0.68', 'v1.0.55 metadata');
+requireText(' * MODULE 2: MISSION FINDER V10.6.131', 'Mission Finder V10.6.120 header');
 requireText('function getTrainedPersonnelRequirementsFromFreeText(', 'free-text trained-personnel parser');
 requireText('function getMissionDefinitionTrainedPersonnelRequirements(', 'mission-definition row classifier');
 requireText('const trailingText =', 'adjacent quantity boundary');
@@ -144,6 +144,22 @@ const wrongRow = runtime.getMissionDefinitionTrainedPersonnelRequirements(
 );
 if (wrongRow.length !== 0) {
   fail('Non-personnel mission rows must not enter the trained-personnel parser');
+}
+
+const percentageSuffix = runtime.getMissionDefinitionTrainedPersonnelRequirements(
+  'Required Personnel (100%)',
+  '2x Police Medic'
+);
+if (percentageSuffix[0]?.code !== 'police_medic' || percentageSuffix[0]?.required !== 2) {
+  fail('Required Personnel percentage suffix must remain actionable');
+}
+
+const availableRow = runtime.getMissionDefinitionTrainedPersonnelRequirements(
+  'Required Personnel Available',
+  '20x Police Medic'
+);
+if (availableRow.length !== 0) {
+  fail('Required Personnel Available must remain excluded');
 }
 
 const extractor = extractFunction('extractLiveMissionRequirementRows');
