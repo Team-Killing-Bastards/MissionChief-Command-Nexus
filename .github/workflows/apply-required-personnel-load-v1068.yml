@@ -4,12 +4,16 @@ on:
   push:
     branches:
       - fix/required-personnel-load-v1068
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: write
 
 concurrency:
-  group: build-required-personnel-load-v1068
+  group: build-required-personnel-load-v1068-${{ github.event_name }}
   cancel-in-progress: false
 
 jobs:
@@ -19,7 +23,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: fix/required-personnel-load-v1068
+          ref: ${{ github.head_ref || github.ref_name }}
           fetch-depth: 0
       - name: Apply cross-table load fix
         run: python3 .github/builders/apply-required-personnel-load-v1068.py
@@ -39,6 +43,8 @@ jobs:
       - name: Validate repository integrity
         run: python3 scripts/check_repository.py
       - name: Commit product changes when needed
+        env:
+          TARGET_BRANCH: ${{ github.head_ref || github.ref_name }}
         shell: bash
         run: |
           set -euo pipefail
@@ -49,4 +55,4 @@ jobs:
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git commit -m 'Read Required Personnel from Other information table'
-          git push origin HEAD:fix/required-personnel-load-v1068
+          git push origin "HEAD:${TARGET_BRANCH}"
