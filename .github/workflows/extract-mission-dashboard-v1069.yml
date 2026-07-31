@@ -4,12 +4,16 @@ on:
   push:
     branches:
       - feature/mission-command-dashboard-v1069
+  pull_request:
+    branches:
+      - main
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: write
 
 concurrency:
-  group: extract-mission-dashboard-v1069
+  group: extract-mission-dashboard-v1069-${{ github.event_name }}
   cancel-in-progress: false
 
 jobs:
@@ -19,11 +23,12 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: feature/mission-command-dashboard-v1069
+          ref: ${{ github.head_ref || github.ref_name }}
           fetch-depth: 0
       - name: Extract live dashboard construction
         run: python3 .github/builders/extract-mission-dashboard-v1069.py
       - name: Commit diagnostics
+        if: github.event_name == 'push'
         shell: bash
         run: |
           set -euo pipefail
