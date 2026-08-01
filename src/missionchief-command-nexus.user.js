@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.79
+// @version      1.0.80
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -10730,7 +10730,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.139
+         * MODULE 2: MISSION FINDER V10.6.140
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -22678,8 +22678,12 @@ let sessionRuntimeTicker = null;
 
         let preloadState = { status: 'idle' };
         let requiredPersonnel = [];
+        let missionVehiclesOnSceneForTrainedPersonnel =
+            false;
 
         try {
+            missionVehiclesOnSceneForTrainedPersonnel =
+                hasMissionVehiclesOnSceneForTrainedPersonnelAuthority();
             preloadState =
                 getMissionRequirementPreloadState();
             requiredPersonnel =
@@ -22730,6 +22734,16 @@ let sessionRuntimeTicker = null;
             requiredPersonnel.length === 0 &&
             selectedVehicles.length === 0
         ) {
+            if (
+                missionVehiclesOnSceneForTrainedPersonnel
+            ) {
+                summary.textContent =
+                    'Vehicles are on scene. Live personnel and course shortages are authoritative.';
+                content.innerHTML =
+                    '<span class="mf2026-small">Mission Required Personnel is shown only before the first vehicle arrives on scene.</span>';
+                return;
+            }
+
             if (preloadState.status === 'loading') {
                 summary.textContent =
                     'Loading mission Required Personnel...';
@@ -27447,7 +27461,57 @@ let sessionRuntimeTicker = null;
             .filter(Boolean);
     }
 
+    function isMissionDefinitionRequiredPersonnelRequirementRow(row) {
+        return !!(
+            row?.missionDefinitionRequiredPersonnel ||
+            row?.source ===
+                'mission-definition-required-personnel'
+        );
+    }
+
+    function hasMissionVehiclesOnSceneForTrainedPersonnelAuthority() {
+        return getMissionAccessibleDocuments().some(
+            candidateDocument => {
+                try {
+                    return !!candidateDocument.querySelector(
+                        '#mission_vehicle_at_mission tbody tr[id^="vehicle_row"], ' +
+                        '#mission_vehicle_at_mission tr[id^="vehicle_row"]'
+                    );
+                } catch (_error) {
+                    return false;
+                }
+            }
+        );
+    }
+
+    function filterMissionDefinitionRequiredPersonnelForScene(
+        rows,
+        vehiclesOnScene =
+            hasMissionVehiclesOnSceneForTrainedPersonnelAuthority()
+    ) {
+        const safeRows =
+            Array.isArray(rows)
+                ? rows
+                : [];
+
+        if (!vehiclesOnScene) {
+            return safeRows;
+        }
+
+        return safeRows.filter(row => {
+            return !isMissionDefinitionRequiredPersonnelRequirementRow(
+                row
+            );
+        });
+    }
+
     function getPreloadedMissionTrainedPersonnelRequirements() {
+        if (
+            hasMissionVehiclesOnSceneForTrainedPersonnelAuthority()
+        ) {
+            return [];
+        }
+
         const cache =
             getMissionRequirementPreloadState();
 
@@ -32187,6 +32251,31 @@ let sessionRuntimeTicker = null;
         const diagnosticSourceLabel =
             String(sourceLabel || '');
 
+        const missionVehiclesOnSceneForTrainedPersonnel =
+            hasMissionVehiclesOnSceneForTrainedPersonnelAuthority();
+        const requirementRowCountBeforeSceneAuthority =
+            Array.isArray(requirementRows)
+                ? requirementRows.length
+                : 0;
+
+        requirementRows =
+            filterMissionDefinitionRequiredPersonnelForScene(
+                requirementRows,
+                missionVehiclesOnSceneForTrainedPersonnel
+            );
+
+        if (
+            mfDebugEnabled &&
+            missionVehiclesOnSceneForTrainedPersonnel &&
+            requirementRows.length <
+                requirementRowCountBeforeSceneAuthority
+        ) {
+            debugLog(
+                'TRAINED PERSONNEL LIVE AUTHORITY',
+                'Vehicles are on scene; mission-definition Required Personnel and course rows were ignored in favour of current live shortages.'
+            );
+        }
+
         const suppliedHasExplicitCurrentMissingRequirements =
             hasExplicitCurrentMissingRequirementRows(
                 requirementRows
@@ -32194,13 +32283,9 @@ let sessionRuntimeTicker = null;
 
         const suppliedHasMissionDefinitionPersonnel =
             (Array.isArray(requirementRows) ? requirementRows : [])
-                .some(row => {
-                    return !!(
-                        row?.missionDefinitionRequiredPersonnel ||
-                        row?.source ===
-                            'mission-definition-required-personnel'
-                    );
-                });
+                .some(
+                    isMissionDefinitionRequiredPersonnelRequirementRow
+                );
 
         if (
             hasAuthoritativeLiveMissionRequirementsPanel() &&

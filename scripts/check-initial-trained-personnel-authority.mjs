@@ -13,11 +13,14 @@ function requireText(token, label) {
   if (!source.includes(token)) fail(`Missing initial trained-personnel contract: ${label}`);
 }
 
-requireText('// @version      1.0.79', 'v1.0.55 metadata');
-requireText(' * MODULE 2: MISSION FINDER V10.6.139', 'Mission Finder V10.6.120 header');
-requireText('const suppliedHasMissionDefinitionPersonnel =', 'definition-personnel authority detector');
-requireText("row?.source ===\n                            'mission-definition-required-personnel'", 'definition source fallback');
-requireText('!suppliedHasMissionDefinitionPersonnel', 'live-panel replacement exclusion');
+requireText('// @version      1.0.80', 'v1.0.55 metadata');
+requireText(' * MODULE 2: MISSION FINDER V10.6.140', 'Mission Finder V10.6.120 header');
+requireText('function isMissionDefinitionRequiredPersonnelRequirementRow(', 'definition-personnel authority classifier');
+requireText("'mission-definition-required-personnel'", 'definition source fallback');
+requireText('function hasMissionVehiclesOnSceneForTrainedPersonnelAuthority(', 'on-scene authority detector');
+requireText('#mission_vehicle_at_mission tbody tr[id^="vehicle_row"]', 'on-scene vehicle table');
+requireText('function filterMissionDefinitionRequiredPersonnelForScene(', 'on-scene definition filter');
+requireText('!suppliedHasMissionDefinitionPersonnel', 'no-vehicle definition authority');
 requireText('hasExplicitCurrentMissingRequirementRows(', 'explicit current shortage authority');
 
 const processStart = source.indexOf('    async function processRequirementRows(');
@@ -25,13 +28,23 @@ const processEnd = source.indexOf('\n    async function processVehicles(', proce
 if (processStart < 0 || processEnd < 0) fail('Unable to isolate processRequirementRows');
 const processBlock = source.slice(processStart, processEnd);
 
-const detectorIndex = processBlock.indexOf('const suppliedHasMissionDefinitionPersonnel =');
+const sceneFilterIndex = processBlock.indexOf('filterMissionDefinitionRequiredPersonnelForScene(');
+const explicitAuthorityIndex = processBlock.indexOf('hasExplicitCurrentMissingRequirementRows(');
 const replacementIndex = processBlock.indexOf('requirementRows = readMissionUpdateRows();');
-if (detectorIndex < 0 || replacementIndex < 0 || detectorIndex > replacementIndex) {
-  fail('Definition personnel must be detected before any live-panel replacement');
+if (
+  sceneFilterIndex < 0 ||
+  explicitAuthorityIndex < 0 ||
+  replacementIndex < 0 ||
+  sceneFilterIndex > explicitAuthorityIndex ||
+  explicitAuthorityIndex > replacementIndex
+) {
+  fail('On-scene static personnel filtering must run before the live authority decision');
 }
 if (!processBlock.includes('!suppliedHasMissionDefinitionPersonnel')) {
-  fail('Live-panel replacement must be blocked for definition-trained rows');
+  fail('Mission-definition personnel must remain authoritative while no vehicle is on scene');
+}
+if (processBlock.includes('#mission_vehicle_driving')) {
+  fail('En-route vehicles must not suppress mission-definition personnel requirements');
 }
 
 const supportedCodes = [
