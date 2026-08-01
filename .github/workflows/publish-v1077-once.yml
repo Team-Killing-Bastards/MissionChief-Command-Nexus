@@ -1,0 +1,26 @@
+name: Publish and verify v1.0.77
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: publish-v1.0.77-once
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'release/publish-v1077'
+    uses: ./.github/workflows/release.yml
+    with:
+      operation: publish-release
+      release_tag: v1.0.77
+      release_notes: 'Restore Resource Administration inside the normal MissionChief Stations overview popup while preserving dedicated full-page, Mission Finder and iOS/iPadOS Safari behaviour.'
+    secrets: inherit
