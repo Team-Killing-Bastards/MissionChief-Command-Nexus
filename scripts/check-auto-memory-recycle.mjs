@@ -59,8 +59,8 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-expect(source.includes('// @version      1.0.73'), 'Expected Command Nexus 1.0.60');
-expect(source.includes('MISSION FINDER V10.6.136'), 'Expected Mission Finder V10.6.123');
+expect(source.includes('// @version      1.0.74'), 'Expected Command Nexus 1.0.74');
+expect(source.includes('MISSION FINDER V10.6.137'), 'Expected Mission Finder V10.6.137');
 expect(source.includes('640 * 1024 * 1024'), 'Expected the 640 MiB high-heap threshold');
 expect(source.includes('4 * 60 * 1000'), 'Expected a bounded recycle cooldown');
 
@@ -69,6 +69,7 @@ for (const token of [
   'mfMainMutationObserver.disconnect()',
   'mfMainMutationObserver = null',
   'stopSessionRuntimeTicker()',
+  'stopMissionFinderRuntimeMemoryMaintenance()',
   'stopMissionEventCollectibleCollector()',
   'stopBackgroundWatcherIntervalsOnly()',
   'invalidateVehicleCheckboxCache()',
@@ -91,6 +92,7 @@ expect(reconcile.includes('mfRuntimeSuspendedForPageHide = false'), 'pageshow mu
 expect(reconcile.includes('startMissionEventCollectibleCollector()'), 'pageshow must restart the collector');
 expect(reconcile.includes('startMissionFinderObserver()'), 'pageshow must restore the main observer');
 expect(reconcile.includes('startSessionRuntimeTicker()'), 'pageshow must restore the session ticker');
+expect(reconcile.includes('startMissionFinderRuntimeMemoryMaintenance()'), 'pageshow must restore memory maintenance');
 
 const guard = extractFunction('shouldRecycleAutoMissionMemoryBeforeSelection');
 for (const token of [
@@ -107,9 +109,17 @@ for (const token of [
   expect(guard.includes(token), `Memory recycle guard missing ${token}`);
 }
 
-const requestRecycle = extractFunction('requestAutoMissionMemoryRecycle');
+const requestAutoRecycle = extractFunction('requestAutoMissionMemoryRecycle');
+expect(
+  requestAutoRecycle.includes('requestMissionFinderMemoryRecycle('),
+  'Auto recycle must delegate to the shared guarded frame recycle'
+);
+expect(requestAutoRecycle.includes('true'), 'Auto recycle must request Auto Mode resume');
+
+const requestRecycle = extractFunction('requestMissionFinderMemoryRecycle');
 expect(requestRecycle.includes('window.location.replace(href)'), 'Memory recycle must replace the current mission frame');
-expect(requestRecycle.includes('resumePending: true'), 'Memory recycle must persist a resume receipt');
+expect(requestRecycle.includes('resumePending:'), 'Memory recycle must persist a resume receipt');
+expect(requestRecycle.includes("mode:\n                resumeAutoMode === true"), 'Memory recycle must record auto versus idle mode');
 expect(requestRecycle.includes('suspendMissionFinderRuntimeForPageHide'), 'Memory recycle must release heavy runtime references before navigation');
 
 const resumeRecycle = extractFunction('scheduleAutoMemoryRecycleResume');
@@ -132,6 +142,8 @@ const diagnostics = extractFunction('mfCollectMemoryDiagnostics');
 for (const token of [
   'sessionRuntimeTickerActive',
   'runtimeSuspendedForPageHide',
+  'runtimeSuspendedForInactiveFrame',
+  'memoryMaintenanceTimerActive',
   'autoMemoryRecycle',
   'getAutoMemoryRecycleDiagnosticState()',
 ]) {

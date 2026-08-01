@@ -31,8 +31,8 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-expect(source.includes('// @version      1.0.73'), 'Command Nexus 1.0.69 metadata missing');
-expect(source.includes('MISSION FINDER V10.6.136'), 'Mission Finder V10.6.136 header missing');
+expect(source.includes('// @version      1.0.74'), 'Command Nexus 1.0.69 metadata missing');
+expect(source.includes('MISSION FINDER V10.6.137'), 'Mission Finder V10.6.137 header missing');
 const panel = extractFunction('createControlPanel');
 const startScanner = extractFunction('startMissionEventCollectibleCollector');
 const styles = extractFunction('injectStyles');
