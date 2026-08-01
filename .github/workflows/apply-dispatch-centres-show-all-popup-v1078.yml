@@ -1,0 +1,70 @@
+name: Apply Dispatch Centres Show all popup v1.0.78
+
+on:
+  push:
+    branches:
+      - feature/dispatch-centres-show-all-popup-v1078
+    paths:
+      - '.github/builders/apply-dispatch-centres-show-all-popup-v1078.py'
+      - '.github/workflows/apply-dispatch-centres-show-all-popup-v1078.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-dispatch-centres-show-all-popup-v1078
+  cancel-in-progress: false
+
+jobs:
+  apply-and-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v6
+        with:
+          ref: feature/dispatch-centres-show-all-popup-v1078
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Apply release change
+        run: python .github/builders/apply-dispatch-centres-show-all-popup-v1078.py
+
+      - name: Remove one-use builder
+        run: |
+          rm -f .github/builders/apply-dispatch-centres-show-all-popup-v1078.py
+          rm -f .github/workflows/apply-dispatch-centres-show-all-popup-v1078.yml
+
+      - name: Validate JavaScript syntax
+        run: node --check src/missionchief-command-nexus.user.js
+
+      - name: Validate userscript metadata and size
+        run: node scripts/validate-userscript.mjs
+
+      - name: Run permanent behavioural regressions
+        run: |
+          set -euo pipefail
+          for check in scripts/check-*.mjs; do
+            echo "Running $check"
+            node "$check"
+          done
+
+      - name: Validate repository integrity
+        run: python scripts/check_repository.py
+
+      - name: Validate whitespace
+        run: git diff --check
+
+      - name: Commit validated product changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Open Dispatch Centres Show all in popup on middle-click"
+          git push origin HEAD:feature/dispatch-centres-show-all-popup-v1078
