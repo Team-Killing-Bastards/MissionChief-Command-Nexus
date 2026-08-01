@@ -1,6 +1,5 @@
-===== 'const vehicleLoadState =': 0 matches =====
 ===== 'let vehicleLoadState =': 1 matches =====
---- lines 13056-13131; match 13081 ---
+--- lines 13056-13136; match 13081 ---
 013056:         "CBRN Vehicle": "OSU",
 013057:         "CBRN Vehicles": "OSU",
 013058:         "Operational Support Unit": "OSU",
@@ -77,9 +76,14 @@
 013129: 
 013130:             Promise.resolve(promise).then(
 013131:                 value => {
+013132:                     clearTimeout(timeoutId);
+013133:                     resolve(value);
+013134:                 },
+013135:                 error => {
+013136:                     clearTimeout(timeoutId);
 ===== 'vehicleLoadState.rows =': 0 matches =====
 ===== 'vehicleLoadState.rows.push': 1 matches =====
---- lines 22366-22441; match 22391 ---
+--- lines 22366-22446; match 22391 ---
 022366:     function resetVehicleLoadState() {
 022367:         clearSelectionGuards();
 022368:         invalidateVehicleCheckboxCache();
@@ -156,81 +160,8 @@
 022439: 
 022440:         if (MF_SELECTED_TRAINING_LABEL_OVERRIDES[code]) {
 022441:             return MF_SELECTED_TRAINING_LABEL_OVERRIDES[code];
-===== 'rows: vehicleLoadState.rows': 1 matches =====
---- lines 13645-13720; match 13670 ---
-013645:                     sessionStorage.getItem(
-013646:                         'mf_auto_mode_running'
-013647:                     ) === 'true',
-013648:                 ready: vehicleLoadState.ready === true,
-013649:                 staffingBlockActive:
-013650:                     mfStaffingBlockActive === true,
-013651:                 staffingBlockText:
-013652:                     String(mfStaffingBlockText || ''),
-013653:                 processedSelectionKeys:
-013654:                     Array.from(processedSelectionKeys || [])
-013655:             },
-013656:             requirementContext: {
-013657:                 ...mfUnitFinderDiagnosticContext,
-013658:                 missionDefinitionRawRows:
-013659:                     mfLastMissionDefinitionRawRows.map(row => ({
-013660:                         label: String(row.label || ''),
-013661:                         value: String(row.value || '')
-013662:                     })),
-013663:                 currentLiveRequirementRows:
-013664:                     mfSerialiseDiagnosticRequirementRows(liveRows),
-013665:                 visibleAlerts:
-013666:                     mfGetDiagnosticVisibleAlerts()
-013667:             },
-013668:             selectionSummary: {
-013669:                 vehicleLoadState: {
-013670:                     rows: vehicleLoadState.rows.map(row => ({
-013671:                         originalName: String(row.originalName || ''),
-013672:                         mappedName: String(row.mappedName || ''),
-013673:                         required: Math.max(
-013674:                             0,
-013675:                             parseInt(row.required, 10) || 0
-013676:                         ),
-013677:                         selected: Math.max(
-013678:                             0,
-013679:                             parseInt(row.selected, 10) || 0
-013680:                         ),
-013681:                         status: String(row.status || '')
-013682:                     })),
-013683:                     patients: Math.max(
-013684:                         0,
-013685:                         parseInt(vehicleLoadState.patients, 10) || 0
-013686:                     ),
-013687:                     ambulances: Math.max(
-013688:                         0,
-013689:                         parseInt(vehicleLoadState.ambulances, 10) || 0
-013690:                     ),
-013691:                     ready: vehicleLoadState.ready === true
-013692:                 },
-013693:                 selectedVehicles
-013694:             },
-013695:             environment: {
-013696:                 language: String(navigator.language || ''),
-013697:                 userAgent: String(navigator.userAgent || '')
-013698:             }
-013699:         };
-013700:     }
-013701: 
-013702:     function mfPersistUnitFinderDiagnostic(reason) {
-013703:         const snapshot =
-013704:             mfBuildUnitFinderDiagnosticSnapshot(reason);
-013705: 
-013706:         const hasUsefulData = !!(
-013707:             snapshot.requirementContext.updatedAt ||
-013708:             snapshot.requirementContext.suppliedRows.length ||
-013709:             snapshot.requirementContext.processedRows.length ||
-013710:             snapshot.requirementContext.currentLiveRequirementRows.length ||
-013711:             snapshot.requirementContext.visibleAlerts.length ||
-013712:             snapshot.selectionSummary.vehicleLoadState.rows.length ||
-013713:             snapshot.selectionSummary.selectedVehicles.length
-013714:         );
-013715: 
-013716:         if (!hasUsefulData) return snapshot;
-013717: 
-013718:         const emptyMissionUpdateSnapshot =
-013719:             reason === 'not-ready' &&
-013720:             snapshot.requirementContext.mode === 'mission-update' &&
+022442:         }
+022443: 
+022444:         return code
+022445:             .replace(/[_-]+/g, ' ')
+022446:             .replace(/\s+/g, ' ')

@@ -1,0 +1,57 @@
+014640:                 'police car' ||
+014641:             raw ===
+014642:                 'police cars' ||
+014643:             raw ===
+014644:                 'police officer' ||
+014645:             raw ===
+014646:                 'police officers' ||
+014647:             mapped ===
+014648:                 'police car' ||
+014649:             mapped ===
+014650:                 'police cars'
+014651:         );
+014652:     }
+014653: 
+014654:     function getVehicleTypeIdentifiers(input) {
+014655:         if (!input) return [];
+014656: 
+014657:         const cached = mfVehicleTypeIdentifierCache.get(input);
+014658:         if (cached) return cached;
+014659: 
+014660:         const row = input.closest?.('tr');
+014661:         const typeCell = row?.querySelector?.(
+014662:             '[vehicle_type_id], [data-vehicle-type-id]'
+014663:         );
+014664: 
+014665:         const identifiers = [
+014666:             input.getAttribute?.('vehicle_type'),
+014667:             input.getAttribute?.('vehicle_type_id'),
+014668:             input.getAttribute?.('data-vehicle-type'),
+014669:             input.getAttribute?.('data-vehicle-type-id'),
+014670:             row?.getAttribute?.('vehicle_type'),
+014671:             row?.getAttribute?.('vehicle_type_id'),
+014672:             row?.getAttribute?.('data-vehicle-type'),
+014673:             row?.getAttribute?.('data-vehicle-type-id'),
+014674:             typeCell?.getAttribute?.('vehicle_type_id'),
+014675:             typeCell?.getAttribute?.('data-vehicle-type-id')
+014676:         ]
+014677:             .filter(value => value !== null && value !== undefined && String(value).trim() !== '')
+014678:             .map(value => String(value).trim());
+014679: 
+014680:         mfVehicleTypeIdentifierCache.set(input, identifiers);
+014681:         return identifiers;
+014682:     }
+014683: 
+014684:     function isPoliceCarVehicleCheckbox(
+014685:         input
+014686:     ) {
+014687:         if (!input) {
+014688:             return false;
+014689:         }
+014690: 
+014691:         const typeIdentifiers =
+014692:             getVehicleTypeIdentifiers(
+014693:                 input
+014694:             );
+014695: 
+014696:         // MissionChief UK normal Police Car / IRV vehicle type.

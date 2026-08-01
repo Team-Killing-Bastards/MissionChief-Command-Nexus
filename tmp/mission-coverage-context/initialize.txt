@@ -1,0 +1,123 @@
+045642:                 if (restarted) {
+045643:                     continue;
+045644:                 }
+045645: 
+045646:                 break;
+045647:             }
+045648: 
+045649:             break;
+045650:         }
+045651: 
+045652:         autoModeLoopActive = false;
+045653:         updateAutoModeButton();
+045654:     }
+045655: 
+045656:     function initialize() {
+045657:         if (!isMissionPage()) return;
+045658: 
+045659:         if (!claimCurrentMissionExecutionOwnership('initialize')) {
+045660:             document.getElementById('mission-finder-wrapper')?.remove();
+045661:             return;
+045662:         }
+045663: 
+045664:         synchroniseMissionInstanceState('initialize');
+045665:         cleanupDuplicatePanels();
+045666:         scheduleMissionFinderIphoneNativePickerSync(
+045667:             'initialize',
+045668:             0,
+045669:             0
+045670:         );
+045671: 
+045672:         if (document.getElementById('mission-finder-wrapper')) {
+045673:             if (readAllyStealPendingState()) {
+045674:                 setTimeout(
+045675:                     function() {
+045676:                         resumeAllyStealAfterDispatchRefresh(
+045677:                             'existing initialized panel'
+045678:                         );
+045679:                     },
+045680:                     150
+045681:                 );
+045682:             } else if (
+045683:                 readAutoAdvanceAfterDispatchState()
+045684:             ) {
+045685:                 setTimeout(
+045686:                     function() {
+045687:                         resumeAutoAdvanceAfterDispatch(
+045688:                             'existing initialized panel'
+045689:                         );
+045690:                     },
+045691:                     150
+045692:                 );
+045693:             }
+045694: 
+045695:             return;
+045696:         }
+045697: 
+045698:         createControlPanel();
+045699: 
+045700:         if (readAllyStealPendingState()) {
+045701:             updateStatusBox(
+045702:                 'Ally Steal: dispatch refresh detected. Resuming confirmation...'
+045703:             );
+045704: 
+045705:             setTimeout(
+045706:                 function() {
+045707:                     resumeAllyStealAfterDispatchRefresh(
+045708:                         'mission initialize after reload'
+045709:                     );
+045710:                 },
+045711:                 150
+045712:             );
+045713: 
+045714:             return;
+045715:         }
+045716: 
+045717:         if (
+045718:             readAutoAdvanceAfterDispatchState()
+045719:         ) {
+045720:             updateStatusBox(
+045721:                 'Dispatch & Share transition detected. Confirming the next mission...'
+045722:             );
+045723: 
+045724:             setTimeout(
+045725:                 function() {
+045726:                     resumeAutoAdvanceAfterDispatch(
+045727:                         'mission initialize after reload'
+045728:                     );
+045729:                 },
+045730:                 150
+045731:             );
+045732: 
+045733:             return;
+045734:         }
+045735: 
+045736:         if (autoModeRunning) {
+045737:             requireMissionUpdateFirstPass(
+045738:                 'mission panel initialized'
+045739:             );
+045740: 
+045741:             if (mfDebugEnabled) {
+045742:                 debugLog(
+045743:                     'UPDATE FIRST GATE',
+045744:                     'Deferred automatic full vehicle-list loading until the mission update precheck completes.'
+045745:                 );
+045746:             }
+045747:         } else {
+045748:             clickVehicleDisplayBarImmediately();
+045749:         }
+045750:     }
+045751: 
+045752:     function getVehicleCheckboxListSignature() {
+045753:         const selectionDocument =
+045754:             getVehicleSelectionDocument();
+045755:         let boxes = [];
+045756:         let vehicleRows = 0;
+045757: 
+045758:         try {
+045759:             boxes = Array.from(
+045760:                 selectionDocument.querySelectorAll(
+045761:                     'input.vehicle_checkbox'
+045762:                 )
+045763:             );
+045764: 

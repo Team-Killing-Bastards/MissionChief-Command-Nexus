@@ -1,0 +1,44 @@
+046713:                     !controlPanel.closest('#mission-finder-wrapper')
+046714:                 )
+046715:             ) {
+046716:                 cleanupDuplicatePanels();
+046717:             }
+046718:         }
+046719: 
+046720:         if (autoModeRunning && missionPage && flags.relevant) {
+046721:             scheduleAutoModeLoopResume(
+046722:                 'filtered/coalesced DOM mutation'
+046723:             );
+046724:         }
+046725:     }
+046726: 
+046727:     function scheduleMissionFinderMutationWork(records = []) {
+046728:         const flags = classifyMissionFinderMutations(records);
+046729: 
+046730:         if (!flags.relevant) return;
+046731: 
+046732:         mfRuntimeMemoryLastMutationAt = Date.now();
+046733: 
+046734:         mergeMainMutationFlags(flags);
+046735: 
+046736:         if (mfMainMutationFlushTimer) return;
+046737: 
+046738:         mfMainMutationFlushTimer = setTimeout(
+046739:             flushMissionFinderMutationWork,
+046740:             200
+046741:         );
+046742:     }
+046743: 
+046744: 
+046745: 
+046746:     function shouldKeepMissionFinderObserverForCurrentFrame() {
+046747:         if (MF_IS_TOP_WINDOW) return true;
+046748:         if (!document.body || !isMissionPage()) return false;
+046749: 
+046750:         try {
+046751:             return getPrimaryMissionRequirementDocument() === document;
+046752:         } catch (_error) {
+046753:             // Preserve the current runtime when cross-frame inspection is
+046754:             // temporarily unavailable rather than risking an operational stop.
+046755:             return true;
+046756:         }

@@ -1,0 +1,213 @@
+016716:         ) {
+016717:             debugLog(
+016718:                 'POLICE CAR STRICT',
+016719:                 `${originalName} -> ${mappedName} | Police Car/IRV type boxes=${matches.length}`
+016720:             );
+016721:         }
+016722: 
+016723:         return sortVehicleCheckboxesByBestArrival(matches);
+016724:     }
+016725: 
+016726:     function getMatchingVehicleCheckboxes(originalName, mappedName) {
+016727:         return getAllMatchingVehicleCheckboxes(originalName, mappedName, false);
+016728:     }
+016729: 
+016730:     function countSelectedMatchingVehicles(originalName, mappedName) {
+016731:         if (isFireOperationalSupportRequirement(originalName, mappedName)) {
+016732:             return getVehicleCheckboxSnapshot().filter(input =>
+016733:                 input.checked && isFireOperationalSupportUnitCheckbox(input)).length;
+016734:         }
+016735:         if (isFireEngineRequirement(originalName, mappedName)) {
+016736:             return getVehicleCheckboxSnapshot().filter(input => (
+016737:                 input.checked &&
+016738:                 isFireEngineVehicleCheckbox(input)
+016739:             )).length;
+016740:         }
+016741: 
+016742:         const eodResponseMode =
+016743:             getEodResponseRequirementMode(
+016744:                 originalName,
+016745:                 mappedName
+016746:             );
+016747: 
+016748:         if (eodResponseMode) {
+016749:             return getVehicleCheckboxSnapshot().filter(input => {
+016750:                 if (!input.checked) return false;
+016751:                 return eodResponseMode === 'marine'
+016752:                     ? isMarineEodResponseVehicleCheckbox(input)
+016753:                     : isEodResponseVehicleCheckbox(input);
+016754:             }).length;
+016755:         }
+016756: 
+016757:         const candidates = getVehicleMatchCandidates(originalName, mappedName);
+016758:         const strictExactOnly = isAmbulanceTransportRequest(originalName, mappedName);
+016759:         const standardAmbulanceEtaPreferred = strictExactOnly;
+016760:         const sartecPrefixOnly = isSartecRequirement(originalName, mappedName);
+016761:         const rrvTypeOnly = isRrvRequirement(originalName, mappedName);
+016762:         const rivTypeOnly = isRivRequirement(originalName, mappedName);
+016763: 
+016764:         const rivOrMajorFoamTenderPreferred =
+016765:             isRivOrMajorFoamTenderRequirement(
+016766:                 originalName,
+016767:                 mappedName
+016768:             );
+016769:         const policeAirMode = getPoliceAirRequirementMode(originalName, mappedName);
+016770:         const policeCarOnly = isPoliceCarRequirement(originalName, mappedName);
+016771:         const roadRailOnly = isRoadRailUnitRequirement(originalName, mappedName);
+016772:         const flatbedRecoveryOnly =
+016773:             isFlatbedRecoveryVehicleRequirement(originalName, mappedName);
+016774:         const crvOnly = isCrvRequirement(originalName, mappedName);
+016775:         const controlVanOnly = isControlVanRequirement(originalName, mappedName);
+016776:         const airAmbulanceOnly = isAirAmbulanceRequirement(originalName, mappedName);
+016777:         const criticalCareTransferOnly = isCriticalCareTransferAmbulanceRequirement(originalName, mappedName);
+016778:         const genericCriticalCare = isGenericCriticalCareRequirement(originalName, mappedName);
+016779:         const criticalCareRegistry = genericCriticalCare ? readPersonnelTrainingRegistry() : null;
+016780:         const atvCarrierOnly = isAtvCarrierRequirement(originalName, mappedName);
+016781:         const seagoingVesselOnly = isSeagoingVesselRequirement(originalName, mappedName);
+016782:         const dogSupportOnly = isDogSupportUnitRequirement(originalName, mappedName);
+016783:         const operationalSupportOnly =
+016784:             isOperationalSupportOrSarVehicleRequirement(
+016785:                 originalName,
+016786:                 mappedName
+016787:             );
+016788: 
+016789:         const generic4x4Only =
+016790:             isGeneric4x4VehicleRequirement(
+016791:                 originalName,
+016792:                 mappedName
+016793:             );
+016794: 
+016795:         const mountainRescue4x4Preferred =
+016796:             isMountainRescueOrSar4x4Requirement(
+016797:                 originalName,
+016798:                 mappedName
+016799:             );
+016800:         const iccuPreferred =
+016801:             isIccuOrAmbulanceControlRequirement(
+016802:                 originalName,
+016803:                 mappedName
+016804:             );
+016805: 
+016806:         if (
+016807:             rivOrMajorFoamTenderPreferred
+016808:         ) {
+016809:             const selected =
+016810:                 getVehicleCheckboxSnapshot().filter(
+016811:                     input =>
+016812:                         input.checked
+016813:                 );
+016814: 
+016815:             const selectedRivs =
+016816:                 selected.filter(
+016817:                     isRivVehicleCheckbox
+016818:                 ).length;
+016819: 
+016820:             if (
+016821:                 selectedRivs >
+016822:                 0
+016823:             ) {
+016824:                 return selectedRivs;
+016825:             }
+016826: 
+016827:             return selected.filter(
+016828:                 isMajorFoamTenderVehicleCheckbox
+016829:             ).length;
+016830:         }
+016831: 
+016832:         let count = 0;
+016833: 
+016834:         for (const input of getVehicleCheckboxSnapshot()) {
+016835:             // A vehicle that is already checked still counts toward the
+016836:             // requirement even when MissionChief disables its checkbox after
+016837:             // selection. V10.6.48 skipped disabled checked boxes, which made a
+016838:             // successfully selected vehicle look missing during verification.
+016839:             if (!input.checked) continue;
+016840: 
+016841:             let matches = false;
+016842: 
+016843:             if (standardAmbulanceEtaPreferred) {
+016844:                 matches = isStandardAmbulanceEtaVehicleCheckbox(input);
+016845:             } else if (roadRailOnly) {
+016846:                 matches = isRoadRailUnitVehicleCheckbox(input);
+016847:             } else if (flatbedRecoveryOnly) {
+016848:                 matches = isFlatbedRecoveryVehicleCheckbox(input);
+016849:             } else if (crvOnly) {
+016850:                 matches = isCrvVehicleCheckbox(input);
+016851:             } else if (controlVanOnly) {
+016852:                 matches = isControlVanVehicleCheckbox(input);
+016853:             } else if (airAmbulanceOnly) {
+016854:                 matches = isAirAmbulanceVehicleCheckbox(input);
+016855:             } else if (criticalCareTransferOnly) {
+016856:                 matches = isCriticalCareTransferAmbulanceCheckbox(input);
+016857:             } else if (genericCriticalCare) {
+016858:                 matches = isGenericCriticalCareVehicleCheckbox(input, criticalCareRegistry);
+016859:             } else if (seagoingVesselOnly) {
+016860:                 matches = isSeagoingVesselCheckbox(
+016861:                     input
+016862:                 );
+016863:             } else if (atvCarrierOnly) {
+016864:                 matches = isAtvCarrierCheckbox(
+016865:                     input
+016866:                 );
+016867:             } else if (dogSupportOnly) {
+016868:                 matches = isDogSupportUnitCheckbox(
+016869:                     input
+016870:                 );
+016871:             } else if (operationalSupportOnly) {
+016872:                 matches = isOperationalSupportVanCheckbox(input);
+016873:             } else if (iccuPreferred) {
+016874:                 matches =
+016875:                     isIccuVehicleCheckbox(input) ||
+016876:                     isAmbulanceControlUnitCheckbox(input);
+016877:             } else if (generic4x4Only) {
+016878:                 matches = isGeneric4x4VehicleCheckbox(input);
+016879:             } else if (mountainRescue4x4Preferred) {
+016880:                 matches =
+016881:                     isMountainRescue4x4Checkbox(input) ||
+016882:                     isSar4x4Checkbox(input);
+016883:             } else if (policeAirMode === 'helicopter') {
+016884:                 matches = isPoliceHelicopterCheckbox(input);
+016885:             } else if (policeAirMode === 'drone') {
+016886:                 matches = isPoliceDroneCheckbox(input);
+016887:             } else if (policeAirMode === 'flexible') {
+016888:                 matches =
+016889:                     isPoliceHelicopterCheckbox(input) ||
+016890:                     isPoliceDroneCheckbox(input);
+016891:             } else if (sartecPrefixOnly) {
+016892:                 matches = isSartecVehicleCheckbox(input);
+016893:             } else if (rrvTypeOnly) {
+016894:                 matches = isRrvVehicleCheckbox(input);
+016895:             } else if (rivTypeOnly) {
+016896:                 matches = isRivVehicleCheckbox(input);
+016897:             } else if (policeCarOnly) {
+016898:                 // Any selected exact type-8 IRV satisfies generic Police
+016899:                 // attendance. Training data controls preference only; named
+016900:                 // specialist requirements still use their strict selectors.
+016901:                 matches = isPoliceCarVehicleCheckbox(input);
+016902:             } else {
+016903:                 matches = vehicleValuesMatchCandidates(
+016904:                     getCheckboxVehicleValues(input),
+016905:                     candidates,
+016906:                     strictExactOnly
+016907:                 );
+016908:             }
+016909: 
+016910:             if (matches) count += 1;
+016911:         }
+016912: 
+016913:         return count;
+016914:     }
+016915: 
+016916:     function refreshVehicleRequirementCounters() {
+016917:         // V9.2.1: DISPLAY ONLY. This updates the panel counters from the current ticked checkboxes.
+016918:         // It must not decide what to send and must not trigger any selections.
+016919:         vehicleLoadState.rows.forEach(row => {
+016920:             const required = Number(row.required || 0);
+016921:             const selected = countSelectedMatchingVehicles(row.originalName, row.mappedName);
+016922:             row.selected = Math.min(selected, required);
+016923:         });
+016924:     }
+016925: 
+016926:     function findUnitButton(mappedName, originalName) {
+016927:         if (isFireOperationalSupportRequirement(originalName, mappedName)) {
+016928:             return sortVehicleCheckboxesByBestArrival(getVehicleCheckboxSnapshot().filter(input =>

@@ -1,0 +1,49 @@
+022364:     }
+022365: 
+022366:     function resetVehicleLoadState() {
+022367:         clearSelectionGuards();
+022368:         invalidateVehicleCheckboxCache();
+022369:         vehicleLoadState = {
+022370:             rows: [],
+022371:             patients: 0,
+022372:             ambulances: 0,
+022373:             ambulanceOfficer: false,
+022374:             ready: false
+022375:         };
+022376:     }
+022377: 
+022378:     function addOrUpdateVehicleRow(originalName, mappedName, required, status, selected) {
+022379:         const safeRequired = Math.max(0, parseInt(required, 10) || 0);
+022380:         const safeSelected = Number.isFinite(Number(selected)) ? Math.max(0, Math.min(Number(selected), safeRequired)) : countSelectedMatchingVehicles(originalName, mappedName);
+022381:         const existing = vehicleLoadState.rows.find(row => row.originalName === originalName && row.mappedName === mappedName);
+022382: 
+022383:         if (existing) {
+022384:             existing.mappedName = mappedName;
+022385:             existing.required = safeRequired;
+022386:             existing.selected = Math.min(safeSelected, safeRequired);
+022387:             existing.status = status || (existing.selected >= safeRequired ? 'assigned' : existing.selected > 0 ? 'retrying' : 'pending');
+022388:             return;
+022389:         }
+022390: 
+022391:         vehicleLoadState.rows.push({
+022392:             originalName,
+022393:             mappedName,
+022394:             required: safeRequired,
+022395:             selected: Math.min(safeSelected, safeRequired),
+022396:             status: status || (safeSelected >= safeRequired ? 'assigned' : safeSelected > 0 ? 'retrying' : 'pending')
+022397:         });
+022398:     }
+022399: 
+022400:     function setVehicleStatus(originalName, status) {
+022401:         const row = vehicleLoadState.rows.find(r => r.originalName === originalName);
+022402:         if (row) {
+022403:             row.status = status;
+022404:             row.selected = Math.min(countSelectedMatchingVehicles(row.originalName, row.mappedName), Number(row.required || 0));
+022405:         }
+022406:     }
+022407: 
+022408:     const MF_SELECTED_TRAINING_LABEL_OVERRIDES =
+022409:         Object.freeze({
+022410:             critical_care: 'Critical Care',
+022411:             traffic_police: 'Roads Policing',
+022412:             swat: 'Firearms',

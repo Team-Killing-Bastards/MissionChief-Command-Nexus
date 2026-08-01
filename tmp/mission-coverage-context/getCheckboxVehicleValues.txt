@@ -1,0 +1,51 @@
+015625:             );
+015626:         } catch (_error) {}
+015627: 
+015628:         mfVehicleCheckboxCache = {
+015629:             expiresAt:
+015630:                 now +
+015631:                 (nodes.length ? 500 : 120),
+015632:             nodes,
+015633:             document: selectionDocument
+015634:         };
+015635: 
+015636:         return nodes;
+015637:     }
+015638: 
+015639:     function getCheckboxVehicleValues(input) {
+015640:         if (!input) return [];
+015641: 
+015642:         const cached = mfCheckboxVehicleValueCache.get(input);
+015643:         if (cached) return cached;
+015644: 
+015645:         const row = input.closest('tr');
+015646:         const values = [
+015647:             input.getAttribute('vehicle_caption'),
+015648:             input.getAttribute('vehicle_type_caption'),
+015649:             input.getAttribute('search_attribute'),
+015650:             input.getAttribute('vehicle_type'),
+015651:             row?.getAttribute('vehicle_caption'),
+015652:             row?.getAttribute('vehicle_type_caption'),
+015653:             row?.getAttribute('vehicle_type'),
+015654:             row?.querySelector('td:nth-child(2)')?.innerText
+015655:         ]
+015656:         .filter(Boolean)
+015657:         .map(normaliseVehicleText);
+015658: 
+015659:         mfCheckboxVehicleValueCache.set(input, values);
+015660:         return values;
+015661:     }
+015662: 
+015663:     function getExtendedVehicleValues(input) {
+015664:         if (!input) return [];
+015665: 
+015666:         const cached = mfExtendedVehicleValueCache.get(input);
+015667:         if (cached) return cached;
+015668: 
+015669:         const row = input.closest && input.closest('tr');
+015670:         const labelById = input.id
+015671:             ? document.getElementById(`label_${input.id}`)
+015672:             : null;
+015673: 
+015674:         const rowLabel = row && input.id
+015675:             ? Array.from(row.querySelectorAll('label[for]')).find(

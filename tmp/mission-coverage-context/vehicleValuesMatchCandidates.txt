@@ -1,0 +1,35 @@
+015697:         const mapped = normaliseVehicleText(mappedName);
+015698: 
+015699:         if (raw.includes('ambulance officer') || mapped.includes('ambulance officer')) {
+015700:             return false;
+015701:         }
+015702: 
+015703:         return mapped === 'ambulance x 01'
+015704:             || mapped === 'ambulance'
+015705:             || mapped === 'ambulances'
+015706:             || raw === 'ambulance'
+015707:             || raw === 'ambulances'
+015708:             || raw === 'ambulance x 01';
+015709:     }
+015710: 
+015711:     function vehicleValuesMatchCandidates(values, candidates, strictExactOnly) {
+015712:         if (strictExactOnly) {
+015713:             return values.some(value => candidates.some(candidate => value === candidate));
+015714:         }
+015715: 
+015716:         return values.some(value => candidates.some(candidate => value === candidate || value.includes(candidate)));
+015717:     }
+015718: 
+015719:     function getVehicleCheckboxForElement(
+015720:         element
+015721:     ) {
+015722:         if (!element) return null;
+015723: 
+015724:         if (
+015725:             element.matches?.(
+015726:                 'input.vehicle_checkbox'
+015727:             )
+015728:         ) {
+015729:             return element;
+015730:         }
+015731: 

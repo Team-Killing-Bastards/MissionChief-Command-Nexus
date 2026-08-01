@@ -1,0 +1,1545 @@
+===== 'vehicle-load-list-content': 5 matches =====
+--- lines 17390-17455; match 17410 ---
+017390: 
+017391:             .mf2026-small {
+017392:                 font-size: 12px;
+017393:                 color: #ccc;
+017394:             }
+017395: 
+017396:             .mf2026-progress-wrap {
+017397:                 background: #222;
+017398:                 border-radius: 6px;
+017399:                 overflow: hidden;
+017400:                 height: 10px;
+017401:             }
+017402: 
+017403:             .mf2026-progress-bar {
+017404:                 height: 10px;
+017405:                 width: 0%;
+017406:                 background: #42ff75;
+017407:                 transition: width 0.25s ease;
+017408:             }
+017409: 
+017410:             #vehicle-load-list-content {
+017411:                 max-height: 210px;
+017412:                 overflow-y: auto;
+017413:                 padding-right: 4px;
+017414:             }
+017415: 
+017416: 
+017417:             #trained-personnel-content {
+017418:                 max-height: 280px;
+017419:                 overflow-y: auto;
+017420:                 padding-right: 4px;
+017421:             }
+017422: 
+017423:             .mf2026-training-vehicle {
+017424:                 padding: 7px 0;
+017425:                 border-bottom: 1px solid rgba(255,255,255,0.1);
+017426:             }
+017427: 
+017428:             .mf2026-training-vehicle:last-child {
+017429:                 border-bottom: none;
+017430:             }
+017431: 
+017432:             .mf2026-training-vehicle-name {
+017433:                 margin-bottom: 5px;
+017434:                 color: #fff;
+017435:                 font-weight: bold;
+017436:             }
+017437: 
+017438:             .mf2026-training-person {
+017439:                 display: grid;
+017440:                 grid-template-columns: auto minmax(0, 1fr);
+017441:                 gap: 8px;
+017442:                 align-items: start;
+017443:                 padding: 3px 0;
+017444:             }
+017445: 
+017446:             .mf2026-training-person-label {
+017447:                 color: #42ff75;
+017448:                 font-weight: bold;
+017449:                 white-space: nowrap;
+017450:             }
+017451: 
+017452:             .mf2026-training-course-list {
+017453:                 color: #ddd;
+017454:                 text-align: right;
+017455:                 overflow-wrap: anywhere;
+--- lines 17727-17792; match 17747 ---
+017727:                 display: flex;
+017728:                 align-items: center;
+017729:                 justify-content: center;
+017730:                 box-sizing: border-box;
+017731:             }
+017732: 
+017733:             #mission-finder-wrapper.mf2026-ios-safari .mf2026-drag {
+017734:                 cursor: grab;
+017735:                 touch-action: none;
+017736:                 -webkit-user-select: none;
+017737:                 user-select: none;
+017738:             }
+017739: 
+017740:             #mission-finder-wrapper.mf2026-ios-safari .mf2026-drag:active {
+017741:                 cursor: grabbing;
+017742:             }
+017743: 
+017744:             #mission-finder-wrapper.mf2026-ios-safari .mf-control-body,
+017745:             #mission-finder-wrapper.mf2026-ios-safari .mf-load-body,
+017746:             #mission-finder-wrapper.mf2026-ios-safari .mf-trained-body,
+017747:             #mission-finder-wrapper.mf2026-ios-safari #vehicle-load-list-content,
+017748:             #mission-finder-wrapper.mf2026-ios-safari #trained-personnel-content,
+017749:             #mission-finder-wrapper.mf2026-ios-safari #session-panel-content {
+017750:                 -webkit-overflow-scrolling: touch;
+017751:             }
+017752: 
+017753:             #mission-finder-wrapper.mf2026-ios-safari .mf2026-button {
+017754:                 min-height: 42px;
+017755:                 font-size: 14px;
+017756:                 touch-action: manipulation;
+017757:             }
+017758: 
+017759:             #mission-finder-wrapper.mf2026-ios-safari input,
+017760:             #mission-finder-wrapper.mf2026-ios-safari select {
+017761:                 min-height: 38px;
+017762:                 font-size: 16px;
+017763:             }
+017764: 
+017765:             #mission-finder-wrapper.mf2026-ios-safari #mf-control-position-box,
+017766:             #mission-finder-wrapper.mf2026-ios-safari #mf-control-centre {
+017767:                 display: none;
+017768:             }
+017769: 
+017770:             #mission-finder-wrapper.mf2026-ios-safari #mf-control-minimize {
+017771:                 width: 44px;
+017772:                 flex: 0 0 44px;
+017773:                 padding: 6px 0;
+017774:                 font-size: 20px;
+017775:                 line-height: 1;
+017776:             }
+017777: 
+017778:             #mission-finder-wrapper.mf2026-ios-safari
+017779:             #control-panel.mf2026-control-collapsed {
+017780:                 width: 100%;
+017781:                 min-height: 0;
+017782:                 padding: 6px;
+017783:                 overflow: hidden;
+017784:             }
+017785: 
+017786:             #mission-finder-wrapper.mf2026-ios-safari
+017787:             #control-panel.mf2026-control-collapsed
+017788:             .mf2026-control-header-row {
+017789:                 width: 100%;
+017790:             }
+017791: 
+017792:             #mission-finder-wrapper.mf2026-ios-safari
+--- lines 18086-18151; match 18106 ---
+018086:                 gap: 4px;
+018087:                 max-height: 42vh;
+018088:                 overflow-y: auto;
+018089:                 overscroll-behavior: contain;
+018090:                 -webkit-overflow-scrolling: touch;
+018091:             }
+018092: 
+018093:             @supports (height: 100dvh) {
+018094:                 #mission-finder-wrapper.mf2026-iphone-safari .mf-load-body {
+018095:                     max-height: 42dvh;
+018096:                 }
+018097:             }
+018098: 
+018099:             #mission-finder-wrapper.mf2026-iphone-safari
+018100:             .mf-load-body .mf2026-box {
+018101:                 padding: 6px;
+018102:                 border-radius: 10px;
+018103:             }
+018104: 
+018105:             #mission-finder-wrapper.mf2026-iphone-safari
+018106:             #vehicle-load-list-content {
+018107:                 max-height: 22vh;
+018108:                 padding-right: 0;
+018109:             }
+018110: 
+018111:             #mission-finder-wrapper.mf2026-iphone-safari
+018112:             #session-panel-content {
+018113:                 max-height: 12vh;
+018114:                 padding-right: 0;
+018115:             }
+018116: 
+018117: 
+018118:             /* MissionChief Nexus integrated mission dashboard (V10.6.132). */
+018119:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) {
+018120:                 display: grid;
+018121:                 grid-template-columns: 66px repeat(3, minmax(235px, 1fr));
+018122:                 grid-template-areas:
+018123:                     "rail control load trained"
+018124:                     "footer footer footer footer";
+018125:                 align-items: stretch;
+018126:                 gap: 10px;
+018127:                 width: min(1360px, calc(100vw - 32px));
+018128:                 max-width: calc(100vw - 32px);
+018129:                 max-height: calc(100vh - 32px);
+018130:                 padding: 10px;
+018131:                 overflow: auto;
+018132:                 box-sizing: border-box;
+018133:                 border: 1px solid rgba(82, 155, 255, 0.24);
+018134:                 border-radius: 14px;
+018135:                 background:
+018136:                     radial-gradient(circle at 8% 0%, rgba(20, 92, 170, 0.18), transparent 34%),
+018137:                     linear-gradient(145deg, rgba(5, 16, 29, 0.98), rgba(4, 21, 38, 0.98));
+018138:                 box-shadow: 0 18px 55px rgba(0, 0, 0, 0.55);
+018139:                 color: #eaf2ff;
+018140:             }
+018141: 
+018142:             #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari) {
+018143:                 grid-template-columns: 66px minmax(250px, 285px) repeat(3, minmax(225px, 1fr));
+018144:                 grid-template-areas:
+018145:                     "rail utility control load trained"
+018146:                     "footer footer footer footer footer";
+018147:                 width: min(1580px, calc(100vw - 32px));
+018148:             }
+018149: 
+018150:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-panel {
+018151:                 width: auto;
+--- lines 20326-20391; match 20346 ---
+020326:         loadPanel.id = 'vehicle-load-list-box';
+020327:         loadPanel.className = `mf2026-panel ${mfVehicleLoadCollapsed ? 'mf2026-load-collapsed' : ''}`;
+020328: 
+020329:         loadPanel.innerHTML = `
+020330:             <div class="mf2026-load-header-row">
+020331:                 <div id="mf-load-title" class="mf2026-header">Vehicle Load</div>
+020332:                 <button id="mf-load-minimize" type="button" class="mf2026-button" title="Minimize / expand vehicle load list">${missionFinderIphoneSafari ? (mfVehicleLoadCollapsed ? '▾' : '▴') : (mfVehicleLoadCollapsed ? '+' : '−')}</button>
+020333:             </div>
+020334: 
+020335:             <div id="mf-load-body" class="mf-load-body">
+020336:                 <div class="mf2026-box">
+020337:                     <div class="mf2026-section-title">Progress</div>
+020338:                     <div id="vehicle-load-summary" class="mf2026-small">No mission loaded</div>
+020339:                     <div class="mf2026-progress-wrap" style="margin-top:6px;">
+020340:                         <div id="vehicle-load-progress" class="mf2026-progress-bar"></div>
+020341:                     </div>
+020342:                 </div>
+020343: 
+020344:                 <div class="mf2026-box">
+020345:                     <div class="mf2026-section-title">Required Vehicles <span class="mf2026-small">(selected / required)</span></div>
+020346:                     <div id="vehicle-load-list-content" class="mf2026-small">
+020347:                         Click Unit Finder to load vehicles.
+020348:                     </div>
+020349:                 </div>
+020350: 
+020351:                 <div class="mf2026-box">
+020352:                     <div class="mf2026-section-title">Patients</div>
+020353:                     <div id="vehicle-patient-content" class="mf2026-small">
+020354:                         No patients checked yet.
+020355:                     </div>
+020356:                 </div>
+020357: 
+020358:                 <div class="mf2026-box">
+020359:                     <div class="mf2026-section-title">Session</div>
+020360:                     <div id="session-panel-content" class="mf2026-small">
+020361:                         No session data yet.
+020362:                     </div>
+020363:                 </div>
+020364:             </div>
+020365:         `;
+020366: 
+020367:         const trainedPanel = document.createElement('div');
+020368:         trainedPanel.id = 'trained-personnel-box';
+020369:         trainedPanel.className = `mf2026-panel ${mfTrainedPersonnelCollapsed ? 'mf2026-trained-collapsed' : ''}`;
+020370:         trainedPanel.innerHTML = `
+020371:             <div class="mf2026-trained-header-row">
+020372:                 <div id="mf-trained-title" class="mf2026-header">Trained Personnel</div>
+020373:                 <button id="mf-trained-minimize" type="button" class="mf2026-button" title="Minimize / expand trained personnel">${mfTrainedPersonnelCollapsed ? '+' : '−'}</button>
+020374:             </div>
+020375: 
+020376:             <div id="mf-trained-body" class="mf-trained-body">
+020377:                 <div class="mf2026-box">
+020378:                     <div class="mf2026-section-title">Selected Training Coverage</div>
+020379:                     <div id="trained-personnel-summary" class="mf2026-small">
+020380:                         No selected trained personnel yet.
+020381:                     </div>
+020382:                 </div>
+020383: 
+020384:                 <div class="mf2026-box">
+020385:                     <div class="mf2026-section-title">Personnel and Courses</div>
+020386:                     <div id="trained-personnel-content" class="mf2026-small">
+020387:                         Selected trained personnel will appear here.
+020388:                     </div>
+020389:                 </div>
+020390:             </div>
+020391:         `;
+--- lines 22676-22741; match 22696 ---
+022676:                         `;
+022677:                     }).join('');
+022678: 
+022679:             return `
+022680:                 <div class="mf2026-training-vehicle">
+022681:                     <div class="mf2026-training-vehicle-name">
+022682:                         ${escapeHtml(vehicleName)}
+022683:                         ${vehicle.vehicleId ? `<span class="mf2026-small"> #${escapeHtml(vehicle.vehicleId)}</span>` : ''}
+022684:                     </div>
+022685:                     ${profileMarkup}
+022686:                 </div>
+022687:             `;
+022688:         }).join('');
+022689: 
+022690:         content.innerHTML =
+022691:             requiredMarkup +
+022692:             selectedMarkup;
+022693:     }
+022694: 
+022695:     function renderVehicleLoadListNow() {
+022696:         const listContent = document.getElementById('vehicle-load-list-content');
+022697:         const patientContent = document.getElementById('vehicle-patient-content');
+022698:         const summary = document.getElementById('vehicle-load-summary');
+022699:         const progress = document.getElementById('vehicle-load-progress');
+022700: 
+022701:         if (!listContent || !patientContent || !summary || !progress) return;
+022702: 
+022703:         refreshVehicleRequirementCounters();
+022704: 
+022705:         const totalRequired = vehicleLoadState.rows.reduce((sum, row) => sum + Number(row.required || 0), 0);
+022706:         const foundRequired = vehicleLoadState.rows.reduce((sum, row) => sum + Number(row.selected || 0), 0);
+022707: 
+022708:         const percent = totalRequired > 0 ? Math.round((foundRequired / totalRequired) * 100) : vehicleLoadState.ready ? 100 : 0;
+022709: 
+022710:         summary.innerHTML = `
+022711:             <div>Vehicles: <strong>${foundRequired}</strong> / <strong>${totalRequired}</strong></div>
+022712:             <div>Status: <strong class="${vehicleLoadState.ready ? 'mf2026-good' : 'mf2026-warn'}">${vehicleLoadState.ready ? 'Ready' : 'Not Ready'}</strong></div>
+022713:         `;
+022714: 
+022715:         progress.style.width = `${percent}%`;
+022716: 
+022717:         if (vehicleLoadState.rows.length === 0) {
+022718:             listContent.innerHTML = vehicleLoadState.ready
+022719:                 ? `<span class="mf2026-good">✓ Ambulance-only mission ready</span>`
+022720:                 : `Click Unit Finder to load vehicles.`;
+022721:         } else {
+022722:             listContent.innerHTML = vehicleLoadState.rows.map(row => {
+022723:                 let icon = '○';
+022724:                 let cls = 'mf2026-warn';
+022725: 
+022726:                 const selected = Math.min(Number(row.selected || 0), Number(row.required || 0));
+022727:                 const required = Number(row.required || 0);
+022728: 
+022729:                 if (selected >= required && required > 0) {
+022730:                     icon = '✓';
+022731:                     cls = 'mf2026-good';
+022732:                 } else if (row.status === 'missing') {
+022733:                     icon = '✕';
+022734:                     cls = 'mf2026-bad';
+022735:                 } else if (selected > 0 || row.status === 'retrying') {
+022736:                     icon = '↻';
+022737:                     cls = 'mf2026-warn';
+022738:                 }
+022739: 
+022740:                 return `
+022741:                     <div class="mf2026-row">
+===== 'trained-personnel-content': 4 matches =====
+--- lines 17397-17462; match 17417 ---
+017397:                 background: #222;
+017398:                 border-radius: 6px;
+017399:                 overflow: hidden;
+017400:                 height: 10px;
+017401:             }
+017402: 
+017403:             .mf2026-progress-bar {
+017404:                 height: 10px;
+017405:                 width: 0%;
+017406:                 background: #42ff75;
+017407:                 transition: width 0.25s ease;
+017408:             }
+017409: 
+017410:             #vehicle-load-list-content {
+017411:                 max-height: 210px;
+017412:                 overflow-y: auto;
+017413:                 padding-right: 4px;
+017414:             }
+017415: 
+017416: 
+017417:             #trained-personnel-content {
+017418:                 max-height: 280px;
+017419:                 overflow-y: auto;
+017420:                 padding-right: 4px;
+017421:             }
+017422: 
+017423:             .mf2026-training-vehicle {
+017424:                 padding: 7px 0;
+017425:                 border-bottom: 1px solid rgba(255,255,255,0.1);
+017426:             }
+017427: 
+017428:             .mf2026-training-vehicle:last-child {
+017429:                 border-bottom: none;
+017430:             }
+017431: 
+017432:             .mf2026-training-vehicle-name {
+017433:                 margin-bottom: 5px;
+017434:                 color: #fff;
+017435:                 font-weight: bold;
+017436:             }
+017437: 
+017438:             .mf2026-training-person {
+017439:                 display: grid;
+017440:                 grid-template-columns: auto minmax(0, 1fr);
+017441:                 gap: 8px;
+017442:                 align-items: start;
+017443:                 padding: 3px 0;
+017444:             }
+017445: 
+017446:             .mf2026-training-person-label {
+017447:                 color: #42ff75;
+017448:                 font-weight: bold;
+017449:                 white-space: nowrap;
+017450:             }
+017451: 
+017452:             .mf2026-training-course-list {
+017453:                 color: #ddd;
+017454:                 text-align: right;
+017455:                 overflow-wrap: anywhere;
+017456:             }
+017457: 
+017458:             #mf-mission-ready-delay-input {
+017459:                 width: 100%;
+017460:                 color: black;
+017461:                 padding: 4px;
+017462:                 border-radius: 4px;
+--- lines 17728-17793; match 17748 ---
+017728:                 align-items: center;
+017729:                 justify-content: center;
+017730:                 box-sizing: border-box;
+017731:             }
+017732: 
+017733:             #mission-finder-wrapper.mf2026-ios-safari .mf2026-drag {
+017734:                 cursor: grab;
+017735:                 touch-action: none;
+017736:                 -webkit-user-select: none;
+017737:                 user-select: none;
+017738:             }
+017739: 
+017740:             #mission-finder-wrapper.mf2026-ios-safari .mf2026-drag:active {
+017741:                 cursor: grabbing;
+017742:             }
+017743: 
+017744:             #mission-finder-wrapper.mf2026-ios-safari .mf-control-body,
+017745:             #mission-finder-wrapper.mf2026-ios-safari .mf-load-body,
+017746:             #mission-finder-wrapper.mf2026-ios-safari .mf-trained-body,
+017747:             #mission-finder-wrapper.mf2026-ios-safari #vehicle-load-list-content,
+017748:             #mission-finder-wrapper.mf2026-ios-safari #trained-personnel-content,
+017749:             #mission-finder-wrapper.mf2026-ios-safari #session-panel-content {
+017750:                 -webkit-overflow-scrolling: touch;
+017751:             }
+017752: 
+017753:             #mission-finder-wrapper.mf2026-ios-safari .mf2026-button {
+017754:                 min-height: 42px;
+017755:                 font-size: 14px;
+017756:                 touch-action: manipulation;
+017757:             }
+017758: 
+017759:             #mission-finder-wrapper.mf2026-ios-safari input,
+017760:             #mission-finder-wrapper.mf2026-ios-safari select {
+017761:                 min-height: 38px;
+017762:                 font-size: 16px;
+017763:             }
+017764: 
+017765:             #mission-finder-wrapper.mf2026-ios-safari #mf-control-position-box,
+017766:             #mission-finder-wrapper.mf2026-ios-safari #mf-control-centre {
+017767:                 display: none;
+017768:             }
+017769: 
+017770:             #mission-finder-wrapper.mf2026-ios-safari #mf-control-minimize {
+017771:                 width: 44px;
+017772:                 flex: 0 0 44px;
+017773:                 padding: 6px 0;
+017774:                 font-size: 20px;
+017775:                 line-height: 1;
+017776:             }
+017777: 
+017778:             #mission-finder-wrapper.mf2026-ios-safari
+017779:             #control-panel.mf2026-control-collapsed {
+017780:                 width: 100%;
+017781:                 min-height: 0;
+017782:                 padding: 6px;
+017783:                 overflow: hidden;
+017784:             }
+017785: 
+017786:             #mission-finder-wrapper.mf2026-ios-safari
+017787:             #control-panel.mf2026-control-collapsed
+017788:             .mf2026-control-header-row {
+017789:                 width: 100%;
+017790:             }
+017791: 
+017792:             #mission-finder-wrapper.mf2026-ios-safari
+017793:             #control-panel.mf2026-control-collapsed
+--- lines 20366-20431; match 20386 ---
+020366: 
+020367:         const trainedPanel = document.createElement('div');
+020368:         trainedPanel.id = 'trained-personnel-box';
+020369:         trainedPanel.className = `mf2026-panel ${mfTrainedPersonnelCollapsed ? 'mf2026-trained-collapsed' : ''}`;
+020370:         trainedPanel.innerHTML = `
+020371:             <div class="mf2026-trained-header-row">
+020372:                 <div id="mf-trained-title" class="mf2026-header">Trained Personnel</div>
+020373:                 <button id="mf-trained-minimize" type="button" class="mf2026-button" title="Minimize / expand trained personnel">${mfTrainedPersonnelCollapsed ? '+' : '−'}</button>
+020374:             </div>
+020375: 
+020376:             <div id="mf-trained-body" class="mf-trained-body">
+020377:                 <div class="mf2026-box">
+020378:                     <div class="mf2026-section-title">Selected Training Coverage</div>
+020379:                     <div id="trained-personnel-summary" class="mf2026-small">
+020380:                         No selected trained personnel yet.
+020381:                     </div>
+020382:                 </div>
+020383: 
+020384:                 <div class="mf2026-box">
+020385:                     <div class="mf2026-section-title">Personnel and Courses</div>
+020386:                     <div id="trained-personnel-content" class="mf2026-small">
+020387:                         Selected trained personnel will appear here.
+020388:                     </div>
+020389:                 </div>
+020390:             </div>
+020391:         `;
+020392: 
+020393:         const dashboardFooter = document.createElement('footer');
+020394:         dashboardFooter.id = 'mf-dashboard-footer';
+020395:         const dashboardVersion =
+020396:             typeof GM_info !== 'undefined' &&
+020397:             GM_info?.script?.version
+020398:                 ? GM_info.script.version
+020399:                 : '1.0.74';
+020400:         dashboardFooter.textContent =
+020401:             `MissionChief Nexus V${dashboardVersion} · MIT · Martblyth`;
+020402: 
+020403:         if (missionFinderIphoneSafari) {
+020404:             wrapper.appendChild(iphoneLauncher);
+020405:         } else {
+020406:             wrapper.appendChild(dashboardBrand);
+020407:             wrapper.appendChild(dashboardRail);
+020408:             wrapper.appendChild(dashboardUtility);
+020409:             wrapper.appendChild(dashboardFooter);
+020410:             setMissionDashboardTab(
+020411:                 localStorage.getItem(
+020412:                     'mf_nexus_dashboard_tab_v1'
+020413:                 ) || 'mission'
+020414:             );
+020415:         }
+020416:         wrapper.appendChild(panel);
+020417:         wrapper.appendChild(loadPanel);
+020418:         wrapper.appendChild(trainedPanel);
+020419:         document.body.appendChild(wrapper);
+020420: 
+020421:         scheduleMissionRequiredPersonnelPreload(0);
+020422: 
+020423:         function syncVehicleLoadCollapseState() {
+020424:             const expanded = !mfVehicleLoadCollapsed;
+020425:             loadPanel.classList.toggle(
+020426:                 'mf2026-load-collapsed',
+020427:                 mfVehicleLoadCollapsed
+020428:             );
+020429: 
+020430:             const minimizeButton =
+020431:                 loadPanel.querySelector('#mf-load-minimize');
+--- lines 22507-22572; match 22527 ---
+022507:                     vehicleId: getMissionVehicleId(input),
+022508:                     vehicleName: getVehicleDebugName(input),
+022509:                     profiles,
+022510:                     profilesComplete:
+022511:                         entry.trainingProfilesComplete === true,
+022512:                     trainingCounts
+022513:                 };
+022514:             })
+022515:             .filter(Boolean)
+022516:             .sort((left, right) => {
+022517:                 return String(left.vehicleName || '')
+022518:                     .localeCompare(String(right.vehicleName || ''));
+022519:             });
+022520:     }
+022521: 
+022522: 
+022523:     function renderSelectedTrainedPersonnelPanel() {
+022524:         const summary =
+022525:             document.getElementById('trained-personnel-summary');
+022526:         const content =
+022527:             document.getElementById('trained-personnel-content');
+022528: 
+022529:         if (!summary || !content) return;
+022530: 
+022531: 
+022532:         let preloadState = { status: 'idle' };
+022533:         let requiredPersonnel = [];
+022534: 
+022535:         try {
+022536:             preloadState =
+022537:                 getMissionRequirementPreloadState();
+022538:             requiredPersonnel =
+022539:                 getPreloadedMissionTrainedPersonnelRequirements();
+022540:         } catch (error) {
+022541:             if (mfDebugEnabled) {
+022542:                 debugLog(
+022543:                     'MISSION PERSONNEL PRELOAD',
+022544:                     `panel cache read failed: ${error?.message || error}`
+022545:                 );
+022546:             }
+022547:         }
+022548:         const selectedVehicles =
+022549:             getSelectedTrainedPersonnelPanelModel();
+022550:         const completeProfiles = selectedVehicles.reduce(
+022551:             (total, vehicle) => {
+022552:                 return total + (
+022553:                     vehicle.profilesComplete
+022554:                         ? vehicle.profiles.length
+022555:                         : 0
+022556:                 );
+022557:             },
+022558:             0
+022559:         );
+022560:         const aggregateOnlyVehicles = selectedVehicles.filter(vehicle => {
+022561:             return !vehicle.profilesComplete;
+022562:         }).length;
+022563:         const requiredTotal = requiredPersonnel.reduce(
+022564:             (total, requirement) => {
+022565:                 return total + requirement.required;
+022566:             },
+022567:             0
+022568:         );
+022569:         const coveredTotal = requiredPersonnel.reduce(
+022570:             (total, requirement) => {
+022571:                 return total + Math.min(
+022572:                     requirement.required,
+===== 'mf2026-training-vehicle': 7 matches =====
+--- lines 17403-17468; match 17423 ---
+017403:             .mf2026-progress-bar {
+017404:                 height: 10px;
+017405:                 width: 0%;
+017406:                 background: #42ff75;
+017407:                 transition: width 0.25s ease;
+017408:             }
+017409: 
+017410:             #vehicle-load-list-content {
+017411:                 max-height: 210px;
+017412:                 overflow-y: auto;
+017413:                 padding-right: 4px;
+017414:             }
+017415: 
+017416: 
+017417:             #trained-personnel-content {
+017418:                 max-height: 280px;
+017419:                 overflow-y: auto;
+017420:                 padding-right: 4px;
+017421:             }
+017422: 
+017423:             .mf2026-training-vehicle {
+017424:                 padding: 7px 0;
+017425:                 border-bottom: 1px solid rgba(255,255,255,0.1);
+017426:             }
+017427: 
+017428:             .mf2026-training-vehicle:last-child {
+017429:                 border-bottom: none;
+017430:             }
+017431: 
+017432:             .mf2026-training-vehicle-name {
+017433:                 margin-bottom: 5px;
+017434:                 color: #fff;
+017435:                 font-weight: bold;
+017436:             }
+017437: 
+017438:             .mf2026-training-person {
+017439:                 display: grid;
+017440:                 grid-template-columns: auto minmax(0, 1fr);
+017441:                 gap: 8px;
+017442:                 align-items: start;
+017443:                 padding: 3px 0;
+017444:             }
+017445: 
+017446:             .mf2026-training-person-label {
+017447:                 color: #42ff75;
+017448:                 font-weight: bold;
+017449:                 white-space: nowrap;
+017450:             }
+017451: 
+017452:             .mf2026-training-course-list {
+017453:                 color: #ddd;
+017454:                 text-align: right;
+017455:                 overflow-wrap: anywhere;
+017456:             }
+017457: 
+017458:             #mf-mission-ready-delay-input {
+017459:                 width: 100%;
+017460:                 color: black;
+017461:                 padding: 4px;
+017462:                 border-radius: 4px;
+017463:                 border: none;
+017464:                 box-sizing: border-box;
+017465:             }
+017466: 
+017467:             .mf2026-checkbox-row {
+017468:                 display: flex;
+--- lines 17408-17473; match 17428 ---
+017408:             }
+017409: 
+017410:             #vehicle-load-list-content {
+017411:                 max-height: 210px;
+017412:                 overflow-y: auto;
+017413:                 padding-right: 4px;
+017414:             }
+017415: 
+017416: 
+017417:             #trained-personnel-content {
+017418:                 max-height: 280px;
+017419:                 overflow-y: auto;
+017420:                 padding-right: 4px;
+017421:             }
+017422: 
+017423:             .mf2026-training-vehicle {
+017424:                 padding: 7px 0;
+017425:                 border-bottom: 1px solid rgba(255,255,255,0.1);
+017426:             }
+017427: 
+017428:             .mf2026-training-vehicle:last-child {
+017429:                 border-bottom: none;
+017430:             }
+017431: 
+017432:             .mf2026-training-vehicle-name {
+017433:                 margin-bottom: 5px;
+017434:                 color: #fff;
+017435:                 font-weight: bold;
+017436:             }
+017437: 
+017438:             .mf2026-training-person {
+017439:                 display: grid;
+017440:                 grid-template-columns: auto minmax(0, 1fr);
+017441:                 gap: 8px;
+017442:                 align-items: start;
+017443:                 padding: 3px 0;
+017444:             }
+017445: 
+017446:             .mf2026-training-person-label {
+017447:                 color: #42ff75;
+017448:                 font-weight: bold;
+017449:                 white-space: nowrap;
+017450:             }
+017451: 
+017452:             .mf2026-training-course-list {
+017453:                 color: #ddd;
+017454:                 text-align: right;
+017455:                 overflow-wrap: anywhere;
+017456:             }
+017457: 
+017458:             #mf-mission-ready-delay-input {
+017459:                 width: 100%;
+017460:                 color: black;
+017461:                 padding: 4px;
+017462:                 border-radius: 4px;
+017463:                 border: none;
+017464:                 box-sizing: border-box;
+017465:             }
+017466: 
+017467:             .mf2026-checkbox-row {
+017468:                 display: flex;
+017469:                 align-items: center;
+017470:                 gap: 8px;
+017471:                 cursor: pointer;
+017472:                 user-select: none;
+017473:             }
+--- lines 17412-17477; match 17432 ---
+017412:                 overflow-y: auto;
+017413:                 padding-right: 4px;
+017414:             }
+017415: 
+017416: 
+017417:             #trained-personnel-content {
+017418:                 max-height: 280px;
+017419:                 overflow-y: auto;
+017420:                 padding-right: 4px;
+017421:             }
+017422: 
+017423:             .mf2026-training-vehicle {
+017424:                 padding: 7px 0;
+017425:                 border-bottom: 1px solid rgba(255,255,255,0.1);
+017426:             }
+017427: 
+017428:             .mf2026-training-vehicle:last-child {
+017429:                 border-bottom: none;
+017430:             }
+017431: 
+017432:             .mf2026-training-vehicle-name {
+017433:                 margin-bottom: 5px;
+017434:                 color: #fff;
+017435:                 font-weight: bold;
+017436:             }
+017437: 
+017438:             .mf2026-training-person {
+017439:                 display: grid;
+017440:                 grid-template-columns: auto minmax(0, 1fr);
+017441:                 gap: 8px;
+017442:                 align-items: start;
+017443:                 padding: 3px 0;
+017444:             }
+017445: 
+017446:             .mf2026-training-person-label {
+017447:                 color: #42ff75;
+017448:                 font-weight: bold;
+017449:                 white-space: nowrap;
+017450:             }
+017451: 
+017452:             .mf2026-training-course-list {
+017453:                 color: #ddd;
+017454:                 text-align: right;
+017455:                 overflow-wrap: anywhere;
+017456:             }
+017457: 
+017458:             #mf-mission-ready-delay-input {
+017459:                 width: 100%;
+017460:                 color: black;
+017461:                 padding: 4px;
+017462:                 border-radius: 4px;
+017463:                 border: none;
+017464:                 box-sizing: border-box;
+017465:             }
+017466: 
+017467:             .mf2026-checkbox-row {
+017468:                 display: flex;
+017469:                 align-items: center;
+017470:                 gap: 8px;
+017471:                 cursor: pointer;
+017472:                 user-select: none;
+017473:             }
+017474: 
+017475:             .mf2026-checkbox-row input {
+017476:                 width: 17px;
+017477:                 height: 17px;
+--- lines 22601-22666; match 22621 ---
+022601:         const summaryParts = [];
+022602: 
+022603:         if (requiredPersonnel.length > 0) {
+022604:             summaryParts.push(`
+022605:                 <div><strong>${requiredPersonnel.length}</strong> required course${requiredPersonnel.length === 1 ? '' : 's'}</div>
+022606:                 <div><strong>${coveredTotal}</strong> / <strong>${requiredTotal}</strong> required trained-personnel coverage</div>
+022607:             `);
+022608:         }
+022609: 
+022610:         if (selectedVehicles.length > 0) {
+022611:             summaryParts.push(`
+022612:                 <div><strong>${selectedVehicles.length}</strong> selected trained vehicle${selectedVehicles.length === 1 ? '' : 's'}</div>
+022613:                 <div><strong>${completeProfiles}</strong> trained personnel profile${completeProfiles === 1 ? '' : 's'}${aggregateOnlyVehicles ? ` · ${aggregateOnlyVehicles} aggregate-only` : ''}</div>
+022614:             `);
+022615:         }
+022616: 
+022617:         summary.innerHTML = summaryParts.join('');
+022618: 
+022619:         const requiredMarkup = requiredPersonnel.length > 0
+022620:             ? `
+022621:                 <div class="mf2026-training-vehicle">
+022622:                     <div class="mf2026-training-vehicle-name">
+022623:                         Mission Required Personnel
+022624:                     </div>
+022625:                     ${requiredPersonnel.map(requirement => {
+022626:                         const selected = Math.min(
+022627:                             requirement.required,
+022628:                             getSelectedTrainedPersonnelCountForCode(
+022629:                                 selectedVehicles,
+022630:                                 requirement.code
+022631:                             )
+022632:                         );
+022633:                         const remaining = Math.max(
+022634:                             0,
+022635:                             requirement.required - selected
+022636:                         );
+022637: 
+022638:                         return `
+022639:                             <div class="mf2026-training-person">
+022640:                                 <span class="mf2026-training-person-label">${selected} / ${requirement.required}</span>
+022641:                                 <span class="mf2026-training-course-list">${escapeHtml(requirement.label)}${remaining > 0 ? ` · ${remaining} still needed` : ' · covered'}</span>
+022642:                             </div>
+022643:                         `;
+022644:                     }).join('')}
+022645:                 </div>
+022646:             `
+022647:             : '';
+022648: 
+022649:         const selectedMarkup = selectedVehicles.map(vehicle => {
+022650:             const vehicleName =
+022651:                 vehicle.vehicleName ||
+022652:                 (vehicle.vehicleId
+022653:                     ? `Vehicle ${vehicle.vehicleId}`
+022654:                     : 'Selected vehicle');
+022655:             const profileMarkup =
+022656:                 vehicle.profilesComplete &&
+022657:                 vehicle.profiles.length > 0
+022658:                     ? vehicle.profiles.map((profile, index) => {
+022659:                         const labels = profile
+022660:                             .map(getSelectedTrainingDisplayLabel)
+022661:                             .sort((left, right) => left.localeCompare(right));
+022662: 
+022663:                         return `
+022664:                             <div class="mf2026-training-person">
+022665:                                 <span class="mf2026-training-person-label">Person ${index + 1}</span>
+022666:                                 <span class="mf2026-training-course-list">${labels.map(escapeHtml).join(', ')}</span>
+--- lines 22602-22667; match 22622 ---
+022602: 
+022603:         if (requiredPersonnel.length > 0) {
+022604:             summaryParts.push(`
+022605:                 <div><strong>${requiredPersonnel.length}</strong> required course${requiredPersonnel.length === 1 ? '' : 's'}</div>
+022606:                 <div><strong>${coveredTotal}</strong> / <strong>${requiredTotal}</strong> required trained-personnel coverage</div>
+022607:             `);
+022608:         }
+022609: 
+022610:         if (selectedVehicles.length > 0) {
+022611:             summaryParts.push(`
+022612:                 <div><strong>${selectedVehicles.length}</strong> selected trained vehicle${selectedVehicles.length === 1 ? '' : 's'}</div>
+022613:                 <div><strong>${completeProfiles}</strong> trained personnel profile${completeProfiles === 1 ? '' : 's'}${aggregateOnlyVehicles ? ` · ${aggregateOnlyVehicles} aggregate-only` : ''}</div>
+022614:             `);
+022615:         }
+022616: 
+022617:         summary.innerHTML = summaryParts.join('');
+022618: 
+022619:         const requiredMarkup = requiredPersonnel.length > 0
+022620:             ? `
+022621:                 <div class="mf2026-training-vehicle">
+022622:                     <div class="mf2026-training-vehicle-name">
+022623:                         Mission Required Personnel
+022624:                     </div>
+022625:                     ${requiredPersonnel.map(requirement => {
+022626:                         const selected = Math.min(
+022627:                             requirement.required,
+022628:                             getSelectedTrainedPersonnelCountForCode(
+022629:                                 selectedVehicles,
+022630:                                 requirement.code
+022631:                             )
+022632:                         );
+022633:                         const remaining = Math.max(
+022634:                             0,
+022635:                             requirement.required - selected
+022636:                         );
+022637: 
+022638:                         return `
+022639:                             <div class="mf2026-training-person">
+022640:                                 <span class="mf2026-training-person-label">${selected} / ${requirement.required}</span>
+022641:                                 <span class="mf2026-training-course-list">${escapeHtml(requirement.label)}${remaining > 0 ? ` · ${remaining} still needed` : ' · covered'}</span>
+022642:                             </div>
+022643:                         `;
+022644:                     }).join('')}
+022645:                 </div>
+022646:             `
+022647:             : '';
+022648: 
+022649:         const selectedMarkup = selectedVehicles.map(vehicle => {
+022650:             const vehicleName =
+022651:                 vehicle.vehicleName ||
+022652:                 (vehicle.vehicleId
+022653:                     ? `Vehicle ${vehicle.vehicleId}`
+022654:                     : 'Selected vehicle');
+022655:             const profileMarkup =
+022656:                 vehicle.profilesComplete &&
+022657:                 vehicle.profiles.length > 0
+022658:                     ? vehicle.profiles.map((profile, index) => {
+022659:                         const labels = profile
+022660:                             .map(getSelectedTrainingDisplayLabel)
+022661:                             .sort((left, right) => left.localeCompare(right));
+022662: 
+022663:                         return `
+022664:                             <div class="mf2026-training-person">
+022665:                                 <span class="mf2026-training-person-label">Person ${index + 1}</span>
+022666:                                 <span class="mf2026-training-course-list">${labels.map(escapeHtml).join(', ')}</span>
+022667:                             </div>
+--- lines 22660-22725; match 22680 ---
+022660:                             .map(getSelectedTrainingDisplayLabel)
+022661:                             .sort((left, right) => left.localeCompare(right));
+022662: 
+022663:                         return `
+022664:                             <div class="mf2026-training-person">
+022665:                                 <span class="mf2026-training-person-label">Person ${index + 1}</span>
+022666:                                 <span class="mf2026-training-course-list">${labels.map(escapeHtml).join(', ')}</span>
+022667:                             </div>
+022668:                         `;
+022669:                     }).join('')
+022670:                     : vehicle.trainingCounts.map(item => {
+022671:                         return `
+022672:                             <div class="mf2026-training-person">
+022673:                                 <span class="mf2026-training-person-label">${item.count}×</span>
+022674:                                 <span class="mf2026-training-course-list">${escapeHtml(item.label)}</span>
+022675:                             </div>
+022676:                         `;
+022677:                     }).join('');
+022678: 
+022679:             return `
+022680:                 <div class="mf2026-training-vehicle">
+022681:                     <div class="mf2026-training-vehicle-name">
+022682:                         ${escapeHtml(vehicleName)}
+022683:                         ${vehicle.vehicleId ? `<span class="mf2026-small"> #${escapeHtml(vehicle.vehicleId)}</span>` : ''}
+022684:                     </div>
+022685:                     ${profileMarkup}
+022686:                 </div>
+022687:             `;
+022688:         }).join('');
+022689: 
+022690:         content.innerHTML =
+022691:             requiredMarkup +
+022692:             selectedMarkup;
+022693:     }
+022694: 
+022695:     function renderVehicleLoadListNow() {
+022696:         const listContent = document.getElementById('vehicle-load-list-content');
+022697:         const patientContent = document.getElementById('vehicle-patient-content');
+022698:         const summary = document.getElementById('vehicle-load-summary');
+022699:         const progress = document.getElementById('vehicle-load-progress');
+022700: 
+022701:         if (!listContent || !patientContent || !summary || !progress) return;
+022702: 
+022703:         refreshVehicleRequirementCounters();
+022704: 
+022705:         const totalRequired = vehicleLoadState.rows.reduce((sum, row) => sum + Number(row.required || 0), 0);
+022706:         const foundRequired = vehicleLoadState.rows.reduce((sum, row) => sum + Number(row.selected || 0), 0);
+022707: 
+022708:         const percent = totalRequired > 0 ? Math.round((foundRequired / totalRequired) * 100) : vehicleLoadState.ready ? 100 : 0;
+022709: 
+022710:         summary.innerHTML = `
+022711:             <div>Vehicles: <strong>${foundRequired}</strong> / <strong>${totalRequired}</strong></div>
+022712:             <div>Status: <strong class="${vehicleLoadState.ready ? 'mf2026-good' : 'mf2026-warn'}">${vehicleLoadState.ready ? 'Ready' : 'Not Ready'}</strong></div>
+022713:         `;
+022714: 
+022715:         progress.style.width = `${percent}%`;
+022716: 
+022717:         if (vehicleLoadState.rows.length === 0) {
+022718:             listContent.innerHTML = vehicleLoadState.ready
+022719:                 ? `<span class="mf2026-good">✓ Ambulance-only mission ready</span>`
+022720:                 : `Click Unit Finder to load vehicles.`;
+022721:         } else {
+022722:             listContent.innerHTML = vehicleLoadState.rows.map(row => {
+022723:                 let icon = '○';
+022724:                 let cls = 'mf2026-warn';
+022725: 
+--- lines 22661-22726; match 22681 ---
+022661:                             .sort((left, right) => left.localeCompare(right));
+022662: 
+022663:                         return `
+022664:                             <div class="mf2026-training-person">
+022665:                                 <span class="mf2026-training-person-label">Person ${index + 1}</span>
+022666:                                 <span class="mf2026-training-course-list">${labels.map(escapeHtml).join(', ')}</span>
+022667:                             </div>
+022668:                         `;
+022669:                     }).join('')
+022670:                     : vehicle.trainingCounts.map(item => {
+022671:                         return `
+022672:                             <div class="mf2026-training-person">
+022673:                                 <span class="mf2026-training-person-label">${item.count}×</span>
+022674:                                 <span class="mf2026-training-course-list">${escapeHtml(item.label)}</span>
+022675:                             </div>
+022676:                         `;
+022677:                     }).join('');
+022678: 
+022679:             return `
+022680:                 <div class="mf2026-training-vehicle">
+022681:                     <div class="mf2026-training-vehicle-name">
+022682:                         ${escapeHtml(vehicleName)}
+022683:                         ${vehicle.vehicleId ? `<span class="mf2026-small"> #${escapeHtml(vehicle.vehicleId)}</span>` : ''}
+022684:                     </div>
+022685:                     ${profileMarkup}
+022686:                 </div>
+022687:             `;
+022688:         }).join('');
+022689: 
+022690:         content.innerHTML =
+022691:             requiredMarkup +
+022692:             selectedMarkup;
+022693:     }
+022694: 
+022695:     function renderVehicleLoadListNow() {
+022696:         const listContent = document.getElementById('vehicle-load-list-content');
+022697:         const patientContent = document.getElementById('vehicle-patient-content');
+022698:         const summary = document.getElementById('vehicle-load-summary');
+022699:         const progress = document.getElementById('vehicle-load-progress');
+022700: 
+022701:         if (!listContent || !patientContent || !summary || !progress) return;
+022702: 
+022703:         refreshVehicleRequirementCounters();
+022704: 
+022705:         const totalRequired = vehicleLoadState.rows.reduce((sum, row) => sum + Number(row.required || 0), 0);
+022706:         const foundRequired = vehicleLoadState.rows.reduce((sum, row) => sum + Number(row.selected || 0), 0);
+022707: 
+022708:         const percent = totalRequired > 0 ? Math.round((foundRequired / totalRequired) * 100) : vehicleLoadState.ready ? 100 : 0;
+022709: 
+022710:         summary.innerHTML = `
+022711:             <div>Vehicles: <strong>${foundRequired}</strong> / <strong>${totalRequired}</strong></div>
+022712:             <div>Status: <strong class="${vehicleLoadState.ready ? 'mf2026-good' : 'mf2026-warn'}">${vehicleLoadState.ready ? 'Ready' : 'Not Ready'}</strong></div>
+022713:         `;
+022714: 
+022715:         progress.style.width = `${percent}%`;
+022716: 
+022717:         if (vehicleLoadState.rows.length === 0) {
+022718:             listContent.innerHTML = vehicleLoadState.ready
+022719:                 ? `<span class="mf2026-good">✓ Ambulance-only mission ready</span>`
+022720:                 : `Click Unit Finder to load vehicles.`;
+022721:         } else {
+022722:             listContent.innerHTML = vehicleLoadState.rows.map(row => {
+022723:                 let icon = '○';
+022724:                 let cls = 'mf2026-warn';
+022725: 
+022726:                 const selected = Math.min(Number(row.selected || 0), Number(row.required || 0));
+===== 'mf2026-row': 7 matches =====
+--- lines 17338-17403; match 17358 ---
+017338:                 min-height: 44px;
+017339:                 line-height: 1.35;
+017340:                 overflow-wrap: break-word;
+017341:             }
+017342: 
+017343:             .mf2026-button {
+017344:                 padding: 7px;
+017345:                 border: none;
+017346:                 border-radius: 5px;
+017347:                 cursor: pointer;
+017348:                 font-weight: bold;
+017349:             }
+017350: 
+017351:             .mf2026-section-title {
+017352:                 font-size: 13px;
+017353:                 font-weight: bold;
+017354:                 margin-bottom: 5px;
+017355:                 color: #ddd;
+017356:             }
+017357: 
+017358:             .mf2026-row {
+017359:                 display: flex;
+017360:                 justify-content: space-between;
+017361:                 gap: 8px;
+017362:                 padding: 4px 0;
+017363:                 border-bottom: 1px solid rgba(255,255,255,0.08);
+017364:             }
+017365: 
+017366:             .mf2026-row:last-child {
+017367:                 border-bottom: none;
+017368:             }
+017369: 
+017370:             .mf2026-name {
+017371:                 flex: 1;
+017372:             }
+017373: 
+017374:             .mf2026-count {
+017375:                 white-space: nowrap;
+017376:                 font-weight: bold;
+017377:             }
+017378: 
+017379:             .mf2026-good {
+017380:                 color: #42ff75;
+017381:             }
+017382: 
+017383:             .mf2026-bad {
+017384:                 color: #ff6666;
+017385:             }
+017386: 
+017387:             .mf2026-warn {
+017388:                 color: #ffd166;
+017389:             }
+017390: 
+017391:             .mf2026-small {
+017392:                 font-size: 12px;
+017393:                 color: #ccc;
+017394:             }
+017395: 
+017396:             .mf2026-progress-wrap {
+017397:                 background: #222;
+017398:                 border-radius: 6px;
+017399:                 overflow: hidden;
+017400:                 height: 10px;
+017401:             }
+017402: 
+017403:             .mf2026-progress-bar {
+--- lines 17346-17411; match 17366 ---
+017346:                 border-radius: 5px;
+017347:                 cursor: pointer;
+017348:                 font-weight: bold;
+017349:             }
+017350: 
+017351:             .mf2026-section-title {
+017352:                 font-size: 13px;
+017353:                 font-weight: bold;
+017354:                 margin-bottom: 5px;
+017355:                 color: #ddd;
+017356:             }
+017357: 
+017358:             .mf2026-row {
+017359:                 display: flex;
+017360:                 justify-content: space-between;
+017361:                 gap: 8px;
+017362:                 padding: 4px 0;
+017363:                 border-bottom: 1px solid rgba(255,255,255,0.08);
+017364:             }
+017365: 
+017366:             .mf2026-row:last-child {
+017367:                 border-bottom: none;
+017368:             }
+017369: 
+017370:             .mf2026-name {
+017371:                 flex: 1;
+017372:             }
+017373: 
+017374:             .mf2026-count {
+017375:                 white-space: nowrap;
+017376:                 font-weight: bold;
+017377:             }
+017378: 
+017379:             .mf2026-good {
+017380:                 color: #42ff75;
+017381:             }
+017382: 
+017383:             .mf2026-bad {
+017384:                 color: #ff6666;
+017385:             }
+017386: 
+017387:             .mf2026-warn {
+017388:                 color: #ffd166;
+017389:             }
+017390: 
+017391:             .mf2026-small {
+017392:                 font-size: 12px;
+017393:                 color: #ccc;
+017394:             }
+017395: 
+017396:             .mf2026-progress-wrap {
+017397:                 background: #222;
+017398:                 border-radius: 6px;
+017399:                 overflow: hidden;
+017400:                 height: 10px;
+017401:             }
+017402: 
+017403:             .mf2026-progress-bar {
+017404:                 height: 10px;
+017405:                 width: 0%;
+017406:                 background: #42ff75;
+017407:                 transition: width 0.25s ease;
+017408:             }
+017409: 
+017410:             #vehicle-load-list-content {
+017411:                 max-height: 210px;
+--- lines 18777-18842; match 18797 ---
+018777:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+018778:             .mf2026-name,
+018779:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+018780:             .mf2026-training-course-list {
+018781:                 min-width: 0;
+018782:                 color: var(--nx-text-2);
+018783:                 line-height: 1.42;
+018784:                 overflow-wrap: anywhere;
+018785:             }
+018786: 
+018787:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+018788:             .mf2026-count,
+018789:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+018790:             .mf2026-log-value,
+018791:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+018792:             .mf2026-stat-grid strong {
+018793:                 font-variant-numeric: tabular-nums;
+018794:             }
+018795: 
+018796:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+018797:             .mf2026-row,
+018798:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+018799:             .mf2026-log-row {
+018800:                 min-width: 0;
+018801:                 border-bottom-color: rgba(151, 171, 195, 0.10);
+018802:             }
+018803: 
+018804:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+018805:             .mf2026-primary-actions {
+018806:                 grid-template-columns: repeat(2, minmax(0, 1fr));
+018807:                 gap: 6px;
+018808:                 margin-top: auto;
+018809:             }
+018810: 
+018811:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+018812:             .mf2026-primary-actions .mf2026-button,
+018813:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+018814:             #mf-export-unit-finder-diagnostics,
+018815:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+018816:             #mf-control-centre,
+018817:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+018818:             #mf-control-minimize,
+018819:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+018820:             #mf-load-minimize,
+018821:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+018822:             #mf-trained-minimize,
+018823:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+018824:             #mf-dashboard-utility-close {
+018825:                 min-width: 0;
+018826:                 min-height: 36px;
+018827:                 padding: 7px 8px;
+018828:                 border: 1px solid var(--nx-border) !important;
+018829:                 border-radius: 8px;
+018830:                 background: var(--nx-surface-2) !important;
+018831:                 color: var(--nx-text-2) !important;
+018832:                 font-size: 10.5px;
+018833:                 font-weight: 650;
+018834:                 line-height: 1.2;
+018835:                 white-space: normal;
+018836:                 overflow-wrap: anywhere;
+018837:                 box-shadow: none;
+018838:                 transition: border-color 120ms ease, background 120ms ease,
+018839:                     color 120ms ease, transform 120ms ease;
+018840:             }
+018841: 
+018842:             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+--- lines 22721-22786; match 22741 ---
+022721:         } else {
+022722:             listContent.innerHTML = vehicleLoadState.rows.map(row => {
+022723:                 let icon = '○';
+022724:                 let cls = 'mf2026-warn';
+022725: 
+022726:                 const selected = Math.min(Number(row.selected || 0), Number(row.required || 0));
+022727:                 const required = Number(row.required || 0);
+022728: 
+022729:                 if (selected >= required && required > 0) {
+022730:                     icon = '✓';
+022731:                     cls = 'mf2026-good';
+022732:                 } else if (row.status === 'missing') {
+022733:                     icon = '✕';
+022734:                     cls = 'mf2026-bad';
+022735:                 } else if (selected > 0 || row.status === 'retrying') {
+022736:                     icon = '↻';
+022737:                     cls = 'mf2026-warn';
+022738:                 }
+022739: 
+022740:                 return `
+022741:                     <div class="mf2026-row">
+022742:                         <div class="mf2026-name">
+022743:                             <span class="${cls}">${icon}</span>
+022744:                             ${escapeHtml(row.originalName)}
+022745:                             <div class="mf2026-small">${escapeHtml(row.mappedName)}</div>
+022746:                         </div>
+022747:                         <div class="mf2026-count ${selected >= required && required > 0 ? 'mf2026-good' : 'mf2026-warn'}">${selected} / ${required}</div>
+022748:                     </div>
+022749:                 `;
+022750:             }).join('');
+022751:         }
+022752: 
+022753:         patientContent.innerHTML = `
+022754:             <div class="mf2026-row">
+022755:                 <div>Patients found</div>
+022756:                 <div class="mf2026-count">${vehicleLoadState.patients}</div>
+022757:             </div>
+022758:             <div class="mf2026-row">
+022759:                 <div>Ambulances selected</div>
+022760:                 <div class="mf2026-count">${vehicleLoadState.ambulances}</div>
+022761:             </div>
+022762:             <div class="mf2026-row">
+022763:                 <div>Ambulance Officer</div>
+022764:                 <div class="mf2026-count mf2026-warn">Live requirements only</div>
+022765:             </div>
+022766:         `;
+022767: 
+022768: 
+022769:         renderSelectedTrainedPersonnelPanel();
+022770:     }
+022771: 
+022772:     function renderVehicleLoadList() {
+022773:         if (mfVehicleLoadRenderFrame !== null) return;
+022774: 
+022775:         const run = () => {
+022776:             mfVehicleLoadRenderFrame = null;
+022777:             renderVehicleLoadListNow();
+022778:         };
+022779: 
+022780:         if (typeof requestAnimationFrame === 'function') {
+022781:             mfVehicleLoadRenderFrame = requestAnimationFrame(run);
+022782:         } else {
+022783:             mfVehicleLoadRenderFrame = setTimeout(run, 50);
+022784:         }
+022785:     }
+022786: 
+--- lines 22734-22799; match 22754 ---
+022734:                     cls = 'mf2026-bad';
+022735:                 } else if (selected > 0 || row.status === 'retrying') {
+022736:                     icon = '↻';
+022737:                     cls = 'mf2026-warn';
+022738:                 }
+022739: 
+022740:                 return `
+022741:                     <div class="mf2026-row">
+022742:                         <div class="mf2026-name">
+022743:                             <span class="${cls}">${icon}</span>
+022744:                             ${escapeHtml(row.originalName)}
+022745:                             <div class="mf2026-small">${escapeHtml(row.mappedName)}</div>
+022746:                         </div>
+022747:                         <div class="mf2026-count ${selected >= required && required > 0 ? 'mf2026-good' : 'mf2026-warn'}">${selected} / ${required}</div>
+022748:                     </div>
+022749:                 `;
+022750:             }).join('');
+022751:         }
+022752: 
+022753:         patientContent.innerHTML = `
+022754:             <div class="mf2026-row">
+022755:                 <div>Patients found</div>
+022756:                 <div class="mf2026-count">${vehicleLoadState.patients}</div>
+022757:             </div>
+022758:             <div class="mf2026-row">
+022759:                 <div>Ambulances selected</div>
+022760:                 <div class="mf2026-count">${vehicleLoadState.ambulances}</div>
+022761:             </div>
+022762:             <div class="mf2026-row">
+022763:                 <div>Ambulance Officer</div>
+022764:                 <div class="mf2026-count mf2026-warn">Live requirements only</div>
+022765:             </div>
+022766:         `;
+022767: 
+022768: 
+022769:         renderSelectedTrainedPersonnelPanel();
+022770:     }
+022771: 
+022772:     function renderVehicleLoadList() {
+022773:         if (mfVehicleLoadRenderFrame !== null) return;
+022774: 
+022775:         const run = () => {
+022776:             mfVehicleLoadRenderFrame = null;
+022777:             renderVehicleLoadListNow();
+022778:         };
+022779: 
+022780:         if (typeof requestAnimationFrame === 'function') {
+022781:             mfVehicleLoadRenderFrame = requestAnimationFrame(run);
+022782:         } else {
+022783:             mfVehicleLoadRenderFrame = setTimeout(run, 50);
+022784:         }
+022785:     }
+022786: 
+022787:     function escapeHtml(value) {
+022788:         return String(value)
+022789:             .replace(/&/g, '&amp;')
+022790:             .replace(/</g, '&lt;')
+022791:             .replace(/>/g, '&gt;')
+022792:             .replace(/"/g, '&quot;')
+022793:             .replace(/'/g, '&#039;');
+022794:     }
+022795: 
+022796:     function getPatientSelectionMissionKey() {
+022797:         const localMissionKey =
+022798:             getLocalMissionInstanceKey();
+022799: 
+--- lines 22738-22803; match 22758 ---
+022738:                 }
+022739: 
+022740:                 return `
+022741:                     <div class="mf2026-row">
+022742:                         <div class="mf2026-name">
+022743:                             <span class="${cls}">${icon}</span>
+022744:                             ${escapeHtml(row.originalName)}
+022745:                             <div class="mf2026-small">${escapeHtml(row.mappedName)}</div>
+022746:                         </div>
+022747:                         <div class="mf2026-count ${selected >= required && required > 0 ? 'mf2026-good' : 'mf2026-warn'}">${selected} / ${required}</div>
+022748:                     </div>
+022749:                 `;
+022750:             }).join('');
+022751:         }
+022752: 
+022753:         patientContent.innerHTML = `
+022754:             <div class="mf2026-row">
+022755:                 <div>Patients found</div>
+022756:                 <div class="mf2026-count">${vehicleLoadState.patients}</div>
+022757:             </div>
+022758:             <div class="mf2026-row">
+022759:                 <div>Ambulances selected</div>
+022760:                 <div class="mf2026-count">${vehicleLoadState.ambulances}</div>
+022761:             </div>
+022762:             <div class="mf2026-row">
+022763:                 <div>Ambulance Officer</div>
+022764:                 <div class="mf2026-count mf2026-warn">Live requirements only</div>
+022765:             </div>
+022766:         `;
+022767: 
+022768: 
+022769:         renderSelectedTrainedPersonnelPanel();
+022770:     }
+022771: 
+022772:     function renderVehicleLoadList() {
+022773:         if (mfVehicleLoadRenderFrame !== null) return;
+022774: 
+022775:         const run = () => {
+022776:             mfVehicleLoadRenderFrame = null;
+022777:             renderVehicleLoadListNow();
+022778:         };
+022779: 
+022780:         if (typeof requestAnimationFrame === 'function') {
+022781:             mfVehicleLoadRenderFrame = requestAnimationFrame(run);
+022782:         } else {
+022783:             mfVehicleLoadRenderFrame = setTimeout(run, 50);
+022784:         }
+022785:     }
+022786: 
+022787:     function escapeHtml(value) {
+022788:         return String(value)
+022789:             .replace(/&/g, '&amp;')
+022790:             .replace(/</g, '&lt;')
+022791:             .replace(/>/g, '&gt;')
+022792:             .replace(/"/g, '&quot;')
+022793:             .replace(/'/g, '&#039;');
+022794:     }
+022795: 
+022796:     function getPatientSelectionMissionKey() {
+022797:         const localMissionKey =
+022798:             getLocalMissionInstanceKey();
+022799: 
+022800:         if (localMissionKey) {
+022801:             return localMissionKey;
+022802:         }
+022803: 
+--- lines 22742-22807; match 22762 ---
+022742:                         <div class="mf2026-name">
+022743:                             <span class="${cls}">${icon}</span>
+022744:                             ${escapeHtml(row.originalName)}
+022745:                             <div class="mf2026-small">${escapeHtml(row.mappedName)}</div>
+022746:                         </div>
+022747:                         <div class="mf2026-count ${selected >= required && required > 0 ? 'mf2026-good' : 'mf2026-warn'}">${selected} / ${required}</div>
+022748:                     </div>
+022749:                 `;
+022750:             }).join('');
+022751:         }
+022752: 
+022753:         patientContent.innerHTML = `
+022754:             <div class="mf2026-row">
+022755:                 <div>Patients found</div>
+022756:                 <div class="mf2026-count">${vehicleLoadState.patients}</div>
+022757:             </div>
+022758:             <div class="mf2026-row">
+022759:                 <div>Ambulances selected</div>
+022760:                 <div class="mf2026-count">${vehicleLoadState.ambulances}</div>
+022761:             </div>
+022762:             <div class="mf2026-row">
+022763:                 <div>Ambulance Officer</div>
+022764:                 <div class="mf2026-count mf2026-warn">Live requirements only</div>
+022765:             </div>
+022766:         `;
+022767: 
+022768: 
+022769:         renderSelectedTrainedPersonnelPanel();
+022770:     }
+022771: 
+022772:     function renderVehicleLoadList() {
+022773:         if (mfVehicleLoadRenderFrame !== null) return;
+022774: 
+022775:         const run = () => {
+022776:             mfVehicleLoadRenderFrame = null;
+022777:             renderVehicleLoadListNow();
+022778:         };
+022779: 
+022780:         if (typeof requestAnimationFrame === 'function') {
+022781:             mfVehicleLoadRenderFrame = requestAnimationFrame(run);
+022782:         } else {
+022783:             mfVehicleLoadRenderFrame = setTimeout(run, 50);
+022784:         }
+022785:     }
+022786: 
+022787:     function escapeHtml(value) {
+022788:         return String(value)
+022789:             .replace(/&/g, '&amp;')
+022790:             .replace(/</g, '&lt;')
+022791:             .replace(/>/g, '&gt;')
+022792:             .replace(/"/g, '&quot;')
+022793:             .replace(/'/g, '&#039;');
+022794:     }
+022795: 
+022796:     function getPatientSelectionMissionKey() {
+022797:         const localMissionKey =
+022798:             getLocalMissionInstanceKey();
+022799: 
+022800:         if (localMissionKey) {
+022801:             return localMissionKey;
+022802:         }
+022803: 
+022804:         const missionId =
+022805:             getCurrentMissionIdForQueueRestart();
+022806: 
+022807:         if (missionId) {
