@@ -4,6 +4,35 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.74] - 2026-08-01
+
+### Fixed
+
+- Prevented the Unit Naming, Station Naming and Personnel Assignment workspace runtime from starting inside child mission/lightbox frames; the single top-window owner still operates same-origin edit frames through the established direct-frame route.
+- Added top-window frame reconciliation so only the active visible mission child retains the whole-document Mission Finder observer. Inactive, replaced and removed mission frames now release their observer, session ticker, maintenance timer, mounted Mission Finder UI and reconstructible DOM caches, then resume safely if they become the active owner again.
+- Added a 15-second memory-maintenance pass. At 480 MiB it performs a soft flush of reconstructible vehicle, mission-context, patient, transport and matching caches. At 640 MiB it may recycle an idle mission frame only after all operational safety gates pass.
+- Blocked hard memory recycling while Auto Mode, Unit Finder, Mission Update, Ally Steal, dispatch/share, selected vehicles, Required Personnel preload, Vehicle Load acquisition, patient/prisoner transport, queue transitions or recent mission activity are present.
+- Bounded the live trained-personnel verification cache to 600 entries in addition to its existing time-to-live pruning.
+- Bounded persisted Unit Finder diagnostic history to 24 entries and 750,000 characters, pruning the oldest snapshots first, and removed the deprecated Issue Recorder payload during safe startup storage maintenance.
+- Explicitly preserved authoritative Personnel Register profiles, user settings, mission-bound Required Personnel preload state, selected vehicles and current Vehicle Load state during soft maintenance.
+
+### Diagnostics
+
+- Memory exports now report inactive-frame suspension, maintenance-timer state, soft-flush count and timestamp, recent runtime activity/mutation, persistent diagnostic storage size and recycle mode.
+
+### Compatibility and safety
+
+- The compact `1.0.73` Mission, Vehicle Load, naming and personnel UI, IDs, geometry and event handlers are unchanged.
+- Unit Finder, Mission Update, Ally Steal, dispatch/share, Auto Mode, Event Scanner, trained-personnel authority, Personnel Register ownership and iPhone/iOS paths remain on their established routes.
+- Added permanent runtime-memory, storage-bound, frame-ownership and operational-lock regression coverage.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.136` to `V10.6.137`.
+- Unit Naming remains `3.3.8`.
+- Station Naming remains `1.3.3`.
+- Personnel Assignment remains `1.3.8`.
+
 ## [1.0.73] - 2026-07-31
 
 ### Refined

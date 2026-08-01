@@ -67,12 +67,12 @@ function extractFunction(name) {
 }
 
 expect(
-  source.includes('// @version      1.0.73'),
+  source.includes('// @version      1.0.74'),
   'Command Nexus 1.0.70 metadata missing'
 );
 expect(
-  source.includes('MISSION FINDER V10.6.136'),
-  'Mission Finder V10.6.136 header missing'
+  source.includes('MISSION FINDER V10.6.137'),
+  'Mission Finder V10.6.137 header missing'
 );
 
 const addPanel = extractFunction('addPanel');

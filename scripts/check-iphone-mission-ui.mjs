@@ -81,8 +81,8 @@ function extractFunction(name) {
   fail(`Unable to find end of ${name}`);
 }
 
-requireText('// @version      1.0.73', 'v1.0.51 metadata');
-requireText(' * MODULE 2: MISSION FINDER V10.6.136', 'V10.6.120 module header');
+requireText('// @version      1.0.74', 'v1.0.51 metadata');
+requireText(' * MODULE 2: MISSION FINDER V10.6.137', 'V10.6.120 module header');
 requireText('function getMissionFinderPhoneScreenShortSide()', 'physical phone-screen detector');
 requireText('function isMissionFinderIphoneSafariWebsite()', 'strict iPhone Safari detector');
 requireText("'mf_control_collapsed_iphone_v2'", 'separate iPhone control state');
@@ -253,14 +253,17 @@ if (detect({ userAgent: desktopSafariUa, platform: 'MacIntel', maxTouchPoints: 0
 
 const control = extractFunction('createControlPanel');
 for (const contract of [
-  "await handleCombinedLogic();",
-  "await handleAllySteal();",
+  "await runMissionFinderMemorySensitiveOperation(",
+  "'manual Unit Finder'",
+  "() => handleCombinedLogic()",
+  "'manual Ally Steal'",
+  "() => handleAllySteal()",
   "handleMissionUpdateUnits(",
   "triggerDispatchClick();",
   "triggerDispatchShareClick();",
   "toggleAutoMode();"
 ]) {
-  if (!control.includes(contract)) fail(`Action handler changed or missing: ${contract}`);
+  if (!control.includes(contract)) fail(`Action handler or memory lock changed or missing: ${contract}`);
 }
 
 requirePattern(
