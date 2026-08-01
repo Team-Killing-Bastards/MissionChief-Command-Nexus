@@ -1,3 +1,172 @@
+===== classifyMissionFinderMutations =====
+
+
+
+
+
+    function classifyMissionFinderMutations(records) {
+        const flags = {
+            relevant: false,
+            vehicleListChanged: false,
+            missionContextChanged: false,
+            patientChanged: false,
+            panelChanged: false,
+            transportChanged: false
+        };
+
+        const inspectNode = node => {
+            if (!node || node.nodeType !== 1) return;
+
+            if (
+                node.matches?.(
+                    MF_MUTATION_PANEL_SELECTOR
+                )
+            ) {
+                flags.panelChanged = true;
+                flags.relevant = true;
+                return;
+            }
+
+            if (
+                node.closest?.(
+                    '#mission-finder-wrapper'
+                )
+            ) {
+                return;
+            }
+
+            if (!mutationNodeMatches(
+                node,
+                MF_MUTATION_RELEVANT_SELECTOR
+            )) {
+                return;
+            }
+
+            if (mutationNodeMatches(
+                node,
+                MF_MUTATION_VEHICLE_SELECTOR
+            )) {
+                flags.vehicleListChanged = true;
+                flags.relevant = true;
+            }
+
+            if (mutationNodeMatches(
+                node,
+                MF_MUTATION_MISSION_SELECTOR
+            )) {
+                flags.missionContextChanged = true;
+                flags.relevant = true;
+            }
+
+            if (mutationNodeMatches(
+                node,
+                MF_MUTATION_PATIENT_SELECTOR
+            )) {
+                flags.patientChanged = true;
+                flags.relevant = true;
+            }
+
+            if (mutationNodeMatches(
+                node,
+                MF_MUTATION_TRANSPORT_SELECTOR
+            )) {
+                flags.transportChanged = true;
+                flags.relevant = true;
+            }
+        };
+
+        for (const record of records || []) {
+
+            const target = record.target;
+            const changedNodes = [
+                ...(record.addedNodes || []),
+                ...(record.removedNodes || [])
+            ];
+            const hasPanelRootMutation =
+                changedNodes.some(node =>
+                    node?.nodeType === 1 &&
+                    node.matches?.(
+                        MF_MUTATION_PANEL_SELECTOR
+                    )
+                );
+            const targetOwned = mutationTargetWithin(
+                target,
+                '#mission-finder-wrapper'
+            );
+
+            if (shouldIgnoreMissionFinderMutationRecord(
+                targetOwned,
+                hasPanelRootMutation
+            )) {
+                continue;
+            }
+
+            const targetRelevant = mutationTargetWithin(
+                target,
+                MF_MUTATION_RELEVANT_TARGET_SELECTOR
+            );
+
+            if (
+                targetRelevant &&
+                mutationTargetWithin(
+                    target,
+                    MF_MUTATION_VEHICLE_SELECTOR
+                )
+            ) {
+                flags.vehicleListChanged = true;
+                flags.relevant = true;
+            }
+
+            if (
+                targetRelevant &&
+                mutationTargetWithin(
+                    target,
+                    MF_MUTATION_MISSION_TARGET_SELECTOR
+                )
+            ) {
+                flags.missionContextChanged = true;
+                flags.relevant = true;
+            }
+
+            if (
+                targetRelevant &&
+                mutationTargetWithin(
+                    target,
+                    MF_MUTATION_PATIENT_SELECTOR
+                )
+            ) {
+                flags.patientChanged = true;
+                flags.relevant = true;
+            }
+
+            if (
+                targetRelevant &&
+                mutationTargetWithin(
+                    target,
+                    MF_MUTATION_TRANSPORT_SELECTOR
+                )
+            ) {
+                flags.transportChanged = true;
+                flags.relevant = true;
+            }
+
+            changedNodes.forEach(inspectNode);
+
+            if (
+                flags.vehicleListChanged &&
+                flags.missionContextChanged &&
+                flags.patientChanged &&
+                flags.panelChanged &&
+                flags.transportChanged
+            ) {
+                break;
+            }
+        }
+
+        return flags;
+    }
+
+
 ===== scheduleMissionFinderMutationWork =====
 
 
@@ -16,6 +185,89 @@
             flushMissionFinderMutationWork,
             200
         );
+    }
+
+
+===== flushMissionFinderMutationWork =====
+
+
+    function flushMissionFinderMutationWork() {
+        mfMainMutationFlushTimer = null;
+
+        const flags = { ...mfMainMutationFlags };
+        resetMainMutationFlags();
+
+        if (flags.vehicleListChanged) {
+            invalidateVehicleCheckboxCache();
+            mfDispatchReadinessExpensiveCache.expiresAt = 0;
+        }
+
+        if (flags.missionContextChanged) {
+            invalidateMissionContextCaches();
+        }
+
+        if (flags.patientChanged) {
+            invalidatePatientCountCache();
+            mfDispatchReadinessExpensiveCache.expiresAt = 0;
+        }
+
+        if (flags.transportChanged) {
+            invalidateTransportCaches();
+        }
+
+
+        const missionPage = isMissionPage();
+        const wrapper = document.getElementById('mission-finder-wrapper');
+
+        if (!missionPage) {
+            cleanupMissionFinderIphoneNativePickerSurfaces();
+            stopMissionFinderRuntimeMemoryMaintenance();
+        }
+
+        if (
+            missionPage &&
+            wrapper &&
+            !isCurrentMissionExecutionOwner('mutation ownership check')
+        ) {
+            removeMissionFinderPanelForClosedMission(
+                'previous mission instance lost ownership'
+            );
+            suspendMissionFinderRuntimeForInactiveFrame(
+                'previous mission instance lost ownership'
+            );
+        } else if (missionPage && !wrapper) {
+            initialize();
+        } else if (!missionPage && wrapper) {
+            removeMissionFinderPanelForClosedMission(
+                'coalesced mission DOM change'
+            );
+        }
+
+        if (flags.panelChanged) {
+            const wrappers = document.querySelectorAll(
+                '#mission-finder-wrapper'
+            );
+
+            const controlPanel = document.getElementById(
+                'control-panel'
+            );
+
+            if (
+                wrappers.length > 1 ||
+                (
+                    controlPanel &&
+                    !controlPanel.closest('#mission-finder-wrapper')
+                )
+            ) {
+                cleanupDuplicatePanels();
+            }
+        }
+
+        if (autoModeRunning && missionPage && flags.relevant) {
+            scheduleAutoModeLoopResume(
+                'filtered/coalesced DOM mutation'
+            );
+        }
     }
 
 
@@ -2259,6 +2511,55 @@
 39398: 
 39399:             updateStatusBox("Some mission update units are missing.");
 39400:             changeDispatchBoxColor(false);
+
+--- lines 47155-47201 ---
+47155:                 !mfAutoAdvanceResumeActive &&
+47156:                 !mfAutoUpgradeResumeActive &&
+47157:                 !readAutoPostDispatchUpgradeState() &&
+47158:                 !readAutoAdvanceAfterDispatchState() &&
+47159:                 !isManualAutoStopActive()
+47160:             ) {
+47161:                 if (mfDebugEnabled) {
+47162:                     debugLog(
+47163:                         'AUTO RESUME COALESCED',
+47164:                         reason
+47165:                     );
+47166:                 }
+47167: 
+47168:                 runAutoModeLoop();
+47169:             }
+47170:         }, 200);
+47171:     }
+47172: 
+47173:     function flushMissionFinderMutationWork() {
+47174:         mfMainMutationFlushTimer = null;
+47175: 
+47176:         const flags = { ...mfMainMutationFlags };
+47177:         resetMainMutationFlags();
+47178: 
+47179:         if (flags.vehicleListChanged) {
+47180:             invalidateVehicleCheckboxCache();
+47181:             mfDispatchReadinessExpensiveCache.expiresAt = 0;
+47182:         }
+47183: 
+47184:         if (flags.missionContextChanged) {
+47185:             invalidateMissionContextCaches();
+47186:         }
+47187: 
+47188:         if (flags.patientChanged) {
+47189:             invalidatePatientCountCache();
+47190:             mfDispatchReadinessExpensiveCache.expiresAt = 0;
+47191:         }
+47192: 
+47193:         if (flags.transportChanged) {
+47194:             invalidateTransportCaches();
+47195:         }
+47196: 
+47197: 
+47198:         const missionPage = isMissionPage();
+47199:         const wrapper = document.getElementById('mission-finder-wrapper');
+47200: 
+47201:         if (!missionPage) {
 
 --- lines 47234-47280 ---
 47234:             if (
