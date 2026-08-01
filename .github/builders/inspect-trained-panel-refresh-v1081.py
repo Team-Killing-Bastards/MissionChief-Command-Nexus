@@ -26,7 +26,6 @@ for number, line in enumerate(lines, 1):
         f'--- lines {start}-{end} ---\n' +
         '\n'.join(f'{index}: {lines[index - 1]}' for index in range(start, end + 1))
     )
-Path('.github/diagnostics/trained-panel-refresh-v1081.txt').write_text(
-    '\n\n'.join(blocks),
-    encoding='utf-8'
-)
+output = Path('.github/diagnostics/trained-panel-refresh-v1081.txt')
+output.parent.mkdir(parents=True, exist_ok=True)
+output.write_text('\n\n'.join(blocks), encoding='utf-8')
