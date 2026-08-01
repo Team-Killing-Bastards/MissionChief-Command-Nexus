@@ -14,6 +14,350 @@ FUNCTION NOT FOUND: hasAuthoritativeMissionDefinitionTrainedPersonnelRequirement
         requirementRows,
         sourceLabel,
         options = {}
+    ) {
+        let missingUnits = [];
+        const trainedVehicleMissing = [];
+        const trainedPersonnelWarnings = [];
+        const diagnosticSuppliedRows =
+            Array.isArray(requirementRows)
+                ? requirementRows.slice()
+                : [];
+        const diagnosticSourceLabel =
+            String(sourceLabel || '');
+
+        const suppliedHasExplicitCurrentMissingRequirements =
+            hasExplicitCurrentMissingRequirementRows(
+                requirementRows
+            );
+
+        const suppliedHasMissionDefinitionPersonnel =
+            (Array.isArray(requirementRows) ? requirementRows : [])
+                .some(row => {
+                    return !!(
+                        row?.missionDefinitionRequiredPersonnel ||
+                        row?.source ===
+                            'mission-definition-required-personnel'
+                    );
+                });
+
+        if (
+            hasAuthoritativeLiveMissionRequirementsPanel() &&
+            sourceLabel !== 'live mission requirements' &&
+            !suppliedHasExplicitCurrentMissingRequirements &&
+            !suppliedHasMissionDefinitionPersonnel
+        ) {
+            requirementRows = readMissionUpdateRows();
+            sourceLabel = 'live mission requirements';
+
+            if (mfDebugEnabled) {
+                debugLog(
+                    'UNIT FINDER LIVE AUTHORITY',
+                    `Using ${requirementRows.length} current live requirement row(s); static mission-help rows were ignored.`
+                );
+            }
+        }
+
+        requirementRows = normaliseOperationalRequirementRows(
+            requirementRows
+        );
+
+        if (
+            options
+                .includeConfiguredHighRiskMissingPersonAmbulance === true
+        ) {
+            const rowCountBeforeConfiguredAmbulance =
+                requirementRows.length;
+
+            requirementRows =
+                addConfiguredHighRiskMissingPersonAmbulanceRequirement(
+                    requirementRows
+                );
+
+            if (
+                mfDebugEnabled &&
+                requirementRows.length >
+                    rowCountBeforeConfiguredAmbulance
+            ) {
+                debugLog(
+                    'HIGH-RISK MISSING PERSON AMBULANCE',
+                    'Settings rule added Ambulance x1 to the fresh Unit Finder requirement set.'
+                );
+            }
+        }
+
+        mfSetUnitFinderDiagnosticContext(
+            'unit-finder',
+            sourceLabel,
+            diagnosticSuppliedRows,
+            requirementRows
+        );
+
+        if (
+            diagnosticSourceLabel !== sourceLabel &&
+            mfUnitFinderDiagnosticContext
+        ) {
+            mfUnitFinderDiagnosticContext.replacedSourceLabel =
+                diagnosticSourceLabel;
+        }
+
+        updateStatusBox(`Processing ${sourceLabel} requirements...`);
+
+        await preparePoliceVehicleSafetyForRows(
+            requirementRows,
+            sourceLabel
+        );
+
+        for (const item of requirementRows) {
+            if (
+                detectAndLatchStaffingBlock(
+                    `process-${sourceLabel}`
+                )
+            ) {
+                break;
+            }
+
+            const unitText = item.unitName;
+
+            if (
+                item
+                    .isTrainedPersonnelRequirement
+            ) {
+                const requirements =
+                    item
+                        .personnelTrainingRequirements ||
+                    [];
+
+                const trainedVehicleTarget =
+                    getTrainedPersonnelVehicleTarget(
+                        requirements
+                    );
+
+                addOrUpdateVehicleRow(
+                    unitText,
+                    'Assigned trained vehicles',
+                    trainedVehicleTarget,
+                    'pending',
+                    0
+                );
+
+                renderVehicleLoadList();
+
+                await refreshPoliceInspectorRegistryFromLiveVehicles(
+                    requirements,
+                    sourceLabel
+                );
+
+                const result =
+                    selectVehiclesForTrainedPersonnelRequirements(
+                        requirements,
+                        sourceLabel
+                    );
+
+                const selectedCount =
+                    result.selectedVehicleCount;
+
+                const displayedTarget =
+                    Math.max(
+                        trainedVehicleTarget,
+                        selectedCount
+                    );
+
+                addOrUpdateVehicleRow(
+                    unitText,
+                    result.trainingSatisfied
+                        ? 'Assigned trained vehicles'
+                        : 'Assigned vehicles · training shortfall',
+                    displayedTarget,
+                    !result.vehicleCoverageSatisfied
+                        ? (
+                            selectedCount > 0
+                                ? 'retrying'
+                                : 'missing'
+                        )
+                        : (
+                            result.trainingSatisfied
+                                ? 'assigned'
+                                : 'retrying'
+                        ),
+                    selectedCount
+                );
+
+                renderVehicleLoadList();
+
+                if (!result.vehicleCoverageSatisfied) {
+                    trainedVehicleMissing.push(
+                        formatTrainedVehicleCapacityShortfall(
+                            result.capacityRemaining
+                        ) ||
+                        'Compatible trained-personnel vehicle capacity is still missing.'
+                    );
+                }
+
+                if (!result.trainingSatisfied) {
+                    trainedPersonnelWarnings.push(
+                        formatTrainedPersonnelShortfall(
+                            result.trainingRemaining
+                        ) ||
+                        'No verified trained personnel were found in the selected compatible vehicles.'
+                    );
+                }
+
+                continue;
+            }
+
+            // Final shared safety net. Even if MissionChief changes a parser
+            // layout and a minimum-statistic row reaches this stage, it must
+            // never be selected, retried or reported as a missing unit.
+            if (shouldIgnoreRequiredMinimumRequirement(unitText)) {
+                continue;
+            }
+
+            const parsedAmount = parseInt(item.stillNeeded, 10);
+            const replacedItemText = resolveUnitName(unitText);
+            const targetMode = getOperationalRequirementTargetMode(item);
+            const matchingSelectedAtStart =
+                countSelectedMatchingVehicles(
+                    unitText,
+                    replacedItemText
+                );
+            const effectiveRequired =
+                targetMode === 'shortage'
+                    ? matchingSelectedAtStart + parsedAmount
+                    : parsedAmount;
+
+            if (mfDebugEnabled) {
+                debugLog(
+                    'PROCESS ROW',
+                    `${unitText} -> ${replacedItemText} | target=${parsedAmount} | mode=${targetMode} | effective total=${effectiveRequired}`
+                );
+            }
+
+            const selectedBefore = Math.min(
+                matchingSelectedAtStart,
+                effectiveRequired
+            );
+            const remainingToSelect = Math.max(
+                0,
+                effectiveRequired - selectedBefore
+            );
+
+            addOrUpdateVehicleRow(
+                unitText,
+                replacedItemText,
+                effectiveRequired,
+                remainingToSelect > 0 ? 'pending' : 'assigned',
+                selectedBefore
+            );
+            renderVehicleLoadList();
+
+            let selectionResult = null;
+            if (remainingToSelect > 0) {
+                selectionResult = selectVehicleUnits(
+                    unitText,
+                    replacedItemText,
+                    remainingToSelect,
+                    sourceLabel
+                );
+            }
+
+            const selectedFromDom = Math.min(
+                countSelectedMatchingVehicles(
+                    unitText,
+                    replacedItemText
+                ),
+                effectiveRequired
+            );
+            const selectedFromClicks = Math.min(
+                effectiveRequired,
+                selectedBefore + Math.max(
+                    0,
+                    parseInt(selectionResult?.assigned, 10) || 0
+                )
+            );
+            const visualSelected = Math.max(
+                selectedFromDom,
+                selectedFromClicks
+            );
+            const status = visualSelected >= effectiveRequired
+                ? 'assigned'
+                : visualSelected > 0
+                    ? 'retrying'
+                    : 'missing';
+
+            addOrUpdateVehicleRow(
+                unitText,
+                replacedItemText,
+                effectiveRequired,
+                status,
+                visualSelected
+            );
+            renderVehicleLoadList();
+
+            if (visualSelected < effectiveRequired) {
+                missingUnits.push({
+                    unitName: unitText,
+                    stillNeeded: effectiveRequired - visualSelected,
+                    requiredTotal: effectiveRequired
+                });
+            }
+        }
+
+        renderVehicleLoadList();
+
+        if (mfStaffingBlockActive) {
+            changeDispatchBoxColor(false);
+            return false;
+        }
+
+        if (trainedVehicleMissing.length > 0) {
+            changeDispatchBoxColor(false);
+            updateStatusBox(
+                'Compatible trained-personnel vehicle capacity is still missing.'
+            );
+
+            originalAlert.call(
+                window,
+                `Final missing units:\n\n${trainedVehicleMissing.join('\n')}`
+            );
+
+            return false;
+        }
+
+        if (missingUnits.length > 0) {
+            // V10.6.48 parity guard:
+            // Manual Unit Finder naturally waits while MissionChief loads the
+            // missing-vehicle list. Auto Mode must wait for the same bounded
+            // retry before it is allowed to run Mission Update or Dispatch.
+            return await retryMissingUnits(
+                missingUnits
+            );
+        }
+
+        changeDispatchBoxColor(true);
+
+        if (trainedPersonnelWarnings.length > 0) {
+            const warningText =
+                trainedPersonnelWarnings.join('\n');
+
+            updateStatusBox(
+                `Vehicles selected. Training shortfall reported: ${warningText}`
+            );
+
+            console.warn(
+                '[Mission Finder] Training shortfall; compatible units remain selected:',
+                warningText
+            );
+
+            if (!autoModeRunning) {
+                originalAlert.call(
+                    window,
+                    `Training shortfall — compatible units were still selected and can be sent:\n\n${warningText}`
+                );
+            }
+        }
+
+        return true;
+    }
 
 
 ===== getSelectedTrainedPersonnelPanelModel =====
@@ -444,7 +788,12 @@ FUNCTION NOT FOUND: hasAuthoritativeMissionDefinitionTrainedPersonnelRequirement
 
 
 ===== readMissionUpdateRows =====
-    function readMissionUpdateRows(options = {}
+    function mfBuildUnitFinderDiagnosticSnapshot(reason) {
+        let liveRows = [];
+
+        try {
+            liveRows = readMissionUpdateRows({ silent: true });
+        } catch (_error) {}
 
 
 ===== hasAuthoritativeLiveMissionRequirementsPanel =====
@@ -472,96 +821,278 @@ FUNCTION NOT FOUND: hasAuthoritativeMissionDefinitionTrainedPersonnelRequirement
 
 
 ===== getVehicleCheckboxSnapshot =====
-    function getVehicleCheckboxSnapshot(
-        forceRefresh = false
-    ) {
-        const now = Date.now();
-        const selectionDocument =
-            getVehicleSelectionDocument(
-                forceRefresh
-            );
-        const cachedNodes =
-            mfVehicleCheckboxCache.nodes;
-        const firstNode = cachedNodes[0];
-        const lastNode =
-            cachedNodes[
-                cachedNodes.length - 1
-            ];
-        const cacheStillConnected =
-            cachedNodes.length === 0 ||
-            (
-                firstNode?.isConnected !== false &&
-                lastNode?.isConnected !== false
-            );
-        const cacheMatchesDocument =
-            mfVehicleCheckboxCache.document ===
-            selectionDocument;
-
-        if (
-            !forceRefresh &&
-            now <
-                mfVehicleCheckboxCache.expiresAt &&
-            cacheStillConnected &&
-            cacheMatchesDocument
-        ) {
-            return cachedNodes;
-        }
-
-        let nodes = [];
-
-        try {
-            nodes = Array.from(
-                selectionDocument.querySelectorAll(
-                    'input.vehicle_checkbox'
-                )
-            );
-        } catch (_error) {}
-
-        mfVehicleCheckboxCache = {
-            expiresAt:
-                now +
-                (nodes.length ? 500 : 120),
-            nodes,
-            document: selectionDocument
-        };
-
-        return nodes;
-    }
+FUNCTION KEYWORD NOT FOUND: getVehicleCheckboxSnapshot
 
 
 ===== getMissionVehicleId =====
-    function getMissionVehicleId(
-        input
-    ) {
-        if (!input) return '';
+FUNCTION KEYWORD NOT FOUND: getMissionVehicleId
 
-        const row =
-            input.closest &&
-            input.closest(
-                'tr[vehicle_id], tr[data-vehicle-id], tr.vehicle_select_table_tr'
+
+===== handleMissionUpdateUnits =====
+FUNCTION KEYWORD NOT FOUND: handleMissionUpdateUnits
+
+
+===== selectVehiclesForTrainedPersonnelRequirements =====
+    function selectVehiclesForTrainedPersonnelRequirements(
+        requirements,
+        source = 'UPDATE'
+    ) {
+        const registry =
+            readPersonnelTrainingRegistry();
+
+        const registryVehicleCount =
+            Object.keys(
+                registry.vehicles ||
+                {}
+            ).length;
+
+        const selected =
+            getVehicleCheckboxSnapshot().filter(
+                checkbox => checkbox.checked
             );
 
-        const idMatches = [
-            String(input.id || '').match(/(?:vehicle_checkbox_|vehicle_)(\d+)/i)?.[1],
-            String(row?.id || '').match(/(?:vehicle_|vehicle_row_)(\d+)/i)?.[1],
-            input.getAttribute('vehicle_id'),
-            input.getAttribute('data-vehicle-id'),
-            row?.getAttribute('vehicle_id'),
-            row?.getAttribute('data-vehicle-id'),
-            input.value
-        ]
-            .map(value => String(value || '').trim())
-            .filter(value => /^\d+$/.test(value));
+        let remaining =
+            getRemainingTrainedPersonnelRequirements(
+                requirements,
+                selected,
+                registry
+            );
 
-        // Real MissionChief vehicle IDs are long numeric identifiers. Reject
-        // short values such as the vehicle type ID "8" rather than matching a
-        // registry entry for the wrong vehicle.
-        return idMatches.find(value => value.length >= 4) || '';
+        const initiallyVehicleCovered =
+            remaining.every(requirement => {
+                return requirement.capacityRemaining <= 0;
+            });
+
+        const initiallyTrainingCovered =
+            remaining.every(requirement => {
+                return requirement.remaining <= 0;
+            });
+
+        // Do not return merely because nominal seats are covered. If a course
+        // deficit remains, continue through the ready trained pool so a second
+        // PSU/IRV can replace a false shortfall with real qualified coverage.
+        if (
+            initiallyVehicleCovered &&
+            initiallyTrainingCovered
+        ) {
+            return {
+                satisfied:
+                    true,
+                vehicleCoverageSatisfied:
+                    true,
+                trainingSatisfied:
+                    true,
+                selectedVehicles:
+                    0,
+                trainedVehicles:
+                    0,
+                fallbackVehicles:
+                    0,
+                selectedVehicleCount:
+                    countSelectedTrainingVehicles(
+                        requirements,
+                        registry
+                    ),
+                remaining,
+                trainingRemaining:
+                    remaining,
+                capacityRemaining:
+                    remaining,
+                registryVehicleCount
+            };
+        }
+
+        const readyCandidates =
+            sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(checkbox => {
+                    if (
+                        checkbox.disabled ||
+                        checkbox.checked
+                    ) {
+                        return false;
+                    }
+
+                    const registryMatch =
+                        getRegistryEntryForMissionCheckbox(
+                            checkbox,
+                            registry
+                        );
+
+                    return (
+                        Array.isArray(requirements)
+                            ? requirements
+                            : []
+                    ).some(requirement => {
+                        return isCheckboxEligibleForTrainingRequirement(
+                            checkbox,
+                            requirement,
+                            registryMatch.entry
+                        );
+                    });
+                })
+            );
+
+        const arrivalIndex =
+            new Map(
+                readyCandidates.map((checkbox, index) => [
+                    checkbox,
+                    index
+                ])
+            );
+
+        const used = new Set();
+        let selectedVehicles = 0;
+        let trainedVehicles = 0;
+        let fallbackVehicles = 0;
+
+        const runSelectionPhase = trainedPhase => {
+            const hasRemainingPhaseNeed = () => {
+                return remaining.some(requirement => {
+                    return trainedPhase
+                        ? requirement.remaining > 0
+                        : requirement.capacityRemaining > 0;
+                });
+            };
+
+            while (hasRemainingPhaseNeed()) {
+                let bestCheckbox = null;
+                let bestEntry = null;
+                let bestMetrics = null;
+                let bestScore =
+                    Number.NEGATIVE_INFINITY;
+
+                readyCandidates.forEach(checkbox => {
+                    if (used.has(checkbox)) {
+                        return;
+                    }
+
+                    const registryMatch =
+                        getRegistryEntryForMissionCheckbox(
+                            checkbox,
+                            registry
+                        );
+
+                    const metrics =
+                        getTrainedCandidateMetrics(
+                            remaining,
+                            checkbox,
+                            registryMatch.entry
+                        );
+
+                    const score =
+                        getTrainedVehicleSelectionScore(
+                            metrics,
+                            trainedPhase
+                        );
+
+                    if (
+                        score > bestScore ||
+                        (
+                            score === bestScore &&
+                            bestCheckbox &&
+                            arrivalIndex.get(checkbox) <
+                                arrivalIndex.get(bestCheckbox)
+                        )
+                    ) {
+                        bestCheckbox = checkbox;
+                        bestEntry = registryMatch.entry;
+                        bestMetrics = metrics;
+                        bestScore = score;
+                    }
+                });
+
+                if (
+                    !bestCheckbox ||
+                    !bestMetrics?.eligible ||
+                    (
+                        trainedPhase &&
+                        bestMetrics.trainedUseful <= 0
+                    )
+                ) {
+                    break;
+                }
+
+                used.add(bestCheckbox);
+
+                if (!clickVehicleElement(bestCheckbox)) {
+                    continue;
+                }
+
+                selectedVehicles += 1;
+
+                if (bestMetrics.trainedUseful > 0) {
+                    trainedVehicles += 1;
+                } else {
+                    fallbackVehicles += 1;
+                }
+
+                remaining =
+                    applyTrainingCandidateToRemaining(
+                        remaining,
+                        bestCheckbox,
+                        bestEntry
+                    );
+
+                if (mfDebugEnabled) {
+                    debugLog(
+                        trainedPhase
+                            ? 'TRAINED COVERAGE CLICK'
+                            : 'TRAINING FALLBACK CLICK',
+                        `${source} | ${getVehicleDebugName(bestCheckbox)} | ` +
+                        `trained=${bestMetrics.trainedUseful} | ` +
+                        `capacity=${bestMetrics.capacityUseful} | ` +
+                        `overshoot=${bestMetrics.overshoot} | ` +
+                        `training remaining=${remaining.map(item => `${item.label}:${item.remaining}`).join(', ')} | ` +
+                        `capacity remaining=${remaining.map(item => `${item.label}:${item.capacityRemaining}`).join(', ')}`
+                    );
+                }
+            }
+        };
+
+        // Phase one chooses the best available trained coverage. Phase two is
+        // deliberately allowed to select correct-type vehicles with no verified
+        // training so the mission can still be sent; the training deficit is
+        // returned separately and never hidden.
+        runSelectionPhase(true);
+        runSelectionPhase(false);
+
+        const vehicleCoverageSatisfied =
+            remaining.every(requirement => {
+                return requirement.capacityRemaining <= 0;
+            });
+
+        const trainingSatisfied =
+            remaining.every(requirement => {
+                return requirement.remaining <= 0;
+            });
+
+        return {
+            satisfied:
+                vehicleCoverageSatisfied,
+            vehicleCoverageSatisfied,
+            trainingSatisfied,
+            selectedVehicles,
+            trainedVehicles,
+            fallbackVehicles,
+            selectedVehicleCount:
+                countSelectedTrainingVehicles(
+                    requirements,
+                    registry
+                ),
+            remaining,
+            trainingRemaining:
+                remaining,
+            capacityRemaining:
+                remaining,
+            registryVehicleCount
+        };
     }
 
 
 ===== STATUS MARKERS =====
---- lines 22544-22550 ---
+--- lines 22542-22552 ---
+22542:             selected: Math.min(safeSelected, safeRequired),
+22543:             status: status || (safeSelected >= safeRequired ? 'assigned' : safeSelected > 0 ? 'retrying' : 'pending')
 22544:         });
 22545:     }
 22546: 
@@ -569,8 +1100,25 @@ FUNCTION NOT FOUND: hasAuthoritativeMissionDefinitionTrainedPersonnelRequirement
 22548:         const row = vehicleLoadState.rows.find(r => r.originalName === originalName);
 22549:         if (row) {
 22550:             row.status = status;
+22551:             row.selected = Math.min(countSelectedMatchingVehicles(row.originalName, row.mappedName), Number(row.required || 0));
+22552:         }
 
---- lines 32609-32615 ---
+--- lines 22893-22903 ---
+22893: 
+22894:         if (displayRows.length === 0) {
+22895:             listContent.innerHTML = vehicleLoadState.ready
+22896:                 ? `<span class="mf2026-good">✓ Ambulance-only mission ready</span>`
+22897:                 : preloadState.status === 'loading'
+22898:                     ? `Loading mission vehicle requirements...`
+22899:                     : `Click Unit Finder to load vehicles.`;
+22900:         } else {
+22901:             listContent.innerHTML = displayRows.map(row => {
+22902:                 let icon = '○';
+22903:                 let cls = 'mf2026-warn';
+
+--- lines 32607-32617 ---
+32607: 
+32608:         updateStatusBox('Retrying missing units...');
 32609: 
 32610:         missingRows.forEach(
 32611:             unit =>
@@ -578,8 +1126,12 @@ FUNCTION NOT FOUND: hasAuthoritativeMissionDefinitionTrainedPersonnelRequirement
 32613:                     unit.unitName,
 32614:                     'retrying'
 32615:                 )
+32616:         );
+32617: 
 
---- lines 32762-32768 ---
+--- lines 32760-32770 ---
+32760: 
+32761:             if (
 32762:                 selectedAfter >=
 32763:                 unit.requiredTotal
 32764:             ) {
@@ -587,8 +1139,12 @@ FUNCTION NOT FOUND: hasAuthoritativeMissionDefinitionTrainedPersonnelRequirement
 32766:                     unit.unitName,
 32767:                     'assigned'
 32768:                 );
+32769:             } else {
+32770:                 setVehicleStatus(
 
---- lines 32767-32773 ---
+--- lines 32765-32775 ---
+32765:                 setVehicleStatus(
+32766:                     unit.unitName,
 32767:                     'assigned'
 32768:                 );
 32769:             } else {
@@ -596,3 +1152,18 @@ FUNCTION NOT FOUND: hasAuthoritativeMissionDefinitionTrainedPersonnelRequirement
 32771:                     unit.unitName,
 32772:                     'missing'
 32773:                 );
+32774: 
+32775:                 stillMissing.push(
+
+--- lines 34328-34338 ---
+34328:             patientCount > 0 ||
+34329:             patientRequirementResult.found
+34330:         ) {
+34331:             if (patientRequirementResult.satisfied) {
+34332:                 updateStatusBox(
+34333:                     'No mission vehicle rows found. Current patient requirements processed.'
+34334:                 );
+34335:                 changeDispatchBoxColor(true);
+34336:                 return true;
+34337:             }
+34338: 
