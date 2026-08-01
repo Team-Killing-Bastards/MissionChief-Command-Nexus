@@ -90,6 +90,7 @@ needles = (
     'renderVehicleLoadListNow(',
     'missionUpdateRowsCache',
     'scheduleMissionFinderMutationWork(',
+    'flushMissionFinderMutationWork(',
 )
 blocks = []
 seen = set()
@@ -108,8 +109,12 @@ for number, line in enumerate(lines, 1):
     )
 
 output_text = '\n\n'.join([
+    '===== classifyMissionFinderMutations =====',
+    extract_function('classifyMissionFinderMutations'),
     '===== scheduleMissionFinderMutationWork =====',
     extract_function('scheduleMissionFinderMutationWork'),
+    '===== flushMissionFinderMutationWork =====',
+    extract_function('flushMissionFinderMutationWork'),
     '===== renderVehicleLoadList =====',
     extract_function('renderVehicleLoadList'),
     '===== renderVehicleLoadListNow =====',
