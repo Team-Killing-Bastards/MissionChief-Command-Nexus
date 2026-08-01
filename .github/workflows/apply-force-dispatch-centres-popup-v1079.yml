@@ -1,0 +1,71 @@
+name: Apply Dispatch Centres popup-window correction
+
+on:
+  push:
+    branches:
+      - feature/force-dispatch-centres-popup-window-v1079
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-force-dispatch-centres-popup-v1079
+  cancel-in-progress: true
+
+jobs:
+  apply:
+    name: Apply and validate 1.0.79
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: feature/force-dispatch-centres-popup-window-v1079
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Apply popup-window correction
+        run: python3 .github/builders/apply-force-dispatch-centres-popup-v1079.py
+
+      - name: Remove one-use builder machinery
+        run: |
+          rm -f .github/builders/apply-force-dispatch-centres-popup-v1079.py
+          rm -f .github/workflows/apply-force-dispatch-centres-popup-v1079.yml
+
+      - name: Validate JavaScript syntax
+        run: node --check src/missionchief-command-nexus.user.js
+
+      - name: Validate userscript metadata and size
+        run: node scripts/validate-userscript.mjs
+
+      - name: Run every permanent behavioural regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          for check in scripts/check-*.mjs; do
+            echo "Running ${check}"
+            node "${check}"
+          done
+
+      - name: Validate repository integrity
+        run: python3 scripts/check_repository.py
+
+      - name: Validate whitespace
+        run: git diff --check
+
+      - name: Commit clean product change
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Force Dispatch Centres Show all into popup window"
+          git push origin HEAD:feature/force-dispatch-centres-popup-window-v1079
