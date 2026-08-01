@@ -7,6 +7,7 @@ import hashlib
 import subprocess
 from pathlib import Path
 
+# One-use verified builder for Command Nexus 1.0.76.
 PATCH_SHA256 = 'edacb0263d280e71b4fad8bbfdeb734ce323a8be1dc724b6b915a2efac0e3207'
 PATCH_GZIP_SHA256 = 'd4c74ca1308262a3857a0434e8ee267be69e9c9121899a98acf891f3b4146f0d'
 PART_GLOB = '.github/builders/high-risk-missing-person-ambulance-v1076.patch.b64.part*'
