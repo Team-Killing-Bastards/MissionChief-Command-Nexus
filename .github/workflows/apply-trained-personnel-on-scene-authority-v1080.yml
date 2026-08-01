@@ -1,0 +1,57 @@
+name: Apply trained personnel on-scene authority v1.0.80
+
+on:
+  push:
+    branches:
+      - feature/trained-personnel-on-scene-authority-v1080
+    paths:
+      - '.github/builders/apply-trained-personnel-on-scene-authority-v1080.py'
+      - '.github/workflows/apply-trained-personnel-on-scene-authority-v1080.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v6
+        with:
+          ref: feature/trained-personnel-on-scene-authority-v1080
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Apply product release
+        run: python3 .github/builders/apply-trained-personnel-on-scene-authority-v1080.py
+
+      - name: Validate complete candidate
+        run: |
+          set -euo pipefail
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          for test in scripts/check-*.mjs; do
+            echo "Running ${test}"
+            node "$test"
+          done
+          python3 scripts/check_repository.py
+          git diff --check
+
+      - name: Commit validated permanent changes
+        run: |
+          set -euo pipefail
+          git config user.name MartyBlyth
+          git config user.email 32400596+Martyblyth@users.noreply.github.com
+          git add -A
+          git commit -m 'Apply trained-personnel on-scene authority v1.0.80'
+          git push origin HEAD:feature/trained-personnel-on-scene-authority-v1080
