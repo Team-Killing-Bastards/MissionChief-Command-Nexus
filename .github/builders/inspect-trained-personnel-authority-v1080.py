@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
+import re
 from pathlib import Path
 
 source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8')
 
 
 def extract_function(name: str) -> str:
-    name_index = source.find(f'{name}(')
-    if name_index < 0:
+    match = re.search(
+        rf'(?m)^\s*(?:async\s+)?function\s+{re.escape(name)}\s*\(',
+        source
+    )
+    if not match:
         return f'FUNCTION NOT FOUND: {name}\n'
-    start = source.rfind('function ', max(0, name_index - 120), name_index)
-    if start < 0:
-        return f'FUNCTION KEYWORD NOT FOUND: {name}\n'
-    start = source.rfind('\n', 0, start) + 1
+    start = match.start()
+    name_index = source.find(name, start, match.end() + len(name) + 20)
     open_paren = source.find('(', name_index)
     paren_depth = 0
     quote = ''
