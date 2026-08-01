@@ -18,6 +18,7 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Live shortage values are already residual MissionChief demand and are not reduced a second time by selected vehicle checkboxes.
 - Selected-vehicle Personnel Register evidence remains visible beneath the live shortage section.
 - The display reuses `readMissionUpdateRows({ silent: true })`; it adds no fetch, timer, observer, selection or dispatch side effect.
+- The existing coalesced mission mutation flush now rerenders the panel after invalidating current mission caches, so live shortage changes appear automatically without a button click.
 - Vehicle Load, Unit Finder, Mission Update, Auto Mode, memory lifecycle and iOS/iPadOS paths remain unchanged.
 
 ### Changed engine baseline

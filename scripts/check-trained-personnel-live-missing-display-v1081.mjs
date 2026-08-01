@@ -93,6 +93,28 @@ for (const forbidden of [
   expect(!helper.includes(forbidden), `Live shortage helper must not use ${forbidden}`);
 }
 
+const mutationFlush = extractFunction('flushMissionFinderMutationWork');
+for (const token of [
+  'const shouldRefreshTrainedPersonnelPanel =',
+  'flags.missionContextChanged',
+  'flags.vehicleListChanged',
+  'flags.patientChanged',
+  'missionPage &&',
+  'wrapper &&',
+  'renderSelectedTrainedPersonnelPanel();'
+]) {
+  expect(mutationFlush.includes(token), `Mutation refresh path missing ${token}`);
+}
+expect(
+  mutationFlush.indexOf('invalidateMissionContextCaches();') <
+    mutationFlush.indexOf('renderSelectedTrainedPersonnelPanel();'),
+  'Live mission caches must be invalidated before the panel rereads current shortages'
+);
+expect(
+  !mutationFlush.includes('new MutationObserver'),
+  'The live panel refresh must reuse the existing observer'
+);
+
 const panel = extractFunction('renderSelectedTrainedPersonnelPanel');
 for (const token of [
   'let liveMissingPersonnel = [];',

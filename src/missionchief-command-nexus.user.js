@@ -47242,6 +47242,19 @@ async function handleAutoPrisonerReleaseAfterActions() {
             }
         }
 
+        const shouldRefreshTrainedPersonnelPanel =
+            flags.missionContextChanged ||
+            flags.vehicleListChanged ||
+            flags.patientChanged;
+
+        if (
+            missionPage &&
+            wrapper &&
+            shouldRefreshTrainedPersonnelPanel
+        ) {
+            renderSelectedTrainedPersonnelPanel();
+        }
+
         if (autoModeRunning && missionPage && flags.relevant) {
             scheduleAutoModeLoopResume(
                 'filtered/coalesced DOM mutation'
