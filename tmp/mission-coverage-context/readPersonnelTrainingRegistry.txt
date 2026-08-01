@@ -1,0 +1,59 @@
+007020:             };
+007021:         }
+007022:     }
+007023: 
+007024:     function createEmptyPersonnelTrainingRegistry() {
+007025:         return {
+007026:             schemaVersion: PERSONNEL_TRAINING_REGISTRY_SCHEMA_VERSION,
+007027:             sourceVersion: PERSONNEL_VERSION,
+007028:             updatedAt: 0,
+007029:             lastPrunedAt: 0,
+007030:             vehicles: {}
+007031:         };
+007032:     }
+007033: 
+007034:     function readPersonnelTrainingRegistry() {
+007035:         if (PERSONNEL_TRAINING_REGISTRY_CACHE) {
+007036:             return PERSONNEL_TRAINING_REGISTRY_CACHE;
+007037:         }
+007038: 
+007039:         const emptyRegistry = createEmptyPersonnelTrainingRegistry();
+007040: 
+007041:         try {
+007042:             const parsed = JSON.parse(
+007043:                 localStorage.getItem(PERSONNEL_TRAINING_REGISTRY_STORAGE_KEY) || 'null'
+007044:             );
+007045: 
+007046:             if (!parsed || typeof parsed !== 'object' || typeof parsed.vehicles !== 'object') {
+007047:                 PERSONNEL_TRAINING_REGISTRY_CACHE = emptyRegistry;
+007048:                 return PERSONNEL_TRAINING_REGISTRY_CACHE;
+007049:             }
+007050: 
+007051:             PERSONNEL_TRAINING_REGISTRY_CACHE = {
+007052:                 ...emptyRegistry,
+007053:                 ...parsed,
+007054:                 vehicles: { ...parsed.vehicles }
+007055:             };
+007056: 
+007057:             prunePersonnelTrainingRegistry(PERSONNEL_TRAINING_REGISTRY_CACHE);
+007058:             PERSONNEL_TRAINING_REGISTRY_CACHE.lastPrunedAt = Date.now();
+007059:             return PERSONNEL_TRAINING_REGISTRY_CACHE;
+007060:         } catch (_error) {
+007061:             PERSONNEL_TRAINING_REGISTRY_CACHE = emptyRegistry;
+007062:             return PERSONNEL_TRAINING_REGISTRY_CACHE;
+007063:         }
+007064:     }
+007065: 
+007066:     function dispatchPersonnelTrainingRegistryUpdate(eventDetail) {
+007067:         if (!eventDetail) return;
+007068: 
+007069:         try {
+007070:             window.dispatchEvent(new CustomEvent(
+007071:                 'mc-personnel-training-registry-updated',
+007072:                 { detail: eventDetail }
+007073:             ));
+007074:         } catch (_eventError) {}
+007075:     }
+007076: 
+007077:     function flushPersonnelTrainingRegistry(silent = false) {
+007078:         if (PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER != null) {

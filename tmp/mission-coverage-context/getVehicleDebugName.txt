@@ -1,0 +1,41 @@
+013807:         const link = document.createElement('a');
+013808:         link.href = url;
+013809:         link.download = filename;
+013810:         link.style.display = 'none';
+013811:         document.body.appendChild(link);
+013812:         link.click();
+013813:         link.remove();
+013814:         setTimeout(() => URL.revokeObjectURL(url), 1500);
+013815: 
+013816:         updateStatusBox(
+013817:             `Diagnostics exported: ${history.length} captured attempt(s).`
+013818:         );
+013819:     }
+013820: 
+013821:     function getVehicleDebugName(element) {
+013822:         if (!element) return 'not found';
+013823:         const row = element.closest && element.closest('tr');
+013824:         const values = [
+013825:             element.getAttribute && element.getAttribute('vehicle_caption'),
+013826:             element.getAttribute && element.getAttribute('vehicle_type_caption'),
+013827:             element.getAttribute && element.getAttribute('search_attribute'),
+013828:             row && row.getAttribute('vehicle_caption'),
+013829:             row && row.getAttribute('vehicle_type_caption'),
+013830:             row && row.querySelector('td:nth-child(2)') && row.querySelector('td:nth-child(2)').innerText
+013831:         ].filter(Boolean);
+013832:         return values.length ? values[0].replace(/\s+/g, ' ').trim() : element.tagName;
+013833:     }
+013834: 
+013835:     function resolveUnitName(unitName) {
+013836:         const cleaned = String(unitName || '')
+013837:             .replace(/\s+/g, ' ')
+013838:             .trim();
+013839: 
+013840:         if (!cleaned) return '';
+013841: 
+013842:         return (
+013843:             crossReference[cleaned] ||
+013844:             crossReferenceNormalisedLookup.get(
+013845:                 cleaned.toLowerCase()
+013846:             ) ||
+013847:             cleaned

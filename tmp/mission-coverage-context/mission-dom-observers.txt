@@ -1,0 +1,2371 @@
+===== 'new MutationObserver': 2 matches =====
+--- lines 1532-1642; match 1562 ---
+001532: 
+001533:         let pendingFrame = null;
+001534:         let navigationTimer = null;
+001535: 
+001536:         const enforce = () => {
+001537:             if (pendingFrame != null) return;
+001538:             pendingFrame = requestAnimationFrame(() => {
+001539:                 pendingFrame = null;
+001540:                 syncNamingToolsPanelLifecycle();
+001541:             });
+001542:         };
+001543: 
+001544:         const isRelevantLifecycleNode = node => {
+001545:             if (
+001546:                 !node ||
+001547:                 node.nodeType !== Node.ELEMENT_NODE
+001548:             ) {
+001549:                 return false;
+001550:             }
+001551: 
+001552:             return Boolean(
+001553:                 node.matches?.(
+001554:                     '#mc-namer-panel, .building_list, .building_list_li'
+001555:                 ) ||
+001556:                 node.querySelector?.(
+001557:                     '#mc-namer-panel, .building_list, .building_list_li'
+001558:                 )
+001559:             );
+001560:         };
+001561: 
+001562:         const observer = new MutationObserver(records => {
+001563:             const relevantMutation = records.some(record => {
+001564:                 const target =
+001565:                     record.target?.nodeType ===
+001566:                     Node.ELEMENT_NODE
+001567:                         ? record.target
+001568:                         : record.target?.parentElement;
+001569: 
+001570:                 if (target?.closest?.('#mc-namer-panel')) {
+001571:                     return false;
+001572:                 }
+001573: 
+001574:                 if (
+001575:                     target?.matches?.(
+001576:                         '.building_list, .building_list_li'
+001577:                     ) ||
+001578:                     target?.closest?.(
+001579:                         '.building_list, .building_list_li'
+001580:                     )
+001581:                 ) {
+001582:                     return true;
+001583:                 }
+001584: 
+001585:                 return [
+001586:                     ...record.addedNodes,
+001587:                     ...record.removedNodes
+001588:                 ].some(isRelevantLifecycleNode);
+001589:             });
+001590: 
+001591:             if (relevantMutation) enforce();
+001592:         });
+001593: 
+001594:         const handleNavigationClick = event => {
+001595:             const control = event.target?.closest?.(
+001596:                 'a, button'
+001597:             );
+001598: 
+001599:             if (
+001600:                 !control ||
+001601:                 control.closest?.('#mc-namer-panel')
+001602:             ) {
+001603:                 return;
+001604:             }
+001605: 
+001606:             enforce();
+001607: 
+001608:             if (navigationTimer != null) {
+001609:                 clearTimeout(navigationTimer);
+001610:             }
+001611: 
+001612:             navigationTimer = setTimeout(() => {
+001613:                 navigationTimer = null;
+001614:                 enforce();
+001615:             }, 250);
+001616:         };
+001617: 
+001618:         const handleVisibilityChange = () => {
+001619:             if (!document.hidden) enforce();
+001620:         };
+001621: 
+001622:         observer.observe(
+001623:             document.body || document.documentElement,
+001624:             {
+001625:                 childList: true,
+001626:                 subtree: true
+001627:             }
+001628:         );
+001629:         window.addEventListener(
+001630:             'pageshow',
+001631:             enforce,
+001632:             { passive: true }
+001633:         );
+001634:         window.addEventListener(
+001635:             'popstate',
+001636:             enforce,
+001637:             { passive: true }
+001638:         );
+001639:         window.addEventListener(
+001640:             'hashchange',
+001641:             enforce,
+001642:             { passive: true }
+--- lines 47284-47345; match 47314 ---
+047284:         }
+047285: 
+047286:         mfRuntimeSuspendedForInactiveFrame = false;
+047287:         installIssueRecorderWatchers();
+047288:         installPersonnelRegistryUpdateHandler();
+047289:         installMissionFinderRuntimeMemoryActivityTracking();
+047290: 
+047291:         if (MF_IS_TOP_WINDOW) {
+047292:             installManualMissionClickFlagClearer();
+047293:             installBackgroundWatcherSupervisor();
+047294:             compactMissionFinderPersistentStorage();
+047295: 
+047296:             if (
+047297:                 localStorage.getItem(
+047298:                     'mf_post_transport_rehook_pending_v1'
+047299:                 ) === 'true' ||
+047300:                 isRecentTransportRehookWindowActive()
+047301:             ) {
+047302:                 forceAutoModeBackOnForTransportRehook();
+047303: 
+047304:                 setTimeout(() => {
+047305:                     openFirstMissionAfterTransportAutoClose(
+047306:                         'startup-pending-rehook'
+047307:                     );
+047308:                 }, 2500);
+047309:             }
+047310:         }
+047311: 
+047312:         if (isMissionPage()) initialize();
+047313: 
+047314:         mfMainMutationObserver = new MutationObserver(records => {
+047315:             releaseRemovedMissionFinderFrameRuntimes(records);
+047316:             scheduleMissionFinderMutationWork(records);
+047317:         });
+047318: 
+047319:         mfMainMutationObserver.observe(document.body, {
+047320:             childList: true,
+047321:             subtree: true
+047322:         });
+047323: 
+047324:         if (isMissionPage()) {
+047325:             startMissionFinderRuntimeMemoryMaintenance();
+047326:         }
+047327: 
+047328:         scheduleAutoMemoryRecycleResume();
+047329:     }
+047330: 
+047331:     if (document.body) {
+047332:         startMissionFinderObserver();
+047333:     } else {
+047334:         document.addEventListener(
+047335:             'DOMContentLoaded',
+047336:             startMissionFinderObserver,
+047337:             { once: true }
+047338:         );
+047339:     }
+047340: 
+047341: })();
+047342:     } catch (error) {
+047343:         console.error('[MissionChief Complete Tools] Mission Finder module startup failed:', error);
+047344:     }
+047345: })();
+===== 'MutationObserver(': 3 matches =====
+--- lines 1532-1642; match 1562 ---
+001532: 
+001533:         let pendingFrame = null;
+001534:         let navigationTimer = null;
+001535: 
+001536:         const enforce = () => {
+001537:             if (pendingFrame != null) return;
+001538:             pendingFrame = requestAnimationFrame(() => {
+001539:                 pendingFrame = null;
+001540:                 syncNamingToolsPanelLifecycle();
+001541:             });
+001542:         };
+001543: 
+001544:         const isRelevantLifecycleNode = node => {
+001545:             if (
+001546:                 !node ||
+001547:                 node.nodeType !== Node.ELEMENT_NODE
+001548:             ) {
+001549:                 return false;
+001550:             }
+001551: 
+001552:             return Boolean(
+001553:                 node.matches?.(
+001554:                     '#mc-namer-panel, .building_list, .building_list_li'
+001555:                 ) ||
+001556:                 node.querySelector?.(
+001557:                     '#mc-namer-panel, .building_list, .building_list_li'
+001558:                 )
+001559:             );
+001560:         };
+001561: 
+001562:         const observer = new MutationObserver(records => {
+001563:             const relevantMutation = records.some(record => {
+001564:                 const target =
+001565:                     record.target?.nodeType ===
+001566:                     Node.ELEMENT_NODE
+001567:                         ? record.target
+001568:                         : record.target?.parentElement;
+001569: 
+001570:                 if (target?.closest?.('#mc-namer-panel')) {
+001571:                     return false;
+001572:                 }
+001573: 
+001574:                 if (
+001575:                     target?.matches?.(
+001576:                         '.building_list, .building_list_li'
+001577:                     ) ||
+001578:                     target?.closest?.(
+001579:                         '.building_list, .building_list_li'
+001580:                     )
+001581:                 ) {
+001582:                     return true;
+001583:                 }
+001584: 
+001585:                 return [
+001586:                     ...record.addedNodes,
+001587:                     ...record.removedNodes
+001588:                 ].some(isRelevantLifecycleNode);
+001589:             });
+001590: 
+001591:             if (relevantMutation) enforce();
+001592:         });
+001593: 
+001594:         const handleNavigationClick = event => {
+001595:             const control = event.target?.closest?.(
+001596:                 'a, button'
+001597:             );
+001598: 
+001599:             if (
+001600:                 !control ||
+001601:                 control.closest?.('#mc-namer-panel')
+001602:             ) {
+001603:                 return;
+001604:             }
+001605: 
+001606:             enforce();
+001607: 
+001608:             if (navigationTimer != null) {
+001609:                 clearTimeout(navigationTimer);
+001610:             }
+001611: 
+001612:             navigationTimer = setTimeout(() => {
+001613:                 navigationTimer = null;
+001614:                 enforce();
+001615:             }, 250);
+001616:         };
+001617: 
+001618:         const handleVisibilityChange = () => {
+001619:             if (!document.hidden) enforce();
+001620:         };
+001621: 
+001622:         observer.observe(
+001623:             document.body || document.documentElement,
+001624:             {
+001625:                 childList: true,
+001626:                 subtree: true
+001627:             }
+001628:         );
+001629:         window.addEventListener(
+001630:             'pageshow',
+001631:             enforce,
+001632:             { passive: true }
+001633:         );
+001634:         window.addEventListener(
+001635:             'popstate',
+001636:             enforce,
+001637:             { passive: true }
+001638:         );
+001639:         window.addEventListener(
+001640:             'hashchange',
+001641:             enforce,
+001642:             { passive: true }
+--- lines 12743-12853; match 12773 ---
+012743:             queueState,
+012744:             unattendedState,
+012745:             vehicleLoadState: {
+012746:                 ready: vehicleLoadState.ready,
+012747:                 patients: vehicleLoadState.patients,
+012748:                 ambulances: vehicleLoadState.ambulances,
+012749:                 rows: (vehicleLoadState.rows || []).map(row => ({
+012750:                     originalName: row.originalName,
+012751:                     mappedName: row.mappedName,
+012752:                     required: row.required,
+012753:                     selected: row.selected,
+012754:                     status: row.status
+012755:                 })).slice(0, 30)
+012756:             },
+012757:             alerts,
+012758:             modals,
+012759:             visibleButtons: getRecorderVisibleButtons(),
+012760:             debugTail: (mfDebugRows || []).slice(0, 60)
+012761:         };
+012762:     }
+012763: 
+012764:     // V10.6.52: Issue Recorder removed. These no-op stubs preserve compatibility
+012765:     // with existing safety/error paths without installing observers or listeners.
+012766:     function recordIssueEvent() {}
+012767:     function renderRecorderStatus() {}
+012768:     function setIssueRecorderEnabled() {}
+012769:     function clearIssueRecorder() {}
+012770:     async function copyIssueRecorder() {}
+012771:     function captureIssueNow() {}
+012772:     function scanIssueRecorderDangerAlerts() {}
+012773:     function syncIssueRecorderMutationObserver() {}
+012774:     function installIssueRecorderWatchers() {
+012775:         window.mfIssueRecorderInstalled = true;
+012776:     }
+012777: 
+012778:     function cleanupDuplicatePanels() {
+012779:         const wrappers = document.querySelectorAll('#mission-finder-wrapper');
+012780: 
+012781:         wrappers.forEach((wrapper, index) => {
+012782:             if (index > 0) {
+012783:                 wrapper.remove();
+012784:             }
+012785:         });
+012786: 
+012787:         document.querySelectorAll('#control-panel').forEach(panel => {
+012788:             if (!panel.closest('#mission-finder-wrapper')) {
+012789:                 panel.remove();
+012790:             }
+012791:         });
+012792:     }
+012793: 
+012794:     const crossReference = {
+012795:         /*************************************************
+012796:          * FIRE
+012797:          *************************************************/
+012798:         "Pumps": "Fire Engine R/PUMP x 1",
+012799:         "Pump": "Fire Engine R/PUMP x 1",
+012800:         "Fire engine": "Fire Engine R/PUMP x 1",
+012801:         "Fire engines": "Fire Engine R/PUMP x 1",
+012802:         "Fire Engine": "Fire Engine R/PUMP x 1",
+012803:         "Fire Engines": "Fire Engine R/PUMP x 1",
+012804:         "Aerial Appliance": "CARP",
+012805:         "Aerial Appliances": "CARP",
+012806:         "Aerial Appliance Truck": "CARP",
+012807:         "Aerial Appliance Trucks": "CARP",
+012808:         "Fire, rescue or aerial appliance": "Rescue Pump",
+012809:         "Road Rail Unit": "Road Rail Unit",
+012810:         "Road Rail Units": "Road Rail Unit",
+012811:         "Firefighter": "Rescue Pump",
+012812:         "Firefighters": "Rescue Pump",
+012813:         "Required Firefighter": "Rescue Pump",
+012814:         "Required Firefighters": "Rescue Pump",
+012815:         "Car Recovery": "Flatbed Recovery Vehicle",
+012816:         "Required Car Recovery": "Flatbed Recovery Vehicle",
+012817:         "ICCU or Ambulance Control Unit": "ICCU/ACU",
+012818:         "ICCU or Ambulance Control Units": "ICCU/ACU",
+012819:         "ICCUs or Ambulance Control Units": "ICCU/ACU",
+012820:         "Fire Officer": "Fire Officer",
+012821:         "Fire Officers": "Fire Officer",
+012822:         "Rescue Support Unit": "Fire Engine R/PUMP x 1",
+012823:         "Rescue Support Units": "Fire Engine R/PUMP x 1",
+012824:         "Rescue Support Vehicle": "Fire Engine R/PUMP x 1",
+012825:         "Rescue Support Vehicles": "Fire Engine R/PUMP x 1",
+012826:         "Rescue Support Unit or Rescue Pump": "Fire Engine R/PUMP x 1",
+012827:         "Rescue Support Units or Rescue Pumps": "Fire Engine R/PUMP x 1",
+012828:         "Fire Engines or Rescue Support Vehicles": "Fire Engine R/PUMP x 1",
+012829:         "Fire Engines, Rescue Support Vehicles or Aerial Appliance Trucks": "Fire Engine R/PUMP x 1",
+012830:         "Foam Unit": "RP CAFS",
+012831:         "Foam Units": "RP CAFS",
+012832:         "Water Carrier": "Water Carrier",
+012833:         "Water Carriers": "Water Carrier",
+012834:         "Welfare Vehicles x1": "Welfare Vehicle",
+012835: 
+012836:         /*************************************************
+012837:          * POLICE
+012838:          *************************************************/
+012839:         "Police Car": "Police Car",
+012840:         "Police Cars": "Police Car",
+012841:         "Police car": "Police Car",
+012842:         "Police cars": "Police Car",
+012843:         "Police Officer": "Police Car",
+012844:         "Police Officers": "Police Car",
+012845:         "Traffic Car": "Police ATC",
+012846:         "Traffic Cars": "Police ATC",
+012847:         "Police Cars or Armed Response Vehicles (ARVs)": "Police ATC",
+012848:         "Armed Response Personnel (In Armed Vehicles)": "Police ATC",
+012849:         "Dog Support Unit (DSU)": "Police DSU",
+012850:         "Dog Support Units (DSU)": "Police DSU",
+012851:         "Dog Support Units (DSUs)": "Police DSU",
+012852:         "Mounted Unit": "Mounted Unit",
+012853:         "Mounted Units": "Mounted Unit",
+--- lines 47284-47345; match 47314 ---
+047284:         }
+047285: 
+047286:         mfRuntimeSuspendedForInactiveFrame = false;
+047287:         installIssueRecorderWatchers();
+047288:         installPersonnelRegistryUpdateHandler();
+047289:         installMissionFinderRuntimeMemoryActivityTracking();
+047290: 
+047291:         if (MF_IS_TOP_WINDOW) {
+047292:             installManualMissionClickFlagClearer();
+047293:             installBackgroundWatcherSupervisor();
+047294:             compactMissionFinderPersistentStorage();
+047295: 
+047296:             if (
+047297:                 localStorage.getItem(
+047298:                     'mf_post_transport_rehook_pending_v1'
+047299:                 ) === 'true' ||
+047300:                 isRecentTransportRehookWindowActive()
+047301:             ) {
+047302:                 forceAutoModeBackOnForTransportRehook();
+047303: 
+047304:                 setTimeout(() => {
+047305:                     openFirstMissionAfterTransportAutoClose(
+047306:                         'startup-pending-rehook'
+047307:                     );
+047308:                 }, 2500);
+047309:             }
+047310:         }
+047311: 
+047312:         if (isMissionPage()) initialize();
+047313: 
+047314:         mfMainMutationObserver = new MutationObserver(records => {
+047315:             releaseRemovedMissionFinderFrameRuntimes(records);
+047316:             scheduleMissionFinderMutationWork(records);
+047317:         });
+047318: 
+047319:         mfMainMutationObserver.observe(document.body, {
+047320:             childList: true,
+047321:             subtree: true
+047322:         });
+047323: 
+047324:         if (isMissionPage()) {
+047325:             startMissionFinderRuntimeMemoryMaintenance();
+047326:         }
+047327: 
+047328:         scheduleAutoMemoryRecycleResume();
+047329:     }
+047330: 
+047331:     if (document.body) {
+047332:         startMissionFinderObserver();
+047333:     } else {
+047334:         document.addEventListener(
+047335:             'DOMContentLoaded',
+047336:             startMissionFinderObserver,
+047337:             { once: true }
+047338:         );
+047339:     }
+047340: 
+047341: })();
+047342:     } catch (error) {
+047343:         console.error('[MissionChief Complete Tools] Mission Finder module startup failed:', error);
+047344:     }
+047345: })();
+===== 'mission_vehicle_driving': 0 matches =====
+===== 'mission_vehicle_at_mission': 0 matches =====
+===== 'vehicle_checkbox': 17 matches =====
+--- lines 13457-13567; match 13487 ---
+013457:                     }
+013458:                 };
+013459: 
+013460:                 let elementCount = 0;
+013461:                 try {
+013462:                     elementCount = candidateDocument
+013463:                         .getElementsByTagName('*')
+013464:                         .length;
+013465:                 } catch (_error) {}
+013466: 
+013467:                 let pageUrl = '';
+013468:                 try {
+013469:                     pageUrl = String(
+013470:                         candidateDocument.location?.href ||
+013471:                         ''
+013472:                     );
+013473:                 } catch (_error) {}
+013474: 
+013475:                 return {
+013476:                     index,
+013477:                     pageUrl,
+013478:                     title: String(candidateDocument.title || '')
+013479:                         .slice(0, 160),
+013480:                     isCurrentDocument:
+013481:                         candidateDocument === document,
+013482:                     ownerFrameConnected,
+013483:                     ownerFrameVisible,
+013484:                     elementCount,
+013485:                     iframeCount: count('iframe'),
+013486:                     vehicleCheckboxCount:
+013487:                         count('input.vehicle_checkbox'),
+013488:                     selectedVehicleCheckboxCount:
+013489:                         count('input.vehicle_checkbox:checked'),
+013490:                     missionPanelCount:
+013491:                         count('#mission-finder-wrapper'),
+013492:                     missionGeneralInfoCount:
+013493:                         count('#mission_general_info')
+013494:                 };
+013495:             });
+013496: 
+013497:         let heap = null;
+013498:         try {
+013499:             const memory = performance.memory;
+013500:             if (memory) {
+013501:                 heap = {
+013502:                     usedJSHeapSize:
+013503:                         Number(memory.usedJSHeapSize || 0),
+013504:                     totalJSHeapSize:
+013505:                         Number(memory.totalJSHeapSize || 0),
+013506:                     jsHeapSizeLimit:
+013507:                         Number(memory.jsHeapSizeLimit || 0)
+013508:                 };
+013509:             }
+013510:         } catch (_error) {}
+013511: 
+013512:         const cachedVehicleNodes = Array.isArray(
+013513:             mfVehicleCheckboxCache?.nodes
+013514:         )
+013515:             ? mfVehicleCheckboxCache.nodes
+013516:             : [];
+013517: 
+013518:         return {
+013519:             capturedAt: new Date().toISOString(),
+013520:             heap,
+013521:             runtime: {
+013522:                 isTopWindow: MF_IS_TOP_WINDOW,
+013523:                 autoModeRunning:
+013524:                     autoModeRunning === true,
+013525:                 eventCollectorTimerActive:
+013526:                     mfEventCollectibleScanTimer !== null,
+013527:                 eventCollectorScanRunning:
+013528:                     mfEventCollectibleScanRunning === true,
+013529:                 eventCollectorTrackedClaims:
+013530:                     mfEventCollectibleClaimTimes.size,
+013531:                 mainMutationObserverActive:
+013532:                     mfMainMutationObserver !== null,
+013533:                 backgroundSupervisorActive:
+013534:                     mfBackgroundWatcherSupervisorTimer !== null,
+013535:                 sessionRuntimeTickerActive:
+013536:                     sessionRuntimeTicker !== null,
+013537:                 runtimeSuspendedForPageHide:
+013538:                     mfRuntimeSuspendedForPageHide === true,
+013539:                 runtimeSuspendedForInactiveFrame:
+013540:                     mfRuntimeSuspendedForInactiveFrame === true,
+013541:                 memoryMaintenanceTimerActive:
+013542:                     mfRuntimeMemoryMaintenanceTimer !== null,
+013543:                 memoryOperationDepth:
+013544:                     mfRuntimeMemoryOperationDepth,
+013545:                 memorySoftFlushCount:
+013546:                     mfRuntimeMemorySoftFlushCount,
+013547:                 memoryLastSoftFlushAt:
+013548:                     mfRuntimeMemoryLastSoftFlushAt,
+013549:                 memoryInactiveSuspendCount:
+013550:                     mfRuntimeMemoryInactiveSuspendCount,
+013551:                 memoryLastActivityAt:
+013552:                     mfRuntimeMemoryLastActivityAt,
+013553:                 memoryLastMutationAt:
+013554:                     mfRuntimeMemoryLastMutationAt,
+013555:                 memoryLastReason:
+013556:                     mfRuntimeMemoryLastReason,
+013557:                 storageMaintenance:
+013558:                     { ...mfRuntimeStorageMaintenanceState },
+013559:                 autoMemoryRecycle:
+013560:                     getAutoMemoryRecycleDiagnosticState()
+013561:             },
+013562:             caches: {
+013563:                 liveTrainingVerifyEntries:
+013564:                     mfLiveTrainingVerifyCache.size,
+013565:                 vehicleMatchCandidateEntries:
+013566:                     mfVehicleMatchCandidateCache.size,
+013567:                 cachedVehicleCheckboxes:
+--- lines 13459-13569; match 13489 ---
+013459: 
+013460:                 let elementCount = 0;
+013461:                 try {
+013462:                     elementCount = candidateDocument
+013463:                         .getElementsByTagName('*')
+013464:                         .length;
+013465:                 } catch (_error) {}
+013466: 
+013467:                 let pageUrl = '';
+013468:                 try {
+013469:                     pageUrl = String(
+013470:                         candidateDocument.location?.href ||
+013471:                         ''
+013472:                     );
+013473:                 } catch (_error) {}
+013474: 
+013475:                 return {
+013476:                     index,
+013477:                     pageUrl,
+013478:                     title: String(candidateDocument.title || '')
+013479:                         .slice(0, 160),
+013480:                     isCurrentDocument:
+013481:                         candidateDocument === document,
+013482:                     ownerFrameConnected,
+013483:                     ownerFrameVisible,
+013484:                     elementCount,
+013485:                     iframeCount: count('iframe'),
+013486:                     vehicleCheckboxCount:
+013487:                         count('input.vehicle_checkbox'),
+013488:                     selectedVehicleCheckboxCount:
+013489:                         count('input.vehicle_checkbox:checked'),
+013490:                     missionPanelCount:
+013491:                         count('#mission-finder-wrapper'),
+013492:                     missionGeneralInfoCount:
+013493:                         count('#mission_general_info')
+013494:                 };
+013495:             });
+013496: 
+013497:         let heap = null;
+013498:         try {
+013499:             const memory = performance.memory;
+013500:             if (memory) {
+013501:                 heap = {
+013502:                     usedJSHeapSize:
+013503:                         Number(memory.usedJSHeapSize || 0),
+013504:                     totalJSHeapSize:
+013505:                         Number(memory.totalJSHeapSize || 0),
+013506:                     jsHeapSizeLimit:
+013507:                         Number(memory.jsHeapSizeLimit || 0)
+013508:                 };
+013509:             }
+013510:         } catch (_error) {}
+013511: 
+013512:         const cachedVehicleNodes = Array.isArray(
+013513:             mfVehicleCheckboxCache?.nodes
+013514:         )
+013515:             ? mfVehicleCheckboxCache.nodes
+013516:             : [];
+013517: 
+013518:         return {
+013519:             capturedAt: new Date().toISOString(),
+013520:             heap,
+013521:             runtime: {
+013522:                 isTopWindow: MF_IS_TOP_WINDOW,
+013523:                 autoModeRunning:
+013524:                     autoModeRunning === true,
+013525:                 eventCollectorTimerActive:
+013526:                     mfEventCollectibleScanTimer !== null,
+013527:                 eventCollectorScanRunning:
+013528:                     mfEventCollectibleScanRunning === true,
+013529:                 eventCollectorTrackedClaims:
+013530:                     mfEventCollectibleClaimTimes.size,
+013531:                 mainMutationObserverActive:
+013532:                     mfMainMutationObserver !== null,
+013533:                 backgroundSupervisorActive:
+013534:                     mfBackgroundWatcherSupervisorTimer !== null,
+013535:                 sessionRuntimeTickerActive:
+013536:                     sessionRuntimeTicker !== null,
+013537:                 runtimeSuspendedForPageHide:
+013538:                     mfRuntimeSuspendedForPageHide === true,
+013539:                 runtimeSuspendedForInactiveFrame:
+013540:                     mfRuntimeSuspendedForInactiveFrame === true,
+013541:                 memoryMaintenanceTimerActive:
+013542:                     mfRuntimeMemoryMaintenanceTimer !== null,
+013543:                 memoryOperationDepth:
+013544:                     mfRuntimeMemoryOperationDepth,
+013545:                 memorySoftFlushCount:
+013546:                     mfRuntimeMemorySoftFlushCount,
+013547:                 memoryLastSoftFlushAt:
+013548:                     mfRuntimeMemoryLastSoftFlushAt,
+013549:                 memoryInactiveSuspendCount:
+013550:                     mfRuntimeMemoryInactiveSuspendCount,
+013551:                 memoryLastActivityAt:
+013552:                     mfRuntimeMemoryLastActivityAt,
+013553:                 memoryLastMutationAt:
+013554:                     mfRuntimeMemoryLastMutationAt,
+013555:                 memoryLastReason:
+013556:                     mfRuntimeMemoryLastReason,
+013557:                 storageMaintenance:
+013558:                     { ...mfRuntimeStorageMaintenanceState },
+013559:                 autoMemoryRecycle:
+013560:                     getAutoMemoryRecycleDiagnosticState()
+013561:             },
+013562:             caches: {
+013563:                 liveTrainingVerifyEntries:
+013564:                     mfLiveTrainingVerifyCache.size,
+013565:                 vehicleMatchCandidateEntries:
+013566:                     mfVehicleMatchCandidateCache.size,
+013567:                 cachedVehicleCheckboxes:
+013568:                     cachedVehicleNodes.length,
+013569:                 detachedCachedVehicleCheckboxes:
+--- lines 15593-15703; match 15623 ---
+015593:         const firstNode = cachedNodes[0];
+015594:         const lastNode =
+015595:             cachedNodes[
+015596:                 cachedNodes.length - 1
+015597:             ];
+015598:         const cacheStillConnected =
+015599:             cachedNodes.length === 0 ||
+015600:             (
+015601:                 firstNode?.isConnected !== false &&
+015602:                 lastNode?.isConnected !== false
+015603:             );
+015604:         const cacheMatchesDocument =
+015605:             mfVehicleCheckboxCache.document ===
+015606:             selectionDocument;
+015607: 
+015608:         if (
+015609:             !forceRefresh &&
+015610:             now <
+015611:                 mfVehicleCheckboxCache.expiresAt &&
+015612:             cacheStillConnected &&
+015613:             cacheMatchesDocument
+015614:         ) {
+015615:             return cachedNodes;
+015616:         }
+015617: 
+015618:         let nodes = [];
+015619: 
+015620:         try {
+015621:             nodes = Array.from(
+015622:                 selectionDocument.querySelectorAll(
+015623:                     'input.vehicle_checkbox'
+015624:                 )
+015625:             );
+015626:         } catch (_error) {}
+015627: 
+015628:         mfVehicleCheckboxCache = {
+015629:             expiresAt:
+015630:                 now +
+015631:                 (nodes.length ? 500 : 120),
+015632:             nodes,
+015633:             document: selectionDocument
+015634:         };
+015635: 
+015636:         return nodes;
+015637:     }
+015638: 
+015639:     function getCheckboxVehicleValues(input) {
+015640:         if (!input) return [];
+015641: 
+015642:         const cached = mfCheckboxVehicleValueCache.get(input);
+015643:         if (cached) return cached;
+015644: 
+015645:         const row = input.closest('tr');
+015646:         const values = [
+015647:             input.getAttribute('vehicle_caption'),
+015648:             input.getAttribute('vehicle_type_caption'),
+015649:             input.getAttribute('search_attribute'),
+015650:             input.getAttribute('vehicle_type'),
+015651:             row?.getAttribute('vehicle_caption'),
+015652:             row?.getAttribute('vehicle_type_caption'),
+015653:             row?.getAttribute('vehicle_type'),
+015654:             row?.querySelector('td:nth-child(2)')?.innerText
+015655:         ]
+015656:         .filter(Boolean)
+015657:         .map(normaliseVehicleText);
+015658: 
+015659:         mfCheckboxVehicleValueCache.set(input, values);
+015660:         return values;
+015661:     }
+015662: 
+015663:     function getExtendedVehicleValues(input) {
+015664:         if (!input) return [];
+015665: 
+015666:         const cached = mfExtendedVehicleValueCache.get(input);
+015667:         if (cached) return cached;
+015668: 
+015669:         const row = input.closest && input.closest('tr');
+015670:         const labelById = input.id
+015671:             ? document.getElementById(`label_${input.id}`)
+015672:             : null;
+015673: 
+015674:         const rowLabel = row && input.id
+015675:             ? Array.from(row.querySelectorAll('label[for]')).find(
+015676:                 label => label.htmlFor === input.id
+015677:             )
+015678:             : null;
+015679: 
+015680:         const values = [
+015681:             ...getCheckboxVehicleValues(input),
+015682:             labelById?.textContent,
+015683:             labelById?.innerText,
+015684:             rowLabel?.textContent,
+015685:             rowLabel?.innerText,
+015686:             row?.querySelector('td[vehicle_type_id]')?.innerText
+015687:         ]
+015688:             .filter(Boolean)
+015689:             .map(normaliseVehicleText);
+015690: 
+015691:         mfExtendedVehicleValueCache.set(input, values);
+015692:         return values;
+015693:     }
+015694: 
+015695:     function isAmbulanceTransportRequest(originalName, mappedName) {
+015696:         const raw = normaliseVehicleText(originalName);
+015697:         const mapped = normaliseVehicleText(mappedName);
+015698: 
+015699:         if (raw.includes('ambulance officer') || mapped.includes('ambulance officer')) {
+015700:             return false;
+015701:         }
+015702: 
+015703:         return mapped === 'ambulance x 01'
+--- lines 15696-15806; match 15726 ---
+015696:         const raw = normaliseVehicleText(originalName);
+015697:         const mapped = normaliseVehicleText(mappedName);
+015698: 
+015699:         if (raw.includes('ambulance officer') || mapped.includes('ambulance officer')) {
+015700:             return false;
+015701:         }
+015702: 
+015703:         return mapped === 'ambulance x 01'
+015704:             || mapped === 'ambulance'
+015705:             || mapped === 'ambulances'
+015706:             || raw === 'ambulance'
+015707:             || raw === 'ambulances'
+015708:             || raw === 'ambulance x 01';
+015709:     }
+015710: 
+015711:     function vehicleValuesMatchCandidates(values, candidates, strictExactOnly) {
+015712:         if (strictExactOnly) {
+015713:             return values.some(value => candidates.some(candidate => value === candidate));
+015714:         }
+015715: 
+015716:         return values.some(value => candidates.some(candidate => value === candidate || value.includes(candidate)));
+015717:     }
+015718: 
+015719:     function getVehicleCheckboxForElement(
+015720:         element
+015721:     ) {
+015722:         if (!element) return null;
+015723: 
+015724:         if (
+015725:             element.matches?.(
+015726:                 'input.vehicle_checkbox'
+015727:             )
+015728:         ) {
+015729:             return element;
+015730:         }
+015731: 
+015732:         const row =
+015733:             element.closest?.('tr');
+015734: 
+015735:         return row?.querySelector?.(
+015736:             'input.vehicle_checkbox'
+015737:         ) || null;
+015738:     }
+015739: 
+015740:     function getAssociatedVehicleCheckboxLabel(
+015741:         checkbox
+015742:     ) {
+015743:         if (!checkbox) return null;
+015744: 
+015745:         try {
+015746:             const directLabel =
+015747:                 Array.from(
+015748:                     checkbox.labels || []
+015749:                 )[0];
+015750: 
+015751:             if (directLabel) {
+015752:                 return directLabel;
+015753:             }
+015754:         } catch (_error) {}
+015755: 
+015756:         const wrappingLabel =
+015757:             checkbox.closest?.('label');
+015758: 
+015759:         if (wrappingLabel) {
+015760:             return wrappingLabel;
+015761:         }
+015762: 
+015763:         const checkboxId =
+015764:             String(checkbox.id || '').trim();
+015765: 
+015766:         if (!checkboxId) return null;
+015767: 
+015768:         const ownerDocument =
+015769:             checkbox.ownerDocument ||
+015770:             document;
+015771: 
+015772:         try {
+015773:             return Array.from(
+015774:                 ownerDocument.querySelectorAll(
+015775:                     'label[for]'
+015776:                 )
+015777:             ).find(label => {
+015778:                 return String(
+015779:                     label.htmlFor ||
+015780:                     label.getAttribute('for') ||
+015781:                     ''
+015782:                 ) === checkboxId;
+015783:             }) || null;
+015784:         } catch (_error) {
+015785:             return null;
+015786:         }
+015787:     }
+015788: 
+015789:     function dispatchVehicleCheckboxStateEvent(
+015790:         checkbox,
+015791:         type
+015792:     ) {
+015793:         try {
+015794:             const ownerWindow =
+015795:                 checkbox.ownerDocument
+015796:                     ?.defaultView ||
+015797:                 window;
+015798: 
+015799:             const EventConstructor =
+015800:                 ownerWindow.Event ||
+015801:                 Event;
+015802: 
+015803:             checkbox.dispatchEvent(
+015804:                 new EventConstructor(
+015805:                     type,
+015806:                     {
+--- lines 15706-15816; match 15736 ---
+015706:             || raw === 'ambulance'
+015707:             || raw === 'ambulances'
+015708:             || raw === 'ambulance x 01';
+015709:     }
+015710: 
+015711:     function vehicleValuesMatchCandidates(values, candidates, strictExactOnly) {
+015712:         if (strictExactOnly) {
+015713:             return values.some(value => candidates.some(candidate => value === candidate));
+015714:         }
+015715: 
+015716:         return values.some(value => candidates.some(candidate => value === candidate || value.includes(candidate)));
+015717:     }
+015718: 
+015719:     function getVehicleCheckboxForElement(
+015720:         element
+015721:     ) {
+015722:         if (!element) return null;
+015723: 
+015724:         if (
+015725:             element.matches?.(
+015726:                 'input.vehicle_checkbox'
+015727:             )
+015728:         ) {
+015729:             return element;
+015730:         }
+015731: 
+015732:         const row =
+015733:             element.closest?.('tr');
+015734: 
+015735:         return row?.querySelector?.(
+015736:             'input.vehicle_checkbox'
+015737:         ) || null;
+015738:     }
+015739: 
+015740:     function getAssociatedVehicleCheckboxLabel(
+015741:         checkbox
+015742:     ) {
+015743:         if (!checkbox) return null;
+015744: 
+015745:         try {
+015746:             const directLabel =
+015747:                 Array.from(
+015748:                     checkbox.labels || []
+015749:                 )[0];
+015750: 
+015751:             if (directLabel) {
+015752:                 return directLabel;
+015753:             }
+015754:         } catch (_error) {}
+015755: 
+015756:         const wrappingLabel =
+015757:             checkbox.closest?.('label');
+015758: 
+015759:         if (wrappingLabel) {
+015760:             return wrappingLabel;
+015761:         }
+015762: 
+015763:         const checkboxId =
+015764:             String(checkbox.id || '').trim();
+015765: 
+015766:         if (!checkboxId) return null;
+015767: 
+015768:         const ownerDocument =
+015769:             checkbox.ownerDocument ||
+015770:             document;
+015771: 
+015772:         try {
+015773:             return Array.from(
+015774:                 ownerDocument.querySelectorAll(
+015775:                     'label[for]'
+015776:                 )
+015777:             ).find(label => {
+015778:                 return String(
+015779:                     label.htmlFor ||
+015780:                     label.getAttribute('for') ||
+015781:                     ''
+015782:                 ) === checkboxId;
+015783:             }) || null;
+015784:         } catch (_error) {
+015785:             return null;
+015786:         }
+015787:     }
+015788: 
+015789:     function dispatchVehicleCheckboxStateEvent(
+015790:         checkbox,
+015791:         type
+015792:     ) {
+015793:         try {
+015794:             const ownerWindow =
+015795:                 checkbox.ownerDocument
+015796:                     ?.defaultView ||
+015797:                 window;
+015798: 
+015799:             const EventConstructor =
+015800:                 ownerWindow.Event ||
+015801:                 Event;
+015802: 
+015803:             checkbox.dispatchEvent(
+015804:                 new EventConstructor(
+015805:                     type,
+015806:                     {
+015807:                         bubbles: true,
+015808:                         cancelable: false,
+015809:                         composed: true
+015810:                     }
+015811:                 )
+015812:             );
+015813: 
+015814:             return true;
+015815:         } catch (_error) {
+015816:             return false;
+--- lines 21768-21878; match 21798 ---
+021768: 
+021769:             isDragging = false;
+021770: 
+021771:             document.removeEventListener('mousemove', onMouseMove);
+021772:             document.removeEventListener('mouseup', onMouseUp);
+021773: 
+021774:             keepMissionFinderWindowOnScreen(panel);
+021775: 
+021776:             if (mfKeepPanelPosition) {
+021777:                 saveMissionFinderWindowPosition(
+021778:                     panel,
+021779:                     'drag completed'
+021780:                 );
+021781:             } else {
+021782:                 localStorage.removeItem(MF_PANEL_LEFT_KEY);
+021783:                 localStorage.removeItem(MF_PANEL_TOP_KEY);
+021784:             }
+021785: 
+021786:             localStorage.removeItem('panel-left');
+021787:             localStorage.removeItem('panel-top');
+021788:         }
+021789:     }
+021790: 
+021791:     function getMissionReadyDelay() {
+021792:         const value = parseInt(localStorage.getItem('mf_mission_ready_delay_ms') || String(missionReadyDelayMs), 10);
+021793:         return Number.isFinite(value) ? Math.max(500, Math.min(15000, value)) : DEFAULT_MISSION_READY_DELAY;
+021794:     }
+021795: 
+021796:     function getDispatchReadinessSignature() {
+021797:         const selectedCount = document.querySelectorAll(
+021798:             'input[type="checkbox"]:checked, input.vehicle_checkbox:checked'
+021799:         ).length;
+021800: 
+021801:         const now = Date.now();
+021802: 
+021803:         if (now >= mfDispatchReadinessExpensiveCache.expiresAt) {
+021804:             mfDispatchReadinessExpensiveCache = {
+021805:                 expiresAt: now + 200,
+021806:                 updateRowsSignature: getMissionUpdateRowsSignature(
+021807:                     readMissionUpdateRows({
+021808:                         silent: true
+021809:                     })
+021810:                 ),
+021811:                 staffingText: getVisibleStaffingShortageText()
+021812:             };
+021813:         }
+021814: 
+021815:         const rowState = vehicleLoadState.rows
+021816:             .map(row => [
+021817:                 row.originalName,
+021818:                 row.mappedName,
+021819:                 row.required,
+021820:                 row.found,
+021821:                 row.status
+021822:             ].join(':'))
+021823:             .sort()
+021824:             .join('|');
+021825: 
+021826:         return [
+021827:             selectedCount,
+021828:             mfDispatchReadinessExpensiveCache.updateRowsSignature,
+021829:             rowState,
+021830:             vehicleLoadState.ready ? 'ready' : 'not-ready',
+021831:             isLoadingBarVisible() ? 'loading' : 'idle',
+021832:             mfDispatchReadinessExpensiveCache.staffingText
+021833:         ].join('||');
+021834:     }
+021835: 
+021836:     async function waitForFastDispatchReadiness(
+021837:         reason,
+021838:         options = {}
+021839:     ) {
+021840:         const minimumWait = Number.isFinite(options.minimumWait)
+021841:             ? options.minimumWait
+021842:             : 250;
+021843: 
+021844:         const stableFor = Number.isFinite(options.stableFor)
+021845:             ? options.stableFor
+021846:             : 450;
+021847: 
+021848:         const timeout = Number.isFinite(options.timeout)
+021849:             ? options.timeout
+021850:             : 2000;
+021851: 
+021852:         const startedAt = Date.now();
+021853:         let lastSignature = '';
+021854:         let stableSince = 0;
+021855: 
+021856:         while (Date.now() - startedAt < timeout) {
+021857:             if (
+021858:                 isManualAutoStopActive() ||
+021859:                 !autoModeRunning
+021860:             ) {
+021861:                 return false;
+021862:             }
+021863: 
+021864:             if (
+021865:                 detectAndLatchStaffingBlock(
+021866:                     `fast-ready-${reason}`
+021867:                 )
+021868:             ) {
+021869:                 return false;
+021870:             }
+021871: 
+021872:             const signature =
+021873:                 getDispatchReadinessSignature();
+021874: 
+021875:             if (signature !== lastSignature) {
+021876:                 lastSignature = signature;
+021877:                 stableSince = Date.now();
+021878:             }
+--- lines 23417-23527; match 23447 ---
+023417:             .replace(/\s+/g, ' ')
+023418:             .trim();
+023419: 
+023420:         return [
+023421:             'document',
+023422:             window.location.pathname,
+023423:             window.location.search,
+023424:             helpHref,
+023425:             missionTitle
+023426:         ].join('|');
+023427:     }
+023428: 
+023429:     function getPrimaryMissionRequirementDocument() {
+023430:         const candidates = [];
+023431: 
+023432:         getMissionAccessibleDocuments(true)
+023433:             .forEach((candidateDocument, documentIndex) => {
+023434:                 if (
+023435:                     !candidateDocument ||
+023436:                     !isMissionDocumentVisible(candidateDocument)
+023437:                 ) {
+023438:                     return;
+023439:                 }
+023440: 
+023441:                 let score = 0;
+023442:                 let visibleMarkerCount = 0;
+023443: 
+023444:                 const markerDefinitions = [
+023445:                     ['#mission_general_info', 500, true],
+023446:                     ['#mission_alarm_btn, #alarm_button', 350, true],
+023447:                     ['input.vehicle_checkbox', 250, true],
+023448:                     ['#mission_help', 180, false]
+023449:                 ];
+023450: 
+023451:                 markerDefinitions.forEach(([selector, weight, requireVisible]) => {
+023452:                     let visibleCount = 0;
+023453: 
+023454:                     try {
+023455:                         visibleCount = Array.from(
+023456:                             candidateDocument.querySelectorAll(selector)
+023457:                         ).filter(element => {
+023458:                             if (element.isConnected === false) return false;
+023459:                             return requireVisible
+023460:                                 ? isMissionElementVisible(element)
+023461:                                 : true;
+023462:                         }).length;
+023463:                     } catch (_error) {}
+023464: 
+023465:                     if (visibleCount > 0) {
+023466:                         score += weight;
+023467:                         visibleMarkerCount += visibleCount;
+023468:                     }
+023469:                 });
+023470: 
+023471:                 if (visibleMarkerCount === 0) return;
+023472: 
+023473:                 try {
+023474:                     const frame =
+023475:                         candidateDocument.defaultView?.frameElement;
+023476: 
+023477:                     if (frame && isMissionElementVisible(frame)) {
+023478:                         score += 1000;
+023479: 
+023480:                         const ownerDocument = frame.ownerDocument;
+023481:                         const ownerWindow =
+023482:                             ownerDocument?.defaultView ||
+023483:                             window;
+023484: 
+023485:                         const ownerModal = frame.closest(
+023486:                             '.vm--modal, .modal, .lightbox, #lightbox_box'
+023487:                         );
+023488: 
+023489:                         if (ownerModal) {
+023490:                             const modalStyle =
+023491:                                 ownerWindow.getComputedStyle(ownerModal);
+023492: 
+023493:                             const modalZIndex = parseInt(
+023494:                                 modalStyle.zIndex,
+023495:                                 10
+023496:                             );
+023497: 
+023498:                             if (Number.isFinite(modalZIndex)) {
+023499:                                 score += Math.max(0, modalZIndex) * 10;
+023500:                             }
+023501: 
+023502:                             if (
+023503:                                 ownerModal.getAttribute('aria-modal') === 'true' ||
+023504:                                 ownerModal.getAttribute('aria-expanded') === 'true'
+023505:                             ) {
+023506:                                 score += 2000;
+023507:                             }
+023508: 
+023509:                             const allModals = Array.from(
+023510:                                 ownerDocument.querySelectorAll(
+023511:                                     '.vm--modal, .modal, .lightbox, #lightbox_box'
+023512:                                 )
+023513:                             );
+023514: 
+023515:                             score += Math.max(
+023516:                                 0,
+023517:                                 allModals.indexOf(ownerModal)
+023518:                             ) * 20;
+023519:                         }
+023520: 
+023521:                         const frameStyle =
+023522:                             ownerWindow.getComputedStyle(frame);
+023523: 
+023524:                         const frameZIndex = parseInt(
+023525:                             frameStyle.zIndex,
+023526:                             10
+023527:                         );
+--- lines 24774-24884; match 24804 ---
+024774:                 candidateDocument => {
+024775:                     if (
+024776:                         !isMissionDocumentVisible(
+024777:                             candidateDocument
+024778:                         )
+024779:                     ) {
+024780:                         return;
+024781:                     }
+024782: 
+024783:                     const contextCountBeforeDocument = contexts.size;
+024784: 
+024785:                     const markerDefinitions = [
+024786:                         {
+024787:                             selector:
+024788:                                 '#mission_general_info',
+024789:                             score:
+024790:                                 120,
+024791:                             reason:
+024792:                                 'mission-general-info'
+024793:                         },
+024794:                         {
+024795:                             selector:
+024796:                                 '#mission_alarm_btn, #alarm_button',
+024797:                             score:
+024798:                                 100,
+024799:                             reason:
+024800:                                 'dispatch-button'
+024801:                         },
+024802:                         {
+024803:                             selector:
+024804:                                 'input.vehicle_checkbox, input[type="checkbox"][vehicle_id]',
+024805:                             score:
+024806:                                 80,
+024807:                             reason:
+024808:                                 'vehicle-list'
+024809:                         },
+024810:                         {
+024811:                             selector:
+024812:                                 '#mission_help',
+024813:                             score:
+024814:                                 50,
+024815:                             reason:
+024816:                                 'mission-help'
+024817:                         },
+024818:                         {
+024819:                             selector:
+024820:                                 '#mc-map-command-toolkit-mission-requirements[data-mcms-requirements-panel="1"], ' +
+024821:                                 'section[data-mcms-requirements-panel="1"] table[aria-label="Live mission requirements"]',
+024822:                             score:
+024823:                                 115,
+024824:                             reason:
+024825:                                 'live-requirements-panel'
+024826:                         },
+024827:                         {
+024828:                             selector:
+024829:                                 '.alert.alert-danger, .alert-danger, [role="alert"], [id*="missing_"], [class*="missing"]',
+024830:                             score:
+024831:                                 90,
+024832:                             reason:
+024833:                                 'mission-alert'
+024834:                         }
+024835:                     ];
+024836: 
+024837:                     markerDefinitions
+024838:                         .forEach(
+024839:                             definition => {
+024840:                                 let elements = [];
+024841: 
+024842:                                 try {
+024843:                                     elements =
+024844:                                         Array.from(
+024845:                                             candidateDocument
+024846:                                                 .querySelectorAll(
+024847:                                                     definition
+024848:                                                         .selector
+024849:                                                 )
+024850:                                         );
+024851:                                 } catch (_error) {}
+024852: 
+024853:                                 elements
+024854:                                     .forEach(
+024855:                                         element => {
+024856:                                             if (
+024857:                                                 definition.reason !==
+024858:                                                     'mission-help' &&
+024859:                                                 !isMissionElementVisible(
+024860:                                                     element
+024861:                                                 )
+024862:                                             ) {
+024863:                                                 return;
+024864:                                             }
+024865: 
+024866:                                             if (
+024867:                                                 definition.reason ===
+024868:                                                     'mission-alert'
+024869:                                             ) {
+024870:                                                 const value =
+024871:                                                     (
+024872:                                                         element
+024873:                                                             .innerText ||
+024874:                                                         element
+024875:                                                             .textContent ||
+024876:                                                         ''
+024877:                                                     )
+024878:                                                         .replace(
+024879:                                                             /\s+/g,
+024880:                                                             ' '
+024881:                                                         )
+024882:                                                         .trim();
+024883: 
+024884:                                                 if (
+--- lines 24914-25024; match 24944 ---
+024914:                             .querySelectorAll(
+024915:                                 '.vm--modal, .modal, .lightbox, #lightbox_box'
+024916:                             )
+024917:                             .forEach(
+024918:                                 container => {
+024919:                                     if (
+024920:                                         !isMissionElementVisible(
+024921:                                             container
+024922:                                         )
+024923:                                     ) {
+024924:                                         return;
+024925:                                     }
+024926: 
+024927:                                     const value =
+024928:                                         (
+024929:                                             container
+024930:                                                 .innerText ||
+024931:                                             container
+024932:                                                 .textContent ||
+024933:                                             ''
+024934:                                         )
+024935:                                             .replace(
+024936:                                                 /\s+/g,
+024937:                                                 ' '
+024938:                                             )
+024939:                                             .trim();
+024940: 
+024941:                                     const hasMissionMarker =
+024942:                                         !!container
+024943:                                             .querySelector(
+024944:                                                 '#mission_general_info, #mission_alarm_btn, #alarm_button, input.vehicle_checkbox, #mission_help'
+024945:                                             );
+024946: 
+024947:                                     const hasUpdateText =
+024948:                                         /Missing\s+(?:Vehicles?|Personnel):|We\s+need\s*:/i
+024949:                                             .test(
+024950:                                                 value
+024951:                                             );
+024952: 
+024953:                                     if (
+024954:                                         hasMissionMarker ||
+024955:                                         hasUpdateText
+024956:                                     ) {
+024957:                                         addContext(
+024958:                                             container,
+024959:                                             hasUpdateText
+024960:                                                 ? 110
+024961:                                                 : 70,
+024962:                                             hasUpdateText
+024963:                                                 ? 'outer-update-window'
+024964:                                                 : 'outer-mission-window'
+024965:                                         );
+024966:                                     }
+024967:                                 }
+024968:                             );
+024969:                     } catch (_error) {}
+024970: 
+024971:                     // Last-resort document-wide text probe. Avoid reading the
+024972:                     // complete body when strong mission markers already produced
+024973:                     // a context for this document.
+024974:                     if (contexts.size === contextCountBeforeDocument) try {
+024975:                         const bodyValue =
+024976:                             (
+024977:                                 candidateDocument
+024978:                                     .body
+024979:                                     ?.innerText ||
+024980:                                 candidateDocument
+024981:                                     .body
+024982:                                     ?.textContent ||
+024983:                                 ''
+024984:                             )
+024985:                                 .replace(
+024986:                                     /\s+/g,
+024987:                                     ' '
+024988:                                 )
+024989:                                 .trim();
+024990: 
+024991:                         const hasMissionControls =
+024992:                             !!candidateDocument
+024993:                                 .querySelector(
+024994:                                     '#mission_alarm_btn, #alarm_button, input.vehicle_checkbox, #mission_general_info'
+024995:                                 );
+024996: 
+024997:                         const hasExplicitUpdate =
+024998:                             /Missing\s+(?:Vehicles?|Personnel):|We\s+need\s*:/i
+024999:                                 .test(
+025000:                                     bodyValue
+025001:                                 );
+025002: 
+025003:                         if (
+025004:                             hasMissionControls ||
+025005:                             hasExplicitUpdate
+025006:                         ) {
+025007:                             addContext(
+025008:                                 candidateDocument,
+025009:                                 hasExplicitUpdate
+025010:                                     ? 60
+025011:                                     : 30,
+025012:                                 hasExplicitUpdate
+025013:                                     ? 'document-update-text'
+025014:                                     : 'document-mission-controls'
+025015:                             );
+025016:                         }
+025017:                     } catch (_error) {}
+025018:                 }
+025019:             );
+025020: 
+025021:         const currentFrameOwnerRoot =
+025022:             getCurrentFrameOwnerMissionRoot(
+025023:                 primaryMissionDocument
+025024:             );
+--- lines 24964-25074; match 24994 ---
+024964:                                                 : 'outer-mission-window'
+024965:                                         );
+024966:                                     }
+024967:                                 }
+024968:                             );
+024969:                     } catch (_error) {}
+024970: 
+024971:                     // Last-resort document-wide text probe. Avoid reading the
+024972:                     // complete body when strong mission markers already produced
+024973:                     // a context for this document.
+024974:                     if (contexts.size === contextCountBeforeDocument) try {
+024975:                         const bodyValue =
+024976:                             (
+024977:                                 candidateDocument
+024978:                                     .body
+024979:                                     ?.innerText ||
+024980:                                 candidateDocument
+024981:                                     .body
+024982:                                     ?.textContent ||
+024983:                                 ''
+024984:                             )
+024985:                                 .replace(
+024986:                                     /\s+/g,
+024987:                                     ' '
+024988:                                 )
+024989:                                 .trim();
+024990: 
+024991:                         const hasMissionControls =
+024992:                             !!candidateDocument
+024993:                                 .querySelector(
+024994:                                     '#mission_alarm_btn, #alarm_button, input.vehicle_checkbox, #mission_general_info'
+024995:                                 );
+024996: 
+024997:                         const hasExplicitUpdate =
+024998:                             /Missing\s+(?:Vehicles?|Personnel):|We\s+need\s*:/i
+024999:                                 .test(
+025000:                                     bodyValue
+025001:                                 );
+025002: 
+025003:                         if (
+025004:                             hasMissionControls ||
+025005:                             hasExplicitUpdate
+025006:                         ) {
+025007:                             addContext(
+025008:                                 candidateDocument,
+025009:                                 hasExplicitUpdate
+025010:                                     ? 60
+025011:                                     : 30,
+025012:                                 hasExplicitUpdate
+025013:                                     ? 'document-update-text'
+025014:                                     : 'document-mission-controls'
+025015:                             );
+025016:                         }
+025017:                     } catch (_error) {}
+025018:                 }
+025019:             );
+025020: 
+025021:         const currentFrameOwnerRoot =
+025022:             getCurrentFrameOwnerMissionRoot(
+025023:                 primaryMissionDocument
+025024:             );
+025025: 
+025026:         if (currentFrameOwnerRoot) {
+025027:             addContext(
+025028:                 currentFrameOwnerRoot,
+025029:                 125,
+025030:                 'current-frame-owner-modal'
+025031:             );
+025032:         }
+025033: 
+025034:         if (
+025035:             contexts.size ===
+025036:             0
+025037:         ) {
+025038:             addContext(
+025039:                 document,
+025040:                 0,
+025041:                 'current-document-fallback'
+025042:             );
+025043:         }
+025044: 
+025045:         return Array.from(
+025046:             contexts.values()
+025047:         ).sort(
+025048:             (
+025049:                 left,
+025050:                 right
+025051:             ) =>
+025052:                 right.score -
+025053:                 left.score
+025054:         );
+025055:     }
+025056: 
+025057:     function getActiveVisibleMissionInfo() {
+025058:         const contexts =
+025059:             getActiveMissionRequirementContexts();
+025060: 
+025061:         for (
+025062:             const context of
+025063:             contexts
+025064:         ) {
+025065:             const candidates =
+025066:                 Array.from(
+025067:                     context.root
+025068:                         .querySelectorAll(
+025069:                             '#mission_general_info'
+025070:                         )
+025071:                 );
+025072: 
+025073:             const visible =
+025074:                 candidates.filter(
+--- lines 27799-27909; match 27829 ---
+027799:                     updatedAt:
+027800:                         0,
+027801:                     vehicles:
+027802:                         {}
+027803:                 };
+027804:             }
+027805: 
+027806:             return parsed;
+027807:         } catch (_error) {
+027808:             return {
+027809:                 updatedAt:
+027810:                     0,
+027811:                 vehicles:
+027812:                     {}
+027813:             };
+027814:         }
+027815:     }
+027816: 
+027817:     function getMissionVehicleId(
+027818:         input
+027819:     ) {
+027820:         if (!input) return '';
+027821: 
+027822:         const row =
+027823:             input.closest &&
+027824:             input.closest(
+027825:                 'tr[vehicle_id], tr[data-vehicle-id], tr.vehicle_select_table_tr'
+027826:             );
+027827: 
+027828:         const idMatches = [
+027829:             String(input.id || '').match(/(?:vehicle_checkbox_|vehicle_)(\d+)/i)?.[1],
+027830:             String(row?.id || '').match(/(?:vehicle_|vehicle_row_)(\d+)/i)?.[1],
+027831:             input.getAttribute('vehicle_id'),
+027832:             input.getAttribute('data-vehicle-id'),
+027833:             row?.getAttribute('vehicle_id'),
+027834:             row?.getAttribute('data-vehicle-id'),
+027835:             input.value
+027836:         ]
+027837:             .map(value => String(value || '').trim())
+027838:             .filter(value => /^\d+$/.test(value));
+027839: 
+027840:         // Real MissionChief vehicle IDs are long numeric identifiers. Reject
+027841:         // short values such as the vehicle type ID "8" rather than matching a
+027842:         // registry entry for the wrong vehicle.
+027843:         return idMatches.find(value => value.length >= 4) || '';
+027844:     }
+027845: 
+027846: 
+027847: 
+027848:     function getPublicOrderPersonnelLevel(
+027849:         value
+027850:     ) {
+027851:         const cleaned =
+027852:             String(
+027853:                 value ||
+027854:                 ''
+027855:             )
+027856:                 .replace(
+027857:                     /\s+/g,
+027858:                     ' '
+027859:                 )
+027860:                 .trim();
+027861: 
+027862:         if (
+027863:             /^(?:Required\s+)?(?:Level\s*1\s+Public\s+Order|Public\s+Order\s+Level\s*1)\s+Officer(?:s)?$/i
+027864:                 .test(
+027865:                     cleaned
+027866:                 )
+027867:         ) {
+027868:             return 1;
+027869:         }
+027870: 
+027871:         if (
+027872:             /^(?:Required\s+)?(?:Level\s*2\s+Public\s+Order|Public\s+Order\s+Level\s*2)\s+Officer(?:s)?$/i
+027873:                 .test(
+027874:                     cleaned
+027875:                 )
+027876:         ) {
+027877:             return 2;
+027878:         }
+027879: 
+027880:         return 0;
+027881:     }
+027882: 
+027883:     function isPublicOrderPersonnelRequirementName(
+027884:         value
+027885:     ) {
+027886:         return (
+027887:             getPublicOrderPersonnelLevel(
+027888:                 value
+027889:             ) >
+027890:             0
+027891:         );
+027892:     }
+027893: 
+027894:     function isPoliceSergeantPersonnelRequirementName(
+027895:         value
+027896:     ) {
+027897:         const cleaned =
+027898:             String(
+027899:                 value ||
+027900:                 ''
+027901:             )
+027902:                 .replace(
+027903:                     /\s+/g,
+027904:                     ' '
+027905:                 )
+027906:                 .trim();
+027907: 
+027908:         return /^(?:Required\s+)?Police\s+Sergeant(?:s)?$/i
+027909:             .test(
+--- lines 31737-31847; match 31767 ---
+031737: 
+031738:             if (mfDebugEnabled) debugLog('SELECT CLICK', `${selectionSource} | ${mappedName} | ${getVehicleDebugName(checkbox)}`);
+031739:             if (clickVehicleElement(checkbox)) {
+031740:                 assigned += 1;
+031741:                 const row = vehicleLoadState.rows.find(r => r.originalName === originalName && r.mappedName === mappedName);
+031742:                 if (row) {
+031743:                     row.status = assigned >= required ? 'assigned' : 'retrying';
+031744:                     renderVehicleLoadList();
+031745:                 }
+031746:             }
+031747:         }
+031748: 
+031749:         const strictVehicleTypeOnly = !!(
+031750:             isAmbulanceTransportRequest(originalName, mappedName) ||
+031751:             isFireEngineRequirement(originalName, mappedName) ||
+031752:             isFlatbedRecoveryVehicleRequirement(originalName, mappedName) ||
+031753:             isFireOperationalSupportRequirement(originalName, mappedName)
+031754:         );
+031755: 
+031756:         if (
+031757:             assigned < required &&
+031758:             !strictVehicleTypeOnly &&
+031759:             !detectAndLatchStaffingBlock(
+031760:                 `before-fallback-${selectionSource}`
+031761:             )
+031762:         ) {
+031763:             const fallback = findUnitButton(mappedName, originalName);
+031764: 
+031765:             if (fallback && !isVehicleElementAlreadySelected(fallback)) {
+031766:                 if (mfDebugEnabled) debugLog('SELECT FALLBACK', `${selectionSource} | ${mappedName} | ${getVehicleDebugName(fallback)}`);
+031767:                 if (fallback.matches && fallback.matches('input.vehicle_checkbox')) {
+031768:                     if (clickVehicleElement(fallback)) assigned += 1;
+031769:                     renderVehicleLoadList();
+031770:                 } else {
+031771:                     while (assigned < required) {
+031772:                         if (!clickVehicleElement(fallback)) break;
+031773:                         assigned += 1;
+031774:                         renderVehicleLoadList();
+031775:                     }
+031776:                 }
+031777:             } else if (mfDebugEnabled && assigned < required) {
+031778:                 debugLog('SELECT MISSING', `${selectionSource} | ${mappedName} | assigned=${assigned}/${required}`);
+031779:             }
+031780:         }
+031781: 
+031782:         const selectedNow = countSelectedMatchingVehicles(originalName, mappedName);
+031783: 
+031784:         if (mfDebugEnabled) {
+031785:             debugLog('SELECT RESULT', `${selectionSource} | ${originalName} -> ${mappedName} | clicked=${assigned}/${required} | visual=${Math.min(selectedNow, required)}/${required}`);
+031786:         }
+031787: 
+031788:         return {
+031789:             assigned,
+031790:             required,
+031791:             missing: Math.max(required - assigned, 0),
+031792:             skipped: false
+031793:         };
+031794:     }
+031795: 
+031796:     function hasAuthoritativeLiveMissionRequirementsPanel() {
+031797:         return getMissionAccessibleDocuments().some(
+031798:             candidateDocument => {
+031799:                 try {
+031800:                     return Array.from(
+031801:                         candidateDocument.querySelectorAll(
+031802:                             'table[aria-label="Live mission requirements"], ' +
+031803:                             '#mc-map-command-toolkit-mission-requirements[data-mcms-requirements-panel="1"] table'
+031804:                         )
+031805:                     ).some(table => {
+031806:                         return (
+031807:                             isLiveMissionRequirementsTable(table) &&
+031808:                             isMissionElementVisible(table)
+031809:                         );
+031810:                     });
+031811:                 } catch (_error) {
+031812:                     return false;
+031813:                 }
+031814:             }
+031815:         );
+031816:     }
+031817: 
+031818:     function getOperationalRequirementTargetMode(item) {
+031819:         return item?.liveRequirementDetails?.dispatchTargetMode === 'shortage'
+031820:             ? 'shortage'
+031821:             : 'total';
+031822:     }
+031823: 
+031824:     function isExplicitMissingVehicleRequirementRow(item) {
+031825:         const details =
+031826:             item?.liveRequirementDetails ||
+031827:             null;
+031828: 
+031829:         const source = String(
+031830:             item?.updateSource ||
+031831:             item?.source ||
+031832:             ''
+031833:         ).trim();
+031834: 
+031835:         return !!(
+031836:             details?.explicitMissingVehicles ||
+031837:             details?.structuredMissingVehicles ||
+031838:             source === 'data-requirement-type-vehicles' ||
+031839:             source === 'data-raw-html-missing-vehicles' ||
+031840:             source === 'missing-on-mission-table' ||
+031841:             source === 'visible-missing-vehicles-alert' ||
+031842:             source === 'visible-structured-missing-vehicles'
+031843:         );
+031844:     }
+031845: 
+031846:     function isExplicitMissingPersonnelRequirementRow(item) {
+031847:         const details =
+--- lines 34067-34177; match 34097 ---
+034067:         const vehicleLink =
+034068:             row?.querySelector(
+034069:                 'a[href^="/vehicles/"]'
+034070:             ) ||
+034071:             checkbox?.closest(
+034072:                 'a[href^="/vehicles/"]'
+034073:             ) ||
+034074:             null;
+034075: 
+034076:         const href = (
+034077:             vehicleLink?.getAttribute('href') ||
+034078:             ''
+034079:         ).split('?')[0].trim();
+034080: 
+034081:         const linkName = (
+034082:             vehicleLink?.textContent ||
+034083:             vehicleLink?.innerText ||
+034084:             ''
+034085:         ).replace(/\s+/g, ' ').trim();
+034086: 
+034087:         const fallbackName = getVehicleDebugName(
+034088:             checkbox
+034089:         );
+034090: 
+034091:         const checkboxVehicleId =
+034092:             (
+034093:                 (
+034094:                     checkbox?.id ||
+034095:                     ''
+034096:                 ).match(
+034097:                     /^vehicle_checkbox_(\d+)$/
+034098:                 ) ||
+034099:                 []
+034100:             )[1] ||
+034101:             checkbox?.getAttribute(
+034102:                 'vehicle_id'
+034103:             ) ||
+034104:             checkbox?.getAttribute(
+034105:                 'data-vehicle-id'
+034106:             ) ||
+034107:             checkbox?.value ||
+034108:             '';
+034109: 
+034110:         const vehicleId =
+034111:             (
+034112:                 href.match(
+034113:                     /\/vehicles\/(\d+)/
+034114:                 ) ||
+034115:                 []
+034116:             )[1] ||
+034117:             (
+034118:                 String(
+034119:                     checkboxVehicleId
+034120:                 ).match(/^(\d+)$/) ||
+034121:                 []
+034122:             )[1] ||
+034123:             '';
+034124: 
+034125:         return {
+034126:             name:
+034127:                 linkName ||
+034128:                 fallbackName ||
+034129:                 'Fire Officer',
+034130:             href:
+034131:                 href ||
+034132:                 (
+034133:                     vehicleId
+034134:                         ? `/vehicles/${vehicleId}`
+034135:                         : ''
+034136:                 ),
+034137:             vehicleId
+034138:         };
+034139:     }
+034140: 
+034141:     async function getAllyStealNormalDispatchButton(
+034142:         timeoutMs = 4000
+034143:     ) {
+034144:         const startedAt = Date.now();
+034145: 
+034146:         while (Date.now() - startedAt < timeoutMs) {
+034147:             const missionInfo =
+034148:                 getActiveMissionInfoForAllySteal();
+034149: 
+034150:             const activeModal = missionInfo
+034151:                 ? missionInfo.closest(
+034152:                     '.vm--modal, .modal, .lightbox'
+034153:                 )
+034154:                 : null;
+034155: 
+034156:             const candidates = Array.from(
+034157:                 (
+034158:                     activeModal ||
+034159:                     document
+034160:                 ).querySelectorAll(
+034161:                     'a#mission_alarm_btn'
+034162:                 )
+034163:             );
+034164: 
+034165:             const dispatchButton =
+034166:                 candidates.find(button => {
+034167:                     if (
+034168:                         !isVisibleForQueueRestart(button)
+034169:                     ) {
+034170:                         return false;
+034171:                     }
+034172: 
+034173:                     const disabled =
+034174:                         button.hasAttribute('disabled') ||
+034175:                         button.getAttribute(
+034176:                             'aria-disabled'
+034177:                         ) === 'true' ||
+--- lines 44244-44354; match 44274 ---
+044244:             const buttonText = (
+044245:                 button.textContent ||
+044246:                 button.innerText ||
+044247:                 ''
+044248:             )
+044249:                 .replace(/\s+/g, ' ')
+044250:                 .trim()
+044251:                 .toLowerCase();
+044252: 
+044253:             const badge =
+044254:                 button.querySelector(
+044255:                     '#vehicle_amount'
+044256:                 ) ||
+044257:                 document.getElementById(
+044258:                     'vehicle_amount'
+044259:                 );
+044260: 
+044261:             const selectedAmount =
+044262:                 parseInt(
+044263:                     (
+044264:                         badge?.textContent ||
+044265:                         badge?.innerText ||
+044266:                         '0'
+044267:                     ).replace(/[^0-9]/g, ''),
+044268:                     10
+044269:                 ) ||
+044270:                 0;
+044271: 
+044272:             const checkedVehicleCount =
+044273:                 document.querySelectorAll(
+044274:                     'input.vehicle_checkbox:checked'
+044275:                 ).length;
+044276: 
+044277:             const selectionRequirementMet =
+044278:                 !requireSelectedVehicles ||
+044279:                 selectedAmount >= 1 ||
+044280:                 checkedVehicleCount >= 1;
+044281: 
+044282:             return (
+044283:                 title.startsWith('dispatch') &&
+044284:                 !title.includes('next') &&
+044285:                 buttonText.startsWith(
+044286:                     'dispatch'
+044287:                 ) &&
+044288:                 selectionRequirementMet
+044289:             );
+044290:         }) || null;
+044291:     }
+044292: 
+044293:     async function waitForExactNormalDispatchButton(
+044294:         timeoutMs = 4000,
+044295:         requireSelectedVehicles = false
+044296:     ) {
+044297:         const startedAt = Date.now();
+044298: 
+044299:         while (
+044300:             Date.now() - startedAt <
+044301:             timeoutMs
+044302:         ) {
+044303:             const button =
+044304:                 getVisibleExactNormalDispatchButton(
+044305:                     requireSelectedVehicles
+044306:                 );
+044307: 
+044308:             if (button) return button;
+044309: 
+044310:             await wait(100);
+044311:         }
+044312: 
+044313:         return null;
+044314:     }
+044315: 
+044316:     function hasVisibleVehicleDispatchSuccessAlert() {
+044317:         return Array.from(
+044318:             document.querySelectorAll(
+044319:                 '.alert.alert-success, [id^="alert_success_"]'
+044320:             )
+044321:         ).some(alert => {
+044322:             if (
+044323:                 !isElementVisible(alert)
+044324:             ) {
+044325:                 return false;
+044326:             }
+044327: 
+044328:             const text = (
+044329:                 alert.textContent ||
+044330:                 alert.innerText ||
+044331:                 ''
+044332:             )
+044333:                 .replace(/\s+/g, ' ')
+044334:                 .trim();
+044335: 
+044336:             return /has successfully been dispatched\.?/i.test(
+044337:                 text
+044338:             );
+044339:         });
+044340:     }
+044341: 
+044342:     async function clickAutoMissionDispatchForUpgradeCheck(
+044343:         missionCredits,
+044344:         isUpgradePass = false
+044345:     ) {
+044346:         const credits =
+044347:             Number(missionCredits || 0);
+044348: 
+044349:         // Preserve the existing high-value share behaviour on the initial
+044350:         // dispatch. Upgrade re-dispatches use the normal Dispatch button.
+044351:         if (
+044352:             !isUpgradePass &&
+044353:             credits > MF_SHARE_CREDIT_THRESHOLD
+044354:         ) {
+--- lines 44671-44781; match 44701 ---
+044671:                 }
+044672: 
+044673:                 await wait(1000);
+044674:             }
+044675: 
+044676:             return false;
+044677:         }
+044678: 
+044679:         return await waitForQueueRestartAndOpenMission('after-final-dispatch');
+044680:     }
+044681: 
+044682: 
+044683:     function getCurrentAutoDispatchSelectionState() {
+044684:         const badge =
+044685:             document.getElementById(
+044686:                 'vehicle_amount'
+044687:             );
+044688: 
+044689:         const badgeCount =
+044690:             parseInt(
+044691:                 (
+044692:                     badge?.textContent ||
+044693:                     badge?.innerText ||
+044694:                     '0'
+044695:                 ).replace(/[^0-9]/g, ''),
+044696:                 10
+044697:             ) || 0;
+044698: 
+044699:         const checkedCount =
+044700:             document.querySelectorAll(
+044701:                 'input.vehicle_checkbox:checked'
+044702:             ).length;
+044703: 
+044704:         return {
+044705:             badgeCount,
+044706:             checkedCount,
+044707:             selectedCount:
+044708:                 Math.max(
+044709:                     badgeCount,
+044710:                     checkedCount
+044711:                 )
+044712:         };
+044713:     }
+044714: 
+044715:     async function retryAutoSelectionWhenZero() {
+044716:         const before =
+044717:             getCurrentAutoDispatchSelectionState();
+044718: 
+044719:         if (
+044720:             before.selectedCount > 0
+044721:         ) {
+044722:             return true;
+044723:         }
+044724: 
+044725:         updateStatusBox(
+044726:             'Auto Mode selected 0 vehicles. Waiting for the vehicle list and retrying once...'
+044727:         );
+044728: 
+044729:         await waitForVehicleCheckboxListStable(
+044730:             6000,
+044731:             900,
+044732:             {
+044733:                 minimumWaitMs: 700,
+044734:                 requireNonZero: true
+044735:             }
+044736:         );
+044737: 
+044738:         resetVehicleLoadState();
+044739:         changeDispatchBoxColor(false);
+044740: 
+044741:         const updateRows =
+044742:             readMissionUpdateRows({
+044743:                 silent: true
+044744:             });
+044745: 
+044746:         if (updateRows.length > 0) {
+044747:             clearSelectionGuards();
+044748: 
+044749:             await preparePoliceVehicleSafetyForRows(
+044750:                 updateRows,
+044751:                 'AUTO ZERO-SELECTION UPDATE'
+044752:             );
+044753: 
+044754:             handleMissionUpdateUnits(
+044755:                 false,
+044756:                 updateRows
+044757:             );
+044758:         } else {
+044759:             try {
+044760:                 await withTimeout(
+044761:                     handleCombinedLogic(),
+044762:                     45000,
+044763:                     'Auto Mode zero-selection retry'
+044764:                 );
+044765:             } catch (error) {
+044766:                 console.warn(
+044767:                     'Mission Finder zero-selection retry failed:',
+044768:                     error
+044769:                 );
+044770:             }
+044771: 
+044772:             // Catch an update that appeared while the normal requirements
+044773:             // were being retried.
+044774:             const lateUpdateRows =
+044775:                 readMissionUpdateRows({
+044776:                     silent: true
+044777:                 });
+044778: 
+044779:             if (
+044780:                 lateUpdateRows.length > 0
+044781:             ) {
+--- lines 45731-45841; match 45761 ---
+045731:             );
+045732: 
+045733:             return;
+045734:         }
+045735: 
+045736:         if (autoModeRunning) {
+045737:             requireMissionUpdateFirstPass(
+045738:                 'mission panel initialized'
+045739:             );
+045740: 
+045741:             if (mfDebugEnabled) {
+045742:                 debugLog(
+045743:                     'UPDATE FIRST GATE',
+045744:                     'Deferred automatic full vehicle-list loading until the mission update precheck completes.'
+045745:                 );
+045746:             }
+045747:         } else {
+045748:             clickVehicleDisplayBarImmediately();
+045749:         }
+045750:     }
+045751: 
+045752:     function getVehicleCheckboxListSignature() {
+045753:         const selectionDocument =
+045754:             getVehicleSelectionDocument();
+045755:         let boxes = [];
+045756:         let vehicleRows = 0;
+045757: 
+045758:         try {
+045759:             boxes = Array.from(
+045760:                 selectionDocument.querySelectorAll(
+045761:                     'input.vehicle_checkbox'
+045762:                 )
+045763:             );
+045764: 
+045765:             vehicleRows =
+045766:                 selectionDocument.querySelectorAll(
+045767:                     'tr.vehicle_select_table_tr, #vehicle_table tr[vehicle_id], #vehicle_table tr[data-vehicle-id]'
+045768:                 ).length;
+045769:         } catch (_error) {}
+045770: 
+045771:         const ids = boxes.map(box => {
+045772:             return String(
+045773:                 box.id ||
+045774:                 box.value ||
+045775:                 getMissionVehicleId(box) ||
+045776:                 ''
+045777:             );
+045778:         });
+045779: 
+045780:         return {
+045781:             boxes,
+045782:             signature:
+045783:                 `${boxes.length}|${vehicleRows}|${ids.join(',')}`
+045784:         };
+045785:     }
+045786: 
+045787:     function getVisibleVehicleListLoadControl() {
+045788:         return queryVehicleSelectionElements(
+045789:             'a.btn-warning.missing_vehicles_load, a.missing_vehicles_load',
+045790:             true
+045791:         ).find(loadControl => {
+045792:             if (
+045793:                 !loadControl ||
+045794:                 loadControl.isConnected === false
+045795:             ) {
+045796:                 return false;
+045797:             }
+045798: 
+045799:             const disabled =
+045800:                 loadControl.hasAttribute('disabled') ||
+045801:                 loadControl.getAttribute('aria-disabled') === 'true' ||
+045802:                 loadControl.classList.contains('disabled');
+045803: 
+045804:             if (disabled) return false;
+045805: 
+045806:             return isVehicleSelectionElementVisible(
+045807:                 loadControl
+045808:             );
+045809:         }) || null;
+045810:     }
+045811: 
+045812:     function getVehicleListLoadControlToken(loadControl) {
+045813:         if (!loadControl) return '';
+045814: 
+045815:         const href = String(
+045816:             loadControl.getAttribute('href') ||
+045817:             loadControl.href ||
+045818:             ''
+045819:         ).trim();
+045820: 
+045821:         const text = String(
+045822:             loadControl.textContent ||
+045823:             loadControl.innerText ||
+045824:             ''
+045825:         ).replace(/\s+/g, ' ').trim();
+045826: 
+045827:         return `${href}|${text}`;
+045828:     }
+045829: 
+045830:     function isVehicleListLoadControlVisible() {
+045831:         return !!getVisibleVehicleListLoadControl();
+045832:     }
+045833: 
+045834:     function isVehicleListLoadingIndicatorVisible() {
+045835:         return queryVehicleSelectionElements(
+045836:             '#vehicle_table .loading, #vehicle_table .spinner, ' +
+045837:             '.vehicle_select_table .loading, .vehicle_select_table .spinner, ' +
+045838:             '[data-vehicle-loading="true"]'
+045839:         ).some(element => {
+045840:             return isVehicleSelectionElementVisible(
+045841:                 element
+--- lines 46205-46315; match 46235 ---
+046205:             debugLog(
+046206:                 'VEHICLE PAGE LOAD',
+046207:                 `READY | pages=${clickedPages} | vehicles=${stability.count} | elapsed=${Date.now() - loadingStartedAt}ms`
+046208:             );
+046209:         }
+046210: 
+046211:         return {
+046212:             ...stability,
+046213:             loadClicked,
+046214:             clickedPages
+046215:         };
+046216:     }
+046217: 
+046218:     async function clickVehicleDisplayBarImmediately() {
+046219:         await ensureVehicleListLoaded();
+046220:     }
+046221: 
+046222:     function shouldRunBackgroundAutomationWatchers() {
+046223:         return !!(
+046224:             autoModeRunning ||
+046225:             sessionStorage.getItem('mf_auto_mode_running') === 'true' ||
+046226:             localStorage.getItem('mf_auto_mode_running') === 'true' ||
+046227:             sessionStorage.getItem(MF_QUEUE_WAIT_ACTIVE_FLAG) === 'true' ||
+046228:             sessionStorage.getItem(MF_FINAL_QUEUE_DISPATCH_FLAG) === 'true' ||
+046229:             isPostTransportRehookPending() ||
+046230:             isRecentTransportRehookWindowActive()
+046231:         );
+046232:     }
+046233: 
+046234:     const MF_MUTATION_VEHICLE_SELECTOR =
+046235:         'input.vehicle_checkbox, #vehicle_table, .vehicle_select_table_tr, ' +
+046236:         'a[search_attribute], a.missing_vehicles_load, .missing_vehicles_load';
+046237: 
+046238:     const MF_MUTATION_MISSION_SELECTOR =
+046239:         '#mission_general_info, #mission_help, #mission_content, ' +
+046240:         '#iframe-inside-container, .mission_content, ' +
+046241:         '#mc-map-command-toolkit-mission-requirements, ' +
+046242:         '[data-mcms-requirements-panel="1"], ' +
+046243:         'table[aria-label="Live mission requirements"], ' +
+046244:         '.alert-danger, [role="alert"], .mission_update, ' +
+046245:         '.mission_update_info, #mission_alarm_btn, #alarm_button, ' +
+046246:         '.vm--modal, .modal, .lightbox, iframe';
+046247: 
+046248:     const MF_MUTATION_PATIENT_SELECTOR =
+046249:         '.mission_patient, [id^="patient_"], [data-patient-id], .badge';
+046250: 
+046251:     const MF_MUTATION_PANEL_SELECTOR =
+046252:         '#mission-finder-wrapper, #control-panel, ' +
+046253:         '#vehicle-load-list-box';
+046254: 
+046255:     const MF_MUTATION_TRANSPORT_SELECTOR =
+046256:         '.vehicle-window, .redesign-wrapper[type="vehicle"], ' +
+046257:         '.vm--modal button.btn-success, .modal button.btn-success, ' +
+046258:         '.lightbox button.btn-success, iframe';
+046259: 
+046260:     const MF_MUTATION_MISSION_TARGET_SELECTOR =
+046261:         '#mission_general_info, #mission_help, #mission_content, ' +
+046262:         '#iframe-inside-container, .mission_content, ' +
+046263:         '#mc-map-command-toolkit-mission-requirements, ' +
+046264:         '[data-mcms-requirements-panel="1"], ' +
+046265:         'table[aria-label="Live mission requirements"], ' +
+046266:         '.alert-danger, [role="alert"], .mission_update, ' +
+046267:         '.mission_update_info, #mission_alarm_btn, #alarm_button';
+046268: 
+046269:     const MF_MUTATION_RELEVANT_SELECTOR =
+046270:         `${MF_MUTATION_VEHICLE_SELECTOR}, ` +
+046271:         `${MF_MUTATION_MISSION_SELECTOR}, ` +
+046272:         `${MF_MUTATION_PATIENT_SELECTOR}, ` +
+046273:         `${MF_MUTATION_PANEL_SELECTOR}, ` +
+046274:         `${MF_MUTATION_TRANSPORT_SELECTOR}`;
+046275: 
+046276:     const MF_MUTATION_RELEVANT_TARGET_SELECTOR =
+046277:         `${MF_MUTATION_VEHICLE_SELECTOR}, ` +
+046278:         `${MF_MUTATION_MISSION_TARGET_SELECTOR}, ` +
+046279:         `${MF_MUTATION_PATIENT_SELECTOR}, ` +
+046280:         `${MF_MUTATION_TRANSPORT_SELECTOR}`;
+046281: 
+046282:     function resetMainMutationFlags() {
+046283:         mfMainMutationFlags = {
+046284:             relevant: false,
+046285:             vehicleListChanged: false,
+046286:             missionContextChanged: false,
+046287:             patientChanged: false,
+046288:             panelChanged: false,
+046289:             transportChanged: false
+046290:         };
+046291:     }
+046292: 
+046293:     function mutationNodeMatches(node, selector) {
+046294:         if (!node || node.nodeType !== 1) return false;
+046295: 
+046296:         try {
+046297:             return (
+046298:                 node.matches?.(selector) ||
+046299:                 !!node.querySelector?.(selector)
+046300:             );
+046301:         } catch (_error) {
+046302:             return false;
+046303:         }
+046304:     }
+046305: 
+046306:     function mutationTargetWithin(target, selector) {
+046307:         if (!target || target.nodeType !== 1) return false;
+046308: 
+046309:         try {
+046310:             return !!target.closest?.(selector);
+046311:         } catch (_error) {
+046312:             return false;
+046313:         }
+046314:     }
+046315: 

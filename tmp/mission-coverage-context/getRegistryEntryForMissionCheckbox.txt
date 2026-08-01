@@ -1,0 +1,85 @@
+029525:                 ? requirements
+029526:                 : []
+029527:         ).some(requirement => {
+029528:             return !!(
+029529:                 getTrainingRequirementRequiredCodes(
+029530:                     requirement
+029531:                 ).length &&
+029532:                 getTrainingRequirementEligibleTypeIds(
+029533:                     requirement
+029534:                 ).length
+029535:             );
+029536:         });
+029537:     }
+029538: 
+029539:     function getRegistryEntryForMissionCheckbox(
+029540:         checkbox,
+029541:         registry
+029542:     ) {
+029543:         const vehicleId =
+029544:             getMissionVehicleId(checkbox);
+029545: 
+029546:         if (!vehicleId) {
+029547:             return {
+029548:                 vehicleId: '',
+029549:                 entry: null,
+029550:                 matchMode: 'no-exact-vehicle-id'
+029551:             };
+029552:         }
+029553: 
+029554:         const directEntry =
+029555:             registry?.vehicles?.[vehicleId];
+029556: 
+029557:         if (!directEntry) {
+029558:             return {
+029559:                 vehicleId,
+029560:                 entry: null,
+029561:                 matchMode: 'none'
+029562:             };
+029563:         }
+029564: 
+029565:         const checkboxTypeIds =
+029566:             new Set(
+029567:                 getVehicleTypeIdentifiers(
+029568:                     checkbox
+029569:                 ).map(String)
+029570:             );
+029571: 
+029572:         const entryTypeId =
+029573:             String(
+029574:                 directEntry.vehicleTypeId ||
+029575:                 ''
+029576:             );
+029577: 
+029578:         if (
+029579:             entryTypeId &&
+029580:             checkboxTypeIds.size > 0 &&
+029581:             !checkboxTypeIds.has(entryTypeId)
+029582:         ) {
+029583:             return {
+029584:                 vehicleId,
+029585:                 entry: null,
+029586:                 matchMode: 'vehicle-type-mismatch'
+029587:             };
+029588:         }
+029589: 
+029590:         return {
+029591:             vehicleId,
+029592:             entry: directEntry,
+029593:             matchMode: 'exact-vehicle-id'
+029594:         };
+029595:     }
+029596: 
+029597: 
+029598:     function parseVehicleIdFromAssignmentLink(value) {
+029599:         const match = String(value || '')
+029600:             .match(/\/vehicles\/(\d+)(?:\/|$|[?#])/i);
+029601: 
+029602:         return match
+029603:             ? String(match[1])
+029604:             : '';
+029605:     }
+029606: 
+029607:     function parseLivePoliceTrainingAssignments(
+029608:         html,
+029609:         currentVehicleId

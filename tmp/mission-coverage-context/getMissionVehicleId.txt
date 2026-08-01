@@ -1,0 +1,56 @@
+027803:                 };
+027804:             }
+027805: 
+027806:             return parsed;
+027807:         } catch (_error) {
+027808:             return {
+027809:                 updatedAt:
+027810:                     0,
+027811:                 vehicles:
+027812:                     {}
+027813:             };
+027814:         }
+027815:     }
+027816: 
+027817:     function getMissionVehicleId(
+027818:         input
+027819:     ) {
+027820:         if (!input) return '';
+027821: 
+027822:         const row =
+027823:             input.closest &&
+027824:             input.closest(
+027825:                 'tr[vehicle_id], tr[data-vehicle-id], tr.vehicle_select_table_tr'
+027826:             );
+027827: 
+027828:         const idMatches = [
+027829:             String(input.id || '').match(/(?:vehicle_checkbox_|vehicle_)(\d+)/i)?.[1],
+027830:             String(row?.id || '').match(/(?:vehicle_|vehicle_row_)(\d+)/i)?.[1],
+027831:             input.getAttribute('vehicle_id'),
+027832:             input.getAttribute('data-vehicle-id'),
+027833:             row?.getAttribute('vehicle_id'),
+027834:             row?.getAttribute('data-vehicle-id'),
+027835:             input.value
+027836:         ]
+027837:             .map(value => String(value || '').trim())
+027838:             .filter(value => /^\d+$/.test(value));
+027839: 
+027840:         // Real MissionChief vehicle IDs are long numeric identifiers. Reject
+027841:         // short values such as the vehicle type ID "8" rather than matching a
+027842:         // registry entry for the wrong vehicle.
+027843:         return idMatches.find(value => value.length >= 4) || '';
+027844:     }
+027845: 
+027846: 
+027847: 
+027848:     function getPublicOrderPersonnelLevel(
+027849:         value
+027850:     ) {
+027851:         const cleaned =
+027852:             String(
+027853:                 value ||
+027854:                 ''
+027855:             )
+027856:                 .replace(
+027857:                     /\s+/g,
+027858:                     ' '

@@ -1,0 +1,488 @@
+===== 'originalName:': 3 matches =====
+--- lines 12728-12795; match 12750 ---
+012728: 
+012729:         return {
+012730:             url: window.location.href,
+012731:             missionName: (() => { try { return getCurrentMissionName(); } catch (error) { return ''; } })(),
+012732:             missionId: (() => { try { return getCurrentMissionIdForQueueRestart(); } catch (error) { return ''; } })(),
+012733:             isMissionPage: (() => { try { return isMissionPage(); } catch (error) { return false; } })(),
+012734:             autoModeRunning,
+012735:             autoModeLoopActive,
+012736:             queueFlags: {
+012737:                 finalQueueDispatch: sessionStorage.getItem(MF_FINAL_QUEUE_DISPATCH_FLAG),
+012738:                 queueWaitActive: sessionStorage.getItem(MF_QUEUE_WAIT_ACTIVE_FLAG),
+012739:                 queueOpeningMission: sessionStorage.getItem(MF_QUEUE_OPENING_MISSION_FLAG),
+012740:                 postTransportRehookPending: sessionStorage.getItem('mf_post_transport_rehook_pending_v1') || localStorage.getItem('mf_post_transport_rehook_pending_v1'),
+012741:                 transportSequenceActive: sessionStorage.getItem('mf_transport_sequence_active_v1')
+012742:             },
+012743:             queueState,
+012744:             unattendedState,
+012745:             vehicleLoadState: {
+012746:                 ready: vehicleLoadState.ready,
+012747:                 patients: vehicleLoadState.patients,
+012748:                 ambulances: vehicleLoadState.ambulances,
+012749:                 rows: (vehicleLoadState.rows || []).map(row => ({
+012750:                     originalName: row.originalName,
+012751:                     mappedName: row.mappedName,
+012752:                     required: row.required,
+012753:                     selected: row.selected,
+012754:                     status: row.status
+012755:                 })).slice(0, 30)
+012756:             },
+012757:             alerts,
+012758:             modals,
+012759:             visibleButtons: getRecorderVisibleButtons(),
+012760:             debugTail: (mfDebugRows || []).slice(0, 60)
+012761:         };
+012762:     }
+012763: 
+012764:     // V10.6.52: Issue Recorder removed. These no-op stubs preserve compatibility
+012765:     // with existing safety/error paths without installing observers or listeners.
+012766:     function recordIssueEvent() {}
+012767:     function renderRecorderStatus() {}
+012768:     function setIssueRecorderEnabled() {}
+012769:     function clearIssueRecorder() {}
+012770:     async function copyIssueRecorder() {}
+012771:     function captureIssueNow() {}
+012772:     function scanIssueRecorderDangerAlerts() {}
+012773:     function syncIssueRecorderMutationObserver() {}
+012774:     function installIssueRecorderWatchers() {
+012775:         window.mfIssueRecorderInstalled = true;
+012776:     }
+012777: 
+012778:     function cleanupDuplicatePanels() {
+012779:         const wrappers = document.querySelectorAll('#mission-finder-wrapper');
+012780: 
+012781:         wrappers.forEach((wrapper, index) => {
+012782:             if (index > 0) {
+012783:                 wrapper.remove();
+012784:             }
+012785:         });
+012786: 
+012787:         document.querySelectorAll('#control-panel').forEach(panel => {
+012788:             if (!panel.closest('#mission-finder-wrapper')) {
+012789:                 panel.remove();
+012790:             }
+012791:         });
+012792:     }
+012793: 
+012794:     const crossReference = {
+012795:         /*************************************************
+--- lines 13649-13716; match 13671 ---
+013649:                 staffingBlockActive:
+013650:                     mfStaffingBlockActive === true,
+013651:                 staffingBlockText:
+013652:                     String(mfStaffingBlockText || ''),
+013653:                 processedSelectionKeys:
+013654:                     Array.from(processedSelectionKeys || [])
+013655:             },
+013656:             requirementContext: {
+013657:                 ...mfUnitFinderDiagnosticContext,
+013658:                 missionDefinitionRawRows:
+013659:                     mfLastMissionDefinitionRawRows.map(row => ({
+013660:                         label: String(row.label || ''),
+013661:                         value: String(row.value || '')
+013662:                     })),
+013663:                 currentLiveRequirementRows:
+013664:                     mfSerialiseDiagnosticRequirementRows(liveRows),
+013665:                 visibleAlerts:
+013666:                     mfGetDiagnosticVisibleAlerts()
+013667:             },
+013668:             selectionSummary: {
+013669:                 vehicleLoadState: {
+013670:                     rows: vehicleLoadState.rows.map(row => ({
+013671:                         originalName: String(row.originalName || ''),
+013672:                         mappedName: String(row.mappedName || ''),
+013673:                         required: Math.max(
+013674:                             0,
+013675:                             parseInt(row.required, 10) || 0
+013676:                         ),
+013677:                         selected: Math.max(
+013678:                             0,
+013679:                             parseInt(row.selected, 10) || 0
+013680:                         ),
+013681:                         status: String(row.status || '')
+013682:                     })),
+013683:                     patients: Math.max(
+013684:                         0,
+013685:                         parseInt(vehicleLoadState.patients, 10) || 0
+013686:                     ),
+013687:                     ambulances: Math.max(
+013688:                         0,
+013689:                         parseInt(vehicleLoadState.ambulances, 10) || 0
+013690:                     ),
+013691:                     ready: vehicleLoadState.ready === true
+013692:                 },
+013693:                 selectedVehicles
+013694:             },
+013695:             environment: {
+013696:                 language: String(navigator.language || ''),
+013697:                 userAgent: String(navigator.userAgent || '')
+013698:             }
+013699:         };
+013700:     }
+013701: 
+013702:     function mfPersistUnitFinderDiagnostic(reason) {
+013703:         const snapshot =
+013704:             mfBuildUnitFinderDiagnosticSnapshot(reason);
+013705: 
+013706:         const hasUsefulData = !!(
+013707:             snapshot.requirementContext.updatedAt ||
+013708:             snapshot.requirementContext.suppliedRows.length ||
+013709:             snapshot.requirementContext.processedRows.length ||
+013710:             snapshot.requirementContext.currentLiveRequirementRows.length ||
+013711:             snapshot.requirementContext.visibleAlerts.length ||
+013712:             snapshot.selectionSummary.vehicleLoadState.rows.length ||
+013713:             snapshot.selectionSummary.selectedVehicles.length
+013714:         );
+013715: 
+013716:         if (!hasUsefulData) return snapshot;
+--- lines 39897-39964; match 39919 ---
+039897:                 lower.includes('start') ||
+039898:                 lower.includes('status')
+039899:             ) {
+039900:                 return;
+039901:             }
+039902: 
+039903:             const mappedName =
+039904:                 crossReference[cleanName] ||
+039905:                 crossReference[cleanName.replace(/s$/i, '')] ||
+039906:                 resolveUnitName(cleanName) ||
+039907:                 cleanName;
+039908: 
+039909:             const key = `${cleanName.toLowerCase()}|${mappedName}|${required}`;
+039910: 
+039911:             if (seen.has(key)) return;
+039912:             seen.add(key);
+039913: 
+039914:             const structuredShortage =
+039915:                 source === 'visible-structured-missing-vehicles';
+039916: 
+039917:             rows.push({
+039918:                 unitName: cleanName,
+039919:                 originalName: cleanName,
+039920:                 mappedName,
+039921:                 stillNeeded: required,
+039922:                 required,
+039923:                 selected: 0,
+039924:                 status: 'pending',
+039925:                 source: source || 'visible fallback',
+039926:                 liveRequirementDetails: structuredShortage
+039927:                     ? {
+039928:                         dispatchTargetMode: 'total',
+039929:                         explicitMissingVehicles: true,
+039930:                         structuredMissingVehicles: true
+039931:                     }
+039932:                     : null
+039933:             });
+039934:         }
+039935: 
+039936:         structuredMissingVehicleRows.forEach(row => {
+039937:             addRow(
+039938:                 row.unitName,
+039939:                 row.stillNeeded,
+039940:                 'visible-structured-missing-vehicles'
+039941:             );
+039942:         });
+039943: 
+039944:         for (const scope of scopes) {
+039945:             const text = (scope.innerText || scope.textContent || '').replace(/\s+/g, ' ').trim();
+039946: 
+039947:             if (!text) continue;
+039948: 
+039949:             // Visible fallback is deliberately strict. Only exact
+039950:             // MissionChief "We need ..." statements are accepted.
+039951:             // A unit name merely appearing elsewhere on the page must never
+039952:             // create a requirement.
+039953:             const needRegex =
+039954:                 /\bWe\s+need\s*:?\s+([A-Za-z0-9/&()'’\- ]{3,80}?)(?:\s+x\s*(\d+)|\s*\((?:min\.\s*)?(\d+)\)|(?=\s+We\s+need\b|$))/gi;
+039955: 
+039956:             let match;
+039957: 
+039958:             while (
+039959:                 (
+039960:                     match =
+039961:                         needRegex.exec(
+039962:                             text
+039963:                         )
+039964:                 )
+===== 'mappedName:': 3 matches =====
+--- lines 12729-12796; match 12751 ---
+012729:         return {
+012730:             url: window.location.href,
+012731:             missionName: (() => { try { return getCurrentMissionName(); } catch (error) { return ''; } })(),
+012732:             missionId: (() => { try { return getCurrentMissionIdForQueueRestart(); } catch (error) { return ''; } })(),
+012733:             isMissionPage: (() => { try { return isMissionPage(); } catch (error) { return false; } })(),
+012734:             autoModeRunning,
+012735:             autoModeLoopActive,
+012736:             queueFlags: {
+012737:                 finalQueueDispatch: sessionStorage.getItem(MF_FINAL_QUEUE_DISPATCH_FLAG),
+012738:                 queueWaitActive: sessionStorage.getItem(MF_QUEUE_WAIT_ACTIVE_FLAG),
+012739:                 queueOpeningMission: sessionStorage.getItem(MF_QUEUE_OPENING_MISSION_FLAG),
+012740:                 postTransportRehookPending: sessionStorage.getItem('mf_post_transport_rehook_pending_v1') || localStorage.getItem('mf_post_transport_rehook_pending_v1'),
+012741:                 transportSequenceActive: sessionStorage.getItem('mf_transport_sequence_active_v1')
+012742:             },
+012743:             queueState,
+012744:             unattendedState,
+012745:             vehicleLoadState: {
+012746:                 ready: vehicleLoadState.ready,
+012747:                 patients: vehicleLoadState.patients,
+012748:                 ambulances: vehicleLoadState.ambulances,
+012749:                 rows: (vehicleLoadState.rows || []).map(row => ({
+012750:                     originalName: row.originalName,
+012751:                     mappedName: row.mappedName,
+012752:                     required: row.required,
+012753:                     selected: row.selected,
+012754:                     status: row.status
+012755:                 })).slice(0, 30)
+012756:             },
+012757:             alerts,
+012758:             modals,
+012759:             visibleButtons: getRecorderVisibleButtons(),
+012760:             debugTail: (mfDebugRows || []).slice(0, 60)
+012761:         };
+012762:     }
+012763: 
+012764:     // V10.6.52: Issue Recorder removed. These no-op stubs preserve compatibility
+012765:     // with existing safety/error paths without installing observers or listeners.
+012766:     function recordIssueEvent() {}
+012767:     function renderRecorderStatus() {}
+012768:     function setIssueRecorderEnabled() {}
+012769:     function clearIssueRecorder() {}
+012770:     async function copyIssueRecorder() {}
+012771:     function captureIssueNow() {}
+012772:     function scanIssueRecorderDangerAlerts() {}
+012773:     function syncIssueRecorderMutationObserver() {}
+012774:     function installIssueRecorderWatchers() {
+012775:         window.mfIssueRecorderInstalled = true;
+012776:     }
+012777: 
+012778:     function cleanupDuplicatePanels() {
+012779:         const wrappers = document.querySelectorAll('#mission-finder-wrapper');
+012780: 
+012781:         wrappers.forEach((wrapper, index) => {
+012782:             if (index > 0) {
+012783:                 wrapper.remove();
+012784:             }
+012785:         });
+012786: 
+012787:         document.querySelectorAll('#control-panel').forEach(panel => {
+012788:             if (!panel.closest('#mission-finder-wrapper')) {
+012789:                 panel.remove();
+012790:             }
+012791:         });
+012792:     }
+012793: 
+012794:     const crossReference = {
+012795:         /*************************************************
+012796:          * FIRE
+--- lines 13162-13229; match 13184 ---
+013162:             required: Math.max(0, parseInt(requirement.required, 10) || 0),
+013163:             personnelRequired: Math.max(
+013164:                 0,
+013165:                 parseInt(requirement.personnelRequired, 10) || 0
+013166:             ),
+013167:             requirementType: String(requirement.requirementType || ''),
+013168:             requiredTrainingCodes: Array.isArray(requirement.requiredTrainingCodes)
+013169:                 ? requirement.requiredTrainingCodes.map(String)
+013170:                 : [],
+013171:             eligibleVehicleTypeIds: Array.isArray(requirement.eligibleVehicleTypeIds)
+013172:                 ? requirement.eligibleVehicleTypeIds.map(String)
+013173:                 : []
+013174:         };
+013175:     }
+013176: 
+013177:     function mfSerialiseDiagnosticRequirementRow(row) {
+013178:         if (!row || typeof row !== 'object') return null;
+013179: 
+013180:         const details = row.liveRequirementDetails || null;
+013181: 
+013182:         return {
+013183:             unitName: String(row.unitName || ''),
+013184:             mappedName: resolveUnitName(row.unitName || ''),
+013185:             stillNeeded: Math.max(0, parseInt(row.stillNeeded, 10) || 0),
+013186:             requiredTotal: Math.max(0, parseInt(row.requiredTotal, 10) || 0),
+013187:             source: String(row.source || row.updateSource || ''),
+013188:             isTrainedPersonnelRequirement:
+013189:                 row.isTrainedPersonnelRequirement === true,
+013190:             missionDefinitionRequiredPersonnel:
+013191:                 row.missionDefinitionRequiredPersonnel === true,
+013192:             convertedFromPersonnelRequirement:
+013193:                 row.convertedFromPersonnelRequirement === true,
+013194:             patientRequirementType: String(row.patientRequirementType || ''),
+013195:             personnelRequirement: String(row.personnelRequirement || ''),
+013196:             personnelTrainingRequirements: Array.isArray(
+013197:                 row.personnelTrainingRequirements
+013198:             )
+013199:                 ? row.personnelTrainingRequirements
+013200:                     .map(mfSerialiseDiagnosticTrainingRequirement)
+013201:                     .filter(Boolean)
+013202:                 : [],
+013203:             liveRequirementDetails: details
+013204:                 ? {
+013205:                     dispatchTargetMode: String(details.dispatchTargetMode || ''),
+013206:                     explicitMissingVehicles:
+013207:                         details.explicitMissingVehicles === true,
+013208:                     explicitMissingPersonnel:
+013209:                         details.explicitMissingPersonnel === true,
+013210:                     structuredMissingVehicles:
+013211:                         details.structuredMissingVehicles === true
+013212:                 }
+013213:                 : null
+013214:         };
+013215:     }
+013216: 
+013217:     function mfSerialiseDiagnosticRequirementRows(rows) {
+013218:         return (Array.isArray(rows) ? rows : [])
+013219:             .map(mfSerialiseDiagnosticRequirementRow)
+013220:             .filter(Boolean);
+013221:     }
+013222: 
+013223:     function mfSetUnitFinderDiagnosticContext(
+013224:         mode,
+013225:         sourceLabel,
+013226:         suppliedRows,
+013227:         processedRows
+013228:     ) {
+013229:         mfUnitFinderDiagnosticContext = {
+--- lines 13650-13717; match 13672 ---
+013650:                     mfStaffingBlockActive === true,
+013651:                 staffingBlockText:
+013652:                     String(mfStaffingBlockText || ''),
+013653:                 processedSelectionKeys:
+013654:                     Array.from(processedSelectionKeys || [])
+013655:             },
+013656:             requirementContext: {
+013657:                 ...mfUnitFinderDiagnosticContext,
+013658:                 missionDefinitionRawRows:
+013659:                     mfLastMissionDefinitionRawRows.map(row => ({
+013660:                         label: String(row.label || ''),
+013661:                         value: String(row.value || '')
+013662:                     })),
+013663:                 currentLiveRequirementRows:
+013664:                     mfSerialiseDiagnosticRequirementRows(liveRows),
+013665:                 visibleAlerts:
+013666:                     mfGetDiagnosticVisibleAlerts()
+013667:             },
+013668:             selectionSummary: {
+013669:                 vehicleLoadState: {
+013670:                     rows: vehicleLoadState.rows.map(row => ({
+013671:                         originalName: String(row.originalName || ''),
+013672:                         mappedName: String(row.mappedName || ''),
+013673:                         required: Math.max(
+013674:                             0,
+013675:                             parseInt(row.required, 10) || 0
+013676:                         ),
+013677:                         selected: Math.max(
+013678:                             0,
+013679:                             parseInt(row.selected, 10) || 0
+013680:                         ),
+013681:                         status: String(row.status || '')
+013682:                     })),
+013683:                     patients: Math.max(
+013684:                         0,
+013685:                         parseInt(vehicleLoadState.patients, 10) || 0
+013686:                     ),
+013687:                     ambulances: Math.max(
+013688:                         0,
+013689:                         parseInt(vehicleLoadState.ambulances, 10) || 0
+013690:                     ),
+013691:                     ready: vehicleLoadState.ready === true
+013692:                 },
+013693:                 selectedVehicles
+013694:             },
+013695:             environment: {
+013696:                 language: String(navigator.language || ''),
+013697:                 userAgent: String(navigator.userAgent || '')
+013698:             }
+013699:         };
+013700:     }
+013701: 
+013702:     function mfPersistUnitFinderDiagnostic(reason) {
+013703:         const snapshot =
+013704:             mfBuildUnitFinderDiagnosticSnapshot(reason);
+013705: 
+013706:         const hasUsefulData = !!(
+013707:             snapshot.requirementContext.updatedAt ||
+013708:             snapshot.requirementContext.suppliedRows.length ||
+013709:             snapshot.requirementContext.processedRows.length ||
+013710:             snapshot.requirementContext.currentLiveRequirementRows.length ||
+013711:             snapshot.requirementContext.visibleAlerts.length ||
+013712:             snapshot.selectionSummary.vehicleLoadState.rows.length ||
+013713:             snapshot.selectionSummary.selectedVehicles.length
+013714:         );
+013715: 
+013716:         if (!hasUsefulData) return snapshot;
+013717: 
+===== "status: 'missing'": 0 matches =====
+===== "status: 'selected'": 0 matches =====
+===== 'required: required': 1 matches =====
+--- lines 31313-31380; match 31335 ---
+031313:         personnelRequired
+031314:     ) {
+031315:         const cleaned = String(requirementName || '')
+031316:             .replace(/\s+/g, ' ')
+031317:             .trim()
+031318:             .replace(/^Missing\s+Personnel\s*:\s*/i, '')
+031319:             .trim();
+031320:         const required = Math.max(
+031321:             0,
+031322:             parseInt(personnelRequired, 10) || 0
+031323:         );
+031324: 
+031325:         if (
+031326:             required <= 0 ||
+031327:             !/^(?:Required\s+)?Police\s+Officer(?:s)?$/i.test(cleaned)
+031328:         ) {
+031329:             return null;
+031330:         }
+031331: 
+031332:         return {
+031333:             unitName: 'Police Car',
+031334:             stillNeeded: Math.ceil(required / 2),
+031335:             personnelRequired: required,
+031336:             personnelPerVehicle: 2
+031337:         };
+031338:     }
+031339: 
+031340:     function normaliseOperationalRequirementRows(rows) {
+031341:         return (Array.isArray(rows) ? rows : []).map(row => {
+031342:             if (!row || row.isTrainedPersonnelRequirement) return row;
+031343: 
+031344:             const searchAdvisorRequirement =
+031345:                 getSearchAdvisorTrainedVehicleRequirement(
+031346:                     row.unitName,
+031347:                     row.stillNeeded
+031348:                 );
+031349: 
+031350:             if (searchAdvisorRequirement) {
+031351:                 return {
+031352:                     ...row,
+031353:                     unitName:
+031354:                         MF_TRAINED_PERSONNEL_ROW_NAME,
+031355:                     stillNeeded:
+031356:                         getTrainedPersonnelVehicleTarget([
+031357:                             searchAdvisorRequirement
+031358:                         ]),
+031359:                     isTrainedPersonnelRequirement:
+031360:                         true,
+031361:                     personnelTrainingRequirements: [
+031362:                         searchAdvisorRequirement
+031363:                     ],
+031364:                     convertedFromPersonnelRequirement:
+031365:                         true
+031366:                 };
+031367:             }
+031368: 
+031369:             const sarConversion =
+031370:                 getSarPersonnelVehicleRequirement(
+031371:                     row.unitName,
+031372:                     row.stillNeeded
+031373:                 );
+031374: 
+031375:             if (sarConversion) {
+031376:                 return {
+031377:                     ...row,
+031378:                     unitName:
+031379:                         sarConversion.unitName,
+031380:                     stillNeeded:

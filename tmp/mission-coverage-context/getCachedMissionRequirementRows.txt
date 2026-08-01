@@ -1,0 +1,52 @@
+027111:         }
+027112: 
+027113:         if (!mfMissionRequirementPreloadCache.missionKey) {
+027114:             mfMissionRequirementPreloadCache.missionKey = missionKey;
+027115:         }
+027116: 
+027117:         return missionKey;
+027118:     }
+027119: 
+027120:     function getMissionRequirementPreloadState() {
+027121:         synchroniseMissionRequirementPreloadCache();
+027122:         return mfMissionRequirementPreloadCache;
+027123:     }
+027124: 
+027125:     function getCachedMissionRequirementRows(sourceDescriptor = null) {
+027126:         const missionKey =
+027127:             synchroniseMissionRequirementPreloadCache();
+027128:         const cache = mfMissionRequirementPreloadCache;
+027129:         const sourceUrl = String(
+027130:             sourceDescriptor?.url ||
+027131:             ''
+027132:         );
+027133: 
+027134:         if (
+027135:             cache.status !== 'loaded' ||
+027136:             cache.missionKey !== missionKey ||
+027137:             !Array.isArray(cache.rows) ||
+027138:             (
+027139:                 sourceUrl &&
+027140:                 cache.sourceUrl &&
+027141:                 cache.sourceUrl !== sourceUrl
+027142:             )
+027143:         ) {
+027144:             return null;
+027145:         }
+027146: 
+027147:         return cloneMissionRequirementRows(cache.rows);
+027148:     }
+027149: 
+027150:     function setCachedMissionRequirementRows(
+027151:         missionKey,
+027152:         sourceDescriptor,
+027153:         rows
+027154:     ) {
+027155:         const currentMissionKey =
+027156:             getMissionRequirementPreloadMissionKey();
+027157: 
+027158:         if (
+027159:             !missionKey ||
+027160:             missionKey !== currentMissionKey
+027161:         ) {
+027162:             return [];
