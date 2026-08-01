@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - feature/force-dispatch-centres-popup-window-v1079
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/builders/apply-force-dispatch-centres-popup-v1079.py'
+      - '.github/workflows/apply-force-dispatch-centres-popup-v1079.yml'
   workflow_dispatch:
 
 permissions:
