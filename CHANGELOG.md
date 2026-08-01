@@ -4,6 +4,20 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.78] - 2026-08-01
+
+### Added
+
+- Middle-clicking the exact Dispatch Centres **Show all** lightbox link opens `/leitstellenansicht` in a centred, resizable popup window.
+- The popup uses a stable window name, focuses after opening and retains scrolling.
+
+### Safety and compatibility
+
+- Normal left-click behaviour remains MissionChief's existing lightbox.
+- Only middle-clicks on `a.lightbox-open[href="/leitstellenansicht"]` are intercepted.
+- The delegated listener installs once and supports dynamically rendered **Show all** links.
+- The 1.0.77 Stations popup ownership fix, Mission Finder, Unit Finder, Vehicle Load, Auto Mode and iOS/iPadOS paths remain unchanged.
+
 ## [1.0.77] - 2026-08-01
 
 ### Fixed
