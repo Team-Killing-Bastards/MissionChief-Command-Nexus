@@ -1,0 +1,38 @@
+name: Inspect trained panel refresh v1.0.81
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - synchronize
+    paths:
+      - '.v1081-refresh-trigger'
+      - '.github/workflows/inspect-trained-panel-refresh-v1081.yml'
+      - '.github/builders/inspect-trained-panel-refresh-v1081.py'
+
+permissions:
+  contents: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: fix/trained-personnel-live-missing-v1081
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Extract refresh contracts
+        run: python3 .github/builders/inspect-trained-panel-refresh-v1081.py
+      - name: Commit diagnostic
+        run: |
+          set -euo pipefail
+          git config user.name MartyBlyth
+          git config user.email 32400596+Martyblyth@users.noreply.github.com
+          git add -f .github/diagnostics/trained-panel-refresh-v1081.txt
+          git commit -m 'Capture trained panel refresh diagnostic'
+          git push origin HEAD:fix/trained-personnel-live-missing-v1081
