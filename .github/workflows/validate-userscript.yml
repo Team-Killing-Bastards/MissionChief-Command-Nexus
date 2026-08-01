@@ -30,6 +30,7 @@ on:
       - 'scripts/check-vehicle-drawer-animation-v1073.mjs'
       - 'scripts/check-auto-memory-lifecycle.mjs'
       - 'scripts/check-auto-memory-recycle.mjs'
+      - 'scripts/check-runtime-memory-maintenance-v1074.mjs'
       - 'scripts/check-auto-dispatch-eod-required-personnel.mjs'
       - 'scripts/check-road-rail-rru-mapping.mjs'
       - 'scripts/check-auto-prisoner-cell-gate.mjs'
@@ -69,6 +70,7 @@ on:
       - 'scripts/check-vehicle-drawer-animation-v1073.mjs'
       - 'scripts/check-auto-memory-lifecycle.mjs'
       - 'scripts/check-auto-memory-recycle.mjs'
+      - 'scripts/check-runtime-memory-maintenance-v1074.mjs'
       - 'scripts/check-auto-dispatch-eod-required-personnel.mjs'
       - 'scripts/check-road-rail-rru-mapping.mjs'
       - 'scripts/check-auto-prisoner-cell-gate.mjs'
@@ -181,6 +183,9 @@ jobs:
 
       - name: Validate Auto Mode memory recycle guard
         run: node scripts/check-auto-memory-recycle.mjs
+
+      - name: Validate runtime memory maintenance and frame ownership
+        run: node scripts/check-runtime-memory-maintenance-v1074.mjs
 
       - name: Validate Auto Mode EOD and composite personnel corrections
         run: node scripts/check-auto-dispatch-eod-required-personnel.mjs
