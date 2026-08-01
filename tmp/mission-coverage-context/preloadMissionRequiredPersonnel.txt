@@ -1,0 +1,113 @@
+027276:                     (Array.isArray(vehicle?.trainingCounts)
+027277:                         ? vehicle.trainingCounts
+027278:                         : []
+027279:                     ).find(item => item.code === code);
+027280: 
+027281:                 return total + Math.max(
+027282:                     0,
+027283:                     parseInt(aggregate?.count, 10) || 0
+027284:                 );
+027285:             }, 0);
+027286:     }
+027287: 
+027288:     async function preloadMissionRequiredPersonnel() {
+027289:         if (
+027290:             !isMissionPage() ||
+027291:             !isCurrentMissionExecutionOwner(
+027292:                 'required personnel preload'
+027293:             )
+027294:         ) {
+027295:             return [];
+027296:         }
+027297: 
+027298:         const missionKey =
+027299:             synchroniseMissionRequirementPreloadCache();
+027300:         if (!missionKey) return [];
+027301: 
+027302:         const sourceDescriptor =
+027303:             getMissionRequirementSource(false);
+027304:         const cachedRows =
+027305:             getCachedMissionRequirementRows(sourceDescriptor);
+027306: 
+027307:         if (cachedRows !== null) {
+027308:             return cachedRows;
+027309:         }
+027310: 
+027311:         if (
+027312:             mfMissionRequirementPreloadPromise &&
+027313:             mfMissionRequirementPreloadPromiseKey === missionKey
+027314:         ) {
+027315:             return mfMissionRequirementPreloadPromise;
+027316:         }
+027317: 
+027318:         mfMissionRequirementPreloadCache.status = 'loading';
+027319:         mfMissionRequirementPreloadCache.attempts += 1;
+027320:         mfMissionRequirementPreloadCache.error = '';
+027321:         mfMissionRequirementPreloadPromiseKey = missionKey;
+027322: 
+027323:         const preloadPromise =
+027324:             readLiveMissionRequirements({
+027325:                 silent: true,
+027326:                 allowCached: true,
+027327:                 preload: true,
+027328:                 forceRefresh: false
+027329:             })
+027330:                 .then(rows => {
+027331:                     if (
+027332:                         missionKey ===
+027333:                         getMissionRequirementPreloadMissionKey()
+027334:                     ) {
+027335:                         renderSelectedTrainedPersonnelPanel();
+027336:                     }
+027337: 
+027338:                     return cloneMissionRequirementRows(rows);
+027339:                 })
+027340:                 .catch(error => {
+027341:                     if (
+027342:                         missionKey ===
+027343:                         getMissionRequirementPreloadMissionKey()
+027344:                     ) {
+027345:                         mfMissionRequirementPreloadCache.status = 'error';
+027346:                         mfMissionRequirementPreloadCache.error =
+027347:                             error?.message || String(error);
+027348:                     }
+027349: 
+027350:                     return [];
+027351:                 })
+027352:                 .finally(() => {
+027353:                     if (
+027354:                         mfMissionRequirementPreloadPromise === preloadPromise
+027355:                     ) {
+027356:                         mfMissionRequirementPreloadPromise = null;
+027357:                         mfMissionRequirementPreloadPromiseKey = '';
+027358:                     }
+027359: 
+027360:                     const cache =
+027361:                         getMissionRequirementPreloadState();
+027362: 
+027363:                     if (
+027364:                         cache.missionKey === missionKey &&
+027365:                         cache.status !== 'loaded' &&
+027366:                         cache.attempts < 6
+027367:                     ) {
+027368:                         scheduleMissionRequiredPersonnelPreload(
+027369:                             350 * cache.attempts
+027370:                         );
+027371:                     }
+027372:                 });
+027373: 
+027374:         mfMissionRequirementPreloadPromise = preloadPromise;
+027375:         return preloadPromise;
+027376:     }
+027377: 
+027378:     function scheduleMissionRequiredPersonnelPreload(
+027379:         delay = 0
+027380:     ) {
+027381:         if (!isMissionPage()) return;
+027382: 
+027383:         synchroniseMissionRequirementPreloadCache();
+027384: 
+027385:         if (
+027386:             mfMissionRequirementPreloadCache.status === 'loaded' ||
+027387:             mfMissionRequirementPreloadTimer
+027388:         ) {

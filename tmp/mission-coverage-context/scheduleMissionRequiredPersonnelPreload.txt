@@ -1,0 +1,43 @@
+027366:                         cache.attempts < 6
+027367:                     ) {
+027368:                         scheduleMissionRequiredPersonnelPreload(
+027369:                             350 * cache.attempts
+027370:                         );
+027371:                     }
+027372:                 });
+027373: 
+027374:         mfMissionRequirementPreloadPromise = preloadPromise;
+027375:         return preloadPromise;
+027376:     }
+027377: 
+027378:     function scheduleMissionRequiredPersonnelPreload(
+027379:         delay = 0
+027380:     ) {
+027381:         if (!isMissionPage()) return;
+027382: 
+027383:         synchroniseMissionRequirementPreloadCache();
+027384: 
+027385:         if (
+027386:             mfMissionRequirementPreloadCache.status === 'loaded' ||
+027387:             mfMissionRequirementPreloadTimer
+027388:         ) {
+027389:             return;
+027390:         }
+027391: 
+027392:         mfMissionRequirementPreloadTimer = setTimeout(() => {
+027393:             mfMissionRequirementPreloadTimer = null;
+027394:             preloadMissionRequiredPersonnel();
+027395:         }, Math.max(0, parseInt(delay, 10) || 0));
+027396:     }
+027397: 
+027398:     const MF_REQUIREMENT_SOURCE_FAILURE_STATUSES =
+027399:         new Set([
+027400:             'missing-source',
+027401:             'fetch-failed',
+027402:             'invalid-response'
+027403:         ]);
+027404: 
+027405:     let mfLastMissionRequirementRead = {
+027406:         status: 'idle',
+027407:         missionKey: '',
+027408:         url: '',

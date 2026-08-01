@@ -1,0 +1,38 @@
+022760:                 <div class="mf2026-count">${vehicleLoadState.ambulances}</div>
+022761:             </div>
+022762:             <div class="mf2026-row">
+022763:                 <div>Ambulance Officer</div>
+022764:                 <div class="mf2026-count mf2026-warn">Live requirements only</div>
+022765:             </div>
+022766:         `;
+022767: 
+022768: 
+022769:         renderSelectedTrainedPersonnelPanel();
+022770:     }
+022771: 
+022772:     function renderVehicleLoadList() {
+022773:         if (mfVehicleLoadRenderFrame !== null) return;
+022774: 
+022775:         const run = () => {
+022776:             mfVehicleLoadRenderFrame = null;
+022777:             renderVehicleLoadListNow();
+022778:         };
+022779: 
+022780:         if (typeof requestAnimationFrame === 'function') {
+022781:             mfVehicleLoadRenderFrame = requestAnimationFrame(run);
+022782:         } else {
+022783:             mfVehicleLoadRenderFrame = setTimeout(run, 50);
+022784:         }
+022785:     }
+022786: 
+022787:     function escapeHtml(value) {
+022788:         return String(value)
+022789:             .replace(/&/g, '&amp;')
+022790:             .replace(/</g, '&lt;')
+022791:             .replace(/>/g, '&gt;')
+022792:             .replace(/"/g, '&quot;')
+022793:             .replace(/'/g, '&#039;');
+022794:     }
+022795: 
+022796:     function getPatientSelectionMissionKey() {
+022797:         const localMissionKey =

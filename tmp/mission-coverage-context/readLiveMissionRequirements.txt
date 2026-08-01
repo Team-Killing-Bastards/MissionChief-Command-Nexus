@@ -1,0 +1,26 @@
+027442:         if (
+027443:             String(missionKey || '') !==
+027444:                 state.missionKey ||
+027445:             !MF_REQUIREMENT_SOURCE_FAILURE_STATUSES
+027446:                 .has(state.status)
+027447:         ) {
+027448:             return null;
+027449:         }
+027450: 
+027451:         return state;
+027452:     }
+027453: 
+027454:     async function readLiveMissionRequirements(
+027455:         options = {}
+027456:     ) {
+027457:         if (!isCurrentMissionExecutionOwner('attachment requirement read')) {
+027458:             return [];
+027459:         }
+027460: 
+027461:         const silent = options?.silent === true;
+027462:         const allowCached = options?.allowCached !== false;
+027463:         const reportStatus = message => {
+027464:             if (!silent) updateStatusBox(message);
+027465:         };
+027466: 
+027467:         synchroniseMissionInstanceState('Unit Finder attachment read');

@@ -1,0 +1,3872 @@
+===== 'missionRequiredPersonnelCache': 0 matches =====
+===== 'requiredPersonnel': 32 matches =====
+--- lines 13155-13270; match 13190 ---
+013155: 
+013156:     function mfSerialiseDiagnosticTrainingRequirement(requirement) {
+013157:         if (!requirement || typeof requirement !== 'object') return null;
+013158: 
+013159:         return {
+013160:             code: String(requirement.code || ''),
+013161:             label: String(requirement.label || ''),
+013162:             required: Math.max(0, parseInt(requirement.required, 10) || 0),
+013163:             personnelRequired: Math.max(
+013164:                 0,
+013165:                 parseInt(requirement.personnelRequired, 10) || 0
+013166:             ),
+013167:             requirementType: String(requirement.requirementType || ''),
+013168:             requiredTrainingCodes: Array.isArray(requirement.requiredTrainingCodes)
+013169:                 ? requirement.requiredTrainingCodes.map(String)
+013170:                 : [],
+013171:             eligibleVehicleTypeIds: Array.isArray(requirement.eligibleVehicleTypeIds)
+013172:                 ? requirement.eligibleVehicleTypeIds.map(String)
+013173:                 : []
+013174:         };
+013175:     }
+013176: 
+013177:     function mfSerialiseDiagnosticRequirementRow(row) {
+013178:         if (!row || typeof row !== 'object') return null;
+013179: 
+013180:         const details = row.liveRequirementDetails || null;
+013181: 
+013182:         return {
+013183:             unitName: String(row.unitName || ''),
+013184:             mappedName: resolveUnitName(row.unitName || ''),
+013185:             stillNeeded: Math.max(0, parseInt(row.stillNeeded, 10) || 0),
+013186:             requiredTotal: Math.max(0, parseInt(row.requiredTotal, 10) || 0),
+013187:             source: String(row.source || row.updateSource || ''),
+013188:             isTrainedPersonnelRequirement:
+013189:                 row.isTrainedPersonnelRequirement === true,
+013190:             missionDefinitionRequiredPersonnel:
+013191:                 row.missionDefinitionRequiredPersonnel === true,
+013192:             convertedFromPersonnelRequirement:
+013193:                 row.convertedFromPersonnelRequirement === true,
+013194:             patientRequirementType: String(row.patientRequirementType || ''),
+013195:             personnelRequirement: String(row.personnelRequirement || ''),
+013196:             personnelTrainingRequirements: Array.isArray(
+013197:                 row.personnelTrainingRequirements
+013198:             )
+013199:                 ? row.personnelTrainingRequirements
+013200:                     .map(mfSerialiseDiagnosticTrainingRequirement)
+013201:                     .filter(Boolean)
+013202:                 : [],
+013203:             liveRequirementDetails: details
+013204:                 ? {
+013205:                     dispatchTargetMode: String(details.dispatchTargetMode || ''),
+013206:                     explicitMissingVehicles:
+013207:                         details.explicitMissingVehicles === true,
+013208:                     explicitMissingPersonnel:
+013209:                         details.explicitMissingPersonnel === true,
+013210:                     structuredMissingVehicles:
+013211:                         details.structuredMissingVehicles === true
+013212:                 }
+013213:                 : null
+013214:         };
+013215:     }
+013216: 
+013217:     function mfSerialiseDiagnosticRequirementRows(rows) {
+013218:         return (Array.isArray(rows) ? rows : [])
+013219:             .map(mfSerialiseDiagnosticRequirementRow)
+013220:             .filter(Boolean);
+013221:     }
+013222: 
+013223:     function mfSetUnitFinderDiagnosticContext(
+013224:         mode,
+013225:         sourceLabel,
+013226:         suppliedRows,
+013227:         processedRows
+013228:     ) {
+013229:         mfUnitFinderDiagnosticContext = {
+013230:             missionKey:
+013231:                 getLocalMissionInstanceKey() ||
+013232:                 getCurrentMissionIdForQueueRestart() ||
+013233:                 '',
+013234:             mode: String(mode || 'unit-finder'),
+013235:             sourceLabel: String(sourceLabel || ''),
+013236:             suppliedRows:
+013237:                 mfSerialiseDiagnosticRequirementRows(suppliedRows),
+013238:             processedRows:
+013239:                 mfSerialiseDiagnosticRequirementRows(processedRows),
+013240:             updatedAt: Date.now()
+013241:         };
+013242:     }
+013243: 
+013244:     function mfBoundUnitFinderDiagnosticHistory(history) {
+013245:         let bounded = (Array.isArray(history) ? history : [])
+013246:             .slice(-MF_UNIT_FINDER_DIAGNOSTICS_LIMIT);
+013247:         let encoded = JSON.stringify(bounded);
+013248: 
+013249:         while (
+013250:             encoded.length >
+013251:                 MF_UNIT_FINDER_DIAGNOSTICS_MAX_STORAGE_CHARS &&
+013252:             bounded.length > 0
+013253:         ) {
+013254:             bounded = bounded.slice(1);
+013255:             encoded = JSON.stringify(bounded);
+013256:         }
+013257: 
+013258:         return {
+013259:             history: bounded,
+013260:             encoded
+013261:         };
+013262:     }
+013263: 
+013264:     function mfReadUnitFinderDiagnosticHistory() {
+013265:         try {
+013266:             const parsed = JSON.parse(
+013267:                 localStorage.getItem(
+013268:                     MF_UNIT_FINDER_DIAGNOSTICS_KEY
+013269:                 ) || '[]'
+013270:             );
+--- lines 13156-13271; match 13191 ---
+013156:     function mfSerialiseDiagnosticTrainingRequirement(requirement) {
+013157:         if (!requirement || typeof requirement !== 'object') return null;
+013158: 
+013159:         return {
+013160:             code: String(requirement.code || ''),
+013161:             label: String(requirement.label || ''),
+013162:             required: Math.max(0, parseInt(requirement.required, 10) || 0),
+013163:             personnelRequired: Math.max(
+013164:                 0,
+013165:                 parseInt(requirement.personnelRequired, 10) || 0
+013166:             ),
+013167:             requirementType: String(requirement.requirementType || ''),
+013168:             requiredTrainingCodes: Array.isArray(requirement.requiredTrainingCodes)
+013169:                 ? requirement.requiredTrainingCodes.map(String)
+013170:                 : [],
+013171:             eligibleVehicleTypeIds: Array.isArray(requirement.eligibleVehicleTypeIds)
+013172:                 ? requirement.eligibleVehicleTypeIds.map(String)
+013173:                 : []
+013174:         };
+013175:     }
+013176: 
+013177:     function mfSerialiseDiagnosticRequirementRow(row) {
+013178:         if (!row || typeof row !== 'object') return null;
+013179: 
+013180:         const details = row.liveRequirementDetails || null;
+013181: 
+013182:         return {
+013183:             unitName: String(row.unitName || ''),
+013184:             mappedName: resolveUnitName(row.unitName || ''),
+013185:             stillNeeded: Math.max(0, parseInt(row.stillNeeded, 10) || 0),
+013186:             requiredTotal: Math.max(0, parseInt(row.requiredTotal, 10) || 0),
+013187:             source: String(row.source || row.updateSource || ''),
+013188:             isTrainedPersonnelRequirement:
+013189:                 row.isTrainedPersonnelRequirement === true,
+013190:             missionDefinitionRequiredPersonnel:
+013191:                 row.missionDefinitionRequiredPersonnel === true,
+013192:             convertedFromPersonnelRequirement:
+013193:                 row.convertedFromPersonnelRequirement === true,
+013194:             patientRequirementType: String(row.patientRequirementType || ''),
+013195:             personnelRequirement: String(row.personnelRequirement || ''),
+013196:             personnelTrainingRequirements: Array.isArray(
+013197:                 row.personnelTrainingRequirements
+013198:             )
+013199:                 ? row.personnelTrainingRequirements
+013200:                     .map(mfSerialiseDiagnosticTrainingRequirement)
+013201:                     .filter(Boolean)
+013202:                 : [],
+013203:             liveRequirementDetails: details
+013204:                 ? {
+013205:                     dispatchTargetMode: String(details.dispatchTargetMode || ''),
+013206:                     explicitMissingVehicles:
+013207:                         details.explicitMissingVehicles === true,
+013208:                     explicitMissingPersonnel:
+013209:                         details.explicitMissingPersonnel === true,
+013210:                     structuredMissingVehicles:
+013211:                         details.structuredMissingVehicles === true
+013212:                 }
+013213:                 : null
+013214:         };
+013215:     }
+013216: 
+013217:     function mfSerialiseDiagnosticRequirementRows(rows) {
+013218:         return (Array.isArray(rows) ? rows : [])
+013219:             .map(mfSerialiseDiagnosticRequirementRow)
+013220:             .filter(Boolean);
+013221:     }
+013222: 
+013223:     function mfSetUnitFinderDiagnosticContext(
+013224:         mode,
+013225:         sourceLabel,
+013226:         suppliedRows,
+013227:         processedRows
+013228:     ) {
+013229:         mfUnitFinderDiagnosticContext = {
+013230:             missionKey:
+013231:                 getLocalMissionInstanceKey() ||
+013232:                 getCurrentMissionIdForQueueRestart() ||
+013233:                 '',
+013234:             mode: String(mode || 'unit-finder'),
+013235:             sourceLabel: String(sourceLabel || ''),
+013236:             suppliedRows:
+013237:                 mfSerialiseDiagnosticRequirementRows(suppliedRows),
+013238:             processedRows:
+013239:                 mfSerialiseDiagnosticRequirementRows(processedRows),
+013240:             updatedAt: Date.now()
+013241:         };
+013242:     }
+013243: 
+013244:     function mfBoundUnitFinderDiagnosticHistory(history) {
+013245:         let bounded = (Array.isArray(history) ? history : [])
+013246:             .slice(-MF_UNIT_FINDER_DIAGNOSTICS_LIMIT);
+013247:         let encoded = JSON.stringify(bounded);
+013248: 
+013249:         while (
+013250:             encoded.length >
+013251:                 MF_UNIT_FINDER_DIAGNOSTICS_MAX_STORAGE_CHARS &&
+013252:             bounded.length > 0
+013253:         ) {
+013254:             bounded = bounded.slice(1);
+013255:             encoded = JSON.stringify(bounded);
+013256:         }
+013257: 
+013258:         return {
+013259:             history: bounded,
+013260:             encoded
+013261:         };
+013262:     }
+013263: 
+013264:     function mfReadUnitFinderDiagnosticHistory() {
+013265:         try {
+013266:             const parsed = JSON.parse(
+013267:                 localStorage.getItem(
+013268:                     MF_UNIT_FINDER_DIAGNOSTICS_KEY
+013269:                 ) || '[]'
+013270:             );
+013271: 
+--- lines 20386-20501; match 20421 ---
+020386:                     <div id="trained-personnel-content" class="mf2026-small">
+020387:                         Selected trained personnel will appear here.
+020388:                     </div>
+020389:                 </div>
+020390:             </div>
+020391:         `;
+020392: 
+020393:         const dashboardFooter = document.createElement('footer');
+020394:         dashboardFooter.id = 'mf-dashboard-footer';
+020395:         const dashboardVersion =
+020396:             typeof GM_info !== 'undefined' &&
+020397:             GM_info?.script?.version
+020398:                 ? GM_info.script.version
+020399:                 : '1.0.74';
+020400:         dashboardFooter.textContent =
+020401:             `MissionChief Nexus V${dashboardVersion} · MIT · Martblyth`;
+020402: 
+020403:         if (missionFinderIphoneSafari) {
+020404:             wrapper.appendChild(iphoneLauncher);
+020405:         } else {
+020406:             wrapper.appendChild(dashboardBrand);
+020407:             wrapper.appendChild(dashboardRail);
+020408:             wrapper.appendChild(dashboardUtility);
+020409:             wrapper.appendChild(dashboardFooter);
+020410:             setMissionDashboardTab(
+020411:                 localStorage.getItem(
+020412:                     'mf_nexus_dashboard_tab_v1'
+020413:                 ) || 'mission'
+020414:             );
+020415:         }
+020416:         wrapper.appendChild(panel);
+020417:         wrapper.appendChild(loadPanel);
+020418:         wrapper.appendChild(trainedPanel);
+020419:         document.body.appendChild(wrapper);
+020420: 
+020421:         scheduleMissionRequiredPersonnelPreload(0);
+020422: 
+020423:         function syncVehicleLoadCollapseState() {
+020424:             const expanded = !mfVehicleLoadCollapsed;
+020425:             loadPanel.classList.toggle(
+020426:                 'mf2026-load-collapsed',
+020427:                 mfVehicleLoadCollapsed
+020428:             );
+020429: 
+020430:             const minimizeButton =
+020431:                 loadPanel.querySelector('#mf-load-minimize');
+020432:             const title =
+020433:                 loadPanel.querySelector('#mf-load-title');
+020434: 
+020435:             if (minimizeButton) {
+020436:                 minimizeButton.textContent =
+020437:                     missionFinderIphoneSafari
+020438:                         ? (expanded ? '▴' : '▾')
+020439:                         : (expanded ? '−' : '+');
+020440:                 minimizeButton.title = expanded
+020441:                     ? 'Collapse Vehicle Load List'
+020442:                     : 'Expand Vehicle Load List';
+020443:                 minimizeButton.setAttribute(
+020444:                     'aria-label',
+020445:                     minimizeButton.title
+020446:                 );
+020447:                 minimizeButton.setAttribute(
+020448:                     'aria-controls',
+020449:                     'mf-load-body'
+020450:                 );
+020451:                 minimizeButton.setAttribute(
+020452:                     'aria-expanded',
+020453:                     String(expanded)
+020454:                 );
+020455:             }
+020456: 
+020457:             if (title) {
+020458:                 title.setAttribute(
+020459:                     'aria-controls',
+020460:                     'mf-load-body'
+020461:                 );
+020462:                 title.setAttribute(
+020463:                     'aria-expanded',
+020464:                     String(expanded)
+020465:                 );
+020466:             }
+020467: 
+020468:             loadPanel.dataset.collapsed =
+020469:                 String(mfVehicleLoadCollapsed);
+020470: 
+020471:             if (!missionFinderIosSafari) {
+020472:                 wrapper.classList.toggle(
+020473:                     'mf-vehicle-drawer-open',
+020474:                     !mfVehicleLoadCollapsed
+020475:                 );
+020476:             }
+020477: 
+020478:             if (missionFinderIphoneSafari) {
+020479:                 const expanded =
+020480:                     !mfVehicleLoadCollapsed;
+020481:                 iphoneVehicleLauncherButton.classList.toggle(
+020482:                     'mf2026-active',
+020483:                     expanded
+020484:                 );
+020485:                 iphoneVehicleLauncherButton.setAttribute(
+020486:                     'aria-pressed',
+020487:                     String(expanded)
+020488:                 );
+020489:                 iphoneVehicleLauncherButton.setAttribute(
+020490:                     'aria-expanded',
+020491:                     String(expanded)
+020492:                 );
+020493:             }
+020494:         }
+020495: 
+020496:         function toggleVehicleLoadCollapsed() {
+020497:             if (missionFinderIphoneSafari) {
+020498:                 toggleIphoneLauncherPanel('vehicle');
+020499:                 return;
+020500:             }
+020501: 
+--- lines 22498-22613; match 22533 ---
+022498:                     .sort((left, right) => {
+022499:                         return left.label.localeCompare(right.label);
+022500:                     });
+022501: 
+022502:                 if (profiles.length === 0 && trainingCounts.length === 0) {
+022503:                     return null;
+022504:                 }
+022505: 
+022506:                 return {
+022507:                     vehicleId: getMissionVehicleId(input),
+022508:                     vehicleName: getVehicleDebugName(input),
+022509:                     profiles,
+022510:                     profilesComplete:
+022511:                         entry.trainingProfilesComplete === true,
+022512:                     trainingCounts
+022513:                 };
+022514:             })
+022515:             .filter(Boolean)
+022516:             .sort((left, right) => {
+022517:                 return String(left.vehicleName || '')
+022518:                     .localeCompare(String(right.vehicleName || ''));
+022519:             });
+022520:     }
+022521: 
+022522: 
+022523:     function renderSelectedTrainedPersonnelPanel() {
+022524:         const summary =
+022525:             document.getElementById('trained-personnel-summary');
+022526:         const content =
+022527:             document.getElementById('trained-personnel-content');
+022528: 
+022529:         if (!summary || !content) return;
+022530: 
+022531: 
+022532:         let preloadState = { status: 'idle' };
+022533:         let requiredPersonnel = [];
+022534: 
+022535:         try {
+022536:             preloadState =
+022537:                 getMissionRequirementPreloadState();
+022538:             requiredPersonnel =
+022539:                 getPreloadedMissionTrainedPersonnelRequirements();
+022540:         } catch (error) {
+022541:             if (mfDebugEnabled) {
+022542:                 debugLog(
+022543:                     'MISSION PERSONNEL PRELOAD',
+022544:                     `panel cache read failed: ${error?.message || error}`
+022545:                 );
+022546:             }
+022547:         }
+022548:         const selectedVehicles =
+022549:             getSelectedTrainedPersonnelPanelModel();
+022550:         const completeProfiles = selectedVehicles.reduce(
+022551:             (total, vehicle) => {
+022552:                 return total + (
+022553:                     vehicle.profilesComplete
+022554:                         ? vehicle.profiles.length
+022555:                         : 0
+022556:                 );
+022557:             },
+022558:             0
+022559:         );
+022560:         const aggregateOnlyVehicles = selectedVehicles.filter(vehicle => {
+022561:             return !vehicle.profilesComplete;
+022562:         }).length;
+022563:         const requiredTotal = requiredPersonnel.reduce(
+022564:             (total, requirement) => {
+022565:                 return total + requirement.required;
+022566:             },
+022567:             0
+022568:         );
+022569:         const coveredTotal = requiredPersonnel.reduce(
+022570:             (total, requirement) => {
+022571:                 return total + Math.min(
+022572:                     requirement.required,
+022573:                     getSelectedTrainedPersonnelCountForCode(
+022574:                         selectedVehicles,
+022575:                         requirement.code
+022576:                     )
+022577:                 );
+022578:             },
+022579:             0
+022580:         );
+022581: 
+022582:         if (
+022583:             requiredPersonnel.length === 0 &&
+022584:             selectedVehicles.length === 0
+022585:         ) {
+022586:             if (preloadState.status === 'loading') {
+022587:                 summary.textContent =
+022588:                     'Loading mission Required Personnel...';
+022589:                 content.innerHTML =
+022590:                     '<span class="mf2026-small">Reading the mission requirement table before unit selection.</span>';
+022591:                 return;
+022592:             }
+022593: 
+022594:             summary.textContent =
+022595:                 'No required or selected trained-personnel evidence is available.';
+022596:             content.innerHTML =
+022597:                 '<span class="mf2026-small">Mission Required Personnel and selected trained personnel will appear here.</span>';
+022598:             return;
+022599:         }
+022600: 
+022601:         const summaryParts = [];
+022602: 
+022603:         if (requiredPersonnel.length > 0) {
+022604:             summaryParts.push(`
+022605:                 <div><strong>${requiredPersonnel.length}</strong> required course${requiredPersonnel.length === 1 ? '' : 's'}</div>
+022606:                 <div><strong>${coveredTotal}</strong> / <strong>${requiredTotal}</strong> required trained-personnel coverage</div>
+022607:             `);
+022608:         }
+022609: 
+022610:         if (selectedVehicles.length > 0) {
+022611:             summaryParts.push(`
+022612:                 <div><strong>${selectedVehicles.length}</strong> selected trained vehicle${selectedVehicles.length === 1 ? '' : 's'}</div>
+022613:                 <div><strong>${completeProfiles}</strong> trained personnel profile${completeProfiles === 1 ? '' : 's'}${aggregateOnlyVehicles ? ` · ${aggregateOnlyVehicles} aggregate-only` : ''}</div>
+--- lines 22503-22618; match 22538 ---
+022503:                     return null;
+022504:                 }
+022505: 
+022506:                 return {
+022507:                     vehicleId: getMissionVehicleId(input),
+022508:                     vehicleName: getVehicleDebugName(input),
+022509:                     profiles,
+022510:                     profilesComplete:
+022511:                         entry.trainingProfilesComplete === true,
+022512:                     trainingCounts
+022513:                 };
+022514:             })
+022515:             .filter(Boolean)
+022516:             .sort((left, right) => {
+022517:                 return String(left.vehicleName || '')
+022518:                     .localeCompare(String(right.vehicleName || ''));
+022519:             });
+022520:     }
+022521: 
+022522: 
+022523:     function renderSelectedTrainedPersonnelPanel() {
+022524:         const summary =
+022525:             document.getElementById('trained-personnel-summary');
+022526:         const content =
+022527:             document.getElementById('trained-personnel-content');
+022528: 
+022529:         if (!summary || !content) return;
+022530: 
+022531: 
+022532:         let preloadState = { status: 'idle' };
+022533:         let requiredPersonnel = [];
+022534: 
+022535:         try {
+022536:             preloadState =
+022537:                 getMissionRequirementPreloadState();
+022538:             requiredPersonnel =
+022539:                 getPreloadedMissionTrainedPersonnelRequirements();
+022540:         } catch (error) {
+022541:             if (mfDebugEnabled) {
+022542:                 debugLog(
+022543:                     'MISSION PERSONNEL PRELOAD',
+022544:                     `panel cache read failed: ${error?.message || error}`
+022545:                 );
+022546:             }
+022547:         }
+022548:         const selectedVehicles =
+022549:             getSelectedTrainedPersonnelPanelModel();
+022550:         const completeProfiles = selectedVehicles.reduce(
+022551:             (total, vehicle) => {
+022552:                 return total + (
+022553:                     vehicle.profilesComplete
+022554:                         ? vehicle.profiles.length
+022555:                         : 0
+022556:                 );
+022557:             },
+022558:             0
+022559:         );
+022560:         const aggregateOnlyVehicles = selectedVehicles.filter(vehicle => {
+022561:             return !vehicle.profilesComplete;
+022562:         }).length;
+022563:         const requiredTotal = requiredPersonnel.reduce(
+022564:             (total, requirement) => {
+022565:                 return total + requirement.required;
+022566:             },
+022567:             0
+022568:         );
+022569:         const coveredTotal = requiredPersonnel.reduce(
+022570:             (total, requirement) => {
+022571:                 return total + Math.min(
+022572:                     requirement.required,
+022573:                     getSelectedTrainedPersonnelCountForCode(
+022574:                         selectedVehicles,
+022575:                         requirement.code
+022576:                     )
+022577:                 );
+022578:             },
+022579:             0
+022580:         );
+022581: 
+022582:         if (
+022583:             requiredPersonnel.length === 0 &&
+022584:             selectedVehicles.length === 0
+022585:         ) {
+022586:             if (preloadState.status === 'loading') {
+022587:                 summary.textContent =
+022588:                     'Loading mission Required Personnel...';
+022589:                 content.innerHTML =
+022590:                     '<span class="mf2026-small">Reading the mission requirement table before unit selection.</span>';
+022591:                 return;
+022592:             }
+022593: 
+022594:             summary.textContent =
+022595:                 'No required or selected trained-personnel evidence is available.';
+022596:             content.innerHTML =
+022597:                 '<span class="mf2026-small">Mission Required Personnel and selected trained personnel will appear here.</span>';
+022598:             return;
+022599:         }
+022600: 
+022601:         const summaryParts = [];
+022602: 
+022603:         if (requiredPersonnel.length > 0) {
+022604:             summaryParts.push(`
+022605:                 <div><strong>${requiredPersonnel.length}</strong> required course${requiredPersonnel.length === 1 ? '' : 's'}</div>
+022606:                 <div><strong>${coveredTotal}</strong> / <strong>${requiredTotal}</strong> required trained-personnel coverage</div>
+022607:             `);
+022608:         }
+022609: 
+022610:         if (selectedVehicles.length > 0) {
+022611:             summaryParts.push(`
+022612:                 <div><strong>${selectedVehicles.length}</strong> selected trained vehicle${selectedVehicles.length === 1 ? '' : 's'}</div>
+022613:                 <div><strong>${completeProfiles}</strong> trained personnel profile${completeProfiles === 1 ? '' : 's'}${aggregateOnlyVehicles ? ` · ${aggregateOnlyVehicles} aggregate-only` : ''}</div>
+022614:             `);
+022615:         }
+022616: 
+022617:         summary.innerHTML = summaryParts.join('');
+022618: 
+--- lines 22528-22643; match 22563 ---
+022528: 
+022529:         if (!summary || !content) return;
+022530: 
+022531: 
+022532:         let preloadState = { status: 'idle' };
+022533:         let requiredPersonnel = [];
+022534: 
+022535:         try {
+022536:             preloadState =
+022537:                 getMissionRequirementPreloadState();
+022538:             requiredPersonnel =
+022539:                 getPreloadedMissionTrainedPersonnelRequirements();
+022540:         } catch (error) {
+022541:             if (mfDebugEnabled) {
+022542:                 debugLog(
+022543:                     'MISSION PERSONNEL PRELOAD',
+022544:                     `panel cache read failed: ${error?.message || error}`
+022545:                 );
+022546:             }
+022547:         }
+022548:         const selectedVehicles =
+022549:             getSelectedTrainedPersonnelPanelModel();
+022550:         const completeProfiles = selectedVehicles.reduce(
+022551:             (total, vehicle) => {
+022552:                 return total + (
+022553:                     vehicle.profilesComplete
+022554:                         ? vehicle.profiles.length
+022555:                         : 0
+022556:                 );
+022557:             },
+022558:             0
+022559:         );
+022560:         const aggregateOnlyVehicles = selectedVehicles.filter(vehicle => {
+022561:             return !vehicle.profilesComplete;
+022562:         }).length;
+022563:         const requiredTotal = requiredPersonnel.reduce(
+022564:             (total, requirement) => {
+022565:                 return total + requirement.required;
+022566:             },
+022567:             0
+022568:         );
+022569:         const coveredTotal = requiredPersonnel.reduce(
+022570:             (total, requirement) => {
+022571:                 return total + Math.min(
+022572:                     requirement.required,
+022573:                     getSelectedTrainedPersonnelCountForCode(
+022574:                         selectedVehicles,
+022575:                         requirement.code
+022576:                     )
+022577:                 );
+022578:             },
+022579:             0
+022580:         );
+022581: 
+022582:         if (
+022583:             requiredPersonnel.length === 0 &&
+022584:             selectedVehicles.length === 0
+022585:         ) {
+022586:             if (preloadState.status === 'loading') {
+022587:                 summary.textContent =
+022588:                     'Loading mission Required Personnel...';
+022589:                 content.innerHTML =
+022590:                     '<span class="mf2026-small">Reading the mission requirement table before unit selection.</span>';
+022591:                 return;
+022592:             }
+022593: 
+022594:             summary.textContent =
+022595:                 'No required or selected trained-personnel evidence is available.';
+022596:             content.innerHTML =
+022597:                 '<span class="mf2026-small">Mission Required Personnel and selected trained personnel will appear here.</span>';
+022598:             return;
+022599:         }
+022600: 
+022601:         const summaryParts = [];
+022602: 
+022603:         if (requiredPersonnel.length > 0) {
+022604:             summaryParts.push(`
+022605:                 <div><strong>${requiredPersonnel.length}</strong> required course${requiredPersonnel.length === 1 ? '' : 's'}</div>
+022606:                 <div><strong>${coveredTotal}</strong> / <strong>${requiredTotal}</strong> required trained-personnel coverage</div>
+022607:             `);
+022608:         }
+022609: 
+022610:         if (selectedVehicles.length > 0) {
+022611:             summaryParts.push(`
+022612:                 <div><strong>${selectedVehicles.length}</strong> selected trained vehicle${selectedVehicles.length === 1 ? '' : 's'}</div>
+022613:                 <div><strong>${completeProfiles}</strong> trained personnel profile${completeProfiles === 1 ? '' : 's'}${aggregateOnlyVehicles ? ` · ${aggregateOnlyVehicles} aggregate-only` : ''}</div>
+022614:             `);
+022615:         }
+022616: 
+022617:         summary.innerHTML = summaryParts.join('');
+022618: 
+022619:         const requiredMarkup = requiredPersonnel.length > 0
+022620:             ? `
+022621:                 <div class="mf2026-training-vehicle">
+022622:                     <div class="mf2026-training-vehicle-name">
+022623:                         Mission Required Personnel
+022624:                     </div>
+022625:                     ${requiredPersonnel.map(requirement => {
+022626:                         const selected = Math.min(
+022627:                             requirement.required,
+022628:                             getSelectedTrainedPersonnelCountForCode(
+022629:                                 selectedVehicles,
+022630:                                 requirement.code
+022631:                             )
+022632:                         );
+022633:                         const remaining = Math.max(
+022634:                             0,
+022635:                             requirement.required - selected
+022636:                         );
+022637: 
+022638:                         return `
+022639:                             <div class="mf2026-training-person">
+022640:                                 <span class="mf2026-training-person-label">${selected} / ${requirement.required}</span>
+022641:                                 <span class="mf2026-training-course-list">${escapeHtml(requirement.label)}${remaining > 0 ? ` · ${remaining} still needed` : ' · covered'}</span>
+022642:                             </div>
+022643:                         `;
+--- lines 22534-22649; match 22569 ---
+022534: 
+022535:         try {
+022536:             preloadState =
+022537:                 getMissionRequirementPreloadState();
+022538:             requiredPersonnel =
+022539:                 getPreloadedMissionTrainedPersonnelRequirements();
+022540:         } catch (error) {
+022541:             if (mfDebugEnabled) {
+022542:                 debugLog(
+022543:                     'MISSION PERSONNEL PRELOAD',
+022544:                     `panel cache read failed: ${error?.message || error}`
+022545:                 );
+022546:             }
+022547:         }
+022548:         const selectedVehicles =
+022549:             getSelectedTrainedPersonnelPanelModel();
+022550:         const completeProfiles = selectedVehicles.reduce(
+022551:             (total, vehicle) => {
+022552:                 return total + (
+022553:                     vehicle.profilesComplete
+022554:                         ? vehicle.profiles.length
+022555:                         : 0
+022556:                 );
+022557:             },
+022558:             0
+022559:         );
+022560:         const aggregateOnlyVehicles = selectedVehicles.filter(vehicle => {
+022561:             return !vehicle.profilesComplete;
+022562:         }).length;
+022563:         const requiredTotal = requiredPersonnel.reduce(
+022564:             (total, requirement) => {
+022565:                 return total + requirement.required;
+022566:             },
+022567:             0
+022568:         );
+022569:         const coveredTotal = requiredPersonnel.reduce(
+022570:             (total, requirement) => {
+022571:                 return total + Math.min(
+022572:                     requirement.required,
+022573:                     getSelectedTrainedPersonnelCountForCode(
+022574:                         selectedVehicles,
+022575:                         requirement.code
+022576:                     )
+022577:                 );
+022578:             },
+022579:             0
+022580:         );
+022581: 
+022582:         if (
+022583:             requiredPersonnel.length === 0 &&
+022584:             selectedVehicles.length === 0
+022585:         ) {
+022586:             if (preloadState.status === 'loading') {
+022587:                 summary.textContent =
+022588:                     'Loading mission Required Personnel...';
+022589:                 content.innerHTML =
+022590:                     '<span class="mf2026-small">Reading the mission requirement table before unit selection.</span>';
+022591:                 return;
+022592:             }
+022593: 
+022594:             summary.textContent =
+022595:                 'No required or selected trained-personnel evidence is available.';
+022596:             content.innerHTML =
+022597:                 '<span class="mf2026-small">Mission Required Personnel and selected trained personnel will appear here.</span>';
+022598:             return;
+022599:         }
+022600: 
+022601:         const summaryParts = [];
+022602: 
+022603:         if (requiredPersonnel.length > 0) {
+022604:             summaryParts.push(`
+022605:                 <div><strong>${requiredPersonnel.length}</strong> required course${requiredPersonnel.length === 1 ? '' : 's'}</div>
+022606:                 <div><strong>${coveredTotal}</strong> / <strong>${requiredTotal}</strong> required trained-personnel coverage</div>
+022607:             `);
+022608:         }
+022609: 
+022610:         if (selectedVehicles.length > 0) {
+022611:             summaryParts.push(`
+022612:                 <div><strong>${selectedVehicles.length}</strong> selected trained vehicle${selectedVehicles.length === 1 ? '' : 's'}</div>
+022613:                 <div><strong>${completeProfiles}</strong> trained personnel profile${completeProfiles === 1 ? '' : 's'}${aggregateOnlyVehicles ? ` · ${aggregateOnlyVehicles} aggregate-only` : ''}</div>
+022614:             `);
+022615:         }
+022616: 
+022617:         summary.innerHTML = summaryParts.join('');
+022618: 
+022619:         const requiredMarkup = requiredPersonnel.length > 0
+022620:             ? `
+022621:                 <div class="mf2026-training-vehicle">
+022622:                     <div class="mf2026-training-vehicle-name">
+022623:                         Mission Required Personnel
+022624:                     </div>
+022625:                     ${requiredPersonnel.map(requirement => {
+022626:                         const selected = Math.min(
+022627:                             requirement.required,
+022628:                             getSelectedTrainedPersonnelCountForCode(
+022629:                                 selectedVehicles,
+022630:                                 requirement.code
+022631:                             )
+022632:                         );
+022633:                         const remaining = Math.max(
+022634:                             0,
+022635:                             requirement.required - selected
+022636:                         );
+022637: 
+022638:                         return `
+022639:                             <div class="mf2026-training-person">
+022640:                                 <span class="mf2026-training-person-label">${selected} / ${requirement.required}</span>
+022641:                                 <span class="mf2026-training-course-list">${escapeHtml(requirement.label)}${remaining > 0 ? ` · ${remaining} still needed` : ' · covered'}</span>
+022642:                             </div>
+022643:                         `;
+022644:                     }).join('')}
+022645:                 </div>
+022646:             `
+022647:             : '';
+022648: 
+022649:         const selectedMarkup = selectedVehicles.map(vehicle => {
+--- lines 22548-22663; match 22583 ---
+022548:         const selectedVehicles =
+022549:             getSelectedTrainedPersonnelPanelModel();
+022550:         const completeProfiles = selectedVehicles.reduce(
+022551:             (total, vehicle) => {
+022552:                 return total + (
+022553:                     vehicle.profilesComplete
+022554:                         ? vehicle.profiles.length
+022555:                         : 0
+022556:                 );
+022557:             },
+022558:             0
+022559:         );
+022560:         const aggregateOnlyVehicles = selectedVehicles.filter(vehicle => {
+022561:             return !vehicle.profilesComplete;
+022562:         }).length;
+022563:         const requiredTotal = requiredPersonnel.reduce(
+022564:             (total, requirement) => {
+022565:                 return total + requirement.required;
+022566:             },
+022567:             0
+022568:         );
+022569:         const coveredTotal = requiredPersonnel.reduce(
+022570:             (total, requirement) => {
+022571:                 return total + Math.min(
+022572:                     requirement.required,
+022573:                     getSelectedTrainedPersonnelCountForCode(
+022574:                         selectedVehicles,
+022575:                         requirement.code
+022576:                     )
+022577:                 );
+022578:             },
+022579:             0
+022580:         );
+022581: 
+022582:         if (
+022583:             requiredPersonnel.length === 0 &&
+022584:             selectedVehicles.length === 0
+022585:         ) {
+022586:             if (preloadState.status === 'loading') {
+022587:                 summary.textContent =
+022588:                     'Loading mission Required Personnel...';
+022589:                 content.innerHTML =
+022590:                     '<span class="mf2026-small">Reading the mission requirement table before unit selection.</span>';
+022591:                 return;
+022592:             }
+022593: 
+022594:             summary.textContent =
+022595:                 'No required or selected trained-personnel evidence is available.';
+022596:             content.innerHTML =
+022597:                 '<span class="mf2026-small">Mission Required Personnel and selected trained personnel will appear here.</span>';
+022598:             return;
+022599:         }
+022600: 
+022601:         const summaryParts = [];
+022602: 
+022603:         if (requiredPersonnel.length > 0) {
+022604:             summaryParts.push(`
+022605:                 <div><strong>${requiredPersonnel.length}</strong> required course${requiredPersonnel.length === 1 ? '' : 's'}</div>
+022606:                 <div><strong>${coveredTotal}</strong> / <strong>${requiredTotal}</strong> required trained-personnel coverage</div>
+022607:             `);
+022608:         }
+022609: 
+022610:         if (selectedVehicles.length > 0) {
+022611:             summaryParts.push(`
+022612:                 <div><strong>${selectedVehicles.length}</strong> selected trained vehicle${selectedVehicles.length === 1 ? '' : 's'}</div>
+022613:                 <div><strong>${completeProfiles}</strong> trained personnel profile${completeProfiles === 1 ? '' : 's'}${aggregateOnlyVehicles ? ` · ${aggregateOnlyVehicles} aggregate-only` : ''}</div>
+022614:             `);
+022615:         }
+022616: 
+022617:         summary.innerHTML = summaryParts.join('');
+022618: 
+022619:         const requiredMarkup = requiredPersonnel.length > 0
+022620:             ? `
+022621:                 <div class="mf2026-training-vehicle">
+022622:                     <div class="mf2026-training-vehicle-name">
+022623:                         Mission Required Personnel
+022624:                     </div>
+022625:                     ${requiredPersonnel.map(requirement => {
+022626:                         const selected = Math.min(
+022627:                             requirement.required,
+022628:                             getSelectedTrainedPersonnelCountForCode(
+022629:                                 selectedVehicles,
+022630:                                 requirement.code
+022631:                             )
+022632:                         );
+022633:                         const remaining = Math.max(
+022634:                             0,
+022635:                             requirement.required - selected
+022636:                         );
+022637: 
+022638:                         return `
+022639:                             <div class="mf2026-training-person">
+022640:                                 <span class="mf2026-training-person-label">${selected} / ${requirement.required}</span>
+022641:                                 <span class="mf2026-training-course-list">${escapeHtml(requirement.label)}${remaining > 0 ? ` · ${remaining} still needed` : ' · covered'}</span>
+022642:                             </div>
+022643:                         `;
+022644:                     }).join('')}
+022645:                 </div>
+022646:             `
+022647:             : '';
+022648: 
+022649:         const selectedMarkup = selectedVehicles.map(vehicle => {
+022650:             const vehicleName =
+022651:                 vehicle.vehicleName ||
+022652:                 (vehicle.vehicleId
+022653:                     ? `Vehicle ${vehicle.vehicleId}`
+022654:                     : 'Selected vehicle');
+022655:             const profileMarkup =
+022656:                 vehicle.profilesComplete &&
+022657:                 vehicle.profiles.length > 0
+022658:                     ? vehicle.profiles.map((profile, index) => {
+022659:                         const labels = profile
+022660:                             .map(getSelectedTrainingDisplayLabel)
+022661:                             .sort((left, right) => left.localeCompare(right));
+022662: 
+022663:                         return `
+--- lines 22568-22683; match 22603 ---
+022568:         );
+022569:         const coveredTotal = requiredPersonnel.reduce(
+022570:             (total, requirement) => {
+022571:                 return total + Math.min(
+022572:                     requirement.required,
+022573:                     getSelectedTrainedPersonnelCountForCode(
+022574:                         selectedVehicles,
+022575:                         requirement.code
+022576:                     )
+022577:                 );
+022578:             },
+022579:             0
+022580:         );
+022581: 
+022582:         if (
+022583:             requiredPersonnel.length === 0 &&
+022584:             selectedVehicles.length === 0
+022585:         ) {
+022586:             if (preloadState.status === 'loading') {
+022587:                 summary.textContent =
+022588:                     'Loading mission Required Personnel...';
+022589:                 content.innerHTML =
+022590:                     '<span class="mf2026-small">Reading the mission requirement table before unit selection.</span>';
+022591:                 return;
+022592:             }
+022593: 
+022594:             summary.textContent =
+022595:                 'No required or selected trained-personnel evidence is available.';
+022596:             content.innerHTML =
+022597:                 '<span class="mf2026-small">Mission Required Personnel and selected trained personnel will appear here.</span>';
+022598:             return;
+022599:         }
+022600: 
+022601:         const summaryParts = [];
+022602: 
+022603:         if (requiredPersonnel.length > 0) {
+022604:             summaryParts.push(`
+022605:                 <div><strong>${requiredPersonnel.length}</strong> required course${requiredPersonnel.length === 1 ? '' : 's'}</div>
+022606:                 <div><strong>${coveredTotal}</strong> / <strong>${requiredTotal}</strong> required trained-personnel coverage</div>
+022607:             `);
+022608:         }
+022609: 
+022610:         if (selectedVehicles.length > 0) {
+022611:             summaryParts.push(`
+022612:                 <div><strong>${selectedVehicles.length}</strong> selected trained vehicle${selectedVehicles.length === 1 ? '' : 's'}</div>
+022613:                 <div><strong>${completeProfiles}</strong> trained personnel profile${completeProfiles === 1 ? '' : 's'}${aggregateOnlyVehicles ? ` · ${aggregateOnlyVehicles} aggregate-only` : ''}</div>
+022614:             `);
+022615:         }
+022616: 
+022617:         summary.innerHTML = summaryParts.join('');
+022618: 
+022619:         const requiredMarkup = requiredPersonnel.length > 0
+022620:             ? `
+022621:                 <div class="mf2026-training-vehicle">
+022622:                     <div class="mf2026-training-vehicle-name">
+022623:                         Mission Required Personnel
+022624:                     </div>
+022625:                     ${requiredPersonnel.map(requirement => {
+022626:                         const selected = Math.min(
+022627:                             requirement.required,
+022628:                             getSelectedTrainedPersonnelCountForCode(
+022629:                                 selectedVehicles,
+022630:                                 requirement.code
+022631:                             )
+022632:                         );
+022633:                         const remaining = Math.max(
+022634:                             0,
+022635:                             requirement.required - selected
+022636:                         );
+022637: 
+022638:                         return `
+022639:                             <div class="mf2026-training-person">
+022640:                                 <span class="mf2026-training-person-label">${selected} / ${requirement.required}</span>
+022641:                                 <span class="mf2026-training-course-list">${escapeHtml(requirement.label)}${remaining > 0 ? ` · ${remaining} still needed` : ' · covered'}</span>
+022642:                             </div>
+022643:                         `;
+022644:                     }).join('')}
+022645:                 </div>
+022646:             `
+022647:             : '';
+022648: 
+022649:         const selectedMarkup = selectedVehicles.map(vehicle => {
+022650:             const vehicleName =
+022651:                 vehicle.vehicleName ||
+022652:                 (vehicle.vehicleId
+022653:                     ? `Vehicle ${vehicle.vehicleId}`
+022654:                     : 'Selected vehicle');
+022655:             const profileMarkup =
+022656:                 vehicle.profilesComplete &&
+022657:                 vehicle.profiles.length > 0
+022658:                     ? vehicle.profiles.map((profile, index) => {
+022659:                         const labels = profile
+022660:                             .map(getSelectedTrainingDisplayLabel)
+022661:                             .sort((left, right) => left.localeCompare(right));
+022662: 
+022663:                         return `
+022664:                             <div class="mf2026-training-person">
+022665:                                 <span class="mf2026-training-person-label">Person ${index + 1}</span>
+022666:                                 <span class="mf2026-training-course-list">${labels.map(escapeHtml).join(', ')}</span>
+022667:                             </div>
+022668:                         `;
+022669:                     }).join('')
+022670:                     : vehicle.trainingCounts.map(item => {
+022671:                         return `
+022672:                             <div class="mf2026-training-person">
+022673:                                 <span class="mf2026-training-person-label">${item.count}×</span>
+022674:                                 <span class="mf2026-training-course-list">${escapeHtml(item.label)}</span>
+022675:                             </div>
+022676:                         `;
+022677:                     }).join('');
+022678: 
+022679:             return `
+022680:                 <div class="mf2026-training-vehicle">
+022681:                     <div class="mf2026-training-vehicle-name">
+022682:                         ${escapeHtml(vehicleName)}
+022683:                         ${vehicle.vehicleId ? `<span class="mf2026-small"> #${escapeHtml(vehicle.vehicleId)}</span>` : ''}
+--- lines 22570-22685; match 22605 ---
+022570:             (total, requirement) => {
+022571:                 return total + Math.min(
+022572:                     requirement.required,
+022573:                     getSelectedTrainedPersonnelCountForCode(
+022574:                         selectedVehicles,
+022575:                         requirement.code
+022576:                     )
+022577:                 );
+022578:             },
+022579:             0
+022580:         );
+022581: 
+022582:         if (
+022583:             requiredPersonnel.length === 0 &&
+022584:             selectedVehicles.length === 0
+022585:         ) {
+022586:             if (preloadState.status === 'loading') {
+022587:                 summary.textContent =
+022588:                     'Loading mission Required Personnel...';
+022589:                 content.innerHTML =
+022590:                     '<span class="mf2026-small">Reading the mission requirement table before unit selection.</span>';
+022591:                 return;
+022592:             }
+022593: 
+022594:             summary.textContent =
+022595:                 'No required or selected trained-personnel evidence is available.';
+022596:             content.innerHTML =
+022597:                 '<span class="mf2026-small">Mission Required Personnel and selected trained personnel will appear here.</span>';
+022598:             return;
+022599:         }
+022600: 
+022601:         const summaryParts = [];
+022602: 
+022603:         if (requiredPersonnel.length > 0) {
+022604:             summaryParts.push(`
+022605:                 <div><strong>${requiredPersonnel.length}</strong> required course${requiredPersonnel.length === 1 ? '' : 's'}</div>
+022606:                 <div><strong>${coveredTotal}</strong> / <strong>${requiredTotal}</strong> required trained-personnel coverage</div>
+022607:             `);
+022608:         }
+022609: 
+022610:         if (selectedVehicles.length > 0) {
+022611:             summaryParts.push(`
+022612:                 <div><strong>${selectedVehicles.length}</strong> selected trained vehicle${selectedVehicles.length === 1 ? '' : 's'}</div>
+022613:                 <div><strong>${completeProfiles}</strong> trained personnel profile${completeProfiles === 1 ? '' : 's'}${aggregateOnlyVehicles ? ` · ${aggregateOnlyVehicles} aggregate-only` : ''}</div>
+022614:             `);
+022615:         }
+022616: 
+022617:         summary.innerHTML = summaryParts.join('');
+022618: 
+022619:         const requiredMarkup = requiredPersonnel.length > 0
+022620:             ? `
+022621:                 <div class="mf2026-training-vehicle">
+022622:                     <div class="mf2026-training-vehicle-name">
+022623:                         Mission Required Personnel
+022624:                     </div>
+022625:                     ${requiredPersonnel.map(requirement => {
+022626:                         const selected = Math.min(
+022627:                             requirement.required,
+022628:                             getSelectedTrainedPersonnelCountForCode(
+022629:                                 selectedVehicles,
+022630:                                 requirement.code
+022631:                             )
+022632:                         );
+022633:                         const remaining = Math.max(
+022634:                             0,
+022635:                             requirement.required - selected
+022636:                         );
+022637: 
+022638:                         return `
+022639:                             <div class="mf2026-training-person">
+022640:                                 <span class="mf2026-training-person-label">${selected} / ${requirement.required}</span>
+022641:                                 <span class="mf2026-training-course-list">${escapeHtml(requirement.label)}${remaining > 0 ? ` · ${remaining} still needed` : ' · covered'}</span>
+022642:                             </div>
+022643:                         `;
+022644:                     }).join('')}
+022645:                 </div>
+022646:             `
+022647:             : '';
+022648: 
+022649:         const selectedMarkup = selectedVehicles.map(vehicle => {
+022650:             const vehicleName =
+022651:                 vehicle.vehicleName ||
+022652:                 (vehicle.vehicleId
+022653:                     ? `Vehicle ${vehicle.vehicleId}`
+022654:                     : 'Selected vehicle');
+022655:             const profileMarkup =
+022656:                 vehicle.profilesComplete &&
+022657:                 vehicle.profiles.length > 0
+022658:                     ? vehicle.profiles.map((profile, index) => {
+022659:                         const labels = profile
+022660:                             .map(getSelectedTrainingDisplayLabel)
+022661:                             .sort((left, right) => left.localeCompare(right));
+022662: 
+022663:                         return `
+022664:                             <div class="mf2026-training-person">
+022665:                                 <span class="mf2026-training-person-label">Person ${index + 1}</span>
+022666:                                 <span class="mf2026-training-course-list">${labels.map(escapeHtml).join(', ')}</span>
+022667:                             </div>
+022668:                         `;
+022669:                     }).join('')
+022670:                     : vehicle.trainingCounts.map(item => {
+022671:                         return `
+022672:                             <div class="mf2026-training-person">
+022673:                                 <span class="mf2026-training-person-label">${item.count}×</span>
+022674:                                 <span class="mf2026-training-course-list">${escapeHtml(item.label)}</span>
+022675:                             </div>
+022676:                         `;
+022677:                     }).join('');
+022678: 
+022679:             return `
+022680:                 <div class="mf2026-training-vehicle">
+022681:                     <div class="mf2026-training-vehicle-name">
+022682:                         ${escapeHtml(vehicleName)}
+022683:                         ${vehicle.vehicleId ? `<span class="mf2026-small"> #${escapeHtml(vehicle.vehicleId)}</span>` : ''}
+022684:                     </div>
+022685:                     ${profileMarkup}
+--- lines 22584-22699; match 22619 ---
+022584:             selectedVehicles.length === 0
+022585:         ) {
+022586:             if (preloadState.status === 'loading') {
+022587:                 summary.textContent =
+022588:                     'Loading mission Required Personnel...';
+022589:                 content.innerHTML =
+022590:                     '<span class="mf2026-small">Reading the mission requirement table before unit selection.</span>';
+022591:                 return;
+022592:             }
+022593: 
+022594:             summary.textContent =
+022595:                 'No required or selected trained-personnel evidence is available.';
+022596:             content.innerHTML =
+022597:                 '<span class="mf2026-small">Mission Required Personnel and selected trained personnel will appear here.</span>';
+022598:             return;
+022599:         }
+022600: 
+022601:         const summaryParts = [];
+022602: 
+022603:         if (requiredPersonnel.length > 0) {
+022604:             summaryParts.push(`
+022605:                 <div><strong>${requiredPersonnel.length}</strong> required course${requiredPersonnel.length === 1 ? '' : 's'}</div>
+022606:                 <div><strong>${coveredTotal}</strong> / <strong>${requiredTotal}</strong> required trained-personnel coverage</div>
+022607:             `);
+022608:         }
+022609: 
+022610:         if (selectedVehicles.length > 0) {
+022611:             summaryParts.push(`
+022612:                 <div><strong>${selectedVehicles.length}</strong> selected trained vehicle${selectedVehicles.length === 1 ? '' : 's'}</div>
+022613:                 <div><strong>${completeProfiles}</strong> trained personnel profile${completeProfiles === 1 ? '' : 's'}${aggregateOnlyVehicles ? ` · ${aggregateOnlyVehicles} aggregate-only` : ''}</div>
+022614:             `);
+022615:         }
+022616: 
+022617:         summary.innerHTML = summaryParts.join('');
+022618: 
+022619:         const requiredMarkup = requiredPersonnel.length > 0
+022620:             ? `
+022621:                 <div class="mf2026-training-vehicle">
+022622:                     <div class="mf2026-training-vehicle-name">
+022623:                         Mission Required Personnel
+022624:                     </div>
+022625:                     ${requiredPersonnel.map(requirement => {
+022626:                         const selected = Math.min(
+022627:                             requirement.required,
+022628:                             getSelectedTrainedPersonnelCountForCode(
+022629:                                 selectedVehicles,
+022630:                                 requirement.code
+022631:                             )
+022632:                         );
+022633:                         const remaining = Math.max(
+022634:                             0,
+022635:                             requirement.required - selected
+022636:                         );
+022637: 
+022638:                         return `
+022639:                             <div class="mf2026-training-person">
+022640:                                 <span class="mf2026-training-person-label">${selected} / ${requirement.required}</span>
+022641:                                 <span class="mf2026-training-course-list">${escapeHtml(requirement.label)}${remaining > 0 ? ` · ${remaining} still needed` : ' · covered'}</span>
+022642:                             </div>
+022643:                         `;
+022644:                     }).join('')}
+022645:                 </div>
+022646:             `
+022647:             : '';
+022648: 
+022649:         const selectedMarkup = selectedVehicles.map(vehicle => {
+022650:             const vehicleName =
+022651:                 vehicle.vehicleName ||
+022652:                 (vehicle.vehicleId
+022653:                     ? `Vehicle ${vehicle.vehicleId}`
+022654:                     : 'Selected vehicle');
+022655:             const profileMarkup =
+022656:                 vehicle.profilesComplete &&
+022657:                 vehicle.profiles.length > 0
+022658:                     ? vehicle.profiles.map((profile, index) => {
+022659:                         const labels = profile
+022660:                             .map(getSelectedTrainingDisplayLabel)
+022661:                             .sort((left, right) => left.localeCompare(right));
+022662: 
+022663:                         return `
+022664:                             <div class="mf2026-training-person">
+022665:                                 <span class="mf2026-training-person-label">Person ${index + 1}</span>
+022666:                                 <span class="mf2026-training-course-list">${labels.map(escapeHtml).join(', ')}</span>
+022667:                             </div>
+022668:                         `;
+022669:                     }).join('')
+022670:                     : vehicle.trainingCounts.map(item => {
+022671:                         return `
+022672:                             <div class="mf2026-training-person">
+022673:                                 <span class="mf2026-training-person-label">${item.count}×</span>
+022674:                                 <span class="mf2026-training-course-list">${escapeHtml(item.label)}</span>
+022675:                             </div>
+022676:                         `;
+022677:                     }).join('');
+022678: 
+022679:             return `
+022680:                 <div class="mf2026-training-vehicle">
+022681:                     <div class="mf2026-training-vehicle-name">
+022682:                         ${escapeHtml(vehicleName)}
+022683:                         ${vehicle.vehicleId ? `<span class="mf2026-small"> #${escapeHtml(vehicle.vehicleId)}</span>` : ''}
+022684:                     </div>
+022685:                     ${profileMarkup}
+022686:                 </div>
+022687:             `;
+022688:         }).join('');
+022689: 
+022690:         content.innerHTML =
+022691:             requiredMarkup +
+022692:             selectedMarkup;
+022693:     }
+022694: 
+022695:     function renderVehicleLoadListNow() {
+022696:         const listContent = document.getElementById('vehicle-load-list-content');
+022697:         const patientContent = document.getElementById('vehicle-patient-content');
+022698:         const summary = document.getElementById('vehicle-load-summary');
+022699:         const progress = document.getElementById('vehicle-load-progress');
+--- lines 22590-22705; match 22625 ---
+022590:                     '<span class="mf2026-small">Reading the mission requirement table before unit selection.</span>';
+022591:                 return;
+022592:             }
+022593: 
+022594:             summary.textContent =
+022595:                 'No required or selected trained-personnel evidence is available.';
+022596:             content.innerHTML =
+022597:                 '<span class="mf2026-small">Mission Required Personnel and selected trained personnel will appear here.</span>';
+022598:             return;
+022599:         }
+022600: 
+022601:         const summaryParts = [];
+022602: 
+022603:         if (requiredPersonnel.length > 0) {
+022604:             summaryParts.push(`
+022605:                 <div><strong>${requiredPersonnel.length}</strong> required course${requiredPersonnel.length === 1 ? '' : 's'}</div>
+022606:                 <div><strong>${coveredTotal}</strong> / <strong>${requiredTotal}</strong> required trained-personnel coverage</div>
+022607:             `);
+022608:         }
+022609: 
+022610:         if (selectedVehicles.length > 0) {
+022611:             summaryParts.push(`
+022612:                 <div><strong>${selectedVehicles.length}</strong> selected trained vehicle${selectedVehicles.length === 1 ? '' : 's'}</div>
+022613:                 <div><strong>${completeProfiles}</strong> trained personnel profile${completeProfiles === 1 ? '' : 's'}${aggregateOnlyVehicles ? ` · ${aggregateOnlyVehicles} aggregate-only` : ''}</div>
+022614:             `);
+022615:         }
+022616: 
+022617:         summary.innerHTML = summaryParts.join('');
+022618: 
+022619:         const requiredMarkup = requiredPersonnel.length > 0
+022620:             ? `
+022621:                 <div class="mf2026-training-vehicle">
+022622:                     <div class="mf2026-training-vehicle-name">
+022623:                         Mission Required Personnel
+022624:                     </div>
+022625:                     ${requiredPersonnel.map(requirement => {
+022626:                         const selected = Math.min(
+022627:                             requirement.required,
+022628:                             getSelectedTrainedPersonnelCountForCode(
+022629:                                 selectedVehicles,
+022630:                                 requirement.code
+022631:                             )
+022632:                         );
+022633:                         const remaining = Math.max(
+022634:                             0,
+022635:                             requirement.required - selected
+022636:                         );
+022637: 
+022638:                         return `
+022639:                             <div class="mf2026-training-person">
+022640:                                 <span class="mf2026-training-person-label">${selected} / ${requirement.required}</span>
+022641:                                 <span class="mf2026-training-course-list">${escapeHtml(requirement.label)}${remaining > 0 ? ` · ${remaining} still needed` : ' · covered'}</span>
+022642:                             </div>
+022643:                         `;
+022644:                     }).join('')}
+022645:                 </div>
+022646:             `
+022647:             : '';
+022648: 
+022649:         const selectedMarkup = selectedVehicles.map(vehicle => {
+022650:             const vehicleName =
+022651:                 vehicle.vehicleName ||
+022652:                 (vehicle.vehicleId
+022653:                     ? `Vehicle ${vehicle.vehicleId}`
+022654:                     : 'Selected vehicle');
+022655:             const profileMarkup =
+022656:                 vehicle.profilesComplete &&
+022657:                 vehicle.profiles.length > 0
+022658:                     ? vehicle.profiles.map((profile, index) => {
+022659:                         const labels = profile
+022660:                             .map(getSelectedTrainingDisplayLabel)
+022661:                             .sort((left, right) => left.localeCompare(right));
+022662: 
+022663:                         return `
+022664:                             <div class="mf2026-training-person">
+022665:                                 <span class="mf2026-training-person-label">Person ${index + 1}</span>
+022666:                                 <span class="mf2026-training-course-list">${labels.map(escapeHtml).join(', ')}</span>
+022667:                             </div>
+022668:                         `;
+022669:                     }).join('')
+022670:                     : vehicle.trainingCounts.map(item => {
+022671:                         return `
+022672:                             <div class="mf2026-training-person">
+022673:                                 <span class="mf2026-training-person-label">${item.count}×</span>
+022674:                                 <span class="mf2026-training-course-list">${escapeHtml(item.label)}</span>
+022675:                             </div>
+022676:                         `;
+022677:                     }).join('');
+022678: 
+022679:             return `
+022680:                 <div class="mf2026-training-vehicle">
+022681:                     <div class="mf2026-training-vehicle-name">
+022682:                         ${escapeHtml(vehicleName)}
+022683:                         ${vehicle.vehicleId ? `<span class="mf2026-small"> #${escapeHtml(vehicle.vehicleId)}</span>` : ''}
+022684:                     </div>
+022685:                     ${profileMarkup}
+022686:                 </div>
+022687:             `;
+022688:         }).join('');
+022689: 
+022690:         content.innerHTML =
+022691:             requiredMarkup +
+022692:             selectedMarkup;
+022693:     }
+022694: 
+022695:     function renderVehicleLoadListNow() {
+022696:         const listContent = document.getElementById('vehicle-load-list-content');
+022697:         const patientContent = document.getElementById('vehicle-patient-content');
+022698:         const summary = document.getElementById('vehicle-load-summary');
+022699:         const progress = document.getElementById('vehicle-load-progress');
+022700: 
+022701:         if (!listContent || !patientContent || !summary || !progress) return;
+022702: 
+022703:         refreshVehicleRequirementCounters();
+022704: 
+022705:         const totalRequired = vehicleLoadState.rows.reduce((sum, row) => sum + Number(row.required || 0), 0);
+--- lines 26218-26333; match 26253 ---
+026218:                 'tbody tr, tr'
+026219:             ).forEach(row => {
+026220:                 const cells = Array.from(
+026221:                     row.querySelectorAll('td')
+026222:                 ).map(cell => normalise(
+026223:                     cell.textContent
+026224:                 ));
+026225: 
+026226:                 if (cells.length < 2) return;
+026227: 
+026228:                 if (
+026229:                     /^(?:Required\s+|Maximum amount of cars to tow|Cars to tow)/i
+026230:                         .test(cells[0]) &&
+026231:                     /\d/.test(cells[1])
+026232:                 ) {
+026233:                     actionableRows += 1;
+026234:                 }
+026235:             });
+026236: 
+026237:             if (actionableRows > 0) {
+026238:                 score += 100 +
+026239:                     actionableRows;
+026240:             }
+026241: 
+026242:             if (score > bestScore) {
+026243:                 bestScore = score;
+026244:                 bestTable = table;
+026245:             }
+026246:         });
+026247: 
+026248:         return bestTable;
+026249:     }
+026250: 
+026251: 
+026252: 
+026253:     function extractMissionDefinitionRequiredPersonnelRows(
+026254:         doc,
+026255:         excludedTable = null
+026256:     ) {
+026257:         const rows = [];
+026258:         const rawRows = [];
+026259:         let requiredPersonnelRowFound = false;
+026260: 
+026261:         if (!doc) {
+026262:             return rows;
+026263:         }
+026264: 
+026265:         Array.from(
+026266:             doc.querySelectorAll(
+026267:                 'table tbody tr, table tr'
+026268:             )
+026269:         ).forEach(tr => {
+026270:             if (
+026271:                 excludedTable &&
+026272:                 excludedTable.contains(tr)
+026273:             ) {
+026274:                 return;
+026275:             }
+026276: 
+026277:             const cells = Array.from(
+026278:                 tr.querySelectorAll('td')
+026279:             ).map(td => {
+026280:                 return String(td.textContent || '')
+026281:                     .replace(/\s+/g, ' ')
+026282:                     .trim();
+026283:             });
+026284: 
+026285:             if (cells.length < 2) return;
+026286: 
+026287:             const rawRequirementName = cells[0];
+026288:             const cleanedName =
+026289:                 cleanRequirementName(
+026290:                     rawRequirementName
+026291:                 );
+026292: 
+026293:             // This exact gate accepts Required Personnel (including a
+026294:             // percentage suffix normalised by cleanRequirementName) while
+026295:             // rejecting the Reward and Precondition row Required Personnel
+026296:             // Available.
+026297:             if (
+026298:                 !/^Personnel(?:\s+Requirements?)?$/i.test(
+026299:                     cleanedName
+026300:                 )
+026301:             ) {
+026302:                 return;
+026303:             }
+026304: 
+026305:             requiredPersonnelRowFound = true;
+026306: 
+026307:             const amountText = String(cells[1] || '')
+026308:                 .replace(/\s+/g, ' ')
+026309:                 .trim();
+026310: 
+026311:             rawRows.push({
+026312:                 label: rawRequirementName,
+026313:                 value: amountText
+026314:             });
+026315: 
+026316:             const trainedRequirements =
+026317:                 getMissionDefinitionTrainedPersonnelRequirements(
+026318:                     rawRequirementName,
+026319:                     amountText
+026320:                 );
+026321:             const sarRequirements =
+026322:                 getMissionDefinitionSarPersonnelVehicleRequirements(
+026323:                     rawRequirementName,
+026324:                     amountText
+026325:                 );
+026326: 
+026327:             if (trainedRequirements.length > 0) {
+026328:                 rows.push({
+026329:                     unitName:
+026330:                         MF_TRAINED_PERSONNEL_ROW_NAME,
+026331:                     stillNeeded:
+026332:                         getTrainedPersonnelVehicleTarget(
+026333:                             trainedRequirements
+--- lines 26224-26339; match 26259 ---
+026224:                 ));
+026225: 
+026226:                 if (cells.length < 2) return;
+026227: 
+026228:                 if (
+026229:                     /^(?:Required\s+|Maximum amount of cars to tow|Cars to tow)/i
+026230:                         .test(cells[0]) &&
+026231:                     /\d/.test(cells[1])
+026232:                 ) {
+026233:                     actionableRows += 1;
+026234:                 }
+026235:             });
+026236: 
+026237:             if (actionableRows > 0) {
+026238:                 score += 100 +
+026239:                     actionableRows;
+026240:             }
+026241: 
+026242:             if (score > bestScore) {
+026243:                 bestScore = score;
+026244:                 bestTable = table;
+026245:             }
+026246:         });
+026247: 
+026248:         return bestTable;
+026249:     }
+026250: 
+026251: 
+026252: 
+026253:     function extractMissionDefinitionRequiredPersonnelRows(
+026254:         doc,
+026255:         excludedTable = null
+026256:     ) {
+026257:         const rows = [];
+026258:         const rawRows = [];
+026259:         let requiredPersonnelRowFound = false;
+026260: 
+026261:         if (!doc) {
+026262:             return rows;
+026263:         }
+026264: 
+026265:         Array.from(
+026266:             doc.querySelectorAll(
+026267:                 'table tbody tr, table tr'
+026268:             )
+026269:         ).forEach(tr => {
+026270:             if (
+026271:                 excludedTable &&
+026272:                 excludedTable.contains(tr)
+026273:             ) {
+026274:                 return;
+026275:             }
+026276: 
+026277:             const cells = Array.from(
+026278:                 tr.querySelectorAll('td')
+026279:             ).map(td => {
+026280:                 return String(td.textContent || '')
+026281:                     .replace(/\s+/g, ' ')
+026282:                     .trim();
+026283:             });
+026284: 
+026285:             if (cells.length < 2) return;
+026286: 
+026287:             const rawRequirementName = cells[0];
+026288:             const cleanedName =
+026289:                 cleanRequirementName(
+026290:                     rawRequirementName
+026291:                 );
+026292: 
+026293:             // This exact gate accepts Required Personnel (including a
+026294:             // percentage suffix normalised by cleanRequirementName) while
+026295:             // rejecting the Reward and Precondition row Required Personnel
+026296:             // Available.
+026297:             if (
+026298:                 !/^Personnel(?:\s+Requirements?)?$/i.test(
+026299:                     cleanedName
+026300:                 )
+026301:             ) {
+026302:                 return;
+026303:             }
+026304: 
+026305:             requiredPersonnelRowFound = true;
+026306: 
+026307:             const amountText = String(cells[1] || '')
+026308:                 .replace(/\s+/g, ' ')
+026309:                 .trim();
+026310: 
+026311:             rawRows.push({
+026312:                 label: rawRequirementName,
+026313:                 value: amountText
+026314:             });
+026315: 
+026316:             const trainedRequirements =
+026317:                 getMissionDefinitionTrainedPersonnelRequirements(
+026318:                     rawRequirementName,
+026319:                     amountText
+026320:                 );
+026321:             const sarRequirements =
+026322:                 getMissionDefinitionSarPersonnelVehicleRequirements(
+026323:                     rawRequirementName,
+026324:                     amountText
+026325:                 );
+026326: 
+026327:             if (trainedRequirements.length > 0) {
+026328:                 rows.push({
+026329:                     unitName:
+026330:                         MF_TRAINED_PERSONNEL_ROW_NAME,
+026331:                     stillNeeded:
+026332:                         getTrainedPersonnelVehicleTarget(
+026333:                             trainedRequirements
+026334:                         ),
+026335:                     isTrainedPersonnelRequirement:
+026336:                         true,
+026337:                     personnelTrainingRequirements:
+026338:                         trainedRequirements,
+026339:                     missionDefinitionRequiredPersonnel:
+--- lines 26270-26385; match 26305 ---
+026270:             if (
+026271:                 excludedTable &&
+026272:                 excludedTable.contains(tr)
+026273:             ) {
+026274:                 return;
+026275:             }
+026276: 
+026277:             const cells = Array.from(
+026278:                 tr.querySelectorAll('td')
+026279:             ).map(td => {
+026280:                 return String(td.textContent || '')
+026281:                     .replace(/\s+/g, ' ')
+026282:                     .trim();
+026283:             });
+026284: 
+026285:             if (cells.length < 2) return;
+026286: 
+026287:             const rawRequirementName = cells[0];
+026288:             const cleanedName =
+026289:                 cleanRequirementName(
+026290:                     rawRequirementName
+026291:                 );
+026292: 
+026293:             // This exact gate accepts Required Personnel (including a
+026294:             // percentage suffix normalised by cleanRequirementName) while
+026295:             // rejecting the Reward and Precondition row Required Personnel
+026296:             // Available.
+026297:             if (
+026298:                 !/^Personnel(?:\s+Requirements?)?$/i.test(
+026299:                     cleanedName
+026300:                 )
+026301:             ) {
+026302:                 return;
+026303:             }
+026304: 
+026305:             requiredPersonnelRowFound = true;
+026306: 
+026307:             const amountText = String(cells[1] || '')
+026308:                 .replace(/\s+/g, ' ')
+026309:                 .trim();
+026310: 
+026311:             rawRows.push({
+026312:                 label: rawRequirementName,
+026313:                 value: amountText
+026314:             });
+026315: 
+026316:             const trainedRequirements =
+026317:                 getMissionDefinitionTrainedPersonnelRequirements(
+026318:                     rawRequirementName,
+026319:                     amountText
+026320:                 );
+026321:             const sarRequirements =
+026322:                 getMissionDefinitionSarPersonnelVehicleRequirements(
+026323:                     rawRequirementName,
+026324:                     amountText
+026325:                 );
+026326: 
+026327:             if (trainedRequirements.length > 0) {
+026328:                 rows.push({
+026329:                     unitName:
+026330:                         MF_TRAINED_PERSONNEL_ROW_NAME,
+026331:                     stillNeeded:
+026332:                         getTrainedPersonnelVehicleTarget(
+026333:                             trainedRequirements
+026334:                         ),
+026335:                     isTrainedPersonnelRequirement:
+026336:                         true,
+026337:                     personnelTrainingRequirements:
+026338:                         trainedRequirements,
+026339:                     missionDefinitionRequiredPersonnel:
+026340:                         true,
+026341:                     source:
+026342:                         'mission-definition-required-personnel'
+026343:                 });
+026344:             }
+026345: 
+026346:             sarRequirements.forEach(conversion => {
+026347:                 rows.push({
+026348:                     unitName:
+026349:                         conversion.unitName,
+026350:                     stillNeeded:
+026351:                         conversion.stillNeeded,
+026352:                     personnelRequirement:
+026353:                         conversion.personnelRequirement,
+026354:                     missionDefinitionRequiredPersonnel:
+026355:                         true,
+026356:                     source:
+026357:                         'mission-definition-required-personnel'
+026358:                 });
+026359:             });
+026360: 
+026361:             if (
+026362:                 mfDebugEnabled &&
+026363:                 (
+026364:                     trainedRequirements.length > 0 ||
+026365:                     sarRequirements.length > 0
+026366:                 )
+026367:             ) {
+026368:                 const parts = [];
+026369: 
+026370:                 if (trainedRequirements.length > 0) {
+026371:                     parts.push(
+026372:                         formatTrainedPersonnelRequirements(
+026373:                             trainedRequirements
+026374:                         )
+026375:                     );
+026376:                 }
+026377: 
+026378:                 sarRequirements.forEach(conversion => {
+026379:                     parts.push(
+026380:                         `${conversion.personnelRequirement} -> ${conversion.unitName} x${conversion.stillNeeded}`
+026381:                     );
+026382:                 });
+026383: 
+026384:                 debugLog(
+026385:                     'UNIT FINDER OTHER INFORMATION REQUIRED PERSONNEL',
+--- lines 26304-26419; match 26339 ---
+026304: 
+026305:             requiredPersonnelRowFound = true;
+026306: 
+026307:             const amountText = String(cells[1] || '')
+026308:                 .replace(/\s+/g, ' ')
+026309:                 .trim();
+026310: 
+026311:             rawRows.push({
+026312:                 label: rawRequirementName,
+026313:                 value: amountText
+026314:             });
+026315: 
+026316:             const trainedRequirements =
+026317:                 getMissionDefinitionTrainedPersonnelRequirements(
+026318:                     rawRequirementName,
+026319:                     amountText
+026320:                 );
+026321:             const sarRequirements =
+026322:                 getMissionDefinitionSarPersonnelVehicleRequirements(
+026323:                     rawRequirementName,
+026324:                     amountText
+026325:                 );
+026326: 
+026327:             if (trainedRequirements.length > 0) {
+026328:                 rows.push({
+026329:                     unitName:
+026330:                         MF_TRAINED_PERSONNEL_ROW_NAME,
+026331:                     stillNeeded:
+026332:                         getTrainedPersonnelVehicleTarget(
+026333:                             trainedRequirements
+026334:                         ),
+026335:                     isTrainedPersonnelRequirement:
+026336:                         true,
+026337:                     personnelTrainingRequirements:
+026338:                         trainedRequirements,
+026339:                     missionDefinitionRequiredPersonnel:
+026340:                         true,
+026341:                     source:
+026342:                         'mission-definition-required-personnel'
+026343:                 });
+026344:             }
+026345: 
+026346:             sarRequirements.forEach(conversion => {
+026347:                 rows.push({
+026348:                     unitName:
+026349:                         conversion.unitName,
+026350:                     stillNeeded:
+026351:                         conversion.stillNeeded,
+026352:                     personnelRequirement:
+026353:                         conversion.personnelRequirement,
+026354:                     missionDefinitionRequiredPersonnel:
+026355:                         true,
+026356:                     source:
+026357:                         'mission-definition-required-personnel'
+026358:                 });
+026359:             });
+026360: 
+026361:             if (
+026362:                 mfDebugEnabled &&
+026363:                 (
+026364:                     trainedRequirements.length > 0 ||
+026365:                     sarRequirements.length > 0
+026366:                 )
+026367:             ) {
+026368:                 const parts = [];
+026369: 
+026370:                 if (trainedRequirements.length > 0) {
+026371:                     parts.push(
+026372:                         formatTrainedPersonnelRequirements(
+026373:                             trainedRequirements
+026374:                         )
+026375:                     );
+026376:                 }
+026377: 
+026378:                 sarRequirements.forEach(conversion => {
+026379:                     parts.push(
+026380:                         `${conversion.personnelRequirement} -> ${conversion.unitName} x${conversion.stillNeeded}`
+026381:                     );
+026382:                 });
+026383: 
+026384:                 debugLog(
+026385:                     'UNIT FINDER OTHER INFORMATION REQUIRED PERSONNEL',
+026386:                     parts.join(' | ')
+026387:                 );
+026388:             }
+026389:         });
+026390: 
+026391:         try {
+026392:             Object.defineProperties(
+026393:                 rows,
+026394:                 {
+026395:                     missionDefinitionRequiredPersonnelFound: {
+026396:                         value: requiredPersonnelRowFound,
+026397:                         enumerable: false
+026398:                     },
+026399:                     rawMissionDefinitionRequiredPersonnelRows: {
+026400:                         value: rawRows,
+026401:                         enumerable: false
+026402:                     }
+026403:                 }
+026404:             );
+026405:         } catch (_error) {}
+026406: 
+026407:         return rows;
+026408:     }
+026409: 
+026410:     function extractLiveMissionRequirementRows(html) {
+026411:         const doc = new DOMParser().parseFromString(html, 'text/html');
+026412: 
+026413:         const candidateTables =
+026414:             Array.from(
+026415:                 doc.querySelectorAll(
+026416:                     'table.table, table'
+026417:                 )
+026418:             );
+026419: 
+--- lines 26319-26434; match 26354 ---
+026319:                     amountText
+026320:                 );
+026321:             const sarRequirements =
+026322:                 getMissionDefinitionSarPersonnelVehicleRequirements(
+026323:                     rawRequirementName,
+026324:                     amountText
+026325:                 );
+026326: 
+026327:             if (trainedRequirements.length > 0) {
+026328:                 rows.push({
+026329:                     unitName:
+026330:                         MF_TRAINED_PERSONNEL_ROW_NAME,
+026331:                     stillNeeded:
+026332:                         getTrainedPersonnelVehicleTarget(
+026333:                             trainedRequirements
+026334:                         ),
+026335:                     isTrainedPersonnelRequirement:
+026336:                         true,
+026337:                     personnelTrainingRequirements:
+026338:                         trainedRequirements,
+026339:                     missionDefinitionRequiredPersonnel:
+026340:                         true,
+026341:                     source:
+026342:                         'mission-definition-required-personnel'
+026343:                 });
+026344:             }
+026345: 
+026346:             sarRequirements.forEach(conversion => {
+026347:                 rows.push({
+026348:                     unitName:
+026349:                         conversion.unitName,
+026350:                     stillNeeded:
+026351:                         conversion.stillNeeded,
+026352:                     personnelRequirement:
+026353:                         conversion.personnelRequirement,
+026354:                     missionDefinitionRequiredPersonnel:
+026355:                         true,
+026356:                     source:
+026357:                         'mission-definition-required-personnel'
+026358:                 });
+026359:             });
+026360: 
+026361:             if (
+026362:                 mfDebugEnabled &&
+026363:                 (
+026364:                     trainedRequirements.length > 0 ||
+026365:                     sarRequirements.length > 0
+026366:                 )
+026367:             ) {
+026368:                 const parts = [];
+026369: 
+026370:                 if (trainedRequirements.length > 0) {
+026371:                     parts.push(
+026372:                         formatTrainedPersonnelRequirements(
+026373:                             trainedRequirements
+026374:                         )
+026375:                     );
+026376:                 }
+026377: 
+026378:                 sarRequirements.forEach(conversion => {
+026379:                     parts.push(
+026380:                         `${conversion.personnelRequirement} -> ${conversion.unitName} x${conversion.stillNeeded}`
+026381:                     );
+026382:                 });
+026383: 
+026384:                 debugLog(
+026385:                     'UNIT FINDER OTHER INFORMATION REQUIRED PERSONNEL',
+026386:                     parts.join(' | ')
+026387:                 );
+026388:             }
+026389:         });
+026390: 
+026391:         try {
+026392:             Object.defineProperties(
+026393:                 rows,
+026394:                 {
+026395:                     missionDefinitionRequiredPersonnelFound: {
+026396:                         value: requiredPersonnelRowFound,
+026397:                         enumerable: false
+026398:                     },
+026399:                     rawMissionDefinitionRequiredPersonnelRows: {
+026400:                         value: rawRows,
+026401:                         enumerable: false
+026402:                     }
+026403:                 }
+026404:             );
+026405:         } catch (_error) {}
+026406: 
+026407:         return rows;
+026408:     }
+026409: 
+026410:     function extractLiveMissionRequirementRows(html) {
+026411:         const doc = new DOMParser().parseFromString(html, 'text/html');
+026412: 
+026413:         const candidateTables =
+026414:             Array.from(
+026415:                 doc.querySelectorAll(
+026416:                     'table.table, table'
+026417:                 )
+026418:             );
+026419: 
+026420:         const table =
+026421:             findMissionRequirementTable(
+026422:                 doc,
+026423:                 candidateTables
+026424:             );
+026425: 
+026426:         if (
+026427:             mfDebugEnabled
+026428:         ) {
+026429:             debugLog(
+026430:                 'UNIT FINDER ATTACHMENT TABLE',
+026431:                 table
+026432:                     ? 'Found exact Vehicle and Personnel Requirements table.'
+026433:                     : `No exact Vehicle and Personnel Requirements table found among ${candidateTables.length} table(s).`
+026434:             );
+--- lines 26360-26475; match 26395 ---
+026360: 
+026361:             if (
+026362:                 mfDebugEnabled &&
+026363:                 (
+026364:                     trainedRequirements.length > 0 ||
+026365:                     sarRequirements.length > 0
+026366:                 )
+026367:             ) {
+026368:                 const parts = [];
+026369: 
+026370:                 if (trainedRequirements.length > 0) {
+026371:                     parts.push(
+026372:                         formatTrainedPersonnelRequirements(
+026373:                             trainedRequirements
+026374:                         )
+026375:                     );
+026376:                 }
+026377: 
+026378:                 sarRequirements.forEach(conversion => {
+026379:                     parts.push(
+026380:                         `${conversion.personnelRequirement} -> ${conversion.unitName} x${conversion.stillNeeded}`
+026381:                     );
+026382:                 });
+026383: 
+026384:                 debugLog(
+026385:                     'UNIT FINDER OTHER INFORMATION REQUIRED PERSONNEL',
+026386:                     parts.join(' | ')
+026387:                 );
+026388:             }
+026389:         });
+026390: 
+026391:         try {
+026392:             Object.defineProperties(
+026393:                 rows,
+026394:                 {
+026395:                     missionDefinitionRequiredPersonnelFound: {
+026396:                         value: requiredPersonnelRowFound,
+026397:                         enumerable: false
+026398:                     },
+026399:                     rawMissionDefinitionRequiredPersonnelRows: {
+026400:                         value: rawRows,
+026401:                         enumerable: false
+026402:                     }
+026403:                 }
+026404:             );
+026405:         } catch (_error) {}
+026406: 
+026407:         return rows;
+026408:     }
+026409: 
+026410:     function extractLiveMissionRequirementRows(html) {
+026411:         const doc = new DOMParser().parseFromString(html, 'text/html');
+026412: 
+026413:         const candidateTables =
+026414:             Array.from(
+026415:                 doc.querySelectorAll(
+026416:                     'table.table, table'
+026417:                 )
+026418:             );
+026419: 
+026420:         const table =
+026421:             findMissionRequirementTable(
+026422:                 doc,
+026423:                 candidateTables
+026424:             );
+026425: 
+026426:         if (
+026427:             mfDebugEnabled
+026428:         ) {
+026429:             debugLog(
+026430:                 'UNIT FINDER ATTACHMENT TABLE',
+026431:                 table
+026432:                     ? 'Found exact Vehicle and Personnel Requirements table.'
+026433:                     : `No exact Vehicle and Personnel Requirements table found among ${candidateTables.length} table(s).`
+026434:             );
+026435:         }
+026436: 
+026437:         const rows = [];
+026438:         mfLastMissionDefinitionRawRows = [];
+026439: 
+026440:         if (table) {
+026441:             mfLastMissionDefinitionRawRows = Array.from(
+026442:                 table.querySelectorAll('tbody tr, tr')
+026443:             ).map(tr => {
+026444:                 const cells = Array.from(
+026445:                     tr.querySelectorAll('td')
+026446:                 );
+026447: 
+026448:                 return {
+026449:                     label: String(cells[0]?.textContent || '')
+026450:                         .replace(/\s+/g, ' ')
+026451:                         .trim(),
+026452:                     value: String(cells[1]?.textContent || '')
+026453:                         .replace(/\s+/g, ' ')
+026454:                         .trim()
+026455:                 };
+026456:             }).filter(row => row.label || row.value);
+026457: 
+026458:             table.querySelectorAll('tbody tr, tr').forEach(tr => {
+026459:                 const cells = Array.from(tr.querySelectorAll('td')).map(td => td.textContent.replace(/\s+/g, ' ').trim());
+026460:                 if (cells.length < 2) return;
+026461: 
+026462:                 const rawRequirementName = cells[0];
+026463:                 const originalName = cleanRequirementName(rawRequirementName);
+026464:                 const amountText = cells[1].replace(/\s+/g, ' ').trim();
+026465: 
+026466:                 if (
+026467:                     shouldIgnoreRequiredMinimumRequirement(rawRequirementName) ||
+026468:                     shouldIgnoreRequiredMinimumRequirement(originalName)
+026469:                 ) {
+026470:                     return;
+026471:                 }
+026472: 
+026473:                 if (mfDebugEnabled) {
+026474:                     debugLog(
+026475:                         'UNIT FINDER ATTACHMENT ROW',
+--- lines 26361-26476; match 26396 ---
+026361:             if (
+026362:                 mfDebugEnabled &&
+026363:                 (
+026364:                     trainedRequirements.length > 0 ||
+026365:                     sarRequirements.length > 0
+026366:                 )
+026367:             ) {
+026368:                 const parts = [];
+026369: 
+026370:                 if (trainedRequirements.length > 0) {
+026371:                     parts.push(
+026372:                         formatTrainedPersonnelRequirements(
+026373:                             trainedRequirements
+026374:                         )
+026375:                     );
+026376:                 }
+026377: 
+026378:                 sarRequirements.forEach(conversion => {
+026379:                     parts.push(
+026380:                         `${conversion.personnelRequirement} -> ${conversion.unitName} x${conversion.stillNeeded}`
+026381:                     );
+026382:                 });
+026383: 
+026384:                 debugLog(
+026385:                     'UNIT FINDER OTHER INFORMATION REQUIRED PERSONNEL',
+026386:                     parts.join(' | ')
+026387:                 );
+026388:             }
+026389:         });
+026390: 
+026391:         try {
+026392:             Object.defineProperties(
+026393:                 rows,
+026394:                 {
+026395:                     missionDefinitionRequiredPersonnelFound: {
+026396:                         value: requiredPersonnelRowFound,
+026397:                         enumerable: false
+026398:                     },
+026399:                     rawMissionDefinitionRequiredPersonnelRows: {
+026400:                         value: rawRows,
+026401:                         enumerable: false
+026402:                     }
+026403:                 }
+026404:             );
+026405:         } catch (_error) {}
+026406: 
+026407:         return rows;
+026408:     }
+026409: 
+026410:     function extractLiveMissionRequirementRows(html) {
+026411:         const doc = new DOMParser().parseFromString(html, 'text/html');
+026412: 
+026413:         const candidateTables =
+026414:             Array.from(
+026415:                 doc.querySelectorAll(
+026416:                     'table.table, table'
+026417:                 )
+026418:             );
+026419: 
+026420:         const table =
+026421:             findMissionRequirementTable(
+026422:                 doc,
+026423:                 candidateTables
+026424:             );
+026425: 
+026426:         if (
+026427:             mfDebugEnabled
+026428:         ) {
+026429:             debugLog(
+026430:                 'UNIT FINDER ATTACHMENT TABLE',
+026431:                 table
+026432:                     ? 'Found exact Vehicle and Personnel Requirements table.'
+026433:                     : `No exact Vehicle and Personnel Requirements table found among ${candidateTables.length} table(s).`
+026434:             );
+026435:         }
+026436: 
+026437:         const rows = [];
+026438:         mfLastMissionDefinitionRawRows = [];
+026439: 
+026440:         if (table) {
+026441:             mfLastMissionDefinitionRawRows = Array.from(
+026442:                 table.querySelectorAll('tbody tr, tr')
+026443:             ).map(tr => {
+026444:                 const cells = Array.from(
+026445:                     tr.querySelectorAll('td')
+026446:                 );
+026447: 
+026448:                 return {
+026449:                     label: String(cells[0]?.textContent || '')
+026450:                         .replace(/\s+/g, ' ')
+026451:                         .trim(),
+026452:                     value: String(cells[1]?.textContent || '')
+026453:                         .replace(/\s+/g, ' ')
+026454:                         .trim()
+026455:                 };
+026456:             }).filter(row => row.label || row.value);
+026457: 
+026458:             table.querySelectorAll('tbody tr, tr').forEach(tr => {
+026459:                 const cells = Array.from(tr.querySelectorAll('td')).map(td => td.textContent.replace(/\s+/g, ' ').trim());
+026460:                 if (cells.length < 2) return;
+026461: 
+026462:                 const rawRequirementName = cells[0];
+026463:                 const originalName = cleanRequirementName(rawRequirementName);
+026464:                 const amountText = cells[1].replace(/\s+/g, ' ').trim();
+026465: 
+026466:                 if (
+026467:                     shouldIgnoreRequiredMinimumRequirement(rawRequirementName) ||
+026468:                     shouldIgnoreRequiredMinimumRequirement(originalName)
+026469:                 ) {
+026470:                     return;
+026471:                 }
+026472: 
+026473:                 if (mfDebugEnabled) {
+026474:                     debugLog(
+026475:                         'UNIT FINDER ATTACHMENT ROW',
+026476:                         `${originalName || '(blank)'} | value=${amountText}`
+--- lines 26364-26479; match 26399 ---
+026364:                     trainedRequirements.length > 0 ||
+026365:                     sarRequirements.length > 0
+026366:                 )
+026367:             ) {
+026368:                 const parts = [];
+026369: 
+026370:                 if (trainedRequirements.length > 0) {
+026371:                     parts.push(
+026372:                         formatTrainedPersonnelRequirements(
+026373:                             trainedRequirements
+026374:                         )
+026375:                     );
+026376:                 }
+026377: 
+026378:                 sarRequirements.forEach(conversion => {
+026379:                     parts.push(
+026380:                         `${conversion.personnelRequirement} -> ${conversion.unitName} x${conversion.stillNeeded}`
+026381:                     );
+026382:                 });
+026383: 
+026384:                 debugLog(
+026385:                     'UNIT FINDER OTHER INFORMATION REQUIRED PERSONNEL',
+026386:                     parts.join(' | ')
+026387:                 );
+026388:             }
+026389:         });
+026390: 
+026391:         try {
+026392:             Object.defineProperties(
+026393:                 rows,
+026394:                 {
+026395:                     missionDefinitionRequiredPersonnelFound: {
+026396:                         value: requiredPersonnelRowFound,
+026397:                         enumerable: false
+026398:                     },
+026399:                     rawMissionDefinitionRequiredPersonnelRows: {
+026400:                         value: rawRows,
+026401:                         enumerable: false
+026402:                     }
+026403:                 }
+026404:             );
+026405:         } catch (_error) {}
+026406: 
+026407:         return rows;
+026408:     }
+026409: 
+026410:     function extractLiveMissionRequirementRows(html) {
+026411:         const doc = new DOMParser().parseFromString(html, 'text/html');
+026412: 
+026413:         const candidateTables =
+026414:             Array.from(
+026415:                 doc.querySelectorAll(
+026416:                     'table.table, table'
+026417:                 )
+026418:             );
+026419: 
+026420:         const table =
+026421:             findMissionRequirementTable(
+026422:                 doc,
+026423:                 candidateTables
+026424:             );
+026425: 
+026426:         if (
+026427:             mfDebugEnabled
+026428:         ) {
+026429:             debugLog(
+026430:                 'UNIT FINDER ATTACHMENT TABLE',
+026431:                 table
+026432:                     ? 'Found exact Vehicle and Personnel Requirements table.'
+026433:                     : `No exact Vehicle and Personnel Requirements table found among ${candidateTables.length} table(s).`
+026434:             );
+026435:         }
+026436: 
+026437:         const rows = [];
+026438:         mfLastMissionDefinitionRawRows = [];
+026439: 
+026440:         if (table) {
+026441:             mfLastMissionDefinitionRawRows = Array.from(
+026442:                 table.querySelectorAll('tbody tr, tr')
+026443:             ).map(tr => {
+026444:                 const cells = Array.from(
+026445:                     tr.querySelectorAll('td')
+026446:                 );
+026447: 
+026448:                 return {
+026449:                     label: String(cells[0]?.textContent || '')
+026450:                         .replace(/\s+/g, ' ')
+026451:                         .trim(),
+026452:                     value: String(cells[1]?.textContent || '')
+026453:                         .replace(/\s+/g, ' ')
+026454:                         .trim()
+026455:                 };
+026456:             }).filter(row => row.label || row.value);
+026457: 
+026458:             table.querySelectorAll('tbody tr, tr').forEach(tr => {
+026459:                 const cells = Array.from(tr.querySelectorAll('td')).map(td => td.textContent.replace(/\s+/g, ' ').trim());
+026460:                 if (cells.length < 2) return;
+026461: 
+026462:                 const rawRequirementName = cells[0];
+026463:                 const originalName = cleanRequirementName(rawRequirementName);
+026464:                 const amountText = cells[1].replace(/\s+/g, ' ').trim();
+026465: 
+026466:                 if (
+026467:                     shouldIgnoreRequiredMinimumRequirement(rawRequirementName) ||
+026468:                     shouldIgnoreRequiredMinimumRequirement(originalName)
+026469:                 ) {
+026470:                     return;
+026471:                 }
+026472: 
+026473:                 if (mfDebugEnabled) {
+026474:                     debugLog(
+026475:                         'UNIT FINDER ATTACHMENT ROW',
+026476:                         `${originalName || '(blank)'} | value=${amountText}`
+026477:                     );
+026478:                 }
+026479: 
+===== 'requirementsSnapshot': 0 matches =====
+===== 'missionDefinition': 40 matches =====
+--- lines 13066-13181; match 13101 ---
+013066:         "Welfare Vehicle x1": "OSU",
+013067:         "Welfare Vehicles x1": "OSU",
+013068:         "HazMat Unit or CBRN Vehicle x1": "OSU",
+013069:         "HazMat Units or CBRN Vehicles x1": "OSU",
+013070:         "Operational Support Unit x1": "OSU",
+013071:         "Operational Support Units x1": "OSU",
+013072:     };
+013073: 
+013074:     const crossReferenceNormalisedLookup = new Map(
+013075:         Object.entries(crossReference).map(([key, value]) => [
+013076:             String(key || '').replace(/\s+/g, ' ').trim().toLowerCase(),
+013077:             value
+013078:         ])
+013079:     );
+013080: 
+013081:     let vehicleLoadState = {
+013082:         rows: [],
+013083:         patients: 0,
+013084:         ambulances: 0,
+013085:         ambulanceOfficer: false,
+013086:         ready: false
+013087:     };
+013088: 
+013089:     const MF_UNIT_FINDER_DIAGNOSTICS_KEY =
+013090:         'mf_unit_finder_diagnostics_v1';
+013091:     const MF_UNIT_FINDER_DIAGNOSTICS_LIMIT = 24;
+013092:     const MF_UNIT_FINDER_DIAGNOSTICS_MAX_STORAGE_CHARS = 750000;
+013093:     let mfUnitFinderDiagnosticContext = {
+013094:         missionKey: '',
+013095:         mode: 'idle',
+013096:         sourceLabel: '',
+013097:         suppliedRows: [],
+013098:         processedRows: [],
+013099:         updatedAt: 0
+013100:     };
+013101:     let mfLastMissionDefinitionRawRows = [];
+013102:     let mfLastUnitFinderDiagnosticSignature = '';
+013103: 
+013104: 
+013105:     // V9.2.1: selection protection. This stops the same source asking for the same vehicle twice
+013106:     // during one Unit Finder / Auto Mode cycle. Counters are visual only and never drive dispatch.
+013107:     let processedSelectionKeys = new Set();
+013108: 
+013109:     function buildSelectionKey(source, originalName, mappedName, amount) {
+013110:         // Include the original requirement as well as the mapped unit.
+013111:         // Different requirements can legitimately map to similar/related vehicles,
+013112:         // so mapped-name-only guards can wrongly block valid dispatches.
+013113:         return `${String(source || 'UNKNOWN').toUpperCase()}|${normaliseVehicleText(originalName)}|${normaliseVehicleText(mappedName)}|${Math.max(0, parseInt(amount, 10) || 0)}`;
+013114:     }
+013115: 
+013116:     function clearSelectionGuards() {
+013117:         processedSelectionKeys = new Set();
+013118:     }
+013119: 
+013120:     function withTimeout(promise, timeoutMs, label) {
+013121:         return new Promise((resolve, reject) => {
+013122:             const timeoutId = setTimeout(() => {
+013123:                 reject(
+013124:                     new Error(
+013125:                         `${label || 'Operation'} timed out after ${timeoutMs}ms`
+013126:                     )
+013127:                 );
+013128:             }, timeoutMs);
+013129: 
+013130:             Promise.resolve(promise).then(
+013131:                 value => {
+013132:                     clearTimeout(timeoutId);
+013133:                     resolve(value);
+013134:                 },
+013135:                 error => {
+013136:                     clearTimeout(timeoutId);
+013137:                     reject(error);
+013138:                 }
+013139:             );
+013140:         });
+013141:     }
+013142: 
+013143:     // V10.6.52 compatibility stubs. Existing operational code can retain its
+013144:     // guarded diagnostic calls without creating log arrays, timers, DOM nodes
+013145:     // or browser-console history.
+013146:     function debugLog() {}
+013147:     function highDebugLog() {}
+013148:     function setDebugEnabled() {}
+013149:     function setHighDebugEnabled() {}
+013150:     function clearDebugLog() {}
+013151:     async function copyDebugLog() {}
+013152:     function renderDebugPanelNow() {}
+013153:     function renderDebugPanel() {}
+013154: 
+013155: 
+013156:     function mfSerialiseDiagnosticTrainingRequirement(requirement) {
+013157:         if (!requirement || typeof requirement !== 'object') return null;
+013158: 
+013159:         return {
+013160:             code: String(requirement.code || ''),
+013161:             label: String(requirement.label || ''),
+013162:             required: Math.max(0, parseInt(requirement.required, 10) || 0),
+013163:             personnelRequired: Math.max(
+013164:                 0,
+013165:                 parseInt(requirement.personnelRequired, 10) || 0
+013166:             ),
+013167:             requirementType: String(requirement.requirementType || ''),
+013168:             requiredTrainingCodes: Array.isArray(requirement.requiredTrainingCodes)
+013169:                 ? requirement.requiredTrainingCodes.map(String)
+013170:                 : [],
+013171:             eligibleVehicleTypeIds: Array.isArray(requirement.eligibleVehicleTypeIds)
+013172:                 ? requirement.eligibleVehicleTypeIds.map(String)
+013173:                 : []
+013174:         };
+013175:     }
+013176: 
+013177:     function mfSerialiseDiagnosticRequirementRow(row) {
+013178:         if (!row || typeof row !== 'object') return null;
+013179: 
+013180:         const details = row.liveRequirementDetails || null;
+013181: 
+-- contained context omitted; match line 13190 --
+-- contained context omitted; match line 13191 --
+--- lines 13623-13738; match 13658 ---
+013623:             schemaVersion: 1,
+013624:             capturedAt: new Date().toISOString(),
+013625:             capturedAtUnix: Date.now(),
+013626:             reason: String(reason || 'manual-export'),
+013627:             versions: {
+013628:                 commandNexus: '1.0.74',
+013629:                 missionFinder: 'V10.6.137',
+013630:                 personnelAssignment: '1.3.8'
+013631:             },
+013632:             mission: {
+013633:                 missionId:
+013634:                     getCurrentMissionIdForQueueRestart() || '',
+013635:                 missionKey:
+013636:                     getLocalMissionInstanceKey() || '',
+013637:                 missionName:
+013638:                     getCurrentMissionName() || '',
+013639:                 pageUrl: String(window.location.href || ''),
+013640:                 host: String(window.location.host || '')
+013641:             },
+013642:             execution: {
+013643:                 autoModeRunning:
+013644:                     autoModeRunning === true ||
+013645:                     sessionStorage.getItem(
+013646:                         'mf_auto_mode_running'
+013647:                     ) === 'true',
+013648:                 ready: vehicleLoadState.ready === true,
+013649:                 staffingBlockActive:
+013650:                     mfStaffingBlockActive === true,
+013651:                 staffingBlockText:
+013652:                     String(mfStaffingBlockText || ''),
+013653:                 processedSelectionKeys:
+013654:                     Array.from(processedSelectionKeys || [])
+013655:             },
+013656:             requirementContext: {
+013657:                 ...mfUnitFinderDiagnosticContext,
+013658:                 missionDefinitionRawRows:
+013659:                     mfLastMissionDefinitionRawRows.map(row => ({
+013660:                         label: String(row.label || ''),
+013661:                         value: String(row.value || '')
+013662:                     })),
+013663:                 currentLiveRequirementRows:
+013664:                     mfSerialiseDiagnosticRequirementRows(liveRows),
+013665:                 visibleAlerts:
+013666:                     mfGetDiagnosticVisibleAlerts()
+013667:             },
+013668:             selectionSummary: {
+013669:                 vehicleLoadState: {
+013670:                     rows: vehicleLoadState.rows.map(row => ({
+013671:                         originalName: String(row.originalName || ''),
+013672:                         mappedName: String(row.mappedName || ''),
+013673:                         required: Math.max(
+013674:                             0,
+013675:                             parseInt(row.required, 10) || 0
+013676:                         ),
+013677:                         selected: Math.max(
+013678:                             0,
+013679:                             parseInt(row.selected, 10) || 0
+013680:                         ),
+013681:                         status: String(row.status || '')
+013682:                     })),
+013683:                     patients: Math.max(
+013684:                         0,
+013685:                         parseInt(vehicleLoadState.patients, 10) || 0
+013686:                     ),
+013687:                     ambulances: Math.max(
+013688:                         0,
+013689:                         parseInt(vehicleLoadState.ambulances, 10) || 0
+013690:                     ),
+013691:                     ready: vehicleLoadState.ready === true
+013692:                 },
+013693:                 selectedVehicles
+013694:             },
+013695:             environment: {
+013696:                 language: String(navigator.language || ''),
+013697:                 userAgent: String(navigator.userAgent || '')
+013698:             }
+013699:         };
+013700:     }
+013701: 
+013702:     function mfPersistUnitFinderDiagnostic(reason) {
+013703:         const snapshot =
+013704:             mfBuildUnitFinderDiagnosticSnapshot(reason);
+013705: 
+013706:         const hasUsefulData = !!(
+013707:             snapshot.requirementContext.updatedAt ||
+013708:             snapshot.requirementContext.suppliedRows.length ||
+013709:             snapshot.requirementContext.processedRows.length ||
+013710:             snapshot.requirementContext.currentLiveRequirementRows.length ||
+013711:             snapshot.requirementContext.visibleAlerts.length ||
+013712:             snapshot.selectionSummary.vehicleLoadState.rows.length ||
+013713:             snapshot.selectionSummary.selectedVehicles.length
+013714:         );
+013715: 
+013716:         if (!hasUsefulData) return snapshot;
+013717: 
+013718:         const emptyMissionUpdateSnapshot =
+013719:             reason === 'not-ready' &&
+013720:             snapshot.requirementContext.mode === 'mission-update' &&
+013721:             snapshot.requirementContext.suppliedRows.length === 0 &&
+013722:             snapshot.requirementContext.processedRows.length === 0 &&
+013723:             snapshot.requirementContext.currentLiveRequirementRows.length === 0 &&
+013724:             snapshot.requirementContext.visibleAlerts.length === 0 &&
+013725:             snapshot.selectionSummary.vehicleLoadState.rows.length === 0;
+013726: 
+013727:         if (emptyMissionUpdateSnapshot) return snapshot;
+013728: 
+013729:         const signature = JSON.stringify({
+013730:             mission: snapshot.mission.missionKey || snapshot.mission.missionId,
+013731:             reason: snapshot.reason,
+013732:             mode: snapshot.requirementContext.mode,
+013733:             source: snapshot.requirementContext.sourceLabel,
+013734:             ready: snapshot.execution.ready,
+013735:             rows: snapshot.selectionSummary.vehicleLoadState.rows,
+013736:             selected: snapshot.selectionSummary.selectedVehicles
+013737:                 .map(vehicle => vehicle.vehicleId || vehicle.vehicleName)
+013738:         });
+--- lines 13624-13739; match 13659 ---
+013624:             capturedAt: new Date().toISOString(),
+013625:             capturedAtUnix: Date.now(),
+013626:             reason: String(reason || 'manual-export'),
+013627:             versions: {
+013628:                 commandNexus: '1.0.74',
+013629:                 missionFinder: 'V10.6.137',
+013630:                 personnelAssignment: '1.3.8'
+013631:             },
+013632:             mission: {
+013633:                 missionId:
+013634:                     getCurrentMissionIdForQueueRestart() || '',
+013635:                 missionKey:
+013636:                     getLocalMissionInstanceKey() || '',
+013637:                 missionName:
+013638:                     getCurrentMissionName() || '',
+013639:                 pageUrl: String(window.location.href || ''),
+013640:                 host: String(window.location.host || '')
+013641:             },
+013642:             execution: {
+013643:                 autoModeRunning:
+013644:                     autoModeRunning === true ||
+013645:                     sessionStorage.getItem(
+013646:                         'mf_auto_mode_running'
+013647:                     ) === 'true',
+013648:                 ready: vehicleLoadState.ready === true,
+013649:                 staffingBlockActive:
+013650:                     mfStaffingBlockActive === true,
+013651:                 staffingBlockText:
+013652:                     String(mfStaffingBlockText || ''),
+013653:                 processedSelectionKeys:
+013654:                     Array.from(processedSelectionKeys || [])
+013655:             },
+013656:             requirementContext: {
+013657:                 ...mfUnitFinderDiagnosticContext,
+013658:                 missionDefinitionRawRows:
+013659:                     mfLastMissionDefinitionRawRows.map(row => ({
+013660:                         label: String(row.label || ''),
+013661:                         value: String(row.value || '')
+013662:                     })),
+013663:                 currentLiveRequirementRows:
+013664:                     mfSerialiseDiagnosticRequirementRows(liveRows),
+013665:                 visibleAlerts:
+013666:                     mfGetDiagnosticVisibleAlerts()
+013667:             },
+013668:             selectionSummary: {
+013669:                 vehicleLoadState: {
+013670:                     rows: vehicleLoadState.rows.map(row => ({
+013671:                         originalName: String(row.originalName || ''),
+013672:                         mappedName: String(row.mappedName || ''),
+013673:                         required: Math.max(
+013674:                             0,
+013675:                             parseInt(row.required, 10) || 0
+013676:                         ),
+013677:                         selected: Math.max(
+013678:                             0,
+013679:                             parseInt(row.selected, 10) || 0
+013680:                         ),
+013681:                         status: String(row.status || '')
+013682:                     })),
+013683:                     patients: Math.max(
+013684:                         0,
+013685:                         parseInt(vehicleLoadState.patients, 10) || 0
+013686:                     ),
+013687:                     ambulances: Math.max(
+013688:                         0,
+013689:                         parseInt(vehicleLoadState.ambulances, 10) || 0
+013690:                     ),
+013691:                     ready: vehicleLoadState.ready === true
+013692:                 },
+013693:                 selectedVehicles
+013694:             },
+013695:             environment: {
+013696:                 language: String(navigator.language || ''),
+013697:                 userAgent: String(navigator.userAgent || '')
+013698:             }
+013699:         };
+013700:     }
+013701: 
+013702:     function mfPersistUnitFinderDiagnostic(reason) {
+013703:         const snapshot =
+013704:             mfBuildUnitFinderDiagnosticSnapshot(reason);
+013705: 
+013706:         const hasUsefulData = !!(
+013707:             snapshot.requirementContext.updatedAt ||
+013708:             snapshot.requirementContext.suppliedRows.length ||
+013709:             snapshot.requirementContext.processedRows.length ||
+013710:             snapshot.requirementContext.currentLiveRequirementRows.length ||
+013711:             snapshot.requirementContext.visibleAlerts.length ||
+013712:             snapshot.selectionSummary.vehicleLoadState.rows.length ||
+013713:             snapshot.selectionSummary.selectedVehicles.length
+013714:         );
+013715: 
+013716:         if (!hasUsefulData) return snapshot;
+013717: 
+013718:         const emptyMissionUpdateSnapshot =
+013719:             reason === 'not-ready' &&
+013720:             snapshot.requirementContext.mode === 'mission-update' &&
+013721:             snapshot.requirementContext.suppliedRows.length === 0 &&
+013722:             snapshot.requirementContext.processedRows.length === 0 &&
+013723:             snapshot.requirementContext.currentLiveRequirementRows.length === 0 &&
+013724:             snapshot.requirementContext.visibleAlerts.length === 0 &&
+013725:             snapshot.selectionSummary.vehicleLoadState.rows.length === 0;
+013726: 
+013727:         if (emptyMissionUpdateSnapshot) return snapshot;
+013728: 
+013729:         const signature = JSON.stringify({
+013730:             mission: snapshot.mission.missionKey || snapshot.mission.missionId,
+013731:             reason: snapshot.reason,
+013732:             mode: snapshot.requirementContext.mode,
+013733:             source: snapshot.requirementContext.sourceLabel,
+013734:             ready: snapshot.execution.ready,
+013735:             rows: snapshot.selectionSummary.vehicleLoadState.rows,
+013736:             selected: snapshot.selectionSummary.selectedVehicles
+013737:                 .map(vehicle => vehicle.vehicleId || vehicle.vehicleName)
+013738:         });
+013739: 
+--- lines 25901-26016; match 25936 ---
+025901:             }
+025902:         ];
+025903: 
+025904:         const definition =
+025905:             definitions.find(item =>
+025906:                 item.pattern.test(
+025907:                     cleanedName
+025908:                 )
+025909:             );
+025910: 
+025911:         if (!definition) {
+025912:             return null;
+025913:         }
+025914: 
+025915:         const vehicleRequired =
+025916:             Math.ceil(
+025917:                 personnelRequired /
+025918:                 definition.personnelPerVehicle
+025919:             );
+025920: 
+025921:         return {
+025922:             sourceName:
+025923:                 cleanedName,
+025924:             personnelRequired,
+025925:             personnelRequirement:
+025926:                 `${personnelRequired} ${definition.personnelLabel}${personnelRequired === 1 ? '' : 's'}`,
+025927:             personnelPerVehicle:
+025928:                 definition.personnelPerVehicle,
+025929:             unitName:
+025930:                 definition.unitName,
+025931:             stillNeeded:
+025932:                 vehicleRequired
+025933:         };
+025934:     }
+025935: 
+025936:     function getMissionDefinitionSarPersonnelVehicleRequirements(
+025937:         requirementName,
+025938:         personnelText
+025939:     ) {
+025940:         const cleanedName =
+025941:             cleanRequirementName(requirementName);
+025942: 
+025943:         // Only the mission-definition "Required Personnel" row is actionable.
+025944:         // "Required Personnel Available" belongs to Reward and Precondition and
+025945:         // must never create dispatch demand.
+025946:         if (!/^Personnel(?:\s+Requirements?)?$/i.test(cleanedName)) {
+025947:             return [];
+025948:         }
+025949: 
+025950:         const input = String(personnelText || '')
+025951:             .replace(/[×✕]/g, 'x')
+025952:             .replace(/\s+/g, ' ')
+025953:             .trim();
+025954: 
+025955:         if (!input) return [];
+025956: 
+025957:         const definitions = [
+025958:             {
+025959:                 name: 'Search Technician',
+025960:                 patterns: [
+025961:                     /(\d+)\s*(?:x\s*)?Search\s+Technician(?:s)?/gi,
+025962:                     /Search\s+Technician(?:s)?\s*(?:x\s*)?(\d+)/gi
+025963:                 ]
+025964:             },
+025965:             {
+025966:                 name: 'SAR Commander',
+025967:                 patterns: [
+025968:                     /(\d+)\s*(?:x\s*)?SAR\s+Commander(?:s)?/gi,
+025969:                     /SAR\s+Commander(?:s)?\s*(?:x\s*)?(\d+)/gi
+025970:                 ]
+025971:             }
+025972:         ];
+025973: 
+025974:         const conversions = [];
+025975: 
+025976:         definitions.forEach(definition => {
+025977:             let maximumRequired = 0;
+025978: 
+025979:             definition.patterns.forEach(pattern => {
+025980:                 pattern.lastIndex = 0;
+025981:                 let match;
+025982: 
+025983:                 while ((match = pattern.exec(input))) {
+025984:                     const patternIsPrefix =
+025985:                         pattern.source.startsWith('(\\d+)');
+025986:                     const trailingText = input.slice(pattern.lastIndex);
+025987: 
+025988:                     if (
+025989:                         !patternIsPrefix &&
+025990:                         /^\s*x(?=\s|[A-Za-z])/i.test(trailingText)
+025991:                     ) {
+025992:                         continue;
+025993:                     }
+025994: 
+025995:                     maximumRequired = Math.max(
+025996:                         maximumRequired,
+025997:                         Math.max(0, parseInt(match[1], 10) || 0)
+025998:                     );
+025999:                 }
+026000:             });
+026001: 
+026002:             if (maximumRequired <= 0) return;
+026003: 
+026004:             const conversion =
+026005:                 getSarPersonnelVehicleRequirement(
+026006:                     definition.name,
+026007:                     maximumRequired
+026008:                 );
+026009: 
+026010:             if (conversion) conversions.push(conversion);
+026011:         });
+026012: 
+026013:         return conversions;
+026014:     }
+026015: 
+026016:     function getSearchAdvisorTrainedVehicleRequirement(
+-- contained context omitted; match line 26253 --
+--- lines 26282-26397; match 26317 ---
+026282:                     .trim();
+026283:             });
+026284: 
+026285:             if (cells.length < 2) return;
+026286: 
+026287:             const rawRequirementName = cells[0];
+026288:             const cleanedName =
+026289:                 cleanRequirementName(
+026290:                     rawRequirementName
+026291:                 );
+026292: 
+026293:             // This exact gate accepts Required Personnel (including a
+026294:             // percentage suffix normalised by cleanRequirementName) while
+026295:             // rejecting the Reward and Precondition row Required Personnel
+026296:             // Available.
+026297:             if (
+026298:                 !/^Personnel(?:\s+Requirements?)?$/i.test(
+026299:                     cleanedName
+026300:                 )
+026301:             ) {
+026302:                 return;
+026303:             }
+026304: 
+026305:             requiredPersonnelRowFound = true;
+026306: 
+026307:             const amountText = String(cells[1] || '')
+026308:                 .replace(/\s+/g, ' ')
+026309:                 .trim();
+026310: 
+026311:             rawRows.push({
+026312:                 label: rawRequirementName,
+026313:                 value: amountText
+026314:             });
+026315: 
+026316:             const trainedRequirements =
+026317:                 getMissionDefinitionTrainedPersonnelRequirements(
+026318:                     rawRequirementName,
+026319:                     amountText
+026320:                 );
+026321:             const sarRequirements =
+026322:                 getMissionDefinitionSarPersonnelVehicleRequirements(
+026323:                     rawRequirementName,
+026324:                     amountText
+026325:                 );
+026326: 
+026327:             if (trainedRequirements.length > 0) {
+026328:                 rows.push({
+026329:                     unitName:
+026330:                         MF_TRAINED_PERSONNEL_ROW_NAME,
+026331:                     stillNeeded:
+026332:                         getTrainedPersonnelVehicleTarget(
+026333:                             trainedRequirements
+026334:                         ),
+026335:                     isTrainedPersonnelRequirement:
+026336:                         true,
+026337:                     personnelTrainingRequirements:
+026338:                         trainedRequirements,
+026339:                     missionDefinitionRequiredPersonnel:
+026340:                         true,
+026341:                     source:
+026342:                         'mission-definition-required-personnel'
+026343:                 });
+026344:             }
+026345: 
+026346:             sarRequirements.forEach(conversion => {
+026347:                 rows.push({
+026348:                     unitName:
+026349:                         conversion.unitName,
+026350:                     stillNeeded:
+026351:                         conversion.stillNeeded,
+026352:                     personnelRequirement:
+026353:                         conversion.personnelRequirement,
+026354:                     missionDefinitionRequiredPersonnel:
+026355:                         true,
+026356:                     source:
+026357:                         'mission-definition-required-personnel'
+026358:                 });
+026359:             });
+026360: 
+026361:             if (
+026362:                 mfDebugEnabled &&
+026363:                 (
+026364:                     trainedRequirements.length > 0 ||
+026365:                     sarRequirements.length > 0
+026366:                 )
+026367:             ) {
+026368:                 const parts = [];
+026369: 
+026370:                 if (trainedRequirements.length > 0) {
+026371:                     parts.push(
+026372:                         formatTrainedPersonnelRequirements(
+026373:                             trainedRequirements
+026374:                         )
+026375:                     );
+026376:                 }
+026377: 
+026378:                 sarRequirements.forEach(conversion => {
+026379:                     parts.push(
+026380:                         `${conversion.personnelRequirement} -> ${conversion.unitName} x${conversion.stillNeeded}`
+026381:                     );
+026382:                 });
+026383: 
+026384:                 debugLog(
+026385:                     'UNIT FINDER OTHER INFORMATION REQUIRED PERSONNEL',
+026386:                     parts.join(' | ')
+026387:                 );
+026388:             }
+026389:         });
+026390: 
+026391:         try {
+026392:             Object.defineProperties(
+026393:                 rows,
+026394:                 {
+026395:                     missionDefinitionRequiredPersonnelFound: {
+026396:                         value: requiredPersonnelRowFound,
+026397:                         enumerable: false
+--- lines 26287-26402; match 26322 ---
+026287:             const rawRequirementName = cells[0];
+026288:             const cleanedName =
+026289:                 cleanRequirementName(
+026290:                     rawRequirementName
+026291:                 );
+026292: 
+026293:             // This exact gate accepts Required Personnel (including a
+026294:             // percentage suffix normalised by cleanRequirementName) while
+026295:             // rejecting the Reward and Precondition row Required Personnel
+026296:             // Available.
+026297:             if (
+026298:                 !/^Personnel(?:\s+Requirements?)?$/i.test(
+026299:                     cleanedName
+026300:                 )
+026301:             ) {
+026302:                 return;
+026303:             }
+026304: 
+026305:             requiredPersonnelRowFound = true;
+026306: 
+026307:             const amountText = String(cells[1] || '')
+026308:                 .replace(/\s+/g, ' ')
+026309:                 .trim();
+026310: 
+026311:             rawRows.push({
+026312:                 label: rawRequirementName,
+026313:                 value: amountText
+026314:             });
+026315: 
+026316:             const trainedRequirements =
+026317:                 getMissionDefinitionTrainedPersonnelRequirements(
+026318:                     rawRequirementName,
+026319:                     amountText
+026320:                 );
+026321:             const sarRequirements =
+026322:                 getMissionDefinitionSarPersonnelVehicleRequirements(
+026323:                     rawRequirementName,
+026324:                     amountText
+026325:                 );
+026326: 
+026327:             if (trainedRequirements.length > 0) {
+026328:                 rows.push({
+026329:                     unitName:
+026330:                         MF_TRAINED_PERSONNEL_ROW_NAME,
+026331:                     stillNeeded:
+026332:                         getTrainedPersonnelVehicleTarget(
+026333:                             trainedRequirements
+026334:                         ),
+026335:                     isTrainedPersonnelRequirement:
+026336:                         true,
+026337:                     personnelTrainingRequirements:
+026338:                         trainedRequirements,
+026339:                     missionDefinitionRequiredPersonnel:
+026340:                         true,
+026341:                     source:
+026342:                         'mission-definition-required-personnel'
+026343:                 });
+026344:             }
+026345: 
+026346:             sarRequirements.forEach(conversion => {
+026347:                 rows.push({
+026348:                     unitName:
+026349:                         conversion.unitName,
+026350:                     stillNeeded:
+026351:                         conversion.stillNeeded,
+026352:                     personnelRequirement:
+026353:                         conversion.personnelRequirement,
+026354:                     missionDefinitionRequiredPersonnel:
+026355:                         true,
+026356:                     source:
+026357:                         'mission-definition-required-personnel'
+026358:                 });
+026359:             });
+026360: 
+026361:             if (
+026362:                 mfDebugEnabled &&
+026363:                 (
+026364:                     trainedRequirements.length > 0 ||
+026365:                     sarRequirements.length > 0
+026366:                 )
+026367:             ) {
+026368:                 const parts = [];
+026369: 
+026370:                 if (trainedRequirements.length > 0) {
+026371:                     parts.push(
+026372:                         formatTrainedPersonnelRequirements(
+026373:                             trainedRequirements
+026374:                         )
+026375:                     );
+026376:                 }
+026377: 
+026378:                 sarRequirements.forEach(conversion => {
+026379:                     parts.push(
+026380:                         `${conversion.personnelRequirement} -> ${conversion.unitName} x${conversion.stillNeeded}`
+026381:                     );
+026382:                 });
+026383: 
+026384:                 debugLog(
+026385:                     'UNIT FINDER OTHER INFORMATION REQUIRED PERSONNEL',
+026386:                     parts.join(' | ')
+026387:                 );
+026388:             }
+026389:         });
+026390: 
+026391:         try {
+026392:             Object.defineProperties(
+026393:                 rows,
+026394:                 {
+026395:                     missionDefinitionRequiredPersonnelFound: {
+026396:                         value: requiredPersonnelRowFound,
+026397:                         enumerable: false
+026398:                     },
+026399:                     rawMissionDefinitionRequiredPersonnelRows: {
+026400:                         value: rawRows,
+026401:                         enumerable: false
+026402:                     }
+-- contained context omitted; match line 26339 --
+-- contained context omitted; match line 26354 --
+-- contained context omitted; match line 26395 --
+-- contained context omitted; match line 26399 --
+--- lines 26403-26518; match 26438 ---
+026403:                 }
+026404:             );
+026405:         } catch (_error) {}
+026406: 
+026407:         return rows;
+026408:     }
+026409: 
+026410:     function extractLiveMissionRequirementRows(html) {
+026411:         const doc = new DOMParser().parseFromString(html, 'text/html');
+026412: 
+026413:         const candidateTables =
+026414:             Array.from(
+026415:                 doc.querySelectorAll(
+026416:                     'table.table, table'
+026417:                 )
+026418:             );
+026419: 
+026420:         const table =
+026421:             findMissionRequirementTable(
+026422:                 doc,
+026423:                 candidateTables
+026424:             );
+026425: 
+026426:         if (
+026427:             mfDebugEnabled
+026428:         ) {
+026429:             debugLog(
+026430:                 'UNIT FINDER ATTACHMENT TABLE',
+026431:                 table
+026432:                     ? 'Found exact Vehicle and Personnel Requirements table.'
+026433:                     : `No exact Vehicle and Personnel Requirements table found among ${candidateTables.length} table(s).`
+026434:             );
+026435:         }
+026436: 
+026437:         const rows = [];
+026438:         mfLastMissionDefinitionRawRows = [];
+026439: 
+026440:         if (table) {
+026441:             mfLastMissionDefinitionRawRows = Array.from(
+026442:                 table.querySelectorAll('tbody tr, tr')
+026443:             ).map(tr => {
+026444:                 const cells = Array.from(
+026445:                     tr.querySelectorAll('td')
+026446:                 );
+026447: 
+026448:                 return {
+026449:                     label: String(cells[0]?.textContent || '')
+026450:                         .replace(/\s+/g, ' ')
+026451:                         .trim(),
+026452:                     value: String(cells[1]?.textContent || '')
+026453:                         .replace(/\s+/g, ' ')
+026454:                         .trim()
+026455:                 };
+026456:             }).filter(row => row.label || row.value);
+026457: 
+026458:             table.querySelectorAll('tbody tr, tr').forEach(tr => {
+026459:                 const cells = Array.from(tr.querySelectorAll('td')).map(td => td.textContent.replace(/\s+/g, ' ').trim());
+026460:                 if (cells.length < 2) return;
+026461: 
+026462:                 const rawRequirementName = cells[0];
+026463:                 const originalName = cleanRequirementName(rawRequirementName);
+026464:                 const amountText = cells[1].replace(/\s+/g, ' ').trim();
+026465: 
+026466:                 if (
+026467:                     shouldIgnoreRequiredMinimumRequirement(rawRequirementName) ||
+026468:                     shouldIgnoreRequiredMinimumRequirement(originalName)
+026469:                 ) {
+026470:                     return;
+026471:                 }
+026472: 
+026473:                 if (mfDebugEnabled) {
+026474:                     debugLog(
+026475:                         'UNIT FINDER ATTACHMENT ROW',
+026476:                         `${originalName || '(blank)'} | value=${amountText}`
+026477:                     );
+026478:                 }
+026479: 
+026480:                 const missionDefinitionPersonnelRequirements =
+026481:                     getMissionDefinitionTrainedPersonnelRequirements(
+026482:                         rawRequirementName,
+026483:                         amountText
+026484:                     );
+026485:                 const missionDefinitionSarPersonnelRequirements =
+026486:                     getMissionDefinitionSarPersonnelVehicleRequirements(
+026487:                         rawRequirementName,
+026488:                         amountText
+026489:                     );
+026490: 
+026491:                 if (
+026492:                     missionDefinitionPersonnelRequirements.length > 0 ||
+026493:                     missionDefinitionSarPersonnelRequirements.length > 0
+026494:                 ) {
+026495:                     if (
+026496:                         missionDefinitionPersonnelRequirements.length > 0
+026497:                     ) {
+026498:                         rows.push({
+026499:                             unitName:
+026500:                                 MF_TRAINED_PERSONNEL_ROW_NAME,
+026501:                             stillNeeded:
+026502:                                 getTrainedPersonnelVehicleTarget(
+026503:                                     missionDefinitionPersonnelRequirements
+026504:                                 ),
+026505:                             isTrainedPersonnelRequirement:
+026506:                                 true,
+026507:                             personnelTrainingRequirements:
+026508:                                 missionDefinitionPersonnelRequirements,
+026509:                             missionDefinitionRequiredPersonnel:
+026510:                                 true,
+026511:                             source:
+026512:                                 'mission-definition-required-personnel'
+026513:                         });
+026514:                     }
+026515: 
+026516:                     missionDefinitionSarPersonnelRequirements
+026517:                         .forEach(conversion => {
+026518:                             rows.push({
+--- lines 26406-26521; match 26441 ---
+026406: 
+026407:         return rows;
+026408:     }
+026409: 
+026410:     function extractLiveMissionRequirementRows(html) {
+026411:         const doc = new DOMParser().parseFromString(html, 'text/html');
+026412: 
+026413:         const candidateTables =
+026414:             Array.from(
+026415:                 doc.querySelectorAll(
+026416:                     'table.table, table'
+026417:                 )
+026418:             );
+026419: 
+026420:         const table =
+026421:             findMissionRequirementTable(
+026422:                 doc,
+026423:                 candidateTables
+026424:             );
+026425: 
+026426:         if (
+026427:             mfDebugEnabled
+026428:         ) {
+026429:             debugLog(
+026430:                 'UNIT FINDER ATTACHMENT TABLE',
+026431:                 table
+026432:                     ? 'Found exact Vehicle and Personnel Requirements table.'
+026433:                     : `No exact Vehicle and Personnel Requirements table found among ${candidateTables.length} table(s).`
+026434:             );
+026435:         }
+026436: 
+026437:         const rows = [];
+026438:         mfLastMissionDefinitionRawRows = [];
+026439: 
+026440:         if (table) {
+026441:             mfLastMissionDefinitionRawRows = Array.from(
+026442:                 table.querySelectorAll('tbody tr, tr')
+026443:             ).map(tr => {
+026444:                 const cells = Array.from(
+026445:                     tr.querySelectorAll('td')
+026446:                 );
+026447: 
+026448:                 return {
+026449:                     label: String(cells[0]?.textContent || '')
+026450:                         .replace(/\s+/g, ' ')
+026451:                         .trim(),
+026452:                     value: String(cells[1]?.textContent || '')
+026453:                         .replace(/\s+/g, ' ')
+026454:                         .trim()
+026455:                 };
+026456:             }).filter(row => row.label || row.value);
+026457: 
+026458:             table.querySelectorAll('tbody tr, tr').forEach(tr => {
+026459:                 const cells = Array.from(tr.querySelectorAll('td')).map(td => td.textContent.replace(/\s+/g, ' ').trim());
+026460:                 if (cells.length < 2) return;
+026461: 
+026462:                 const rawRequirementName = cells[0];
+026463:                 const originalName = cleanRequirementName(rawRequirementName);
+026464:                 const amountText = cells[1].replace(/\s+/g, ' ').trim();
+026465: 
+026466:                 if (
+026467:                     shouldIgnoreRequiredMinimumRequirement(rawRequirementName) ||
+026468:                     shouldIgnoreRequiredMinimumRequirement(originalName)
+026469:                 ) {
+026470:                     return;
+026471:                 }
+026472: 
+026473:                 if (mfDebugEnabled) {
+026474:                     debugLog(
+026475:                         'UNIT FINDER ATTACHMENT ROW',
+026476:                         `${originalName || '(blank)'} | value=${amountText}`
+026477:                     );
+026478:                 }
+026479: 
+026480:                 const missionDefinitionPersonnelRequirements =
+026481:                     getMissionDefinitionTrainedPersonnelRequirements(
+026482:                         rawRequirementName,
+026483:                         amountText
+026484:                     );
+026485:                 const missionDefinitionSarPersonnelRequirements =
+026486:                     getMissionDefinitionSarPersonnelVehicleRequirements(
+026487:                         rawRequirementName,
+026488:                         amountText
+026489:                     );
+026490: 
+026491:                 if (
+026492:                     missionDefinitionPersonnelRequirements.length > 0 ||
+026493:                     missionDefinitionSarPersonnelRequirements.length > 0
+026494:                 ) {
+026495:                     if (
+026496:                         missionDefinitionPersonnelRequirements.length > 0
+026497:                     ) {
+026498:                         rows.push({
+026499:                             unitName:
+026500:                                 MF_TRAINED_PERSONNEL_ROW_NAME,
+026501:                             stillNeeded:
+026502:                                 getTrainedPersonnelVehicleTarget(
+026503:                                     missionDefinitionPersonnelRequirements
+026504:                                 ),
+026505:                             isTrainedPersonnelRequirement:
+026506:                                 true,
+026507:                             personnelTrainingRequirements:
+026508:                                 missionDefinitionPersonnelRequirements,
+026509:                             missionDefinitionRequiredPersonnel:
+026510:                                 true,
+026511:                             source:
+026512:                                 'mission-definition-required-personnel'
+026513:                         });
+026514:                     }
+026515: 
+026516:                     missionDefinitionSarPersonnelRequirements
+026517:                         .forEach(conversion => {
+026518:                             rows.push({
+026519:                                 unitName:
+026520:                                     conversion.unitName,
+026521:                                 stillNeeded:
+--- lines 26445-26560; match 26480 ---
+026445:                     tr.querySelectorAll('td')
+026446:                 );
+026447: 
+026448:                 return {
+026449:                     label: String(cells[0]?.textContent || '')
+026450:                         .replace(/\s+/g, ' ')
+026451:                         .trim(),
+026452:                     value: String(cells[1]?.textContent || '')
+026453:                         .replace(/\s+/g, ' ')
+026454:                         .trim()
+026455:                 };
+026456:             }).filter(row => row.label || row.value);
+026457: 
+026458:             table.querySelectorAll('tbody tr, tr').forEach(tr => {
+026459:                 const cells = Array.from(tr.querySelectorAll('td')).map(td => td.textContent.replace(/\s+/g, ' ').trim());
+026460:                 if (cells.length < 2) return;
+026461: 
+026462:                 const rawRequirementName = cells[0];
+026463:                 const originalName = cleanRequirementName(rawRequirementName);
+026464:                 const amountText = cells[1].replace(/\s+/g, ' ').trim();
+026465: 
+026466:                 if (
+026467:                     shouldIgnoreRequiredMinimumRequirement(rawRequirementName) ||
+026468:                     shouldIgnoreRequiredMinimumRequirement(originalName)
+026469:                 ) {
+026470:                     return;
+026471:                 }
+026472: 
+026473:                 if (mfDebugEnabled) {
+026474:                     debugLog(
+026475:                         'UNIT FINDER ATTACHMENT ROW',
+026476:                         `${originalName || '(blank)'} | value=${amountText}`
+026477:                     );
+026478:                 }
+026479: 
+026480:                 const missionDefinitionPersonnelRequirements =
+026481:                     getMissionDefinitionTrainedPersonnelRequirements(
+026482:                         rawRequirementName,
+026483:                         amountText
+026484:                     );
+026485:                 const missionDefinitionSarPersonnelRequirements =
+026486:                     getMissionDefinitionSarPersonnelVehicleRequirements(
+026487:                         rawRequirementName,
+026488:                         amountText
+026489:                     );
+026490: 
+026491:                 if (
+026492:                     missionDefinitionPersonnelRequirements.length > 0 ||
+026493:                     missionDefinitionSarPersonnelRequirements.length > 0
+026494:                 ) {
+026495:                     if (
+026496:                         missionDefinitionPersonnelRequirements.length > 0
+026497:                     ) {
+026498:                         rows.push({
+026499:                             unitName:
+026500:                                 MF_TRAINED_PERSONNEL_ROW_NAME,
+026501:                             stillNeeded:
+026502:                                 getTrainedPersonnelVehicleTarget(
+026503:                                     missionDefinitionPersonnelRequirements
+026504:                                 ),
+026505:                             isTrainedPersonnelRequirement:
+026506:                                 true,
+026507:                             personnelTrainingRequirements:
+026508:                                 missionDefinitionPersonnelRequirements,
+026509:                             missionDefinitionRequiredPersonnel:
+026510:                                 true,
+026511:                             source:
+026512:                                 'mission-definition-required-personnel'
+026513:                         });
+026514:                     }
+026515: 
+026516:                     missionDefinitionSarPersonnelRequirements
+026517:                         .forEach(conversion => {
+026518:                             rows.push({
+026519:                                 unitName:
+026520:                                     conversion.unitName,
+026521:                                 stillNeeded:
+026522:                                     conversion.stillNeeded,
+026523:                                 personnelRequirement:
+026524:                                     conversion.personnelRequirement,
+026525:                                 missionDefinitionRequiredPersonnel:
+026526:                                     true,
+026527:                                 source:
+026528:                                     'mission-definition-required-personnel'
+026529:                             });
+026530:                         });
+026531: 
+026532:                     if (mfDebugEnabled) {
+026533:                         const parts = [];
+026534:                         if (
+026535:                             missionDefinitionPersonnelRequirements.length > 0
+026536:                         ) {
+026537:                             parts.push(
+026538:                                 formatTrainedPersonnelRequirements(
+026539:                                     missionDefinitionPersonnelRequirements
+026540:                                 )
+026541:                             );
+026542:                         }
+026543:                         missionDefinitionSarPersonnelRequirements
+026544:                             .forEach(conversion => {
+026545:                                 parts.push(
+026546:                                     `${conversion.personnelRequirement} -> ${conversion.unitName} x${conversion.stillNeeded}`
+026547:                                 );
+026548:                             });
+026549:                         debugLog(
+026550:                             'UNIT FINDER REQUIRED PERSONNEL',
+026551:                             parts.join(' | ')
+026552:                         );
+026553:                     }
+026554: 
+026555:                     return;
+026556:                 }
+026557: 
+026558:                 const towRequirement =
+026559:                     getCarsToTowVehicleRequirement(
+026560:                         originalName,
+--- lines 26446-26561; match 26481 ---
+026446:                 );
+026447: 
+026448:                 return {
+026449:                     label: String(cells[0]?.textContent || '')
+026450:                         .replace(/\s+/g, ' ')
+026451:                         .trim(),
+026452:                     value: String(cells[1]?.textContent || '')
+026453:                         .replace(/\s+/g, ' ')
+026454:                         .trim()
+026455:                 };
+026456:             }).filter(row => row.label || row.value);
+026457: 
+026458:             table.querySelectorAll('tbody tr, tr').forEach(tr => {
+026459:                 const cells = Array.from(tr.querySelectorAll('td')).map(td => td.textContent.replace(/\s+/g, ' ').trim());
+026460:                 if (cells.length < 2) return;
+026461: 
+026462:                 const rawRequirementName = cells[0];
+026463:                 const originalName = cleanRequirementName(rawRequirementName);
+026464:                 const amountText = cells[1].replace(/\s+/g, ' ').trim();
+026465: 
+026466:                 if (
+026467:                     shouldIgnoreRequiredMinimumRequirement(rawRequirementName) ||
+026468:                     shouldIgnoreRequiredMinimumRequirement(originalName)
+026469:                 ) {
+026470:                     return;
+026471:                 }
+026472: 
+026473:                 if (mfDebugEnabled) {
+026474:                     debugLog(
+026475:                         'UNIT FINDER ATTACHMENT ROW',
+026476:                         `${originalName || '(blank)'} | value=${amountText}`
+026477:                     );
+026478:                 }
+026479: 
+026480:                 const missionDefinitionPersonnelRequirements =
+026481:                     getMissionDefinitionTrainedPersonnelRequirements(
+026482:                         rawRequirementName,
+026483:                         amountText
+026484:                     );
+026485:                 const missionDefinitionSarPersonnelRequirements =
+026486:                     getMissionDefinitionSarPersonnelVehicleRequirements(
+026487:                         rawRequirementName,
+026488:                         amountText
+026489:                     );
+026490: 
+026491:                 if (
+026492:                     missionDefinitionPersonnelRequirements.length > 0 ||
+026493:                     missionDefinitionSarPersonnelRequirements.length > 0
+026494:                 ) {
+026495:                     if (
+026496:                         missionDefinitionPersonnelRequirements.length > 0
+026497:                     ) {
+026498:                         rows.push({
+026499:                             unitName:
+026500:                                 MF_TRAINED_PERSONNEL_ROW_NAME,
+026501:                             stillNeeded:
+026502:                                 getTrainedPersonnelVehicleTarget(
+026503:                                     missionDefinitionPersonnelRequirements
+026504:                                 ),
+026505:                             isTrainedPersonnelRequirement:
+026506:                                 true,
+026507:                             personnelTrainingRequirements:
+026508:                                 missionDefinitionPersonnelRequirements,
+026509:                             missionDefinitionRequiredPersonnel:
+026510:                                 true,
+026511:                             source:
+026512:                                 'mission-definition-required-personnel'
+026513:                         });
+026514:                     }
+026515: 
+026516:                     missionDefinitionSarPersonnelRequirements
+026517:                         .forEach(conversion => {
+026518:                             rows.push({
+026519:                                 unitName:
+026520:                                     conversion.unitName,
+026521:                                 stillNeeded:
+026522:                                     conversion.stillNeeded,
+026523:                                 personnelRequirement:
+026524:                                     conversion.personnelRequirement,
+026525:                                 missionDefinitionRequiredPersonnel:
+026526:                                     true,
+026527:                                 source:
+026528:                                     'mission-definition-required-personnel'
+026529:                             });
+026530:                         });
+026531: 
+026532:                     if (mfDebugEnabled) {
+026533:                         const parts = [];
+026534:                         if (
+026535:                             missionDefinitionPersonnelRequirements.length > 0
+026536:                         ) {
+026537:                             parts.push(
+026538:                                 formatTrainedPersonnelRequirements(
+026539:                                     missionDefinitionPersonnelRequirements
+026540:                                 )
+026541:                             );
+026542:                         }
+026543:                         missionDefinitionSarPersonnelRequirements
+026544:                             .forEach(conversion => {
+026545:                                 parts.push(
+026546:                                     `${conversion.personnelRequirement} -> ${conversion.unitName} x${conversion.stillNeeded}`
+026547:                                 );
+026548:                             });
+026549:                         debugLog(
+026550:                             'UNIT FINDER REQUIRED PERSONNEL',
+026551:                             parts.join(' | ')
+026552:                         );
+026553:                     }
+026554: 
+026555:                     return;
+026556:                 }
+026557: 
+026558:                 const towRequirement =
+026559:                     getCarsToTowVehicleRequirement(
+026560:                         originalName,
+026561:                         amountText
+--- lines 26450-26565; match 26485 ---
+026450:                         .replace(/\s+/g, ' ')
+026451:                         .trim(),
+026452:                     value: String(cells[1]?.textContent || '')
+026453:                         .replace(/\s+/g, ' ')
+026454:                         .trim()
+026455:                 };
+026456:             }).filter(row => row.label || row.value);
+026457: 
+026458:             table.querySelectorAll('tbody tr, tr').forEach(tr => {
+026459:                 const cells = Array.from(tr.querySelectorAll('td')).map(td => td.textContent.replace(/\s+/g, ' ').trim());
+026460:                 if (cells.length < 2) return;
+026461: 
+026462:                 const rawRequirementName = cells[0];
+026463:                 const originalName = cleanRequirementName(rawRequirementName);
+026464:                 const amountText = cells[1].replace(/\s+/g, ' ').trim();
+026465: 
+026466:                 if (
+026467:                     shouldIgnoreRequiredMinimumRequirement(rawRequirementName) ||
+026468:                     shouldIgnoreRequiredMinimumRequirement(originalName)
+026469:                 ) {
+026470:                     return;
+026471:                 }
+026472: 
+026473:                 if (mfDebugEnabled) {
+026474:                     debugLog(
+026475:                         'UNIT FINDER ATTACHMENT ROW',
+026476:                         `${originalName || '(blank)'} | value=${amountText}`
+026477:                     );
+026478:                 }
+026479: 
+026480:                 const missionDefinitionPersonnelRequirements =
+026481:                     getMissionDefinitionTrainedPersonnelRequirements(
+026482:                         rawRequirementName,
+026483:                         amountText
+026484:                     );
+026485:                 const missionDefinitionSarPersonnelRequirements =
+026486:                     getMissionDefinitionSarPersonnelVehicleRequirements(
+026487:                         rawRequirementName,
+026488:                         amountText
+026489:                     );
+026490: 
+026491:                 if (
+026492:                     missionDefinitionPersonnelRequirements.length > 0 ||
+026493:                     missionDefinitionSarPersonnelRequirements.length > 0
+026494:                 ) {
+026495:                     if (
+026496:                         missionDefinitionPersonnelRequirements.length > 0
+026497:                     ) {
+026498:                         rows.push({
+026499:                             unitName:
+026500:                                 MF_TRAINED_PERSONNEL_ROW_NAME,
+026501:                             stillNeeded:
+026502:                                 getTrainedPersonnelVehicleTarget(
+026503:                                     missionDefinitionPersonnelRequirements
+026504:                                 ),
+026505:                             isTrainedPersonnelRequirement:
+026506:                                 true,
+026507:                             personnelTrainingRequirements:
+026508:                                 missionDefinitionPersonnelRequirements,
+026509:                             missionDefinitionRequiredPersonnel:
+026510:                                 true,
+026511:                             source:
+026512:                                 'mission-definition-required-personnel'
+026513:                         });
+026514:                     }
+026515: 
+026516:                     missionDefinitionSarPersonnelRequirements
+026517:                         .forEach(conversion => {
+026518:                             rows.push({
+026519:                                 unitName:
+026520:                                     conversion.unitName,
+026521:                                 stillNeeded:
+026522:                                     conversion.stillNeeded,
+026523:                                 personnelRequirement:
+026524:                                     conversion.personnelRequirement,
+026525:                                 missionDefinitionRequiredPersonnel:
+026526:                                     true,
+026527:                                 source:
+026528:                                     'mission-definition-required-personnel'
+026529:                             });
+026530:                         });
+026531: 
+026532:                     if (mfDebugEnabled) {
+026533:                         const parts = [];
+026534:                         if (
+026535:                             missionDefinitionPersonnelRequirements.length > 0
+026536:                         ) {
+026537:                             parts.push(
+026538:                                 formatTrainedPersonnelRequirements(
+026539:                                     missionDefinitionPersonnelRequirements
+026540:                                 )
+026541:                             );
+026542:                         }
+026543:                         missionDefinitionSarPersonnelRequirements
+026544:                             .forEach(conversion => {
+026545:                                 parts.push(
+026546:                                     `${conversion.personnelRequirement} -> ${conversion.unitName} x${conversion.stillNeeded}`
+026547:                                 );
+026548:                             });
+026549:                         debugLog(
+026550:                             'UNIT FINDER REQUIRED PERSONNEL',
+026551:                             parts.join(' | ')
+026552:                         );
+026553:                     }
+026554: 
+026555:                     return;
+026556:                 }
+026557: 
+026558:                 const towRequirement =
+026559:                     getCarsToTowVehicleRequirement(
+026560:                         originalName,
+026561:                         amountText
+026562:                     );
+026563: 
+026564:                 if (towRequirement) {
+026565:                     rows.push({
+--- lines 26451-26566; match 26486 ---
+026451:                         .trim(),
+026452:                     value: String(cells[1]?.textContent || '')
+026453:                         .replace(/\s+/g, ' ')
+026454:                         .trim()
+026455:                 };
+026456:             }).filter(row => row.label || row.value);
+026457: 
+026458:             table.querySelectorAll('tbody tr, tr').forEach(tr => {
+026459:                 const cells = Array.from(tr.querySelectorAll('td')).map(td => td.textContent.replace(/\s+/g, ' ').trim());
+026460:                 if (cells.length < 2) return;
+026461: 
+026462:                 const rawRequirementName = cells[0];
+026463:                 const originalName = cleanRequirementName(rawRequirementName);
+026464:                 const amountText = cells[1].replace(/\s+/g, ' ').trim();
+026465: 
+026466:                 if (
+026467:                     shouldIgnoreRequiredMinimumRequirement(rawRequirementName) ||
+026468:                     shouldIgnoreRequiredMinimumRequirement(originalName)
+026469:                 ) {
+026470:                     return;
+026471:                 }
+026472: 
+026473:                 if (mfDebugEnabled) {
+026474:                     debugLog(
+026475:                         'UNIT FINDER ATTACHMENT ROW',
+026476:                         `${originalName || '(blank)'} | value=${amountText}`
+026477:                     );
+026478:                 }
+026479: 
+026480:                 const missionDefinitionPersonnelRequirements =
+026481:                     getMissionDefinitionTrainedPersonnelRequirements(
+026482:                         rawRequirementName,
+026483:                         amountText
+026484:                     );
+026485:                 const missionDefinitionSarPersonnelRequirements =
+026486:                     getMissionDefinitionSarPersonnelVehicleRequirements(
+026487:                         rawRequirementName,
+026488:                         amountText
+026489:                     );
+026490: 
+026491:                 if (
+026492:                     missionDefinitionPersonnelRequirements.length > 0 ||
+026493:                     missionDefinitionSarPersonnelRequirements.length > 0
+026494:                 ) {
+026495:                     if (
+026496:                         missionDefinitionPersonnelRequirements.length > 0
+026497:                     ) {
+026498:                         rows.push({
+026499:                             unitName:
+026500:                                 MF_TRAINED_PERSONNEL_ROW_NAME,
+026501:                             stillNeeded:
+026502:                                 getTrainedPersonnelVehicleTarget(
+026503:                                     missionDefinitionPersonnelRequirements
+026504:                                 ),
+026505:                             isTrainedPersonnelRequirement:
+026506:                                 true,
+026507:                             personnelTrainingRequirements:
+026508:                                 missionDefinitionPersonnelRequirements,
+026509:                             missionDefinitionRequiredPersonnel:
+026510:                                 true,
+026511:                             source:
+026512:                                 'mission-definition-required-personnel'
+026513:                         });
+026514:                     }
+026515: 
+026516:                     missionDefinitionSarPersonnelRequirements
+026517:                         .forEach(conversion => {
+026518:                             rows.push({
+026519:                                 unitName:
+026520:                                     conversion.unitName,
+026521:                                 stillNeeded:
+026522:                                     conversion.stillNeeded,
+026523:                                 personnelRequirement:
+026524:                                     conversion.personnelRequirement,
+026525:                                 missionDefinitionRequiredPersonnel:
+026526:                                     true,
+026527:                                 source:
+026528:                                     'mission-definition-required-personnel'
+026529:                             });
+026530:                         });
+026531: 
+026532:                     if (mfDebugEnabled) {
+026533:                         const parts = [];
+026534:                         if (
+026535:                             missionDefinitionPersonnelRequirements.length > 0
+026536:                         ) {
+026537:                             parts.push(
+026538:                                 formatTrainedPersonnelRequirements(
+026539:                                     missionDefinitionPersonnelRequirements
+026540:                                 )
+026541:                             );
+026542:                         }
+026543:                         missionDefinitionSarPersonnelRequirements
+026544:                             .forEach(conversion => {
+026545:                                 parts.push(
+026546:                                     `${conversion.personnelRequirement} -> ${conversion.unitName} x${conversion.stillNeeded}`
+026547:                                 );
+026548:                             });
+026549:                         debugLog(
+026550:                             'UNIT FINDER REQUIRED PERSONNEL',
+026551:                             parts.join(' | ')
+026552:                         );
+026553:                     }
+026554: 
+026555:                     return;
+026556:                 }
+026557: 
+026558:                 const towRequirement =
+026559:                     getCarsToTowVehicleRequirement(
+026560:                         originalName,
+026561:                         amountText
+026562:                     );
+026563: 
+026564:                 if (towRequirement) {
+026565:                     rows.push({
+026566:                         unitName:
+--- lines 26457-26572; match 26492 ---
+026457: 
+026458:             table.querySelectorAll('tbody tr, tr').forEach(tr => {
+026459:                 const cells = Array.from(tr.querySelectorAll('td')).map(td => td.textContent.replace(/\s+/g, ' ').trim());
+026460:                 if (cells.length < 2) return;
+026461: 
+026462:                 const rawRequirementName = cells[0];
+026463:                 const originalName = cleanRequirementName(rawRequirementName);
+026464:                 const amountText = cells[1].replace(/\s+/g, ' ').trim();
+026465: 
+026466:                 if (
+026467:                     shouldIgnoreRequiredMinimumRequirement(rawRequirementName) ||
+026468:                     shouldIgnoreRequiredMinimumRequirement(originalName)
+026469:                 ) {
+026470:                     return;
+026471:                 }
+026472: 
+026473:                 if (mfDebugEnabled) {
+026474:                     debugLog(
+026475:                         'UNIT FINDER ATTACHMENT ROW',
+026476:                         `${originalName || '(blank)'} | value=${amountText}`
+026477:                     );
+026478:                 }
+026479: 
+026480:                 const missionDefinitionPersonnelRequirements =
+026481:                     getMissionDefinitionTrainedPersonnelRequirements(
+026482:                         rawRequirementName,
+026483:                         amountText
+026484:                     );
+026485:                 const missionDefinitionSarPersonnelRequirements =
+026486:                     getMissionDefinitionSarPersonnelVehicleRequirements(
+026487:                         rawRequirementName,
+026488:                         amountText
+026489:                     );
+026490: 
+026491:                 if (
+026492:                     missionDefinitionPersonnelRequirements.length > 0 ||
+026493:                     missionDefinitionSarPersonnelRequirements.length > 0
+026494:                 ) {
+026495:                     if (
+026496:                         missionDefinitionPersonnelRequirements.length > 0
+026497:                     ) {
+026498:                         rows.push({
+026499:                             unitName:
+026500:                                 MF_TRAINED_PERSONNEL_ROW_NAME,
+026501:                             stillNeeded:
+026502:                                 getTrainedPersonnelVehicleTarget(
+026503:                                     missionDefinitionPersonnelRequirements
+026504:                                 ),
+026505:                             isTrainedPersonnelRequirement:
+026506:                                 true,
+026507:                             personnelTrainingRequirements:
+026508:                                 missionDefinitionPersonnelRequirements,
+026509:                             missionDefinitionRequiredPersonnel:
+026510:                                 true,
+026511:                             source:
+026512:                                 'mission-definition-required-personnel'
+026513:                         });
+026514:                     }
+026515: 
+026516:                     missionDefinitionSarPersonnelRequirements
+026517:                         .forEach(conversion => {
+026518:                             rows.push({
+026519:                                 unitName:
+026520:                                     conversion.unitName,
+026521:                                 stillNeeded:
+026522:                                     conversion.stillNeeded,
+026523:                                 personnelRequirement:
+026524:                                     conversion.personnelRequirement,
+026525:                                 missionDefinitionRequiredPersonnel:
+026526:                                     true,
+026527:                                 source:
+026528:                                     'mission-definition-required-personnel'
+026529:                             });
+026530:                         });
+026531: 
+026532:                     if (mfDebugEnabled) {
+026533:                         const parts = [];
+026534:                         if (
+026535:                             missionDefinitionPersonnelRequirements.length > 0
+026536:                         ) {
+026537:                             parts.push(
+026538:                                 formatTrainedPersonnelRequirements(
+026539:                                     missionDefinitionPersonnelRequirements
+026540:                                 )
+026541:                             );
+026542:                         }
+026543:                         missionDefinitionSarPersonnelRequirements
+026544:                             .forEach(conversion => {
+026545:                                 parts.push(
+026546:                                     `${conversion.personnelRequirement} -> ${conversion.unitName} x${conversion.stillNeeded}`
+026547:                                 );
+026548:                             });
+026549:                         debugLog(
+026550:                             'UNIT FINDER REQUIRED PERSONNEL',
+026551:                             parts.join(' | ')
+026552:                         );
+026553:                     }
+026554: 
+026555:                     return;
+026556:                 }
+026557: 
+026558:                 const towRequirement =
+026559:                     getCarsToTowVehicleRequirement(
+026560:                         originalName,
+026561:                         amountText
+026562:                     );
+026563: 
+026564:                 if (towRequirement) {
+026565:                     rows.push({
+026566:                         unitName:
+026567:                             towRequirement.unitName,
+026568:                         stillNeeded:
+026569:                             towRequirement.stillNeeded,
+026570:                         towCarsRequired:
+026571:                             towRequirement.carsRequired
+026572:                     });

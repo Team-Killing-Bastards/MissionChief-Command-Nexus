@@ -1,0 +1,195 @@
+022511:                         entry.trainingProfilesComplete === true,
+022512:                     trainingCounts
+022513:                 };
+022514:             })
+022515:             .filter(Boolean)
+022516:             .sort((left, right) => {
+022517:                 return String(left.vehicleName || '')
+022518:                     .localeCompare(String(right.vehicleName || ''));
+022519:             });
+022520:     }
+022521: 
+022522: 
+022523:     function renderSelectedTrainedPersonnelPanel() {
+022524:         const summary =
+022525:             document.getElementById('trained-personnel-summary');
+022526:         const content =
+022527:             document.getElementById('trained-personnel-content');
+022528: 
+022529:         if (!summary || !content) return;
+022530: 
+022531: 
+022532:         let preloadState = { status: 'idle' };
+022533:         let requiredPersonnel = [];
+022534: 
+022535:         try {
+022536:             preloadState =
+022537:                 getMissionRequirementPreloadState();
+022538:             requiredPersonnel =
+022539:                 getPreloadedMissionTrainedPersonnelRequirements();
+022540:         } catch (error) {
+022541:             if (mfDebugEnabled) {
+022542:                 debugLog(
+022543:                     'MISSION PERSONNEL PRELOAD',
+022544:                     `panel cache read failed: ${error?.message || error}`
+022545:                 );
+022546:             }
+022547:         }
+022548:         const selectedVehicles =
+022549:             getSelectedTrainedPersonnelPanelModel();
+022550:         const completeProfiles = selectedVehicles.reduce(
+022551:             (total, vehicle) => {
+022552:                 return total + (
+022553:                     vehicle.profilesComplete
+022554:                         ? vehicle.profiles.length
+022555:                         : 0
+022556:                 );
+022557:             },
+022558:             0
+022559:         );
+022560:         const aggregateOnlyVehicles = selectedVehicles.filter(vehicle => {
+022561:             return !vehicle.profilesComplete;
+022562:         }).length;
+022563:         const requiredTotal = requiredPersonnel.reduce(
+022564:             (total, requirement) => {
+022565:                 return total + requirement.required;
+022566:             },
+022567:             0
+022568:         );
+022569:         const coveredTotal = requiredPersonnel.reduce(
+022570:             (total, requirement) => {
+022571:                 return total + Math.min(
+022572:                     requirement.required,
+022573:                     getSelectedTrainedPersonnelCountForCode(
+022574:                         selectedVehicles,
+022575:                         requirement.code
+022576:                     )
+022577:                 );
+022578:             },
+022579:             0
+022580:         );
+022581: 
+022582:         if (
+022583:             requiredPersonnel.length === 0 &&
+022584:             selectedVehicles.length === 0
+022585:         ) {
+022586:             if (preloadState.status === 'loading') {
+022587:                 summary.textContent =
+022588:                     'Loading mission Required Personnel...';
+022589:                 content.innerHTML =
+022590:                     '<span class="mf2026-small">Reading the mission requirement table before unit selection.</span>';
+022591:                 return;
+022592:             }
+022593: 
+022594:             summary.textContent =
+022595:                 'No required or selected trained-personnel evidence is available.';
+022596:             content.innerHTML =
+022597:                 '<span class="mf2026-small">Mission Required Personnel and selected trained personnel will appear here.</span>';
+022598:             return;
+022599:         }
+022600: 
+022601:         const summaryParts = [];
+022602: 
+022603:         if (requiredPersonnel.length > 0) {
+022604:             summaryParts.push(`
+022605:                 <div><strong>${requiredPersonnel.length}</strong> required course${requiredPersonnel.length === 1 ? '' : 's'}</div>
+022606:                 <div><strong>${coveredTotal}</strong> / <strong>${requiredTotal}</strong> required trained-personnel coverage</div>
+022607:             `);
+022608:         }
+022609: 
+022610:         if (selectedVehicles.length > 0) {
+022611:             summaryParts.push(`
+022612:                 <div><strong>${selectedVehicles.length}</strong> selected trained vehicle${selectedVehicles.length === 1 ? '' : 's'}</div>
+022613:                 <div><strong>${completeProfiles}</strong> trained personnel profile${completeProfiles === 1 ? '' : 's'}${aggregateOnlyVehicles ? ` · ${aggregateOnlyVehicles} aggregate-only` : ''}</div>
+022614:             `);
+022615:         }
+022616: 
+022617:         summary.innerHTML = summaryParts.join('');
+022618: 
+022619:         const requiredMarkup = requiredPersonnel.length > 0
+022620:             ? `
+022621:                 <div class="mf2026-training-vehicle">
+022622:                     <div class="mf2026-training-vehicle-name">
+022623:                         Mission Required Personnel
+022624:                     </div>
+022625:                     ${requiredPersonnel.map(requirement => {
+022626:                         const selected = Math.min(
+022627:                             requirement.required,
+022628:                             getSelectedTrainedPersonnelCountForCode(
+022629:                                 selectedVehicles,
+022630:                                 requirement.code
+022631:                             )
+022632:                         );
+022633:                         const remaining = Math.max(
+022634:                             0,
+022635:                             requirement.required - selected
+022636:                         );
+022637: 
+022638:                         return `
+022639:                             <div class="mf2026-training-person">
+022640:                                 <span class="mf2026-training-person-label">${selected} / ${requirement.required}</span>
+022641:                                 <span class="mf2026-training-course-list">${escapeHtml(requirement.label)}${remaining > 0 ? ` · ${remaining} still needed` : ' · covered'}</span>
+022642:                             </div>
+022643:                         `;
+022644:                     }).join('')}
+022645:                 </div>
+022646:             `
+022647:             : '';
+022648: 
+022649:         const selectedMarkup = selectedVehicles.map(vehicle => {
+022650:             const vehicleName =
+022651:                 vehicle.vehicleName ||
+022652:                 (vehicle.vehicleId
+022653:                     ? `Vehicle ${vehicle.vehicleId}`
+022654:                     : 'Selected vehicle');
+022655:             const profileMarkup =
+022656:                 vehicle.profilesComplete &&
+022657:                 vehicle.profiles.length > 0
+022658:                     ? vehicle.profiles.map((profile, index) => {
+022659:                         const labels = profile
+022660:                             .map(getSelectedTrainingDisplayLabel)
+022661:                             .sort((left, right) => left.localeCompare(right));
+022662: 
+022663:                         return `
+022664:                             <div class="mf2026-training-person">
+022665:                                 <span class="mf2026-training-person-label">Person ${index + 1}</span>
+022666:                                 <span class="mf2026-training-course-list">${labels.map(escapeHtml).join(', ')}</span>
+022667:                             </div>
+022668:                         `;
+022669:                     }).join('')
+022670:                     : vehicle.trainingCounts.map(item => {
+022671:                         return `
+022672:                             <div class="mf2026-training-person">
+022673:                                 <span class="mf2026-training-person-label">${item.count}×</span>
+022674:                                 <span class="mf2026-training-course-list">${escapeHtml(item.label)}</span>
+022675:                             </div>
+022676:                         `;
+022677:                     }).join('');
+022678: 
+022679:             return `
+022680:                 <div class="mf2026-training-vehicle">
+022681:                     <div class="mf2026-training-vehicle-name">
+022682:                         ${escapeHtml(vehicleName)}
+022683:                         ${vehicle.vehicleId ? `<span class="mf2026-small"> #${escapeHtml(vehicle.vehicleId)}</span>` : ''}
+022684:                     </div>
+022685:                     ${profileMarkup}
+022686:                 </div>
+022687:             `;
+022688:         }).join('');
+022689: 
+022690:         content.innerHTML =
+022691:             requiredMarkup +
+022692:             selectedMarkup;
+022693:     }
+022694: 
+022695:     function renderVehicleLoadListNow() {
+022696:         const listContent = document.getElementById('vehicle-load-list-content');
+022697:         const patientContent = document.getElementById('vehicle-patient-content');
+022698:         const summary = document.getElementById('vehicle-load-summary');
+022699:         const progress = document.getElementById('vehicle-load-progress');
+022700: 
+022701:         if (!listContent || !patientContent || !summary || !progress) return;
+022702: 
+022703:         refreshVehicleRequirementCounters();
+022704: 
+022705:         const totalRequired = vehicleLoadState.rows.reduce((sum, row) => sum + Number(row.required || 0), 0);

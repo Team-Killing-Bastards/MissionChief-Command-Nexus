@@ -1,0 +1,2986 @@
+===== 'mission_vehicle_driving': 0 matches =====
+===== 'mission_vehicle_at_mission': 0 matches =====
+===== 'vehicle_type_id': 28 matches =====
+--- lines 19-159; match 59 ---
+000019:     // One combined installation guard. Each retained module also keeps its
+000020:     // original guard, so enabling an old standalone copy cannot initialise a
+000021:     // second UI or a second automation engine in the same page context.
+000022:     if (window.__MC_COMPLETE_TOOLS_MERGED_V10668_V428__) return;
+000023:     window.__MC_COMPLETE_TOOLS_MERGED_V10668_V428__ = true;
+000024: 
+000025:     // Runtime isolation preserves the behaviour of two standalone userscripts:
+000026:     // a startup fault in one module is reported without preventing the other
+000027:     // independent module from loading.
+000028:     try {
+000029:         /* ==================================================================
+000030:          * MODULE 1: UNIT, STATION & PERSONNEL TOOLS V4.2.8
+000031:          * Original source retained below, excluding only its metadata block.
+000032:          * ================================================================== */
+000033: (function () {
+000034:     'use strict';
+000035: 
+000036:     if (window.__MC_NAMING_TOOLS_V428__) return;
+000037:     window.__MC_NAMING_TOOLS_V428__ = true;
+000038: 
+000039:     const TOOL_IS_TOP_WINDOW = (() => {
+000040:         try {
+000041:             return window.top === window.self;
+000042:         } catch (_error) {
+000043:             return true;
+000044:         }
+000045:     })();
+000046: 
+000047:     // The naming/personnel workspace owns the main MissionChief document and
+000048:     // reaches its edit iframes from there. Running a second complete workspace
+000049:     // runtime inside every mission/lightbox iframe retained an extra whole-DOM
+000050:     // observer, caches and global listeners for documents that never render the
+000051:     // tools. Child frames therefore leave this module to the top-window owner.
+000052:     if (!TOOL_IS_TOP_WINDOW) return;
+000053: 
+000054:     const UNIT_VERSION = '3.3.8';
+000055:     const STATION_VERSION = '1.3.3';
+000056:     const PERSONNEL_VERSION = '1.3.8';
+000057:     const PERSONNEL_TRAINING_CODE = 'critical_care';
+000058:     const PERSONNEL_TRAINING_LABEL = 'Critical Care';
+000059:     const PERSONNEL_TARGET_VEHICLE_TYPE_ID = '5';
+000060:     const PERSONNEL_TARGET_VEHICLE_LABEL = 'Ambulance';
+000061:     const PERSONNEL_TARGET_PER_VEHICLE = 1;
+000062:     const PERSONNEL_REQUEST_GAP_MS = 650;
+000063:     const PERSONNEL_STATION_GAP_MS = 900;
+000064:     const PERSONNEL_REGISTER_MAX_CONCURRENCY = 3;
+000065:     const PERSONNEL_REGISTER_LAUNCH_GAP_MS = 350;
+000066:     const PERSONNEL_REGISTER_REVERIFY_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+000067:     const ACTIVE_TAB_STORAGE_KEY = 'mcNamingToolsActiveTab_v32';
+000068:     const COLLAPSED_STORAGE_KEY = 'mcNamingToolsCollapsed_v36';
+000069:     const PERSONNEL_STATION_REPORT_VISIBLE_KEY = 'mcPersonnelStationReportVisible_v407';
+000070:     const PERSONNEL_OVERALL_REPORT_VISIBLE_KEY = 'mcPersonnelOverallReportVisible_v407';
+000071:     const PERSONNEL_SERVICE_STORAGE_KEY = 'mcPersonnelService_v410';
+000072:     const PERSONNEL_PROFILE_STORAGE_KEY = 'mcPersonnelProfile_v410';
+000073:     const PERSONNEL_UNITS_REQUIRED_STORAGE_KEY = 'mcPersonnelUnitsRequired_v423';
+000074:     const PERSONNEL_TRAINING_REGISTRY_STORAGE_KEY =
+000075:         'mcPersonnelVehicleTrainingRegistry_v1';
+000076:     const PERSONNEL_TRAINING_REGISTRY_SCHEMA_VERSION = 1;
+000077:     const PERSONNEL_TRAINING_REGISTRY_EXPORT_FORMAT =
+000078:         'missionchief-personnel-training-register';
+000079:     const PERSONNEL_TRAINING_REGISTRY_EXPORT_VERSION = 1;
+000080:     const PERSONNEL_TRAINING_REGISTRY_IMPORT_MAX_BYTES = 10 * 1024 * 1024;
+000081:     const TOOL_LOG_MAX_LINES = 400;
+000082:     const TOOL_LOG_TRIM_BUFFER = 40;
+000083:     const PERSONNEL_TRAINING_REGISTRY_MAX_VEHICLES = 5000;
+000084:     const PERSONNEL_TRAINING_REGISTRY_MAX_AGE_MS = 180 * 24 * 60 * 60 * 1000;
+000085:     const PERSONNEL_TRAINING_REGISTRY_QUOTA_RETRY_MAX_VEHICLES = 2500;
+000086:     const PERSONNEL_TRAINING_REGISTRY_FLUSH_DELAY_MS = 1400;
+000087:     const PERSONNEL_TRAINING_REGISTRY_PRUNE_INTERVAL_MS = 6 * 60 * 60 * 1000;
+000088:     const TOOL_LIFECYCLE_CLEANUPS = new Set();
+000089:     const TOOL_LOG_SCROLL_FRAMES = new Map();
+000090:     const TOOL_UI_ELEMENT_CACHE = new Map();
+000091:     const PERSONNEL_ASSIGNMENT_INDEX_CACHE = new WeakMap();
+000092:     const PERSONNEL_TRAINING_SET_CACHE = new WeakMap();
+000093:     const PERSONNEL_VISIBLE_TRAINING_COUNTS_CACHE = new WeakMap();
+000094:     const PERSONNEL_REPORT_BLOCK_CACHE = new WeakMap();
+000095:     const PERSONNEL_STATION_LINK_BY_HREF = new Map();
+000096:     const PERSONNEL_START_OPTION_BY_HREF = new Map();
+000097:     const PERSONNEL_HIGHLIGHTED_STATION_LINKS = new Set();
+000098:     let TOOL_LIFECYCLE_CLEANED = false;
+000099:     let NAMING_TOOLS_PANEL_GUARD_INSTALLED = false;
+000100:     let PERSONNEL_TRAINING_REGISTRY_CACHE = null;
+000101:     let PERSONNEL_TRAINING_REGISTRY_DIRTY = false;
+000102:     let PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER = null;
+000103:     let PERSONNEL_TRAINING_REGISTRY_PENDING_EVENT = null;
+000104:     let PERSONNEL_SHORTFALL_CACHE_SIZE = -1;
+000105:     let PERSONNEL_SHORTFALL_CACHE = [];
+000106: 
+000107:     const makeServicePreviewProfile = (id, label, serviceLabel) => ({
+000108:         id,
+000109:         label,
+000110:         vehicle: `Mapped ${serviceLabel} vehicle(s)`,
+000111:         requirement: `${label} on mapped vehicle seats`,
+000112:         policy: `UI preview: ${label} has been added from the supplied ${serviceLabel} training list. Vehicle mapping and required seat counts still need confirmation before assignment can be enabled.`,
+000113:         live: false,
+000114:         stationTypes: []
+000115:     });
+000116: 
+000117:     const makePoliceRule = ({
+000118:         id,
+000119:         label,
+000120:         vehicleTypeIds,
+000121:         vehicleLabel,
+000122:         target,
+000123:         trainingAll,
+000124:         trainingLabel,
+000125:         preferWithout = [],
+000126:         sharedVehiclePool = false
+000127:     }) => Object.freeze({
+000128:         id,
+000129:         label,
+000130:         vehicleTypeIds: vehicleTypeIds.map(String),
+000131:         vehicleLabel,
+000132:         target: Number(target),
+000133:         trainingAll: trainingAll.map(String),
+000134:         trainingLabel,
+000135:         preferWithout: preferWithout.map(String),
+000136:         sharedVehiclePool: Boolean(sharedVehiclePool)
+000137:     });
+000138: 
+000139:     const POLICE_TRAINING_LABELS =
+000140:         Object.freeze({
+000141:             level_1_public_order:
+000142:                 'Level 1 Public Order',
+000143:             level_2_public_order:
+000144:                 'Level 2 Public Order',
+000145:             police_sergeant:
+000146:                 'Police Sergeant',
+000147:             police_medic:
+000148:                 'Police Medic',
+000149:             police_inspector:
+000150:                 'Police Inspector',
+000151:             traffic_police:
+000152:                 'Roads Policing',
+000153:             swat:
+000154:                 'Firearms',
+000155:             police_horse:
+000156:                 'Mounted Officer',
+000157:             k9:
+000158:                 'Dog Handler',
+000159:             drone:
+--- lines 7500-7640; match 7540 ---
+007500:         const cached = PERSONNEL_VISIBLE_TRAINING_COUNTS_CACHE.get(personnel);
+007501:         if (cached) return cached;
+007502: 
+007503:         const counts = new Map();
+007504:         personnel.forEach(person => {
+007505:             getPersonnelTrainingSet(person).forEach(code => {
+007506:                 counts.set(code, Number(counts.get(code) || 0) + 1);
+007507:             });
+007508:         });
+007509: 
+007510:         PERSONNEL_VISIBLE_TRAINING_COUNTS_CACHE.set(personnel, counts);
+007511:         return counts;
+007512:     }
+007513: 
+007514:     function personnelMatchesRule(person, rule) {
+007515:         const requiredCodes = Array.isArray(rule?.trainingAll) ? rule.trainingAll : [];
+007516:         if (!requiredCodes.length) return true;
+007517: 
+007518:         const trainingSet = getPersonnelTrainingSet(person);
+007519:         return requiredCodes.every(code => trainingSet.has(code));
+007520:     }
+007521: 
+007522:     function sortPersonnelCandidatesForRule(candidates, rule) {
+007523:         return candidates.slice().sort((left, right) => {
+007524:             const leftReserved = rule.preferWithout.some(code => left.trainingCodes.includes(code)) ? 1 : 0;
+007525:             const rightReserved = rule.preferWithout.some(code => right.trainingCodes.includes(code)) ? 1 : 0;
+007526:             if (leftReserved !== rightReserved) return leftReserved - rightReserved;
+007527: 
+007528:             const extraDifference = left.trainingCodes.length - right.trainingCodes.length;
+007529:             if (extraDifference) return extraDifference;
+007530:             return String(left.name || '').localeCompare(String(right.name || ''), 'en-GB', { numeric: true });
+007531:         });
+007532:     }
+007533: 
+007534:     function getPersonnelVehicleTypeIdFromRow(row) {
+007535:         if (!row) return '';
+007536: 
+007537:         const typedElements = [
+007538:             row,
+007539:             ...row.querySelectorAll(
+007540:                 '[vehicle_type_id], [data-vehicle-type-id], ' +
+007541:                 '[vehicle_type], [data-vehicle-type]'
+007542:             )
+007543:         ];
+007544: 
+007545:         const candidates = typedElements.flatMap(element => [
+007546:             element.getAttribute?.('vehicle_type_id'),
+007547:             element.getAttribute?.('data-vehicle-type-id'),
+007548:             element.getAttribute?.('vehicle_type'),
+007549:             element.getAttribute?.('data-vehicle-type')
+007550:         ]);
+007551: 
+007552:         const numericTypeId = candidates
+007553:             .map(value => String(value || '').trim())
+007554:             .find(value => /^\d+$/.test(value));
+007555: 
+007556:         if (numericTypeId) return numericTypeId;
+007557: 
+007558:         const typeText = cleanText([
+007559:             row.getAttribute?.('vehicle_type_caption'),
+007560:             row.getAttribute?.('data-vehicle-type-caption'),
+007561:             row.querySelector?.('[vehicle_type_caption]')?.getAttribute?.('vehicle_type_caption'),
+007562:             row.querySelector?.('[data-vehicle-type-caption]')?.getAttribute?.('data-vehicle-type-caption'),
+007563:             row.querySelector?.('td:nth-child(2)')?.textContent
+007564:         ].filter(Boolean).join(' '));
+007565: 
+007566:         // MissionChief UK PSU Carrier. This fallback is used only when the
+007567:         // station row exposes no numeric vehicle-type attribute at all.
+007568:         if (/\b(?:PSU|Police\s+Support\s+Unit)\s+Carrier\b/i.test(typeText)) {
+007569:             return '51';
+007570:         }
+007571: 
+007572:         return '';
+007573:     }
+007574: 
+007575:     function getPersonnelVehicleQueue(doc, allowedTypeIds) {
+007576:         const allowed = new Set((allowedTypeIds || []).map(String));
+007577:         const allowAllVehicleTypes = allowed.size === 0;
+007578:         const seen = new Set();
+007579:         const queue = [];
+007580: 
+007581:         for (const row of [...doc.querySelectorAll('#vehicle_table tr')]) {
+007582:             const vehicleTypeId = getPersonnelVehicleTypeIdFromRow(row);
+007583:             if (!allowAllVehicleTypes && !allowed.has(vehicleTypeId)) continue;
+007584: 
+007585:             const vehicleLinks = [...row.querySelectorAll('a[href*="/vehicles/"]')];
+007586:             const plainVehicleLink = vehicleLinks.find(link => /^\/vehicles\/\d+\/?(?:[?#].*)?$/.test(link.getAttribute('href') || ''));
+007587:             const editLink = vehicleLinks.find(link => /\/vehicles\/\d+\/edit(?:[/?#]|$)/.test(link.getAttribute('href') || ''));
+007588:             const directAssignmentLink = vehicleLinks.find(link => /\/vehicles\/\d+\/zuweisung(?:[/?#]|$)/.test(link.getAttribute('href') || ''));
+007589:             const vehicleId = [plainVehicleLink, editLink, directAssignmentLink]
+007590:                 .map(link => getVehicleIdFromHref(link?.getAttribute('href') || ''))
+007591:                 .find(Boolean) || '';
+007592: 
+007593:             if (!vehicleId || seen.has(vehicleId)) continue;
+007594:             seen.add(vehicleId);
+007595: 
+007596:             const occupancy = parsePersonnelVehicleOccupancy(row);
+007597:             const nameSource = plainVehicleLink || vehicleLinks.find(link => cleanText(link.textContent || ''));
+007598:             queue.push({
+007599:                 vehicleId,
+007600:                 vehicleTypeId,
+007601:                 name: cleanText(nameSource?.textContent || row.textContent || '') || `${TYPE_ID_TO_VEHICLE_TYPE[vehicleTypeId] || 'Vehicle'} ${vehicleId}`,
+007602:                 assignmentHref: directAssignmentLink?.getAttribute('href') || `/vehicles/${vehicleId}/zuweisung`,
+007603:                 assignedCount: occupancy.assignedCount,
+007604:                 maxCount: occupancy.maxCount
+007605:             });
+007606:         }
+007607: 
+007608:         queue.sort((left, right) => left.name.localeCompare(right.name, 'en-GB', { numeric: true, sensitivity: 'base' }));
+007609:         return queue;
+007610:     }
+007611: 
+007612:     function sortPersonnelVehiclesForStationTarget(
+007613:         vehicles,
+007614:         personnel,
+007615:         rule
+007616:     ) {
+007617:         return (
+007618:             Array.isArray(vehicles)
+007619:                 ? vehicles.slice()
+007620:                 : []
+007621:         ).sort((left, right) => {
+007622:             const getState = vehicle => {
+007623:                 const assigned =
+007624:                     getPersonnelAssignedToVehicle(
+007625:                         personnel,
+007626:                         vehicle
+007627:                     );
+007628: 
+007629:                 const qualified =
+007630:                     assigned.filter(
+007631:                         person =>
+007632:                             personnelMatchesRule(
+007633:                                 person,
+007634:                                 rule
+007635:                             )
+007636:                     ).length;
+007637: 
+007638:                 const total = assigned.length;
+007639:                 const capacity =
+007640:                     Math.max(
+--- lines 7506-7646; match 7546 ---
+007506:                 counts.set(code, Number(counts.get(code) || 0) + 1);
+007507:             });
+007508:         });
+007509: 
+007510:         PERSONNEL_VISIBLE_TRAINING_COUNTS_CACHE.set(personnel, counts);
+007511:         return counts;
+007512:     }
+007513: 
+007514:     function personnelMatchesRule(person, rule) {
+007515:         const requiredCodes = Array.isArray(rule?.trainingAll) ? rule.trainingAll : [];
+007516:         if (!requiredCodes.length) return true;
+007517: 
+007518:         const trainingSet = getPersonnelTrainingSet(person);
+007519:         return requiredCodes.every(code => trainingSet.has(code));
+007520:     }
+007521: 
+007522:     function sortPersonnelCandidatesForRule(candidates, rule) {
+007523:         return candidates.slice().sort((left, right) => {
+007524:             const leftReserved = rule.preferWithout.some(code => left.trainingCodes.includes(code)) ? 1 : 0;
+007525:             const rightReserved = rule.preferWithout.some(code => right.trainingCodes.includes(code)) ? 1 : 0;
+007526:             if (leftReserved !== rightReserved) return leftReserved - rightReserved;
+007527: 
+007528:             const extraDifference = left.trainingCodes.length - right.trainingCodes.length;
+007529:             if (extraDifference) return extraDifference;
+007530:             return String(left.name || '').localeCompare(String(right.name || ''), 'en-GB', { numeric: true });
+007531:         });
+007532:     }
+007533: 
+007534:     function getPersonnelVehicleTypeIdFromRow(row) {
+007535:         if (!row) return '';
+007536: 
+007537:         const typedElements = [
+007538:             row,
+007539:             ...row.querySelectorAll(
+007540:                 '[vehicle_type_id], [data-vehicle-type-id], ' +
+007541:                 '[vehicle_type], [data-vehicle-type]'
+007542:             )
+007543:         ];
+007544: 
+007545:         const candidates = typedElements.flatMap(element => [
+007546:             element.getAttribute?.('vehicle_type_id'),
+007547:             element.getAttribute?.('data-vehicle-type-id'),
+007548:             element.getAttribute?.('vehicle_type'),
+007549:             element.getAttribute?.('data-vehicle-type')
+007550:         ]);
+007551: 
+007552:         const numericTypeId = candidates
+007553:             .map(value => String(value || '').trim())
+007554:             .find(value => /^\d+$/.test(value));
+007555: 
+007556:         if (numericTypeId) return numericTypeId;
+007557: 
+007558:         const typeText = cleanText([
+007559:             row.getAttribute?.('vehicle_type_caption'),
+007560:             row.getAttribute?.('data-vehicle-type-caption'),
+007561:             row.querySelector?.('[vehicle_type_caption]')?.getAttribute?.('vehicle_type_caption'),
+007562:             row.querySelector?.('[data-vehicle-type-caption]')?.getAttribute?.('data-vehicle-type-caption'),
+007563:             row.querySelector?.('td:nth-child(2)')?.textContent
+007564:         ].filter(Boolean).join(' '));
+007565: 
+007566:         // MissionChief UK PSU Carrier. This fallback is used only when the
+007567:         // station row exposes no numeric vehicle-type attribute at all.
+007568:         if (/\b(?:PSU|Police\s+Support\s+Unit)\s+Carrier\b/i.test(typeText)) {
+007569:             return '51';
+007570:         }
+007571: 
+007572:         return '';
+007573:     }
+007574: 
+007575:     function getPersonnelVehicleQueue(doc, allowedTypeIds) {
+007576:         const allowed = new Set((allowedTypeIds || []).map(String));
+007577:         const allowAllVehicleTypes = allowed.size === 0;
+007578:         const seen = new Set();
+007579:         const queue = [];
+007580: 
+007581:         for (const row of [...doc.querySelectorAll('#vehicle_table tr')]) {
+007582:             const vehicleTypeId = getPersonnelVehicleTypeIdFromRow(row);
+007583:             if (!allowAllVehicleTypes && !allowed.has(vehicleTypeId)) continue;
+007584: 
+007585:             const vehicleLinks = [...row.querySelectorAll('a[href*="/vehicles/"]')];
+007586:             const plainVehicleLink = vehicleLinks.find(link => /^\/vehicles\/\d+\/?(?:[?#].*)?$/.test(link.getAttribute('href') || ''));
+007587:             const editLink = vehicleLinks.find(link => /\/vehicles\/\d+\/edit(?:[/?#]|$)/.test(link.getAttribute('href') || ''));
+007588:             const directAssignmentLink = vehicleLinks.find(link => /\/vehicles\/\d+\/zuweisung(?:[/?#]|$)/.test(link.getAttribute('href') || ''));
+007589:             const vehicleId = [plainVehicleLink, editLink, directAssignmentLink]
+007590:                 .map(link => getVehicleIdFromHref(link?.getAttribute('href') || ''))
+007591:                 .find(Boolean) || '';
+007592: 
+007593:             if (!vehicleId || seen.has(vehicleId)) continue;
+007594:             seen.add(vehicleId);
+007595: 
+007596:             const occupancy = parsePersonnelVehicleOccupancy(row);
+007597:             const nameSource = plainVehicleLink || vehicleLinks.find(link => cleanText(link.textContent || ''));
+007598:             queue.push({
+007599:                 vehicleId,
+007600:                 vehicleTypeId,
+007601:                 name: cleanText(nameSource?.textContent || row.textContent || '') || `${TYPE_ID_TO_VEHICLE_TYPE[vehicleTypeId] || 'Vehicle'} ${vehicleId}`,
+007602:                 assignmentHref: directAssignmentLink?.getAttribute('href') || `/vehicles/${vehicleId}/zuweisung`,
+007603:                 assignedCount: occupancy.assignedCount,
+007604:                 maxCount: occupancy.maxCount
+007605:             });
+007606:         }
+007607: 
+007608:         queue.sort((left, right) => left.name.localeCompare(right.name, 'en-GB', { numeric: true, sensitivity: 'base' }));
+007609:         return queue;
+007610:     }
+007611: 
+007612:     function sortPersonnelVehiclesForStationTarget(
+007613:         vehicles,
+007614:         personnel,
+007615:         rule
+007616:     ) {
+007617:         return (
+007618:             Array.isArray(vehicles)
+007619:                 ? vehicles.slice()
+007620:                 : []
+007621:         ).sort((left, right) => {
+007622:             const getState = vehicle => {
+007623:                 const assigned =
+007624:                     getPersonnelAssignedToVehicle(
+007625:                         personnel,
+007626:                         vehicle
+007627:                     );
+007628: 
+007629:                 const qualified =
+007630:                     assigned.filter(
+007631:                         person =>
+007632:                             personnelMatchesRule(
+007633:                                 person,
+007634:                                 rule
+007635:                             )
+007636:                     ).length;
+007637: 
+007638:                 const total = assigned.length;
+007639:                 const capacity =
+007640:                     Math.max(
+007641:                         rule.target,
+007642:                         Number(vehicle.maxCount)
+007643:                         || rule.target
+007644:                     );
+007645: 
+007646:                 return {
+--- lines 7917-8057; match 7957 ---
+007917:                             personnelMatchesRule(
+007918:                                 person,
+007919:                                 rule
+007920:                             )
+007921:                     ).length;
+007922: 
+007923:                 let occupantTrainingGaps =
+007924:                     baselineAssigned
+007925:                         .map(person => {
+007926:                             return {
+007927:                                 name:
+007928:                                     String(
+007929:                                         person.name ||
+007930:                                         person.personnelId ||
+007931:                                         'Assigned person'
+007932:                                     ),
+007933:                                 missingTraining:
+007934:                                     getPersonnelMissingTrainingForRule(
+007935:                                         person,
+007936:                                         rule
+007937:                                     )
+007938:                             };
+007939:                         })
+007940:                         .filter(
+007941:                             entry =>
+007942:                                 entry
+007943:                                     .missingTraining
+007944:                                     .length >
+007945:                                 0
+007946:                         );
+007947: 
+007948:                 const plannedNames = [];
+007949:                 const assignedNames = [];
+007950:                 let liveAssignment = null;
+007951: 
+007952:                 if (PERSONNEL_STATE.action === 'assign' && beforeQualified < rule.target) {
+007953:                     const livePage = await personnelFetchDocument(vehicle.assignmentHref, 14000);
+007954:                     liveAssignment = parseVehicleAssignmentPage(livePage.doc, vehicle.vehicleId);
+007955: 
+007956:                     if (!rule.vehicleTypeIds.includes(liveAssignment.vehicleTypeId)) {
+007957:                         personnelLog(`Skipped unexpected vehicle_type_id=${liveAssignment.vehicleTypeId || 'unknown'} for ${rule.label}.`, 'error');
+007958:                         const unfilled = Math.max(0, rule.target - beforeQualified);
+007959:                         stationAssignmentShortfall += unfilled;
+007960:                         vehicleReports.push({
+007961:                             vehicleId: vehicle.vehicleId,
+007962:                             vehicleTypeId: vehicle.vehicleTypeId,
+007963:                             name: vehicle.name,
+007964:                             ruleId: rule.id,
+007965:                             ruleLabel: rule.label,
+007966:                             trainingLabel: rule.trainingLabel,
+007967:                             target: rule.target,
+007968:                             beforeQualified,
+007969:                             beforeCritical: beforeQualified,
+007970:                             beforeTotal,
+007971:                             afterQualified: beforeQualified,
+007972:                             afterCritical: beforeQualified,
+007973:                             afterTotal: beforeTotal,
+007974:                             finalQualified: beforeQualified,
+007975:                             finalCritical: beforeQualified,
+007976:                             finalTotal: beforeTotal,
+007977:                             plannedNames,
+007978:                             assignedNames,
+007979:                             unfilled,
+007980:                             occupiedSeatBlock: 0,
+007981:                             verificationStatus: 'skipped'
+007982:                         });
+007983:                         continue;
+007984:                     }
+007985: 
+007986:                     beforeTotal = liveAssignment.totalAssigned.length;
+007987:                     beforeQualified = liveAssignment.totalAssigned.filter(person => personnelMatchesRule(person, rule)).length;
+007988:                 }
+007989: 
+007990:                 if (beforeQualified >= rule.target) {
+007991:                     personnelLog(`Already covered: ${beforeQualified}/${rule.target} ${rule.trainingLabel}.`, 'done');
+007992:                 } else {
+007993:                     const seatCapacity = Math.max(rule.target, Number(vehicle.maxCount) || rule.target);
+007994:                     const seatsAvailable = Math.max(0, seatCapacity - beforeTotal);
+007995:                     const targetGap = Math.max(0, rule.target - beforeQualified);
+007996:                     const attemptCount = Math.min(targetGap, seatsAvailable);
+007997: 
+007998:                     if (!attemptCount && targetGap) {
+007999:                         personnelLog(`Cannot top up safely: ${beforeTotal}/${seatCapacity} seats are occupied and ${targetGap} qualified position(s) remain. Existing staff were preserved.`, 'error');
+008000:                     }
+008001: 
+008002:                     const sourceRows = PERSONNEL_STATE.action === 'assign' ? (liveAssignment?.rows || []) : personnel;
+008003:                     const candidates = sortPersonnelCandidatesForRule(
+008004:                         sourceRows.filter(person =>
+008005:                             person.available
+008006:                             && !reservedPersonnelIds.has(person.personnelId)
+008007:                             && personnelMatchesRule(person, rule)
+008008:                         ),
+008009:                         rule
+008010:                     ).slice(0, attemptCount);
+008011: 
+008012:                     candidates.forEach(person => reservedPersonnelIds.add(person.personnelId));
+008013: 
+008014:                     if (PERSONNEL_STATE.action === 'preview') {
+008015:                         candidates.forEach(person => plannedNames.push(person.name));
+008016:                         stationPlanned += candidates.length;
+008017:                         if (candidates.length) personnelLog(`Would assign: ${candidates.map(person => person.name).join(', ')}`, 'after');
+008018:                     } else {
+008019:                         const submittedCandidates = [];
+008020:                         for (const candidate of candidates) {
+008021:                             if (PERSONNEL_STATE.stopped) break;
+008022:                             await waitIfPersonnelPaused();
+008023:                             if (PERSONNEL_STATE.stopped) break;
+008024: 
+008025:                             personnelLog(`Assigning ${candidate.name} to ${vehicle.name}...`, 'after');
+008026:                             if (await submitPersonnelAssignment(candidate)) {
+008027:                                 submittedCandidates.push(candidate);
+008028:                                 personnelLog(`Assignment submitted: ${candidate.name}`, 'info');
+008029:                             } else {
+008030:                                 personnelLog(`Assignment request failed: ${candidate.name}`, 'error');
+008031:                             }
+008032:                         }
+008033: 
+008034:                         if (submittedCandidates.length && !PERSONNEL_STATE.stopped) {
+008035:                             await waitPersonnelDelay(250);
+008036:                             const verificationPage = await personnelFetchDocument(vehicle.assignmentHref, 14000);
+008037:                             const verification = parseVehicleAssignmentPage(verificationPage.doc, vehicle.vehicleId);
+008038: 
+008039:                             publishPersonnelVehicleTrainingRegistry({
+008040:                                 station,
+008041:                                 vehicles:
+008042:                                     allVehicles,
+008043:                                 personnel:
+008044:                                     verification.rows,
+008045:                                 source:
+008046:                                     'police-vehicle-verification'
+008047:                             });
+008048: 
+008049:                             const verifiedIds = new Set(
+008050:                                 verification.rows
+008051:                                     .filter(person => person.assignedHere && personnelMatchesRule(person, rule))
+008052:                                     .map(person => person.personnelId)
+008053:                             );
+008054: 
+008055:                             submittedCandidates.forEach(candidate => {
+008056:                                 if (verifiedIds.has(candidate.personnelId)) {
+008057:                                     assignedNames.push(candidate.name);
+--- lines 8384-8524; match 8424 ---
+008384:                         : 2;
+008385: 
+008386:             if (leftRank !== rightRank) {
+008387:                 return leftRank - rightRank;
+008388:             }
+008389: 
+008390:             if (
+008391:                 leftState.critical
+008392:                 !== rightState.critical
+008393:             ) {
+008394:                 return (
+008395:                     rightState.critical
+008396:                     - leftState.critical
+008397:                 );
+008398:             }
+008399: 
+008400:             return String(
+008401:                 left.name || ''
+008402:             ).localeCompare(
+008403:                 String(right.name || ''),
+008404:                 'en-GB',
+008405:                 { numeric: true }
+008406:             );
+008407:         });
+008408:     }
+008409: 
+008410:     async function processOneMedicalCriticalCareStation(station) {
+008411:         const stationPage = await personnelFetchDocument(station.href, 14000);
+008412:         const vehicles = getPersonnelAmbulanceQueue(stationPage.doc);
+008413: 
+008414:         if (!vehicles.length) {
+008415:             throw new Error('No Ambulance vehicles were found in the station vehicle table.');
+008416:         }
+008417: 
+008418:         // One Ambulance assignment page supplies the station-wide personnel snapshot.
+008419:         // Button state is the authoritative binding signal; the station vehicle table
+008420:         // supplies the initial occupied/max cross-check.
+008421:         const baselinePage = await personnelFetchDocument(vehicles[0].assignmentHref, 14000);
+008422:         const baselineAssignment = parseVehicleAssignmentPage(baselinePage.doc, vehicles[0].vehicleId);
+008423: 
+008424:         if (baselineAssignment.vehicleTypeId !== PERSONNEL_TARGET_VEHICLE_TYPE_ID) {
+008425:             throw new Error(`The personnel assignment page was not an Ambulance page (vehicle_type_id=${baselineAssignment.vehicleTypeId || 'unknown'}).`);
+008426:         }
+008427: 
+008428:         const personnel = baselineAssignment.rows;
+008429:         const trained = personnel.filter(person => person.trainingCodes.includes(PERSONNEL_TRAINING_CODE));
+008430:         const availableAtScan = trained.filter(person => person.available).length;
+008431: 
+008432:         const processingVehicles =
+008433:             isPersonnelPerStationTargetMode()
+008434:                 ? sortMedicalVehiclesForStationTarget(
+008435:                     vehicles,
+008436:                     personnel
+008437:                 )
+008438:                 : vehicles;
+008439: 
+008440:         const reservedPersonnelIds = new Set();
+008441:         const vehicleReports = [];
+008442:         let required = 0;
+008443:         let trainingShortfall = 0;
+008444:         let stationPlanned = 0;
+008445:         let stationAssigned = 0;
+008446:         let stationAssignmentShortfall = 0;
+008447:         let projectedFulfilledUnits = 0;
+008448: 
+008449:         const stationUnitsNeeded = getPersonnelUnitsRemaining();
+008450:         const stationUnitTargetReached = () =>
+008451:             Number.isFinite(stationUnitsNeeded)
+008452:             && projectedFulfilledUnits >= stationUnitsNeeded;
+008453: 
+008454:         personnelLog(`Ambulances available: ${vehicles.length}`, 'info');
+008455:         personnelLog(`${PERSONNEL_TRAINING_LABEL} trained: ${trained.length} | Available at scan: ${availableAtScan}`, 'info');
+008456:         if (Number.isFinite(stationUnitsNeeded)) {
+008457:             personnelLog(`Units still required before this station: ${stationUnitsNeeded}. Only Ambulances reaching 2/2 Critical Care count.`, 'info');
+008458:         }
+008459:         personnelLog(
+008460:             PERSONNEL_STATE.action === 'preview'
+008461:                 ? 'Low-impact preview: station occupancy is cross-checked against one Ambulance personnel page.'
+008462:                 : 'Fast safe assignment: each Ambulance is read once, assignments are submitted in a small batch, then verified with one vehicle check and one final station-wide check.',
+008463:             'debug'
+008464:         );
+008465: 
+008466:         for (let vehicleIndex = 0; vehicleIndex < processingVehicles.length; vehicleIndex++) {
+008467:             if (PERSONNEL_STATE.stopped || stationUnitTargetReached()) break;
+008468:             await waitIfPersonnelPaused();
+008469:             if (PERSONNEL_STATE.stopped || stationUnitTargetReached()) break;
+008470: 
+008471:             const vehicle = processingVehicles[vehicleIndex];
+008472:             required += PERSONNEL_TARGET_PER_VEHICLE;
+008473: 
+008474:             setPersonnelUiValue('vehicle', vehicle.name || vehicle.vehicleId);
+008475:             setPersonnelUiValue('status', PERSONNEL_STATE.action === 'assign' ? 'Checking vehicle' : 'Building station preview');
+008476:             personnelLog(`Vehicle ${vehicleIndex + 1}/${processingVehicles.length}: ${vehicle.name || vehicle.vehicleId}`, 'station');
+008477: 
+008478:             const stationAssignedPeople = getPersonnelAssignedToVehicle(personnel, vehicle);
+008479:             const mappedTotal = stationAssignedPeople.length;
+008480:             const mappedCritical = stationAssignedPeople.filter(person => person.trainingCodes.includes(PERSONNEL_TRAINING_CODE)).length;
+008481:             const hasTableOccupancy = Number.isInteger(vehicle.assignedCount) && vehicle.assignedCount >= 0;
+008482: 
+008483:             let beforeTotal = hasTableOccupancy
+008484:                 ? Math.min(vehicle.assignedCount, mappedTotal)
+008485:                 : mappedTotal;
+008486:             let beforeCritical = Math.min(mappedCritical, beforeTotal);
+008487:             const plannedNames = [];
+008488:             const assignedNames = [];
+008489: 
+008490:             if (hasTableOccupancy && mappedTotal !== beforeTotal) {
+008491:                 personnelDebug(
+008492:                     `${vehicle.name}: station table occupancy=${vehicle.assignedCount}, `
+008493:                     + `personnel snapshot mapped=${mappedTotal}. Initial count set to ${beforeTotal}.`
+008494:                 );
+008495:             }
+008496: 
+008497:             if (beforeTotal === 0) beforeCritical = 0;
+008498: 
+008499:             // In live mode, read the specific Ambulance immediately before changing it.
+008500:             let liveAssignment = null;
+008501:             if (PERSONNEL_STATE.action === 'assign' && beforeCritical < PERSONNEL_TARGET_PER_VEHICLE && beforeTotal < PERSONNEL_TARGET_PER_VEHICLE) {
+008502:                 const livePage = await personnelFetchDocument(vehicle.assignmentHref, 14000);
+008503:                 liveAssignment = parseVehicleAssignmentPage(livePage.doc, vehicle.vehicleId);
+008504: 
+008505:                 if (liveAssignment.vehicleTypeId !== PERSONNEL_TARGET_VEHICLE_TYPE_ID) {
+008506:                     personnelLog(`Skipped non-Ambulance assignment page: vehicle_type_id=${liveAssignment.vehicleTypeId || 'unknown'}`, 'error');
+008507:                     const skippedUnfilled = Math.max(0, PERSONNEL_TARGET_PER_VEHICLE - beforeCritical);
+008508:                     stationAssignmentShortfall += skippedUnfilled;
+008509:                     vehicleReports.push({
+008510:                         vehicleId: vehicle.vehicleId,
+008511:                         name: vehicle.name || `Vehicle ${vehicle.vehicleId}`,
+008512:                         beforeCritical,
+008513:                         beforeTotal,
+008514:                         finalCritical: beforeCritical,
+008515:                         finalTotal: beforeTotal,
+008516:                         afterCritical: beforeCritical,
+008517:                         afterTotal: beforeTotal,
+008518:                         plannedNames,
+008519:                         assignedNames,
+008520:                         unfilled: skippedUnfilled,
+008521:                         occupiedSeatBlock: 0,
+008522:                         verificationStatus: 'skipped'
+008523:                     });
+008524:                     continue;
+--- lines 8385-8525; match 8425 ---
+008385: 
+008386:             if (leftRank !== rightRank) {
+008387:                 return leftRank - rightRank;
+008388:             }
+008389: 
+008390:             if (
+008391:                 leftState.critical
+008392:                 !== rightState.critical
+008393:             ) {
+008394:                 return (
+008395:                     rightState.critical
+008396:                     - leftState.critical
+008397:                 );
+008398:             }
+008399: 
+008400:             return String(
+008401:                 left.name || ''
+008402:             ).localeCompare(
+008403:                 String(right.name || ''),
+008404:                 'en-GB',
+008405:                 { numeric: true }
+008406:             );
+008407:         });
+008408:     }
+008409: 
+008410:     async function processOneMedicalCriticalCareStation(station) {
+008411:         const stationPage = await personnelFetchDocument(station.href, 14000);
+008412:         const vehicles = getPersonnelAmbulanceQueue(stationPage.doc);
+008413: 
+008414:         if (!vehicles.length) {
+008415:             throw new Error('No Ambulance vehicles were found in the station vehicle table.');
+008416:         }
+008417: 
+008418:         // One Ambulance assignment page supplies the station-wide personnel snapshot.
+008419:         // Button state is the authoritative binding signal; the station vehicle table
+008420:         // supplies the initial occupied/max cross-check.
+008421:         const baselinePage = await personnelFetchDocument(vehicles[0].assignmentHref, 14000);
+008422:         const baselineAssignment = parseVehicleAssignmentPage(baselinePage.doc, vehicles[0].vehicleId);
+008423: 
+008424:         if (baselineAssignment.vehicleTypeId !== PERSONNEL_TARGET_VEHICLE_TYPE_ID) {
+008425:             throw new Error(`The personnel assignment page was not an Ambulance page (vehicle_type_id=${baselineAssignment.vehicleTypeId || 'unknown'}).`);
+008426:         }
+008427: 
+008428:         const personnel = baselineAssignment.rows;
+008429:         const trained = personnel.filter(person => person.trainingCodes.includes(PERSONNEL_TRAINING_CODE));
+008430:         const availableAtScan = trained.filter(person => person.available).length;
+008431: 
+008432:         const processingVehicles =
+008433:             isPersonnelPerStationTargetMode()
+008434:                 ? sortMedicalVehiclesForStationTarget(
+008435:                     vehicles,
+008436:                     personnel
+008437:                 )
+008438:                 : vehicles;
+008439: 
+008440:         const reservedPersonnelIds = new Set();
+008441:         const vehicleReports = [];
+008442:         let required = 0;
+008443:         let trainingShortfall = 0;
+008444:         let stationPlanned = 0;
+008445:         let stationAssigned = 0;
+008446:         let stationAssignmentShortfall = 0;
+008447:         let projectedFulfilledUnits = 0;
+008448: 
+008449:         const stationUnitsNeeded = getPersonnelUnitsRemaining();
+008450:         const stationUnitTargetReached = () =>
+008451:             Number.isFinite(stationUnitsNeeded)
+008452:             && projectedFulfilledUnits >= stationUnitsNeeded;
+008453: 
+008454:         personnelLog(`Ambulances available: ${vehicles.length}`, 'info');
+008455:         personnelLog(`${PERSONNEL_TRAINING_LABEL} trained: ${trained.length} | Available at scan: ${availableAtScan}`, 'info');
+008456:         if (Number.isFinite(stationUnitsNeeded)) {
+008457:             personnelLog(`Units still required before this station: ${stationUnitsNeeded}. Only Ambulances reaching 2/2 Critical Care count.`, 'info');
+008458:         }
+008459:         personnelLog(
+008460:             PERSONNEL_STATE.action === 'preview'
+008461:                 ? 'Low-impact preview: station occupancy is cross-checked against one Ambulance personnel page.'
+008462:                 : 'Fast safe assignment: each Ambulance is read once, assignments are submitted in a small batch, then verified with one vehicle check and one final station-wide check.',
+008463:             'debug'
+008464:         );
+008465: 
+008466:         for (let vehicleIndex = 0; vehicleIndex < processingVehicles.length; vehicleIndex++) {
+008467:             if (PERSONNEL_STATE.stopped || stationUnitTargetReached()) break;
+008468:             await waitIfPersonnelPaused();
+008469:             if (PERSONNEL_STATE.stopped || stationUnitTargetReached()) break;
+008470: 
+008471:             const vehicle = processingVehicles[vehicleIndex];
+008472:             required += PERSONNEL_TARGET_PER_VEHICLE;
+008473: 
+008474:             setPersonnelUiValue('vehicle', vehicle.name || vehicle.vehicleId);
+008475:             setPersonnelUiValue('status', PERSONNEL_STATE.action === 'assign' ? 'Checking vehicle' : 'Building station preview');
+008476:             personnelLog(`Vehicle ${vehicleIndex + 1}/${processingVehicles.length}: ${vehicle.name || vehicle.vehicleId}`, 'station');
+008477: 
+008478:             const stationAssignedPeople = getPersonnelAssignedToVehicle(personnel, vehicle);
+008479:             const mappedTotal = stationAssignedPeople.length;
+008480:             const mappedCritical = stationAssignedPeople.filter(person => person.trainingCodes.includes(PERSONNEL_TRAINING_CODE)).length;
+008481:             const hasTableOccupancy = Number.isInteger(vehicle.assignedCount) && vehicle.assignedCount >= 0;
+008482: 
+008483:             let beforeTotal = hasTableOccupancy
+008484:                 ? Math.min(vehicle.assignedCount, mappedTotal)
+008485:                 : mappedTotal;
+008486:             let beforeCritical = Math.min(mappedCritical, beforeTotal);
+008487:             const plannedNames = [];
+008488:             const assignedNames = [];
+008489: 
+008490:             if (hasTableOccupancy && mappedTotal !== beforeTotal) {
+008491:                 personnelDebug(
+008492:                     `${vehicle.name}: station table occupancy=${vehicle.assignedCount}, `
+008493:                     + `personnel snapshot mapped=${mappedTotal}. Initial count set to ${beforeTotal}.`
+008494:                 );
+008495:             }
+008496: 
+008497:             if (beforeTotal === 0) beforeCritical = 0;
+008498: 
+008499:             // In live mode, read the specific Ambulance immediately before changing it.
+008500:             let liveAssignment = null;
+008501:             if (PERSONNEL_STATE.action === 'assign' && beforeCritical < PERSONNEL_TARGET_PER_VEHICLE && beforeTotal < PERSONNEL_TARGET_PER_VEHICLE) {
+008502:                 const livePage = await personnelFetchDocument(vehicle.assignmentHref, 14000);
+008503:                 liveAssignment = parseVehicleAssignmentPage(livePage.doc, vehicle.vehicleId);
+008504: 
+008505:                 if (liveAssignment.vehicleTypeId !== PERSONNEL_TARGET_VEHICLE_TYPE_ID) {
+008506:                     personnelLog(`Skipped non-Ambulance assignment page: vehicle_type_id=${liveAssignment.vehicleTypeId || 'unknown'}`, 'error');
+008507:                     const skippedUnfilled = Math.max(0, PERSONNEL_TARGET_PER_VEHICLE - beforeCritical);
+008508:                     stationAssignmentShortfall += skippedUnfilled;
+008509:                     vehicleReports.push({
+008510:                         vehicleId: vehicle.vehicleId,
+008511:                         name: vehicle.name || `Vehicle ${vehicle.vehicleId}`,
+008512:                         beforeCritical,
+008513:                         beforeTotal,
+008514:                         finalCritical: beforeCritical,
+008515:                         finalTotal: beforeTotal,
+008516:                         afterCritical: beforeCritical,
+008517:                         afterTotal: beforeTotal,
+008518:                         plannedNames,
+008519:                         assignedNames,
+008520:                         unfilled: skippedUnfilled,
+008521:                         occupiedSeatBlock: 0,
+008522:                         verificationStatus: 'skipped'
+008523:                     });
+008524:                     continue;
+008525:                 }
+--- lines 8465-8605; match 8505 ---
+008465: 
+008466:         for (let vehicleIndex = 0; vehicleIndex < processingVehicles.length; vehicleIndex++) {
+008467:             if (PERSONNEL_STATE.stopped || stationUnitTargetReached()) break;
+008468:             await waitIfPersonnelPaused();
+008469:             if (PERSONNEL_STATE.stopped || stationUnitTargetReached()) break;
+008470: 
+008471:             const vehicle = processingVehicles[vehicleIndex];
+008472:             required += PERSONNEL_TARGET_PER_VEHICLE;
+008473: 
+008474:             setPersonnelUiValue('vehicle', vehicle.name || vehicle.vehicleId);
+008475:             setPersonnelUiValue('status', PERSONNEL_STATE.action === 'assign' ? 'Checking vehicle' : 'Building station preview');
+008476:             personnelLog(`Vehicle ${vehicleIndex + 1}/${processingVehicles.length}: ${vehicle.name || vehicle.vehicleId}`, 'station');
+008477: 
+008478:             const stationAssignedPeople = getPersonnelAssignedToVehicle(personnel, vehicle);
+008479:             const mappedTotal = stationAssignedPeople.length;
+008480:             const mappedCritical = stationAssignedPeople.filter(person => person.trainingCodes.includes(PERSONNEL_TRAINING_CODE)).length;
+008481:             const hasTableOccupancy = Number.isInteger(vehicle.assignedCount) && vehicle.assignedCount >= 0;
+008482: 
+008483:             let beforeTotal = hasTableOccupancy
+008484:                 ? Math.min(vehicle.assignedCount, mappedTotal)
+008485:                 : mappedTotal;
+008486:             let beforeCritical = Math.min(mappedCritical, beforeTotal);
+008487:             const plannedNames = [];
+008488:             const assignedNames = [];
+008489: 
+008490:             if (hasTableOccupancy && mappedTotal !== beforeTotal) {
+008491:                 personnelDebug(
+008492:                     `${vehicle.name}: station table occupancy=${vehicle.assignedCount}, `
+008493:                     + `personnel snapshot mapped=${mappedTotal}. Initial count set to ${beforeTotal}.`
+008494:                 );
+008495:             }
+008496: 
+008497:             if (beforeTotal === 0) beforeCritical = 0;
+008498: 
+008499:             // In live mode, read the specific Ambulance immediately before changing it.
+008500:             let liveAssignment = null;
+008501:             if (PERSONNEL_STATE.action === 'assign' && beforeCritical < PERSONNEL_TARGET_PER_VEHICLE && beforeTotal < PERSONNEL_TARGET_PER_VEHICLE) {
+008502:                 const livePage = await personnelFetchDocument(vehicle.assignmentHref, 14000);
+008503:                 liveAssignment = parseVehicleAssignmentPage(livePage.doc, vehicle.vehicleId);
+008504: 
+008505:                 if (liveAssignment.vehicleTypeId !== PERSONNEL_TARGET_VEHICLE_TYPE_ID) {
+008506:                     personnelLog(`Skipped non-Ambulance assignment page: vehicle_type_id=${liveAssignment.vehicleTypeId || 'unknown'}`, 'error');
+008507:                     const skippedUnfilled = Math.max(0, PERSONNEL_TARGET_PER_VEHICLE - beforeCritical);
+008508:                     stationAssignmentShortfall += skippedUnfilled;
+008509:                     vehicleReports.push({
+008510:                         vehicleId: vehicle.vehicleId,
+008511:                         name: vehicle.name || `Vehicle ${vehicle.vehicleId}`,
+008512:                         beforeCritical,
+008513:                         beforeTotal,
+008514:                         finalCritical: beforeCritical,
+008515:                         finalTotal: beforeTotal,
+008516:                         afterCritical: beforeCritical,
+008517:                         afterTotal: beforeTotal,
+008518:                         plannedNames,
+008519:                         assignedNames,
+008520:                         unfilled: skippedUnfilled,
+008521:                         occupiedSeatBlock: 0,
+008522:                         verificationStatus: 'skipped'
+008523:                     });
+008524:                     continue;
+008525:                 }
+008526: 
+008527:                 beforeCritical = liveAssignment.criticalAssigned.length;
+008528:                 beforeTotal = liveAssignment.totalAssigned.length;
+008529:             }
+008530: 
+008531:             if (beforeCritical >= PERSONNEL_TARGET_PER_VEHICLE) {
+008532:                 personnelLog(`Already covered: ${beforeCritical}/${PERSONNEL_TARGET_PER_VEHICLE} Critical Care staff.`, 'done');
+008533:             } else {
+008534:                 const seatsAvailable = Math.max(0, PERSONNEL_TARGET_PER_VEHICLE - beforeTotal);
+008535:                 const targetGap = Math.max(0, PERSONNEL_TARGET_PER_VEHICLE - beforeCritical);
+008536:                 const attemptCount = Math.min(targetGap, seatsAvailable);
+008537: 
+008538:                 if (seatsAvailable === 0) {
+008539:                     personnelLog(`Cannot top up safely: ${beforeTotal}/${PERSONNEL_TARGET_PER_VEHICLE} seats are occupied, but only ${beforeCritical} occupant(s) have Critical Care. Existing staff were preserved.`, 'error');
+008540:                 }
+008541: 
+008542:                 if (PERSONNEL_STATE.action === 'preview') {
+008543:                     const candidates = trained
+008544:                         .filter(person => person.available && !reservedPersonnelIds.has(person.personnelId))
+008545:                         .slice(0, attemptCount);
+008546: 
+008547:                     candidates.forEach(person => {
+008548:                         reservedPersonnelIds.add(person.personnelId);
+008549:                         plannedNames.push(person.name);
+008550:                     });
+008551:                     stationPlanned += candidates.length;
+008552: 
+008553:                     if (candidates.length) {
+008554:                         personnelLog(`Would assign: ${candidates.map(person => person.name).join(', ')}`, 'after');
+008555:                     }
+008556:                 } else {
+008557:                     // Use the live page already loaded for this Ambulance to select all
+008558:                     // required candidates. Submit them sequentially, then verify the whole
+008559:                     // batch with one fresh page request instead of reloading after every
+008560:                     // individual person.
+008561:                     const candidates = (liveAssignment?.availableCritical || [])
+008562:                         .filter(person => !reservedPersonnelIds.has(person.personnelId))
+008563:                         .slice(0, attemptCount);
+008564:                     const submittedCandidates = [];
+008565: 
+008566:                     candidates.forEach(person => reservedPersonnelIds.add(person.personnelId));
+008567: 
+008568:                     for (const candidate of candidates) {
+008569:                         if (PERSONNEL_STATE.stopped) break;
+008570:                         await waitIfPersonnelPaused();
+008571:                         if (PERSONNEL_STATE.stopped) break;
+008572: 
+008573:                         personnelLog(`Assigning ${candidate.name} to ${vehicle.name || vehicle.vehicleId}...`, 'after');
+008574:                         const submitted = await submitPersonnelAssignment(candidate);
+008575: 
+008576:                         if (submitted) {
+008577:                             submittedCandidates.push(candidate);
+008578:                             personnelLog(`Assignment submitted: ${candidate.name}`, 'info');
+008579:                         } else {
+008580:                             personnelLog(`Assignment request failed: ${candidate.name}`, 'error');
+008581:                         }
+008582:                     }
+008583: 
+008584:                     if (submittedCandidates.length && !PERSONNEL_STATE.stopped) {
+008585:                         await waitPersonnelDelay(250);
+008586:                         const verificationPage = await personnelFetchDocument(vehicle.assignmentHref, 14000);
+008587:                         const verification = parseVehicleAssignmentPage(verificationPage.doc, vehicle.vehicleId);
+008588:                         const verifiedIds = new Set(
+008589:                             verification.rows
+008590:                                 .filter(person => person.assignedHere)
+008591:                                 .map(person => person.personnelId)
+008592:                         );
+008593: 
+008594:                         submittedCandidates.forEach(candidate => {
+008595:                             if (verifiedIds.has(candidate.personnelId)) {
+008596:                                 assignedNames.push(candidate.name);
+008597:                                 stationAssigned++;
+008598:                                 personnelLog(`Assigned and verified: ${candidate.name}`, 'done');
+008599:                             } else {
+008600:                                 personnelLog(`Assignment could not be verified: ${candidate.name}`, 'error');
+008601:                             }
+008602:                         });
+008603:                     }
+008604:                 }
+008605:             }
+--- lines 8466-8606; match 8506 ---
+008466:         for (let vehicleIndex = 0; vehicleIndex < processingVehicles.length; vehicleIndex++) {
+008467:             if (PERSONNEL_STATE.stopped || stationUnitTargetReached()) break;
+008468:             await waitIfPersonnelPaused();
+008469:             if (PERSONNEL_STATE.stopped || stationUnitTargetReached()) break;
+008470: 
+008471:             const vehicle = processingVehicles[vehicleIndex];
+008472:             required += PERSONNEL_TARGET_PER_VEHICLE;
+008473: 
+008474:             setPersonnelUiValue('vehicle', vehicle.name || vehicle.vehicleId);
+008475:             setPersonnelUiValue('status', PERSONNEL_STATE.action === 'assign' ? 'Checking vehicle' : 'Building station preview');
+008476:             personnelLog(`Vehicle ${vehicleIndex + 1}/${processingVehicles.length}: ${vehicle.name || vehicle.vehicleId}`, 'station');
+008477: 
+008478:             const stationAssignedPeople = getPersonnelAssignedToVehicle(personnel, vehicle);
+008479:             const mappedTotal = stationAssignedPeople.length;
+008480:             const mappedCritical = stationAssignedPeople.filter(person => person.trainingCodes.includes(PERSONNEL_TRAINING_CODE)).length;
+008481:             const hasTableOccupancy = Number.isInteger(vehicle.assignedCount) && vehicle.assignedCount >= 0;
+008482: 
+008483:             let beforeTotal = hasTableOccupancy
+008484:                 ? Math.min(vehicle.assignedCount, mappedTotal)
+008485:                 : mappedTotal;
+008486:             let beforeCritical = Math.min(mappedCritical, beforeTotal);
+008487:             const plannedNames = [];
+008488:             const assignedNames = [];
+008489: 
+008490:             if (hasTableOccupancy && mappedTotal !== beforeTotal) {
+008491:                 personnelDebug(
+008492:                     `${vehicle.name}: station table occupancy=${vehicle.assignedCount}, `
+008493:                     + `personnel snapshot mapped=${mappedTotal}. Initial count set to ${beforeTotal}.`
+008494:                 );
+008495:             }
+008496: 
+008497:             if (beforeTotal === 0) beforeCritical = 0;
+008498: 
+008499:             // In live mode, read the specific Ambulance immediately before changing it.
+008500:             let liveAssignment = null;
+008501:             if (PERSONNEL_STATE.action === 'assign' && beforeCritical < PERSONNEL_TARGET_PER_VEHICLE && beforeTotal < PERSONNEL_TARGET_PER_VEHICLE) {
+008502:                 const livePage = await personnelFetchDocument(vehicle.assignmentHref, 14000);
+008503:                 liveAssignment = parseVehicleAssignmentPage(livePage.doc, vehicle.vehicleId);
+008504: 
+008505:                 if (liveAssignment.vehicleTypeId !== PERSONNEL_TARGET_VEHICLE_TYPE_ID) {
+008506:                     personnelLog(`Skipped non-Ambulance assignment page: vehicle_type_id=${liveAssignment.vehicleTypeId || 'unknown'}`, 'error');
+008507:                     const skippedUnfilled = Math.max(0, PERSONNEL_TARGET_PER_VEHICLE - beforeCritical);
+008508:                     stationAssignmentShortfall += skippedUnfilled;
+008509:                     vehicleReports.push({
+008510:                         vehicleId: vehicle.vehicleId,
+008511:                         name: vehicle.name || `Vehicle ${vehicle.vehicleId}`,
+008512:                         beforeCritical,
+008513:                         beforeTotal,
+008514:                         finalCritical: beforeCritical,
+008515:                         finalTotal: beforeTotal,
+008516:                         afterCritical: beforeCritical,
+008517:                         afterTotal: beforeTotal,
+008518:                         plannedNames,
+008519:                         assignedNames,
+008520:                         unfilled: skippedUnfilled,
+008521:                         occupiedSeatBlock: 0,
+008522:                         verificationStatus: 'skipped'
+008523:                     });
+008524:                     continue;
+008525:                 }
+008526: 
+008527:                 beforeCritical = liveAssignment.criticalAssigned.length;
+008528:                 beforeTotal = liveAssignment.totalAssigned.length;
+008529:             }
+008530: 
+008531:             if (beforeCritical >= PERSONNEL_TARGET_PER_VEHICLE) {
+008532:                 personnelLog(`Already covered: ${beforeCritical}/${PERSONNEL_TARGET_PER_VEHICLE} Critical Care staff.`, 'done');
+008533:             } else {
+008534:                 const seatsAvailable = Math.max(0, PERSONNEL_TARGET_PER_VEHICLE - beforeTotal);
+008535:                 const targetGap = Math.max(0, PERSONNEL_TARGET_PER_VEHICLE - beforeCritical);
+008536:                 const attemptCount = Math.min(targetGap, seatsAvailable);
+008537: 
+008538:                 if (seatsAvailable === 0) {
+008539:                     personnelLog(`Cannot top up safely: ${beforeTotal}/${PERSONNEL_TARGET_PER_VEHICLE} seats are occupied, but only ${beforeCritical} occupant(s) have Critical Care. Existing staff were preserved.`, 'error');
+008540:                 }
+008541: 
+008542:                 if (PERSONNEL_STATE.action === 'preview') {
+008543:                     const candidates = trained
+008544:                         .filter(person => person.available && !reservedPersonnelIds.has(person.personnelId))
+008545:                         .slice(0, attemptCount);
+008546: 
+008547:                     candidates.forEach(person => {
+008548:                         reservedPersonnelIds.add(person.personnelId);
+008549:                         plannedNames.push(person.name);
+008550:                     });
+008551:                     stationPlanned += candidates.length;
+008552: 
+008553:                     if (candidates.length) {
+008554:                         personnelLog(`Would assign: ${candidates.map(person => person.name).join(', ')}`, 'after');
+008555:                     }
+008556:                 } else {
+008557:                     // Use the live page already loaded for this Ambulance to select all
+008558:                     // required candidates. Submit them sequentially, then verify the whole
+008559:                     // batch with one fresh page request instead of reloading after every
+008560:                     // individual person.
+008561:                     const candidates = (liveAssignment?.availableCritical || [])
+008562:                         .filter(person => !reservedPersonnelIds.has(person.personnelId))
+008563:                         .slice(0, attemptCount);
+008564:                     const submittedCandidates = [];
+008565: 
+008566:                     candidates.forEach(person => reservedPersonnelIds.add(person.personnelId));
+008567: 
+008568:                     for (const candidate of candidates) {
+008569:                         if (PERSONNEL_STATE.stopped) break;
+008570:                         await waitIfPersonnelPaused();
+008571:                         if (PERSONNEL_STATE.stopped) break;
+008572: 
+008573:                         personnelLog(`Assigning ${candidate.name} to ${vehicle.name || vehicle.vehicleId}...`, 'after');
+008574:                         const submitted = await submitPersonnelAssignment(candidate);
+008575: 
+008576:                         if (submitted) {
+008577:                             submittedCandidates.push(candidate);
+008578:                             personnelLog(`Assignment submitted: ${candidate.name}`, 'info');
+008579:                         } else {
+008580:                             personnelLog(`Assignment request failed: ${candidate.name}`, 'error');
+008581:                         }
+008582:                     }
+008583: 
+008584:                     if (submittedCandidates.length && !PERSONNEL_STATE.stopped) {
+008585:                         await waitPersonnelDelay(250);
+008586:                         const verificationPage = await personnelFetchDocument(vehicle.assignmentHref, 14000);
+008587:                         const verification = parseVehicleAssignmentPage(verificationPage.doc, vehicle.vehicleId);
+008588:                         const verifiedIds = new Set(
+008589:                             verification.rows
+008590:                                 .filter(person => person.assignedHere)
+008591:                                 .map(person => person.personnelId)
+008592:                         );
+008593: 
+008594:                         submittedCandidates.forEach(candidate => {
+008595:                             if (verifiedIds.has(candidate.personnelId)) {
+008596:                                 assignedNames.push(candidate.name);
+008597:                                 stationAssigned++;
+008598:                                 personnelLog(`Assigned and verified: ${candidate.name}`, 'done');
+008599:                             } else {
+008600:                                 personnelLog(`Assignment could not be verified: ${candidate.name}`, 'error');
+008601:                             }
+008602:                         });
+008603:                     }
+008604:                 }
+008605:             }
+008606: 
+--- lines 8631-8771; match 8671 ---
+008631:                 plannedNames,
+008632:                 assignedNames,
+008633:                 unfilled: calculatedUnfilled,
+008634:                 occupiedSeatBlock: Math.max(0, (PERSONNEL_TARGET_PER_VEHICLE - beforeCritical) - Math.max(0, PERSONNEL_TARGET_PER_VEHICLE - beforeTotal)),
+008635:                 verificationStatus: PERSONNEL_STATE.action === 'preview' ? 'projected' : 'individually-verified'
+008636:             });
+008637: 
+008638:             if (calculatedUnfilled === 0) {
+008639:                 projectedFulfilledUnits++;
+008640:                 personnelLog(
+008641:                     Number.isFinite(stationUnitsNeeded)
+008642:                         ? `Unit target progress at this station: ${projectedFulfilledUnits}/${stationUnitsNeeded}.`
+008643:                         : `Fully covered Ambulances at this station: ${projectedFulfilledUnits}.`,
+008644:                     'done'
+008645:                 );
+008646:             }
+008647:         }
+008648: 
+008649:         trainingShortfall = Math.max(0, required - trained.length);
+008650:         if (trainingShortfall) {
+008651:             personnelLog(`Training shortfall for processed Ambulances: ${trainingShortfall} additional personnel need ${PERSONNEL_TRAINING_LABEL} training.`, 'error');
+008652:         }
+008653: 
+008654:         let afterActionVerified = PERSONNEL_STATE.action === 'preview';
+008655:         let verificationError = '';
+008656:         let availableAtEnd = Math.max(0, availableAtScan - (PERSONNEL_STATE.action === 'preview' ? stationPlanned : stationAssigned));
+008657: 
+008658:         // Final station-wide verification. This is one additional request after the
+008659:         // station is complete and produces the actual after-action figures rather than
+008660:         // merely trusting the number of successful POSTs.
+008661:         if (PERSONNEL_STATE.action === 'assign' && !PERSONNEL_STATE.stopped && vehicleReports.length) {
+008662:             setPersonnelUiValue('status', 'Final station verification');
+008663:             setPersonnelUiValue('vehicle', 'Processed Ambulances');
+008664:             personnelLog('Running final station-wide after-action verification...', 'info');
+008665: 
+008666:             try {
+008667:                 await waitPersonnelDelay(900);
+008668:                 const finalPage = await personnelFetchDocument(vehicles[0].assignmentHref, 14000);
+008669:                 const finalAssignment = parseVehicleAssignmentPage(finalPage.doc, vehicles[0].vehicleId);
+008670: 
+008671:                 if (finalAssignment.vehicleTypeId !== PERSONNEL_TARGET_VEHICLE_TYPE_ID) {
+008672:                     throw new Error(`Final verification returned vehicle_type_id=${finalAssignment.vehicleTypeId || 'unknown'}.`);
+008673:                 }
+008674: 
+008675:                 availableAtEnd = finalAssignment.availableCritical.length;
+008676:                 stationAssignmentShortfall = 0;
+008677: 
+008678:                 vehicleReports.forEach(vehicleReport => {
+008679:                     const actualAssigned = getPersonnelAssignedToVehicle(finalAssignment.rows, vehicleReport);
+008680:                     const actualCritical = actualAssigned.filter(person => person.trainingCodes.includes(PERSONNEL_TRAINING_CODE)).length;
+008681:                     const actualTotal = actualAssigned.length;
+008682: 
+008683:                     vehicleReport.afterCritical = actualCritical;
+008684:                     vehicleReport.afterTotal = actualTotal;
+008685:                     vehicleReport.finalCritical = actualCritical;
+008686:                     vehicleReport.finalTotal = actualTotal;
+008687:                     vehicleReport.unfilled = Math.max(0, PERSONNEL_TARGET_PER_VEHICLE - actualCritical);
+008688:                     vehicleReport.verificationStatus = 'final-verified';
+008689:                     stationAssignmentShortfall += vehicleReport.unfilled;
+008690:                 });
+008691: 
+008692:                 afterActionVerified = true;
+008693:                 personnelLog(`Final station verification passed. Unfilled positions: ${stationAssignmentShortfall}.`, stationAssignmentShortfall ? 'error' : 'done');
+008694:             } catch (error) {
+008695:                 verificationError = error?.message || String(error);
+008696:                 afterActionVerified = false;
+008697:                 vehicleReports.forEach(vehicleReport => {
+008698:                     if (vehicleReport.verificationStatus !== 'skipped') {
+008699:                         vehicleReport.verificationStatus = 'individual-verification-only';
+008700:                     }
+008701:                 });
+008702:                 personnelLog(`Final station verification failed: ${verificationError}`, 'error');
+008703:             }
+008704:         }
+008705: 
+008706:         let initialCriticalFilled = vehicleReports.reduce((sum, vehicle) => sum + Number(vehicle.beforeCritical || 0), 0);
+008707:         let finalCriticalFilled = vehicleReports.reduce((sum, vehicle) => sum + Number(vehicle.afterCritical || 0), 0);
+008708:         let fulfilledUnits = vehicleReports.filter(vehicle => Number(vehicle.unfilled || 0) === 0).length;
+008709: 
+008710:         const stationTarget =
+008711:             isPersonnelPerStationTargetMode()
+008712:                 ? PERSONNEL_STATE.unitsRequired
+008713:                 : 0;
+008714: 
+008715:         if (stationTarget > 0) {
+008716:             fulfilledUnits =
+008717:                 Math.min(
+008718:                     stationTarget,
+008719:                     fulfilledUnits
+008720:                 );
+008721: 
+008722:             required =
+008723:                 stationTarget
+008724:                 * PERSONNEL_TARGET_PER_VEHICLE;
+008725: 
+008726:             trainingShortfall =
+008727:                 Math.max(
+008728:                     0,
+008729:                     required - trained.length
+008730:                 );
+008731: 
+008732:             stationAssignmentShortfall =
+008733:                 Math.max(
+008734:                     0,
+008735:                     (
+008736:                         stationTarget - fulfilledUnits
+008737:                     ) * PERSONNEL_TARGET_PER_VEHICLE
+008738:                 );
+008739: 
+008740:             initialCriticalFilled =
+008741:                 Math.min(
+008742:                     required,
+008743:                     initialCriticalFilled
+008744:                 );
+008745: 
+008746:             finalCriticalFilled =
+008747:                 Math.min(
+008748:                     required,
+008749:                     finalCriticalFilled
+008750:                 );
+008751:         }
+008752: 
+008753:         return {
+008754:             stationName: station.displayName,
+008755:             stationHref: station.href,
+008756:             personnelPageHref: baselinePage.href,
+008757:             profileLabel: 'Critical Care',
+008758:             qualificationLabel: PERSONNEL_TRAINING_LABEL,
+008759:             vehicleCount: vehicleReports.length,
+008760:             ambulances: vehicleReports.length,
+008761:             required,
+008762:             trained: trained.length,
+008763:             availableAtScan,
+008764:             availableAtEnd,
+008765:             initialQualifiedFilled: initialCriticalFilled,
+008766:             finalQualifiedFilled: finalCriticalFilled,
+008767:             initialCriticalFilled,
+008768:             finalCriticalFilled,
+008769:             trainingShortfall,
+008770:             assignmentShortfall: stationAssignmentShortfall,
+008771:             planned: stationPlanned,
+--- lines 8632-8772; match 8672 ---
+008632:                 assignedNames,
+008633:                 unfilled: calculatedUnfilled,
+008634:                 occupiedSeatBlock: Math.max(0, (PERSONNEL_TARGET_PER_VEHICLE - beforeCritical) - Math.max(0, PERSONNEL_TARGET_PER_VEHICLE - beforeTotal)),
+008635:                 verificationStatus: PERSONNEL_STATE.action === 'preview' ? 'projected' : 'individually-verified'
+008636:             });
+008637: 
+008638:             if (calculatedUnfilled === 0) {
+008639:                 projectedFulfilledUnits++;
+008640:                 personnelLog(
+008641:                     Number.isFinite(stationUnitsNeeded)
+008642:                         ? `Unit target progress at this station: ${projectedFulfilledUnits}/${stationUnitsNeeded}.`
+008643:                         : `Fully covered Ambulances at this station: ${projectedFulfilledUnits}.`,
+008644:                     'done'
+008645:                 );
+008646:             }
+008647:         }
+008648: 
+008649:         trainingShortfall = Math.max(0, required - trained.length);
+008650:         if (trainingShortfall) {
+008651:             personnelLog(`Training shortfall for processed Ambulances: ${trainingShortfall} additional personnel need ${PERSONNEL_TRAINING_LABEL} training.`, 'error');
+008652:         }
+008653: 
+008654:         let afterActionVerified = PERSONNEL_STATE.action === 'preview';
+008655:         let verificationError = '';
+008656:         let availableAtEnd = Math.max(0, availableAtScan - (PERSONNEL_STATE.action === 'preview' ? stationPlanned : stationAssigned));
+008657: 
+008658:         // Final station-wide verification. This is one additional request after the
+008659:         // station is complete and produces the actual after-action figures rather than
+008660:         // merely trusting the number of successful POSTs.
+008661:         if (PERSONNEL_STATE.action === 'assign' && !PERSONNEL_STATE.stopped && vehicleReports.length) {
+008662:             setPersonnelUiValue('status', 'Final station verification');
+008663:             setPersonnelUiValue('vehicle', 'Processed Ambulances');
+008664:             personnelLog('Running final station-wide after-action verification...', 'info');
+008665: 
+008666:             try {
+008667:                 await waitPersonnelDelay(900);
+008668:                 const finalPage = await personnelFetchDocument(vehicles[0].assignmentHref, 14000);
+008669:                 const finalAssignment = parseVehicleAssignmentPage(finalPage.doc, vehicles[0].vehicleId);
+008670: 
+008671:                 if (finalAssignment.vehicleTypeId !== PERSONNEL_TARGET_VEHICLE_TYPE_ID) {
+008672:                     throw new Error(`Final verification returned vehicle_type_id=${finalAssignment.vehicleTypeId || 'unknown'}.`);
+008673:                 }
+008674: 
+008675:                 availableAtEnd = finalAssignment.availableCritical.length;
+008676:                 stationAssignmentShortfall = 0;
+008677: 
+008678:                 vehicleReports.forEach(vehicleReport => {
+008679:                     const actualAssigned = getPersonnelAssignedToVehicle(finalAssignment.rows, vehicleReport);
+008680:                     const actualCritical = actualAssigned.filter(person => person.trainingCodes.includes(PERSONNEL_TRAINING_CODE)).length;
+008681:                     const actualTotal = actualAssigned.length;
+008682: 
+008683:                     vehicleReport.afterCritical = actualCritical;
+008684:                     vehicleReport.afterTotal = actualTotal;
+008685:                     vehicleReport.finalCritical = actualCritical;
+008686:                     vehicleReport.finalTotal = actualTotal;
+008687:                     vehicleReport.unfilled = Math.max(0, PERSONNEL_TARGET_PER_VEHICLE - actualCritical);
+008688:                     vehicleReport.verificationStatus = 'final-verified';
+008689:                     stationAssignmentShortfall += vehicleReport.unfilled;
+008690:                 });
+008691: 
+008692:                 afterActionVerified = true;
+008693:                 personnelLog(`Final station verification passed. Unfilled positions: ${stationAssignmentShortfall}.`, stationAssignmentShortfall ? 'error' : 'done');
+008694:             } catch (error) {
+008695:                 verificationError = error?.message || String(error);
+008696:                 afterActionVerified = false;
+008697:                 vehicleReports.forEach(vehicleReport => {
+008698:                     if (vehicleReport.verificationStatus !== 'skipped') {
+008699:                         vehicleReport.verificationStatus = 'individual-verification-only';
+008700:                     }
+008701:                 });
+008702:                 personnelLog(`Final station verification failed: ${verificationError}`, 'error');
+008703:             }
+008704:         }
+008705: 
+008706:         let initialCriticalFilled = vehicleReports.reduce((sum, vehicle) => sum + Number(vehicle.beforeCritical || 0), 0);
+008707:         let finalCriticalFilled = vehicleReports.reduce((sum, vehicle) => sum + Number(vehicle.afterCritical || 0), 0);
+008708:         let fulfilledUnits = vehicleReports.filter(vehicle => Number(vehicle.unfilled || 0) === 0).length;
+008709: 
+008710:         const stationTarget =
+008711:             isPersonnelPerStationTargetMode()
+008712:                 ? PERSONNEL_STATE.unitsRequired
+008713:                 : 0;
+008714: 
+008715:         if (stationTarget > 0) {
+008716:             fulfilledUnits =
+008717:                 Math.min(
+008718:                     stationTarget,
+008719:                     fulfilledUnits
+008720:                 );
+008721: 
+008722:             required =
+008723:                 stationTarget
+008724:                 * PERSONNEL_TARGET_PER_VEHICLE;
+008725: 
+008726:             trainingShortfall =
+008727:                 Math.max(
+008728:                     0,
+008729:                     required - trained.length
+008730:                 );
+008731: 
+008732:             stationAssignmentShortfall =
+008733:                 Math.max(
+008734:                     0,
+008735:                     (
+008736:                         stationTarget - fulfilledUnits
+008737:                     ) * PERSONNEL_TARGET_PER_VEHICLE
+008738:                 );
+008739: 
+008740:             initialCriticalFilled =
+008741:                 Math.min(
+008742:                     required,
+008743:                     initialCriticalFilled
+008744:                 );
+008745: 
+008746:             finalCriticalFilled =
+008747:                 Math.min(
+008748:                     required,
+008749:                     finalCriticalFilled
+008750:                 );
+008751:         }
+008752: 
+008753:         return {
+008754:             stationName: station.displayName,
+008755:             stationHref: station.href,
+008756:             personnelPageHref: baselinePage.href,
+008757:             profileLabel: 'Critical Care',
+008758:             qualificationLabel: PERSONNEL_TRAINING_LABEL,
+008759:             vehicleCount: vehicleReports.length,
+008760:             ambulances: vehicleReports.length,
+008761:             required,
+008762:             trained: trained.length,
+008763:             availableAtScan,
+008764:             availableAtEnd,
+008765:             initialQualifiedFilled: initialCriticalFilled,
+008766:             finalQualifiedFilled: finalCriticalFilled,
+008767:             initialCriticalFilled,
+008768:             finalCriticalFilled,
+008769:             trainingShortfall,
+008770:             assignmentShortfall: stationAssignmentShortfall,
+008771:             planned: stationPlanned,
+008772:             assigned: stationAssigned,
+--- lines 8860-9000; match 8900 ---
+008860:                 'Accept': 'text/html,application/xhtml+xml'
+008861:             }
+008862:         }, timeoutMs);
+008863: 
+008864:         if (!response.ok) throw new Error(`Request returned HTTP ${response.status}: ${url}`);
+008865: 
+008866:         const html = await response.text();
+008867:         const doc = new DOMParser().parseFromString(html, 'text/html');
+008868:         return { response, doc, href: new URL(response.url || url, location.origin).pathname };
+008869:     }
+008870: 
+008871:     function parsePersonnelVehicleOccupancy(row) {
+008872:         const text = String(row?.textContent || '');
+008873:         const matches = [...text.matchAll(/\(\s*(\d+)\s*\/\s*(\d+)\s*\)/g)];
+008874:         const match = matches.at(-1);
+008875: 
+008876:         if (!match) {
+008877:             return { assignedCount: null, maxCount: null };
+008878:         }
+008879: 
+008880:         return {
+008881:             assignedCount: Number(match[1]),
+008882:             maxCount: Number(match[2])
+008883:         };
+008884:     }
+008885: 
+008886:     function normalizePersonnelVehicleName(value) {
+008887:         return cleanText(value)
+008888:             .replace(/\s+/g, ' ')
+008889:             .trim()
+008890:             .toUpperCase();
+008891:     }
+008892: 
+008893:     function getPersonnelAmbulanceQueue(doc) {
+008894:         const seen = new Set();
+008895:         const queue = [];
+008896:         const rows = [...doc.querySelectorAll('#vehicle_table tr')];
+008897:         let ambulanceRows = 0;
+008898: 
+008899:         for (const row of rows) {
+008900:             const image = row.querySelector('img[vehicle_type_id]');
+008901:             const vehicleTypeId = image?.getAttribute('vehicle_type_id') || '';
+008902:             if (vehicleTypeId !== PERSONNEL_TARGET_VEHICLE_TYPE_ID) continue;
+008903: 
+008904:             ambulanceRows++;
+008905: 
+008906:             const vehicleLinks = [...row.querySelectorAll('a[href*="/vehicles/"]')];
+008907:             const plainVehicleLink = vehicleLinks.find(link => {
+008908:                 const href = link.getAttribute('href') || '';
+008909:                 return /^\/vehicles\/\d+\/?(?:[?#].*)?$/.test(href);
+008910:             });
+008911:             const editLink = vehicleLinks.find(link => {
+008912:                 const href = link.getAttribute('href') || '';
+008913:                 return /\/vehicles\/\d+\/edit(?:[/?#]|$)/.test(href);
+008914:             });
+008915:             const directAssignmentLink = vehicleLinks.find(link => {
+008916:                 const href = link.getAttribute('href') || '';
+008917:                 return /\/vehicles\/\d+\/zuweisung(?:[/?#]|$)/.test(href);
+008918:             });
+008919: 
+008920:             // Prefer the normal vehicle-name link because it is tied directly to the
+008921:             // displayed row. Edit and personnel links are safe fallbacks.
+008922:             const idCandidates = [plainVehicleLink, editLink, directAssignmentLink]
+008923:                 .map(link => getVehicleIdFromHref(link?.getAttribute('href') || ''))
+008924:                 .filter(Boolean);
+008925:             const vehicleId = idCandidates[0] || '';
+008926: 
+008927:             if (!vehicleId || seen.has(vehicleId)) continue;
+008928:             seen.add(vehicleId);
+008929: 
+008930:             const distinctIds = [...new Set(idCandidates)];
+008931:             if (distinctIds.length > 1) {
+008932:                 personnelDebug(`Ambulance row contains conflicting vehicle IDs (${distinctIds.join(', ')}). Using ${vehicleId}.`);
+008933:             }
+008934: 
+008935:             const assignmentHref = directAssignmentLink?.getAttribute('href') || `/vehicles/${vehicleId}/zuweisung`;
+008936:             const nameSource = plainVehicleLink
+008937:                 || vehicleLinks.find(link => cleanText(link.textContent || ''))
+008938:                 || null;
+008939:             const name = cleanText(nameSource?.textContent || row.textContent || '') || `Ambulance ${vehicleId}`;
+008940:             const occupancy = parsePersonnelVehicleOccupancy(row);
+008941: 
+008942:             queue.push({
+008943:                 vehicleId,
+008944:                 name,
+008945:                 assignmentHref,
+008946:                 assignedCount: occupancy.assignedCount,
+008947:                 maxCount: occupancy.maxCount
+008948:             });
+008949:         }
+008950: 
+008951:         queue.sort((a, b) => a.name.localeCompare(b.name, undefined, {
+008952:             numeric: true,
+008953:             sensitivity: 'base'
+008954:         }));
+008955: 
+008956:         personnelDebug(`Vehicle table scan: ${rows.length} row(s), ${ambulanceRows} Ambulance row(s), ${queue.length} usable assignment route(s).`);
+008957:         queue.forEach(vehicle => {
+008958:             personnelDebug(`Ambulance detected: ${vehicle.name} | ID=${vehicle.vehicleId} | table occupancy=${vehicle.assignedCount ?? '?'} / ${vehicle.maxCount ?? '?'}`);
+008959:         });
+008960: 
+008961:         return queue;
+008962:     }
+008963: 
+008964: 
+008965:     function parseTrainingCodes(row) {
+008966:         const raw = row?.getAttribute('data-filterable-by') ||
+008967:             row?.querySelector?.('[data-filterable-by]')?.getAttribute('data-filterable-by') ||
+008968:             '[]';
+008969:         try {
+008970:             const parsed = JSON.parse(raw);
+008971:             return Array.isArray(parsed)
+008972:                 ? Array.from(new Set(parsed.map(String).filter(Boolean)))
+008973:                 : [];
+008974:         } catch (_error) {
+008975:             const rawText = String(raw || '');
+008976:             const quotedCodes = Array.from(
+008977:                 rawText.matchAll(/["']([^"']+)["']/g),
+008978:                 match => String(match[1] || '').trim()
+008979:             ).filter(Boolean);
+008980: 
+008981:             if (quotedCodes.length) {
+008982:                 return Array.from(new Set(quotedCodes));
+008983:             }
+008984: 
+008985:             return Array.from(new Set(
+008986:                 rawText
+008987:                     .replace(/[\[\]]/g, ' ')
+008988:                     .split(/[\s,]+/)
+008989:                     .map(value => value.replace(/^["']|["']$/g, '').trim())
+008990:                     .filter(Boolean)
+008991:             ));
+008992:         }
+008993:     }
+008994: 
+008995:     function getStationPersonnelRowId(row) {
+008996:         if (!row) return '';
+008997: 
+008998:         const candidates = [
+008999:             row.getAttribute?.('personal_id'),
+009000:             row.getAttribute?.('data-personal-id'),
+--- lines 8861-9001; match 8901 ---
+008861:             }
+008862:         }, timeoutMs);
+008863: 
+008864:         if (!response.ok) throw new Error(`Request returned HTTP ${response.status}: ${url}`);
+008865: 
+008866:         const html = await response.text();
+008867:         const doc = new DOMParser().parseFromString(html, 'text/html');
+008868:         return { response, doc, href: new URL(response.url || url, location.origin).pathname };
+008869:     }
+008870: 
+008871:     function parsePersonnelVehicleOccupancy(row) {
+008872:         const text = String(row?.textContent || '');
+008873:         const matches = [...text.matchAll(/\(\s*(\d+)\s*\/\s*(\d+)\s*\)/g)];
+008874:         const match = matches.at(-1);
+008875: 
+008876:         if (!match) {
+008877:             return { assignedCount: null, maxCount: null };
+008878:         }
+008879: 
+008880:         return {
+008881:             assignedCount: Number(match[1]),
+008882:             maxCount: Number(match[2])
+008883:         };
+008884:     }
+008885: 
+008886:     function normalizePersonnelVehicleName(value) {
+008887:         return cleanText(value)
+008888:             .replace(/\s+/g, ' ')
+008889:             .trim()
+008890:             .toUpperCase();
+008891:     }
+008892: 
+008893:     function getPersonnelAmbulanceQueue(doc) {
+008894:         const seen = new Set();
+008895:         const queue = [];
+008896:         const rows = [...doc.querySelectorAll('#vehicle_table tr')];
+008897:         let ambulanceRows = 0;
+008898: 
+008899:         for (const row of rows) {
+008900:             const image = row.querySelector('img[vehicle_type_id]');
+008901:             const vehicleTypeId = image?.getAttribute('vehicle_type_id') || '';
+008902:             if (vehicleTypeId !== PERSONNEL_TARGET_VEHICLE_TYPE_ID) continue;
+008903: 
+008904:             ambulanceRows++;
+008905: 
+008906:             const vehicleLinks = [...row.querySelectorAll('a[href*="/vehicles/"]')];
+008907:             const plainVehicleLink = vehicleLinks.find(link => {
+008908:                 const href = link.getAttribute('href') || '';
+008909:                 return /^\/vehicles\/\d+\/?(?:[?#].*)?$/.test(href);
+008910:             });
+008911:             const editLink = vehicleLinks.find(link => {
+008912:                 const href = link.getAttribute('href') || '';
+008913:                 return /\/vehicles\/\d+\/edit(?:[/?#]|$)/.test(href);
+008914:             });
+008915:             const directAssignmentLink = vehicleLinks.find(link => {
+008916:                 const href = link.getAttribute('href') || '';
+008917:                 return /\/vehicles\/\d+\/zuweisung(?:[/?#]|$)/.test(href);
+008918:             });
+008919: 
+008920:             // Prefer the normal vehicle-name link because it is tied directly to the
+008921:             // displayed row. Edit and personnel links are safe fallbacks.
+008922:             const idCandidates = [plainVehicleLink, editLink, directAssignmentLink]
+008923:                 .map(link => getVehicleIdFromHref(link?.getAttribute('href') || ''))
+008924:                 .filter(Boolean);
+008925:             const vehicleId = idCandidates[0] || '';
+008926: 
+008927:             if (!vehicleId || seen.has(vehicleId)) continue;
+008928:             seen.add(vehicleId);
+008929: 
+008930:             const distinctIds = [...new Set(idCandidates)];
+008931:             if (distinctIds.length > 1) {
+008932:                 personnelDebug(`Ambulance row contains conflicting vehicle IDs (${distinctIds.join(', ')}). Using ${vehicleId}.`);
+008933:             }
+008934: 
+008935:             const assignmentHref = directAssignmentLink?.getAttribute('href') || `/vehicles/${vehicleId}/zuweisung`;
+008936:             const nameSource = plainVehicleLink
+008937:                 || vehicleLinks.find(link => cleanText(link.textContent || ''))
+008938:                 || null;
+008939:             const name = cleanText(nameSource?.textContent || row.textContent || '') || `Ambulance ${vehicleId}`;
+008940:             const occupancy = parsePersonnelVehicleOccupancy(row);
+008941: 
+008942:             queue.push({
+008943:                 vehicleId,
+008944:                 name,
+008945:                 assignmentHref,
+008946:                 assignedCount: occupancy.assignedCount,
+008947:                 maxCount: occupancy.maxCount
+008948:             });
+008949:         }
+008950: 
+008951:         queue.sort((a, b) => a.name.localeCompare(b.name, undefined, {
+008952:             numeric: true,
+008953:             sensitivity: 'base'
+008954:         }));
+008955: 
+008956:         personnelDebug(`Vehicle table scan: ${rows.length} row(s), ${ambulanceRows} Ambulance row(s), ${queue.length} usable assignment route(s).`);
+008957:         queue.forEach(vehicle => {
+008958:             personnelDebug(`Ambulance detected: ${vehicle.name} | ID=${vehicle.vehicleId} | table occupancy=${vehicle.assignedCount ?? '?'} / ${vehicle.maxCount ?? '?'}`);
+008959:         });
+008960: 
+008961:         return queue;
+008962:     }
+008963: 
+008964: 
+008965:     function parseTrainingCodes(row) {
+008966:         const raw = row?.getAttribute('data-filterable-by') ||
+008967:             row?.querySelector?.('[data-filterable-by]')?.getAttribute('data-filterable-by') ||
+008968:             '[]';
+008969:         try {
+008970:             const parsed = JSON.parse(raw);
+008971:             return Array.isArray(parsed)
+008972:                 ? Array.from(new Set(parsed.map(String).filter(Boolean)))
+008973:                 : [];
+008974:         } catch (_error) {
+008975:             const rawText = String(raw || '');
+008976:             const quotedCodes = Array.from(
+008977:                 rawText.matchAll(/["']([^"']+)["']/g),
+008978:                 match => String(match[1] || '').trim()
+008979:             ).filter(Boolean);
+008980: 
+008981:             if (quotedCodes.length) {
+008982:                 return Array.from(new Set(quotedCodes));
+008983:             }
+008984: 
+008985:             return Array.from(new Set(
+008986:                 rawText
+008987:                     .replace(/[\[\]]/g, ' ')
+008988:                     .split(/[\s,]+/)
+008989:                     .map(value => value.replace(/^["']|["']$/g, '').trim())
+008990:                     .filter(Boolean)
+008991:             ));
+008992:         }
+008993:     }
+008994: 
+008995:     function getStationPersonnelRowId(row) {
+008996:         if (!row) return '';
+008997: 
+008998:         const candidates = [
+008999:             row.getAttribute?.('personal_id'),
+009000:             row.getAttribute?.('data-personal-id'),
+009001:             row.id?.match(/personal_(\d+)/)?.[1],
+--- lines 8862-9002; match 8902 ---
+008862:         }, timeoutMs);
+008863: 
+008864:         if (!response.ok) throw new Error(`Request returned HTTP ${response.status}: ${url}`);
+008865: 
+008866:         const html = await response.text();
+008867:         const doc = new DOMParser().parseFromString(html, 'text/html');
+008868:         return { response, doc, href: new URL(response.url || url, location.origin).pathname };
+008869:     }
+008870: 
+008871:     function parsePersonnelVehicleOccupancy(row) {
+008872:         const text = String(row?.textContent || '');
+008873:         const matches = [...text.matchAll(/\(\s*(\d+)\s*\/\s*(\d+)\s*\)/g)];
+008874:         const match = matches.at(-1);
+008875: 
+008876:         if (!match) {
+008877:             return { assignedCount: null, maxCount: null };
+008878:         }
+008879: 
+008880:         return {
+008881:             assignedCount: Number(match[1]),
+008882:             maxCount: Number(match[2])
+008883:         };
+008884:     }
+008885: 
+008886:     function normalizePersonnelVehicleName(value) {
+008887:         return cleanText(value)
+008888:             .replace(/\s+/g, ' ')
+008889:             .trim()
+008890:             .toUpperCase();
+008891:     }
+008892: 
+008893:     function getPersonnelAmbulanceQueue(doc) {
+008894:         const seen = new Set();
+008895:         const queue = [];
+008896:         const rows = [...doc.querySelectorAll('#vehicle_table tr')];
+008897:         let ambulanceRows = 0;
+008898: 
+008899:         for (const row of rows) {
+008900:             const image = row.querySelector('img[vehicle_type_id]');
+008901:             const vehicleTypeId = image?.getAttribute('vehicle_type_id') || '';
+008902:             if (vehicleTypeId !== PERSONNEL_TARGET_VEHICLE_TYPE_ID) continue;
+008903: 
+008904:             ambulanceRows++;
+008905: 
+008906:             const vehicleLinks = [...row.querySelectorAll('a[href*="/vehicles/"]')];
+008907:             const plainVehicleLink = vehicleLinks.find(link => {
+008908:                 const href = link.getAttribute('href') || '';
+008909:                 return /^\/vehicles\/\d+\/?(?:[?#].*)?$/.test(href);
+008910:             });
+008911:             const editLink = vehicleLinks.find(link => {
+008912:                 const href = link.getAttribute('href') || '';
+008913:                 return /\/vehicles\/\d+\/edit(?:[/?#]|$)/.test(href);
+008914:             });
+008915:             const directAssignmentLink = vehicleLinks.find(link => {
+008916:                 const href = link.getAttribute('href') || '';
+008917:                 return /\/vehicles\/\d+\/zuweisung(?:[/?#]|$)/.test(href);
+008918:             });
+008919: 
+008920:             // Prefer the normal vehicle-name link because it is tied directly to the
+008921:             // displayed row. Edit and personnel links are safe fallbacks.
+008922:             const idCandidates = [plainVehicleLink, editLink, directAssignmentLink]
+008923:                 .map(link => getVehicleIdFromHref(link?.getAttribute('href') || ''))
+008924:                 .filter(Boolean);
+008925:             const vehicleId = idCandidates[0] || '';
+008926: 
+008927:             if (!vehicleId || seen.has(vehicleId)) continue;
+008928:             seen.add(vehicleId);
+008929: 
+008930:             const distinctIds = [...new Set(idCandidates)];
+008931:             if (distinctIds.length > 1) {
+008932:                 personnelDebug(`Ambulance row contains conflicting vehicle IDs (${distinctIds.join(', ')}). Using ${vehicleId}.`);
+008933:             }
+008934: 
+008935:             const assignmentHref = directAssignmentLink?.getAttribute('href') || `/vehicles/${vehicleId}/zuweisung`;
+008936:             const nameSource = plainVehicleLink
+008937:                 || vehicleLinks.find(link => cleanText(link.textContent || ''))
+008938:                 || null;
+008939:             const name = cleanText(nameSource?.textContent || row.textContent || '') || `Ambulance ${vehicleId}`;
+008940:             const occupancy = parsePersonnelVehicleOccupancy(row);
+008941: 
+008942:             queue.push({
+008943:                 vehicleId,
+008944:                 name,
+008945:                 assignmentHref,
+008946:                 assignedCount: occupancy.assignedCount,
+008947:                 maxCount: occupancy.maxCount
+008948:             });
+008949:         }
+008950: 
+008951:         queue.sort((a, b) => a.name.localeCompare(b.name, undefined, {
+008952:             numeric: true,
+008953:             sensitivity: 'base'
+008954:         }));
+008955: 
+008956:         personnelDebug(`Vehicle table scan: ${rows.length} row(s), ${ambulanceRows} Ambulance row(s), ${queue.length} usable assignment route(s).`);
+008957:         queue.forEach(vehicle => {
+008958:             personnelDebug(`Ambulance detected: ${vehicle.name} | ID=${vehicle.vehicleId} | table occupancy=${vehicle.assignedCount ?? '?'} / ${vehicle.maxCount ?? '?'}`);
+008959:         });
+008960: 
+008961:         return queue;
+008962:     }
+008963: 
+008964: 
+008965:     function parseTrainingCodes(row) {
+008966:         const raw = row?.getAttribute('data-filterable-by') ||
+008967:             row?.querySelector?.('[data-filterable-by]')?.getAttribute('data-filterable-by') ||
+008968:             '[]';
+008969:         try {
+008970:             const parsed = JSON.parse(raw);
+008971:             return Array.isArray(parsed)
+008972:                 ? Array.from(new Set(parsed.map(String).filter(Boolean)))
+008973:                 : [];
+008974:         } catch (_error) {
+008975:             const rawText = String(raw || '');
+008976:             const quotedCodes = Array.from(
+008977:                 rawText.matchAll(/["']([^"']+)["']/g),
+008978:                 match => String(match[1] || '').trim()
+008979:             ).filter(Boolean);
+008980: 
+008981:             if (quotedCodes.length) {
+008982:                 return Array.from(new Set(quotedCodes));
+008983:             }
+008984: 
+008985:             return Array.from(new Set(
+008986:                 rawText
+008987:                     .replace(/[\[\]]/g, ' ')
+008988:                     .split(/[\s,]+/)
+008989:                     .map(value => value.replace(/^["']|["']$/g, '').trim())
+008990:                     .filter(Boolean)
+008991:             ));
+008992:         }
+008993:     }
+008994: 
+008995:     function getStationPersonnelRowId(row) {
+008996:         if (!row) return '';
+008997: 
+008998:         const candidates = [
+008999:             row.getAttribute?.('personal_id'),
+009000:             row.getAttribute?.('data-personal-id'),
+009001:             row.id?.match(/personal_(\d+)/)?.[1],
+009002:             row.querySelector?.('input.personal-delete-checkbox[value]')?.value,
+--- lines 9060-9200; match 9100 ---
+009060:             const matchedVehicle = linkedVehicleId
+009061:                 ? null
+009062:                 : vehicleNameIndex.get(
+009063:                     normalizePersonnelVehicleName(assignedVehicleName)
+009064:                 );
+009065:             const assignedVehicleId = String(
+009066:                 linkedVehicleId ||
+009067:                 matchedVehicle?.vehicleId ||
+009068:                 ''
+009069:             );
+009070:             const statusText = cleanText(
+009071:                 cells[statusIndex]?.textContent || ''
+009072:             );
+009073: 
+009074:             return {
+009075:                 personnelId: getStationPersonnelRowId(row),
+009076:                 name: cleanText(cells[nameIndex]?.textContent || ''),
+009077:                 trainingText: cleanText(cells[trainingIndex]?.textContent || ''),
+009078:                 trainingCodes: parseTrainingCodes(row),
+009079:                 assignedHere: false,
+009080:                 assignedVehicleId,
+009081:                 assignedVehicleName,
+009082:                 available: /\bavailable\b/i.test(statusText),
+009083:                 assignedElsewhere: false,
+009084:                 displayedVehicleId: assignedVehicleId,
+009085:                 assignHref: '',
+009086:                 stationAssignmentEvidence: true
+009087:             };
+009088:         }).filter(person => {
+009089:             return !!(
+009090:                 person.personnelId &&
+009091:                 person.assignedVehicleId
+009092:             );
+009093:         });
+009094:     }
+009095: 
+009096: 
+009097:     function parseVehicleAssignmentPage(doc, vehicleId) {
+009098:         const currentVehicleId = String(vehicleId || '');
+009099:         const vehicleTypeElement = doc.querySelector(
+009100:             '.vehicle_image_reload[vehicle_type_id], ' +
+009101:             '[vehicle_type_id], [data-vehicle-type-id]'
+009102:         );
+009103:         const vehicleTypeId = String(
+009104:             vehicleTypeElement?.getAttribute('vehicle_type_id') ||
+009105:             vehicleTypeElement?.getAttribute('data-vehicle-type-id') ||
+009106:             ''
+009107:         );
+009108: 
+009109:         const rows = [...doc.querySelectorAll('#personal_table tbody tr')]
+009110:             .map(row => {
+009111:                 const cells = [...row.children];
+009112:                 const actionControls = [...row.querySelectorAll(
+009113:                     'a[href*="/zuweisungDo/"], button, ' +
+009114:                     'input[type="submit"], input[type="button"], ' +
+009115:                     '[personal_id], [data-personal-id], .btn-assigned'
+009116:                 )];
+009117:                 const visibleActionControls = actionControls.filter(control => {
+009118:                     const style = String(control.getAttribute?.('style') || '').toLowerCase();
+009119:                     const hiddenByClass = control.classList?.contains('hidden') ||
+009120:                         control.classList?.contains('d-none');
+009121:                     return !(
+009122:                         control.hidden ||
+009123:                         control.getAttribute?.('aria-hidden') === 'true' ||
+009124:                         hiddenByClass ||
+009125:                         /display\s*:\s*none|visibility\s*:\s*hidden/.test(style)
+009126:                     );
+009127:                 });
+009128: 
+009129:                 const exactActionLink = actionControls.find(control => {
+009130:                     const href = control.getAttribute?.('href') || '';
+009131:                     return href.includes(`/vehicles/${currentVehicleId}/zuweisungDo/`);
+009132:                 });
+009133: 
+009134:                 const assignedControl = visibleActionControls.find(control => {
+009135:                     const text = cleanText(
+009136:                         control?.innerText ||
+009137:                         control?.textContent ||
+009138:                         control?.value ||
+009139:                         ''
+009140:                     );
+009141:                     return !!(
+009142:                         control?.classList?.contains('btn-assigned') ||
+009143:                         /remove\s+binding/i.test(text)
+009144:                     );
+009145:                 });
+009146: 
+009147:                 const statusControl = assignedControl || exactActionLink || actionControls[0] || null;
+009148:                 const actionLink = exactActionLink || actionControls.find(control => control.tagName === 'A') || null;
+009149: 
+009150:                 const personnelIdCandidates = [
+009151:                     statusControl?.getAttribute?.('personal_id'),
+009152:                     statusControl?.getAttribute?.('data-personal-id'),
+009153:                     actionLink?.getAttribute?.('personal_id'),
+009154:                     actionLink?.getAttribute?.('data-personal-id'),
+009155:                     row.getAttribute?.('personal_id'),
+009156:                     row.getAttribute?.('data-personal-id'),
+009157:                     row.id?.match(/personal_(\d+)/)?.[1],
+009158:                     actionLink?.getAttribute?.('href')?.match(/\/zuweisungDo\/(\d+)/)?.[1],
+009159:                     statusControl?.getAttribute?.('formaction')?.match(/\/zuweisungDo\/(\d+)/)?.[1]
+009160:                 ];
+009161: 
+009162:                 const personnelId = String(
+009163:                     personnelIdCandidates.find(value => /^\d+$/.test(String(value || '').trim())) ||
+009164:                     ''
+009165:                 );
+009166: 
+009167:                 const assignedVehicleLink = [...row.querySelectorAll('a[href^="/vehicles/"]')].find(link => {
+009168:                     const href = link.getAttribute('href') || '';
+009169:                     return /^\/vehicles\/\d+\/?(?:[?#].*)?$/.test(href);
+009170:                 });
+009171:                 const detectedAssignedVehicleId = getVehicleIdFromHref(
+009172:                     assignedVehicleLink?.getAttribute('href') || ''
+009173:                 );
+009174: 
+009175:                 const assignedHere = visibleActionControls.some(control => {
+009176:                     const text = cleanText(
+009177:                         control?.innerText ||
+009178:                         control?.textContent ||
+009179:                         control?.value ||
+009180:                         ''
+009181:                     );
+009182:                     return !!(
+009183:                         control?.classList?.contains('btn-assigned') ||
+009184:                         /remove\s+binding/i.test(text)
+009185:                     );
+009186:                 });
+009187:                 const assignedElsewhere = !assignedHere && visibleActionControls.some(
+009188:                     control => control?.classList?.contains('btn-warning')
+009189:                 );
+009190:                 const available = !assignedHere && !assignedElsewhere && visibleActionControls.some(
+009191:                     control => control?.classList?.contains('btn-success')
+009192:                 );
+009193: 
+009194:                 const assignedVehicleId = assignedHere
+009195:                     ? currentVehicleId
+009196:                     : (assignedElsewhere ? detectedAssignedVehicleId : '');
+009197: 
+009198:                 const assignHref = String(
+009199:                     exactActionLink?.getAttribute?.('href') ||
+009200:                     actionLink?.getAttribute?.('href') ||
+--- lines 9061-9201; match 9101 ---
+009061:                 ? null
+009062:                 : vehicleNameIndex.get(
+009063:                     normalizePersonnelVehicleName(assignedVehicleName)
+009064:                 );
+009065:             const assignedVehicleId = String(
+009066:                 linkedVehicleId ||
+009067:                 matchedVehicle?.vehicleId ||
+009068:                 ''
+009069:             );
+009070:             const statusText = cleanText(
+009071:                 cells[statusIndex]?.textContent || ''
+009072:             );
+009073: 
+009074:             return {
+009075:                 personnelId: getStationPersonnelRowId(row),
+009076:                 name: cleanText(cells[nameIndex]?.textContent || ''),
+009077:                 trainingText: cleanText(cells[trainingIndex]?.textContent || ''),
+009078:                 trainingCodes: parseTrainingCodes(row),
+009079:                 assignedHere: false,
+009080:                 assignedVehicleId,
+009081:                 assignedVehicleName,
+009082:                 available: /\bavailable\b/i.test(statusText),
+009083:                 assignedElsewhere: false,
+009084:                 displayedVehicleId: assignedVehicleId,
+009085:                 assignHref: '',
+009086:                 stationAssignmentEvidence: true
+009087:             };
+009088:         }).filter(person => {
+009089:             return !!(
+009090:                 person.personnelId &&
+009091:                 person.assignedVehicleId
+009092:             );
+009093:         });
+009094:     }
+009095: 
+009096: 
+009097:     function parseVehicleAssignmentPage(doc, vehicleId) {
+009098:         const currentVehicleId = String(vehicleId || '');
+009099:         const vehicleTypeElement = doc.querySelector(
+009100:             '.vehicle_image_reload[vehicle_type_id], ' +
+009101:             '[vehicle_type_id], [data-vehicle-type-id]'
+009102:         );
+009103:         const vehicleTypeId = String(
+009104:             vehicleTypeElement?.getAttribute('vehicle_type_id') ||
+009105:             vehicleTypeElement?.getAttribute('data-vehicle-type-id') ||
+009106:             ''
+009107:         );
+009108: 
+009109:         const rows = [...doc.querySelectorAll('#personal_table tbody tr')]
+009110:             .map(row => {
+009111:                 const cells = [...row.children];
+009112:                 const actionControls = [...row.querySelectorAll(
+009113:                     'a[href*="/zuweisungDo/"], button, ' +
+009114:                     'input[type="submit"], input[type="button"], ' +
+009115:                     '[personal_id], [data-personal-id], .btn-assigned'
+009116:                 )];
+009117:                 const visibleActionControls = actionControls.filter(control => {
+009118:                     const style = String(control.getAttribute?.('style') || '').toLowerCase();
+009119:                     const hiddenByClass = control.classList?.contains('hidden') ||
+009120:                         control.classList?.contains('d-none');
+009121:                     return !(
+009122:                         control.hidden ||
+009123:                         control.getAttribute?.('aria-hidden') === 'true' ||
+009124:                         hiddenByClass ||
+009125:                         /display\s*:\s*none|visibility\s*:\s*hidden/.test(style)
+009126:                     );
+009127:                 });
+009128: 
+009129:                 const exactActionLink = actionControls.find(control => {
+009130:                     const href = control.getAttribute?.('href') || '';
+009131:                     return href.includes(`/vehicles/${currentVehicleId}/zuweisungDo/`);
+009132:                 });
+009133: 
+009134:                 const assignedControl = visibleActionControls.find(control => {
+009135:                     const text = cleanText(
+009136:                         control?.innerText ||
+009137:                         control?.textContent ||
+009138:                         control?.value ||
+009139:                         ''
+009140:                     );
+009141:                     return !!(
+009142:                         control?.classList?.contains('btn-assigned') ||
+009143:                         /remove\s+binding/i.test(text)
+009144:                     );
+009145:                 });
+009146: 
+009147:                 const statusControl = assignedControl || exactActionLink || actionControls[0] || null;
+009148:                 const actionLink = exactActionLink || actionControls.find(control => control.tagName === 'A') || null;
+009149: 
+009150:                 const personnelIdCandidates = [
+009151:                     statusControl?.getAttribute?.('personal_id'),
+009152:                     statusControl?.getAttribute?.('data-personal-id'),
+009153:                     actionLink?.getAttribute?.('personal_id'),
+009154:                     actionLink?.getAttribute?.('data-personal-id'),
+009155:                     row.getAttribute?.('personal_id'),
+009156:                     row.getAttribute?.('data-personal-id'),
+009157:                     row.id?.match(/personal_(\d+)/)?.[1],
+009158:                     actionLink?.getAttribute?.('href')?.match(/\/zuweisungDo\/(\d+)/)?.[1],
+009159:                     statusControl?.getAttribute?.('formaction')?.match(/\/zuweisungDo\/(\d+)/)?.[1]
+009160:                 ];
+009161: 
+009162:                 const personnelId = String(
+009163:                     personnelIdCandidates.find(value => /^\d+$/.test(String(value || '').trim())) ||
+009164:                     ''
+009165:                 );
+009166: 
+009167:                 const assignedVehicleLink = [...row.querySelectorAll('a[href^="/vehicles/"]')].find(link => {
+009168:                     const href = link.getAttribute('href') || '';
+009169:                     return /^\/vehicles\/\d+\/?(?:[?#].*)?$/.test(href);
+009170:                 });
+009171:                 const detectedAssignedVehicleId = getVehicleIdFromHref(
+009172:                     assignedVehicleLink?.getAttribute('href') || ''
+009173:                 );
+009174: 
+009175:                 const assignedHere = visibleActionControls.some(control => {
+009176:                     const text = cleanText(
+009177:                         control?.innerText ||
+009178:                         control?.textContent ||
+009179:                         control?.value ||
+009180:                         ''
+009181:                     );
+009182:                     return !!(
+009183:                         control?.classList?.contains('btn-assigned') ||
+009184:                         /remove\s+binding/i.test(text)
+009185:                     );
+009186:                 });
+009187:                 const assignedElsewhere = !assignedHere && visibleActionControls.some(
+009188:                     control => control?.classList?.contains('btn-warning')
+009189:                 );
+009190:                 const available = !assignedHere && !assignedElsewhere && visibleActionControls.some(
+009191:                     control => control?.classList?.contains('btn-success')
+009192:                 );
+009193: 
+009194:                 const assignedVehicleId = assignedHere
+009195:                     ? currentVehicleId
+009196:                     : (assignedElsewhere ? detectedAssignedVehicleId : '');
+009197: 
+009198:                 const assignHref = String(
+009199:                     exactActionLink?.getAttribute?.('href') ||
+009200:                     actionLink?.getAttribute?.('href') ||
+009201:                     statusControl?.getAttribute?.('formaction') ||
+--- lines 9064-9204; match 9104 ---
+009064:                 );
+009065:             const assignedVehicleId = String(
+009066:                 linkedVehicleId ||
+009067:                 matchedVehicle?.vehicleId ||
+009068:                 ''
+009069:             );
+009070:             const statusText = cleanText(
+009071:                 cells[statusIndex]?.textContent || ''
+009072:             );
+009073: 
+009074:             return {
+009075:                 personnelId: getStationPersonnelRowId(row),
+009076:                 name: cleanText(cells[nameIndex]?.textContent || ''),
+009077:                 trainingText: cleanText(cells[trainingIndex]?.textContent || ''),
+009078:                 trainingCodes: parseTrainingCodes(row),
+009079:                 assignedHere: false,
+009080:                 assignedVehicleId,
+009081:                 assignedVehicleName,
+009082:                 available: /\bavailable\b/i.test(statusText),
+009083:                 assignedElsewhere: false,
+009084:                 displayedVehicleId: assignedVehicleId,
+009085:                 assignHref: '',
+009086:                 stationAssignmentEvidence: true
+009087:             };
+009088:         }).filter(person => {
+009089:             return !!(
+009090:                 person.personnelId &&
+009091:                 person.assignedVehicleId
+009092:             );
+009093:         });
+009094:     }
+009095: 
+009096: 
+009097:     function parseVehicleAssignmentPage(doc, vehicleId) {
+009098:         const currentVehicleId = String(vehicleId || '');
+009099:         const vehicleTypeElement = doc.querySelector(
+009100:             '.vehicle_image_reload[vehicle_type_id], ' +
+009101:             '[vehicle_type_id], [data-vehicle-type-id]'
+009102:         );
+009103:         const vehicleTypeId = String(
+009104:             vehicleTypeElement?.getAttribute('vehicle_type_id') ||
+009105:             vehicleTypeElement?.getAttribute('data-vehicle-type-id') ||
+009106:             ''
+009107:         );
+009108: 
+009109:         const rows = [...doc.querySelectorAll('#personal_table tbody tr')]
+009110:             .map(row => {
+009111:                 const cells = [...row.children];
+009112:                 const actionControls = [...row.querySelectorAll(
+009113:                     'a[href*="/zuweisungDo/"], button, ' +
+009114:                     'input[type="submit"], input[type="button"], ' +
+009115:                     '[personal_id], [data-personal-id], .btn-assigned'
+009116:                 )];
+009117:                 const visibleActionControls = actionControls.filter(control => {
+009118:                     const style = String(control.getAttribute?.('style') || '').toLowerCase();
+009119:                     const hiddenByClass = control.classList?.contains('hidden') ||
+009120:                         control.classList?.contains('d-none');
+009121:                     return !(
+009122:                         control.hidden ||
+009123:                         control.getAttribute?.('aria-hidden') === 'true' ||
+009124:                         hiddenByClass ||
+009125:                         /display\s*:\s*none|visibility\s*:\s*hidden/.test(style)
+009126:                     );
+009127:                 });
+009128: 
+009129:                 const exactActionLink = actionControls.find(control => {
+009130:                     const href = control.getAttribute?.('href') || '';
+009131:                     return href.includes(`/vehicles/${currentVehicleId}/zuweisungDo/`);
+009132:                 });
+009133: 
+009134:                 const assignedControl = visibleActionControls.find(control => {
+009135:                     const text = cleanText(
+009136:                         control?.innerText ||
+009137:                         control?.textContent ||
+009138:                         control?.value ||
+009139:                         ''
+009140:                     );
+009141:                     return !!(
+009142:                         control?.classList?.contains('btn-assigned') ||
+009143:                         /remove\s+binding/i.test(text)
+009144:                     );
+009145:                 });
+009146: 
+009147:                 const statusControl = assignedControl || exactActionLink || actionControls[0] || null;
+009148:                 const actionLink = exactActionLink || actionControls.find(control => control.tagName === 'A') || null;
+009149: 
+009150:                 const personnelIdCandidates = [
+009151:                     statusControl?.getAttribute?.('personal_id'),
+009152:                     statusControl?.getAttribute?.('data-personal-id'),
+009153:                     actionLink?.getAttribute?.('personal_id'),
+009154:                     actionLink?.getAttribute?.('data-personal-id'),
+009155:                     row.getAttribute?.('personal_id'),
+009156:                     row.getAttribute?.('data-personal-id'),
+009157:                     row.id?.match(/personal_(\d+)/)?.[1],
+009158:                     actionLink?.getAttribute?.('href')?.match(/\/zuweisungDo\/(\d+)/)?.[1],
+009159:                     statusControl?.getAttribute?.('formaction')?.match(/\/zuweisungDo\/(\d+)/)?.[1]
+009160:                 ];
+009161: 
+009162:                 const personnelId = String(
+009163:                     personnelIdCandidates.find(value => /^\d+$/.test(String(value || '').trim())) ||
+009164:                     ''
+009165:                 );
+009166: 
+009167:                 const assignedVehicleLink = [...row.querySelectorAll('a[href^="/vehicles/"]')].find(link => {
+009168:                     const href = link.getAttribute('href') || '';
+009169:                     return /^\/vehicles\/\d+\/?(?:[?#].*)?$/.test(href);
+009170:                 });
+009171:                 const detectedAssignedVehicleId = getVehicleIdFromHref(
+009172:                     assignedVehicleLink?.getAttribute('href') || ''
+009173:                 );
+009174: 
+009175:                 const assignedHere = visibleActionControls.some(control => {
+009176:                     const text = cleanText(
+009177:                         control?.innerText ||
+009178:                         control?.textContent ||
+009179:                         control?.value ||
+009180:                         ''
+009181:                     );
+009182:                     return !!(
+009183:                         control?.classList?.contains('btn-assigned') ||
+009184:                         /remove\s+binding/i.test(text)
+009185:                     );
+009186:                 });
+009187:                 const assignedElsewhere = !assignedHere && visibleActionControls.some(
+009188:                     control => control?.classList?.contains('btn-warning')
+009189:                 );
+009190:                 const available = !assignedHere && !assignedElsewhere && visibleActionControls.some(
+009191:                     control => control?.classList?.contains('btn-success')
+009192:                 );
+009193: 
+009194:                 const assignedVehicleId = assignedHere
+009195:                     ? currentVehicleId
+009196:                     : (assignedElsewhere ? detectedAssignedVehicleId : '');
+009197: 
+009198:                 const assignHref = String(
+009199:                     exactActionLink?.getAttribute?.('href') ||
+009200:                     actionLink?.getAttribute?.('href') ||
+009201:                     statusControl?.getAttribute?.('formaction') ||
+009202:                     ''
+009203:                 );
+009204: 
+--- lines 10399-10539; match 10439 ---
+010399:         return null;
+010400:     }
+010401: 
+010402:     async function waitForVehicleTable(iframe) {
+010403:         for (let i = 0; i < 80; i++) {
+010404:             if (STATE.stopped) return false;
+010405: 
+010406:             try {
+010407:                 const doc = iframe.contentDocument;
+010408:                 if (doc && doc.querySelector('#vehicle_table tbody tr')) {
+010409:                     await sleep(300);
+010410:                     return true;
+010411:                 }
+010412:             } catch (e) {}
+010413: 
+010414:             await sleep(250);
+010415:         }
+010416:         return false;
+010417:     }
+010418: 
+010419:     async function waitForEditPage(iframe) {
+010420:         for (let i = 0; i < 80; i++) {
+010421:             if (STATE.stopped) return false;
+010422: 
+010423:             try {
+010424:                 const doc = iframe.contentDocument;
+010425:                 if (doc && doc.querySelector('#vehicle_caption')) {
+010426:                     await sleep(300);
+010427:                     return true;
+010428:                 }
+010429:             } catch (e) {}
+010430: 
+010431:             await sleep(250);
+010432:         }
+010433:         return false;
+010434:     }
+010435: 
+010436:     function getVehicleQueueFromTable(doc) {
+010437:         return [...doc.querySelectorAll('#vehicle_table tbody tr')]
+010438:             .map((row, index) => {
+010439:                 const img = row.querySelector('img[vehicle_type_id]');
+010440:                 const vehicleTypeId = img?.getAttribute('vehicle_type_id') || '';
+010441:                 const vehicleType = TYPE_ID_TO_VEHICLE_TYPE[vehicleTypeId] || '';
+010442: 
+010443:                 const allLinks = [...row.querySelectorAll('a[href^="/vehicles/"]')];
+010444: 
+010445:                 const editLink = allLinks.find(a => {
+010446:                     const href = a.getAttribute('href') || '';
+010447:                     return href.endsWith('/edit');
+010448:                 });
+010449: 
+010450:                 const vehicleLink = allLinks.find(a => {
+010451:                     const href = a.getAttribute('href') || '';
+010452:                     return !href.endsWith('/edit') && !href.includes('/zuweisung');
+010453:                 });
+010454: 
+010455:                 const vehicleHref = vehicleLink?.getAttribute('href') || '';
+010456:                 const editHref = editLink?.getAttribute('href') || '';
+010457:                 const vehicleId = getVehicleIdFromHref(editHref || vehicleHref);
+010458:                 const currentName = cleanText(vehicleLink?.textContent || '');
+010459: 
+010460:                 return {
+010461:                     tableIndex: index,
+010462:                     vehicleId,
+010463:                     vehicleTypeId,
+010464:                     vehicleType,
+010465:                     currentName,
+010466:                     vehicleHref,
+010467:                     editHref
+010468:                 };
+010469:             })
+010470:             .filter(v => v.editHref && v.vehicleId)
+010471:             .filter(vehicleMatchesSelectedUnitClass);
+010472:     }
+010473: 
+010474:     async function processStationVehicleQueue(iframe, station) {
+010475:         setStatus('Building vehicle queue');
+010476: 
+010477:         // Build a lightweight string-only queue and release the station document
+010478:         // before the first navigation. Holding the original document across every
+010479:         // awaited edit page kept the full station DOM alive for the whole run.
+010480:         const queue = getVehicleQueueFromTable(
+010481:             iframe.contentDocument
+010482:         );
+010483: 
+010484:         debug(`Vehicle queue built for ${station.displayName}: ${queue.length}`);
+010485: 
+010486:         if (!queue.length) {
+010487:             log(`No ${getUnitClassDisplayLabel(STATE.selectedUnitClass)} vehicles found in ${station.displayName}.`, 'debug');
+010488:             return;
+010489:         }
+010490: 
+010491:         const counts = {};
+010492: 
+010493:         for (const item of queue) {
+010494:             if (STATE.stopped) return;
+010495: 
+010496:             await waitIfPaused();
+010497:             if (STATE.stopped) return;
+010498: 
+010499:             if (!item.vehicleType) {
+010500:                 log(`Unknown vehicle_type_id skipped: ${item.vehicleTypeId} | ${item.editHref}`, 'error');
+010501:                 STATE.skippedCount++;
+010502:                 updateCounters();
+010503:                 continue;
+010504:             }
+010505: 
+010506:             const info = VEHICLE_INFO[item.vehicleType];
+010507: 
+010508:             if (!info) {
+010509:                 log(`No naming rule skipped: "${item.vehicleType}"`, 'error');
+010510:                 STATE.skippedCount++;
+010511:                 updateCounters();
+010512:                 continue;
+010513:             }
+010514: 
+010515:             counts[item.vehicleType] = (counts[item.vehicleType] || 0) + 1;
+010516: 
+010517:             const newName = makeVehicleName(
+010518:                 station,
+010519:                 item.vehicleType,
+010520:                 counts[item.vehicleType]
+010521:             );
+010522: 
+010523:             setStatus('Opening edit page');
+010524:             setVehicle(item.editHref);
+010525: 
+010526:             // Replace rather than append to the iframe history. This prevents a
+010527:             // long rename run from retaining one browsing-history document for
+010528:             // every vehicle edit page.
+010529:             if (!navigateUnitIframe(iframe, item.editHref)) {
+010530:                 log(`Could not navigate to vehicle edit page: ${item.editHref}`, 'error');
+010531:                 STATE.skippedCount++;
+010532:                 updateCounters();
+010533:                 continue;
+010534:             }
+010535: 
+010536:             const editPageReady = await waitForEditPage(iframe);
+010537: 
+010538:             if (!editPageReady) {
+010539:                 log(`Vehicle edit page did not load: ${item.editHref}`, 'error');
+--- lines 10400-10540; match 10440 ---
+010400:     }
+010401: 
+010402:     async function waitForVehicleTable(iframe) {
+010403:         for (let i = 0; i < 80; i++) {
+010404:             if (STATE.stopped) return false;
+010405: 
+010406:             try {
+010407:                 const doc = iframe.contentDocument;
+010408:                 if (doc && doc.querySelector('#vehicle_table tbody tr')) {
+010409:                     await sleep(300);
+010410:                     return true;
+010411:                 }
+010412:             } catch (e) {}
+010413: 
+010414:             await sleep(250);
+010415:         }
+010416:         return false;
+010417:     }
+010418: 
+010419:     async function waitForEditPage(iframe) {
+010420:         for (let i = 0; i < 80; i++) {
+010421:             if (STATE.stopped) return false;
+010422: 
+010423:             try {
+010424:                 const doc = iframe.contentDocument;
+010425:                 if (doc && doc.querySelector('#vehicle_caption')) {
+010426:                     await sleep(300);
+010427:                     return true;
+010428:                 }
+010429:             } catch (e) {}
+010430: 
+010431:             await sleep(250);
+010432:         }
+010433:         return false;
+010434:     }
+010435: 
+010436:     function getVehicleQueueFromTable(doc) {
+010437:         return [...doc.querySelectorAll('#vehicle_table tbody tr')]
+010438:             .map((row, index) => {
+010439:                 const img = row.querySelector('img[vehicle_type_id]');
+010440:                 const vehicleTypeId = img?.getAttribute('vehicle_type_id') || '';
+010441:                 const vehicleType = TYPE_ID_TO_VEHICLE_TYPE[vehicleTypeId] || '';
+010442: 
+010443:                 const allLinks = [...row.querySelectorAll('a[href^="/vehicles/"]')];
+010444: 
+010445:                 const editLink = allLinks.find(a => {
+010446:                     const href = a.getAttribute('href') || '';
+010447:                     return href.endsWith('/edit');
+010448:                 });
+010449: 
+010450:                 const vehicleLink = allLinks.find(a => {
+010451:                     const href = a.getAttribute('href') || '';
+010452:                     return !href.endsWith('/edit') && !href.includes('/zuweisung');
+010453:                 });
+010454: 
+010455:                 const vehicleHref = vehicleLink?.getAttribute('href') || '';
+010456:                 const editHref = editLink?.getAttribute('href') || '';
+010457:                 const vehicleId = getVehicleIdFromHref(editHref || vehicleHref);
+010458:                 const currentName = cleanText(vehicleLink?.textContent || '');
+010459: 
+010460:                 return {
+010461:                     tableIndex: index,
+010462:                     vehicleId,
+010463:                     vehicleTypeId,
+010464:                     vehicleType,
+010465:                     currentName,
+010466:                     vehicleHref,
+010467:                     editHref
+010468:                 };
+010469:             })
+010470:             .filter(v => v.editHref && v.vehicleId)
+010471:             .filter(vehicleMatchesSelectedUnitClass);
+010472:     }
+010473: 
+010474:     async function processStationVehicleQueue(iframe, station) {
+010475:         setStatus('Building vehicle queue');
+010476: 
+010477:         // Build a lightweight string-only queue and release the station document
+010478:         // before the first navigation. Holding the original document across every
+010479:         // awaited edit page kept the full station DOM alive for the whole run.
+010480:         const queue = getVehicleQueueFromTable(
+010481:             iframe.contentDocument
+010482:         );
+010483: 
+010484:         debug(`Vehicle queue built for ${station.displayName}: ${queue.length}`);
+010485: 
+010486:         if (!queue.length) {
+010487:             log(`No ${getUnitClassDisplayLabel(STATE.selectedUnitClass)} vehicles found in ${station.displayName}.`, 'debug');
+010488:             return;
+010489:         }
+010490: 
+010491:         const counts = {};
+010492: 
+010493:         for (const item of queue) {
+010494:             if (STATE.stopped) return;
+010495: 
+010496:             await waitIfPaused();
+010497:             if (STATE.stopped) return;
+010498: 
+010499:             if (!item.vehicleType) {
+010500:                 log(`Unknown vehicle_type_id skipped: ${item.vehicleTypeId} | ${item.editHref}`, 'error');
+010501:                 STATE.skippedCount++;
+010502:                 updateCounters();
+010503:                 continue;
+010504:             }
+010505: 
+010506:             const info = VEHICLE_INFO[item.vehicleType];
+010507: 
+010508:             if (!info) {
+010509:                 log(`No naming rule skipped: "${item.vehicleType}"`, 'error');
+010510:                 STATE.skippedCount++;
+010511:                 updateCounters();
+010512:                 continue;
+010513:             }
+010514: 
+010515:             counts[item.vehicleType] = (counts[item.vehicleType] || 0) + 1;
+010516: 
+010517:             const newName = makeVehicleName(
+010518:                 station,
+010519:                 item.vehicleType,
+010520:                 counts[item.vehicleType]
+010521:             );
+010522: 
+010523:             setStatus('Opening edit page');
+010524:             setVehicle(item.editHref);
+010525: 
+010526:             // Replace rather than append to the iframe history. This prevents a
+010527:             // long rename run from retaining one browsing-history document for
+010528:             // every vehicle edit page.
+010529:             if (!navigateUnitIframe(iframe, item.editHref)) {
+010530:                 log(`Could not navigate to vehicle edit page: ${item.editHref}`, 'error');
+010531:                 STATE.skippedCount++;
+010532:                 updateCounters();
+010533:                 continue;
+010534:             }
+010535: 
+010536:             const editPageReady = await waitForEditPage(iframe);
+010537: 
+010538:             if (!editPageReady) {
+010539:                 log(`Vehicle edit page did not load: ${item.editHref}`, 'error');
+010540:                 STATE.skippedCount++;
+--- lines 10460-10600; match 10500 ---
+010460:                 return {
+010461:                     tableIndex: index,
+010462:                     vehicleId,
+010463:                     vehicleTypeId,
+010464:                     vehicleType,
+010465:                     currentName,
+010466:                     vehicleHref,
+010467:                     editHref
+010468:                 };
+010469:             })
+010470:             .filter(v => v.editHref && v.vehicleId)
+010471:             .filter(vehicleMatchesSelectedUnitClass);
+010472:     }
+010473: 
+010474:     async function processStationVehicleQueue(iframe, station) {
+010475:         setStatus('Building vehicle queue');
+010476: 
+010477:         // Build a lightweight string-only queue and release the station document
+010478:         // before the first navigation. Holding the original document across every
+010479:         // awaited edit page kept the full station DOM alive for the whole run.
+010480:         const queue = getVehicleQueueFromTable(
+010481:             iframe.contentDocument
+010482:         );
+010483: 
+010484:         debug(`Vehicle queue built for ${station.displayName}: ${queue.length}`);
+010485: 
+010486:         if (!queue.length) {
+010487:             log(`No ${getUnitClassDisplayLabel(STATE.selectedUnitClass)} vehicles found in ${station.displayName}.`, 'debug');
+010488:             return;
+010489:         }
+010490: 
+010491:         const counts = {};
+010492: 
+010493:         for (const item of queue) {
+010494:             if (STATE.stopped) return;
+010495: 
+010496:             await waitIfPaused();
+010497:             if (STATE.stopped) return;
+010498: 
+010499:             if (!item.vehicleType) {
+010500:                 log(`Unknown vehicle_type_id skipped: ${item.vehicleTypeId} | ${item.editHref}`, 'error');
+010501:                 STATE.skippedCount++;
+010502:                 updateCounters();
+010503:                 continue;
+010504:             }
+010505: 
+010506:             const info = VEHICLE_INFO[item.vehicleType];
+010507: 
+010508:             if (!info) {
+010509:                 log(`No naming rule skipped: "${item.vehicleType}"`, 'error');
+010510:                 STATE.skippedCount++;
+010511:                 updateCounters();
+010512:                 continue;
+010513:             }
+010514: 
+010515:             counts[item.vehicleType] = (counts[item.vehicleType] || 0) + 1;
+010516: 
+010517:             const newName = makeVehicleName(
+010518:                 station,
+010519:                 item.vehicleType,
+010520:                 counts[item.vehicleType]
+010521:             );
+010522: 
+010523:             setStatus('Opening edit page');
+010524:             setVehicle(item.editHref);
+010525: 
+010526:             // Replace rather than append to the iframe history. This prevents a
+010527:             // long rename run from retaining one browsing-history document for
+010528:             // every vehicle edit page.
+010529:             if (!navigateUnitIframe(iframe, item.editHref)) {
+010530:                 log(`Could not navigate to vehicle edit page: ${item.editHref}`, 'error');
+010531:                 STATE.skippedCount++;
+010532:                 updateCounters();
+010533:                 continue;
+010534:             }
+010535: 
+010536:             const editPageReady = await waitForEditPage(iframe);
+010537: 
+010538:             if (!editPageReady) {
+010539:                 log(`Vehicle edit page did not load: ${item.editHref}`, 'error');
+010540:                 STATE.skippedCount++;
+010541:                 updateCounters();
+010542:                 continue;
+010543:             }
+010544: 
+010545:             let editDoc = iframe.contentDocument;
+010546:             let captionInput = editDoc?.querySelector('#vehicle_caption') || null;
+010547:             let saveBtn = editDoc?.querySelector(
+010548:                 'input[type="submit"][value="Save"], button[type="submit"]'
+010549:             ) || null;
+010550: 
+010551:             if (!captionInput || !saveBtn) {
+010552:                 log(`Caption or Save missing: ${item.editHref}`, 'error');
+010553:                 STATE.skippedCount++;
+010554:                 updateCounters();
+010555:                 editDoc = null;
+010556:                 captionInput = null;
+010557:                 saveBtn = null;
+010558:                 continue;
+010559:             }
+010560: 
+010561:             const before = captionInput.value;
+010562: 
+010563:             setStatus('Saving vehicle');
+010564:             setVehicle(newName);
+010565: 
+010566:             captionInput.value = newName;
+010567:             captionInput.dispatchEvent(new Event('input', { bubbles: true }));
+010568:             captionInput.dispatchEvent(new Event('change', { bubbles: true }));
+010569: 
+010570:             log(`BEFORE: ${before}`, 'before');
+010571:             log(`AFTER : ${newName}`, 'after');
+010572: 
+010573:             saveBtn.click();
+010574: 
+010575:             STATE.renamedCount++;
+010576:             updateCounters();
+010577: 
+010578:             // Do not retain the completed edit document or its form controls
+010579:             // during the post-save wait.
+010580:             editDoc = null;
+010581:             captionInput = null;
+010582:             saveBtn = null;
+010583: 
+010584:             await sleep(700);
+010585:         }
+010586: 
+010587:         navigateUnitIframe(iframe, station.href);
+010588:         await waitForVehicleTable(iframe);
+010589:         await sleep(300);
+010590:     }
+010591: 
+010592:     async function closeStationModal(iframe = STATE.activeIframe) {
+010593:         setStatus('Closing station');
+010594: 
+010595:         const activeIframe = iframe || STATE.activeIframe;
+010596:         if (STATE.activeIframe === activeIframe) {
+010597:             STATE.activeIframe = null;
+010598:         }
+010599: 
+010600:         if (removeManagedStationIframe(activeIframe)) {
+--- lines 13306-13446; match 13346 ---
+013306:                 entry.trainingProfilesComplete === true,
+013307:             trainingCounts:
+013308:                 entry.trainingCounts &&
+013309:                 typeof entry.trainingCounts === 'object'
+013310:                     ? { ...entry.trainingCounts }
+013311:                     : {},
+013312:             assignedTrainingProfiles:
+013313:                 Array.isArray(entry.assignedTrainingProfiles)
+013314:                     ? entry.assignedTrainingProfiles
+013315:                         .slice(0, 40)
+013316:                         .map(profile => {
+013317:                             return Array.isArray(profile)
+013318:                                 ? profile.slice(0, 40).map(String)
+013319:                                 : [];
+013320:                         })
+013321:                     : [],
+013322:             matchType: String(
+013323:                 registryMatch?.matchType ||
+013324:                 registryMatch?.matchedBy ||
+013325:                 ''
+013326:             )
+013327:         };
+013328:     }
+013329: 
+013330:     function mfGetDiagnosticSelectedVehicles() {
+013331:         let registry = { vehicles: {} };
+013332: 
+013333:         try {
+013334:             registry = readPersonnelTrainingRegistry();
+013335:         } catch (_error) {}
+013336: 
+013337:         return getVehicleCheckboxSnapshot(true)
+013338:             .filter(input => input?.checked)
+013339:             .map(input => {
+013340:                 const row = input.closest?.('tr') || null;
+013341: 
+013342:                 return {
+013343:                     vehicleId: getMissionVehicleId(input),
+013344:                     vehicleName: getVehicleDebugName(input),
+013345:                     vehicleTypeId: String(
+013346:                         input.getAttribute?.('vehicle_type_id') ||
+013347:                         row?.getAttribute?.('vehicle_type_id') ||
+013348:                         input.getAttribute?.('vehicle_type') ||
+013349:                         row?.getAttribute?.('vehicle_type') ||
+013350:                         ''
+013351:                     ),
+013352:                     vehicleTypeCaption: String(
+013353:                         input.getAttribute?.('vehicle_type_caption') ||
+013354:                         row?.getAttribute?.('vehicle_type_caption') ||
+013355:                         ''
+013356:                     ),
+013357:                     disabled: input.disabled === true,
+013358:                     rowText: String(
+013359:                         row?.innerText ||
+013360:                         row?.textContent ||
+013361:                         ''
+013362:                     )
+013363:                         .replace(/\s+/g, ' ')
+013364:                         .trim()
+013365:                         .slice(0, 600),
+013366:                     registryEvidence:
+013367:                         mfGetDiagnosticRegistryEvidence(
+013368:                             input,
+013369:                             registry
+013370:                         )
+013371:                 };
+013372:             });
+013373:     }
+013374: 
+013375:     function mfGetDiagnosticVisibleAlerts() {
+013376:         const values = [];
+013377: 
+013378:         try {
+013379:             getCurrentMissionAlertScopes().forEach(scope => {
+013380:                 Array.from(
+013381:                     scope.querySelectorAll(
+013382:                         '.alert-danger, .alert-warning, ' +
+013383:                         'div[id^="alert_danger_"], #missing_text'
+013384:                     )
+013385:                 ).forEach(alert => {
+013386:                     try {
+013387:                         if (!isElementVisible(alert)) return;
+013388:                     } catch (_error) {}
+013389: 
+013390:                     const text = String(
+013391:                         alert.innerText ||
+013392:                         alert.textContent ||
+013393:                         ''
+013394:                     )
+013395:                         .replace(/\s+/g, ' ')
+013396:                         .trim();
+013397: 
+013398:                     if (text) values.push(text.slice(0, 1500));
+013399:                 });
+013400:             });
+013401:         } catch (_error) {}
+013402: 
+013403:         return Array.from(new Set(values));
+013404:     }
+013405: 
+013406: 
+013407:     function mfCollectMemoryDiagnostics() {
+013408:         const documents = [];
+013409:         const addDocument = candidateDocument => {
+013410:             try {
+013411:                 if (
+013412:                     candidateDocument?.documentElement &&
+013413:                     !documents.includes(candidateDocument)
+013414:                 ) {
+013415:                     documents.push(candidateDocument);
+013416:                 }
+013417:             } catch (_error) {}
+013418:         };
+013419: 
+013420:         try {
+013421:             getMissionAccessibleDocuments(true)
+013422:                 .forEach(addDocument);
+013423:         } catch (_error) {
+013424:             addDocument(document);
+013425:         }
+013426: 
+013427:         if (documents.length === 0) {
+013428:             addDocument(document);
+013429:         }
+013430: 
+013431:         const documentSnapshots = documents
+013432:             .slice(0, 24)
+013433:             .map((candidateDocument, index) => {
+013434:                 let ownerFrame = null;
+013435:                 let ownerFrameVisible = true;
+013436:                 let ownerFrameConnected = true;
+013437: 
+013438:                 try {
+013439:                     ownerFrame =
+013440:                         candidateDocument.defaultView?.frameElement ||
+013441:                         null;
+013442:                     ownerFrameConnected = ownerFrame
+013443:                         ? ownerFrame.isConnected !== false
+013444:                         : true;
+013445:                     ownerFrameVisible = ownerFrame
+013446:                         ? isMissionElementVisible(ownerFrame)
+===== 'vehicle_row_': 1 matches =====
+--- lines 27790-27930; match 27830 ---
+027790:                 'null'
+027791:             );
+027792: 
+027793:             if (
+027794:                 !parsed ||
+027795:                 typeof parsed !== 'object' ||
+027796:                 typeof parsed.vehicles !== 'object'
+027797:             ) {
+027798:                 return {
+027799:                     updatedAt:
+027800:                         0,
+027801:                     vehicles:
+027802:                         {}
+027803:                 };
+027804:             }
+027805: 
+027806:             return parsed;
+027807:         } catch (_error) {
+027808:             return {
+027809:                 updatedAt:
+027810:                     0,
+027811:                 vehicles:
+027812:                     {}
+027813:             };
+027814:         }
+027815:     }
+027816: 
+027817:     function getMissionVehicleId(
+027818:         input
+027819:     ) {
+027820:         if (!input) return '';
+027821: 
+027822:         const row =
+027823:             input.closest &&
+027824:             input.closest(
+027825:                 'tr[vehicle_id], tr[data-vehicle-id], tr.vehicle_select_table_tr'
+027826:             );
+027827: 
+027828:         const idMatches = [
+027829:             String(input.id || '').match(/(?:vehicle_checkbox_|vehicle_)(\d+)/i)?.[1],
+027830:             String(row?.id || '').match(/(?:vehicle_|vehicle_row_)(\d+)/i)?.[1],
+027831:             input.getAttribute('vehicle_id'),
+027832:             input.getAttribute('data-vehicle-id'),
+027833:             row?.getAttribute('vehicle_id'),
+027834:             row?.getAttribute('data-vehicle-id'),
+027835:             input.value
+027836:         ]
+027837:             .map(value => String(value || '').trim())
+027838:             .filter(value => /^\d+$/.test(value));
+027839: 
+027840:         // Real MissionChief vehicle IDs are long numeric identifiers. Reject
+027841:         // short values such as the vehicle type ID "8" rather than matching a
+027842:         // registry entry for the wrong vehicle.
+027843:         return idMatches.find(value => value.length >= 4) || '';
+027844:     }
+027845: 
+027846: 
+027847: 
+027848:     function getPublicOrderPersonnelLevel(
+027849:         value
+027850:     ) {
+027851:         const cleaned =
+027852:             String(
+027853:                 value ||
+027854:                 ''
+027855:             )
+027856:                 .replace(
+027857:                     /\s+/g,
+027858:                     ' '
+027859:                 )
+027860:                 .trim();
+027861: 
+027862:         if (
+027863:             /^(?:Required\s+)?(?:Level\s*1\s+Public\s+Order|Public\s+Order\s+Level\s*1)\s+Officer(?:s)?$/i
+027864:                 .test(
+027865:                     cleaned
+027866:                 )
+027867:         ) {
+027868:             return 1;
+027869:         }
+027870: 
+027871:         if (
+027872:             /^(?:Required\s+)?(?:Level\s*2\s+Public\s+Order|Public\s+Order\s+Level\s*2)\s+Officer(?:s)?$/i
+027873:                 .test(
+027874:                     cleaned
+027875:                 )
+027876:         ) {
+027877:             return 2;
+027878:         }
+027879: 
+027880:         return 0;
+027881:     }
+027882: 
+027883:     function isPublicOrderPersonnelRequirementName(
+027884:         value
+027885:     ) {
+027886:         return (
+027887:             getPublicOrderPersonnelLevel(
+027888:                 value
+027889:             ) >
+027890:             0
+027891:         );
+027892:     }
+027893: 
+027894:     function isPoliceSergeantPersonnelRequirementName(
+027895:         value
+027896:     ) {
+027897:         const cleaned =
+027898:             String(
+027899:                 value ||
+027900:                 ''
+027901:             )
+027902:                 .replace(
+027903:                     /\s+/g,
+027904:                     ' '
+027905:                 )
+027906:                 .trim();
+027907: 
+027908:         return /^(?:Required\s+)?Police\s+Sergeant(?:s)?$/i
+027909:             .test(
+027910:                 cleaned
+027911:             );
+027912:     }
+027913: 
+027914:     function isPoliceInspectorPersonnelRequirementName(
+027915:         value
+027916:     ) {
+027917:         const cleaned =
+027918:             String(
+027919:                 value ||
+027920:                 ''
+027921:             )
+027922:                 .replace(
+027923:                     /\s+/g,
+027924:                     ' '
+027925:                 )
+027926:                 .trim();
+027927: 
+027928:         return /^(?:Required\s+)?Police\s+Inspector(?:s)?$/i
+027929:             .test(
+027930:                 cleaned
