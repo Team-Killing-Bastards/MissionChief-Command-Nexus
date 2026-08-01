@@ -4,6 +4,28 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.80] - 2026-08-01
+
+### Fixed
+
+- Mission-definition **Required Personnel** and course totals are now authoritative only while no vehicle has reached the mission scene.
+- As soon as `#mission_vehicle_at_mission` contains a real `vehicle_row`, initial Unit Finder filters the static personnel/course rows before choosing its authority source.
+- The Trained Personnel panel hides the cached **Mission Required Personnel** totals after the first vehicle arrives and explains that live personnel and course shortages are authoritative.
+
+### Safety and authority
+
+- Vehicles listed only in `#mission_vehicle_driving` remain en route and do not suppress the initial mission-definition requirements.
+- Current live Missing Personnel/course rows remain actionable after vehicles arrive on scene.
+- Ordinary vehicle requirements, Personnel Register evidence, trained-vehicle optimisation, Mission Update, Auto Mode, Vehicle Load and iOS/iPadOS paths remain unchanged.
+- The panel continues to be display-only and adds no fetch, timer or observer.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.139` to `V10.6.140`.
+- Unit Naming remains `3.3.9`.
+- Station Naming remains `1.3.3`.
+- Personnel Assignment remains `1.3.8`.
+
 ## [1.0.79] - 2026-08-01
 
 ### Fixed

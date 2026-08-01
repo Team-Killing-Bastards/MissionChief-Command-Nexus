@@ -1,5 +1,5 @@
 name: Validate userscript
-# Includes mission-definition trained-personnel, Required Personnel preload, preloaded Vehicle Load coverage, high-risk Missing Person Ambulance settings, normal Stations popup ownership, Dispatch Centres Show all enforced popup window, selected-trained-personnel UI, integrated mission dashboard, compact Nexus UI, HazMat vehicle/personnel-to-OSU, diagnostic export, dispatch-correction, memory lifecycle/recycle, Missing-on-mission authority and single-pass update coverage.
+# Includes mission-definition trained-personnel, on-scene trained-personnel authority, Required Personnel preload, preloaded Vehicle Load coverage, high-risk Missing Person Ambulance settings, normal Stations popup ownership, Dispatch Centres Show all enforced popup window, selected-trained-personnel UI, integrated mission dashboard, compact Nexus UI, HazMat vehicle/personnel-to-OSU, diagnostic export, dispatch-correction, memory lifecycle/recycle, Missing-on-mission authority and single-pass update coverage.
 
 on:
   pull_request:
@@ -22,6 +22,7 @@ on:
       - 'scripts/check-trained-coverage-optimizer.mjs'
       - 'scripts/check-mission-definition-trained-personnel.mjs'
       - 'scripts/check-mission-definition-personnel-preload.mjs'
+      - 'scripts/check-trained-personnel-on-scene-authority-v1080.mjs'
       - 'scripts/check-unit-finder-diagnostic-export.mjs'
       - 'scripts/check-mission-dashboard-v1069.mjs'
       - 'scripts/check-nexus-visual-system-v1070.mjs'
@@ -67,6 +68,7 @@ on:
       - 'scripts/check-trained-coverage-optimizer.mjs'
       - 'scripts/check-mission-definition-trained-personnel.mjs'
       - 'scripts/check-mission-definition-personnel-preload.mjs'
+      - 'scripts/check-trained-personnel-on-scene-authority-v1080.mjs'
       - 'scripts/check-unit-finder-diagnostic-export.mjs'
       - 'scripts/check-mission-dashboard-v1069.mjs'
       - 'scripts/check-nexus-visual-system-v1070.mjs'
@@ -169,6 +171,9 @@ jobs:
 
       - name: Validate mission-definition Required Personnel preload
         run: node scripts/check-mission-definition-personnel-preload.mjs
+
+      - name: Validate trained-personnel on-scene authority
+        run: node scripts/check-trained-personnel-on-scene-authority-v1080.mjs
 
       - name: Validate Unit Finder diagnostic export
         run: node scripts/check-unit-finder-diagnostic-export.mjs
