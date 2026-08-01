@@ -37,29 +37,50 @@ expect(start >= 0 && end > start, 'Popup installer is missing');
 
 const feature = source.slice(start, end);
 for (const token of [
-  'mcnDispatchCentresPopupInstalled',
-  "document.addEventListener(",
+  "'missionchief-dispatch-centres-popup-v1079'",
+  "'mousedown'",
+  "'mouseup'",
   "'auxclick'",
+  'handleMiddleMouseDown',
+  'handleMiddleMouseRelease',
   'event.button !== 1',
-  'target.closest(SHOW_ALL_SELECTOR)',
-  'event.preventDefault()',
-  'event.stopPropagation()',
-  'stopImmediatePropagation',
-  "anchor.getAttribute('href')",
-  "'/leitstellenansicht'",
+  'stopNativeMiddleClick(event)',
   'window.open(',
+  "'about:blank'",
   'POPUP_NAME',
   "'popup=yes'",
-  "'resizable=yes'",
-  "'scrollbars=yes'",
-  'popup?.focus()'
+  "'toolbar=no'",
+  "'location=no'",
+  'popup.resizeTo(width, height)',
+  'popup.moveTo(left, top)',
+  'popup.location.replace(url)',
+  'popup?.focus()',
+  'Date.now() - openedFromMouseDownAt > 1000'
 ]) {
   expect(
-    feature.includes(token),
-    `Middle-click popup contract missing ${token}`
+    (token === "'missionchief-dispatch-centres-popup-v1079'" ? source : feature).includes(token),
+    `Popup-window enforcement contract missing ${token}`
   );
 }
 
+const downHandler = feature.indexOf(
+  'function handleMiddleMouseDown('
+);
+const downOpen = feature.indexOf(
+  'openDispatchCentresPopup(anchor);',
+  downHandler
+);
+const auxListener = feature.indexOf("'auxclick'");
+expect(
+  downHandler >= 0 &&
+    downOpen > downHandler &&
+    auxListener > downOpen,
+  'Popup must open during mousedown before auxclick suppression'
+);
+expect(
+  !feature.includes("'_blank'"),
+  'The feature must use its dedicated named popup'
+);
 expect(
   !feature.includes("addEventListener('click'"),
   'Normal left-click lightbox behaviour must remain untouched'
@@ -72,5 +93,5 @@ expect(
 );
 
 console.log(
-  'Dispatch Centres Show all middle-click popup checks passed.'
+  'Dispatch Centres popup-window enforcement checks passed.'
 );

@@ -68,7 +68,7 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-requireText('// @version      1.0.78', 'Command Nexus 1.0.64 metadata');
+requireText('// @version      1.0.79', 'Command Nexus 1.0.64 metadata');
 requireText("const PERSONNEL_VERSION = '1.3.8';", 'Personnel Assignment 1.3.8');
 requireText(' * MODULE 2: MISSION FINDER V10.6.139', 'Mission Finder V10.6.127');
 requireText("code:\n                    'gw_gefahrgut',\n                label:\n                    'HazMat Unit'", 'HazMat trained-personnel pattern');
