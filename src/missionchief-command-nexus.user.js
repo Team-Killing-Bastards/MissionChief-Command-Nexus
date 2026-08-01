@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.80
+// @version      1.0.81
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -10730,7 +10730,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.140
+         * MODULE 2: MISSION FINDER V10.6.141
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -22678,6 +22678,7 @@ let sessionRuntimeTicker = null;
 
         let preloadState = { status: 'idle' };
         let requiredPersonnel = [];
+        let liveMissingPersonnel = [];
         let missionVehiclesOnSceneForTrainedPersonnel =
             false;
 
@@ -22688,6 +22689,8 @@ let sessionRuntimeTicker = null;
                 getMissionRequirementPreloadState();
             requiredPersonnel =
                 getPreloadedMissionTrainedPersonnelRequirements();
+            liveMissingPersonnel =
+                getLiveMissionTrainedPersonnelRequirementsForDisplay();
         } catch (error) {
             if (mfDebugEnabled) {
                 debugLog(
@@ -22729,18 +22732,25 @@ let sessionRuntimeTicker = null;
             },
             0
         );
+        const liveMissingTotal = liveMissingPersonnel.reduce(
+            (total, requirement) => {
+                return total + requirement.missing;
+            },
+            0
+        );
 
         if (
             requiredPersonnel.length === 0 &&
+            liveMissingPersonnel.length === 0 &&
             selectedVehicles.length === 0
         ) {
             if (
                 missionVehiclesOnSceneForTrainedPersonnel
             ) {
                 summary.textContent =
-                    'Vehicles are on scene. Live personnel and course shortages are authoritative.';
+                    'No current trained-personnel shortage is reported.';
                 content.innerHTML =
-                    '<span class="mf2026-small">Mission Required Personnel is shown only before the first vehicle arrives on scene.</span>';
+                    '<span class="mf2026-small">Vehicles are on scene. Live personnel and course shortages are authoritative; Mission Required Personnel is shown only before the first vehicle arrives on scene.</span>';
                 return;
             }
 
@@ -22765,6 +22775,19 @@ let sessionRuntimeTicker = null;
             summaryParts.push(`
                 <div><strong>${requiredPersonnel.length}</strong> required course${requiredPersonnel.length === 1 ? '' : 's'}</div>
                 <div><strong>${coveredTotal}</strong> / <strong>${requiredTotal}</strong> required trained-personnel coverage</div>
+            `);
+        }
+
+        if (liveMissingPersonnel.length > 0) {
+            summaryParts.push(`
+                <div><strong>${liveMissingPersonnel.length}</strong> current missing course${liveMissingPersonnel.length === 1 ? '' : 's'}</div>
+                <div><strong>${liveMissingTotal}</strong> trained personnel still missing</div>
+            `);
+        } else if (
+            missionVehiclesOnSceneForTrainedPersonnel
+        ) {
+            summaryParts.push(`
+                <div><strong>0</strong> current trained-personnel shortages</div>
             `);
         }
 
@@ -22800,6 +22823,24 @@ let sessionRuntimeTicker = null;
                             <div class="mf2026-training-person">
                                 <span class="mf2026-training-person-label">${selected} / ${requirement.required}</span>
                                 <span class="mf2026-training-course-list">${escapeHtml(requirement.label)}${remaining > 0 ? ` · ${remaining} still needed` : ' · covered'}</span>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `
+            : '';
+
+        const liveMissingMarkup = liveMissingPersonnel.length > 0
+            ? `
+                <div class="mf2026-training-vehicle">
+                    <div class="mf2026-training-vehicle-name">
+                        Current Missing Personnel
+                    </div>
+                    ${liveMissingPersonnel.map(requirement => {
+                        return `
+                            <div class="mf2026-training-person">
+                                <span class="mf2026-training-person-label">${requirement.missing} missing</span>
+                                <span class="mf2026-training-course-list">${escapeHtml(requirement.label)} · current live shortage</span>
                             </div>
                         `;
                     }).join('')}
@@ -22850,6 +22891,7 @@ let sessionRuntimeTicker = null;
 
         content.innerHTML =
             requiredMarkup +
+            liveMissingMarkup +
             selectedMarkup;
     }
 
@@ -27503,6 +27545,87 @@ let sessionRuntimeTicker = null;
                 row
             );
         });
+    }
+
+    function getLiveMissionTrainedPersonnelRequirementsForDisplay() {
+        if (
+            !hasMissionVehiclesOnSceneForTrainedPersonnelAuthority()
+        ) {
+            return [];
+        }
+
+        let liveRows = [];
+
+        try {
+            liveRows = normaliseOperationalRequirementRows(
+                readMissionUpdateRows({ silent: true })
+            );
+        } catch (error) {
+            if (mfDebugEnabled) {
+                debugLog(
+                    'LIVE TRAINED PERSONNEL DISPLAY',
+                    `current shortage read failed: ${error?.message || error}`
+                );
+            }
+
+            return [];
+        }
+
+        const requirements = new Map();
+
+        liveRows
+            .filter(row => {
+                return (
+                    row?.isTrainedPersonnelRequirement === true &&
+                    Array.isArray(row?.personnelTrainingRequirements)
+                );
+            })
+            .forEach(row => {
+                row.personnelTrainingRequirements
+                    .forEach(requirement => {
+                        const requiredTrainingCodes =
+                            Array.isArray(requirement?.requiredTrainingCodes)
+                                ? requirement.requiredTrainingCodes
+                                    .map(value => String(value || '').trim())
+                                    .filter(Boolean)
+                                : [];
+                        const code =
+                            requiredTrainingCodes[0] ||
+                            String(requirement?.code || '')
+                                .replace(/_vehicle$/i, '')
+                                .trim();
+                        const missing = Math.max(
+                            0,
+                            parseInt(
+                                requirement?.personnelRequired ??
+                                requirement?.required,
+                                10
+                            ) || 0
+                        );
+
+                        if (!code || missing <= 0) return;
+
+                        const existing =
+                            requirements.get(code);
+
+                        if (
+                            !existing ||
+                            missing > existing.missing
+                        ) {
+                            requirements.set(code, {
+                                code,
+                                label:
+                                    getSelectedTrainingDisplayLabel(code),
+                                missing
+                            });
+                        }
+                    });
+            });
+
+        return Array.from(requirements.values())
+            .sort((left, right) => {
+                return left.label.localeCompare(right.label);
+            });
     }
 
     function getPreloadedMissionTrainedPersonnelRequirements() {
