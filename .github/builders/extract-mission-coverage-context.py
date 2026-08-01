@@ -17,18 +17,18 @@ def extract_function(name):
     for index, line in enumerate(lines):
         if not pattern.search(line):
             continue
-        start = max(0, index - 12)
+        start = max(0, index - 14)
         depth = 0
         opened = False
-        end = min(len(lines), index + 600)
-        for i in range(index, min(len(lines), index + 3000)):
+        end = min(len(lines), index + 800)
+        for i in range(index, min(len(lines), index + 4000)):
             text = lines[i]
             depth += text.count('{') - text.count('}')
             opened = opened or '{' in text
             if opened and depth <= 0:
                 end = i + 1
                 break
-        return numbered(start, min(len(lines), end + 12))
+        return numbered(start, min(len(lines), end + 14))
     return f'NOT FOUND: {name}\n'
 
 
@@ -51,63 +51,50 @@ def extract_terms(filename, terms, before=25, after=55, limit=20):
 
 functions = [
     'renderVehicleLoadList',
+    'renderVehicleLoadListNow',
+    'refreshVehicleRequirementCounters',
     'renderSelectedTrainedPersonnelPanel',
+    'getSelectedTrainedPersonnelPanelModel',
+    'getSelectedTrainedPersonnelCountForCode',
+    'getPreloadedMissionTrainedPersonnelRequirements',
+    'getMissionRequirementPreloadState',
     'getCachedMissionRequiredPersonnel',
     'preloadMissionRequiredPersonnel',
     'scheduleMissionRequiredPersonnelPreload',
     'readLiveMissionRequirements',
+    'updateVehicleLoadState',
+    'setVehicleLoadState',
+    'resetVehicleLoadState',
 ]
 for function_name in functions:
     (OUT / f'{function_name}.txt').write_text(
         extract_function(function_name), encoding='utf-8'
     )
 
-extract_terms(
-    'mission-requirement-cache.txt',
-    [
-        'missionRequiredPersonnelCache',
-        'requiredPersonnel',
-        'requirementsSnapshot',
-        'missionDefinition',
-    ],
-    before=35,
-    after=80,
-)
-extract_terms(
-    'vehicle-load-state.txt',
-    [
-        'vehicleLoad',
-        'requiredVehicles',
-        'selectedVehicles',
-        'vehicleRequirements',
-        'selectionCoverage',
-    ],
-    before=35,
-    after=90,
-)
-extract_terms(
-    'mission-vehicle-tables.txt',
-    [
-        'mission_vehicle_driving',
-        'mission_vehicle_at_mission',
-        'vehicle_type_id',
-        'vehicle_row_',
-    ],
-    before=40,
-    after=100,
-)
-extract_terms(
-    'trained-personnel-state.txt',
-    [
-        'trainedPersonnel',
-        'personnelAssignment',
-        'assignedPersonnel',
-        'selectedTrained',
-        'education',
-        'course',
-    ],
-    before=30,
-    after=75,
-    limit=30,
-)
+extract_terms('mission-requirement-cache.txt', [
+    'missionRequiredPersonnelCache',
+    'requiredPersonnel',
+    'requirementsSnapshot',
+    'missionDefinition',
+], before=35, after=80)
+extract_terms('vehicle-load-state.txt', [
+    'const vehicleLoadState',
+    'vehicleLoadState =',
+    'vehicleLoadState.rows',
+    'requiredVehicles',
+    'vehicleRequirements',
+], before=45, after=120, limit=30)
+extract_terms('mission-vehicle-tables.txt', [
+    'mission_vehicle_driving',
+    'mission_vehicle_at_mission',
+    'vehicle_type_id',
+    'vehicle_row_',
+], before=40, after=100)
+extract_terms('trained-personnel-state.txt', [
+    'selectedTrainedPersonnel',
+    'trainingProfilesComplete',
+    'trainingCounts',
+    'MF_PERSONNEL_TRAINING_REGISTRY_KEY',
+    'mfLiveTraining',
+], before=40, after=100, limit=30)
 print(f'wrote exact mission coverage contexts from {len(lines)} source lines')
