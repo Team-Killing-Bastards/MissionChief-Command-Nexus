@@ -1,0 +1,71 @@
+name: Apply high-risk Missing Person Ambulance v1.0.76
+
+on:
+  push:
+    branches:
+      - feature/high-risk-missing-person-ambulance-v1076
+    paths:
+      - '.github/builders/apply-high-risk-missing-person-ambulance-v1076.py'
+      - '.github/workflows/apply-high-risk-missing-person-ambulance-v1076.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-high-risk-missing-person-ambulance-v1076
+  cancel-in-progress: false
+
+jobs:
+  apply-and-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v6
+        with:
+          ref: feature/high-risk-missing-person-ambulance-v1076
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Apply verified release patch
+        run: python .github/builders/apply-high-risk-missing-person-ambulance-v1076.py
+
+      - name: Remove one-use builder files
+        run: |
+          rm -f .github/builders/apply-high-risk-missing-person-ambulance-v1076.py
+          rm -f .github/builders/high-risk-missing-person-ambulance-v1076.patch.b64.part*
+          rm -f .github/workflows/apply-high-risk-missing-person-ambulance-v1076.yml
+
+      - name: Validate JavaScript syntax
+        run: node --check src/missionchief-command-nexus.user.js
+
+      - name: Validate userscript metadata and size
+        run: node scripts/validate-userscript.mjs
+
+      - name: Run permanent behavioural regressions
+        run: |
+          set -euo pipefail
+          for check in scripts/check-*.mjs; do
+            echo "Running $check"
+            node "$check"
+          done
+
+      - name: Validate repository integrity
+        run: python scripts/check_repository.py
+
+      - name: Validate whitespace
+        run: git diff --check
+
+      - name: Commit validated product changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Add high-risk missing person Ambulance setting"
+          git push origin HEAD:feature/high-risk-missing-person-ambulance-v1076
