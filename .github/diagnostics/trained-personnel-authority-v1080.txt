@@ -1,14 +1,6 @@
 CURRENT VERSION LINES
 // @version      1.0.79
 
-===== getInitialMissionDefinitionTrainedPersonnelRequirements =====
-FUNCTION NOT FOUND: getInitialMissionDefinitionTrainedPersonnelRequirements
-
-
-===== hasAuthoritativeMissionDefinitionTrainedPersonnelRequirements =====
-FUNCTION NOT FOUND: hasAuthoritativeMissionDefinitionTrainedPersonnelRequirements
-
-
 ===== processRequirementRows =====
     async function processRequirementRows(
         requirementRows,
@@ -360,6 +352,14 @@ FUNCTION NOT FOUND: hasAuthoritativeMissionDefinitionTrainedPersonnelRequirement
     }
 
 
+===== getPreloadedMissionTrainedPersonnelRequirements =====
+FUNCTION KEYWORD NOT FOUND: getPreloadedMissionTrainedPersonnelRequirements
+
+
+===== renderSelectedTrainedPersonnelPanel =====
+FUNCTION KEYWORD NOT FOUND: renderSelectedTrainedPersonnelPanel
+
+
 ===== getSelectedTrainedPersonnelPanelModel =====
     function getSelectedTrainedPersonnelPanelModel() {
         let registry = { vehicles: {} };
@@ -429,6 +429,122 @@ FUNCTION NOT FOUND: hasAuthoritativeMissionDefinitionTrainedPersonnelRequirement
                 return String(left.vehicleName || '')
                     .localeCompare(String(right.vehicleName || ''));
             });
+    }
+
+
+===== readLiveMissionRequirements =====
+FUNCTION KEYWORD NOT FOUND: readLiveMissionRequirements
+
+
+===== getCachedMissionRequirementRows =====
+    function getCachedMissionRequirementRows(sourceDescriptor = null) {
+        const missionKey =
+            synchroniseMissionRequirementPreloadCache();
+        const cache = mfMissionRequirementPreloadCache;
+        const sourceUrl = String(
+            sourceDescriptor?.url ||
+            ''
+        );
+
+        if (
+            cache.status !== 'loaded' ||
+            cache.missionKey !== missionKey ||
+            !Array.isArray(cache.rows) ||
+            (
+                sourceUrl &&
+                cache.sourceUrl &&
+                cache.sourceUrl !== sourceUrl
+            )
+        ) {
+            return null;
+        }
+
+        return cloneMissionRequirementRows(cache.rows);
+    }
+
+
+===== hasExplicitCurrentMissingRequirementRows =====
+    function hasExplicitCurrentMissingRequirementRows(rows) {
+        return (Array.isArray(rows) ? rows : []).some(item => {
+            return (
+                isExplicitMissingVehicleRequirementRow(item) ||
+                isExplicitMissingPersonnelRequirementRow(item)
+            );
+        });
+    }
+
+
+===== normaliseOperationalRequirementRows =====
+    function normaliseOperationalRequirementRows(rows) {
+        return (Array.isArray(rows) ? rows : []).map(row => {
+            if (!row || row.isTrainedPersonnelRequirement) return row;
+
+            const searchAdvisorRequirement =
+                getSearchAdvisorTrainedVehicleRequirement(
+                    row.unitName,
+                    row.stillNeeded
+                );
+
+            if (searchAdvisorRequirement) {
+                return {
+                    ...row,
+                    unitName:
+                        MF_TRAINED_PERSONNEL_ROW_NAME,
+                    stillNeeded:
+                        getTrainedPersonnelVehicleTarget([
+                            searchAdvisorRequirement
+                        ]),
+                    isTrainedPersonnelRequirement:
+                        true,
+                    personnelTrainingRequirements: [
+                        searchAdvisorRequirement
+                    ],
+                    convertedFromPersonnelRequirement:
+                        true
+                };
+            }
+
+            const sarConversion =
+                getSarPersonnelVehicleRequirement(
+                    row.unitName,
+                    row.stillNeeded
+                );
+
+            if (sarConversion) {
+                return {
+                    ...row,
+                    unitName:
+                        sarConversion.unitName,
+                    stillNeeded:
+                        sarConversion.stillNeeded,
+                    personnelRequirement:
+                        sarConversion.personnelRequirement,
+                    personnelPerVehicle:
+                        sarConversion.personnelPerVehicle,
+                    sarPersonnelConversion:
+                        sarConversion,
+                    convertedFromPersonnelRequirement:
+                        true
+                };
+            }
+
+            const conversion = getPoliceOfficerVehicleRequirement(
+                row.unitName,
+                row.stillNeeded
+            );
+
+            if (!conversion) return row;
+
+            return {
+                ...row,
+                unitName: conversion.unitName,
+                stillNeeded: conversion.stillNeeded,
+                personnelRequirement:
+                    `${conversion.personnelRequired} Police Officer${conversion.personnelRequired === 1 ? '' : 's'}`,
+                personnelPerVehicle: conversion.personnelPerVehicle,
+                convertedFromPersonnelRequirement: true
+            };
+        });
     }
 
 
@@ -818,6 +934,10 @@ FUNCTION NOT FOUND: hasAuthoritativeMissionDefinitionTrainedPersonnelRequirement
             }
         );
     }
+
+
+===== getMissionAccessibleDocuments =====
+FUNCTION KEYWORD NOT FOUND: getMissionAccessibleDocuments
 
 
 ===== getVehicleCheckboxSnapshot =====
