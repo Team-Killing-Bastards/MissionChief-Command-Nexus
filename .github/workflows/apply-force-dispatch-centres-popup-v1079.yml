@@ -40,6 +40,19 @@ jobs:
       - name: Apply popup-window correction
         run: python3 .github/builders/apply-force-dispatch-centres-popup-v1079.py
 
+      - name: Correct popup-name regression scope
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('scripts/check-dispatch-centres-popup-window-v1079.mjs')
+          text = path.read_text(encoding='utf-8')
+          old = "    feature.includes(token),\n"
+          new = "    (token === \"'missionchief-dispatch-centres-popup-v1079'\" ? source : feature).includes(token),\n"
+          if text.count(old) != 1:
+              raise SystemExit('Generated regression assertion was not unique')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+
       - name: Remove one-use builder machinery
         run: |
           rm -f .github/builders/apply-force-dispatch-centres-popup-v1079.py
