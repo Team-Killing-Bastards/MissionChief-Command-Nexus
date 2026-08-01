@@ -7,6 +7,12 @@ on:
     paths:
       - '.github/builders/apply-high-risk-missing-person-ambulance-v1076.py'
       - '.github/workflows/apply-high-risk-missing-person-ambulance-v1076.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/builders/apply-high-risk-missing-person-ambulance-v1076.py'
+      - '.github/workflows/apply-high-risk-missing-person-ambulance-v1076.yml'
   workflow_dispatch:
 
 permissions:
