@@ -67,7 +67,7 @@ function extractFunction(name) {
 }
 
 expect(
-  source.includes('// @version      1.0.76'),
+  source.includes('// @version      1.0.77'),
   'Command Nexus 1.0.70 metadata missing'
 );
 expect(

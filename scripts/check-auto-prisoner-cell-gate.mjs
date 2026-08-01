@@ -14,7 +14,7 @@ function fail(message) {
 }
 
 for (const [token, label] of [
-  ['// @version      1.0.76', 'v1.0.51 metadata'],
+  ['// @version      1.0.77', 'v1.0.51 metadata'],
   [' * MODULE 2: MISSION FINDER V10.6.139', 'Mission Finder V10.6.120 header'],
   ['the prisoners should be placed in a cell', 'normalised prisoner alert contract'],
   ['a.btn.btn-success[data-prison-id][href*="/gefangener/"]', 'green prison destination selector'],

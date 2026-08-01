@@ -59,7 +59,7 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-expect(source.includes('// @version      1.0.76'), 'v1.0.76 metadata missing');
+expect(source.includes('// @version      1.0.77'), 'v1.0.77 metadata missing');
 expect(source.includes('MISSION FINDER V10.6.139'), 'V10.6.139 header missing');
 expect(
   source.includes('/* Vehicle drawer top alignment and motion V1.0.73. */'),
@@ -134,5 +134,5 @@ expect(
 );
 
 console.log(
-  'Command Nexus V1.0.76 top-aligned animated Vehicle drawer and action-order checks passed.'
+  'Command Nexus V1.0.77 top-aligned animated Vehicle drawer and action-order checks passed.'
 );

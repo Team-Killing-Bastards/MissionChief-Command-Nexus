@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.76
+// @version      1.0.77
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -44,14 +44,27 @@
         }
     })();
 
-    // The naming/personnel workspace owns the main MissionChief document and
-    // reaches its edit iframes from there. Running a second complete workspace
-    // runtime inside every mission/lightbox iframe retained an extra whole-DOM
-    // observer, caches and global listeners for documents that never render the
-    // tools. Child frames therefore leave this module to the top-window owner.
-    if (!TOOL_IS_TOP_WINDOW) return;
+    const TOOL_IS_STATION_OVERVIEW_FRAME = (() => {
+        if (TOOL_IS_TOP_WINDOW) return false;
+        try {
+            if (window.top.location.origin !== location.origin) return false;
+        } catch (_error) {
+            return false;
+        }
 
-    const UNIT_VERSION = '3.3.8';
+        return /^\/leitstellenansicht\/?$/.test(
+            String(location.pathname || '')
+        );
+    })();
+
+    // Resource Administration normally has one top-window owner. MissionChief's
+    // normal Stations control opens the same /leitstellenansicht document in a
+    // same-origin lightbox iframe, so that exact frame is also an authoritative
+    // workspace host. Mission, building-detail and unrelated child frames stay
+    // excluded from the naming/personnel runtime.
+    if (!TOOL_IS_TOP_WINDOW && !TOOL_IS_STATION_OVERVIEW_FRAME) return;
+
+    const UNIT_VERSION = '3.3.9';
     const STATION_VERSION = '1.3.3';
     const PERSONNEL_VERSION = '1.3.8';
     const PERSONNEL_TRAINING_CODE = 'critical_care';
@@ -1851,6 +1864,12 @@
 
         const desktopStationSelector =
             'a.lightbox-open.list-group-item.active[href*="/buildings/"]';
+
+        if (TOOL_IS_STATION_OVERVIEW_FRAME) {
+            return entries.some(entry =>
+                entry.link?.isConnected
+            );
+        }
 
         if (!isIosSafariWebsite()) {
             return entries.some(entry =>
@@ -13631,7 +13650,7 @@
             capturedAtUnix: Date.now(),
             reason: String(reason || 'manual-export'),
             versions: {
-                commandNexus: '1.0.76',
+                commandNexus: '1.0.77',
                 missionFinder: 'V10.6.139',
                 personnelAssignment: '1.3.8'
             },
@@ -20451,7 +20470,7 @@ function isRoadRailUnitVehicleCheckbox(input) {
             typeof GM_info !== 'undefined' &&
             GM_info?.script?.version
                 ? GM_info.script.version
-                : '1.0.76';
+                : '1.0.77';
         dashboardFooter.textContent =
             `MissionChief Nexus V${dashboardVersion} · MIT · Martblyth`;
 
