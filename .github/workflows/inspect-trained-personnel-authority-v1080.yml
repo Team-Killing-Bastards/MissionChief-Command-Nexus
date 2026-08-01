@@ -1,0 +1,35 @@
+name: Inspect trained personnel authority v1.0.80
+
+on:
+  push:
+    branches:
+      - feature/trained-personnel-on-scene-authority-v1080
+    paths:
+      - '.github/workflows/inspect-trained-personnel-authority-v1080.yml'
+      - '.github/builders/inspect-trained-personnel-authority-v1080.py'
+
+permissions:
+  contents: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: feature/trained-personnel-on-scene-authority-v1080
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Extract current authority and on-scene contracts
+        run: python3 .github/builders/inspect-trained-personnel-authority-v1080.py
+      - name: Commit diagnostic extract
+        run: |
+          set -euo pipefail
+          git config user.name MartyBlyth
+          git config user.email 32400596+Martyblyth@users.noreply.github.com
+          git add .github/diagnostics/trained-personnel-authority-v1080.txt
+          git commit -m 'Capture trained-personnel authority diagnostic'
+          git push origin HEAD:feature/trained-personnel-on-scene-authority-v1080
