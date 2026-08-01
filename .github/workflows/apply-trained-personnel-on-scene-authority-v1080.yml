@@ -5,6 +5,7 @@ on:
     branches:
       - feature/trained-personnel-on-scene-authority-v1080
     paths:
+      - '.v1080-apply-trigger'
       - '.github/builders/apply-trained-personnel-on-scene-authority-v1080.py'
       - '.github/workflows/apply-trained-personnel-on-scene-authority-v1080.yml'
 
