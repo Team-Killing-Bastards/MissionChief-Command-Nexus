@@ -1,3 +1,158 @@
+===== scheduleMissionFinderMutationWork =====
+
+
+    function scheduleMissionFinderMutationWork(records = []) {
+        const flags = classifyMissionFinderMutations(records);
+
+        if (!flags.relevant) return;
+
+        mfRuntimeMemoryLastMutationAt = Date.now();
+
+        mergeMainMutationFlags(flags);
+
+        if (mfMainMutationFlushTimer) return;
+
+        mfMainMutationFlushTimer = setTimeout(
+            flushMissionFinderMutationWork,
+            200
+        );
+    }
+
+
+===== renderVehicleLoadList =====
+
+
+    function renderVehicleLoadList() {
+        if (mfVehicleLoadRenderFrame !== null) return;
+
+        const run = () => {
+            mfVehicleLoadRenderFrame = null;
+            renderVehicleLoadListNow();
+        };
+
+        if (typeof requestAnimationFrame === 'function') {
+            mfVehicleLoadRenderFrame = requestAnimationFrame(run);
+        } else {
+            mfVehicleLoadRenderFrame = setTimeout(run, 50);
+        }
+    }
+
+
+===== renderVehicleLoadListNow =====
+
+
+    function renderVehicleLoadListNow() {
+        const listContent = document.getElementById('vehicle-load-list-content');
+        const patientContent = document.getElementById('vehicle-patient-content');
+        const summary = document.getElementById('vehicle-load-summary');
+        const progress = document.getElementById('vehicle-load-progress');
+
+        if (!listContent || !patientContent || !summary || !progress) return;
+
+        refreshVehicleRequirementCounters();
+
+        const preloadState =
+            getMissionRequirementPreloadState();
+        const preloadedRows =
+            vehicleLoadState.rows.length === 0
+                ? getPreloadedMissionVehicleRequirementsForDisplay()
+                : [];
+        const usingPreloadedRows =
+            preloadedRows.length > 0;
+        const displayRows =
+            usingPreloadedRows
+                ? preloadedRows
+                : vehicleLoadState.rows;
+
+        const totalRequired = displayRows.reduce((sum, row) => sum + Number(row.required || 0), 0);
+        const foundRequired = displayRows.reduce((sum, row) => sum + Number(row.selected || 0), 0);
+
+        const percent = totalRequired > 0 ? Math.round((foundRequired / totalRequired) * 100) : vehicleLoadState.ready ? 100 : 0;
+        const preloadedCoverageComplete = Boolean(
+            usingPreloadedRows &&
+            totalRequired > 0 &&
+            foundRequired >= totalRequired
+        );
+        const statusText = usingPreloadedRows
+            ? preloadedCoverageComplete
+                ? 'Covered'
+                : 'Requirements loaded'
+            : vehicleLoadState.ready
+                ? 'Ready'
+                : 'Not Ready';
+        const statusClass =
+            vehicleLoadState.ready ||
+            preloadedCoverageComplete
+                ? 'mf2026-good'
+                : 'mf2026-warn';
+
+        summary.innerHTML = `
+            <div>Vehicles: <strong>${foundRequired}</strong> / <strong>${totalRequired}</strong></div>
+            <div>Status: <strong class="${statusClass}">${statusText}</strong></div>
+        `;
+
+        progress.style.width = `${percent}%`;
+
+        if (displayRows.length === 0) {
+            listContent.innerHTML = vehicleLoadState.ready
+                ? `<span class="mf2026-good">✓ Ambulance-only mission ready</span>`
+                : preloadState.status === 'loading'
+                    ? `Loading mission vehicle requirements...`
+                    : `Click Unit Finder to load vehicles.`;
+        } else {
+            listContent.innerHTML = displayRows.map(row => {
+                let icon = '○';
+                let cls = 'mf2026-warn';
+
+                const selected = Math.min(Number(row.selected || 0), Number(row.required || 0));
+                const required = Number(row.required || 0);
+
+                if (selected >= required && required > 0) {
+                    icon = '✓';
+                    cls = 'mf2026-good';
+                } else if (row.status === 'missing') {
+                    icon = '✕';
+                    cls = 'mf2026-bad';
+                } else if (selected > 0 || row.status === 'retrying') {
+                    icon = '↻';
+                    cls = 'mf2026-warn';
+                }
+
+                return `
+                    <div class="mf2026-row">
+                        <div class="mf2026-name">
+                            <span class="${cls}">${icon}</span>
+                            ${escapeHtml(row.originalName)}
+                            <div class="mf2026-small">${escapeHtml(row.mappedName)}</div>
+                        </div>
+                        <div class="mf2026-count ${selected >= required && required > 0 ? 'mf2026-good' : 'mf2026-warn'}">${selected} / ${required}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        patientContent.innerHTML = `
+            <div class="mf2026-row">
+                <div>Patients found</div>
+                <div class="mf2026-count">${vehicleLoadState.patients}</div>
+            </div>
+            <div class="mf2026-row">
+                <div>Ambulances selected</div>
+                <div class="mf2026-count">${vehicleLoadState.ambulances}</div>
+            </div>
+            <div class="mf2026-row">
+                <div>Ambulance Officer</div>
+                <div class="mf2026-count mf2026-warn">Live requirements only</div>
+            </div>
+        `;
+
+
+        renderSelectedTrainedPersonnelPanel();
+    }
+
+
+===== MATCH WINDOWS =====
+
 --- lines 1557-1603 ---
 1557:         const isRelevantLifecycleNode = node => {
 1558:             if (
@@ -389,55 +544,6 @@
 20372:             if (missionFinderIphoneSafari) {
 20373:                 consumeIphoneDisclosureEvent(event);
 20374:                 toggleMissionControlCollapsed();
-
---- lines 20477-20523 ---
-20477:         if (missionFinderIphoneSafari) {
-20478:             wrapper.appendChild(iphoneLauncher);
-20479:         } else {
-20480:             wrapper.appendChild(dashboardBrand);
-20481:             wrapper.appendChild(dashboardRail);
-20482:             wrapper.appendChild(dashboardUtility);
-20483:             wrapper.appendChild(dashboardFooter);
-20484:             setMissionDashboardTab(
-20485:                 localStorage.getItem(
-20486:                     'mf_nexus_dashboard_tab_v1'
-20487:                 ) || 'mission'
-20488:             );
-20489:         }
-20490:         wrapper.appendChild(panel);
-20491:         wrapper.appendChild(loadPanel);
-20492:         wrapper.appendChild(trainedPanel);
-20493:         document.body.appendChild(wrapper);
-20494: 
-20495:         scheduleMissionRequiredPersonnelPreload(0);
-20496: 
-20497:         function syncVehicleLoadCollapseState() {
-20498:             const expanded = !mfVehicleLoadCollapsed;
-20499:             loadPanel.classList.toggle(
-20500:                 'mf2026-load-collapsed',
-20501:                 mfVehicleLoadCollapsed
-20502:             );
-20503: 
-20504:             const minimizeButton =
-20505:                 loadPanel.querySelector('#mf-load-minimize');
-20506:             const title =
-20507:                 loadPanel.querySelector('#mf-load-title');
-20508: 
-20509:             if (minimizeButton) {
-20510:                 minimizeButton.textContent =
-20511:                     missionFinderIphoneSafari
-20512:                         ? (expanded ? '▴' : '▾')
-20513:                         : (expanded ? '−' : '+');
-20514:                 minimizeButton.title = expanded
-20515:                     ? 'Collapse Vehicle Load List'
-20516:                     : 'Expand Vehicle Load List';
-20517:                 minimizeButton.setAttribute(
-20518:                     'aria-label',
-20519:                     minimizeButton.title
-20520:                 );
-20521:                 minimizeButton.setAttribute(
-20522:                     'aria-controls',
-20523:                     'mf-load-body'
 
 --- lines 20564-20610 ---
 20564:                     'aria-expanded',
@@ -1271,104 +1377,6 @@
 27816:                         getMissionRequirementPreloadState();
 27817: 
 27818:                     if (
-
---- lines 27805-27851 ---
-27805:                     return [];
-27806:                 })
-27807:                 .finally(() => {
-27808:                     if (
-27809:                         mfMissionRequirementPreloadPromise === preloadPromise
-27810:                     ) {
-27811:                         mfMissionRequirementPreloadPromise = null;
-27812:                         mfMissionRequirementPreloadPromiseKey = '';
-27813:                     }
-27814: 
-27815:                     const cache =
-27816:                         getMissionRequirementPreloadState();
-27817: 
-27818:                     if (
-27819:                         cache.missionKey === missionKey &&
-27820:                         cache.status !== 'loaded' &&
-27821:                         cache.attempts < 6
-27822:                     ) {
-27823:                         scheduleMissionRequiredPersonnelPreload(
-27824:                             350 * cache.attempts
-27825:                         );
-27826:                     }
-27827:                 });
-27828: 
-27829:         mfMissionRequirementPreloadPromise = preloadPromise;
-27830:         return preloadPromise;
-27831:     }
-27832: 
-27833:     function scheduleMissionRequiredPersonnelPreload(
-27834:         delay = 0
-27835:     ) {
-27836:         if (!isMissionPage()) return;
-27837: 
-27838:         synchroniseMissionRequirementPreloadCache();
-27839: 
-27840:         if (
-27841:             mfMissionRequirementPreloadCache.status === 'loaded' ||
-27842:             mfMissionRequirementPreloadTimer
-27843:         ) {
-27844:             return;
-27845:         }
-27846: 
-27847:         mfMissionRequirementPreloadTimer = setTimeout(() => {
-27848:             mfMissionRequirementPreloadTimer = null;
-27849:             preloadMissionRequiredPersonnel();
-27850:         }, Math.max(0, parseInt(delay, 10) || 0));
-27851:     }
-
---- lines 27815-27861 ---
-27815:                     const cache =
-27816:                         getMissionRequirementPreloadState();
-27817: 
-27818:                     if (
-27819:                         cache.missionKey === missionKey &&
-27820:                         cache.status !== 'loaded' &&
-27821:                         cache.attempts < 6
-27822:                     ) {
-27823:                         scheduleMissionRequiredPersonnelPreload(
-27824:                             350 * cache.attempts
-27825:                         );
-27826:                     }
-27827:                 });
-27828: 
-27829:         mfMissionRequirementPreloadPromise = preloadPromise;
-27830:         return preloadPromise;
-27831:     }
-27832: 
-27833:     function scheduleMissionRequiredPersonnelPreload(
-27834:         delay = 0
-27835:     ) {
-27836:         if (!isMissionPage()) return;
-27837: 
-27838:         synchroniseMissionRequirementPreloadCache();
-27839: 
-27840:         if (
-27841:             mfMissionRequirementPreloadCache.status === 'loaded' ||
-27842:             mfMissionRequirementPreloadTimer
-27843:         ) {
-27844:             return;
-27845:         }
-27846: 
-27847:         mfMissionRequirementPreloadTimer = setTimeout(() => {
-27848:             mfMissionRequirementPreloadTimer = null;
-27849:             preloadMissionRequiredPersonnel();
-27850:         }, Math.max(0, parseInt(delay, 10) || 0));
-27851:     }
-27852: 
-27853:     const MF_REQUIREMENT_SOURCE_FAILURE_STATUSES =
-27854:         new Set([
-27855:             'missing-source',
-27856:             'fetch-failed',
-27857:             'invalid-response'
-27858:         ]);
-27859: 
-27860:     let mfLastMissionRequirementRead = {
-27861:         status: 'idle',
 
 --- lines 32181-32227 ---
 32181:         highDebugLog('SELECT DETAIL', `${selectionSource} | ${originalName} -> ${mappedName} | required=${required} | first=${checkboxes[0] ? getVehicleDebugName(checkboxes[0]) : 'none'}`);
@@ -2252,6 +2260,55 @@
 39399:             updateStatusBox("Some mission update units are missing.");
 39400:             changeDispatchBoxColor(false);
 
+--- lines 47234-47280 ---
+47234:             if (
+47235:                 wrappers.length > 1 ||
+47236:                 (
+47237:                     controlPanel &&
+47238:                     !controlPanel.closest('#mission-finder-wrapper')
+47239:                 )
+47240:             ) {
+47241:                 cleanupDuplicatePanels();
+47242:             }
+47243:         }
+47244: 
+47245:         if (autoModeRunning && missionPage && flags.relevant) {
+47246:             scheduleAutoModeLoopResume(
+47247:                 'filtered/coalesced DOM mutation'
+47248:             );
+47249:         }
+47250:     }
+47251: 
+47252:     function scheduleMissionFinderMutationWork(records = []) {
+47253:         const flags = classifyMissionFinderMutations(records);
+47254: 
+47255:         if (!flags.relevant) return;
+47256: 
+47257:         mfRuntimeMemoryLastMutationAt = Date.now();
+47258: 
+47259:         mergeMainMutationFlags(flags);
+47260: 
+47261:         if (mfMainMutationFlushTimer) return;
+47262: 
+47263:         mfMainMutationFlushTimer = setTimeout(
+47264:             flushMissionFinderMutationWork,
+47265:             200
+47266:         );
+47267:     }
+47268: 
+47269: 
+47270: 
+47271:     function shouldKeepMissionFinderObserverForCurrentFrame() {
+47272:         if (MF_IS_TOP_WINDOW) return true;
+47273:         if (!document.body || !isMissionPage()) return false;
+47274: 
+47275:         try {
+47276:             return getPrimaryMissionRequirementDocument() === document;
+47277:         } catch (_error) {
+47278:             // Preserve the current runtime when cross-frame inspection is
+47279:             // temporarily unavailable rather than risking an operational stop.
+47280:             return true;
+
 --- lines 47271-47317 ---
 47271:     function shouldKeepMissionFinderObserverForCurrentFrame() {
 47272:         if (MF_IS_TOP_WINDOW) return true;
@@ -2888,6 +2945,55 @@
 47865: 
 47866: })();
 47867:     } catch (error) {
+
+--- lines 47823-47869 ---
+47823:                     'mf_post_transport_rehook_pending_v1'
+47824:                 ) === 'true' ||
+47825:                 isRecentTransportRehookWindowActive()
+47826:             ) {
+47827:                 forceAutoModeBackOnForTransportRehook();
+47828: 
+47829:                 setTimeout(() => {
+47830:                     openFirstMissionAfterTransportAutoClose(
+47831:                         'startup-pending-rehook'
+47832:                     );
+47833:                 }, 2500);
+47834:             }
+47835:         }
+47836: 
+47837:         if (isMissionPage()) initialize();
+47838: 
+47839:         mfMainMutationObserver = new MutationObserver(records => {
+47840:             releaseRemovedMissionFinderFrameRuntimes(records);
+47841:             scheduleMissionFinderMutationWork(records);
+47842:         });
+47843: 
+47844:         mfMainMutationObserver.observe(document.body, {
+47845:             childList: true,
+47846:             subtree: true
+47847:         });
+47848: 
+47849:         if (isMissionPage()) {
+47850:             startMissionFinderRuntimeMemoryMaintenance();
+47851:         }
+47852: 
+47853:         scheduleAutoMemoryRecycleResume();
+47854:     }
+47855: 
+47856:     if (document.body) {
+47857:         startMissionFinderObserver();
+47858:     } else {
+47859:         document.addEventListener(
+47860:             'DOMContentLoaded',
+47861:             startMissionFinderObserver,
+47862:             { once: true }
+47863:         );
+47864:     }
+47865: 
+47866: })();
+47867:     } catch (error) {
+47868:         console.error('[MissionChief Complete Tools] Mission Finder module startup failed:', error);
+47869:     }
 
 --- lines 47826-47872 ---
 47826:             ) {
