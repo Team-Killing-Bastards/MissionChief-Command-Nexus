@@ -83,7 +83,7 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-expect(source.includes('// @version      1.0.77'), 'Expected Command Nexus 1.0.77');
+expect(source.includes('// @version      1.0.78'), 'Expected Command Nexus 1.0.78');
 expect(source.includes('MISSION FINDER V10.6.139'), 'Mission Finder baseline must remain V10.6.139');
 expect(source.includes("const UNIT_VERSION = '3.3.9';"), 'Unit Naming must be 3.3.9');
 expect(source.includes("const STATION_VERSION = '1.3.3';"), 'Station Naming must remain 1.3.3');

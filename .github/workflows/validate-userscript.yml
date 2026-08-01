@@ -1,5 +1,5 @@
 name: Validate userscript
-# Includes mission-definition trained-personnel, Required Personnel preload, preloaded Vehicle Load coverage, high-risk Missing Person Ambulance settings, normal Stations popup ownership, selected-trained-personnel UI, integrated mission dashboard, compact Nexus UI, HazMat vehicle/personnel-to-OSU, diagnostic export, dispatch-correction, memory lifecycle/recycle, Missing-on-mission authority and single-pass update coverage.
+# Includes mission-definition trained-personnel, Required Personnel preload, preloaded Vehicle Load coverage, high-risk Missing Person Ambulance settings, normal Stations popup ownership, Dispatch Centres Show all middle-click popup, selected-trained-personnel UI, integrated mission dashboard, compact Nexus UI, HazMat vehicle/personnel-to-OSU, diagnostic export, dispatch-correction, memory lifecycle/recycle, Missing-on-mission authority and single-pass update coverage.
 
 on:
   pull_request:
@@ -30,6 +30,7 @@ on:
       - 'scripts/check-vehicle-load-preloaded-requirements-v1075.mjs'
       - 'scripts/check-high-risk-missing-person-ambulance-v1076.mjs'
       - 'scripts/check-station-overview-popup-v1077.mjs'
+      - 'scripts/check-dispatch-centres-show-all-popup-v1078.mjs'
       - 'scripts/check-vehicle-drawer-animation-v1073.mjs'
       - 'scripts/check-auto-memory-lifecycle.mjs'
       - 'scripts/check-auto-memory-recycle.mjs'
@@ -73,6 +74,7 @@ on:
       - 'scripts/check-vehicle-load-preloaded-requirements-v1075.mjs'
       - 'scripts/check-high-risk-missing-person-ambulance-v1076.mjs'
       - 'scripts/check-station-overview-popup-v1077.mjs'
+      - 'scripts/check-dispatch-centres-show-all-popup-v1078.mjs'
       - 'scripts/check-vehicle-drawer-animation-v1073.mjs'
       - 'scripts/check-auto-memory-lifecycle.mjs'
       - 'scripts/check-auto-memory-recycle.mjs'
@@ -189,6 +191,9 @@ jobs:
 
       - name: Validate normal Stations overview popup ownership
         run: node scripts/check-station-overview-popup-v1077.mjs
+
+      - name: Validate Dispatch Centres Show all middle-click popup
+        run: node scripts/check-dispatch-centres-show-all-popup-v1078.mjs
 
       - name: Validate top-aligned animated Vehicle drawer and action order
         run: node scripts/check-vehicle-drawer-animation-v1073.mjs

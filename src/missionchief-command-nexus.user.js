@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.77
+// @version      1.0.78
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -13650,7 +13650,7 @@
             capturedAtUnix: Date.now(),
             reason: String(reason || 'manual-export'),
             versions: {
-                commandNexus: '1.0.77',
+                commandNexus: '1.0.78',
                 missionFinder: 'V10.6.139',
                 personnelAssignment: '1.3.8'
             },
@@ -20470,7 +20470,7 @@ function isRoadRailUnitVehicleCheckbox(input) {
             typeof GM_info !== 'undefined' &&
             GM_info?.script?.version
                 ? GM_info.script.version
-                : '1.0.77';
+                : '1.0.78';
         dashboardFooter.textContent =
             `MissionChief Nexus V${dashboardVersion} · MIT · Martblyth`;
 
@@ -47659,4 +47659,97 @@ async function handleAutoPrisonerReleaseAfterActions() {
     } catch (error) {
         console.error('[MissionChief Complete Tools] Mission Finder module startup failed:', error);
     }
+})();
+
+/* Dispatch Centres Show all middle-click popup V1.0.78. */
+(function() {
+    'use strict';
+
+    const SHOW_ALL_SELECTOR =
+        'a.lightbox-open[href="/leitstellenansicht"]';
+    const POPUP_NAME =
+        'missionchief-dispatch-centres-show-all';
+
+    function installDispatchCentresShowAllMiddleClick() {
+        const root = document.documentElement;
+        if (
+            !root ||
+            root.dataset.mcnDispatchCentresPopupInstalled === 'true'
+        ) {
+            return;
+        }
+
+        root.dataset.mcnDispatchCentresPopupInstalled = 'true';
+
+        document.addEventListener(
+            'auxclick',
+            event => {
+                if (event.button !== 1) {
+                    return;
+                }
+
+                const target =
+                    event.target &&
+                    typeof event.target.closest === 'function'
+                        ? event.target
+                        : event.target?.parentElement;
+                const anchor =
+                    target &&
+                    typeof target.closest === 'function'
+                        ? target.closest(SHOW_ALL_SELECTOR)
+                        : null;
+
+                if (!anchor) {
+                    return;
+                }
+
+                event.preventDefault();
+                event.stopPropagation();
+                event.stopImmediatePropagation?.();
+
+                const width = 1280;
+                const height = 900;
+                const left = Math.max(
+                    0,
+                    Math.round(
+                        Number(window.screenX || 0) +
+                            (Number(window.outerWidth || width) -
+                                width) /
+                                2
+                    )
+                );
+                const top = Math.max(
+                    0,
+                    Math.round(
+                        Number(window.screenY || 0) +
+                            (Number(window.outerHeight || height) -
+                                height) /
+                                2
+                    )
+                );
+                const popup = window.open(
+                    new URL(
+                        anchor.getAttribute('href') ||
+                            '/leitstellenansicht',
+                        window.location.origin
+                    ).href,
+                    POPUP_NAME,
+                    [
+                        'popup=yes',
+                        `width=${width}`,
+                        `height=${height}`,
+                        `left=${left}`,
+                        `top=${top}`,
+                        'resizable=yes',
+                        'scrollbars=yes'
+                    ].join(',')
+                );
+
+                popup?.focus();
+            },
+            true
+        );
+    }
+
+    installDispatchCentresShowAllMiddleClick();
 })();
