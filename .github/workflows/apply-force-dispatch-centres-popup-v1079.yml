@@ -1,9 +1,6 @@
 name: Apply Dispatch Centres popup-window correction
 
 on:
-  push:
-    branches:
-      - feature/force-dispatch-centres-popup-window-v1079
   pull_request:
     branches:
       - main
@@ -53,10 +50,11 @@ jobs:
           path.write_text(text.replace(old, new, 1), encoding='utf-8')
           PY
 
-      - name: Remove one-use builder machinery
-        run: |
-          rm -f .github/builders/apply-force-dispatch-centres-popup-v1079.py
-          rm -f .github/workflows/apply-force-dispatch-centres-popup-v1079.yml
+      - name: Leave workflow registration for connected app
+        run: git checkout HEAD -- .github/workflows/validate-userscript.yml
+
+      - name: Remove one-use builder
+        run: rm -f .github/builders/apply-force-dispatch-centres-popup-v1079.py
 
       - name: Validate JavaScript syntax
         run: node --check src/missionchief-command-nexus.user.js
@@ -79,7 +77,7 @@ jobs:
       - name: Validate whitespace
         run: git diff --check
 
-      - name: Commit clean product change
+      - name: Commit validated product change
         shell: bash
         run: |
           set -euo pipefail
