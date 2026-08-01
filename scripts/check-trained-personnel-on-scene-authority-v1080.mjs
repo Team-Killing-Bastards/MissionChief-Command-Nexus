@@ -66,11 +66,11 @@ function extractFunction(name) {
 }
 
 expect(
-  source.includes('// @version      1.0.80'),
+  source.includes('// @version      1.0.81'),
   'Expected Command Nexus 1.0.80'
 );
 expect(
-  source.includes(' * MODULE 2: MISSION FINDER V10.6.140'),
+  source.includes(' * MODULE 2: MISSION FINDER V10.6.141'),
   'Expected Mission Finder V10.6.140'
 );
 
@@ -134,7 +134,7 @@ expect(
   'Panel preload must stop before reading static Required Personnel when vehicles are on scene'
 );
 
-const process = extractFunction('processRequirementRows');
+const processBlock = extractFunction('processRequirementRows');
 for (const token of [
   'const missionVehiclesOnSceneForTrainedPersonnel =',
   'filterMissionDefinitionRequiredPersonnelForScene(',
@@ -144,15 +144,15 @@ for (const token of [
   'isMissionDefinitionRequiredPersonnelRequirementRow',
   'requirementRows = readMissionUpdateRows();'
 ]) {
-  expect(process.includes(token), `Initial authority path missing ${token}`);
+  expect(processBlock.includes(token), `Initial authority path missing ${token}`);
 }
 expect(
-  process.indexOf('filterMissionDefinitionRequiredPersonnelForScene(') <
-    process.indexOf('hasExplicitCurrentMissingRequirementRows('),
+  processBlock.indexOf('filterMissionDefinitionRequiredPersonnelForScene(') <
+    processBlock.indexOf('hasExplicitCurrentMissingRequirementRows('),
   'Static personnel rows must be filtered before the live authority decision'
 );
 expect(
-  process.includes('!suppliedHasMissionDefinitionPersonnel'),
+  processBlock.includes('!suppliedHasMissionDefinitionPersonnel'),
   'No-vehicle static personnel authority must remain available'
 );
 
@@ -160,8 +160,8 @@ const panel = extractFunction('renderSelectedTrainedPersonnelPanel');
 for (const token of [
   'missionVehiclesOnSceneForTrainedPersonnel',
   'hasMissionVehiclesOnSceneForTrainedPersonnelAuthority()',
-  'Vehicles are on scene. Live personnel and course shortages are authoritative.',
-  'Mission Required Personnel is shown only before the first vehicle arrives on scene.'
+  'No current trained-personnel shortage is reported.',
+  'Current Missing Personnel'
 ]) {
   expect(panel.includes(token), `Trained Personnel panel missing ${token}`);
 }

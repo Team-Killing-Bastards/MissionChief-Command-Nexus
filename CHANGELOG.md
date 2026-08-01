@@ -4,6 +4,30 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.81] - 2026-08-01
+
+### Fixed
+
+- After vehicles arrive on scene, the Trained Personnel panel now displays the current live Missing Personnel/course shortages already parsed by Mission Update.
+- The panel switches from the fresh-mission **Mission Required Personnel** totals to a **Current Missing Personnel** section with the exact remaining count for each supported course.
+- When no live trained-personnel shortage is reported, the panel explicitly shows zero current shortages rather than retaining the new-mission totals.
+
+### Safety and authority
+
+- Before the first vehicle reaches the scene, the existing mission-definition Required Personnel totals and selected/required coverage remain unchanged.
+- Live shortage values are already residual MissionChief demand and are not reduced a second time by selected vehicle checkboxes.
+- Selected-vehicle Personnel Register evidence remains visible beneath the live shortage section.
+- The display reuses `readMissionUpdateRows({ silent: true })`; it adds no fetch, timer, observer, selection or dispatch side effect.
+- The existing coalesced mission mutation flush now rerenders the panel after invalidating current mission caches, so live shortage changes appear automatically without a button click.
+- Vehicle Load, Unit Finder, Mission Update, Auto Mode, memory lifecycle and iOS/iPadOS paths remain unchanged.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.140` to `V10.6.141`.
+- Unit Naming remains `3.3.9`.
+- Station Naming remains `1.3.3`.
+- Personnel Assignment remains `1.3.8`.
+
 ## [1.0.80] - 2026-08-01
 
 ### Fixed
