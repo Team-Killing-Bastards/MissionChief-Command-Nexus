@@ -11,6 +11,7 @@ on:
     paths:
       - '.v1081-apply-trigger'
       - '.github/builders/apply-live-trained-personnel-display-v1081.py'
+      - '.github/builders/fix-live-trained-personnel-regressions-v1081.py'
       - '.github/workflows/apply-live-trained-personnel-display-v1081.yml'
   push:
     branches:
@@ -38,6 +39,8 @@ jobs:
           python-version: '3.12'
       - name: Apply live Missing Personnel display
         run: python3 .github/builders/apply-live-trained-personnel-display-v1081.py
+      - name: Align on-scene authority regression
+        run: python3 .github/builders/fix-live-trained-personnel-regressions-v1081.py
       - name: Validate complete candidate
         run: |
           set -euo pipefail
