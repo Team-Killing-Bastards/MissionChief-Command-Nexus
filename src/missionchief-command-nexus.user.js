@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.78
+// @version      1.0.79
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -13650,7 +13650,7 @@
             capturedAtUnix: Date.now(),
             reason: String(reason || 'manual-export'),
             versions: {
-                commandNexus: '1.0.78',
+                commandNexus: '1.0.79',
                 missionFinder: 'V10.6.139',
                 personnelAssignment: '1.3.8'
             },
@@ -20470,7 +20470,7 @@ function isRoadRailUnitVehicleCheckbox(input) {
             typeof GM_info !== 'undefined' &&
             GM_info?.script?.version
                 ? GM_info.script.version
-                : '1.0.78';
+                : '1.0.79';
         dashboardFooter.textContent =
             `MissionChief Nexus V${dashboardVersion} · MIT · Martblyth`;
 
@@ -47661,14 +47661,16 @@ async function handleAutoPrisonerReleaseAfterActions() {
     }
 })();
 
-/* Dispatch Centres Show all middle-click popup V1.0.78. */
+/* Dispatch Centres Show all popup-window enforcement V1.0.79. */
 (function() {
     'use strict';
 
     const SHOW_ALL_SELECTOR =
         'a.lightbox-open[href="/leitstellenansicht"]';
     const POPUP_NAME =
-        'missionchief-dispatch-centres-show-all';
+        'missionchief-dispatch-centres-popup-v1079';
+    const POPUP_WIDTH = 1280;
+    const POPUP_HEIGHT = 900;
 
     function installDispatchCentresShowAllMiddleClick() {
         const root = document.documentElement;
@@ -47680,73 +47682,148 @@ async function handleAutoPrisonerReleaseAfterActions() {
         }
 
         root.dataset.mcnDispatchCentresPopupInstalled = 'true';
+        let openedFromMouseDownAt = 0;
+
+        function findShowAllAnchor(event) {
+            const target =
+                event.target &&
+                typeof event.target.closest === 'function'
+                    ? event.target
+                    : event.target?.parentElement;
+
+            return target &&
+                typeof target.closest === 'function'
+                ? target.closest(SHOW_ALL_SELECTOR)
+                : null;
+        }
+
+        function stopNativeMiddleClick(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            event.stopImmediatePropagation?.();
+        }
+
+        function getPopupGeometry() {
+            const availableWidth = Number(
+                window.screen?.availWidth || POPUP_WIDTH
+            );
+            const availableHeight = Number(
+                window.screen?.availHeight || POPUP_HEIGHT
+            );
+            const width = Math.min(POPUP_WIDTH, availableWidth);
+            const height = Math.min(POPUP_HEIGHT, availableHeight);
+            const left = Math.max(
+                0,
+                Math.round(
+                    Number(window.screenX || 0) +
+                        (Number(window.outerWidth || width) - width) / 2
+                )
+            );
+            const top = Math.max(
+                0,
+                Math.round(
+                    Number(window.screenY || 0) +
+                        (Number(window.outerHeight || height) - height) / 2
+                )
+            );
+
+            return { width, height, left, top };
+        }
+
+        function openDispatchCentresPopup(anchor) {
+            const url = new URL(
+                anchor.getAttribute('href') ||
+                    '/leitstellenansicht',
+                window.location.origin
+            ).href;
+            const { width, height, left, top } =
+                getPopupGeometry();
+            const popup = window.open(
+                'about:blank',
+                POPUP_NAME,
+                [
+                    'popup=yes',
+                    `width=${width}`,
+                    `height=${height}`,
+                    `left=${left}`,
+                    `top=${top}`,
+                    'resizable=yes',
+                    'scrollbars=yes',
+                    'toolbar=no',
+                    'location=no',
+                    'menubar=no',
+                    'status=no'
+                ].join(',')
+            );
+
+            if (!popup) {
+                return;
+            }
+
+            try {
+                popup.resizeTo(width, height);
+                popup.moveTo(left, top);
+            } catch (_error) {
+                // Browser window-management policy may ignore sizing.
+            }
+
+            try {
+                popup.location.replace(url);
+            } catch (_error) {
+                popup.location.href = url;
+            }
+
+            popup?.focus();
+        }
+
+        function handleMiddleMouseDown(event) {
+            if (event.button !== 1) {
+                return;
+            }
+
+            const anchor = findShowAllAnchor(event);
+            if (!anchor) {
+                return;
+            }
+
+            stopNativeMiddleClick(event);
+            openedFromMouseDownAt = Date.now();
+            openDispatchCentresPopup(anchor);
+        }
+
+        function handleMiddleMouseRelease(event) {
+            if (event.button !== 1) {
+                return;
+            }
+
+            const anchor = findShowAllAnchor(event);
+            if (!anchor) {
+                return;
+            }
+
+            stopNativeMiddleClick(event);
+
+            if (
+                event.type === 'auxclick' &&
+                Date.now() - openedFromMouseDownAt > 1000
+            ) {
+                openDispatchCentresPopup(anchor);
+            }
+        }
 
         document.addEventListener(
+            'mousedown',
+            handleMiddleMouseDown,
+            true
+        );
+        document.addEventListener(
+            'mouseup',
+            handleMiddleMouseRelease,
+            true
+        );
+        document.addEventListener(
             'auxclick',
-            event => {
-                if (event.button !== 1) {
-                    return;
-                }
-
-                const target =
-                    event.target &&
-                    typeof event.target.closest === 'function'
-                        ? event.target
-                        : event.target?.parentElement;
-                const anchor =
-                    target &&
-                    typeof target.closest === 'function'
-                        ? target.closest(SHOW_ALL_SELECTOR)
-                        : null;
-
-                if (!anchor) {
-                    return;
-                }
-
-                event.preventDefault();
-                event.stopPropagation();
-                event.stopImmediatePropagation?.();
-
-                const width = 1280;
-                const height = 900;
-                const left = Math.max(
-                    0,
-                    Math.round(
-                        Number(window.screenX || 0) +
-                            (Number(window.outerWidth || width) -
-                                width) /
-                                2
-                    )
-                );
-                const top = Math.max(
-                    0,
-                    Math.round(
-                        Number(window.screenY || 0) +
-                            (Number(window.outerHeight || height) -
-                                height) /
-                                2
-                    )
-                );
-                const popup = window.open(
-                    new URL(
-                        anchor.getAttribute('href') ||
-                            '/leitstellenansicht',
-                        window.location.origin
-                    ).href,
-                    POPUP_NAME,
-                    [
-                        'popup=yes',
-                        `width=${width}`,
-                        `height=${height}`,
-                        `left=${left}`,
-                        `top=${top}`,
-                        'resizable=yes',
-                        'scrollbars=yes'
-                    ].join(',')
-                );
-
-                popup?.focus();
-            },
+            handleMiddleMouseRelease,
             true
         );
     }

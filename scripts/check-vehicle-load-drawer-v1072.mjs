@@ -54,7 +54,7 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-expect(source.includes('// @version      1.0.78'), 'v1.0.72 metadata missing');
+expect(source.includes('// @version      1.0.79'), 'v1.0.72 metadata missing');
 expect(source.includes('MISSION FINDER V10.6.139'), 'V10.6.135 header missing');
 
 const control = extractFunction('createControlPanel');

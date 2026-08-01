@@ -4,6 +4,23 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.79] - 2026-08-01
+
+### Fixed
+
+- The Dispatch Centres **Show all** middle-click now creates the dedicated popup window during the captured middle-button `mousedown` user gesture instead of waiting until `auxclick`.
+- The popup opens as a named blank window with explicit dimensions and browser-chrome hints, is moved and resized when browser policy permits, and then navigates to `/leitstellenansicht`.
+- A new popup name prevents a previously opened 1.0.78 browser tab from being reused.
+
+### Safety and compatibility
+
+- Captured `mouseup` and `auxclick` handlers suppress the browser's native middle-click new-tab action without opening a second window.
+- `auxclick` retains a guarded fallback for browsers that do not deliver the expected `mousedown`.
+- Normal left-click remains MissionChief's existing lightbox behaviour.
+- Browser popup-blocking and window-management policies remain authoritative.
+- The 1.0.77 Stations ownership correction, Mission Finder V10.6.139, Unit Finder, Vehicle Load, Auto Mode and iOS/iPadOS paths remain unchanged.
+
+
 ## [1.0.78] - 2026-08-01
 
 ### Added
