@@ -10,6 +10,21 @@ const [releaseWorkflow, repairWorkflow, repositoryQuality, notifier] =
     readFile('scripts/release-notify.mjs', 'utf8'),
   ]);
 
+for (const required of [
+  "const PRODUCT_PAGE_URL =",
+  "https://tkb-gaming.scot/mission-chief-scripts/command-nexus/",
+  "[Install / Update](${productPageUrl})",
+  "[TKB Scripts](${productPageUrl})",
+]) {
+  if (!notifier.includes(required)) {
+    fail(`release notifier is missing the TKB landing-page contract: ${required}`);
+  }
+}
+
+if (notifier.includes("[Install / Update](${greasyForkInstallUrl})")) {
+  fail('release notifier must not bypass the Command Nexus TKB landing page');
+}
+
 function fail(message) {
   console.error(`ERROR: ${message}`);
   process.exit(1);

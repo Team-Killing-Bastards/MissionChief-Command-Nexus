@@ -19,6 +19,10 @@ const PRODUCT_NAME =
   process.env.PRODUCT_NAME ||
   'MissionChief Command Nexus';
 
+const PRODUCT_PAGE_URL =
+  process.env.PRODUCT_PAGE_URL ||
+  'https://tkb-gaming.scot/mission-chief-scripts/command-nexus/';
+
 const MAX_MISSION_BRIEF_LENGTH = 1400;
 const GITHUB_SOURCE_ATTEMPTS = 12;
 const GITHUB_SOURCE_WAIT_MS = 2_500;
@@ -737,8 +741,7 @@ function buildDiscordPayload({
   releaseTag,
   releaseSha,
   releaseUrl,
-  greasyForkInstallUrl,
-  greasyForkPageUrl,
+  productPageUrl,
   missionBrief,
   recordedChecksum,
   greasyForkElapsedMs,
@@ -760,7 +763,7 @@ function buildDiscordPayload({
         url: releaseUrl,
         description:
           'The latest production build has cleared every release gate ' +
-          'and is now available through **Greasy Fork** and **GitHub**.',
+          'and is now available through **TKB Scripts** and **GitHub**.',
         fields: [
           {
             name: 'Release',
@@ -815,9 +818,9 @@ function buildDiscordPayload({
           {
             name: 'Get the release',
             value:
-              `[Install / Update](${greasyForkInstallUrl})  •  ` +
+              `[Install / Update](${productPageUrl})  •  ` +
               `[Release Notes](${releaseUrl})  •  ` +
-              `[Greasy Fork Page](${greasyForkPageUrl})`,
+              `[TKB Scripts](${productPageUrl})`,
             inline: false,
           },
           {
@@ -975,8 +978,7 @@ async function main() {
     releaseTag,
     releaseSha,
     releaseUrl,
-    greasyForkInstallUrl,
-    greasyForkPageUrl,
+    productPageUrl: PRODUCT_PAGE_URL,
     missionBrief,
     recordedChecksum,
     greasyForkElapsedMs:
