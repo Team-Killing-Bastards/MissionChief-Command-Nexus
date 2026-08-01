@@ -1,4 +1,4 @@
-name: Inspect trained panel refresh v1.0.81
+name: Apply trained panel refresh v1.0.81
 
 on:
   pull_request:
@@ -7,32 +7,45 @@ on:
     types:
       - synchronize
     paths:
-      - '.v1081-refresh-trigger'
+      - '.github/builders/apply-trained-panel-refresh-v1081.py'
       - '.github/workflows/inspect-trained-panel-refresh-v1081.yml'
-      - '.github/builders/inspect-trained-panel-refresh-v1081.py'
 
 permissions:
   contents: write
 
 jobs:
-  inspect:
+  apply:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
         with:
           ref: fix/trained-personnel-live-missing-v1081
           fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Extract refresh contracts
-        run: python3 .github/builders/inspect-trained-panel-refresh-v1081.py
-      - name: Commit diagnostic
+      - name: Apply existing-observer refresh
+        run: python3 .github/builders/apply-trained-panel-refresh-v1081.py
+      - name: Validate complete candidate
+        run: |
+          set -euo pipefail
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          for test in scripts/check-*.mjs; do
+            echo "Running ${test}"
+            node "$test"
+          done
+          python3 scripts/check_repository.py
+          git diff --check
+      - name: Commit validated permanent changes
         run: |
           set -euo pipefail
           git config user.name MartyBlyth
           git config user.email 32400596+Martyblyth@users.noreply.github.com
-          git add -f .github/diagnostics/trained-panel-refresh-v1081.txt
-          git commit -m 'Capture trained panel refresh diagnostic'
+          git add src/missionchief-command-nexus.user.js scripts/check-trained-personnel-live-missing-display-v1081.mjs CHANGELOG.md
+          git commit -m 'Refresh live Missing Personnel panel from existing mission observer'
           git push origin HEAD:fix/trained-personnel-live-missing-v1081
