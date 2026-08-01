@@ -48,6 +48,12 @@ functions = [
     'renderVehicleLoadList',
     'renderVehicleLoadListNow',
     'refreshVehicleRequirementCounters',
+    'countSelectedMatchingVehicles',
+    'getCheckboxVehicleValues',
+    'getVehicleTypeIdentifiers',
+    'vehicleValuesMatchCandidates',
+    'getRequirementVehicleCandidates',
+    'shouldUseStrictExactVehicleRequirementMatch',
     'renderSelectedTrainedPersonnelPanel',
     'getSelectedTrainedPersonnelPanelModel',
     'getSelectedTrainedPersonnelCountForCode',
@@ -60,10 +66,13 @@ functions = [
     'updateVehicleLoadState',
     'setVehicleLoadState',
     'resetVehicleLoadState',
+    'addOrUpdateVehicleRow',
     'readPersonnelTrainingRegistry',
     'getRegistryEntryForMissionCheckbox',
     'getMissionVehicleId',
     'getVehicleDebugName',
+    'scheduleMissionFinderMutationWork',
+    'initialize',
 ]
 for function_name in functions:
     (OUT / f'{function_name}.txt').write_text(
@@ -71,36 +80,20 @@ for function_name in functions:
     )
 
 extract_terms('vehicle-load-declaration.txt', [
-    'const vehicleLoadState =',
     'let vehicleLoadState =',
     'vehicleLoadState.rows =',
     'vehicleLoadState.rows.push',
-    'rows: vehicleLoadState.rows',
-], before=25, after=50, limit=40)
-extract_terms('vehicle-load-population.txt', [
-    'originalName:',
-    'mappedName:',
-    'status: \'missing\'',
-    'status: \'selected\'',
-    'required: required',
-], before=22, after=45, limit=60)
+], before=25, after=55, limit=40)
 extract_terms('preloaded-row-shape.txt', [
     'missionDefinitionRequiredPersonnel',
     'isTrainedPersonnelRequirement',
     'personnelTrainingRequirements',
     'missionDefinition',
-], before=35, after=75, limit=40)
-extract_terms('mission-dom-observers.txt', [
-    'new MutationObserver',
-    'MutationObserver(',
-    'mission_vehicle_driving',
-    'mission_vehicle_at_mission',
-    'vehicle_checkbox',
-], before=30, after=80, limit=60)
-extract_terms('training-registry-shape.txt', [
-    'assignedTrainingProfiles',
-    'trainingProfilesComplete',
-    'trainingCounts',
-    'vehicles: {}',
 ], before=35, after=75, limit=50)
+extract_terms('mission-table-css.txt', [
+    'vehicle-load-list-content',
+    'trained-personnel-content',
+    'mf2026-training-vehicle',
+    'mf2026-row',
+], before=20, after=45, limit=50)
 print(f'wrote exact mission coverage contexts from {len(lines)} source lines')
