@@ -1,0 +1,81 @@
+name: Apply Stations overview popup v1.0.76 correction
+
+on:
+  pull_request:
+    paths:
+      - '.github/builders/apply-station-overview-popup-v1076.py'
+      - '.github/workflows/apply-station-overview-popup-v1076.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-station-overview-popup-v1076-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  apply-and-validate:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out exact pull-request head
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Apply exact popup lifecycle correction
+        run: python3 .github/builders/apply-station-overview-popup-v1076.py
+
+      - name: Validate JavaScript syntax
+        run: node --check src/missionchief-command-nexus.user.js
+
+      - name: Validate metadata and Greasy Fork limits
+        run: node scripts/validate-userscript.mjs
+
+      - name: Run every permanent userscript regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          for check in scripts/check-*.mjs; do
+            echo "Running ${check}"
+            node "${check}"
+          done
+
+      - name: Validate repository integrity
+        run: python3 scripts/check_repository.py
+
+      - name: Validate whitespace
+        run: git diff --check
+
+      - name: Remove one-use builder and export workflow
+        shell: bash
+        run: |
+          git rm -f \
+            .github/builders/apply-station-overview-popup-v1076.py \
+            .github/workflows/apply-station-overview-popup-v1076.yml \
+            .github/workflows/emergency-station-overlay-source-export.yml
+
+      - name: Commit clean candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            src/missionchief-command-nexus.user.js \
+            src/README.md \
+            CHANGELOG.md \
+            scripts/check-runtime-memory-maintenance-v1074.mjs \
+            scripts/check-station-overview-popup-v1076.mjs \
+            .github/workflows/validate-userscript.yml
+          git commit -m "Restore Resource Administration in Stations popup"
+          git push origin HEAD:${{ github.event.pull_request.head.ref || github.ref_name }}
