@@ -5,13 +5,51 @@ source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-
 
 
 def extract_function(name: str) -> str:
-    signatures = [f'    function {name}(', f'    async function {name}(']
-    starts = [source.find(signature) for signature in signatures]
-    starts = [start for start in starts if start >= 0]
-    if not starts:
+    name_index = source.find(f'{name}(')
+    if name_index < 0:
         return f'FUNCTION NOT FOUND: {name}\n'
-    start = min(starts)
-    body_start = source.find('{', start)
+    start = source.rfind('function ', max(0, name_index - 120), name_index)
+    if start < 0:
+        return f'FUNCTION KEYWORD NOT FOUND: {name}\n'
+    line_start = source.rfind('\n', 0, start) + 1
+    start = line_start
+
+    open_paren = source.find('(', name_index)
+    paren_depth = 0
+    quote = ''
+    escaped = False
+    close_paren = -1
+    index = open_paren
+    while index < len(source):
+        character = source[index]
+        if quote:
+            if escaped:
+                escaped = False
+            elif character == '\\':
+                escaped = True
+            elif character == quote:
+                quote = ''
+            index += 1
+            continue
+        if character in ('"', "'", '`'):
+            quote = character
+            index += 1
+            continue
+        if character == '(':
+            paren_depth += 1
+        elif character == ')':
+            paren_depth -= 1
+            if paren_depth == 0:
+                close_paren = index
+                break
+        index += 1
+    if close_paren < 0:
+        return f'PARAMETERS NOT TERMINATED: {name}\n'
+
+    body_start = source.find('{', close_paren)
+    if body_start < 0:
+        return f'BODY NOT FOUND: {name}\n'
+
     depth = 0
     quote = ''
     escaped = False
@@ -59,6 +97,8 @@ names = [
     'hasAuthoritativeLiveMissionRequirementsPanel',
     'getVehicleCheckboxSnapshot',
     'getMissionVehicleId',
+    'handleMissionUpdateUnits',
+    'selectVehiclesForTrainedPersonnelRequirements',
 ]
 
 lines = source.splitlines()
@@ -66,14 +106,18 @@ markers = []
 needles = (
     'on scene', 'on_scene', 'on-scene', 'status_4', 'status-4',
     'vehicle_status_4', 'vehicle-status-4', 'vehicle_marker_s',
-    'vehiclestatus', 'vehicle_status', 'mission_vehicle', 'arrived'
+    'vehiclestatus', 'vehicle_status', 'mission_vehicle', 'arrived',
+    'fms_real', 'fms-real', 'data-fms', 'data-status', 'status="4"',
+    "status='4'", 'at_mission', 'at-mission', 'atmission',
+    'vehicle_at_mission', 'vehicle-at-mission', 'vehicleatmission',
+    'mission vehicle', 'mission-vehicle', 'mission_vehicle'
 )
 seen = set()
 for number, line in enumerate(lines, 1):
     lower = line.lower()
     if any(needle in lower for needle in needles):
-        start = max(1, number - 3)
-        end = min(len(lines), number + 3)
+        start = max(1, number - 5)
+        end = min(len(lines), number + 5)
         key = (start, end)
         if key in seen:
             continue
@@ -84,7 +128,7 @@ for number, line in enumerate(lines, 1):
 
 output = [
     'CURRENT VERSION LINES',
-    '\n'.join(line for line in lines[:150] if '@version' in line or 'MISSION FINDER V' in line),
+    '\n'.join(line for line in lines[:200] if '@version' in line or 'MISSION FINDER V' in line),
     '',
 ]
 for name in names:
