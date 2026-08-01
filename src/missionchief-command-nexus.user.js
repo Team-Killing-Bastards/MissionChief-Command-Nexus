@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.75
+// @version      1.0.76
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -10711,7 +10711,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.138
+         * MODULE 2: MISSION FINDER V10.6.139
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -11538,6 +11538,8 @@
     const MF_KEEP_PANEL_POSITION_KEY = 'mf_keep_panel_position_v10_4_0';
     const MF_PANEL_LEFT_KEY = 'mf_panel_left_v10_4_0';
     const MF_PANEL_TOP_KEY = 'mf_panel_top_v10_4_0';
+    const MF_HIGH_RISK_MISSING_PERSON_AMBULANCE_KEY =
+        'mf_high_risk_missing_person_ambulance_v1';
     const MF_SHARE_CREDIT_THRESHOLD = 15000;
 
     const MF_PERSONNEL_TRAINING_REGISTRY_KEY =
@@ -11849,6 +11851,10 @@
 
     let mfKeepPanelPosition =
         localStorage.getItem(MF_KEEP_PANEL_POSITION_KEY) === 'true';
+    let mfAlwaysSendAmbulanceToHighRiskMissingPerson =
+        localStorage.getItem(
+            MF_HIGH_RISK_MISSING_PERSON_AMBULANCE_KEY
+        ) === 'true';
 
     let mfStaffingBlockActive = false;
     let mfStaffingBlockText = '';
@@ -13625,8 +13631,8 @@
             capturedAtUnix: Date.now(),
             reason: String(reason || 'manual-export'),
             versions: {
-                commandNexus: '1.0.75',
-                missionFinder: 'V10.6.138',
+                commandNexus: '1.0.76',
+                missionFinder: 'V10.6.139',
                 personnelAssignment: '1.3.8'
             },
             mission: {
@@ -13650,6 +13656,10 @@
                     mfStaffingBlockActive === true,
                 staffingBlockText:
                     String(mfStaffingBlockText || ''),
+                alwaysSendAmbulanceToHighRiskMissingPerson:
+                    mfAlwaysSendAmbulanceToHighRiskMissingPerson === true,
+                highRiskMissingPersonMission:
+                    isConfiguredHighRiskMissingPersonMission(),
                 processedSelectionKeys:
                     Array.from(processedSelectionKeys || [])
             },
@@ -19835,6 +19845,51 @@ function isRoadRailUnitVehicleCheckbox(input) {
             updateStatusBox(`Mission Ready Delay set to ${missionReadyDelayMs}ms`);
         });
 
+        const highRiskMissingPersonAmbulanceBox =
+            document.createElement('div');
+        highRiskMissingPersonAmbulanceBox.id =
+            'mf-high-risk-missing-person-ambulance-box';
+        highRiskMissingPersonAmbulanceBox.className =
+            'mf2026-box';
+        highRiskMissingPersonAmbulanceBox.innerHTML = `
+            <div class="mf2026-section-title">High-risk Missing Person</div>
+            <label class="mf2026-checkbox-row mf-dashboard-toggle-row">
+                <input id="mf-high-risk-missing-person-ambulance-toggle"
+                       type="checkbox"
+                       ${mfAlwaysSendAmbulanceToHighRiskMissingPerson ? 'checked' : ''}>
+                <span>Always include 1 Ambulance in Unit Finder</span>
+            </label>
+            <div class="mf2026-small" style="margin-top:5px;">
+                Applies to High Risk and Very High Risk Missing Person missions. Existing live shortages stay authoritative.
+            </div>
+        `;
+        advancedBody.appendChild(
+            highRiskMissingPersonAmbulanceBox
+        );
+
+        const highRiskMissingPersonAmbulanceToggle =
+            highRiskMissingPersonAmbulanceBox.querySelector(
+                '#mf-high-risk-missing-person-ambulance-toggle'
+            );
+
+        highRiskMissingPersonAmbulanceToggle?.addEventListener(
+            'change',
+            function() {
+                mfAlwaysSendAmbulanceToHighRiskMissingPerson =
+                    this.checked === true;
+                localStorage.setItem(
+                    MF_HIGH_RISK_MISSING_PERSON_AMBULANCE_KEY,
+                    String(
+                        mfAlwaysSendAmbulanceToHighRiskMissingPerson
+                    )
+                );
+                renderVehicleLoadList();
+                updateStatusBox(
+                    `High-risk Missing Person Ambulance ${mfAlwaysSendAmbulanceToHighRiskMissingPerson ? 'enabled' : 'disabled'}.`
+                );
+            }
+        );
+
         const queueRestartBox = document.createElement('div');
         queueRestartBox.className = 'mf2026-box';
         queueRestartBox.innerHTML = `
@@ -20396,7 +20451,7 @@ function isRoadRailUnitVehicleCheckbox(input) {
             typeof GM_info !== 'undefined' &&
             GM_info?.script?.version
                 ? GM_info.script.version
-                : '1.0.75';
+                : '1.0.76';
         dashboardFooter.textContent =
             `MissionChief Nexus V${dashboardVersion} · MIT · Martblyth`;
 
@@ -21975,6 +22030,79 @@ function isRoadRailUnitVehicleCheckbox(input) {
         }
 
         return 'Mission';
+    }
+
+    function isConfiguredHighRiskMissingPersonMission(
+        missionName = getCurrentMissionName()
+    ) {
+        const normalisedTitle = String(
+            missionName || ''
+        )
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        return /\b(?:very\s+)?high\s+risk\s+missing\s+persons?\b/.test(
+            normalisedTitle
+        );
+    }
+
+    function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
+        rows
+    ) {
+        const sourceRows =
+            (Array.isArray(rows) ? rows : [])
+                .filter(Boolean);
+
+        if (
+            !mfAlwaysSendAmbulanceToHighRiskMissingPerson ||
+            !isConfiguredHighRiskMissingPersonMission()
+        ) {
+            return sourceRows.slice();
+        }
+
+        const alreadyRequiresAmbulance =
+            sourceRows.some(row => {
+                if (
+                    row?.isTrainedPersonnelRequirement === true ||
+                    Math.max(
+                        0,
+                        parseInt(row?.stillNeeded, 10) || 0
+                    ) <= 0
+                ) {
+                    return false;
+                }
+
+                const originalName =
+                    String(row?.unitName || '')
+                        .replace(/\s+/g, ' ')
+                        .trim();
+
+                return Boolean(
+                    originalName &&
+                    isAmbulanceTransportRequest(
+                        originalName,
+                        resolveUnitName(originalName)
+                    )
+                );
+            });
+
+        if (alreadyRequiresAmbulance) {
+            return sourceRows.slice();
+        }
+
+        return [
+            ...sourceRows,
+            {
+                unitName: 'Ambulance',
+                stillNeeded: 1,
+                source:
+                    'settings-high-risk-missing-person-ambulance',
+                configuredHighRiskMissingPersonAmbulance:
+                    true
+            }
+        ];
     }
 
     function getCurrentMissionValueScope() {
@@ -27242,7 +27370,9 @@ let sessionRuntimeTicker = null;
             return [];
         }
 
-        return cache.rows
+        return addConfiguredHighRiskMissingPersonAmbulanceRequirement(
+            cache.rows
+        )
             .filter(row => {
                 return Boolean(
                     row &&
@@ -32023,7 +32153,11 @@ let sessionRuntimeTicker = null;
         });
     }
 
-    async function processRequirementRows(requirementRows, sourceLabel) {
+    async function processRequirementRows(
+        requirementRows,
+        sourceLabel,
+        options = {}
+    ) {
         let missingUnits = [];
         const trainedVehicleMissing = [];
         const trainedPersonnelWarnings = [];
@@ -32069,6 +32203,30 @@ let sessionRuntimeTicker = null;
         requirementRows = normaliseOperationalRequirementRows(
             requirementRows
         );
+
+        if (
+            options
+                .includeConfiguredHighRiskMissingPersonAmbulance === true
+        ) {
+            const rowCountBeforeConfiguredAmbulance =
+                requirementRows.length;
+
+            requirementRows =
+                addConfiguredHighRiskMissingPersonAmbulanceRequirement(
+                    requirementRows
+                );
+
+            if (
+                mfDebugEnabled &&
+                requirementRows.length >
+                    rowCountBeforeConfiguredAmbulance
+            ) {
+                debugLog(
+                    'HIGH-RISK MISSING PERSON AMBULANCE',
+                    'Settings rule added Ambulance x1 to the fresh Unit Finder requirement set.'
+                );
+            }
+        }
 
         mfSetUnitFinderDiagnosticContext(
             'unit-finder',
@@ -32344,7 +32502,10 @@ let sessionRuntimeTicker = null;
         return true;
     }
 
-    async function processVehicles(vehicleList) {
+    async function processVehicles(
+        vehicleList,
+        options = {}
+    ) {
         const listItems = vehicleList.querySelectorAll('li.class-x');
         const requirementRows = [];
 
@@ -32364,7 +32525,11 @@ let sessionRuntimeTicker = null;
             });
         });
 
-        return processRequirementRows(requirementRows, 'fallback vehicle list');
+        return processRequirementRows(
+            requirementRows,
+            'fallback vehicle list',
+            options
+        );
     }
 
     async function retryMissingUnits(missingUnits) {
@@ -34082,7 +34247,11 @@ let sessionRuntimeTicker = null;
             const missionRequirementsSatisfied =
                 await processRequirementRows(
                     attachmentRows,
-                    'MISSION HELP ATTACHMENT'
+                    'MISSION HELP ATTACHMENT',
+                    {
+                        includeConfiguredHighRiskMissingPersonAmbulance:
+                            true
+                    }
                 );
 
             return preservePatientFailure(
@@ -34105,7 +34274,11 @@ let sessionRuntimeTicker = null;
             const missionRequirementsSatisfied =
                 await processRequirementRows(
                     visibleFallbackRows,
-                    'VISIBLE FALLBACK'
+                    'VISIBLE FALLBACK',
+                    {
+                        includeConfiguredHighRiskMissingPersonAmbulance:
+                            true
+                    }
                 );
 
             return preservePatientFailure(
@@ -34119,7 +34292,13 @@ let sessionRuntimeTicker = null;
             updateStatusBox('Fallback vehicle list found. Processing...');
 
             const missionRequirementsSatisfied =
-                await processVehicles(vehicleList);
+                await processVehicles(
+                    vehicleList,
+                    {
+                        includeConfiguredHighRiskMissingPersonAmbulance:
+                            true
+                    }
+                );
 
             return preservePatientFailure(
                 missionRequirementsSatisfied

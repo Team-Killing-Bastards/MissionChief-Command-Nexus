@@ -4,6 +4,28 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.76] - 2026-08-01
+
+### Added
+
+- Settings now includes **Always include 1 Ambulance in Unit Finder** for High Risk and Very High Risk Missing Person missions.
+- When enabled, fresh manual and Auto Mode Unit Finder passes guarantee a minimum total of one ordinary Ambulance requirement, while avoiding a duplicate when the mission or patient requirements already include one.
+- The configured Ambulance appears in the preloaded Vehicle Load display before Unit Finder runs.
+
+### Safety and authority
+
+- The option is disabled by default and persists in local storage when changed.
+- The rule is limited to fresh Unit Finder requirement sources. Mission Update and existing-mission Missing Vehicles, Missing Personnel and Missing on mission authority remain unchanged, so an Ambulance is not resent during update passes.
+- The current Ambulance matching and ETA selection contract remains unchanged.
+- The compact Settings, Vehicle drawer, Auto Mode, memory lifecycle and iPhone/iOS paths remain unchanged.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.138` to `V10.6.139`.
+- Unit Naming remains `3.3.8`.
+- Station Naming remains `1.3.3`.
+- Personnel Assignment remains `1.3.8`.
+
 ## [1.0.75] - 2026-08-01
 
 ### Added

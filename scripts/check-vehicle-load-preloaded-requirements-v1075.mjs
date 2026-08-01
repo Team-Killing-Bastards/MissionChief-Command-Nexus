@@ -84,8 +84,8 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-expect(source.includes('// @version      1.0.75'), 'Expected Command Nexus 1.0.75');
-expect(source.includes('MISSION FINDER V10.6.138'), 'Expected Mission Finder V10.6.138');
+expect(source.includes('// @version      1.0.76'), 'Expected Command Nexus 1.0.76');
+expect(source.includes('MISSION FINDER V10.6.139'), 'Expected Mission Finder V10.6.139');
 
 const authority = extractFunction('hasCurrentMissionVehicleRequirementAuthorityForDisplay');
 for (const token of [
@@ -143,6 +143,7 @@ expect(preload.includes('renderVehicleLoadList();'), 'Vehicle Load refresh missi
 const buildModel = new Function(
   'getMissionRequirementPreloadState',
   'hasCurrentMissionVehicleRequirementAuthorityForDisplay',
+  'addConfiguredHighRiskMissingPersonAmbulanceRequirement',
   'shouldIgnoreRequiredMinimumRequirement',
   'resolveUnitName',
   'countSelectedMatchingVehicles',
@@ -165,6 +166,7 @@ const buildModel = new Function(
     ]
   }),
   () => false,
+  rows => rows,
   () => false,
   name => name === 'Fire Engine' ? 'Fire Engine R/PUMP x 1' : name,
   () => 2
@@ -180,6 +182,7 @@ expect(freshRows[0].status === 'retrying', 'Partial preloaded coverage must rema
 const blockedModel = new Function(
   'getMissionRequirementPreloadState',
   'hasCurrentMissionVehicleRequirementAuthorityForDisplay',
+  'addConfiguredHighRiskMissingPersonAmbulanceRequirement',
   'shouldIgnoreRequiredMinimumRequirement',
   'resolveUnitName',
   'countSelectedMatchingVehicles',
@@ -187,6 +190,7 @@ const blockedModel = new Function(
 )(
   () => ({ status: 'loaded', rows: [{ unitName: 'Fire Engine', stillNeeded: 3 }] }),
   () => true,
+  rows => rows,
   () => false,
   value => value,
   () => 0
