@@ -19,8 +19,7 @@ jobs:
           tar \
             --exclude=.git \
             --exclude=runtime-memory-audit.json \
-            --exclude=runtime-memory-branch-snapshot.tar.gz \
-            -czf runtime-memory-branch-snapshot.tar.gz .
+            -czf "$RUNNER_TEMP/runtime-memory-branch-snapshot.tar.gz" .
       - name: Upload exact source and audit
         uses: actions/upload-artifact@v4
         with:
@@ -28,6 +27,6 @@ jobs:
           path: |
             src/missionchief-command-nexus.user.js
             runtime-memory-audit.json
-            runtime-memory-branch-snapshot.tar.gz
+            ${{ runner.temp }}/runtime-memory-branch-snapshot.tar.gz
           if-no-files-found: error
           retention-days: 1
