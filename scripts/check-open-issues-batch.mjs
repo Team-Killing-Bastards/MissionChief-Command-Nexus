@@ -22,7 +22,7 @@ function extractBetween(startText, endText, label) {
   return source.slice(start, end);
 }
 
-requireText('// @version      1.0.76', 'v1.0.51 metadata');
+requireText('// @version      1.0.77', 'v1.0.51 metadata');
 requireText("const PERSONNEL_VERSION = '1.3.8';", 'Personnel v1.3.4');
 requireText(' * MODULE 2: MISSION FINDER V10.6.139', 'V10.6.120 header');
 

@@ -4,6 +4,26 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.77] - 2026-08-01
+
+### Fixed
+
+- Resource Administration now appears inside MissionChief's normal Stations overview popup as well as on the dedicated full-page `/leitstellenansicht` route.
+- The popup workspace mounts against the authoritative Stations document instead of being suppressed by the child-frame runtime guard introduced in `1.0.74`.
+
+### Safety and compatibility
+
+- Only the exact same-origin `/leitstellenansicht` child frame may host Resource Administration.
+- Mission, building-detail and unrelated child frames remain excluded from the naming/personnel runtime.
+- The dedicated desktop Stations view, iOS/iPadOS Safari lifecycle, single-instance protection, saved state, Unit/Station/Personnel handlers and Mission Finder paths remain unchanged.
+
+### Changed component baseline
+
+- Mission Finder remains `V10.6.139`.
+- Unit Naming increased from `3.3.8` to `3.3.9`.
+- Station Naming remains `1.3.3`.
+- Personnel Assignment remains `1.3.8`.
+
 ## [1.0.76] - 2026-08-01
 
 ### Added

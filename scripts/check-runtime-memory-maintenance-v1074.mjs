@@ -88,7 +88,7 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-expect(source.includes('// @version      1.0.76'), 'Expected Command Nexus 1.0.76');
+expect(source.includes('// @version      1.0.77'), 'Expected Command Nexus 1.0.77');
 expect(source.includes('MISSION FINDER V10.6.139'), 'Expected Mission Finder V10.6.139');
 expect(source.includes('480 * 1024 * 1024'), 'Soft cache flush threshold must be 480 MiB');
 expect(source.includes('640 * 1024 * 1024'), 'Guarded frame recycle threshold must remain 640 MiB');
@@ -96,10 +96,14 @@ expect(source.includes("'missionchief-nexus-frame-runtime-reconcile-v1074'"), 'M
 
 const namingModuleStart = source.slice(
   source.indexOf("if (window.__MC_NAMING_TOOLS_V428__) return;"),
-  source.indexOf("const UNIT_VERSION = '3.3.8';")
+  source.indexOf("const UNIT_VERSION = '3.3.9';")
 );
 expect(namingModuleStart.includes('window.top === window.self'), 'Naming/personnel runtime must identify its top-window owner');
-expect(namingModuleStart.includes('if (!TOOL_IS_TOP_WINDOW) return;'), 'Naming/personnel runtime must not duplicate in child mission frames');
+expect(namingModuleStart.includes('TOOL_IS_STATION_OVERVIEW_FRAME'), 'Naming/personnel runtime must recognise the exact Stations overview lightbox');
+expect(namingModuleStart.includes('window.top.location.origin !== location.origin'), 'Stations overview lightbox ownership must remain same-origin');
+expect(namingModuleStart.includes('leitstellenansicht'), 'Stations overview lightbox ownership must remain route-scoped');
+expect(namingModuleStart.includes('if (!TOOL_IS_TOP_WINDOW && !TOOL_IS_STATION_OVERVIEW_FRAME) return;'), 'Naming/personnel runtime must remain excluded from mission and unrelated child frames');
+expect(!namingModuleStart.includes('if (!TOOL_IS_TOP_WINDOW) return;'), 'Blanket child-frame exclusion must not suppress the Stations overview lightbox');
 
 const frameOwner = extractFunction('shouldKeepMissionFinderObserverForCurrentFrame');
 expect(frameOwner.includes('if (MF_IS_TOP_WINDOW) return true'), 'Top MissionChief document must retain its observer');
