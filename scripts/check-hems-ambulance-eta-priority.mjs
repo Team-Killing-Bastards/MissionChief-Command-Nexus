@@ -25,8 +25,8 @@ function extractFunction(name) {
 }
 
 for (const [token, label] of [
-  ['// @version      1.0.74', 'v1.0.51 metadata'],
-  [' * MODULE 2: MISSION FINDER V10.6.137', 'Mission Finder V10.6.120'],
+  ['// @version      1.0.75', 'v1.0.51 metadata'],
+  [' * MODULE 2: MISSION FINDER V10.6.138', 'Mission Finder V10.6.120'],
   ['function isStandardAmbulanceEtaVehicleCheckbox(', 'combined standard Ambulance candidate helper'],
   ["typeIdentifiers.includes('5')", 'exact type-5 road Ambulance'],
   ["typeIdentifiers.includes('9')", 'exact type-9 HEMS'],

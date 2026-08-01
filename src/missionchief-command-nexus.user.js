@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.74
+// @version      1.0.75
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -10711,7 +10711,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.137
+         * MODULE 2: MISSION FINDER V10.6.138
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -13625,8 +13625,8 @@
             capturedAtUnix: Date.now(),
             reason: String(reason || 'manual-export'),
             versions: {
-                commandNexus: '1.0.74',
-                missionFinder: 'V10.6.137',
+                commandNexus: '1.0.75',
+                missionFinder: 'V10.6.138',
                 personnelAssignment: '1.3.8'
             },
             mission: {
@@ -20396,7 +20396,7 @@ function isRoadRailUnitVehicleCheckbox(input) {
             typeof GM_info !== 'undefined' &&
             GM_info?.script?.version
                 ? GM_info.script.version
-                : '1.0.74';
+                : '1.0.75';
         dashboardFooter.textContent =
             `MissionChief Nexus V${dashboardVersion} · MIT · Martblyth`;
 
@@ -22702,24 +22702,56 @@ let sessionRuntimeTicker = null;
 
         refreshVehicleRequirementCounters();
 
-        const totalRequired = vehicleLoadState.rows.reduce((sum, row) => sum + Number(row.required || 0), 0);
-        const foundRequired = vehicleLoadState.rows.reduce((sum, row) => sum + Number(row.selected || 0), 0);
+        const preloadState =
+            getMissionRequirementPreloadState();
+        const preloadedRows =
+            vehicleLoadState.rows.length === 0
+                ? getPreloadedMissionVehicleRequirementsForDisplay()
+                : [];
+        const usingPreloadedRows =
+            preloadedRows.length > 0;
+        const displayRows =
+            usingPreloadedRows
+                ? preloadedRows
+                : vehicleLoadState.rows;
+
+        const totalRequired = displayRows.reduce((sum, row) => sum + Number(row.required || 0), 0);
+        const foundRequired = displayRows.reduce((sum, row) => sum + Number(row.selected || 0), 0);
 
         const percent = totalRequired > 0 ? Math.round((foundRequired / totalRequired) * 100) : vehicleLoadState.ready ? 100 : 0;
+        const preloadedCoverageComplete = Boolean(
+            usingPreloadedRows &&
+            totalRequired > 0 &&
+            foundRequired >= totalRequired
+        );
+        const statusText = usingPreloadedRows
+            ? preloadedCoverageComplete
+                ? 'Covered'
+                : 'Requirements loaded'
+            : vehicleLoadState.ready
+                ? 'Ready'
+                : 'Not Ready';
+        const statusClass =
+            vehicleLoadState.ready ||
+            preloadedCoverageComplete
+                ? 'mf2026-good'
+                : 'mf2026-warn';
 
         summary.innerHTML = `
             <div>Vehicles: <strong>${foundRequired}</strong> / <strong>${totalRequired}</strong></div>
-            <div>Status: <strong class="${vehicleLoadState.ready ? 'mf2026-good' : 'mf2026-warn'}">${vehicleLoadState.ready ? 'Ready' : 'Not Ready'}</strong></div>
+            <div>Status: <strong class="${statusClass}">${statusText}</strong></div>
         `;
 
         progress.style.width = `${percent}%`;
 
-        if (vehicleLoadState.rows.length === 0) {
+        if (displayRows.length === 0) {
             listContent.innerHTML = vehicleLoadState.ready
                 ? `<span class="mf2026-good">✓ Ambulance-only mission ready</span>`
-                : `Click Unit Finder to load vehicles.`;
+                : preloadState.status === 'loading'
+                    ? `Loading mission vehicle requirements...`
+                    : `Click Unit Finder to load vehicles.`;
         } else {
-            listContent.innerHTML = vehicleLoadState.rows.map(row => {
+            listContent.innerHTML = displayRows.map(row => {
                 let icon = '○';
                 let cls = 'mf2026-warn';
 
@@ -27180,6 +27212,92 @@ let sessionRuntimeTicker = null;
         return cloneMissionRequirementRows(clonedRows);
     }
 
+    function hasCurrentMissionVehicleRequirementAuthorityForDisplay() {
+        try {
+            const currentRows =
+                readMissionUpdateRows({
+                    silent: true
+                });
+
+            return Boolean(
+                getExplicitCurrentMissingRequirementRows(
+                    currentRows
+                ).length > 0 ||
+                hasVisibleCurrentMissingOnMissionTable()
+            );
+        } catch (_error) {
+            return false;
+        }
+    }
+
+    function getPreloadedMissionVehicleRequirementsForDisplay() {
+        const cache =
+            getMissionRequirementPreloadState();
+
+        if (
+            cache.status !== 'loaded' ||
+            !Array.isArray(cache.rows) ||
+            hasCurrentMissionVehicleRequirementAuthorityForDisplay()
+        ) {
+            return [];
+        }
+
+        return cache.rows
+            .filter(row => {
+                return Boolean(
+                    row &&
+                    row.isTrainedPersonnelRequirement !== true &&
+                    !row.patientRequirementType &&
+                    row.isPatientAlertFallback !== true
+                );
+            })
+            .map(row => {
+                const originalName =
+                    String(row.unitName || '')
+                        .replace(/\s+/g, ' ')
+                        .trim();
+                const required = Math.max(
+                    0,
+                    parseInt(row.stillNeeded, 10) || 0
+                );
+
+                if (
+                    !originalName ||
+                    required <= 0 ||
+                    shouldIgnoreRequiredMinimumRequirement(
+                        originalName
+                    )
+                ) {
+                    return null;
+                }
+
+                const mappedName =
+                    resolveUnitName(originalName);
+                const selected = Math.min(
+                    countSelectedMatchingVehicles(
+                        originalName,
+                        mappedName
+                    ),
+                    required
+                );
+
+                return {
+                    originalName,
+                    mappedName,
+                    required,
+                    selected,
+                    status:
+                        selected >= required
+                            ? 'assigned'
+                            : selected > 0
+                                ? 'retrying'
+                                : 'pending',
+                    preloaded: true
+                };
+            })
+            .filter(Boolean);
+    }
+
     function getPreloadedMissionTrainedPersonnelRequirements() {
         const cache =
             getMissionRequirementPreloadState();
@@ -27333,6 +27451,7 @@ let sessionRuntimeTicker = null;
                         getMissionRequirementPreloadMissionKey()
                     ) {
                         renderSelectedTrainedPersonnelPanel();
+                        renderVehicleLoadList();
                     }
 
                     return cloneMissionRequirementRows(rows);

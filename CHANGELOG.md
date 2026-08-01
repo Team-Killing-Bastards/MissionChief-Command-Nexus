@@ -4,6 +4,29 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.75] - 2026-08-01
+
+### Added
+
+- Vehicle Load now consumes the existing mission-definition preload on a fresh mission and shows ordinary required vehicles before Unit Finder runs.
+- Preloaded rows begin at `0 / required` and update from the current selected vehicle checkboxes, including `required / required` covered state.
+- A loading message is shown while the authoritative mission requirements are being preloaded.
+
+### Safety and authority
+
+- Preloaded Vehicle Load rows are display-only and do not mutate dispatch readiness, selection guards or the operational `vehicleLoadState`.
+- Existing missions keep current Missing Vehicles/Personnel and Missing on mission table authority; static mission-definition totals are suppressed whenever that live authority exists.
+- Trained-personnel and patient rows remain excluded from Vehicle Load. Trained requirements continue to use the separate Trained Personnel panel.
+- The Vehicle Load renderer reads only the mission-bound cache and never schedules or performs another mission-definition fetch.
+- The compact Vehicle drawer UI, action handlers, memory lifecycle and iPhone/iOS paths are unchanged.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.137` to `V10.6.138`.
+- Unit Naming remains `3.3.8`.
+- Station Naming remains `1.3.3`.
+- Personnel Assignment remains `1.3.8`.
+
 ## [1.0.74] - 2026-08-01
 
 ### Fixed
