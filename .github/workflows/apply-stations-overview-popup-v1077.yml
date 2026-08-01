@@ -1,0 +1,83 @@
+name: Apply Stations overview popup v1.0.77 hotfix
+
+on:
+  pull_request:
+    paths:
+      - '.github/builders/apply-stations-overview-popup-v1077.py'
+      - '.github/builders/stations-overview-popup-v1077.patch.b64.part*'
+      - '.github/workflows/apply-stations-overview-popup-v1077.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-stations-overview-popup-v1077-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-validate-clean:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out exact pull-request head
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Apply checksummed production patch
+        run: python3 .github/builders/apply-stations-overview-popup-v1077.py
+
+      - name: Validate exact candidate source checksum
+        run: echo 'ef61bc9acbf46ddb274cf9b941d01487910376e794623e887a99fc00dda586a4  src/missionchief-command-nexus.user.js' | sha256sum --check --strict
+
+      - name: Validate JavaScript syntax
+        run: node --check src/missionchief-command-nexus.user.js
+
+      - name: Validate metadata and Greasy Fork limits
+        run: node scripts/validate-userscript.mjs
+
+      - name: Run every permanent userscript regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          for check in scripts/check-*.mjs; do
+            echo "Running ${check}"
+            node "${check}"
+          done
+
+      - name: Validate repository integrity
+        run: python3 scripts/check_repository.py
+
+      - name: Validate whitespace
+        run: git diff --check
+
+      - name: Remove one-use builder material
+        shell: bash
+        run: |
+          git rm -f \
+            .github/builders/apply-stations-overview-popup-v1077.py \
+            .github/builders/stations-overview-popup-v1077.patch.b64.part1 \
+            .github/builders/stations-overview-popup-v1077.patch.b64.part2 \
+            .github/builders/stations-overview-popup-v1077.patch.b64.part3 \
+            .github/builders/stations-overview-popup-v1077.patch.b64.part4 \
+            .github/workflows/apply-stations-overview-popup-v1077.yml
+
+      - name: Commit clean hotfix candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "Restore Resource Administration in Stations popup"
+          git push origin HEAD:${{ github.event.pull_request.head.ref || github.ref_name }}
