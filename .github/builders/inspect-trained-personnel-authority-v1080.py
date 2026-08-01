@@ -11,9 +11,7 @@ def extract_function(name: str) -> str:
     start = source.rfind('function ', max(0, name_index - 120), name_index)
     if start < 0:
         return f'FUNCTION KEYWORD NOT FOUND: {name}\n'
-    line_start = source.rfind('\n', 0, start) + 1
-    start = line_start
-
+    start = source.rfind('\n', 0, start) + 1
     open_paren = source.find('(', name_index)
     paren_depth = 0
     quote = ''
@@ -45,11 +43,9 @@ def extract_function(name: str) -> str:
         index += 1
     if close_paren < 0:
         return f'PARAMETERS NOT TERMINATED: {name}\n'
-
     body_start = source.find('{', close_paren)
     if body_start < 0:
         return f'BODY NOT FOUND: {name}\n'
-
     depth = 0
     quote = ''
     escaped = False
@@ -88,13 +84,18 @@ def extract_function(name: str) -> str:
     return f'UNTERMINATED FUNCTION: {name}\n'
 
 names = [
-    'getInitialMissionDefinitionTrainedPersonnelRequirements',
-    'hasAuthoritativeMissionDefinitionTrainedPersonnelRequirements',
     'processRequirementRows',
+    'getPreloadedMissionTrainedPersonnelRequirements',
+    'renderSelectedTrainedPersonnelPanel',
     'getSelectedTrainedPersonnelPanelModel',
+    'readLiveMissionRequirements',
+    'getCachedMissionRequirementRows',
+    'hasExplicitCurrentMissingRequirementRows',
+    'normaliseOperationalRequirementRows',
     'extractLiveMissionRequirementRows',
     'readMissionUpdateRows',
     'hasAuthoritativeLiveMissionRequirementsPanel',
+    'getMissionAccessibleDocuments',
     'getVehicleCheckboxSnapshot',
     'getMissionVehicleId',
     'handleMissionUpdateUnits',
