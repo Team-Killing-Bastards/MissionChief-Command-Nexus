@@ -1,0 +1,39 @@
+022352:         }
+022353: 
+022354:         vehicleLoadState.ready = !!isComplete;
+022355:         renderVehicleLoadList();
+022356: 
+022357:         try {
+022358:             mfPersistUnitFinderDiagnostic(
+022359:                 isComplete
+022360:                     ? 'ready-for-dispatch'
+022361:                     : 'not-ready'
+022362:             );
+022363:         } catch (_error) {}
+022364:     }
+022365: 
+022366:     function resetVehicleLoadState() {
+022367:         clearSelectionGuards();
+022368:         invalidateVehicleCheckboxCache();
+022369:         vehicleLoadState = {
+022370:             rows: [],
+022371:             patients: 0,
+022372:             ambulances: 0,
+022373:             ambulanceOfficer: false,
+022374:             ready: false
+022375:         };
+022376:     }
+022377: 
+022378:     function addOrUpdateVehicleRow(originalName, mappedName, required, status, selected) {
+022379:         const safeRequired = Math.max(0, parseInt(required, 10) || 0);
+022380:         const safeSelected = Number.isFinite(Number(selected)) ? Math.max(0, Math.min(Number(selected), safeRequired)) : countSelectedMatchingVehicles(originalName, mappedName);
+022381:         const existing = vehicleLoadState.rows.find(row => row.originalName === originalName && row.mappedName === mappedName);
+022382: 
+022383:         if (existing) {
+022384:             existing.mappedName = mappedName;
+022385:             existing.required = safeRequired;
+022386:             existing.selected = Math.min(safeSelected, safeRequired);
+022387:             existing.status = status || (existing.selected >= safeRequired ? 'assigned' : existing.selected > 0 ? 'retrying' : 'pending');
+022388:             return;
+022389:         }
+022390: 

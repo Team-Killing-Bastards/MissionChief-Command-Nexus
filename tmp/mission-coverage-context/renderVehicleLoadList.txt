@@ -1,3 +1,5 @@
+022758:             <div class="mf2026-row">
+022759:                 <div>Ambulances selected</div>
 022760:                 <div class="mf2026-count">${vehicleLoadState.ambulances}</div>
 022761:             </div>
 022762:             <div class="mf2026-row">
@@ -36,3 +38,5 @@
 022795: 
 022796:     function getPatientSelectionMissionKey() {
 022797:         const localMissionKey =
+022798:             getLocalMissionInstanceKey();
+022799: 

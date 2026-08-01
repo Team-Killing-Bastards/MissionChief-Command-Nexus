@@ -1,0 +1,96 @@
+027169:             missionKey,
+027170:             sourceUrl:
+027171:                 String(sourceDescriptor?.url || ''),
+027172:             status: 'loaded',
+027173:             rows: clonedRows,
+027174:             loadedAt: Date.now(),
+027175:             attempts:
+027176:                 mfMissionRequirementPreloadCache.attempts,
+027177:             error: ''
+027178:         };
+027179: 
+027180:         return cloneMissionRequirementRows(clonedRows);
+027181:     }
+027182: 
+027183:     function getPreloadedMissionTrainedPersonnelRequirements() {
+027184:         const cache =
+027185:             getMissionRequirementPreloadState();
+027186: 
+027187:         if (
+027188:             cache.status !== 'loaded' ||
+027189:             !Array.isArray(cache.rows)
+027190:         ) {
+027191:             return [];
+027192:         }
+027193: 
+027194:         const requirements = new Map();
+027195: 
+027196:         cache.rows
+027197:             .filter(row => {
+027198:                 return (
+027199:                     row?.isTrainedPersonnelRequirement === true &&
+027200:                     row?.missionDefinitionRequiredPersonnel === true &&
+027201:                     Array.isArray(row?.personnelTrainingRequirements)
+027202:                 );
+027203:             })
+027204:             .forEach(row => {
+027205:                 row.personnelTrainingRequirements
+027206:                     .forEach(requirement => {
+027207:                         const requiredTrainingCodes =
+027208:                             Array.isArray(requirement?.requiredTrainingCodes)
+027209:                                 ? requirement.requiredTrainingCodes
+027210:                                     .map(value => String(value || '').trim())
+027211:                                     .filter(Boolean)
+027212:                                 : [];
+027213:                         const code =
+027214:                             requiredTrainingCodes[0] ||
+027215:                             String(requirement?.code || '')
+027216:                                 .replace(/_vehicle$/i, '')
+027217:                                 .trim();
+027218:                         const required = Math.max(
+027219:                             0,
+027220:                             parseInt(
+027221:                                 requirement?.personnelRequired ??
+027222:                                 requirement?.required,
+027223:                                 10
+027224:                             ) || 0
+027225:                         );
+027226: 
+027227:                         if (!code || required <= 0) return;
+027228: 
+027229:                         const existing =
+027230:                             requirements.get(code);
+027231: 
+027232:                         if (
+027233:                             !existing ||
+027234:                             required > existing.required
+027235:                         ) {
+027236:                             requirements.set(code, {
+027237:                                 code,
+027238:                                 label:
+027239:                                     getSelectedTrainingDisplayLabel(code),
+027240:                                 required
+027241:                             });
+027242:                         }
+027243:                     });
+027244:             });
+027245: 
+027246:         return Array.from(requirements.values())
+027247:             .sort((left, right) => {
+027248:                 return left.label.localeCompare(right.label);
+027249:             });
+027250:     }
+027251: 
+027252:     function getSelectedTrainedPersonnelCountForCode(
+027253:         selectedVehicles,
+027254:         trainingCode
+027255:     ) {
+027256:         const code = String(trainingCode || '').trim();
+027257:         if (!code) return 0;
+027258: 
+027259:         return (Array.isArray(selectedVehicles) ? selectedVehicles : [])
+027260:             .reduce((total, vehicle) => {
+027261:                 if (vehicle?.profilesComplete) {
+027262:                     return total + vehicle.profiles.reduce(
+027263:                         (vehicleTotal, profile) => {
+027264:                             return vehicleTotal + (

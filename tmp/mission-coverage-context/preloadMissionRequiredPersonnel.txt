@@ -1,3 +1,5 @@
+027274: 
+027275:                 const aggregate =
 027276:                     (Array.isArray(vehicle?.trainingCounts)
 027277:                         ? vehicle.trainingCounts
 027278:                         : []
@@ -111,3 +113,5 @@
 027386:             mfMissionRequirementPreloadCache.status === 'loaded' ||
 027387:             mfMissionRequirementPreloadTimer
 027388:         ) {
+027389:             return;
+027390:         }

@@ -1,3 +1,5 @@
+022509:                     profiles,
+022510:                     profilesComplete:
 022511:                         entry.trainingProfilesComplete === true,
 022512:                     trainingCounts
 022513:                 };
@@ -193,3 +195,5 @@
 022703:         refreshVehicleRequirementCounters();
 022704: 
 022705:         const totalRequired = vehicleLoadState.rows.reduce((sum, row) => sum + Number(row.required || 0), 0);
+022706:         const foundRequired = vehicleLoadState.rows.reduce((sum, row) => sum + Number(row.selected || 0), 0);
+022707: 

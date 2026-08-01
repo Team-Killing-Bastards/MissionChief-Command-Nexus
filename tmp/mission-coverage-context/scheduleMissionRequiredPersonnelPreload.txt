@@ -1,3 +1,5 @@
+027364:                         cache.missionKey === missionKey &&
+027365:                         cache.status !== 'loaded' &&
 027366:                         cache.attempts < 6
 027367:                     ) {
 027368:                         scheduleMissionRequiredPersonnelPreload(
@@ -41,3 +43,5 @@
 027406:         status: 'idle',
 027407:         missionKey: '',
 027408:         url: '',
+027409:         missionId: '',
+027410:         missionTypeId: '',

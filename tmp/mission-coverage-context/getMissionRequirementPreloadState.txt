@@ -1,0 +1,32 @@
+027106:             mfMissionRequirementPreloadCache.missionKey !== missionKey
+027107:         ) {
+027108:             resetMissionRequirementPreloadCache(
+027109:                 `mission changed: ${mfMissionRequirementPreloadCache.missionKey} -> ${missionKey}`
+027110:             );
+027111:         }
+027112: 
+027113:         if (!mfMissionRequirementPreloadCache.missionKey) {
+027114:             mfMissionRequirementPreloadCache.missionKey = missionKey;
+027115:         }
+027116: 
+027117:         return missionKey;
+027118:     }
+027119: 
+027120:     function getMissionRequirementPreloadState() {
+027121:         synchroniseMissionRequirementPreloadCache();
+027122:         return mfMissionRequirementPreloadCache;
+027123:     }
+027124: 
+027125:     function getCachedMissionRequirementRows(sourceDescriptor = null) {
+027126:         const missionKey =
+027127:             synchroniseMissionRequirementPreloadCache();
+027128:         const cache = mfMissionRequirementPreloadCache;
+027129:         const sourceUrl = String(
+027130:             sourceDescriptor?.url ||
+027131:             ''
+027132:         );
+027133: 
+027134:         if (
+027135:             cache.status !== 'loaded' ||
+027136:             cache.missionKey !== missionKey ||
+027137:             !Array.isArray(cache.rows) ||

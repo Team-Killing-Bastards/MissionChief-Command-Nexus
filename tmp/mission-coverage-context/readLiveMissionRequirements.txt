@@ -1,3 +1,5 @@
+027440:             mfLastMissionRequirementRead;
+027441: 
 027442:         if (
 027443:             String(missionKey || '') !==
 027444:                 state.missionKey ||
@@ -24,3 +26,5 @@
 027465:         };
 027466: 
 027467:         synchroniseMissionInstanceState('Unit Finder attachment read');
+027468: 
+027469:         const missionKeyAtFetchStart =

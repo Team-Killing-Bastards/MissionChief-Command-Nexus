@@ -1,0 +1,104 @@
+022681:                     <div class="mf2026-training-vehicle-name">
+022682:                         ${escapeHtml(vehicleName)}
+022683:                         ${vehicle.vehicleId ? `<span class="mf2026-small"> #${escapeHtml(vehicle.vehicleId)}</span>` : ''}
+022684:                     </div>
+022685:                     ${profileMarkup}
+022686:                 </div>
+022687:             `;
+022688:         }).join('');
+022689: 
+022690:         content.innerHTML =
+022691:             requiredMarkup +
+022692:             selectedMarkup;
+022693:     }
+022694: 
+022695:     function renderVehicleLoadListNow() {
+022696:         const listContent = document.getElementById('vehicle-load-list-content');
+022697:         const patientContent = document.getElementById('vehicle-patient-content');
+022698:         const summary = document.getElementById('vehicle-load-summary');
+022699:         const progress = document.getElementById('vehicle-load-progress');
+022700: 
+022701:         if (!listContent || !patientContent || !summary || !progress) return;
+022702: 
+022703:         refreshVehicleRequirementCounters();
+022704: 
+022705:         const totalRequired = vehicleLoadState.rows.reduce((sum, row) => sum + Number(row.required || 0), 0);
+022706:         const foundRequired = vehicleLoadState.rows.reduce((sum, row) => sum + Number(row.selected || 0), 0);
+022707: 
+022708:         const percent = totalRequired > 0 ? Math.round((foundRequired / totalRequired) * 100) : vehicleLoadState.ready ? 100 : 0;
+022709: 
+022710:         summary.innerHTML = `
+022711:             <div>Vehicles: <strong>${foundRequired}</strong> / <strong>${totalRequired}</strong></div>
+022712:             <div>Status: <strong class="${vehicleLoadState.ready ? 'mf2026-good' : 'mf2026-warn'}">${vehicleLoadState.ready ? 'Ready' : 'Not Ready'}</strong></div>
+022713:         `;
+022714: 
+022715:         progress.style.width = `${percent}%`;
+022716: 
+022717:         if (vehicleLoadState.rows.length === 0) {
+022718:             listContent.innerHTML = vehicleLoadState.ready
+022719:                 ? `<span class="mf2026-good">✓ Ambulance-only mission ready</span>`
+022720:                 : `Click Unit Finder to load vehicles.`;
+022721:         } else {
+022722:             listContent.innerHTML = vehicleLoadState.rows.map(row => {
+022723:                 let icon = '○';
+022724:                 let cls = 'mf2026-warn';
+022725: 
+022726:                 const selected = Math.min(Number(row.selected || 0), Number(row.required || 0));
+022727:                 const required = Number(row.required || 0);
+022728: 
+022729:                 if (selected >= required && required > 0) {
+022730:                     icon = '✓';
+022731:                     cls = 'mf2026-good';
+022732:                 } else if (row.status === 'missing') {
+022733:                     icon = '✕';
+022734:                     cls = 'mf2026-bad';
+022735:                 } else if (selected > 0 || row.status === 'retrying') {
+022736:                     icon = '↻';
+022737:                     cls = 'mf2026-warn';
+022738:                 }
+022739: 
+022740:                 return `
+022741:                     <div class="mf2026-row">
+022742:                         <div class="mf2026-name">
+022743:                             <span class="${cls}">${icon}</span>
+022744:                             ${escapeHtml(row.originalName)}
+022745:                             <div class="mf2026-small">${escapeHtml(row.mappedName)}</div>
+022746:                         </div>
+022747:                         <div class="mf2026-count ${selected >= required && required > 0 ? 'mf2026-good' : 'mf2026-warn'}">${selected} / ${required}</div>
+022748:                     </div>
+022749:                 `;
+022750:             }).join('');
+022751:         }
+022752: 
+022753:         patientContent.innerHTML = `
+022754:             <div class="mf2026-row">
+022755:                 <div>Patients found</div>
+022756:                 <div class="mf2026-count">${vehicleLoadState.patients}</div>
+022757:             </div>
+022758:             <div class="mf2026-row">
+022759:                 <div>Ambulances selected</div>
+022760:                 <div class="mf2026-count">${vehicleLoadState.ambulances}</div>
+022761:             </div>
+022762:             <div class="mf2026-row">
+022763:                 <div>Ambulance Officer</div>
+022764:                 <div class="mf2026-count mf2026-warn">Live requirements only</div>
+022765:             </div>
+022766:         `;
+022767: 
+022768: 
+022769:         renderSelectedTrainedPersonnelPanel();
+022770:     }
+022771: 
+022772:     function renderVehicleLoadList() {
+022773:         if (mfVehicleLoadRenderFrame !== null) return;
+022774: 
+022775:         const run = () => {
+022776:             mfVehicleLoadRenderFrame = null;
+022777:             renderVehicleLoadListNow();
+022778:         };
+022779: 
+022780:         if (typeof requestAnimationFrame === 'function') {
+022781:             mfVehicleLoadRenderFrame = requestAnimationFrame(run);
+022782:         } else {
+022783:             mfVehicleLoadRenderFrame = setTimeout(run, 50);
+022784:         }

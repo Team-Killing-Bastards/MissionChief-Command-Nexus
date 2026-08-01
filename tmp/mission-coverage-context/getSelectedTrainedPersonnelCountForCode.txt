@@ -1,0 +1,63 @@
+027238:                                 label:
+027239:                                     getSelectedTrainingDisplayLabel(code),
+027240:                                 required
+027241:                             });
+027242:                         }
+027243:                     });
+027244:             });
+027245: 
+027246:         return Array.from(requirements.values())
+027247:             .sort((left, right) => {
+027248:                 return left.label.localeCompare(right.label);
+027249:             });
+027250:     }
+027251: 
+027252:     function getSelectedTrainedPersonnelCountForCode(
+027253:         selectedVehicles,
+027254:         trainingCode
+027255:     ) {
+027256:         const code = String(trainingCode || '').trim();
+027257:         if (!code) return 0;
+027258: 
+027259:         return (Array.isArray(selectedVehicles) ? selectedVehicles : [])
+027260:             .reduce((total, vehicle) => {
+027261:                 if (vehicle?.profilesComplete) {
+027262:                     return total + vehicle.profiles.reduce(
+027263:                         (vehicleTotal, profile) => {
+027264:                             return vehicleTotal + (
+027265:                                 Array.isArray(profile) &&
+027266:                                 profile.includes(code)
+027267:                                     ? 1
+027268:                                     : 0
+027269:                             );
+027270:                         },
+027271:                         0
+027272:                     );
+027273:                 }
+027274: 
+027275:                 const aggregate =
+027276:                     (Array.isArray(vehicle?.trainingCounts)
+027277:                         ? vehicle.trainingCounts
+027278:                         : []
+027279:                     ).find(item => item.code === code);
+027280: 
+027281:                 return total + Math.max(
+027282:                     0,
+027283:                     parseInt(aggregate?.count, 10) || 0
+027284:                 );
+027285:             }, 0);
+027286:     }
+027287: 
+027288:     async function preloadMissionRequiredPersonnel() {
+027289:         if (
+027290:             !isMissionPage() ||
+027291:             !isCurrentMissionExecutionOwner(
+027292:                 'required personnel preload'
+027293:             )
+027294:         ) {
+027295:             return [];
+027296:         }
+027297: 
+027298:         const missionKey =
+027299:             synchroniseMissionRequirementPreloadCache();
+027300:         if (!missionKey) return [];

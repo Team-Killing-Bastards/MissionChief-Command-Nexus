@@ -1,0 +1,97 @@
+022438:         }
+022439: 
+022440:         if (MF_SELECTED_TRAINING_LABEL_OVERRIDES[code]) {
+022441:             return MF_SELECTED_TRAINING_LABEL_OVERRIDES[code];
+022442:         }
+022443: 
+022444:         return code
+022445:             .replace(/[_-]+/g, ' ')
+022446:             .replace(/\s+/g, ' ')
+022447:             .trim()
+022448:             .replace(/\b\w/g, character => character.toUpperCase());
+022449:     }
+022450: 
+022451: 
+022452:     function getSelectedTrainedPersonnelPanelModel() {
+022453:         let registry = { vehicles: {} };
+022454: 
+022455:         try {
+022456:             registry = readPersonnelTrainingRegistry();
+022457:         } catch (_error) {}
+022458: 
+022459:         return getVehicleCheckboxSnapshot(true)
+022460:             .filter(input => input?.checked)
+022461:             .map(input => {
+022462:                 let registryMatch = null;
+022463: 
+022464:                 try {
+022465:                     registryMatch = getRegistryEntryForMissionCheckbox(
+022466:                         input,
+022467:                         registry
+022468:                     );
+022469:                 } catch (_error) {}
+022470: 
+022471:                 const entry = registryMatch?.entry || null;
+022472:                 if (!entry) return null;
+022473: 
+022474:                 const profiles = (
+022475:                     Array.isArray(entry.assignedTrainingProfiles)
+022476:                         ? entry.assignedTrainingProfiles
+022477:                         : []
+022478:                 ).map(profile => {
+022479:                     return Array.from(new Set(
+022480:                         (Array.isArray(profile) ? profile : [])
+022481:                             .map(value => String(value || '').trim())
+022482:                             .filter(Boolean)
+022483:                     ));
+022484:                 }).filter(profile => profile.length > 0);
+022485: 
+022486:                 const trainingCounts = Object.entries(
+022487:                     entry.trainingCounts &&
+022488:                     typeof entry.trainingCounts === 'object'
+022489:                         ? entry.trainingCounts
+022490:                         : {}
+022491:                 ).map(([code, value]) => {
+022492:                     return {
+022493:                         code: String(code || ''),
+022494:                         label: getSelectedTrainingDisplayLabel(code),
+022495:                         count: Math.max(0, parseInt(value, 10) || 0)
+022496:                     };
+022497:                 }).filter(item => item.code && item.count > 0)
+022498:                     .sort((left, right) => {
+022499:                         return left.label.localeCompare(right.label);
+022500:                     });
+022501: 
+022502:                 if (profiles.length === 0 && trainingCounts.length === 0) {
+022503:                     return null;
+022504:                 }
+022505: 
+022506:                 return {
+022507:                     vehicleId: getMissionVehicleId(input),
+022508:                     vehicleName: getVehicleDebugName(input),
+022509:                     profiles,
+022510:                     profilesComplete:
+022511:                         entry.trainingProfilesComplete === true,
+022512:                     trainingCounts
+022513:                 };
+022514:             })
+022515:             .filter(Boolean)
+022516:             .sort((left, right) => {
+022517:                 return String(left.vehicleName || '')
+022518:                     .localeCompare(String(right.vehicleName || ''));
+022519:             });
+022520:     }
+022521: 
+022522: 
+022523:     function renderSelectedTrainedPersonnelPanel() {
+022524:         const summary =
+022525:             document.getElementById('trained-personnel-summary');
+022526:         const content =
+022527:             document.getElementById('trained-personnel-content');
+022528: 
+022529:         if (!summary || !content) return;
+022530: 
+022531: 
+022532:         let preloadState = { status: 'idle' };
+022533:         let requiredPersonnel = [];
+022534: 

@@ -1,0 +1,37 @@
+016902:             } else {
+016903:                 matches = vehicleValuesMatchCandidates(
+016904:                     getCheckboxVehicleValues(input),
+016905:                     candidates,
+016906:                     strictExactOnly
+016907:                 );
+016908:             }
+016909: 
+016910:             if (matches) count += 1;
+016911:         }
+016912: 
+016913:         return count;
+016914:     }
+016915: 
+016916:     function refreshVehicleRequirementCounters() {
+016917:         // V9.2.1: DISPLAY ONLY. This updates the panel counters from the current ticked checkboxes.
+016918:         // It must not decide what to send and must not trigger any selections.
+016919:         vehicleLoadState.rows.forEach(row => {
+016920:             const required = Number(row.required || 0);
+016921:             const selected = countSelectedMatchingVehicles(row.originalName, row.mappedName);
+016922:             row.selected = Math.min(selected, required);
+016923:         });
+016924:     }
+016925: 
+016926:     function findUnitButton(mappedName, originalName) {
+016927:         if (isFireOperationalSupportRequirement(originalName, mappedName)) {
+016928:             return sortVehicleCheckboxesByBestArrival(getVehicleCheckboxSnapshot().filter(input =>
+016929:                 !input.disabled && !input.checked && isFireOperationalSupportUnitCheckbox(input)))[0] || null;
+016930:         }
+016931:         if (isFireEngineRequirement(originalName, mappedName)) {
+016932:             return sortVehicleCheckboxesByBestArrival(
+016933:                 getVehicleCheckboxSnapshot().filter(input => (
+016934:                     !input.disabled &&
+016935:                     !input.checked &&
+016936:                     isFireEngineVehicleCheckbox(input)
+016937:                 ))
+016938:             )[0] || null;
