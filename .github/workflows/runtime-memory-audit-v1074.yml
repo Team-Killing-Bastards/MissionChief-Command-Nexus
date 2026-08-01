@@ -1,0 +1,25 @@
+name: Runtime memory audit v1.0.74
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build runtime memory inventory
+        run: python3 .github/audit/runtime-memory-audit.py
+      - name: Upload exact source and audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-memory-audit-v1074
+          path: |
+            src/missionchief-command-nexus.user.js
+            runtime-memory-audit.json
+          if-no-files-found: error
+          retention-days: 1
