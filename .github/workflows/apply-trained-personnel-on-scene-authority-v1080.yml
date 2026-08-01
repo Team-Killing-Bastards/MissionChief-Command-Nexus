@@ -33,6 +33,9 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Remove one-use trigger
+        run: rm -f .v1080-apply-trigger
+
       - name: Apply product release
         id: apply
         continue-on-error: true
