@@ -1,0 +1,34 @@
+name: Inspect live trained personnel v1.0.81
+
+on:
+  push:
+    branches:
+      - fix/trained-personnel-live-missing-v1081
+    paths:
+      - '.v1081-inspect-trigger'
+
+permissions:
+  contents: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: fix/trained-personnel-live-missing-v1081
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Extract live trained-personnel contracts
+        run: python3 .github/builders/inspect-live-trained-personnel-v1081.py
+      - name: Commit diagnostic extract
+        run: |
+          set -euo pipefail
+          git config user.name MartyBlyth
+          git config user.email 32400596+Martyblyth@users.noreply.github.com
+          git add -f .github/diagnostics/live-trained-personnel-v1081.txt
+          git commit -m 'Capture live trained-personnel diagnostic'
+          git push origin HEAD:fix/trained-personnel-live-missing-v1081
