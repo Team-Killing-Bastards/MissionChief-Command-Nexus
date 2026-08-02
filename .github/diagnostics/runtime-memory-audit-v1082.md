@@ -1,333 +1,410 @@
 # MissionChief Command Nexus runtime-memory audit
 
-Linear static audit of the exact current branch source. Heuristic findings are evidence leads, not automatic proof of a leak.
+Single-pass static inventory of the exact current branch. Scores identify investigation leads, not automatic proof.
 
-## Source baseline
+## Baseline
 - **line count**: `48053`
 - **byte count**: `1631728`
 - **userscript version**: `1.0.81`
 - **mission finder version**: `V10.6.141`
-- **set interval count**: `8`
-- **set timeout count**: `35`
-- **request animation frame count**: `17`
-- **mutation observer count**: `2`
-- **add event listener count**: `72`
-- **remove event listener count**: `31`
-- **collection count with mutation or pruning**: `140`
+- **interval count**: `8`
+- **timeout count**: `34`
+- **raf count**: `16`
+- **observer count**: `2`
+- **listener add count**: `29`
+- **listener remove tuple count**: `11`
+- **collection rows**: `85`
 - **dom query count**: `425`
-- **node retention match count**: `18`
+- **node retention matches**: `52`
 
-## Highest-signal suspects
-- **score 9 — untracked-interval**: function=startMissionEventCollectibleCollector, line=11012
-- **score 8 — high-dom-query-density**: function=createCompactActionDisclosure, query_count=69
-- **score 8 — collection-without-static-prune-evidence**: line=104, name=PERSONNEL_ASSIGNMENT_INDEX_CACHE, kind=new WeakMap(
-- **score 8 — collection-without-static-prune-evidence**: line=105, name=PERSONNEL_TRAINING_SET_CACHE, kind=new WeakMap(
-- **score 8 — collection-without-static-prune-evidence**: line=106, name=PERSONNEL_VISIBLE_TRAINING_COUNTS_CACHE, kind=new WeakMap(
-- **score 8 — collection-without-static-prune-evidence**: line=107, name=PERSONNEL_REPORT_BLOCK_CACHE, kind=new WeakMap(
-- **score 8 — collection-without-static-prune-evidence**: line=1284, name=groups, kind=new Map(
-- **score 8 — collection-without-static-prune-evidence**: line=4997, name=cacheCandidates, kind=[]
-- **score 8 — collection-without-static-prune-evidence**: line=5898, name=profilesByVehicle, kind=new Map(
-- **score 8 — collection-without-static-prune-evidence**: line=6000, name=verifiedVehicles, kind=[]
-- **score 8 — collection-without-static-prune-evidence**: line=6003, name=failedVehicleIds, kind=[]
-- **score 8 — collection-without-static-prune-evidence**: line=6275, name=vehiclesToVerify, kind=[]
-- **score 8 — collection-without-static-prune-evidence**: line=7313, name=byVehicleId, kind=new Map(
-- **score 8 — collection-without-static-prune-evidence**: line=7315, name=byVehicleName, kind=new Map(
-- **score 8 — collection-without-static-prune-evidence**: line=7350, name=seen, kind=new Set(
-- **score 8 — collection-without-static-prune-evidence**: line=7597, name=seen, kind=new Set(
-- **score 8 — collection-without-static-prune-evidence**: line=7753, name=personToSlot, kind=new Map(
-- **score 8 — collection-without-static-prune-evidence**: line=7754, name=candidatesByRule, kind=new Map(
-- **score 8 — collection-without-static-prune-evidence**: line=7837, name=reservedPersonnelIds, kind=new Set(
-- **score 8 — collection-without-static-prune-evidence**: line=7839, name=claimedVehicleIds, kind=new Set(
-- **score 8 — collection-without-static-prune-evidence**: line=7841, name=ruleReports, kind=[]
-- **score 8 — collection-without-static-prune-evidence**: line=7844, name=qualificationSlots, kind=[]
-- **score 8 — collection-without-static-prune-evidence**: line=8038, name=submittedCandidates, kind=[]
-- **score 8 — collection-without-static-prune-evidence**: line=8067, name=verifiedIds, kind=new Set(
-- **score 8 — collection-without-static-prune-evidence**: line=8458, name=reservedPersonnelIds, kind=new Set(
-- **score 8 — collection-without-static-prune-evidence**: line=8583, name=submittedCandidates, kind=[]
-- **score 8 — collection-without-static-prune-evidence**: line=8607, name=verifiedIds, kind=new Set(
-- **score 8 — collection-without-static-prune-evidence**: line=8913, name=seen, kind=new Set(
-- **score 8 — collection-without-static-prune-evidence**: line=9432, name=lines, kind=[]
-- **score 8 — collection-without-static-prune-evidence**: line=9983, name=byVehicleType, kind=new Map(
-- **score 8 — collection-without-static-prune-evidence**: line=10765, name=seen, kind=new Set(
-- **score 8 — collection-without-static-prune-evidence**: line=12315, name=mfExtendedVehicleValueCache, kind=new WeakMap(
-- **score 8 — collection-without-static-prune-evidence**: line=12316, name=mfSartecDisplayedValueCache, kind=new WeakMap(
-- **score 8 — collection-without-static-prune-evidence**: line=13126, name=mfLastMissionDefinitionRawRows, kind=[]
-- **score 8 — collection-without-static-prune-evidence**: line=22771, name=summaryParts, kind=[]
-- **score 8 — collection-without-static-prune-evidence**: line=23345, name=patientCards, kind=[]
-- **score 8 — collection-without-static-prune-evidence**: line=23506, name=attributeElements, kind=[]
-- **score 8 — collection-without-static-prune-evidence**: line=23530, name=urlElements, kind=[]
-- **score 8 — collection-without-static-prune-evidence**: line=25549, name=routeElements, kind=[]
-- **score 8 — collection-without-static-prune-evidence**: line=25618, name=seenElements, kind=new Set(
-- **score 8 — collection-without-static-prune-evidence**: line=25815, name=exactElements, kind=[]
-- **score 8 — collection-without-static-prune-evidence**: line=25902, name=fallbackElements, kind=[]
-- **score 8 — collection-without-static-prune-evidence**: line=26493, name=rawRows, kind=[]
-- **score 8 — collection-without-static-prune-evidence**: line=27120, name=merged, kind=new Map(
-- **score 8 — collection-without-static-prune-evidence**: line=29097, name=verifiedOrdinary, kind=[]
-- **score 8 — collection-without-static-prune-evidence**: line=29098, name=unknownOrStale, kind=[]
-- **score 8 — collection-without-static-prune-evidence**: line=29099, name=protectedFallback, kind=[]
-- **score 8 — collection-without-static-prune-evidence**: line=30192, name=rowCodes, kind=new Set(
-- **score 8 — collection-without-static-prune-evidence**: line=30547, name=verifiedIds, kind=new Set(
-- **score 8 — collection-without-static-prune-evidence**: line=30827, name=verifiedIds, kind=new Set(
-- **score 8 — collection-without-static-prune-evidence**: line=32367, name=missingUnits, kind=[]
-- **score 8 — collection-without-static-prune-evidence**: line=32737, name=requirementRows, kind=[]
-- **score 8 — collection-without-static-prune-evidence**: line=33482, name=seen, kind=new Set(
-- **score 8 — collection-without-static-prune-evidence**: line=33509, name=seen, kind=new Set(
-- **score 8 — collection-without-static-prune-evidence**: line=36308, name=deduped, kind=new Map(
-- **score 8 — collection-without-static-prune-evidence**: line=36767, name=livePatientRequirementStates, kind=new Map(
-- **score 8 — collection-without-static-prune-evidence**: line=38068, name=patientGroups, kind=new Map(
-- **score 8 — collection-without-static-prune-evidence**: line=39067, name=missingAfterAttempt, kind=[]
-- **score 8 — collection-without-static-prune-evidence**: line=40374, name=seen, kind=new Set(
-- **score 8 — collection-without-static-prune-evidence**: line=41507, name=modalCandidates, kind=[]
-- **score 8 — collection-without-static-prune-evidence**: line=42044, name=seen, kind=new Set(
-- **score 8 — collection-without-static-prune-evidence**: line=42996, name=seenDocuments, kind=new Set(
-- **score 8 — collection-without-static-prune-evidence**: line=47444, name=frames, kind=new Set(
-- **score 6 — document-wide-subtree-observer**: handle=observer, function=observer, line=1575
-- **score 6 — document-wide-subtree-observer**: handle=mfMainMutationObserver, function=startMissionFinderObserver, line=47852
-- **score 5 — anonymous-global-listener**: function=installManualMissionClickFlagClearer, line=39846, target=document, event=click
-- **score 4 — high-dom-query-density**: function=startIndex, query_count=10
-- **score 4 — high-dom-query-density**: function=updatePersonnelProfileUi, query_count=13
+## Highest-signal leads
+- **9 · untracked-interval** — function=startMissionEventCollectibleCollector, line=11012
+- **8 · high-dom-query-density** — function=createCompactActionDisclosure, query_count=69
+- **7 · collection-without-prune-call** — line=104, name=PERSONNEL_ASSIGNMENT_INDEX_CACHE, kind=new WeakMap(
+- **7 · collection-without-prune-call** — line=105, name=PERSONNEL_TRAINING_SET_CACHE, kind=new WeakMap(
+- **7 · collection-without-prune-call** — line=106, name=PERSONNEL_VISIBLE_TRAINING_COUNTS_CACHE, kind=new WeakMap(
+- **7 · collection-without-prune-call** — line=107, name=PERSONNEL_REPORT_BLOCK_CACHE, kind=new WeakMap(
+- **7 · collection-without-prune-call** — line=1284, name=groups, kind=new Map(
+- **7 · collection-without-prune-call** — line=4997, name=cacheCandidates, kind=[]
+- **7 · collection-without-prune-call** — line=5899, name=profilesByVehicle, kind=new Map(
+- **7 · collection-without-prune-call** — line=6000, name=verifiedVehicles, kind=[]
+- **7 · collection-without-prune-call** — line=6003, name=failedVehicleIds, kind=[]
+- **7 · collection-without-prune-call** — line=6275, name=vehiclesToVerify, kind=[]
+- **7 · collection-without-prune-call** — line=7314, name=byVehicleId, kind=new Map(
+- **7 · collection-without-prune-call** — line=7315, name=byVehicleName, kind=new Map(
+- **7 · collection-without-prune-call** — line=7522, name=counts, kind=new Map(
+- **7 · collection-without-prune-call** — line=7753, name=personToSlot, kind=new Map(
+- **7 · collection-without-prune-call** — line=7754, name=candidatesByRule, kind=new Map(
+- **7 · collection-without-prune-call** — line=7839, name=claimedVehicleIds, kind=new Set(
+- **7 · collection-without-prune-call** — line=7841, name=ruleReports, kind=[]
+- **7 · collection-without-prune-call** — line=7844, name=qualificationSlots, kind=[]
+- **7 · collection-without-prune-call** — line=8459, name=reservedPersonnelIds, kind=new Set(
+- **7 · collection-without-prune-call** — line=8460, name=vehicleReports, kind=[]
+- **7 · collection-without-prune-call** — line=8506, name=plannedNames, kind=[]
+- **7 · collection-without-prune-call** — line=8507, name=assignedNames, kind=[]
+- **7 · collection-without-prune-call** — line=8583, name=submittedCandidates, kind=[]
+- **7 · collection-without-prune-call** — line=9033, name=index, kind=new Map(
+- **7 · collection-without-prune-call** — line=9433, name=lines, kind=[]
+- **7 · collection-without-prune-call** — line=9984, name=byVehicleType, kind=new Map(
+- **7 · collection-without-prune-call** — line=12314, name=mfCheckboxVehicleValueCache, kind=new WeakMap(
+- **7 · collection-without-prune-call** — line=12315, name=mfExtendedVehicleValueCache, kind=new WeakMap(
+- **7 · collection-without-prune-call** — line=12316, name=mfSartecDisplayedValueCache, kind=new WeakMap(
+- **7 · collection-without-prune-call** — line=12317, name=mfVehicleTypeIdentifierCache, kind=new WeakMap(
+- **7 · collection-without-prune-call** — line=12318, name=mfVehicleArrivalMetricCache, kind=new WeakMap(
+- **7 · collection-without-prune-call** — line=13126, name=mfLastMissionDefinitionRawRows, kind=[]
+- **7 · collection-without-prune-call** — line=13132, name=processedSelectionKeys, kind=new Set(
+- **7 · collection-without-prune-call** — line=22772, name=summaryParts, kind=[]
+- **7 · collection-without-prune-call** — line=23345, name=patientCards, kind=[]
+- **7 · collection-without-prune-call** — line=23507, name=attributeElements, kind=[]
+- **7 · collection-without-prune-call** — line=23531, name=urlElements, kind=[]
+- **7 · collection-without-prune-call** — line=25550, name=routeElements, kind=[]
+- **7 · collection-without-prune-call** — line=25618, name=seenElements, kind=new Set(
+- **7 · collection-without-prune-call** — line=25816, name=exactElements, kind=[]
+- **7 · collection-without-prune-call** — line=26209, name=conversions, kind=[]
+- **7 · collection-without-prune-call** — line=26493, name=rawRows, kind=[]
+- **7 · collection-without-prune-call** — line=29097, name=verifiedOrdinary, kind=[]
+- **7 · collection-without-prune-call** — line=29098, name=unknownOrStale, kind=[]
+- **7 · collection-without-prune-call** — line=29099, name=protectedFallback, kind=[]
+- **7 · collection-without-prune-call** — line=30082, name=assignedTrainingProfiles, kind=[]
+- **7 · collection-without-prune-call** — line=30193, name=rowCodes, kind=new Set(
+- **7 · collection-without-prune-call** — line=30827, name=verifiedIds, kind=new Set(
+- **7 · collection-without-prune-call** — line=31115, name=requirements, kind=[]
+- **7 · collection-without-prune-call** — line=31215, name=coveredCodes, kind=new Set(
+- **7 · collection-without-prune-call** — line=31618, name=used, kind=new Set(
+- **7 · collection-without-prune-call** — line=32367, name=missingUnits, kind=[]
+- **7 · collection-without-prune-call** — line=32368, name=trainedVehicleMissing, kind=[]
+- **7 · collection-without-prune-call** — line=32737, name=requirementRows, kind=[]
+- **7 · collection-without-prune-call** — line=36294, name=elements, kind=[]
+- **7 · collection-without-prune-call** — line=36309, name=deduped, kind=new Map(
+- **7 · collection-without-prune-call** — line=39068, name=missingAfterAttempt, kind=[]
+- **7 · collection-without-prune-call** — line=39069, name=trainedPersonnelWarnings, kind=[]
+- **7 · collection-without-prune-call** — line=40332, name=values, kind=[]
+- **7 · collection-without-prune-call** — line=41507, name=modalCandidates, kind=[]
+- **7 · collection-without-prune-call** — line=42043, name=candidates, kind=[]
+- **7 · collection-without-prune-call** — line=42044, name=seen, kind=new Set(
+- **7 · collection-without-prune-call** — line=42486, name=alerts, kind=[]
+- **7 · collection-without-prune-call** — line=42995, name=roots, kind=[]
+- **7 · collection-without-prune-call** — line=42996, name=seenDocuments, kind=new Set(
+- **7 · collection-without-prune-call** — line=47445, name=frames, kind=new Set(
+- **6 · document-wide-subtree-observer** — handle=observer, function=observer, line=1575
+- **6 · document-wide-subtree-observer** — handle=mfMainMutationObserver, function=startMissionFinderObserver, line=47852
+- **5 · anonymous-global-listener** — function=installManualMissionClickFlagClearer, line=39846, target=document, event=click
+- **4 · high-innerhtml-density** — function=aggregateOnlyVehicles, innerhtml_count=4
+- **4 · high-innerhtml-density** — function=foundRequired, innerhtml_count=4
+- **4 · high-innerhtml-density** — function=setMissionDashboardTab, innerhtml_count=4
+- **4 · high-dom-query-density** — function=startIndex, query_count=10
+- **4 · high-dom-query-density** — function=updatePersonnelProfileUi, query_count=13
+- **4 · untracked-timeout** — function=sleep, line=1026
+- **4 · untracked-timeout** — function=preventNavigation, line=1340
+- **4 · untracked-raf** — function=setNamingToolsPanelVisibility, line=1484
+- **4 · untracked-raf** — function=createCompactDisclosure, line=2195
+- **4 · untracked-raf** — function=showAndViewPersonnelStationReport, line=4308
+- **4 · untracked-raf** — function=switchToolTab, line=4409
+- **4 · untracked-timeout** — function=downloadPersonnelTrainingRegistryJson, line=5695
+- **4 · untracked-timeout** — function=scheduled, line=6011
+- **4 · untracked-timeout** — function=worker, line=6064
+- **4 · untracked-timeout** — function=requestMissionFinderMemoryRecycle, line=12233
+- **4 · untracked-timeout** — function=wait, line=12588
+- **4 · untracked-timeout** — function=exportUnitFinderDiagnostics, line=13843
+- **4 · untracked-raf** — function=setMissionDashboardTab, line=19781
+- **4 · untracked-raf** — function=syncIphoneAdvancedToggle, line=20261
+- **4 · untracked-raf** — function=toggleMissionControlCollapsed, line=20349
+- **4 · untracked-raf** — function=toggleTrainedPersonnelCollapsed, line=20647
+- **4 · untracked-raf** — function=toggleIphoneLauncherPanel, line=20723
+- **4 · untracked-raf** — function=applySavedMissionFinderWindowPosition, line=21000
+- **4 · untracked-raf** — function=resetMissionFinderIosPosition, line=21436
+- **4 · untracked-raf** — function=applyCentre, line=21517
+- **4 · untracked-raf** — function=applyCentre, line=21518
+- **4 · untracked-timeout** — function=updateAutoModeButton, line=22457
+- **4 · untracked-timeout** — function=handleAllySteal, line=34161
+- **4 · untracked-timeout** — function=clickMissionDispatchByValue, line=35305
 
-## Timer ownership
-- Tracked intervals: 7; untracked intervals: 1
-  - `timer` line 1846 near `tryInitialise`; clear found: **True**
-  - `mfRuntimeMemoryMaintenanceTimer` line 12296 near `startMissionFinderRuntimeMemoryMaintenance`; clear found: **True**
-  - `sessionRuntimeTicker` line 22321 near `startSessionRuntimeTicker`; clear found: **True**
-  - `mfSilentQueueWatcherTimer` line 39634 near `startSilentQueueWatcher`; clear found: **True**
-  - `mfPostTransportRehookTimer` line 43559 near `startPostTransportRehookWatcher`; clear found: **True**
-  - `mfBruteApproachWatcherTimer` line 43934 near `startBruteApproachTransportWatcher`; clear found: **True**
-  - `mfBackgroundWatcherSupervisorTimer` line 47132 near `installBackgroundWatcherSupervisor`; clear found: **True**
-  - untracked interval line 11012 near `startMissionEventCollectibleCollector`
-- Tracked timeouts: 10; untracked timeouts: 25
-  - `navigationTimer` line 1625 near `handleNavigationClick`; clear found: **True**
-  - `timer` line 5178 near `timer`; clear found: **True**
-  - `PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER` line 7133 near `schedulePersonnelTrainingRegistryFlush`; clear found: **True**
-  - `timer` line 8856 near `timer`; clear found: **True**
-  - `timeoutId` line 13147 near `timeoutId`; clear found: **True**
-  - `mfVehicleLoadRenderFrame` line 23018 near `run`; clear found: **True**
-  - `mfIphoneNativePickerSyncTimer` line 24646 near `scheduleMissionFinderIphoneNativePickerSync`; clear found: **True**
-  - `mfMissionRequirementPreloadTimer` line 27847 near `scheduleMissionRequiredPersonnelPreload`; clear found: **True**
-  - `mfAutoLoopResumeTimer` line 47148 near `scheduleAutoModeLoopResume`; clear found: **True**
-  - `mfMainMutationFlushTimer` line 47276 near `scheduleMissionFinderMutationWork`; clear found: **True**
-- Tracked RAFs: 4; untracked RAFs: 13
-
-## MutationObserver ownership
-- `observer` line 1575 near `observer`; disconnect: **True**; document subtree: **True**
-- `mfMainMutationObserver` line 47852 near `startMissionFinderObserver`; disconnect: **True**; document subtree: **True**
+## Timers and observers
+### interval
+- `timer` line 1846 near `tryInitialise`; cleanup=True
+- `mfRuntimeMemoryMaintenanceTimer` line 12296 near `startMissionFinderRuntimeMemoryMaintenance`; cleanup=True
+- `sessionRuntimeTicker` line 22321 near `startSessionRuntimeTicker`; cleanup=True
+- `mfSilentQueueWatcherTimer` line 39634 near `startSilentQueueWatcher`; cleanup=True
+- `mfPostTransportRehookTimer` line 43559 near `startPostTransportRehookWatcher`; cleanup=True
+- `mfBruteApproachWatcherTimer` line 43934 near `startBruteApproachTransportWatcher`; cleanup=True
+- `mfBackgroundWatcherSupervisorTimer` line 47132 near `installBackgroundWatcherSupervisor`; cleanup=True
+- untracked line 11012 near `startMissionEventCollectibleCollector`
+### timeout
+- `navigationTimer` line 1625 near `handleNavigationClick`; cleanup=True
+- `timer` line 8856 near `timer`; cleanup=True
+- `PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER` line 7133 near `schedulePersonnelTrainingRegistryFlush`; cleanup=True
+- `timeoutId` line 13147 near `timeoutId`; cleanup=True
+- `mfVehicleLoadRenderFrame` line 23018 near `run`; cleanup=True
+- `mfIphoneNativePickerSyncTimer` line 24646 near `scheduleMissionFinderIphoneNativePickerSync`; cleanup=True
+- `mfMissionRequirementPreloadTimer` line 27847 near `scheduleMissionRequiredPersonnelPreload`; cleanup=True
+- `mfAutoLoopResumeTimer` line 47148 near `scheduleAutoModeLoopResume`; cleanup=True
+- `mfMainMutationFlushTimer` line 47276 near `scheduleMissionFinderMutationWork`; cleanup=True
+- untracked line 1026 near `sleep`
+- untracked line 1340 near `preventNavigation`
+- untracked line 5695 near `downloadPersonnelTrainingRegistryJson`
+- untracked line 6011 near `scheduled`
+- untracked line 6064 near `worker`
+- untracked line 12233 near `requestMissionFinderMemoryRecycle`
+- untracked line 12588 near `wait`
+- untracked line 13843 near `exportUnitFinderDiagnostics`
+- untracked line 22457 near `updateAutoModeButton`
+- untracked line 34161 near `handleAllySteal`
+- untracked line 35305 near `clickMissionDispatchByValue`
+- untracked line 35391 near `triggerDispatchShareClick`
+- untracked line 39462 near `autoHandleMissionUpdateAfterDispatch`
+- untracked line 39878 near `installManualMissionClickFlagClearer`
+- untracked line 40832 near `resumeAutoAfterMainMissionOpen`
+- untracked line 43325 near `hardOpenFirstMissionFromMainAfterTransport`
+- untracked line 43538 near `openFirstMissionAfterTransportAutoClose`
+- untracked line 44519 near `resumeAutoAdvanceAfterDispatch`
+- untracked line 45138 near `clickNextMissionAfterAutoUpgrade`
+- untracked line 45529 near `scheduleAutoMemoryRecycleResume`
+- untracked line 46199 near `initialize`
+- untracked line 46210 near `initialize`
+- untracked line 46230 near `initialize`
+- untracked line 46249 near `initialize`
+- untracked line 47842 near `startMissionFinderObserver`
+### raf
+- `frameId` line 1138 near `frameId`; cleanup=True
+- `pendingFrame` line 1772 near `requestClamp`; cleanup=True
+- `mfVehicleLoadRenderFrame` line 23016 near `run`; cleanup=True
+- untracked line 1484 near `setNamingToolsPanelVisibility`
+- untracked line 2195 near `createCompactDisclosure`
+- untracked line 4308 near `showAndViewPersonnelStationReport`
+- untracked line 4409 near `switchToolTab`
+- untracked line 19781 near `setMissionDashboardTab`
+- untracked line 20261 near `syncIphoneAdvancedToggle`
+- untracked line 20349 near `toggleMissionControlCollapsed`
+- untracked line 20647 near `toggleTrainedPersonnelCollapsed`
+- untracked line 20723 near `toggleIphoneLauncherPanel`
+- untracked line 21000 near `applySavedMissionFinderWindowPosition`
+- untracked line 21436 near `resetMissionFinderIosPosition`
+- untracked line 21517 near `applyCentre`
+- untracked line 21518 near `applyCentre`
+### observer
+- `observer` line 1575 near `observer`; cleanup=True; document subtree=True
+- `mfMainMutationObserver` line 47852 near `startMissionFinderObserver`; cleanup=True; document subtree=True
 
 ## Collections
-- `lines` `[]` line 9432: mutations=20, pruning=0, limit mentions=0
-- `rows` `[]` line 26492: mutations=18, pruning=4, limit mentions=11
-- `rows` `[]` line 26671: mutations=18, pruning=4, limit mentions=11
-- `rows` `[]` line 26999: mutations=18, pruning=4, limit mentions=11
-- `rows` `[]` line 31881: mutations=18, pruning=4, limit mentions=11
-- `rows` `[]` line 35445: mutations=18, pruning=4, limit mentions=11
-- `rows` `[]` line 40372: mutations=18, pruning=4, limit mentions=11
-- `candidates` `new Set(` line 15282: mutations=10, pruning=0, limit mentions=7
-- `candidates` `[]` line 21071: mutations=10, pruning=0, limit mentions=7
-- `candidates` `[]` line 21140: mutations=10, pruning=0, limit mentions=7
-- `candidates` `[]` line 23665: mutations=10, pruning=0, limit mentions=7
-- `candidates` `new Set(` line 24296: mutations=10, pruning=0, limit mentions=7
-- `candidates` `[]` line 25617: mutations=10, pruning=0, limit mentions=7
-- `candidates` `[]` line 33508: mutations=10, pruning=0, limit mentions=7
-- `candidates` `[]` line 42043: mutations=10, pruning=0, limit mentions=7
-- `seen` `new Set(` line 7350: mutations=8, pruning=0, limit mentions=0
-- `seen` `new Set(` line 7597: mutations=8, pruning=0, limit mentions=0
-- `seen` `new Set(` line 8913: mutations=8, pruning=0, limit mentions=0
-- `seen` `new Set(` line 10765: mutations=8, pruning=0, limit mentions=0
-- `seen` `new Set(` line 33482: mutations=8, pruning=0, limit mentions=0
-- `seen` `new Set(` line 33509: mutations=8, pruning=0, limit mentions=0
-- `missingRows` `[]` line 36720: mutations=8, pruning=1, limit mentions=4
-- `seen` `new Set(` line 40374: mutations=8, pruning=0, limit mentions=0
-- `seen` `new Set(` line 42044: mutations=8, pruning=0, limit mentions=0
-- `documents` `[]` line 10764: mutations=6, pruning=1, limit mentions=1
-- `parts` `[]` line 12642: mutations=6, pruning=1, limit mentions=0
-- `documents` `[]` line 13433: mutations=6, pruning=1, limit mentions=1
-- `documents` `[]` line 24040: mutations=6, pruning=1, limit mentions=1
-- `documents` `[]` line 24574: mutations=6, pruning=1, limit mentions=1
-- `parts` `[]` line 26603: mutations=6, pruning=1, limit mentions=0
-- `parts` `[]` line 26768: mutations=6, pruning=1, limit mentions=0
-- `rowCodes` `new Set(` line 30192: mutations=6, pruning=0, limit mentions=0
-- `documents` `[]` line 33390: mutations=6, pruning=1, limit mentions=1
-- `values` `[]` line 1226: mutations=5, pruning=0, limit mentions=5
-- `values` `[]` line 11338: mutations=5, pruning=0, limit mentions=5
-- `values` `[]` line 13401: mutations=5, pruning=0, limit mentions=5
-- `elements` `[]` line 25075: mutations=5, pruning=0, limit mentions=2
-- `elements` `[]` line 25517: mutations=5, pruning=0, limit mentions=2
-- `elements` `[]` line 25682: mutations=5, pruning=0, limit mentions=2
-- `elements` `[]` line 25703: mutations=5, pruning=0, limit mentions=2
-- `elements` `[]` line 36293: mutations=5, pruning=0, limit mentions=2
-- `values` `[]` line 40332: mutations=5, pruning=0, limit mentions=5
-- `vehicleReports` `[]` line 7840: mutations=4, pruning=0, limit mentions=4
-- `verifiedIds` `new Set(` line 8067: mutations=4, pruning=0, limit mentions=0
-- `vehicleReports` `[]` line 8460: mutations=4, pruning=0, limit mentions=4
-- `verifiedIds` `new Set(` line 8607: mutations=4, pruning=0, limit mentions=0
-- `summaryParts` `[]` line 22771: mutations=4, pruning=0, limit mentions=0
-- `requirements` `new Map(` line 27573: mutations=4, pruning=0, limit mentions=13
-- `requirements` `new Map(` line 27647: mutations=4, pruning=0, limit mentions=13
-- `requirements` `new Map(` line 28505: mutations=4, pruning=0, limit mentions=13
-- `verifiedIds` `new Set(` line 30547: mutations=4, pruning=0, limit mentions=0
-- `verifiedIds` `new Set(` line 30827: mutations=4, pruning=0, limit mentions=0
-- `requirements` `[]` line 31115: mutations=4, pruning=0, limit mentions=13
-- `queue` `[]` line 7598: mutations=3, pruning=1, limit mentions=6
-- `reservedPersonnelIds` `new Set(` line 7837: mutations=3, pruning=0, limit mentions=0
-- `reservedPersonnelIds` `new Set(` line 8458: mutations=3, pruning=0, limit mentions=0
-- `queue` `[]` line 8914: mutations=3, pruning=1, limit mentions=6
-- `alerts` `[]` line 33481: mutations=3, pruning=0, limit mentions=4
-- `deduped` `new Map(` line 36308: mutations=3, pruning=0, limit mentions=0
-- `alerts` `[]` line 40228: mutations=3, pruning=0, limit mentions=4
-- `alerts` `[]` line 42485: mutations=3, pruning=0, limit mentions=4
-- `cacheCandidates` `[]` line 4997: mutations=2, pruning=0, limit mentions=0
-- `plannedNames` `[]` line 7966: mutations=2, pruning=0, limit mentions=2
-- `assignedNames` `[]` line 7968: mutations=2, pruning=0, limit mentions=2
-- `submittedCandidates` `[]` line 8038: mutations=2, pruning=0, limit mentions=0
-- `plannedNames` `[]` line 8506: mutations=2, pruning=0, limit mentions=2
-- `assignedNames` `[]` line 8507: mutations=2, pruning=0, limit mentions=2
-- `submittedCandidates` `[]` line 8583: mutations=2, pruning=0, limit mentions=0
-- `index` `new Map(` line 9033: mutations=2, pruning=0, limit mentions=6
-- `attributeElements` `[]` line 23506: mutations=2, pruning=0, limit mentions=0
-- `merged` `new Map(` line 27120: mutations=2, pruning=0, limit mentions=0
-- `trainedPersonnelWarnings` `[]` line 32369: mutations=2, pruning=0, limit mentions=1
-- `roots` `[]` line 36400: mutations=2, pruning=0, limit mentions=2
-- `dedupedByMappedName` `new Map(` line 38450: mutations=2, pruning=0, limit mentions=1
-- `missingAfterAttempt` `[]` line 39067: mutations=2, pruning=0, limit mentions=0
-- `trainedPersonnelWarnings` `[]` line 39069: mutations=2, pruning=0, limit mentions=1
-- `modalCandidates` `[]` line 41507: mutations=2, pruning=0, limit mentions=0
-- `roots` `[]` line 42995: mutations=2, pruning=0, limit mentions=2
-- `canonicalRows` `new Map(` line 44655: mutations=2, pruning=0, limit mentions=1
-- `frames` `new Set(` line 47444: mutations=2, pruning=0, limit mentions=0
-- `TOOL_LIFECYCLE_CLEANUPS` `new Set(` line 101: mutations=1, pruning=3, limit mentions=1
-- `TOOL_LOG_SCROLL_FRAMES` `new Map(` line 102: mutations=1, pruning=3, limit mentions=1
-- `TOOL_UI_ELEMENT_CACHE` `new Map(` line 103: mutations=1, pruning=2, limit mentions=0
-- `PERSONNEL_ASSIGNMENT_INDEX_CACHE` `new WeakMap(` line 104: mutations=1, pruning=0, limit mentions=0
-- `PERSONNEL_TRAINING_SET_CACHE` `new WeakMap(` line 105: mutations=1, pruning=0, limit mentions=0
-- `PERSONNEL_VISIBLE_TRAINING_COUNTS_CACHE` `new WeakMap(` line 106: mutations=1, pruning=0, limit mentions=0
-- `PERSONNEL_REPORT_BLOCK_CACHE` `new WeakMap(` line 107: mutations=1, pruning=0, limit mentions=0
-- `PERSONNEL_STATION_LINK_BY_HREF` `new Map(` line 108: mutations=1, pruning=2, limit mentions=0
-- `PERSONNEL_START_OPTION_BY_HREF` `new Map(` line 109: mutations=1, pruning=2, limit mentions=0
-- `PERSONNEL_HIGHLIGHTED_STATION_LINKS` `new Set(` line 110: mutations=1, pruning=2, limit mentions=0
-- `groups` `new Map(` line 1284: mutations=1, pruning=0, limit mentions=0
-- `profilesByVehicle` `new Map(` line 5898: mutations=1, pruning=0, limit mentions=0
-- `verifiedVehicles` `[]` line 6000: mutations=1, pruning=0, limit mentions=0
-- `failedVehicleIds` `[]` line 6003: mutations=1, pruning=0, limit mentions=0
-- `vehiclesToVerify` `[]` line 6275: mutations=1, pruning=0, limit mentions=0
-- `byVehicleId` `new Map(` line 7313: mutations=1, pruning=0, limit mentions=0
-- `byVehicleName` `new Map(` line 7315: mutations=1, pruning=0, limit mentions=0
-- `counts` `new Map(` line 7521: mutations=1, pruning=0, limit mentions=5
-- `personToSlot` `new Map(` line 7753: mutations=1, pruning=0, limit mentions=0
-- `candidatesByRule` `new Map(` line 7754: mutations=1, pruning=0, limit mentions=0
-- `claimedVehicleIds` `new Set(` line 7839: mutations=1, pruning=0, limit mentions=0
-- `ruleReports` `[]` line 7841: mutations=1, pruning=0, limit mentions=0
-- `qualificationSlots` `[]` line 7844: mutations=1, pruning=0, limit mentions=0
-- `byVehicleType` `new Map(` line 9983: mutations=1, pruning=0, limit mentions=0
-- `mfEventCollectibleClaimTimes` `new Map(` line 10753: mutations=1, pruning=4, limit mentions=2
-- `mfLiveTrainingVerifyCache` `new Map(` line 11690: mutations=1, pruning=3, limit mentions=4
-- `mfIphoneNativePickerDocuments` `new Set(` line 11897: mutations=1, pruning=2, limit mentions=0
-- `mfCheckboxVehicleValueCache` `new WeakMap(` line 12313: mutations=1, pruning=0, limit mentions=1
-- `mfExtendedVehicleValueCache` `new WeakMap(` line 12315: mutations=1, pruning=0, limit mentions=0
-- `mfSartecDisplayedValueCache` `new WeakMap(` line 12316: mutations=1, pruning=0, limit mentions=0
-- `mfVehicleTypeIdentifierCache` `new WeakMap(` line 12317: mutations=1, pruning=0, limit mentions=1
-- `mfVehicleArrivalMetricCache` `new WeakMap(` line 12318: mutations=1, pruning=0, limit mentions=1
-- `mfVehicleMatchCandidateCache` `new Map(` line 12319: mutations=1, pruning=5, limit mentions=2
-- `mfLastMissionDefinitionRawRows` `[]` line 13126: mutations=1, pruning=0, limit mentions=0
-- `processedSelectionKeys` `new Set(` line 13132: mutations=1, pruning=0, limit mentions=1
-- `patientCards` `[]` line 23345: mutations=1, pruning=0, limit mentions=0
-- `urlElements` `[]` line 23530: mutations=1, pruning=0, limit mentions=0
-- `contexts` `new Map(` line 24915: mutations=1, pruning=0, limit mentions=1
-- `routeElements` `[]` line 25549: mutations=1, pruning=0, limit mentions=0
-- `seenElements` `new Set(` line 25618: mutations=1, pruning=0, limit mentions=0
-- `exactElements` `[]` line 25815: mutations=1, pruning=0, limit mentions=0
-- `fallbackElements` `[]` line 25902: mutations=1, pruning=0, limit mentions=0
-- `conversions` `[]` line 26208: mutations=1, pruning=0, limit mentions=2
-- `rawRows` `[]` line 26493: mutations=1, pruning=0, limit mentions=0
-- `verifiedOrdinary` `[]` line 29097: mutations=1, pruning=0, limit mentions=0
-- `unknownOrStale` `[]` line 29098: mutations=1, pruning=0, limit mentions=0
-- `protectedFallback` `[]` line 29099: mutations=1, pruning=0, limit mentions=0
-- `assignedTrainingProfiles` `[]` line 30082: mutations=1, pruning=0, limit mentions=3
-- `coveredCodes` `new Set(` line 31214: mutations=1, pruning=0, limit mentions=3
-- `used` `new Set(` line 31617: mutations=1, pruning=0, limit mentions=1
-- `missingUnits` `[]` line 32367: mutations=1, pruning=0, limit mentions=0
-- `trainedVehicleMissing` `[]` line 32368: mutations=1, pruning=0, limit mentions=2
-- `requirementRows` `[]` line 32737: mutations=1, pruning=0, limit mentions=0
-- `stillMissing` `[]` line 32891: mutations=1, pruning=1, limit mentions=0
-- `livePatientRequirementStates` `new Map(` line 36767: mutations=1, pruning=0, limit mentions=0
-- `patientGroups` `new Map(` line 38068: mutations=1, pruning=0, limit mentions=0
-- `seenDocuments` `new Set(` line 42996: mutations=1, pruning=0, limit mentions=0
-- `mfMissingUnitRetryIntervals` `new Set(` line 11924: mutations=0, pruning=3, limit mentions=0
-- `requiredPersonnel` `[]` line 22680: mutations=0, pruning=2, limit mentions=0
-- `liveMissingPersonnel` `[]` line 22681: mutations=0, pruning=2, limit mentions=0
+- `lines` line 9433 `[]` mutations=20, pruning=0, ops={'push': 20}
+- `rows` line 40373 `[]` mutations=18, pruning=4, ops={'length_assign': 4, 'push': 18}
+- `candidates` line 42043 `[]` mutations=10, pruning=0, ops={'push': 7, 'add': 3}
+- `missingRows` line 36721 `[]` mutations=8, pruning=1, ops={'push': 8, 'length_assign': 1}
+- `seen` line 42044 `new Set(` mutations=8, pruning=0, ops={'add': 8}
+- `parts` line 26768 `[]` mutations=6, pruning=1, ops={'pop': 1, 'unshift': 2, 'push': 4}
+- `rowCodes` line 30193 `new Set(` mutations=6, pruning=0, ops={'add': 6}
+- `documents` line 33390 `[]` mutations=6, pruning=1, ops={'push': 6, 'length_assign': 1}
+- `elements` line 36294 `[]` mutations=5, pruning=0, ops={'push': 5}
+- `values` line 40332 `[]` mutations=5, pruning=0, ops={'push': 5}
+- `vehicleReports` line 8460 `[]` mutations=4, pruning=0, ops={'push': 4}
+- `summaryParts` line 22772 `[]` mutations=4, pruning=0, ops={'push': 4}
+- `verifiedIds` line 30827 `new Set(` mutations=4, pruning=0, ops={'add': 4}
+- `requirements` line 31115 `[]` mutations=4, pruning=0, ops={'set': 3, 'push': 1}
+- `reservedPersonnelIds` line 8459 `new Set(` mutations=3, pruning=0, ops={'add': 3}
+- `queue` line 8914 `[]` mutations=3, pruning=1, ops={'push': 3, 'shift': 1}
+- `deduped` line 36309 `new Map(` mutations=3, pruning=0, ops={'set': 3}
+- `alerts` line 42486 `[]` mutations=3, pruning=0, ops={'push': 3}
+- `cacheCandidates` line 4997 `[]` mutations=2, pruning=0, ops={'push': 2}
+- `plannedNames` line 8506 `[]` mutations=2, pruning=0, ops={'push': 2}
+- `assignedNames` line 8507 `[]` mutations=2, pruning=0, ops={'push': 2}
+- `submittedCandidates` line 8583 `[]` mutations=2, pruning=0, ops={'push': 2}
+- `index` line 9033 `new Map(` mutations=2, pruning=0, ops={'set': 2}
+- `attributeElements` line 23507 `[]` mutations=2, pruning=0, ops={'push': 2}
+- `missingAfterAttempt` line 39068 `[]` mutations=2, pruning=0, ops={'push': 2}
+- `trainedPersonnelWarnings` line 39069 `[]` mutations=2, pruning=0, ops={'push': 2}
+- `modalCandidates` line 41507 `[]` mutations=2, pruning=0, ops={'push': 2}
+- `roots` line 42995 `[]` mutations=2, pruning=0, ops={'push': 2}
+- `frames` line 47445 `new Set(` mutations=2, pruning=0, ops={'add': 2}
+- `TOOL_LIFECYCLE_CLEANUPS` line 101 `new Set(` mutations=1, pruning=3, ops={'add': 1, 'clear': 1, 'delete': 2}
+- `TOOL_LOG_SCROLL_FRAMES` line 102 `new Map(` mutations=1, pruning=3, ops={'clear': 1, 'delete': 2, 'set': 1}
+- `TOOL_UI_ELEMENT_CACHE` line 103 `new Map(` mutations=1, pruning=2, ops={'clear': 1, 'set': 1, 'delete': 1}
+- `PERSONNEL_ASSIGNMENT_INDEX_CACHE` line 104 `new WeakMap(` mutations=1, pruning=0, ops={'set': 1}
+- `PERSONNEL_TRAINING_SET_CACHE` line 105 `new WeakMap(` mutations=1, pruning=0, ops={'set': 1}
+- `PERSONNEL_VISIBLE_TRAINING_COUNTS_CACHE` line 106 `new WeakMap(` mutations=1, pruning=0, ops={'set': 1}
+- `PERSONNEL_REPORT_BLOCK_CACHE` line 107 `new WeakMap(` mutations=1, pruning=0, ops={'set': 1}
+- `PERSONNEL_STATION_LINK_BY_HREF` line 108 `new Map(` mutations=1, pruning=2, ops={'clear': 2, 'set': 1}
+- `PERSONNEL_START_OPTION_BY_HREF` line 109 `new Map(` mutations=1, pruning=2, ops={'clear': 2, 'set': 1}
+- `PERSONNEL_HIGHLIGHTED_STATION_LINKS` line 110 `new Set(` mutations=1, pruning=2, ops={'clear': 2, 'add': 1}
+- `groups` line 1284 `new Map(` mutations=1, pruning=0, ops={'set': 1}
+- `profilesByVehicle` line 5899 `new Map(` mutations=1, pruning=0, ops={'set': 1}
+- `verifiedVehicles` line 6000 `[]` mutations=1, pruning=0, ops={'push': 1}
+- `failedVehicleIds` line 6003 `[]` mutations=1, pruning=0, ops={'push': 1}
+- `vehiclesToVerify` line 6275 `[]` mutations=1, pruning=0, ops={'push': 1}
+- `byVehicleId` line 7314 `new Map(` mutations=1, pruning=0, ops={'set': 1}
+- `byVehicleName` line 7315 `new Map(` mutations=1, pruning=0, ops={'set': 1}
+- `counts` line 7522 `new Map(` mutations=1, pruning=0, ops={'set': 1}
+- `personToSlot` line 7753 `new Map(` mutations=1, pruning=0, ops={'set': 1}
+- `candidatesByRule` line 7754 `new Map(` mutations=1, pruning=0, ops={'set': 1}
+- `claimedVehicleIds` line 7839 `new Set(` mutations=1, pruning=0, ops={'add': 1}
+- `ruleReports` line 7841 `[]` mutations=1, pruning=0, ops={'push': 1}
+- `qualificationSlots` line 7844 `[]` mutations=1, pruning=0, ops={'push': 1}
+- `byVehicleType` line 9984 `new Map(` mutations=1, pruning=0, ops={'set': 1}
+- `mfEventCollectibleClaimTimes` line 10753 `new Map(` mutations=1, pruning=4, ops={'delete': 3, 'set': 1, 'clear': 1}
+- `mfLiveTrainingVerifyCache` line 11691 `new Map(` mutations=1, pruning=3, ops={'delete': 2, 'set': 1, 'clear': 1}
+- `mfIphoneNativePickerDocuments` line 11897 `new Set(` mutations=1, pruning=2, ops={'delete': 1, 'add': 1, 'clear': 1}
+- `mfCheckboxVehicleValueCache` line 12314 `new WeakMap(` mutations=1, pruning=0, ops={'set': 1}
+- `mfExtendedVehicleValueCache` line 12315 `new WeakMap(` mutations=1, pruning=0, ops={'set': 1}
+- `mfSartecDisplayedValueCache` line 12316 `new WeakMap(` mutations=1, pruning=0, ops={'set': 1}
+- `mfVehicleTypeIdentifierCache` line 12317 `new WeakMap(` mutations=1, pruning=0, ops={'set': 1}
+- `mfVehicleArrivalMetricCache` line 12318 `new WeakMap(` mutations=1, pruning=0, ops={'set': 1}
+- `mfVehicleMatchCandidateCache` line 12320 `new Map(` mutations=1, pruning=5, ops={'clear': 5, 'set': 1}
+- `mfLastMissionDefinitionRawRows` line 13126 `[]` mutations=1, pruning=0, ops={'push': 1}
+- `processedSelectionKeys` line 13132 `new Set(` mutations=1, pruning=0, ops={'add': 1}
+- `patientCards` line 23345 `[]` mutations=1, pruning=0, ops={'push': 1}
+- `urlElements` line 23531 `[]` mutations=1, pruning=0, ops={'push': 1}
+- `routeElements` line 25550 `[]` mutations=1, pruning=0, ops={'push': 1}
+- `seenElements` line 25618 `new Set(` mutations=1, pruning=0, ops={'add': 1}
+- `exactElements` line 25816 `[]` mutations=1, pruning=0, ops={'push': 1}
+- `conversions` line 26209 `[]` mutations=1, pruning=0, ops={'push': 1}
+- `rawRows` line 26493 `[]` mutations=1, pruning=0, ops={'push': 1}
+- `verifiedOrdinary` line 29097 `[]` mutations=1, pruning=0, ops={'push': 1}
+- `unknownOrStale` line 29098 `[]` mutations=1, pruning=0, ops={'push': 1}
+- `protectedFallback` line 29099 `[]` mutations=1, pruning=0, ops={'push': 1}
+- `assignedTrainingProfiles` line 30082 `[]` mutations=1, pruning=0, ops={'push': 1}
+- `coveredCodes` line 31215 `new Set(` mutations=1, pruning=0, ops={'add': 1}
+- `used` line 31618 `new Set(` mutations=1, pruning=0, ops={'add': 1}
+- `missingUnits` line 32367 `[]` mutations=1, pruning=0, ops={'push': 1}
+- `trainedVehicleMissing` line 32368 `[]` mutations=1, pruning=0, ops={'push': 1}
+- `requirementRows` line 32737 `[]` mutations=1, pruning=0, ops={'push': 1}
+- `stillMissing` line 32892 `[]` mutations=1, pruning=1, ops={'push': 1, 'length_assign': 1}
+- `seenDocuments` line 42996 `new Set(` mutations=1, pruning=0, ops={'add': 1}
+- `mfMissingUnitRetryIntervals` line 11924 `new Set(` mutations=0, pruning=3, ops={'clear': 3}
+- `requiredPersonnel` line 22680 `[]` mutations=0, pruning=2, ops={'length_assign': 2}
+- `liveMissingPersonnel` line 22681 `[]` mutations=0, pruning=2, ops={'length_assign': 2}
 
 ## DOM query density
 - `createCompactActionDisclosure`: 69
 - `updatePersonnelProfileUi`: 13
 - `startIndex`: 10
 - `switchToolTab`: 9
-- `addCandidate`: 6
 - `processOneStationName`: 6
+- `addCandidate`: 6
+- `buildPersonnelTrainingRegisterOneClick`: 5
 - `waitForStationIframe`: 5
 - `getRecorderMissionSnapshot`: 5
-- `buildPersonnelTrainingRegisterOneClick`: 5
 - `setMissionDashboardTab`: 5
+- `updatePersonnelModeUi`: 4
+- `updatePersonnelReportVisibility`: 4
 - `buildActiveMissionRequirementContexts`: 4
 - `extractLiveMissionRequirementRows`: 4
 - `parseLivePoliceTrainingAssignments`: 4
 - `readMissionUpdateRows`: 4
 - `getMissionUpdateRenderSignature`: 4
-- `updatePersonnelModeUi`: 4
-- `updatePersonnelReportVisibility`: 4
 - `getUnattendedMissionStateForQueueRestart`: 4
+- `extractCoordinatesFromStationDocument`: 3
 - `getPersonnelAmbulanceQueue`: 3
 - `parseVehicleAssignmentPage`: 3
 - `getVehicleQueueFromTable`: 3
 - `createControlPanel`: 3
+- `getCurrentMissionName`: 3
 - `computePatientCountNow`: 3
 - `getMissionIdFromLocalScope`: 3
 - `getLocalMissionInstanceKey`: 3
 - `getPrimaryMissionRequirementDocument`: 3
 - `normalise`: 3
 - `getAllyStealNormalDispatchButton`: 3
-- `mfGetTransportOwnerModal`: 3
 - `visible`: 3
-- `getVisibleExactNormalDispatchButton`: 3
-- `extractCoordinatesFromStationDocument`: 3
-- `getCurrentMissionName`: 3
+- `mfGetTransportOwnerModal`: 3
 - `isCurrentMissionWindowStillOpenForSafeOpen`: 3
 - `isMissionScreenVisibleForQueueRestart`: 3
 - `getTransportScreenFingerprint`: 3
+- `getVisibleExactNormalDispatchButton`: 3
 - `add`: 2
 - `ensureSingleNamingToolsPanel`: 2
+- `handlePersonnelModeChange`: 2
+- `initialisePersonnelProfileNavigation`: 2
+- `handlePersonnelServiceChange`: 2
+- `handlePersonnelProfileChange`: 2
+- `initialisePersonnelReportVisibility`: 2
+- `setPanelCollapsed`: 2
+- `populateStationNamingStartDropdown`: 2
+- `fetchStationMoveAddress`: 2
 - `waitForStationNamingIframe`: 2
 - `getPersonnelVehicleQueue`: 2
+- `populateUnitClassDropdown`: 2
+- `populateStartDropdown`: 2
+- `processStationVehicleQueue`: 2
 - `cleanupDuplicatePanels`: 2
+- `addDocument`: 2
 - `count`: 2
+- `getVehicleDebugName`: 2
 - `getSartecDisplayedVehicleValues`: 2
 - `getExtendedVehicleValues`: 2
-- `getMissionCredits`: 2
-- `removeAutoModeQueueHelperCopy`: 2
-- `addDocument`: 2
-- `getMissionFinderIphoneNativePickerStrips`: 2
-- `getMissionTypeIdFromScope`: 2
-- `getMissionRequirementSource`: 2
+- `saveQueueRestartThresholdInput`: 2
+- `syncVehicleLoadCollapseState`: 2
+- `toggleVehicleLoadCollapsed`: 2
 
-## Potential DOM retention assignments
-- line 15634 near `getVehicleCheckboxSnapshot` pattern `\.document\s*=\s*`
-- line 12804 near `cleanupDuplicatePanels` pattern `=\s*document\.querySelectorAll`
-- line 21871 near `getDispatchReadinessSignature` pattern `=\s*document\.querySelectorAll`
-- line 44797 near `getVisibleExactNormalDispatchButton` pattern `=\s*document\.querySelectorAll`
-- line 45224 near `getCurrentAutoDispatchSelectionState` pattern `=\s*document\.querySelectorAll`
-- line 47226 near `flushMissionFinderMutationWork` pattern `=\s*document\.querySelectorAll`
-- line 1404 near `ensureSingleNamingToolsPanel` pattern `=\s*\[\.\.\.document\.querySelectorAll`
-- line 1413 near `ensureSingleNamingToolsPanel` pattern `=\s*\[\.\.\.document\.querySelectorAll`
-- line 5363 near `closeStationNamingModal` pattern `=\s*\[\.\.\.document\.querySelectorAll`
-- line 5263 near `waitForStationNamingIframe` pattern `=\s*[^;\n]*\.contentDocument`
-- line 5284 near `waitForStationNamingDocument` pattern `=\s*[^;\n]*\.contentDocument`
-- line 10378 near `waitForStationIframe` pattern `=\s*[^;\n]*\.contentDocument`
-- line 10426 near `waitForVehicleTable` pattern `=\s*[^;\n]*\.contentDocument`
-- line 10443 near `waitForEditPage` pattern `=\s*[^;\n]*\.contentDocument`
-- line 10564 near `processStationVehicleQueue` pattern `=\s*[^;\n]*\.contentDocument`
-- line 10789 near `getMissionEventCollectibleDocuments` pattern `=\s*[^;\n]*\.contentDocument`
-- line 40930 near `mfGetAccessibleDocumentsForTransport` pattern `=\s*[^;\n]*\.contentDocument`
-- line 47468 near `addFrames` pattern `=\s*[^;\n]*\.contentDocument`
+## innerHTML density
+- `setMissionDashboardTab`: 4
+- `aggregateOnlyVehicles`: 4
+- `foundRequired`: 4
+- `createControlPanel`: 3
+- `populateStationNamingStartDropdown`: 2
+- `populateStartDropdown`: 2
+- `consumeIphoneDisclosureEvent`: 2
+- `addPanel`: 1
+- `createCompactDisclosure`: 1
+- `populatePersonnelProfileSelect`: 1
+- `updatePersonnelProfileUi`: 1
+- `populateUnitClassDropdown`: 1
+- `saveQueueRestartThresholdInput`: 1
+- `renderSessionPanel`: 1
+- `selectedMarkup`: 1
 
-## Supporting extracts
-- `.github/diagnostics/runtime-memory-functions-v1082.txt`
+## Potential node retention
+- line 1348 near `createManagedStationIframe` pattern `document.querySelectorAll`
+- line 1404 near `ensureSingleNamingToolsPanel` pattern `document.querySelectorAll`
+- line 1413 near `ensureSingleNamingToolsPanel` pattern `document.querySelectorAll`
+- line 5254 near `waitForStationNamingIframe` pattern `document.querySelectorAll`
+- line 5263 near `waitForStationNamingIframe` pattern `contentDocument`
+- line 5284 near `waitForStationNamingDocument` pattern `contentDocument`
+- line 5363 near `closeStationNamingModal` pattern `document.querySelectorAll`
+- line 5792 near `getPersonnelRegisterStationEntries` pattern `document.querySelectorAll`
+- line 9964 near `getUnitModalCloseButton` pattern `document.querySelectorAll`
+- line 10369 near `waitForStationIframe` pattern `document.querySelectorAll`
+- line 10378 near `waitForStationIframe` pattern `contentDocument`
+- line 10426 near `waitForVehicleTable` pattern `contentDocument`
+- line 10443 near `waitForEditPage` pattern `contentDocument`
+- line 10500 near `processStationVehicleQueue` pattern `contentDocument`
+- line 10564 near `processStationVehicleQueue` pattern `contentDocument`
+- line 10790 near `getMissionEventCollectibleDocuments` pattern `contentDocument`
+- line 12682 near `getRecorderVisibleButtons` pattern `document.querySelectorAll`
+- line 12715 near `getRecorderMissionSnapshot` pattern `document.querySelectorAll`
+- line 12732 near `getRecorderMissionSnapshot` pattern `document.querySelectorAll`
+- line 12804 near `cleanupDuplicatePanels` pattern `document.querySelectorAll`
+- line 12812 near `cleanupDuplicatePanels` pattern `document.querySelectorAll`
+- line 15634 near `getVehicleCheckboxSnapshot` pattern `\.document\s*=`
+- line 21075 near `getMissionFinderIphoneCloseControlGutter` pattern `document.querySelectorAll`
+- line 21144 near `getMissionFinderIphoneNativeControlContainer` pattern `document.querySelectorAll`
+- line 21871 near `getDispatchReadinessSignature` pattern `document.querySelectorAll`
+- line 22397 near `removeAutoModeQueueHelperCopy` pattern `document.querySelectorAll`
+- line 23582 near `getLocalMissionInstanceKey` pattern `document.querySelectorAll`
+- line 23617 near `getLocalMissionInstanceKey` pattern `document.querySelectorAll`
+- line 24075 near `addDocument` pattern `contentDocument`
+- line 33429 near `addDocument` pattern `contentDocument`
+- line 34040 near `handleAllySteal` pattern `document.querySelectorAll`
+- line 34567 near `getActiveMissionInfoForAllySteal` pattern `document.querySelectorAll`
+- line 34764 near `getAllyStealNormalDispatchButton` pattern `document.querySelectorAll`
+- line 35096 near `clickDispatchOnly` pattern `document.querySelectorAll`
+- line 35163 near `clickDispatchOnly` pattern `document.querySelectorAll`
+- line 35247 near `clickDispatchAndShareOnly` pattern `document.querySelectorAll`
+- line 40688 near `getVisibleQueueOpenModals` pattern `document.querySelectorAll`
+- line 40928 near `mfGetAccessibleDocumentsForTransport` pattern `document.querySelectorAll`
+- line 40931 near `mfGetAccessibleDocumentsForTransport` pattern `contentDocument`
+- line 42751 near `matches` pattern `document.querySelectorAll`
+- line 42850 near `findFirstMissionButtonForQueueRestart` pattern `document.querySelectorAll`
+- line 43011 near `addDocument` pattern `contentDocument`
+- line 43043 near `findExactFirstApproachTransportButton` pattern `document.querySelectorAll`
+- line 43679 near `mfFindAnyVisibleApproachButtonInModal` pattern `document.querySelectorAll`
+- line 43716 near `mfBruteFindVehicleTransportModal` pattern `document.querySelectorAll`
+- line 43969 near `findTransportSendButton` pattern `document.querySelectorAll`
+- line 44740 near `getVisibleExactNormalDispatchButton` pattern `document.querySelectorAll`
+- line 44798 near `getVisibleExactNormalDispatchButton` pattern `document.querySelectorAll`
+- line 44843 near `hasVisibleVehicleDispatchSuccessAlert` pattern `document.querySelectorAll`
+- line 45225 near `getCurrentAutoDispatchSelectionState` pattern `document.querySelectorAll`
+- line 47226 near `flushMissionFinderMutationWork` pattern `document.querySelectorAll`
+- line 47469 near `addFrames` pattern `contentDocument`
+
+## Supporting files
 - `.github/diagnostics/runtime-memory-audit-v1082.json`
+- `.github/diagnostics/runtime-memory-functions-v1082.txt`
