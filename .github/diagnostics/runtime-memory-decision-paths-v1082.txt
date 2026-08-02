@@ -1,0 +1,2443 @@
+===== FUNCTION shouldRecycleIdleMissionMemory =====
+
+    function shouldRecycleIdleMissionMemory() {
+        if (
+            autoModeRunning ||
+            sessionStorage.getItem(
+                'mf_auto_mode_running'
+            ) === 'true' ||
+            !isMissionPage() ||
+            !isCurrentMissionExecutionOwner(
+                'idle memory maintenance'
+            ) ||
+            document.visibilityState === 'hidden' ||
+            mfRuntimeSuspendedForPageHide ||
+            mfRuntimeSuspendedForInactiveFrame ||
+            vehicleLoadState.ready ||
+            isMissionFinderMemoryWorkActive() ||
+            hasSelectedMissionVehiclesForMemoryRecycle() ||
+            mfMissionRequirementPreloadPromise ||
+            mfMissionRequirementPreloadCache.status === 'loading'
+        ) {
+            return null;
+        }
+
+        const now = Date.now();
+
+        if (
+            now - mfRuntimeMemoryLastActivityAt <
+                MF_RUNTIME_MEMORY_IDLE_MS ||
+            now - mfRuntimeMemoryLastMutationAt <
+                MF_RUNTIME_MEMORY_STABLE_MS
+        ) {
+            return null;
+        }
+
+        const heap = getAutoMemoryHeapSnapshot();
+        if (
+            !heap ||
+            heap.usedJSHeapSize <
+                MF_AUTO_MEMORY_RECYCLE_HEAP_THRESHOLD_BYTES
+        ) {
+            return null;
+        }
+
+        const previous = readAutoMemoryRecycleState();
+        if (
+            previous &&
+            now - Number(previous.lastRecycleAt || 0) <
+                MF_AUTO_MEMORY_RECYCLE_COOLDOWN_MS
+        ) {
+            return null;
+        }
+
+        return heap;
+    }
+
+
+===== FUNCTION flushMissionFinderEphemeralMemory =====
+
+    function flushMissionFinderEphemeralMemory(
+        reason = 'runtime memory maintenance'
+    ) {
+        invalidateVehicleCheckboxCache();
+        invalidateMissionContextCaches();
+        invalidatePatientCountCache();
+        invalidateTransportCaches();
+        mfVehicleMatchCandidateCache.clear();
+        pruneLiveTrainingVerifyCache();
+        pruneMissionFinderIphoneNativePickerDocuments();
+
+        mfRuntimeMemoryLastSoftFlushAt = Date.now();
+        mfRuntimeMemorySoftFlushCount += 1;
+        mfRuntimeMemoryLastReason = String(reason || '');
+    }
+
+
+===== FUNCTION isMissionFinderMemoryWorkActive =====
+
+    function isMissionFinderMemoryWorkActive() {
+        return Boolean(
+            mfRuntimeMemoryOperationDepth > 0 ||
+            autoModeLoopActive ||
+            mfSilentQueueOpening ||
+            mfQueueRestartWaiting ||
+            mfGlobalTransportClicking ||
+            mfBruteApproachClicking ||
+            mfTransportApproachClicking ||
+            mfTransportSequenceActive ||
+            mfTransportContinuationRunning ||
+            mfPostTransportOpening ||
+            mfAutoAdvanceResumeActive ||
+            mfAutoUpgradeResumeActive ||
+            sessionStorage.getItem(
+                MF_QUEUE_OPENING_MISSION_FLAG
+            ) === 'true' ||
+            sessionStorage.getItem(
+                MF_FINAL_QUEUE_DISPATCH_FLAG
+            ) === 'true' ||
+            readAutoAdvanceAfterDispatchState() ||
+            readAllyStealPendingState() ||
+            readAutoPostDispatchUpgradeState() ||
+            isPostTransportRehookPending()
+        );
+    }
+
+
+===== FUNCTION installMissionFinderRuntimeMemoryActivityTracking =====
+
+    function installMissionFinderRuntimeMemoryActivityTracking() {
+        if (mfRuntimeMemoryActivityHandler) return;
+
+        mfRuntimeMemoryActivityHandler = () => {
+            noteMissionFinderRuntimeMemoryActivity(
+                'user interaction'
+            );
+        };
+
+        document.addEventListener(
+            'pointerdown',
+            mfRuntimeMemoryActivityHandler,
+            { capture: true, passive: true }
+        );
+        document.addEventListener(
+            'keydown',
+            mfRuntimeMemoryActivityHandler,
+            true
+        );
+        document.addEventListener(
+            'input',
+            mfRuntimeMemoryActivityHandler,
+            true
+        );
+    }
+
+
+===== FUNCTION removeMissionFinderRuntimeMemoryActivityTracking =====
+
+    function removeMissionFinderRuntimeMemoryActivityTracking() {
+        if (!mfRuntimeMemoryActivityHandler) return;
+
+        document.removeEventListener(
+            'pointerdown',
+            mfRuntimeMemoryActivityHandler,
+            true
+        );
+        document.removeEventListener(
+            'keydown',
+            mfRuntimeMemoryActivityHandler,
+            true
+        );
+        document.removeEventListener(
+            'input',
+            mfRuntimeMemoryActivityHandler,
+            true
+        );
+        mfRuntimeMemoryActivityHandler = null;
+    }
+
+
+===== FUNCTION pruneMissionFinderIphoneNativePickerDocuments =====
+
+    function pruneMissionFinderIphoneNativePickerDocuments() {
+        mfIphoneNativePickerDocuments.forEach(candidateDocument => {
+            if (!isCachedMissionDocumentUsable(candidateDocument)) {
+                mfIphoneNativePickerDocuments.delete(candidateDocument);
+            }
+        });
+    }
+
+
+===== FUNCTION cleanupMissionFinderIphoneNativePickerSurfaces =====
+
+    function cleanupMissionFinderIphoneNativePickerSurfaces() {
+        if (mfIphoneNativePickerSyncTimer) {
+            clearTimeout(
+                mfIphoneNativePickerSyncTimer
+            );
+            mfIphoneNativePickerSyncTimer = null;
+        }
+
+        const documents = Array.from(
+            mfIphoneNativePickerDocuments
+        );
+
+        try {
+            getMissionAccessibleDocuments(
+                false
+            ).forEach(candidateDocument => {
+                if (!documents.includes(candidateDocument)) {
+                    documents.push(candidateDocument);
+                }
+            });
+        } catch (_error) {}
+
+        documents.forEach(
+            cleanupMissionFinderIphoneNativePickerDocument
+        );
+        mfIphoneNativePickerDocuments.clear();
+    }
+
+
+===== FUNCTION readMissionUpdateRows =====
+
+    function readMissionUpdateRows(options = {}
+
+
+===== FUNCTION normaliseOperationalRequirementRows =====
+
+    function normaliseOperationalRequirementRows(rows) {
+        return (Array.isArray(rows) ? rows : []).map(row => {
+            if (!row || row.isTrainedPersonnelRequirement) return row;
+
+            const searchAdvisorRequirement =
+                getSearchAdvisorTrainedVehicleRequirement(
+                    row.unitName,
+                    row.stillNeeded
+                );
+
+            if (searchAdvisorRequirement) {
+                return {
+                    ...row,
+                    unitName:
+                        MF_TRAINED_PERSONNEL_ROW_NAME,
+                    stillNeeded:
+                        getTrainedPersonnelVehicleTarget([
+                            searchAdvisorRequirement
+                        ]),
+                    isTrainedPersonnelRequirement:
+                        true,
+                    personnelTrainingRequirements: [
+                        searchAdvisorRequirement
+                    ],
+                    convertedFromPersonnelRequirement:
+                        true
+                };
+            }
+
+            const sarConversion =
+                getSarPersonnelVehicleRequirement(
+                    row.unitName,
+                    row.stillNeeded
+                );
+
+            if (sarConversion) {
+                return {
+                    ...row,
+                    unitName:
+                        sarConversion.unitName,
+                    stillNeeded:
+                        sarConversion.stillNeeded,
+                    personnelRequirement:
+                        sarConversion.personnelRequirement,
+                    personnelPerVehicle:
+                        sarConversion.personnelPerVehicle,
+                    sarPersonnelConversion:
+                        sarConversion,
+                    convertedFromPersonnelRequirement:
+                        true
+                };
+            }
+
+            const conversion = getPoliceOfficerVehicleRequirement(
+                row.unitName,
+                row.stillNeeded
+            );
+
+            if (!conversion) return row;
+
+            return {
+                ...row,
+                unitName: conversion.unitName,
+                stillNeeded: conversion.stillNeeded,
+                personnelRequirement:
+                    `${conversion.personnelRequired} Police Officer${conversion.personnelRequired === 1 ? '' : 's'}`,
+                personnelPerVehicle: conversion.personnelPerVehicle,
+                convertedFromPersonnelRequirement: true
+            };
+        });
+    }
+
+
+===== FUNCTION renderSelectedTrainedPersonnelPanel =====
+
+
+    function renderSelectedTrainedPersonnelPanel() {
+        const summary =
+            document.getElementById('trained-personnel-summary');
+        const content =
+            document.getElementById('trained-personnel-content');
+
+        if (!summary || !content) return;
+
+
+        let preloadState = { status: 'idle' };
+        let requiredPersonnel = [];
+        let liveMissingPersonnel = [];
+        let missionVehiclesOnSceneForTrainedPersonnel =
+            false;
+
+        try {
+            missionVehiclesOnSceneForTrainedPersonnel =
+                hasMissionVehiclesOnSceneForTrainedPersonnelAuthority();
+            preloadState =
+                getMissionRequirementPreloadState();
+            requiredPersonnel =
+                getPreloadedMissionTrainedPersonnelRequirements();
+            liveMissingPersonnel =
+                getLiveMissionTrainedPersonnelRequirementsForDisplay();
+        } catch (error) {
+            if (mfDebugEnabled) {
+                debugLog(
+                    'MISSION PERSONNEL PRELOAD',
+                    `panel cache read failed: ${error?.message || error}`
+                );
+            }
+        }
+        const selectedVehicles =
+            getSelectedTrainedPersonnelPanelModel();
+        const completeProfiles = selectedVehicles.reduce(
+            (total, vehicle) => {
+                return total + (
+                    vehicle.profilesComplete
+                        ? vehicle.profiles.length
+                        : 0
+                );
+            },
+            0
+        );
+        const aggregateOnlyVehicles = selectedVehicles.filter(vehicle => {
+            return !vehicle.profilesComplete;
+        }).length;
+        const requiredTotal = requiredPersonnel.reduce(
+            (total, requirement) => {
+                return total + requirement.required;
+            },
+            0
+        );
+        const coveredTotal = requiredPersonnel.reduce(
+            (total, requirement) => {
+                return total + Math.min(
+                    requirement.required,
+                    getSelectedTrainedPersonnelCountForCode(
+                        selectedVehicles,
+                        requirement.code
+                    )
+                );
+            },
+            0
+        );
+        const liveMissingTotal = liveMissingPersonnel.reduce(
+            (total, requirement) => {
+                return total + requirement.missing;
+            },
+            0
+        );
+
+        if (
+            requiredPersonnel.length === 0 &&
+            liveMissingPersonnel.length === 0 &&
+            selectedVehicles.length === 0
+        ) {
+            if (
+                missionVehiclesOnSceneForTrainedPersonnel
+            ) {
+                summary.textContent =
+                    'No current trained-personnel shortage is reported.';
+                content.innerHTML =
+                    '<span class="mf2026-small">Vehicles are on scene. Live personnel and course shortages are authoritative; Mission Required Personnel is shown only before the first vehicle arrives on scene.</span>';
+                return;
+            }
+
+            if (preloadState.status === 'loading') {
+                summary.textContent =
+                    'Loading mission Required Personnel...';
+                content.innerHTML =
+                    '<span class="mf2026-small">Reading the mission requirement table before unit selection.</span>';
+                return;
+            }
+
+            summary.textContent =
+                'No required or selected trained-personnel evidence is available.';
+            content.innerHTML =
+                '<span class="mf2026-small">Mission Required Personnel and selected trained personnel will appear here.</span>';
+            return;
+        }
+
+        const summaryParts = [];
+
+        if (requiredPersonnel.length > 0) {
+            summaryParts.push(`
+                <div><strong>${requiredPersonnel.length}</strong> required course${requiredPersonnel.length === 1 ? '' : 's'}</div>
+                <div><strong>${coveredTotal}</strong> / <strong>${requiredTotal}</strong> required trained-personnel coverage</div>
+            `);
+        }
+
+        if (liveMissingPersonnel.length > 0) {
+            summaryParts.push(`
+                <div><strong>${liveMissingPersonnel.length}</strong> current missing course${liveMissingPersonnel.length === 1 ? '' : 's'}</div>
+                <div><strong>${liveMissingTotal}</strong> trained personnel still missing</div>
+            `);
+        } else if (
+            missionVehiclesOnSceneForTrainedPersonnel
+        ) {
+            summaryParts.push(`
+                <div><strong>0</strong> current trained-personnel shortages</div>
+            `);
+        }
+
+        if (selectedVehicles.length > 0) {
+            summaryParts.push(`
+                <div><strong>${selectedVehicles.length}</strong> selected trained vehicle${selectedVehicles.length === 1 ? '' : 's'}</div>
+                <div><strong>${completeProfiles}</strong> trained personnel profile${completeProfiles === 1 ? '' : 's'}${aggregateOnlyVehicles ? ` · ${aggregateOnlyVehicles} aggregate-only` : ''}</div>
+            `);
+        }
+
+        summary.innerHTML = summaryParts.join('');
+
+        const requiredMarkup = requiredPersonnel.length > 0
+            ? `
+                <div class="mf2026-training-vehicle">
+                    <div class="mf2026-training-vehicle-name">
+                        Mission Required Personnel
+                    </div>
+                    ${requiredPersonnel.map(requirement => {
+                        const selected = Math.min(
+                            requirement.required,
+                            getSelectedTrainedPersonnelCountForCode(
+                                selectedVehicles,
+                                requirement.code
+                            )
+                        );
+                        const remaining = Math.max(
+                            0,
+                            requirement.required - selected
+                        );
+
+                        return `
+                            <div class="mf2026-training-person">
+                                <span class="mf2026-training-person-label">${selected} / ${requirement.required}</span>
+                                <span class="mf2026-training-course-list">${escapeHtml(requirement.label)}${remaining > 0 ? ` · ${remaining} still needed` : ' · covered'}</span>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `
+            : '';
+
+        const liveMissingMarkup = liveMissingPersonnel.length > 0
+            ? `
+                <div class="mf2026-training-vehicle">
+                    <div class="mf2026-training-vehicle-name">
+                        Current Missing Personnel
+                    </div>
+                    ${liveMissingPersonnel.map(requirement => {
+                        return `
+                            <div class="mf2026-training-person">
+                                <span class="mf2026-training-person-label">${requirement.missing} missing</span>
+                                <span class="mf2026-training-course-list">${escapeHtml(requirement.label)} · current live shortage</span>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `
+            : '';
+
+        const selectedMarkup = selectedVehicles.map(vehicle => {
+            const vehicleName =
+                vehicle.vehicleName ||
+                (vehicle.vehicleId
+                    ? `Vehicle ${vehicle.vehicleId}`
+                    : 'Selected vehicle');
+            const profileMarkup =
+                vehicle.profilesComplete &&
+                vehicle.profiles.length > 0
+                    ? vehicle.profiles.map((profile, index) => {
+                        const labels = profile
+                            .map(getSelectedTrainingDisplayLabel)
+                            .sort((left, right) => left.localeCompare(right));
+
+                        return `
+                            <div class="mf2026-training-person">
+                                <span class="mf2026-training-person-label">Person ${index + 1}</span>
+                                <span class="mf2026-training-course-list">${labels.map(escapeHtml).join(', ')}</span>
+                            </div>
+                        `;
+                    }).join('')
+                    : vehicle.trainingCounts.map(item => {
+                        return `
+                            <div class="mf2026-training-person">
+                                <span class="mf2026-training-person-label">${item.count}×</span>
+                                <span class="mf2026-training-course-list">${escapeHtml(item.label)}</span>
+                            </div>
+                        `;
+                    }).join('');
+
+            return `
+                <div class="mf2026-training-vehicle">
+                    <div class="mf2026-training-vehicle-name">
+                        ${escapeHtml(vehicleName)}
+                        ${vehicle.vehicleId ? `<span class="mf2026-small"> #${escapeHtml(vehicle.vehicleId)}</span>` : ''}
+                    </div>
+                    ${profileMarkup}
+                </div>
+            `;
+        }).join('');
+
+        content.innerHTML =
+            requiredMarkup +
+            liveMissingMarkup +
+            selectedMarkup;
+    }
+
+
+===== FUNCTION getLiveMissionTrainedPersonnelRequirementsForDisplay =====
+
+    function getLiveMissionTrainedPersonnelRequirementsForDisplay() {
+        if (
+            !hasMissionVehiclesOnSceneForTrainedPersonnelAuthority()
+        ) {
+            return [];
+        }
+
+        let liveRows = [];
+
+        try {
+            liveRows = normaliseOperationalRequirementRows(
+                readMissionUpdateRows({ silent: true })
+            );
+        } catch (error) {
+            if (mfDebugEnabled) {
+                debugLog(
+                    'LIVE TRAINED PERSONNEL DISPLAY',
+                    `current shortage read failed: ${error?.message || error}`
+                );
+            }
+
+            return [];
+        }
+
+        const requirements = new Map();
+
+        liveRows
+            .filter(row => {
+                return (
+                    row?.isTrainedPersonnelRequirement === true &&
+                    Array.isArray(row?.personnelTrainingRequirements)
+                );
+            })
+            .forEach(row => {
+                row.personnelTrainingRequirements
+                    .forEach(requirement => {
+                        const requiredTrainingCodes =
+                            Array.isArray(requirement?.requiredTrainingCodes)
+                                ? requirement.requiredTrainingCodes
+                                    .map(value => String(value || '').trim())
+                                    .filter(Boolean)
+                                : [];
+                        const code =
+                            requiredTrainingCodes[0] ||
+                            String(requirement?.code || '')
+                                .replace(/_vehicle$/i, '')
+                                .trim();
+                        const missing = Math.max(
+                            0,
+                            parseInt(
+                                requirement?.personnelRequired ??
+                                requirement?.required,
+                                10
+                            ) || 0
+                        );
+
+                        if (!code || missing <= 0) return;
+
+                        const existing =
+                            requirements.get(code);
+
+                        if (
+                            !existing ||
+                            missing > existing.missing
+                        ) {
+                            requirements.set(code, {
+                                code,
+                                label:
+                                    getSelectedTrainingDisplayLabel(code),
+                                missing
+                            });
+                        }
+                    });
+            });
+
+        return Array.from(requirements.values())
+            .sort((left, right) => {
+                return left.label.localeCompare(right.label);
+            });
+    }
+
+
+===== FUNCTION getSelectedVehicleTrainingCoverageRows =====
+FUNCTION NOT FOUND: getSelectedVehicleTrainingCoverageRows
+
+
+===== FUNCTION hasMissionVehiclesOnSceneForTrainedPersonnelAuthority =====
+
+    function hasMissionVehiclesOnSceneForTrainedPersonnelAuthority() {
+        return getMissionAccessibleDocuments().some(
+            candidateDocument => {
+                try {
+                    return !!candidateDocument.querySelector(
+                        '#mission_vehicle_at_mission tbody tr[id^="vehicle_row"], ' +
+                        '#mission_vehicle_at_mission tr[id^="vehicle_row"]'
+                    );
+                } catch (_error) {
+                    return false;
+                }
+            }
+        );
+    }
+
+
+===== FUNCTION shouldIgnoreMissionFinderMutationRecord =====
+
+    function shouldIgnoreMissionFinderMutationRecord(
+        targetOwned,
+        hasPanelRootMutation
+    ) {
+        return Boolean(
+            targetOwned &&
+            !hasPanelRootMutation
+        );
+    }
+
+
+===== FUNCTION mutationNodeMatches =====
+
+    function mutationNodeMatches(node, selector) {
+        if (!node || node.nodeType !== 1) return false;
+
+        try {
+            return (
+                node.matches?.(selector) ||
+                !!node.querySelector?.(selector)
+            );
+        } catch (_error) {
+            return false;
+        }
+    }
+
+
+===== FUNCTION mutationTargetWithin =====
+
+    function mutationTargetWithin(target, selector) {
+        if (!target || target.nodeType !== 1) return false;
+
+        try {
+            return !!target.closest?.(selector);
+        } catch (_error) {
+            return false;
+        }
+    }
+
+
+===== FUNCTION stopBackgroundWatcherIntervalsOnly =====
+
+    function stopBackgroundWatcherIntervalsOnly() {
+        if (mfSilentQueueWatcherTimer) {
+            clearInterval(mfSilentQueueWatcherTimer);
+            mfSilentQueueWatcherTimer = null;
+        }
+
+        if (mfGlobalTransportWatcherTimer) {
+            clearInterval(mfGlobalTransportWatcherTimer);
+            mfGlobalTransportWatcherTimer = null;
+        }
+
+        if (mfBruteApproachWatcherTimer) {
+            clearInterval(mfBruteApproachWatcherTimer);
+            mfBruteApproachWatcherTimer = null;
+        }
+
+        if (mfPostTransportRehookTimer) {
+            clearInterval(mfPostTransportRehookTimer);
+            mfPostTransportRehookTimer = null;
+        }
+    }
+
+
+===== FUNCTION stopAutoMode =====
+
+    function stopAutoMode(message) {
+        clearAutoPostDispatchUpgradeState(
+            message || 'auto mode stopped'
+        );
+
+        clearAutoAdvanceAfterDispatchState(
+            message || 'auto mode stopped'
+        );
+
+        clearAutoSelectionMissionGuard(
+            message ||
+            'Auto Mode stopped'
+        );
+
+        resetVehicleLoadState();
+
+        setManualAutoStop(
+            message ||
+            'auto mode stopped'
+        );
+
+        updateAutoModeButton();
+
+        if (message) {
+            updateStatusBox(message);
+        } else {
+            updateStatusBox('Auto Mode stopped.');
+        }
+    }
+
+
+===== FUNCTION isPostTransportRehookPending =====
+
+    function isPostTransportRehookPending() {
+        if (isManualAutoStopActive()) return false;
+
+        return sessionStorage.getItem('mf_post_transport_rehook_pending_v1') === 'true' ||
+            localStorage.getItem('mf_post_transport_rehook_pending_v1') === 'true' ||
+            wasTransportSequenceActive() ||
+            isRecentTransportRehookWindowActive();
+    }
+
+
+===== FUNCTION isRecentTransportRehookWindowActive =====
+
+    function isRecentTransportRehookWindowActive() {
+        if (isManualAutoStopActive()) return false;
+
+        const until = Math.max(
+            parseInt(sessionStorage.getItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY) || '0', 10) || 0,
+            parseInt(localStorage.getItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY) || '0', 10) || 0
+        );
+
+        if (until > Date.now()) return true;
+
+        sessionStorage.removeItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY);
+        localStorage.removeItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY);
+        return false;
+    }
+
+
+===== FUNCTION clearQueueWaitFlags =====
+
+
+    function clearQueueWaitFlags(reason) {
+        const hadQueueWait = sessionStorage.getItem(MF_QUEUE_WAIT_ACTIVE_FLAG) === 'true';
+        const hadFinalDispatch = sessionStorage.getItem(MF_FINAL_QUEUE_DISPATCH_FLAG) === 'true';
+        const hadOpening = sessionStorage.getItem(MF_QUEUE_OPENING_MISSION_FLAG) === 'true';
+
+        sessionStorage.removeItem(MF_QUEUE_WAIT_ACTIVE_FLAG);
+        sessionStorage.removeItem(MF_FINAL_QUEUE_DISPATCH_FLAG);
+        sessionStorage.removeItem(MF_QUEUE_OPENING_MISSION_FLAG);
+        sessionStorage.removeItem(MF_MAIN_MISSION_PENDING_UNTIL_KEY);
+        sessionStorage.removeItem(MF_MAIN_MISSION_PENDING_TARGET_KEY);
+        sessionStorage.removeItem(MF_MAIN_MISSION_PENDING_REASON_KEY);
+        mfQueueRestartWaiting = false;
+        mfSilentQueueOpening = false;
+        releaseMainMissionOpenLock(reason || 'clearQueueWaitFlags');
+
+        if (reason && String(reason).toLowerCase().includes('stopped')) {
+            releaseTransportRehookLock(reason || 'clearQueueWaitFlags');
+        }
+
+        if (mfDebugEnabled && (hadQueueWait || hadFinalDispatch || hadOpening)) {
+            debugLog('NEXT QUEUE', `Cleared queue flags. reason=${reason || 'unknown'} | queueWait=${hadQueueWait ? 'yes' : 'no'} | finalDispatch=${hadFinalDispatch ? 'yes' : 'no'} | opening=${hadOpening ? 'yes' : 'no'}`);
+        }
+    }
+
+
+===== REFERENCES MF_MUTATION_RELEVANT_SELECTOR =====
+46776:     const MF_MUTATION_PANEL_SELECTOR =
+46777:         '#mission-finder-wrapper, #control-panel, ' +
+46778:         '#vehicle-load-list-box';
+46779: 
+46780:     const MF_MUTATION_TRANSPORT_SELECTOR =
+46781:         '.vehicle-window, .redesign-wrapper[type="vehicle"], ' +
+46782:         '.vm--modal button.btn-success, .modal button.btn-success, ' +
+46783:         '.lightbox button.btn-success, iframe';
+46784: 
+46785:     const MF_MUTATION_MISSION_TARGET_SELECTOR =
+46786:         '#mission_general_info, #mission_help, #mission_content, ' +
+46787:         '#iframe-inside-container, .mission_content, ' +
+46788:         '#mc-map-command-toolkit-mission-requirements, ' +
+46789:         '[data-mcms-requirements-panel="1"], ' +
+46790:         'table[aria-label="Live mission requirements"], ' +
+46791:         '.alert-danger, [role="alert"], .mission_update, ' +
+46792:         '.mission_update_info, #mission_alarm_btn, #alarm_button';
+46793: 
+46794:     const MF_MUTATION_RELEVANT_SELECTOR =
+46795:         `${MF_MUTATION_VEHICLE_SELECTOR}, ` +
+46796:         `${MF_MUTATION_MISSION_SELECTOR}, ` +
+46797:         `${MF_MUTATION_PATIENT_SELECTOR}, ` +
+46798:         `${MF_MUTATION_PANEL_SELECTOR}, ` +
+46799:         `${MF_MUTATION_TRANSPORT_SELECTOR}`;
+46800: 
+46801:     const MF_MUTATION_RELEVANT_TARGET_SELECTOR =
+46802:         `${MF_MUTATION_VEHICLE_SELECTOR}, ` +
+46803:         `${MF_MUTATION_MISSION_TARGET_SELECTOR}, ` +
+46804:         `${MF_MUTATION_PATIENT_SELECTOR}, ` +
+46805:         `${MF_MUTATION_TRANSPORT_SELECTOR}`;
+46806: 
+46807:     function resetMainMutationFlags() {
+46808:         mfMainMutationFlags = {
+46809:             relevant: false,
+46810:             vehicleListChanged: false,
+46811:             missionContextChanged: false,
+46812:             patientChanged: false,
+
+46869:                     MF_MUTATION_PANEL_SELECTOR
+46870:                 )
+46871:             ) {
+46872:                 flags.panelChanged = true;
+46873:                 flags.relevant = true;
+46874:                 return;
+46875:             }
+46876: 
+46877:             if (
+46878:                 node.closest?.(
+46879:                     '#mission-finder-wrapper'
+46880:                 )
+46881:             ) {
+46882:                 return;
+46883:             }
+46884: 
+46885:             if (!mutationNodeMatches(
+46886:                 node,
+46887:                 MF_MUTATION_RELEVANT_SELECTOR
+46888:             )) {
+46889:                 return;
+46890:             }
+46891: 
+46892:             if (mutationNodeMatches(
+46893:                 node,
+46894:                 MF_MUTATION_VEHICLE_SELECTOR
+46895:             )) {
+46896:                 flags.vehicleListChanged = true;
+46897:                 flags.relevant = true;
+46898:             }
+46899: 
+46900:             if (mutationNodeMatches(
+46901:                 node,
+46902:                 MF_MUTATION_MISSION_SELECTOR
+46903:             )) {
+46904:                 flags.missionContextChanged = true;
+46905:                 flags.relevant = true;
+
+
+===== REFERENCES MF_MUTATION_RELEVANT_TARGET_SELECTOR =====
+46783:         '.lightbox button.btn-success, iframe';
+46784: 
+46785:     const MF_MUTATION_MISSION_TARGET_SELECTOR =
+46786:         '#mission_general_info, #mission_help, #mission_content, ' +
+46787:         '#iframe-inside-container, .mission_content, ' +
+46788:         '#mc-map-command-toolkit-mission-requirements, ' +
+46789:         '[data-mcms-requirements-panel="1"], ' +
+46790:         'table[aria-label="Live mission requirements"], ' +
+46791:         '.alert-danger, [role="alert"], .mission_update, ' +
+46792:         '.mission_update_info, #mission_alarm_btn, #alarm_button';
+46793: 
+46794:     const MF_MUTATION_RELEVANT_SELECTOR =
+46795:         `${MF_MUTATION_VEHICLE_SELECTOR}, ` +
+46796:         `${MF_MUTATION_MISSION_SELECTOR}, ` +
+46797:         `${MF_MUTATION_PATIENT_SELECTOR}, ` +
+46798:         `${MF_MUTATION_PANEL_SELECTOR}, ` +
+46799:         `${MF_MUTATION_TRANSPORT_SELECTOR}`;
+46800: 
+46801:     const MF_MUTATION_RELEVANT_TARGET_SELECTOR =
+46802:         `${MF_MUTATION_VEHICLE_SELECTOR}, ` +
+46803:         `${MF_MUTATION_MISSION_TARGET_SELECTOR}, ` +
+46804:         `${MF_MUTATION_PATIENT_SELECTOR}, ` +
+46805:         `${MF_MUTATION_TRANSPORT_SELECTOR}`;
+46806: 
+46807:     function resetMainMutationFlags() {
+46808:         mfMainMutationFlags = {
+46809:             relevant: false,
+46810:             vehicleListChanged: false,
+46811:             missionContextChanged: false,
+46812:             patientChanged: false,
+46813:             panelChanged: false,
+46814:             transportChanged: false
+46815:         };
+46816:     }
+46817: 
+46818:     function mutationNodeMatches(node, selector) {
+46819:         if (!node || node.nodeType !== 1) return false;
+
+46935:                     node.matches?.(
+46936:                         MF_MUTATION_PANEL_SELECTOR
+46937:                     )
+46938:                 );
+46939:             const targetOwned = mutationTargetWithin(
+46940:                 target,
+46941:                 '#mission-finder-wrapper'
+46942:             );
+46943: 
+46944:             if (shouldIgnoreMissionFinderMutationRecord(
+46945:                 targetOwned,
+46946:                 hasPanelRootMutation
+46947:             )) {
+46948:                 continue;
+46949:             }
+46950: 
+46951:             const targetRelevant = mutationTargetWithin(
+46952:                 target,
+46953:                 MF_MUTATION_RELEVANT_TARGET_SELECTOR
+46954:             );
+46955: 
+46956:             if (
+46957:                 targetRelevant &&
+46958:                 mutationTargetWithin(
+46959:                     target,
+46960:                     MF_MUTATION_VEHICLE_SELECTOR
+46961:                 )
+46962:             ) {
+46963:                 flags.vehicleListChanged = true;
+46964:                 flags.relevant = true;
+46965:             }
+46966: 
+46967:             if (
+46968:                 targetRelevant &&
+46969:                 mutationTargetWithin(
+46970:                     target,
+46971:                     MF_MUTATION_MISSION_TARGET_SELECTOR
+
+
+===== REFERENCES MF_MUTATION_MISSION_SELECTOR =====
+46745:     }
+46746: 
+46747:     function shouldRunBackgroundAutomationWatchers() {
+46748:         return !!(
+46749:             autoModeRunning ||
+46750:             sessionStorage.getItem('mf_auto_mode_running') === 'true' ||
+46751:             localStorage.getItem('mf_auto_mode_running') === 'true' ||
+46752:             sessionStorage.getItem(MF_QUEUE_WAIT_ACTIVE_FLAG) === 'true' ||
+46753:             sessionStorage.getItem(MF_FINAL_QUEUE_DISPATCH_FLAG) === 'true' ||
+46754:             isPostTransportRehookPending() ||
+46755:             isRecentTransportRehookWindowActive()
+46756:         );
+46757:     }
+46758: 
+46759:     const MF_MUTATION_VEHICLE_SELECTOR =
+46760:         'input.vehicle_checkbox, #vehicle_table, .vehicle_select_table_tr, ' +
+46761:         'a[search_attribute], a.missing_vehicles_load, .missing_vehicles_load';
+46762: 
+46763:     const MF_MUTATION_MISSION_SELECTOR =
+46764:         '#mission_general_info, #mission_help, #mission_content, ' +
+46765:         '#iframe-inside-container, .mission_content, ' +
+46766:         '#mc-map-command-toolkit-mission-requirements, ' +
+46767:         '[data-mcms-requirements-panel="1"], ' +
+46768:         'table[aria-label="Live mission requirements"], ' +
+46769:         '.alert-danger, [role="alert"], .mission_update, ' +
+46770:         '.mission_update_info, #mission_alarm_btn, #alarm_button, ' +
+46771:         '.vm--modal, .modal, .lightbox, iframe';
+46772: 
+46773:     const MF_MUTATION_PATIENT_SELECTOR =
+46774:         '.mission_patient, [id^="patient_"], [data-patient-id], .badge';
+46775: 
+46776:     const MF_MUTATION_PANEL_SELECTOR =
+46777:         '#mission-finder-wrapper, #control-panel, ' +
+46778:         '#vehicle-load-list-box';
+46779: 
+46780:     const MF_MUTATION_TRANSPORT_SELECTOR =
+46781:         '.vehicle-window, .redesign-wrapper[type="vehicle"], ' +
+
+46778:         '#vehicle-load-list-box';
+46779: 
+46780:     const MF_MUTATION_TRANSPORT_SELECTOR =
+46781:         '.vehicle-window, .redesign-wrapper[type="vehicle"], ' +
+46782:         '.vm--modal button.btn-success, .modal button.btn-success, ' +
+46783:         '.lightbox button.btn-success, iframe';
+46784: 
+46785:     const MF_MUTATION_MISSION_TARGET_SELECTOR =
+46786:         '#mission_general_info, #mission_help, #mission_content, ' +
+46787:         '#iframe-inside-container, .mission_content, ' +
+46788:         '#mc-map-command-toolkit-mission-requirements, ' +
+46789:         '[data-mcms-requirements-panel="1"], ' +
+46790:         'table[aria-label="Live mission requirements"], ' +
+46791:         '.alert-danger, [role="alert"], .mission_update, ' +
+46792:         '.mission_update_info, #mission_alarm_btn, #alarm_button';
+46793: 
+46794:     const MF_MUTATION_RELEVANT_SELECTOR =
+46795:         `${MF_MUTATION_VEHICLE_SELECTOR}, ` +
+46796:         `${MF_MUTATION_MISSION_SELECTOR}, ` +
+46797:         `${MF_MUTATION_PATIENT_SELECTOR}, ` +
+46798:         `${MF_MUTATION_PANEL_SELECTOR}, ` +
+46799:         `${MF_MUTATION_TRANSPORT_SELECTOR}`;
+46800: 
+46801:     const MF_MUTATION_RELEVANT_TARGET_SELECTOR =
+46802:         `${MF_MUTATION_VEHICLE_SELECTOR}, ` +
+46803:         `${MF_MUTATION_MISSION_TARGET_SELECTOR}, ` +
+46804:         `${MF_MUTATION_PATIENT_SELECTOR}, ` +
+46805:         `${MF_MUTATION_TRANSPORT_SELECTOR}`;
+46806: 
+46807:     function resetMainMutationFlags() {
+46808:         mfMainMutationFlags = {
+46809:             relevant: false,
+46810:             vehicleListChanged: false,
+46811:             missionContextChanged: false,
+46812:             patientChanged: false,
+46813:             panelChanged: false,
+46814:             transportChanged: false
+
+46884: 
+46885:             if (!mutationNodeMatches(
+46886:                 node,
+46887:                 MF_MUTATION_RELEVANT_SELECTOR
+46888:             )) {
+46889:                 return;
+46890:             }
+46891: 
+46892:             if (mutationNodeMatches(
+46893:                 node,
+46894:                 MF_MUTATION_VEHICLE_SELECTOR
+46895:             )) {
+46896:                 flags.vehicleListChanged = true;
+46897:                 flags.relevant = true;
+46898:             }
+46899: 
+46900:             if (mutationNodeMatches(
+46901:                 node,
+46902:                 MF_MUTATION_MISSION_SELECTOR
+46903:             )) {
+46904:                 flags.missionContextChanged = true;
+46905:                 flags.relevant = true;
+46906:             }
+46907: 
+46908:             if (mutationNodeMatches(
+46909:                 node,
+46910:                 MF_MUTATION_PATIENT_SELECTOR
+46911:             )) {
+46912:                 flags.patientChanged = true;
+46913:                 flags.relevant = true;
+46914:             }
+46915: 
+46916:             if (mutationNodeMatches(
+46917:                 node,
+46918:                 MF_MUTATION_TRANSPORT_SELECTOR
+46919:             )) {
+46920:                 flags.transportChanged = true;
+
+
+===== REFERENCES MF_MUTATION_MISSION_TARGET_SELECTOR =====
+46767:         '[data-mcms-requirements-panel="1"], ' +
+46768:         'table[aria-label="Live mission requirements"], ' +
+46769:         '.alert-danger, [role="alert"], .mission_update, ' +
+46770:         '.mission_update_info, #mission_alarm_btn, #alarm_button, ' +
+46771:         '.vm--modal, .modal, .lightbox, iframe';
+46772: 
+46773:     const MF_MUTATION_PATIENT_SELECTOR =
+46774:         '.mission_patient, [id^="patient_"], [data-patient-id], .badge';
+46775: 
+46776:     const MF_MUTATION_PANEL_SELECTOR =
+46777:         '#mission-finder-wrapper, #control-panel, ' +
+46778:         '#vehicle-load-list-box';
+46779: 
+46780:     const MF_MUTATION_TRANSPORT_SELECTOR =
+46781:         '.vehicle-window, .redesign-wrapper[type="vehicle"], ' +
+46782:         '.vm--modal button.btn-success, .modal button.btn-success, ' +
+46783:         '.lightbox button.btn-success, iframe';
+46784: 
+46785:     const MF_MUTATION_MISSION_TARGET_SELECTOR =
+46786:         '#mission_general_info, #mission_help, #mission_content, ' +
+46787:         '#iframe-inside-container, .mission_content, ' +
+46788:         '#mc-map-command-toolkit-mission-requirements, ' +
+46789:         '[data-mcms-requirements-panel="1"], ' +
+46790:         'table[aria-label="Live mission requirements"], ' +
+46791:         '.alert-danger, [role="alert"], .mission_update, ' +
+46792:         '.mission_update_info, #mission_alarm_btn, #alarm_button';
+46793: 
+46794:     const MF_MUTATION_RELEVANT_SELECTOR =
+46795:         `${MF_MUTATION_VEHICLE_SELECTOR}, ` +
+46796:         `${MF_MUTATION_MISSION_SELECTOR}, ` +
+46797:         `${MF_MUTATION_PATIENT_SELECTOR}, ` +
+46798:         `${MF_MUTATION_PANEL_SELECTOR}, ` +
+46799:         `${MF_MUTATION_TRANSPORT_SELECTOR}`;
+46800: 
+46801:     const MF_MUTATION_RELEVANT_TARGET_SELECTOR =
+46802:         `${MF_MUTATION_VEHICLE_SELECTOR}, ` +
+46803:         `${MF_MUTATION_MISSION_TARGET_SELECTOR}, ` +
+
+46785:     const MF_MUTATION_MISSION_TARGET_SELECTOR =
+46786:         '#mission_general_info, #mission_help, #mission_content, ' +
+46787:         '#iframe-inside-container, .mission_content, ' +
+46788:         '#mc-map-command-toolkit-mission-requirements, ' +
+46789:         '[data-mcms-requirements-panel="1"], ' +
+46790:         'table[aria-label="Live mission requirements"], ' +
+46791:         '.alert-danger, [role="alert"], .mission_update, ' +
+46792:         '.mission_update_info, #mission_alarm_btn, #alarm_button';
+46793: 
+46794:     const MF_MUTATION_RELEVANT_SELECTOR =
+46795:         `${MF_MUTATION_VEHICLE_SELECTOR}, ` +
+46796:         `${MF_MUTATION_MISSION_SELECTOR}, ` +
+46797:         `${MF_MUTATION_PATIENT_SELECTOR}, ` +
+46798:         `${MF_MUTATION_PANEL_SELECTOR}, ` +
+46799:         `${MF_MUTATION_TRANSPORT_SELECTOR}`;
+46800: 
+46801:     const MF_MUTATION_RELEVANT_TARGET_SELECTOR =
+46802:         `${MF_MUTATION_VEHICLE_SELECTOR}, ` +
+46803:         `${MF_MUTATION_MISSION_TARGET_SELECTOR}, ` +
+46804:         `${MF_MUTATION_PATIENT_SELECTOR}, ` +
+46805:         `${MF_MUTATION_TRANSPORT_SELECTOR}`;
+46806: 
+46807:     function resetMainMutationFlags() {
+46808:         mfMainMutationFlags = {
+46809:             relevant: false,
+46810:             vehicleListChanged: false,
+46811:             missionContextChanged: false,
+46812:             patientChanged: false,
+46813:             panelChanged: false,
+46814:             transportChanged: false
+46815:         };
+46816:     }
+46817: 
+46818:     function mutationNodeMatches(node, selector) {
+46819:         if (!node || node.nodeType !== 1) return false;
+46820: 
+46821:         try {
+
+46953:                 MF_MUTATION_RELEVANT_TARGET_SELECTOR
+46954:             );
+46955: 
+46956:             if (
+46957:                 targetRelevant &&
+46958:                 mutationTargetWithin(
+46959:                     target,
+46960:                     MF_MUTATION_VEHICLE_SELECTOR
+46961:                 )
+46962:             ) {
+46963:                 flags.vehicleListChanged = true;
+46964:                 flags.relevant = true;
+46965:             }
+46966: 
+46967:             if (
+46968:                 targetRelevant &&
+46969:                 mutationTargetWithin(
+46970:                     target,
+46971:                     MF_MUTATION_MISSION_TARGET_SELECTOR
+46972:                 )
+46973:             ) {
+46974:                 flags.missionContextChanged = true;
+46975:                 flags.relevant = true;
+46976:             }
+46977: 
+46978:             if (
+46979:                 targetRelevant &&
+46980:                 mutationTargetWithin(
+46981:                     target,
+46982:                     MF_MUTATION_PATIENT_SELECTOR
+46983:                 )
+46984:             ) {
+46985:                 flags.patientChanged = true;
+46986:                 flags.relevant = true;
+46987:             }
+46988: 
+46989:             if (
+
+
+===== REFERENCES MF_MUTATION_VEHICLE_SELECTOR =====
+46741:     }
+46742: 
+46743:     async function clickVehicleDisplayBarImmediately() {
+46744:         await ensureVehicleListLoaded();
+46745:     }
+46746: 
+46747:     function shouldRunBackgroundAutomationWatchers() {
+46748:         return !!(
+46749:             autoModeRunning ||
+46750:             sessionStorage.getItem('mf_auto_mode_running') === 'true' ||
+46751:             localStorage.getItem('mf_auto_mode_running') === 'true' ||
+46752:             sessionStorage.getItem(MF_QUEUE_WAIT_ACTIVE_FLAG) === 'true' ||
+46753:             sessionStorage.getItem(MF_FINAL_QUEUE_DISPATCH_FLAG) === 'true' ||
+46754:             isPostTransportRehookPending() ||
+46755:             isRecentTransportRehookWindowActive()
+46756:         );
+46757:     }
+46758: 
+46759:     const MF_MUTATION_VEHICLE_SELECTOR =
+46760:         'input.vehicle_checkbox, #vehicle_table, .vehicle_select_table_tr, ' +
+46761:         'a[search_attribute], a.missing_vehicles_load, .missing_vehicles_load';
+46762: 
+46763:     const MF_MUTATION_MISSION_SELECTOR =
+46764:         '#mission_general_info, #mission_help, #mission_content, ' +
+46765:         '#iframe-inside-container, .mission_content, ' +
+46766:         '#mc-map-command-toolkit-mission-requirements, ' +
+46767:         '[data-mcms-requirements-panel="1"], ' +
+46768:         'table[aria-label="Live mission requirements"], ' +
+46769:         '.alert-danger, [role="alert"], .mission_update, ' +
+46770:         '.mission_update_info, #mission_alarm_btn, #alarm_button, ' +
+46771:         '.vm--modal, .modal, .lightbox, iframe';
+46772: 
+46773:     const MF_MUTATION_PATIENT_SELECTOR =
+46774:         '.mission_patient, [id^="patient_"], [data-patient-id], .badge';
+46775: 
+46776:     const MF_MUTATION_PANEL_SELECTOR =
+46777:         '#mission-finder-wrapper, #control-panel, ' +
+
+46777:         '#mission-finder-wrapper, #control-panel, ' +
+46778:         '#vehicle-load-list-box';
+46779: 
+46780:     const MF_MUTATION_TRANSPORT_SELECTOR =
+46781:         '.vehicle-window, .redesign-wrapper[type="vehicle"], ' +
+46782:         '.vm--modal button.btn-success, .modal button.btn-success, ' +
+46783:         '.lightbox button.btn-success, iframe';
+46784: 
+46785:     const MF_MUTATION_MISSION_TARGET_SELECTOR =
+46786:         '#mission_general_info, #mission_help, #mission_content, ' +
+46787:         '#iframe-inside-container, .mission_content, ' +
+46788:         '#mc-map-command-toolkit-mission-requirements, ' +
+46789:         '[data-mcms-requirements-panel="1"], ' +
+46790:         'table[aria-label="Live mission requirements"], ' +
+46791:         '.alert-danger, [role="alert"], .mission_update, ' +
+46792:         '.mission_update_info, #mission_alarm_btn, #alarm_button';
+46793: 
+46794:     const MF_MUTATION_RELEVANT_SELECTOR =
+46795:         `${MF_MUTATION_VEHICLE_SELECTOR}, ` +
+46796:         `${MF_MUTATION_MISSION_SELECTOR}, ` +
+46797:         `${MF_MUTATION_PATIENT_SELECTOR}, ` +
+46798:         `${MF_MUTATION_PANEL_SELECTOR}, ` +
+46799:         `${MF_MUTATION_TRANSPORT_SELECTOR}`;
+46800: 
+46801:     const MF_MUTATION_RELEVANT_TARGET_SELECTOR =
+46802:         `${MF_MUTATION_VEHICLE_SELECTOR}, ` +
+46803:         `${MF_MUTATION_MISSION_TARGET_SELECTOR}, ` +
+46804:         `${MF_MUTATION_PATIENT_SELECTOR}, ` +
+46805:         `${MF_MUTATION_TRANSPORT_SELECTOR}`;
+46806: 
+46807:     function resetMainMutationFlags() {
+46808:         mfMainMutationFlags = {
+46809:             relevant: false,
+46810:             vehicleListChanged: false,
+46811:             missionContextChanged: false,
+46812:             patientChanged: false,
+46813:             panelChanged: false,
+
+46784: 
+46785:     const MF_MUTATION_MISSION_TARGET_SELECTOR =
+46786:         '#mission_general_info, #mission_help, #mission_content, ' +
+46787:         '#iframe-inside-container, .mission_content, ' +
+46788:         '#mc-map-command-toolkit-mission-requirements, ' +
+46789:         '[data-mcms-requirements-panel="1"], ' +
+46790:         'table[aria-label="Live mission requirements"], ' +
+46791:         '.alert-danger, [role="alert"], .mission_update, ' +
+46792:         '.mission_update_info, #mission_alarm_btn, #alarm_button';
+46793: 
+46794:     const MF_MUTATION_RELEVANT_SELECTOR =
+46795:         `${MF_MUTATION_VEHICLE_SELECTOR}, ` +
+46796:         `${MF_MUTATION_MISSION_SELECTOR}, ` +
+46797:         `${MF_MUTATION_PATIENT_SELECTOR}, ` +
+46798:         `${MF_MUTATION_PANEL_SELECTOR}, ` +
+46799:         `${MF_MUTATION_TRANSPORT_SELECTOR}`;
+46800: 
+46801:     const MF_MUTATION_RELEVANT_TARGET_SELECTOR =
+46802:         `${MF_MUTATION_VEHICLE_SELECTOR}, ` +
+46803:         `${MF_MUTATION_MISSION_TARGET_SELECTOR}, ` +
+46804:         `${MF_MUTATION_PATIENT_SELECTOR}, ` +
+46805:         `${MF_MUTATION_TRANSPORT_SELECTOR}`;
+46806: 
+46807:     function resetMainMutationFlags() {
+46808:         mfMainMutationFlags = {
+46809:             relevant: false,
+46810:             vehicleListChanged: false,
+46811:             missionContextChanged: false,
+46812:             patientChanged: false,
+46813:             panelChanged: false,
+46814:             transportChanged: false
+46815:         };
+46816:     }
+46817: 
+46818:     function mutationNodeMatches(node, selector) {
+46819:         if (!node || node.nodeType !== 1) return false;
+46820: 
+
+46876: 
+46877:             if (
+46878:                 node.closest?.(
+46879:                     '#mission-finder-wrapper'
+46880:                 )
+46881:             ) {
+46882:                 return;
+46883:             }
+46884: 
+46885:             if (!mutationNodeMatches(
+46886:                 node,
+46887:                 MF_MUTATION_RELEVANT_SELECTOR
+46888:             )) {
+46889:                 return;
+46890:             }
+46891: 
+46892:             if (mutationNodeMatches(
+46893:                 node,
+46894:                 MF_MUTATION_VEHICLE_SELECTOR
+46895:             )) {
+46896:                 flags.vehicleListChanged = true;
+46897:                 flags.relevant = true;
+46898:             }
+46899: 
+46900:             if (mutationNodeMatches(
+46901:                 node,
+46902:                 MF_MUTATION_MISSION_SELECTOR
+46903:             )) {
+46904:                 flags.missionContextChanged = true;
+46905:                 flags.relevant = true;
+46906:             }
+46907: 
+46908:             if (mutationNodeMatches(
+46909:                 node,
+46910:                 MF_MUTATION_PATIENT_SELECTOR
+46911:             )) {
+46912:                 flags.patientChanged = true;
+
+46942:             );
+46943: 
+46944:             if (shouldIgnoreMissionFinderMutationRecord(
+46945:                 targetOwned,
+46946:                 hasPanelRootMutation
+46947:             )) {
+46948:                 continue;
+46949:             }
+46950: 
+46951:             const targetRelevant = mutationTargetWithin(
+46952:                 target,
+46953:                 MF_MUTATION_RELEVANT_TARGET_SELECTOR
+46954:             );
+46955: 
+46956:             if (
+46957:                 targetRelevant &&
+46958:                 mutationTargetWithin(
+46959:                     target,
+46960:                     MF_MUTATION_VEHICLE_SELECTOR
+46961:                 )
+46962:             ) {
+46963:                 flags.vehicleListChanged = true;
+46964:                 flags.relevant = true;
+46965:             }
+46966: 
+46967:             if (
+46968:                 targetRelevant &&
+46969:                 mutationTargetWithin(
+46970:                     target,
+46971:                     MF_MUTATION_MISSION_TARGET_SELECTOR
+46972:                 )
+46973:             ) {
+46974:                 flags.missionContextChanged = true;
+46975:                 flags.relevant = true;
+46976:             }
+46977: 
+46978:             if (
+
+
+===== REFERENCES MF_MUTATION_PATIENT_SELECTOR =====
+46755:             isRecentTransportRehookWindowActive()
+46756:         );
+46757:     }
+46758: 
+46759:     const MF_MUTATION_VEHICLE_SELECTOR =
+46760:         'input.vehicle_checkbox, #vehicle_table, .vehicle_select_table_tr, ' +
+46761:         'a[search_attribute], a.missing_vehicles_load, .missing_vehicles_load';
+46762: 
+46763:     const MF_MUTATION_MISSION_SELECTOR =
+46764:         '#mission_general_info, #mission_help, #mission_content, ' +
+46765:         '#iframe-inside-container, .mission_content, ' +
+46766:         '#mc-map-command-toolkit-mission-requirements, ' +
+46767:         '[data-mcms-requirements-panel="1"], ' +
+46768:         'table[aria-label="Live mission requirements"], ' +
+46769:         '.alert-danger, [role="alert"], .mission_update, ' +
+46770:         '.mission_update_info, #mission_alarm_btn, #alarm_button, ' +
+46771:         '.vm--modal, .modal, .lightbox, iframe';
+46772: 
+46773:     const MF_MUTATION_PATIENT_SELECTOR =
+46774:         '.mission_patient, [id^="patient_"], [data-patient-id], .badge';
+46775: 
+46776:     const MF_MUTATION_PANEL_SELECTOR =
+46777:         '#mission-finder-wrapper, #control-panel, ' +
+46778:         '#vehicle-load-list-box';
+46779: 
+46780:     const MF_MUTATION_TRANSPORT_SELECTOR =
+46781:         '.vehicle-window, .redesign-wrapper[type="vehicle"], ' +
+46782:         '.vm--modal button.btn-success, .modal button.btn-success, ' +
+46783:         '.lightbox button.btn-success, iframe';
+46784: 
+46785:     const MF_MUTATION_MISSION_TARGET_SELECTOR =
+46786:         '#mission_general_info, #mission_help, #mission_content, ' +
+46787:         '#iframe-inside-container, .mission_content, ' +
+46788:         '#mc-map-command-toolkit-mission-requirements, ' +
+46789:         '[data-mcms-requirements-panel="1"], ' +
+46790:         'table[aria-label="Live mission requirements"], ' +
+46791:         '.alert-danger, [role="alert"], .mission_update, ' +
+
+46779: 
+46780:     const MF_MUTATION_TRANSPORT_SELECTOR =
+46781:         '.vehicle-window, .redesign-wrapper[type="vehicle"], ' +
+46782:         '.vm--modal button.btn-success, .modal button.btn-success, ' +
+46783:         '.lightbox button.btn-success, iframe';
+46784: 
+46785:     const MF_MUTATION_MISSION_TARGET_SELECTOR =
+46786:         '#mission_general_info, #mission_help, #mission_content, ' +
+46787:         '#iframe-inside-container, .mission_content, ' +
+46788:         '#mc-map-command-toolkit-mission-requirements, ' +
+46789:         '[data-mcms-requirements-panel="1"], ' +
+46790:         'table[aria-label="Live mission requirements"], ' +
+46791:         '.alert-danger, [role="alert"], .mission_update, ' +
+46792:         '.mission_update_info, #mission_alarm_btn, #alarm_button';
+46793: 
+46794:     const MF_MUTATION_RELEVANT_SELECTOR =
+46795:         `${MF_MUTATION_VEHICLE_SELECTOR}, ` +
+46796:         `${MF_MUTATION_MISSION_SELECTOR}, ` +
+46797:         `${MF_MUTATION_PATIENT_SELECTOR}, ` +
+46798:         `${MF_MUTATION_PANEL_SELECTOR}, ` +
+46799:         `${MF_MUTATION_TRANSPORT_SELECTOR}`;
+46800: 
+46801:     const MF_MUTATION_RELEVANT_TARGET_SELECTOR =
+46802:         `${MF_MUTATION_VEHICLE_SELECTOR}, ` +
+46803:         `${MF_MUTATION_MISSION_TARGET_SELECTOR}, ` +
+46804:         `${MF_MUTATION_PATIENT_SELECTOR}, ` +
+46805:         `${MF_MUTATION_TRANSPORT_SELECTOR}`;
+46806: 
+46807:     function resetMainMutationFlags() {
+46808:         mfMainMutationFlags = {
+46809:             relevant: false,
+46810:             vehicleListChanged: false,
+46811:             missionContextChanged: false,
+46812:             patientChanged: false,
+46813:             panelChanged: false,
+46814:             transportChanged: false
+46815:         };
+
+46786:         '#mission_general_info, #mission_help, #mission_content, ' +
+46787:         '#iframe-inside-container, .mission_content, ' +
+46788:         '#mc-map-command-toolkit-mission-requirements, ' +
+46789:         '[data-mcms-requirements-panel="1"], ' +
+46790:         'table[aria-label="Live mission requirements"], ' +
+46791:         '.alert-danger, [role="alert"], .mission_update, ' +
+46792:         '.mission_update_info, #mission_alarm_btn, #alarm_button';
+46793: 
+46794:     const MF_MUTATION_RELEVANT_SELECTOR =
+46795:         `${MF_MUTATION_VEHICLE_SELECTOR}, ` +
+46796:         `${MF_MUTATION_MISSION_SELECTOR}, ` +
+46797:         `${MF_MUTATION_PATIENT_SELECTOR}, ` +
+46798:         `${MF_MUTATION_PANEL_SELECTOR}, ` +
+46799:         `${MF_MUTATION_TRANSPORT_SELECTOR}`;
+46800: 
+46801:     const MF_MUTATION_RELEVANT_TARGET_SELECTOR =
+46802:         `${MF_MUTATION_VEHICLE_SELECTOR}, ` +
+46803:         `${MF_MUTATION_MISSION_TARGET_SELECTOR}, ` +
+46804:         `${MF_MUTATION_PATIENT_SELECTOR}, ` +
+46805:         `${MF_MUTATION_TRANSPORT_SELECTOR}`;
+46806: 
+46807:     function resetMainMutationFlags() {
+46808:         mfMainMutationFlags = {
+46809:             relevant: false,
+46810:             vehicleListChanged: false,
+46811:             missionContextChanged: false,
+46812:             patientChanged: false,
+46813:             panelChanged: false,
+46814:             transportChanged: false
+46815:         };
+46816:     }
+46817: 
+46818:     function mutationNodeMatches(node, selector) {
+46819:         if (!node || node.nodeType !== 1) return false;
+46820: 
+46821:         try {
+46822:             return (
+
+46892:             if (mutationNodeMatches(
+46893:                 node,
+46894:                 MF_MUTATION_VEHICLE_SELECTOR
+46895:             )) {
+46896:                 flags.vehicleListChanged = true;
+46897:                 flags.relevant = true;
+46898:             }
+46899: 
+46900:             if (mutationNodeMatches(
+46901:                 node,
+46902:                 MF_MUTATION_MISSION_SELECTOR
+46903:             )) {
+46904:                 flags.missionContextChanged = true;
+46905:                 flags.relevant = true;
+46906:             }
+46907: 
+46908:             if (mutationNodeMatches(
+46909:                 node,
+46910:                 MF_MUTATION_PATIENT_SELECTOR
+46911:             )) {
+46912:                 flags.patientChanged = true;
+46913:                 flags.relevant = true;
+46914:             }
+46915: 
+46916:             if (mutationNodeMatches(
+46917:                 node,
+46918:                 MF_MUTATION_TRANSPORT_SELECTOR
+46919:             )) {
+46920:                 flags.transportChanged = true;
+46921:                 flags.relevant = true;
+46922:             }
+46923:         };
+46924: 
+46925:         for (const record of records || []) {
+46926: 
+46927:             const target = record.target;
+46928:             const changedNodes = [
+
+46964:                 flags.relevant = true;
+46965:             }
+46966: 
+46967:             if (
+46968:                 targetRelevant &&
+46969:                 mutationTargetWithin(
+46970:                     target,
+46971:                     MF_MUTATION_MISSION_TARGET_SELECTOR
+46972:                 )
+46973:             ) {
+46974:                 flags.missionContextChanged = true;
+46975:                 flags.relevant = true;
+46976:             }
+46977: 
+46978:             if (
+46979:                 targetRelevant &&
+46980:                 mutationTargetWithin(
+46981:                     target,
+46982:                     MF_MUTATION_PATIENT_SELECTOR
+46983:                 )
+46984:             ) {
+46985:                 flags.patientChanged = true;
+46986:                 flags.relevant = true;
+46987:             }
+46988: 
+46989:             if (
+46990:                 targetRelevant &&
+46991:                 mutationTargetWithin(
+46992:                     target,
+46993:                     MF_MUTATION_TRANSPORT_SELECTOR
+46994:                 )
+46995:             ) {
+46996:                 flags.transportChanged = true;
+46997:                 flags.relevant = true;
+46998:             }
+46999: 
+47000:             changedNodes.forEach(inspectNode);
+
+
+===== REFERENCES MF_MUTATION_TRANSPORT_SELECTOR =====
+46762: 
+46763:     const MF_MUTATION_MISSION_SELECTOR =
+46764:         '#mission_general_info, #mission_help, #mission_content, ' +
+46765:         '#iframe-inside-container, .mission_content, ' +
+46766:         '#mc-map-command-toolkit-mission-requirements, ' +
+46767:         '[data-mcms-requirements-panel="1"], ' +
+46768:         'table[aria-label="Live mission requirements"], ' +
+46769:         '.alert-danger, [role="alert"], .mission_update, ' +
+46770:         '.mission_update_info, #mission_alarm_btn, #alarm_button, ' +
+46771:         '.vm--modal, .modal, .lightbox, iframe';
+46772: 
+46773:     const MF_MUTATION_PATIENT_SELECTOR =
+46774:         '.mission_patient, [id^="patient_"], [data-patient-id], .badge';
+46775: 
+46776:     const MF_MUTATION_PANEL_SELECTOR =
+46777:         '#mission-finder-wrapper, #control-panel, ' +
+46778:         '#vehicle-load-list-box';
+46779: 
+46780:     const MF_MUTATION_TRANSPORT_SELECTOR =
+46781:         '.vehicle-window, .redesign-wrapper[type="vehicle"], ' +
+46782:         '.vm--modal button.btn-success, .modal button.btn-success, ' +
+46783:         '.lightbox button.btn-success, iframe';
+46784: 
+46785:     const MF_MUTATION_MISSION_TARGET_SELECTOR =
+46786:         '#mission_general_info, #mission_help, #mission_content, ' +
+46787:         '#iframe-inside-container, .mission_content, ' +
+46788:         '#mc-map-command-toolkit-mission-requirements, ' +
+46789:         '[data-mcms-requirements-panel="1"], ' +
+46790:         'table[aria-label="Live mission requirements"], ' +
+46791:         '.alert-danger, [role="alert"], .mission_update, ' +
+46792:         '.mission_update_info, #mission_alarm_btn, #alarm_button';
+46793: 
+46794:     const MF_MUTATION_RELEVANT_SELECTOR =
+46795:         `${MF_MUTATION_VEHICLE_SELECTOR}, ` +
+46796:         `${MF_MUTATION_MISSION_SELECTOR}, ` +
+46797:         `${MF_MUTATION_PATIENT_SELECTOR}, ` +
+46798:         `${MF_MUTATION_PANEL_SELECTOR}, ` +
+
+46781:         '.vehicle-window, .redesign-wrapper[type="vehicle"], ' +
+46782:         '.vm--modal button.btn-success, .modal button.btn-success, ' +
+46783:         '.lightbox button.btn-success, iframe';
+46784: 
+46785:     const MF_MUTATION_MISSION_TARGET_SELECTOR =
+46786:         '#mission_general_info, #mission_help, #mission_content, ' +
+46787:         '#iframe-inside-container, .mission_content, ' +
+46788:         '#mc-map-command-toolkit-mission-requirements, ' +
+46789:         '[data-mcms-requirements-panel="1"], ' +
+46790:         'table[aria-label="Live mission requirements"], ' +
+46791:         '.alert-danger, [role="alert"], .mission_update, ' +
+46792:         '.mission_update_info, #mission_alarm_btn, #alarm_button';
+46793: 
+46794:     const MF_MUTATION_RELEVANT_SELECTOR =
+46795:         `${MF_MUTATION_VEHICLE_SELECTOR}, ` +
+46796:         `${MF_MUTATION_MISSION_SELECTOR}, ` +
+46797:         `${MF_MUTATION_PATIENT_SELECTOR}, ` +
+46798:         `${MF_MUTATION_PANEL_SELECTOR}, ` +
+46799:         `${MF_MUTATION_TRANSPORT_SELECTOR}`;
+46800: 
+46801:     const MF_MUTATION_RELEVANT_TARGET_SELECTOR =
+46802:         `${MF_MUTATION_VEHICLE_SELECTOR}, ` +
+46803:         `${MF_MUTATION_MISSION_TARGET_SELECTOR}, ` +
+46804:         `${MF_MUTATION_PATIENT_SELECTOR}, ` +
+46805:         `${MF_MUTATION_TRANSPORT_SELECTOR}`;
+46806: 
+46807:     function resetMainMutationFlags() {
+46808:         mfMainMutationFlags = {
+46809:             relevant: false,
+46810:             vehicleListChanged: false,
+46811:             missionContextChanged: false,
+46812:             patientChanged: false,
+46813:             panelChanged: false,
+46814:             transportChanged: false
+46815:         };
+46816:     }
+46817: 
+
+46787:         '#iframe-inside-container, .mission_content, ' +
+46788:         '#mc-map-command-toolkit-mission-requirements, ' +
+46789:         '[data-mcms-requirements-panel="1"], ' +
+46790:         'table[aria-label="Live mission requirements"], ' +
+46791:         '.alert-danger, [role="alert"], .mission_update, ' +
+46792:         '.mission_update_info, #mission_alarm_btn, #alarm_button';
+46793: 
+46794:     const MF_MUTATION_RELEVANT_SELECTOR =
+46795:         `${MF_MUTATION_VEHICLE_SELECTOR}, ` +
+46796:         `${MF_MUTATION_MISSION_SELECTOR}, ` +
+46797:         `${MF_MUTATION_PATIENT_SELECTOR}, ` +
+46798:         `${MF_MUTATION_PANEL_SELECTOR}, ` +
+46799:         `${MF_MUTATION_TRANSPORT_SELECTOR}`;
+46800: 
+46801:     const MF_MUTATION_RELEVANT_TARGET_SELECTOR =
+46802:         `${MF_MUTATION_VEHICLE_SELECTOR}, ` +
+46803:         `${MF_MUTATION_MISSION_TARGET_SELECTOR}, ` +
+46804:         `${MF_MUTATION_PATIENT_SELECTOR}, ` +
+46805:         `${MF_MUTATION_TRANSPORT_SELECTOR}`;
+46806: 
+46807:     function resetMainMutationFlags() {
+46808:         mfMainMutationFlags = {
+46809:             relevant: false,
+46810:             vehicleListChanged: false,
+46811:             missionContextChanged: false,
+46812:             patientChanged: false,
+46813:             panelChanged: false,
+46814:             transportChanged: false
+46815:         };
+46816:     }
+46817: 
+46818:     function mutationNodeMatches(node, selector) {
+46819:         if (!node || node.nodeType !== 1) return false;
+46820: 
+46821:         try {
+46822:             return (
+46823:                 node.matches?.(selector) ||
+
+46900:             if (mutationNodeMatches(
+46901:                 node,
+46902:                 MF_MUTATION_MISSION_SELECTOR
+46903:             )) {
+46904:                 flags.missionContextChanged = true;
+46905:                 flags.relevant = true;
+46906:             }
+46907: 
+46908:             if (mutationNodeMatches(
+46909:                 node,
+46910:                 MF_MUTATION_PATIENT_SELECTOR
+46911:             )) {
+46912:                 flags.patientChanged = true;
+46913:                 flags.relevant = true;
+46914:             }
+46915: 
+46916:             if (mutationNodeMatches(
+46917:                 node,
+46918:                 MF_MUTATION_TRANSPORT_SELECTOR
+46919:             )) {
+46920:                 flags.transportChanged = true;
+46921:                 flags.relevant = true;
+46922:             }
+46923:         };
+46924: 
+46925:         for (const record of records || []) {
+46926: 
+46927:             const target = record.target;
+46928:             const changedNodes = [
+46929:                 ...(record.addedNodes || []),
+46930:                 ...(record.removedNodes || [])
+46931:             ];
+46932:             const hasPanelRootMutation =
+46933:                 changedNodes.some(node =>
+46934:                     node?.nodeType === 1 &&
+46935:                     node.matches?.(
+46936:                         MF_MUTATION_PANEL_SELECTOR
+
+46975:                 flags.relevant = true;
+46976:             }
+46977: 
+46978:             if (
+46979:                 targetRelevant &&
+46980:                 mutationTargetWithin(
+46981:                     target,
+46982:                     MF_MUTATION_PATIENT_SELECTOR
+46983:                 )
+46984:             ) {
+46985:                 flags.patientChanged = true;
+46986:                 flags.relevant = true;
+46987:             }
+46988: 
+46989:             if (
+46990:                 targetRelevant &&
+46991:                 mutationTargetWithin(
+46992:                     target,
+46993:                     MF_MUTATION_TRANSPORT_SELECTOR
+46994:                 )
+46995:             ) {
+46996:                 flags.transportChanged = true;
+46997:                 flags.relevant = true;
+46998:             }
+46999: 
+47000:             changedNodes.forEach(inspectNode);
+47001: 
+47002:             if (
+47003:                 flags.vehicleListChanged &&
+47004:                 flags.missionContextChanged &&
+47005:                 flags.patientChanged &&
+47006:                 flags.panelChanged &&
+47007:                 flags.transportChanged
+47008:             ) {
+47009:                 break;
+47010:             }
+47011:         }
+
+
+===== REFERENCES MF_RUNTIME_MEMORY_IDLE_MS =====
+11900:     let mfRuntimePageShowHandler = null;
+11901:     let mfBackgroundWatcherSupervisorTimer = null;
+11902:     let mfBackgroundStorageHandler = null;
+11903:     let mfRuntimeSuspendedForPageHide = false;
+11904:     const MF_AUTO_MEMORY_RECYCLE_STATE_KEY =
+11905:         'mf_auto_memory_recycle_state_v1';
+11906:     const MF_AUTO_MEMORY_RECYCLE_HEAP_THRESHOLD_BYTES =
+11907:         640 * 1024 * 1024;
+11908:     const MF_AUTO_MEMORY_RECYCLE_COOLDOWN_MS =
+11909:         4 * 60 * 1000;
+11910:     const MF_AUTO_MEMORY_RECYCLE_MAX_STATE_AGE_MS =
+11911:         20 * 60 * 1000;
+11912:     const MF_RUNTIME_MEMORY_SOFT_FLUSH_THRESHOLD_BYTES =
+11913:         480 * 1024 * 1024;
+11914:     const MF_RUNTIME_MEMORY_MAINTENANCE_INTERVAL_MS =
+11915:         15 * 1000;
+11916:     const MF_RUNTIME_MEMORY_SOFT_FLUSH_COOLDOWN_MS =
+11917:         60 * 1000;
+11918:     const MF_RUNTIME_MEMORY_IDLE_MS =
+11919:         30 * 1000;
+11920:     const MF_RUNTIME_MEMORY_STABLE_MS =
+11921:         15 * 1000;
+11922:     const MF_FRAME_RUNTIME_RECONCILE_EVENT =
+11923:         'missionchief-nexus-frame-runtime-reconcile-v1074';
+11924:     const mfMissingUnitRetryIntervals = new Set();
+11925:     let mfRuntimeSuspendedForInactiveFrame = false;
+11926:     let mfFrameRuntimeReconcileHandler = null;
+11927:     let mfRuntimeMemoryMaintenanceTimer = null;
+11928:     let mfRuntimeMemoryActivityHandler = null;
+11929:     let mfRuntimeMemoryOperationDepth = 0;
+11930:     let mfRuntimeMemoryLastActivityAt = Date.now();
+11931:     let mfRuntimeMemoryLastMutationAt = Date.now();
+11932:     let mfRuntimeMemoryLastSoftFlushAt = 0;
+11933:     let mfRuntimeMemorySoftFlushCount = 0;
+11934:     let mfRuntimeMemoryInactiveSuspendCount = 0;
+11935:     let mfRuntimeMemoryLastReason = '';
+11936:     let mfRuntimeStorageMaintenanceState = {
+
+12137:                 'idle memory maintenance'
+12138:             ) ||
+12139:             document.visibilityState === 'hidden' ||
+12140:             mfRuntimeSuspendedForPageHide ||
+12141:             mfRuntimeSuspendedForInactiveFrame ||
+12142:             vehicleLoadState.ready ||
+12143:             isMissionFinderMemoryWorkActive() ||
+12144:             hasSelectedMissionVehiclesForMemoryRecycle() ||
+12145:             mfMissionRequirementPreloadPromise ||
+12146:             mfMissionRequirementPreloadCache.status === 'loading'
+12147:         ) {
+12148:             return null;
+12149:         }
+12150: 
+12151:         const now = Date.now();
+12152: 
+12153:         if (
+12154:             now - mfRuntimeMemoryLastActivityAt <
+12155:                 MF_RUNTIME_MEMORY_IDLE_MS ||
+12156:             now - mfRuntimeMemoryLastMutationAt <
+12157:                 MF_RUNTIME_MEMORY_STABLE_MS
+12158:         ) {
+12159:             return null;
+12160:         }
+12161: 
+12162:         const heap = getAutoMemoryHeapSnapshot();
+12163:         if (
+12164:             !heap ||
+12165:             heap.usedJSHeapSize <
+12166:                 MF_AUTO_MEMORY_RECYCLE_HEAP_THRESHOLD_BYTES
+12167:         ) {
+12168:             return null;
+12169:         }
+12170: 
+12171:         const previous = readAutoMemoryRecycleState();
+12172:         if (
+12173:             previous &&
+
+
+===== REFERENCES MF_RUNTIME_MEMORY_STABLE_MS =====
+11902:     let mfBackgroundStorageHandler = null;
+11903:     let mfRuntimeSuspendedForPageHide = false;
+11904:     const MF_AUTO_MEMORY_RECYCLE_STATE_KEY =
+11905:         'mf_auto_memory_recycle_state_v1';
+11906:     const MF_AUTO_MEMORY_RECYCLE_HEAP_THRESHOLD_BYTES =
+11907:         640 * 1024 * 1024;
+11908:     const MF_AUTO_MEMORY_RECYCLE_COOLDOWN_MS =
+11909:         4 * 60 * 1000;
+11910:     const MF_AUTO_MEMORY_RECYCLE_MAX_STATE_AGE_MS =
+11911:         20 * 60 * 1000;
+11912:     const MF_RUNTIME_MEMORY_SOFT_FLUSH_THRESHOLD_BYTES =
+11913:         480 * 1024 * 1024;
+11914:     const MF_RUNTIME_MEMORY_MAINTENANCE_INTERVAL_MS =
+11915:         15 * 1000;
+11916:     const MF_RUNTIME_MEMORY_SOFT_FLUSH_COOLDOWN_MS =
+11917:         60 * 1000;
+11918:     const MF_RUNTIME_MEMORY_IDLE_MS =
+11919:         30 * 1000;
+11920:     const MF_RUNTIME_MEMORY_STABLE_MS =
+11921:         15 * 1000;
+11922:     const MF_FRAME_RUNTIME_RECONCILE_EVENT =
+11923:         'missionchief-nexus-frame-runtime-reconcile-v1074';
+11924:     const mfMissingUnitRetryIntervals = new Set();
+11925:     let mfRuntimeSuspendedForInactiveFrame = false;
+11926:     let mfFrameRuntimeReconcileHandler = null;
+11927:     let mfRuntimeMemoryMaintenanceTimer = null;
+11928:     let mfRuntimeMemoryActivityHandler = null;
+11929:     let mfRuntimeMemoryOperationDepth = 0;
+11930:     let mfRuntimeMemoryLastActivityAt = Date.now();
+11931:     let mfRuntimeMemoryLastMutationAt = Date.now();
+11932:     let mfRuntimeMemoryLastSoftFlushAt = 0;
+11933:     let mfRuntimeMemorySoftFlushCount = 0;
+11934:     let mfRuntimeMemoryInactiveSuspendCount = 0;
+11935:     let mfRuntimeMemoryLastReason = '';
+11936:     let mfRuntimeStorageMaintenanceState = {
+11937:         ranAt: 0,
+11938:         legacyRecorderRemoved: false,
+
+12139:             document.visibilityState === 'hidden' ||
+12140:             mfRuntimeSuspendedForPageHide ||
+12141:             mfRuntimeSuspendedForInactiveFrame ||
+12142:             vehicleLoadState.ready ||
+12143:             isMissionFinderMemoryWorkActive() ||
+12144:             hasSelectedMissionVehiclesForMemoryRecycle() ||
+12145:             mfMissionRequirementPreloadPromise ||
+12146:             mfMissionRequirementPreloadCache.status === 'loading'
+12147:         ) {
+12148:             return null;
+12149:         }
+12150: 
+12151:         const now = Date.now();
+12152: 
+12153:         if (
+12154:             now - mfRuntimeMemoryLastActivityAt <
+12155:                 MF_RUNTIME_MEMORY_IDLE_MS ||
+12156:             now - mfRuntimeMemoryLastMutationAt <
+12157:                 MF_RUNTIME_MEMORY_STABLE_MS
+12158:         ) {
+12159:             return null;
+12160:         }
+12161: 
+12162:         const heap = getAutoMemoryHeapSnapshot();
+12163:         if (
+12164:             !heap ||
+12165:             heap.usedJSHeapSize <
+12166:                 MF_AUTO_MEMORY_RECYCLE_HEAP_THRESHOLD_BYTES
+12167:         ) {
+12168:             return null;
+12169:         }
+12170: 
+12171:         const previous = readAutoMemoryRecycleState();
+12172:         if (
+12173:             previous &&
+12174:             now - Number(previous.lastRecycleAt || 0) <
+12175:                 MF_AUTO_MEMORY_RECYCLE_COOLDOWN_MS
+
+
+===== REFERENCES MF_AUTO_MEMORY_RECYCLE_HEAP_THRESHOLD_BYTES =====
+11888:     let mfMainMutationObserver = null;
+11889:     let mfMainMutationFlushTimer = null;
+11890:     let mfAutoLoopResumeTimer = null;
+11891:     let mfIssueRecorderObserver = null;
+11892:     let mfIssueRecorderMutationTimer = null;
+11893:     let mfMissionFinderResizeHandler = null;
+11894:     let mfDebugRenderFrame = null;
+11895:     let mfVehicleLoadRenderFrame = null;
+11896:     let mfIphoneNativePickerSyncTimer = null;
+11897:     const mfIphoneNativePickerDocuments = new Set();
+11898:     let mfRuntimeCleanupInstalled = false;
+11899:     let mfRuntimePageHideHandler = null;
+11900:     let mfRuntimePageShowHandler = null;
+11901:     let mfBackgroundWatcherSupervisorTimer = null;
+11902:     let mfBackgroundStorageHandler = null;
+11903:     let mfRuntimeSuspendedForPageHide = false;
+11904:     const MF_AUTO_MEMORY_RECYCLE_STATE_KEY =
+11905:         'mf_auto_memory_recycle_state_v1';
+11906:     const MF_AUTO_MEMORY_RECYCLE_HEAP_THRESHOLD_BYTES =
+11907:         640 * 1024 * 1024;
+11908:     const MF_AUTO_MEMORY_RECYCLE_COOLDOWN_MS =
+11909:         4 * 60 * 1000;
+11910:     const MF_AUTO_MEMORY_RECYCLE_MAX_STATE_AGE_MS =
+11911:         20 * 60 * 1000;
+11912:     const MF_RUNTIME_MEMORY_SOFT_FLUSH_THRESHOLD_BYTES =
+11913:         480 * 1024 * 1024;
+11914:     const MF_RUNTIME_MEMORY_MAINTENANCE_INTERVAL_MS =
+11915:         15 * 1000;
+11916:     const MF_RUNTIME_MEMORY_SOFT_FLUSH_COOLDOWN_MS =
+11917:         60 * 1000;
+11918:     const MF_RUNTIME_MEMORY_IDLE_MS =
+11919:         30 * 1000;
+11920:     const MF_RUNTIME_MEMORY_STABLE_MS =
+11921:         15 * 1000;
+11922:     const MF_FRAME_RUNTIME_RECONCILE_EVENT =
+11923:         'missionchief-nexus-frame-runtime-reconcile-v1074';
+11924:     const mfMissingUnitRetryIntervals = new Set();
+
+12148:             return null;
+12149:         }
+12150: 
+12151:         const now = Date.now();
+12152: 
+12153:         if (
+12154:             now - mfRuntimeMemoryLastActivityAt <
+12155:                 MF_RUNTIME_MEMORY_IDLE_MS ||
+12156:             now - mfRuntimeMemoryLastMutationAt <
+12157:                 MF_RUNTIME_MEMORY_STABLE_MS
+12158:         ) {
+12159:             return null;
+12160:         }
+12161: 
+12162:         const heap = getAutoMemoryHeapSnapshot();
+12163:         if (
+12164:             !heap ||
+12165:             heap.usedJSHeapSize <
+12166:                 MF_AUTO_MEMORY_RECYCLE_HEAP_THRESHOLD_BYTES
+12167:         ) {
+12168:             return null;
+12169:         }
+12170: 
+12171:         const previous = readAutoMemoryRecycleState();
+12172:         if (
+12173:             previous &&
+12174:             now - Number(previous.lastRecycleAt || 0) <
+12175:                 MF_AUTO_MEMORY_RECYCLE_COOLDOWN_MS
+12176:         ) {
+12177:             return null;
+12178:         }
+12179: 
+12180:         return heap;
+12181:     }
+12182: 
+12183:     function requestMissionFinderMemoryRecycle(
+12184:         heap,
+
+45464:             isManualAutoStopActive() ||
+45465:             !isMissionPage() ||
+45466:             document.visibilityState === 'hidden' ||
+45467:             vehicleLoadState.ready ||
+45468:             processedSelectionKeys.size > 0 ||
+45469:             hasSelectedMissionVehiclesForMemoryRecycle() ||
+45470:             readAutoAdvanceAfterDispatchState() ||
+45471:             readAllyStealPendingState() ||
+45472:             readAutoPostDispatchUpgradeState() ||
+45473:             isPostTransportRehookPending()
+45474:         ) {
+45475:             return null;
+45476:         }
+45477: 
+45478:         const heap = getAutoMemoryHeapSnapshot();
+45479:         if (
+45480:             !heap ||
+45481:             heap.usedJSHeapSize <
+45482:                 MF_AUTO_MEMORY_RECYCLE_HEAP_THRESHOLD_BYTES
+45483:         ) {
+45484:             return null;
+45485:         }
+45486: 
+45487:         const previous = readAutoMemoryRecycleState();
+45488:         if (
+45489:             previous &&
+45490:             Date.now() - Number(previous.lastRecycleAt || 0) <
+45491:                 MF_AUTO_MEMORY_RECYCLE_COOLDOWN_MS
+45492:         ) {
+45493:             return null;
+45494:         }
+45495: 
+45496:         return heap;
+45497:     }
+45498: 
+45499:     function requestAutoMissionMemoryRecycle(
+45500:         reason = 'high JavaScript heap before selection'
+
+
+===== REFERENCES MF_RUNTIME_MEMORY_SOFT_FLUSH_THRESHOLD_BYTES =====
+11894:     let mfDebugRenderFrame = null;
+11895:     let mfVehicleLoadRenderFrame = null;
+11896:     let mfIphoneNativePickerSyncTimer = null;
+11897:     const mfIphoneNativePickerDocuments = new Set();
+11898:     let mfRuntimeCleanupInstalled = false;
+11899:     let mfRuntimePageHideHandler = null;
+11900:     let mfRuntimePageShowHandler = null;
+11901:     let mfBackgroundWatcherSupervisorTimer = null;
+11902:     let mfBackgroundStorageHandler = null;
+11903:     let mfRuntimeSuspendedForPageHide = false;
+11904:     const MF_AUTO_MEMORY_RECYCLE_STATE_KEY =
+11905:         'mf_auto_memory_recycle_state_v1';
+11906:     const MF_AUTO_MEMORY_RECYCLE_HEAP_THRESHOLD_BYTES =
+11907:         640 * 1024 * 1024;
+11908:     const MF_AUTO_MEMORY_RECYCLE_COOLDOWN_MS =
+11909:         4 * 60 * 1000;
+11910:     const MF_AUTO_MEMORY_RECYCLE_MAX_STATE_AGE_MS =
+11911:         20 * 60 * 1000;
+11912:     const MF_RUNTIME_MEMORY_SOFT_FLUSH_THRESHOLD_BYTES =
+11913:         480 * 1024 * 1024;
+11914:     const MF_RUNTIME_MEMORY_MAINTENANCE_INTERVAL_MS =
+11915:         15 * 1000;
+11916:     const MF_RUNTIME_MEMORY_SOFT_FLUSH_COOLDOWN_MS =
+11917:         60 * 1000;
+11918:     const MF_RUNTIME_MEMORY_IDLE_MS =
+11919:         30 * 1000;
+11920:     const MF_RUNTIME_MEMORY_STABLE_MS =
+11921:         15 * 1000;
+11922:     const MF_FRAME_RUNTIME_RECONCILE_EVENT =
+11923:         'missionchief-nexus-frame-runtime-reconcile-v1074';
+11924:     const mfMissingUnitRetryIntervals = new Set();
+11925:     let mfRuntimeSuspendedForInactiveFrame = false;
+11926:     let mfFrameRuntimeReconcileHandler = null;
+11927:     let mfRuntimeMemoryMaintenanceTimer = null;
+11928:     let mfRuntimeMemoryActivityHandler = null;
+11929:     let mfRuntimeMemoryOperationDepth = 0;
+11930:     let mfRuntimeMemoryLastActivityAt = Date.now();
+
+12248: 
+12249:         if (
+12250:             !isMissionPage() ||
+12251:             mfRuntimeSuspendedForPageHide ||
+12252:             mfRuntimeSuspendedForInactiveFrame ||
+12253:             !isCurrentMissionExecutionOwner(
+12254:                 'runtime memory maintenance'
+12255:             )
+12256:         ) {
+12257:             return;
+12258:         }
+12259: 
+12260:         const heap = getAutoMemoryHeapSnapshot();
+12261:         const now = Date.now();
+12262: 
+12263:         if (
+12264:             heap &&
+12265:             heap.usedJSHeapSize >=
+12266:                 MF_RUNTIME_MEMORY_SOFT_FLUSH_THRESHOLD_BYTES &&
+12267:             !isMissionFinderMemoryWorkActive() &&
+12268:             now - mfRuntimeMemoryLastSoftFlushAt >=
+12269:                 MF_RUNTIME_MEMORY_SOFT_FLUSH_COOLDOWN_MS
+12270:         ) {
+12271:             flushMissionFinderEphemeralMemory(
+12272:                 `soft high-heap flush at ${Math.round(heap.usedJSHeapSize / 1048576)} MiB`
+12273:             );
+12274:         }
+12275: 
+12276:         const recycleHeap = shouldRecycleIdleMissionMemory();
+12277:         if (recycleHeap) {
+12278:             requestMissionFinderMemoryRecycle(
+12279:                 recycleHeap,
+12280:                 'high JavaScript heap while mission was safely idle',
+12281:                 false
+12282:             );
+12283:         }
+12284:     }
+
+
+===== REFERENCES mfRuntimeMemoryLastMutationAt = Date.now() =====
+11913:         480 * 1024 * 1024;
+11914:     const MF_RUNTIME_MEMORY_MAINTENANCE_INTERVAL_MS =
+11915:         15 * 1000;
+11916:     const MF_RUNTIME_MEMORY_SOFT_FLUSH_COOLDOWN_MS =
+11917:         60 * 1000;
+11918:     const MF_RUNTIME_MEMORY_IDLE_MS =
+11919:         30 * 1000;
+11920:     const MF_RUNTIME_MEMORY_STABLE_MS =
+11921:         15 * 1000;
+11922:     const MF_FRAME_RUNTIME_RECONCILE_EVENT =
+11923:         'missionchief-nexus-frame-runtime-reconcile-v1074';
+11924:     const mfMissingUnitRetryIntervals = new Set();
+11925:     let mfRuntimeSuspendedForInactiveFrame = false;
+11926:     let mfFrameRuntimeReconcileHandler = null;
+11927:     let mfRuntimeMemoryMaintenanceTimer = null;
+11928:     let mfRuntimeMemoryActivityHandler = null;
+11929:     let mfRuntimeMemoryOperationDepth = 0;
+11930:     let mfRuntimeMemoryLastActivityAt = Date.now();
+11931:     let mfRuntimeMemoryLastMutationAt = Date.now();
+11932:     let mfRuntimeMemoryLastSoftFlushAt = 0;
+11933:     let mfRuntimeMemorySoftFlushCount = 0;
+11934:     let mfRuntimeMemoryInactiveSuspendCount = 0;
+11935:     let mfRuntimeMemoryLastReason = '';
+11936:     let mfRuntimeStorageMaintenanceState = {
+11937:         ranAt: 0,
+11938:         legacyRecorderRemoved: false,
+11939:         diagnosticCharsBefore: 0,
+11940:         diagnosticCharsAfter: 0
+11941:     };
+11942: 
+11943:     function noteMissionFinderRuntimeMemoryActivity(
+11944:         reason = ''
+11945:     ) {
+11946:         mfRuntimeMemoryLastActivityAt = Date.now();
+11947:         if (reason) {
+11948:             mfRuntimeMemoryLastReason = String(reason);
+11949:         }
+
+47252:             wrapper &&
+47253:             shouldRefreshTrainedPersonnelPanel
+47254:         ) {
+47255:             renderSelectedTrainedPersonnelPanel();
+47256:         }
+47257: 
+47258:         if (autoModeRunning && missionPage && flags.relevant) {
+47259:             scheduleAutoModeLoopResume(
+47260:                 'filtered/coalesced DOM mutation'
+47261:             );
+47262:         }
+47263:     }
+47264: 
+47265:     function scheduleMissionFinderMutationWork(records = []) {
+47266:         const flags = classifyMissionFinderMutations(records);
+47267: 
+47268:         if (!flags.relevant) return;
+47269: 
+47270:         mfRuntimeMemoryLastMutationAt = Date.now();
+47271: 
+47272:         mergeMainMutationFlags(flags);
+47273: 
+47274:         if (mfMainMutationFlushTimer) return;
+47275: 
+47276:         mfMainMutationFlushTimer = setTimeout(
+47277:             flushMissionFinderMutationWork,
+47278:             200
+47279:         );
+47280:     }
+47281: 
+47282: 
+47283: 
+47284:     function shouldKeepMissionFinderObserverForCurrentFrame() {
+47285:         if (MF_IS_TOP_WINDOW) return true;
+47286:         if (!document.body || !isMissionPage()) return false;
+47287: 
+47288:         try {
+
+
+===== REFERENCES mfTransportOwnerModal = =====
+11065:     let mfQueueRestartThreshold = parseInt(localStorage.getItem('mf_next_queue_restart_threshold_v10_1_3') || '20', 10);
+11066:     let mfQueueRestartWaiting = false;
+11067:     let mfSilentQueueWatcherTimer = null;
+11068:     let mfSilentQueueOpening = false;
+11069:     let mfGlobalTransportWatcherTimer = null;
+11070:     let mfGlobalTransportClicking = false;
+11071:     let mfLastTransportFingerprint = '';
+11072:     let mfLastTransportClickAt = 0;
+11073:     let mfBruteApproachWatcherTimer = null;
+11074:     let mfBruteApproachClicking = false;
+11075:     let mfBruteLastFingerprint = '';
+11076:     let mfBruteLastClickAt = 0;
+11077:     let mfTransportApproachClicking = false;
+11078:     let mfTransportLastClickAt = 0;
+11079:     let mfTransportSequenceActive = false;
+11080:     let mfTransportContinuationRunning = false;
+11081:     let mfPostTransportRehookTimer = null;
+11082:     let mfPostTransportOpening = false;
+11083:     let mfTransportOwnerModal = null;
+11084:     let mfTransportOwnerApproachGoneAt = 0;
+11085:     let mfTransportOwnerCloseAttemptedAt = 0;
+11086:     let mfTransportMainStableAt = 0;
+11087:     let mfMissionUpdateFirstPassRequired = true;
+11088:     let mfMissionUpdateFirstPassMissionKey = '';
+11089:     let mfMissionUpdateFirstPassCompletedAt = 0;
+11090:     let mfLastQueueThresholdStatusAt = 0;
+11091:     let mfLastQueueThresholdStatusKey = '';
+11092:     const MF_MANUAL_AUTO_STOP_FLAG = 'mf_manual_auto_stop_v10_3_9u';
+11093:     const MF_MAIN_MISSION_OPEN_LOCK_KEY = 'mf_main_mission_open_lock_until_v10_3_9v';
+11094:     const MF_MAIN_MISSION_OPEN_REASON_KEY = 'mf_main_mission_open_reason_v10_3_9v';
+11095:     const MF_TRANSPORT_REHOOK_LOCK_KEY = 'mf_transport_rehook_lock_until_v10_3_9x';
+11096:     const MF_TRANSPORT_REHOOK_REASON_KEY = 'mf_transport_rehook_reason_v10_3_9x';
+11097:     const MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY = 'mf_transport_rehook_recent_until_v10_3_9y';
+11098:     const MF_MAIN_MISSION_PENDING_UNTIL_KEY = 'mf_main_mission_pending_until_v10_3_9zc';
+11099:     const MF_MAIN_MISSION_PENDING_TARGET_KEY = 'mf_main_mission_pending_target_v10_3_9zc';
+11100:     const MF_MAIN_MISSION_PENDING_REASON_KEY = 'mf_main_mission_pending_reason_v10_3_9zc';
+11101:     const MF_TRANSPORT_CLICK_LOCK_UNTIL_KEY = 'mf_transport_click_lock_until_v10_3_9zd';
+
+41022:         );
+41023:         sessionStorage.setItem(
+41024:             MF_TRANSPORT_LAST_CLICK_AT_KEY,
+41025:             String(now)
+41026:         );
+41027:         sessionStorage.setItem(
+41028:             MF_TRANSPORT_LAST_CLICK_REASON_KEY,
+41029:             String(reason || 'unknown')
+41030:         );
+41031: 
+41032:         return true;
+41033:     }
+41034: 
+41035:     function mfMarkTransportOwner(button, reason) {
+41036:         const modal = button && button.closest
+41037:             ? button.closest('.vm--modal, .modal, .lightbox')
+41038:             : null;
+41039: 
+41040:         mfTransportOwnerModal = modal;
+41041:         mfTransportOwnerApproachGoneAt = 0;
+41042:         mfTransportOwnerCloseAttemptedAt = 0;
+41043:         mfTransportMainStableAt = 0;
+41044: 
+41045:         if (modal) {
+41046:             try {
+41047:                 modal.setAttribute('data-mf-transport-owner', 'true');
+41048:                 modal.setAttribute(
+41049:                     'data-mf-transport-owner-reason',
+41050:                     String(reason || 'unknown')
+41051:                 );
+41052:             } catch (error) {}
+41053:         }
+41054: 
+41055:         if (mfDebugEnabled) {
+41056:             debugLog(
+41057:                 'TRANSPORT MODAL OWNER',
+41058:                 `Marked | reason=${reason || 'unknown'} | modal=${modal ? 'yes' : 'no'}`
+
+41057:                 'TRANSPORT MODAL OWNER',
+41058:                 `Marked | reason=${reason || 'unknown'} | modal=${modal ? 'yes' : 'no'}`
+41059:             );
+41060:         }
+41061:     }
+41062: 
+41063:     function mfGetTransportOwnerModal() {
+41064:         if (mfTransportOwnerModal && mfTransportOwnerModal.isConnected) {
+41065:             return mfTransportOwnerModal;
+41066:         }
+41067: 
+41068:         for (const doc of mfGetAccessibleDocumentsForTransport()) {
+41069:             try {
+41070:                 const marked = doc.querySelector(
+41071:                     '[data-mf-transport-owner="true"]'
+41072:                 );
+41073: 
+41074:                 if (marked) {
+41075:                     mfTransportOwnerModal = marked;
+41076:                     return marked;
+41077:                 }
+41078:             } catch (error) {}
+41079:         }
+41080: 
+41081:         const lastClickAt = mfGetSharedTransportLastClickAt();
+41082: 
+41083:         if (
+41084:             isPostTransportRehookPending() &&
+41085:             lastClickAt > 0 &&
+41086:             Date.now() - lastClickAt < 30000
+41087:         ) {
+41088:             for (const doc of mfGetAccessibleDocumentsForTransport()) {
+41089:                 try {
+41090:                     const modals = Array.from(
+41091:                         doc.querySelectorAll('.vm--modal, .modal, .lightbox')
+41092:                     ).filter(modal => {
+41093:                         if (!mfIsVisibleInOwnDocument(modal)) return false;
+
+41101:                         const hasMission = !!modal.querySelector(
+41102:                             '#mission_general_info, #mission_content, #mission_caption, #missionH1'
+41103:                         );
+41104: 
+41105:                         const hasApproach =
+41106:                             mfGetExactVisibleApproachButtons(modal).length > 0;
+41107: 
+41108:                         return !hasMission &&
+41109:                             !hasApproach &&
+41110:                             modalText.length < 160;
+41111:                     });
+41112: 
+41113:                     if (modals.length) {
+41114:                         const modal = modals[modals.length - 1];
+41115:                         modal.setAttribute(
+41116:                             'data-mf-transport-owner',
+41117:                             'true'
+41118:                         );
+41119:                         mfTransportOwnerModal = modal;
+41120:                         return modal;
+41121:                     }
+41122:                 } catch (error) {}
+41123:             }
+41124:         }
+41125: 
+41126:         return null;
+41127:     }
+41128: 
+41129:     function mfClearTransportOwner(reason) {
+41130:         for (const doc of mfGetAccessibleDocumentsForTransport()) {
+41131:             try {
+41132:                 doc.querySelectorAll(
+41133:                     '[data-mf-transport-owner="true"]'
+41134:                 ).forEach(modal => {
+41135:                     modal.removeAttribute('data-mf-transport-owner');
+41136:                     modal.removeAttribute(
+41137:                         'data-mf-transport-owner-reason'
+
+41125: 
+41126:         return null;
+41127:     }
+41128: 
+41129:     function mfClearTransportOwner(reason) {
+41130:         for (const doc of mfGetAccessibleDocumentsForTransport()) {
+41131:             try {
+41132:                 doc.querySelectorAll(
+41133:                     '[data-mf-transport-owner="true"]'
+41134:                 ).forEach(modal => {
+41135:                     modal.removeAttribute('data-mf-transport-owner');
+41136:                     modal.removeAttribute(
+41137:                         'data-mf-transport-owner-reason'
+41138:                     );
+41139:                 });
+41140:             } catch (error) {}
+41141:         }
+41142: 
+41143:         mfTransportOwnerModal = null;
+41144:         mfTransportOwnerApproachGoneAt = 0;
+41145:         mfTransportOwnerCloseAttemptedAt = 0;
+41146:         mfTransportMainStableAt = 0;
+41147: 
+41148:         if (mfDebugEnabled) {
+41149:             debugLog(
+41150:                 'TRANSPORT MODAL OWNER',
+41151:                 `Cleared | reason=${reason || 'unknown'}`
+41152:             );
+41153:         }
+41154:     }
+41155: 
+41156:     function mfTransportShellReadyForRehook(reason) {
+41157:         const now = Date.now();
+41158:         const lastClickAt = Math.max(
+41159:             mfGetSharedTransportLastClickAt(),
+41160:             mfTransportLastClickAt || 0,
+41161:             mfBruteLastClickAt || 0,
+
+
+===== REFERENCES mfIphoneNativePickerDocuments.add =====
+24544:                 )
+24545:             );
+24546:         } catch (_error) {}
+24547: 
+24548:         if (!hasNativePicker) return false;
+24549: 
+24550:         ensureMissionFinderIphoneNativePickerStyles(
+24551:             candidateDocument
+24552:         );
+24553: 
+24554:         try {
+24555:             candidateDocument.documentElement.classList.add(
+24556:                 MF_IPHONE_NATIVE_PICKER_ROOT_CLASS
+24557:             );
+24558:         } catch (_error) {
+24559:             return false;
+24560:         }
+24561: 
+24562:         mfIphoneNativePickerDocuments.add(
+24563:             candidateDocument
+24564:         );
+24565:         return true;
+24566:     }
+24567: 
+24568:     function syncMissionFinderIphoneNativePickerSurfaces(
+24569:         forceRefresh = false
+24570:     ) {
+24571:         if (!isMissionFinderIphoneSafariWebsite()) {
+24572:             return 0;
+24573:         }
+24574: 
+24575:         const documents = [];
+24576:         const addDocument = candidateDocument => {
+24577:             try {
+24578:                 if (
+24579:                     candidateDocument?.documentElement &&
+24580:                     !documents.includes(candidateDocument)
+
+
+===== REFERENCES mfIphoneNativePickerDocuments.clear =====
+24725: 
+24726:         const documents = Array.from(
+24727:             mfIphoneNativePickerDocuments
+24728:         );
+24729: 
+24730:         try {
+24731:             getMissionAccessibleDocuments(
+24732:                 false
+24733:             ).forEach(candidateDocument => {
+24734:                 if (!documents.includes(candidateDocument)) {
+24735:                     documents.push(candidateDocument);
+24736:                 }
+24737:             });
+24738:         } catch (_error) {}
+24739: 
+24740:         documents.forEach(
+24741:             cleanupMissionFinderIphoneNativePickerDocument
+24742:         );
+24743:         mfIphoneNativePickerDocuments.clear();
+24744:     }
+24745: 
+24746:     function isMissionElementVisible(
+24747:         element
+24748:     ) {
+24749:         if (
+24750:             !element ||
+24751:             element.isConnected === false
+24752:         ) {
+24753:             return false;
+24754:         }
+24755: 
+24756:         try {
+24757:             const ownerDocument =
+24758:                 element.ownerDocument;
+24759: 
+24760:             const ownerWindow =
+24761:                 ownerDocument
+
+
+===== REFERENCES missionUpdateRowsCache =====
+NOT FOUND: missionUpdateRowsCache
