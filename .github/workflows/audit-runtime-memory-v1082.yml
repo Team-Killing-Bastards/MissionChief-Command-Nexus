@@ -11,6 +11,7 @@ on:
     paths:
       - '.runtime-memory-audit-v1082-trigger'
       - '.github/builders/audit-runtime-memory-v1082-ultrafast.py'
+      - '.github/builders/extract-runtime-hotpaths-v1082.py'
       - '.github/workflows/audit-runtime-memory-v1082.yml'
 
 permissions:
@@ -31,7 +32,9 @@ jobs:
           python-version: '3.12'
 
       - name: Audit timers, observers, caches and retained DOM paths
-        run: python3 .github/builders/audit-runtime-memory-v1082-ultrafast.py
+        run: |
+          python3 .github/builders/audit-runtime-memory-v1082-ultrafast.py
+          python3 .github/builders/extract-runtime-hotpaths-v1082.py
 
       - name: Commit audit report
         run: |
@@ -41,7 +44,8 @@ jobs:
           git add -f \
             .github/diagnostics/runtime-memory-audit-v1082.md \
             .github/diagnostics/runtime-memory-audit-v1082.json \
-            .github/diagnostics/runtime-memory-functions-v1082.txt
+            .github/diagnostics/runtime-memory-functions-v1082.txt \
+            .github/diagnostics/runtime-memory-hotpaths-v1082.txt
           if git diff --cached --quiet; then
             echo 'Audit output unchanged.'
             exit 0
