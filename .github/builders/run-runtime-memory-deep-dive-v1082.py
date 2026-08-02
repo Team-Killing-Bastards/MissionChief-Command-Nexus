@@ -33,7 +33,7 @@ source = (
 )
 '''
 
-cleanup_old = '''source = replace_once(
+cleanup_old = r"""source = replace_once(
     source,
     '''        stopSessionRuntimeTicker();
         stopMissionFinderRuntimeMemoryMaintenance();
@@ -44,8 +44,8 @@ cleanup_old = '''source = replace_once(
         removeMissionFinderRuntimeMemoryActivityTracking();''',
     'inactive frame trained refresh cleanup',
 )
-'''
-cleanup_new = '''inactive_start, inactive_end = function_span(
+"""
+cleanup_new = r"""inactive_start, inactive_end = function_span(
     source,
     'suspendMissionFinderRuntimeForInactiveFrame'
 )
@@ -62,7 +62,7 @@ inactive_body = replace_once(
     'inactive frame trained refresh cleanup',
 )
 source = source[:inactive_start] + inactive_body + source[inactive_end:]
-'''
+"""
 
 for label, old, new in (
     ('cache', cache_old, cache_new),
