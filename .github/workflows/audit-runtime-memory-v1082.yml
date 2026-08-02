@@ -10,7 +10,7 @@ on:
       - reopened
     paths:
       - '.runtime-memory-audit-v1082-trigger'
-      - '.github/builders/audit-runtime-memory-v1082-fast.py'
+      - '.github/builders/audit-runtime-memory-v1082-ultrafast.py'
       - '.github/workflows/audit-runtime-memory-v1082.yml'
 
 permissions:
@@ -19,7 +19,7 @@ permissions:
 jobs:
   audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v6
         with:
@@ -31,7 +31,7 @@ jobs:
           python-version: '3.12'
 
       - name: Audit timers, observers, caches and retained DOM paths
-        run: python3 .github/builders/audit-runtime-memory-v1082-fast.py
+        run: python3 .github/builders/audit-runtime-memory-v1082-ultrafast.py
 
       - name: Commit audit report
         run: |
