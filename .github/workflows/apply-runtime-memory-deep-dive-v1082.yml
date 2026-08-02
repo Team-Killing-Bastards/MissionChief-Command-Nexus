@@ -53,7 +53,7 @@ jobs:
           python3 scripts/check_repository.py
           git diff --check
 
-      - name: Commit validated permanent changes
+      - name: Commit validated product changes
         run: |
           set -euo pipefail
           git config user.name MartyBlyth
@@ -63,7 +63,6 @@ jobs:
             src/README.md \
             README.md \
             CHANGELOG.md \
-            scripts \
-            .github/workflows/validate-userscript.yml
+            scripts
           git commit -m 'Harden idle and Auto Mode runtime memory paths'
           git push origin HEAD:fix/runtime-memory-deep-dive-v1082
