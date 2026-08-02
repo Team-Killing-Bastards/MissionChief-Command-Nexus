@@ -1,0 +1,37 @@
+name: Audit runtime memory v1.0.82
+
+on:
+  push:
+    branches:
+      - diagnostic/deep-memory-audit-v1082
+    paths:
+      - '.github/builders/audit-runtime-memory-v1082.py'
+      - '.github/workflows/audit-runtime-memory-v1082.yml'
+      - '.v1082-memory-audit-trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: diagnostic/deep-memory-audit-v1082
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Extract long-lived runtime ownership
+        run: python3 .github/builders/audit-runtime-memory-v1082.py
+      - name: Commit audit report
+        run: |
+          set -euo pipefail
+          git config user.name MartyBlyth
+          git config user.email 32400596+Martyblyth@users.noreply.github.com
+          git add -f .github/diagnostics/runtime-memory-audit-v1082.txt
+          git commit -m 'Capture deep runtime memory audit'
+          git push origin HEAD:diagnostic/deep-memory-audit-v1082
