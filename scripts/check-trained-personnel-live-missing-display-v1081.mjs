@@ -65,8 +65,8 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-expect(source.includes('// @version      1.0.81'), 'Expected Command Nexus 1.0.81');
-expect(source.includes(' * MODULE 2: MISSION FINDER V10.6.141'), 'Expected Mission Finder V10.6.141');
+expect(source.includes('// @version      1.0.82'), 'Expected Command Nexus 1.0.81');
+expect(source.includes(' * MODULE 2: MISSION FINDER V10.6.142'), 'Expected Mission Finder V10.6.141');
 
 const helper = extractFunction(
   'getLiveMissionTrainedPersonnelRequirementsForDisplay'
@@ -101,19 +101,40 @@ for (const token of [
   'flags.patientChanged',
   'missionPage &&',
   'wrapper &&',
-  'renderSelectedTrainedPersonnelPanel();'
+  'invalidateLiveTrainedPersonnelDisplayCache();',
+  'scheduleTrainedPersonnelPanelRefresh();'
 ]) {
   expect(mutationFlush.includes(token), `Mutation refresh path missing ${token}`);
 }
 expect(
   mutationFlush.indexOf('invalidateMissionContextCaches();') <
-    mutationFlush.indexOf('renderSelectedTrainedPersonnelPanel();'),
+    mutationFlush.indexOf('invalidateLiveTrainedPersonnelDisplayCache();'),
   'Live mission caches must be invalidated before the panel rereads current shortages'
+);
+expect(
+  !mutationFlush.includes('renderSelectedTrainedPersonnelPanel();'),
+  'Mutation flush must not synchronously rebuild the trained-personnel DOM'
 );
 expect(
   !mutationFlush.includes('new MutationObserver'),
   'The live panel refresh must reuse the existing observer'
 );
+
+const scheduledRefresh = extractFunction(
+  'scheduleTrainedPersonnelPanelRefresh'
+);
+for (const token of [
+  'if (mfTrainedPersonnelMutationRefreshTimer) return;',
+  'mfTrainedPersonnelMutationRefreshTimer = setTimeout(',
+  'mfTrainedPersonnelMutationRefreshTimer = null;',
+  'renderSelectedTrainedPersonnelPanel();',
+  'MF_TRAINED_PERSONNEL_MUTATION_REFRESH_DELAY_MS'
+]) {
+  expect(
+    scheduledRefresh.includes(token),
+    `Scheduled trained-personnel refresh missing ${token}`
+  );
+}
 
 const panel = extractFunction('renderSelectedTrainedPersonnelPanel');
 for (const token of [
@@ -151,6 +172,10 @@ for (const forbidden of [
 const helperRuntime = Function(
   `"use strict";\n` +
   `function hasMissionVehiclesOnSceneForTrainedPersonnelAuthority() { return true; }\n` +
+  `function getCurrentMissionIdForQueueRestart() { return 'test-mission'; }\n` +
+  `const MF_LIVE_TRAINED_PERSONNEL_DISPLAY_CACHE_MS = 1500;\n` +
+  `let mfLiveTrainedPersonnelDisplayCache = {missionId:'',expiresAt:0,rows:[]};\n` +
+  `function invalidateLiveTrainedPersonnelDisplayCache() { mfLiveTrainedPersonnelDisplayCache = {missionId:'',expiresAt:0,rows:[]}; }\n` +
   `function readMissionUpdateRows() { return [{isTrainedPersonnelRequirement:true, personnelTrainingRequirements:[` +
     `{code:'police_medic',required:4},` +
     `{code:'police_sergeant',required:2},` +

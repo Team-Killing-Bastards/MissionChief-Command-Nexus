@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.81
+// @version      1.0.82
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -10730,7 +10730,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.141
+         * MODULE 2: MISSION FINDER V10.6.142
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -10747,7 +10747,8 @@
     // claim_found_object_sync route without navigating away from the mission.
     const MF_EVENT_COLLECTIBLE_SELECTOR =
         'a#easter-egg-link[href^="/missions/"][href*="/claim_found_object_sync"]';
-    const MF_EVENT_COLLECTIBLE_SCAN_INTERVAL_MS = 1000;
+    const MF_EVENT_COLLECTIBLE_SCAN_INTERVAL_MS =
+        15 * 1000;
     const MF_EVENT_COLLECTIBLE_REQUEST_COOLDOWN_MS = 10000;
     const MF_EVENT_COLLECTIBLE_MAX_TRACKED = 250;
     const mfEventCollectibleClaimTimes = new Map();
@@ -10759,48 +10760,13 @@
         localStorage.getItem(
             MF_EVENT_SCANNER_ENABLED_KEY
         ) !== 'false';
-
     function getMissionEventCollectibleDocuments() {
-        const documents = [];
-        const seen = new Set();
-        const queue = [document];
-
-        while (
-            queue.length > 0 &&
-            documents.length < 24
-        ) {
-            const candidate = queue.shift();
-
-            if (
-                !candidate ||
-                seen.has(candidate)
-            ) {
-                continue;
-            }
-
-            seen.add(candidate);
-            documents.push(candidate);
-
-            try {
-                candidate
-                    .querySelectorAll('iframe')
-                    .forEach(frame => {
-                        try {
-                            const frameDocument =
-                                frame.contentDocument;
-
-                            if (
-                                frameDocument &&
-                                !seen.has(frameDocument)
-                            ) {
-                                queue.push(frameDocument);
-                            }
-                        } catch (_error) {}
-                    });
-            } catch (_error) {}
+        try {
+            return getMissionAccessibleDocuments(false)
+                .slice(0, 24);
+        } catch (_error) {
+            return [document];
         }
-
-        return documents;
     }
 
     function readMissionEventCollectibleClaim(link) {
@@ -11905,6 +11871,8 @@
         'mf_auto_memory_recycle_state_v1';
     const MF_AUTO_MEMORY_RECYCLE_HEAP_THRESHOLD_BYTES =
         640 * 1024 * 1024;
+    const MF_RUNTIME_MEMORY_EMERGENCY_RECYCLE_THRESHOLD_BYTES =
+        700 * 1024 * 1024;
     const MF_AUTO_MEMORY_RECYCLE_COOLDOWN_MS =
         4 * 60 * 1000;
     const MF_AUTO_MEMORY_RECYCLE_MAX_STATE_AGE_MS =
@@ -12120,12 +12088,19 @@
         mfVehicleMatchCandidateCache.clear();
         pruneLiveTrainingVerifyCache();
         pruneMissionFinderIphoneNativePickerDocuments();
+        invalidateLiveTrainedPersonnelDisplayCache();
+
+        if (
+            mfTransportOwnerModal &&
+            !mfTransportOwnerModal.isConnected
+        ) {
+            mfTransportOwnerModal = null;
+        }
 
         mfRuntimeMemoryLastSoftFlushAt = Date.now();
         mfRuntimeMemorySoftFlushCount += 1;
         mfRuntimeMemoryLastReason = String(reason || '');
     }
-
     function shouldRecycleIdleMissionMemory() {
         if (
             autoModeRunning ||
@@ -12148,22 +12123,28 @@
             return null;
         }
 
-        const now = Date.now();
-
-        if (
-            now - mfRuntimeMemoryLastActivityAt <
-                MF_RUNTIME_MEMORY_IDLE_MS ||
-            now - mfRuntimeMemoryLastMutationAt <
-                MF_RUNTIME_MEMORY_STABLE_MS
-        ) {
-            return null;
-        }
-
         const heap = getAutoMemoryHeapSnapshot();
         if (
             !heap ||
             heap.usedJSHeapSize <
                 MF_AUTO_MEMORY_RECYCLE_HEAP_THRESHOLD_BYTES
+        ) {
+            return null;
+        }
+
+        const now = Date.now();
+        const emergencyRecycle =
+            heap.usedJSHeapSize >=
+                MF_RUNTIME_MEMORY_EMERGENCY_RECYCLE_THRESHOLD_BYTES;
+
+        if (
+            now - mfRuntimeMemoryLastActivityAt <
+                MF_RUNTIME_MEMORY_IDLE_MS ||
+            (
+                !emergencyRecycle &&
+                now - mfRuntimeMemoryLastMutationAt <
+                    MF_RUNTIME_MEMORY_STABLE_MS
+            )
         ) {
             return null;
         }
@@ -22667,6 +22648,75 @@ let sessionRuntimeTicker = null;
     }
 
 
+    const MF_TRAINED_PERSONNEL_MUTATION_REFRESH_DELAY_MS =
+        1200;
+    const MF_LIVE_TRAINED_PERSONNEL_DISPLAY_CACHE_MS =
+        1500;
+    let mfTrainedPersonnelMutationRefreshTimer = null;
+    let mfLiveTrainedPersonnelDisplayCache = {
+        missionId: '',
+        expiresAt: 0,
+        rows: []
+    };
+
+    function invalidateLiveTrainedPersonnelDisplayCache() {
+        mfLiveTrainedPersonnelDisplayCache = {
+            missionId: '',
+            expiresAt: 0,
+            rows: []
+        };
+    }
+
+    function cancelTrainedPersonnelPanelRefresh() {
+        if (mfTrainedPersonnelMutationRefreshTimer) {
+            clearTimeout(
+                mfTrainedPersonnelMutationRefreshTimer
+            );
+            mfTrainedPersonnelMutationRefreshTimer = null;
+        }
+        invalidateLiveTrainedPersonnelDisplayCache();
+    }
+
+    function scheduleTrainedPersonnelPanelRefresh() {
+        if (mfTrainedPersonnelMutationRefreshTimer) return;
+
+        mfTrainedPersonnelMutationRefreshTimer = setTimeout(
+            () => {
+                mfTrainedPersonnelMutationRefreshTimer = null;
+                renderSelectedTrainedPersonnelPanel();
+            },
+            MF_TRAINED_PERSONNEL_MUTATION_REFRESH_DELAY_MS
+        );
+    }
+
+    function applyTrainedPersonnelPanelTextRender(
+        summary,
+        content,
+        summaryText,
+        contentMarkup
+    ) {
+        if (summary.textContent !== summaryText) {
+            summary.textContent = summaryText;
+        }
+        if (content.innerHTML !== contentMarkup) {
+            content.innerHTML = contentMarkup;
+        }
+    }
+
+    function applyTrainedPersonnelPanelMarkupRender(
+        summary,
+        content,
+        summaryMarkup,
+        contentMarkup
+    ) {
+        if (summary.innerHTML !== summaryMarkup) {
+            summary.innerHTML = summaryMarkup;
+        }
+        if (content.innerHTML !== contentMarkup) {
+            content.innerHTML = contentMarkup;
+        }
+    }
+
     function renderSelectedTrainedPersonnelPanel() {
         const summary =
             document.getElementById('trained-personnel-summary');
@@ -22747,25 +22797,31 @@ let sessionRuntimeTicker = null;
             if (
                 missionVehiclesOnSceneForTrainedPersonnel
             ) {
-                summary.textContent =
-                    'No current trained-personnel shortage is reported.';
-                content.innerHTML =
-                    '<span class="mf2026-small">Vehicles are on scene. Live personnel and course shortages are authoritative; Mission Required Personnel is shown only before the first vehicle arrives on scene.</span>';
+                applyTrainedPersonnelPanelTextRender(
+                    summary,
+                    content,
+                    'No current trained-personnel shortage is reported.',
+                    '<span class="mf2026-small">Vehicles are on scene. Live personnel and course shortages are authoritative; Mission Required Personnel is shown only before the first vehicle arrives on scene.</span>'
+                );
                 return;
             }
 
             if (preloadState.status === 'loading') {
-                summary.textContent =
-                    'Loading mission Required Personnel...';
-                content.innerHTML =
-                    '<span class="mf2026-small">Reading the mission requirement table before unit selection.</span>';
+                applyTrainedPersonnelPanelTextRender(
+                    summary,
+                    content,
+                    'Loading mission Required Personnel...',
+                    '<span class="mf2026-small">Reading the mission requirement table before unit selection.</span>'
+                );
                 return;
             }
 
-            summary.textContent =
-                'No required or selected trained-personnel evidence is available.';
-            content.innerHTML =
-                '<span class="mf2026-small">Mission Required Personnel and selected trained personnel will appear here.</span>';
+            applyTrainedPersonnelPanelTextRender(
+                summary,
+                content,
+                'No required or selected trained-personnel evidence is available.',
+                '<span class="mf2026-small">Mission Required Personnel and selected trained personnel will appear here.</span>'
+            );
             return;
         }
 
@@ -22798,7 +22854,7 @@ let sessionRuntimeTicker = null;
             `);
         }
 
-        summary.innerHTML = summaryParts.join('');
+        const summaryMarkup = summaryParts.join('');
 
         const requiredMarkup = requiredPersonnel.length > 0
             ? `
@@ -22889,10 +22945,17 @@ let sessionRuntimeTicker = null;
             `;
         }).join('');
 
-        content.innerHTML =
+        const contentMarkup =
             requiredMarkup +
             liveMissingMarkup +
             selectedMarkup;
+
+        applyTrainedPersonnelPanelMarkupRender(
+            summary,
+            content,
+            summaryMarkup,
+            contentMarkup
+        );
     }
 
     function renderVehicleLoadListNow() {
@@ -24081,7 +24144,7 @@ let sessionRuntimeTicker = null;
         }
 
         mfMissionDocumentCache = {
-            expiresAt: now + 500,
+            expiresAt: now + 5000,
             documents
         };
 
@@ -27546,12 +27609,25 @@ let sessionRuntimeTicker = null;
             );
         });
     }
-
     function getLiveMissionTrainedPersonnelRequirementsForDisplay() {
         if (
             !hasMissionVehiclesOnSceneForTrainedPersonnelAuthority()
         ) {
+            invalidateLiveTrainedPersonnelDisplayCache();
             return [];
+        }
+
+        const now = Date.now();
+        const missionId =
+            getCurrentMissionIdForQueueRestart() || '';
+        const cached =
+            mfLiveTrainedPersonnelDisplayCache;
+
+        if (
+            cached.missionId === missionId &&
+            now < cached.expiresAt
+        ) {
+            return cached.rows;
         }
 
         let liveRows = [];
@@ -27568,6 +27644,7 @@ let sessionRuntimeTicker = null;
                 );
             }
 
+            invalidateLiveTrainedPersonnelDisplayCache();
             return [];
         }
 
@@ -27622,10 +27699,20 @@ let sessionRuntimeTicker = null;
                     });
             });
 
-        return Array.from(requirements.values())
+        const rows = Array.from(requirements.values())
             .sort((left, right) => {
                 return left.label.localeCompare(right.label);
             });
+
+        mfLiveTrainedPersonnelDisplayCache = {
+            missionId,
+            expiresAt:
+                now +
+                MF_LIVE_TRAINED_PERSONNEL_DISPLAY_CACHE_MS,
+            rows
+        };
+
+        return rows;
     }
 
     function getPreloadedMissionTrainedPersonnelRequirements() {
@@ -47031,6 +47118,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
         }
 
         stopSessionRuntimeTicker();
+        cancelTrainedPersonnelPanelRefresh();
         cleanupMissionFinderIphoneNativePickerSurfaces();
 
         if (mfDebugRenderFrame !== null) {
@@ -47057,29 +47145,36 @@ async function handleAutoPrisonerReleaseAfterActions() {
             debugLog('PANEL LIFECYCLE', `Removed after mission closed | ${reason}`);
         }
     }
-
     function stopBackgroundWatcherIntervalsOnly() {
-        if (mfSilentQueueWatcherTimer) {
-            clearInterval(mfSilentQueueWatcherTimer);
-            mfSilentQueueWatcherTimer = null;
-        }
+        stopSilentQueueWatcher();
 
         if (mfGlobalTransportWatcherTimer) {
             clearInterval(mfGlobalTransportWatcherTimer);
             mfGlobalTransportWatcherTimer = null;
         }
 
-        if (mfBruteApproachWatcherTimer) {
-            clearInterval(mfBruteApproachWatcherTimer);
-            mfBruteApproachWatcherTimer = null;
-        }
-
-        if (mfPostTransportRehookTimer) {
-            clearInterval(mfPostTransportRehookTimer);
-            mfPostTransportRehookTimer = null;
-        }
+        stopBruteApproachTransportWatcher();
+        stopPostTransportRehookWatcher();
     }
 
+
+    function stopSilentQueueWatcher() {
+        if (!mfSilentQueueWatcherTimer) return;
+        clearInterval(mfSilentQueueWatcherTimer);
+        mfSilentQueueWatcherTimer = null;
+    }
+
+    function stopBruteApproachTransportWatcher() {
+        if (!mfBruteApproachWatcherTimer) return;
+        clearInterval(mfBruteApproachWatcherTimer);
+        mfBruteApproachWatcherTimer = null;
+    }
+
+    function stopPostTransportRehookWatcher() {
+        if (!mfPostTransportRehookTimer) return;
+        clearInterval(mfPostTransportRehookTimer);
+        mfPostTransportRehookTimer = null;
+    }
     function syncBackgroundAutomationWatchers() {
         if (!MF_IS_TOP_WINDOW) return;
 
@@ -47095,12 +47190,37 @@ async function handleAutoPrisonerReleaseAfterActions() {
                 'mf_next_queue_restart_enabled_v10'
             ) !== 'false';
 
-        if (shouldRunBackgroundAutomationWatchers()) {
+        const silentQueueRequired = Boolean(
+            sessionStorage.getItem(
+                MF_QUEUE_WAIT_ACTIVE_FLAG
+            ) === 'true' ||
+            sessionStorage.getItem(
+                MF_FINAL_QUEUE_DISPATCH_FLAG
+            ) === 'true'
+        );
+        const transportWatcherRequired =
+            isTransportAutomationAllowed();
+        const postTransportWatcherRequired = Boolean(
+            isPostTransportRehookPending() ||
+            isRecentTransportRehookWindowActive()
+        );
+
+        if (silentQueueRequired) {
             startSilentQueueWatcher();
+        } else {
+            stopSilentQueueWatcher();
+        }
+
+        if (transportWatcherRequired) {
             startBruteApproachTransportWatcher();
+        } else {
+            stopBruteApproachTransportWatcher();
+        }
+
+        if (postTransportWatcherRequired) {
             startPostTransportRehookWatcher();
         } else {
-            stopBackgroundWatcherIntervalsOnly();
+            stopPostTransportRehookWatcher();
         }
     }
 
@@ -47134,7 +47254,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
                     syncBackgroundAutomationWatchers();
                     reconcileMissionFinderFrameRuntimesFromTop();
                 },
-                5000
+                15 * 1000
             );
         }
 
@@ -47252,7 +47372,8 @@ async function handleAutoPrisonerReleaseAfterActions() {
             wrapper &&
             shouldRefreshTrainedPersonnelPanel
         ) {
-            renderSelectedTrainedPersonnelPanel();
+            invalidateLiveTrainedPersonnelDisplayCache();
+            scheduleTrainedPersonnelPanelRefresh();
         }
 
         if (autoModeRunning && missionPage && flags.relevant) {
@@ -47342,6 +47463,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
 
         stopSessionRuntimeTicker();
         stopMissionFinderRuntimeMemoryMaintenance();
+        cancelTrainedPersonnelPanelRefresh();
         removeMissionFinderRuntimeMemoryActivityTracking();
 
         document.getElementById(
@@ -47418,12 +47540,11 @@ async function handleAutoPrisonerReleaseAfterActions() {
             );
         } catch (_error) {}
     }
-
     function reconcileMissionFinderFrameRuntimesFromTop() {
         if (!MF_IS_TOP_WINDOW) return;
 
         try {
-            getMissionAccessibleDocuments(true)
+            getMissionAccessibleDocuments(false)
                 .forEach(candidateDocument => {
                     if (candidateDocument === document) return;
                     dispatchMissionFinderFrameRuntimeEvent(
