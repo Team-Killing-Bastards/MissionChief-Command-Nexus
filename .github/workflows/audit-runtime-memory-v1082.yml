@@ -5,36 +5,39 @@ on:
     branches:
       - main
     types:
-      - opened
+      - reopened
       - synchronize
     paths:
-      - '.github/builders/audit-runtime-memory-v1082.py'
       - '.github/workflows/audit-runtime-memory-v1082.yml'
       - '.v1082-memory-audit-trigger'
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: diagnostic/deep-memory-audit-v1082
+          ref: fix/runtime-memory-deep-dive-v1082
           fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Extract long-lived runtime ownership
-        run: python3 .github/builders/audit-runtime-memory-v1082.py
-      - name: Commit audit report
+      - name: Validate exact v1.0.82 candidate
         run: |
           set -euo pipefail
-          git config user.name MartyBlyth
-          git config user.email 32400596+Martyblyth@users.noreply.github.com
-          git add -f .github/diagnostics/runtime-memory-audit-v1082.txt
-          git commit -m 'Capture deep runtime memory audit'
-          git push origin HEAD:diagnostic/deep-memory-audit-v1082
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          for test in scripts/check-*.mjs; do
+            echo "Running ${test}"
+            node "$test"
+          done
+          python3 scripts/check_repository.py
+          git diff --check
