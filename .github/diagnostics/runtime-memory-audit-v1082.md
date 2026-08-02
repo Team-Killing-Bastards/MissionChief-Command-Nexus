@@ -1,0 +1,292 @@
+# MissionChief Command Nexus runtime-memory audit
+
+Static deep-dive generated from the current branch source. This report intentionally over-collects possible retention and churn paths; findings still require engineering interpretation.
+
+## Source baseline
+- **source path**: `src/missionchief-command-nexus.user.js`
+- **line count**: `48053`
+- **byte count**: `1631728`
+- **userscript version**: `1.0.81`
+- **mission finder version**: `V10.6.141`
+- **function count**: `962`
+- **set interval count**: `8`
+- **set timeout count**: `35`
+- **request animation frame count**: `17`
+- **mutation observer count**: `2`
+- **add event listener count**: `72`
+- **remove event listener count**: `31`
+- **query call count**: `425`
+- **inner html assignment count**: `29`
+- **node retention match count**: `18`
+
+## Highest-signal suspects
+- **score 8 — high-dom-query-density**: function=addPanel, query_count=68
+- **score 8 — unbounded-module-collection**: line=104, name=PERSONNEL_ASSIGNMENT_INDEX_CACHE, kind=new WeakMap(
+- **score 8 — unbounded-module-collection**: line=105, name=PERSONNEL_TRAINING_SET_CACHE, kind=new WeakMap(
+- **score 8 — unbounded-module-collection**: line=106, name=PERSONNEL_VISIBLE_TRAINING_COUNTS_CACHE, kind=new WeakMap(
+- **score 8 — unbounded-module-collection**: line=107, name=PERSONNEL_REPORT_BLOCK_CACHE, kind=new WeakMap(
+- **score 8 — unbounded-module-collection**: line=6000, name=verifiedVehicles, kind=[]
+- **score 8 — unbounded-module-collection**: line=6003, name=failedVehicleIds, kind=[]
+- **score 8 — unbounded-module-collection**: line=6275, name=vehiclesToVerify, kind=[]
+- **score 8 — untracked-interval**: function=startMissionEventCollectibleCollector, line=11012
+- **score 8 — unbounded-module-collection**: line=40374, name=seen, kind=new Set(
+- **score 5 — document-wide-subtree-observer**: handle=observer, function=installSingleNamingToolsPanelGuard, line=1575
+- **score 5 — document-wide-subtree-observer**: handle=mfMainMutationObserver, function=startMissionFinderObserver, line=47852
+- **score 4 — high-dom-query-density**: function=createControlPanel, query_count=14
+- **score 4 — high-dom-query-density**: function=updatePersonnelProfileUi, query_count=13
+- **score 4 — anonymous-global-listener**: function=installManualMissionClickFlagClearer, line=39846, event=click, target=document
+
+## Timer ownership
+- Tracked intervals: 7; untracked interval calls: 1
+  - `timer` at line 1846 in `initWhenReady` — clear found: **True**
+  - `mfRuntimeMemoryMaintenanceTimer` at line 12296 in `startMissionFinderRuntimeMemoryMaintenance` — clear found: **True**
+  - `sessionRuntimeTicker` at line 22321 in `startSessionRuntimeTicker` — clear found: **True**
+  - `mfSilentQueueWatcherTimer` at line 39634 in `startSilentQueueWatcher` — clear found: **True**
+  - `mfPostTransportRehookTimer` at line 43559 in `startPostTransportRehookWatcher` — clear found: **True**
+  - `mfBruteApproachWatcherTimer` at line 43934 in `startBruteApproachTransportWatcher` — clear found: **True**
+  - `mfBackgroundWatcherSupervisorTimer` at line 47132 in `installBackgroundWatcherSupervisor` — clear found: **True**
+  - **untracked** interval at line 11012 in `startMissionEventCollectibleCollector`
+- Tracked timeouts: 10; untracked timeout calls: 25
+  - `navigationTimer` at line 1625 in `handleNavigationClick` — clear found: **True**
+  - `timer` at line 5178 in `<module scope>` — clear found: **True**
+  - `PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER` at line 7133 in `schedulePersonnelTrainingRegistryFlush` — clear found: **True**
+  - `timer` at line 8856 in `<module scope>` — clear found: **True**
+  - `timeoutId` at line 13147 in `withTimeout` — clear found: **True**
+  - `mfVehicleLoadRenderFrame` at line 23018 in `renderVehicleLoadList` — clear found: **True**
+  - `mfIphoneNativePickerSyncTimer` at line 24646 in `scheduleMissionFinderIphoneNativePickerSync` — clear found: **True**
+  - `mfMissionRequirementPreloadTimer` at line 27847 in `scheduleMissionRequiredPersonnelPreload` — clear found: **True**
+  - `mfAutoLoopResumeTimer` at line 47148 in `scheduleAutoModeLoopResume` — clear found: **True**
+  - `mfMainMutationFlushTimer` at line 47276 in `scheduleMissionFinderMutationWork` — clear found: **True**
+- Tracked animation frames: 4; untracked RAF calls: 13
+  - `frameId` at line 1138 in `appendBoundedToolLog` — cancel found: **True**
+  - `pendingFrame` at line 1551 in `enforce` — cancel found: **True**
+  - `pendingFrame` at line 1772 in `requestClamp` — cancel found: **True**
+  - `mfVehicleLoadRenderFrame` at line 23016 in `renderVehicleLoadList` — cancel found: **True**
+
+## MutationObserver ownership
+- `observer` at line 1575 in `installSingleNamingToolsPanelGuard` — disconnect found: **True**; document-wide subtree: **True**
+- `mfMainMutationObserver` at line 47852 in `startMissionFinderObserver` — disconnect found: **True**; document-wide subtree: **True**
+
+## Module and function collections
+- `lines` ([]) line 9432, scope `buildPersonnelOverallStationBlock` — mutations=20, pruning=0, limit mentions=0
+- `rows` ([]) line 26492, scope `extractMissionDefinitionRequiredPersonnelRows` — mutations=18, pruning=4, limit mentions=12
+- `rows` ([]) line 26671, scope `extractLiveMissionRequirementRows` — mutations=18, pruning=4, limit mentions=12
+- `rows` ([]) line 26999, scope `extractTowCarRequirementRows` — mutations=18, pruning=4, limit mentions=12
+- `rows` ([]) line 31881, scope `escapeHtml` — mutations=18, pruning=4, limit mentions=12
+- `rows` ([]) line 35445, scope `getGenericMissingVehicleRowsFromText` — mutations=18, pruning=4, limit mentions=12
+- `rows` ([]) line 40372, scope `<module scope>` — mutations=18, pruning=4, limit mentions=12
+- `candidates` (new Set() line 15282, scope `getVehicleMatchCandidates` — mutations=10, pruning=0, limit mentions=8
+- `candidates` ([]) line 21071, scope `getMissionFinderIphoneCloseControlGutter` — mutations=10, pruning=0, limit mentions=8
+- `candidates` ([]) line 21140, scope `getMissionFinderIphoneNativeControlContainer` — mutations=10, pruning=0, limit mentions=8
+- `candidates` ([]) line 23665, scope `getPrimaryMissionRequirementDocument` — mutations=10, pruning=0, limit mentions=8
+- `candidates` (new Set() line 24296, scope `getMissionFinderIphoneNativePickerStrips` — mutations=10, pruning=0, limit mentions=8
+- `candidates` ([]) line 25617, scope `getMissionRequirementSource` — mutations=10, pruning=0, limit mentions=8
+- `candidates` ([]) line 33508, scope `getAllyStealParentModalCloseCandidates` — mutations=10, pruning=0, limit mentions=8
+- `candidates` ([]) line 42043, scope `getVisibleAutoPrisonerReleaseDismissContexts` — mutations=10, pruning=0, limit mentions=8
+- `seen` (new Set() line 7350, scope `getPersonnelAssignedToVehicle` — mutations=8, pruning=0, limit mentions=0
+- `seen` (new Set() line 7597, scope `getPersonnelVehicleQueue` — mutations=8, pruning=0, limit mentions=0
+- `seen` (new Set() line 8913, scope `getPersonnelAmbulanceQueue` — mutations=8, pruning=0, limit mentions=0
+- `seen` (new Set() line 10765, scope `getMissionEventCollectibleDocuments` — mutations=8, pruning=0, limit mentions=0
+- `seen` (new Set() line 33482, scope `getAllAllyStealSuccessAlerts` — mutations=8, pruning=0, limit mentions=0
+- `seen` (new Set() line 33509, scope `getAllyStealParentModalCloseCandidates` — mutations=8, pruning=0, limit mentions=0
+- `missingRows` ([]) line 36720, scope `getGenericMissingVehicleRowsFromText` — mutations=8, pruning=1, limit mentions=4
+- `seen` (new Set() line 40374, scope `<module scope>` — mutations=8, pruning=0, limit mentions=0
+- `seen` (new Set() line 42044, scope `getVisibleAutoPrisonerReleaseDismissContexts` — mutations=8, pruning=0, limit mentions=0
+- `documents` ([]) line 10764, scope `getMissionEventCollectibleDocuments` — mutations=6, pruning=1, limit mentions=1
+- `parts` ([]) line 12642, scope `getRecorderElementPath` — mutations=6, pruning=1, limit mentions=0
+- `documents` ([]) line 13433, scope `mfCollectMemoryDiagnostics` — mutations=6, pruning=1, limit mentions=1
+- `documents` ([]) line 24040, scope `getMissionAccessibleDocuments` — mutations=6, pruning=1, limit mentions=1
+- `documents` ([]) line 24574, scope `syncMissionFinderIphoneNativePickerSurfaces` — mutations=6, pruning=1, limit mentions=1
+- `parts` ([]) line 26603, scope `extractMissionDefinitionRequiredPersonnelRows` — mutations=6, pruning=1, limit mentions=0
+- `parts` ([]) line 26768, scope `extractLiveMissionRequirementRows` — mutations=6, pruning=1, limit mentions=0
+- `rowCodes` (new Set() line 30192, scope `parseLivePoliceTrainingAssignments` — mutations=6, pruning=0, limit mentions=0
+- `documents` ([]) line 33390, scope `getAllyStealAccessibleDocuments` — mutations=6, pruning=1, limit mentions=1
+- `values` ([]) line 1226, scope `readStationOverviewName` — mutations=5, pruning=0, limit mentions=5
+- `values` ([]) line 11338, scope `getMissionFinderPhoneScreenShortSide` — mutations=5, pruning=0, limit mentions=5
+- `values` ([]) line 13401, scope `mfGetDiagnosticVisibleAlerts` — mutations=5, pruning=0, limit mentions=5
+- `elements` ([]) line 25075, scope `buildActiveMissionRequirementContexts` — mutations=5, pruning=0, limit mentions=2
+- `elements` ([]) line 25517, scope `getMissionTypeIdFromScope` — mutations=5, pruning=0, limit mentions=2
+- `elements` ([]) line 25682, scope `getMissionRequirementSource` — mutations=5, pruning=0, limit mentions=2
+- `elements` ([]) line 25703, scope `getMissionRequirementSource` — mutations=5, pruning=0, limit mentions=2
+- `elements` ([]) line 36293, scope `getStructuredMissingVehicleRows` — mutations=5, pruning=0, limit mentions=2
+- `values` ([]) line 40332, scope `<module scope>` — mutations=5, pruning=0, limit mentions=5
+- `vehicleReports` ([]) line 7840, scope `processOnePoliceStation` — mutations=4, pruning=0, limit mentions=5
+- `verifiedIds` (new Set() line 8067, scope `processOnePoliceStation` — mutations=4, pruning=0, limit mentions=0
+- `vehicleReports` ([]) line 8460, scope `processOneMedicalCriticalCareStation` — mutations=4, pruning=0, limit mentions=5
+- `verifiedIds` (new Set() line 8607, scope `processOneMedicalCriticalCareStation` — mutations=4, pruning=0, limit mentions=0
+- `summaryParts` ([]) line 22771, scope `renderSelectedTrainedPersonnelPanel` — mutations=4, pruning=0, limit mentions=0
+- `requirements` (new Map() line 27573, scope `getLiveMissionTrainedPersonnelRequirementsForDisplay` — mutations=4, pruning=0, limit mentions=17
+- `requirements` (new Map() line 27647, scope `getPreloadedMissionTrainedPersonnelRequirements` — mutations=4, pruning=0, limit mentions=17
+- `requirements` (new Map() line 28505, scope `getTrainedPersonnelRequirementsFromFreeText` — mutations=4, pruning=0, limit mentions=17
+- `verifiedIds` (new Set() line 30547, scope `refreshPoliceInspectorRegistryFromLiveVehicles` — mutations=4, pruning=0, limit mentions=0
+- `verifiedIds` (new Set() line 30827, scope `refreshArmedResponseRegistryFromLiveVehicles` — mutations=4, pruning=0, limit mentions=0
+- `requirements` ([]) line 31115, scope `prepareTrainedPersonnelRegistryForRows` — mutations=4, pruning=0, limit mentions=17
+- `queue` ([]) line 7598, scope `getPersonnelVehicleQueue` — mutations=3, pruning=1, limit mentions=7
+- `reservedPersonnelIds` (new Set() line 7837, scope `processOnePoliceStation` — mutations=3, pruning=0, limit mentions=1
+- `reservedPersonnelIds` (new Set() line 8458, scope `processOneMedicalCriticalCareStation` — mutations=3, pruning=0, limit mentions=1
+- `queue` ([]) line 8914, scope `getPersonnelAmbulanceQueue` — mutations=3, pruning=1, limit mentions=7
+- `alerts` ([]) line 33481, scope `getAllAllyStealSuccessAlerts` — mutations=3, pruning=0, limit mentions=4
+- `deduped` (new Map() line 36308, scope `getStructuredMissingVehicleRows` — mutations=3, pruning=0, limit mentions=0
+- `alerts` ([]) line 40228, scope `getVisibleInlineProblemAlertText` — mutations=3, pruning=0, limit mentions=4
+- `alerts` ([]) line 42485, scope `getInlinePersonnelQualificationAlertText` — mutations=3, pruning=0, limit mentions=4
+- `cacheCandidates` ([]) line 4997, scope `findBuildingCoordinatesInPageCaches` — mutations=2, pruning=0, limit mentions=0
+- `plannedNames` ([]) line 7966, scope `processOnePoliceStation` — mutations=2, pruning=0, limit mentions=2
+- `assignedNames` ([]) line 7968, scope `processOnePoliceStation` — mutations=2, pruning=0, limit mentions=2
+- `submittedCandidates` ([]) line 8038, scope `processOnePoliceStation` — mutations=2, pruning=0, limit mentions=0
+- `plannedNames` ([]) line 8506, scope `processOneMedicalCriticalCareStation` — mutations=2, pruning=0, limit mentions=2
+- `assignedNames` ([]) line 8507, scope `processOneMedicalCriticalCareStation` — mutations=2, pruning=0, limit mentions=2
+- `submittedCandidates` ([]) line 8583, scope `processOneMedicalCriticalCareStation` — mutations=2, pruning=0, limit mentions=0
+- `index` (new Map() line 9033, scope `getUniquePersonnelVehicleNameIndex` — mutations=2, pruning=0, limit mentions=7
+- `attributeElements` ([]) line 23506, scope `getMissionIdFromLocalScope` — mutations=2, pruning=0, limit mentions=0
+- `merged` (new Map() line 27120, scope `mergeRequirementRows` — mutations=2, pruning=0, limit mentions=0
+- `trainedPersonnelWarnings` ([]) line 32369, scope `escapeHtml` — mutations=2, pruning=0, limit mentions=1
+- `roots` ([]) line 36400, scope `getCurrentMissionPatientAlertRoots` — mutations=2, pruning=0, limit mentions=2
+- `dedupedByMappedName` (new Map() line 38450, scope `<module scope>` — mutations=2, pruning=0, limit mentions=1
+- `missingAfterAttempt` ([]) line 39067, scope `<module scope>` — mutations=2, pruning=0, limit mentions=1
+- `trainedPersonnelWarnings` ([]) line 39069, scope `<module scope>` — mutations=2, pruning=0, limit mentions=1
+- `modalCandidates` ([]) line 41507, scope `buildTransportActiveScopes` — mutations=2, pruning=0, limit mentions=0
+- `roots` ([]) line 42995, scope `mfGetExactPatientTransportRoots` — mutations=2, pruning=0, limit mentions=2
+- `canonicalRows` (new Map() line 44655, scope `getMissionUpdateRowsSignature` — mutations=2, pruning=0, limit mentions=1
+- `frames` (new Set() line 47444, scope `releaseRemovedMissionFinderFrameRuntimes` — mutations=2, pruning=0, limit mentions=0
+- `TOOL_LIFECYCLE_CLEANUPS` (new Set() line 101, scope `<module scope>` — mutations=1, pruning=3, limit mentions=1
+- `TOOL_LOG_SCROLL_FRAMES` (new Map() line 102, scope `<module scope>` — mutations=1, pruning=3, limit mentions=1
+- `TOOL_UI_ELEMENT_CACHE` (new Map() line 103, scope `<module scope>` — mutations=1, pruning=2, limit mentions=0
+- `PERSONNEL_ASSIGNMENT_INDEX_CACHE` (new WeakMap() line 104, scope `<module scope>` — mutations=1, pruning=0, limit mentions=0
+- `PERSONNEL_TRAINING_SET_CACHE` (new WeakMap() line 105, scope `<module scope>` — mutations=1, pruning=0, limit mentions=0
+- `PERSONNEL_VISIBLE_TRAINING_COUNTS_CACHE` (new WeakMap() line 106, scope `<module scope>` — mutations=1, pruning=0, limit mentions=0
+- `PERSONNEL_REPORT_BLOCK_CACHE` (new WeakMap() line 107, scope `<module scope>` — mutations=1, pruning=0, limit mentions=0
+- `PERSONNEL_STATION_LINK_BY_HREF` (new Map() line 108, scope `<module scope>` — mutations=1, pruning=2, limit mentions=0
+- `PERSONNEL_START_OPTION_BY_HREF` (new Map() line 109, scope `<module scope>` — mutations=1, pruning=2, limit mentions=0
+- `PERSONNEL_HIGHLIGHTED_STATION_LINKS` (new Set() line 110, scope `<module scope>` — mutations=1, pruning=2, limit mentions=0
+- `groups` (new Map() line 1284, scope `getStationOverviewEntries` — mutations=1, pruning=0, limit mentions=0
+- `result` (Object.create() line 5600, scope `normalisePersonnelTrainingRegistryCountMap` — mutations=1, pruning=0, limit mentions=9
+- `profilesByVehicle` (new Map() line 5898, scope `getPersonnelStationAssignmentSnapshot` — mutations=1, pruning=0, limit mentions=0
+- `verifiedVehicles` ([]) line 6000, scope `<module scope>` — mutations=1, pruning=0, limit mentions=0
+- `failedVehicleIds` ([]) line 6003, scope `<module scope>` — mutations=1, pruning=0, limit mentions=0
+- `vehiclesToVerify` ([]) line 6275, scope `<module scope>` — mutations=1, pruning=0, limit mentions=0
+- `counts` ({}) line 7142, scope `countPersonnelTrainingCodes` — mutations=1, pruning=0, limit mentions=6
+- `counts` ({}) line 7203, scope `countPersonnelTrainingCombinations` — mutations=1, pruning=0, limit mentions=6
+- `byVehicleId` (new Map() line 7313, scope `getPersonnelAssignmentIndex` — mutations=1, pruning=0, limit mentions=0
+- `byVehicleName` (new Map() line 7315, scope `getPersonnelAssignmentIndex` — mutations=1, pruning=0, limit mentions=0
+- `counts` (new Map() line 7521, scope `getVisiblePersonnelTrainingCounts` — mutations=1, pruning=0, limit mentions=6
+- `personToSlot` (new Map() line 7753, scope `calculatePersonnelQualificationShortfall` — mutations=1, pruning=0, limit mentions=0
+- `candidatesByRule` (new Map() line 7754, scope `calculatePersonnelQualificationShortfall` — mutations=1, pruning=0, limit mentions=0
+- `claimedVehicleIds` (new Set() line 7839, scope `processOnePoliceStation` — mutations=1, pruning=0, limit mentions=0
+- `ruleReports` ([]) line 7841, scope `processOnePoliceStation` — mutations=1, pruning=0, limit mentions=0
+- `qualificationSlots` ([]) line 7844, scope `processOnePoliceStation` — mutations=1, pruning=0, limit mentions=0
+- `byVehicleType` (new Map() line 9983, scope `getUnitClassOptionsForStationType` — mutations=1, pruning=0, limit mentions=0
+- `counts` ({}) line 10509, scope `processStationVehicleQueue` — mutations=1, pruning=0, limit mentions=6
+- `mfEventCollectibleClaimTimes` (new Map() line 10753, scope `parseTrainingCodes` — mutations=1, pruning=4, limit mentions=2
+- `mfLiveTrainingVerifyCache` (new Map() line 11690, scope `parseTrainingCodes` — mutations=1, pruning=3, limit mentions=4
+- `mfIphoneNativePickerDocuments` (new Set() line 11897, scope `parseTrainingCodes` — mutations=1, pruning=2, limit mentions=0
+- `mfCheckboxVehicleValueCache` (new WeakMap() line 12313, scope `parseTrainingCodes` — mutations=1, pruning=0, limit mentions=1
+- `mfExtendedVehicleValueCache` (new WeakMap() line 12315, scope `parseTrainingCodes` — mutations=1, pruning=0, limit mentions=0
+- `mfSartecDisplayedValueCache` (new WeakMap() line 12316, scope `parseTrainingCodes` — mutations=1, pruning=0, limit mentions=0
+- `mfVehicleTypeIdentifierCache` (new WeakMap() line 12317, scope `parseTrainingCodes` — mutations=1, pruning=0, limit mentions=1
+- `mfVehicleArrivalMetricCache` (new WeakMap() line 12318, scope `parseTrainingCodes` — mutations=1, pruning=0, limit mentions=1
+- `mfVehicleMatchCandidateCache` (new Map() line 12319, scope `parseTrainingCodes` — mutations=1, pruning=5, limit mentions=2
+- `mfLastMissionDefinitionRawRows` ([]) line 13126, scope `parseTrainingCodes` — mutations=1, pruning=0, limit mentions=0
+- `processedSelectionKeys` (new Set() line 13132, scope `parseTrainingCodes` — mutations=1, pruning=0, limit mentions=1
+- `patientCards` ([]) line 23345, scope `computePatientCountNow` — mutations=1, pruning=0, limit mentions=0
+- `urlElements` ([]) line 23530, scope `getMissionIdFromLocalScope` — mutations=1, pruning=0, limit mentions=0
+- `contexts` (new Map() line 24915, scope `buildActiveMissionRequirementContexts` — mutations=1, pruning=0, limit mentions=1
+- `routeElements` ([]) line 25549, scope `getMissionTypeIdFromScope` — mutations=1, pruning=0, limit mentions=0
+- `seenElements` (new Set() line 25618, scope `getMissionRequirementSource` — mutations=1, pruning=0, limit mentions=0
+- `exactElements` ([]) line 25815, scope `getActiveMissionProblemTextBlocks` — mutations=1, pruning=0, limit mentions=0
+- `fallbackElements` ([]) line 25902, scope `getActiveMissionProblemTextBlocks` — mutations=1, pruning=0, limit mentions=0
+- `conversions` ([]) line 26208, scope `getMissionDefinitionSarPersonnelVehicleRequirements` — mutations=1, pruning=0, limit mentions=2
+- `rawRows` ([]) line 26493, scope `extractMissionDefinitionRequiredPersonnelRows` — mutations=1, pruning=0, limit mentions=0
+- `verifiedOrdinary` ([]) line 29097, scope `orderOrdinaryPoliceIrvCandidates` — mutations=1, pruning=0, limit mentions=0
+- `unknownOrStale` ([]) line 29098, scope `orderOrdinaryPoliceIrvCandidates` — mutations=1, pruning=0, limit mentions=0
+- `protectedFallback` ([]) line 29099, scope `orderOrdinaryPoliceIrvCandidates` — mutations=1, pruning=0, limit mentions=0
+- `assignedTrainingProfiles` ([]) line 30082, scope `parseLivePoliceTrainingAssignments` — mutations=1, pruning=0, limit mentions=3
+- `coveredCodes` (new Set() line 31214, scope `applyTrainingCandidateCoverage` — mutations=1, pruning=0, limit mentions=3
+- `used` (new Set() line 31617, scope `selectVehiclesForTrainedPersonnelRequirements` — mutations=1, pruning=0, limit mentions=2
+- `missingUnits` ([]) line 32367, scope `escapeHtml` — mutations=1, pruning=0, limit mentions=0
+- `trainedVehicleMissing` ([]) line 32368, scope `escapeHtml` — mutations=1, pruning=0, limit mentions=2
+- `requirementRows` ([]) line 32737, scope `escapeHtml` — mutations=1, pruning=0, limit mentions=0
+- `stillMissing` ([]) line 32891, scope `retryMissingUnits` — mutations=1, pruning=1, limit mentions=0
+- `livePatientRequirementStates` (new Map() line 36767, scope `getGenericMissingVehicleRowsFromText` — mutations=1, pruning=0, limit mentions=0
+- `patientGroups` (new Map() line 38068, scope `<module scope>` — mutations=1, pruning=0, limit mentions=1
+- `seenDocuments` (new Set() line 42996, scope `mfGetExactPatientTransportRoots` — mutations=1, pruning=0, limit mentions=0
+- `mfMissingUnitRetryIntervals` (new Set() line 11924, scope `parseTrainingCodes` — mutations=0, pruning=3, limit mentions=0
+- `requiredPersonnel` ([]) line 22680, scope `renderSelectedTrainedPersonnelPanel` — mutations=0, pruning=2, limit mentions=0
+- `liveMissingPersonnel` ([]) line 22681, scope `renderSelectedTrainedPersonnelPanel` — mutations=0, pruning=2, limit mentions=0
+- `trainingCounts` ({}) line 30079, scope `parseLivePoliceTrainingAssignments` — mutations=0, pruning=1, limit mentions=6
+
+## DOM query density
+- `addPanel`: 68 DOM query calls
+- `createControlPanel`: 14 DOM query calls
+- `updatePersonnelProfileUi`: 13 DOM query calls
+- `switchToolTab`: 9 DOM query calls
+- `<module scope>`: 7 DOM query calls
+- `getAllyStealParentModalCloseCandidates`: 6 DOM query calls
+- `processOneStationName`: 6 DOM query calls
+- `waitForStationIframe`: 5 DOM query calls
+- `getRecorderMissionSnapshot`: 5 DOM query calls
+- `extractLiveMissionRequirementRows`: 5 DOM query calls
+- `startPersonnelRun`: 5 DOM query calls
+- `parseVehicleAssignmentPage`: 4 DOM query calls
+- `buildActiveMissionRequirementContexts`: 4 DOM query calls
+- `findMissionRequirementTable`: 4 DOM query calls
+- `parseLivePoliceTrainingAssignments`: 4 DOM query calls
+- `getMissionUpdateRenderSignature`: 4 DOM query calls
+- `updatePersonnelModeUi`: 4 DOM query calls
+- `updatePersonnelReportVisibility`: 4 DOM query calls
+- `startStationNamingRun`: 4 DOM query calls
+- `startRun`: 4 DOM query calls
+- `getUnattendedMissionStateForQueueRestart`: 4 DOM query calls
+- `getPersonnelAmbulanceQueue`: 3 DOM query calls
+- `getVehicleQueueFromTable`: 3 DOM query calls
+- `computePatientCountNow`: 3 DOM query calls
+- `getMissionIdFromLocalScope`: 3 DOM query calls
+- `getLocalMissionInstanceKey`: 3 DOM query calls
+- `getPrimaryMissionRequirementDocument`: 3 DOM query calls
+- `extractTowCarRequirementRows`: 3 DOM query calls
+- `getAllyStealNormalDispatchButton`: 3 DOM query calls
+- `getGenericMissingVehicleRowsFromText`: 3 DOM query calls
+- `mfGetTransportOwnerModal`: 3 DOM query calls
+- `getVisibleExactNormalDispatchButton`: 3 DOM query calls
+- `extractCoordinatesFromStationDocument`: 3 DOM query calls
+- `getCurrentMissionName`: 3 DOM query calls
+- `isCurrentMissionWindowStillOpenForSafeOpen`: 3 DOM query calls
+- `isMissionScreenVisibleForQueueRestart`: 3 DOM query calls
+- `getTransportScreenFingerprint`: 3 DOM query calls
+- `readStationOverviewName`: 2 DOM query calls
+- `ensureSingleNamingToolsPanel`: 2 DOM query calls
+- `waitForStationNamingIframe`: 2 DOM query calls
+
+## Global event listeners without obvious removal pairs
+- line 39846: `document.click` handler `function(event` in `installManualMissionClickFlagClearer`; anonymous=True
+- line 47872: `document.DOMContentLoaded` handler `startMissionFinderObserver` in `<module scope>`; anonymous=False
+- line 48035: `document.mousedown` handler `handleMiddleMouseDown` in `installDispatchCentresShowAllMiddleClick`; anonymous=False
+- line 48040: `document.mouseup` handler `handleMiddleMouseRelease` in `installDispatchCentresShowAllMiddleClick`; anonymous=False
+- line 48045: `document.auxclick` handler `handleMiddleMouseRelease` in `installDispatchCentresShowAllMiddleClick`; anonymous=False
+
+## Potential DOM-node retention assignments
+- line 15634 in `getVehicleCheckboxSnapshot` pattern `\.document\s*=\s*`
+- line 1404 in `ensureSingleNamingToolsPanel` pattern `=\s*\[\.\.\.document\.querySelectorAll`
+- line 1413 in `ensureSingleNamingToolsPanel` pattern `=\s*\[\.\.\.document\.querySelectorAll`
+- line 5363 in `closeStationNamingModal` pattern `=\s*\[\.\.\.document\.querySelectorAll`
+- line 12804 in `cleanupDuplicatePanels` pattern `=\s*document\.querySelectorAll`
+- line 21871 in `getDispatchReadinessSignature` pattern `=\s*document\.querySelectorAll`
+- line 44797 in `getVisibleExactNormalDispatchButton` pattern `=\s*document\.querySelectorAll`
+- line 45224 in `getCurrentAutoDispatchSelectionState` pattern `=\s*document\.querySelectorAll`
+- line 47226 in `flushMissionFinderMutationWork` pattern `=\s*document\.querySelectorAll`
+- line 5263 in `waitForStationNamingIframe` pattern `=\s*[^;\n]*\.contentDocument`
+- line 5284 in `waitForStationNamingDocument` pattern `=\s*[^;\n]*\.contentDocument`
+- line 10378 in `waitForStationIframe` pattern `=\s*[^;\n]*\.contentDocument`
+- line 10426 in `waitForVehicleTable` pattern `=\s*[^;\n]*\.contentDocument`
+- line 10443 in `waitForEditPage` pattern `=\s*[^;\n]*\.contentDocument`
+- line 10564 in `processStationVehicleQueue` pattern `=\s*[^;\n]*\.contentDocument`
+- line 10789 in `getMissionEventCollectibleDocuments` pattern `=\s*[^;\n]*\.contentDocument`
+- line 40930 in `mfGetAccessibleDocumentsForTransport` pattern `=\s*[^;\n]*\.contentDocument`
+- line 47468 in `releaseRemovedMissionFinderFrameRuntimes` pattern `=\s*[^;\n]*\.contentDocument`
+
+## Recursive timeout functions
+- `parseTrainingCodes` line 8982; obvious guard=True
+- `scheduleMissionFinderIphoneNativePickerSync` line 24623; obvious guard=True
+
+## Extracted function bodies
+- See `.github/diagnostics/runtime-memory-functions-v1082.txt` for the lifecycle, Auto Mode, observer, cache, render and memory-maintenance functions used for manual review.
+- Machine-readable data: `.github/diagnostics/runtime-memory-audit-v1082.json`.
