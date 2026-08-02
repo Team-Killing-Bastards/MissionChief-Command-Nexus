@@ -12,6 +12,7 @@ on:
       - '.runtime-memory-fix-v1082-trigger'
       - '.github/builders/apply-runtime-memory-deep-dive-v1082.py'
       - '.github/builders/run-runtime-memory-deep-dive-v1082.py'
+      - '.github/builders/align-trained-personnel-regression-v1082.py'
       - '.github/workflows/apply-runtime-memory-deep-dive-v1082.yml'
 
 permissions:
@@ -36,7 +37,9 @@ jobs:
           python-version: '3.12'
 
       - name: Apply runtime memory hardening
-        run: python3 .github/builders/run-runtime-memory-deep-dive-v1082.py
+        run: |
+          python3 .github/builders/run-runtime-memory-deep-dive-v1082.py
+          python3 .github/builders/align-trained-personnel-regression-v1082.py
 
       - name: Validate complete candidate
         run: |
