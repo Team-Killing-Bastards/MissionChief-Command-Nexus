@@ -4,7 +4,7 @@ from pathlib import Path
 builder_path = Path('.github/builders/apply-runtime-memory-deep-dive-v1082.py')
 builder = builder_path.read_text(encoding='utf-8')
 
-old = '''# Shared document topology cache lives longer; explicit invalidation/force refresh remains available.
+cache_old = '''# Shared document topology cache lives longer; explicit invalidation/force refresh remains available.
 source = replace_once(
     source,
     'expiresAt: now + 500,\\n            documents',
@@ -12,7 +12,7 @@ source = replace_once(
     'mission document cache lifetime',
 )
 '''
-new = '''# Shared Mission Finder document topology cache lives longer; explicit invalidation/force refresh remains available.
+cache_new = '''# Shared Mission Finder document topology cache lives longer; explicit invalidation/force refresh remains available.
 document_cache_start, document_cache_end = function_span(
     source,
     'getMissionAccessibleDocuments'
@@ -33,12 +33,47 @@ source = (
 )
 '''
 
-if builder.count(old) != 1:
-    raise SystemExit(
-        f'Builder cache patch anchor: expected one match, found {builder.count(old)}'
-    )
+cleanup_old = '''source = replace_once(
+    source,
+    '''        stopSessionRuntimeTicker();
+        stopMissionFinderRuntimeMemoryMaintenance();
+        removeMissionFinderRuntimeMemoryActivityTracking();''',
+    '''        stopSessionRuntimeTicker();
+        stopMissionFinderRuntimeMemoryMaintenance();
+        cancelTrainedPersonnelPanelRefresh();
+        removeMissionFinderRuntimeMemoryActivityTracking();''',
+    'inactive frame trained refresh cleanup',
+)
+'''
+cleanup_new = '''inactive_start, inactive_end = function_span(
+    source,
+    'suspendMissionFinderRuntimeForInactiveFrame'
+)
+inactive_body = source[inactive_start:inactive_end]
+inactive_body = replace_once(
+    inactive_body,
+    '''        stopSessionRuntimeTicker();
+        stopMissionFinderRuntimeMemoryMaintenance();
+        removeMissionFinderRuntimeMemoryActivityTracking();''',
+    '''        stopSessionRuntimeTicker();
+        stopMissionFinderRuntimeMemoryMaintenance();
+        cancelTrainedPersonnelPanelRefresh();
+        removeMissionFinderRuntimeMemoryActivityTracking();''',
+    'inactive frame trained refresh cleanup',
+)
+source = source[:inactive_start] + inactive_body + source[inactive_end:]
+'''
 
-builder = builder.replace(old, new, 1)
+for label, old, new in (
+    ('cache', cache_old, cache_new),
+    ('inactive cleanup', cleanup_old, cleanup_new),
+):
+    if builder.count(old) != 1:
+        raise SystemExit(
+            f'Builder {label} patch anchor: expected one match, found {builder.count(old)}'
+        )
+    builder = builder.replace(old, new, 1)
+
 namespace = {
     '__name__': '__main__',
     '__file__': str(builder_path),
