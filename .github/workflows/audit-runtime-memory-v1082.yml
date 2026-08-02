@@ -1,9 +1,12 @@
 name: Audit runtime memory v1.0.82
 
 on:
-  push:
+  pull_request:
     branches:
-      - diagnostic/deep-memory-audit-v1082
+      - main
+    types:
+      - opened
+      - synchronize
     paths:
       - '.github/builders/audit-runtime-memory-v1082.py'
       - '.github/workflows/audit-runtime-memory-v1082.yml'
