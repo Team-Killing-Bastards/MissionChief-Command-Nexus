@@ -1,15 +1,13 @@
 {
   "animation_frames": [
     {
-      "clear_call": "cancelAnimationFrame",
       "cleared": true,
       "excerpt": "01133:                 logBox.firstElementChild?.remove();\n01134:             }\n01135:         }\n01136: \n01137:         if (!TOOL_LOG_SCROLL_FRAMES.has(logBox)) {\n01138:             const frameId = requestAnimationFrame(() => {\n01139:                 TOOL_LOG_SCROLL_FRAMES.delete(logBox);\n01140:                 if (logBox.isConnected) logBox.scrollTop = logBox.scrollHeight;\n01141:             });\n01142:             TOOL_LOG_SCROLL_FRAMES.set(logBox, frameId);\n01143:         }",
-      "function": "appendBoundedToolLog",
+      "function": "frameId",
       "handle": "frameId",
       "line": 1138
     },
     {
-      "clear_call": "cancelAnimationFrame",
       "cleared": true,
       "excerpt": "01546:         let pendingFrame = null;\n01547:         let navigationTimer = null;\n01548: \n01549:         const enforce = () => {\n01550:             if (pendingFrame != null) return;\n01551:             pendingFrame = requestAnimationFrame(() => {\n01552:                 pendingFrame = null;\n01553:                 syncNamingToolsPanelLifecycle();\n01554:             });\n01555:         };\n01556: ",
       "function": "enforce",
@@ -17,7 +15,6 @@
       "line": 1551
     },
     {
-      "clear_call": "cancelAnimationFrame",
       "cleared": true,
       "excerpt": "01767:     function installToolViewportGuard(panel) {\n01768:         let pendingFrame = null;\n01769: \n01770:         const requestClamp = () => {\n01771:             if (pendingFrame != null) return;\n01772:             pendingFrame = requestAnimationFrame(() => {\n01773:                 pendingFrame = null;\n01774:                 clampToolPanelToViewport(panel);\n01775:             });\n01776:         };\n01777: ",
       "function": "requestClamp",
@@ -25,10 +22,9 @@
       "line": 1772
     },
     {
-      "clear_call": "cancelAnimationFrame",
       "cleared": true,
       "excerpt": "23011:             mfVehicleLoadRenderFrame = null;\n23012:             renderVehicleLoadListNow();\n23013:         };\n23014: \n23015:         if (typeof requestAnimationFrame === 'function') {\n23016:             mfVehicleLoadRenderFrame = requestAnimationFrame(run);\n23017:         } else {\n23018:             mfVehicleLoadRenderFrame = setTimeout(run, 50);\n23019:         }\n23020:     }\n23021: ",
-      "function": "renderVehicleLoadList",
+      "function": "run",
       "handle": "mfVehicleLoadRenderFrame",
       "line": 23016
     }
@@ -55,7 +51,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "<module scope>"
+      "scope": "TOOL_IS_STATION_OVERVIEW_FRAME"
     },
     {
       "kind": "new Map(",
@@ -78,7 +74,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "<module scope>"
+      "scope": "TOOL_IS_STATION_OVERVIEW_FRAME"
     },
     {
       "kind": "new Map(",
@@ -101,7 +97,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "<module scope>"
+      "scope": "TOOL_IS_STATION_OVERVIEW_FRAME"
     },
     {
       "kind": "new WeakMap(",
@@ -124,7 +120,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "<module scope>"
+      "scope": "TOOL_IS_STATION_OVERVIEW_FRAME"
     },
     {
       "kind": "new WeakMap(",
@@ -147,7 +143,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "<module scope>"
+      "scope": "TOOL_IS_STATION_OVERVIEW_FRAME"
     },
     {
       "kind": "new WeakMap(",
@@ -170,7 +166,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "<module scope>"
+      "scope": "TOOL_IS_STATION_OVERVIEW_FRAME"
     },
     {
       "kind": "new WeakMap(",
@@ -193,7 +189,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "<module scope>"
+      "scope": "TOOL_IS_STATION_OVERVIEW_FRAME"
     },
     {
       "kind": "new Map(",
@@ -216,7 +212,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "<module scope>"
+      "scope": "TOOL_IS_STATION_OVERVIEW_FRAME"
     },
     {
       "kind": "new Map(",
@@ -239,7 +235,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "<module scope>"
+      "scope": "TOOL_IS_STATION_OVERVIEW_FRAME"
     },
     {
       "kind": "new Set(",
@@ -262,7 +258,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "<module scope>"
+      "scope": "TOOL_IS_STATION_OVERVIEW_FRAME"
     },
     {
       "kind": "[]",
@@ -334,29 +330,6 @@
       "scope": "findBuildingCoordinatesInPageCaches"
     },
     {
-      "kind": "Object.create(",
-      "limit_mentions": 9,
-      "line": 5600,
-      "mutation_total": 1,
-      "mutations": {
-        "add": 0,
-        "push": 1,
-        "set": 0,
-        "unshift": 0
-      },
-      "name": "result",
-      "prune_total": 0,
-      "pruning": {
-        "clear": 0,
-        "delete": 0,
-        "length_assign": 0,
-        "pop": 0,
-        "shift": 0,
-        "splice": 0
-      },
-      "scope": "normalisePersonnelTrainingRegistryCountMap"
-    },
-    {
       "kind": "new Map(",
       "limit_mentions": 0,
       "line": 5898,
@@ -400,7 +373,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "<module scope>"
+      "scope": "runPersonnelRegisterVehicleVerificationPool"
     },
     {
       "kind": "[]",
@@ -423,7 +396,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "<module scope>"
+      "scope": "runPersonnelRegisterVehicleVerificationPool"
     },
     {
       "kind": "[]",
@@ -446,53 +419,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "<module scope>"
-    },
-    {
-      "kind": "{}",
-      "limit_mentions": 6,
-      "line": 7142,
-      "mutation_total": 1,
-      "mutations": {
-        "add": 0,
-        "push": 0,
-        "set": 1,
-        "unshift": 0
-      },
-      "name": "counts",
-      "prune_total": 0,
-      "pruning": {
-        "clear": 0,
-        "delete": 0,
-        "length_assign": 0,
-        "pop": 0,
-        "shift": 0,
-        "splice": 0
-      },
-      "scope": "countPersonnelTrainingCodes"
-    },
-    {
-      "kind": "{}",
-      "limit_mentions": 6,
-      "line": 7203,
-      "mutation_total": 1,
-      "mutations": {
-        "add": 0,
-        "push": 0,
-        "set": 1,
-        "unshift": 0
-      },
-      "name": "counts",
-      "prune_total": 0,
-      "pruning": {
-        "clear": 0,
-        "delete": 0,
-        "length_assign": 0,
-        "pop": 0,
-        "shift": 0,
-        "splice": 0
-      },
-      "scope": "countPersonnelTrainingCombinations"
+      "scope": "buildPersonnelTrainingRegisterOneClick"
     },
     {
       "kind": "new Map(",
@@ -561,11 +488,11 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "getPersonnelAssignedToVehicle"
+      "scope": "seen"
     },
     {
       "kind": "new Map(",
-      "limit_mentions": 6,
+      "limit_mentions": 5,
       "line": 7521,
       "mutation_total": 1,
       "mutations": {
@@ -611,7 +538,7 @@
     },
     {
       "kind": "[]",
-      "limit_mentions": 7,
+      "limit_mentions": 6,
       "line": 7598,
       "mutation_total": 3,
       "mutations": {
@@ -653,7 +580,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "calculatePersonnelQualificationShortfall"
+      "scope": "people"
     },
     {
       "kind": "new Map(",
@@ -676,11 +603,11 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "calculatePersonnelQualificationShortfall"
+      "scope": "people"
     },
     {
       "kind": "new Set(",
-      "limit_mentions": 1,
+      "limit_mentions": 0,
       "line": 7837,
       "mutation_total": 3,
       "mutations": {
@@ -699,7 +626,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "processOnePoliceStation"
+      "scope": "targetTypeIds"
     },
     {
       "kind": "new Set(",
@@ -722,11 +649,11 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "processOnePoliceStation"
+      "scope": "targetTypeIds"
     },
     {
       "kind": "[]",
-      "limit_mentions": 5,
+      "limit_mentions": 4,
       "line": 7840,
       "mutation_total": 4,
       "mutations": {
@@ -745,7 +672,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "processOnePoliceStation"
+      "scope": "targetTypeIds"
     },
     {
       "kind": "[]",
@@ -768,7 +695,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "processOnePoliceStation"
+      "scope": "targetTypeIds"
     },
     {
       "kind": "[]",
@@ -791,7 +718,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "processOnePoliceStation"
+      "scope": "targetTypeIds"
     },
     {
       "kind": "[]",
@@ -814,7 +741,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "processOnePoliceStation"
+      "scope": "ruleTrained"
     },
     {
       "kind": "[]",
@@ -837,7 +764,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "processOnePoliceStation"
+      "scope": "ruleTrained"
     },
     {
       "kind": "[]",
@@ -860,7 +787,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "processOnePoliceStation"
+      "scope": "ruleTrained"
     },
     {
       "kind": "new Set(",
@@ -883,11 +810,11 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "processOnePoliceStation"
+      "scope": "ruleTrained"
     },
     {
       "kind": "new Set(",
-      "limit_mentions": 1,
+      "limit_mentions": 0,
       "line": 8458,
       "mutation_total": 3,
       "mutations": {
@@ -906,11 +833,11 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "processOneMedicalCriticalCareStation"
+      "scope": "availableAtScan"
     },
     {
       "kind": "[]",
-      "limit_mentions": 5,
+      "limit_mentions": 4,
       "line": 8460,
       "mutation_total": 4,
       "mutations": {
@@ -929,7 +856,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "processOneMedicalCriticalCareStation"
+      "scope": "availableAtScan"
     },
     {
       "kind": "[]",
@@ -952,7 +879,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "processOneMedicalCriticalCareStation"
+      "scope": "mappedCritical"
     },
     {
       "kind": "[]",
@@ -975,7 +902,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "processOneMedicalCriticalCareStation"
+      "scope": "mappedCritical"
     },
     {
       "kind": "[]",
@@ -998,7 +925,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "processOneMedicalCriticalCareStation"
+      "scope": "mappedCritical"
     },
     {
       "kind": "new Set(",
@@ -1021,7 +948,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "processOneMedicalCriticalCareStation"
+      "scope": "mappedCritical"
     },
     {
       "kind": "new Set(",
@@ -1048,7 +975,7 @@
     },
     {
       "kind": "[]",
-      "limit_mentions": 7,
+      "limit_mentions": 6,
       "line": 8914,
       "mutation_total": 3,
       "mutations": {
@@ -1071,7 +998,7 @@
     },
     {
       "kind": "new Map(",
-      "limit_mentions": 7,
+      "limit_mentions": 6,
       "line": 9033,
       "mutation_total": 2,
       "mutations": {
@@ -1139,29 +1066,6 @@
       "scope": "getUnitClassOptionsForStationType"
     },
     {
-      "kind": "{}",
-      "limit_mentions": 6,
-      "line": 10509,
-      "mutation_total": 1,
-      "mutations": {
-        "add": 0,
-        "push": 0,
-        "set": 1,
-        "unshift": 0
-      },
-      "name": "counts",
-      "prune_total": 0,
-      "pruning": {
-        "clear": 0,
-        "delete": 0,
-        "length_assign": 0,
-        "pop": 0,
-        "shift": 0,
-        "splice": 0
-      },
-      "scope": "processStationVehicleQueue"
-    },
-    {
       "kind": "new Map(",
       "limit_mentions": 2,
       "line": 10753,
@@ -1182,7 +1086,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "parseTrainingCodes"
+      "scope": "handleToolPageHide"
     },
     {
       "kind": "[]",
@@ -1274,7 +1178,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "parseTrainingCodes"
+      "scope": "getMissionFinderIphonePanelStateForToggle"
     },
     {
       "kind": "new Set(",
@@ -1297,7 +1201,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "parseTrainingCodes"
+      "scope": "installPersonnelRegistryUpdateHandler"
     },
     {
       "kind": "new Set(",
@@ -1320,7 +1224,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "parseTrainingCodes"
+      "scope": "installPersonnelRegistryUpdateHandler"
     },
     {
       "kind": "new WeakMap(",
@@ -1343,7 +1247,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "parseTrainingCodes"
+      "scope": "stopMissionFinderRuntimeMemoryMaintenance"
     },
     {
       "kind": "new WeakMap(",
@@ -1366,7 +1270,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "parseTrainingCodes"
+      "scope": "stopMissionFinderRuntimeMemoryMaintenance"
     },
     {
       "kind": "new WeakMap(",
@@ -1389,7 +1293,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "parseTrainingCodes"
+      "scope": "stopMissionFinderRuntimeMemoryMaintenance"
     },
     {
       "kind": "new WeakMap(",
@@ -1412,7 +1316,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "parseTrainingCodes"
+      "scope": "stopMissionFinderRuntimeMemoryMaintenance"
     },
     {
       "kind": "new WeakMap(",
@@ -1435,7 +1339,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "parseTrainingCodes"
+      "scope": "stopMissionFinderRuntimeMemoryMaintenance"
     },
     {
       "kind": "new Map(",
@@ -1458,7 +1362,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "parseTrainingCodes"
+      "scope": "stopMissionFinderRuntimeMemoryMaintenance"
     },
     {
       "kind": "[]",
@@ -1504,7 +1408,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "parseTrainingCodes"
+      "scope": "cleanupDuplicatePanels"
     },
     {
       "kind": "new Set(",
@@ -1527,7 +1431,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "parseTrainingCodes"
+      "scope": "cleanupDuplicatePanels"
     },
     {
       "kind": "[]",
@@ -1577,7 +1481,7 @@
     },
     {
       "kind": "new Set(",
-      "limit_mentions": 8,
+      "limit_mentions": 7,
       "line": 15282,
       "mutation_total": 10,
       "mutations": {
@@ -1600,7 +1504,7 @@
     },
     {
       "kind": "[]",
-      "limit_mentions": 8,
+      "limit_mentions": 7,
       "line": 21071,
       "mutation_total": 10,
       "mutations": {
@@ -1623,7 +1527,7 @@
     },
     {
       "kind": "[]",
-      "limit_mentions": 8,
+      "limit_mentions": 7,
       "line": 21140,
       "mutation_total": 10,
       "mutations": {
@@ -1711,7 +1615,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "renderSelectedTrainedPersonnelPanel"
+      "scope": "aggregateOnlyVehicles"
     },
     {
       "kind": "[]",
@@ -1784,7 +1688,7 @@
     },
     {
       "kind": "[]",
-      "limit_mentions": 8,
+      "limit_mentions": 7,
       "line": 23665,
       "mutation_total": 10,
       "mutations": {
@@ -1830,7 +1734,7 @@
     },
     {
       "kind": "new Set(",
-      "limit_mentions": 8,
+      "limit_mentions": 7,
       "line": 24296,
       "mutation_total": 10,
       "mutations": {
@@ -1968,7 +1872,7 @@
     },
     {
       "kind": "[]",
-      "limit_mentions": 8,
+      "limit_mentions": 7,
       "line": 25617,
       "mutation_total": 10,
       "mutations": {
@@ -2129,7 +2033,7 @@
     },
     {
       "kind": "[]",
-      "limit_mentions": 12,
+      "limit_mentions": 11,
       "line": 26492,
       "mutation_total": 18,
       "mutations": {
@@ -2198,7 +2102,7 @@
     },
     {
       "kind": "[]",
-      "limit_mentions": 12,
+      "limit_mentions": 11,
       "line": 26671,
       "mutation_total": 18,
       "mutations": {
@@ -2240,11 +2144,11 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "extractLiveMissionRequirementRows"
+      "scope": "cells"
     },
     {
       "kind": "[]",
-      "limit_mentions": 12,
+      "limit_mentions": 11,
       "line": 26999,
       "mutation_total": 18,
       "mutations": {
@@ -2290,7 +2194,7 @@
     },
     {
       "kind": "new Map(",
-      "limit_mentions": 17,
+      "limit_mentions": 13,
       "line": 27573,
       "mutation_total": 4,
       "mutations": {
@@ -2313,7 +2217,7 @@
     },
     {
       "kind": "new Map(",
-      "limit_mentions": 17,
+      "limit_mentions": 13,
       "line": 27647,
       "mutation_total": 4,
       "mutations": {
@@ -2336,7 +2240,7 @@
     },
     {
       "kind": "new Map(",
-      "limit_mentions": 17,
+      "limit_mentions": 13,
       "line": 28505,
       "mutation_total": 4,
       "mutations": {
@@ -2425,29 +2329,6 @@
         "splice": 0
       },
       "scope": "orderOrdinaryPoliceIrvCandidates"
-    },
-    {
-      "kind": "{}",
-      "limit_mentions": 6,
-      "line": 30079,
-      "mutation_total": 0,
-      "mutations": {
-        "add": 0,
-        "push": 0,
-        "set": 0,
-        "unshift": 0
-      },
-      "name": "trainingCounts",
-      "prune_total": 1,
-      "pruning": {
-        "clear": 0,
-        "delete": 0,
-        "length_assign": 1,
-        "pop": 0,
-        "shift": 0,
-        "splice": 0
-      },
-      "scope": "parseLivePoliceTrainingAssignments"
     },
     {
       "kind": "[]",
@@ -2543,7 +2424,7 @@
     },
     {
       "kind": "[]",
-      "limit_mentions": 17,
+      "limit_mentions": 13,
       "line": 31115,
       "mutation_total": 4,
       "mutations": {
@@ -2589,7 +2470,7 @@
     },
     {
       "kind": "new Set(",
-      "limit_mentions": 2,
+      "limit_mentions": 1,
       "line": 31617,
       "mutation_total": 1,
       "mutations": {
@@ -2612,7 +2493,7 @@
     },
     {
       "kind": "[]",
-      "limit_mentions": 12,
+      "limit_mentions": 11,
       "line": 31881,
       "mutation_total": 18,
       "mutations": {
@@ -2631,7 +2512,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "escapeHtml"
+      "scope": "getSupportedMissingPersonnelRowsFromText"
     },
     {
       "kind": "[]",
@@ -2654,7 +2535,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "escapeHtml"
+      "scope": "processRequirementRows"
     },
     {
       "kind": "[]",
@@ -2677,7 +2558,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "escapeHtml"
+      "scope": "processRequirementRows"
     },
     {
       "kind": "[]",
@@ -2700,7 +2581,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "escapeHtml"
+      "scope": "processRequirementRows"
     },
     {
       "kind": "[]",
@@ -2723,7 +2604,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "escapeHtml"
+      "scope": "processVehicles"
     },
     {
       "kind": "[]",
@@ -2746,7 +2627,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "retryMissingUnits"
+      "scope": "missingRows"
     },
     {
       "kind": "[]",
@@ -2819,7 +2700,7 @@
     },
     {
       "kind": "[]",
-      "limit_mentions": 8,
+      "limit_mentions": 7,
       "line": 33508,
       "mutation_total": 10,
       "mutations": {
@@ -2865,7 +2746,7 @@
     },
     {
       "kind": "[]",
-      "limit_mentions": 12,
+      "limit_mentions": 11,
       "line": 35445,
       "mutation_total": 18,
       "mutations": {
@@ -2976,7 +2857,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "getGenericMissingVehicleRowsFromText"
+      "scope": "readMissionUpdateRows"
     },
     {
       "kind": "new Map(",
@@ -2999,11 +2880,11 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "getGenericMissingVehicleRowsFromText"
+      "scope": "readMissionUpdateRows"
     },
     {
       "kind": "new Map(",
-      "limit_mentions": 1,
+      "limit_mentions": 0,
       "line": 38068,
       "mutation_total": 1,
       "mutations": {
@@ -3022,7 +2903,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "<module scope>"
+      "scope": "readMissionUpdateRows"
     },
     {
       "kind": "new Map(",
@@ -3045,11 +2926,11 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "<module scope>"
+      "scope": "readMissionUpdateRows"
     },
     {
       "kind": "[]",
-      "limit_mentions": 1,
+      "limit_mentions": 0,
       "line": 39067,
       "mutation_total": 2,
       "mutations": {
@@ -3068,7 +2949,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "<module scope>"
+      "scope": "handleMissionUpdateUnits"
     },
     {
       "kind": "[]",
@@ -3091,7 +2972,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "<module scope>"
+      "scope": "handleMissionUpdateUnits"
     },
     {
       "kind": "[]",
@@ -3137,11 +3018,11 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "<module scope>"
+      "scope": "parseVisibleMissionRequirementRows"
     },
     {
       "kind": "[]",
-      "limit_mentions": 12,
+      "limit_mentions": 11,
       "line": 40372,
       "mutation_total": 18,
       "mutations": {
@@ -3160,7 +3041,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "<module scope>"
+      "scope": "parseVisibleMissionRequirementRows"
     },
     {
       "kind": "new Set(",
@@ -3183,7 +3064,7 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "<module scope>"
+      "scope": "parseVisibleMissionRequirementRows"
     },
     {
       "kind": "[]",
@@ -3210,7 +3091,7 @@
     },
     {
       "kind": "[]",
-      "limit_mentions": 8,
+      "limit_mentions": 7,
       "line": 42043,
       "mutation_total": 10,
       "mutations": {
@@ -3370,164 +3251,15 @@
       "scope": "releaseRemovedMissionFinderFrameRuntimes"
     }
   ],
-  "inner_html_assignments": [
-    {
-      "excerpt": "01900:         panel.id = 'mc-namer-panel';\n01901:         panel.classList.toggle('mc-ios-safari', isIosSafariWebsite());\n01902: \n01903:         panel.innerHTML = `\n01904:             <div id=\"mc-namer-header\">\n01905:                 <div class=\"mc-nexus-brand-block\">\n01906:                     <span class=\"mc-nexus-mark\" aria-hidden=\"true\">NX</span>",
-      "function": "addPanel",
-      "line": 1903
-    },
-    {
-      "excerpt": "02172: \n02173:             const summary = document.createElement('summary');\n02174:             summary.className = 'mc-compact-disclosure-summary';\n02175:             summary.innerHTML = `\n02176:                 <span>${label}</span>\n02177:                 <span class=\"mc-compact-summary-mark\" aria-hidden=\"true\"></span>\n02178:             `;",
-      "function": "createCompactDisclosure",
-      "line": 2175
-    },
-    {
-      "excerpt": "04124:         if (!select) return;\n04125: \n04126:         const service = getPersonnelServiceDefinition();\n04127:         select.innerHTML = '';\n04128: \n04129:         service.profiles.forEach(profile => {\n04130:             const option = document.createElement('option');",
-      "function": "populatePersonnelProfileSelect",
-      "line": 4127
-    },
-    {
-      "excerpt": "04188:         if (vehicle) vehicle.textContent = profile.vehicle;\n04189:         if (requirement) requirement.textContent = profile.requirement;\n04190:         if (policy) {\n04191:             policy.innerHTML = `<strong>${service.icon} ${service.label} policy:</strong> ${profile.policy}`;\n04192:         }\n04193: \n04194:         if (banner) {",
-      "function": "updatePersonnelProfileUi",
-      "line": 4191
-    },
-    {
-      "excerpt": "04512:             return selectedType === 'ALL' || station.stationType === selectedType;\n04513:         });\n04514: \n04515:         select.innerHTML = '';\n04516: \n04517:         if (!STATION_STATE.filteredStations.length) {\n04518:             select.innerHTML = '<option value=\"\">No matching stations found</option>';",
-      "function": "populateStationNamingStartDropdown",
-      "line": 4515
-    },
-    {
-      "excerpt": "04515:         select.innerHTML = '';\n04516: \n04517:         if (!STATION_STATE.filteredStations.length) {\n04518:             select.innerHTML = '<option value=\"\">No matching stations found</option>';\n04519:             STATION_STATE.selectedHref = '';\n04520:             setStationUiValue('current', 'None');\n04521:             setStationUiValue('progress', '0 / 0');",
-      "function": "populateStationNamingStartDropdown",
-      "line": 4518
-    },
-    {
-      "excerpt": "10044:         const options =\n10045:             getUnitClassOptionsForStationType(selectedStationType);\n10046: \n10047:         select.innerHTML = '';\n10048: \n10049:         const allOption = document.createElement('option');\n10050:         allOption.value = UNIT_CLASS_ALL;",
-      "function": "populateUnitClassDropdown",
-      "line": 10047
-    },
-    {
-      "excerpt": "10150:             return selectedType === 'ALL' || station.stationType === selectedType;\n10151:         });\n10152: \n10153:         select.innerHTML = '';\n10154: \n10155:         if (!STATE.filteredStations.length) {\n10156:             select.innerHTML = `<option value=\"\">No matching stations found</option>`;",
-      "function": "populateStartDropdown",
-      "line": 10153
-    },
-    {
-      "excerpt": "10153:         select.innerHTML = '';\n10154: \n10155:         if (!STATE.filteredStations.length) {\n10156:             select.innerHTML = `<option value=\"\">No matching stations found</option>`;\n10157:             setProgress(0, 0);\n10158:             return;\n10159:         }",
-      "function": "populateStartDropdown",
-      "line": 10156
-    },
-    {
-      "excerpt": "19680: \n19681:         const dashboardBrand = document.createElement('header');\n19682:         dashboardBrand.id = 'mf-dashboard-brand';\n19683:         dashboardBrand.innerHTML = `\n19684:             <div class=\"mf-dashboard-brand-copy\">\n19685:                 <span class=\"mf-dashboard-brand-mark\" aria-hidden=\"true\">NX</span>\n19686:                 <span class=\"mf-dashboard-brand-text\">",
-      "function": "createControlPanel",
-      "line": 19683
-    },
-    {
-      "excerpt": "19694:         const dashboardRail = document.createElement('nav');\n19695:         dashboardRail.id = 'mf-dashboard-rail';\n19696:         dashboardRail.setAttribute('aria-label', 'MissionChief Nexus dashboard');\n19697:         dashboardRail.innerHTML = `\n19698:             <button type=\"button\" class=\"mf-dashboard-tab mf-dashboard-tab-active\" data-mf-dashboard-tab=\"mission\" aria-pressed=\"true\">\n19699:                 <span class=\"mf-dashboard-tab-icon\">01</span>\n19700:                 <span>Mission</span>",
-      "function": "createControlPanel",
-      "line": 19697
-    },
-    {
-      "excerpt": "19712:         const dashboardUtility = document.createElement('aside');\n19713:         dashboardUtility.id = 'mf-dashboard-utility';\n19714:         dashboardUtility.hidden = true;\n19715:         dashboardUtility.innerHTML = `\n19716:             <div class=\"mf-dashboard-utility-header\">\n19717:                 <span id=\"mf-dashboard-utility-title\">Settings</span>\n19718:                 <button id=\"mf-dashboard-utility-close\" type=\"button\" aria-label=\"Close utility panel\">\u00d7</button>",
-      "function": "createControlPanel",
-      "line": 19715
-    },
-    {
-      "excerpt": "19826:         const positionBox = document.createElement('div');\n19827:         positionBox.id = 'mf-control-position-box';\n19828:         positionBox.className = 'mf2026-box';\n19829:         positionBox.innerHTML = `\n19830:             <div class=\"mf2026-section-title\">Control Window Position</div>\n19831:             <label class=\"mf2026-checkbox-row\">\n19832:                 <input id=\"mf-keep-panel-position\"",
-      "function": "createControlPanel",
-      "line": 19829
-    },
-    {
-      "excerpt": "19845: \n19846:         const delayBox = document.createElement('div');\n19847:         delayBox.className = 'mf2026-box';\n19848:         delayBox.innerHTML = `\n19849:             <div class=\"mf2026-section-title\">Mission Ready Delay</div>\n19850:             <input id=\"mf-mission-ready-delay-input\"\n19851:                    type=\"number\"",
-      "function": "createControlPanel",
-      "line": 19848
-    },
-    {
-      "excerpt": "19870:             'mf-high-risk-missing-person-ambulance-box';\n19871:         highRiskMissingPersonAmbulanceBox.className =\n19872:             'mf2026-box';\n19873:         highRiskMissingPersonAmbulanceBox.innerHTML = `\n19874:             <div class=\"mf2026-section-title\">High-risk Missing Person</div>\n19875:             <label class=\"mf2026-checkbox-row mf-dashboard-toggle-row\">\n19876:                 <input id=\"mf-high-risk-missing-person-ambulance-toggle\"",
-      "function": "createControlPanel",
-      "line": 19873
-    },
-    {
-      "excerpt": "19911: \n19912:         const queueRestartBox = document.createElement('div');\n19913:         queueRestartBox.className = 'mf2026-box';\n19914:         queueRestartBox.innerHTML = `\n19915:             <div class=\"mf2026-section-title\">V10 Queue Restart</div>\n19916:             <button id=\"mf-next-queue-restart-toggle\"\n19917:                     class=\"mf2026-button\"",
-      "function": "createControlPanel",
-      "line": 19914
-    },
-    {
-      "excerpt": "19981:         const eventScannerBox = document.createElement('div');\n19982:         eventScannerBox.id = 'mf-event-scanner-box';\n19983:         eventScannerBox.className = 'mf2026-box';\n19984:         eventScannerBox.innerHTML = `\n19985:             <div class=\"mf2026-section-title\">Event Scanner</div>\n19986:             <label class=\"mf2026-checkbox-row mf-dashboard-toggle-row\">\n19987:                 <input id=\"mf-event-scanner-toggle\"",
-      "function": "createControlPanel",
-      "line": 19984
-    },
-    {
-      "excerpt": "20400:         loadPanel.id = 'vehicle-load-list-box';\n20401:         loadPanel.className = `mf2026-panel ${mfVehicleLoadCollapsed ? 'mf2026-load-collapsed' : ''}`;\n20402: \n20403:         loadPanel.innerHTML = `\n20404:             <div class=\"mf2026-load-header-row\">\n20405:                 <div id=\"mf-load-title\" class=\"mf2026-header\">Vehicle Load</div>\n20406:                 <button id=\"mf-load-minimize\" type=\"button\" class=\"mf2026-button\" title=\"Minimize / expand vehicle load list\">${missionFinderIphoneSafari ? (mfVehicleLoadCollapsed ? '\u25be' : '\u25b4') : (mfVehicleLoadCollapsed ? '+' : '\u2212')}</button>",
-      "function": "createControlPanel",
-      "line": 20403
-    },
-    {
-      "excerpt": "20441:         const trainedPanel = document.createElement('div');\n20442:         trainedPanel.id = 'trained-personnel-box';\n20443:         trainedPanel.className = `mf2026-panel ${mfTrainedPersonnelCollapsed ? 'mf2026-trained-collapsed' : ''}`;\n20444:         trainedPanel.innerHTML = `\n20445:             <div class=\"mf2026-trained-header-row\">\n20446:                 <div id=\"mf-trained-title\" class=\"mf2026-header\">Trained Personnel</div>\n20447:                 <button id=\"mf-trained-minimize\" type=\"button\" class=\"mf2026-button\" title=\"Minimize / expand trained personnel\">${mfTrainedPersonnelCollapsed ? '+' : '\u2212'}</button>",
-      "function": "createControlPanel",
-      "line": 20444
-    },
-    {
-      "excerpt": "22292:             ? (((completed / (completed + skipped)) * 100).toFixed(1) + '%')\n22293:             : '----';\n22294: \n22295:         container.innerHTML = `\n22296:             <div class=\"mf2026-stat-grid\">\n22297:                 <span>Runtime</span><strong>${formatRuntime(runtimeMs)}</strong>\n22298:                 <span>Completed</span><strong>${completed}</strong>",
-      "function": "renderSessionPanel",
-      "line": 22295
-    },
-    {
-      "excerpt": "22749:             ) {\n22750:                 summary.textContent =\n22751:                     'No current trained-personnel shortage is reported.';\n22752:                 content.innerHTML =\n22753:                     '<span class=\"mf2026-small\">Vehicles are on scene. Live personnel and course shortages are authoritative; Mission Required Personnel is shown only before the first vehicle arrives on scene.</span>';\n22754:                 return;\n22755:             }",
-      "function": "renderSelectedTrainedPersonnelPanel",
-      "line": 22752
-    },
-    {
-      "excerpt": "22757:             if (preloadState.status === 'loading') {\n22758:                 summary.textContent =\n22759:                     'Loading mission Required Personnel...';\n22760:                 content.innerHTML =\n22761:                     '<span class=\"mf2026-small\">Reading the mission requirement table before unit selection.</span>';\n22762:                 return;\n22763:             }",
-      "function": "renderSelectedTrainedPersonnelPanel",
-      "line": 22760
-    },
-    {
-      "excerpt": "22764: \n22765:             summary.textContent =\n22766:                 'No required or selected trained-personnel evidence is available.';\n22767:             content.innerHTML =\n22768:                 '<span class=\"mf2026-small\">Mission Required Personnel and selected trained personnel will appear here.</span>';\n22769:             return;\n22770:         }",
-      "function": "renderSelectedTrainedPersonnelPanel",
-      "line": 22767
-    },
-    {
-      "excerpt": "22798:             `);\n22799:         }\n22800: \n22801:         summary.innerHTML = summaryParts.join('');\n22802: \n22803:         const requiredMarkup = requiredPersonnel.length > 0\n22804:             ? `",
-      "function": "renderSelectedTrainedPersonnelPanel",
-      "line": 22801
-    },
-    {
-      "excerpt": "22889:             `;\n22890:         }).join('');\n22891: \n22892:         content.innerHTML =\n22893:             requiredMarkup +\n22894:             liveMissingMarkup +\n22895:             selectedMarkup;",
-      "function": "renderSelectedTrainedPersonnelPanel",
-      "line": 22892
-    },
-    {
-      "excerpt": "22940:                 ? 'mf2026-good'\n22941:                 : 'mf2026-warn';\n22942: \n22943:         summary.innerHTML = `\n22944:             <div>Vehicles: <strong>${foundRequired}</strong> / <strong>${totalRequired}</strong></div>\n22945:             <div>Status: <strong class=\"${statusClass}\">${statusText}</strong></div>\n22946:         `;",
-      "function": "renderVehicleLoadListNow",
-      "line": 22943
-    },
-    {
-      "excerpt": "22948:         progress.style.width = `${percent}%`;\n22949: \n22950:         if (displayRows.length === 0) {\n22951:             listContent.innerHTML = vehicleLoadState.ready\n22952:                 ? `<span class=\"mf2026-good\">\u2713 Ambulance-only mission ready</span>`\n22953:                 : preloadState.status === 'loading'\n22954:                     ? `Loading mission vehicle requirements...`",
-      "function": "renderVehicleLoadListNow",
-      "line": 22951
-    },
-    {
-      "excerpt": "22954:                     ? `Loading mission vehicle requirements...`\n22955:                     : `Click Unit Finder to load vehicles.`;\n22956:         } else {\n22957:             listContent.innerHTML = displayRows.map(row => {\n22958:                 let icon = '\u25cb';\n22959:                 let cls = 'mf2026-warn';\n22960: ",
-      "function": "renderVehicleLoadListNow",
-      "line": 22957
-    },
-    {
-      "excerpt": "22985:             }).join('');\n22986:         }\n22987: \n22988:         patientContent.innerHTML = `\n22989:             <div class=\"mf2026-row\">\n22990:                 <div>Patients found</div>\n22991:                 <div class=\"mf2026-count\">${vehicleLoadState.patients}</div>",
-      "function": "renderVehicleLoadListNow",
-      "line": 22988
-    }
-  ],
   "intervals": [
     {
-      "clear_call": "clearInterval",
       "cleared": true,
       "excerpt": "01841:             return true;\n01842:         }\n01843: \n01844:         if (tryInitialise()) return;\n01845: \n01846:         timer = setInterval(() => {\n01847:             tries++;\n01848:             if (tryInitialise()) return;\n01849:             if (tries >= maximumTries) {\n01850:                 clearInterval(timer);\n01851:                 timer = null;",
-      "function": "initWhenReady",
+      "function": "tryInitialise",
       "handle": "timer",
       "line": 1846
     },
     {
-      "clear_call": "clearInterval",
       "cleared": true,
       "excerpt": "12291:             mfRuntimeSuspendedForInactiveFrame\n12292:         ) {\n12293:             return;\n12294:         }\n12295: \n12296:         mfRuntimeMemoryMaintenanceTimer = setInterval(\n12297:             runMissionFinderRuntimeMemoryMaintenance,\n12298:             MF_RUNTIME_MEMORY_MAINTENANCE_INTERVAL_MS\n12299:         );\n12300:     }\n12301: ",
       "function": "startMissionFinderRuntimeMemoryMaintenance",
@@ -3535,7 +3267,6 @@
       "line": 12296
     },
     {
-      "clear_call": "clearInterval",
       "cleared": true,
       "excerpt": "22316:     }\n22317: \n22318:     function startSessionRuntimeTicker() {\n22319:         if (sessionRuntimeTicker) return;\n22320: \n22321:         sessionRuntimeTicker = setInterval(() => {\n22322:             if (!document.getElementById('session-panel-content')) {\n22323:                 stopSessionRuntimeTicker();\n22324:                 return;\n22325:             }\n22326: ",
       "function": "startSessionRuntimeTicker",
@@ -3543,7 +3274,6 @@
       "line": 22321
     },
     {
-      "clear_call": "clearInterval",
       "cleared": true,
       "excerpt": "39629: \n39630:     function startSilentQueueWatcher() {\n39631:         if (!MF_IS_TOP_WINDOW) return;\n39632:         if (mfSilentQueueWatcherTimer) return;\n39633: \n39634:         mfSilentQueueWatcherTimer = setInterval(async () => {\n39635:             if (isManualAutoStopActive()) return;\n39636:             if (!isSilentQueueWatchActive()) return;\n39637:             if (mfSilentQueueOpening) return;\n39638:             if (isMainMissionOpeningPending('silent-queue-watch')) return;\n39639:             if (sessionStorage.getItem(MF_QUEUE_OPENING_MISSION_FLAG) === 'true') return;",
       "function": "startSilentQueueWatcher",
@@ -3551,7 +3281,6 @@
       "line": 39634
     },
     {
-      "clear_call": "clearInterval",
       "cleared": true,
       "excerpt": "43554: \n43555:     function startPostTransportRehookWatcher() {\n43556:         if (!MF_IS_TOP_WINDOW) return;\n43557:         if (mfPostTransportRehookTimer) return;\n43558: \n43559:         mfPostTransportRehookTimer = setInterval(async () => {\n43560:             if (isManualAutoStopActive()) return;\n43561:             if (!isTransportAutomationAllowed()) return;\n43562:             if (!isPostTransportRehookPending()) return;\n43563:             if (mfPostTransportOpening || mfTransportContinuationRunning) return;\n43564:             if (isMainMissionOpeningPending('post-transport-watch')) return;",
       "function": "startPostTransportRehookWatcher",
@@ -3559,7 +3288,6 @@
       "line": 43559
     },
     {
-      "clear_call": "clearInterval",
       "cleared": true,
       "excerpt": "43929: \n43930:     function startBruteApproachTransportWatcher() {\n43931:         if (!MF_IS_TOP_WINDOW) return;\n43932:         if (mfBruteApproachWatcherTimer) return;\n43933: \n43934:         mfBruteApproachWatcherTimer = setInterval(async () => {\n43935:             if (isManualAutoStopActive()) return;\n43936: \n43937:             // Auto guard: this must not run when Auto Mode is off,\n43938:             // unless a valid post-transport rehook is pending from an Auto Mode run.\n43939:             if (!isTransportAutomationAllowed()) return;",
       "function": "startBruteApproachTransportWatcher",
@@ -3567,7 +3295,6 @@
       "line": 43934
     },
     {
-      "clear_call": "clearInterval",
       "cleared": true,
       "excerpt": "47127: \n47128:         if (!mfBackgroundWatcherSupervisorTimer) {\n47129:             // One low-frequency supervisor replaces three always-on heavy\n47130:             // DOM-scanning intervals while Auto Mode is off. The storage\n47131:             // listener normally reacts immediately; this is the safety net.\n47132:             mfBackgroundWatcherSupervisorTimer = setInterval(\n47133:                 () => {\n47134:                     syncBackgroundAutomationWatchers();\n47135:                     reconcileMissionFinderFrameRuntimesFromTop();\n47136:                 },\n47137:                 5000",
       "function": "installBackgroundWatcherSupervisor",
@@ -3579,82 +3306,82 @@
     {
       "anonymous": false,
       "event": "click",
-      "function": "activateStationOverviewEntry",
+      "function": "preventNavigation",
       "handler": "preventNavigation",
       "line": 1338,
-      "removable_pair_found": false,
+      "removal_pair": false,
       "target": "link"
     },
     {
       "anonymous": false,
       "event": "pageshow",
-      "function": "installSingleNamingToolsPanelGuard",
+      "function": "handleVisibilityChange",
       "handler": "enforce",
       "line": 1642,
-      "removable_pair_found": true,
+      "removal_pair": true,
       "target": "window"
     },
     {
       "anonymous": false,
       "event": "popstate",
-      "function": "installSingleNamingToolsPanelGuard",
+      "function": "handleVisibilityChange",
       "handler": "enforce",
       "line": 1647,
-      "removable_pair_found": true,
+      "removal_pair": true,
       "target": "window"
     },
     {
       "anonymous": false,
       "event": "hashchange",
-      "function": "installSingleNamingToolsPanelGuard",
+      "function": "handleVisibilityChange",
       "handler": "enforce",
       "line": 1652,
-      "removable_pair_found": true,
+      "removal_pair": true,
       "target": "window"
     },
     {
       "anonymous": false,
       "event": "visibilitychange",
-      "function": "installSingleNamingToolsPanelGuard",
+      "function": "handleVisibilityChange",
       "handler": "handleVisibilityChange",
       "line": 1657,
-      "removable_pair_found": true,
+      "removal_pair": true,
       "target": "document"
     },
     {
       "anonymous": false,
       "event": "click",
-      "function": "installSingleNamingToolsPanelGuard",
+      "function": "handleVisibilityChange",
       "handler": "handleNavigationClick",
       "line": 1662,
-      "removable_pair_found": true,
+      "removal_pair": true,
       "target": "document"
     },
     {
       "anonymous": false,
       "event": "resize",
-      "function": "installToolViewportGuard",
+      "function": "resetIosPosition",
       "handler": "requestClamp",
       "line": 1788,
-      "removable_pair_found": true,
+      "removal_pair": true,
       "target": "window"
     },
     {
       "anonymous": false,
       "event": "orientationchange",
-      "function": "installToolViewportGuard",
+      "function": "resetIosPosition",
       "handler": "resetIosPosition",
       "line": 1789,
-      "removable_pair_found": true,
+      "removal_pair": true,
       "target": "window"
     },
     {
       "anonymous": false,
       "event": "pageshow",
-      "function": "installToolViewportGuard",
+      "function": "resetIosPosition",
       "handler": "requestClamp",
       "line": 1790,
-      "removable_pair_found": true,
+      "removal_pair": true,
       "target": "window"
     },
     {
@@ -3663,61 +3390,61 @@
       "function": "createCompactDisclosure",
       "handler": "(",
       "line": 2188,
-      "removable_pair_found": false,
+      "removal_pair": false,
       "target": "details"
     },
     {
       "anonymous": false,
       "event": "pointerdown",
-      "function": "makePanelDraggable",
+      "function": "onPointerMove",
       "handler": "onPointerDown",
       "line": 9863,
-      "removable_pair_found": true,
+      "removal_pair": true,
       "target": "handle"
     },
     {
       "anonymous": false,
       "event": "pointermove",
-      "function": "makePanelDraggable",
+      "function": "onPointerMove",
       "handler": "onPointerMove",
       "line": 9864,
-      "removable_pair_found": true,
+      "removal_pair": true,
       "target": "handle"
     },
     {
       "anonymous": false,
       "event": "pointerup",
-      "function": "makePanelDraggable",
+      "function": "onPointerMove",
       "handler": "endDrag",
       "line": 9865,
-      "removable_pair_found": true,
+      "removal_pair": true,
       "target": "handle"
     },
     {
       "anonymous": false,
       "event": "pointercancel",
-      "function": "makePanelDraggable",
+      "function": "onPointerMove",
       "handler": "endDrag",
       "line": 9866,
-      "removable_pair_found": true,
+      "removal_pair": true,
       "target": "handle"
     },
     {
       "anonymous": false,
       "event": "storage",
-      "function": "parseTrainingCodes",
+      "function": "handleToolPageHide",
       "handler": "handlePersonnelRegistryStorage",
       "line": 10717,
-      "removable_pair_found": true,
+      "removal_pair": true,
       "target": "window"
     },
     {
       "anonymous": false,
       "event": "pagehide",
-      "function": "parseTrainingCodes",
+      "function": "handleToolPageHide",
       "handler": "handleToolPageHide",
       "line": 10718,
-      "removable_pair_found": true,
+      "removal_pair": true,
       "target": "window"
     },
     {
@@ -3726,7 +3453,7 @@
       "function": "installPersonnelRegistryUpdateHandler",
       "handler": "mfPersonnelRegistryUpdatedHandler",
       "line": 11758,
-      "removable_pair_found": true,
+      "removal_pair": true,
       "target": "window"
     },
     {
@@ -3735,7 +3462,7 @@
       "function": "installMissionFinderRuntimeMemoryActivityTracking",
       "handler": "mfRuntimeMemoryActivityHandler",
       "line": 11991,
-      "removable_pair_found": true,
+      "removal_pair": true,
       "target": "document"
     },
     {
@@ -3744,7 +3471,7 @@
       "function": "installMissionFinderRuntimeMemoryActivityTracking",
       "handler": "mfRuntimeMemoryActivityHandler",
       "line": 11996,
-      "removable_pair_found": true,
+      "removal_pair": true,
       "target": "document"
     },
     {
@@ -3753,223 +3480,223 @@
       "function": "installMissionFinderRuntimeMemoryActivityTracking",
       "handler": "mfRuntimeMemoryActivityHandler",
       "line": 12001,
-      "removable_pair_found": true,
+      "removal_pair": true,
       "target": "document"
     },
     {
       "anonymous": true,
       "event": "click",
-      "function": "createControlPanel",
+      "function": "setMissionDashboardTab",
       "handler": "function(",
       "line": 19787,
-      "removable_pair_found": false,
+      "removal_pair": false,
       "target": "button"
     },
     {
       "anonymous": true,
       "event": "click",
-      "function": "createControlPanel",
+      "function": "setMissionDashboardTab",
       "handler": "function(",
       "line": 19934,
-      "removable_pair_found": false,
+      "removal_pair": false,
       "target": "queueRestartToggle"
     },
     {
       "anonymous": true,
       "event": "input",
-      "function": "createControlPanel",
+      "function": "saveQueueRestartThresholdInput",
       "handler": "function(",
       "line": 19967,
-      "removable_pair_found": false,
+      "removal_pair": false,
       "target": "queueRestartThresholdInput"
     },
     {
       "anonymous": true,
       "event": "change",
-      "function": "createControlPanel",
+      "function": "saveQueueRestartThresholdInput",
       "handler": "function(",
       "line": 19974,
-      "removable_pair_found": false,
+      "removal_pair": false,
       "target": "queueRestartThresholdInput"
     },
     {
       "anonymous": true,
       "event": "click",
-      "function": "createControlPanel",
+      "function": "syncEventScannerControl",
       "handler": "async function(",
       "line": 20051,
-      "removable_pair_found": false,
+      "removal_pair": false,
       "target": "unitFinderBtn"
     },
     {
       "anonymous": true,
       "event": "click",
-      "function": "createControlPanel",
+      "function": "syncEventScannerControl",
       "handler": "async function(",
       "line": 20065,
-      "removable_pair_found": false,
+      "removal_pair": false,
       "target": "allyStealBtn"
     },
     {
       "anonymous": true,
       "event": "click",
-      "function": "createControlPanel",
+      "function": "syncEventScannerControl",
       "handler": "async function(",
       "line": 20088,
-      "removable_pair_found": false,
+      "removal_pair": false,
       "target": "missionUpdateBtn"
     },
     {
       "anonymous": true,
       "event": "click",
-      "function": "createControlPanel",
+      "function": "syncEventScannerControl",
       "handler": "function(",
       "line": 20165,
-      "removable_pair_found": false,
+      "removal_pair": false,
       "target": "dispatchBtn"
     },
     {
       "anonymous": true,
       "event": "click",
-      "function": "createControlPanel",
+      "function": "syncEventScannerControl",
       "handler": "function(",
       "line": 20178,
-      "removable_pair_found": false,
+      "removal_pair": false,
       "target": "dispatchShareBtn"
     },
     {
       "anonymous": true,
       "event": "click",
-      "function": "createControlPanel",
+      "function": "syncEventScannerControl",
       "handler": "function(",
       "line": 20191,
-      "removable_pair_found": false,
+      "removal_pair": false,
       "target": "autoModeBtn"
     },
     {
       "anonymous": true,
       "event": "click",
-      "function": "createControlPanel",
+      "function": "syncEventScannerControl",
       "handler": "function(",
       "line": 20203,
-      "removable_pair_found": false,
+      "removal_pair": false,
       "target": "diagnosticsBtn"
     },
     {
       "anonymous": true,
       "event": "click",
-      "function": "createControlPanel",
+      "function": "syncIphoneAdvancedToggle",
       "handler": "function(",
       "line": 20251,
-      "removable_pair_found": false,
+      "removal_pair": false,
       "target": "iphoneAdvancedToggle"
     },
     {
       "anonymous": true,
       "event": "click",
-      "function": "createControlPanel",
+      "function": "consumeIphoneDisclosureEvent",
       "handler": "function(event",
       "line": 20363,
-      "removable_pair_found": false,
+      "removal_pair": false,
       "target": "controlMinimizeBtn"
     },
     {
       "anonymous": true,
       "event": "click",
-      "function": "createControlPanel",
+      "function": "consumeIphoneDisclosureEvent",
       "handler": "function(event",
       "line": 20371,
-      "removable_pair_found": false,
+      "removal_pair": false,
       "target": "dragHandle"
     },
     {
       "anonymous": true,
       "event": "keydown",
-      "function": "createControlPanel",
+      "function": "consumeIphoneDisclosureEvent",
       "handler": "function(event",
       "line": 20386,
-      "removable_pair_found": false,
+      "removal_pair": false,
       "target": "dragHandle"
     },
     {
       "anonymous": true,
       "event": "click",
-      "function": "createControlPanel",
+      "function": "toggleTrainedPersonnelCollapsed",
       "handler": "function(event",
       "line": 20660,
-      "removable_pair_found": false,
+      "removal_pair": false,
       "target": "trainedMinimizeButton"
     },
     {
       "anonymous": true,
       "event": "click",
-      "function": "createControlPanel",
+      "function": "toggleTrainedPersonnelCollapsed",
       "handler": "function(",
       "line": 20671,
-      "removable_pair_found": false,
+      "removal_pair": false,
       "target": "trainedTitle"
     },
     {
       "anonymous": true,
       "event": "click",
-      "function": "createControlPanel",
+      "function": "toggleIphoneLauncherPanel",
       "handler": "function(event",
       "line": 20734,
-      "removable_pair_found": false,
+      "removal_pair": false,
       "target": "iphoneMissionLauncherButton"
     },
     {
       "anonymous": true,
       "event": "click",
-      "function": "createControlPanel",
+      "function": "toggleIphoneLauncherPanel",
       "handler": "function(event",
       "line": 20741,
-      "removable_pair_found": false,
+      "removal_pair": false,
       "target": "iphoneVehicleLauncherButton"
     },
     {
       "anonymous": true,
       "event": "click",
-      "function": "createControlPanel",
+      "function": "toggleIphoneLauncherPanel",
       "handler": "function(event",
       "line": 20751,
-      "removable_pair_found": false,
+      "removal_pair": false,
       "target": "loadMinimizeButton"
     },
     {
       "anonymous": true,
       "event": "click",
-      "function": "createControlPanel",
+      "function": "toggleIphoneLauncherPanel",
       "handler": "function(event",
       "line": 20764,
-      "removable_pair_found": false,
+      "removal_pair": false,
       "target": "loadTitle"
     },
     {
       "anonymous": true,
       "event": "keydown",
-      "function": "createControlPanel",
+      "function": "toggleIphoneLauncherPanel",
       "handler": "function(event",
       "line": 20776,
-      "removable_pair_found": false,
+      "removal_pair": false,
       "target": "loadTitle"
     },
     {
       "anonymous": true,
       "event": "change",
-      "function": "createControlPanel",
+      "function": "toggleIphoneLauncherPanel",
       "handler": "function(",
       "line": 20796,
-      "removable_pair_found": false,
+      "removal_pair": false,
       "target": "keepPanelPositionCheckbox"
     },
     {
       "anonymous": true,
       "event": "click",
-      "function": "createControlPanel",
+      "function": "toggleIphoneLauncherPanel",
       "handler": "function(event",
       "line": 20831,
-      "removable_pair_found": false,
+      "removal_pair": false,
       "target": "controlCentreBtn"
     },
     {
@@ -3978,7 +3705,7 @@
       "function": "installMissionFinderResizeHandler",
       "handler": "mfMissionFinderResizeHandler",
       "line": 20925,
-      "removable_pair_found": true,
+      "removal_pair": true,
       "target": "window"
     },
     {
@@ -3987,7 +3714,7 @@
       "function": "installMissionFinderResizeHandler",
       "handler": "mfMissionFinderResizeHandler",
       "line": 20932,
-      "removable_pair_found": true,
+      "removal_pair": true,
       "target": "window"
     },
     {
@@ -3996,79 +3723,79 @@
       "function": "installMissionFinderResizeHandler",
       "handler": "mfMissionFinderResizeHandler",
       "line": 20937,
-      "removable_pair_found": true,
+      "removal_pair": true,
       "target": "window"
     },
     {
       "anonymous": false,
       "event": "click",
-      "function": "finishPointerDrag",
+      "function": "suppressClick",
       "handler": "suppressClick",
       "line": 21645,
-      "removable_pair_found": false,
+      "removal_pair": false,
       "target": "dragHandle"
     },
     {
       "anonymous": true,
       "event": "pointerdown",
-      "function": "makePanelDraggable",
+      "function": "suppressClick",
       "handler": "event => {",
       "line": 21656,
-      "removable_pair_found": false,
+      "removal_pair": false,
       "target": "dragHandle"
     },
     {
       "anonymous": true,
       "event": "pointermove",
-      "function": "makePanelDraggable",
+      "function": "suppressClick",
       "handler": "event => {",
       "line": 21695,
-      "removable_pair_found": false,
+      "removal_pair": false,
       "target": "dragHandle"
     },
     {
       "anonymous": false,
       "event": "pointerup",
-      "function": "makePanelDraggable",
+      "function": "suppressClick",
       "handler": "finishPointerDrag",
       "line": 21756,
-      "removable_pair_found": false,
+      "removal_pair": false,
       "target": "dragHandle"
     },
     {
       "anonymous": false,
       "event": "pointercancel",
-      "function": "makePanelDraggable",
+      "function": "suppressClick",
       "handler": "finishPointerDrag",
       "line": 21760,
-      "removable_pair_found": false,
+      "removal_pair": false,
       "target": "dragHandle"
     },
     {
       "anonymous": true,
       "event": "mousedown",
-      "function": "makePanelDraggable",
+      "function": "suppressClick",
       "handler": "function(e",
       "line": 21771,
-      "removable_pair_found": false,
+      "removal_pair": false,
       "target": "dragHandle"
     },
     {
       "anonymous": false,
       "event": "mousemove",
-      "function": "makePanelDraggable",
+      "function": "suppressClick",
       "handler": "onMouseMove",
       "line": 21793,
-      "removable_pair_found": true,
+      "removal_pair": true,
       "target": "document"
     },
     {
       "anonymous": false,
       "event": "mouseup",
-      "function": "makePanelDraggable",
+      "function": "suppressClick",
       "handler": "onMouseUp",
       "line": 21794,
-      "removable_pair_found": true,
+      "removal_pair": true,
       "target": "document"
     },
     {
@@ -4077,7 +3804,7 @@
       "function": "installManualMissionClickFlagClearer",
       "handler": "function(event",
       "line": 39846,
-      "removable_pair_found": false,
+      "removal_pair": false,
       "target": "document"
     },
     {
@@ -4086,7 +3813,7 @@
       "function": "installBackgroundWatcherSupervisor",
       "handler": "mfBackgroundStorageHandler",
       "line": 47122,
-      "removable_pair_found": true,
+      "removal_pair": true,
       "target": "window"
     },
     {
@@ -4095,7 +3822,7 @@
       "function": "installMissionFinderRuntimeCleanup",
       "handler": "mfRuntimePageHideHandler",
       "line": 47800,
-      "removable_pair_found": true,
+      "removal_pair": true,
       "target": "window"
     },
     {
@@ -4104,43 +3831,43 @@
       "function": "installMissionFinderRuntimeCleanup",
       "handler": "mfRuntimePageShowHandler",
       "line": 47804,
-      "removable_pair_found": true,
+      "removal_pair": true,
       "target": "window"
     },
     {
       "anonymous": false,
       "event": "DOMContentLoaded",
-      "function": "<module scope>",
+      "function": "startMissionFinderObserver",
       "handler": "startMissionFinderObserver",
       "line": 47872,
-      "removable_pair_found": false,
+      "removal_pair": false,
       "target": "document"
     },
     {
       "anonymous": false,
       "event": "mousedown",
-      "function": "installDispatchCentresShowAllMiddleClick",
+      "function": "handleMiddleMouseRelease",
       "handler": "handleMiddleMouseDown",
       "line": 48035,
-      "removable_pair_found": false,
+      "removal_pair": false,
       "target": "document"
     },
     {
       "anonymous": false,
       "event": "mouseup",
-      "function": "installDispatchCentresShowAllMiddleClick",
+      "function": "handleMiddleMouseRelease",
       "handler": "handleMiddleMouseRelease",
       "line": 48040,
-      "removable_pair_found": false,
+      "removal_pair": false,
       "target": "document"
     },
     {
       "anonymous": false,
       "event": "auxclick",
-      "function": "installDispatchCentresShowAllMiddleClick",
+      "function": "handleMiddleMouseRelease",
       "handler": "handleMiddleMouseRelease",
       "line": 48045,
-      "removable_pair_found": false,
+      "removal_pair": false,
       "target": "document"
     }
   ],
@@ -4150,24 +3877,6 @@
       "function": "getVehicleCheckboxSnapshot",
       "line": 15634,
       "pattern": "\\.document\\s*=\\s*"
-    },
-    {
-      "excerpt": "01400:         return managed ? await waitForIframe(entry.href, managed) : null;\n01401:     }\n01402: \n01403:     function ensureSingleNamingToolsPanel(preferredPanel = null) {\n01404:         const panels = [...document.querySelectorAll('#mc-namer-panel')];\n01405:         const keeper = preferredPanel?.isConnected\n01406:             ? preferredPanel\n01407:             : panels[0] || null;\n01408: ",
-      "function": "ensureSingleNamingToolsPanel",
-      "line": 1404,
-      "pattern": "=\\s*\\[\\.\\.\\.document\\.querySelectorAll"
-    },
-    {
-      "excerpt": "01409:         panels.forEach(panel => {\n01410:             if (panel !== keeper) panel.remove();\n01411:         });\n01412: \n01413:         const styles = [...document.querySelectorAll('style[data-mc-namer-style=\"true\"]')];\n01414:         styles.forEach((style, index) => {\n01415:             if (index > 0) style.remove();\n01416:         });\n01417: ",
-      "function": "ensureSingleNamingToolsPanel",
-      "line": 1413,
-      "pattern": "=\\s*\\[\\.\\.\\.document\\.querySelectorAll"
-    },
-    {
-      "excerpt": "05359:             await sleep(50);\n05360:             return;\n05361:         }\n05362: \n05363:         const closeButtons = [...document.querySelectorAll('span.lightbox-close')];\n05364:         const closeButton = closeButtons.reverse().find(button => button.offsetParent !== null) || closeButtons[0];\n05365: \n05366:         if (closeButton) {\n05367:             closeButton.click();",
-      "function": "closeStationNamingModal",
-      "line": 5363,
-      "pattern": "=\\s*\\[\\.\\.\\.document\\.querySelectorAll"
     },
     {
       "excerpt": "12800:         window.mfIssueRecorderInstalled = true;\n12801:     }\n12802: \n12803:     function cleanupDuplicatePanels() {\n12804:         const wrappers = document.querySelectorAll('#mission-finder-wrapper');\n12805: \n12806:         wrappers.forEach((wrapper, index) => {\n12807:             if (index > 0) {\n12808:                 wrapper.remove();",
@@ -4198,6 +3907,24 @@
       "function": "flushMissionFinderMutationWork",
       "line": 47226,
       "pattern": "=\\s*document\\.querySelectorAll"
+    },
+    {
+      "excerpt": "01400:         return managed ? await waitForIframe(entry.href, managed) : null;\n01401:     }\n01402: \n01403:     function ensureSingleNamingToolsPanel(preferredPanel = null) {\n01404:         const panels = [...document.querySelectorAll('#mc-namer-panel')];\n01405:         const keeper = preferredPanel?.isConnected\n01406:             ? preferredPanel\n01407:             : panels[0] || null;\n01408: ",
+      "function": "ensureSingleNamingToolsPanel",
+      "line": 1404,
+      "pattern": "=\\s*\\[\\.\\.\\.document\\.querySelectorAll"
+    },
+    {
+      "excerpt": "01409:         panels.forEach(panel => {\n01410:             if (panel !== keeper) panel.remove();\n01411:         });\n01412: \n01413:         const styles = [...document.querySelectorAll('style[data-mc-namer-style=\"true\"]')];\n01414:         styles.forEach((style, index) => {\n01415:             if (index > 0) style.remove();\n01416:         });\n01417: ",
+      "function": "ensureSingleNamingToolsPanel",
+      "line": 1413,
+      "pattern": "=\\s*\\[\\.\\.\\.document\\.querySelectorAll"
+    },
+    {
+      "excerpt": "05359:             await sleep(50);\n05360:             return;\n05361:         }\n05362: \n05363:         const closeButtons = [...document.querySelectorAll('span.lightbox-close')];\n05364:         const closeButton = closeButtons.reverse().find(button => button.offsetParent !== null) || closeButtons[0];\n05365: \n05366:         if (closeButton) {\n05367:             closeButton.click();",
+      "function": "closeStationNamingModal",
+      "line": 5363,
+      "pattern": "=\\s*\\[\\.\\.\\.document\\.querySelectorAll"
     },
     {
       "excerpt": "05259:             ].filter(Boolean);\n05260: \n05261:             for (const iframe of candidates.reverse()) {\n05262:                 try {\n05263:                     const doc = iframe.contentDocument;\n05264:                     const currentPath = iframe.contentWindow?.location?.pathname || iframe.getAttribute('src') || '';\n05265:                     if (doc && (currentPath.startsWith(stationHref) || doc.querySelector(`a[href=\"${stationHref}/move\"], form[action=\"${stationHref}\"], form[action=\"${stationHref}/move_do\"]`))) {\n05266:                         return iframe;\n05267:                     }",
@@ -4249,7 +3976,7 @@
     },
     {
       "excerpt": "47464:         });\n47465: \n47466:         frames.forEach(frame => {\n47467:             try {\n47468:                 const candidateDocument =\n47469:                     frame.contentDocument ||\n47470:                     frame.contentWindow?.document;\n47471: \n47472:                 dispatchMissionFinderFrameRuntimeEvent(",
-      "function": "releaseRemovedMissionFinderFrameRuntimes",
+      "function": "addFrames",
       "line": 47468,
       "pattern": "=\\s*[^;\\n]*\\.contentDocument"
     }
@@ -4259,7 +3986,7 @@
       "body_subtree": true,
       "disconnected": true,
       "excerpt": "01568:                 ) ||\n01569:                 node.querySelector?.(\n01570:                     '#mc-namer-panel, .building_list, .building_list_li'\n01571:                 )\n01572:             );\n01573:         };\n01574: \n01575:         const observer = new MutationObserver(records => {\n01576:             const relevantMutation = records.some(record => {\n01577:                 const target =\n01578:                     record.target?.nodeType ===\n01579:                     Node.ELEMENT_NODE\n01580:                         ? record.target\n01581:                         : record.target?.parentElement;\n01582: ",
-      "function": "installSingleNamingToolsPanelGuard",
+      "function": "observer",
       "handle": "observer",
       "line": 1575
     },
@@ -4274,27 +4001,23 @@
   ],
   "query_by_function": [
     [
-      "addPanel",
-      68
-    ],
-    [
-      "createControlPanel",
-      14
+      "createCompactActionDisclosure",
+      69
     ],
     [
       "updatePersonnelProfileUi",
       13
     ],
     [
+      "startIndex",
+      10
+    ],
+    [
       "switchToolTab",
       9
     ],
     [
-      "<module scope>",
-      7
-    ],
-    [
-      "getAllyStealParentModalCloseCandidates",
+      "addCandidate",
       6
     ],
     [
@@ -4310,27 +4033,27 @@
       5
     ],
     [
-      "extractLiveMissionRequirementRows",
+      "buildPersonnelTrainingRegisterOneClick",
       5
     ],
     [
-      "startPersonnelRun",
+      "setMissionDashboardTab",
       5
-    ],
-    [
-      "parseVehicleAssignmentPage",
-      4
     ],
     [
       "buildActiveMissionRequirementContexts",
       4
     ],
     [
-      "findMissionRequirementTable",
+      "extractLiveMissionRequirementRows",
       4
     ],
     [
       "parseLivePoliceTrainingAssignments",
+      4
+    ],
+    [
+      "readMissionUpdateRows",
       4
     ],
     [
@@ -4346,14 +4069,6 @@
       4
     ],
     [
-      "startStationNamingRun",
-      4
-    ],
-    [
-      "startRun",
-      4
-    ],
-    [
       "getUnattendedMissionStateForQueueRestart",
       4
     ],
@@ -4362,7 +4077,15 @@
       3
     ],
     [
+      "parseVehicleAssignmentPage",
+      3
+    ],
+    [
       "getVehicleQueueFromTable",
+      3
+    ],
+    [
+      "createControlPanel",
       3
     ],
     [
@@ -4382,7 +4105,7 @@
       3
     ],
     [
-      "extractTowCarRequirementRows",
+      "normalise",
       3
     ],
     [
@@ -4390,11 +4113,11 @@
       3
     ],
     [
-      "getGenericMissingVehicleRowsFromText",
+      "mfGetTransportOwnerModal",
       3
     ],
     [
-      "mfGetTransportOwnerModal",
+      "visible",
       3
     ],
     [
@@ -4422,7 +4145,7 @@
       3
     ],
     [
-      "readStationOverviewName",
+      "add",
       2
     ],
     [
@@ -4434,15 +4157,15 @@
       2
     ],
     [
-      "updateStationListName",
-      2
-    ],
-    [
       "getPersonnelVehicleQueue",
       2
     ],
     [
       "cleanupDuplicatePanels",
+      2
+    ],
+    [
+      "count",
       2
     ],
     [
@@ -4459,6 +4182,10 @@
     ],
     [
       "removeAutoModeQueueHelperCopy",
+      2
+    ],
+    [
+      "addDocument",
       2
     ],
     [
@@ -4479,6 +4206,14 @@
     ],
     [
       "extractMissionDefinitionRequiredPersonnelRows",
+      2
+    ],
+    [
+      "cells",
+      2
+    ],
+    [
+      "extractTowCarRequirementRows",
       2
     ],
     [
@@ -4503,10 +4238,6 @@
     ],
     [
       "buildTransportActiveScopes",
-      2
-    ],
-    [
-      "resolveAutoPrisonerReleaseDismissContext",
       2
     ],
     [
@@ -4570,11 +4301,23 @@
       2
     ],
     [
+      "saveQueueRestartThresholdInput",
+      2
+    ],
+    [
       "syncVehicleLoadCollapseState",
       2
     ],
     [
+      "toggleVehicleLoadCollapsed",
+      2
+    ],
+    [
       "syncTrainedPersonnelCollapseState",
+      2
+    ],
+    [
+      "toggleTrainedPersonnelCollapsed",
       2
     ],
     [
@@ -4610,6 +4353,10 @@
       1
     ],
     [
+      "updateStationListName",
+      1
+    ],
+    [
       "closeStationNamingModal",
       1
     ],
@@ -4626,6 +4373,10 @@
       1
     ],
     [
+      "assignedVehicleLink",
+      1
+    ],
+    [
       "getUnitModalCloseButton",
       1
     ],
@@ -4639,10 +4390,6 @@
     ],
     [
       "mfGetDiagnosticVisibleAlerts",
-      1
-    ],
-    [
-      "count",
       1
     ],
     [
@@ -4670,10 +4417,6 @@
       1
     ],
     [
-      "getMissionAccessibleDocuments",
-      1
-    ],
-    [
       "getMissionFinderIphoneNativePickerAnchors",
       1
     ],
@@ -4690,6 +4433,10 @@
       1
     ],
     [
+      "findMissionRequirementTable",
+      1
+    ],
+    [
       "getVisibleStaffingShortageText",
       1
     ],
@@ -4698,15 +4445,11 @@
       1
     ],
     [
-      "escapeHtml",
+      "processVehicles",
       1
     ],
     [
       "findLegacyVehicleRequirementList",
-      1
-    ],
-    [
-      "getAllyStealAccessibleDocuments",
       1
     ],
     [
@@ -4746,6 +4489,10 @@
       1
     ],
     [
+      "parseVisibleMissionRequirementRows",
+      1
+    ],
+    [
       "getVisibleQueueOpenModals",
       1
     ],
@@ -4762,7 +4509,7 @@
       1
     ],
     [
-      "mfGetApproachCapacityInfo",
+      "headers",
       1
     ],
     [
@@ -4794,7 +4541,7 @@
       1
     ],
     [
-      "getVisibleMissionCloseButtonsForQueueRestart",
+      "matches",
       1
     ],
     [
@@ -4826,10 +4573,6 @@
       1
     ],
     [
-      "createCompactActionDisclosure",
-      1
-    ],
-    [
       "handlePersonnelUnitsRequiredChange",
       1
     ],
@@ -4850,6 +4593,10 @@
       1
     ],
     [
+      "startStationNamingRun",
+      1
+    ],
+    [
       "toggleStationNamingPause",
       1
     ],
@@ -4863,6 +4610,10 @@
     ],
     [
       "verifyStationNameSaved",
+      1
+    ],
+    [
+      "nameLink",
       1
     ],
     [
@@ -4883,6 +4634,10 @@
     ],
     [
       "worker",
+      1
+    ],
+    [
+      "startPersonnelRun",
       1
     ],
     [
@@ -4911,6 +4666,10 @@
     ],
     [
       "getSelectedUnitClass",
+      1
+    ],
+    [
+      "startRun",
       1
     ],
     [
@@ -4958,7 +4717,7 @@
       1
     ],
     [
-      "retryMissingUnits",
+      "missingRows",
       1
     ],
     [
@@ -4979,10 +4738,6 @@
     ],
     [
       "getNextMissionQueueState",
-      1
-    ],
-    [
-      "isCurrentMissionWindowOpenStrict",
       1
     ],
     [
@@ -5012,23 +4767,7 @@
     [
       "clickNextMissionAfterAutoUpgrade",
       1
-    ],
-    [
-      "mfCollectMemoryDiagnostics",
-      1
     ]
-  ],
-  "recursive_timeout_functions": [
-    {
-      "function": "parseTrainingCodes",
-      "has_guard": true,
-      "line": 8982
-    },
-    {
-      "function": "scheduleMissionFinderIphoneNativePickerSync",
-      "has_guard": true,
-      "line": 24623
-    }
   ],
   "selected_function_presence": {
     "classifyMissionFinderMutations": true,
@@ -5071,24 +4810,29 @@
   "summary": {
     "add_event_listener_count": 72,
     "byte_count": 1631728,
-    "function_count": 962,
-    "inner_html_assignment_count": 29,
+    "collection_count_with_mutation_or_pruning": 140,
+    "dom_query_count": 425,
     "line_count": 48053,
     "mission_finder_version": "V10.6.141",
     "mutation_observer_count": 2,
     "node_retention_match_count": 18,
-    "query_call_count": 425,
     "remove_event_listener_count": 31,
     "request_animation_frame_count": 17,
     "set_interval_count": 8,
     "set_timeout_count": 35,
-    "source_path": "src/missionchief-command-nexus.user.js",
     "userscript_version": "1.0.81"
   },
   "suspects": [
     {
-      "function": "addPanel",
-      "query_count": 68,
+      "excerpt": "11007:         }\n11008: \n11009:         void scanMissionEventCollectibles();\n11010: \n11011:         mfEventCollectibleScanTimer =\n11012:             window.setInterval(\n11013:                 () => {\n11014:                     void scanMissionEventCollectibles();\n11015:                 },\n11016:                 MF_EVENT_COLLECTIBLE_SCAN_INTERVAL_MS\n11017:             );",
+      "function": "startMissionEventCollectibleCollector",
+      "line": 11012,
+      "score": 9,
+      "type": "untracked-interval"
+    },
+    {
+      "function": "createCompactActionDisclosure",
+      "query_count": 69,
       "score": 8,
       "type": "high-dom-query-density"
     },
@@ -5113,9 +4857,9 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "<module scope>",
+      "scope": "TOOL_IS_STATION_OVERVIEW_FRAME",
       "score": 8,
-      "type": "unbounded-module-collection"
+      "type": "collection-without-static-prune-evidence"
     },
     {
       "kind": "new WeakMap(",
@@ -5138,9 +4882,9 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "<module scope>",
+      "scope": "TOOL_IS_STATION_OVERVIEW_FRAME",
       "score": 8,
-      "type": "unbounded-module-collection"
+      "type": "collection-without-static-prune-evidence"
     },
     {
       "kind": "new WeakMap(",
@@ -5163,9 +4907,9 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "<module scope>",
+      "scope": "TOOL_IS_STATION_OVERVIEW_FRAME",
       "score": 8,
-      "type": "unbounded-module-collection"
+      "type": "collection-without-static-prune-evidence"
     },
     {
       "kind": "new WeakMap(",
@@ -5188,9 +4932,84 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "<module scope>",
+      "scope": "TOOL_IS_STATION_OVERVIEW_FRAME",
       "score": 8,
-      "type": "unbounded-module-collection"
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "new Map(",
+      "limit_mentions": 0,
+      "line": 1284,
+      "mutation_total": 1,
+      "mutations": {
+        "add": 0,
+        "push": 0,
+        "set": 1,
+        "unshift": 0
+      },
+      "name": "groups",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "getStationOverviewEntries",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "[]",
+      "limit_mentions": 0,
+      "line": 4997,
+      "mutation_total": 2,
+      "mutations": {
+        "add": 0,
+        "push": 2,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "cacheCandidates",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "findBuildingCoordinatesInPageCaches",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "new Map(",
+      "limit_mentions": 0,
+      "line": 5898,
+      "mutation_total": 1,
+      "mutations": {
+        "add": 0,
+        "push": 0,
+        "set": 1,
+        "unshift": 0
+      },
+      "name": "profilesByVehicle",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "getPersonnelStationAssignmentSnapshot",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
     },
     {
       "kind": "[]",
@@ -5213,9 +5032,9 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "<module scope>",
+      "scope": "runPersonnelRegisterVehicleVerificationPool",
       "score": 8,
-      "type": "unbounded-module-collection"
+      "type": "collection-without-static-prune-evidence"
     },
     {
       "kind": "[]",
@@ -5238,9 +5057,9 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "<module scope>",
+      "scope": "runPersonnelRegisterVehicleVerificationPool",
       "score": 8,
-      "type": "unbounded-module-collection"
+      "type": "collection-without-static-prune-evidence"
     },
     {
       "kind": "[]",
@@ -5263,16 +5082,1159 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "<module scope>",
+      "scope": "buildPersonnelTrainingRegisterOneClick",
       "score": 8,
-      "type": "unbounded-module-collection"
+      "type": "collection-without-static-prune-evidence"
     },
     {
-      "excerpt": "11007:         }\n11008: \n11009:         void scanMissionEventCollectibles();\n11010: \n11011:         mfEventCollectibleScanTimer =\n11012:             window.setInterval(\n11013:                 () => {\n11014:                     void scanMissionEventCollectibles();\n11015:                 },\n11016:                 MF_EVENT_COLLECTIBLE_SCAN_INTERVAL_MS\n11017:             );",
-      "function": "startMissionEventCollectibleCollector",
-      "line": 11012,
+      "kind": "new Map(",
+      "limit_mentions": 0,
+      "line": 7313,
+      "mutation_total": 1,
+      "mutations": {
+        "add": 0,
+        "push": 0,
+        "set": 1,
+        "unshift": 0
+      },
+      "name": "byVehicleId",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "getPersonnelAssignmentIndex",
       "score": 8,
-      "type": "untracked-interval"
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "new Map(",
+      "limit_mentions": 0,
+      "line": 7315,
+      "mutation_total": 1,
+      "mutations": {
+        "add": 0,
+        "push": 0,
+        "set": 1,
+        "unshift": 0
+      },
+      "name": "byVehicleName",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "getPersonnelAssignmentIndex",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "new Set(",
+      "limit_mentions": 0,
+      "line": 7350,
+      "mutation_total": 8,
+      "mutations": {
+        "add": 8,
+        "push": 0,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "seen",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "seen",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "new Set(",
+      "limit_mentions": 0,
+      "line": 7597,
+      "mutation_total": 8,
+      "mutations": {
+        "add": 8,
+        "push": 0,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "seen",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "getPersonnelVehicleQueue",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "new Map(",
+      "limit_mentions": 0,
+      "line": 7753,
+      "mutation_total": 1,
+      "mutations": {
+        "add": 0,
+        "push": 0,
+        "set": 1,
+        "unshift": 0
+      },
+      "name": "personToSlot",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "people",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "new Map(",
+      "limit_mentions": 0,
+      "line": 7754,
+      "mutation_total": 1,
+      "mutations": {
+        "add": 0,
+        "push": 0,
+        "set": 1,
+        "unshift": 0
+      },
+      "name": "candidatesByRule",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "people",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "new Set(",
+      "limit_mentions": 0,
+      "line": 7837,
+      "mutation_total": 3,
+      "mutations": {
+        "add": 3,
+        "push": 0,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "reservedPersonnelIds",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "targetTypeIds",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "new Set(",
+      "limit_mentions": 0,
+      "line": 7839,
+      "mutation_total": 1,
+      "mutations": {
+        "add": 1,
+        "push": 0,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "claimedVehicleIds",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "targetTypeIds",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "[]",
+      "limit_mentions": 0,
+      "line": 7841,
+      "mutation_total": 1,
+      "mutations": {
+        "add": 0,
+        "push": 1,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "ruleReports",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "targetTypeIds",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "[]",
+      "limit_mentions": 0,
+      "line": 7844,
+      "mutation_total": 1,
+      "mutations": {
+        "add": 0,
+        "push": 1,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "qualificationSlots",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "targetTypeIds",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "[]",
+      "limit_mentions": 0,
+      "line": 8038,
+      "mutation_total": 2,
+      "mutations": {
+        "add": 0,
+        "push": 2,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "submittedCandidates",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "ruleTrained",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "new Set(",
+      "limit_mentions": 0,
+      "line": 8067,
+      "mutation_total": 4,
+      "mutations": {
+        "add": 4,
+        "push": 0,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "verifiedIds",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "ruleTrained",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "new Set(",
+      "limit_mentions": 0,
+      "line": 8458,
+      "mutation_total": 3,
+      "mutations": {
+        "add": 3,
+        "push": 0,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "reservedPersonnelIds",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "availableAtScan",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "[]",
+      "limit_mentions": 0,
+      "line": 8583,
+      "mutation_total": 2,
+      "mutations": {
+        "add": 0,
+        "push": 2,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "submittedCandidates",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "mappedCritical",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "new Set(",
+      "limit_mentions": 0,
+      "line": 8607,
+      "mutation_total": 4,
+      "mutations": {
+        "add": 4,
+        "push": 0,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "verifiedIds",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "mappedCritical",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "new Set(",
+      "limit_mentions": 0,
+      "line": 8913,
+      "mutation_total": 8,
+      "mutations": {
+        "add": 8,
+        "push": 0,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "seen",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "getPersonnelAmbulanceQueue",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "[]",
+      "limit_mentions": 0,
+      "line": 9432,
+      "mutation_total": 20,
+      "mutations": {
+        "add": 0,
+        "push": 20,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "lines",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "buildPersonnelOverallStationBlock",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "new Map(",
+      "limit_mentions": 0,
+      "line": 9983,
+      "mutation_total": 1,
+      "mutations": {
+        "add": 0,
+        "push": 0,
+        "set": 1,
+        "unshift": 0
+      },
+      "name": "byVehicleType",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "getUnitClassOptionsForStationType",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "new Set(",
+      "limit_mentions": 0,
+      "line": 10765,
+      "mutation_total": 8,
+      "mutations": {
+        "add": 8,
+        "push": 0,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "seen",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "getMissionEventCollectibleDocuments",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "new WeakMap(",
+      "limit_mentions": 0,
+      "line": 12315,
+      "mutation_total": 1,
+      "mutations": {
+        "add": 0,
+        "push": 0,
+        "set": 1,
+        "unshift": 0
+      },
+      "name": "mfExtendedVehicleValueCache",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "stopMissionFinderRuntimeMemoryMaintenance",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "new WeakMap(",
+      "limit_mentions": 0,
+      "line": 12316,
+      "mutation_total": 1,
+      "mutations": {
+        "add": 0,
+        "push": 0,
+        "set": 1,
+        "unshift": 0
+      },
+      "name": "mfSartecDisplayedValueCache",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "stopMissionFinderRuntimeMemoryMaintenance",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "[]",
+      "limit_mentions": 0,
+      "line": 13126,
+      "mutation_total": 1,
+      "mutations": {
+        "add": 0,
+        "push": 1,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "mfLastMissionDefinitionRawRows",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "cleanupDuplicatePanels",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "[]",
+      "limit_mentions": 0,
+      "line": 22771,
+      "mutation_total": 4,
+      "mutations": {
+        "add": 0,
+        "push": 4,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "summaryParts",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "aggregateOnlyVehicles",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "[]",
+      "limit_mentions": 0,
+      "line": 23345,
+      "mutation_total": 1,
+      "mutations": {
+        "add": 0,
+        "push": 1,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "patientCards",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "computePatientCountNow",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "[]",
+      "limit_mentions": 0,
+      "line": 23506,
+      "mutation_total": 2,
+      "mutations": {
+        "add": 0,
+        "push": 2,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "attributeElements",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "getMissionIdFromLocalScope",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "[]",
+      "limit_mentions": 0,
+      "line": 23530,
+      "mutation_total": 1,
+      "mutations": {
+        "add": 0,
+        "push": 1,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "urlElements",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "getMissionIdFromLocalScope",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "[]",
+      "limit_mentions": 0,
+      "line": 25549,
+      "mutation_total": 1,
+      "mutations": {
+        "add": 0,
+        "push": 1,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "routeElements",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "getMissionTypeIdFromScope",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "new Set(",
+      "limit_mentions": 0,
+      "line": 25618,
+      "mutation_total": 1,
+      "mutations": {
+        "add": 1,
+        "push": 0,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "seenElements",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "getMissionRequirementSource",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "[]",
+      "limit_mentions": 0,
+      "line": 25815,
+      "mutation_total": 1,
+      "mutations": {
+        "add": 0,
+        "push": 1,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "exactElements",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "getActiveMissionProblemTextBlocks",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "[]",
+      "limit_mentions": 0,
+      "line": 25902,
+      "mutation_total": 1,
+      "mutations": {
+        "add": 0,
+        "push": 1,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "fallbackElements",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "getActiveMissionProblemTextBlocks",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "[]",
+      "limit_mentions": 0,
+      "line": 26493,
+      "mutation_total": 1,
+      "mutations": {
+        "add": 0,
+        "push": 1,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "rawRows",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "extractMissionDefinitionRequiredPersonnelRows",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "new Map(",
+      "limit_mentions": 0,
+      "line": 27120,
+      "mutation_total": 2,
+      "mutations": {
+        "add": 0,
+        "push": 0,
+        "set": 2,
+        "unshift": 0
+      },
+      "name": "merged",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "mergeRequirementRows",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "[]",
+      "limit_mentions": 0,
+      "line": 29097,
+      "mutation_total": 1,
+      "mutations": {
+        "add": 0,
+        "push": 1,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "verifiedOrdinary",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "orderOrdinaryPoliceIrvCandidates",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "[]",
+      "limit_mentions": 0,
+      "line": 29098,
+      "mutation_total": 1,
+      "mutations": {
+        "add": 0,
+        "push": 1,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "unknownOrStale",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "orderOrdinaryPoliceIrvCandidates",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "[]",
+      "limit_mentions": 0,
+      "line": 29099,
+      "mutation_total": 1,
+      "mutations": {
+        "add": 0,
+        "push": 1,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "protectedFallback",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "orderOrdinaryPoliceIrvCandidates",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "new Set(",
+      "limit_mentions": 0,
+      "line": 30192,
+      "mutation_total": 6,
+      "mutations": {
+        "add": 6,
+        "push": 0,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "rowCodes",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "parseLivePoliceTrainingAssignments",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "new Set(",
+      "limit_mentions": 0,
+      "line": 30547,
+      "mutation_total": 4,
+      "mutations": {
+        "add": 4,
+        "push": 0,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "verifiedIds",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "refreshPoliceInspectorRegistryFromLiveVehicles",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "new Set(",
+      "limit_mentions": 0,
+      "line": 30827,
+      "mutation_total": 4,
+      "mutations": {
+        "add": 4,
+        "push": 0,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "verifiedIds",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "refreshArmedResponseRegistryFromLiveVehicles",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "[]",
+      "limit_mentions": 0,
+      "line": 32367,
+      "mutation_total": 1,
+      "mutations": {
+        "add": 0,
+        "push": 1,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "missingUnits",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "processRequirementRows",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "[]",
+      "limit_mentions": 0,
+      "line": 32737,
+      "mutation_total": 1,
+      "mutations": {
+        "add": 0,
+        "push": 1,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "requirementRows",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "processVehicles",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "new Set(",
+      "limit_mentions": 0,
+      "line": 33482,
+      "mutation_total": 8,
+      "mutations": {
+        "add": 8,
+        "push": 0,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "seen",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "getAllAllyStealSuccessAlerts",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "new Set(",
+      "limit_mentions": 0,
+      "line": 33509,
+      "mutation_total": 8,
+      "mutations": {
+        "add": 8,
+        "push": 0,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "seen",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "getAllyStealParentModalCloseCandidates",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "new Map(",
+      "limit_mentions": 0,
+      "line": 36308,
+      "mutation_total": 3,
+      "mutations": {
+        "add": 0,
+        "push": 0,
+        "set": 3,
+        "unshift": 0
+      },
+      "name": "deduped",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "getStructuredMissingVehicleRows",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "new Map(",
+      "limit_mentions": 0,
+      "line": 36767,
+      "mutation_total": 1,
+      "mutations": {
+        "add": 0,
+        "push": 0,
+        "set": 1,
+        "unshift": 0
+      },
+      "name": "livePatientRequirementStates",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "readMissionUpdateRows",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "new Map(",
+      "limit_mentions": 0,
+      "line": 38068,
+      "mutation_total": 1,
+      "mutations": {
+        "add": 0,
+        "push": 0,
+        "set": 1,
+        "unshift": 0
+      },
+      "name": "patientGroups",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "readMissionUpdateRows",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "[]",
+      "limit_mentions": 0,
+      "line": 39067,
+      "mutation_total": 2,
+      "mutations": {
+        "add": 0,
+        "push": 2,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "missingAfterAttempt",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "handleMissionUpdateUnits",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
     },
     {
       "kind": "new Set(",
@@ -5295,18 +6257,118 @@
         "shift": 0,
         "splice": 0
       },
-      "scope": "<module scope>",
+      "scope": "parseVisibleMissionRequirementRows",
       "score": 8,
-      "type": "unbounded-module-collection"
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "[]",
+      "limit_mentions": 0,
+      "line": 41507,
+      "mutation_total": 2,
+      "mutations": {
+        "add": 0,
+        "push": 2,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "modalCandidates",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "buildTransportActiveScopes",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "new Set(",
+      "limit_mentions": 0,
+      "line": 42044,
+      "mutation_total": 8,
+      "mutations": {
+        "add": 8,
+        "push": 0,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "seen",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "getVisibleAutoPrisonerReleaseDismissContexts",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "new Set(",
+      "limit_mentions": 0,
+      "line": 42996,
+      "mutation_total": 1,
+      "mutations": {
+        "add": 1,
+        "push": 0,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "seenDocuments",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "mfGetExactPatientTransportRoots",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
+    },
+    {
+      "kind": "new Set(",
+      "limit_mentions": 0,
+      "line": 47444,
+      "mutation_total": 2,
+      "mutations": {
+        "add": 2,
+        "push": 0,
+        "set": 0,
+        "unshift": 0
+      },
+      "name": "frames",
+      "prune_total": 0,
+      "pruning": {
+        "clear": 0,
+        "delete": 0,
+        "length_assign": 0,
+        "pop": 0,
+        "shift": 0,
+        "splice": 0
+      },
+      "scope": "releaseRemovedMissionFinderFrameRuntimes",
+      "score": 8,
+      "type": "collection-without-static-prune-evidence"
     },
     {
       "body_subtree": true,
       "disconnected": true,
       "excerpt": "01568:                 ) ||\n01569:                 node.querySelector?.(\n01570:                     '#mc-namer-panel, .building_list, .building_list_li'\n01571:                 )\n01572:             );\n01573:         };\n01574: \n01575:         const observer = new MutationObserver(records => {\n01576:             const relevantMutation = records.some(record => {\n01577:                 const target =\n01578:                     record.target?.nodeType ===\n01579:                     Node.ELEMENT_NODE\n01580:                         ? record.target\n01581:                         : record.target?.parentElement;\n01582: ",
-      "function": "installSingleNamingToolsPanelGuard",
+      "function": "observer",
       "handle": "observer",
       "line": 1575,
-      "score": 5,
+      "score": 6,
       "type": "document-wide-subtree-observer"
     },
     {
@@ -5316,12 +6378,23 @@
       "function": "startMissionFinderObserver",
       "handle": "mfMainMutationObserver",
       "line": 47852,
-      "score": 5,
+      "score": 6,
       "type": "document-wide-subtree-observer"
     },
     {
-      "function": "createControlPanel",
-      "query_count": 14,
+      "anonymous": true,
+      "event": "click",
+      "function": "installManualMissionClickFlagClearer",
+      "handler": "function(event",
+      "line": 39846,
+      "removal_pair": false,
+      "score": 5,
+      "target": "document",
+      "type": "anonymous-global-listener"
+    },
+    {
+      "function": "startIndex",
+      "query_count": 10,
       "score": 4,
       "type": "high-dom-query-density"
     },
@@ -5330,22 +6403,10 @@
       "query_count": 13,
       "score": 4,
       "type": "high-dom-query-density"
-    },
-    {
-      "anonymous": true,
-      "event": "click",
-      "function": "installManualMissionClickFlagClearer",
-      "handler": "function(event",
-      "line": 39846,
-      "removable_pair_found": false,
-      "score": 4,
-      "target": "document",
-      "type": "anonymous-global-listener"
     }
   ],
   "timeouts": [
     {
-      "clear_call": "clearTimeout",
       "cleared": true,
       "excerpt": "01620: \n01621:             if (navigationTimer != null) {\n01622:                 clearTimeout(navigationTimer);\n01623:             }\n01624: \n01625:             navigationTimer = setTimeout(() => {\n01626:                 navigationTimer = null;\n01627:                 enforce();\n01628:             }, 250);\n01629:         };\n01630: ",
       "function": "handleNavigationClick",
@@ -5353,15 +6414,13 @@
       "line": 1625
     },
     {
-      "clear_call": "clearTimeout",
       "cleared": true,
       "excerpt": "05173:     }\n05174: \n05175:     async function stationFetchWithTimeout(url, options = {}, timeoutMs = 10000) {\n05176:         const controller = new AbortController();\n05177:         STATION_STATE.activeControllers.add(controller);\n05178:         const timer = setTimeout(() => controller.abort(), timeoutMs);\n05179: \n05180:         try {\n05181:             return await fetch(url, {\n05182:                 ...options,\n05183:                 signal: controller.signal",
-      "function": "<module scope>",
+      "function": "timer",
       "handle": "timer",
       "line": 5178
     },
     {
-      "clear_call": "clearTimeout",
       "cleared": true,
       "excerpt": "07128:     }\n07129: \n07130:     function schedulePersonnelTrainingRegistryFlush() {\n07131:         if (PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER != null) return;\n07132: \n07133:         PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER = setTimeout(() => {\n07134:             PERSONNEL_TRAINING_REGISTRY_FLUSH_TIMER = null;\n07135:             flushPersonnelTrainingRegistry(false);\n07136:         }, PERSONNEL_TRAINING_REGISTRY_FLUSH_DELAY_MS);\n07137:     }\n07138: ",
       "function": "schedulePersonnelTrainingRegistryFlush",
@@ -5369,31 +6428,27 @@
       "line": 7133
     },
     {
-      "clear_call": "clearTimeout",
       "cleared": true,
       "excerpt": "08851:     async function personnelFetchResponse(url, options = {}, timeoutMs = 12000) {\n08852:         await waitForPersonnelRequestSlot();\n08853: \n08854:         const controller = new AbortController();\n08855:         PERSONNEL_STATE.activeController = controller;\n08856:         const timer = setTimeout(() => controller.abort(), timeoutMs);\n08857: \n08858:         try {\n08859:             const response = await fetch(url, {\n08860:                 credentials: 'same-origin',\n08861:                 cache: 'no-store',",
-      "function": "<module scope>",
+      "function": "timer",
       "handle": "timer",
       "line": 8856
     },
     {
-      "clear_call": "clearTimeout",
       "cleared": true,
       "excerpt": "13142:         processedSelectionKeys = new Set();\n13143:     }\n13144: \n13145:     function withTimeout(promise, timeoutMs, label) {\n13146:         return new Promise((resolve, reject) => {\n13147:             const timeoutId = setTimeout(() => {\n13148:                 reject(\n13149:                     new Error(\n13150:                         `${label || 'Operation'} timed out after ${timeoutMs}ms`\n13151:                     )\n13152:                 );",
-      "function": "withTimeout",
+      "function": "timeoutId",
       "handle": "timeoutId",
       "line": 13147
     },
     {
-      "clear_call": "clearTimeout",
       "cleared": true,
       "excerpt": "23013:         };\n23014: \n23015:         if (typeof requestAnimationFrame === 'function') {\n23016:             mfVehicleLoadRenderFrame = requestAnimationFrame(run);\n23017:         } else {\n23018:             mfVehicleLoadRenderFrame = setTimeout(run, 50);\n23019:         }\n23020:     }\n23021: \n23022:     function escapeHtml(value) {\n23023:         return String(value)",
-      "function": "renderVehicleLoadList",
+      "function": "run",
       "handle": "mfVehicleLoadRenderFrame",
       "line": 23018
     },
     {
-      "clear_call": "clearTimeout",
       "cleared": true,
       "excerpt": "24641:                 mfIphoneNativePickerSyncTimer\n24642:             );\n24643:             mfIphoneNativePickerSyncTimer = null;\n24644:         }\n24645: \n24646:         mfIphoneNativePickerSyncTimer = setTimeout(\n24647:             () => {\n24648:                 mfIphoneNativePickerSyncTimer = null;\n24649: \n24650:                 const appliedCount =\n24651:                     syncMissionFinderIphoneNativePickerSurfaces(",
       "function": "scheduleMissionFinderIphoneNativePickerSync",
@@ -5401,7 +6456,6 @@
       "line": 24646
     },
     {
-      "clear_call": "clearTimeout",
       "cleared": true,
       "excerpt": "27842:             mfMissionRequirementPreloadTimer\n27843:         ) {\n27844:             return;\n27845:         }\n27846: \n27847:         mfMissionRequirementPreloadTimer = setTimeout(() => {\n27848:             mfMissionRequirementPreloadTimer = null;\n27849:             preloadMissionRequiredPersonnel();\n27850:         }, Math.max(0, parseInt(delay, 10) || 0));\n27851:     }\n27852: ",
       "function": "scheduleMissionRequiredPersonnelPreload",
@@ -5409,7 +6463,6 @@
       "line": 27847
     },
     {
-      "clear_call": "clearTimeout",
       "cleared": true,
       "excerpt": "47143:     }\n47144: \n47145:     function scheduleAutoModeLoopResume(reason = 'mutation observer') {\n47146:         if (mfAutoLoopResumeTimer) return;\n47147: \n47148:         mfAutoLoopResumeTimer = setTimeout(() => {\n47149:             mfAutoLoopResumeTimer = null;\n47150: \n47151:             if (\n47152:                 autoModeRunning &&\n47153:                 isMissionPage() &&",
       "function": "scheduleAutoModeLoopResume",
@@ -5417,7 +6470,6 @@
       "line": 47148
     },
     {
-      "clear_call": "clearTimeout",
       "cleared": true,
       "excerpt": "47271: \n47272:         mergeMainMutationFlags(flags);\n47273: \n47274:         if (mfMainMutationFlushTimer) return;\n47275: \n47276:         mfMainMutationFlushTimer = setTimeout(\n47277:             flushMissionFinderMutationWork,\n47278:             200\n47279:         );\n47280:     }\n47281: ",
       "function": "scheduleMissionFinderMutationWork",
@@ -5453,7 +6505,7 @@
     },
     {
       "excerpt": "20256:                     localStorage.setItem(\n20257:                         MF_IPHONE_ADVANCED_EXPANDED_KEY,\n20258:                         String(mfIphoneAdvancedExpanded)\n20259:                     );\n20260:                     syncIphoneAdvancedToggle();\n20261:                     requestAnimationFrame(() => {\n20262:                         keepMissionFinderWindowOnScreen(\n20263:                             wrapper\n20264:                         );\n20265:                     });\n20266:                 }",
-      "function": "createControlPanel",
+      "function": "syncIphoneAdvancedToggle",
       "line": 20261
     },
     {
@@ -5483,12 +6535,12 @@
     },
     {
       "excerpt": "21512:                     `Centred | reason=${reason || 'unknown'} | left=${left}px | top=${top}px`\n21513:                 );\n21514:             }\n21515:         };\n21516: \n21517:         requestAnimationFrame(() => {\n21518:             requestAnimationFrame(applyCentre);\n21519:         });\n21520:     }\n21521: \n21522:     function keepMissionFinderWindowOnScreen(panel) {",
-      "function": "centreMissionFinderWindow",
+      "function": "applyCentre",
       "line": 21517
     },
     {
       "excerpt": "21513:                 );\n21514:             }\n21515:         };\n21516: \n21517:         requestAnimationFrame(() => {\n21518:             requestAnimationFrame(applyCentre);\n21519:         });\n21520:     }\n21521: \n21522:     function keepMissionFinderWindowOnScreen(panel) {\n21523:         if (!panel) return;",
-      "function": "centreMissionFinderWindow",
+      "function": "applyCentre",
       "line": 21518
     }
   ],
@@ -5503,12 +6555,12 @@
   "untracked_timeouts": [
     {
       "excerpt": "01021:         lastStationReport: null,\n01022:         activeController: null,\n01023:         lastRequestAt: 0\n01024:     };\n01025: \n01026:     const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));\n01027: \n01028:     function registerToolLifecycleCleanup(cleanup) {\n01029:         if (typeof cleanup === 'function') {\n01030:             TOOL_LIFECYCLE_CLEANUPS.add(cleanup);\n01031:         }",
-      "function": "<module scope>",
+      "function": "sleep",
       "line": 1026
     },
     {
       "excerpt": "01335:         // MissionChief's delegated lightbox handler while preventing navigation.\n01336:         link.classList.add('lightbox-open');\n01337:         const preventNavigation = event => event.preventDefault();\n01338:         link.addEventListener('click', preventNavigation, { capture: true, once: true });\n01339:         link.click();\n01340:         setTimeout(() => link.classList.remove('lightbox-open'), 0);\n01341:         return true;\n01342:     }\n01343: \n01344:     function createManagedStationIframe(stationHref, purpose = 'station') {\n01345:         const href = normaliseStationOverviewHref(stationHref);",
-      "function": "activateStationOverviewEntry",
+      "function": "preventNavigation",
       "line": 1340
     },
     {
@@ -5518,7 +6570,7 @@
     },
     {
       "excerpt": "06006:         let launchChain = Promise.resolve();\n06007:         const waitForLaunchSlot = () => {\n06008:             const scheduled = launchChain.then(async () => {\n06009:                 const delay = Math.max(0, nextLaunchAt - Date.now());\n06010:                 if (delay > 0) {\n06011:                     await new Promise(resolve => setTimeout(resolve, delay));\n06012:                 }\n06013:                 nextLaunchAt = Date.now() +\n06014:                     PERSONNEL_REGISTER_LAUNCH_GAP_MS;\n06015:             });\n06016:             launchChain = scheduled.catch(() => {});",
-      "function": "waitForLaunchSlot",
+      "function": "scheduled",
       "line": 6011
     },
     {
