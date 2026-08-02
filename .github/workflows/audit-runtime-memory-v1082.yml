@@ -1,0 +1,50 @@
+name: Audit runtime memory v1.0.82
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+    paths:
+      - '.runtime-memory-audit-v1082-trigger'
+      - '.github/builders/audit-runtime-memory-v1082.py'
+      - '.github/workflows/audit-runtime-memory-v1082.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: diagnostic/runtime-memory-deep-dive-v1082
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Audit timers, observers, caches and retained DOM paths
+        run: python3 .github/builders/audit-runtime-memory-v1082.py
+
+      - name: Commit audit report
+        run: |
+          set -euo pipefail
+          git config user.name MartyBlyth
+          git config user.email 32400596+Martyblyth@users.noreply.github.com
+          git add -f \
+            .github/diagnostics/runtime-memory-audit-v1082.md \
+            .github/diagnostics/runtime-memory-audit-v1082.json \
+            .github/diagnostics/runtime-memory-functions-v1082.txt
+          if git diff --cached --quiet; then
+            echo 'Audit output unchanged.'
+            exit 0
+          fi
+          git commit -m 'Capture runtime memory deep-dive report'
+          git push origin HEAD:diagnostic/runtime-memory-deep-dive-v1082
