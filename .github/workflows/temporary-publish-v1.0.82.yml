@@ -15,15 +15,15 @@ permissions:
   contents: write
 
 jobs:
-  publish:
-    name: Verify Greasy Fork and notify Discord
+  discord:
+    name: Post verified v1.0.82 Discord notice
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
-      - name: Check out immutable v1.0.82 source
+      - name: Check out repository tooling
         uses: actions/checkout@v6
         with:
-          ref: v1.0.82
+          ref: main
           fetch-depth: 0
 
       - name: Set up Node.js
@@ -32,38 +32,178 @@ jobs:
           node-version: '24'
           package-manager-cache: false
 
-      - name: Prepare immutable release assets
+      - name: Check for an existing interim Discord receipt
+        id: existing
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          cp src/missionchief-command-nexus.user.js MissionChief-Command-Nexus-1.0.82.user.js
-          sha256sum MissionChief-Command-Nexus-1.0.82.user.js > MissionChief-Command-Nexus-1.0.82.user.js.sha256
+          PREFIX='Command-Nexus-Discord-Pending-GreasyFork-Receipt-v1.0.82-'
+          EXISTING="$(
+            gh release view v1.0.82 --json assets --jq '.assets[].name' |
+              grep -m1 "^${PREFIX}" || true
+          )"
+          if [[ -n "${EXISTING}" ]]; then
+            echo "already=true" >> "${GITHUB_OUTPUT}"
+            echo "receipt=${EXISTING}" >> "${GITHUB_OUTPUT}"
+          else
+            echo "already=false" >> "${GITHUB_OUTPUT}"
+          fi
 
-      - name: Use raw immutable source verification
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          path = Path('scripts/release-notify.mjs')
-          text = path.read_text(encoding='utf-8')
-          old = """  const sourceUrl = new URL(\n    `https://api.github.com/repos/${repository}` +\n    `/contents/${encodedSourcePath}`\n  );\n  sourceUrl.searchParams.set('ref', releaseSha);"""
-          new = """  const sourceUrl = new URL(\n    `https://raw.githubusercontent.com/${repository}/` +\n    `${releaseSha}/${encodedSourcePath}`\n  );"""
-          if text.count(old) != 1:
-              raise SystemExit(f'immutable source patch anchor count: {text.count(old)}')
-          path.write_text(text.replace(old, new, 1), encoding='utf-8')
-          PY
-          node --check scripts/release-notify.mjs
-
-      - name: Verify Greasy Fork and post Discord release
+      - name: Post Discord release status and create receipt
+        id: discord
+        if: steps.existing.outputs.already != 'true'
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
-          GITHUB_TOKEN: ${{ github.token }}
-          GREASYFORK_INSTALL_URL: ${{ vars.GREASYFORK_INSTALL_URL }}
-          GREASYFORK_PAGE_URL: ${{ vars.GREASYFORK_PAGE_URL }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
           RELEASE_TAG: v1.0.82
           RELEASE_SHA: cbe4840dda93f0d1d4e73cc201930a782b06c3f6
-          SOURCE_PATH: src/missionchief-command-nexus.user.js
-          CHANGELOG_PATH: CHANGELOG.md
-          PRODUCT_NAME: MissionChief Command Nexus
-        run: node scripts/release-notify.mjs
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const webhookUrl = String(process.env.DISCORD_WEBHOOK_URL || '').trim();
+          if (!webhookUrl) throw new Error('Missing DISCORD_RELEASE_WEBHOOK');
+
+          const releaseTag = process.env.RELEASE_TAG;
+          const releaseSha = process.env.RELEASE_SHA;
+          const releaseUrl = 'https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/tag/v1.0.82';
+
+          const inspectResponse = await fetch(webhookUrl, {
+            headers: { Accept: 'application/json' }
+          });
+          if (!inspectResponse.ok) {
+            throw new Error(`Discord webhook inspection failed: HTTP ${inspectResponse.status}`);
+          }
+          const webhook = await inspectResponse.json();
+          if (!webhook?.id || !webhook?.channel_id) {
+            throw new Error('Discord webhook inspection returned no webhook/channel identity');
+          }
+
+          const target = new URL(webhookUrl);
+          target.searchParams.set('wait', 'true');
+
+          const payload = {
+            username: 'Command Nexus Release Control',
+            allowed_mentions: { parse: [] },
+            embeds: [
+              {
+                color: 0x22d3ee,
+                title: '🚨 MissionChief Command Nexus v1.0.82 released',
+                url: releaseUrl,
+                description:
+                  'The verified GitHub release is live. Greasy Fork external synchronization is still serving `1.0.81`, so the public installer update remains pending while its webhook is repaired.',
+                fields: [
+                  { name: 'Release', value: '`1.0.82`', inline: true },
+                  { name: 'GitHub', value: '✅ Live and verified', inline: true },
+                  { name: 'Greasy Fork', value: '🟠 Sync pending', inline: true }
+                ]
+              },
+              {
+                color: 0x8b5cf6,
+                title: '🧭 Mission Brief',
+                description:
+                  '• Deep idle and Auto Mode memory-pressure hardening\n' +
+                  '• Background scanners and transport watchers now run only when required\n' +
+                  '• Trained Personnel rendering is coalesced and cached\n' +
+                  '• Ally Steal has shorter bounded response delays without weakening confirmation safeguards'
+              },
+              {
+                color: 0xf59e0b,
+                title: 'External delivery status',
+                description:
+                  'GitHub assets and checksum have passed independent verification. A second notice may be sent after Greasy Fork serves the exact `1.0.82` source.',
+                fields: [
+                  {
+                    name: 'Release notes and download',
+                    value: `[Open GitHub release](${releaseUrl})`,
+                    inline: false
+                  },
+                  {
+                    name: 'Immutable source',
+                    value: `\`${releaseSha}\``,
+                    inline: false
+                  }
+                ],
+                timestamp: new Date().toISOString()
+              }
+            ]
+          };
+
+          const postResponse = await fetch(target, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const responseText = await postResponse.text();
+          if (!postResponse.ok) {
+            throw new Error(`Discord webhook post failed: HTTP ${postResponse.status}: ${responseText.slice(0, 500)}`);
+          }
+
+          const message = JSON.parse(responseText);
+          if (!message?.id || !message?.channel_id) {
+            throw new Error('Discord accepted the post but returned no message/channel receipt');
+          }
+          if (String(message.channel_id) !== String(webhook.channel_id)) {
+            throw new Error('Discord message channel does not match webhook channel');
+          }
+
+          const receiptName =
+            `Command-Nexus-Discord-Pending-GreasyFork-Receipt-${releaseTag}-${message.id}.json`;
+          const receipt = {
+            schema: 1,
+            type: 'release_notice_greasy_fork_pending',
+            product: 'MissionChief Command Nexus',
+            release_tag: releaseTag,
+            release_sha: releaseSha,
+            webhook_id: String(webhook.id),
+            guild_id: webhook.guild_id ? String(webhook.guild_id) : null,
+            channel_id: String(message.channel_id),
+            message_id: String(message.id),
+            posted_at: new Date().toISOString(),
+            greasy_fork_status: 'served 1.0.81; 1.0.82 synchronization pending'
+          };
+          fs.writeFileSync(receiptName, JSON.stringify(receipt, null, 2) + '\n');
+          fs.appendFileSync(
+            process.env.GITHUB_OUTPUT,
+            `receipt=${receiptName}\nmessage_id=${message.id}\nchannel_id=${message.channel_id}\n`
+          );
+          console.log(
+            `Discord v1.0.82 release notice posted: message_id=${message.id} channel_id=${message.channel_id}`
+          );
+          NODE
+
+      - name: Upload Discord delivery receipt
+        if: steps.existing.outputs.already != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RECEIPT: ${{ steps.discord.outputs.receipt }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release upload v1.0.82 "${RECEIPT}"
+
+      - name: Record delivery summary
+        shell: bash
+        env:
+          ALREADY: ${{ steps.existing.outputs.already }}
+          EXISTING_RECEIPT: ${{ steps.existing.outputs.receipt }}
+          NEW_RECEIPT: ${{ steps.discord.outputs.receipt }}
+          MESSAGE_ID: ${{ steps.discord.outputs.message_id }}
+          CHANNEL_ID: ${{ steps.discord.outputs.channel_id }}
+        run: |
+          {
+            echo '### Discord delivery status'
+            if [[ "${ALREADY}" == 'true' ]]; then
+              echo "- Existing receipt: \`${EXISTING_RECEIPT}\`"
+              echo '- Duplicate Discord post skipped.'
+            else
+              echo '- Release: `v1.0.82`'
+              echo "- Message ID: \`${MESSAGE_ID}\`"
+              echo "- Channel ID: \`${CHANNEL_ID}\`"
+              echo "- Receipt asset: \`${NEW_RECEIPT}\`"
+              echo '- Greasy Fork status in the notice: synchronization pending.'
+            fi
+          } >> "${GITHUB_STEP_SUMMARY}"
