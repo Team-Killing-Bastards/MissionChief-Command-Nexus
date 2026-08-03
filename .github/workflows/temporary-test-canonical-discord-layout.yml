@@ -60,10 +60,40 @@ jobs:
             const marker = `function ${name}(`;
             const start = notifier.indexOf(marker);
             if (start < 0) throw new Error(`Missing canonical function ${name}`);
-            const bodyStart = notifier.indexOf('{', start);
-            let depth = 0;
+
+            const parameterStart = notifier.indexOf('(', start);
+            let parameterDepth = 0;
             let quote = '';
             let escaped = false;
+            let bodyStart = -1;
+
+            for (let index = parameterStart; index < notifier.length; index += 1) {
+              const character = notifier[index];
+              if (quote) {
+                if (escaped) escaped = false;
+                else if (character === '\\') escaped = true;
+                else if (character === quote) quote = '';
+                continue;
+              }
+              if (character === '"' || character === "'" || character === '`') {
+                quote = character;
+                continue;
+              }
+              if (character === '(') parameterDepth += 1;
+              if (character === ')') {
+                parameterDepth -= 1;
+                if (parameterDepth === 0) {
+                  bodyStart = notifier.indexOf('{', index);
+                  break;
+                }
+              }
+            }
+
+            if (bodyStart < 0) throw new Error(`Missing function body for ${name}`);
+
+            let depth = 0;
+            quote = '';
+            escaped = false;
             for (let index = bodyStart; index < notifier.length; index += 1) {
               const character = notifier[index];
               const next = notifier[index + 1] || '';
