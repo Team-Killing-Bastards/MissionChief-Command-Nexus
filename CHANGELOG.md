@@ -14,11 +14,13 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Live Trained Personnel updates are now coalesced, cached briefly and skipped when generated markup is unchanged, preventing repeated full parser/model work and detached DOM churn on rapidly mutating mission pages.
 - High-heap idle recovery can now recycle safely above 700 MiB after user-idle and operational safety checks even when benign live mission mutations prevent a 15-second mutation-free window.
 - Soft memory maintenance releases the live personnel display cache and stale detached transport-modal references.
+- Ally Steal now uses shorter bounded selection, dispatch-resume and parent-close settle delays, reducing the normal path without weakening exact Fire Officer, success-alert or mission-close confirmation.
 
 ### Safety and compatibility
 
 - No additional observer, repeating timer, fetch, selection or dispatch path was added.
 - Exact Unit Finder, Mission Update, trained-personnel authority, patient/prisoner transport, Auto Mode mission ownership and final dispatch safeguards remain unchanged.
+- Ally Steal retains the exact selected-vehicle identity, new-success-alert matching, 15-second confirmation window, pending-state hand-off and 12-attempt parent-close fallback.
 - Event collection remains enabled by the existing setting and still performs an immediate scan when the runtime starts.
 - iPhone/iPadOS ownership and native-picker cleanup paths remain intact.
 

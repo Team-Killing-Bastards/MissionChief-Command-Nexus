@@ -33286,6 +33286,13 @@ let sessionRuntimeTicker = null;
 
     const MF_ALLY_PENDING_MAX_AGE_MS =
         45000;
+    const MF_ALLY_SELECTION_CLEAR_SETTLE_MS = 150;
+    const MF_ALLY_SELECTION_SETTLE_MS = 225;
+    const MF_ALLY_PRE_DISPATCH_SETTLE_MS = 225;
+    const MF_ALLY_RESUME_MIN_CLICK_AGE_MS = 1200;
+    const MF_ALLY_SAME_DOCUMENT_FALLBACK_MS = 1400;
+    const MF_ALLY_CLOSE_RETRY_MS = 150;
+    const MF_ALLY_CLOSE_VERIFY_MS = 250;
 
     let mfAllyResumeActive = false;
 
@@ -33724,7 +33731,7 @@ let sessionRuntimeTicker = null;
                 null;
 
             if (!closeButton) {
-                await wait(250);
+                await wait(MF_ALLY_CLOSE_RETRY_MS);
                 continue;
             }
 
@@ -33791,7 +33798,7 @@ let sessionRuntimeTicker = null;
             }
 
             // This document may be unloaded immediately after the click.
-            await wait(400);
+            await wait(MF_ALLY_CLOSE_VERIFY_MS);
 
             try {
                 if (
@@ -33866,9 +33873,9 @@ let sessionRuntimeTicker = null;
                     Date.now()
                 );
 
-            if (elapsed < 2000) {
+            if (elapsed < MF_ALLY_RESUME_MIN_CLICK_AGE_MS) {
                 await wait(
-                    2000 - elapsed
+                    MF_ALLY_RESUME_MIN_CLICK_AGE_MS - elapsed
                 );
             }
 
@@ -34029,7 +34036,7 @@ let sessionRuntimeTicker = null;
             checkbox.click();
         });
 
-        await wait(250);
+        await wait(MF_ALLY_SELECTION_CLEAR_SETTLE_MS);
 
         allyStealDebugSnapshot(
             'after clearing other selections'
@@ -34055,7 +34062,7 @@ let sessionRuntimeTicker = null;
                 result
             );
 
-            await wait(350);
+            await wait(MF_ALLY_SELECTION_SETTLE_MS);
 
             selectedFireOfficers =
                 countSelectedMatchingVehicles(
@@ -34141,7 +34148,7 @@ let sessionRuntimeTicker = null;
             `Ally Steal: ${selectedVehicleIdentity.name || 'Fire Officer'} selected. Dispatching...`
         );
 
-        await wait(400);
+        await wait(MF_ALLY_PRE_DISPATCH_SETTLE_MS);
 
         const dispatchButton =
             await getAllyStealNormalDispatchButton();
@@ -34251,7 +34258,7 @@ let sessionRuntimeTicker = null;
                     'same-document fallback'
                 );
             },
-            2200
+            MF_ALLY_SAME_DOCUMENT_FALLBACK_MS
         );
 
         // A full document refresh normally happens immediately after this
