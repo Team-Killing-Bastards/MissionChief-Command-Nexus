@@ -128,10 +128,13 @@ def extract_function(name: str) -> str:
 
 
 names = [
+    'getAllyStealAccessibleDocuments',
     'getAllAllyStealSuccessAlerts',
+    'isMatchingAllyStealSuccessAlert',
+    'waitForAllyStealDispatchSuccess',
     'getAllyStealParentModalCloseCandidates',
-    'closeAllyStealSuccessModal',
-    'waitForAllyStealSuccess',
+    'clickAllyStealParentMissionClose',
+    'getAllyStealNormalDispatchButton',
     'resumeAllyStealAfterDispatchRefresh',
     'handleAllySteal',
 ]
@@ -140,10 +143,9 @@ for name in names:
     print(f'\n===== {name} =====\n')
     print(extract_function(name))
 
-print('\n===== ALLY STEAL CONSTANTS / WAITS =====\n')
+print('\n===== ALL ALLY STEAL LINES WITH NUMERIC WAITS =====\n')
 for line_number, line in enumerate(source.splitlines(), 1):
-    lower = line.lower()
-    if 'ally' not in lower:
+    if 'ally' not in line.lower():
         continue
-    if any(token in line for token in ('setTimeout', 'sleep(', 'await sleep', '_MS', 'INTERVAL', 'DELAY', 'POLL', 'TIMEOUT')):
+    if re.search(r'\b(?:wait|setTimeout)\s*\(|\b\d{3,5}\b', line):
         print(f'{line_number}: {line}')
