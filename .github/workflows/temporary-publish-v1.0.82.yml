@@ -1,0 +1,21 @@
+name: Publish Command Nexus v1.0.82 externally
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/temporary-publish-v1.0.82.yml'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  publish:
+    uses: ./.github/workflows/release.yml
+    with:
+      operation: publish-release
+      release_tag: v1.0.82
+      release_notes: 'Runtime memory hardening and slightly faster Ally Steal response handling.'
+    secrets: inherit
