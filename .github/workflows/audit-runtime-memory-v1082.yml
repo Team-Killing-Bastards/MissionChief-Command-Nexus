@@ -9,6 +9,7 @@ on:
       - synchronize
     paths:
       - '.github/workflows/audit-runtime-memory-v1082.yml'
+      - '.github/builders/extract-ally-steal-v1082.py'
       - '.v1082-memory-audit-trigger'
   workflow_dispatch:
 
@@ -30,6 +31,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Extract Ally Steal timing contracts
+        run: python3 "$GITHUB_WORKSPACE/.github/builders/extract-ally-steal-v1082.py"
       - name: Validate exact v1.0.82 candidate
         run: |
           set -euo pipefail
