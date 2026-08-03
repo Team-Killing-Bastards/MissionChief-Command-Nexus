@@ -21,9 +21,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v6
+      - name: Check out trusted audit tools
+        uses: actions/checkout@v6
+        with:
+          ref: diagnostic/deep-memory-audit-v1082
+          path: audit-tools
+          fetch-depth: 1
+      - name: Check out exact v1.0.82 candidate
+        uses: actions/checkout@v6
         with:
           ref: fix/runtime-memory-deep-dive-v1082
+          path: candidate
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
@@ -32,8 +40,10 @@ jobs:
         with:
           python-version: '3.12'
       - name: Extract Ally Steal timing contracts
-        run: python3 "$GITHUB_WORKSPACE/.github/builders/extract-ally-steal-v1082.py"
+        working-directory: candidate
+        run: python3 ../audit-tools/.github/builders/extract-ally-steal-v1082.py
       - name: Validate exact v1.0.82 candidate
+        working-directory: candidate
         run: |
           set -euo pipefail
           node --check src/missionchief-command-nexus.user.js
