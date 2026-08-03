@@ -10,21 +10,60 @@ on:
       - synchronize
     paths:
       - '.external-publish-v1.0.82-trigger'
-  push:
-    branches:
-      - main
-    paths:
-      - '.github/workflows/temporary-publish-v1.0.82.yml'
 
 permissions:
   contents: write
-  pull-requests: write
 
 jobs:
   publish:
-    uses: ./.github/workflows/release.yml
-    with:
-      operation: publish-release
-      release_tag: v1.0.82
-      release_notes: 'Runtime memory hardening and slightly faster Ally Steal response handling.'
-    secrets: inherit
+    name: Verify Greasy Fork and notify Discord
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out immutable v1.0.82 source
+        uses: actions/checkout@v6
+        with:
+          ref: v1.0.82
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Prepare immutable release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp src/missionchief-command-nexus.user.js MissionChief-Command-Nexus-1.0.82.user.js
+          sha256sum MissionChief-Command-Nexus-1.0.82.user.js > MissionChief-Command-Nexus-1.0.82.user.js.sha256
+
+      - name: Use raw immutable source verification
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('scripts/release-notify.mjs')
+          text = path.read_text(encoding='utf-8')
+          old = """  const sourceUrl = new URL(\n    `https://api.github.com/repos/${repository}` +\n    `/contents/${encodedSourcePath}`\n  );\n  sourceUrl.searchParams.set('ref', releaseSha);"""
+          new = """  const sourceUrl = new URL(\n    `https://raw.githubusercontent.com/${repository}/` +\n    `${releaseSha}/${encodedSourcePath}`\n  );"""
+          if text.count(old) != 1:
+              raise SystemExit(f'immutable source patch anchor count: {text.count(old)}')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+          node --check scripts/release-notify.mjs
+
+      - name: Verify Greasy Fork and post Discord release
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GREASYFORK_INSTALL_URL: ${{ vars.GREASYFORK_INSTALL_URL }}
+          GREASYFORK_PAGE_URL: ${{ vars.GREASYFORK_PAGE_URL }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          RELEASE_TAG: v1.0.82
+          RELEASE_SHA: cbe4840dda93f0d1d4e73cc201930a782b06c3f6
+          SOURCE_PATH: src/missionchief-command-nexus.user.js
+          CHANGELOG_PATH: CHANGELOG.md
+          PRODUCT_NAME: MissionChief Command Nexus
+        run: node scripts/release-notify.mjs
