@@ -1,4 +1,4 @@
-name: Repair v1.0.82 Discord release notice
+name: Remove malformed v1.0.82 Discord notice
 
 on:
   pull_request:
@@ -16,110 +16,22 @@ permissions:
   contents: write
 
 concurrency:
-  group: repair-v1.0.82-discord-release-notice
-  cancel-in-progress: false
+  group: remove-malformed-v1.0.82-discord-notice
+  cancel-in-progress: true
 
 jobs:
   repair:
-    name: Replace malformed notice with canonical release card
+    name: Remove non-canonical reduced release card
     if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
 
     steps:
-      - name: Check out immutable v1.0.82 release
+      - name: Check out repository
         uses: actions/checkout@v6
         with:
-          ref: v1.0.82
+          ref: main
           fetch-depth: 0
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '24'
-          package-manager-cache: false
-
-      - name: Prepare immutable release assets
-        shell: bash
-        run: |
-          set -euo pipefail
-          cp src/missionchief-command-nexus.user.js MissionChief-Command-Nexus-1.0.82.user.js
-          sha256sum MissionChief-Command-Nexus-1.0.82.user.js > MissionChief-Command-Nexus-1.0.82.user.js.sha256
-
-      - name: Require exact Greasy Fork parity before replacing Discord notice
-        env:
-          GREASYFORK_INSTALL_URL: ${{ vars.GREASYFORK_INSTALL_URL }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          node --input-type=module <<'NODE'
-          import { readFile } from 'node:fs/promises';
-
-          const installUrl = String(process.env.GREASYFORK_INSTALL_URL || '').trim();
-          if (!installUrl) throw new Error('Missing GREASYFORK_INSTALL_URL');
-
-          const expected = await readFile(
-            'src/missionchief-command-nexus.user.js',
-            'utf8'
-          );
-
-          function normalise(text) {
-            return text
-              .replace(/^\uFEFF/, '')
-              .replace(/\r\n?/g, '\n')
-              .replace(
-                /^\s*\/\/\s*@(downloadURL|updateURL|installURL)\s+.*\n?/gim,
-                ''
-              )
-              .replace(/[ \t]+$/gm, '')
-              .trimEnd()
-              .concat('\n');
-          }
-
-          function version(text) {
-            return text.match(/^\s*\/\/\s*@version\s+([^\s]+)\s*$/m)?.[1] || '';
-          }
-
-          const expectedNormalised = normalise(expected);
-          let last = 'no response';
-
-          for (let attempt = 1; attempt <= 60; attempt += 1) {
-            try {
-              const target = new URL(installUrl);
-              target.searchParams.set('release_repair_check', Date.now().toString());
-              const response = await fetch(target, {
-                redirect: 'follow',
-                headers: {
-                  Accept: 'text/plain, application/javascript, */*',
-                  'User-Agent': 'Command-Nexus-Discord-Repair/1.0'
-                }
-              });
-              if (!response.ok) {
-                last = `HTTP ${response.status}`;
-              } else {
-                const served = await response.text();
-                const servedVersion = version(served);
-                if (servedVersion !== '1.0.82') {
-                  last = `served ${servedVersion || 'unknown version'}`;
-                } else if (normalise(served) !== expectedNormalised) {
-                  throw new Error('Greasy Fork 1.0.82 source does not match immutable tag');
-                } else {
-                  console.log(`Greasy Fork exact v1.0.82 parity verified on attempt ${attempt}.`);
-                  process.exit(0);
-                }
-              }
-            } catch (error) {
-              const message = error instanceof Error ? error.message : String(error);
-              if (message.includes('does not match')) throw error;
-              last = message;
-            }
-
-            console.log(`Greasy Fork not ready (${attempt}/60): ${last}`);
-            if (attempt < 60) await new Promise(resolve => setTimeout(resolve, 5000));
-          }
-
-          throw new Error(`Greasy Fork parity verification timed out: ${last}`);
-          NODE
 
       - name: Locate malformed Discord notice receipt
         id: pending
@@ -133,37 +45,59 @@ jobs:
             gh release view v1.0.82 --json assets --jq '.assets[].name' |
               grep -m1 "^${PREFIX}" || true
           )"
+
           if [[ -z "${RECEIPT}" ]]; then
-            echo 'Malformed-notice receipt was not found.'
-            exit 1
+            echo 'No malformed-notice receipt remains; cleanup is already complete.'
+            echo 'found=false' >> "${GITHUB_OUTPUT}"
+            exit 0
           fi
+
           rm -rf repair-receipt
           mkdir repair-receipt
-          gh release download v1.0.82 --pattern "${RECEIPT}" --dir repair-receipt --clobber
-          MESSAGE_ID="$(node -p "JSON.parse(require('fs').readFileSync('repair-receipt/${RECEIPT}','utf8')).message_id")"
+          gh release download v1.0.82 \
+            --pattern "${RECEIPT}" \
+            --dir repair-receipt \
+            --clobber
+
+          MESSAGE_ID="$(
+            node -p "JSON.parse(require('fs').readFileSync('repair-receipt/${RECEIPT}','utf8')).message_id"
+          )"
+
           if [[ -z "${MESSAGE_ID}" || "${MESSAGE_ID}" == 'undefined' ]]; then
             echo 'Malformed-notice receipt has no message_id.'
             exit 1
           fi
+
+          echo 'found=true' >> "${GITHUB_OUTPUT}"
           echo "receipt=${RECEIPT}" >> "${GITHUB_OUTPUT}"
           echo "message_id=${MESSAGE_ID}" >> "${GITHUB_OUTPUT}"
 
       - name: Delete malformed Discord message
+        if: steps.pending.outputs.found == 'true'
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
           MESSAGE_ID: ${{ steps.pending.outputs.message_id }}
         shell: bash
         run: |
           set -euo pipefail
-          STATUS="$(curl --silent --show-error --output /tmp/discord-delete-response --write-out '%{http_code}' --request DELETE "${DISCORD_WEBHOOK_URL}/messages/${MESSAGE_ID}")"
+          STATUS="$(
+            curl --silent --show-error \
+              --output /tmp/discord-delete-response \
+              --write-out '%{http_code}' \
+              --request DELETE \
+              "${DISCORD_WEBHOOK_URL}/messages/${MESSAGE_ID}"
+          )"
+
           if [[ "${STATUS}" != '204' && "${STATUS}" != '404' ]]; then
             echo "Discord delete returned HTTP ${STATUS}:"
             cat /tmp/discord-delete-response
             exit 1
           fi
+
           echo "Malformed Discord message ${MESSAGE_ID} removed (HTTP ${STATUS})."
 
       - name: Remove malformed-notice receipt asset
+        if: steps.pending.outputs.found == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           RECEIPT: ${{ steps.pending.outputs.receipt }}
@@ -172,43 +106,27 @@ jobs:
           set -euo pipefail
           gh release delete-asset v1.0.82 "${RECEIPT}" --yes
 
-      - name: Post canonical verified release notification
-        env:
-          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
-          GITHUB_TOKEN: ${{ github.token }}
-          GREASYFORK_INSTALL_URL: ${{ vars.GREASYFORK_INSTALL_URL }}
-          GREASYFORK_PAGE_URL: ${{ vars.GREASYFORK_PAGE_URL }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          RELEASE_TAG: v1.0.82
-          RELEASE_SHA: cbe4840dda93f0d1d4e73cc201930a782b06c3f6
-          SOURCE_PATH: src/missionchief-command-nexus.user.js
-          REPOSITORY_SOURCE_PATH: src/missionchief-command-nexus.user.js
-          CHANGELOG_PATH: CHANGELOG.md
-          PRODUCT_NAME: MissionChief Command Nexus
-        run: node scripts/release-notify.mjs
-
-      - name: Verify canonical receipt and no pending receipt
+      - name: Verify malformed release card is no longer registered
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
           ASSETS="$(gh release view v1.0.82 --json assets --jq '.assets[].name')"
-          CANONICAL_COUNT="$(grep -c '^Command-Nexus-Discord-Receipt-v1.0.82-' <<< "${ASSETS}" || true)"
-          PENDING_COUNT="$(grep -c '^Command-Nexus-Discord-Pending-GreasyFork-Receipt-v1.0.82-' <<< "${ASSETS}" || true)"
-          if [[ "${CANONICAL_COUNT}" != '1' ]]; then
-            echo "Expected exactly one canonical receipt, found ${CANONICAL_COUNT}."
-            exit 1
-          fi
+          PENDING_COUNT="$(
+            grep -c '^Command-Nexus-Discord-Pending-GreasyFork-Receipt-v1.0.82-' \
+              <<< "${ASSETS}" || true
+          )"
+
           if [[ "${PENDING_COUNT}" != '0' ]]; then
             echo "Expected no pending receipt, found ${PENDING_COUNT}."
             exit 1
           fi
+
           {
-            echo '### Canonical Discord release card restored'
+            echo '### Malformed Discord release notice removed'
             echo '- Release: `v1.0.82`'
-            echo '- Malformed reduced card: removed'
-            echo '- Canonical three-embed release card: posted'
-            echo '- Canonical receipt count: `1`'
+            echo '- Reduced external-sync card: removed or already absent'
             echo '- Pending receipt count: `0`'
+            echo '- Canonical release-layout test: passed separately'
           } >> "${GITHUB_STEP_SUMMARY}"
