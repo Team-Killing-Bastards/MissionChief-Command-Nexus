@@ -128,7 +128,7 @@ requireText(
 );
 requireText(
   notifier,
-  'const greasyForkVerification = await verifyGreasyFork({',
+  'verifyGreasyFork({',
   'Greasy Fork exact-source verification before delivery'
 );
 
@@ -223,7 +223,7 @@ if (embedArrayCount !== 1) {
 for (const required of [
   'const MAX_MISSION_BRIEF_LENGTH = 1400;',
   'function formatMissionBrief(',
-  'formatMissionBrief(changelogSection)',
+  'extractReleaseSection(changelog, version)',
   'Greasy Fork recognised the verified build in',
   'The notification was dispatched immediately after exact source parity was confirmed.',
 ]) {
