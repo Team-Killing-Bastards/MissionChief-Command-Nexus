@@ -4,6 +4,33 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.82] - 2026-08-02
+
+### Fixed
+
+- Reduced the default-on Event Scanner from a one-second independent iframe/document walk to a shared cached document snapshot every 15 seconds, while retaining the immediate startup scan and exact claim route.
+- Reduced top-window mission-frame reconciliation from a forced document-graph rebuild every five seconds to a cached reconciliation every 15 seconds.
+- Background automation now starts only the silent-queue and post-transport pollers whose state is actually active instead of running all three watchers for the whole Auto Mode session.
+- Live Trained Personnel updates are now coalesced, cached briefly and skipped when generated markup is unchanged, preventing repeated full parser/model work and detached DOM churn on rapidly mutating mission pages.
+- High-heap idle recovery can now recycle safely above 700 MiB after user-idle and operational safety checks even when benign live mission mutations prevent a 15-second mutation-free window.
+- Soft memory maintenance releases the live personnel display cache and stale detached transport-modal references.
+- Ally Steal now uses shorter bounded selection, dispatch-resume and parent-close settle delays, reducing the normal path without weakening exact Fire Officer, success-alert or mission-close confirmation.
+
+### Safety and compatibility
+
+- No additional observer, repeating timer, fetch, selection or dispatch path was added.
+- Exact Unit Finder, Mission Update, trained-personnel authority, patient/prisoner transport, Auto Mode mission ownership and final dispatch safeguards remain unchanged.
+- Ally Steal retains the exact selected-vehicle identity, new-success-alert matching, 15-second confirmation window, pending-state hand-off and 12-attempt parent-close fallback.
+- Event collection remains enabled by the existing setting and still performs an immediate scan when the runtime starts.
+- iPhone/iPadOS ownership and native-picker cleanup paths remain intact.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.141` to `V10.6.142`.
+- Unit Naming remains `3.3.9`.
+- Station Naming remains `1.3.3`.
+- Personnel Assignment remains `1.3.8`.
+
 ## [1.0.81] - 2026-08-01
 
 ### Fixed

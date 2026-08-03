@@ -1,5 +1,5 @@
 name: Validate userscript
-# Includes mission-definition trained-personnel, on-scene trained-personnel authority, live Missing Personnel panel display, Required Personnel preload, preloaded Vehicle Load coverage, high-risk Missing Person Ambulance settings, normal Stations popup ownership, Dispatch Centres Show all enforced popup window, selected-trained-personnel UI, integrated mission dashboard, compact Nexus UI, HazMat vehicle/personnel-to-OSU, diagnostic export, dispatch-correction, memory lifecycle/recycle, Missing-on-mission authority and single-pass update coverage.
+# Includes mission-definition trained-personnel, on-scene trained-personnel authority, live Missing Personnel panel display, Required Personnel preload, preloaded Vehicle Load coverage, high-risk Missing Person Ambulance settings, normal Stations popup ownership, Dispatch Centres Show all enforced popup window, selected-trained-personnel UI, integrated mission dashboard, compact Nexus UI, HazMat vehicle/personnel-to-OSU, diagnostic export, dispatch-correction, memory lifecycle/recycle, deep idle/Auto Mode memory controls, bounded Ally Steal response timing, Missing-on-mission authority and single-pass update coverage.
 
 on:
   pull_request:
@@ -24,6 +24,7 @@ on:
       - 'scripts/check-mission-definition-personnel-preload.mjs'
       - 'scripts/check-trained-personnel-on-scene-authority-v1080.mjs'
       - 'scripts/check-trained-personnel-live-missing-display-v1081.mjs'
+      - 'scripts/check-ally-steal-response-v1082.mjs'
       - 'scripts/check-unit-finder-diagnostic-export.mjs'
       - 'scripts/check-mission-dashboard-v1069.mjs'
       - 'scripts/check-nexus-visual-system-v1070.mjs'
@@ -38,6 +39,7 @@ on:
       - 'scripts/check-auto-memory-lifecycle.mjs'
       - 'scripts/check-auto-memory-recycle.mjs'
       - 'scripts/check-runtime-memory-maintenance-v1074.mjs'
+      - 'scripts/check-runtime-memory-deep-dive-v1082.mjs'
       - 'scripts/check-auto-dispatch-eod-required-personnel.mjs'
       - 'scripts/check-road-rail-rru-mapping.mjs'
       - 'scripts/check-auto-prisoner-cell-gate.mjs'
@@ -71,6 +73,7 @@ on:
       - 'scripts/check-mission-definition-personnel-preload.mjs'
       - 'scripts/check-trained-personnel-on-scene-authority-v1080.mjs'
       - 'scripts/check-trained-personnel-live-missing-display-v1081.mjs'
+      - 'scripts/check-ally-steal-response-v1082.mjs'
       - 'scripts/check-unit-finder-diagnostic-export.mjs'
       - 'scripts/check-mission-dashboard-v1069.mjs'
       - 'scripts/check-nexus-visual-system-v1070.mjs'
@@ -85,6 +88,7 @@ on:
       - 'scripts/check-auto-memory-lifecycle.mjs'
       - 'scripts/check-auto-memory-recycle.mjs'
       - 'scripts/check-runtime-memory-maintenance-v1074.mjs'
+      - 'scripts/check-runtime-memory-deep-dive-v1082.mjs'
       - 'scripts/check-auto-dispatch-eod-required-personnel.mjs'
       - 'scripts/check-road-rail-rru-mapping.mjs'
       - 'scripts/check-auto-prisoner-cell-gate.mjs'
@@ -180,6 +184,9 @@ jobs:
       - name: Validate live Missing Personnel panel display
         run: node scripts/check-trained-personnel-live-missing-display-v1081.mjs
 
+      - name: Validate bounded Ally Steal response timing
+        run: node scripts/check-ally-steal-response-v1082.mjs
+
       - name: Validate Unit Finder diagnostic export
         run: node scripts/check-unit-finder-diagnostic-export.mjs
 
@@ -221,6 +228,9 @@ jobs:
 
       - name: Validate runtime memory maintenance and frame ownership
         run: node scripts/check-runtime-memory-maintenance-v1074.mjs
+
+      - name: Validate deep idle and Auto Mode memory controls
+        run: node scripts/check-runtime-memory-deep-dive-v1082.mjs
 
       - name: Validate Auto Mode EOD and composite personnel corrections
         run: node scripts/check-auto-dispatch-eod-required-personnel.mjs

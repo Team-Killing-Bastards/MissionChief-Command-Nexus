@@ -67,11 +67,11 @@ function extractFunction(name) {
 }
 
 expect(
-  source.includes('// @version      1.0.81'),
+  source.includes('// @version      1.0.82'),
   'Command Nexus 1.0.70 metadata missing'
 );
 expect(
-  source.includes('MISSION FINDER V10.6.141'),
+  source.includes('MISSION FINDER V10.6.142'),
   'Mission Finder V10.6.139 header missing'
 );
 
