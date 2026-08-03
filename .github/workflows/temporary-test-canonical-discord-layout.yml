@@ -1,0 +1,168 @@
+name: Test canonical Discord release layout
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+    paths:
+      - '.discord-release-layout-test-trigger'
+      - '.github/workflows/temporary-test-canonical-discord-layout.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-canonical-discord-release-layout
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Post controlled canonical three-embed test
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out immutable v1.0.82 release
+        uses: actions/checkout@v6
+        with:
+          ref: v1.0.82
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Build from canonical formatter and post controlled test
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --input-type=module <<'NODE'
+          import { createHash } from 'node:crypto';
+          import { readFile } from 'node:fs/promises';
+
+          const webhookUrl = String(process.env.DISCORD_WEBHOOK_URL || '').trim();
+          if (!webhookUrl) throw new Error('Missing DISCORD_RELEASE_WEBHOOK');
+
+          const notifier = await readFile('scripts/release-notify.mjs', 'utf8');
+          const changelog = await readFile('CHANGELOG.md', 'utf8');
+          const source = await readFile('src/missionchief-command-nexus.user.js');
+
+          function extractFunction(name) {
+            const marker = `function ${name}(`;
+            const start = notifier.indexOf(marker);
+            if (start < 0) throw new Error(`Missing canonical function ${name}`);
+            const bodyStart = notifier.indexOf('{', start);
+            let depth = 0;
+            let quote = '';
+            let escaped = false;
+            for (let index = bodyStart; index < notifier.length; index += 1) {
+              const character = notifier[index];
+              const next = notifier[index + 1] || '';
+              if (quote) {
+                if (escaped) escaped = false;
+                else if (character === '\\') escaped = true;
+                else if (character === quote) quote = '';
+                continue;
+              }
+              if (character === '"' || character === "'" || character === '`') {
+                quote = character;
+                continue;
+              }
+              if (character === '/' && next === '/') {
+                const lineEnd = notifier.indexOf('\n', index + 2);
+                index = lineEnd < 0 ? notifier.length : lineEnd;
+                continue;
+              }
+              if (character === '/' && next === '*') {
+                const blockEnd = notifier.indexOf('*/', index + 2);
+                if (blockEnd < 0) throw new Error(`Unclosed comment in ${name}`);
+                index = blockEnd + 1;
+                continue;
+              }
+              if (character === '{') depth += 1;
+              if (character === '}') {
+                depth -= 1;
+                if (depth === 0) return notifier.slice(start, index + 1);
+              }
+            }
+            throw new Error(`Unable to extract ${name}`);
+          }
+
+          const factory = new Function(
+            'PRODUCT_NAME',
+            'COLOURS',
+            'MAX_MISSION_BRIEF_LENGTH',
+            `${extractFunction('formatMissionBrief')}\n` +
+              `${extractFunction('formatSeconds')}\n` +
+              `${extractFunction('buildDiscordPayload')}\n` +
+              'return { formatMissionBrief, buildDiscordPayload };'
+          );
+
+          const { formatMissionBrief, buildDiscordPayload } = factory(
+            'MissionChief Command Nexus',
+            Object.freeze({
+              command: 0x22d3ee,
+              mission: 0x8b5cf6,
+              verified: 0x22c55e
+            }),
+            1400
+          );
+
+          const heading = changelog.match(/^## \[1\.0\.82\](?:\s+-.*)?\s*$/m);
+          if (!heading) throw new Error('Missing v1.0.82 changelog section');
+          const remaining = changelog.slice(heading.index + heading[0].length);
+          const nextHeading = remaining.search(/^##\s+/m);
+          const section = (nextHeading < 0 ? remaining : remaining.slice(0, nextHeading)).trim();
+          const checksum = createHash('sha256').update(source).digest('hex');
+
+          const payload = buildDiscordPayload({
+            version: '1.0.82',
+            releaseTag: 'v1.0.82',
+            releaseSha: 'cbe4840dda93f0d1d4e73cc201930a782b06c3f6',
+            releaseUrl: 'https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/tag/v1.0.82',
+            productPageUrl: 'https://tkb-gaming.scot/mission-chief-scripts/command-nexus/',
+            missionBrief: formatMissionBrief(section),
+            recordedChecksum: checksum,
+            greasyForkElapsedMs: 3200
+          });
+
+          if (payload.embeds?.length !== 3) {
+            throw new Error(`Canonical payload must contain three embeds; found ${payload.embeds?.length}`);
+          }
+
+          payload.embeds[0].title = `🧪 LAYOUT TEST — ${payload.embeds[0].title.replace(/^🚨\s*/, '')}`;
+          payload.embeds[0].description =
+            '**Controlled formatting test — no release action is required.**\n\n' +
+            payload.embeds[0].description;
+          payload.embeds[2].title = '✅ Canonical deployment card verified — TEST';
+          payload.embeds[2].description =
+            '**This test was generated by the production release formatter itself.**\n\n' +
+            payload.embeds[2].description;
+
+          const target = new URL(webhookUrl);
+          target.searchParams.set('wait', 'true');
+          const response = await fetch(target, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const responseText = await response.text();
+          if (!response.ok) {
+            throw new Error(`Discord test post failed: HTTP ${response.status}: ${responseText.slice(0, 500)}`);
+          }
+          const message = JSON.parse(responseText);
+          if (!message?.id || !message?.channel_id) {
+            throw new Error('Discord test returned no message/channel receipt');
+          }
+          console.log(`Canonical release-layout test posted: message_id=${message.id} channel_id=${message.channel_id}`);
+          console.log('Canonical layout structure: cyan status + purple Mission Brief + green verification card.');
+          NODE
