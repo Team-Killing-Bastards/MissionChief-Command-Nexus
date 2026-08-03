@@ -61,8 +61,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node <<'NODE'
-          const fs = require('node:fs');
+          node --input-type=module <<'NODE'
+          import {
+            appendFileSync,
+            writeFileSync
+          } from 'node:fs';
 
           const webhookUrl = String(process.env.DISCORD_WEBHOOK_URL || '').trim();
           if (!webhookUrl) throw new Error('Missing DISCORD_RELEASE_WEBHOOK');
@@ -165,8 +168,11 @@ jobs:
             posted_at: new Date().toISOString(),
             greasy_fork_status: 'served 1.0.81; 1.0.82 synchronization pending'
           };
-          fs.writeFileSync(receiptName, JSON.stringify(receipt, null, 2) + '\n');
-          fs.appendFileSync(
+          writeFileSync(
+            receiptName,
+            JSON.stringify(receipt, null, 2) + '\n'
+          );
+          appendFileSync(
             process.env.GITHUB_OUTPUT,
             `receipt=${receiptName}\nmessage_id=${message.id}\nchannel_id=${message.channel_id}\n`
           );
