@@ -9,12 +9,12 @@ on:
       - synchronize
     paths:
       - '.github/workflows/audit-runtime-memory-v1082.yml'
-      - '.github/builders/extract-ally-steal-v1082.py'
+      - '.github/builders/apply-ally-steal-speed-v1082.py'
       - '.v1082-memory-audit-trigger'
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   audit:
@@ -39,9 +39,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Extract Ally Steal timing contracts
+      - name: Apply bounded Ally Steal response improvements
         working-directory: candidate
-        run: python3 ../audit-tools/.github/builders/extract-ally-steal-v1082.py
+        run: python3 ../audit-tools/.github/builders/apply-ally-steal-speed-v1082.py
       - name: Validate exact v1.0.82 candidate
         working-directory: candidate
         run: |
@@ -54,3 +54,12 @@ jobs:
           done
           python3 scripts/check_repository.py
           git diff --check
+      - name: Commit validated permanent changes
+        working-directory: candidate
+        run: |
+          set -euo pipefail
+          git config user.name MartyBlyth
+          git config user.email 32400596+Martyblyth@users.noreply.github.com
+          git add src/missionchief-command-nexus.user.js scripts/check-ally-steal-response-v1082.mjs CHANGELOG.md
+          git commit -m 'Slightly speed up Ally Steal response handling'
+          git push origin HEAD:fix/runtime-memory-deep-dive-v1082
