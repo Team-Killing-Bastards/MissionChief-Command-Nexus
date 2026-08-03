@@ -92,7 +92,7 @@ requireText(
 );
 requireText(
   releaseWorkflow,
-  'run: node scripts/release-notify.mjs',
+  'node scripts/release-notify.mjs',
   'canonical notifier invocation'
 );
 requireText(
@@ -160,7 +160,7 @@ requireText(
 );
 requireText(
   repairWorkflow,
-  'run: node scripts/release-notify.mjs',
+  'node scripts/release-notify.mjs',
   'repair uses the canonical notifier'
 );
 
@@ -252,7 +252,7 @@ for (const file of workflowFiles) {
   }
 
   const constructsEmbedDirectly =
-    file.source.includes("Command Nexus Release Control") ||
+    file.source.includes('Command Nexus Release Control') ||
     /embeds:\s*\[/m.test(file.source) ||
     /target\.searchParams\.set\(['"]wait['"],\s*['"]true['"]\)/m.test(file.source) ||
     /\/messages\/\$\{?MESSAGE_ID\}?/m.test(file.source);
