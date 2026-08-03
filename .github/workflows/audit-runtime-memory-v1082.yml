@@ -9,29 +9,21 @@ on:
       - synchronize
     paths:
       - '.github/workflows/audit-runtime-memory-v1082.yml'
-      - '.github/builders/apply-ally-steal-speed-v1082.py'
       - '.v1082-memory-audit-trigger'
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   audit:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
-      - name: Check out trusted audit tools
-        uses: actions/checkout@v6
-        with:
-          ref: diagnostic/deep-memory-audit-v1082
-          path: audit-tools
-          fetch-depth: 1
       - name: Check out exact v1.0.82 candidate
         uses: actions/checkout@v6
         with:
           ref: fix/runtime-memory-deep-dive-v1082
-          path: candidate
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
@@ -39,11 +31,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Apply bounded Ally Steal response improvements
-        working-directory: candidate
-        run: python3 ../audit-tools/.github/builders/apply-ally-steal-speed-v1082.py
-      - name: Validate exact v1.0.82 candidate
-        working-directory: candidate
+      - name: Validate exact memory and Ally Steal candidate
         run: |
           set -euo pipefail
           node --check src/missionchief-command-nexus.user.js
@@ -54,12 +42,3 @@ jobs:
           done
           python3 scripts/check_repository.py
           git diff --check
-      - name: Commit validated permanent changes
-        working-directory: candidate
-        run: |
-          set -euo pipefail
-          git config user.name MartyBlyth
-          git config user.email 32400596+Martyblyth@users.noreply.github.com
-          git add src/missionchief-command-nexus.user.js scripts/check-ally-steal-response-v1082.mjs CHANGELOG.md
-          git commit -m 'Slightly speed up Ally Steal response handling'
-          git push origin HEAD:fix/runtime-memory-deep-dive-v1082
