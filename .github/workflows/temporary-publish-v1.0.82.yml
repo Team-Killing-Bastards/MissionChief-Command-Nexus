@@ -1,6 +1,15 @@
 name: Publish Command Nexus v1.0.82 externally
 
 on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+    paths:
+      - '.external-publish-v1.0.82-trigger'
   push:
     branches:
       - main
