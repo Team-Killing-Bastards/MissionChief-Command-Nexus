@@ -100,7 +100,6 @@ for (const selector of [
   '#mc-namer-panel.mc-ios-safari #mc-personnel-start',
   '#mc-namer-panel.mc-ios-safari .mc-compact-disclosure',
   '#mc-namer-panel.mc-ios-safari .mc-compact-disclosure-summary',
-  '#mc-namer-panel.mc-ios-safari .mc-compact-disclosure-body',
   '#mc-namer-panel.mc-ios-safari .mc-compact-action-disclosure[open]',
   '#mc-namer-panel.mc-ios-safari .mc-compact-action-disclosure button',
 ]) {
