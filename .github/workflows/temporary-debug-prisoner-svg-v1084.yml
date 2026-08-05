@@ -1,0 +1,42 @@
+name: Debug prisoner SVG close candidate v1.0.84
+
+on:
+  push:
+    branches:
+      - fix/prisoner-svg-close-v1084
+    paths:
+      - '.github/workflows/temporary-debug-prisoner-svg-v1084.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: fix/prisoner-svg-close-v1084
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Capture exact builder result
+        shell: bash
+        run: |
+          set +e
+          mkdir -p diagnostics
+          python3 scripts/temporary-build-prisoner-svg-close-v1084.py > diagnostics/prisoner-svg-builder-result.log 2>&1
+          STATUS=$?
+          echo >> diagnostics/prisoner-svg-builder-result.log
+          echo "exit_status=${STATUS}" >> diagnostics/prisoner-svg-builder-result.log
+          git reset --hard HEAD
+          git clean -fd -e diagnostics/prisoner-svg-builder-result.log
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -f diagnostics/prisoner-svg-builder-result.log
+          git commit -m 'Record prisoner SVG builder diagnostic' || true
+          git push origin HEAD:fix/prisoner-svg-close-v1084
+          exit 0
