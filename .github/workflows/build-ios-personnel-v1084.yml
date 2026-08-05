@@ -70,11 +70,6 @@ jobs:
           python3 scripts/check_repository.py
           git diff --check
 
-          for checker in scripts/check-*.mjs; do
-            echo "Running ${checker}"
-            node "${checker}"
-          done
-
       - name: Commit validated production candidate
         shell: bash
         run: |
@@ -103,5 +98,6 @@ jobs:
             echo '- Native file input: permanently hidden from layout'
             echo '- iOS layout: 44px touch controls, 2-column grids, safe-area and 100dvh scrolling'
             echo '- One-use builder material: removed before commit'
-            echo '- Full permanent regression suite: passed before push'
+            echo '- Targeted candidate validation: passed before push'
+            echo '- Full permanent suite: delegated to normal PR validation workflow'
           } >> "${GITHUB_STEP_SUMMARY}"
