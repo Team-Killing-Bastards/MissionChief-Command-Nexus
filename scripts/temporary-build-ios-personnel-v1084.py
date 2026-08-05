@@ -39,10 +39,7 @@ source = replace_once(
     "Personnel Assignment version",
 )
 
-engine_numbers = [
-    int(value)
-    for value in re.findall(r"V10\.6\.(\d+)", source)
-]
+engine_numbers = [int(value) for value in re.findall(r"V10\.6\.(\d+)", source)]
 if not engine_numbers:
     raise RuntimeError("No Mission Finder V10.6.x engine version was found")
 
@@ -53,157 +50,260 @@ new_engine_token = f"V10.6.{new_engine}"
 engine_reference_count = source.count(old_engine_token)
 if engine_reference_count < 1 or engine_reference_count > 12:
     raise RuntimeError(
-        "Unexpected current Mission Finder engine reference count for "
-        f"{old_engine_token}: {engine_reference_count}"
+        f"Unexpected reference count for {old_engine_token}: {engine_reference_count}"
     )
 source = source.replace(old_engine_token, new_engine_token)
 
-file_input_pattern = (
-    r"^(?P<indent>[ \t]*)fileInput\.id\s*=\s*"
-    r"['\"]mf-personnel-import-file['\"];[ \t]*$"
+# The native file input is already semantically hidden in the HTML. iOS Safari's
+# broad input rule must never override it visually, so keep the exact input and
+# lock it down through a higher-specificity CSS rule below.
+file_input_html = (
+    '<input id=\\"mc-personnel-import-register-file\\" type=\\"file\\" '
+    'accept=\\"application/json,.json\\" hidden>'
 )
-
-def harden_file_input(match: re.Match[str]) -> str:
-    indent = match.group("indent")
-    return "\n".join(
-        [
-            f"{indent}fileInput.id = 'mf-personnel-import-file';",
-            f"{indent}fileInput.hidden = true;",
-            f"{indent}fileInput.setAttribute('aria-hidden', 'true');",
-            f"{indent}fileInput.tabIndex = -1;",
-            f"{indent}fileInput.style.display = 'none';",
-        ]
+if source.count(file_input_html) != 1:
+    raise RuntimeError(
+        "Personnel register import input: expected exactly one current HTML control, "
+        f"found {source.count(file_input_html)}"
     )
 
 source = sub_once(
     source,
-    file_input_pattern,
-    harden_file_input,
-    "hidden Personnel Assignment import input",
+    r"function createCompactActionDisclosure\(\n"
+    r"(?P<indent>\s*)container,\n"
+    r"(?P=indent)selectors,\n"
+    r"(?P=indent)label,\n"
+    r"(?P=indent)id\n"
+    r"(?P<close>\s*)\) \{",
+    lambda match: (
+        "function createCompactActionDisclosure(\n"
+        f"{match.group('indent')}container,\n"
+        f"{match.group('indent')}selectors,\n"
+        f"{match.group('indent')}label,\n"
+        f"{match.group('indent')}id,\n"
+        f"{match.group('indent')}defaultOpen = false\n"
+        f"{match.group('close')}) {{"
+    ),
+    "compact action disclosure default-open parameter",
 )
 
-mobile_pattern = re.compile(
-    r"""@media \(max-width: 820px\) \{
-\s*#mf-personnel-panel \.mf-personnel-action-row,
-\s*#mf-personnel-panel \.mf-personnel-tools-disclosure \.mf-compact-tools-grid \{
-\s*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);
-\s*\}
-
-\s*#mf-personnel-panel \.mf-personnel-refresh-control,
-\s*#mf-personnel-panel \.mf-personnel-import-control,
-\s*#mf-personnel-panel \.mf-personnel-start-control \{
-\s*grid-column: auto;
-\s*\}
-\s*\}""",
-    re.MULTILINE,
+source = replace_once(
+    source,
+    """            const details = createCompactDisclosure(
+                id,
+                label,
+                buttons,
+                false
+            );""",
+    """            const details = createCompactDisclosure(
+                id,
+                label,
+                buttons,
+                defaultOpen
+            );""",
+    "compact action disclosure default-open forwarding",
 )
 
-mobile_contract = """/* iOS Safari Personnel Assignment completeness contract. */
-#mf-personnel-import-file {
-    display: none !important;
-    position: absolute !important;
-    width: 0 !important;
-    height: 0 !important;
-    overflow: hidden !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
-}
-
-#mf-personnel-panel .mf-personnel-action-row {
-    display: grid !important;
-}
-
-#mf-personnel-panel .mf-personnel-action-row > .mf-button {
-    display: inline-flex !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    position: static !important;
-    min-width: 0 !important;
-}
-
-#mf-personnel-panel details.mf-personnel-tools-disclosure {
-    display: block !important;
-}
-
-#mf-personnel-panel details.mf-personnel-tools-disclosure > summary {
-    display: flex !important;
-}
-
-#mf-personnel-panel details.mf-personnel-tools-disclosure:not([open])
-    > .mf-compact-disclosure-content {
-    display: none !important;
-}
-
-#mf-personnel-panel details.mf-personnel-tools-disclosure[open]
-    > .mf-compact-disclosure-content {
-    display: block !important;
-}
-
-@media (max-width: 820px), (hover: none) and (pointer: coarse) {
-    #mf-personnel-panel {
-        min-height: 0;
-        max-height: calc(
-            100dvh
-            - env(safe-area-inset-top)
-            - env(safe-area-inset-bottom)
-            - 12px
-        );
-        overflow-y: auto !important;
-        overscroll-behavior: contain;
-        -webkit-overflow-scrolling: touch;
-        padding-bottom: max(14px, env(safe-area-inset-bottom));
-    }
-
-    #mf-personnel-panel .mf-personnel-action-row,
-    #mf-personnel-panel .mf-personnel-tools-disclosure .mf-compact-tools-grid {
-        display: grid !important;
-        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-        gap: 8px;
-    }
-
-    #mf-personnel-panel .mf-personnel-action-row > .mf-button,
-    #mf-personnel-panel .mf-personnel-tools-disclosure .mf-button,
-    #mf-personnel-panel details.mf-personnel-tools-disclosure > summary {
-        min-height: 44px !important;
-        font-size: 14px;
-        touch-action: manipulation;
-    }
-
-    #mf-personnel-panel .mf-personnel-refresh-control,
-    #mf-personnel-panel .mf-personnel-import-control,
-    #mf-personnel-panel .mf-personnel-start-control,
-    #mf-personnel-panel .mf-personnel-pause-control,
-    #mf-personnel-panel .mf-personnel-stop-control {
-        display: inline-flex !important;
-        grid-column: auto;
-    }
-}
-
-@media (max-width: 520px) {
-    #mf-personnel-panel .mf-personnel-action-row,
-    #mf-personnel-panel .mf-personnel-tools-disclosure .mf-compact-tools-grid {
-        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    }
-
-    #mf-personnel-panel .mf-personnel-refresh-control {
-        grid-column: 1 / -1 !important;
-    }
-
-    #mf-personnel-panel .mf-personnel-import-control,
-    #mf-personnel-panel .mf-personnel-start-control,
-    #mf-personnel-panel .mf-personnel-pause-control,
-    #mf-personnel-panel .mf-personnel-stop-control {
-        grid-column: auto !important;
-    }
-}
-/* End iOS Safari Personnel Assignment completeness contract. */"""
-
-source, mobile_count = mobile_pattern.subn(mobile_contract, source, count=1)
-if mobile_count != 1:
+personnel_tools_pattern = re.compile(
+    r"""        createCompactActionDisclosure\(
+            compactPersonnelView\?\.querySelector\('\.mc-nexus-action-bar'\),
+            \[
+                '#mc-personnel-build-register',
+                '#mc-personnel-full-register',
+                '#mc-personnel-export-register',
+                '#mc-personnel-import-register',
+                '#mc-personnel-view-station-report',
+                '#mc-personnel-copy-station',
+                '#mc-personnel-copy',
+                '#mc-personnel-debug',
+                '#mc-personnel-clear'
+            \],
+            'Tools and reports',
+            'mc-compact-personnel-tools'
+        \);"""
+)
+personnel_tools_replacement = """        createCompactActionDisclosure(
+            compactPersonnelView?.querySelector('.mc-nexus-action-bar'),
+            [
+                '#mc-personnel-build-register',
+                '#mc-personnel-full-register',
+                '#mc-personnel-export-register',
+                '#mc-personnel-import-register',
+                '#mc-personnel-view-station-report',
+                '#mc-personnel-copy-station',
+                '#mc-personnel-copy',
+                '#mc-personnel-debug',
+                '#mc-personnel-clear'
+            ],
+            'Tools and reports',
+            'mc-compact-personnel-tools',
+            isIosSafariWebsite()
+        );"""
+source, personnel_tools_count = personnel_tools_pattern.subn(
+    personnel_tools_replacement,
+    source,
+    count=1,
+)
+if personnel_tools_count != 1:
     raise RuntimeError(
-        "Personnel Assignment mobile CSS anchor: expected exactly one match, "
-        f"found {mobile_count}"
+        "Personnel Tools and reports call: expected exactly one match, "
+        f"found {personnel_tools_count}"
     )
+
+style_anchor = """            #mc-namer-panel.mc-ios-safari .mc-namer-buttons button,
+            #mc-namer-panel.mc-ios-safari select,
+            #mc-namer-panel.mc-ios-safari input {
+                min-height: 36px;
+                font-size: 16px;
+            }
+"""
+
+mobile_contract = """
+
+            /* iOS Safari Personnel Assignment completeness contract. */
+            #mc-namer-panel.mc-ios-safari #mc-personnel-import-register-file {
+                display: none !important;
+                position: absolute !important;
+                inline-size: 0 !important;
+                block-size: 0 !important;
+                overflow: hidden !important;
+                opacity: 0 !important;
+                pointer-events: none !important;
+            }
+
+            #mc-namer-panel.mc-ios-safari #mc-namer-body {
+                min-height: 0;
+                max-height: calc(
+                    100dvh
+                    - env(safe-area-inset-top, 0px)
+                    - env(safe-area-inset-bottom, 0px)
+                    - 58px
+                );
+                overflow-y: auto !important;
+                overscroll-behavior: contain;
+                -webkit-overflow-scrolling: touch;
+                padding-bottom: max(14px, env(safe-area-inset-bottom, 0px));
+            }
+
+            #mc-namer-panel.mc-ios-safari .mc-nexus-action-bar {
+                display: grid !important;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 8px;
+                align-items: stretch;
+            }
+
+            #mc-namer-panel.mc-ios-safari .mc-nexus-action-bar > button {
+                display: inline-flex !important;
+                align-items: center;
+                justify-content: center;
+                inline-size: 100%;
+                min-inline-size: 0;
+                min-height: 44px !important;
+                padding: 8px 10px;
+                line-height: 1.2;
+                white-space: normal;
+                overflow-wrap: anywhere;
+                touch-action: manipulation;
+            }
+
+            #mc-namer-panel.mc-ios-safari #mc-personnel-refresh,
+            #mc-namer-panel.mc-ios-safari #mc-personnel-start,
+            #mc-namer-panel.mc-ios-safari .mc-compact-action-disclosure {
+                grid-column: 1 / -1;
+            }
+
+            #mc-namer-panel.mc-ios-safari .mc-compact-disclosure {
+                display: block !important;
+                min-inline-size: 0;
+                margin: 0;
+                border: 1px solid #4b5563;
+                border-radius: 7px;
+                background: #111827;
+                overflow: hidden;
+            }
+
+            #mc-namer-panel.mc-ios-safari .mc-compact-disclosure-summary {
+                display: flex !important;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+                min-height: 44px !important;
+                padding: 9px 11px;
+                color: #f8fafc;
+                background: #1f2937;
+                font-weight: 700;
+                line-height: 1.2;
+                list-style: none;
+                cursor: pointer;
+                user-select: none;
+                touch-action: manipulation;
+            }
+
+            #mc-namer-panel.mc-ios-safari
+            .mc-compact-disclosure-summary::-webkit-details-marker {
+                display: none;
+            }
+
+            #mc-namer-panel.mc-ios-safari .mc-compact-summary-mark::before {
+                content: "+";
+                color: #93c5fd;
+                font-size: 18px;
+                line-height: 1;
+            }
+
+            #mc-namer-panel.mc-ios-safari
+            .mc-compact-disclosure[open]
+            > .mc-compact-disclosure-summary
+            .mc-compact-summary-mark::before {
+                content: "−";
+            }
+
+            #mc-namer-panel.mc-ios-safari .mc-compact-disclosure:not([open])
+            > .mc-compact-disclosure-body {
+                display: none !important;
+            }
+
+            #mc-namer-panel.mc-ios-safari .mc-compact-disclosure[open]
+            > .mc-compact-disclosure-body {
+                display: block !important;
+                min-inline-size: 0;
+                padding: 8px;
+                border-top: 1px solid #374151;
+            }
+
+            #mc-namer-panel.mc-ios-safari .mc-compact-action-disclosure[open]
+            > .mc-compact-disclosure-body {
+                display: grid !important;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 8px;
+            }
+
+            #mc-namer-panel.mc-ios-safari .mc-compact-action-disclosure button {
+                display: inline-flex !important;
+                align-items: center;
+                justify-content: center;
+                inline-size: 100%;
+                min-inline-size: 0;
+                min-height: 44px !important;
+                padding: 8px;
+                white-space: normal;
+                overflow-wrap: anywhere;
+                touch-action: manipulation;
+            }
+
+            #mc-namer-panel.mc-ios-safari .mc-nexus-personnel-grid
+            > .mc-compact-disclosure {
+                margin: 0 8px 8px;
+            }
+
+            /* End iOS Safari Personnel Assignment completeness contract. */
+"""
+source = replace_once(
+    source,
+    style_anchor,
+    style_anchor + mobile_contract,
+    "iOS Safari style anchor",
+)
 
 SOURCE_PATH.write_text(source, encoding="utf-8")
 
@@ -212,10 +312,11 @@ readme_anchor = "## Current v1.0.84 behaviour\n"
 readme_insert = """
 ### Complete Personnel Assignment controls on iOS Safari
 
-- Mobile and touch layouts retain **Refresh Stations**, **Import**, **Start**, **Pause** and **Stop**; no desktop action is removed.
-- The native JSON file input remains hidden while the visible Import control opens it directly.
-- **Tools and reports** remains a proper disclosure: closed content stays hidden and every report/status tool appears when opened.
-- The Personnel panel uses touch-sized controls, two-column compact grids, safe-area padding and bounded `100dvh` scrolling on iPhone/iPad Safari.
+- Mobile retains **Refresh Stations**, **Start**, **Pause** and **Stop** as full touch controls.
+- **Tools and reports** opens by default on iOS and contains Quick Refresh Register, Full Verify Register, Export Register, Import Register, station/overall report actions, Debug and Clear Log.
+- The native JSON file input is permanently hidden from layout; the visible Import Register button remains the only file-picker control.
+- Every compact disclosure has a visible touch-sized header, clear plus/minus state and reliable closed/open body behaviour.
+- The panel uses two-column mobile action grids, `100dvh` scrolling and iOS safe-area padding without removing desktop functionality.
 
 """
 readme = replace_once(
@@ -242,8 +343,7 @@ path_replacement = (
 path_count = workflow.count(path_anchor)
 if path_count != 2:
     raise RuntimeError(
-        "validation workflow path anchors: expected two matches, "
-        f"found {path_count}"
+        f"validation workflow path anchors: expected two matches, found {path_count}"
     )
 workflow = workflow.replace(path_anchor, path_replacement)
 
@@ -267,4 +367,7 @@ print(
     f"Mission Finder {old_engine_token} -> {new_engine_token} "
     f"across {engine_reference_count} current references."
 )
-print("Applied permanent iOS Safari action/disclosure/safe-area CSS contract.")
+print(
+    "Made every primary Personnel action visible, default-opened Tools and reports "
+    "on iOS, hid the native file input and restored styled disclosures."
+)
