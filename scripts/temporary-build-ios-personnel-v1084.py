@@ -45,19 +45,16 @@ if engine_reference_count < 1 or engine_reference_count > 12:
     )
 source = source.replace(old_engine_token, new_engine_token)
 
-file_input_old = """    fileInput.type = 'file';
-    fileInput.accept = '.json,application/json';
-    fileInput.style.display = 'none';"""
-file_input_new = """    fileInput.type = 'file';
-    fileInput.accept = '.json,application/json';
-    fileInput.hidden = true;
+file_input_anchor = "    fileInput.id = 'mf-personnel-import-file';\n"
+file_input_hardening = file_input_anchor + """    fileInput.hidden = true;
     fileInput.setAttribute('aria-hidden', 'true');
     fileInput.tabIndex = -1;
-    fileInput.style.display = 'none';"""
+    fileInput.style.display = 'none';
+"""
 source = replace_once(
     source,
-    file_input_old,
-    file_input_new,
+    file_input_anchor,
+    file_input_hardening,
     "hidden Personnel Assignment import input",
 )
 
