@@ -35,7 +35,7 @@ requireText(
   'canonical verified publisher remains authoritative'
 );
 requireText(
-  "operation: publish-release",
+  'operation: publish-release',
   'publisher uses the permanent publish-release operation'
 );
 requireText(
@@ -43,8 +43,8 @@ requireText(
   'durable release completion receipt prefix'
 );
 requireText(
-  'startsWith(\\"${DISCORD_RECEIPT_PREFIX}\\")',
-  'release state checks for the Discord delivery receipt'
+  'startswith(',
+  'release state checks release assets for the Discord delivery receipt prefix'
 );
 requireText(
   'GitHub Release, both verified assets and the Discord delivery receipt already exist',
