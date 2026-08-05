@@ -16,6 +16,11 @@ jobs:
     timeout-minutes: 40
 
     steps:
+      - name: Report builder start
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr comment 255 --repo "$GITHUB_REPOSITORY" --body "Trusted v1.0.83 transport builder started: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+
       - name: Check out trusted builder source
         uses: actions/checkout@v6
         with:
@@ -102,3 +107,10 @@ jobs:
           git push origin HEAD:refs/heads/fix/faster-auto-transport-v1083
           SHA="$(git rev-parse HEAD)"
           gh pr edit 255 --repo "$GITHUB_REPOSITORY" --title 'Speed up Auto Mode patient and prisoner transport' --body "## Objective\n\nMake Auto Mode react faster when clicking patient and prisoner transport controls without weakening exact destination, ownership or duplicate-click safeguards.\n\n## Changes\n\n- Patient repeat-click guard: 4.0s -> 2.5s.\n- Patient Vue/iframe retry wait: 1.8s -> 0.9s.\n- Prisoner destination/result polling: 200-250ms -> 100-125ms.\n- Prisoner verified close retry: 480ms -> 250ms.\n- Guarded failed prisoner click retry: 6.5s -> 4.0s.\n\n## Safety retained\n\nExact patient/prisoner routes, nearest valid destination selection, pending-state hand-off, result-screen identity, Unit Finder blocking, duplicate-click guards and fail-closed maximum timeouts remain authoritative.\n\n## Release\n\n- Command Nexus \`1.0.83\`\n- Mission Finder \`V10.6.143\`\n- Permanent regression: \`scripts/check-auto-transport-response-v1083.mjs\`\n\nEvery permanent regression, syntax, userscript validation, repository integrity and whitespace check passed.\n\nValidated commit: \`${SHA}\`."
+          gh pr comment 255 --repo "$GITHUB_REPOSITORY" --body "Trusted v1.0.83 transport builder completed successfully at commit ${SHA}."
+
+      - name: Report builder failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr comment 255 --repo "$GITHUB_REPOSITORY" --body "Trusted v1.0.83 transport builder failed: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
