@@ -5,9 +5,6 @@ on:
     branches:
       - main
   pull_request:
-  pull_request_target:
-    types:
-      - closed
   workflow_dispatch:
 
 permissions:
@@ -20,7 +17,6 @@ concurrency:
 jobs:
   integrity:
     name: Repository integrity
-    if: github.event_name != 'pull_request_target'
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -42,9 +38,7 @@ jobs:
   release-state:
     name: Detect unpublished canonical version
     if: >-
-      (github.event_name == 'pull_request_target' &&
-       github.event.action == 'closed' &&
-       github.event.pull_request.merged == true) ||
+      github.event_name == 'push' ||
       github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -134,6 +128,6 @@ jobs:
     with:
       operation: publish-release
       release_tag: ${{ needs.release-state.outputs.release_tag }}
-      release_notes: Automatic verified release after merge to main.
+      release_notes: Automatic verified release after push to main.
     secrets:
       DISCORD_RELEASE_WEBHOOK: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
