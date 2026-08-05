@@ -4,6 +4,24 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.83] - 2026-08-05
+
+### Changed
+
+- Patient transport keeps the existing exact-route, iframe and duplicate-click safeguards while reducing the shared repeat-click window from 4.0 seconds to 2.5 seconds.
+- A stalled patient **Transport Patient / Approach** attempt now retries the live Vue/iframe state after 0.9 seconds instead of 1.8 seconds.
+- Prisoner cell and release destination discovery now polls the live result UI at 100-125 ms rather than 200-250 ms.
+- Verified prisoner-result close retries now run after 250 ms instead of 480 ms, and guarded failed-click retries become eligible after 4 seconds instead of 6.5 seconds.
+
+### Safety
+
+- Exact patient and prisoner routes, nearest valid destination selection, pending-state hand-off, result-screen identity, duplicate-click protection and fail-closed maximum timeouts remain unchanged.
+- Unit Finder remains blocked while patient or prisoner transport ownership is unresolved.
+
+### Changed engine baseline
+
+- Mission Finder increased from `V10.6.142` to `V10.6.143`.
+
 ## [1.0.82] - 2026-08-02
 
 ### Fixed

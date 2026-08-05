@@ -20,8 +20,8 @@ function sliceBetween(startToken, endToken, label) {
   return source.slice(start, end);
 }
 
-expect(source.includes('// @version      1.0.82'), 'Expected Command Nexus 1.0.61');
-expect(source.includes(' * MODULE 2: MISSION FINDER V10.6.142'), 'Expected Mission Finder V10.6.124');
+expect(source.includes('// @version      1.0.83'), 'Expected Command Nexus 1.0.61');
+expect(source.includes(' * MODULE 2: MISSION FINDER V10.6.143'), 'Expected Mission Finder V10.6.124');
 
 const helperSource = sliceBetween(
   '    function shouldRunPostSelectionMissionUpdate(selectionRunState) {',

@@ -11,8 +11,8 @@ function fail(message) {
 }
 
 for (const [token, label] of [
-  ['// @version      1.0.82', 'v1.0.51 metadata'],
-  [' * MODULE 2: MISSION FINDER V10.6.142', 'Mission Finder V10.6.120 header'],
+  ['// @version      1.0.83', 'v1.0.51 metadata'],
+  [' * MODULE 2: MISSION FINDER V10.6.143', 'Mission Finder V10.6.120 header'],
   ['"Fire engines": "Fire Engine R/PUMP x 1"', 'plural Fire Engine alias'],
   ['MF_FIRE_ENGINE_TYPE_IDS', 'Fire Engine type set'],
   ['function isFireEngineRequirement(', 'Fire Engine requirement detector'],
