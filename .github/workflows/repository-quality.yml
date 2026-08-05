@@ -35,6 +35,9 @@ jobs:
       - name: Validate single-delivery Discord release notifications
         run: node scripts/check-release-notification-single-delivery.mjs
 
+      - name: Validate automatic live release reconciliation
+        run: node scripts/check-release-auto-publish.mjs
+
   release-state:
     name: Detect unpublished canonical version
     if: >-
