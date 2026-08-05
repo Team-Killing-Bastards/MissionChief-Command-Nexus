@@ -1,0 +1,103 @@
+name: Inspect prisoner SVG close path v1.0.84
+
+on:
+  push:
+    branches:
+      - fix/prisoner-svg-close-v1084
+    paths:
+      - '.github/workflows/temporary-prisoner-svg-close-v1084.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: fix/prisoner-svg-close-v1084
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Extract current prisoner close implementation
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p diagnostics
+          node <<'NODE'
+          const fs = require('fs');
+          const source = fs.readFileSync('src/missionchief-command-nexus.user.js', 'utf8');
+
+          function extractFunction(name) {
+            const pattern = new RegExp(`(?:async\\s+)?function\\s+${name}\\s*\\(`);
+            const match = pattern.exec(source);
+            if (!match) throw new Error(`Missing function ${name}`);
+            let i = source.indexOf('{', match.index);
+            let depth = 0;
+            let quote = '';
+            let escaped = false;
+            let lineComment = false;
+            let blockComment = false;
+            for (; i < source.length; i += 1) {
+              const ch = source[i];
+              const next = source[i + 1] || '';
+              if (lineComment) {
+                if (ch === '\n') lineComment = false;
+                continue;
+              }
+              if (blockComment) {
+                if (ch === '*' && next === '/') { blockComment = false; i += 1; }
+                continue;
+              }
+              if (quote) {
+                if (escaped) escaped = false;
+                else if (ch === '\\') escaped = true;
+                else if (ch === quote) quote = '';
+                continue;
+              }
+              if (ch === '/' && next === '/') { lineComment = true; i += 1; continue; }
+              if (ch === '/' && next === '*') { blockComment = true; i += 1; continue; }
+              if (ch === '"' || ch === "'" || ch === '`') { quote = ch; continue; }
+              if (ch === '{') depth += 1;
+              else if (ch === '}') {
+                depth -= 1;
+                if (depth === 0) return source.slice(match.index, i + 1);
+              }
+            }
+            throw new Error(`Unterminated function ${name}`);
+          }
+
+          const names = [
+            'getAutoPrisonerReleaseOwnerContainer',
+            'resolveAutoPrisonerReleaseDismissContext',
+            'getVisibleAutoPrisonerReleaseDismissContexts',
+            'getTopmostAutoPrisonerReleaseDismissContext',
+            'isAutoPrisonerReleaseDismissContextVisible',
+            'closeAutoPrisonerReleaseDismissAfterClick'
+          ];
+          const out = [
+            'Current prisoner release close implementation from main-derived branch',
+            '',
+            ...names.flatMap(name => [`===== ${name} =====`, extractFunction(name), ''])
+          ].join('\n');
+          fs.writeFileSync('diagnostics/prisoner-close-current.txt', out);
+          NODE
+
+      - name: Commit branch-only diagnostic
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add diagnostics/prisoner-close-current.txt
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m 'Inspect current prisoner SVG close path'
+          git push origin HEAD:fix/prisoner-svg-close-v1084
