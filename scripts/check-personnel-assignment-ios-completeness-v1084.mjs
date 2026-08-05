@@ -20,53 +20,61 @@ function requireText(text, label = text) {
 
 for (const required of [
   "const PERSONNEL_VERSION = '1.3.9';",
-  "fileInput.id = 'mf-personnel-import-file';",
-  "fileInput.type = 'file';",
-  "fileInput.accept = '.json,application/json';",
-  'fileInput.hidden = true;',
-  "fileInput.setAttribute('aria-hidden', 'true');",
-  'fileInput.tabIndex = -1;',
-  "fileInput.style.display = 'none';",
-  "importButton.id = 'mf-personnel-import';",
-  "startButton.id = 'mf-personnel-start';",
-  "pauseButton.id = 'mf-personnel-pause';",
-  "stopButton.id = 'mf-personnel-stop';",
-  "className: 'mf-personnel-tools-disclosure'",
+  '<button id=\\"mc-personnel-refresh\\">Refresh Stations</button>',
+  '<button id=\\"mc-personnel-build-register\\"',
+  '<button id=\\"mc-personnel-full-register\\"',
+  '<button id=\\"mc-personnel-export-register\\"',
+  '<button id=\\"mc-personnel-import-register\\"',
+  '<input id=\\"mc-personnel-import-register-file\\" type=\\"file\\" accept=\\"application/json,.json\\" hidden>',
+  '<button id=\\"mc-personnel-start\\">Start</button>',
+  '<button id=\\"mc-personnel-pause\\">Pause</button>',
+  '<button id=\\"mc-personnel-stop\\">Stop</button>',
+  '<button id=\\"mc-personnel-view-station-report\\">View Station Report</button>',
+  '<button id=\\"mc-personnel-copy-station\\">Copy Station Report</button>',
+  '<button id=\\"mc-personnel-copy\\">Copy Overall Report</button>',
+  '<button id=\\"mc-personnel-debug\\">Debug: OFF</button>',
+  '<button id=\\"mc-personnel-clear\\">Clear Log</button>',
+  "'#mc-personnel-build-register'",
+  "'#mc-personnel-full-register'",
+  "'#mc-personnel-export-register'",
+  "'#mc-personnel-import-register'",
+  "'#mc-personnel-view-station-report'",
+  "'#mc-personnel-copy-station'",
+  "'#mc-personnel-copy'",
+  "'#mc-personnel-debug'",
+  "'#mc-personnel-clear'",
   "'Tools and reports'",
-  '#mf-personnel-import-file {',
+  "'mc-compact-personnel-tools'",
+  'defaultOpen = false',
+  'isIosSafariWebsite()',
+  '/* iOS Safari Personnel Assignment completeness contract. */',
+  '/* End iOS Safari Personnel Assignment completeness contract. */',
+  '#mc-namer-panel.mc-ios-safari #mc-personnel-import-register-file {',
   'display: none !important;',
-  '#mf-personnel-panel details.mf-personnel-tools-disclosure:not([open])',
-  '> .mf-compact-disclosure-content {',
-  '#mf-personnel-panel details.mf-personnel-tools-disclosure[open]',
-  '@media (max-width: 820px), (hover: none) and (pointer: coarse) {',
+  '#mc-namer-panel.mc-ios-safari .mc-compact-disclosure {',
+  '#mc-namer-panel.mc-ios-safari .mc-compact-disclosure-summary {',
+  '#mc-namer-panel.mc-ios-safari .mc-compact-disclosure:not([open])',
+  '> .mc-compact-disclosure-body {',
+  '#mc-namer-panel.mc-ios-safari .mc-compact-disclosure[open]',
+  '#mc-namer-panel.mc-ios-safari .mc-compact-action-disclosure[open]',
+  'grid-template-columns: repeat(2, minmax(0, 1fr));',
   'min-height: 44px !important;',
   'max-height: calc(',
   '100dvh',
-  'env(safe-area-inset-top)',
-  'env(safe-area-inset-bottom)',
+  'env(safe-area-inset-top',
+  'env(safe-area-inset-bottom',
   '-webkit-overflow-scrolling: touch;',
-  '@media (max-width: 520px) {',
-  '#mf-personnel-panel .mf-personnel-refresh-control {',
-  'grid-column: 1 / -1 !important;',
 ]) {
   requireText(required);
 }
 
-const actionAppend = source.indexOf(
-  'actionRow.append(\n' +
-    '        refreshButton,\n' +
-    '        fileInput,\n' +
-    '        importButton,\n' +
-    '        startButton,\n' +
-    '        pauseButton,\n' +
-    '        stopButton\n' +
-    '    );'
+const personnelToolsCall = source.match(
+  /createCompactActionDisclosure\(\s*compactPersonnelView\?\.querySelector\('\.mc-nexus-action-bar'\),[\s\S]*?'Tools and reports',[\s\S]*?'mc-compact-personnel-tools',[\s\S]*?isIosSafariWebsite\(\)[\s\S]*?\);/
 );
 
-if (actionAppend < 0) {
+if (!personnelToolsCall) {
   fail(
-    'Refresh, Import, Start, Pause and Stop controls must all remain ' +
-      'mounted in the Personnel Assignment action row.'
+    'Personnel tools must remain grouped, complete and default-open on iOS Safari.'
   );
 }
 
@@ -85,51 +93,51 @@ if (hardeningStart < 0 || hardeningEnd <= hardeningStart) {
 const contract = source.slice(hardeningStart, hardeningEnd);
 
 for (const selector of [
-  '#mf-personnel-panel .mf-personnel-action-row',
-  '#mf-personnel-panel .mf-personnel-action-row > .mf-button',
-  '#mf-personnel-panel details.mf-personnel-tools-disclosure',
-  '#mf-personnel-panel details.mf-personnel-tools-disclosure > summary',
-  '#mf-personnel-panel .mf-personnel-tools-disclosure .mf-compact-tools-grid',
-  '#mf-personnel-panel .mf-personnel-import-control',
-  '#mf-personnel-panel .mf-personnel-start-control',
-  '#mf-personnel-panel .mf-personnel-pause-control',
-  '#mf-personnel-panel .mf-personnel-stop-control',
+  '#mc-namer-panel.mc-ios-safari #mc-personnel-import-register-file',
+  '#mc-namer-panel.mc-ios-safari .mc-nexus-action-bar',
+  '#mc-namer-panel.mc-ios-safari .mc-nexus-action-bar > button',
+  '#mc-namer-panel.mc-ios-safari #mc-personnel-refresh',
+  '#mc-namer-panel.mc-ios-safari #mc-personnel-start',
+  '#mc-namer-panel.mc-ios-safari .mc-compact-disclosure',
+  '#mc-namer-panel.mc-ios-safari .mc-compact-disclosure-summary',
+  '#mc-namer-panel.mc-ios-safari .mc-compact-disclosure-body',
+  '#mc-namer-panel.mc-ios-safari .mc-compact-action-disclosure[open]',
+  '#mc-namer-panel.mc-ios-safari .mc-compact-action-disclosure button',
 ]) {
   if (!contract.includes(selector)) {
     fail(`Mobile completeness CSS does not protect ${selector}`);
   }
 }
 
+const hiddenInputRule = contract.match(
+  /#mc-namer-panel\.mc-ios-safari #mc-personnel-import-register-file\s*\{[\s\S]*?display:\s*none\s*!important;/
+);
+const closedRule = contract.match(
+  /\.mc-compact-disclosure:not\(\[open\]\)[\s\S]*?> \.mc-compact-disclosure-body\s*\{[\s\S]*?display:\s*none\s*!important;/
+);
+const openRule = contract.match(
+  /\.mc-compact-disclosure\[open\][\s\S]*?> \.mc-compact-disclosure-body\s*\{[\s\S]*?display:\s*block\s*!important;/
+);
+
+if (!hiddenInputRule || !closedRule || !openRule) {
+  fail(
+    'The native file input and disclosure open/closed behaviour are not fail-safe.'
+  );
+}
+
 for (const forbidden of [
-  '#mf-personnel-import { display: none',
-  '#mf-personnel-start { display: none',
-  '#mf-personnel-pause { display: none',
-  '#mf-personnel-stop { display: none',
-  '.mf-personnel-import-control { display: none',
-  '.mf-personnel-start-control { display: none',
-  '.mf-personnel-pause-control { display: none',
-  '.mf-personnel-stop-control { display: none',
+  '#mc-personnel-import-register { display: none',
+  '#mc-personnel-start { display: none',
+  '#mc-personnel-pause { display: none',
+  '#mc-personnel-stop { display: none',
 ]) {
   if (source.includes(forbidden)) {
     fail(`Mobile feature-removal rule is forbidden: ${forbidden}`);
   }
 }
 
-const closedRule = contract.match(
-  /details\.mf-personnel-tools-disclosure:not\(\[open\]\)[\s\S]*?> \.mf-compact-disclosure-content \{[\s\S]*?display:\s*none\s*!important;/
-);
-const openRule = contract.match(
-  /details\.mf-personnel-tools-disclosure\[open\][\s\S]*?> \.mf-compact-disclosure-content \{[\s\S]*?display:\s*block\s*!important;/
-);
-
-if (!closedRule || !openRule) {
-  fail(
-    'Tools and reports must hide while closed and render normally while open.'
-  );
-}
-
 console.log(
   'iOS Safari Personnel Assignment completeness contracts passed: ' +
-    'Refresh, Import, Start, Pause, Stop and all Tools and reports remain ' +
-    'present with safe-area scrolling and touch-sized controls.'
+    'all primary actions and all register/report tools remain accessible; ' +
+    'the native file input stays hidden; disclosures are styled and functional.'
 );
