@@ -53,6 +53,23 @@ jobs:
 
           (
             set -euo pipefail
+            python3 - <<'PY'
+            from pathlib import Path
+            path = Path('scripts/temporary-build-prisoner-svg-close-v1084.py')
+            text = path.read_text(encoding='utf-8')
+            old_synthetic = "        } else if (attempt === 3) {\n            const view = current.closeButton.ownerDocument?.defaultView || window;"
+            new_synthetic = "        } else if (attempt === 2) {\n            const view = current.closeButton.ownerDocument?.defaultView || window;"
+            old_overlay = "        } else if (attempt === 4 && current.overlay) {"
+            new_overlay = "        } else if (attempt === 3 && current.overlay) {"
+            if text.count(old_synthetic) != 1 or text.count(old_overlay) != 1:
+                raise SystemExit('Unable to preserve the established attempt-2 synthetic / attempt-3 overlay contract')
+            path.write_text(
+                text.replace(old_synthetic, new_synthetic, 1)
+                    .replace(old_overlay, new_overlay, 1),
+                encoding='utf-8'
+            )
+            PY
+
             python3 scripts/temporary-build-prisoner-svg-close-v1084.py
 
             git rm -f --ignore-unmatch \
