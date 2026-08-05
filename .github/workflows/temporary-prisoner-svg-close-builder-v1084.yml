@@ -1,7 +1,7 @@
 name: Trusted prisoner SVG close builder v1.0.84
 
 on:
-  pull_request_target:
+  pull_request:
     types:
       - opened
       - synchronize
