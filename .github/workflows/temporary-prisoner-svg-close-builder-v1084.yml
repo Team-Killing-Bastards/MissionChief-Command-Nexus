@@ -47,6 +47,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           HEAD_BRANCH: ${{ github.event.pull_request.head.ref }}
         run: |
+          set +e
           set -uo pipefail
           BUILD_LOG="$(mktemp)"
 
