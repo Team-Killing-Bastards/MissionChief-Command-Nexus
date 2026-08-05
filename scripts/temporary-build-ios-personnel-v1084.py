@@ -54,12 +54,9 @@ if engine_reference_count < 1 or engine_reference_count > 12:
     )
 source = source.replace(old_engine_token, new_engine_token)
 
-# The native file input is already semantically hidden in the HTML. iOS Safari's
-# broad input rule must never override it visually, so keep the exact input and
-# lock it down through a higher-specificity CSS rule below.
 file_input_html = (
-    '<input id=\\"mc-personnel-import-register-file\\" type=\\"file\\" '
-    'accept=\\"application/json,.json\\" hidden>'
+    '<input id="mc-personnel-import-register-file" type="file" '
+    'accept="application/json,.json" hidden>'
 )
 if source.count(file_input_html) != 1:
     raise RuntimeError(
