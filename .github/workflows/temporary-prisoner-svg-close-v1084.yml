@@ -11,6 +11,10 @@ permissions:
   contents: write
   pull-requests: write
 
+concurrency:
+  group: prisoner-svg-close-v1084-builder
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -26,19 +30,47 @@ jobs:
           node-version: '24'
           package-manager-cache: false
 
-      - name: Build v1.0.84 candidate
+      - name: Build and validate v1.0.84 candidate
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
           BUILD_LOG="$(mktemp)"
-          if ! python3 scripts/temporary-build-prisoner-svg-close-v1084.py >"${BUILD_LOG}" 2>&1; then
+
+          (
+            set -euo pipefail
+            python3 scripts/temporary-build-prisoner-svg-close-v1084.py
+
+            git rm -f --ignore-unmatch \
+              .github/workflows/temporary-prisoner-svg-close-v1084.yml \
+              scripts/temporary-build-prisoner-svg-close-v1084.mjs \
+              scripts/temporary-build-prisoner-svg-close-v1084.py \
+              diagnostics/prisoner-close-current.txt \
+              diagnostics/branch-create-request.txt
+
+            node --check src/missionchief-command-nexus.user.js
+            node scripts/validate-userscript.mjs
+            for check in scripts/check-*.mjs; do
+              node "$check"
+            done
+            python3 scripts/check_repository.py
+            git diff --check
+
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add -A
+            git commit -m 'Fix prisoner result SVG close control'
+            git push origin HEAD:fix/prisoner-svg-close-v1084
+          ) >"${BUILD_LOG}" 2>&1
+          STATUS=$?
+
+          if [[ "${STATUS}" -ne 0 ]]; then
             {
-              echo 'The automated v1.0.84 prisoner SVG close builder stopped before committing.'
+              echo 'The automated v1.0.84 prisoner SVG close builder stopped without committing.'
               echo
               echo '```text'
-              tail -c 5000 "${BUILD_LOG}"
+              tail -c 7000 "${BUILD_LOG}"
               echo
               echo '```'
               echo
@@ -46,29 +78,8 @@ jobs:
             } > builder-failure.md
             gh pr comment 257 --body-file builder-failure.md || true
             cat "${BUILD_LOG}"
-            exit 1
+            exit "${STATUS}"
           fi
+
           cat "${BUILD_LOG}"
-
-          git rm -f --ignore-unmatch \
-            .github/workflows/temporary-prisoner-svg-close-v1084.yml \
-            scripts/temporary-build-prisoner-svg-close-v1084.mjs \
-            scripts/temporary-build-prisoner-svg-close-v1084.py \
-            diagnostics/prisoner-close-current.txt \
-            diagnostics/branch-create-request.txt
-
-          node --check src/missionchief-command-nexus.user.js
-          node scripts/validate-userscript.mjs
-          for check in scripts/check-*.mjs; do
-            node "$check"
-          done
-          python3 scripts/check_repository.py
-          git diff --check
-
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
-          git commit -m 'Fix prisoner result SVG close control'
-          git push origin HEAD:fix/prisoner-svg-close-v1084
-
           gh pr comment 257 --body "Built the clean Command Nexus 1.0.84 / Mission Finder V10.6.144 candidate. The Vue/Font Awesome xmark marker now resolves to its live interactive parent, retries reacquire current DOM nodes, every permanent regression passed, repository integrity passed, and all temporary diagnostics/build files were removed." || true
