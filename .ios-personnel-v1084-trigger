@@ -2,3 +2,4 @@ Build and validate complete iOS Safari Personnel Assignment controls.
 Retry: resolve current Mission Finder engine reference dynamically.
 Retry 2: harden the import input from its stable element ID.
 Retry 3: match the import input independent of whitespace and quote style.
+Retry 4: patch the current mc-personnel DOM and iOS compact disclosures.
