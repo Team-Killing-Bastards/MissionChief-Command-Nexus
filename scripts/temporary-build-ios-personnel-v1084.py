@@ -305,9 +305,7 @@ source = replace_once(
 SOURCE_PATH.write_text(source, encoding="utf-8")
 
 readme = README_PATH.read_text(encoding="utf-8")
-readme_anchor = "## Current v1.0.84 behaviour\n"
-readme_insert = """
-### Complete Personnel Assignment controls on iOS Safari
+readme_insert = """## iOS Safari Personnel Assignment completeness
 
 - Mobile retains **Refresh Stations**, **Start**, **Pause** and **Stop** as full touch controls.
 - **Tools and reports** opens by default on iOS and contains Quick Refresh Register, Full Verify Register, Export Register, Import Register, station/overall report actions, Debug and Clear Log.
@@ -318,9 +316,9 @@ readme_insert = """
 """
 readme = replace_once(
     readme,
-    readme_anchor,
-    readme_anchor + readme_insert,
-    "README current mobile behaviour",
+    "## Capability matrix\n",
+    readme_insert + "## Capability matrix\n",
+    "README capability matrix anchor",
 )
 README_PATH.write_text(readme, encoding="utf-8")
 
