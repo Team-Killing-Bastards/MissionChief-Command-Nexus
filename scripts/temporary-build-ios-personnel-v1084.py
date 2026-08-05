@@ -17,13 +17,6 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
     return text.replace(old, new, 1)
 
 
-def sub_once(text: str, pattern: str, replacement, label: str) -> str:
-    updated, count = re.subn(pattern, replacement, text, count=1, flags=re.MULTILINE)
-    if count != 1:
-        raise RuntimeError(f"{label}: expected exactly one match, found {count}")
-    return updated
-
-
 source = SOURCE_PATH.read_text(encoding="utf-8")
 
 source = replace_once(
@@ -33,35 +26,24 @@ source = replace_once(
     "Personnel Assignment version",
 )
 
-engine_patterns = [
-    r"(const\s+MISSION_FINDER_VERSION\s*=\s*'V10\.6\.)(\d+)(';)",
-    r"(const\s+MISSION_FINDER_ENGINE_VERSION\s*=\s*'V10\.6\.)(\d+)(';)",
-    r"(const\s+VERSION\s*=\s*'V10\.6\.)(\d+)(';)",
+engine_numbers = [
+    int(value)
+    for value in re.findall(r"V10\.6\.(\d+)", source)
 ]
-engine_match = None
-engine_pattern = None
-for candidate in engine_patterns:
-    match = re.search(candidate, source)
-    if match:
-        engine_match = match
-        engine_pattern = candidate
-        break
+if not engine_numbers:
+    raise RuntimeError("No Mission Finder V10.6.x engine version was found")
 
-if engine_match is None or engine_pattern is None:
-    occurrences = sorted(set(re.findall(r"V10\.6\.\d+", source)))
-    raise RuntimeError(
-        "Mission Finder version constant was not found. Visible versions: "
-        + ", ".join(occurrences[-10:])
-    )
-
-old_engine = int(engine_match.group(2))
+old_engine = max(engine_numbers)
 new_engine = old_engine + 1
-source = sub_once(
-    source,
-    engine_pattern,
-    lambda match: f"{match.group(1)}{new_engine}{match.group(3)}",
-    "Mission Finder engine version",
-)
+old_engine_token = f"V10.6.{old_engine}"
+new_engine_token = f"V10.6.{new_engine}"
+engine_reference_count = source.count(old_engine_token)
+if engine_reference_count < 1 or engine_reference_count > 12:
+    raise RuntimeError(
+        "Unexpected current Mission Finder engine reference count for "
+        f"{old_engine_token}: {engine_reference_count}"
+    )
+source = source.replace(old_engine_token, new_engine_token)
 
 file_input_old = """    fileInput.type = 'file';
     fileInput.accept = '.json,application/json';
@@ -261,6 +243,7 @@ VALIDATE_WORKFLOW_PATH.write_text(workflow, encoding="utf-8")
 
 print(
     "Patched Personnel Assignment 1.3.8 -> 1.3.9; "
-    f"Mission Finder V10.6.{old_engine} -> V10.6.{new_engine}."
+    f"Mission Finder {old_engine_token} -> {new_engine_token} "
+    f"across {engine_reference_count} current references."
 )
 print("Applied permanent iOS Safari action/disclosure/safe-area CSS contract.")
