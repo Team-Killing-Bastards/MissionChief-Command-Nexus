@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.82
+// @version      1.0.83
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -10730,7 +10730,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.142
+         * MODULE 2: MISSION FINDER V10.6.143
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -41672,11 +41672,11 @@ let sessionRuntimeTicker = null;
 const MF_AUTO_PRISONER_CELL_HANDOFF_KEY =
     'mf_auto_prisoner_cell_handoff_v1';
 const MF_AUTO_PRISONER_CELL_DESTINATION_WAIT_MS = 8000;
-const MF_AUTO_PRISONER_CELL_CLICK_RETRY_MS = 6500;
+const MF_AUTO_PRISONER_CELL_CLICK_RETRY_MS = 4000;
 const MF_AUTO_PRISONER_CELL_MAX_ATTEMPTS = 2;
 const MF_AUTO_PRISONER_RELEASE_STATE_KEY =
     'mf_auto_prisoner_release_v1';
-const MF_AUTO_PRISONER_RELEASE_CLICK_RETRY_MS = 6500;
+const MF_AUTO_PRISONER_RELEASE_CLICK_RETRY_MS = 4000;
 const MF_AUTO_PRISONER_RELEASE_MAX_ATTEMPTS = 2;
 const MF_AUTO_PRISONER_RELEASE_RESULT_WAIT_MS = 10000;
 const MF_AUTO_PRISONER_RELEASE_DISMISS_WAIT_MS = 8000;
@@ -41880,7 +41880,7 @@ async function handleAutoPrisonerCellBeforeUnitFinder() {
         Date.now() - destinationWaitStarted <
             MF_AUTO_PRISONER_CELL_DESTINATION_WAIT_MS
     ) {
-        await wait(250);
+        await wait(125);
 
         context = getActivePrisonerCellSelectionContext();
 
@@ -42193,7 +42193,7 @@ async function closeAutoPrisonerReleaseDismissAfterClick(releaseContext = null) 
         getActivePrisonerCellSelectionContext() &&
         Date.now() - resultStarted < MF_AUTO_PRISONER_RELEASE_RESULT_WAIT_MS
     ) {
-        await wait(200);
+        await wait(100);
     }
 
     if (!autoModeRunning || isManualAutoStopActive()) return 'stuck';
@@ -42209,7 +42209,7 @@ async function closeAutoPrisonerReleaseDismissAfterClick(releaseContext = null) 
         !isManualAutoStopActive() &&
         Date.now() - dismissStarted < MF_AUTO_PRISONER_RELEASE_DISMISS_WAIT_MS
     ) {
-        await wait(200);
+        await wait(100);
         dismissContext = getTopmostAutoPrisonerReleaseDismissContext(
             releaseContext
         );
@@ -42281,7 +42281,7 @@ async function closeAutoPrisonerReleaseDismissAfterClick(releaseContext = null) 
             realClickForQueueRestart(current.closeButton);
         }
 
-        await wait(480);
+        await wait(250);
         if (!isAutoPrisonerReleaseDismissContextVisible(dismissContext)) {
             clearAutoPrisonerReleaseState();
             updateStatusBox(
@@ -43676,7 +43676,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
         if (!isTransportAutomationAllowed()) return false;
         if (mfGlobalTransportClicking) return false;
         if (mfTransportApproachClicking) return false;
-        if (Date.now() - mfTransportLastClickAt < 4000) return false;
+        if (Date.now() - mfTransportLastClickAt < 2500) return false;
 
         const button = findExactFirstApproachTransportButton();
 
@@ -43711,7 +43711,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
         const now = Date.now();
 
         // Four seconds between Approach clicks.
-        if (fingerprint && fingerprint === mfLastTransportFingerprint && now - mfLastTransportClickAt < 4000) {
+        if (fingerprint && fingerprint === mfLastTransportFingerprint && now - mfLastTransportClickAt < 2500) {
             return false;
         }
 
@@ -43945,7 +43945,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
         if (!isTransportAutomationAllowed()) return false;
         if (mfBruteApproachClicking) return false;
         if (mfTransportApproachClicking) return false;
-        if (Date.now() - mfTransportLastClickAt < 4000) return false;
+        if (Date.now() - mfTransportLastClickAt < 2500) return false;
 
         const button = mfBruteFindFirstApproachButton();
 
@@ -44133,7 +44133,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
                         debugLog('AUTO TRANSPORT', `${reason}: Approach found but click helper did not click yet; waiting for Vue/iframe update.`);
                     }
 
-                    await wait(1800);
+                    await wait(900);
                     continue;
                 }
             }
