@@ -79,6 +79,7 @@ jobs:
           RELEASE_TAG="v${SCRIPT_VERSION}"
           ASSET="MissionChief-Command-Nexus-${SCRIPT_VERSION}.user.js"
           CHECKSUM="${ASSET}.sha256"
+          DISCORD_RECEIPT_PREFIX="Command-Nexus-Discord-Receipt-${RELEASE_TAG}-"
 
           if ! grep -Fq "## [${SCRIPT_VERSION}]" CHANGELOG.md; then
             echo "CHANGELOG.md does not contain a release section for ${SCRIPT_VERSION}."
@@ -86,7 +87,9 @@ jobs:
           fi
 
           SHOULD_PUBLISH=true
-          REASON="release or verified assets are missing"
+          REASON="release, verified assets or Discord delivery receipt are missing"
+          ASSET_COUNT=0
+          DISCORD_RECEIPT_COUNT=0
 
           if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
             ASSET_COUNT="$(
@@ -94,10 +97,17 @@ jobs:
                 --json assets \
                 --jq ".assets | map(select(.name == \"${ASSET}\" or .name == \"${CHECKSUM}\")) | unique_by(.name) | length"
             )"
+            DISCORD_RECEIPT_COUNT="$(
+              gh release view "${RELEASE_TAG}" \
+                --json assets \
+                --jq ".assets | map(select(.name | startswith(\"${DISCORD_RECEIPT_PREFIX}\"))) | length"
+            )"
 
-            if [[ "${ASSET_COUNT}" == "2" ]]; then
+            if [[ "${ASSET_COUNT}" == "2" && "${DISCORD_RECEIPT_COUNT}" -ge 1 ]]; then
               SHOULD_PUBLISH=false
-              REASON="GitHub Release and both verified assets already exist"
+              REASON="GitHub Release, both verified assets and the Discord delivery receipt already exist"
+            elif [[ "${ASSET_COUNT}" == "2" ]]; then
+              REASON="GitHub assets exist but the verified Discord delivery receipt is missing"
             else
               REASON="GitHub Release exists but one or more verified assets are missing"
             fi
@@ -113,6 +123,8 @@ jobs:
             echo "### Automatic release decision"
             echo "- Version: \`${SCRIPT_VERSION}\`"
             echo "- Tag: \`${RELEASE_TAG}\`"
+            echo "- Verified GitHub assets: \`${ASSET_COUNT}/2\`"
+            echo "- Discord delivery receipts: \`${DISCORD_RECEIPT_COUNT}\`"
             echo "- Publish required: \`${SHOULD_PUBLISH}\`"
             echo "- Reason: ${REASON}"
           } >> "${GITHUB_STEP_SUMMARY}"
