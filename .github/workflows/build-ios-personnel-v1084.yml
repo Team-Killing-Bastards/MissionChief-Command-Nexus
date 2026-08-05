@@ -50,23 +50,25 @@ jobs:
       - name: Apply iOS Personnel Assignment completeness patch
         run: python3 scripts/temporary-build-ios-personnel-v1084.py
 
-      - name: Remove one-use builder material
+      - name: Remove one-use non-workflow material
         shell: bash
         run: |
           set -euo pipefail
+          git checkout -- .github/workflows/validate-userscript.yml
           rm -f \
             .ios-personnel-v1084-trigger \
-            .github/workflows/build-ios-personnel-v1084.yml \
             scripts/temporary-build-ios-personnel-v1084.py
+          rm -rf scripts/__pycache__
 
       - name: Validate exact candidate
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
         shell: bash
         run: |
           set -euo pipefail
           node --check src/missionchief-command-nexus.user.js
           node scripts/validate-userscript.mjs
           node scripts/check-personnel-assignment-ios-completeness-v1084.mjs
-          python3 -m py_compile scripts/check_repository.py
           python3 scripts/check_repository.py
           git diff --check
 
@@ -83,6 +85,12 @@ jobs:
             exit 1
           fi
 
+          if git diff --cached --name-only | grep -q '^.github/workflows/'; then
+            echo 'The production candidate must not modify workflow files in this push.'
+            git diff --cached --name-only
+            exit 1
+          fi
+
           git commit -m "Restore complete iOS Personnel Assignment controls"
           git push origin HEAD:fix/ios-personnel-assignment-completeness-v1084
 
@@ -94,10 +102,9 @@ jobs:
             echo '- Command Nexus: `1.0.84`'
             echo '- Personnel Assignment: `1.3.9`'
             echo '- Mobile actions: Refresh, Import, Start, Pause and Stop retained'
-            echo '- Tools and reports: closed/open disclosure contract restored'
+            echo '- Tools and reports: complete and default-open on iOS'
             echo '- Native file input: permanently hidden from layout'
             echo '- iOS layout: 44px touch controls, 2-column grids, safe-area and 100dvh scrolling'
-            echo '- One-use builder material: removed before commit'
+            echo '- Non-workflow one-use material: removed before commit'
             echo '- Targeted candidate validation: passed before push'
-            echo '- Full permanent suite: delegated to normal PR validation workflow'
           } >> "${GITHUB_STEP_SUMMARY}"
