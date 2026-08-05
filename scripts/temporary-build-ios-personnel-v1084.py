@@ -17,6 +17,19 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
     return text.replace(old, new, 1)
 
 
+def sub_once(text: str, pattern: str, replacement, label: str) -> str:
+    updated, count = re.subn(
+        pattern,
+        replacement,
+        text,
+        count=1,
+        flags=re.MULTILINE,
+    )
+    if count != 1:
+        raise RuntimeError(f"{label}: expected exactly one match, found {count}")
+    return updated
+
+
 source = SOURCE_PATH.read_text(encoding="utf-8")
 
 source = replace_once(
@@ -45,16 +58,27 @@ if engine_reference_count < 1 or engine_reference_count > 12:
     )
 source = source.replace(old_engine_token, new_engine_token)
 
-file_input_anchor = "    fileInput.id = 'mf-personnel-import-file';\n"
-file_input_hardening = file_input_anchor + """    fileInput.hidden = true;
-    fileInput.setAttribute('aria-hidden', 'true');
-    fileInput.tabIndex = -1;
-    fileInput.style.display = 'none';
-"""
-source = replace_once(
+file_input_pattern = (
+    r"^(?P<indent>[ \t]*)fileInput\.id\s*=\s*"
+    r"['\"]mf-personnel-import-file['\"];[ \t]*$"
+)
+
+def harden_file_input(match: re.Match[str]) -> str:
+    indent = match.group("indent")
+    return "\n".join(
+        [
+            f"{indent}fileInput.id = 'mf-personnel-import-file';",
+            f"{indent}fileInput.hidden = true;",
+            f"{indent}fileInput.setAttribute('aria-hidden', 'true');",
+            f"{indent}fileInput.tabIndex = -1;",
+            f"{indent}fileInput.style.display = 'none';",
+        ]
+    )
+
+source = sub_once(
     source,
-    file_input_anchor,
-    file_input_hardening,
+    file_input_pattern,
+    harden_file_input,
     "hidden Personnel Assignment import input",
 )
 
