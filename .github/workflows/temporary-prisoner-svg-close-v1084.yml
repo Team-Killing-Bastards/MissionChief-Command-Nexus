@@ -32,9 +32,23 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          trap 'gh pr comment 257 --body "The automated v1.0.84 prisoner SVG close builder failed before committing a candidate. The branch remains draft and production is unchanged." || true' ERR
-
-          python3 scripts/temporary-build-prisoner-svg-close-v1084.py
+          BUILD_LOG="$(mktemp)"
+          if ! python3 scripts/temporary-build-prisoner-svg-close-v1084.py >"${BUILD_LOG}" 2>&1; then
+            {
+              echo 'The automated v1.0.84 prisoner SVG close builder stopped before committing.'
+              echo
+              echo '```text'
+              tail -c 5000 "${BUILD_LOG}"
+              echo
+              echo '```'
+              echo
+              echo 'The branch remains draft and production is unchanged.'
+            } > builder-failure.md
+            gh pr comment 257 --body-file builder-failure.md || true
+            cat "${BUILD_LOG}"
+            exit 1
+          fi
+          cat "${BUILD_LOG}"
 
           git rm -f --ignore-unmatch \
             .github/workflows/temporary-prisoner-svg-close-v1084.yml \
