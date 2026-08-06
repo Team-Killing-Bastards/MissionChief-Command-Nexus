@@ -1,0 +1,146 @@
+{
+  "tag": {
+    "bytes": 1641051,
+    "sha256": "6e397236f2c8827a9f3795c54a19603115113b6f92f8027f4ec800c5d08f12bb",
+    "normalised_sha256": "6e397236f2c8827a9f3795c54a19603115113b6f92f8027f4ec800c5d08f12bb",
+    "line_count": 48322,
+    "metadata": {
+      "@name": "MissionChief Command Nexus",
+      "@namespace": "https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus",
+      "@version": "1.0.84",
+      "@description": "Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.",
+      "@author": "MartyBlyth",
+      "@license": "MIT",
+      "@homepageURL": "https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus",
+      "@supportURL": "https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues",
+      "@match": "https://police.missionchief.co.uk/*",
+      "@grant": "none",
+      "@run-at": "document-end"
+    }
+  },
+  "greasy_fork": {
+    "bytes": 1641249,
+    "sha256": "07f831899947a8006be6723d486181ff93eedce131d590bec60ada3f6e28a168",
+    "normalised_sha256": "07f831899947a8006be6723d486181ff93eedce131d590bec60ada3f6e28a168",
+    "line_count": 48324,
+    "metadata": {
+      "@name": "MissionChief Command Nexus",
+      "@namespace": "https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus",
+      "@version": "1.0.84",
+      "@description": "Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.",
+      "@author": "MartyBlyth",
+      "@license": "MIT",
+      "@homepageURL": "https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus",
+      "@supportURL": "https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues",
+      "@match": "https://police.missionchief.co.uk/*",
+      "@grant": "none",
+      "@run-at": "document-end",
+      "@downloadURL": "https://update.greasyfork.org/scripts/587702/MissionChief%20Command%20Nexus.user.js",
+      "@updateURL": "https://update.greasyfork.org/scripts/587702/MissionChief%20Command%20Nexus.meta.js"
+    }
+  },
+  "byte_equal": false,
+  "line_ending_normalised_equal": false,
+  "first_differences": [
+    {
+      "line": 14,
+      "tag": "// ==/UserScript==",
+      "greasy_fork": "// @downloadURL https://update.greasyfork.org/scripts/587702/MissionChief%20Command%20Nexus.user.js"
+    },
+    {
+      "line": 15,
+      "tag": "",
+      "greasy_fork": "// @updateURL https://update.greasyfork.org/scripts/587702/MissionChief%20Command%20Nexus.meta.js"
+    },
+    {
+      "line": 16,
+      "tag": "(function () {",
+      "greasy_fork": "// ==/UserScript=="
+    },
+    {
+      "line": 17,
+      "tag": "    'use strict';",
+      "greasy_fork": ""
+    },
+    {
+      "line": 18,
+      "tag": "",
+      "greasy_fork": "(function () {"
+    },
+    {
+      "line": 19,
+      "tag": "    // One combined installation guard. Each retained module also keeps its",
+      "greasy_fork": "    'use strict';"
+    },
+    {
+      "line": 20,
+      "tag": "    // original guard, so enabling an old standalone copy cannot initialise a",
+      "greasy_fork": ""
+    },
+    {
+      "line": 21,
+      "tag": "    // second UI or a second automation engine in the same page context.",
+      "greasy_fork": "    // One combined installation guard. Each retained module also keeps its"
+    },
+    {
+      "line": 22,
+      "tag": "    if (window.__MC_COMPLETE_TOOLS_MERGED_V10668_V428__) return;",
+      "greasy_fork": "    // original guard, so enabling an old standalone copy cannot initialise a"
+    },
+    {
+      "line": 23,
+      "tag": "    window.__MC_COMPLETE_TOOLS_MERGED_V10668_V428__ = true;",
+      "greasy_fork": "    // second UI or a second automation engine in the same page context."
+    },
+    {
+      "line": 24,
+      "tag": "",
+      "greasy_fork": "    if (window.__MC_COMPLETE_TOOLS_MERGED_V10668_V428__) return;"
+    },
+    {
+      "line": 25,
+      "tag": "    // Runtime isolation preserves the behaviour of two standalone userscripts:",
+      "greasy_fork": "    window.__MC_COMPLETE_TOOLS_MERGED_V10668_V428__ = true;"
+    },
+    {
+      "line": 26,
+      "tag": "    // a startup fault in one module is reported without preventing the other",
+      "greasy_fork": ""
+    },
+    {
+      "line": 27,
+      "tag": "    // independent module from loading.",
+      "greasy_fork": "    // Runtime isolation preserves the behaviour of two standalone userscripts:"
+    },
+    {
+      "line": 28,
+      "tag": "    try {",
+      "greasy_fork": "    // a startup fault in one module is reported without preventing the other"
+    },
+    {
+      "line": 29,
+      "tag": "        /* ==================================================================",
+      "greasy_fork": "    // independent module from loading."
+    },
+    {
+      "line": 30,
+      "tag": "         * MODULE 1: UNIT, STATION & PERSONNEL TOOLS V4.2.8",
+      "greasy_fork": "    try {"
+    },
+    {
+      "line": 31,
+      "tag": "         * Original source retained below, excluding only its metadata block.",
+      "greasy_fork": "        /* =================================================================="
+    },
+    {
+      "line": 32,
+      "tag": "         * ================================================================== */",
+      "greasy_fork": "         * MODULE 1: UNIT, STATION & PERSONNEL TOOLS V4.2.8"
+    },
+    {
+      "line": 33,
+      "tag": "(function () {",
+      "greasy_fork": "         * Original source retained below, excluding only its metadata block."
+    }
+  ]
+}
