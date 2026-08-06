@@ -1,0 +1,110 @@
+name: Post-completion audit v1.0.84
+
+on:
+  push:
+    branches:
+      - release/reconcile-v1.0.84-discord
+    paths:
+      - '.github/workflows/post-completion-audit-v1084.yml'
+      - '.post-completion-audit-v1084-trigger'
+
+permissions:
+  contents: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out audit branch
+        uses: actions/checkout@v6
+        with:
+          ref: release/reconcile-v1.0.84-discord
+          fetch-depth: 0
+          token: ${{ github.token }}
+
+      - name: Audit completed release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git fetch origin main --tags --force
+          gh release view v1.0.84 --json tagName,url,isDraft,isPrerelease,targetCommitish,assets > /tmp/release.json
+          git show 'v1.0.84:src/missionchief-command-nexus.user.js' > /tmp/tag.user.js
+          curl --location --fail --silent --show-error \
+            'https://update.greasyfork.org/scripts/587702/MissionChief%20Command%20Nexus.user.js' \
+            --output /tmp/gf.user.js
+
+          python3 - <<'PY' > .release-v1084-post-completion-audit.json
+          import hashlib
+          import json
+          import re
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          release = json.loads(Path('/tmp/release.json').read_text())
+          tag = Path('/tmp/tag.user.js').read_text(encoding='utf-8-sig')
+          gf = Path('/tmp/gf.user.js').read_text(encoding='utf-8-sig')
+
+          def normalise(text):
+              text = text.replace('\r\n', '\n').replace('\r', '\n')
+              text = re.sub(
+                  r'^\s*//\s*@(downloadURL|updateURL|installURL)\s+.*\n?',
+                  '', text, flags=re.I | re.M,
+              )
+              text = '\n'.join(line.rstrip(' \t') for line in text.split('\n'))
+              return text.rstrip() + '\n'
+
+          def version(text):
+              m = re.search(r'^\s*//\s*@version\s+(\S+)\s*$', text, re.M)
+              return m.group(1) if m else None
+
+          assets = release.get('assets') or []
+          names = [asset.get('name') for asset in assets]
+          receipts = [name for name in names if (name or '').startswith('Command-Nexus-Discord-Receipt-v1.0.84-')]
+          tag_norm = normalise(tag)
+          gf_norm = normalise(gf)
+          result = {
+              'checked_at': datetime.now(timezone.utc).isoformat(),
+              'release': {
+                  'tag': release.get('tagName'),
+                  'url': release.get('url'),
+                  'draft': release.get('isDraft'),
+                  'prerelease': release.get('isPrerelease'),
+                  'target_commitish': release.get('targetCommitish'),
+                  'asset_names': names,
+                  'userscript_asset_present': 'MissionChief-Command-Nexus-1.0.84.user.js' in names,
+                  'checksum_asset_present': 'MissionChief-Command-Nexus-1.0.84.user.js.sha256' in names,
+                  'discord_receipt_assets': receipts,
+              },
+              'greasy_fork': {
+                  'version': version(gf),
+                  'normalised_exact_match': gf_norm == tag_norm,
+                  'normalised_sha256': hashlib.sha256(gf_norm.encode()).hexdigest(),
+              },
+              'tag': {
+                  'version': version(tag),
+                  'normalised_sha256': hashlib.sha256(tag_norm.encode()).hexdigest(),
+              },
+          }
+          result['complete'] = (
+              result['release']['draft'] is False
+              and result['release']['userscript_asset_present']
+              and result['release']['checksum_asset_present']
+              and len(receipts) >= 1
+              and result['greasy_fork']['version'] == '1.0.84'
+              and result['greasy_fork']['normalised_exact_match']
+          )
+          print(json.dumps(result, indent=2))
+          PY
+
+          git rm -f --ignore-unmatch \
+            .github/workflows/post-completion-audit-v1084.yml \
+            .post-completion-audit-v1084-trigger
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Record post-completion v1.0.84 audit'
+          git push origin HEAD:refs/heads/release/reconcile-v1.0.84-discord
