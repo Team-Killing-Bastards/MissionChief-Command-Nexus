@@ -1,0 +1,60 @@
+name: Fix v1.0.84 README engine label
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/fix-readme-engine-v1084.yml'
+      - '.github/fix-readme-engine-v1084-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fix-readme-engine-v1084
+  cancel-in-progress: true
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ github.token }}
+
+      - name: Align README with verified source
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('README.md')
+          text = path.read_text(encoding='utf-8')
+          old = '**Current version:** `1.0.84` · **Mission Finder engine:** `V10.6.143`'
+          new = '**Current version:** `1.0.84` · **Mission Finder engine:** `V10.6.144`'
+          if text.count(old) != 1:
+              raise SystemExit('Expected exactly one stale README engine label')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+
+          git rm -f --ignore-unmatch \
+            .github/workflows/fix-readme-engine-v1084.yml \
+            .github/fix-readme-engine-v1084-trigger.txt
+
+          python3 scripts/check_repository.py
+          git diff --check
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Align v1.0.84 README engine label'
+          git push origin HEAD:refs/heads/main
