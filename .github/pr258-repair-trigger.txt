@@ -1,2 +1,0 @@
-Repair and revalidate PR #258 for Command Nexus v1.0.84.
-Triggered: 2026-08-06T07:22:00+01:00
