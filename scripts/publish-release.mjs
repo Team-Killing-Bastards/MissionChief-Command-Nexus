@@ -255,8 +255,6 @@ async function createOrStageRelease(context, { tag, target, title, notes }) {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      tag_name: tag,
-      target_commitish: target,
       name: title,
       body: notes,
       draft: true,
@@ -413,8 +411,6 @@ async function publishRelease(context, release, { tag, target, title, notes }) {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      tag_name: tag,
-      target_commitish: target,
       name: title,
       body: notes,
       draft: false,
