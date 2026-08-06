@@ -1,4 +1,5 @@
 name: Repository quality
+# Every owner-authored main push reconciles GitHub, Greasy Fork and Discord release state.
 
 on:
   push:
