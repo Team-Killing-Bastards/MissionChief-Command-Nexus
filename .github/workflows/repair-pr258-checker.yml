@@ -1,0 +1,74 @@
+name: Repair PR 258 checker
+
+on:
+  push:
+    branches:
+      - fix/ios-personnel-assignment-completeness-v1084
+    paths:
+      - '.github/workflows/repair-pr258-checker.yml'
+      - '.repair-pr258-checker-trigger'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: repair-pr258-checker
+  cancel-in-progress: true
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out PR branch
+        uses: actions/checkout@v6
+        with:
+          ref: fix/ios-personnel-assignment-completeness-v1084
+          fetch-depth: 0
+          token: ${{ github.token }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Correct stale current-version assertions
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('scripts/check-iphone-mission-ui.mjs')
+          text = path.read_text(encoding='utf-8')
+          replacements = {
+              "requireText('// @version      1.0.83', 'v1.0.51 metadata');":
+                  "requireText('// @version      1.0.84', 'current userscript metadata');",
+              "requireText(' * MODULE 2: MISSION FINDER V10.6.143', 'V10.6.120 module header');":
+                  "requireText(' * MODULE 2: MISSION FINDER V10.6.144', 'current Mission Finder module header');",
+          }
+          for old, new in replacements.items():
+              if text.count(old) != 1:
+                  raise SystemExit(f'Expected exactly one stale assertion: {old}')
+              text = text.replace(old, new, 1)
+          path.write_text(text, encoding='utf-8')
+          PY
+
+          git rm -f --ignore-unmatch \
+            .github/workflows/repair-pr258-checker.yml \
+            .repair-pr258-checker-trigger
+
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          node scripts/check-iphone-mission-ui.mjs
+          node scripts/check-personnel-assignment-ios-completeness-v1084.mjs
+          git diff --check
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Fix v1.0.84 current-version assertions'
+          git push origin HEAD:refs/heads/fix/ios-personnel-assignment-completeness-v1084
