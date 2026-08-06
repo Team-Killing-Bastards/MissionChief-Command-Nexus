@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Final owner-authorised validation trigger for Command Nexus v1.0.84.
 import { readFile } from 'node:fs/promises';
 
 const source = await readFile('src/missionchief-command-nexus.user.js', 'utf8');
