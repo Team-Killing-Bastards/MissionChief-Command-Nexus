@@ -1,0 +1,108 @@
+name: Inspect v1.0.84 publisher run
+
+on:
+  push:
+    branches:
+      - release/reconcile-v1.0.84-discord
+    paths:
+      - '.github/workflows/inspect-v1084-publisher-run.yml'
+      - '.inspect-v1084-publisher-run-trigger'
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out diagnostic branch
+        uses: actions/checkout@v6
+        with:
+          ref: release/reconcile-v1.0.84-discord
+          fetch-depth: 0
+          token: ${{ github.token }}
+
+      - name: Inspect recent trusted publisher runs
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          gh api \
+            'repos/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/runs?event=pull_request_target&per_page=20' \
+            > /tmp/runs.json
+
+          python3 - <<'PY' > /tmp/selected.json
+          import json
+          from pathlib import Path
+
+          data = json.loads(Path('/tmp/runs.json').read_text())
+          runs = data.get('workflow_runs', [])
+          selected = []
+          for run in runs:
+              created = run.get('created_at') or ''
+              if created >= '2026-08-06T07:00:00Z':
+                  selected.append({
+                      'id': run.get('id'),
+                      'name': run.get('name'),
+                      'event': run.get('event'),
+                      'status': run.get('status'),
+                      'conclusion': run.get('conclusion'),
+                      'head_sha': run.get('head_sha'),
+                      'created_at': created,
+                      'updated_at': run.get('updated_at'),
+                      'html_url': run.get('html_url'),
+                      'run_number': run.get('run_number'),
+                  })
+          Path('/tmp/selected.json').write_text(json.dumps(selected, indent=2) + '\n')
+          PY
+
+          python3 - <<'PY' > .release-v1084-publisher-runs.json
+          import json
+          import subprocess
+          from pathlib import Path
+
+          runs = json.loads(Path('/tmp/selected.json').read_text())
+          output = []
+          for run in runs:
+              raw = subprocess.check_output([
+                  'gh', 'api',
+                  f"repos/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/runs/{run['id']}/jobs?per_page=100",
+              ], text=True)
+              jobs_data = json.loads(raw)
+              jobs = []
+              for job in jobs_data.get('jobs', []):
+                  jobs.append({
+                      'id': job.get('id'),
+                      'name': job.get('name'),
+                      'status': job.get('status'),
+                      'conclusion': job.get('conclusion'),
+                      'started_at': job.get('started_at'),
+                      'completed_at': job.get('completed_at'),
+                      'html_url': job.get('html_url'),
+                      'steps': [
+                          {
+                              'name': step.get('name'),
+                              'status': step.get('status'),
+                              'conclusion': step.get('conclusion'),
+                              'number': step.get('number'),
+                          }
+                          for step in job.get('steps', [])
+                      ],
+                  })
+              output.append({**run, 'jobs': jobs})
+          print(json.dumps(output, indent=2))
+          PY
+
+          git rm -f --ignore-unmatch \
+            .github/workflows/inspect-v1084-publisher-run.yml \
+            .inspect-v1084-publisher-run-trigger
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Record v1.0.84 publisher run diagnostic'
+          git push origin HEAD:refs/heads/release/reconcile-v1.0.84-discord
