@@ -1,0 +1,25 @@
+{
+  "checked_at": "2026-08-06T07:09:27.983Z",
+  "release": {
+    "tag": "v1.0.84",
+    "url": "https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/tag/untagged-659d5446134a8475c4f1",
+    "target_commitish": "d0e956fb5df60bbc029fddf17e06c7be7d8dcaf9",
+    "draft": true,
+    "prerelease": false,
+    "assets": [],
+    "expected_asset_present": false,
+    "checksum_asset_present": false,
+    "discord_receipt_assets": []
+  },
+  "tag": {
+    "sha": "d0e956fb5df60bbc029fddf17e06c7be7d8dcaf9",
+    "version": "1.0.84",
+    "sha256": "6e397236f2c8827a9f3795c54a19603115113b6f92f8027f4ec800c5d08f12bb"
+  },
+  "greasy_fork": {
+    "http_status": 200,
+    "version": "1.0.84",
+    "sha256": "07f831899947a8006be6723d486181ff93eedce131d590bec60ada3f6e28a168",
+    "exact_tag_source_match": false
+  }
+}
