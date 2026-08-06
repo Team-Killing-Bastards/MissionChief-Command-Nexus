@@ -17,7 +17,7 @@
 </tr>
 </table>
 
-**Current version:** `1.0.83` · **Mission Finder engine:** `V10.6.143` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
+**Current version:** `1.0.84` · **Mission Finder engine:** `V10.6.143` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)
@@ -111,6 +111,14 @@ Command Nexus is designed for players who operate at scale and need repeatable r
 > Keep **one active Command Nexus installation only**. The combined userscript already contains both operational engines. Running legacy copies beside it can create duplicate interfaces, observers, selections, or dispatch behaviour.
 
 The canonical source is [`src/missionchief-command-nexus.user.js`](src/missionchief-command-nexus.user.js) on `main`. Greasy Fork is the supported public installation and update channel.
+
+## iOS Safari Personnel Assignment completeness
+
+- Mobile retains **Refresh Stations**, **Start**, **Pause** and **Stop** as full touch controls.
+- **Tools and reports** opens by default on iOS and contains Quick Refresh Register, Full Verify Register, Export Register, Import Register, station/overall report actions, Debug and Clear Log.
+- The native JSON file input is permanently hidden from layout; the visible Import Register button remains the only file-picker control.
+- Every compact disclosure has a visible touch-sized header, clear plus/minus state and reliable closed/open body behaviour.
+- The panel uses two-column mobile action grids, `100dvh` scrolling and iOS safe-area padding without removing desktop functionality.
 
 ## Capability matrix
 

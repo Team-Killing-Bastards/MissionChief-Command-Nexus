@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.83
+// @version      1.0.84
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -66,7 +66,7 @@
 
     const UNIT_VERSION = '3.3.9';
     const STATION_VERSION = '1.3.3';
-    const PERSONNEL_VERSION = '1.3.8';
+    const PERSONNEL_VERSION = '1.3.9';
     const PERSONNEL_TRAINING_CODE = 'critical_care';
     const PERSONNEL_TRAINING_LABEL = 'Critical Care';
     const PERSONNEL_TARGET_VEHICLE_TYPE_ID = '5';
@@ -2204,7 +2204,8 @@
             container,
             selectors,
             label,
-            id
+            id,
+            defaultOpen = false
         ) {
             if (!container) return null;
             const buttons = selectors
@@ -2216,7 +2217,7 @@
                 id,
                 label,
                 buttons,
-                false
+                defaultOpen
             );
             if (!details) return null;
             details.classList.add('mc-compact-action-disclosure');
@@ -2289,7 +2290,8 @@
                 '#mc-personnel-clear'
             ],
             'Tools and reports',
-            'mc-compact-personnel-tools'
+            'mc-compact-personnel-tools',
+            isIosSafariWebsite()
         );
         createCompactDisclosure(
             'mc-compact-personnel-status',
@@ -2853,6 +2855,145 @@
                 min-height: 36px;
                 font-size: 16px;
             }
+
+
+            /* iOS Safari Personnel Assignment completeness contract. */
+            #mc-namer-panel.mc-ios-safari #mc-personnel-import-register-file {
+                display: none !important;
+                position: absolute !important;
+                inline-size: 0 !important;
+                block-size: 0 !important;
+                overflow: hidden !important;
+                opacity: 0 !important;
+                pointer-events: none !important;
+            }
+
+            #mc-namer-panel.mc-ios-safari #mc-namer-body {
+                min-height: 0;
+                max-height: calc(
+                    100dvh
+                    - env(safe-area-inset-top, 0px)
+                    - env(safe-area-inset-bottom, 0px)
+                    - 58px
+                );
+                overflow-y: auto !important;
+                overscroll-behavior: contain;
+                -webkit-overflow-scrolling: touch;
+                padding-bottom: max(14px, env(safe-area-inset-bottom, 0px));
+            }
+
+            #mc-namer-panel.mc-ios-safari .mc-nexus-action-bar {
+                display: grid !important;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 8px;
+                align-items: stretch;
+            }
+
+            #mc-namer-panel.mc-ios-safari .mc-nexus-action-bar > button {
+                display: inline-flex !important;
+                align-items: center;
+                justify-content: center;
+                inline-size: 100%;
+                min-inline-size: 0;
+                min-height: 44px !important;
+                padding: 8px 10px;
+                line-height: 1.2;
+                white-space: normal;
+                overflow-wrap: anywhere;
+                touch-action: manipulation;
+            }
+
+            #mc-namer-panel.mc-ios-safari #mc-personnel-refresh,
+            #mc-namer-panel.mc-ios-safari #mc-personnel-start,
+            #mc-namer-panel.mc-ios-safari .mc-compact-action-disclosure {
+                grid-column: 1 / -1;
+            }
+
+            #mc-namer-panel.mc-ios-safari .mc-compact-disclosure {
+                display: block !important;
+                min-inline-size: 0;
+                margin: 0;
+                border: 1px solid #4b5563;
+                border-radius: 7px;
+                background: #111827;
+                overflow: hidden;
+            }
+
+            #mc-namer-panel.mc-ios-safari .mc-compact-disclosure-summary {
+                display: flex !important;
+                align-items: center;
+                justify-content: space-between;
+                gap: 8px;
+                min-height: 44px !important;
+                padding: 9px 11px;
+                color: #f8fafc;
+                background: #1f2937;
+                font-weight: 700;
+                line-height: 1.2;
+                list-style: none;
+                cursor: pointer;
+                user-select: none;
+                touch-action: manipulation;
+            }
+
+            #mc-namer-panel.mc-ios-safari
+            .mc-compact-disclosure-summary::-webkit-details-marker {
+                display: none;
+            }
+
+            #mc-namer-panel.mc-ios-safari .mc-compact-summary-mark::before {
+                content: "+";
+                color: #93c5fd;
+                font-size: 18px;
+                line-height: 1;
+            }
+
+            #mc-namer-panel.mc-ios-safari
+            .mc-compact-disclosure[open]
+            > .mc-compact-disclosure-summary
+            .mc-compact-summary-mark::before {
+                content: "−";
+            }
+
+            #mc-namer-panel.mc-ios-safari .mc-compact-disclosure:not([open])
+            > .mc-compact-disclosure-body {
+                display: none !important;
+            }
+
+            #mc-namer-panel.mc-ios-safari .mc-compact-disclosure[open]
+            > .mc-compact-disclosure-body {
+                display: block !important;
+                min-inline-size: 0;
+                padding: 8px;
+                border-top: 1px solid #374151;
+            }
+
+            #mc-namer-panel.mc-ios-safari .mc-compact-action-disclosure[open]
+            > .mc-compact-disclosure-body {
+                display: grid !important;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 8px;
+            }
+
+            #mc-namer-panel.mc-ios-safari .mc-compact-action-disclosure button {
+                display: inline-flex !important;
+                align-items: center;
+                justify-content: center;
+                inline-size: 100%;
+                min-inline-size: 0;
+                min-height: 44px !important;
+                padding: 8px;
+                white-space: normal;
+                overflow-wrap: anywhere;
+                touch-action: manipulation;
+            }
+
+            #mc-namer-panel.mc-ios-safari .mc-nexus-personnel-grid
+            > .mc-compact-disclosure {
+                margin: 0 8px 8px;
+            }
+
+            /* End iOS Safari Personnel Assignment completeness contract. */
 
 
 
@@ -10730,7 +10871,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.143
+         * MODULE 2: MISSION FINDER V10.6.144
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {

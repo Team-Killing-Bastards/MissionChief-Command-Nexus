@@ -4,6 +4,16 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.84] - 2026-08-05
+
+### Changed
+
+- Restore every Personnel Assignment action on iPhone and iPad Safari: Refresh Stations, Import, Start, Pause and Stop.
+- Keep the native JSON file input hidden so it cannot displace or cover the visible mobile action buttons.
+- Restore the Tools and reports disclosure so closed content stays hidden and every status/report tool appears when opened.
+- Add touch-sized two-column mobile grids, dynamic-viewport scrolling and iOS safe-area protection without removing desktop functionality.
+- Increased the unified userscript version from `1.0.83` to `1.0.84`.
+
 ## [1.0.83] - 2026-08-05
 
 ### Changed

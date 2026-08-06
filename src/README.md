@@ -10,7 +10,7 @@ src/missionchief-command-nexus.user.js
 
 | Item | Value |
 |---|---|
-| Command Nexus version | `1.0.83` |
+| Command Nexus version | `1.0.84` |
 | Mission Finder baseline | `V10.6.143` |
 | Unit, Station & Personnel baseline | `V4.2.8` |
 | Licence | MIT |

@@ -24,8 +24,8 @@ function extractBetween(startText, endText, label) {
   return source.slice(start, end);
 }
 
-requireText('// @version      1.0.83', 'v1.0.51 metadata');
-requireText(' * MODULE 2: MISSION FINDER V10.6.143', 'V10.6.120 module header');
+requireText('// @version      1.0.84', 'current v1.0.84 metadata');
+requireText(' * MODULE 2: MISSION FINDER V10.6.144', 'current V10.6.144 module header');
 requireText('allowUnknown: true', 'unknown or stale type-8 IRV fallback');
 requireText('allowProtected: true', 'known specialist type-8 IRV final fallback');
 requireText('protectedFallback.push(checkbox)', 'specialist fallback partition');
@@ -84,6 +84,5 @@ for (const requiredToken of [
     fail(`Named trained Police vehicle contract changed: ${requiredToken}`);
   }
 }
-
 
 console.log('Police IRV fallback and Missing Personnel regression checks passed.');
