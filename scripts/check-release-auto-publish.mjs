@@ -20,11 +20,23 @@ function requireText(text, label) {
 
 requireText(
   "push:\n    branches:\n      - main",
-  'every main push starts repository release reconciliation'
+  'normal main pushes can reconcile release state'
+);
+requireText(
+  "pull_request_target:\n    types:\n      - closed",
+  'trusted merged-PR close events reconcile release state'
+);
+requireText(
+  "github.event_name == 'pull_request_target' &&",
+  'release-state job recognises trusted PR close events'
+);
+requireText(
+  "github.event.pull_request.merged == true) ||",
+  'closed but unmerged PRs cannot publish'
 );
 requireText(
   "github.event_name == 'push' ||",
-  'release-state job runs for main push events'
+  'release-state job retains main-push recovery'
 );
 requireText(
   "github.event_name == 'workflow_dispatch'",
@@ -55,12 +67,6 @@ requireText(
   'incomplete releases are retried after packaging'
 );
 
-if (workflow.includes('pull_request_target:')) {
-  fail(
-    'Release publication must use the single main-push path, not a second pull_request_target publisher'
-  );
-}
-
 const publishGate =
   "if: needs.release-state.outputs.should_publish == 'true'";
 const gateCount = workflow.split(publishGate).length - 1;
@@ -70,6 +76,15 @@ if (gateCount !== 1) {
   );
 }
 
+const publisherCount = workflow.split(
+  'uses: ./.github/workflows/release.yml'
+).length - 1;
+if (publisherCount !== 1) {
+  fail(
+    `Expected exactly one canonical release publisher; found ${publisherCount}`
+  );
+}
+
 console.log(
-  'Every-main-push release reconciliation and receipt-aware completion checks passed.'
+  'Merged-PR, main-push and manual release reconciliation with receipt-aware completion checks passed.'
 );
