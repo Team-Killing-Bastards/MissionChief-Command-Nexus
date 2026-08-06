@@ -1,0 +1,95 @@
+name: Repair PR 258 v1.0.84 release candidate
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/repair-pr258-v1084.yml'
+      - '.github/pr258-repair-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: repair-pr258-v1084
+  cancel-in-progress: true
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out release branch
+        uses: actions/checkout@v6
+        with:
+          ref: fix/ios-personnel-assignment-completeness-v1084
+          fetch-depth: 0
+          token: ${{ github.token }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Rebase, clean and validate v1.0.84 candidate
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          git fetch origin main fix/ios-personnel-assignment-completeness-v1084 --force
+          git checkout -B fix/ios-personnel-assignment-completeness-v1084 origin/fix/ios-personnel-assignment-completeness-v1084
+          git merge --no-edit origin/main
+
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('scripts/check-iphone-mission-ui.mjs')
+          text = path.read_text(encoding='utf-8')
+          replacements = {
+              "requireText('// @version      1.0.83', 'v1.0.51 metadata');":
+                  "requireText('// @version      1.0.84', 'current userscript metadata');",
+              "requireText(' * MODULE 2: MISSION FINDER V10.6.143', 'V10.6.120 module header');":
+                  "requireText(' * MODULE 2: MISSION FINDER V10.6.144', 'current Mission Finder module header');",
+          }
+          for old, new in replacements.items():
+              if text.count(old) != 1:
+                  raise SystemExit(f'Expected exactly one stale assertion: {old}')
+              text = text.replace(old, new, 1)
+          path.write_text(text, encoding='utf-8')
+          PY
+
+          git rm -f --ignore-unmatch \
+            .github/workflows/temporary-scan-current-version-assertions.yml \
+            .scan-current-version-assertions-trigger \
+            .github/workflows/repair-pr258-v1084.yml \
+            .github/pr258-repair-trigger.txt \
+            .github/greasyfork-sync-trigger.txt
+
+          if find .github/workflows -maxdepth 1 -type f \( -name 'temporary-*.yml' -o -name 'temporary-*.yaml' \) | grep -q .; then
+            echo 'Temporary workflows remain in the release candidate.'
+            find .github/workflows -maxdepth 1 -type f \( -name 'temporary-*.yml' -o -name 'temporary-*.yaml' \)
+            exit 1
+          fi
+
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          for check in scripts/check-*.mjs; do
+            node "$check"
+          done
+          python3 scripts/check_repository.py
+          git diff --check
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Rebase and validate v1.0.84 release candidate'
+          git push --force-with-lease origin HEAD:refs/heads/fix/ios-personnel-assignment-completeness-v1084
+
+          gh pr comment 258 --body 'The v1.0.84 release candidate was rebuilt on current main. The stale iPhone UI version assertion was corrected, all one-use workflows/triggers were removed, every permanent userscript regression passed, repository integrity passed, and the clean head was pushed for normal PR validation.' || true
