@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Owner-authorised validation retrigger for Command Nexus v1.0.84.
 
 import { readFile } from 'node:fs/promises';
 
