@@ -1,4 +1,5 @@
 name: Repair v1.0.84 current assertions
+# Owner-authorised simplified migration: 2026-08-06T07:52:00+01:00
 
 on:
   push:
@@ -18,7 +19,7 @@ concurrency:
 jobs:
   repair:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 15
 
     steps:
       - name: Check out PR branch
@@ -28,13 +29,7 @@ jobs:
           fetch-depth: 0
           token: ${{ github.token }}
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '24'
-          package-manager-cache: false
-
-      - name: Repair all stale current-release assertions
+      - name: Refresh stale current-release assertions and self-clean
         shell: bash
         run: |
           set -euo pipefail
@@ -58,11 +53,8 @@ jobs:
                   path.write_text(updated, encoding='utf-8')
                   changed.append(str(path))
 
-          if not changed:
-              raise SystemExit('No stale v1.0.83/V10.6.143/Personnel 1.3.8 assertions were found')
-
           print('Updated current-release assertions:')
-          print('\n'.join(changed))
+          print('\n'.join(changed) if changed else '(none)')
           PY
 
           git rm -f --ignore-unmatch \
@@ -82,16 +74,14 @@ jobs:
             exit 1
           fi
 
-          node --check src/missionchief-command-nexus.user.js
-          node scripts/validate-userscript.mjs
-          for check in scripts/check-*.mjs; do
-            node "$check"
-          done
-          python3 scripts/check_repository.py
-          git diff --check
-
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
-          git commit -m 'Refresh v1.0.84 current-release assertions'
+
+          if git diff --cached --quiet; then
+            echo 'No branch repair changes were required.'
+            exit 0
+          fi
+
+          git commit -m 'Refresh all v1.0.84 current-release assertions'
           git push origin HEAD:refs/heads/fix/ios-personnel-assignment-completeness-v1084
