@@ -1,0 +1,184 @@
+[
+  {
+    "id": 31079674810,
+    "name": "Repository quality",
+    "event": "pull_request_target",
+    "status": "completed",
+    "conclusion": "failure",
+    "head_sha": "80a94315cd3bdf12171355cbcf020e3d10badeaa",
+    "created_at": "2026-08-06T07:06:45Z",
+    "updated_at": "2026-08-06T07:07:16Z",
+    "html_url": "https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/runs/31079674810",
+    "run_number": 2117,
+    "jobs": [
+      {
+        "id": 92545376232,
+        "name": "Detect unpublished canonical version",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-08-06T07:06:48Z",
+        "completed_at": "2026-08-06T07:06:58Z",
+        "html_url": "https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/runs/31079674810/job/92545376232",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Check out trusted main",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Set up Node.js",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Validate source and inspect release state",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Post Set up Node.js",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Post Check out trusted main",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 9
+          }
+        ]
+      },
+      {
+        "id": 92545378443,
+        "name": "Repository integrity",
+        "status": "completed",
+        "conclusion": "skipped",
+        "started_at": "2026-08-06T07:06:46Z",
+        "completed_at": "2026-08-06T07:06:45Z",
+        "html_url": "https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/runs/31079674810/job/92545378443",
+        "steps": []
+      },
+      {
+        "id": 92545418120,
+        "name": "Publish, verify and announce canonical release / Package, reconcile, verify and announce userscript release",
+        "status": "completed",
+        "conclusion": "failure",
+        "started_at": "2026-08-06T07:07:04Z",
+        "completed_at": "2026-08-06T07:07:15Z",
+        "html_url": "https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/runs/31079674810/job/92545418120",
+        "steps": [
+          {
+            "name": "Set up job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 1
+          },
+          {
+            "name": "Check out current release automation",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 2
+          },
+          {
+            "name": "Set up Node.js",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 3
+          },
+          {
+            "name": "Resolve immutable release source",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 4
+          },
+          {
+            "name": "Validate tagged repository and current publisher",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 5
+          },
+          {
+            "name": "Confirm changelog contains mission brief",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 6
+          },
+          {
+            "name": "Confirm deployment configuration",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 7
+          },
+          {
+            "name": "Prepare release asset, checksum and patch log",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 8
+          },
+          {
+            "name": "Reconcile and publish GitHub release",
+            "status": "completed",
+            "conclusion": "failure",
+            "number": 9
+          },
+          {
+            "name": "Independently verify published assets",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 10
+          },
+          {
+            "name": "Verify deployment and notify Discord",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 11
+          },
+          {
+            "name": "Post Set up Node.js",
+            "status": "completed",
+            "conclusion": "skipped",
+            "number": 21
+          },
+          {
+            "name": "Post Check out current release automation",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 22
+          },
+          {
+            "name": "Complete job",
+            "status": "completed",
+            "conclusion": "success",
+            "number": 23
+          }
+        ]
+      },
+      {
+        "id": 92545419753,
+        "name": "Publish, verify and announce canonical release / Prepare release version",
+        "status": "completed",
+        "conclusion": "skipped",
+        "started_at": "2026-08-06T07:06:59Z",
+        "completed_at": "2026-08-06T07:07:01Z",
+        "html_url": "https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/runs/31079674810/job/92545419753",
+        "steps": []
+      }
+    ]
+  }
+]
