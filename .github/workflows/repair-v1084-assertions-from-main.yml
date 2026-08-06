@@ -1,5 +1,5 @@
 name: Repair PR 258 v1.0.84 assertions from main
-# Owner-authorised retrigger: 2026-08-06T07:38:00+01:00
+# Owner-authorised retrigger: 2026-08-06T07:49:00+01:00
 
 on:
   push:
