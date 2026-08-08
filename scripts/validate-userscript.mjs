@@ -19,6 +19,18 @@ function runV1087ValidationBootstrap() {
     throw new Error(`v1.0.87 candidate builder failed with status ${build.status}.`);
   }
 
+  // The GitHub App token can push product files but cannot create/update workflow files.
+  // The permanent v1.0.87 workflow registration is applied separately through the
+  // GitHub connector after this clean product candidate is committed.
+  const restoreWorkflow = spawnSync(
+    'git',
+    ['restore', '.github/workflows/validate-userscript.yml'],
+    { stdio: 'inherit' },
+  );
+  if (restoreWorkflow.status !== 0) {
+    throw new Error('Unable to restore validate-userscript.yml after the v1.0.87 build.');
+  }
+
   const selfPath = path.resolve('scripts/validate-userscript.mjs');
   let self = fs.readFileSync(selfPath, 'utf8');
   const startMarker = '// BEGIN V1087 VALIDATION BOOTSTRAP';
