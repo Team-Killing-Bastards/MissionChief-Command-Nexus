@@ -1,1 +1,1 @@
-Prime merged-PR hardened v1.0.86 Dispatch Centre-first build trigger.
+Run hardened native Dispatch Centre list builder for v1.0.86 from the current main baseline.
