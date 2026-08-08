@@ -4,6 +4,8 @@ on:
   push:
     paths:
       - '.github/build-v1086-dispatch-centre-first.trigger'
+  pull_request_target:
+    types: [closed]
 
 permissions:
   contents: write
@@ -14,6 +16,10 @@ concurrency:
 
 jobs:
   build:
+    if: >-
+      github.event_name == 'push' ||
+      (github.event.pull_request.merged == true &&
+       github.event.pull_request.head.ref == 'agent/build-v1086-dispatch-centre-first')
     runs-on: ubuntu-latest
     steps:
       - name: Check out v1.0.86 feature branch
