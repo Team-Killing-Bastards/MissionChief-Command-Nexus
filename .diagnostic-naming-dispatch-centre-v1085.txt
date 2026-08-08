@@ -1,3 +1,230 @@
+===== state and shared helpers | 900-1125 =====
+00900:         ]),
+00901:         COASTGUARD: Object.freeze([
+00902:             '57', '58', '59', '60', '61', '62', '63', '65', '66', '70', '71', '72'
+00903:         ]),
+00904:         RNLI: Object.freeze([
+00905:             '67', '68', '69', '70', '74'
+00906:         ]),
+00907:         SAR: Object.freeze([
+00908:             '61', '62', '63', '66', '70', '71', '72', '85', '86', '87', '88', '89', '93', '99', '102'
+00909:         ]),
+00910:         EOD: Object.freeze([
+00911:             '109', '110', '111', '112', '113', '114'
+00912:         ]),
+00913:         RECOVERY: Object.freeze([
+00914:             '105'
+00915:         ])
+00916:     });
+00917: 
+00918:     const STATION_TYPES = {
+00919:         ALL: "All station types",
+00920:         AMBULANCE: "Ambulance",
+00921:         FIRE: "Fire",
+00922:         POLICE: "Police",
+00923:         AIR: "Air / Heli",
+00924:         COASTGUARD: "Coastguard",
+00925:         RNLI: "RNLI / Lifeboat",
+00926:         SAR: "SAR",
+00927:         AIRFIELD: "Airfield",
+00928:         EOD: "EOD / Bomb",
+00929:         RECOVERY: "Recovery",
+00930:         OTHER: "Other"
+00931:     };
+00932: 
+00933: 
+00934:     // MissionChief's own building type IDs. These are read from the parent
+00935:     // .building_list_li element and do not depend on uploaded station images.
+00936:     const STATION_BUILDING_TYPE_INFO = {
+00937:         0:  { stationType: 'FIRE',       suffix: '-FS',   label: 'Fire station' },
+00938:         18: { stationType: 'FIRE',       suffix: '-FS',   label: 'Small fire station' },
+00939:         2:  { stationType: 'AMBULANCE',  suffix: '-AS',   label: 'Ambulance station' },
+00940:         20: { stationType: 'AMBULANCE',  suffix: '-AS',   label: 'Small ambulance station' },
+00941:         6:  { stationType: 'POLICE',     suffix: '-PS',   label: 'Police station' },
+00942:         19: { stationType: 'POLICE',     suffix: '-PS',   label: 'Small police station' },
+00943:         5:  { stationType: 'AIR',        suffix: '-AA',   label: 'Air ambulance station' },
+00944:         13: { stationType: 'AIR',        suffix: '-PH',   label: 'Police helicopter station' },
+00945:         27: { stationType: 'RNLI',       suffix: '-RNLI', label: 'RNLI / lifeboat station' },
+00946:         28: { stationType: 'COASTGUARD', suffix: '-CG',   label: 'Coastguard station' },
+00947:         30: { stationType: 'COASTGUARD', suffix: '-CG',   label: 'Coastguard helicopter station' },
+00948:         33: { stationType: 'SAR',        suffix: '-SAR',  label: 'Search and rescue station' },
+00949:         34: { stationType: 'RECOVERY',   suffix: '-REC',  label: 'Recovery station' },
+00950:         35: { stationType: 'EOD',        suffix: '-EOD',  label: 'EOD / bomb disposal station' }
+00951:     };
+00952: 
+00953:     const STATE = {
+00954:         running: false,
+00955:         paused: false,
+00956:         stopped: false,
+00957:         debug: false,
+00958:         stations: [],
+00959:         filteredStations: [],
+00960:         stationIndex: 0,
+00961:         renamedCount: 0,
+00962:         skippedCount: 0,
+00963:         mode: "all",
+00964:         selectedUnitClass: UNIT_CLASS_ALL,
+00965:         runId: 0,
+00966:         activeIframe: null
+00967:     };
+00968: 
+00969:     const STATION_STATE = {
+00970:         running: false,
+00971:         paused: false,
+00972:         stopped: false,
+00973:         debug: false,
+00974:         stations: [],
+00975:         filteredStations: [],
+00976:         queue: [],
+00977:         selectedHref: '',
+00978:         mode: 'all',
+00979:         action: 'preview',
+00980:         stationIndex: 0,
+00981:         renamedCount: 0,
+00982:         skippedCount: 0,
+00983:         previewedCount: 0,
+00984:         activeIframe: null,
+00985:         buildingCoordinateCache: new Map(),
+00986:         buildingDataPromise: null,
+00987:         activeControllers: new Set()
+00988:     };
+00989: 
+00990:     const PERSONNEL_STATE = {
+00991:         running: false,
+00992:         paused: false,
+00993:         stopped: false,
+00994:         debug: false,
+00995:         stations: [],
+00996:         filteredStations: [],
+00997:         queue: [],
+00998:         selectedHref: '',
+00999:         service: 'medical',
+01000:         profile: 'critical_care',
+01001:         mode: 'all',
+01002:         action: 'preview',
+01003:         registerBuilding: false,
+01004:         configuredUnitsRequired: 0,
+01005:         unitsRequired: 0,
+01006:         unitsFulfilled: 0,
+01007:         unitTargetReached: false,
+01008:         stationsTargetMet: 0,
+01009:         stationsTargetShort: 0,
+01010:         stationIndex: 0,
+01011:         completedStations: 0,
+01012:         skippedStations: 0,
+01013:         checkedVehicles: 0,
+01014:         plannedCount: 0,
+01015:         assignedCount: 0,
+01016:         trainingShortfall: 0,
+01017:         assignmentShortfall: 0,
+01018:         reports: [],
+01019:         currentReport: '',
+01020:         currentStationReport: '',
+01021:         lastStationReport: null,
+01022:         activeController: null,
+01023:         lastRequestAt: 0
+01024:     };
+01025: 
+01026:     const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+01027: 
+01028:     function registerToolLifecycleCleanup(cleanup) {
+01029:         if (typeof cleanup === 'function') {
+01030:             TOOL_LIFECYCLE_CLEANUPS.add(cleanup);
+01031:         }
+01032:         return cleanup;
+01033:     }
+01034: 
+01035:     function runToolLifecycleCleanup() {
+01036:         if (TOOL_LIFECYCLE_CLEANED) return;
+01037:         TOOL_LIFECYCLE_CLEANED = true;
+01038: 
+01039:         STATE.stopped = true;
+01040:         STATE.paused = false;
+01041: 
+01042:         const activeUnitIframe = STATE.activeIframe;
+01043:         STATE.activeIframe = null;
+01044:         releaseUnitIframeDocument(activeUnitIframe);
+01045:         STATE.stations = [];
+01046:         STATE.filteredStations = [];
+01047:         STATION_STATE.stopped = true;
+01048:         STATION_STATE.paused = false;
+01049:         PERSONNEL_STATE.stopped = true;
+01050:         PERSONNEL_STATE.paused = false;
+01051: 
+01052:         flushPersonnelTrainingRegistry(true);
+01053: 
+01054:         if (PERSONNEL_STATE.activeController) {
+01055:             try {
+01056:                 PERSONNEL_STATE.activeController.abort();
+01057:             } catch (_error) {}
+01058:             PERSONNEL_STATE.activeController = null;
+01059:         }
+01060: 
+01061:         for (const controller of STATION_STATE.activeControllers) {
+01062:             try {
+01063:                 controller.abort();
+01064:             } catch (_error) {}
+01065:         }
+01066:         STATION_STATE.activeControllers.clear();
+01067: 
+01068:         for (const cleanup of [...TOOL_LIFECYCLE_CLEANUPS]) {
+01069:             try {
+01070:                 cleanup();
+01071:             } catch (_error) {}
+01072:         }
+01073:         TOOL_LIFECYCLE_CLEANUPS.clear();
+01074: 
+01075:         for (const frameId of TOOL_LOG_SCROLL_FRAMES.values()) {
+01076:             try {
+01077:                 cancelAnimationFrame(frameId);
+01078:             } catch (_error) {}
+01079:         }
+01080:         TOOL_LOG_SCROLL_FRAMES.clear();
+01081:         TOOL_UI_ELEMENT_CACHE.clear();
+01082:         PERSONNEL_STATION_LINK_BY_HREF.clear();
+01083:         PERSONNEL_START_OPTION_BY_HREF.clear();
+01084:         PERSONNEL_HIGHLIGHTED_STATION_LINKS.clear();
+01085: 
+01086:         STATION_STATE.activeIframe = null;
+01087:         STATION_STATE.buildingCoordinateCache.clear();
+01088:         STATION_STATE.buildingDataPromise = null;
+01089:         PERSONNEL_STATE.reports = [];
+01090:         PERSONNEL_STATE.lastStationReport = null;
+01091:         PERSONNEL_STATE.currentReport = '';
+01092:         PERSONNEL_STATE.currentStationReport = '';
+01093:         PERSONNEL_TRAINING_REGISTRY_CACHE = null;
+01094:         PERSONNEL_SHORTFALL_CACHE = [];
+01095:         PERSONNEL_SHORTFALL_CACHE_SIZE = -1;
+01096:     }
+01097: 
+01098:     function getToolElementById(id) {
+01099:         const key = String(id || '');
+01100:         if (!key) return null;
+01101: 
+01102:         const cached = TOOL_UI_ELEMENT_CACHE.get(key);
+01103:         if (cached?.isConnected) return cached;
+01104: 
+01105:         const element = document.getElementById(key);
+01106:         if (element) TOOL_UI_ELEMENT_CACHE.set(key, element);
+01107:         else TOOL_UI_ELEMENT_CACHE.delete(key);
+01108:         return element;
+01109:     }
+01110: 
+01111:     function clearBoundedToolLog(logBox) {
+01112:         if (!logBox) return;
+01113: 
+01114:         const frameId = TOOL_LOG_SCROLL_FRAMES.get(logBox);
+01115:         if (frameId != null) {
+01116:             try {
+01117:                 cancelAnimationFrame(frameId);
+01118:             } catch (_error) {}
+01119:             TOOL_LOG_SCROLL_FRAMES.delete(logBox);
+01120:         }
+01121: 
+01122:         logBox.replaceChildren();
+01123:     }
+01124: 
+01125:     function appendBoundedToolLog(logBox, line) {
 ===== station overview selectors and entry model | 1125-1355 =====
 01125:     function appendBoundedToolLog(logBox, line) {
 01126:         if (!logBox || !line) return;
@@ -230,7 +457,7 @@
 01353:         iframe.className = 'mc-namer-managed-station-iframe';
 01354:         iframe.dataset.mcPurpose = purpose;
 01355:         iframe.src = href;
-===== panel HTML and naming filters | 1880-2145 =====
+===== panel HTML and event wiring | 1880-2350 =====
 01880:         }
 01881: 
 01882:         return entries.some(entry =>
@@ -497,224 +724,382 @@
 02143:         document.body.appendChild(panel);
 02144:         ensureSingleNamingToolsPanel(panel);
 02145: 
-===== panel event wiring | 4000-4215 =====
-04000:                     )
-04001:                     : 0;
-04002: 
-04003:             return `${PERSONNEL_STATE.stationsTargetMet} / ${PERSONNEL_STATE.completedStations} stations met | latest ${latestFulfilled}/${target}`;
-04004:         }
-04005: 
-04006:         return `${PERSONNEL_STATE.unitsFulfilled} / All`;
-04007:     }
-04008: 
-04009:     function handlePersonnelUnitsRequiredChange() {
-04010:         const input =
-04011:             document.querySelector(
-04012:                 '#mc-personnel-units-required'
-04013:             );
-04014: 
-04015:         if (!input) return;
-04016: 
-04017:         if (PERSONNEL_STATE.running) {
-04018:             input.value =
-04019:                 String(
-04020:                     PERSONNEL_STATE
-04021:                         .configuredUnitsRequired ||
-04022:                     0
-04023:                 );
-04024: 
-04025:             personnelLog(
-04026:                 'Stop Personnel Assignment before changing Units required.',
-04027:                 'error'
-04028:             );
-04029: 
-04030:             return;
-04031:         }
-04032: 
-04033:         const configuredTarget =
-04034:             normalisePersonnelUnitsRequired(
-04035:                 input.value
-04036:             );
-04037: 
-04038:         PERSONNEL_STATE
-04039:             .configuredUnitsRequired =
-04040:                 configuredTarget;
-04041: 
-04042:         PERSONNEL_STATE.unitsRequired =
-04043:             0;
-04044: 
-04045:         PERSONNEL_STATE.unitsFulfilled =
-04046:             0;
-04047: 
-04048:         PERSONNEL_STATE.unitTargetReached =
-04049:             false;
-04050: 
-04051:         input.value =
-04052:             String(configuredTarget);
-04053: 
-04054:         try {
-04055:             localStorage.setItem(
-04056:                 PERSONNEL_UNITS_REQUIRED_STORAGE_KEY,
-04057:                 String(configuredTarget)
-04058:             );
-04059:         } catch (_error) {}
-04060: 
-04061:         setPersonnelUiValue(
-04062:             'unitsFulfilled',
-04063:             configuredTarget > 0
-04064:                 ? `0 / ${configuredTarget}`
-04065:                 : '0 / target not set'
-04066:         );
-04067: 
-04068:         personnelLog(
-04069:             configuredTarget > 0
-04070:                 ? `Each-station target is configured for ${configuredTarget} fully staffed unit(s).`
-04071:                 : 'Each-station target has not been entered yet.',
-04072:             'debug'
-04073:         );
-04074:     }
-04075: 
-04076:     function updatePersonnelModeUi() {
-04077:         const modeSelect =
-04078:             document.querySelector(
-04079:                 '#mc-personnel-mode'
-04080:             );
-04081: 
-04082:         const input =
-04083:             document.querySelector(
-04084:                 '#mc-personnel-units-required'
-04085:             );
-04086: 
-04087:         const note =
-04088:             document.querySelector(
-04089:                 '#mc-personnel-units-required-note'
-04090:             );
-04091: 
-04092:         const live =
-04093:             isLivePersonnelProfile();
-04094: 
-04095:         const mode =
-04096:             modeSelect?.value ||
-04097:             PERSONNEL_STATE.mode ||
-04098:             'all';
-04099: 
-04100:         PERSONNEL_STATE.mode =
-04101:             mode;
-04102: 
-04103:         const targetMode =
-04104:             mode === 'target';
-04105: 
-04106:         const fulfilledLabel =
-04107:             document.querySelector(
-04108:                 '#mc-personnel-units-fulfilled-label'
-04109:             );
-04110: 
-04111:         if (fulfilledLabel) {
-04112:             fulfilledLabel.textContent =
-04113:                 targetMode
-04114:                     ? 'Station targets met:'
-04115:                     : 'Units fulfilled:';
-04116:         }
-04117: 
-04118:         if (input) {
-04119:             input.disabled =
-04120:                 !live ||
-04121:                 !targetMode;
-04122: 
-04123:             input.value =
-04124:                 targetMode
-04125:                     ? String(
-04126:                         PERSONNEL_STATE
-04127:                             .configuredUnitsRequired ||
-04128:                         0
-04129:                     )
-04130:                     : '0';
-04131:         }
-04132: 
-04133:         if (note) {
-04134:             note.textContent =
-04135:                 targetMode
-04136:                     ? 'Enter the number of fully staffed units required at every station. Existing covered units count first; only the missing units are topped up.'
-04137:                     : mode === 'single'
-04138:                         ? 'Selected Station mode scans every matching unit at that one station. Units required is not used.'
-04139:                         : 'All Stations mode always scans every relevant station from the selected start point. Units required is not used.';
-04140:         }
-04141: 
-04142:         if (
-04143:             !PERSONNEL_STATE.running
-04144:         ) {
-04145:             setPersonnelUiValue(
-04146:                 'unitsFulfilled',
-04147:                 targetMode &&
-04148:                 PERSONNEL_STATE
-04149:                     .configuredUnitsRequired >
-04150:                     0
-04151:                     ? `0 / ${PERSONNEL_STATE.configuredUnitsRequired}`
-04152:                     : '0 / All'
-04153:             );
-04154:         }
-04155:     }
-04156: 
-04157:     function handlePersonnelModeChange() {
-04158:         if (PERSONNEL_STATE.running) {
-04159:             const select =
-04160:                 document.querySelector(
-04161:                     '#mc-personnel-mode'
-04162:                 );
-04163: 
-04164:             if (select) {
-04165:                 select.value =
-04166:                     PERSONNEL_STATE.mode ||
-04167:                     'all';
-04168:             }
-04169: 
-04170:             personnelLog(
-04171:                 'Stop Personnel Assignment before changing Mode.',
-04172:                 'error'
-04173:             );
-04174: 
-04175:             return;
-04176:         }
-04177: 
-04178:         PERSONNEL_STATE.mode =
-04179:             document.querySelector(
-04180:                 '#mc-personnel-mode'
-04181:             )?.value ||
-04182:             'all';
-04183: 
-04184:         PERSONNEL_STATE.unitsRequired =
-04185:             0;
-04186: 
-04187:         PERSONNEL_STATE.unitsFulfilled =
-04188:             0;
-04189: 
-04190:         PERSONNEL_STATE.unitTargetReached =
-04191:             false;
-04192: 
-04193:         updatePersonnelModeUi();
-04194: 
-04195:         const modeMessage =
-04196:             PERSONNEL_STATE.mode ===
-04197:                 'target'
-04198:                 ? 'Mode set to enforce the Units required target independently at every station.'
-04199:                 : PERSONNEL_STATE.mode ===
-04200:                     'single'
-04201:                     ? 'Mode set to Selected station only.'
-04202:                     : 'Mode set to All relevant stations. Every station in scope will be scanned.';
-04203: 
-04204:         personnelLog(
-04205:             modeMessage,
-04206:             'debug'
-04207:         );
-04208:     }
-04209: 
-04210:     function initialisePersonnelProfileNavigation() {
-04211:         const serviceSelect = document.querySelector('#mc-personnel-service');
-04212:         if (!serviceSelect) return;
-04213: 
-04214:         let savedService = 'medical';
-04215:         let savedProfile = 'critical_care';
-===== station naming refresh and filtering | 4470-4705 =====
+02146:         const compactDisclosureStoragePrefix =
+02147:             'mc_compact_disclosure_v1071_';
+02148: 
+02149:         function createCompactDisclosure(
+02150:             id,
+02151:             label,
+02152:             targets,
+02153:             defaultOpen = false
+02154:         ) {
+02155:             const nodes = (Array.isArray(targets) ? targets : [targets])
+02156:                 .filter(node => node?.isConnected);
+02157:             if (!nodes.length) return null;
+02158: 
+02159:             const details = document.createElement('details');
+02160:             details.id = id;
+02161:             details.className = 'mc-compact-disclosure';
+02162: 
+02163:             const storageKey =
+02164:                 `${compactDisclosureStoragePrefix}${id}`;
+02165:             let savedState = null;
+02166:             try {
+02167:                 savedState = localStorage.getItem(storageKey);
+02168:             } catch (_error) {}
+02169:             details.open = savedState == null
+02170:                 ? Boolean(defaultOpen)
+02171:                 : savedState === 'true';
+02172: 
+02173:             const summary = document.createElement('summary');
+02174:             summary.className = 'mc-compact-disclosure-summary';
+02175:             summary.innerHTML = `
+02176:                 <span>${label}</span>
+02177:                 <span class="mc-compact-summary-mark" aria-hidden="true"></span>
+02178:             `;
+02179: 
+02180:             const body = document.createElement('div');
+02181:             body.className = 'mc-compact-disclosure-body';
+02182: 
+02183:             nodes[0].parentNode.insertBefore(details, nodes[0]);
+02184:             details.appendChild(summary);
+02185:             details.appendChild(body);
+02186:             nodes.forEach(node => body.appendChild(node));
+02187: 
+02188:             details.addEventListener('toggle', () => {
+02189:                 try {
+02190:                     localStorage.setItem(
+02191:                         storageKey,
+02192:                         String(details.open)
+02193:                     );
+02194:                 } catch (_error) {}
+02195:                 requestAnimationFrame(() => {
+02196:                     clampToolPanelToViewport(panel);
+02197:                 });
+02198:             });
+02199: 
+02200:             return details;
+02201:         }
+02202: 
+02203:         function createCompactActionDisclosure(
+02204:             container,
+02205:             selectors,
+02206:             label,
+02207:             id,
+02208:             defaultOpen = false
+02209:         ) {
+02210:             if (!container) return null;
+02211:             const buttons = selectors
+02212:                 .map(selector => container.querySelector(selector))
+02213:                 .filter(Boolean);
+02214:             if (!buttons.length) return null;
+02215: 
+02216:             const details = createCompactDisclosure(
+02217:                 id,
+02218:                 label,
+02219:                 buttons,
+02220:                 defaultOpen
+02221:             );
+02222:             if (!details) return null;
+02223:             details.classList.add('mc-compact-action-disclosure');
+02224:             container.appendChild(details);
+02225:             return details;
+02226:         }
+02227: 
+02228:         const compactUnitView = panel.querySelector('#mc-unit-view');
+02229:         const compactStationView = panel.querySelector('#mc-station-view');
+02230:         const compactPersonnelView = panel.querySelector('#mc-personnel-view');
+02231: 
+02232:         createCompactActionDisclosure(
+02233:             compactUnitView?.querySelector('.mc-nexus-action-bar'),
+02234:             ['#mc-namer-debug', '#mc-namer-clear'],
+02235:             'More',
+02236:             'mc-compact-unit-tools'
+02237:         );
+02238:         createCompactDisclosure(
+02239:             'mc-compact-unit-status',
+02240:             'Status',
+02241:             compactUnitView?.querySelector('.mc-nexus-status-card'),
+02242:             false
+02243:         );
+02244:         createCompactDisclosure(
+02245:             'mc-compact-unit-log',
+02246:             'Activity log',
+02247:             compactUnitView?.querySelector('#mc-namer-log'),
+02248:             false
+02249:         );
+02250: 
+02251:         createCompactActionDisclosure(
+02252:             compactStationView?.querySelector('.mc-nexus-action-bar'),
+02253:             ['#mc-station-debug', '#mc-station-clear'],
+02254:             'More',
+02255:             'mc-compact-station-tools'
+02256:         );
+02257:         createCompactDisclosure(
+02258:             'mc-compact-station-status',
+02259:             'Status',
+02260:             compactStationView?.querySelector('.mc-nexus-status-card'),
+02261:             false
+02262:         );
+02263:         createCompactDisclosure(
+02264:             'mc-compact-station-log',
+02265:             'Activity log',
+02266:             compactStationView?.querySelector('#mc-station-log'),
+02267:             false
+02268:         );
+02269: 
+02270:         createCompactDisclosure(
+02271:             'mc-compact-personnel-profile',
+02272:             'Profile details',
+02273:             [
+02274:                 compactPersonnelView?.querySelector('.mc-personnel-fixed-grid'),
+02275:                 compactPersonnelView?.querySelector('#mc-personnel-policy-summary')
+02276:             ],
+02277:             false
+02278:         );
+02279:         createCompactActionDisclosure(
+02280:             compactPersonnelView?.querySelector('.mc-nexus-action-bar'),
+02281:             [
+02282:                 '#mc-personnel-build-register',
+02283:                 '#mc-personnel-full-register',
+02284:                 '#mc-personnel-export-register',
+02285:                 '#mc-personnel-import-register',
+02286:                 '#mc-personnel-view-station-report',
+02287:                 '#mc-personnel-copy-station',
+02288:                 '#mc-personnel-copy',
+02289:                 '#mc-personnel-debug',
+02290:                 '#mc-personnel-clear'
+02291:             ],
+02292:             'Tools and reports',
+02293:             'mc-compact-personnel-tools',
+02294:             isIosSafariWebsite()
+02295:         );
+02296:         createCompactDisclosure(
+02297:             'mc-compact-personnel-status',
+02298:             'Status',
+02299:             compactPersonnelView?.querySelector('.mc-nexus-status-card'),
+02300:             false
+02301:         );
+02302:         createCompactDisclosure(
+02303:             'mc-compact-personnel-report-display',
+02304:             'Report display',
+02305:             compactPersonnelView?.querySelector('.mc-nexus-report-controls'),
+02306:             false
+02307:         );
+02308:         createCompactDisclosure(
+02309:             'mc-compact-personnel-station-report',
+02310:             'Station report',
+02311:             compactPersonnelView?.querySelector('#mc-personnel-after-action-section'),
+02312:             false
+02313:         );
+02314:         createCompactDisclosure(
+02315:             'mc-compact-personnel-overall-report',
+02316:             'Overall report',
+02317:             compactPersonnelView?.querySelector('#mc-personnel-overall-report-section'),
+02318:             false
+02319:         );
+02320:         createCompactDisclosure(
+02321:             'mc-compact-personnel-log',
+02322:             'Activity log',
+02323:             [
+02324:                 compactPersonnelView?.querySelector('.mc-personnel-log-heading'),
+02325:                 compactPersonnelView?.querySelector('#mc-personnel-log')
+02326:             ],
+02327:             false
+02328:         );
+02329: 
+02330:         const style = document.createElement('style');
+02331:         style.dataset.mcNamerStyle = 'true';
+02332:         style.textContent = `
+02333:             #mc-namer-panel {
+02334:                 position: fixed;
+02335:                 top: 90px;
+02336:                 right: 20px;
+02337:                 width: 470px;
+02338:                 max-height: 760px;
+02339:                 background: #1f2933;
+02340:                 color: #f5f5f5;
+02341:                 z-index: 999999;
+02342:                 border-radius: 8px;
+02343:                 box-shadow: 0 4px 16px rgba(0,0,0,0.35);
+02344:                 font-family: Arial, sans-serif;
+02345:                 font-size: 12px;
+02346:                 overflow: hidden;
+02347:                 display: flex;
+02348:                 flex-direction: column;
+02349:                 max-height: min(760px, calc(100vh - 20px));
+02350:             }
+===== station naming refresh and filtering | 4300-4705 =====
+04300:             personnelLog('Stop Personnel Assignment before changing Training profile.', 'error');
+04301:             const select = document.querySelector('#mc-personnel-profile');
+04302:             if (select) select.value = PERSONNEL_STATE.profile;
+04303:             return;
+04304:         }
+04305: 
+04306:         PERSONNEL_STATE.profile = document.querySelector('#mc-personnel-profile')?.value || 'critical_care';
+04307:         updatePersonnelProfileUi(true);
+04308:     }
+04309: 
+04310:     function updatePersonnelProfileUi(save = true) {
+04311:         const service = getPersonnelServiceDefinition();
+04312:         const profile = getPersonnelProfileDefinition();
+04313:         const live = isLivePersonnelProfile();
+04314: 
+04315:         const training = document.querySelector('#mc-personnel-profile-training');
+04316:         const vehicle = document.querySelector('#mc-personnel-profile-vehicle');
+04317:         const requirement = document.querySelector('#mc-personnel-profile-requirement');
+04318:         const policy = document.querySelector('#mc-personnel-policy-summary');
+04319:         const banner = document.querySelector('#mc-personnel-profile-banner');
+04320:         const modeAll = document.querySelector('#mc-personnel-mode-all-option');
+04321:         const start = document.querySelector('#mc-personnel-start');
+04322:         const refresh = document.querySelector('#mc-personnel-refresh');
+04323:         const mode = document.querySelector('#mc-personnel-mode');
+04324:         const action = document.querySelector('#mc-personnel-action');
+04325:         const unitsRequired = document.querySelector('#mc-personnel-units-required');
+04326:         const startFrom = document.querySelector('#mc-personnel-startfrom');
+04327: 
+04328:         if (training) training.textContent = profile.label;
+04329:         if (vehicle) vehicle.textContent = profile.vehicle;
+04330:         if (requirement) requirement.textContent = profile.requirement;
+04331:         if (policy) {
+04332:             policy.innerHTML = `<strong>${service.icon} ${service.label} policy:</strong> ${profile.policy}`;
+04333:         }
+04334: 
+04335:         if (banner) {
+04336:             banner.classList.toggle('is-live', live);
+04337:             banner.classList.toggle('is-preview', !live);
+04338:             banner.textContent = live
+04339:                 ? '● LIVE PROFILE — the selected assignment engine is enabled.'
+04340:                 : '◐ UI PREVIEW ONLY — assignment controls are safely disabled for this profile.';
+04341:         }
+04342: 
+04343:         if (modeAll) {
+04344:             modeAll.textContent = live
+04345:                 ? `All ${getPersonnelStationScopeLabel()} from selected start point`
+04346:                 : `All relevant ${service.label} stations from selected start point`;
+04347:         }
+04348: 
+04349:         [start, refresh, mode, action, startFrom].forEach(control => {
+04350:             if (control) control.disabled = !live;
+04351:         });
+04352: 
+04353:         if (unitsRequired) {
+04354:             unitsRequired.disabled =
+04355:                 !live ||
+04356:                 (
+04357:                     document.querySelector(
+04358:                         '#mc-personnel-mode'
+04359:                     )?.value ||
+04360:                     'all'
+04361:                 ) !== 'target';
+04362:         }
+04363: 
+04364:         if (start) {
+04365:             start.title = live
+04366:                 ? 'Start the selected Personnel Assignment profile'
+04367:                 : 'This profile is a UI preview and cannot make assignments yet';
+04368:         }
+04369: 
+04370:         if (live) {
+04371:             setPersonnelUiValue('status', PERSONNEL_STATE.filteredStations.length ? 'Ready' : 'Refresh required');
+04372:         } else {
+04373:             setPersonnelUiValue('status', 'Profile UI preview');
+04374:             setPersonnelUiValue('vehicle', 'Not enabled');
+04375:         }
+04376: 
+04377:         if (save) {
+04378:             PERSONNEL_STATE.stations = [];
+04379:             PERSONNEL_STATE.filteredStations = [];
+04380:             PERSONNEL_STATE.queue = [];
+04381:             PERSONNEL_STATE.selectedHref = '';
+04382:             PERSONNEL_STATE.unitsFulfilled = 0;
+04383:             PERSONNEL_STATE.unitTargetReached = false;
+04384:             setPersonnelUiValue('unitsFulfilled', PERSONNEL_STATE.unitsRequired > 0 ? `0 / ${PERSONNEL_STATE.unitsRequired}` : '0 / All');
+04385:             populatePersonnelStartDropdown();
+04386:             setPersonnelUiValue('status', live ? 'Refresh required' : 'Profile UI preview');
+04387:             setPersonnelUiValue('vehicle', live ? 'None' : 'Not enabled');
+04388: 
+04389:             try {
+04390:                 localStorage.setItem(PERSONNEL_SERVICE_STORAGE_KEY, PERSONNEL_STATE.service);
+04391:                 localStorage.setItem(PERSONNEL_PROFILE_STORAGE_KEY, PERSONNEL_STATE.profile);
+04392:             } catch (_error) {}
+04393: 
+04394:             personnelLog(`${service.icon} Service: ${service.label} | Training profile: ${profile.label}${live ? ' (LIVE)' : ' (UI preview only)'}`, live ? 'info' : 'debug');
+04395:         }
+04396: 
+04397:         updatePersonnelModeUi();
+04398:     }
+04399: 
+04400:     function initialisePersonnelReportVisibility() {
+04401:         const stationCheckbox = document.querySelector('#mc-personnel-show-station-report');
+04402:         const overallCheckbox = document.querySelector('#mc-personnel-show-overall-report');
+04403:         if (!stationCheckbox || !overallCheckbox) return;
+04404: 
+04405:         let showStation = true;
+04406:         let showOverall = true;
+04407: 
+04408:         try {
+04409:             showStation = localStorage.getItem(PERSONNEL_STATION_REPORT_VISIBLE_KEY) !== 'false';
+04410:             showOverall = localStorage.getItem(PERSONNEL_OVERALL_REPORT_VISIBLE_KEY) !== 'false';
+04411:         } catch (_error) {}
+04412: 
+04413:         stationCheckbox.checked = showStation;
+04414:         overallCheckbox.checked = showOverall;
+04415:         updatePersonnelReportVisibility(false);
+04416:     }
+04417: 
+04418:     function updatePersonnelReportVisibility(save = true) {
+04419:         const stationCheckbox = document.querySelector('#mc-personnel-show-station-report');
+04420:         const overallCheckbox = document.querySelector('#mc-personnel-show-overall-report');
+04421:         const stationSection = document.querySelector('#mc-personnel-after-action-section');
+04422:         const overallSection = document.querySelector('#mc-personnel-overall-report-section');
+04423: 
+04424:         if (!stationCheckbox || !overallCheckbox || !stationSection || !overallSection) return;
+04425: 
+04426:         const showStation = Boolean(stationCheckbox.checked);
+04427:         const showOverall = Boolean(overallCheckbox.checked);
+04428: 
+04429:         stationSection.hidden = !showStation;
+04430:         overallSection.hidden = !showOverall;
+04431:         stationCheckbox.setAttribute('aria-expanded', showStation ? 'true' : 'false');
+04432:         overallCheckbox.setAttribute('aria-expanded', showOverall ? 'true' : 'false');
+04433: 
+04434:         if (save) {
+04435:             try {
+04436:                 localStorage.setItem(PERSONNEL_STATION_REPORT_VISIBLE_KEY, showStation ? 'true' : 'false');
+04437:                 localStorage.setItem(PERSONNEL_OVERALL_REPORT_VISIBLE_KEY, showOverall ? 'true' : 'false');
+04438:             } catch (_error) {}
+04439:         }
+04440:     }
+04441: 
+04442:     function showAndViewPersonnelStationReport() {
+04443:         const checkbox = document.querySelector('#mc-personnel-show-station-report');
+04444:         if (checkbox && !checkbox.checked) {
+04445:             checkbox.checked = true;
+04446:             updatePersonnelReportVisibility(true);
+04447:         }
+04448: 
+04449:         requestAnimationFrame(() => scrollPersonnelTo('mc-personnel-after-action-section'));
+04450:     }
+04451: 
+04452: 
+04453:     function togglePanelCollapsed() {
+04454:         const panel = document.querySelector('#mc-namer-panel');
+04455:         if (!panel) return;
+04456:         setPanelCollapsed(!panel.classList.contains('mc-namer-collapsed'));
+04457:     }
+04458: 
+04459:     function setPanelCollapsed(collapsed, save = true) {
+04460:         const panel = document.querySelector('#mc-namer-panel');
+04461:         const button = document.querySelector('#mc-namer-collapse');
+04462:         if (!panel || !button) return;
+04463: 
+04464:         panel.classList.toggle('mc-namer-collapsed', Boolean(collapsed));
+04465:         button.textContent = collapsed ? '+' : '−';
+04466:         button.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+04467:         button.title = collapsed ? 'Expand naming tools' : 'Collapse naming tools';
+04468: 
+04469:         if (save) {
 04470:             try {
 04471:                 localStorage.setItem(COLLAPSED_STORAGE_KEY, collapsed ? 'true' : 'false');
 04472:             } catch (e) {}
@@ -951,7 +1336,7 @@
 04703:             setStationUiValue('status', 'Blocked by Personnel Assignment');
 04704:             return;
 04705:         }
-===== unit naming refresh and filtering | 10190-10330 =====
+===== unit naming refresh, filtering and start | 10190-10390 =====
 10190:         const allOption = document.createElement('option');
 10191:         allOption.value = UNIT_CLASS_ALL;
 10192:         allOption.textContent = 'All classes';
@@ -1093,29 +1478,98 @@
 10328:         if (STATE.running) {
 10329:             log('Already running.', 'debug');
 10330:             return;
-===== direct dispatch-centre identifiers =====
-00005: // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
-00055:         return /^\/leitstellenansicht\/?$/.test(
-00061:     // normal Stations control opens the same /leitstellenansicht document in a
-02368:                 align-items: center;
-02636:                 text-align: center;
-02672:                 align-items: center;
-02712:                 align-items: center;
-02894:                 align-items: center;
-02895:                 justify-content: center;
-02924:                 align-items: center;
-02980:                 align-items: center;
-02981:                 justify-content: center;
-03054:                 align-items: center;
-03069:                 place-items: center;
-03163:                 align-items: center;
-03164:                 justify-content: center;
-03701:                 align-items: center;
-04970:             nameInput.dispatchEvent(new Event('input', { bubbles: true }));
-04971:             nameInput.dispatchEvent(new Event('change', { bubbles: true }));
-05909:         dispatchPersonnelTrainingRegistryUpdate({ imported: true, vehicleCount: importedCount, updatedAt: Date.now() });
-07226:     function dispatchPersonnelTrainingRegistryUpdate(eventDetail) {
-07230:             window.dispatchEvent(new CustomEvent(
-07253:             dispatchPersonnelTrainingRegistryUpdate(pendingEvent);
-10727:             captionInput.dispatchEvent(new Event('input', { bubbles: true }));
-10728:             captionInput.dispatchEvent(new Event('change', { bubbles: true }));
+10331:         }
+10332: 
+10333:         if (STATE.activeIframe) {
+10334:             releaseUnitIframeDocument(STATE.activeIframe);
+10335:             STATE.activeIframe = null;
+10336:         }
+10337: 
+10338:         if (!STATE.filteredStations.length) {
+10339:             log('No matching stations loaded. Press Refresh Stations first.', 'error');
+10340:             return;
+10341:         }
+10342: 
+10343:         const selectedHref = document.querySelector('#mc-namer-startfrom').value;
+10344:         const startIndex = STATE.filteredStations.findIndex(station => station.href === selectedHref);
+10345: 
+10346:         if (startIndex < 0) {
+10347:             log(`Selected start station not found: ${selectedHref}`, 'error');
+10348:             return;
+10349:         }
+10350: 
+10351:         STATE.mode = document.querySelector('#mc-namer-mode')?.value || 'all';
+10352:         STATE.selectedUnitClass = getSelectedUnitClass();
+10353:         STATE.running = true;
+10354:         STATE.paused = false;
+10355:         STATE.stopped = false;
+10356:         STATE.stationIndex = startIndex;
+10357:         STATE.renamedCount = 0;
+10358:         STATE.skippedCount = 0;
+10359:         const runId = ++STATE.runId;
+10360: 
+10361:         updateCounters();
+10362:         document.querySelector('#mc-namer-pause').textContent = 'Pause';
+10363: 
+10364:         log(`Mode: ${STATE.mode === 'single' ? 'Selected station only' : 'All matching stations'}`, 'info');
+10365:         log(`Station type: ${STATION_TYPES[document.querySelector('#mc-namer-station-type').value]}`, 'info');
+10366:         log(`Unit class: ${getUnitClassDisplayLabel(STATE.selectedUnitClass)}`, 'info');
+10367:         log(`Starting from: ${STATE.filteredStations[startIndex].displayName}`, 'info');
+10368: 
+10369:         processStations(runId).catch(error => {
+10370:             if (runId !== STATE.runId) return;
+10371:             log(`Unit Naming stopped after an unexpected error: ${error?.message || error}`, 'error');
+10372:             debug(error?.stack || String(error));
+10373:             STATE.stopped = true;
+10374:             setStatus('Error');
+10375:         });
+10376:     }
+10377: 
+10378:     function togglePause() {
+10379:         if (!STATE.running) return;
+10380: 
+10381:         STATE.paused = !STATE.paused;
+10382:         document.querySelector('#mc-namer-pause').textContent = STATE.paused ? 'Resume' : 'Pause';
+10383:         setStatus(STATE.paused ? 'Paused' : 'Running');
+10384:         log(STATE.paused ? 'Paused.' : 'Resumed.', 'debug');
+10385:     }
+10386: 
+10387:     function stopRun() {
+10388:         if (!STATE.running) return;
+10389: 
+10390:         STATE.stopped = true;
+===== exact filter/listener hits =====
+01338:         link.addEventListener('click', preventNavigation, { capture: true, once: true });
+01642:         window.addEventListener(
+01647:         window.addEventListener(
+01652:         window.addEventListener(
+01657:         document.addEventListener(
+01662:         document.addEventListener(
+01788:         window.addEventListener('resize', requestClamp, { passive: true });
+01789:         window.addEventListener('orientationchange', resetIosPosition, { passive: true });
+01790:         window.addEventListener('pageshow', requestClamp, { passive: true });
+01791:         window.visualViewport?.addEventListener('resize', requestClamp, { passive: true });
+01792:         window.visualViewport?.addEventListener('scroll', requestClamp, { passive: true });
+01934:                     <select id="mc-namer-station-type">
+01979:                     <select id="mc-station-type">
+02188:             details.addEventListener('toggle', () => {
+02461:             #mc-namer-station-type,
+02465:             #mc-station-type,
+03883:         document.querySelector('#mc-namer-station-type').onchange = handleUnitStationTypeChange;
+03893:         document.querySelector('#mc-station-type').onchange = populateStationNamingStartDropdown;
+04598:         populateStationNamingStartDropdown();
+04646:     function populateStationNamingStartDropdown() {
+04650:         const selectedType = document.querySelector('#mc-station-type')?.value || 'ALL';
+10004:         handle.addEventListener('pointerdown', onPointerDown);
+10005:         handle.addEventListener('pointermove', onPointerMove);
+10006:         handle.addEventListener('pointerup', endDrag);
+10007:         handle.addEventListener('pointercancel', endDrag);
+10177:             document.querySelector('#mc-namer-station-type')?.value ||
+10220:         populateStartDropdown();
+10225:         populateStartDropdown();
+10270:         populateStartDropdown();
+10284:     function populateStartDropdown() {
+10288:         const selectedType = document.querySelector('#mc-namer-station-type')?.value || 'ALL';
+10365:         log(`Station type: ${STATION_TYPES[document.querySelector('#mc-namer-station-type').value]}`, 'info');
+10858:     window.addEventListener('storage', handlePersonnelRegistryStorage);
+10859:     window.addEventListener('pagehide', handleToolPageHide);
