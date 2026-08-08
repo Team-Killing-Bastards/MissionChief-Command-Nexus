@@ -1,8 +1,10 @@
 name: Build v1.0.87 Dispatch Centre refresh
 
 on:
-  pull_request:
-    types: [reopened]
+  push:
+    branches: [main]
+    paths:
+      - '.github/build-dispatch-centre-refresh-v1087.trigger'
 
 permissions:
   contents: write
@@ -13,9 +15,6 @@ concurrency:
 
 jobs:
   build:
-    if: >-
-      github.event.pull_request.head.ref == 'fix/dispatch-centre-refresh-v1087' &&
-      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
       - name: Check out feature branch
