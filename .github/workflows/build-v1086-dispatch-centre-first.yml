@@ -6,6 +6,8 @@ on:
       - '.github/build-v1086-dispatch-centre-first.trigger'
   pull_request_target:
     types: [closed]
+  issue_comment:
+    types: [created]
 
 permissions:
   contents: write
@@ -18,8 +20,13 @@ jobs:
   build:
     if: >-
       github.event_name == 'push' ||
-      (github.event.pull_request.merged == true &&
-       github.event.pull_request.head.ref == 'agent/build-v1086-dispatch-centre-first')
+      (github.event_name == 'pull_request_target' &&
+       github.event.pull_request.merged == true &&
+       github.event.pull_request.head.ref == 'agent/build-v1086-dispatch-centre-first') ||
+      (github.event_name == 'issue_comment' &&
+       github.actor == 'Martyblyth' &&
+       github.event.issue.number == 262 &&
+       github.event.comment.body == '/build-v1086-dispatch-centre-first')
     runs-on: ubuntu-latest
     steps:
       - name: Check out v1.0.86 feature branch
