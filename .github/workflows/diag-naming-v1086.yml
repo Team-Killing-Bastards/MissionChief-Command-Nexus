@@ -1,0 +1,35 @@
+name: Diagnose naming v1.0.86
+on:
+  push:
+    branches:
+      - fix/naming-dispatch-centres-v1086
+    paths:
+      - '.github/v1086-naming-diag-trigger.txt'
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Print naming control and refresh regions
+        shell: bash
+        run: |
+          set -euo pipefail
+          f=src/missionchief-command-nexus.user.js
+          for token in \
+            'id="mc-namer-dispatch-centre"' \
+            'id="mc-station-dispatch-centre"' \
+            "function populateNamingDispatchCentreFilter" \
+            "function refreshStationNamingStations" \
+            "function refreshStations" \
+            "mc-namer-dispatch-centre').onchange" \
+            "mc-station-dispatch-centre').onchange"; do
+            echo "===== $token ====="
+            line=$(grep -nF "$token" "$f" | head -1 | cut -d: -f1 || true)
+            if [ -n "$line" ]; then
+              start=$(( line > 35 ? line - 35 : 1 ))
+              end=$(( line + 55 ))
+              sed -n "${start},${end}p" "$f"
+            fi
+          done
