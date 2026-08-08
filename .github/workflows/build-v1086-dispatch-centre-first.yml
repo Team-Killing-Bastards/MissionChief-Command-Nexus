@@ -1,0 +1,51 @@
+name: Build v1.0.86 Dispatch Centre First
+
+on:
+  push:
+    paths:
+      - '.github/build-v1086-dispatch-centre-first.trigger'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out v1.0.86 feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/dispatch-centre-first-v1086
+          fetch-depth: 0
+
+      - name: Build corrected Dispatch Centre-first candidate
+        run: |
+          python3 scripts/build-v1086-dispatch-centre-first.py
+          python3 scripts/build-v1086-post.py
+          rm -f scripts/build-v1086-dispatch-centre-first.py
+          rm -f scripts/build-v1086-post.py
+          rm -f scripts/v1086-dispatch-centre-helpers.txt
+
+      - name: Validate userscript syntax
+        run: node --check src/missionchief-command-nexus.user.js
+
+      - name: Run every permanent regression
+        run: |
+          set -euo pipefail
+          for check in scripts/check-*.mjs; do
+            echo "Running $check"
+            node "$check"
+          done
+
+      - name: Validate repository whitespace
+        run: git diff --check
+
+      - name: Commit clean candidate
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'Fix Dispatch Centre-first naming flow for v1.0.86'
+          git push origin HEAD:fix/dispatch-centre-first-v1086
