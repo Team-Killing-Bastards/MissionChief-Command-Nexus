@@ -104,10 +104,13 @@ on:
       - 'scripts/check-hems-ambulance-eta-priority.mjs'
       - 'scripts/check-police-search-advisor-register.mjs'
       - '.github/workflows/validate-userscript.yml'
+      - '.github/v1086-active-builder-trigger.txt'
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
+  issues: write
+  pull-requests: write
 
 concurrency:
   group: validate-userscript-${{ github.workflow }}-${{ github.ref }}
@@ -274,3 +277,51 @@ jobs:
       - name: Require a version increase when code changes
         if: github.event_name == 'pull_request'
         run: node scripts/validate-userscript.mjs --base-ref "origin/${{ github.base_ref }}"
+
+  build_v1086:
+    name: One-shot v1.0.86 builder
+    if: github.event_name == 'push' && github.event.head_commit.message == 'Run active v1.0.86 builder'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out v1.0.86 feature branch
+        uses: actions/checkout@v6
+        with:
+          ref: fix/dispatch-centre-first-v1086
+          fetch-depth: 0
+          token: ${{ github.token }}
+
+      - name: Build and validate v1.0.86
+        run: |
+          set -euo pipefail
+          python3 scripts/build-v1086-dispatch-centre-first.py
+          python3 scripts/build-v1086-post.py
+          rm -f scripts/build-v1086-dispatch-centre-first.py scripts/build-v1086-post.py scripts/v1086-dispatch-centre-helpers.txt
+          node --check src/missionchief-command-nexus.user.js
+          for check in scripts/check-*.mjs; do
+            echo "Running $check"
+            node "$check"
+          done
+          git diff --check
+
+      - name: Push clean candidate
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'Fix Dispatch Centre-first naming flow for v1.0.86'
+          git push origin HEAD:fix/dispatch-centre-first-v1086
+
+      - name: Report build success
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr comment 262 --repo "$GITHUB_REPOSITORY" --body 'v1.0.86 ACTIVE BUILDER PASS: clean candidate pushed after full regression suite.'
+
+      - name: Report build failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr comment 262 --repo "$GITHUB_REPOSITORY" --body "v1.0.86 ACTIVE BUILDER FAILED: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
