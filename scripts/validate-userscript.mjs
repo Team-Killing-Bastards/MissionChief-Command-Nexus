@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+// Validation entry point; touched to run the final v1.0.86 PR gate.
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
