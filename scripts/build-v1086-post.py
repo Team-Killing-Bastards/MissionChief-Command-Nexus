@@ -1,6 +1,6 @@
 from pathlib import Path
 
-# Owner-authored synchronize trigger for the trusted v1.0.86 builder.
+# Owner-authored synchronize trigger for the trusted v1.0.86 builder (retry).
 root = Path('.')
 src = root / 'src/missionchief-command-nexus.user.js'
 s = src.read_text(encoding='utf-8')
