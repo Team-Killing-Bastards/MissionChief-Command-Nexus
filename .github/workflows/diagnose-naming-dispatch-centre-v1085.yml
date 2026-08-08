@@ -1,0 +1,61 @@
+name: Diagnose naming Dispatch Centre filter
+
+on:
+  push:
+    branches:
+      - feature/naming-dispatch-centre-filter-v1085
+    paths:
+      - '.github/workflows/diagnose-naming-dispatch-centre-v1085.yml'
+      - '.github/diagnose-naming-dispatch-centre-v1085-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: feature/naming-dispatch-centre-filter-v1085
+          fetch-depth: 0
+          token: ${{ github.token }}
+      - name: Extract naming filter and Dispatch Centre evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          lines = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8').splitlines()
+          terms = ['Unit Naming','Station Naming','mc-namer','filter','dispatch','centre','center','leitstelle','building_id','building_type','station','vehicle']
+          hits=[]
+          for i,line in enumerate(lines[:11000],1):
+              low=line.lower()
+              if any(t.lower() in low for t in terms): hits.append(i)
+          windows=[]
+          for i in hits:
+              s,e=max(1,i-12),min(len(lines),i+20)
+              if windows and s <= windows[-1][1]+4: windows[-1]=(windows[-1][0],max(windows[-1][1],e))
+              else: windows.append((s,e))
+          ranked=[]
+          weights={'filter':8,'dispatch':12,'centre':12,'center':12,'leitstelle':12,'unit naming':12,'station naming':12,'mc-namer':6,'building_id':5,'station':2,'vehicle':2}
+          for s,e in windows:
+              txt='\n'.join(lines[s-1:e]).lower(); score=sum(txt.count(k)*w for k,w in weights.items()); ranked.append((score,s,e))
+          ranked.sort(reverse=True)
+          out=[]; seen=[]
+          for score,s,e in ranked:
+              if len(out)>=30: break
+              if any(not(e<ss or s>ee) for ss,ee in seen): continue
+              seen.append((s,e))
+              out.append(f'===== SCORE {score} LINES {s}-{e} =====\n'+'\n'.join(f'{n:05d}: {lines[n-1]}' for n in range(s,e+1)))
+          direct=[f'{i:05d}: {line}' for i,line in enumerate(lines[:11000],1) if re.search(r'dispatch|centre|center|leitstelle',line,re.I)]
+          Path('.diagnostic-naming-dispatch-centre-v1085.txt').write_text('DIRECT MATCHES\n'+'\n'.join(direct)+'\n\nRANKED WINDOWS\n'+'\n\n'.join(out)+'\n',encoding='utf-8')
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .diagnostic-naming-dispatch-centre-v1085.txt
+          git commit -m 'Capture naming Dispatch Centre diagnostic'
+          git push origin HEAD:refs/heads/feature/naming-dispatch-centre-filter-v1085
