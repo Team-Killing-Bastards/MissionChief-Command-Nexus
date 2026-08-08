@@ -1,6 +1,8 @@
 name: Build v1.0.87 Dispatch Centre candidate
 
 on:
+  pull_request_target:
+    types: [reopened]
   issue_comment:
     types: [created]
 
@@ -15,9 +17,14 @@ concurrency:
 jobs:
   build:
     if: >-
-      github.actor == 'Martyblyth' &&
-      github.event.issue.number == 267 &&
-      github.event.comment.body == '/build-v1087-now'
+      (github.event_name == 'pull_request_target' &&
+       github.event.pull_request.number == 267 &&
+       github.event.pull_request.head.ref == 'fix/dispatch-centre-refresh-v1087' &&
+       github.event.pull_request.head.repo.full_name == github.repository) ||
+      (github.event_name == 'issue_comment' &&
+       github.actor == 'Martyblyth' &&
+       github.event.issue.number == 267 &&
+       github.event.comment.body == '/build-v1087-now')
     runs-on: ubuntu-latest
     steps:
       - name: Report builder start
