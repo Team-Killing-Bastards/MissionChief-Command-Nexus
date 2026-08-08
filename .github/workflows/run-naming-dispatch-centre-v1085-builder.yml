@@ -1,0 +1,87 @@
+name: Run naming Dispatch Centre v1.0.85 builder
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/run-naming-dispatch-centre-v1085-builder.yml'
+      - '.github/run-naming-dispatch-centre-v1085-builder-trigger.txt'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: run-naming-dispatch-centre-v1085-builder
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Check out exact feature branch
+        uses: actions/checkout@v6
+        with:
+          ref: feature/naming-dispatch-centre-filter-v1085
+          fetch-depth: 0
+          token: ${{ github.token }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Apply feature patch
+        run: python3 scripts/temporary-build-naming-dispatch-centre-v1085.py
+
+      - name: Remove feature-branch one-use controls
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm -f --ignore-unmatch \
+            .github/workflows/diagnose-naming-dispatch-centre-v1085.yml \
+            .github/diagnose-naming-dispatch-centre-v1085-trigger.txt \
+            .diagnostic-naming-dispatch-centre-v1085.txt \
+            .github/workflows/build-naming-dispatch-centre-v1085.yml \
+            .github/build-naming-dispatch-centre-v1085-trigger.txt \
+            scripts/temporary-build-naming-dispatch-centre-v1085.py
+
+      - name: Validate clean v1.0.85 candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          for check in scripts/check-*.mjs; do
+            node "$check"
+          done
+          python3 scripts/check_repository.py
+          git diff --check
+
+      - name: Push feature candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Add Dispatch Centre filters to naming tools'
+          git push origin HEAD:refs/heads/feature/naming-dispatch-centre-filter-v1085
+
+      - name: Remove trusted one-use runner from main
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --force
+          git checkout -B main origin/main
+          git rm -f --ignore-unmatch \
+            .github/workflows/run-naming-dispatch-centre-v1085-builder.yml \
+            .github/run-naming-dispatch-centre-v1085-builder-trigger.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Remove one-use v1.0.85 naming builder runner'
+          git push origin HEAD:refs/heads/main
