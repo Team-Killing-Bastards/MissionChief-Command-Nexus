@@ -2,7 +2,7 @@ name: Build v1.0.86 candidate runner
 
 on:
   pull_request_target:
-    types: [opened]
+    types: [opened, synchronize]
   issue_comment:
     types: [created]
 
