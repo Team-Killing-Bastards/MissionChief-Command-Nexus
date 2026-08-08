@@ -8,6 +8,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: build-v1086-dispatch-centre-first
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
