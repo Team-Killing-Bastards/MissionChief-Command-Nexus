@@ -1,5 +1,5 @@
 name: Run naming Dispatch Centre v1.0.85 builder
-# Owner-authorised retrigger: 2026-08-08T17:20:00+01:00
+# Owner-authorised candidate handoff: 2026-08-08T17:28:00+01:00
 
 on:
   push:
@@ -38,7 +38,7 @@ jobs:
       - name: Apply feature patch
         run: python3 scripts/temporary-build-naming-dispatch-centre-v1085.py
 
-      - name: Remove feature-branch one-use controls
+      - name: Remove one-use feature controls for validation
         shell: bash
         run: |
           set -euo pipefail
@@ -62,7 +62,16 @@ jobs:
           python3 scripts/check_repository.py
           git diff --check
 
-      - name: Push feature candidate
+      - name: Restore workflow files for connector-managed handoff
+        shell: bash
+        run: |
+          set -euo pipefail
+          git restore --source=HEAD --staged --worktree -- \
+            .github/workflows/validate-userscript.yml \
+            .github/workflows/diagnose-naming-dispatch-centre-v1085.yml \
+            .github/workflows/build-naming-dispatch-centre-v1085.yml
+
+      - name: Push validated feature candidate
         shell: bash
         run: |
           set -euo pipefail
@@ -71,18 +80,3 @@ jobs:
           git add -A
           git commit -m 'Add Dispatch Centre filters to naming tools'
           git push origin HEAD:refs/heads/feature/naming-dispatch-centre-filter-v1085
-
-      - name: Remove trusted one-use runner from main
-        if: success()
-        shell: bash
-        run: |
-          set -euo pipefail
-          git fetch origin main --force
-          git checkout -B main origin/main
-          git rm -f --ignore-unmatch \
-            .github/workflows/run-naming-dispatch-centre-v1085-builder.yml \
-            .github/run-naming-dispatch-centre-v1085-builder-trigger.txt
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git commit -m 'Remove one-use v1.0.85 naming builder runner'
-          git push origin HEAD:refs/heads/main
