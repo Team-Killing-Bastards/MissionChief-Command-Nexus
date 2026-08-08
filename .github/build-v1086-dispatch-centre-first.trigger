@@ -1,1 +1,1 @@
-Build the clean v1.0.86 Dispatch Centre-first Unit/Station Naming candidate from the latest fix/dispatch-centre-first-v1086 branch, including permanent workflow registration.
+Run the trusted merged-PR builder for the final v1.0.86 Dispatch Centre -> Station Type -> Start From candidate.
