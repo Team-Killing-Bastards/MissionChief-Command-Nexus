@@ -55,7 +55,7 @@ if s.count('        await loadNamingDispatchCentreData();') != 2: raise SystemEx
 s = s.replace('        await loadNamingDispatchCentreData();', '        await Promise.all([loadNamingDispatchCentreList(false), loadNamingDispatchCentreData(false)]);')
 one("        populateNamingDispatchCentreFilter(\n            'mc-station-dispatch-centre',\n            STATION_STATE.stations\n        );\n        populateStationNamingStartDropdown();", "        populateNamingDispatchCentreFilter('mc-station-dispatch-centre');\n        populateNamingStationTypeFilter('mc-station-type', 'mc-station-dispatch-centre', STATION_STATE.stations);\n        populateStationNamingStartDropdown();", 'station cascade')
 one("        populateNamingDispatchCentreFilter(\n            'mc-namer-dispatch-centre',\n            STATE.stations\n        );\n        populateStartDropdown();", "        populateNamingDispatchCentreFilter('mc-namer-dispatch-centre');\n        populateNamingStationTypeFilter('mc-namer-station-type', 'mc-namer-dispatch-centre', STATE.stations);\n        populateStartDropdown();", 'unit cascade')
-one('        populateUnitClassDropdown();\n', '        populateUnitClassDropdown();\n        void refreshNamingDispatchCentres(false);\n', 'initial centre refresh')
+one("        document.querySelector('#mc-namer-unit-class').onchange = handleUnitClassChange;\n        populateUnitClassDropdown();\n", "        document.querySelector('#mc-namer-unit-class').onchange = handleUnitClassChange;\n        populateUnitClassDropdown();\n        void refreshNamingDispatchCentres(false);\n", 'initial centre refresh')
 
 p.write_text(s, encoding='utf-8')
 
