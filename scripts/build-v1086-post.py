@@ -6,7 +6,12 @@ s = src.read_text(encoding='utf-8')
 old = "        centres.forEach(({ id, label }) => add(id, label));\n        const values = new Set([...select.options].map(option => option.value));"
 new = "        centres.forEach(({ id, label }) => add(id, label));\n        if (NAMING_DISPATCH_CENTRE_STATE.loaded) add(NAMING_DISPATCH_CENTRE_UNASSIGNED, 'Unassigned / default');\n        const values = new Set([...select.options].map(option => option.value));"
 if s.count(old) != 1: raise SystemExit('Unable to preserve Unassigned / default option')
-src.write_text(s.replace(old, new, 1), encoding='utf-8')
+s = s.replace(old, new, 1)
+old = "            if (scoped.length && !types.has(key)) return;"
+new = "            if ((stations || []).length && !types.has(key)) return;"
+if s.count(old) != 1: raise SystemExit('Unable to tighten centre-scoped Station Type edge case')
+s = s.replace(old, new, 1)
+src.write_text(s, encoding='utf-8')
 
 readme = root / 'README.md'
 r = readme.read_text(encoding='utf-8')
