@@ -1,15 +1,12 @@
 name: Build v1.0.87 Dispatch Centre candidate
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/build-v1087-dispatch-centre-merged.trigger'
   issue_comment:
     types: [created]
 
 permissions:
   contents: write
+  issues: write
 
 concurrency:
   group: build-v1087-dispatch-centre-merged
@@ -18,13 +15,18 @@ concurrency:
 jobs:
   build:
     if: >-
-      github.event_name == 'push' ||
-      (github.event_name == 'issue_comment' &&
-       github.actor == 'Martyblyth' &&
-       github.event.issue.number == 267 &&
-       github.event.comment.body == '/build-v1087-now')
+      github.actor == 'Martyblyth' &&
+      github.event.issue.number == 267 &&
+      github.event.comment.body == '/build-v1087-now'
     runs-on: ubuntu-latest
     steps:
+      - name: Report builder start
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/${GITHUB_REPOSITORY}/issues/267/comments" \
+            -f body='v1.0.87 Dispatch Centre builder started.' >/dev/null
+
       - name: Check out feature branch
         uses: actions/checkout@v4
         with:
@@ -53,19 +55,21 @@ jobs:
           tail -n 180 /tmp/v1087-build.log > /tmp/v1087-tail.log
           exit 0
 
-      - name: Commit diagnostic on failure
-        if: steps.validate.outputs.status != '0'
-        shell: bash
+      - name: Report validation result
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STATUS: ${{ steps.validate.outputs.status }}
         run: |
-          set -euo pipefail
-          git reset --hard HEAD
-          cp /tmp/v1087-tail.log scripts/v1087-build-failure.txt
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add scripts/v1087-build-failure.txt
-          git commit -m 'Record v1.0.87 builder failure'
-          git push origin HEAD:fix/dispatch-centre-refresh-v1087
-          exit 1
+          if [ "$STATUS" = "0" ]; then
+            body='v1.0.87 Dispatch Centre candidate: build, syntax, metadata/size and every permanent regression passed. Committing the clean candidate.'
+          else
+            body="v1.0.87 Dispatch Centre builder failed with status $STATUS. Last log lines:\n\n\`\`\`text\n$(cat /tmp/v1087-tail.log)\n\`\`\`"
+          fi
+          gh api "repos/${GITHUB_REPOSITORY}/issues/267/comments" -f body="$body" >/dev/null
+
+      - name: Fail on validation error
+        if: steps.validate.outputs.status != '0'
+        run: exit 1
 
       - name: Commit clean v1.0.87 candidate
         if: steps.validate.outputs.status == '0'
@@ -78,3 +82,12 @@ jobs:
           git diff --cached --check
           git commit -m 'Fix Dispatch Centre refresh for v1.0.87'
           git push origin HEAD:fix/dispatch-centre-refresh-v1087
+
+      - name: Report committed candidate
+        if: steps.validate.outputs.status == '0'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sha=$(git rev-parse HEAD)
+          gh api "repos/${GITHUB_REPOSITORY}/issues/267/comments" \
+            -f body="v1.0.87 clean candidate committed: ${sha}" >/dev/null
