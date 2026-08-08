@@ -30,26 +30,25 @@ jobs:
           from pathlib import Path
           lines=Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8').splitlines()
           ranges=[
+            (900,1125,'state and shared helpers'),
             (1125,1355,'station overview selectors and entry model'),
-            (1880,2145,'panel HTML and naming filters'),
-            (4000,4215,'panel event wiring'),
-            (4470,4705,'station naming refresh and filtering'),
-            (10190,10330,'unit naming refresh and filtering'),
+            (1880,2350,'panel HTML and event wiring'),
+            (4300,4705,'station naming refresh and filtering'),
+            (10190,10390,'unit naming refresh, filtering and start'),
           ]
           parts=[]
           for s,e,label in ranges:
             parts.append(f'===== {label} | {s}-{e} =====')
             parts.extend(f'{n:05d}: {lines[n-1]}' for n in range(s,e+1))
-          # Also surface all identifiers mentioning dispatch/centre/center/leitstelle within Module 1.
-          parts.append('===== direct dispatch-centre identifiers =====')
+          parts.append('===== exact filter/listener hits =====')
+          needles=('mc-namer-station-type','mc-station-type','populateStartDropdown','populateStationNamingStartDropdown','addEventListener','/api/buildings','leitstelle_building_id')
           for n,line in enumerate(lines[:11000],1):
-            low=line.lower()
-            if any(x in low for x in ('dispatch','centre','center','leitstelle')):
+            if any(x in line for x in needles):
               parts.append(f'{n:05d}: {line}')
           Path('.diagnostic-naming-dispatch-centre-v1085.txt').write_text('\n'.join(parts)+'\n',encoding='utf-8')
           PY
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add .diagnostic-naming-dispatch-centre-v1085.txt
-          git commit -m 'Refine naming Dispatch Centre diagnostic'
+          git commit -m 'Capture naming filter event wiring'
           git push origin HEAD:refs/heads/feature/naming-dispatch-centre-filter-v1085
