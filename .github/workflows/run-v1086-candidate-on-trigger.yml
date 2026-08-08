@@ -1,0 +1,62 @@
+name: Run v1.0.86 candidate recovery
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/v1086-candidate-trigger.txt'
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: v1086-candidate-recovery
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: github.actor == 'Martyblyth'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out v1.0.86 feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/dispatch-centre-first-v1086
+          fetch-depth: 0
+
+      - name: Apply prepared v1.0.86 patch
+        run: |
+          set -euo pipefail
+          python3 scripts/build-v1086-dispatch-centre-first.py
+          python3 scripts/build-v1086-post.py
+          rm -f scripts/build-v1086-dispatch-centre-first.py scripts/build-v1086-post.py scripts/v1086-dispatch-centre-helpers.txt
+
+      - name: Validate candidate
+        run: |
+          set -euo pipefail
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          for check in scripts/check-*.mjs; do
+            echo "Running $check"
+            node "$check"
+          done
+          python3 scripts/check_repository.py
+          git diff --check
+
+      - name: Commit clean candidate
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'Fix Dispatch Centre-first naming flow for v1.0.86'
+          git push origin HEAD:fix/dispatch-centre-first-v1086
+
+      - name: Report success
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sha=$(git rev-parse HEAD)
+          gh api "repos/${GITHUB_REPOSITORY}/issues/263/comments" -f body="v1.0.86 clean candidate committed and full permanent regression suite passed: ${sha}" >/dev/null
