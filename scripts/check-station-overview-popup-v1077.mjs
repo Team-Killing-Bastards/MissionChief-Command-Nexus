@@ -83,14 +83,14 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-expect(source.includes('// @version      1.0.84'), 'Expected Command Nexus 1.0.79');
+expect(source.includes('// @version      1.0.85'), 'Expected Command Nexus 1.0.79');
 expect(source.includes('MISSION FINDER V10.6.144'), 'Mission Finder baseline must remain V10.6.139');
-expect(source.includes("const UNIT_VERSION = '3.3.9';"), 'Unit Naming must be 3.3.9');
-expect(source.includes("const STATION_VERSION = '1.3.3';"), 'Station Naming must remain 1.3.3');
+expect(source.includes("const UNIT_VERSION = '3.3.10';"), 'Unit Naming must be 3.3.9');
+expect(source.includes("const STATION_VERSION = '1.3.4';"), 'Station Naming must remain 1.3.3');
 expect(source.includes("const PERSONNEL_VERSION = '1.3.9';"), 'Personnel Assignment must remain 1.3.8');
 
 const moduleStart = source.indexOf("if (window.__MC_NAMING_TOOLS_V428__) return;");
-const moduleEnd = source.indexOf("const UNIT_VERSION = '3.3.9';", moduleStart);
+const moduleEnd = source.indexOf("const UNIT_VERSION = '3.3.10';", moduleStart);
 expect(moduleStart >= 0 && moduleEnd > moduleStart, 'Unable to isolate Resource Administration startup');
 const startup = source.slice(moduleStart, moduleEnd);
 

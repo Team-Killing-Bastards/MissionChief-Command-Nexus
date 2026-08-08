@@ -4,6 +4,28 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.85] - 2026-08-08
+
+### Added
+
+- Unit Naming and Station Naming now include a **Dispatch Centre** filter alongside the existing station-type filter.
+- Dispatch Centre options come from MissionChief's authoritative `/building/buildings_json` building data and each station's `leitstelle_building_id` relationship rather than station-name guessing.
+- **All dispatch centres** remains the default. When MissionChief reports stations with no Dispatch Centre assignment, **Unassigned / default** is available as an explicit filter.
+
+### Safety and scope
+
+- The filter only changes which stations enter the Unit Naming or Station Naming queue; established naming and save logic are unchanged.
+- Personnel Assignment is not filtered by this control.
+- If Dispatch Centre data cannot be loaded, the selector stays disabled and naming falls back to the existing all-stations behaviour.
+
+### Changed resource baselines
+
+- Unit Naming increased from `3.3.9` to `3.3.10`.
+- Station Naming increased from `1.3.3` to `1.3.4`.
+- Mission Finder remains `V10.6.144`.
+- Personnel Assignment remains `1.3.9`.
+- Command Nexus increased from `1.0.84` to `1.0.85`.
+
 ## [1.0.84] - 2026-08-05
 
 ### Changed
