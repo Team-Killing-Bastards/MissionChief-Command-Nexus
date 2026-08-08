@@ -1,0 +1,83 @@
+name: Build v1.0.86 owner-comment runner
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: build-v1086-owner-comment
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: >-
+      github.actor == 'Martyblyth' &&
+      github.event.issue.number == 262 &&
+      github.event.comment.body == '/build-v1086-now'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/dispatch-centre-first-v1086
+          fetch-depth: 0
+
+      - name: Build and validate candidate
+        id: validate
+        shell: bash
+        run: |
+          set +e
+          {
+            set -x
+            python3 scripts/build-v1086-dispatch-centre-first.py
+            python3 scripts/build-v1086-post.py
+            rm -f scripts/build-v1086-dispatch-centre-first.py scripts/build-v1086-post.py scripts/v1086-dispatch-centre-helpers.txt
+            node --check src/missionchief-command-nexus.user.js
+            for check in scripts/check-*.mjs; do
+              echo "Running $check"
+              node "$check" || exit $?
+            done
+            git diff --check
+          } > /tmp/v1086-build.log 2>&1
+          status=$?
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          tail -n 120 /tmp/v1086-build.log > /tmp/v1086-tail.log
+          exit 0
+
+      - name: Report build result
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STATUS: ${{ steps.validate.outputs.status }}
+        run: |
+          if [ "$STATUS" = "0" ]; then
+            body='v1.0.86 owner-comment builder: build and every permanent regression passed. Committing the clean candidate now.'
+          else
+            body="v1.0.86 owner-comment builder failed with status $STATUS. Last log lines:\n\n\`\`\`text\n$(cat /tmp/v1086-tail.log)\n\`\`\`"
+          fi
+          gh api "repos/${GITHUB_REPOSITORY}/issues/262/comments" -f body="$body" >/dev/null
+
+      - name: Fail on validation error
+        if: steps.validate.outputs.status != '0'
+        run: exit 1
+
+      - name: Commit clean candidate
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'Fix Dispatch Centre-first naming flow for v1.0.86'
+          git push origin HEAD:fix/dispatch-centre-first-v1086
+
+      - name: Report committed candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          sha=$(git rev-parse HEAD)
+          gh api "repos/${GITHUB_REPOSITORY}/issues/262/comments" -f body="v1.0.86 clean candidate committed: ${sha}" >/dev/null
