@@ -23,32 +23,44 @@ jobs:
           ref: fix/dispatch-centre-refresh-v1087
           fetch-depth: 0
 
-      - name: Build exact candidate
-        run: python3 scripts/build-dispatch-centre-refresh-v1087.py
+      - name: Build and validate exact candidate
+        id: validate
+        shell: bash
+        run: |
+          set +e
+          {
+            set -x
+            python3 scripts/build-dispatch-centre-refresh-v1087.py
+            node --check src/missionchief-command-nexus.user.js
+            node scripts/validate-userscript.mjs
+            for check in scripts/check-*.mjs; do
+              echo "Running $check"
+              node "$check" || exit $?
+            done
+            test ! -e scripts/build-dispatch-centre-refresh-v1087.py
+            git diff --check
+          } > /tmp/v1087-build.log 2>&1
+          status=$?
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          tail -n 180 /tmp/v1087-build.log > /tmp/v1087-tail.log
+          exit 0
 
-      - name: Validate JavaScript syntax
-        run: node --check src/missionchief-command-nexus.user.js
-
-      - name: Validate userscript metadata and size
-        run: node scripts/validate-userscript.mjs
-
-      - name: Run every permanent regression
+      - name: Commit diagnostic on failure
+        if: steps.validate.outputs.status != '0'
         shell: bash
         run: |
           set -euo pipefail
-          for check in scripts/check-*.mjs; do
-            echo "Running $check"
-            node "$check"
-          done
-
-      - name: Validate clean candidate
-        shell: bash
-        run: |
-          set -euo pipefail
-          test ! -e scripts/build-dispatch-centre-refresh-v1087.py
-          git diff --check
+          git reset --hard HEAD
+          cp /tmp/v1087-tail.log scripts/v1087-build-failure.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add scripts/v1087-build-failure.txt
+          git commit -m 'Record v1.0.87 builder failure'
+          git push origin HEAD:fix/dispatch-centre-refresh-v1087
+          exit 1
 
       - name: Commit clean v1.0.87 candidate
+        if: steps.validate.outputs.status == '0'
         shell: bash
         run: |
           set -euo pipefail
