@@ -2,7 +2,7 @@ name: Build v1.0.87 Dispatch Centre refresh
 
 on:
   pull_request_target:
-    types: [opened]
+    types: [opened, reopened]
 
 permissions:
   contents: write
