@@ -12,6 +12,9 @@ on:
 permissions:
   contents: write
 
+env:
+  GH_REPO: Team-Killing-Bastards/MissionChief-Command-Nexus
+
 jobs:
   diagnose:
     runs-on: ubuntu-latest
@@ -22,33 +25,18 @@ jobs:
           ref: feature/naming-dispatch-centre-filter-v1085
           fetch-depth: 0
           token: ${{ github.token }}
-      - name: Extract exact naming scopes
+
+      - name: Inspect recent main workflow runs
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-          lines=Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8').splitlines()
-          ranges=[
-            (900,1125,'state and shared helpers'),
-            (1125,1355,'station overview selectors and entry model'),
-            (1880,2350,'panel HTML and event wiring'),
-            (4300,4705,'station naming refresh and filtering'),
-            (10190,10390,'unit naming refresh, filtering and start'),
-          ]
-          parts=[]
-          for s,e,label in ranges:
-            parts.append(f'===== {label} | {s}-{e} =====')
-            parts.extend(f'{n:05d}: {lines[n-1]}' for n in range(s,e+1))
-          parts.append('===== exact filter/listener hits =====')
-          needles=('mc-namer-station-type','mc-station-type','populateStartDropdown','populateStationNamingStartDropdown','addEventListener','/api/buildings','leitstelle_building_id')
-          for n,line in enumerate(lines[:11000],1):
-            if any(x in line for x in needles):
-              parts.append(f'{n:05d}: {line}')
-          Path('.diagnostic-naming-dispatch-centre-v1085.txt').write_text('\n'.join(parts)+'\n',encoding='utf-8')
-          PY
+          gh api "repos/${GH_REPO}/actions/runs?branch=main&per_page=30" \
+            --jq '.workflow_runs | map(select(.name | test("naming Dispatch Centre|Repository quality|Validate userscript"; "i"))) | map({id,name,event,status,conclusion,head_sha,created_at,updated_at,jobs_url,html_url})' \
+            > .diagnostic-naming-dispatch-centre-v1085.txt
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add .diagnostic-naming-dispatch-centre-v1085.txt
-          git commit -m 'Capture naming filter event wiring'
+          git commit -m 'Capture trusted naming builder run status'
           git push origin HEAD:refs/heads/feature/naming-dispatch-centre-filter-v1085
