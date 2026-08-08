@@ -1,1 +1,1 @@
-Extract exact Unit Naming/Station Naming UI, event wiring, station overview model and filtering scopes for v1.0.85.
+Capture exact state, panel listeners, Unit Naming filter and Station Naming filter wiring for v1.0.85.
