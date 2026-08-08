@@ -19,6 +19,51 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  finalize-v1086:
+    name: Finalize v1.0.86 Dispatch Centre candidate
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.number == 264 &&
+      github.actor == 'Martyblyth'
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Apply and validate prepared candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f scripts/build-v1086-dispatch-centre-first.py
+          python3 scripts/build-v1086-dispatch-centre-first.py
+          python3 scripts/build-v1086-post.py
+          rm -f scripts/build-v1086-dispatch-centre-first.py scripts/build-v1086-post.py scripts/v1086-dispatch-centre-helpers.txt
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          for check in scripts/check-*.mjs; do
+            echo "Running $check"
+            node "$check"
+          done
+          python3 scripts/check_repository.py
+          git diff --check
+
+      - name: Commit clean candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'Fix Dispatch Centre-first naming flow for v1.0.86'
+          git push origin HEAD:${{ github.head_ref }}
+
   integrity:
     name: Repository integrity
     if: github.event_name != 'pull_request_target'
