@@ -11,6 +11,8 @@ on:
 
 permissions:
   contents: write
+  issues: write
+  pull-requests: write
 
 concurrency:
   group: build-v1086-dispatch-centre-first
@@ -66,3 +68,15 @@ jobs:
           git diff --cached --check
           git commit -m 'Fix Dispatch Centre-first naming flow for v1.0.86'
           git push origin HEAD:fix/dispatch-centre-first-v1086
+
+      - name: Report success
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr comment 262 --repo "$GITHUB_REPOSITORY" --body "v1.0.86 trusted builder PASS: clean Dispatch Centre-first candidate pushed."
+
+      - name: Report failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr comment 262 --repo "$GITHUB_REPOSITORY" --body "v1.0.86 trusted builder FAILED. Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
