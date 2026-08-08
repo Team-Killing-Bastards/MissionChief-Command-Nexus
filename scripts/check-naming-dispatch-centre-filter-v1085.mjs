@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { readFile } from 'node:fs/promises';
 
+// Legacy v1.0.85 safety coverage retained and revalidated for v1.0.86.
 const source = await readFile('src/missionchief-command-nexus.user.js', 'utf8');
 const workflow = await readFile('.github/workflows/validate-userscript.yml', 'utf8');
 const fail = message => { console.error(`ERROR: ${message}`); process.exit(1); };
