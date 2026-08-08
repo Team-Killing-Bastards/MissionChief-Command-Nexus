@@ -1,5 +1,5 @@
 name: Validate userscript
-# Includes mission-definition trained-personnel, on-scene trained-personnel authority, live Missing Personnel panel display, Required Personnel preload, preloaded Vehicle Load coverage, high-risk Missing Person Ambulance settings, normal Stations popup ownership, Dispatch Centres Show all enforced popup window, selected-trained-personnel UI, integrated mission dashboard, compact Nexus UI, HazMat vehicle/personnel-to-OSU, diagnostic export, dispatch-correction, memory lifecycle/recycle, deep idle/Auto Mode memory controls, bounded Ally Steal response timing, faster patient/prisoner transport response, complete iOS Personnel Assignment controls, Unit/Station Naming Dispatch Centre filters, Missing-on-mission authority and single-pass update coverage.
+# Includes mission-definition trained-personnel, on-scene trained-personnel authority, live Missing Personnel panel display, Required Personnel preload, preloaded Vehicle Load coverage, high-risk Missing Person Ambulance settings, normal Stations popup ownership, Dispatch Centres Show all enforced popup window, selected-trained-personnel UI, integrated mission dashboard, compact Nexus UI, HazMat vehicle/personnel-to-OSU, diagnostic export, dispatch-correction, memory lifecycle/recycle, deep idle/Auto Mode memory controls, bounded Ally Steal response timing, faster patient/prisoner transport response, complete iOS Personnel Assignment controls, Unit/Station Naming Dispatch Centre filters and centre-first flow, Missing-on-mission authority and single-pass update coverage.
 
 on:
   pull_request:
@@ -28,6 +28,7 @@ on:
       - 'scripts/check-auto-transport-response-v1083.mjs'
       - 'scripts/check-personnel-assignment-ios-completeness-v1084.mjs'
       - 'scripts/check-naming-dispatch-centre-filter-v1085.mjs'
+      - 'scripts/check-naming-dispatch-centre-first-v1086.mjs'
       - 'scripts/check-unit-finder-diagnostic-export.mjs'
       - 'scripts/check-mission-dashboard-v1069.mjs'
       - 'scripts/check-nexus-visual-system-v1070.mjs'
@@ -80,6 +81,7 @@ on:
       - 'scripts/check-auto-transport-response-v1083.mjs'
       - 'scripts/check-personnel-assignment-ios-completeness-v1084.mjs'
       - 'scripts/check-naming-dispatch-centre-filter-v1085.mjs'
+      - 'scripts/check-naming-dispatch-centre-first-v1086.mjs'
       - 'scripts/check-unit-finder-diagnostic-export.mjs'
       - 'scripts/check-mission-dashboard-v1069.mjs'
       - 'scripts/check-nexus-visual-system-v1070.mjs'
@@ -201,6 +203,9 @@ jobs:
 
       - name: Validate Unit and Station Naming Dispatch Centre filters
         run: node scripts/check-naming-dispatch-centre-filter-v1085.mjs
+
+      - name: Validate Dispatch Centre-first naming flow
+        run: node scripts/check-naming-dispatch-centre-first-v1086.mjs
 
       - name: Validate Unit Finder diagnostic export
         run: node scripts/check-unit-finder-diagnostic-export.mjs
