@@ -1,6 +1,8 @@
-name: Build v1.0.86 owner-comment runner
+name: Build v1.0.86 candidate runner
 
 on:
+  pull_request_target:
+    types: [opened]
   issue_comment:
     types: [created]
 
@@ -9,15 +11,19 @@ permissions:
   issues: write
 
 concurrency:
-  group: build-v1086-owner-comment
+  group: build-v1086-candidate
   cancel-in-progress: true
 
 jobs:
   build:
     if: >-
-      github.actor == 'Martyblyth' &&
-      github.event.issue.number == 263 &&
-      github.event.comment.body == '/build-v1086-now'
+      (github.event_name == 'pull_request_target' &&
+       github.actor == 'Martyblyth' &&
+       github.event.pull_request.head.ref == 'fix/dispatch-centre-first-v1086') ||
+      (github.event_name == 'issue_comment' &&
+       github.actor == 'Martyblyth' &&
+       github.event.issue.number == 263 &&
+       github.event.comment.body == '/build-v1086-now')
     runs-on: ubuntu-latest
     steps:
       - name: Check out feature branch
@@ -54,9 +60,9 @@ jobs:
           STATUS: ${{ steps.validate.outputs.status }}
         run: |
           if [ "$STATUS" = "0" ]; then
-            body='v1.0.86 owner-comment builder: build and every permanent regression passed. Committing the clean candidate now.'
+            body='v1.0.86 candidate builder: build and every permanent regression passed. Committing the clean candidate now.'
           else
-            body="v1.0.86 owner-comment builder failed with status $STATUS. Last log lines:\n\n\`\`\`text\n$(cat /tmp/v1086-tail.log)\n\`\`\`"
+            body="v1.0.86 candidate builder failed with status $STATUS. Last log lines:\n\n\`\`\`text\n$(cat /tmp/v1086-tail.log)\n\`\`\`"
           fi
           gh api "repos/${GITHUB_REPOSITORY}/issues/263/comments" -f body="$body" >/dev/null
 
