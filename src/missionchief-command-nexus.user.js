@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.85
+// @version      1.0.86
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -64,8 +64,8 @@
     // excluded from the naming/personnel runtime.
     if (!TOOL_IS_TOP_WINDOW && !TOOL_IS_STATION_OVERVIEW_FRAME) return;
 
-    const UNIT_VERSION = '3.3.10';
-    const STATION_VERSION = '1.3.4';
+    const UNIT_VERSION = '3.3.11';
+    const STATION_VERSION = '1.3.5';
     const PERSONNEL_VERSION = '1.3.9';
     const PERSONNEL_TRAINING_CODE = 'critical_care';
     const PERSONNEL_TRAINING_LABEL = 'Critical Care';
@@ -992,6 +992,8 @@
     const NAMING_DISPATCH_CENTRE_STATE = {
         loadPromise: null,
         loaded: false,
+        listPromise: null,
+        listLoaded: false,
         byBuildingId: new Map(),
         labelsById: new Map()
     };
@@ -1099,6 +1101,8 @@
         NAMING_DISPATCH_CENTRE_STATE.labelsById.clear();
         NAMING_DISPATCH_CENTRE_STATE.loadPromise = null;
         NAMING_DISPATCH_CENTRE_STATE.loaded = false;
+        NAMING_DISPATCH_CENTRE_STATE.listPromise = null;
+        NAMING_DISPATCH_CENTRE_STATE.listLoaded = false;
         PERSONNEL_STATE.reports = [];
         PERSONNEL_STATE.lastStationReport = null;
         PERSONNEL_STATE.currentReport = '';
@@ -1359,7 +1363,12 @@
         ) || `Dispatch Centre ${fallbackId}`.trim();
     }
 
-    async function loadNamingDispatchCentreData() {
+    async function loadNamingDispatchCentreData(force = false) {
+        if (force) {
+            NAMING_DISPATCH_CENTRE_STATE.loaded = false;
+            NAMING_DISPATCH_CENTRE_STATE.loadPromise = null;
+            NAMING_DISPATCH_CENTRE_STATE.byBuildingId.clear();
+        }
         if (NAMING_DISPATCH_CENTRE_STATE.loaded) return true;
         if (NAMING_DISPATCH_CENTRE_STATE.loadPromise) {
             return NAMING_DISPATCH_CENTRE_STATE.loadPromise;
@@ -1377,36 +1386,22 @@
                 }
 
                 const records = extractBuildingRecords(await response.json());
-                const recordsById = new Map();
-                const requestedCentreIds = new Set();
 
                 NAMING_DISPATCH_CENTRE_STATE.byBuildingId.clear();
-                NAMING_DISPATCH_CENTRE_STATE.labelsById.clear();
 
                 records.forEach(building => {
                     const buildingId = getNamingBuildingRecordId(building);
                     if (!buildingId) return;
-                    recordsById.set(buildingId, building);
 
                     const dispatchCentreId = getNamingDispatchCentreIdFromRecord(building);
                     if (!dispatchCentreId) return;
                     NAMING_DISPATCH_CENTRE_STATE.byBuildingId.set(buildingId, dispatchCentreId);
-                    requestedCentreIds.add(dispatchCentreId);
-                });
-
-                requestedCentreIds.forEach(dispatchCentreId => {
-                    const centre = recordsById.get(dispatchCentreId);
-                    NAMING_DISPATCH_CENTRE_STATE.labelsById.set(
-                        dispatchCentreId,
-                        getNamingBuildingRecordLabel(centre, dispatchCentreId)
-                    );
                 });
 
                 NAMING_DISPATCH_CENTRE_STATE.loaded = true;
                 return true;
             } catch (error) {
                 NAMING_DISPATCH_CENTRE_STATE.byBuildingId.clear();
-                NAMING_DISPATCH_CENTRE_STATE.labelsById.clear();
                 NAMING_DISPATCH_CENTRE_STATE.loaded = false;
                 console.warn('[Command Nexus] Dispatch Centre filter data unavailable:', error);
                 return false;
@@ -1432,52 +1427,159 @@
         return String(station?.dispatchCentreId || '') === selected;
     }
 
-    function populateNamingDispatchCentreFilter(selectId, stations) {
+    function getNamingDispatchCentreIdFromHref(href, allowNested = false) {
+        if (!href) return '';
+        try {
+            const url = new URL(String(href), location.origin);
+            if (url.origin !== location.origin) return '';
+            const pattern = allowNested ? /^\/buildings\/(\d+)(?:\/|$)/ : /^\/buildings\/(\d+)\/?$/;
+            return url.pathname.match(pattern)?.[1] || '';
+        } catch (_) {
+            return '';
+        }
+    }
+
+    function extractNamingDispatchCentresFromHtml(html) {
+        const parsed = new DOMParser().parseFromString(String(html || ''), 'text/html');
+        const centres = new Map();
+        const containers = parsed.querySelectorAll(
+            '.building_list_li[building_type_id="7"], .building_list[building_type_id="7"], [data-building-type-id="7"], [building_type="7"]'
+        );
+
+        containers.forEach(container => {
+            const anchors = [...container.querySelectorAll('a[href*="/buildings/"]')];
+            const preferred = anchors.find(anchor =>
+                /^\/buildings\/\d+\/?$/.test(
+                    (() => {
+                        try { return new URL(anchor.getAttribute('href') || '', location.origin).pathname; }
+                        catch (_) { return ''; }
+                    })()
+                )
+            ) || anchors[0];
+            if (!preferred) return;
+
+            const id =
+                getNamingDispatchCentreIdFromHref(preferred.getAttribute('href')) ||
+                getNamingDispatchCentreIdFromHref(preferred.getAttribute('href'), true) ||
+                String(
+                    container.getAttribute('building_id') ||
+                    container.getAttribute('data-building-id') ||
+                    ''
+                );
+            if (!id) return;
+
+            const caption =
+                container.querySelector('.building_list_caption .map_position_mover') ||
+                container.querySelector('.building_list_caption a[href*="/buildings/"]') ||
+                preferred;
+            const label = cleanText(caption?.textContent || '');
+            if (label) centres.set(String(id), label);
+        });
+
+        return centres;
+    }
+
+    async function loadNamingDispatchCentreList(force = false) {
+        if (force) {
+            NAMING_DISPATCH_CENTRE_STATE.listLoaded = false;
+            NAMING_DISPATCH_CENTRE_STATE.listPromise = null;
+            NAMING_DISPATCH_CENTRE_STATE.labelsById.clear();
+        }
+        if (NAMING_DISPATCH_CENTRE_STATE.listLoaded) return true;
+        if (NAMING_DISPATCH_CENTRE_STATE.listPromise) return NAMING_DISPATCH_CENTRE_STATE.listPromise;
+        NAMING_DISPATCH_CENTRE_STATE.listPromise = (async () => {
+            try {
+                const response = await stationFetchWithTimeout('/leitstellenansicht', { credentials: 'same-origin', cache: 'no-store' }, 15000);
+                if (!response.ok) throw new Error(`Dispatch Centres view returned HTTP ${response.status}`);
+                const centres = extractNamingDispatchCentresFromHtml(await response.text());
+                if (!centres.size) throw new Error('No Dispatch Centres found in native Dispatch Centres view');
+                NAMING_DISPATCH_CENTRE_STATE.labelsById.clear();
+                centres.forEach((label, id) => NAMING_DISPATCH_CENTRE_STATE.labelsById.set(String(id), label));
+                NAMING_DISPATCH_CENTRE_STATE.listLoaded = true;
+                return true;
+            } catch (error) {
+                NAMING_DISPATCH_CENTRE_STATE.labelsById.clear();
+                NAMING_DISPATCH_CENTRE_STATE.listLoaded = false;
+                console.warn('[Command Nexus] Dispatch Centre list unavailable:', error);
+                return false;
+            }
+        })();
+        const loaded = await NAMING_DISPATCH_CENTRE_STATE.listPromise;
+        if (!loaded) NAMING_DISPATCH_CENTRE_STATE.listPromise = null;
+        return loaded;
+    }
+
+    function populateNamingDispatchCentreFilter(selectId) {
         const select = document.getElementById(selectId);
         if (!select) return;
-
         const previous = select.value || NAMING_DISPATCH_CENTRE_ALL;
-        const centreIds = [...new Set(
-            (stations || [])
-                .map(station => String(station?.dispatchCentreId || ''))
-                .filter(Boolean)
-        )].sort((a, b) => {
-            const labelA = NAMING_DISPATCH_CENTRE_STATE.labelsById.get(a) || a;
-            const labelB = NAMING_DISPATCH_CENTRE_STATE.labelsById.get(b) || b;
-            return labelA.localeCompare(labelB, undefined, { numeric: true });
-        });
-        const hasUnassigned =
-            NAMING_DISPATCH_CENTRE_STATE.loaded &&
-            (stations || []).some(station => !station?.dispatchCentreId);
-
+        const centres = [...NAMING_DISPATCH_CENTRE_STATE.labelsById.entries()]
+            .map(([id, label]) => ({ id: String(id), label: cleanText(label) || `Dispatch Centre ${id}` }))
+            .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
         select.replaceChildren();
-        const addOption = (value, label) => {
+        const add = (value, label) => {
             const option = document.createElement('option');
             option.value = value;
             option.textContent = label;
             select.appendChild(option);
         };
-
-        addOption(NAMING_DISPATCH_CENTRE_ALL, 'All dispatch centres');
-        centreIds.forEach(dispatchCentreId => {
-            addOption(
-                dispatchCentreId,
-                NAMING_DISPATCH_CENTRE_STATE.labelsById.get(dispatchCentreId) ||
-                    `Dispatch Centre ${dispatchCentreId}`
-            );
-        });
-        if (hasUnassigned) {
-            addOption(NAMING_DISPATCH_CENTRE_UNASSIGNED, 'Unassigned / default');
-        }
-
+        add(NAMING_DISPATCH_CENTRE_ALL, 'All dispatch centres');
+        centres.forEach(({ id, label }) => add(id, label));
+        if (NAMING_DISPATCH_CENTRE_STATE.loaded) add(NAMING_DISPATCH_CENTRE_UNASSIGNED, 'Unassigned / default');
         const values = new Set([...select.options].map(option => option.value));
         select.value = values.has(previous) ? previous : NAMING_DISPATCH_CENTRE_ALL;
-        select.disabled = !NAMING_DISPATCH_CENTRE_STATE.loaded;
-        select.title = NAMING_DISPATCH_CENTRE_STATE.loaded
-            ? 'Filter stations by their MissionChief Dispatch Centre assignment.'
-            : 'Dispatch Centre data unavailable; using all stations.';
+        select.disabled = !NAMING_DISPATCH_CENTRE_STATE.listLoaded;
+        select.title = NAMING_DISPATCH_CENTRE_STATE.listLoaded
+            ? 'Choose a MissionChief Dispatch Centre first, then Station Type and Start From.'
+            : 'Dispatch Centre list unavailable; refresh to retry.';
     }
 
+    function getStationsForNamingDispatchCentre(stations, dispatchSelectId) {
+        const centre = document.getElementById(dispatchSelectId)?.value || NAMING_DISPATCH_CENTRE_ALL;
+        return (stations || []).filter(station => stationMatchesNamingDispatchCentre(station, centre));
+    }
+
+    function populateNamingStationTypeFilter(selectId, dispatchSelectId, stations) {
+        const select = document.getElementById(selectId);
+        if (!select) return;
+        const previous = select.value || 'ALL';
+        const scoped = getStationsForNamingDispatchCentre(stations, dispatchSelectId);
+        const types = new Set(scoped.map(station => station?.stationType).filter(Boolean));
+        select.replaceChildren();
+        const all = document.createElement('option');
+        all.value = 'ALL';
+        all.textContent = 'All station types';
+        select.appendChild(all);
+        Object.entries(STATION_TYPES).forEach(([key, label]) => {
+            if ((stations || []).length && !types.has(key)) return;
+            const option = document.createElement('option');
+            option.value = key;
+            option.textContent = label;
+            select.appendChild(option);
+        });
+        const values = new Set([...select.options].map(option => option.value));
+        select.value = values.has(previous) ? previous : 'ALL';
+    }
+
+    async function refreshNamingDispatchCentres(force = true) {
+        await Promise.all([loadNamingDispatchCentreList(force), loadNamingDispatchCentreData(force)]);
+        populateNamingDispatchCentreFilter('mc-namer-dispatch-centre');
+        populateNamingDispatchCentreFilter('mc-station-dispatch-centre');
+        populateNamingStationTypeFilter('mc-namer-station-type', 'mc-namer-dispatch-centre', STATE.stations);
+        populateNamingStationTypeFilter('mc-station-type', 'mc-station-dispatch-centre', STATION_STATE.stations);
+        populateStartDropdown();
+        populateStationNamingStartDropdown();
+    }
+
+    function handleUnitDispatchCentreChange() {
+        populateNamingStationTypeFilter('mc-namer-station-type', 'mc-namer-dispatch-centre', STATE.stations);
+        handleUnitStationTypeChange();
+    }
+
+    function handleStationDispatchCentreChange() {
+        populateNamingStationTypeFilter('mc-station-type', 'mc-station-dispatch-centre', STATION_STATE.stations);
+        populateStationNamingStartDropdown();
+    }
     function findStationOverviewEntry(href) {
         const expected = normaliseStationOverviewHref(href);
         if (!expected) return null;
@@ -2093,14 +2195,16 @@
 
             <div id="mc-unit-view" class="mc-tool-view mc-nexus-tool-grid">
                 <div class="mc-namer-section mc-nexus-config-card">
-                    <label><b>Station Type:</b></label>
-                    <select id="mc-namer-station-type">
-                        ${Object.entries(STATION_TYPES).map(([key, label]) => `<option value="${key}">${label}</option>`).join('')}
-                    </select>
-
-                    <label style="margin-top:6px; display:block;"><b>Dispatch Centre:</b></label>
+                    <label><b>Dispatch Centre:</b></label>
                     <select id="mc-namer-dispatch-centre" disabled>
                         <option value="ALL">All dispatch centres</option>
+                    </select>
+                    <button id="mc-namer-refresh-dispatch-centres" type="button" style="margin-top:4px;">Refresh Dispatch Centres</button>
+
+                    <label style="margin-top:6px; display:block;"><b>Station Type:</b></label>
+                    <select id="mc-namer-station-type">
+                        <option value="ALL">All station types</option>
+                        ${Object.entries(STATION_TYPES).map(([key, label]) => `<option value="${key}">${label}</option>`).join('')}
                     </select>
 
                     <label style="margin-top:6px; display:block;"><b>Unit Class:</b></label>
@@ -2143,14 +2247,16 @@
 
             <div id="mc-station-view" class="mc-tool-view mc-nexus-tool-grid" style="display:none;">
                 <div class="mc-namer-section mc-nexus-config-card">
-                    <label><b>Station Type:</b></label>
-                    <select id="mc-station-type">
-                        ${Object.entries(STATION_TYPES).map(([key, label]) => `<option value="${key}">${label}</option>`).join('')}
-                    </select>
-
-                    <label style="margin-top:6px; display:block;"><b>Dispatch Centre:</b></label>
+                    <label><b>Dispatch Centre:</b></label>
                     <select id="mc-station-dispatch-centre" disabled>
                         <option value="ALL">All dispatch centres</option>
+                    </select>
+                    <button id="mc-station-refresh-dispatch-centres" type="button" style="margin-top:4px;">Refresh Dispatch Centres</button>
+
+                    <label style="margin-top:6px; display:block;"><b>Station Type:</b></label>
+                    <select id="mc-station-type">
+                        <option value="ALL">All station types</option>
+                        ${Object.entries(STATION_TYPES).map(([key, label]) => `<option value="${key}">${label}</option>`).join('')}
                     </select>
 
                     <label style="margin-top:6px; display:block;"><b>Mode:</b></label>
@@ -2633,11 +2739,13 @@
             #mc-namer-startfrom,
             #mc-namer-station-type,
             #mc-namer-dispatch-centre,
+            #mc-namer-refresh-dispatch-centres,
             #mc-namer-unit-class,
             #mc-namer-mode,
             #mc-station-startfrom,
             #mc-station-type,
             #mc-station-dispatch-centre,
+            #mc-station-refresh-dispatch-centres,
             #mc-station-mode,
             #mc-station-action,
             #mc-personnel-service,
@@ -4055,10 +4163,12 @@
         document.querySelector('#mc-namer-stop').onclick = stopRun;
         document.querySelector('#mc-namer-debug').onclick = toggleDebug;
         document.querySelector('#mc-namer-clear').onclick = clearLog;
+        document.querySelector('#mc-namer-dispatch-centre').onchange = handleUnitDispatchCentreChange;
+        document.querySelector('#mc-namer-refresh-dispatch-centres').onclick = () => refreshNamingDispatchCentres(true);
         document.querySelector('#mc-namer-station-type').onchange = handleUnitStationTypeChange;
-        document.querySelector('#mc-namer-dispatch-centre').onchange = populateStartDropdown;
         document.querySelector('#mc-namer-unit-class').onchange = handleUnitClassChange;
         populateUnitClassDropdown();
+        void refreshNamingDispatchCentres(false);
 
         document.querySelector('#mc-station-refresh').onclick = refreshStationNamingStations;
         document.querySelector('#mc-station-start').onclick = startStationNamingRun;
@@ -4066,8 +4176,9 @@
         document.querySelector('#mc-station-stop').onclick = stopStationNamingRun;
         document.querySelector('#mc-station-debug').onclick = toggleStationDebug;
         document.querySelector('#mc-station-clear').onclick = clearStationLog;
+        document.querySelector('#mc-station-dispatch-centre').onchange = handleStationDispatchCentreChange;
+        document.querySelector('#mc-station-refresh-dispatch-centres').onclick = () => refreshNamingDispatchCentres(true);
         document.querySelector('#mc-station-type').onchange = populateStationNamingStartDropdown;
-        document.querySelector('#mc-station-dispatch-centre').onchange = populateStationNamingStartDropdown;
         document.querySelector('#mc-station-startfrom').onchange = updateStationNamingSelectionPreview;
         document.querySelector('#mc-station-mode').onchange = () => {
             STATION_STATE.mode = document.querySelector('#mc-station-mode')?.value || 'all';
@@ -4751,7 +4862,7 @@
         stationLog('Refreshing station list and reading MissionChief building type IDs...', 'info');
 
         const stationEntries = getStationOverviewEntries();
-        await loadNamingDispatchCentreData();
+        await Promise.all([loadNamingDispatchCentreList(false), loadNamingDispatchCentreData(false)]);
 
         STATION_STATE.stations = stationEntries
             .map((entry, index) => {
@@ -4774,10 +4885,8 @@
             })
             .filter(station => station.href && station.buildingId);
 
-        populateNamingDispatchCentreFilter(
-            'mc-station-dispatch-centre',
-            STATION_STATE.stations
-        );
+        populateNamingDispatchCentreFilter('mc-station-dispatch-centre');
+        populateNamingStationTypeFilter('mc-station-type', 'mc-station-dispatch-centre', STATION_STATE.stations);
         populateStationNamingStartDropdown();
         setStationUiValue('status', 'Ready');
 
@@ -10447,7 +10556,7 @@
         log(`Unit class filter: ${getUnitClassDisplayLabel()}`, 'info');
 
         const stationEntries = getStationOverviewEntries();
-        await loadNamingDispatchCentreData();
+        await Promise.all([loadNamingDispatchCentreList(false), loadNamingDispatchCentreData(false)]);
 
         STATE.stations = stationEntries.map((entry, index) => ({
             index,
@@ -10461,10 +10570,8 @@
                 detectStationType(entry.displayName)
         }));
 
-        populateNamingDispatchCentreFilter(
-            'mc-namer-dispatch-centre',
-            STATE.stations
-        );
+        populateNamingDispatchCentreFilter('mc-namer-dispatch-centre');
+        populateNamingStationTypeFilter('mc-namer-station-type', 'mc-namer-dispatch-centre', STATE.stations);
         populateStartDropdown();
 
         setStatus('Ready');

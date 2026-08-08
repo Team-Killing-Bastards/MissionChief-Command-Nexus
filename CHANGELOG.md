@@ -4,6 +4,23 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.86] - 2026-08-08
+
+### Fixed
+
+- Unit Naming and Station Naming now load the **Dispatch Centre list independently** from MissionChief's native `/leitstellenansicht` view instead of inferring available centres from station records.
+- Naming now follows **Dispatch Centre → Station Type → Start From**. Choosing a centre first narrows Station Type to types represented in that centre, and Start From is then limited to the selected centre and type.
+- Added **Refresh Dispatch Centres** controls to both naming tools.
+- Station membership still uses MissionChief's `leitstelle_building_id` relationship from `/building/buildings_json`; centre names are not hard-coded or guessed.
+
+### Changed resource baselines
+
+- Unit Naming increased from `3.3.10` to `3.3.11`.
+- Station Naming increased from `1.3.4` to `1.3.5`.
+- Mission Finder remains `V10.6.144`.
+- Personnel Assignment remains `1.3.9`.
+- Command Nexus increased from `1.0.85` to `1.0.86`.
+
 ## [1.0.85] - 2026-08-08
 
 ### Added
