@@ -1,0 +1,40 @@
+name: Diagnose naming v1.0.85 builder status
+
+on:
+  push:
+    branches:
+      - diagnostic/naming-v1085-builder-status
+    paths:
+      - '.github/workflows/diagnose-naming-v1085-builder-status.yml'
+      - '.github/diagnose-naming-v1085-builder-status-trigger.txt'
+
+permissions:
+  contents: write
+
+env:
+  GH_REPO: Team-Killing-Bastards/MissionChief-Command-Nexus
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: diagnostic/naming-v1085-builder-status
+          token: ${{ github.token }}
+      - name: Capture latest builder run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          RUN_JSON="$(gh api "repos/${GH_REPO}/actions/runs?branch=main&per_page=30" --jq '.workflow_runs | map(select(.name == "Run naming Dispatch Centre v1.0.85 builder")) | sort_by(.created_at) | reverse | .[0]')"
+          printf '%s\n' "${RUN_JSON}" > .diagnostic-naming-v1085-builder-run.json
+          RUN_ID="$(printf '%s\n' "${RUN_JSON}" | jq -r '.id')"
+          gh api "repos/${GH_REPO}/actions/runs/${RUN_ID}/jobs" --jq '.jobs | map({id,name,status,conclusion,steps})' > .diagnostic-naming-v1085-builder-jobs.json
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .diagnostic-naming-v1085-builder-run.json .diagnostic-naming-v1085-builder-jobs.json
+          git commit -m 'Capture latest v1.0.85 builder status'
+          git push origin HEAD:refs/heads/diagnostic/naming-v1085-builder-status
