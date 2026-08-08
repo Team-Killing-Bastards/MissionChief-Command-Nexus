@@ -7,7 +7,6 @@ on:
 permissions:
   contents: write
   issues: write
-  pull-requests: write
 
 concurrency:
   group: build-v1086-owner-comment
@@ -17,7 +16,7 @@ jobs:
   build:
     if: >-
       github.actor == 'Martyblyth' &&
-      github.event.issue.number == 262 &&
+      github.event.issue.number == 263 &&
       github.event.comment.body == '/build-v1086-now'
     runs-on: ubuntu-latest
     steps:
@@ -59,7 +58,7 @@ jobs:
           else
             body="v1.0.86 owner-comment builder failed with status $STATUS. Last log lines:\n\n\`\`\`text\n$(cat /tmp/v1086-tail.log)\n\`\`\`"
           fi
-          gh api "repos/${GITHUB_REPOSITORY}/issues/262/comments" -f body="$body" >/dev/null
+          gh api "repos/${GITHUB_REPOSITORY}/issues/263/comments" -f body="$body" >/dev/null
 
       - name: Fail on validation error
         if: steps.validate.outputs.status != '0'
@@ -80,4 +79,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           sha=$(git rev-parse HEAD)
-          gh api "repos/${GITHUB_REPOSITORY}/issues/262/comments" -f body="v1.0.86 clean candidate committed: ${sha}" >/dev/null
+          gh api "repos/${GITHUB_REPOSITORY}/issues/263/comments" -f body="v1.0.86 clean candidate committed: ${sha}" >/dev/null
