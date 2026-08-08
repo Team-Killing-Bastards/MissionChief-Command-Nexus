@@ -13,20 +13,40 @@
     function extractNamingDispatchCentresFromHtml(html) {
         const parsed = new DOMParser().parseFromString(String(html || ''), 'text/html');
         const centres = new Map();
-        parsed.querySelectorAll('a[href]').forEach(anchor => {
-            const id = getNamingDispatchCentreIdFromHref(anchor.getAttribute('href'));
-            const label = cleanText(anchor.textContent || '');
-            if (id && label && !/^(?:edit|show|view|details|delete|open)$/i.test(label)) centres.set(id, label);
+        const containers = parsed.querySelectorAll(
+            '.building_list_li[building_type_id="7"], .building_list[building_type_id="7"], [data-building-type-id="7"], [building_type="7"]'
+        );
+
+        containers.forEach(container => {
+            const anchors = [...container.querySelectorAll('a[href*="/buildings/"]')];
+            const preferred = anchors.find(anchor =>
+                /^\/buildings\/\d+\/?$/.test(
+                    (() => {
+                        try { return new URL(anchor.getAttribute('href') || '', location.origin).pathname; }
+                        catch (_) { return ''; }
+                    })()
+                )
+            ) || anchors[0];
+            if (!preferred) return;
+
+            const id =
+                getNamingDispatchCentreIdFromHref(preferred.getAttribute('href')) ||
+                getNamingDispatchCentreIdFromHref(preferred.getAttribute('href'), true) ||
+                String(
+                    container.getAttribute('building_id') ||
+                    container.getAttribute('data-building-id') ||
+                    ''
+                );
+            if (!id) return;
+
+            const caption =
+                container.querySelector('.building_list_caption .map_position_mover') ||
+                container.querySelector('.building_list_caption a[href*="/buildings/"]') ||
+                preferred;
+            const label = cleanText(caption?.textContent || '');
+            if (label) centres.set(String(id), label);
         });
-        if (!centres.size) {
-            parsed.querySelectorAll('a[href*="/buildings/"]').forEach(anchor => {
-                const id = getNamingDispatchCentreIdFromHref(anchor.getAttribute('href'), true);
-                if (!id || centres.has(id)) return;
-                const row = anchor.closest('tr, .panel, .card, .building, li, .row') || anchor.parentElement;
-                const label = cleanText(row?.querySelector('a[href^="/buildings/"]')?.textContent || anchor.textContent || '');
-                if (label && !/^(?:edit|show|view|details|delete|open)$/i.test(label)) centres.set(id, label);
-            });
-        }
+
         return centres;
     }
 
@@ -79,6 +99,9 @@
         const values = new Set([...select.options].map(option => option.value));
         select.value = values.has(previous) ? previous : NAMING_DISPATCH_CENTRE_ALL;
         select.disabled = !NAMING_DISPATCH_CENTRE_STATE.listLoaded;
+        select.title = NAMING_DISPATCH_CENTRE_STATE.listLoaded
+            ? 'Choose a MissionChief Dispatch Centre first, then Station Type and Start From.'
+            : 'Dispatch Centre list unavailable; refresh to retry.';
     }
 
     function getStationsForNamingDispatchCentre(stations, dispatchSelectId) {
