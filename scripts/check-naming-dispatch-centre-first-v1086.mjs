@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 
+// Permanent v1.0.86 regression for the Dispatch Centre-first naming cascade.
 const source = await readFile('src/missionchief-command-nexus.user.js', 'utf8');
 const fail = message => { console.error(`ERROR: ${message}`); process.exit(1); };
 const expect = (condition, message) => { if (!condition) fail(message); };
