@@ -1,1 +1,1 @@
-Capture exact state, panel listeners, Unit Naming filter and Station Naming filter wiring for v1.0.85.
+Inspect the trusted main-side v1.0.85 naming builder workflow status and failure point.
