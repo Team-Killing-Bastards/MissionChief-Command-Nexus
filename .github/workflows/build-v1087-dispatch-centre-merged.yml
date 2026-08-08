@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - '.github/build-v1087-dispatch-centre-merged.trigger'
+  issue_comment:
+    types: [created]
 
 permissions:
   contents: write
@@ -15,6 +17,12 @@ concurrency:
 
 jobs:
   build:
+    if: >-
+      github.event_name == 'push' ||
+      (github.event_name == 'issue_comment' &&
+       github.actor == 'Martyblyth' &&
+       github.event.issue.number == 267 &&
+       github.event.comment.body == '/build-v1087-now')
     runs-on: ubuntu-latest
     steps:
       - name: Check out feature branch
