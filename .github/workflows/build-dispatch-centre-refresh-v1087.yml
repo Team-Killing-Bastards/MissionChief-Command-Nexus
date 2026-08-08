@@ -1,0 +1,61 @@
+name: Build v1.0.87 Dispatch Centre refresh
+
+on:
+  pull_request_target:
+    types: [opened]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-dispatch-centre-refresh-v1087
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: >-
+      github.event.pull_request.head.ref == 'fix/dispatch-centre-refresh-v1087' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/dispatch-centre-refresh-v1087
+          fetch-depth: 0
+
+      - name: Build exact candidate
+        run: python3 scripts/build-dispatch-centre-refresh-v1087.py
+
+      - name: Validate JavaScript syntax
+        run: node --check src/missionchief-command-nexus.user.js
+
+      - name: Validate userscript metadata and size
+        run: node scripts/validate-userscript.mjs
+
+      - name: Run every permanent regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          for check in scripts/check-*.mjs; do
+            echo "Running $check"
+            node "$check"
+          done
+
+      - name: Validate clean candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test ! -e scripts/build-dispatch-centre-refresh-v1087.py
+          git diff --check
+
+      - name: Commit clean v1.0.87 candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'Fix Dispatch Centre refresh for v1.0.87'
+          git push origin HEAD:fix/dispatch-centre-refresh-v1087
