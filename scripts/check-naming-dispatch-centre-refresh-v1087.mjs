@@ -6,9 +6,9 @@ const workflow = await readFile('.github/workflows/validate-userscript.yml', 'ut
 const fail = message => { console.error(`ERROR: ${message}`); process.exit(1); };
 const expect = (condition, message) => { if (!condition) fail(message); };
 
-expect(source.includes('// @version      1.0.91'), 'Expected Command Nexus 1.0.91');
-expect(source.includes("const UNIT_VERSION = '3.3.16';"), 'Expected Unit Naming 3.3.16');
-expect(source.includes("const STATION_VERSION = '1.3.10';"), 'Expected Station Naming 1.3.10');
+expect(source.includes('// @version      1.0.92'), 'Expected Command Nexus 1.0.91');
+expect(source.includes("const UNIT_VERSION = '3.3.17';"), 'Expected Unit Naming 3.3.16');
+expect(source.includes("const STATION_VERSION = '1.3.11';"), 'Expected Station Naming 1.3.10');
 expect(source.includes("'Refreshing…'"), 'Refresh action must expose a loading state');
 expect(source.includes("'Retry Dispatch Centres'"), 'Refresh failure must expose a retry state');
 expect(source.includes("'Dispatch Centres unavailable — refresh'"), 'Disabled selector must explain profile-list failure');

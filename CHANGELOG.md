@@ -4,6 +4,29 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.92] - 2026-08-09
+
+### Fixed
+
+- Fixed the live `Profile did not expose any Dispatch Centre panels` failure in Unit Naming and Station Naming.
+- The signed-in profile is now loaded in a hidden same-origin iframe so MissionChief/Vue can render `.profile-dispatchcenter` panels before Command Nexus reads them.
+- Raw `fetch('/profile/...')` HTML is no longer used as the Dispatch Centre source because the server response can be only the pre-render application shell.
+- The rendered profile frame is bounded to 15 seconds, hidden from interaction, and removed after success or failure.
+- Dispatch Centre → Service → Station Type → Start From, row-level `leitstelle_building_id` membership, delegated Retry ownership and Personnel Assignment isolation remain unchanged.
+
+### Regression coverage
+
+- Added `scripts/check-naming-dispatch-centre-profile-render-v1092.mjs`, which starts from an empty profile shell, simulates the rendered seven-centre DOM appearing, verifies centre extraction, and requires renderer cleanup.
+- The permanent workflow now runs the renderer regression for pull requests and main updates.
+
+### Changed resource baselines
+
+- Command Nexus increased from `1.0.91` to `1.0.92`.
+- Unit Naming increased from `3.3.16` to `3.3.17`.
+- Station Naming increased from `1.3.10` to `1.3.11`.
+- Mission Finder remains `V10.6.144`.
+- Personnel Assignment remains `1.3.9`.
+
 ## [1.0.91] - 2026-08-09
 
 ### Rebuilt
