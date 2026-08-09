@@ -3,6 +3,8 @@ name: Build trusted v1.0.89 Dispatch Centre Retry
 on:
   pull_request_target:
     types: [reopened]
+  issue_comment:
+    types: [created]
 
 permissions:
   contents: write
@@ -16,9 +18,14 @@ concurrency:
 jobs:
   build:
     if: >-
-      github.event.pull_request.number == 278 &&
-      github.event.pull_request.head.ref == 'fix/dispatch-centre-retry-v1089' &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      (github.event_name == 'pull_request_target' &&
+       github.event.pull_request.number == 278 &&
+       github.event.pull_request.head.ref == 'fix/dispatch-centre-retry-v1089' &&
+       github.event.pull_request.head.repo.full_name == github.repository) ||
+      (github.event_name == 'issue_comment' &&
+       github.actor == 'Martyblyth' &&
+       github.event.issue.number == 278 &&
+       github.event.comment.body == '/build-v1089-now')
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
