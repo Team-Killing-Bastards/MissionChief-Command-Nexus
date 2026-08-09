@@ -31,19 +31,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Validate exact v1.0.87 candidate
-        if: github.event_name == 'pull_request' && github.head_ref == 'fix/dispatch-centre-refresh-v1087'
-        shell: bash
-        run: |
-          set -euo pipefail
-          node --check src/missionchief-command-nexus.user.js
-          node scripts/validate-userscript.mjs
-          for check in scripts/check-*.mjs; do
-            echo "Running $check"
-            node "$check"
-          done
-          git diff --check
-
       - name: Compile repository checker
         run: python3 -m py_compile scripts/check_repository.py
 
