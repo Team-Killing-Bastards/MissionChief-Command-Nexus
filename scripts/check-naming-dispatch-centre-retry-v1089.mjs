@@ -2,6 +2,7 @@
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 
+// Permanent live regression for the v1.0.89 Retry Dispatch Centres interaction.
 const source = await readFile('src/missionchief-command-nexus.user.js', 'utf8');
 const workflow = await readFile('.github/workflows/validate-userscript.yml', 'utf8');
 const fail = message => { console.error(`ERROR: ${message}`); process.exit(1); };
