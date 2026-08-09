@@ -4,6 +4,27 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.90] - 2026-08-09
+
+### Fixed
+
+- Dispatch Centre name discovery no longer requires the seed station to already be assigned to a Dispatch Centre. Any ordinary station edit page may seed the native **Assigned Dispatch Center** selector.
+- MissionChief's literal `leitstelle_building_id="null"` value is now normalized as genuinely unassigned rather than being treated as a Dispatch Centre ID.
+- When the active Resource Administration document/state has no usable station rows yet, the loader performs one bounded `/leitstellenansicht` fetch only to discover up to three station building IDs, then still reads Dispatch Centre ID/name pairs from the edit-page assignment selector.
+- The native Stations view remains a seed-discovery fallback only; it is not restored as Dispatch Centre name authority, and station-to-centre membership remains the row-level `leitstelle_building_id` relationship.
+
+### Regression coverage
+
+- Added `scripts/check-naming-dispatch-centre-unassigned-seed-v1090.mjs` covering literal `null`, an unassigned ordinary station as a valid edit-page seed, an empty live Resource Administration DOM, and native Stations HTML fallback without changing centre-name authority.
+
+### Changed resource baselines
+
+- Command Nexus increased from `1.0.89` to `1.0.90`.
+- Unit Naming increased from `3.3.14` to `3.3.15`.
+- Station Naming increased from `1.3.8` to `1.3.9`.
+- Mission Finder remains `V10.6.144`.
+- Personnel Assignment remains `1.3.9`.
+
 ## [1.0.89] - 2026-08-09
 
 ### Fixed

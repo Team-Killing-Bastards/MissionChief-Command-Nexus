@@ -54,9 +54,9 @@ class FixtureRow {
   querySelector() { return null; }
 }
 
-expect(source.includes('// @version      1.0.89'), 'Expected Command Nexus 1.0.89');
-expect(source.includes("const UNIT_VERSION = '3.3.14';"), 'Expected Unit Naming 3.3.14');
-expect(source.includes("const STATION_VERSION = '1.3.8';"), 'Expected Station Naming 1.3.8');
+expect(source.includes('// @version      1.0.90'), 'Expected Command Nexus 1.0.89');
+expect(source.includes("const UNIT_VERSION = '3.3.15';"), 'Expected Unit Naming 3.3.14');
+expect(source.includes("const STATION_VERSION = '1.3.9';"), 'Expected Station Naming 1.3.8');
 expect(source.includes("'0', '18'"), 'Ordinary fire-station seed types missing');
 expect(source.includes("'2', '20'"), 'Ordinary ambulance-station seed types missing');
 expect(source.includes("'6', '19'"), 'Ordinary police-station seed types missing');
@@ -83,6 +83,7 @@ vm.runInNewContext(
   `${extractFunction('getNamingStationRowBuildingId')}\n` +
   `${extractFunction('getNamingStationRowDispatchCentreId')}\n` +
   `${extractFunction('isNamingDispatchCentreSeedStationTypeId')}\n` +
+  `${extractFunction('getNamingDispatchCentreSeedBuildingIdsFromRows')}\n` +
   `${extractFunction('getNamingDispatchCentreSeedBuildingIds')}\n` +
   `result = getNamingDispatchCentreSeedBuildingIds(3);`,
   context
@@ -95,7 +96,7 @@ expect(!seeds.includes('1859041'), 'Dispatch Centre building itself must not bec
 expect(!seeds.includes('1914809'), 'Assigned Home Response row must not outrank ordinary stations');
 
 const listLoader = extractFunction('loadNamingDispatchCentreList');
-expect(listLoader.includes('getNamingDispatchCentreSeedBuildingIds(3)'), 'List loader must use bounded assigned-station seed candidates');
+expect(listLoader.includes('await loadNamingDispatchCentreSeedBuildingIds(3)'), 'List loader must use bounded resilient station seed candidates');
 expect(listLoader.includes('for (const seedBuildingId of seedBuildingIds)'), 'List loader must retry bounded seed candidates');
 expect(listLoader.includes('lastListError'), 'List loader must expose its failure reason');
 
@@ -118,4 +119,4 @@ expect(source.includes('lastAssignmentError'), 'Assignment failure reason state 
 expect(!source.includes('mc-personnel-dispatch-centre'), 'Personnel Assignment must remain outside Dispatch Centre filtering');
 expect(workflow.includes('scripts/check-naming-dispatch-centre-retry-v1089.mjs'), 'v1.0.89 Retry regression must be registered');
 
-console.log('PASS: v1.0.89 keeps Retry Dispatch Centres clickable, visibly active and seeded from assigned ordinary stations.');
+console.log('PASS: v1.0.89 Retry interaction remains protected under the v1.0.90 resilient seed loader.');
