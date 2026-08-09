@@ -43,6 +43,20 @@ jobs:
           git fetch origin main --force
           test "$(git rev-parse origin/main)" = "61cbc2ba25aa3dc75a0599371327eca6ca24e9b2"
 
+          # The GitHub Actions token may not update workflow definitions. Build and
+          # validate production code here; the permanent regression workflow entry is
+          # added separately through the repository connector after this push.
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('scripts/build-v1094-membership-frame.py')
+          text = path.read_text(encoding='utf-8')
+          marker = "\nworkflow_path = ROOT / '.github/workflows/validate-userscript.yml'\n"
+          if marker not in text:
+              raise SystemExit('Unable to isolate workflow registration from builder')
+          text = text.split(marker, 1)[0] + "\nprint('Built Command Nexus 1.0.94 frame-scoped Dispatch Centre membership candidate.')\n"
+          path.write_text(text, encoding='utf-8')
+          PY
+
           python3 scripts/build-v1094-membership-frame.py
           rm -f scripts/build-v1094-membership-frame.py
 
