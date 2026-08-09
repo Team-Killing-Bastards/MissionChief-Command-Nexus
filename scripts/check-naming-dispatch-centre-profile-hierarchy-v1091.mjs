@@ -1,6 +1,12 @@
 #!/usr/bin/env node
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
+
+// Validate userscript already runs this permanent hierarchy check. Chain the
+// v1.0.92 acquisition regression through it so rendered-profile behaviour is
+// protected without adding another workflow-definition mutation.
+await import('./check-naming-dispatch-centre-profile-render-v1092.mjs');
+
 const source = await readFile('src/missionchief-command-nexus.user.js', 'utf8');
 const fail = message => { console.error(`ERROR: ${message}`); process.exit(1); };
 const expect = (condition, message) => { if (!condition) fail(message); };
@@ -57,9 +63,9 @@ class ProfileDoc {
 }
 class DOMParserFixture { parseFromString() { return new ProfileDoc(); } }
 
-expect(source.includes('// @version      1.0.92'), 'Expected Command Nexus 1.0.91');
-expect(source.includes("const UNIT_VERSION = '3.3.17';"), 'Expected Unit Naming 3.3.16');
-expect(source.includes("const STATION_VERSION = '1.3.11';"), 'Expected Station Naming 1.3.10');
+expect(source.includes('// @version      1.0.92'), 'Expected current Command Nexus 1.0.92');
+expect(source.includes("const UNIT_VERSION = '3.3.17';"), 'Expected current Unit Naming 3.3.17');
+expect(source.includes("const STATION_VERSION = '1.3.11';"), 'Expected current Station Naming 1.3.11');
 expect(source.includes('id="mc-namer-service"'), 'Unit Naming Service selector missing');
 expect(source.includes('id="mc-station-service"'), 'Station Naming Service selector missing');
 
@@ -151,4 +157,4 @@ expect(source.includes("querySelector('#mc-namer-service').onchange = handleUnit
 expect(source.includes("querySelector('#mc-station-service').onchange = handleStationNamingServiceChange"), 'Station Service change handler missing');
 expect(!source.includes('mc-personnel-dispatch-centre'), 'Personnel Assignment must remain outside centre filtering');
 
-console.log('PASS: v1.0.91 uses profile Dispatch Centres then Service, Station Type and Start From with row-authoritative membership.');
+console.log('PASS: v1.0.91 hierarchy plus v1.0.92 rendered-profile acquisition remain protected with row-authoritative membership.');
