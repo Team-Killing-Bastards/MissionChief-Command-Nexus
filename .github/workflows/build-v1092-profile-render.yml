@@ -53,10 +53,11 @@ jobs:
           python3 scripts/build-v1092-profile-render.py
           python3 scripts/patch-v1092-legacy-regressions.py
 
-          # Remove all one-use machinery before validation/commit.
+          # Remove one-use script machinery before validation/commit.
+          # The temporary workflow itself is left untouched for this push because
+          # the Actions token cannot create/update/delete workflow files.
           rm -f scripts/build-v1092-profile-render.py
           rm -f scripts/patch-v1092-legacy-regressions.py
-          rm -f .github/workflows/build-v1092-profile-render.yml
 
           node --check src/missionchief-command-nexus.user.js
           node scripts/validate-userscript.mjs
@@ -66,6 +67,10 @@ jobs:
           done
           python3 scripts/check_repository.py
           git diff --check
+
+          # Permanent workflow registration was validated above but must be written
+          # separately through the GitHub connector after this candidate push.
+          git checkout HEAD -- .github/workflows/validate-userscript.yml
 
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
