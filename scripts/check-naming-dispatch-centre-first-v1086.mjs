@@ -6,9 +6,9 @@ const source = await readFile('src/missionchief-command-nexus.user.js', 'utf8');
 const fail = message => { console.error(`ERROR: ${message}`); process.exit(1); };
 const expect = (condition, message) => { if (!condition) fail(message); };
 
-expect(source.includes('// @version      1.0.88'), 'Expected Command Nexus 1.0.88');
-expect(source.includes("const UNIT_VERSION = '3.3.13';"), 'Expected Unit Naming 3.3.13');
-expect(source.includes("const STATION_VERSION = '1.3.7';"), 'Expected Station Naming 1.3.7');
+expect(source.includes('// @version      1.0.89'), 'Expected Command Nexus 1.0.88');
+expect(source.includes("const UNIT_VERSION = '3.3.14';"), 'Expected Unit Naming 3.3.13');
+expect(source.includes("const STATION_VERSION = '1.3.8';"), 'Expected Station Naming 1.3.7');
 expect(source.includes('extractNamingDispatchCentresFromBuildingEditHtml'), 'Building-edit Dispatch Centre parser missing');
 expect(source.includes('`/buildings/${seedBuildingId}/edit`'), 'Dispatch Centre names must come from the building assignment selector');
 expect(source.includes("getAttribute?.('leitstelle_building_id')"), 'Station relationship must come from station-row leitstelle_building_id');

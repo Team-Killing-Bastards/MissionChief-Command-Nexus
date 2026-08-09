@@ -4,6 +4,28 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.89] - 2026-08-09
+
+### Fixed
+
+- **Retry Dispatch Centres** now uses one delegated document-level click owner, so the action remains live even if MissionChief replaces the Resource Administration panel DOM after the original mount.
+- Dispatch Centre discovery no longer trusts the first arbitrary building as its edit-page seed. It prefers ordinary fire, ambulance, police and other supported station rows that carry a real `leitstelle_building_id` assignment.
+- The edit-page lookup is bounded to at most three assigned station candidates and stops on the first page that exposes MissionChief's **Assigned Dispatch Center** selector. This is a retry fallback, not a per-building crawl.
+- The button now holds a visible **Refreshing…** state before loading starts, records an explicit loading/error state, and exposes the concrete loader failure in the button tooltip and naming logs instead of appearing inert.
+- Unit Naming and Station Naming keep the existing Dispatch Centre → Station Type → Start From cascade and authoritative station-row `leitstelle_building_id` membership.
+
+### Regression coverage
+
+- Added `scripts/check-naming-dispatch-centre-retry-v1089.mjs`, which executes the production seed selector against a fixture with early unassigned Home Response rows, a Dispatch Centre row and later assigned ordinary stations; it also protects delegated Retry ownership, visible loading state, failure diagnostics and pointer/touch affordance.
+
+### Changed resource baselines
+
+- Command Nexus increased from `1.0.88` to `1.0.89`.
+- Unit Naming increased from `3.3.13` to `3.3.14`.
+- Station Naming increased from `1.3.7` to `1.3.8`.
+- Mission Finder remains `V10.6.144`.
+- Personnel Assignment remains `1.3.9`.
+
 ## [1.0.88] - 2026-08-09
 
 ### Fixed

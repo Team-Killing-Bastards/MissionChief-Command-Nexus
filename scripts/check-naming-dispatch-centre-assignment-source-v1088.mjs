@@ -75,9 +75,9 @@ class FixtureDocument {
 }
 class FixtureDOMParser { parseFromString(html) { return new FixtureDocument(html); } }
 
-expect(source.includes('// @version      1.0.88'), 'Expected Command Nexus 1.0.88');
-expect(source.includes("const UNIT_VERSION = '3.3.13';"), 'Expected Unit Naming 3.3.13');
-expect(source.includes("const STATION_VERSION = '1.3.7';"), 'Expected Station Naming 1.3.7');
+expect(source.includes('// @version      1.0.89'), 'Expected Command Nexus 1.0.88');
+expect(source.includes("const UNIT_VERSION = '3.3.14';"), 'Expected Unit Naming 3.3.13');
+expect(source.includes("const STATION_VERSION = '1.3.8';"), 'Expected Station Naming 1.3.7');
 
 const parserSource = extractFunction('extractNamingDispatchCentresFromBuildingEditHtml');
 const context = {
