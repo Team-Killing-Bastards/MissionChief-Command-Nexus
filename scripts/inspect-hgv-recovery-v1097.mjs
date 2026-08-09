@@ -4,6 +4,11 @@ const path = 'src/missionchief-command-nexus.user.js';
 const source = fs.readFileSync(path, 'utf8');
 
 const needles = [
+  'function normalise(',
+  'function normalise ',
+  'const normalise =',
+  'let normalise =',
+  'var normalise =',
   'function isCarsToTowRequirementName',
   'function getCarsToTowVehicleRequirement',
   'function getGenericMissingVehicleRowsFromText',
@@ -25,9 +30,9 @@ for (const needle of needles) {
     const index = source.indexOf(needle, from);
     if (index < 0) break;
     count += 1;
-    const start = Math.max(0, source.lastIndexOf('\n', Math.max(0, index - 1800)));
-    let end = source.indexOf('\n', index + 2600);
-    if (end < 0) end = Math.min(source.length, index + 2600);
+    const start = Math.max(0, source.lastIndexOf('\n', Math.max(0, index - 1200)));
+    let end = source.indexOf('\n', index + 1800);
+    if (end < 0) end = Math.min(source.length, index + 1800);
     console.log(`\n--- occurrence ${count} @ ${index} ---\n${source.slice(start, end)}`);
     from = index + needle.length;
   }
