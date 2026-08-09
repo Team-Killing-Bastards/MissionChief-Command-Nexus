@@ -2,7 +2,7 @@ name: Build v1.0.88 Dispatch Centre Assignment Source
 
 on:
   pull_request:
-    types: [opened, reopened]
+    types: [opened, reopened, ready_for_review]
 
 permissions:
   contents: write
