@@ -4,6 +4,29 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.97] - 2026-08-09
+
+### Fixed
+
+- Reverted the v1.0.96 towing matcher to the proven v1.0.95 car-towing implementation after v1.0.96 introduced an out-of-scope `normalise(...)` call that could throw during the shared vehicle-selection path used by Unit Finder, Upgrade and Auto Mode.
+- Added a separate HGV towing classifier for explicit `truck to tow`, `HGV to tow` and `lorry to tow` wording without broadening the restored car-towing helper.
+- `Car(s) to tow` continues to use exact MissionChief vehicle type `105` (Flatbed Recovery Vehicle).
+- HGV/truck/lorry towing now uses exact MissionChief vehicle type `106` (HGV Recovery Vehicle).
+- Generic fallback is blocked for both recovery requirements so a missing specialist vehicle cannot silently substitute the wrong type.
+
+### Regression coverage
+
+- Added `scripts/check-hgv-recovery-v1097.mjs` to execute the restored car matcher, prove it has no dependency on an external `normalise` helper, validate the HGV-only towing aliases, protect unrelated truck wording, require exact type 105/106 selectors, and verify the strict matching/count/fallback branches.
+- The existing v1.0.96 towing regression now delegates to the corrected v1.0.97 contract so the established validation chain remains intact.
+
+### Changed engine baseline
+
+- Command Nexus increased from `1.0.96` to `1.0.97`.
+- Mission Finder increased from `V10.6.145` to `V10.6.146`.
+- Unit Naming remains `3.3.20`.
+- Station Naming remains `1.3.14`.
+- Personnel Assignment remains `1.3.9`.
+
 ## [1.0.96] - 2026-08-09
 
 ### Fixed

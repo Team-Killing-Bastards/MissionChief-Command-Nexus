@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.96
+// @version      1.0.97
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -11572,7 +11572,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.145
+         * MODULE 2: MISSION FINDER V10.6.146
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -16095,6 +16095,37 @@ function isRoadRailUnitVehicleCheckbox(input) {
             .includes('105');
     }
 
+    function isHgvTowRequirementName(value) {
+        const cleaned = String(value || '')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        return /^(?:Required\s+)?(?:\d+\s+)?(?:truck(?:s)?|hgv(?:s)?|lorr(?:y|ies))\s+(?:to\s+tow|to\s+be\s+towed)$/i.test(cleaned);
+    }
+
+    function isHgvRecoveryVehicleRequirement(
+        originalName,
+        mappedName
+    ) {
+        return [originalName, mappedName].some(value => {
+            const cleaned = normaliseVehicleText(value);
+
+            return !!(
+                isHgvTowRequirementName(value) ||
+                cleaned === 'hgv recovery vehicle' ||
+                cleaned === 'hgv recovery vehicles' ||
+                cleaned === 'required hgv recovery vehicle' ||
+                cleaned === 'required hgv recovery vehicles'
+            );
+        });
+    }
+
+    function isHgvRecoveryVehicleCheckbox(input) {
+        if (!input) return false;
+        return getVehicleTypeIdentifiers(input)
+            .includes('106');
+    }
+
     function getVehicleMatchCandidates(originalName, mappedName) {
         const raw = String(originalName || '').replace(/\s+/g, ' ').trim();
         const mapped = String(mappedName || '').replace(/\s+/g, ' ').trim();
@@ -17007,6 +17038,12 @@ function isRoadRailUnitVehicleCheckbox(input) {
                 mappedName
             );
 
+        const hgvRecoveryOnly =
+            isHgvRecoveryVehicleRequirement(
+                originalName,
+                mappedName
+            );
+
         const crvOnly =
             isCrvRequirement(
                 originalName,
@@ -17122,6 +17159,16 @@ function isRoadRailUnitVehicleCheckbox(input) {
                     if (input.disabled) return false;
                     if (!includeChecked && input.checked) return false;
                     return isFlatbedRecoveryVehicleCheckbox(input);
+                })
+            );
+        }
+
+        if (hgvRecoveryOnly) {
+            return sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) return false;
+                    if (!includeChecked && input.checked) return false;
+                    return isHgvRecoveryVehicleCheckbox(input);
                 })
             );
         }
@@ -17623,6 +17670,8 @@ function isRoadRailUnitVehicleCheckbox(input) {
         const roadRailOnly = isRoadRailUnitRequirement(originalName, mappedName);
         const flatbedRecoveryOnly =
             isFlatbedRecoveryVehicleRequirement(originalName, mappedName);
+        const hgvRecoveryOnly =
+            isHgvRecoveryVehicleRequirement(originalName, mappedName);
         const crvOnly = isCrvRequirement(originalName, mappedName);
         const controlVanOnly = isControlVanRequirement(originalName, mappedName);
         const airAmbulanceOnly = isAirAmbulanceRequirement(originalName, mappedName);
@@ -17698,6 +17747,8 @@ function isRoadRailUnitVehicleCheckbox(input) {
                 matches = isRoadRailUnitVehicleCheckbox(input);
             } else if (flatbedRecoveryOnly) {
                 matches = isFlatbedRecoveryVehicleCheckbox(input);
+            } else if (hgvRecoveryOnly) {
+                matches = isHgvRecoveryVehicleCheckbox(input);
             } else if (crvOnly) {
                 matches = isCrvVehicleCheckbox(input);
             } else if (controlVanOnly) {
@@ -27939,24 +27990,13 @@ let sessionRuntimeTicker = null;
         return rows;
     }
 
-    function isCarsToTowRequirementName(name) {
-        // Historical helper name retained because the existing towing converter and
-        // strict Flatbed Recovery selector both use it. Match explicit towing language
-        // only: an ordinary "truck" requirement must never become Recovery demand.
-        let key = normalise(name);
-        key = key
-            .replace(/^required\s+/, '')
-            .replace(/^(?:maximum|minimum)\s+amount\s+of\s+/, '')
-            .replace(/^\d+\s+/, '')
-            .replace(/\s+\d+$/, '');
+    function isCarsToTowRequirementName(value) {
+        const cleaned = String(value || '')
+            .replace(/\s+/g, ' ')
+            .trim();
 
-        if (
-            /^(?:cars?|trucks?|lorr(?:y|ies)|vans?|vehicles?)\s+(?:to\s+tow|to\s+be\s+towed)$/.test(key)
-        ) {
-            return true;
-        }
-
-        return /^(?:tow|recovery)\s+trucks?$/.test(key);
+        return /^(?:Required\s+)?(?:\d+\s+)?car(?:s)?\s+to\s+tow$/i.test(cleaned) ||
+            /^(?:Required\s+)?(?:Maximum|Minimum)\s+amount\s+of\s+cars\s+to\s+tow$/i.test(cleaned);
     }
 
     function getCarsToTowVehicleRequirement(unitName, carsRequired) {
@@ -33145,6 +33185,7 @@ let sessionRuntimeTicker = null;
             isAmbulanceTransportRequest(originalName, mappedName) ||
             isFireEngineRequirement(originalName, mappedName) ||
             isFlatbedRecoveryVehicleRequirement(originalName, mappedName) ||
+            isHgvRecoveryVehicleRequirement(originalName, mappedName) ||
             isFireOperationalSupportRequirement(originalName, mappedName)
         );
 
