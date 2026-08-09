@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from pathlib import Path
 
+# v1.0.88: preserve authority semantics while allowing the rendered-profile layer.
 path = Path('scripts/check-naming-dispatch-centre-assignment-source-v1088.mjs')
 text = path.read_text()
 old = "expect(listLoader.includes('extractNamingDispatchCentresFromProfileHtml'), 'Centre list must use the profile Dispatch Centre parser');"
@@ -17,4 +18,18 @@ text = text.replace(
     1
 )
 path.write_text(text)
-print('Adapted v1.0.88 authority regression for the v1.0.92 rendered-profile acquisition layer.')
+
+# v1.0.91: its HTML wrapper now delegates to the shared rendered-document parser.
+path = Path('scripts/check-naming-dispatch-centre-profile-hierarchy-v1091.mjs')
+text = path.read_text()
+old = """  `${extractFunction('getNamingDispatchCentreIdFromHref')}\\n` +
+  `${extractFunction('extractNamingDispatchCentresFromProfileHtml')}\\n` +"""
+new = """  `${extractFunction('getNamingDispatchCentreIdFromHref')}\\n` +
+  `${extractFunction('extractNamingDispatchCentresFromProfileDocument')}\\n` +
+  `${extractFunction('extractNamingDispatchCentresFromProfileHtml')}\\n` +"""
+if old not in text:
+    raise SystemExit('v1.0.91 isolated profile parser harness not found')
+text = text.replace(old, new, 1)
+path.write_text(text)
+
+print('Adapted v1.0.88-v1.0.91 regressions for the v1.0.92 rendered-profile acquisition layer.')
