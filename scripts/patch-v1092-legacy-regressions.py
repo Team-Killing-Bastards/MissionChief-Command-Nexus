@@ -32,4 +32,22 @@ if old not in text:
 text = text.replace(old, new, 1)
 path.write_text(text)
 
-print('Adapted v1.0.88-v1.0.91 regressions for the v1.0.92 rendered-profile acquisition layer.')
+# v1.0.92: preserve the async keyword when extracting the production renderer into vm.
+path = Path('scripts/check-naming-dispatch-centre-profile-render-v1092.mjs')
+text = path.read_text()
+old = """function extractFunction(name) {
+  const marker = `function ${name}(`;
+  const start = source.indexOf(marker);
+  if (start < 0) fail(`Unable to find ${name}`);"""
+new = """function extractFunction(name) {
+  const asyncMarker = `async function ${name}(`;
+  const syncMarker = `function ${name}(`;
+  const asyncStart = source.indexOf(asyncMarker);
+  const start = asyncStart >= 0 ? asyncStart : source.indexOf(syncMarker);
+  if (start < 0) fail(`Unable to find ${name}`);"""
+if old not in text:
+    raise SystemExit('v1.0.92 sync-only function extractor not found')
+text = text.replace(old, new, 1)
+path.write_text(text)
+
+print('Adapted v1.0.88-v1.0.92 regression harnesses for the rendered-profile acquisition layer.')
