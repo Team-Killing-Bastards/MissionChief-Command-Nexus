@@ -1,15 +1,15 @@
 name: Build v1.0.88 Dispatch Centre Assignment Source
 
 on:
-  push:
-    paths:
-      - '.github/build-v1088-dispatch-centre-assignment.trigger'
+  pull_request:
+    types: [opened, reopened]
 
 permissions:
   contents: write
 
 jobs:
   build:
+    if: github.head_ref == 'fix/dispatch-centre-assignment-source-v1088'
     runs-on: ubuntu-latest
     steps:
       - name: Check out v1.0.88 feature branch
