@@ -5,36 +5,6 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
-// BEGIN V1087 VALIDATION BOOTSTRAP
-function runV1087ValidationBootstrap() {
-  if (process.env.GITHUB_ACTIONS !== 'true') return;
-  if (process.env.GITHUB_HEAD_REF !== 'fix/dispatch-centre-refresh-v1087') return;
-
-  const builderPath = 'scripts/build-dispatch-centre-refresh-v1087.py';
-  if (!fs.existsSync(builderPath)) return;
-
-  console.log('Building the clean v1.0.87 Dispatch Centre refresh candidate...');
-  const build = spawnSync('python3', [builderPath], { stdio: 'inherit' });
-  if (build.status !== 0) {
-    throw new Error(`v1.0.87 candidate builder failed with status ${build.status}.`);
-  }
-
-  // The GitHub App token can push product files but cannot create/update workflow files.
-  // The permanent v1.0.87 workflow registration is applied separately through the
-  // GitHub connector after this clean product candidate is committed.
-  const restoreWorkflow = spawnSync(
-    'git',
-    ['restore', '.github/workflows/validate-userscript.yml'],
-    { stdio: 'inherit' },
-  );
-  if (restoreWorkflow.status !== 0) {
-    throw new Error('Unable to restore validate-userscript.yml after the v1.0.87 build.');
-  }
-
-  const selfPath = path.resolve('scripts/validate-userscript.mjs');
-  let self = fs.readFileSync(selfPath, 'utf8');
-  const startMarker = '// BEGIN V1087 VALIDATION BOOTSTRAP';
-  const endMarker = '// END V1087 VALIDATION BOOTSTRAP';
   const start = self.indexOf(startMarker);
   const end = self.indexOf(endMarker, start);
   if (start < 0 || end < 0) {

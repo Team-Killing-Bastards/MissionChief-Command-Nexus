@@ -84,7 +84,7 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-expect(source.includes('// @version      1.0.86'), 'Expected Command Nexus 1.0.79');
+expect(source.includes('// @version      1.0.87'), 'Expected Command Nexus 1.0.79');
 expect(source.includes('MISSION FINDER V10.6.144'), 'Expected Mission Finder V10.6.139');
 
 const authority = extractFunction('hasCurrentMissionVehicleRequirementAuthorityForDisplay');
