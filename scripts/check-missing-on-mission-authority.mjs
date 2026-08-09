@@ -66,8 +66,8 @@ function sourceSlice(startToken, endToken, label) {
   return source.slice(start, end);
 }
 
-expect(source.includes('// @version      1.0.95'), 'Expected Command Nexus 1.0.84');
-expect(source.includes('MISSION FINDER V10.6.144'), 'Expected Mission Finder V10.6.144');
+expect(source.includes('// @version      1.0.96'), 'Expected Command Nexus 1.0.84');
+expect(source.includes('MISSION FINDER V10.6.145'), 'Expected Mission Finder V10.6.145');
 
 const headerFunction = extractFunction('getMissionUpdateTableHeaderTexts');
 const tableFunction = extractFunction('isMissingOnMissionUpdateTable');

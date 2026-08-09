@@ -61,8 +61,8 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-expect(source.includes('// @version      1.0.95'), 'Expected Command Nexus 1.0.58');
-expect(source.includes('MISSION FINDER V10.6.144'), 'Expected Mission Finder V10.6.121');
+expect(source.includes('// @version      1.0.96'), 'Expected Command Nexus 1.0.58');
+expect(source.includes('MISSION FINDER V10.6.145'), 'Expected Mission Finder V10.6.121');
 
 const startCollector = extractFunction('startMissionEventCollectibleCollector');
 expect(startCollector.includes('!MF_IS_TOP_WINDOW'), 'Collectible scanner must be top-window only');
