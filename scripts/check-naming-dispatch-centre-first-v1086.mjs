@@ -1,14 +1,14 @@
 import { readFile } from 'node:fs/promises';
 
 // Permanent v1.0.86 regression for the Dispatch Centre-first naming cascade.
-// Owner-authored validation trigger for the final clean release candidate.
+// Revalidated against the current v1.0.87 production baseline.
 const source = await readFile('src/missionchief-command-nexus.user.js', 'utf8');
 const fail = message => { console.error(`ERROR: ${message}`); process.exit(1); };
 const expect = (condition, message) => { if (!condition) fail(message); };
 
-expect(source.includes('// @version      1.0.87'), 'Expected Command Nexus 1.0.86');
-expect(source.includes("const UNIT_VERSION = '3.3.12';"), 'Expected Unit Naming 3.3.11');
-expect(source.includes("const STATION_VERSION = '1.3.6';"), 'Expected Station Naming 1.3.5');
+expect(source.includes('// @version      1.0.87'), 'Expected Command Nexus 1.0.87');
+expect(source.includes("const UNIT_VERSION = '3.3.12';"), 'Expected Unit Naming 3.3.12');
+expect(source.includes("const STATION_VERSION = '1.3.6';"), 'Expected Station Naming 1.3.6');
 expect(source.includes("stationFetchWithTimeout('/leitstellenansicht'"), 'Dispatch Centre names must come from native /leitstellenansicht');
 expect(source.includes('new DOMParser().parseFromString'), 'Native Dispatch Centre parser missing');
 expect(source.includes("stationFetchWithTimeout('/building/buildings_json'"), 'Station relationship source missing');
