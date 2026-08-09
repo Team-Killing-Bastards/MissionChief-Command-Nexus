@@ -6,13 +6,15 @@ const source = fs.readFileSync(path, 'utf8');
 const needles = [
   'function isCarsToTowRequirementName',
   'function getCarsToTowVehicleRequirement',
-  "flatbed-recovery-exact",
+  'function getGenericMissingVehicleRowsFromText',
+  'function normaliseEscapedMissionHtmlText',
+  'function getStructuredMissingVehicleRows',
   'isFlatbedRecoveryVehicleRequirement',
-  'selectExactFlatbedRecoveryVehicles',
+  'isFlatbedRecoveryVehicleCheckbox',
+  'flatbedRecoveryOnly',
+  'strictVehicleTypeOnly',
   "[data-requirement-type=\"vehicles\"]",
-  "[data-requirement-type='vehicles']",
-  'data-raw-html',
-  'requirementTypeEntries'
+  'data-raw-html-missing-vehicles'
 ];
 
 for (const needle of needles) {
@@ -23,9 +25,9 @@ for (const needle of needles) {
     const index = source.indexOf(needle, from);
     if (index < 0) break;
     count += 1;
-    const start = Math.max(0, source.lastIndexOf('\n', Math.max(0, index - 1400)));
-    let end = source.indexOf('\n', index + 1800);
-    if (end < 0) end = Math.min(source.length, index + 1800);
+    const start = Math.max(0, source.lastIndexOf('\n', Math.max(0, index - 1800)));
+    let end = source.indexOf('\n', index + 2600);
+    if (end < 0) end = Math.min(source.length, index + 2600);
     console.log(`\n--- occurrence ${count} @ ${index} ---\n${source.slice(start, end)}`);
     from = index + needle.length;
   }
