@@ -257,15 +257,18 @@ jobs:
         shell: bash
         env:
           EVENT_NAME: ${{ github.event_name }}
+          EVENT_REF: ${{ github.ref }}
           REQUESTED_TAG: ${{ inputs.release_tag }}
         run: |
           set -euo pipefail
 
           git fetch origin main --tags --force
           MAIN_SHA="$(git rev-parse origin/main)"
+          IS_TAG_EVENT=false
 
-          if [[ "${EVENT_NAME}" == "push" ]]; then
-            RELEASE_TAG="${GITHUB_REF_NAME}"
+          if [[ "${EVENT_NAME}" == "push" && "${EVENT_REF}" == refs/tags/* ]]; then
+            IS_TAG_EVENT=true
+            RELEASE_TAG="${EVENT_REF#refs/tags/}"
           else
             RELEASE_TAG="${REQUESTED_TAG#refs/tags/}"
 
@@ -287,7 +290,7 @@ jobs:
           if git show-ref --tags --verify --quiet "refs/tags/${RELEASE_TAG}"; then
             RELEASE_SHA="$(git rev-list -n 1 "${RELEASE_TAG}")"
           else
-            if [[ "${EVENT_NAME}" == "push" ]]; then
+            if [[ "${IS_TAG_EVENT}" == "true" ]]; then
               echo "Tag event ${RELEASE_TAG} could not be resolved locally."
               exit 1
             fi
@@ -356,6 +359,7 @@ jobs:
           {
             echo "### Release context"
             echo "- Event: ${EVENT_NAME}"
+            echo "- Event ref: \`${EVENT_REF}\`"
             echo "- Tag: \`${RELEASE_TAG}\`"
             echo "- Version: \`${SCRIPT_VERSION}\`"
             echo "- Immutable source commit: \`${RELEASE_SHA}\`"
