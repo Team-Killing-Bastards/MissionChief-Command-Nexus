@@ -4,6 +4,31 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.95] - 2026-08-09
+
+### Improved
+
+- Selecting a Dispatch Centre in Unit Naming now automatically runs the existing **Refresh Stations** routine before rebuilding the downstream filters.
+- Selecting a Dispatch Centre in Station Naming now automatically runs the existing Station Naming refresh routine before rebuilding the downstream filters.
+- The selected Dispatch Centre is preserved while its options are rebuilt, then the established **Dispatch Centre → Service → Station Type → Start From** cascade is regenerated from the fresh Resource Administration station snapshot.
+- Each Dispatch Centre change performs exactly one station refresh; programmatic restoration of the selected centre does not fire another change event.
+- The manual **Refresh Stations** control remains available unchanged as a fallback.
+- Existing Personnel Assignment/runtime guards remain owned by the normal refresh routines rather than duplicated in the Dispatch Centre handlers.
+
+### Regression coverage
+
+- Added `scripts/check-naming-dispatch-centre-auto-station-refresh-v1095.mjs`.
+- The regression executes both production Dispatch Centre change handlers, requires exactly one normal station-refresh call per selection, protects selected-centre restoration and verifies both refresh routines rebuild Service, Station Type and Start From in order.
+- The regression is chained through the already-registered naming hierarchy gate, so no permanent workflow-definition change is required.
+
+### Changed resource baselines
+
+- Command Nexus increased from `1.0.94` to `1.0.95`.
+- Unit Naming increased from `3.3.19` to `3.3.20`.
+- Station Naming increased from `1.3.13` to `1.3.14`.
+- Mission Finder remains `V10.6.144`.
+- Personnel Assignment remains `1.3.9`.
+
 ## [1.0.94] - 2026-08-09
 
 ### Fixed

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.94
+// @version      1.0.95
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -64,8 +64,8 @@
     // excluded from the naming/personnel runtime.
     if (!TOOL_IS_TOP_WINDOW && !TOOL_IS_STATION_OVERVIEW_FRAME) return;
 
-    const UNIT_VERSION = '3.3.19';
-    const STATION_VERSION = '1.3.13';
+    const UNIT_VERSION = '3.3.20';
+    const STATION_VERSION = '1.3.14';
     const PERSONNEL_VERSION = '1.3.9';
     const PERSONNEL_TRAINING_CODE = 'critical_care';
     const PERSONNEL_TRAINING_LABEL = 'Critical Care';
@@ -1909,15 +1909,11 @@
         }
     }
 
-    function handleUnitDispatchCentreChange() {
-        populateNamingServiceFilter('mc-namer-service', 'mc-namer-dispatch-centre', STATE.stations);
-        populateNamingStationTypeFilter(
-            'mc-namer-station-type',
-            'mc-namer-dispatch-centre',
-            'mc-namer-service',
-            STATE.stations
-        );
-        handleUnitStationTypeChange();
+    async function handleUnitDispatchCentreChange() {
+        // A Dispatch Centre selection is a data-boundary change. Reuse the normal
+        // station refresh so membership, Service, Station Type and Start From are
+        // rebuilt from the current Resource Administration rows in one pass.
+        await refreshStations();
     }
 
     function handleUnitNamingServiceChange() {
@@ -1930,15 +1926,11 @@
         handleUnitStationTypeChange();
     }
 
-    function handleStationDispatchCentreChange() {
-        populateNamingServiceFilter('mc-station-service', 'mc-station-dispatch-centre', STATION_STATE.stations);
-        populateNamingStationTypeFilter(
-            'mc-station-type',
-            'mc-station-dispatch-centre',
-            'mc-station-service',
-            STATION_STATE.stations
-        );
-        populateStationNamingStartDropdown();
+    async function handleStationDispatchCentreChange() {
+        // Keep Station Naming on the same fresh station snapshot as Unit Naming.
+        // populateNamingDispatchCentreFilter restores the selected centre after
+        // refresh, then the normal cascade rebuilds Service -> Type -> Start From.
+        await refreshStationNamingStations();
     }
 
     function handleStationNamingServiceChange() {
