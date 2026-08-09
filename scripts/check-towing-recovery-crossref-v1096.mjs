@@ -48,13 +48,18 @@ vm.runInNewContext(
       'Car to tow',
       'Cars to tow',
       'Car to tow: 2',
+      'Maximum amount of cars to tow',
+      'Minimum amount of cars to tow',
+      'Required Maximum amount of cars to tow',
       '1 truck to tow',
       'truck to tow',
       'trucks to tow',
       '2 trucks to tow',
       'Required 1 truck to tow',
+      'Maximum amount of trucks to tow',
       '1 lorry to tow',
       'lorries to tow',
+      'Minimum amount of lorries to tow',
       '1 van to tow',
       'vehicles to tow',
       'truck to be towed',
@@ -94,4 +99,4 @@ expect(conversionContext.result?.stillNeeded === 1, `Reported '1 truck to tow' m
 expect(source.includes('flatbedRecoveryOnly'), 'Strict Flatbed Recovery selection path missing');
 expect(source.includes(".includes('105')"), 'Recovery selection must remain exact MissionChief type 105');
 
-console.log('PASS: 1 truck to tow and related explicit towing aliases route through the production Recovery converter while unrelated truck wording stays untouched and Recovery remains exact type 105.');
+console.log('PASS: towing aliases including historical maximum/minimum forms and 1 truck to tow route through the production Recovery converter; unrelated truck wording stays untouched and Recovery remains exact type 105.');
