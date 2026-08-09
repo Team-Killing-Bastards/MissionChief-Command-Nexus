@@ -186,7 +186,8 @@ jobs:
           set -euo pipefail
           git fetch origin main --force
           python3 scripts/build-v1091-dispatch-centre-profile.py
-          rm -f scripts/build-v1091-dispatch-centre-profile.py scripts/inspect-v1091-naming-service.py
+          python3 scripts/patch-v1091-legacy-regressions.py
+          rm -f scripts/build-v1091-dispatch-centre-profile.py scripts/inspect-v1091-naming-service.py scripts/patch-v1091-legacy-regressions.py
           git checkout origin/main -- .github/workflows/repository-quality.yml
 
           node --check src/missionchief-command-nexus.user.js
