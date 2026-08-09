@@ -4,6 +4,32 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.93] - 2026-08-09
+
+### Fixed
+
+- Fixed the live `Rendered profile did not expose any Dispatch Centre panels within 15000ms` failure in Unit Naming and Station Naming.
+- v1.0.92 incorrectly assumed that loading `/profile/{id}` in a hidden iframe would reproduce the LSSMV4/Vue profile lightbox with its Buildings tab selected; live MissionChief does not expose those modal-only panels in that iframe.
+- Dispatch Centre ID/name authority now comes directly from native Resource Administration building rows with `building_type_id="7"`.
+- Station-to-centre membership remains directly authoritative from the same native row model's `leitstelle_building_id` attribute.
+- Native row discovery checks the active document and same-origin frame documents, so the naming tools work whether Resource Administration owns the current frame or the top page.
+- Removed profile route resolution, `.profile-dispatchcenter` parsing and the hidden profile renderer from Dispatch Centre naming discovery.
+- Dispatch Centre → Service → Station Type → Start From, delegated Refresh/Retry ownership and Personnel Assignment isolation remain unchanged.
+
+### Regression coverage
+
+- Added `scripts/check-naming-dispatch-centre-native-station-rows-v1093.mjs`, executing the production row parser against all seven supplied Dispatch Centres plus ordinary, mismatched and invalid rows.
+- Reworked the retained v1.0.86-v1.0.92 Dispatch Centre regressions so they preserve hierarchy, membership and Retry contracts while permanently rejecting the failed profile acquisition architecture.
+- The already-registered hierarchy gate chains the v1.0.93 regression, so no new workflow-definition mutation is required.
+
+### Changed resource baselines
+
+- Command Nexus increased from `1.0.92` to `1.0.93`.
+- Unit Naming increased from `3.3.17` to `3.3.18`.
+- Station Naming increased from `1.3.11` to `1.3.12`.
+- Mission Finder remains `V10.6.144`.
+- Personnel Assignment remains `1.3.9`.
+
 ## [1.0.92] - 2026-08-09
 
 ### Fixed

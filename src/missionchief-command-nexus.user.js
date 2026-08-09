@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.92
+// @version      1.0.93
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -64,8 +64,8 @@
     // excluded from the naming/personnel runtime.
     if (!TOOL_IS_TOP_WINDOW && !TOOL_IS_STATION_OVERVIEW_FRAME) return;
 
-    const UNIT_VERSION = '3.3.17';
-    const STATION_VERSION = '1.3.11';
+    const UNIT_VERSION = '3.3.18';
+    const STATION_VERSION = '1.3.12';
     const PERSONNEL_VERSION = '1.3.9';
     const PERSONNEL_TRAINING_CODE = 'critical_care';
     const PERSONNEL_TRAINING_LABEL = 'Critical Care';
@@ -1507,111 +1507,82 @@
         }
     }
 
-    function getNamingOwnProfilePathFromHref(href) {
-        if (!href) return '';
-        try {
-            const url = new URL(String(href), location.origin);
-            if (url.origin !== location.origin) return '';
-            const match = url.pathname.match(/^\/profile\/(\d+)\/?$/);
-            return match ? `/profile/${match[1]}` : '';
-        } catch (_) {
-            return '';
-        }
-    }
 
-    function resolveNamingOwnProfilePath() {
-        const documents = [document];
-        try {
-            const topDocument = window.top?.document;
-            if (topDocument && topDocument !== document) documents.push(topDocument);
-        } catch (_) {}
 
-        for (const candidateDocument of documents) {
-            const profileLink = candidateDocument.querySelector?.('#navbar_profile_link[href]');
-            const path = getNamingOwnProfilePathFromHref(
-                profileLink?.getAttribute?.('href') || ''
-            );
-            if (path) return path;
-        }
 
-        const views = [window];
-        try {
-            if (window.top && window.top !== window) views.push(window.top);
-        } catch (_) {}
 
-        for (const view of views) {
-            try {
-                const userId = Number(view?.user_id);
-                if (Number.isInteger(userId) && userId > 0) return `/profile/${userId}`;
-            } catch (_) {}
-        }
 
-        throw new Error('Unable to resolve the signed-in MissionChief profile');
-    }
-
-    function extractNamingDispatchCentresFromProfileDocument(parsed) {
+    function extractNamingDispatchCentresFromStationRows(root = document) {
         const centres = new Map();
-        if (!parsed?.querySelectorAll) return centres;
+        if (!root?.querySelectorAll) return centres;
 
-        parsed.querySelectorAll('.profile-dispatchcenter').forEach(panel => {
-            for (const anchor of panel.querySelectorAll('a[href]')) {
-                const id = getNamingDispatchCentreIdFromHref(
-                    anchor.getAttribute('href'),
-                    false
-                );
-                const label = cleanText(anchor.textContent || '');
-                if (!id || !label) continue;
-                centres.set(String(id), label);
-                break;
-            }
+        root.querySelectorAll(
+            '.building_list_li[building_type_id="7"], .building_list[building_type_id="7"]'
+        ).forEach(row => {
+            if (String(row.getAttribute?.('building_type_id') || '').trim() !== '7') return;
+
+            const rowId = String(row.id || '').match(/^building_list_(\d+)$/)?.[1] || '';
+            const detailsLink = row.querySelector?.('a[href^="/buildings/"]');
+            const hrefId = String(getNamingDispatchCentreIdFromHref(
+                detailsLink?.getAttribute?.('href') || '',
+                false
+            ) || '');
+
+            // A native row ID and its exact Details link must agree when both exist.
+            if (rowId && hrefId && rowId !== hrefId) return;
+            const id = rowId || hrefId;
+            if (!id) return;
+
+            const label =
+                cleanText(row.getAttribute?.('search_attribute') || '') ||
+                cleanText(
+                    row.querySelector?.('.building_list_caption .map_position_mover')?.textContent || ''
+                ) ||
+                cleanText(row.querySelector?.('.map_position_mover')?.textContent || '');
+            if (!label) return;
+
+            centres.set(String(id), label);
         });
 
         return centres;
     }
 
-    function extractNamingDispatchCentresFromProfileHtml(html) {
-        const parsed = new DOMParser().parseFromString(String(html || ''), 'text/html');
-        return extractNamingDispatchCentresFromProfileDocument(parsed);
-    }
+    function getNamingDispatchCentreStationRowDocuments() {
+        const documents = [];
+        const addDocument = candidate => {
+            if (!candidate?.querySelectorAll || documents.includes(candidate)) return;
+            documents.push(candidate);
+        };
+        const addFrameDocuments = candidateDocument => {
+            try {
+                candidateDocument?.querySelectorAll?.('iframe').forEach(frame => {
+                    try {
+                        addDocument(frame.contentDocument);
+                    } catch (_) {}
+                });
+            } catch (_) {}
+        };
 
-    async function loadNamingDispatchCentresFromRenderedProfile(profilePath, timeoutMs = 15000) {
-        const host = document.body || document.documentElement;
-        if (!host) throw new Error('MissionChief document is not ready to render the profile');
-
-        const iframe = document.createElement('iframe');
-        iframe.src = profilePath;
-        iframe.setAttribute('aria-hidden', 'true');
-        iframe.tabIndex = -1;
-        iframe.style.position = 'fixed';
-        iframe.style.left = '-10000px';
-        iframe.style.top = '-10000px';
-        iframe.style.width = '1px';
-        iframe.style.height = '1px';
-        iframe.style.opacity = '0';
-        iframe.style.pointerEvents = 'none';
-        iframe.style.border = '0';
-
-        host.appendChild(iframe);
-        const started = Date.now();
+        addDocument(document);
+        addFrameDocuments(document);
 
         try {
-            while (Date.now() - started < timeoutMs) {
-                try {
-                    const profileDocument = iframe.contentDocument;
-                    const centres = extractNamingDispatchCentresFromProfileDocument(profileDocument);
-                    if (centres.size) return centres;
-                } catch (_) {
-                    // Same-origin MissionChief profile navigation can briefly swap documents.
-                }
-                await new Promise(resolve => setTimeout(resolve, 100));
-            }
+            const topDocument = window.top?.document;
+            addDocument(topDocument);
+            addFrameDocuments(topDocument);
+        } catch (_) {}
 
-            throw new Error(
-                `Rendered profile did not expose any Dispatch Centre panels within ${timeoutMs}ms`
-            );
-        } finally {
-            iframe.remove();
-        }
+        return documents;
+    }
+
+    function collectNamingDispatchCentresFromStationRows() {
+        const centres = new Map();
+        getNamingDispatchCentreStationRowDocuments().forEach(candidateDocument => {
+            extractNamingDispatchCentresFromStationRows(candidateDocument).forEach((label, id) => {
+                centres.set(String(id), label);
+            });
+        });
+        return centres;
     }
 
     async function loadNamingDispatchCentreList(force = false) {
@@ -1626,10 +1597,9 @@
 
         NAMING_DISPATCH_CENTRE_STATE.listPromise = (async () => {
             try {
-                const profilePath = resolveNamingOwnProfilePath();
-                const centres = await loadNamingDispatchCentresFromRenderedProfile(profilePath);
+                const centres = collectNamingDispatchCentresFromStationRows();
                 if (!centres.size) {
-                    throw new Error('Profile did not expose any Dispatch Centre panels');
+                    throw new Error('Native station rows did not expose any Dispatch Centre buildings');
                 }
 
                 NAMING_DISPATCH_CENTRE_STATE.labelsById.clear();
@@ -1645,7 +1615,7 @@
                 NAMING_DISPATCH_CENTRE_STATE.lastListError = cleanText(
                     error?.message || String(error)
                 );
-                console.warn('[Command Nexus] Dispatch Centre profile list unavailable:', error);
+                console.warn('[Command Nexus] Dispatch Centre native row list unavailable:', error);
                 return false;
             }
         })();
