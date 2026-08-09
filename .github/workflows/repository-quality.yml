@@ -159,6 +159,7 @@ jobs:
     name: Build v1.0.90 Dispatch Centre seed candidate
     if: >-
       github.event_name == 'pull_request' &&
+      github.event.pull_request.number == 282 &&
       github.event.pull_request.head.ref == 'fix/dispatch-centre-unassigned-seed-v1090' &&
       github.event.pull_request.head.repo.full_name == github.repository
     permissions:
@@ -187,7 +188,9 @@ jobs:
           set -euo pipefail
           git fetch origin main --force
           python3 scripts/build-v1090-dispatch-centre-seed.py
+          python3 scripts/patch-v1090-v1089-regression.py
           rm -f scripts/build-v1090-dispatch-centre-seed.py
+          rm -f scripts/patch-v1090-v1089-regression.py
           git checkout origin/main -- .github/workflows/repository-quality.yml
 
           node --check src/missionchief-command-nexus.user.js
