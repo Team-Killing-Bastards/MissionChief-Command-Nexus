@@ -35,7 +35,7 @@ class FixtureRow {
   constructor(dc) { this.dataset = {}; this.attrs = { leitstelle_building_id: dc }; }
   getAttribute(name) { return this.attrs[name] ?? ''; }
 }
-expect(source.includes('// @version      1.0.94'), 'Expected current Command Nexus version');
+expect(source.includes('// @version      1.0.95'), 'Expected current Command Nexus version');
 const context = { String, Number, row: new FixtureRow('null'), result: null };
 vm.runInNewContext(`${extractFunction('getNamingStationRowDispatchCentreId')}
 result = getNamingStationRowDispatchCentreId(row);`, context);

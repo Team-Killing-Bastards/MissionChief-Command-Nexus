@@ -7,6 +7,7 @@ import vm from 'node:vm';
 // station-membership regression through the already-registered Validate gate.
 await import('./check-naming-dispatch-centre-profile-render-v1092.mjs');
 await import('./check-naming-dispatch-centre-membership-frame-v1094.mjs');
+await import('./check-naming-dispatch-centre-auto-station-refresh-v1095.mjs');
 
 const source = await readFile('src/missionchief-command-nexus.user.js', 'utf8');
 const fail = message => { console.error(`ERROR: ${message}`); process.exit(1); };
@@ -32,9 +33,9 @@ function extractFunction(name) {
   fail(`Unterminated ${name}`);
 }
 
-expect(source.includes('// @version      1.0.94'), 'Expected current Command Nexus 1.0.94');
-expect(source.includes("const UNIT_VERSION = '3.3.19';"), 'Expected current Unit Naming 3.3.19');
-expect(source.includes("const STATION_VERSION = '1.3.13';"), 'Expected current Station Naming 1.3.13');
+expect(source.includes('// @version      1.0.95'), 'Expected current Command Nexus 1.0.94');
+expect(source.includes("const UNIT_VERSION = '3.3.20';"), 'Expected current Unit Naming 3.3.19');
+expect(source.includes("const STATION_VERSION = '1.3.14';"), 'Expected current Station Naming 1.3.13');
 expect(source.includes('id="mc-namer-service"'), 'Unit Naming Service selector missing');
 expect(source.includes('id="mc-station-service"'), 'Station Naming Service selector missing');
 

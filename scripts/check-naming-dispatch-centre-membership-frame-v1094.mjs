@@ -62,9 +62,9 @@ class FixtureDocument {
   }
 }
 
-expect(source.includes('// @version      1.0.94'), 'Expected Command Nexus 1.0.94');
-expect(source.includes("const UNIT_VERSION = '3.3.19';"), 'Expected Unit Naming 3.3.19');
-expect(source.includes("const STATION_VERSION = '1.3.13';"), 'Expected Station Naming 1.3.13');
+expect(source.includes('// @version      1.0.95'), 'Expected Command Nexus 1.0.94');
+expect(source.includes("const UNIT_VERSION = '3.3.20';"), 'Expected Unit Naming 3.3.19');
+expect(source.includes("const STATION_VERSION = '1.3.14';"), 'Expected Station Naming 1.3.13');
 
 // The live failure is specifically cross-document: the naming UI can live in the
 // top Stations host while the native building rows carrying leitstelle_building_id
