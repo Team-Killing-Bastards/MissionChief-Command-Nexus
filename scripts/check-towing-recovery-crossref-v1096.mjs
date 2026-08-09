@@ -35,7 +35,6 @@ function extractFunction(name) {
 
 expect(source.includes('// @version      1.0.96'), 'Expected Command Nexus 1.0.96');
 expect(source.includes(' * MODULE 2: MISSION FINDER V10.6.145'), 'Expected Mission Finder V10.6.145');
-expect(source.includes("const MF_FLATBED_RECOVERY_TYPE_ID = '105';"), 'Exact type-105 Flatbed Recovery constant missing');
 
 const context = {
   normalise: value => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(),
@@ -77,7 +76,7 @@ expect(context.result.unrelated.every(value => value === false), `Unrelated truc
 const recoveryClassifier = extractFunction('isFlatbedRecoveryVehicleRequirement');
 expect(recoveryClassifier.includes('isCarsToTowRequirementName(value)'), 'Flatbed Recovery classifier must consume towing aliases');
 const recoveryCheckbox = extractFunction('isFlatbedRecoveryVehicleCheckbox');
-expect(recoveryCheckbox.includes(".includes('105')") || recoveryCheckbox.includes('MF_FLATBED_RECOVERY_TYPE_ID'), 'Recovery checkbox matching must stay exact type 105');
+expect(recoveryCheckbox.includes(".includes('105')"), 'Recovery checkbox matching must stay exact MissionChief type 105');
 
 const converter = extractFunction('getCarsToTowVehicleRequirement');
 expect(converter.includes('isCarsToTowRequirementName'), 'Towing quantity converter must use the towing alias classifier');
@@ -85,6 +84,6 @@ const resolve = extractFunction('resolveVehicleTypeRequirements');
 expect(resolve.includes('getCarsToTowVehicleRequirement'), 'Requirement resolver must keep towing conversion in its normal path');
 
 expect(source.includes('flatbedRecoveryOnly'), 'Strict Flatbed Recovery selection path missing');
-expect(source.includes('isExactVehicleType(checkbox, MF_FLATBED_RECOVERY_TYPE_ID)') || source.includes(".includes('105')"), 'Recovery selection must remain exact type 105');
+expect(source.includes(".includes('105')"), 'Recovery selection must remain exact MissionChief type 105');
 
 console.log('PASS: towing cross-reference recognises truck/lorry/van/vehicle-to-tow aliases, ignores unrelated truck wording, and keeps exact type-105 Recovery selection.');
