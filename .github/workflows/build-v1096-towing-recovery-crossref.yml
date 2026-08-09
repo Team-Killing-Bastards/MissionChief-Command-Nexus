@@ -1,0 +1,58 @@
+name: Build v1.0.96 towing recovery cross-reference candidate
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  build:
+    if: github.event.pull_request.head.ref == 'fix/towing-recovery-crossref-v1096'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out exact feature branch
+        uses: actions/checkout@v6
+        with:
+          ref: fix/towing-recovery-crossref-v1096
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Build and validate v1.0.96
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! -f scripts/build-v1096-towing-recovery-crossref.py ]]; then
+            echo 'Candidate already built; no one-use builder remains.'
+            exit 0
+          fi
+
+          git fetch origin main --force
+          test "$(git rev-parse origin/main)" = "9569214ead9ba94b09a08b00e4196135779bdb1c"
+
+          python3 scripts/build-v1096-towing-recovery-crossref.py
+          rm -f scripts/build-v1096-towing-recovery-crossref.py
+
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          node scripts/check-towing-recovery-crossref-v1096.mjs
+          for check in scripts/check-*.mjs; do
+            echo "Running $check"
+            node "$check"
+          done
+          python3 scripts/check_repository.py
+          git diff --check
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'Route towing truck aliases to Recovery in v1.0.96'
+          git push origin HEAD:fix/towing-recovery-crossref-v1096
