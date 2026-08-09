@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: repository-quality-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
@@ -30,10 +30,6 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-
-      - name: Bootstrap clean v1.0.87 Dispatch Centre candidate
-        if: github.event_name == 'pull_request' && github.head_ref == 'fix/dispatch-centre-refresh-v1087'
-        run: node scripts/validate-userscript.mjs
 
       - name: Compile repository checker
         run: python3 -m py_compile scripts/check_repository.py
