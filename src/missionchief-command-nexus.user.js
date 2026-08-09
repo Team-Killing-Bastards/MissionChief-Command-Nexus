@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.86
+// @version      1.0.87
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -64,8 +64,8 @@
     // excluded from the naming/personnel runtime.
     if (!TOOL_IS_TOP_WINDOW && !TOOL_IS_STATION_OVERVIEW_FRAME) return;
 
-    const UNIT_VERSION = '3.3.11';
-    const STATION_VERSION = '1.3.5';
+    const UNIT_VERSION = '3.3.12';
+    const STATION_VERSION = '1.3.6';
     const PERSONNEL_VERSION = '1.3.9';
     const PERSONNEL_TRAINING_CODE = 'critical_care';
     const PERSONNEL_TRAINING_LABEL = 'Critical Care';
@@ -1442,39 +1442,43 @@
     function extractNamingDispatchCentresFromHtml(html) {
         const parsed = new DOMParser().parseFromString(String(html || ''), 'text/html');
         const centres = new Map();
-        const containers = parsed.querySelectorAll(
-            '.building_list_li[building_type_id="7"], .building_list[building_type_id="7"], [data-building-type-id="7"], [building_type="7"]'
-        );
+        const containers = [
+            ...parsed.querySelectorAll(
+                '.building_list_li, .building_list, [data-building-id], [building_id]'
+            )
+        ];
 
-        containers.forEach(container => {
+        const addFromContainer = container => {
             const anchors = [...container.querySelectorAll('a[href*="/buildings/"]')];
             const preferred = anchors.find(anchor =>
-                /^\/buildings\/\d+\/?$/.test(
-                    (() => {
-                        try { return new URL(anchor.getAttribute('href') || '', location.origin).pathname; }
-                        catch (_) { return ''; }
-                    })()
-                )
-            ) || anchors[0];
+                Boolean(getNamingDispatchCentreIdFromHref(anchor.getAttribute('href') || ''))
+            );
             if (!preferred) return;
 
-            const id =
-                getNamingDispatchCentreIdFromHref(preferred.getAttribute('href')) ||
-                getNamingDispatchCentreIdFromHref(preferred.getAttribute('href'), true) ||
-                String(
-                    container.getAttribute('building_id') ||
-                    container.getAttribute('data-building-id') ||
-                    ''
-                );
+            const id = getNamingDispatchCentreIdFromHref(preferred.getAttribute('href') || '');
             if (!id) return;
 
             const caption =
                 container.querySelector('.building_list_caption .map_position_mover') ||
                 container.querySelector('.building_list_caption a[href*="/buildings/"]') ||
                 preferred;
-            const label = cleanText(caption?.textContent || '');
-            if (label) centres.set(String(id), label);
-        });
+            const label = cleanText(caption?.textContent || preferred.textContent || '');
+            if (label && !centres.has(String(id))) centres.set(String(id), label);
+        };
+
+        containers.forEach(addFromContainer);
+
+        // /leitstellenansicht is already the native Dispatch Centres view. If MissionChief
+        // changes or removes its list wrapper classes, fall back to exact same-origin
+        // /buildings/{id} anchors rather than treating the page as empty.
+        if (!centres.size) {
+            [...parsed.querySelectorAll('a[href*="/buildings/"]')].forEach(anchor => {
+                const id = getNamingDispatchCentreIdFromHref(anchor.getAttribute('href') || '');
+                if (!id) return;
+                const label = cleanText(anchor.textContent || '');
+                if (label && !centres.has(String(id))) centres.set(String(id), label);
+            });
+        }
 
         return centres;
     }
@@ -1516,6 +1520,7 @@
         const centres = [...NAMING_DISPATCH_CENTRE_STATE.labelsById.entries()]
             .map(([id, label]) => ({ id: String(id), label: cleanText(label) || `Dispatch Centre ${id}` }))
             .sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true }));
+
         select.replaceChildren();
         const add = (value, label) => {
             const option = document.createElement('option');
@@ -1523,15 +1528,28 @@
             option.textContent = label;
             select.appendChild(option);
         };
+
+        const available =
+            NAMING_DISPATCH_CENTRE_STATE.listLoaded &&
+            NAMING_DISPATCH_CENTRE_STATE.loaded &&
+            centres.length > 0;
+
+        if (!available) {
+            add(NAMING_DISPATCH_CENTRE_ALL, 'Dispatch Centres unavailable — refresh');
+            select.value = NAMING_DISPATCH_CENTRE_ALL;
+            select.disabled = true;
+            select.title = 'Dispatch Centre data unavailable. Use Refresh Dispatch Centres to retry.';
+            return;
+        }
+
         add(NAMING_DISPATCH_CENTRE_ALL, 'All dispatch centres');
         centres.forEach(({ id, label }) => add(id, label));
-        if (NAMING_DISPATCH_CENTRE_STATE.loaded) add(NAMING_DISPATCH_CENTRE_UNASSIGNED, 'Unassigned / default');
+        add(NAMING_DISPATCH_CENTRE_UNASSIGNED, 'Unassigned / default');
+
         const values = new Set([...select.options].map(option => option.value));
         select.value = values.has(previous) ? previous : NAMING_DISPATCH_CENTRE_ALL;
-        select.disabled = !NAMING_DISPATCH_CENTRE_STATE.listLoaded;
-        select.title = NAMING_DISPATCH_CENTRE_STATE.listLoaded
-            ? 'Choose a MissionChief Dispatch Centre first, then Station Type and Start From.'
-            : 'Dispatch Centre list unavailable; refresh to retry.';
+        select.disabled = false;
+        select.title = 'Choose a MissionChief Dispatch Centre first, then Station Type and Start From.';
     }
 
     function getStationsForNamingDispatchCentre(stations, dispatchSelectId) {
@@ -1562,13 +1580,58 @@
     }
 
     async function refreshNamingDispatchCentres(force = true) {
-        await Promise.all([loadNamingDispatchCentreList(force), loadNamingDispatchCentreData(force)]);
-        populateNamingDispatchCentreFilter('mc-namer-dispatch-centre');
-        populateNamingDispatchCentreFilter('mc-station-dispatch-centre');
-        populateNamingStationTypeFilter('mc-namer-station-type', 'mc-namer-dispatch-centre', STATE.stations);
-        populateNamingStationTypeFilter('mc-station-type', 'mc-station-dispatch-centre', STATION_STATE.stations);
-        populateStartDropdown();
-        populateStationNamingStartDropdown();
+        const buttons = [
+            document.getElementById('mc-namer-refresh-dispatch-centres'),
+            document.getElementById('mc-station-refresh-dispatch-centres')
+        ].filter(Boolean);
+
+        buttons.forEach(button => {
+            button.disabled = true;
+            button.textContent = 'Refreshing…';
+            button.title = 'Loading Dispatch Centres from MissionChief.';
+        });
+
+        let listLoaded = false;
+        let assignmentsLoaded = false;
+        let ready = false;
+        let centreCount = 0;
+
+        try {
+            [listLoaded, assignmentsLoaded] = await Promise.all([
+                loadNamingDispatchCentreList(force),
+                loadNamingDispatchCentreData(force)
+            ]);
+
+            populateNamingDispatchCentreFilter('mc-namer-dispatch-centre');
+            populateNamingDispatchCentreFilter('mc-station-dispatch-centre');
+            populateNamingStationTypeFilter(
+                'mc-namer-station-type',
+                'mc-namer-dispatch-centre',
+                STATE.stations
+            );
+            populateNamingStationTypeFilter(
+                'mc-station-type',
+                'mc-station-dispatch-centre',
+                STATION_STATE.stations
+            );
+            populateStartDropdown();
+            populateStationNamingStartDropdown();
+
+            centreCount = NAMING_DISPATCH_CENTRE_STATE.labelsById.size;
+            ready = Boolean(listLoaded && assignmentsLoaded && centreCount > 0);
+            return ready;
+        } catch (error) {
+            console.warn('[Command Nexus] Dispatch Centre refresh failed:', error);
+            return false;
+        } finally {
+            buttons.forEach(button => {
+                button.disabled = false;
+                button.textContent = ready ? 'Refresh Dispatch Centres' : 'Retry Dispatch Centres';
+                button.title = ready
+                    ? `Loaded ${centreCount} Dispatch Centre${centreCount === 1 ? '' : 's'} from MissionChief.`
+                    : 'Dispatch Centre data could not be loaded. Click to retry.';
+            });
+        }
     }
 
     function handleUnitDispatchCentreChange() {

@@ -4,6 +4,28 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.87] - 2026-08-09
+
+### Fixed
+
+- **Refresh Dispatch Centres** now parses the native `/leitstellenansicht` list without requiring MissionChief to expose `building_type_id="7"` on each list wrapper.
+- Dispatch Centre discovery first uses MissionChief's building-list containers and falls back to exact same-origin `/buildings/{id}` links if wrapper markup changes.
+- Unit Naming and Station Naming now show **Refreshing…** while the list is loading and **Retry Dispatch Centres** when either centre discovery or station-to-centre assignment data fails.
+- A failed load now leaves a clear **Dispatch Centres unavailable — refresh** placeholder instead of a disabled **All dispatch centres** selector that appears to do nothing.
+- Station membership remains authoritative through `/building/buildings_json` and `leitstelle_building_id`.
+
+### Regression coverage
+
+- Added `scripts/check-naming-dispatch-centre-refresh-v1087.mjs`, which executes the production parser against Dispatch Centre HTML fixtures without `building_type_id="7"`, verifies wrapperless fallback behaviour, rejects nested/cross-origin links and protects the visible refresh/retry states.
+
+### Changed resource baselines
+
+- Command Nexus increased from `1.0.86` to `1.0.87`.
+- Unit Naming increased from `3.3.11` to `3.3.12`.
+- Station Naming increased from `1.3.5` to `1.3.6`.
+- Mission Finder remains `V10.6.144`.
+- Personnel Assignment remains `1.3.9`.
+
 ## [1.0.86] - 2026-08-08
 
 ### Fixed
