@@ -1,0 +1,36 @@
+name: Validate v1.0.97 candidate
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/validate-v1097-candidate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate syntax and metadata
+        run: |
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+      - name: Run every permanent JavaScript regression
+        run: |
+          set -euo pipefail
+          for check in scripts/check-*.mjs; do
+            echo "Running $check"
+            node "$check"
+          done
+      - name: Validate repository integrity
+        run: python3 scripts/check_repository.py
+      - name: Validate clean diff
+        run: git diff --check
