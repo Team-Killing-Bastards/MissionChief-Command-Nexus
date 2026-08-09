@@ -4,6 +4,33 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.91] - 2026-08-09
+
+### Rebuilt
+
+- Rebuilt Unit Naming and Station Naming around the live MissionChief hierarchy **Dispatch Centre → Service → Station Type → Start From**.
+- Dispatch Centre ID/name pairs now come directly from the signed-in user's native profile `.profile-dispatchcenter` panels. The profile route is resolved from MissionChief's `#navbar_profile_link`, with the page `user_id` available only as a bounded fallback.
+- The empty profile Dispatch Centre placeholder is ignored because it has no exact `/buildings/{id}` centre link.
+- Dispatch Centre options become available as soon as the profile list loads; station-assignment loading no longer blocks the first dropdown.
+- Station membership remains authoritative from row-level `leitstelle_building_id`, including literal `null` normalisation for unassigned buildings.
+- Added a Service stage derived from MissionChief building type IDs so Air Ambulance stays Ambulance while Police Helicopter/EOD remain Police; RNLI, Coastguard and SAR are grouped under Search & Rescue / Coastguard.
+- Station Type is rebuilt from the selected Dispatch Centre + Service subset, and Start From is rebuilt from Dispatch Centre + Service + Station Type.
+- Removed the failed station-seed, `/leitstellenansicht` seed fallback and building-edit-page centre discovery runtime introduced during 1.0.88–1.0.90 troubleshooting.
+- Preserved delegated Refresh/Retry ownership, visible Refreshing/error diagnostics and Personnel Assignment isolation.
+
+### Regression coverage
+
+- Added `scripts/check-naming-dispatch-centre-profile-hierarchy-v1091.mjs` using the supplied seven-centre profile fixture and exact service/building-type mappings.
+- Reworked the v1.0.88–v1.0.90 Dispatch Centre regressions so they preserve station-membership, Retry and null-normalisation contracts without protecting the removed seed architecture.
+
+### Changed resource baselines
+
+- Command Nexus increased from `1.0.90` to `1.0.91`.
+- Unit Naming increased from `3.3.15` to `3.3.16`.
+- Station Naming increased from `1.3.9` to `1.3.10`.
+- Mission Finder remains `V10.6.144`.
+- Personnel Assignment remains `1.3.9`.
+
 ## [1.0.90] - 2026-08-09
 
 ### Fixed
