@@ -4,6 +4,7 @@ import vm from 'node:vm';
 
 const source = await readFile('src/missionchief-command-nexus.user.js', 'utf8');
 const workflow = await readFile('.github/workflows/validate-userscript.yml', 'utf8');
+const hierarchyCheck = await readFile('scripts/check-naming-dispatch-centre-profile-hierarchy-v1091.mjs', 'utf8');
 const fail = message => { console.error(`ERROR: ${message}`); process.exit(1); };
 const expect = (condition, message) => { if (!condition) fail(message); };
 
@@ -119,6 +120,7 @@ expect(!listLoader.includes('response.text()'), 'Centre loader must not depend o
 expect(source.includes("document.createElement('iframe')"), 'Rendered profile loader must use a same-origin iframe');
 expect(source.includes("iframe.remove();"), 'Rendered profile loader cleanup missing');
 expect(source.includes('extractNamingDispatchCentresFromProfileDocument'), 'Rendered DOM parser helper missing');
-expect(workflow.includes('scripts/check-naming-dispatch-centre-profile-render-v1092.mjs'), 'v1.0.92 renderer regression must be permanently registered');
+expect(workflow.includes('scripts/check-naming-dispatch-centre-profile-hierarchy-v1091.mjs'), 'Registered profile hierarchy regression must remain in Validate userscript');
+expect(hierarchyCheck.includes("check-naming-dispatch-centre-profile-render-v1092.mjs"), 'Registered profile hierarchy regression must execute the v1.0.92 renderer regression');
 
 console.log('PASS: v1.0.92 waits for MissionChief/Vue to render the signed-in profile before reading Dispatch Centres.');
