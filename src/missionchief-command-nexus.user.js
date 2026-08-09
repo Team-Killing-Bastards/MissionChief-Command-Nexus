@@ -27946,6 +27946,7 @@ let sessionRuntimeTicker = null;
         let key = normalise(name);
         key = key
             .replace(/^required\s+/, '')
+            .replace(/^(?:maximum|minimum)\s+amount\s+of\s+/, '')
             .replace(/^\d+\s+/, '')
             .replace(/\s+\d+$/, '');
 
