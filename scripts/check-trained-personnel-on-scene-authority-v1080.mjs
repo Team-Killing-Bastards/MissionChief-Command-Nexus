@@ -66,7 +66,7 @@ function extractFunction(name) {
 }
 
 expect(
-  source.includes('// @version      1.0.92'),
+  source.includes('// @version      1.0.93'),
   'Expected Command Nexus 1.0.80'
 );
 expect(

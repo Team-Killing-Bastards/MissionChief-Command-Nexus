@@ -2,9 +2,8 @@
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 
-// Validate userscript already runs this permanent hierarchy check. Chain the
-// v1.0.92 acquisition regression through it so rendered-profile behaviour is
-// protected without adding another workflow-definition mutation.
+// Preserve the hierarchy introduced in v1.0.91 while chaining the v1.0.92
+// supersession guard and the v1.0.93 native-row acquisition regression.
 await import('./check-naming-dispatch-centre-profile-render-v1092.mjs');
 
 const source = await readFile('src/missionchief-command-nexus.user.js', 'utf8');
@@ -21,12 +20,7 @@ function extractFunction(name) {
     const c = source[i], n = source[i + 1];
     if (lineComment) { if (c === '\n') lineComment = false; continue; }
     if (blockComment) { if (c === '*' && n === '/') { blockComment = false; i += 1; } continue; }
-    if (quote) {
-      if (escaped) { escaped = false; continue; }
-      if (c === '\\') { escaped = true; continue; }
-      if (c === quote) quote = '';
-      continue;
-    }
+    if (quote) { if (escaped) { escaped = false; continue; } if (c === '\\') { escaped = true; continue; } if (c === quote) quote = ''; continue; }
     if (c === '/' && n === '/') { lineComment = true; i += 1; continue; }
     if (c === '/' && n === '*') { blockComment = true; i += 1; continue; }
     if (c === "'" || c === '"' || c === '`') { quote = c; continue; }
@@ -36,79 +30,11 @@ function extractFunction(name) {
   fail(`Unterminated ${name}`);
 }
 
-class Anchor {
-  constructor(href, text) { this.href = href; this.textContent = text; }
-  getAttribute(name) { return name === 'href' ? this.href : ''; }
-}
-class Panel {
-  constructor(anchors) { this.anchors = anchors; }
-  querySelectorAll(selector) { return selector === 'a[href]' ? this.anchors : []; }
-}
-class ProfileDoc {
-  constructor() {
-    this.panels = [
-      new Panel([]),
-      new Panel([new Anchor('/buildings/2634040', ' LODON DISPATCH ')]),
-      new Panel([new Anchor('/buildings/2638525', 'NI Ambulance Dispatch')]),
-      new Panel([new Anchor('/buildings/2638524', 'NI Fire Dispatch')]),
-      new Panel([new Anchor('/buildings/2638571', 'NI Hospitals')]),
-      new Panel([new Anchor('/buildings/2632635', 'NI Police Dispatch')]),
-      new Panel([new Anchor('/buildings/2638564', 'North England Dispatch')]),
-      new Panel([new Anchor('/buildings/1859041', 'Scotlands Dispatch')]),
-      new Panel([new Anchor('/buildings/1859041/edit', 'Nested action')]),
-      new Panel([new Anchor('https://example.invalid/buildings/999', 'Cross origin')])
-    ];
-  }
-  querySelectorAll(selector) { return selector === '.profile-dispatchcenter' ? this.panels : []; }
-}
-class DOMParserFixture { parseFromString() { return new ProfileDoc(); } }
-
-expect(source.includes('// @version      1.0.92'), 'Expected current Command Nexus 1.0.92');
-expect(source.includes("const UNIT_VERSION = '3.3.17';"), 'Expected current Unit Naming 3.3.17');
-expect(source.includes("const STATION_VERSION = '1.3.11';"), 'Expected current Station Naming 1.3.11');
+expect(source.includes('// @version      1.0.93'), 'Expected current Command Nexus 1.0.93');
+expect(source.includes("const UNIT_VERSION = '3.3.18';"), 'Expected current Unit Naming 3.3.18');
+expect(source.includes("const STATION_VERSION = '1.3.12';"), 'Expected current Station Naming 1.3.12');
 expect(source.includes('id="mc-namer-service"'), 'Unit Naming Service selector missing');
 expect(source.includes('id="mc-station-service"'), 'Station Naming Service selector missing');
-
-const profileContext = {
-  DOMParser: DOMParserFixture,
-  URL,
-  location: { origin: 'https://www.missionchief.co.uk' },
-  cleanText: value => String(value || '').replace(/\s+/g, ' ').trim(),
-  Map, String,
-  result: null
-};
-vm.runInNewContext(
-  `${extractFunction('getNamingDispatchCentreIdFromHref')}\n` +
-  `${extractFunction('extractNamingDispatchCentresFromProfileDocument')}\n` +
-  `${extractFunction('extractNamingDispatchCentresFromProfileHtml')}\n` +
-  `result = extractNamingDispatchCentresFromProfileHtml('<fixture>');`,
-  profileContext
-);
-const centres = new Map(profileContext.result);
-expect(centres.size === 7, `Expected seven real profile Dispatch Centres, got ${centres.size}`);
-expect(centres.get('2634040') === 'LODON DISPATCH', 'LODON DISPATCH missing from profile parser');
-expect(centres.get('1859041') === 'Scotlands Dispatch', 'Scotlands Dispatch missing from profile parser');
-expect(!centres.has('999'), 'Cross-origin building link must be rejected');
-
-const pathContext = {
-  URL,
-  location: { origin: 'https://www.missionchief.co.uk' },
-  window: {},
-  document: {
-    querySelector: selector => selector === '#navbar_profile_link[href]'
-      ? new Anchor('/profile/419938', 'Profile')
-      : null
-  },
-  result: null
-};
-pathContext.window.top = { document: pathContext.document };
-vm.runInNewContext(
-  `${extractFunction('getNamingOwnProfilePathFromHref')}\n` +
-  `${extractFunction('resolveNamingOwnProfilePath')}\n` +
-  `result = resolveNamingOwnProfilePath();`,
-  pathContext
-);
-expect(pathContext.result === '/profile/419938', `Expected own navbar profile route, got ${pathContext.result}`);
 
 const serviceBlock = source.slice(
   source.indexOf('const NAMING_SERVICES ='),
@@ -141,8 +67,9 @@ expect(JSON.stringify(serviceContext.result) === JSON.stringify([
 ]), `Unexpected Service grouping: ${JSON.stringify(serviceContext.result)}`);
 
 const listLoader = extractFunction('loadNamingDispatchCentreList');
-expect(listLoader.includes('resolveNamingOwnProfilePath()'), 'Profile route must drive centre list loading');
-expect(!listLoader.includes('/leitstellenansicht'), 'Stations view must not drive centre discovery');
+expect(listLoader.includes('collectNamingDispatchCentresFromStationRows()'), 'Native station rows must drive Dispatch Centre list loading');
+expect(!listLoader.includes('/profile/'), 'Profile route must not drive centre discovery');
+expect(!listLoader.includes('/leitstellenansicht'), 'Network Stations view must not drive centre discovery');
 expect(!listLoader.includes('/edit'), 'Building edit pages must not drive centre discovery');
 expect(!source.includes('function loadNamingDispatchCentreSeedBuildingIds('), 'Old seed loader remains');
 expect(!source.includes('getNamingDispatchCentreSeedBuildingIds'), 'Old seed chooser remains');
@@ -157,4 +84,4 @@ expect(source.includes("querySelector('#mc-namer-service').onchange = handleUnit
 expect(source.includes("querySelector('#mc-station-service').onchange = handleStationNamingServiceChange"), 'Station Service change handler missing');
 expect(!source.includes('mc-personnel-dispatch-centre'), 'Personnel Assignment must remain outside centre filtering');
 
-console.log('PASS: v1.0.91 hierarchy plus v1.0.92 rendered-profile acquisition remain protected with row-authoritative membership.');
+console.log('PASS: v1.0.91 Dispatch Centre -> Service -> Station Type -> Start From hierarchy is preserved under v1.0.93 native-row authority.');

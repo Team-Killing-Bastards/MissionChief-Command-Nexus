@@ -10,7 +10,7 @@ function fail(message) {
 }
 
 for (const [token, label] of [
-  ['// @version      1.0.92', 'v1.0.51 metadata'],
+  ['// @version      1.0.93', 'v1.0.51 metadata'],
   [' * MODULE 2: MISSION FINDER V10.6.144', 'Mission Finder V10.6.120 header'],
   ['Keep my saved panel position', 'saved-position checkbox label'],
 ]) {
