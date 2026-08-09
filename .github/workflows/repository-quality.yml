@@ -43,6 +43,54 @@ jobs:
       - name: Validate automatic live release reconciliation
         run: node scripts/check-release-auto-publish.mjs
 
+  build-v1088-dispatch-centres:
+    name: Build v1.0.88 Dispatch Centre assignment source
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.head_ref == 'fix/dispatch-centre-assignment-source-v1088' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out trusted same-repository feature branch
+        uses: actions/checkout@v6
+        with:
+          ref: fix/dispatch-centre-assignment-source-v1088
+          fetch-depth: 0
+
+      - name: Build corrected Dispatch Centre candidate
+        run: |
+          set -euo pipefail
+          python3 scripts/build-v1088-dispatch-centre-assignment.py
+          rm -f scripts/build-v1088-dispatch-centre-assignment.py
+          rm -f .github/build-v1088-dispatch-centre-assignment.trigger
+          rm -f .github/workflows/build-v1088-dispatch-centre-assignment.yml
+
+      - name: Validate exact candidate
+        run: |
+          set -euo pipefail
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          for check in scripts/check-*.mjs; do
+            echo "Running $check"
+            node "$check"
+          done
+          python3 scripts/check_repository.py
+          git diff --check
+
+      - name: Commit clean candidate
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'Use building assignment source for Dispatch Centres in v1.0.88'
+          git push origin HEAD:fix/dispatch-centre-assignment-source-v1088
+
   release-state:
     name: Detect unpublished canonical version
     if: >-
