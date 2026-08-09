@@ -4,6 +4,30 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.94] - 2026-08-09
+
+### Fixed
+
+- Fixed Dispatch Centre membership appearing entirely under **Unassigned / default** after the v1.0.93 native-centre discovery correction.
+- Station-to-centre membership now scans the same active/top/same-origin Resource Administration document collection as Dispatch Centre discovery instead of restricting `leitstelle_building_id` reads to the userscript's current document.
+- Native station rows such as `leitstelle_building_id="<centre id>"` now populate the building-to-centre map even when those rows live inside the normal Stations child frame.
+- Literal `null`, `undefined`, `false`, blank and non-positive assignments remain genuinely unassigned.
+- The established **Dispatch Centre → Service → Station Type → Start From** cascade is unchanged; selecting a centre now exposes the services and station types actually assigned to it.
+
+### Regression coverage
+
+- Added `scripts/check-naming-dispatch-centre-membership-frame-v1094.mjs`.
+- The regression starts with an empty top document and puts assigned native station rows in a same-origin Resource Administration child frame, then executes the production membership loader and proves NI Fire Dispatch membership reaches the downstream Fire & Rescue Service subset while only a literal-null station remains Unassigned/default.
+- The regression is permanently registered in `Validate userscript`.
+
+### Changed resource baselines
+
+- Command Nexus increased from `1.0.93` to `1.0.94`.
+- Unit Naming increased from `3.3.18` to `3.3.19`.
+- Station Naming increased from `1.3.12` to `1.3.13`.
+- Mission Finder remains `V10.6.144`.
+- Personnel Assignment remains `1.3.9`.
+
 ## [1.0.93] - 2026-08-09
 
 ### Fixed

@@ -20,7 +20,7 @@ function extractFunction(name) {
 }
 
 for (const [token, label] of [
-  ['// @version      1.0.93', 'v1.0.83 metadata'],
+  ['// @version      1.0.94', 'v1.0.83 metadata'],
   ['MISSION FINDER V10.6.144', 'Mission Finder V10.6.143'],
   ['function mfIsExactPatientTransportAnchor(', 'exact patient route guard'],
   ['function mfFindExactPatientTransportAnchorDeep(', 'iframe-aware patient finder'],

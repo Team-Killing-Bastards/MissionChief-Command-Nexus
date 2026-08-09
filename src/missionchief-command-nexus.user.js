@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.93
+// @version      1.0.94
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -64,8 +64,8 @@
     // excluded from the naming/personnel runtime.
     if (!TOOL_IS_TOP_WINDOW && !TOOL_IS_STATION_OVERVIEW_FRAME) return;
 
-    const UNIT_VERSION = '3.3.18';
-    const STATION_VERSION = '1.3.12';
+    const UNIT_VERSION = '3.3.19';
+    const STATION_VERSION = '1.3.13';
     const PERSONNEL_VERSION = '1.3.9';
     const PERSONNEL_TRAINING_CODE = 'critical_care';
     const PERSONNEL_TRAINING_LABEL = 'Critical Care';
@@ -1430,18 +1430,29 @@
 
     function refreshNamingDispatchCentreAssignmentsFromStationRows() {
         NAMING_DISPATCH_CENTRE_STATE.byBuildingId.clear();
-        const rows = [
-            ...document.querySelectorAll(
-                '.building_list_li, .building_list, [leitstelle_building_id], [data-leitstelle-building-id]'
-            )
-        ];
+        const seenRows = new Set();
 
-        rows.forEach(row => {
-            const buildingId = getNamingStationRowBuildingId(row);
-            if (!buildingId) return;
-            const dispatchCentreId = getNamingStationRowDispatchCentreId(row);
-            if (!dispatchCentreId) return;
-            NAMING_DISPATCH_CENTRE_STATE.byBuildingId.set(buildingId, dispatchCentreId);
+        // Dispatch Centre names and station membership must come from the same native
+        // Resource Administration document graph. In the normal Stations lightbox the
+        // naming UI can be owned by the top document while building rows live in a
+        // same-origin child frame, so current-document-only assignment scans fail empty.
+        getNamingDispatchCentreStationRowDocuments().forEach(candidateDocument => {
+            const rows = [
+                ...candidateDocument.querySelectorAll(
+                    '.building_list_li, .building_list, [leitstelle_building_id], [data-leitstelle-building-id]'
+                )
+            ];
+
+            rows.forEach(row => {
+                if (!row || seenRows.has(row)) return;
+                seenRows.add(row);
+
+                const buildingId = getNamingStationRowBuildingId(row);
+                if (!buildingId) return;
+                const dispatchCentreId = getNamingStationRowDispatchCentreId(row);
+                if (!dispatchCentreId) return;
+                NAMING_DISPATCH_CENTRE_STATE.byBuildingId.set(buildingId, dispatchCentreId);
+            });
         });
 
         NAMING_DISPATCH_CENTRE_STATE.loaded = true;
