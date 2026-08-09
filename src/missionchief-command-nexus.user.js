@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.87
+// @version      1.0.88
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -64,8 +64,8 @@
     // excluded from the naming/personnel runtime.
     if (!TOOL_IS_TOP_WINDOW && !TOOL_IS_STATION_OVERVIEW_FRAME) return;
 
-    const UNIT_VERSION = '3.3.12';
-    const STATION_VERSION = '1.3.6';
+    const UNIT_VERSION = '3.3.13';
+    const STATION_VERSION = '1.3.7';
     const PERSONNEL_VERSION = '1.3.9';
     const PERSONNEL_TRAINING_CODE = 'critical_care';
     const PERSONNEL_TRAINING_LABEL = 'Critical Care';
@@ -1363,6 +1363,58 @@
         ) || `Dispatch Centre ${fallbackId}`.trim();
     }
 
+    function getNamingStationRowBuildingId(row) {
+        if (!row) return '';
+        const explicit =
+            row.getAttribute?.('building_id') ||
+            row.getAttribute?.('data-building-id') ||
+            row.dataset?.buildingId ||
+            '';
+        if (explicit) return String(explicit);
+
+        const rowId = String(row.id || '').match(/^building_list_(\d+)$/)?.[1] || '';
+        if (rowId) return rowId;
+
+        const nested =
+            row.querySelector?.('[building_id]')?.getAttribute?.('building_id') ||
+            row.querySelector?.('[data-building_id]')?.getAttribute?.('data-building_id') ||
+            '';
+        return nested ? String(nested) : '';
+    }
+
+    function getNamingStationRowDispatchCentreId(row) {
+        if (!row) return '';
+        const raw =
+            row.getAttribute?.('leitstelle_building_id') ||
+            row.getAttribute?.('data-leitstelle-building-id') ||
+            row.dataset?.leitstelleBuildingId ||
+            '';
+        if (raw === '' || raw == null) return '';
+        const numeric = Number(raw);
+        if (Number.isFinite(numeric) && numeric <= 0) return '';
+        return String(raw);
+    }
+
+    function refreshNamingDispatchCentreAssignmentsFromStationRows() {
+        NAMING_DISPATCH_CENTRE_STATE.byBuildingId.clear();
+        const rows = [
+            ...document.querySelectorAll(
+                '.building_list_li, .building_list, [leitstelle_building_id], [data-leitstelle-building-id]'
+            )
+        ];
+
+        rows.forEach(row => {
+            const buildingId = getNamingStationRowBuildingId(row);
+            if (!buildingId) return;
+            const dispatchCentreId = getNamingStationRowDispatchCentreId(row);
+            if (!dispatchCentreId) return;
+            NAMING_DISPATCH_CENTRE_STATE.byBuildingId.set(buildingId, dispatchCentreId);
+        });
+
+        NAMING_DISPATCH_CENTRE_STATE.loaded = true;
+        return true;
+    }
+
     async function loadNamingDispatchCentreData(force = false) {
         if (force) {
             NAMING_DISPATCH_CENTRE_STATE.loaded = false;
@@ -1374,39 +1426,14 @@
             return NAMING_DISPATCH_CENTRE_STATE.loadPromise;
         }
 
-        NAMING_DISPATCH_CENTRE_STATE.loadPromise = (async () => {
-            try {
-                const response = await stationFetchWithTimeout('/building/buildings_json', {
-                    credentials: 'same-origin',
-                    cache: 'no-store'
-                }, 15000);
-
-                if (!response.ok) {
-                    throw new Error(`Buildings data returned HTTP ${response.status}`);
-                }
-
-                const records = extractBuildingRecords(await response.json());
-
-                NAMING_DISPATCH_CENTRE_STATE.byBuildingId.clear();
-
-                records.forEach(building => {
-                    const buildingId = getNamingBuildingRecordId(building);
-                    if (!buildingId) return;
-
-                    const dispatchCentreId = getNamingDispatchCentreIdFromRecord(building);
-                    if (!dispatchCentreId) return;
-                    NAMING_DISPATCH_CENTRE_STATE.byBuildingId.set(buildingId, dispatchCentreId);
-                });
-
-                NAMING_DISPATCH_CENTRE_STATE.loaded = true;
-                return true;
-            } catch (error) {
+        NAMING_DISPATCH_CENTRE_STATE.loadPromise = Promise.resolve()
+            .then(() => refreshNamingDispatchCentreAssignmentsFromStationRows())
+            .catch(error => {
                 NAMING_DISPATCH_CENTRE_STATE.byBuildingId.clear();
                 NAMING_DISPATCH_CENTRE_STATE.loaded = false;
-                console.warn('[Command Nexus] Dispatch Centre filter data unavailable:', error);
+                console.warn('[Command Nexus] Dispatch Centre station assignments unavailable:', error);
                 return false;
-            }
-        })();
+            });
 
         const loaded = await NAMING_DISPATCH_CENTRE_STATE.loadPromise;
         if (!loaded) NAMING_DISPATCH_CENTRE_STATE.loadPromise = null;
@@ -1439,48 +1466,41 @@
         }
     }
 
-    function extractNamingDispatchCentresFromHtml(html) {
+    function extractNamingDispatchCentresFromBuildingEditHtml(html) {
         const parsed = new DOMParser().parseFromString(String(html || ''), 'text/html');
+        const select =
+            parsed.querySelector('#building_leitstelle_building_id') ||
+            parsed.querySelector('select[name="building[leitstelle_building_id]"]');
         const centres = new Map();
-        const containers = [
-            ...parsed.querySelectorAll(
-                '.building_list_li, .building_list, [data-building-id], [building_id]'
-            )
-        ];
+        if (!select) return centres;
 
-        const addFromContainer = container => {
-            const anchors = [...container.querySelectorAll('a[href*="/buildings/"]')];
-            const preferred = anchors.find(anchor =>
-                Boolean(getNamingDispatchCentreIdFromHref(anchor.getAttribute('href') || ''))
-            );
-            if (!preferred) return;
-
-            const id = getNamingDispatchCentreIdFromHref(preferred.getAttribute('href') || '');
-            if (!id) return;
-
-            const caption =
-                container.querySelector('.building_list_caption .map_position_mover') ||
-                container.querySelector('.building_list_caption a[href*="/buildings/"]') ||
-                preferred;
-            const label = cleanText(caption?.textContent || preferred.textContent || '');
-            if (label && !centres.has(String(id))) centres.set(String(id), label);
-        };
-
-        containers.forEach(addFromContainer);
-
-        // /leitstellenansicht is already the native Dispatch Centres view. If MissionChief
-        // changes or removes its list wrapper classes, fall back to exact same-origin
-        // /buildings/{id} anchors rather than treating the page as empty.
-        if (!centres.size) {
-            [...parsed.querySelectorAll('a[href*="/buildings/"]')].forEach(anchor => {
-                const id = getNamingDispatchCentreIdFromHref(anchor.getAttribute('href') || '');
-                if (!id) return;
-                const label = cleanText(anchor.textContent || '');
-                if (label && !centres.has(String(id))) centres.set(String(id), label);
-            });
-        }
-
+        [...select.querySelectorAll('option[value]')].forEach(option => {
+            const id = String(option.getAttribute('value') || '').trim();
+            const label = cleanText(option.textContent || '');
+            if (!id || !label) return;
+            centres.set(id, label);
+        });
         return centres;
+    }
+
+    function getNamingDispatchCentreSeedBuildingId() {
+        const stateBuildingId = [
+            ...(STATE.stations || []),
+            ...(STATION_STATE.stations || [])
+        ].map(station => String(station?.buildingId || '')).find(Boolean);
+        if (stateBuildingId) return stateBuildingId;
+
+        const rows = [
+            ...document.querySelectorAll('.building_list_li, .building_list')
+        ];
+        const preferred = rows.find(row => {
+            const buildingId = getNamingStationRowBuildingId(row);
+            if (!buildingId) return false;
+            const typeId = String(row.getAttribute?.('building_type_id') || '');
+            return typeId !== '7';
+        }) || rows.find(row => Boolean(getNamingStationRowBuildingId(row)));
+
+        return getNamingStationRowBuildingId(preferred);
     }
 
     async function loadNamingDispatchCentreList(force = false) {
@@ -1491,14 +1511,32 @@
         }
         if (NAMING_DISPATCH_CENTRE_STATE.listLoaded) return true;
         if (NAMING_DISPATCH_CENTRE_STATE.listPromise) return NAMING_DISPATCH_CENTRE_STATE.listPromise;
+
         NAMING_DISPATCH_CENTRE_STATE.listPromise = (async () => {
             try {
-                const response = await stationFetchWithTimeout('/leitstellenansicht', { credentials: 'same-origin', cache: 'no-store' }, 15000);
-                if (!response.ok) throw new Error(`Dispatch Centres view returned HTTP ${response.status}`);
-                const centres = extractNamingDispatchCentresFromHtml(await response.text());
-                if (!centres.size) throw new Error('No Dispatch Centres found in native Dispatch Centres view');
+                const seedBuildingId = getNamingDispatchCentreSeedBuildingId();
+                if (!seedBuildingId) {
+                    throw new Error('No station building is available to read Dispatch Centre assignments');
+                }
+
+                const response = await stationFetchWithTimeout(
+                    `/buildings/${seedBuildingId}/edit`,
+                    { credentials: 'same-origin', cache: 'no-store' },
+                    15000
+                );
+                if (!response.ok) {
+                    throw new Error(`Building edit page returned HTTP ${response.status}`);
+                }
+
+                const centres = extractNamingDispatchCentresFromBuildingEditHtml(await response.text());
+                if (!centres.size) {
+                    throw new Error('Assigned Dispatch Center selector did not expose any Dispatch Centres');
+                }
+
                 NAMING_DISPATCH_CENTRE_STATE.labelsById.clear();
-                centres.forEach((label, id) => NAMING_DISPATCH_CENTRE_STATE.labelsById.set(String(id), label));
+                centres.forEach((label, id) =>
+                    NAMING_DISPATCH_CENTRE_STATE.labelsById.set(String(id), label)
+                );
                 NAMING_DISPATCH_CENTRE_STATE.listLoaded = true;
                 return true;
             } catch (error) {
@@ -1508,6 +1546,7 @@
                 return false;
             }
         })();
+
         const loaded = await NAMING_DISPATCH_CENTRE_STATE.listPromise;
         if (!loaded) NAMING_DISPATCH_CENTRE_STATE.listPromise = null;
         return loaded;
