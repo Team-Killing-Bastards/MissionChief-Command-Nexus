@@ -40,6 +40,7 @@ jobs:
 
           python3 scripts/build-v1093-native-station-rows.py
           rm -f scripts/build-v1093-native-station-rows.py
+          rm -f scripts/.v1093-trigger
 
           node --check src/missionchief-command-nexus.user.js
           node scripts/validate-userscript.mjs
