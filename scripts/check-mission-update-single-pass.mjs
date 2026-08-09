@@ -21,7 +21,7 @@ function sliceBetween(startToken, endToken, label) {
   return source.slice(start, end);
 }
 
-expect(source.includes('// @version      1.0.91'), 'Expected Command Nexus 1.0.84');
+expect(source.includes('// @version      1.0.92'), 'Expected Command Nexus 1.0.84');
 expect(source.includes(' * MODULE 2: MISSION FINDER V10.6.144'), 'Expected Mission Finder V10.6.144');
 
 const helperSource = sliceBetween(

@@ -5,9 +5,9 @@ const source = await readFile('src/missionchief-command-nexus.user.js', 'utf8');
 const fail = message => { console.error(`ERROR: ${message}`); process.exit(1); };
 const expect = (condition, message) => { if (!condition) fail(message); };
 
-expect(source.includes('// @version      1.0.91'), 'Expected Command Nexus 1.0.91');
-expect(source.includes("const UNIT_VERSION = '3.3.16';"), 'Expected Unit Naming 3.3.16');
-expect(source.includes("const STATION_VERSION = '1.3.10';"), 'Expected Station Naming 1.3.10');
+expect(source.includes('// @version      1.0.92'), 'Expected Command Nexus 1.0.91');
+expect(source.includes("const UNIT_VERSION = '3.3.17';"), 'Expected Unit Naming 3.3.16');
+expect(source.includes("const STATION_VERSION = '1.3.11';"), 'Expected Station Naming 1.3.10');
 expect(source.includes('extractNamingDispatchCentresFromProfileHtml'), 'Profile Dispatch Centre parser missing');
 expect(source.includes('resolveNamingOwnProfilePath'), 'Signed-in profile route resolver missing');
 expect(source.includes("getAttribute?.('leitstelle_building_id')"), 'Station membership must remain row-authoritative');

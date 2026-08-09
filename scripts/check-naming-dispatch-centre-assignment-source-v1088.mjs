@@ -31,9 +31,9 @@ function extractFunction(name) {
 }
 
 
-expect(source.includes('// @version      1.0.91'), 'Expected current Command Nexus version');
-expect(source.includes("const UNIT_VERSION = '3.3.16';"), 'Expected current Unit Naming version');
-expect(source.includes("const STATION_VERSION = '1.3.10';"), 'Expected current Station Naming version');
+expect(source.includes('// @version      1.0.92'), 'Expected current Command Nexus version');
+expect(source.includes("const UNIT_VERSION = '3.3.17';"), 'Expected current Unit Naming version');
+expect(source.includes("const STATION_VERSION = '1.3.11';"), 'Expected current Station Naming version');
 
 const assignmentStart = source.indexOf('function getNamingStationRowBuildingId(');
 const assignmentLoader = source.slice(
@@ -46,11 +46,14 @@ expect(!assignmentLoader.includes('stationFetchWithTimeout'), 'Station membershi
 
 const listLoader = extractFunction('loadNamingDispatchCentreList');
 expect(listLoader.includes('resolveNamingOwnProfilePath()'), 'Centre list must resolve the signed-in profile');
-expect(listLoader.includes('extractNamingDispatchCentresFromProfileHtml'), 'Centre list must use the profile Dispatch Centre parser');
+expect(listLoader.includes('loadNamingDispatchCentresFromRenderedProfile'), 'Centre list must load the rendered signed-in profile');
+const renderedProfileLoader = extractFunction('loadNamingDispatchCentresFromRenderedProfile');
+expect(renderedProfileLoader.includes('extractNamingDispatchCentresFromProfileDocument'), 'Rendered profile loader must use the profile Dispatch Centre parser');
+expect(!listLoader.includes('stationFetchWithTimeout'), 'Centre list must not parse a static fetched profile shell');
 expect(!listLoader.includes('/building/buildings_json'), 'Centre list must not depend on buildings_json');
 expect(!listLoader.includes('/leitstellenansicht'), 'Centre list must not use Stations view as name authority');
 expect(!listLoader.includes('/edit'), 'Centre list must not depend on a building edit page');
 expect(!source.includes('mc-personnel-dispatch-centre'), 'Personnel Assignment must remain outside Dispatch Centre filtering');
 expect(workflow.includes('scripts/check-naming-dispatch-centre-assignment-source-v1088.mjs'), 'v1.0.88 authority regression must remain registered');
 
-console.log('PASS: v1.0.88 station-membership authority is preserved while v1.0.91 moves centre names to the signed-in profile.');
+console.log('PASS: v1.0.88 station-membership authority is preserved while v1.0.92 reads centre names from the rendered signed-in profile.');

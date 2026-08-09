@@ -57,9 +57,9 @@ class ProfileDoc {
 }
 class DOMParserFixture { parseFromString() { return new ProfileDoc(); } }
 
-expect(source.includes('// @version      1.0.91'), 'Expected Command Nexus 1.0.91');
-expect(source.includes("const UNIT_VERSION = '3.3.16';"), 'Expected Unit Naming 3.3.16');
-expect(source.includes("const STATION_VERSION = '1.3.10';"), 'Expected Station Naming 1.3.10');
+expect(source.includes('// @version      1.0.92'), 'Expected Command Nexus 1.0.91');
+expect(source.includes("const UNIT_VERSION = '3.3.17';"), 'Expected Unit Naming 3.3.16');
+expect(source.includes("const STATION_VERSION = '1.3.11';"), 'Expected Station Naming 1.3.10');
 expect(source.includes('id="mc-namer-service"'), 'Unit Naming Service selector missing');
 expect(source.includes('id="mc-station-service"'), 'Station Naming Service selector missing');
 
@@ -73,6 +73,7 @@ const profileContext = {
 };
 vm.runInNewContext(
   `${extractFunction('getNamingDispatchCentreIdFromHref')}\n` +
+  `${extractFunction('extractNamingDispatchCentresFromProfileDocument')}\n` +
   `${extractFunction('extractNamingDispatchCentresFromProfileHtml')}\n` +
   `result = extractNamingDispatchCentresFromProfileHtml('<fixture>');`,
   profileContext

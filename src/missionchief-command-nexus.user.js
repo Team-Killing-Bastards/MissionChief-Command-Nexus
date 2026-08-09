@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.91
+// @version      1.0.92
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -64,8 +64,8 @@
     // excluded from the naming/personnel runtime.
     if (!TOOL_IS_TOP_WINDOW && !TOOL_IS_STATION_OVERVIEW_FRAME) return;
 
-    const UNIT_VERSION = '3.3.16';
-    const STATION_VERSION = '1.3.10';
+    const UNIT_VERSION = '3.3.17';
+    const STATION_VERSION = '1.3.11';
     const PERSONNEL_VERSION = '1.3.9';
     const PERSONNEL_TRAINING_CODE = 'critical_care';
     const PERSONNEL_TRAINING_LABEL = 'Critical Care';
@@ -1549,9 +1549,9 @@
         throw new Error('Unable to resolve the signed-in MissionChief profile');
     }
 
-    function extractNamingDispatchCentresFromProfileHtml(html) {
-        const parsed = new DOMParser().parseFromString(String(html || ''), 'text/html');
+    function extractNamingDispatchCentresFromProfileDocument(parsed) {
         const centres = new Map();
+        if (!parsed?.querySelectorAll) return centres;
 
         parsed.querySelectorAll('.profile-dispatchcenter').forEach(panel => {
             for (const anchor of panel.querySelectorAll('a[href]')) {
@@ -1569,6 +1569,51 @@
         return centres;
     }
 
+    function extractNamingDispatchCentresFromProfileHtml(html) {
+        const parsed = new DOMParser().parseFromString(String(html || ''), 'text/html');
+        return extractNamingDispatchCentresFromProfileDocument(parsed);
+    }
+
+    async function loadNamingDispatchCentresFromRenderedProfile(profilePath, timeoutMs = 15000) {
+        const host = document.body || document.documentElement;
+        if (!host) throw new Error('MissionChief document is not ready to render the profile');
+
+        const iframe = document.createElement('iframe');
+        iframe.src = profilePath;
+        iframe.setAttribute('aria-hidden', 'true');
+        iframe.tabIndex = -1;
+        iframe.style.position = 'fixed';
+        iframe.style.left = '-10000px';
+        iframe.style.top = '-10000px';
+        iframe.style.width = '1px';
+        iframe.style.height = '1px';
+        iframe.style.opacity = '0';
+        iframe.style.pointerEvents = 'none';
+        iframe.style.border = '0';
+
+        host.appendChild(iframe);
+        const started = Date.now();
+
+        try {
+            while (Date.now() - started < timeoutMs) {
+                try {
+                    const profileDocument = iframe.contentDocument;
+                    const centres = extractNamingDispatchCentresFromProfileDocument(profileDocument);
+                    if (centres.size) return centres;
+                } catch (_) {
+                    // Same-origin MissionChief profile navigation can briefly swap documents.
+                }
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            throw new Error(
+                `Rendered profile did not expose any Dispatch Centre panels within ${timeoutMs}ms`
+            );
+        } finally {
+            iframe.remove();
+        }
+    }
+
     async function loadNamingDispatchCentreList(force = false) {
         if (force) {
             NAMING_DISPATCH_CENTRE_STATE.listLoaded = false;
@@ -1582,18 +1627,7 @@
         NAMING_DISPATCH_CENTRE_STATE.listPromise = (async () => {
             try {
                 const profilePath = resolveNamingOwnProfilePath();
-                const response = await stationFetchWithTimeout(
-                    profilePath,
-                    { credentials: 'same-origin', cache: 'no-store' },
-                    15000
-                );
-                if (!response.ok) {
-                    throw new Error(`Profile returned HTTP ${response.status} while loading Dispatch Centres`);
-                }
-
-                const centres = extractNamingDispatchCentresFromProfileHtml(
-                    await response.text()
-                );
+                const centres = await loadNamingDispatchCentresFromRenderedProfile(profilePath);
                 if (!centres.size) {
                     throw new Error('Profile did not expose any Dispatch Centre panels');
                 }
