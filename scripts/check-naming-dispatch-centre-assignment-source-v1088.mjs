@@ -2,6 +2,7 @@
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 
+// Historical v1.0.88 authority regression, revalidated against the v1.0.89 baseline.
 const source = await readFile('src/missionchief-command-nexus.user.js', 'utf8');
 const workflow = await readFile('.github/workflows/validate-userscript.yml', 'utf8');
 const fail = message => { console.error(`ERROR: ${message}`); process.exit(1); };
@@ -75,9 +76,9 @@ class FixtureDocument {
 }
 class FixtureDOMParser { parseFromString(html) { return new FixtureDocument(html); } }
 
-expect(source.includes('// @version      1.0.88'), 'Expected Command Nexus 1.0.88');
-expect(source.includes("const UNIT_VERSION = '3.3.13';"), 'Expected Unit Naming 3.3.13');
-expect(source.includes("const STATION_VERSION = '1.3.7';"), 'Expected Station Naming 1.3.7');
+expect(source.includes('// @version      1.0.89'), 'Expected Command Nexus 1.0.89');
+expect(source.includes("const UNIT_VERSION = '3.3.14';"), 'Expected Unit Naming 3.3.14');
+expect(source.includes("const STATION_VERSION = '1.3.8';"), 'Expected Station Naming 1.3.8');
 
 const parserSource = extractFunction('extractNamingDispatchCentresFromBuildingEditHtml');
 const context = {
@@ -136,4 +137,4 @@ expect(!source.includes("stationFetchWithTimeout('/leitstellenansicht'"), 'Obsol
 expect(!source.includes('mc-personnel-dispatch-centre'), 'Personnel Assignment must remain outside Dispatch Centre filtering');
 expect(workflow.includes('scripts/check-naming-dispatch-centre-assignment-source-v1088.mjs'), 'v1.0.88 source regression must be registered in Validate userscript');
 
-console.log('PASS: v1.0.88 uses the building assignment selector plus station-row leitstelle_building_id authority.');
+console.log('PASS: v1.0.88 Dispatch Centre authority remains intact under the v1.0.89 baseline.');

@@ -61,7 +61,7 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-expect(source.includes('// @version      1.0.88'), 'Expected Command Nexus 1.0.58');
+expect(source.includes('// @version      1.0.89'), 'Expected Command Nexus 1.0.58');
 expect(source.includes('MISSION FINDER V10.6.144'), 'Expected Mission Finder V10.6.121');
 
 const startCollector = extractFunction('startMissionEventCollectibleCollector');
