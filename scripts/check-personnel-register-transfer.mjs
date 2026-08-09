@@ -11,7 +11,7 @@ function fail(message) {
 }
 
 for (const [token, label] of [
-  ['// @version      1.0.93', 'v1.0.51 metadata'],
+  ['// @version      1.0.94', 'v1.0.51 metadata'],
   ["const PERSONNEL_VERSION = '1.3.9';", 'Personnel v1.3.4'],
   [' * MODULE 2: MISSION FINDER V10.6.144', 'latest Mission Finder baseline'],
   ['Build All Register', 'readable all-station register action'],

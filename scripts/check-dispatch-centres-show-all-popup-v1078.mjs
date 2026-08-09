@@ -16,7 +16,7 @@ function expect(condition, message) {
 }
 
 expect(
-  source.includes('// @version      1.0.93'),
+  source.includes('// @version      1.0.94'),
   'Expected Command Nexus 1.0.79'
 );
 expect(

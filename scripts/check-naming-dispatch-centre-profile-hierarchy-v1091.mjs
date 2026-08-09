@@ -3,8 +3,10 @@ import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 
 // Preserve the hierarchy introduced in v1.0.91 while chaining the v1.0.92
-// supersession guard and the v1.0.93 native-row acquisition regression.
+// supersession guard, v1.0.93 native-row acquisition and v1.0.94 frame-scoped
+// station-membership regression through the already-registered Validate gate.
 await import('./check-naming-dispatch-centre-profile-render-v1092.mjs');
+await import('./check-naming-dispatch-centre-membership-frame-v1094.mjs');
 
 const source = await readFile('src/missionchief-command-nexus.user.js', 'utf8');
 const fail = message => { console.error(`ERROR: ${message}`); process.exit(1); };
@@ -30,9 +32,9 @@ function extractFunction(name) {
   fail(`Unterminated ${name}`);
 }
 
-expect(source.includes('// @version      1.0.93'), 'Expected current Command Nexus 1.0.93');
-expect(source.includes("const UNIT_VERSION = '3.3.18';"), 'Expected current Unit Naming 3.3.18');
-expect(source.includes("const STATION_VERSION = '1.3.12';"), 'Expected current Station Naming 1.3.12');
+expect(source.includes('// @version      1.0.94'), 'Expected current Command Nexus 1.0.94');
+expect(source.includes("const UNIT_VERSION = '3.3.19';"), 'Expected current Unit Naming 3.3.19');
+expect(source.includes("const STATION_VERSION = '1.3.13';"), 'Expected current Station Naming 1.3.13');
 expect(source.includes('id="mc-namer-service"'), 'Unit Naming Service selector missing');
 expect(source.includes('id="mc-station-service"'), 'Station Naming Service selector missing');
 
@@ -84,4 +86,4 @@ expect(source.includes("querySelector('#mc-namer-service').onchange = handleUnit
 expect(source.includes("querySelector('#mc-station-service').onchange = handleStationNamingServiceChange"), 'Station Service change handler missing');
 expect(!source.includes('mc-personnel-dispatch-centre'), 'Personnel Assignment must remain outside centre filtering');
 
-console.log('PASS: v1.0.91 Dispatch Centre -> Service -> Station Type -> Start From hierarchy is preserved under v1.0.93 native-row authority.');
+console.log('PASS: Dispatch Centre -> Service -> Station Type -> Start From hierarchy is preserved under v1.0.94 native-row centre and membership authority.');

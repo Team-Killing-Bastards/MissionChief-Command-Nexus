@@ -64,9 +64,9 @@ class Root {
   }
 }
 
-expect(source.includes('// @version      1.0.93'), 'Expected Command Nexus 1.0.93');
-expect(source.includes("const UNIT_VERSION = '3.3.18';"), 'Expected Unit Naming 3.3.18');
-expect(source.includes("const STATION_VERSION = '1.3.12';"), 'Expected Station Naming 1.3.12');
+expect(source.includes('// @version      1.0.94'), 'Expected Command Nexus 1.0.93');
+expect(source.includes("const UNIT_VERSION = '3.3.19';"), 'Expected Unit Naming 3.3.18');
+expect(source.includes("const STATION_VERSION = '1.3.13';"), 'Expected Station Naming 1.3.12');
 
 const root = new Root([
   new Row({ id:'building_list_2634040', name:'LODON DISPATCH', href:'/buildings/2634040' }),
