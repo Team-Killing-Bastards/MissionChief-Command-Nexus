@@ -36,12 +36,13 @@ function extractFunction(name) {
 expect(source.includes('// @version      1.0.96'), 'Expected Command Nexus 1.0.96');
 expect(source.includes(' * MODULE 2: MISSION FINDER V10.6.145'), 'Expected Mission Finder V10.6.145');
 
+const matcher = extractFunction('isCarsToTowRequirementName');
 const context = {
   normalise: value => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(),
   result: null
 };
 vm.runInNewContext(
-  `${extractFunction('isCarsToTowRequirementName')}\n` +
+  `${matcher}\n` +
   `result = {
     supported: [
       'Car to tow',
@@ -80,10 +81,17 @@ expect(recoveryCheckbox.includes(".includes('105')"), 'Recovery checkbox matchin
 
 const converter = extractFunction('getCarsToTowVehicleRequirement');
 expect(converter.includes('isCarsToTowRequirementName'), 'Towing quantity converter must use the towing alias classifier');
-const resolve = extractFunction('resolveVehicleTypeRequirements');
-expect(resolve.includes('getCarsToTowVehicleRequirement'), 'Requirement resolver must keep towing conversion in its normal path');
+const conversionContext = {
+  normalise: context.normalise,
+  result: null
+};
+vm.runInNewContext(
+  `${matcher}\n${converter}\nresult = getCarsToTowVehicleRequirement('1 truck to tow', 1);`,
+  conversionContext
+);
+expect(conversionContext.result?.stillNeeded === 1, `Reported '1 truck to tow' must convert to one Recovery vehicle, got ${JSON.stringify(conversionContext.result)}`);
 
 expect(source.includes('flatbedRecoveryOnly'), 'Strict Flatbed Recovery selection path missing');
 expect(source.includes(".includes('105')"), 'Recovery selection must remain exact MissionChief type 105');
 
-console.log('PASS: towing cross-reference recognises truck/lorry/van/vehicle-to-tow aliases, ignores unrelated truck wording, and keeps exact type-105 Recovery selection.');
+console.log('PASS: 1 truck to tow and related explicit towing aliases route through the production Recovery converter while unrelated truck wording stays untouched and Recovery remains exact type 105.');
