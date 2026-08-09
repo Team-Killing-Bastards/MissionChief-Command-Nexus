@@ -6,6 +6,10 @@ const workflow = await readFile(
   '.github/workflows/repository-quality.yml',
   'utf8'
 );
+const publisher = await readFile(
+  '.github/workflows/release.yml',
+  'utf8'
+);
 
 function fail(message) {
   console.error(`ERROR: ${message}`);
@@ -15,6 +19,12 @@ function fail(message) {
 function requireText(text, label) {
   if (!workflow.includes(text)) {
     fail(`Missing automatic release contract: ${label}`);
+  }
+}
+
+function requirePublisherText(text, label) {
+  if (!publisher.includes(text)) {
+    fail(`Missing publisher release-source contract: ${label}`);
   }
 }
 
@@ -67,6 +77,40 @@ requireText(
   'incomplete releases are retried after packaging'
 );
 
+// A reusable publisher inherits the caller's github event. A normal push to
+// main must therefore not be mistaken for an immutable tag-push event.
+requirePublisherText(
+  'EVENT_REF: ${{ github.ref }}',
+  'publisher captures the original event ref as well as the event name'
+);
+requirePublisherText(
+  'if [[ "${EVENT_NAME}" == "push" && "${EVENT_REF}" == refs/tags/* ]]; then',
+  'only refs/tags/* pushes enter tag-event resolution'
+);
+requirePublisherText(
+  'IS_TAG_EVENT=true',
+  'publisher records a real tag-event decision'
+);
+requirePublisherText(
+  'RELEASE_TAG="${EVENT_REF#refs/tags/}"',
+  'real tag events derive the immutable tag from refs/tags/*'
+);
+requirePublisherText(
+  'if [[ "${IS_TAG_EVENT}" == "true" ]]; then',
+  'missing-tag failure is restricted to a real tag event'
+);
+requirePublisherText(
+  'RELEASE_TAG="${REQUESTED_TAG#refs/tags/}"',
+  'ordinary main pushes continue with the requested canonical release tag'
+);
+
+const obsoletePushOnlyGate = 'if [[ "${EVENT_NAME}" == "push" ]]; then';
+if (publisher.includes(obsoletePushOnlyGate)) {
+  fail(
+    'Publisher still treats every push, including refs/heads/main, as a tag event.'
+  );
+}
+
 const publishGate =
   "if: needs.release-state.outputs.should_publish == 'true'";
 const gateCount = workflow.split(publishGate).length - 1;
@@ -86,5 +130,5 @@ if (publisherCount !== 1) {
 }
 
 console.log(
-  'Merged-PR, main-push and manual release reconciliation with receipt-aware completion checks passed.'
+  'Merged-PR, main-push and manual release reconciliation with tag-safe immutable-source and receipt-aware completion checks passed.'
 );
