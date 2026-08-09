@@ -51,9 +51,11 @@ jobs:
           PY
 
           python3 scripts/build-v1092-profile-render.py
+          python3 scripts/patch-v1092-legacy-regressions.py
 
           # Remove all one-use machinery before validation/commit.
           rm -f scripts/build-v1092-profile-render.py
+          rm -f scripts/patch-v1092-legacy-regressions.py
           rm -f .github/workflows/build-v1092-profile-render.yml
 
           node --check src/missionchief-command-nexus.user.js
