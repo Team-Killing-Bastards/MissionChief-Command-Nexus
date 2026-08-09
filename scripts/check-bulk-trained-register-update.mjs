@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { readFile } from 'node:fs/promises';
+await import('./check-towing-recovery-crossref-v1096.mjs');
 
 const source = await readFile('src/missionchief-command-nexus.user.js', 'utf8');
 
@@ -14,8 +15,8 @@ function requireText(token, label) {
 }
 
 for (const [token, label] of [
-  ['// @version      1.0.95', 'v1.0.51 metadata'],
-  [' * MODULE 2: MISSION FINDER V10.6.144', 'Mission Finder V10.6.120'],
+  ['// @version      1.0.96', 'v1.0.51 metadata'],
+  [' * MODULE 2: MISSION FINDER V10.6.145', 'Mission Finder V10.6.120'],
   ["const PERSONNEL_VERSION = '1.3.9';", 'Personnel v1.3.5'],
   ['const DEFAULT_MISSION_READY_DELAY = 1000;', '1000 ms default retained'],
   ['personnel-register-exact-all-vehicle-scan-v2', 'exact all-vehicle register source'],
@@ -62,4 +63,4 @@ for (const [label, cars, expectedVehicles] of [
   }
 }
 
-console.log('Bulk update contracts passed: delay helper removed, all-vehicle exact personnel profiles trusted, Search Advisor uses trained assigned units, and singular/plural towing uses exact type-105 recovery vehicles.');
+console.log('Bulk update contracts passed: delay helper removed, all-vehicle exact personnel profiles trusted, Search Advisor uses trained assigned units, and explicit car/truck/lorry/van/vehicle towing aliases use exact type-105 recovery vehicles.');

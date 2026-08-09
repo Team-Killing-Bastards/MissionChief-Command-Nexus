@@ -25,7 +25,7 @@ function extractFunction(name) {
   fail(`Unterminated ${name}`);
 }
 
-expect(source.includes('// @version      1.0.95'), 'Expected current Command Nexus version');
+expect(source.includes('// @version      1.0.96'), 'Expected current Command Nexus version');
 expect(source.includes("const UNIT_VERSION = '3.3.20';"), 'Expected current Unit Naming version');
 expect(source.includes("const STATION_VERSION = '1.3.14';"), 'Expected current Station Naming version');
 

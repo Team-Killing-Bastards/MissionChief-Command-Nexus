@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.95
+// @version      1.0.96
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -11572,7 +11572,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.144
+         * MODULE 2: MISSION FINDER V10.6.145
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -27939,13 +27939,23 @@ let sessionRuntimeTicker = null;
         return rows;
     }
 
-    function isCarsToTowRequirementName(value) {
-        const cleaned = String(value || '')
-            .replace(/\s+/g, ' ')
-            .trim();
+    function isCarsToTowRequirementName(name) {
+        // Historical helper name retained because the existing towing converter and
+        // strict Flatbed Recovery selector both use it. Match explicit towing language
+        // only: an ordinary "truck" requirement must never become Recovery demand.
+        let key = normalise(name);
+        key = key
+            .replace(/^required\s+/, '')
+            .replace(/^\d+\s+/, '')
+            .replace(/\s+\d+$/, '');
 
-        return /^(?:Required\s+)?(?:\d+\s+)?car(?:s)?\s+to\s+tow$/i.test(cleaned) ||
-            /^(?:Required\s+)?(?:Maximum|Minimum)\s+amount\s+of\s+cars\s+to\s+tow$/i.test(cleaned);
+        if (
+            /^(?:cars?|trucks?|lorr(?:y|ies)|vans?|vehicles?)\s+(?:to\s+tow|to\s+be\s+towed)$/.test(key)
+        ) {
+            return true;
+        }
+
+        return /^(?:tow|recovery)\s+trucks?$/.test(key);
     }
 
     function getCarsToTowVehicleRequirement(unitName, carsRequired) {

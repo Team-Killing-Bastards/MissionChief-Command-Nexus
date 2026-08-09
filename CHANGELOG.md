@@ -4,6 +4,29 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.96] - 2026-08-09
+
+### Fixed
+
+- Expanded the existing towing/recovery cross-reference so explicit road-vehicle towing wording such as `1 truck to tow`, `trucks to tow`, `lorry/lorries to tow`, `van/vans to tow`, `vehicle/vehicles to tow`, and `... to be towed` enters the established Recovery path.
+- Added direct `Tow truck(s)` and `Recovery truck(s)` aliases to the same strict Recovery path.
+- Preserved existing `Car to tow`, `Cars to tow`, `Car Recovery` and towing quantity conversion behavior.
+- Recovery selection remains exact MissionChief vehicle type `105` (Flatbed Recovery Vehicle); generic vehicle quick-select fallback remains blocked for recognised recovery demand.
+- Unrelated truck wording such as `1 truck`, `Fire truck`, `Heavy Rescue truck`, or `Trucks required` is deliberately not classified as towing demand.
+
+### Regression coverage
+
+- Added `scripts/check-towing-recovery-crossref-v1096.mjs`, including the reported `1 truck to tow` case, supported road-vehicle towing variants, unrelated-truck negative cases, the existing towing converter, strict recovery classification and exact type-105 selection.
+- Chained the new regression through the already-registered bulk trained-register/recovery validation gate, avoiding a permanent workflow-definition change.
+
+### Changed engine baseline
+
+- Command Nexus increased from `1.0.95` to `1.0.96`.
+- Mission Finder increased from `V10.6.144` to `V10.6.145`.
+- Unit Naming remains `3.3.20`.
+- Station Naming remains `1.3.14`.
+- Personnel Assignment remains `1.3.9`.
+
 ## [1.0.95] - 2026-08-09
 
 ### Improved

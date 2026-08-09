@@ -81,8 +81,8 @@ function extractFunction(name) {
   fail(`Unable to find end of ${name}`);
 }
 
-requireText('// @version      1.0.95', 'current userscript metadata');
-requireText(' * MODULE 2: MISSION FINDER V10.6.144', 'current Mission Finder module header');
+requireText('// @version      1.0.96', 'current userscript metadata');
+requireText(' * MODULE 2: MISSION FINDER V10.6.145', 'current Mission Finder module header');
 requireText('function getMissionFinderPhoneScreenShortSide()', 'physical phone-screen detector');
 requireText('function isMissionFinderIphoneSafariWebsite()', 'strict iPhone Safari detector');
 requireText("'mf_control_collapsed_iphone_v2'", 'separate iPhone control state');
