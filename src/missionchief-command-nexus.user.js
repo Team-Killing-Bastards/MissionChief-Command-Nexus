@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.89
+// @version      1.0.90
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -64,8 +64,8 @@
     // excluded from the naming/personnel runtime.
     if (!TOOL_IS_TOP_WINDOW && !TOOL_IS_STATION_OVERVIEW_FRAME) return;
 
-    const UNIT_VERSION = '3.3.14';
-    const STATION_VERSION = '1.3.8';
+    const UNIT_VERSION = '3.3.15';
+    const STATION_VERSION = '1.3.9';
     const PERSONNEL_VERSION = '1.3.9';
     const PERSONNEL_TRAINING_CODE = 'critical_care';
     const PERSONNEL_TRAINING_LABEL = 'Critical Care';
@@ -1392,9 +1392,13 @@
             row.dataset?.leitstelleBuildingId ||
             '';
         if (raw === '' || raw == null) return '';
-        const numeric = Number(raw);
+
+        const normalized = String(raw).trim();
+        if (!normalized || /^(?:null|undefined|false)$/i.test(normalized)) return '';
+
+        const numeric = Number(normalized);
         if (Number.isFinite(numeric) && numeric <= 0) return '';
-        return String(raw);
+        return normalized;
     }
 
     function refreshNamingDispatchCentreAssignmentsFromStationRows() {
@@ -1506,10 +1510,11 @@
         return NAMING_DISPATCH_CENTRE_SEED_TYPE_IDS.has(String(typeId ?? ''));
     }
 
-    function getNamingDispatchCentreSeedBuildingIds(limit = 3) {
+    function getNamingDispatchCentreSeedBuildingIdsFromRows(rows, limit = 3) {
         const maxCandidates = Math.max(1, Math.min(3, Number(limit) || 3));
         const candidates = [];
         const seen = new Set();
+        const sourceRows = [...(rows || [])];
         const addCandidate = buildingId => {
             const id = String(buildingId || '').trim();
             if (!id || seen.has(id) || candidates.length >= maxCandidates) return;
@@ -1517,56 +1522,110 @@
             candidates.push(id);
         };
 
-        const rows = [
-            ...document.querySelectorAll('.building_list_li, .building_list')
-        ];
-
-        // Prefer an ordinary station that MissionChief explicitly says is assigned to a
-        // Dispatch Centre. The real Stations view can contain unassigned Home Response
-        // rows before normal stations, so the first building in the list is not a safe seed.
-        rows.forEach(row => {
+        // Prefer ordinary stations that already carry a real assignment, but assignment
+        // is NOT a prerequisite for reading the native Assigned Dispatch Center selector.
+        sourceRows.forEach(row => {
             if (candidates.length >= maxCandidates) return;
-            const buildingId = getNamingStationRowBuildingId(row);
-            const dispatchCentreId = getNamingStationRowDispatchCentreId(row);
             const typeId = String(row.getAttribute?.('building_type_id') || '');
-            if (
-                !buildingId ||
-                !dispatchCentreId ||
-                !isNamingDispatchCentreSeedStationTypeId(typeId)
-            ) {
-                return;
-            }
-            addCandidate(buildingId);
+            if (!isNamingDispatchCentreSeedStationTypeId(typeId)) return;
+            if (!getNamingStationRowDispatchCentreId(row)) return;
+            addCandidate(getNamingStationRowBuildingId(row));
         });
 
-        // State can already contain authoritative station/centre joins after Refresh
-        // Stations. Use it only for assigned stations and never blindly take the first row.
-        [
-            ...(STATE.stations || []),
-            ...(STATION_STATE.stations || [])
-        ].forEach(station => {
+        // Critical v1.0.90 fallback: an unassigned ordinary station edit page still exposes
+        // the complete Assigned Dispatch Center selector, so it is a valid name-list seed.
+        sourceRows.forEach(row => {
             if (candidates.length >= maxCandidates) return;
-            if (!station?.buildingId || !station?.dispatchCentreId) return;
-            const typeId = String(station?.buildingTypeId ?? '');
-            if (typeId && !isNamingDispatchCentreSeedStationTypeId(typeId)) return;
-            addCandidate(station.buildingId);
+            const typeId = String(row.getAttribute?.('building_type_id') || '');
+            if (!isNamingDispatchCentreSeedStationTypeId(typeId)) return;
+            addCandidate(getNamingStationRowBuildingId(row));
         });
 
-        // Bounded last-resort fallback: still require a real Dispatch Centre assignment.
-        // This is deliberately capped and is not a per-building crawl.
+        // Last-resort local fallback only when no ordinary station row is represented.
+        // Never use a Dispatch Centre building itself as an edit-page seed.
         if (!candidates.length) {
-            rows.forEach(row => {
+            sourceRows.forEach(row => {
                 if (candidates.length >= maxCandidates) return;
-                const buildingId = getNamingStationRowBuildingId(row);
-                const dispatchCentreId = getNamingStationRowDispatchCentreId(row);
-                if (buildingId && dispatchCentreId) addCandidate(buildingId);
+                const typeId = String(row.getAttribute?.('building_type_id') || '');
+                if (typeId === '7') return;
+                addCandidate(getNamingStationRowBuildingId(row));
             });
         }
 
         return candidates;
     }
 
-        async function loadNamingDispatchCentreList(force = false) {
+    function getNamingDispatchCentreSeedBuildingIds(limit = 3) {
+        const maxCandidates = Math.max(1, Math.min(3, Number(limit) || 3));
+        const rows = [
+            ...document.querySelectorAll('.building_list_li, .building_list')
+        ];
+        const candidates = getNamingDispatchCentreSeedBuildingIdsFromRows(rows, maxCandidates);
+        if (candidates.length >= maxCandidates) return candidates;
+
+        const seen = new Set(candidates);
+        const addCandidate = buildingId => {
+            const id = String(buildingId || '').trim();
+            if (!id || seen.has(id) || candidates.length >= maxCandidates) return;
+            seen.add(id);
+            candidates.push(id);
+        };
+        const stations = [
+            ...(STATE.stations || []),
+            ...(STATION_STATE.stations || [])
+        ];
+
+        stations.forEach(station => {
+            if (candidates.length >= maxCandidates) return;
+            const typeId = String(station?.buildingTypeId ?? '');
+            if (typeId && !isNamingDispatchCentreSeedStationTypeId(typeId)) return;
+            if (!station?.dispatchCentreId) return;
+            addCandidate(station?.buildingId);
+        });
+        stations.forEach(station => {
+            if (candidates.length >= maxCandidates) return;
+            const typeId = String(station?.buildingTypeId ?? '');
+            if (typeId && !isNamingDispatchCentreSeedStationTypeId(typeId)) return;
+            addCandidate(station?.buildingId);
+        });
+
+        return candidates;
+    }
+
+    function extractNamingDispatchCentreSeedBuildingIdsFromHtml(html, limit = 3) {
+        const parsed = new DOMParser().parseFromString(String(html || ''), 'text/html');
+        const rows = [
+            ...parsed.querySelectorAll('.building_list_li, .building_list')
+        ];
+        return getNamingDispatchCentreSeedBuildingIdsFromRows(rows, limit);
+    }
+
+    async function loadNamingDispatchCentreSeedBuildingIds(limit = 3) {
+        const localSeeds = getNamingDispatchCentreSeedBuildingIds(limit);
+        if (localSeeds.length) return localSeeds;
+
+        // The native Stations view is only a bounded building-ID discovery fallback here.
+        // Dispatch Centre ID/name authority remains the edit-page assignment selector.
+        const response = await stationFetchWithTimeout(
+            '/leitstellenansicht',
+            { credentials: 'same-origin', cache: 'no-store' },
+            15000
+        );
+        if (!response.ok) {
+            throw new Error(`Stations view returned HTTP ${response.status} while finding a seed station`);
+        }
+
+        const fetchedSeeds = extractNamingDispatchCentreSeedBuildingIdsFromHtml(
+            await response.text(),
+            limit
+        );
+        if (!fetchedSeeds.length) {
+            throw new Error('Stations view did not expose a usable station building for Dispatch Centre discovery');
+        }
+        return fetchedSeeds;
+    }
+
+    async function loadNamingDispatchCentreList(force = false) {
         if (force) {
             NAMING_DISPATCH_CENTRE_STATE.listLoaded = false;
             NAMING_DISPATCH_CENTRE_STATE.listPromise = null;
@@ -1578,10 +1637,10 @@
 
         NAMING_DISPATCH_CENTRE_STATE.listPromise = (async () => {
             try {
-                const seedBuildingIds = getNamingDispatchCentreSeedBuildingIds(3);
+                const seedBuildingIds = await loadNamingDispatchCentreSeedBuildingIds(3);
                 if (!seedBuildingIds.length) {
                     throw new Error(
-                        'No assigned ordinary station is available to read Dispatch Centre assignments'
+                        'No station building is available to read Dispatch Centre assignments'
                     );
                 }
 
