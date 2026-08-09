@@ -154,3 +154,20 @@ jobs:
       release_notes: Automatic verified release after trusted repository event.
     secrets:
       DISCORD_RELEASE_WEBHOOK: ${{ secrets.DISCORD_RELEASE_WEBHOOK }}
+
+  inspect-v1091:
+    name: Inspect v1.0.91 naming service model
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.ref == 'fix/dispatch-centre-profile-hierarchy-v1091' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out exact feature branch
+        uses: actions/checkout@v6
+        with:
+          ref: fix/dispatch-centre-profile-hierarchy-v1091
+          fetch-depth: 0
+      - name: Inspect naming/service definitions
+        run: python3 scripts/inspect-v1091-naming-service.py
