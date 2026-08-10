@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.97
+// @version      1.0.98
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -11572,7 +11572,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.146
+         * MODULE 2: MISSION FINDER V10.6.147
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -16126,6 +16126,26 @@ function isRoadRailUnitVehicleCheckbox(input) {
             .includes('106');
     }
 
+    function isRescueDogRequirementName(value) {
+        const cleaned = String(value || '')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        return /^(?:Required\s+)?(?:\d+\s+)?Rescue Dog(?:s)?$/i.test(cleaned);
+    }
+
+    function isSearchDogUnitRequirement(originalName, mappedName) {
+        return [originalName, mappedName].some(value =>
+            isRescueDogRequirementName(value)
+        );
+    }
+
+    function isSearchDogUnitVehicleCheckbox(input) {
+        if (!input) return false;
+        return getVehicleTypeIdentifiers(input)
+            .includes('101');
+    }
+
     function getVehicleMatchCandidates(originalName, mappedName) {
         const raw = String(originalName || '').replace(/\s+/g, ' ').trim();
         const mapped = String(mappedName || '').replace(/\s+/g, ' ').trim();
@@ -17044,6 +17064,12 @@ function isRoadRailUnitVehicleCheckbox(input) {
                 mappedName
             );
 
+        const searchDogUnitOnly =
+            isSearchDogUnitRequirement(
+                originalName,
+                mappedName
+            );
+
         const crvOnly =
             isCrvRequirement(
                 originalName,
@@ -17159,6 +17185,16 @@ function isRoadRailUnitVehicleCheckbox(input) {
                     if (input.disabled) return false;
                     if (!includeChecked && input.checked) return false;
                     return isFlatbedRecoveryVehicleCheckbox(input);
+                })
+            );
+        }
+
+        if (searchDogUnitOnly) {
+            return sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) return false;
+                    if (!includeChecked && input.checked) return false;
+                    return isSearchDogUnitVehicleCheckbox(input);
                 })
             );
         }
@@ -17672,6 +17708,8 @@ function isRoadRailUnitVehicleCheckbox(input) {
             isFlatbedRecoveryVehicleRequirement(originalName, mappedName);
         const hgvRecoveryOnly =
             isHgvRecoveryVehicleRequirement(originalName, mappedName);
+        const searchDogUnitOnly =
+            isSearchDogUnitRequirement(originalName, mappedName);
         const crvOnly = isCrvRequirement(originalName, mappedName);
         const controlVanOnly = isControlVanRequirement(originalName, mappedName);
         const airAmbulanceOnly = isAirAmbulanceRequirement(originalName, mappedName);
@@ -17747,6 +17785,8 @@ function isRoadRailUnitVehicleCheckbox(input) {
                 matches = isRoadRailUnitVehicleCheckbox(input);
             } else if (flatbedRecoveryOnly) {
                 matches = isFlatbedRecoveryVehicleCheckbox(input);
+            } else if (searchDogUnitOnly) {
+                matches = isSearchDogUnitVehicleCheckbox(input);
             } else if (hgvRecoveryOnly) {
                 matches = isHgvRecoveryVehicleCheckbox(input);
             } else if (crvOnly) {
@@ -33185,6 +33225,7 @@ let sessionRuntimeTicker = null;
             isAmbulanceTransportRequest(originalName, mappedName) ||
             isFireEngineRequirement(originalName, mappedName) ||
             isFlatbedRecoveryVehicleRequirement(originalName, mappedName) ||
+            isSearchDogUnitRequirement(originalName, mappedName) ||
             isHgvRecoveryVehicleRequirement(originalName, mappedName) ||
             isFireOperationalSupportRequirement(originalName, mappedName)
         );
