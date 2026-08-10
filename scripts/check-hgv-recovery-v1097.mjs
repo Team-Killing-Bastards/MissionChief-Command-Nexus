@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
+await import('./check-rescue-dog-search-dog-v1098.mjs');
 
 const source = await readFile('src/missionchief-command-nexus.user.js', 'utf8');
 const fail = message => { console.error(`ERROR: ${message}`); process.exit(1); };
@@ -40,8 +41,8 @@ function extractFunction(name) {
   fail(`Unterminated ${name}`);
 }
 
-expect(source.includes('// @version      1.0.97'), 'Expected Command Nexus 1.0.97');
-expect(source.includes(' * MODULE 2: MISSION FINDER V10.6.146'), 'Expected Mission Finder V10.6.146');
+expect(source.includes('// @version      1.0.98'), 'Expected Command Nexus 1.0.97');
+expect(source.includes(' * MODULE 2: MISSION FINDER V10.6.147'), 'Expected Mission Finder V10.6.147');
 
 const carMatcher = extractFunction('isCarsToTowRequirementName');
 expect(!carMatcher.includes('normalise('), 'Car towing matcher must not depend on an out-of-scope normalise helper');

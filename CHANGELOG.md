@@ -4,6 +4,28 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.98] - 2026-08-10
+
+### Fixed
+
+- Added an exact cross-reference from MissionChief requirement **Rescue Dog** to **Search Dog Unit**.
+- Rescue Dog demand now uses exact MissionChief vehicle type `101` in the shared Unit Finder, Upgrade and Auto Mode vehicle-selection path.
+- The specialist requirement is protected from generic fallback so an unrelated vehicle cannot satisfy Rescue Dog demand when no Search Dog Unit is available.
+- Existing Flatbed Recovery type `105` and HGV Recovery type `106` specialist routing remains unchanged.
+
+### Regression coverage
+
+- Added `scripts/check-rescue-dog-search-dog-v1098.mjs` to prove supported Rescue Dog wording, reject unrelated dog/support requirements, require exact type `101`, and verify candidate selection, selected-unit verification and strict fallback protection.
+- Chained the regression through the existing HGV/recovery validation path so the permanent userscript gate covers it without adding another workflow step.
+
+### Changed engine baseline
+
+- Command Nexus increased from `1.0.97` to `1.0.98`.
+- Mission Finder increased from `V10.6.146` to `V10.6.147`.
+- Unit Naming remains `3.3.20`.
+- Station Naming remains `1.3.14`.
+- Personnel Assignment remains `1.3.9`.
+
 ## [1.0.97] - 2026-08-09
 
 ### Fixed
