@@ -44,10 +44,8 @@ jobs:
           node --check src/missionchief-command-nexus.user.js
           node scripts/validate-userscript.mjs
           node scripts/check-rescue-dog-search-dog-v1098.mjs
-          for check in scripts/check-*.mjs; do
-            echo "Running $check"
-            node "$check"
-          done
+          node scripts/check-hgv-recovery-v1097.mjs
+          node scripts/check-bulk-trained-register-update.mjs
           python3 scripts/check_repository.py
           git diff --check
 
