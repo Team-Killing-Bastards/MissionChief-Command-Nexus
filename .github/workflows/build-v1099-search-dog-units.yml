@@ -1,0 +1,56 @@
+name: Build v1.0.99 Search Dog Units alias candidate
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  build:
+    name: Build and validate v1.0.99 Search Dog Units alias
+    if: >-
+      github.event.pull_request.head.ref == 'fix/search-dog-units-alias-v1099' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out exact feature branch
+        uses: actions/checkout@v6
+        with:
+          ref: fix/search-dog-units-alias-v1099
+          fetch-depth: 0
+          token: ${{ github.token }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Build exact candidate from trusted main builder
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --force
+          test "$(git show origin/main:src/missionchief-command-nexus.user.js | sed -n 's#^//[[:space:]]*@version[[:space:]]*##p' | head -n1 | xargs)" = "1.0.98"
+          git show origin/main:scripts/build-v1099-search-dog-units-alias.py > scripts/build-v1099-search-dog-units-alias.py
+          python3 scripts/build-v1099-search-dog-units-alias.py
+          rm -f scripts/build-v1099-search-dog-units-alias.py
+
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          node scripts/check-rescue-dog-search-dog-v1098.mjs
+          node scripts/check-hgv-recovery-v1097.mjs
+          python3 scripts/check_repository.py
+          git diff --check
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'Alias Required Search Dog Units to type 101 in v1.0.99'
+          git push origin HEAD:fix/search-dog-units-alias-v1099
