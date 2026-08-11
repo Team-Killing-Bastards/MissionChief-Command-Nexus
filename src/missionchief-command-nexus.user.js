@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.98
+// @version      1.0.99
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -11572,7 +11572,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.147
+         * MODULE 2: MISSION FINDER V10.6.148
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -16131,7 +16131,7 @@ function isRoadRailUnitVehicleCheckbox(input) {
             .replace(/\s+/g, ' ')
             .trim();
 
-        return /^(?:Required\s+)?(?:\d+\s+)?Rescue Dog(?:s)?$/i.test(cleaned);
+        return /^(?:Required\s+)?(?:\d+\s+)?(?:Rescue Dogs?|Search Dog Units?)$/i.test(cleaned);
     }
 
     function isSearchDogUnitRequirement(originalName, mappedName) {

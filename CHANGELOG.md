@@ -4,6 +4,28 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.99] - 2026-08-11
+
+### Fixed
+
+- Extended the existing exact Search Dog Unit cross-reference so MissionChief requirement **Required Search Dog Units** follows the same strict rule as **Rescue Dog**.
+- Supported Search Dog Unit wording now includes singular/plural, optional numeric quantities, and optional `Required` prefixes while continuing to select exact MissionChief vehicle type `101`.
+- Police **Dog Support Unit (DSU)** demand remains separate and is not captured by the Search Dog matcher.
+- Generic fallback remains blocked for this specialist requirement, so an unrelated vehicle cannot satisfy Search Dog Unit demand when no type `101` unit is available.
+
+### Regression coverage
+
+- Extended `scripts/check-rescue-dog-search-dog-v1098.mjs` with `Search Dog Unit`, `Search Dog Units`, counted variants, `Required Search Dog Unit`, the reported `Required Search Dog Units`, and counted `Required` variants.
+- Existing negative coverage continues to reject Police Dog / Dog Support Unit wording and unrelated rescue or towing requirements.
+
+### Changed engine baseline
+
+- Command Nexus increased from `1.0.98` to `1.0.99`.
+- Mission Finder increased from `V10.6.147` to `V10.6.148`.
+- Unit Naming remains `3.3.20`.
+- Station Naming remains `1.3.14`.
+- Personnel Assignment remains `1.3.9`.
+
 ## [1.0.98] - 2026-08-10
 
 ### Fixed

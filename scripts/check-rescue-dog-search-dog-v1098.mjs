@@ -40,14 +40,14 @@ function extractFunction(name) {
   fail(`Unterminated ${name}`);
 }
 
-expect(source.includes('// @version      1.0.98'), 'Expected Command Nexus 1.0.98');
-expect(source.includes(' * MODULE 2: MISSION FINDER V10.6.147'), 'Expected Mission Finder V10.6.147');
+expect(source.includes('// @version      1.0.99'), 'Expected Command Nexus 1.0.99');
+expect(source.includes(' * MODULE 2: MISSION FINDER V10.6.148'), 'Expected Mission Finder V10.6.148');
 
 const matcher = extractFunction('isRescueDogRequirementName');
 const context = { result: null };
 vm.runInNewContext(
   `${matcher}\nresult = {` +
-  ` yes: ['Rescue Dog', 'Rescue Dogs', '1 Rescue Dog', 'Required Rescue Dog', 'Required 2 Rescue Dogs'].map(isRescueDogRequirementName),` +
+  ` yes: ['Rescue Dog', 'Rescue Dogs', '1 Rescue Dog', 'Required Rescue Dog', 'Required 2 Rescue Dogs', 'Search Dog Unit', 'Search Dog Units', '2 Search Dog Units', 'Required Search Dog Unit', 'Required Search Dog Units', 'Required 2 Search Dog Units'].map(isRescueDogRequirementName),` +
   ` no: ['Search Advisor', 'Police Dog', 'Dog Support Unit', 'Rescue Pump', 'HGV to tow'].map(isRescueDogRequirementName)` +
   `};`,
   context
@@ -56,7 +56,7 @@ expect(context.result.yes.every(Boolean), `Rescue Dog alias rejected: ${JSON.str
 expect(context.result.no.every(value => value === false), `Unrelated requirement captured as Rescue Dog: ${JSON.stringify(context.result.no)}`);
 
 const classifier = extractFunction('isSearchDogUnitRequirement');
-expect(classifier.includes('isRescueDogRequirementName(value)'), 'Search Dog classifier must consume only Rescue Dog requirement names');
+expect(classifier.includes('isRescueDogRequirementName(value)'), 'Search Dog classifier must consume the strict Rescue/Search Dog requirement-name matcher');
 const checkbox = extractFunction('isSearchDogUnitVehicleCheckbox');
 expect(checkbox.includes(".includes('101')"), 'Search Dog Unit must be exact MissionChief vehicle type 101');
 
@@ -69,4 +69,4 @@ expect(source.includes('isSearchDogUnitRequirement(originalName, mappedName) ||'
 expect(extractFunction('isFlatbedRecoveryVehicleCheckbox').includes(".includes('105')"), 'Flatbed Recovery type 105 regression');
 expect(extractFunction('isHgvRecoveryVehicleCheckbox').includes(".includes('106')"), 'HGV Recovery type 106 regression');
 
-console.log('PASS: Rescue Dog requirements route only to exact Search Dog Unit type 101 across candidate selection, selected-unit verification and strict generic-fallback protection.');
+console.log('PASS: Rescue Dog and Search Dog Unit requirement aliases route only to exact Search Dog Unit type 101 across candidate selection, selected-unit verification and strict generic-fallback protection.');
