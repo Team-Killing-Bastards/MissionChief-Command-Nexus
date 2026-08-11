@@ -39,7 +39,7 @@ jobs:
           test "$(git show origin/main:src/missionchief-command-nexus.user.js | sed -n 's#^//[[:space:]]*@version[[:space:]]*##p' | head -n1 | xargs)" = "1.0.99"
           git show origin/main:scripts/build-v10100-required-drone-alias.py > scripts/build-v10100-required-drone-alias.py
           python3 scripts/build-v10100-required-drone-alias.py
-          rm -f scripts/build-v10100-required-drone-alias.py
+          rm -f scripts/build-v10100-required-drone-alias.py scripts/.v10100-required-drone-build-trigger
 
           node --check src/missionchief-command-nexus.user.js
           node scripts/validate-userscript.mjs
