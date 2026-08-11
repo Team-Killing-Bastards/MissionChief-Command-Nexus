@@ -4,6 +4,28 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.100] - 2026-08-11
+
+### Fixed
+
+- Added MissionChief Police requirement aliases **Require Drone**, **Requires Drone** and **Required Drone** (plus plural forms) to the existing Police Drone cross-reference.
+- These requirement labels enter the established drone-only Police Air path and select exact MissionChief vehicle type `91`, **Police Drone Vehicle / Drone Vehicle (Police Station)**.
+- Existing helicopter-only and explicit **Police Helicopter or Drone** flexible behavior remains unchanged.
+- A bare **Drone** / **Drones** alias is deliberately not added, avoiding accidental capture of unrelated cross-service drone wording.
+
+### Regression coverage
+
+- Added `scripts/check-police-drone-requirement-v10100.mjs` to lock the reported aliases, exact type-91 selection, drone-only routing, selected-unit verification and the no-bare-Drone guard.
+- Chained the new check through the existing Search Dog / recovery regression path so the permanent validation gate continues to cover it without adding another workflow step.
+
+### Changed engine baseline
+
+- Command Nexus increased from `1.0.99` to `1.0.100`.
+- Mission Finder increased from `V10.6.148` to `V10.6.149`.
+- Unit Naming remains `3.3.20`.
+- Station Naming remains `1.3.14`.
+- Personnel Assignment remains `1.3.9`.
+
 ## [1.0.99] - 2026-08-11
 
 ### Fixed
