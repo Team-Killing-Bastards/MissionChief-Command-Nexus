@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
+await import('./check-police-drone-requirement-v10100.mjs');
 
 const source = await readFile('src/missionchief-command-nexus.user.js', 'utf8');
 const fail = message => { console.error(`ERROR: ${message}`); process.exit(1); };
@@ -40,8 +41,8 @@ function extractFunction(name) {
   fail(`Unterminated ${name}`);
 }
 
-expect(source.includes('// @version      1.0.99'), 'Expected Command Nexus 1.0.99');
-expect(source.includes(' * MODULE 2: MISSION FINDER V10.6.148'), 'Expected Mission Finder V10.6.148');
+expect(source.includes('// @version      1.0.100'), 'Expected Command Nexus 1.0.100');
+expect(source.includes(' * MODULE 2: MISSION FINDER V10.6.149'), 'Expected Mission Finder V10.6.149');
 
 const matcher = extractFunction('isRescueDogRequirementName');
 const context = { result: null };

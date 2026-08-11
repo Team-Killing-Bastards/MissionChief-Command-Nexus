@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.99
+// @version      1.0.100
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -11572,7 +11572,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.148
+         * MODULE 2: MISSION FINDER V10.6.149
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -13205,6 +13205,12 @@
         'police drones',
         'required police drone',
         'required police drones',
+        'require drone',
+        'require drones',
+        'required drone',
+        'required drones',
+        'requires drone',
+        'requires drones',
         'drone vehicle(police station)',
         'drone vehicle (police station)',
         'drone vehicle police station'
@@ -13712,6 +13718,12 @@
         "Required Police Helicopter or Drones": "Police Helicopter",
         "Required Police Helicopters or Drone": "Police Helicopter",
         "Required Police Helicopters or Drones": "Police Helicopter",
+        "Require Drone": "Police Helicopter",
+        "Require Drones": "Police Helicopter",
+        "Required Drone": "Police Helicopter",
+        "Required Drones": "Police Helicopter",
+        "Requires Drone": "Police Helicopter",
+        "Requires Drones": "Police Helicopter",
         "Police Drone": "Police Helicopter",
         "Police Drones": "Police Helicopter",
         "Policehelicopter": "Police Helicopter",
