@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.101
+// @version      1.0.102
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -11572,7 +11572,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.150
+         * MODULE 2: MISSION FINDER V10.6.151
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -13269,7 +13269,8 @@
     let mfMissionUpdateRowsCache = {
         expiresAt: 0,
         missionKey: '',
-        rows: []
+        rows: [],
+        ambulanceOfficerSatisfied: false
     };
 
     // V10.6.57 current-mission isolation. Every shared requirement reader is
@@ -16644,6 +16645,26 @@ function isRoadRailUnitVehicleCheckbox(input) {
             || raw === 'ambulance x 01';
     }
 
+    function isAmbulanceOfficerVehicleCheckbox(input) {
+        if (!input) return false;
+
+        const typeIds = getVehicleTypeIdentifiers(input);
+
+        if (typeIds.includes('34')) {
+            return true;
+        }
+
+        if (typeIds.length > 0) {
+            return false;
+        }
+
+        return getExtendedVehicleValues(input).some(value => {
+            const normalised = normaliseVehicleText(value);
+            return normalised === 'ambulance officer' ||
+                normalised === 'ambulance officers';
+        });
+    }
+
     function vehicleValuesMatchCandidates(values, candidates, strictExactOnly) {
         if (strictExactOnly) {
             return values.some(value => candidates.some(candidate => value === candidate));
@@ -17044,6 +17065,11 @@ function isRoadRailUnitVehicleCheckbox(input) {
         const candidates = getVehicleMatchCandidates(originalName, mappedName);
         const strictExactOnly = isAmbulanceTransportRequest(originalName, mappedName);
         const standardAmbulanceEtaPreferred = strictExactOnly;
+        const ambulanceOfficerOnly =
+            isAmbulanceOfficerRequirement(
+                originalName,
+                mappedName
+            );
         const sartecPrefixOnly = isSartecRequirement(
             originalName,
             mappedName
@@ -17619,6 +17645,12 @@ function isRoadRailUnitVehicleCheckbox(input) {
             if (input.disabled) return false;
             if (!includeChecked && input.checked) return false;
 
+            if (ambulanceOfficerOnly) {
+                return isAmbulanceOfficerVehicleCheckbox(
+                    input
+                );
+            }
+
             if (sartecPrefixOnly) {
                 return isSartecVehicleCheckbox(
                     input
@@ -17725,6 +17757,11 @@ function isRoadRailUnitVehicleCheckbox(input) {
         const candidates = getVehicleMatchCandidates(originalName, mappedName);
         const strictExactOnly = isAmbulanceTransportRequest(originalName, mappedName);
         const standardAmbulanceEtaPreferred = strictExactOnly;
+        const ambulanceOfficerOnly =
+            isAmbulanceOfficerRequirement(
+                originalName,
+                mappedName
+            );
         const sartecPrefixOnly = isSartecRequirement(originalName, mappedName);
         const rrvTypeOnly = isRrvRequirement(originalName, mappedName);
         const rivTypeOnly = isRivRequirement(originalName, mappedName);
@@ -17812,7 +17849,11 @@ function isRoadRailUnitVehicleCheckbox(input) {
 
             let matches = false;
 
-            if (standardAmbulanceEtaPreferred) {
+            if (ambulanceOfficerOnly) {
+                matches = isAmbulanceOfficerVehicleCheckbox(
+                    input
+                );
+            } else if (standardAmbulanceEtaPreferred) {
                 matches = isStandardAmbulanceEtaVehicleCheckbox(input);
             } else if (roadRailOnly) {
                 matches = isRoadRailUnitVehicleCheckbox(input);
@@ -20849,7 +20890,7 @@ function isRoadRailUnitVehicleCheckbox(input) {
                        style="width:72px; margin-left:auto;">
             </label>
             <div class="mf2026-small" style="margin-top:5px;">
-                Example: 5 adds one Ambulance Officer when 6 or more Ambulances are required. Counts fresh mission and current patient Ambulance requirements; existing live shortages stay authoritative.
+                Example: 5 adds one Ambulance Officer when 6 or more Ambulances are required. Applies consistently to Unit Finder, Auto Mode and Mission Update while live shortages remain authoritative.
             </div>
         `;
 
@@ -23125,6 +23166,33 @@ function isRoadRailUnitVehicleCheckbox(input) {
         });
     }
 
+    function hasAmbulanceOfficerThresholdAlreadySatisfied() {
+        const missionKey =
+            getLocalMissionInstanceKey();
+
+        const liveRequirementSatisfied =
+            !!(
+                missionKey &&
+                mfMissionUpdateRowsCache
+                    .missionKey === missionKey &&
+                mfMissionUpdateRowsCache
+                    .ambulanceOfficerSatisfied === true
+            );
+
+        const alreadySelected =
+            countSelectedMatchingVehicles(
+                'Ambulance Officer',
+                'Ambulance Officer'
+            ) > 0;
+
+        return (
+            alreadySelected ||
+            liveRequirementSatisfied ||
+            vehicleLoadState
+                .ambulanceOfficer === true
+        );
+    }
+
         function addConfiguredAmbulanceOfficerThresholdRequirement(
         rows,
         additionalRows = []
@@ -23202,6 +23270,12 @@ function isRoadRailUnitVehicleCheckbox(input) {
             });
 
         if (alreadyRequiresOfficer) {
+            return sourceRows.slice();
+        }
+
+        if (
+            hasAmbulanceOfficerThresholdAlreadySatisfied()
+        ) {
             return sourceRows.slice();
         }
 
@@ -24455,10 +24529,16 @@ let sessionRuntimeTicker = null;
                 'ambulance'
             )
         );
-        vehicleLoadState.ambulanceOfficer = false;
+        vehicleLoadState.ambulanceOfficer =
+            vehicleLoadState.ambulanceOfficer ||
+            countSelectedMatchingVehicles(
+                'Ambulance Officer',
+                'Ambulance Officer'
+            ) > 0;
 
         // V9.1: patient badge only sends ambulances.
-        // Specialist ambulance units/officers are selected only when the live mission requirements ask for them.
+        // Specialist ambulance units/officers are selected only when the live
+        // mission requirements or the configured Officer threshold ask for them.
         if (patientCount > 0) {
             triggerAmbulanceClick(patientCount);
         }
@@ -25255,7 +25335,8 @@ let sessionRuntimeTicker = null;
         mfMissionUpdateRowsCache = {
             expiresAt: 0,
             missionKey: '',
-            rows: []
+            rows: [],
+            ambulanceOfficerSatisfied: false
         };
     }
 
@@ -33708,18 +33789,35 @@ let sessionRuntimeTicker = null;
             requirementRows
         );
 
-        if (
+        const includeConfiguredFreshMissionRules =
             options
-                .includeConfiguredHighRiskMissingPersonAmbulance === true
-        ) {
+                .includeConfiguredHighRiskMissingPersonAmbulance === true;
+
+        const includeConfiguredAmbulanceOfficerThreshold =
+            includeConfiguredFreshMissionRules ||
+            options
+                .includeConfiguredAmbulanceOfficerThreshold === true;
+
+        if (includeConfiguredFreshMissionRules) {
             requirementRows =
                 applyConfiguredFreshMissionVehicleRequirements(
                     requirementRows,
                     options
                         .ambulanceOfficerThresholdAdditionalRows
                 );
+        } else if (
+            includeConfiguredAmbulanceOfficerThreshold
+        ) {
+            requirementRows =
+                addConfiguredAmbulanceOfficerThresholdRequirement(
+                    requirementRows,
+                    options
+                        .ambulanceOfficerThresholdAdditionalRows
+                );
+        }
 
-            if (mfDebugEnabled) {
+        if (mfDebugEnabled) {
+            if (includeConfiguredFreshMissionRules) {
                 if (
                     requirementRows.some(
                         row =>
@@ -33732,7 +33830,11 @@ let sessionRuntimeTicker = null;
                         'Settings rule added Ambulance x1 to the fresh Unit Finder requirement set.'
                     );
                 }
+            }
 
+            if (
+                includeConfiguredAmbulanceOfficerThreshold
+            ) {
                 if (
                     requirementRows.some(
                         row =>
@@ -33941,6 +34043,18 @@ let sessionRuntimeTicker = null;
                 selectedFromDom,
                 selectedFromClicks
             );
+
+            if (
+                visualSelected > 0 &&
+                isAmbulanceOfficerRequirement(
+                    unitText,
+                    replacedItemText
+                )
+            ) {
+                vehicleLoadState.ambulanceOfficer =
+                    true;
+            }
+
             const status = visualSelected >= effectiveRequired
                 ? 'assigned'
                 : visualSelected > 0
@@ -35758,7 +35872,11 @@ let sessionRuntimeTicker = null;
                 const missionRequirementsSatisfied =
                     await processRequirementRows(
                         currentUpdateRows,
-                        'CURRENT MISSING REQUIREMENTS'
+                        'CURRENT MISSING REQUIREMENTS',
+                        {
+                            includeConfiguredAmbulanceOfficerThreshold:
+                                true
+                        }
                     );
 
                 return preservePatientFailure(
@@ -38025,6 +38143,7 @@ let sessionRuntimeTicker = null;
         }
 
         const missingRows = [];
+        let liveAmbulanceOfficerSatisfied = false;
 
         const missionUpdateContexts =
             getActiveMissionRequirementContexts();
@@ -38630,6 +38749,19 @@ let sessionRuntimeTicker = null;
                                         10
                                     ) || 0
                                 );
+
+                            if (
+                                livePatientRule.type ===
+                                    'ambulance-officer' &&
+                                confirmedNeed === 0 &&
+                                (
+                                    (requiredValue || 0) > 0 ||
+                                    (selectedValue || 0) > 0
+                                )
+                            ) {
+                                liveAmbulanceOfficerSatisfied =
+                                    true;
+                            }
 
                             livePatientRequirementStates.set(
                                 livePatientRule.type,
@@ -39922,7 +40054,9 @@ let sessionRuntimeTicker = null;
         mfMissionUpdateRowsCache = {
             expiresAt: Date.now() + 175,
             missionKey,
-            rows: deduped
+            rows: deduped,
+            ambulanceOfficerSatisfied:
+                liveAmbulanceOfficerSatisfied
         };
 
         return deduped;
@@ -40345,9 +40479,14 @@ let sessionRuntimeTicker = null;
         // Supplied live-table rows can bypass readMissionUpdateRows(), so run
         // the same personnel-to-vehicle conversion at the Upgrade entry point.
         // This restores SAR Commander -> Control Van parity with Unit Finder.
-        const missingRows =
+        const normalisedMissingRows =
             normaliseOperationalRequirementRows(
                 rawMissingRows
+            );
+
+        const missingRows =
+            addConfiguredAmbulanceOfficerThresholdRequirement(
+                normalisedMissingRows
             );
 
         mfSetUnitFinderDiagnosticContext(
@@ -40615,6 +40754,17 @@ let sessionRuntimeTicker = null;
                     selectedFromCurrentDom,
                     selectedFromThisAttempt
                 );
+
+            if (
+                visualSelected > 0 &&
+                isAmbulanceOfficerRequirement(
+                    item.unitName,
+                    mappedName
+                )
+            ) {
+                vehicleLoadState.ambulanceOfficer =
+                    true;
+            }
 
             if (patientRequirementType) {
                 if (isTotalPatientFallback) {
