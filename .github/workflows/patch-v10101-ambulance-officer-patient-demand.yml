@@ -1,0 +1,65 @@
+name: Patch v1.0.101 Ambulance Officer patient demand
+
+on:
+  pull_request:
+    types: [synchronize, reopened]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  patch:
+    name: Patch and validate mission plus patient Ambulance total
+    if: >-
+      github.event.pull_request.head.ref == 'feature/ambulance-officer-threshold-v10101' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Check out exact feature branch
+        uses: actions/checkout@v6
+        with:
+          ref: feature/ambulance-officer-threshold-v10101
+          fetch-depth: 0
+          token: ${{ github.token }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Patch, validate and push exact candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test "$(sed -n 's#^//[[:space:]]*@version[[:space:]]*##p' src/missionchief-command-nexus.user.js | head -n1 | xargs)" = "1.0.101"
+          git fetch origin main --force
+          git show origin/main:scripts/patch-v10101-ambulance-officer-patient-demand.py > scripts/patch-v10101-ambulance-officer-patient-demand.py
+          python3 scripts/patch-v10101-ambulance-officer-patient-demand.py
+          rm -f scripts/patch-v10101-ambulance-officer-patient-demand.py
+
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          node scripts/check-ambulance-officer-threshold-v10101.mjs
+          node scripts/check-high-risk-missing-person-ambulance-v1076.mjs
+          node scripts/check-police-drone-requirement-v10100.mjs
+          node scripts/check-rescue-dog-search-dog-v1098.mjs
+          node scripts/check-hgv-recovery-v1097.mjs
+          python3 scripts/check_repository.py
+          git diff --check
+
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "Candidate already contains the mission plus patient threshold patch."
+            exit 0
+          fi
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'Count patient demand in Ambulance Officer threshold'
+          git push origin HEAD:feature/ambulance-officer-threshold-v10101
