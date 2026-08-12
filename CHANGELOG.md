@@ -4,6 +4,30 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.103] - 2026-08-12
+
+### Fixed
+
+- Completed issue #299 for genuinely fresh missions: the Ambulance Officer threshold now receives the ordinary Ambulance total already calculated from the current patient badge count, even when no explicit patient `We need: Ambulance` row exists.
+- Fresh patient badge demand and explicit patient Ambulance rows are collapsed to the larger authoritative total for threshold comparison, preventing the same patient demand from being counted twice.
+- The late-render fresh-mission recovery path now applies the same threshold and exact type-34 selector after patient data appears.
+- Late visible, legacy-list and refetched mission-help fallbacks now retain the configured fresh-mission rules instead of silently bypassing them.
+- Existing positive Officer demand, selected/on-mission Officer coverage, live shortage authority, the separate High-risk Missing Person Ambulance rule and the Upgrade exclusion remain unchanged.
+
+### Regression coverage
+
+- Extended `scripts/check-ambulance-officer-threshold-v10101.mjs` with the real missed state: six fresh patient-badge Ambulances, no mission-help Ambulance row and no explicit patient Ambulance alert must select one Officer at threshold five.
+- Added equal-threshold, badge/explicit-row de-duplication, larger-explicit-total, preloaded Vehicle Load and late fresh-recovery assertions.
+- Preserved the chained High-risk Missing Person, Mission Update single-pass and Missing-on-mission authority regressions.
+
+### Changed engine baseline
+
+- Command Nexus increased from `1.0.102` to `1.0.103`.
+- Mission Finder increased from `V10.6.151` to `V10.6.152`.
+- Unit Naming remains `3.3.20`.
+- Station Naming remains `1.3.14`.
+- Personnel Assignment remains `1.3.9`.
+
 ## [1.0.102] - 2026-08-12
 
 ### Fixed

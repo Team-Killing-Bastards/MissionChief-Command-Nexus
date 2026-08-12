@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.102
+// @version      1.0.103
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -11572,7 +11572,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.151
+         * MODULE 2: MISSION FINDER V10.6.152
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -20890,7 +20890,7 @@ function isRoadRailUnitVehicleCheckbox(input) {
                        style="width:72px; margin-left:auto;">
             </label>
             <div class="mf2026-small" style="margin-top:5px;">
-                Example: 5 adds one Ambulance Officer when 6 or more Ambulances are required. Applies consistently to Unit Finder, Auto Mode and Mission Update while live shortages remain authoritative.
+                Example: 5 adds one Ambulance Officer when 6 or more Ambulances are required. Fresh patient-badge demand is counted once, and the rule applies consistently to Unit Finder, Auto Mode and Mission Update while live shortages remain authoritative.
             </div>
         `;
 
@@ -23363,6 +23363,91 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
             ),
             additionalRows
         );
+    }
+
+    function buildFreshAmbulanceOfficerThresholdAdditionalRows(
+        patientRequirementRows = [],
+        patientCount = 0
+    ) {
+        const sourceRows =
+            (Array.isArray(patientRequirementRows)
+                ? patientRequirementRows
+                : [])
+                .filter(Boolean);
+
+        const explicitPatientAmbulanceCount =
+            sourceRows.reduce((total, row) => {
+                const originalName =
+                    row.originalName ||
+                    row.unitName ||
+                    '';
+                const mappedName =
+                    row.unitName ||
+                    resolveUnitName(originalName);
+
+                if (
+                    !isAmbulanceTransportRequest(
+                        originalName,
+                        mappedName
+                    )
+                ) {
+                    return total;
+                }
+
+                return total + Math.max(
+                    0,
+                    Number(row.stillNeeded) || 0
+                );
+            }, 0);
+
+        // Fresh Unit Finder deliberately selects ordinary Ambulances from
+        // the current patient badge count and suppresses the duplicate
+        // Ambulance row in the mission-help table. Feed that already-owned
+        // demand into the Officer threshold without adding it to any explicit
+        // patient "We need: Ambulance" total a second time.
+        const freshPatientAmbulanceCount =
+            Math.max(
+                explicitPatientAmbulanceCount,
+                Math.max(
+                    0,
+                    parseInt(patientCount, 10) || 0
+                )
+            );
+
+        const nonAmbulanceRows =
+            sourceRows.filter(row => {
+                const originalName =
+                    row.originalName ||
+                    row.unitName ||
+                    '';
+                const mappedName =
+                    row.unitName ||
+                    resolveUnitName(originalName);
+
+                return !isAmbulanceTransportRequest(
+                    originalName,
+                    mappedName
+                );
+            });
+
+        if (freshPatientAmbulanceCount <= 0) {
+            return nonAmbulanceRows;
+        }
+
+        return [
+            ...nonAmbulanceRows,
+            {
+                unitName: 'Ambulance x 01',
+                stillNeeded:
+                    freshPatientAmbulanceCount,
+                source:
+                    'fresh-patient-ambulance-total',
+                patientRequirementType:
+                    'ambulance',
+                configuredFreshPatientAmbulanceTotal:
+                    true
+            }
+        ];
     }
 
 
@@ -28776,9 +28861,17 @@ let sessionRuntimeTicker = null;
             return [];
         }
 
+        const patientRequirementRows =
+            readUnitFinderPatientRequirementRows();
+        const ambulanceOfficerThresholdAdditionalRows =
+            buildFreshAmbulanceOfficerThresholdAdditionalRows(
+                patientRequirementRows,
+                findPatientCount()
+            );
+
         return applyConfiguredFreshMissionVehicleRequirements(
             cache.rows,
-            readUnitFinderPatientRequirementRows()
+            ambulanceOfficerThresholdAdditionalRows
         )
             .filter(row => {
                 return Boolean(
@@ -34481,7 +34574,7 @@ let sessionRuntimeTicker = null;
         return null;
     }
 
-    function applyLatePatientCount(patientCount, sourceLabel) {
+    async function applyLatePatientCount(patientCount, sourceLabel) {
         const required = Math.max(0, parseInt(patientCount, 10) || 0);
 
         if (required <= 0) return false;
@@ -34507,6 +34600,21 @@ let sessionRuntimeTicker = null;
             selectVehicleUnits('Ambulance', 'Ambulance x 01', stillNeeded, 'PATIENT-LATE');
         }
 
+        const ambulanceOfficerThresholdSatisfied =
+            await processRequirementRows(
+                [],
+                'late fresh patient Ambulance Officer threshold',
+                {
+                    includeConfiguredAmbulanceOfficerThreshold:
+                        true,
+                    ambulanceOfficerThresholdAdditionalRows:
+                        buildFreshAmbulanceOfficerThresholdAdditionalRows(
+                            [],
+                            required
+                        )
+                }
+            );
+
         const selectedNow = Math.min(
             countSelectedMatchingVehicles('Ambulance', 'Ambulance x 01'),
             required
@@ -34524,10 +34632,21 @@ let sessionRuntimeTicker = null;
 
         renderVehicleLoadList();
 
-        if (selectedNow >= required) {
+        if (
+            selectedNow >= required &&
+            ambulanceOfficerThresholdSatisfied !== false
+        ) {
             updateStatusBox(`Late patient data loaded: ${required} ambulance(s) selected.`);
             changeDispatchBoxColor(true);
             return true;
+        }
+
+        if (selectedNow >= required) {
+            updateStatusBox(
+                `Late patient data loaded: ${required} ambulance(s) selected, but the configured Ambulance Officer is still missing.`
+            );
+            changeDispatchBoxColor(false);
+            return false;
         }
 
         updateStatusBox(`Late patient data loaded, but only ${selectedNow}/${required} ambulance(s) were selected.`);
@@ -34565,7 +34684,19 @@ let sessionRuntimeTicker = null;
 
             if (visibleFallbackRows.length > 0) {
                 updateStatusBox(`Late visible requirements found: ${visibleFallbackRows.length} row(s).`);
-                await processRequirementRows(visibleFallbackRows, 'late visible fallback');
+                await processRequirementRows(
+                    visibleFallbackRows,
+                    'late visible fallback',
+                    {
+                        includeConfiguredHighRiskMissingPersonAmbulance:
+                            true,
+                        ambulanceOfficerThresholdAdditionalRows:
+                            buildFreshAmbulanceOfficerThresholdAdditionalRows(
+                                readUnitFinderPatientRequirementRows(),
+                                patientCount
+                            )
+                    }
+                );
                 return true;
             }
 
@@ -34573,7 +34704,18 @@ let sessionRuntimeTicker = null;
 
             if (legacyVehicleList) {
                 updateStatusBox('Late fallback vehicle list found. Processing...');
-                await processVehicles(legacyVehicleList);
+                await processVehicles(
+                    legacyVehicleList,
+                    {
+                        includeConfiguredHighRiskMissingPersonAmbulance:
+                            true,
+                        ambulanceOfficerThresholdAdditionalRows:
+                            buildFreshAmbulanceOfficerThresholdAdditionalRows(
+                                readUnitFinderPatientRequirementRows(),
+                                patientCount
+                            )
+                    }
+                );
                 return true;
             }
 
@@ -34586,7 +34728,19 @@ let sessionRuntimeTicker = null;
                         debugLog('ZERO LIVE RETRY', `Retry fetch found ${retryLiveRows.length} live requirement row(s).`);
                     }
 
-                    await processRequirementRows(retryLiveRows, 'retry live mission help');
+                    await processRequirementRows(
+                        retryLiveRows,
+                        'retry live mission help',
+                        {
+                            includeConfiguredHighRiskMissingPersonAmbulance:
+                                true,
+                            ambulanceOfficerThresholdAdditionalRows:
+                                buildFreshAmbulanceOfficerThresholdAdditionalRows(
+                                    readUnitFinderPatientRequirementRows(),
+                                    findPatientCount(true)
+                                )
+                        }
+                    );
                     return true;
                 }
             }
@@ -35834,6 +35988,12 @@ let sessionRuntimeTicker = null;
         const patientRequirementResult =
             handleUnitFinderPatientRequirements();
 
+        const ambulanceOfficerThresholdAdditionalRows =
+            buildFreshAmbulanceOfficerThresholdAdditionalRows(
+                patientRequirementResult.rows,
+                patientCount
+            );
+
         const preservePatientFailure = result => {
             if (
                 patientRequirementResult.found &&
@@ -35897,7 +36057,7 @@ let sessionRuntimeTicker = null;
                         includeConfiguredHighRiskMissingPersonAmbulance:
                             true,
                         ambulanceOfficerThresholdAdditionalRows:
-                            patientRequirementResult.rows
+                            ambulanceOfficerThresholdAdditionalRows
                     }
                 );
 
@@ -35926,7 +36086,7 @@ let sessionRuntimeTicker = null;
                         includeConfiguredHighRiskMissingPersonAmbulance:
                             true,
                         ambulanceOfficerThresholdAdditionalRows:
-                            patientRequirementResult.rows
+                            ambulanceOfficerThresholdAdditionalRows
                     }
                 );
 
@@ -35947,7 +36107,7 @@ let sessionRuntimeTicker = null;
                         includeConfiguredHighRiskMissingPersonAmbulance:
                             true,
                         ambulanceOfficerThresholdAdditionalRows:
-                            patientRequirementResult.rows
+                            ambulanceOfficerThresholdAdditionalRows
                     }
                 );
 
