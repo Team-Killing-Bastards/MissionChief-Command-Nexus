@@ -4,6 +4,29 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.104] - 2026-08-12
+
+### Added
+
+- Added issue #304's persistent Auto Mode stop evidence to Mission Control. Automatic safety stops now show a compact red **AUTO STOPPED** flag, the local stop date/time and the exact supplied reason.
+- The stop record is stored independently from the live status message, so mission changes, document reloads and later status updates cannot erase the explanation.
+- A recreated Mission Control panel restores the saved flag and reason. Starting Auto Mode clears the record; deliberately pressing **Auto Mode: Stop** does not create a false automatic-stop warning.
+- Invalid or corrupt saved stop data is discarded safely without blocking Mission Control.
+- Existing safety-stop decisions, selector logic, dispatch behaviour and Police Unit Naming issue #295 remain unchanged.
+
+### Regression coverage
+
+- Added `scripts/check-auto-stop-reason.mjs` to exercise real stop-record storage, flag rendering, exact-reason retention, local timestamp display, cross-panel restoration, live-status isolation, restart clearing and corrupt-data recovery.
+- Preserved the canonical userscript validator, repository integrity checks and current Ambulance Officer/Mission Update authority regressions.
+
+### Changed engine baseline
+
+- Command Nexus increased from `1.0.103` to `1.0.104`.
+- Mission Finder increased from `V10.6.152` to `V10.6.153`.
+- Unit Naming remains `3.3.20`.
+- Station Naming remains `1.3.14`.
+- Personnel Assignment remains `1.3.9`.
+
 ## [1.0.103] - 2026-08-12
 
 ### Fixed

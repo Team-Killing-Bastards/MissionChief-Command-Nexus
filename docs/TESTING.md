@@ -19,9 +19,12 @@ This checks required repository files, attribution, local documentation links, R
 ```bash
 node --check src/missionchief-command-nexus.user.js
 node scripts/validate-userscript.mjs
+node scripts/check-auto-stop-reason.mjs
 ```
 
 The userscript validator checks the canonical metadata contract, version format, Greasy Fork size limits and prohibited update/download metadata. Pull requests that change the userscript must increase `@version` above the base branch.
+
+The Auto Mode stop-reason regression executes the persistent storage and status-display functions against a recreated Mission Control panel. It verifies exact-reason retention, timestamp rendering, isolation from temporary status updates, restart clearing and safe recovery from corrupt saved data.
 
 Automated checks are necessary but cannot prove live MissionChief behaviour.
 

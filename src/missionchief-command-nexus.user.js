@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.103
+// @version      1.0.104
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -11572,7 +11572,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.152
+         * MODULE 2: MISSION FINDER V10.6.153
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -11898,6 +11898,8 @@
     let mfLastQueueThresholdStatusAt = 0;
     let mfLastQueueThresholdStatusKey = '';
     const MF_MANUAL_AUTO_STOP_FLAG = 'mf_manual_auto_stop_v10_3_9u';
+    const MF_AUTO_STOP_RECORD_KEY =
+        'mf_auto_stop_record_v10_6_153';
     const MF_MAIN_MISSION_OPEN_LOCK_KEY = 'mf_main_mission_open_lock_until_v10_3_9v';
     const MF_MAIN_MISSION_OPEN_REASON_KEY = 'mf_main_mission_open_reason_v10_3_9v';
     const MF_TRANSPORT_REHOOK_LOCK_KEY = 'mf_transport_rehook_lock_until_v10_3_9x';
@@ -12051,6 +12053,9 @@
     }
 
 
+    // V10.6.153: automatic Auto Mode safety stops persist their exact reason
+    // and local timestamp in Mission Control until the user starts Auto Mode
+    // again. Deliberate manual stops do not create an unexpected-stop warning.
     // V10.6.58: Auto Mode speed optimisation. Attachment fetching now overlaps
     // vehicle-list stabilisation, Unit Finder no longer repeats that same load
     // pass, readiness gates are shorter and state-driven, and mission-resume
@@ -18357,6 +18362,61 @@ function isRoadRailUnitVehicleCheckbox(input) {
                 overflow-wrap: break-word;
             }
 
+            #mf-auto-stop-flag {
+                margin-bottom: 7px;
+                padding-bottom: 7px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+            }
+
+            #mf-auto-stop-flag[hidden] {
+                display: none !important;
+            }
+
+            .mf-auto-stop-heading {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 7px;
+                margin-bottom: 5px;
+            }
+
+            .mf-auto-stop-badge {
+                display: inline-flex;
+                align-items: center;
+                min-height: 18px;
+                padding: 2px 6px;
+                border: 1px solid rgba(255, 255, 255, 0.24);
+                border-radius: 999px;
+                background: #b4232f;
+                color: #fff;
+                font-size: 9px;
+                font-weight: 800;
+                letter-spacing: 0.06em;
+                line-height: 1;
+                white-space: nowrap;
+            }
+
+            #mf-auto-stop-time {
+                color: rgba(255, 255, 255, 0.72);
+                font-size: 9px;
+                text-align: right;
+            }
+
+            #mf-auto-stop-reason {
+                color: #ffd8dc;
+                font-weight: 700;
+                line-height: 1.35;
+            }
+
+            #status-box.mf-auto-stopped {
+                border-color: rgba(255, 95, 109, 0.46) !important;
+                background: rgba(86, 15, 25, 0.76) !important;
+            }
+
+            #status-box.mf-auto-stopped #status-box-message {
+                color: rgba(255, 255, 255, 0.78);
+            }
+
             .mf2026-button {
                 padding: 7px;
                 border: none;
@@ -20786,7 +20846,16 @@ function isRoadRailUnitVehicleCheckbox(input) {
         const statusBox = document.createElement('div');
         statusBox.id = 'status-box';
         statusBox.className = 'mf2026-box';
-        statusBox.textContent = 'Ready to start...';
+        statusBox.innerHTML = `
+            <div id="mf-auto-stop-flag" role="alert" hidden>
+                <div class="mf-auto-stop-heading">
+                    <span class="mf-auto-stop-badge">AUTO STOPPED</span>
+                    <span id="mf-auto-stop-time"></span>
+                </div>
+                <div id="mf-auto-stop-reason"></div>
+            </div>
+            <div id="status-box-message">Ready to start...</div>
+        `;
         controlBody.appendChild(statusBox);
 
         const iphoneAdvancedToggle =
@@ -21554,6 +21623,7 @@ function isRoadRailUnitVehicleCheckbox(input) {
         wrapper.appendChild(loadPanel);
         wrapper.appendChild(trainedPanel);
         document.body.appendChild(wrapper);
+        renderPersistentAutoStopRecord();
 
         scheduleMissionRequiredPersonnelPreload(0);
 
@@ -23711,12 +23781,173 @@ let sessionRuntimeTicker = null;
     }
 
     function updateStatusBox(message) {
-        const statusBox = document.getElementById('status-box');
-        if (statusBox) statusBox.textContent = message;
+        const statusMessage =
+            document.getElementById('status-box-message');
+
+        if (statusMessage) {
+            statusMessage.textContent = message;
+        } else {
+            const statusBox =
+                document.getElementById('status-box');
+
+            if (statusBox) {
+                statusBox.textContent = message;
+            }
+        }
 
         if (mfDebugEnabled) {
             debugLog('STATUS', message);
         }
+    }
+
+    function normaliseAutoStopReason(reason) {
+        const value = String(
+            reason ||
+            'Auto Mode stopped for an unknown reason.'
+        )
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        return (
+            value ||
+            'Auto Mode stopped for an unknown reason.'
+        ).slice(0, 800);
+    }
+
+    function readPersistentAutoStopRecord() {
+        let raw = '';
+
+        try {
+            raw = localStorage.getItem(
+                MF_AUTO_STOP_RECORD_KEY
+            ) || '';
+        } catch (_error) {
+            return null;
+        }
+
+        if (!raw) return null;
+
+        try {
+            const parsed = JSON.parse(raw);
+            const reason = normaliseAutoStopReason(
+                parsed?.reason
+            );
+            const stoppedAt = Number(
+                parsed?.stoppedAt
+            );
+
+            if (
+                !parsed ||
+                typeof parsed.reason !== 'string' ||
+                !parsed.reason.trim() ||
+                !Number.isFinite(stoppedAt) ||
+                stoppedAt <= 0
+            ) {
+                throw new Error(
+                    'Invalid Auto Mode stop record'
+                );
+            }
+
+            return {
+                reason,
+                stoppedAt
+            };
+        } catch (_error) {
+            try {
+                localStorage.removeItem(
+                    MF_AUTO_STOP_RECORD_KEY
+                );
+            } catch (_removeError) {}
+
+            return null;
+        }
+    }
+
+    function formatAutoStopTimestamp(stoppedAt) {
+        try {
+            return new Date(stoppedAt).toLocaleString(
+                [],
+                {
+                    day: '2-digit',
+                    month: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }
+            );
+        } catch (_error) {
+            return '';
+        }
+    }
+
+    function renderPersistentAutoStopRecord(
+        record = readPersistentAutoStopRecord()
+    ) {
+        const statusBox =
+            document.getElementById('status-box');
+        const flag =
+            document.getElementById('mf-auto-stop-flag');
+        const reason =
+            document.getElementById('mf-auto-stop-reason');
+        const time =
+            document.getElementById('mf-auto-stop-time');
+
+        if (!statusBox || !flag || !reason || !time) {
+            return;
+        }
+
+        const hasRecord = !!record;
+
+        flag.hidden = !hasRecord;
+        statusBox.classList.toggle(
+            'mf-auto-stopped',
+            hasRecord
+        );
+
+        reason.textContent =
+            hasRecord
+                ? record.reason
+                : '';
+
+        time.textContent =
+            hasRecord
+                ? formatAutoStopTimestamp(
+                    record.stoppedAt
+                )
+                : '';
+
+        if (hasRecord) {
+            updateStatusBox(
+                'Start Auto Mode again to clear this warning.'
+            );
+        }
+    }
+
+    function persistAutomaticAutoStopRecord(reason) {
+        const record = {
+            reason: normaliseAutoStopReason(reason),
+            stoppedAt: Date.now()
+        };
+
+        try {
+            localStorage.setItem(
+                MF_AUTO_STOP_RECORD_KEY,
+                JSON.stringify(record)
+            );
+        } catch (_error) {}
+
+        renderPersistentAutoStopRecord(record);
+
+        return record;
+    }
+
+    function clearPersistentAutoStopRecord() {
+        try {
+            localStorage.removeItem(
+                MF_AUTO_STOP_RECORD_KEY
+            );
+        } catch (_error) {}
+
+        renderPersistentAutoStopRecord(null);
     }
 
     function removeAutoModeQueueHelperCopy() {
@@ -41516,7 +41747,12 @@ let sessionRuntimeTicker = null;
 
     function toggleAutoMode() {
         if (autoModeRunning) {
-            stopAutoMode('Auto Mode stopped.');
+            stopAutoMode(
+                'Auto Mode stopped.',
+                {
+                    automatic: false
+                }
+            );
             return;
         }
 
@@ -41524,6 +41760,7 @@ let sessionRuntimeTicker = null;
     }
 
     function startAutoMode() {
+        clearPersistentAutoStopRecord();
         clearManualAutoStop('auto mode manually started');
 
         if (!isMissionPage()) {
@@ -41567,33 +41804,49 @@ let sessionRuntimeTicker = null;
         runAutoModeLoop();
     }
 
-    function stopAutoMode(message) {
+    function stopAutoMode(
+        message,
+        options
+    ) {
+        const automatic =
+            options?.automatic !== false;
+        const stopReason =
+            normaliseAutoStopReason(message);
+
+        if (automatic) {
+            persistAutomaticAutoStopRecord(
+                stopReason
+            );
+        } else {
+            clearPersistentAutoStopRecord();
+        }
+
         clearAutoPostDispatchUpgradeState(
-            message || 'auto mode stopped'
+            stopReason
         );
 
         clearAutoAdvanceAfterDispatchState(
-            message || 'auto mode stopped'
+            stopReason
         );
 
         clearAutoSelectionMissionGuard(
-            message ||
-            'Auto Mode stopped'
+            stopReason
         );
 
         resetVehicleLoadState();
 
         setManualAutoStop(
-            message ||
-            'auto mode stopped'
+            stopReason
         );
 
         updateAutoModeButton();
 
-        if (message) {
-            updateStatusBox(message);
+        if (automatic) {
+            updateStatusBox(
+                'Start Auto Mode again to clear this warning.'
+            );
         } else {
-            updateStatusBox('Auto Mode stopped.');
+            updateStatusBox(stopReason);
         }
     }
 

@@ -37,6 +37,9 @@ jobs:
       - name: Run repository checks
         run: python3 scripts/check_repository.py
 
+      - name: Validate persistent Auto Mode stop reasons
+        run: node scripts/check-auto-stop-reason.mjs
+
       - name: Validate single-delivery Discord release notifications
         run: node scripts/check-release-notification-single-delivery.mjs
 
