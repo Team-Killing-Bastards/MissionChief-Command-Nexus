@@ -1,0 +1,44 @@
+name: Validate v1.0.101 Ambulance Officer candidate
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Full candidate validation
+    if: >-
+      github.event.pull_request.head.ref == 'feature/ambulance-officer-threshold-v10101' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Check out exact candidate branch
+        uses: actions/checkout@v6
+        with:
+          ref: feature/ambulance-officer-threshold-v10101
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Validate complete candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(sed -n 's#^//[[:space:]]*@version[[:space:]]*##p' src/missionchief-command-nexus.user.js | head -n1 | xargs)" = "1.0.101"
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          for check in scripts/check-*.mjs; do
+            echo "Running $check"
+            node "$check"
+          done
+          python3 scripts/check_repository.py
+          git diff --check
