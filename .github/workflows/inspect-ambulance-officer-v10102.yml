@@ -1,0 +1,49 @@
+name: Inspect Ambulance Officer v1.0.102
+
+on:
+  push:
+    branches:
+      - agent/fix-ambulance-officer-live-shortage-v10102
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Extract relevant production contexts
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/missionchief-command-nexus.user.js')
+          lines = path.read_text(encoding='utf-8').splitlines()
+          needles = [
+              'includeConfiguredHighRiskMissingPersonAmbulance',
+              'applyConfiguredAmbulanceOfficerThreshold',
+              'loadFreshMissionRequirements',
+              'readMissionUpdateRows',
+              'Missing Vehicles',
+              'getCurrentRequirements',
+              'getCurrentPatientRequirements',
+              'selectAmbulanceOfficerVehicles',
+              'AMBULANCE_OFFICER_REQUIREMENT_NAME',
+              'freshMission',
+          ]
+
+          print(f'FILE={path} LINES={len(lines)}')
+          for needle in needles:
+              matches = [i for i, line in enumerate(lines) if needle in line]
+              print(f'\n===== {needle} ({len(matches)} matches) =====')
+              for match_index, i in enumerate(matches, start=1):
+                  start = max(0, i - 35)
+                  end = min(len(lines), i + 46)
+                  print(f'\n--- match {match_index}: line {i + 1}; context {start + 1}-{end} ---')
+                  for n in range(start, end):
+                      print(f'{n + 1:06d}: {lines[n]}')
+          PY
