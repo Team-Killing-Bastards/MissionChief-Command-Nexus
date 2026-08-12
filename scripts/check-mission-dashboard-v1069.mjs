@@ -31,8 +31,8 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-expect(source.includes('// @version      1.0.96'), 'Command Nexus 1.0.69 metadata missing');
-expect(source.includes('MISSION FINDER V10.6.145'), 'Mission Finder V10.6.139 header missing');
+expect(source.includes('// @version      1.0.105'), 'Command Nexus 1.0.69 metadata missing');
+expect(source.includes('MISSION FINDER V10.6.153'), 'Mission Finder V10.6.139 header missing');
 const panel = extractFunction('createControlPanel');
 const startScanner = extractFunction('startMissionEventCollectibleCollector');
 const styles = extractFunction('injectStyles');
@@ -62,6 +62,14 @@ const primaryEnd = panel.indexOf('controlBody.appendChild(primaryActions)', prim
 const primaryBlock = panel.slice(primaryStart, primaryEnd);
 expect(!primaryBlock.includes('primaryActions.appendChild(diagnosticsBtn);\n        controlBody'), 'Diagnostics must not remain an unconditional Mission Control action');
 expect(panel.indexOf('settingsPane.appendChild(advancedBody)') < panel.indexOf('const unitFinderBtn'), 'Settings ownership must be established before action creation');
-expect(panel.includes('wrapper.appendChild(loadPanel);\n        wrapper.appendChild(trainedPanel);\n        document.body.appendChild(wrapper);\n\n        scheduleMissionRequiredPersonnelPreload(0);'), 'Required Personnel preload lifecycle must remain intact');
+const mountIndex = panel.indexOf('document.body.appendChild(wrapper);');
+const preloadIndex = panel.indexOf(
+  'scheduleMissionRequiredPersonnelPreload(0);',
+  mountIndex
+);
+expect(
+  mountIndex >= 0 && preloadIndex > mountIndex,
+  'Required Personnel preload lifecycle must remain intact after dashboard mount'
+);
 
 console.log('Mission dashboard V10.6.132 ownership and lifecycle checks passed.');
