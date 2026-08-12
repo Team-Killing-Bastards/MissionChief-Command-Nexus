@@ -91,8 +91,8 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-expect(source.includes('// @version      1.0.102'), 'Expected Command Nexus 1.0.102');
-expect(source.includes(' * MODULE 2: MISSION FINDER V10.6.151'), 'Expected Mission Finder V10.6.151');
+expect(source.includes('// @version      1.0.103'), 'Expected Command Nexus 1.0.103');
+expect(source.includes(' * MODULE 2: MISSION FINDER V10.6.152'), 'Expected Mission Finder V10.6.152');
 
 for (const token of [
   "'mf_high_risk_missing_person_ambulance_v1'",
@@ -169,6 +169,54 @@ function buildThresholdHelper({ enabled, threshold, alreadySatisfied = false }) 
     value => value
   );
 }
+
+const freshPatientRowsHelper = extractFunction(
+  'buildFreshAmbulanceOfficerThresholdAdditionalRows'
+);
+const buildFreshPatientRows = new Function(
+  'isAmbulanceTransportRequest',
+  'resolveUnitName',
+  `${freshPatientRowsHelper}; return buildFreshAmbulanceOfficerThresholdAdditionalRows;`
+)(
+  (originalName, mappedName) => {
+    const values = [originalName, mappedName].map(value => String(value || '').toLowerCase().replace(/\s+/g, ' ').trim());
+    return values.some(value => value === 'ambulance' || value === 'ambulances' || value === 'ambulance x 01');
+  },
+  value => value
+);
+
+const freshBadgeOnlyRows = buildFreshPatientRows([], 6);
+expect(freshBadgeOnlyRows.length === 1, 'A fresh patient badge total must create one threshold-only Ambulance row');
+expect(freshBadgeOnlyRows[0].unitName === 'Ambulance x 01', 'Fresh patient badge demand must use the ordinary Ambulance identity');
+expect(freshBadgeOnlyRows[0].stillNeeded === 6, 'Fresh patient badge demand must preserve the calculated Ambulance total');
+expect(freshBadgeOnlyRows[0].configuredFreshPatientAmbulanceTotal === true, 'Fresh patient badge threshold row must be diagnostic');
+
+const freshBadgeTrigger = buildThresholdHelper({ enabled: true, threshold: 5 })(
+  [],
+  freshBadgeOnlyRows
+);
+expect(freshBadgeTrigger.some(row => row.configuredAmbulanceOfficerThreshold === true), 'Six fresh patient-badge Ambulances must trigger one Officer at threshold five');
+
+const freshBadgeEqual = buildThresholdHelper({ enabled: true, threshold: 5 })(
+  [],
+  buildFreshPatientRows([], 5)
+);
+expect(!freshBadgeEqual.some(row => row.configuredAmbulanceOfficerThreshold), 'Five fresh patient-badge Ambulances must not trigger at threshold five');
+
+const mergedFreshPatientRows = buildFreshPatientRows([
+  { unitName: 'Ambulance', stillNeeded: 2 },
+  { unitName: 'Critical Care', stillNeeded: 1 },
+  { unitName: 'Ambulance Officer', stillNeeded: 1 }
+], 6);
+expect(mergedFreshPatientRows.filter(row => row.unitName === 'Ambulance x 01').length === 1, 'Patient badge and explicit Ambulance rows must collapse to one threshold total');
+expect(mergedFreshPatientRows.find(row => row.unitName === 'Ambulance x 01')?.stillNeeded === 6, 'Fresh patient threshold must use the larger badge total without double-counting explicit demand');
+expect(mergedFreshPatientRows.some(row => row.unitName === 'Critical Care'), 'Non-Ambulance patient requirements must be preserved');
+expect(mergedFreshPatientRows.some(row => row.unitName === 'Ambulance Officer'), 'Explicit patient Ambulance Officer demand must be preserved for duplicate prevention');
+
+const largerExplicitPatientRows = buildFreshPatientRows([
+  { unitName: 'Ambulances', stillNeeded: 7 }
+], 6);
+expect(largerExplicitPatientRows[0].stillNeeded === 7, 'A larger explicit patient Ambulance total must outrank the badge total');
 
 const base = [{ unitName: 'Police Car', stillNeeded: 2 }];
 const disabled = buildThresholdHelper({ enabled: false, threshold: 5 })([
@@ -294,6 +342,8 @@ const preloaded = extractFunction('getPreloadedMissionVehicleRequirementsForDisp
 expect(preloaded.includes('applyConfiguredFreshMissionVehicleRequirements('), 'Preloaded Vehicle Load must show the configured Officer row');
 expect(preloaded.includes('cache.rows'), 'Preloaded Vehicle Load must retain mission rows');
 expect(preloaded.includes('readUnitFinderPatientRequirementRows()'), 'Preloaded Vehicle Load must include current patient Ambulance demand');
+expect(preloaded.includes('buildFreshAmbulanceOfficerThresholdAdditionalRows('), 'Preloaded Vehicle Load must include fresh patient badge Ambulance demand');
+expect(preloaded.includes('findPatientCount()'), 'Preloaded Vehicle Load must read the current fresh patient total');
 expect(preloaded.includes('hasCurrentMissionVehicleRequirementAuthorityForDisplay()'), 'Live shortage authority must continue to suppress static configured display');
 
 const freshRuleMatch =
@@ -321,7 +371,9 @@ expect(source.includes("'AMBULANCE OFFICER THRESHOLD'"), 'Ambulance Officer debu
 const combined = extractFunction('handleCombinedLogic');
 expect((combined.match(/includeConfiguredHighRiskMissingPersonAmbulance:/g) || []).length === 3, 'Fresh attachment, visible fallback and legacy fallback routes must keep the configured-rule opt-in');
 expect((combined.match(/ambulanceOfficerThresholdAdditionalRows:/g) || []).length === 3, 'All fresh Unit Finder routes must pass patient demand to the threshold');
-expect((combined.match(/patientRequirementResult\.rows/g) || []).length >= 3, 'Current patient rows must feed all fresh threshold routes');
+expect(combined.includes('buildFreshAmbulanceOfficerThresholdAdditionalRows('), 'Fresh Unit Finder must combine patient rows with the calculated patient badge total');
+expect(combined.includes('patientRequirementResult.rows,'), 'Current explicit patient rows must feed the fresh threshold total');
+expect(combined.includes('patientCount\n            );'), 'The calculated fresh patient count must feed the threshold total');
 const currentMissingIndex = combined.indexOf("'CURRENT MISSING REQUIREMENTS'");
 expect(currentMissingIndex >= 0, 'Current Missing Requirements route missing');
 const currentMissingWindow = combined.slice(currentMissingIndex - 350, currentMissingIndex + 450);
@@ -340,6 +392,16 @@ expect(processRows.includes('includeConfiguredAmbulanceOfficerThreshold === true
 expect(processRows.includes('addConfiguredAmbulanceOfficerThresholdRequirement('), 'Shared Unit Finder processing must apply the threshold-only helper');
 expect(processRows.includes('vehicleLoadState.ambulanceOfficer =\n                    true;'), 'Unit Finder must remember a selected Officer for later passes');
 
+const latePatient = extractFunction('applyLatePatientCount');
+expect(latePatient.startsWith('async function applyLatePatientCount('), 'Late fresh patient recovery must support the asynchronous shared selector');
+expect(latePatient.includes('buildFreshAmbulanceOfficerThresholdAdditionalRows('), 'Late fresh patient recovery must feed its calculated Ambulance total to the threshold');
+expect(latePatient.includes('includeConfiguredAmbulanceOfficerThreshold:'), 'Late fresh patient recovery must enable the Officer threshold');
+expect(latePatient.includes('await processRequirementRows('), 'Late fresh patient recovery must select the configured Officer through the shared exact matcher');
+
+const lateRecovery = extractFunction('recoverLateMissionRequirements');
+expect((lateRecovery.match(/includeConfiguredHighRiskMissingPersonAmbulance:/g) || []).length === 3, 'Every late fresh mission fallback must retain the configured fresh rules');
+expect((lateRecovery.match(/buildFreshAmbulanceOfficerThresholdAdditionalRows\(/g) || []).length === 3, 'Every late fresh mission fallback must pass fresh patient demand to the Officer threshold');
+
 const autoModeStart = source.indexOf('async function runAutoModeLoop()');
 const autoModeEnd = source.indexOf('function suspendMissionFinderRuntimeForPageHide(', autoModeStart);
 const autoMode = source.slice(autoModeStart, autoModeEnd);
@@ -353,4 +415,4 @@ for (const token of [
   'highRiskMissingPersonMission:'
 ]) expect(source.includes(token), `Diagnostic contract missing ${token}`);
 
-console.log('PASS: issue #299 Ambulance Officer threshold works through Unit Finder, Auto Mode and Mission Update, selects exact type 34 and prevents duplicate Officers.');
+console.log('PASS: issue #299 Ambulance Officer threshold works through fresh patient-badge Unit Finder, late fresh recovery, Auto Mode and Mission Update, selects exact type 34 and prevents duplicate Officers.');
