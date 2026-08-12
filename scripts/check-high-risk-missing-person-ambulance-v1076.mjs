@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
+await import('./check-ambulance-officer-threshold-v10101.mjs');
 
 const source = fs.readFileSync('src/missionchief-command-nexus.user.js', 'utf8');
 
@@ -97,8 +98,8 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-expect(source.includes('// @version      1.0.96'), 'Expected Command Nexus 1.0.79');
-expect(source.includes('MISSION FINDER V10.6.145'), 'Expected Mission Finder V10.6.139');
+expect(source.includes('// @version      1.0.101'), 'Expected Command Nexus 1.0.79');
+expect(source.includes('MISSION FINDER V10.6.150'), 'Expected Mission Finder V10.6.139');
 
 for (const token of [
   "const MF_HIGH_RISK_MISSING_PERSON_AMBULANCE_KEY =",
@@ -217,28 +218,36 @@ expect(zeroAmbulanceRows.some(row => row.configuredHighRiskMissingPersonAmbulanc
 
 const preloadedDisplay = extractFunction('getPreloadedMissionVehicleRequirementsForDisplay');
 expect(
-  preloadedDisplay.includes('addConfiguredHighRiskMissingPersonAmbulanceRequirement(\n            cache.rows\n        )'),
-  'Preloaded Vehicle Load display must include the configured Ambulance row'
+  preloadedDisplay.includes('applyConfiguredFreshMissionVehicleRequirements(') &&
+    preloadedDisplay.includes('cache.rows') &&
+    preloadedDisplay.includes('readUnitFinderPatientRequirementRows()'),
+  'Preloaded Vehicle Load display must include configured fresh mission and patient demand'
 );
 expect(
   preloadedDisplay.includes('hasCurrentMissionVehicleRequirementAuthorityForDisplay()'),
   'Preloaded display must preserve current live shortage authority'
 );
 
-const processRows = extractFunction('processRequirementRows');
-for (const token of [
-  'options = {}',
-  'includeConfiguredHighRiskMissingPersonAmbulance === true',
-  'addConfiguredHighRiskMissingPersonAmbulanceRequirement(',
-  "'HIGH-RISK MISSING PERSON AMBULANCE'"
-]) {
-  expect(processRows.includes(token), `Selection pipeline missing ${token}`);
-}
+const freshRuleMatch =
+  /requirementRows\s*=\s*applyConfiguredFreshMissionVehicleRequirements\(\s*requirementRows\s*,\s*options\s*\.ambulanceOfficerThresholdAdditionalRows\s*\);/.exec(source);
 expect(
-  processRows.indexOf('normaliseOperationalRequirementRows(') <
-    processRows.indexOf('addConfiguredHighRiskMissingPersonAmbulanceRequirement('),
-  'Configured Ambulance must be added after requirement authority normalization'
+  source.includes('includeConfiguredHighRiskMissingPersonAmbulance === true'),
+  'Fresh Unit Finder configured-rule gate missing'
 );
+expect(
+  freshRuleMatch,
+  'Selection pipeline must apply the combined fresh-mission settings rules'
+);
+const freshRuleCallIndex = freshRuleMatch.index;
+const normaliseIndex = source.lastIndexOf(
+  'requirementRows = normaliseOperationalRequirementRows(',
+  freshRuleCallIndex
+);
+expect(
+  normaliseIndex >= 0 && normaliseIndex < freshRuleCallIndex,
+  'Configured rules must run after requirement authority normalisation'
+);
+
 
 const combined = extractFunction('handleCombinedLogic');
 expect(

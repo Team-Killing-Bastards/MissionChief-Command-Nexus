@@ -10,8 +10,8 @@ src/missionchief-command-nexus.user.js
 
 | Item | Value |
 |---|---|
-| Command Nexus version | `1.0.100` |
-| Mission Finder baseline | `V10.6.149` |
+| Command Nexus version | `1.0.101` |
+| Mission Finder baseline | `V10.6.150` |
 | Unit, Station & Personnel baseline | `V4.2.8` |
 | Licence | MIT |
 | Developer and source-code owner | **MartyBlyth** |
