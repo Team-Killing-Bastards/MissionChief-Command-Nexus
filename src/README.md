@@ -10,8 +10,8 @@ src/missionchief-command-nexus.user.js
 
 | Item | Value |
 |---|---|
-| Command Nexus version | `1.0.103` |
-| Mission Finder baseline | `V10.6.152` |
+| Command Nexus version | `1.0.104` |
+| Mission Finder baseline | `V10.6.153` |
 | Unit, Station & Personnel baseline | `V4.2.8` |
 | Licence | MIT |
 | Developer and source-code owner | **MartyBlyth** |
@@ -50,6 +50,7 @@ Before publishing a source change:
 - Update `CHANGELOG.md`.
 - Run `node --check src/missionchief-command-nexus.user.js`.
 - Run `node scripts/validate-userscript.mjs`.
+- Run `node scripts/check-auto-stop-reason.mjs`.
 - Run `node scripts/check-ios-compatibility.mjs`.
 - Run `node scripts/check-runtime-hardening.mjs`.
 - Run `node scripts/check-police-irv-fallback.mjs`.
