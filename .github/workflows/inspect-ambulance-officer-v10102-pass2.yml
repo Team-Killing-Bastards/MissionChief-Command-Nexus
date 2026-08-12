@@ -1,0 +1,81 @@
+name: Inspect Ambulance Officer v1.0.102 pass 2
+
+on:
+  push:
+    branches:
+      - agent/fix-ambulance-officer-live-shortage-v10102
+    paths:
+      - .github/workflows/inspect-ambulance-officer-v10102-pass2.yml
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Print focused source and regression context
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          src = Path('src/missionchief-command-nexus.user.js')
+          lines = src.read_text(encoding='utf-8').splitlines()
+          needles = [
+              'function applyConfiguredFreshMissionVehicleRequirements',
+              'applyConfiguredFreshMissionVehicleRequirements(',
+              'function normaliseConfiguredAmbulanceOfficerThreshold',
+              'configuredAmbulanceOfficerThreshold',
+              'function processRequirementRows',
+              'function processVehicles',
+              'function getExplicitCurrentMissingRequirementRows',
+              'function hasExplicitCurrentMissingRequirementRows',
+              'function isExplicitMissingVehicleRequirementRow',
+              'mfAmbulanceOfficerThresholdEnabled',
+              "vehicleTypeId === 34",
+              "vehicle_type_id === 34",
+              'Ambulance Officer'
+          ]
+
+          print('===== SOURCE HEADER 1-180 =====')
+          for i, line in enumerate(lines[:180], start=1):
+              print(f'{i:06d}: {line}')
+
+          seen = set()
+          for needle in needles:
+              matches = [i for i, line in enumerate(lines) if needle in line]
+              print(f'\n===== {needle} ({len(matches)} matches) =====')
+              for i in matches:
+                  key = (max(0, i - 45), min(len(lines), i + 90))
+                  if key in seen:
+                      continue
+                  seen.add(key)
+                  start, end = key
+                  print(f'\n--- line {i + 1}; context {start + 1}-{end} ---')
+                  for n in range(start, end):
+                      print(f'{n + 1:06d}: {lines[n]}')
+
+          for path in [
+              Path('scripts/check-ambulance-officer-threshold-v10101.mjs'),
+              Path('package.json'),
+              Path('README.md'),
+              Path('CHANGELOG.md')
+          ]:
+              print(f'\n===== FILE {path} =====')
+              if not path.exists():
+                  print('MISSING')
+                  continue
+              content = path.read_text(encoding='utf-8')
+              if path.name == 'README.md':
+                  for i, line in enumerate(content.splitlines(), start=1):
+                      if any(term in line for term in ['1.0.101', 'V10.6.150', 'Ambulance Officer']):
+                          start = max(1, i - 8)
+                          end = min(len(content.splitlines()), i + 12)
+                          print(f'--- README context {start}-{end} ---')
+                          for n in range(start, end + 1):
+                              print(f'{n:06d}: {content.splitlines()[n - 1]}')
+                  continue
+              print(content)
+          PY
