@@ -4,6 +4,29 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.102] - 2026-08-12
+
+### Fixed
+
+- Fixed issue #299: the configured Ambulance Officer threshold now runs consistently through Unit Finder, Auto Mode and Mission Update, including cycles where the current live Missing Vehicles/Personnel table is authoritative.
+- The active path counts only its authoritative positive ordinary Ambulance demand and adds exactly one Ambulance Officer when that count is strictly greater than the configured threshold.
+- Ambulance Officer selection now prefers exact MissionChief vehicle type `34`, with an exact-name fallback only when MissionChief does not expose a vehicle type ID.
+- Existing positive Officer demand, an already-selected Officer, a mission-scoped Officer selected by an earlier pass, or a confirmed satisfied live Officer requirement prevents duplication.
+- The separate High-risk Missing Person Ambulance rule remains fresh-mission-only and is not enabled during Mission Update.
+
+### Regression coverage
+
+- Extended `scripts/check-ambulance-officer-threshold-v10101.mjs` to cover fresh Unit Finder, live-authority Unit Finder, Auto Mode, manual/post-selection Mission Update, strict type-34 matching and duplicate protection.
+- Preserved the chained High-risk Missing Person regression and re-ran the Mission Update single-pass and Missing-on-mission authority checks against the current release baseline.
+
+### Changed engine baseline
+
+- Command Nexus increased from `1.0.101` to `1.0.102`.
+- Mission Finder increased from `V10.6.150` to `V10.6.151`.
+- Unit Naming remains `3.3.20`.
+- Station Naming remains `1.3.14`.
+- Personnel Assignment remains `1.3.9`.
+
 ## [1.0.101] - 2026-08-12
 
 ### Added
