@@ -47,10 +47,11 @@ jobs:
           test "$(git show origin/main:src/missionchief-command-nexus.user.js | sed -n 's#^//[[:space:]]*@version[[:space:]]*##p' | head -n1 | xargs)" = "1.0.100"
           git show origin/main:scripts/build-v10101-ambulance-officer-threshold.py > scripts/build-v10101-ambulance-officer-threshold.py
 
-          # The production high-risk helper has two operational call sites:
-          # preloaded Vehicle Load display and the fresh Unit Finder gate. Patch
-          # the trusted builder to replace those exact call sites while keeping
-          # the original helper declaration and the new combined wrapper intact.
+          # The production high-risk helper has two direct operational call
+          # sites: preloaded Vehicle Load display and the shared fresh Unit
+          # Finder gate. The gate itself is entered through three current fresh
+          # source routes: attachment, visible fallback and legacy vehicle-list
+          # fallback.
           python3 - <<'PY'
           from pathlib import Path
 
@@ -114,9 +115,11 @@ jobs:
           rm -f scripts/build-v10101-ambulance-officer-threshold.py
 
           # Keep the existing high-risk diagnostics truthful after both fresh
-          # settings rules share one wrapper, and update regressions to target
-          # the real source-level fresh Unit Finder gate rather than a stale
-          # historical function name.
+          # settings rules share one wrapper, update regressions to target the
+          # real source-level Unit Finder gate, and give the new regression the
+          # proven parameter-aware function extractor used by the established
+          # high-risk test. The simpler extractor mistakes options = {} for the
+          # function body.
           python3 - <<'PY'
           from pathlib import Path
 
@@ -224,28 +227,102 @@ jobs:
               + "expect(source.includes(\"'AMBULANCE OFFICER THRESHOLD'\"), 'Ambulance Officer debug contract missing');\n"
               + threshold[block_end:]
           )
-          threshold_path.write_text(threshold, encoding='utf-8')
 
-          count_contract = (
-              "(combined.match(/includeConfiguredHighRiskMissingPersonAmbulance:/g) || []).length === 3"
+          extractor_start = threshold.index('function extractFunction(name) {')
+          extractor_end = threshold.index(
+              "\n\nexpect(source.includes('// @version",
+              extractor_start
           )
-          current_contract = (
-              "(combined.match(/includeConfiguredHighRiskMissingPersonAmbulance:/g) || []).length === 2"
+          robust_extractor = r'''function extractFunction(name) {
+            const markers = [`function ${name}(`, `async function ${name}(`];
+            const starts = markers
+              .map(marker => source.indexOf(marker))
+              .filter(index => index >= 0);
+
+            if (starts.length === 0) fail(`Missing function ${name}`);
+
+            const start = Math.min(...starts);
+            const parameterStart = source.indexOf('(', start);
+            let parameterDepth = 0;
+            let bodyStart = -1;
+            let quote = '';
+            let escaped = false;
+
+            for (let index = parameterStart; index < source.length; index += 1) {
+              const character = source[index];
+
+              if (quote) {
+                if (escaped) escaped = false;
+                else if (character === '\\') escaped = true;
+                else if (character === quote) quote = '';
+                continue;
+              }
+
+              if (character === '"' || character === "'" || character === '`') {
+                quote = character;
+                continue;
+              }
+
+              if (character === '(') parameterDepth += 1;
+              if (character === ')') {
+                parameterDepth -= 1;
+                if (parameterDepth === 0) {
+                  bodyStart = source.indexOf('{', index);
+                  break;
+                }
+              }
+            }
+
+            if (bodyStart < 0) fail(`Missing body for ${name}`);
+
+            let depth = 0;
+            quote = '';
+            escaped = false;
+
+            for (let index = bodyStart; index < source.length; index += 1) {
+              const character = source[index];
+              const next = source[index + 1] || '';
+
+              if (quote) {
+                if (escaped) escaped = false;
+                else if (character === '\\') escaped = true;
+                else if (character === quote) quote = '';
+                continue;
+              }
+
+              if (character === '"' || character === "'" || character === '`') {
+                quote = character;
+                continue;
+              }
+
+              if (character === '/' && next === '/') {
+                const lineEnd = source.indexOf('\n', index + 2);
+                index = lineEnd < 0 ? source.length : lineEnd;
+                continue;
+              }
+
+              if (character === '/' && next === '*') {
+                const blockEnd = source.indexOf('*/', index + 2);
+                if (blockEnd < 0) fail(`Unclosed comment in ${name}`);
+                index = blockEnd + 1;
+                continue;
+              }
+
+              if (character === '{') depth += 1;
+              if (character === '}') {
+                depth -= 1;
+                if (depth === 0) return source.slice(start, index + 1);
+              }
+            }
+
+            fail(`Unable to extract ${name}`);
+          }'''
+          threshold = (
+              threshold[:extractor_start]
+              + robust_extractor
+              + threshold[extractor_end:]
           )
-          for path in (high_risk_path, threshold_path):
-              text = path.read_text(encoding='utf-8')
-              if text.count(count_contract) != 1:
-                  raise SystemExit(
-                      f'{path}: expected one stale three-route assertion, got '
-                      f'{text.count(count_contract)}'
-                  )
-              text = text.replace(count_contract, current_contract, 1)
-              text = text.replace(
-                  'Fresh attachment, visible fallback and legacy fallback routes',
-                  'Fresh attachment and visible fallback routes',
-                  1
-              )
-              path.write_text(text, encoding='utf-8')
+          threshold_path.write_text(threshold, encoding='utf-8')
           PY
 
           node --check src/missionchief-command-nexus.user.js
