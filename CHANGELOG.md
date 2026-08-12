@@ -4,6 +4,35 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.101] - 2026-08-12
+
+### Added
+
+- Added a new Settings checkbox, **Automatically add 1 Ambulance Officer**, alongside the existing High-risk Missing Person Ambulance rule.
+- Added a user-set numeric threshold from `0` to `99`, defaulting to `5` while the rule remains disabled by default.
+- On fresh Unit Finder and Auto Mode requirement loads, one **Ambulance Officer** is added when the final ordinary Ambulance demand is strictly greater than the configured threshold. Example: threshold `5` triggers at `6` Ambulances.
+- Multiple ordinary Ambulance rows are summed across fresh mission and current patient requirements, an existing positive Ambulance Officer requirement in either source prevents duplication, and the configured row appears in the preloaded Vehicle Load display.
+
+### Preserved safety and authority
+
+- The existing **Always include 1 Ambulance in Unit Finder** option for High Risk and Very High Risk Missing Person missions remains unchanged and fully covered.
+- The Ambulance Officer threshold evaluates after the high-risk rule, so any configured high-risk Ambulance is included in the final Ambulance count.
+- Current Missing Vehicles, Missing Personnel, Mission Update and other live shortage sources remain authoritative and never re-add the configured Officer.
+- Both settings default off and persist independently in local storage.
+
+### Regression coverage
+
+- Added `scripts/check-ambulance-officer-threshold-v10101.mjs` for settings persistence, threshold bounds, strict more-than comparison, summed Ambulance demand, duplicate protection, fresh-path gating, Vehicle Load display and diagnostics.
+- Chained the new regression through `scripts/check-high-risk-missing-person-ambulance-v1076.mjs`, which continues to prove the original high-risk rule.
+
+### Changed engine baseline
+
+- Command Nexus increased from `1.0.100` to `1.0.101`.
+- Mission Finder increased from `V10.6.149` to `V10.6.150`.
+- Unit Naming remains `3.3.20`.
+- Station Naming remains `1.3.14`.
+- Personnel Assignment remains `1.3.9`.
+
 ## [1.0.100] - 2026-08-11
 
 ### Fixed

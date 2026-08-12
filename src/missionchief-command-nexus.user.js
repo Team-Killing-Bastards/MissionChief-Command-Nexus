@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.100
+// @version      1.0.101
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -11572,7 +11572,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.149
+         * MODULE 2: MISSION FINDER V10.6.150
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -12367,6 +12367,13 @@
     const MF_PANEL_TOP_KEY = 'mf_panel_top_v10_4_0';
     const MF_HIGH_RISK_MISSING_PERSON_AMBULANCE_KEY =
         'mf_high_risk_missing_person_ambulance_v1';
+    const MF_AMBULANCE_OFFICER_THRESHOLD_ENABLED_KEY =
+        'mf_ambulance_officer_threshold_enabled_v1';
+    const MF_AMBULANCE_OFFICER_THRESHOLD_KEY =
+        'mf_ambulance_officer_threshold_v1';
+    const MF_AMBULANCE_OFFICER_THRESHOLD_DEFAULT = 5;
+    const MF_AMBULANCE_OFFICER_THRESHOLD_MIN = 0;
+    const MF_AMBULANCE_OFFICER_THRESHOLD_MAX = 99;
     const MF_SHARE_CREDIT_THRESHOLD = 15000;
 
     const MF_PERSONNEL_TRAINING_REGISTRY_KEY =
@@ -12682,6 +12689,16 @@
         localStorage.getItem(
             MF_HIGH_RISK_MISSING_PERSON_AMBULANCE_KEY
         ) === 'true';
+    let mfAmbulanceOfficerThresholdEnabled =
+        localStorage.getItem(
+            MF_AMBULANCE_OFFICER_THRESHOLD_ENABLED_KEY
+        ) === 'true';
+    let mfAmbulanceOfficerThreshold =
+        normaliseConfiguredAmbulanceOfficerThreshold(
+            localStorage.getItem(
+                MF_AMBULANCE_OFFICER_THRESHOLD_KEY
+            )
+        );
 
     let mfStaffingBlockActive = false;
     let mfStaffingBlockText = '';
@@ -14510,6 +14527,10 @@
                     mfStaffingBlockActive === true,
                 staffingBlockText:
                     String(mfStaffingBlockText || ''),
+                ambulanceOfficerThresholdEnabled:
+                    mfAmbulanceOfficerThresholdEnabled,
+                ambulanceOfficerThreshold:
+                    mfAmbulanceOfficerThreshold,
                 alwaysSendAmbulanceToHighRiskMissingPerson:
                     mfAlwaysSendAmbulanceToHighRiskMissingPerson === true,
                 highRiskMissingPersonMission:
@@ -20807,7 +20828,82 @@ function isRoadRailUnitVehicleCheckbox(input) {
             <div class="mf2026-small" style="margin-top:5px;">
                 Applies to High Risk and Very High Risk Missing Person missions. Existing live shortages stay authoritative.
             </div>
+            <div class="mf2026-section-title" style="margin-top:12px;">Ambulance Officer</div>
+            <label class="mf2026-checkbox-row mf-dashboard-toggle-row">
+                <input id="mf-ambulance-officer-threshold-toggle"
+                       type="checkbox"
+                       ${mfAmbulanceOfficerThresholdEnabled ? 'checked' : ''}>
+                <span>Automatically add 1 Ambulance Officer</span>
+            </label>
+            <label class="mf2026-small"
+                   style="display:flex; align-items:center; gap:8px; margin-top:7px;">
+                <span>When required Ambulances exceed</span>
+                <input id="mf-ambulance-officer-threshold-input"
+                       type="number"
+                       inputmode="numeric"
+                       min="${MF_AMBULANCE_OFFICER_THRESHOLD_MIN}"
+                       max="${MF_AMBULANCE_OFFICER_THRESHOLD_MAX}"
+                       step="1"
+                       value="${mfAmbulanceOfficerThreshold}"
+                       ${mfAmbulanceOfficerThresholdEnabled ? '' : 'disabled'}
+                       style="width:72px; margin-left:auto;">
+            </label>
+            <div class="mf2026-small" style="margin-top:5px;">
+                Example: 5 adds one Ambulance Officer when 6 or more Ambulances are required. Counts fresh mission and current patient Ambulance requirements; existing live shortages stay authoritative.
+            </div>
         `;
+
+        const ambulanceOfficerThresholdToggle =
+            highRiskMissingPersonAmbulanceBox.querySelector(
+                '#mf-ambulance-officer-threshold-toggle'
+            );
+        const ambulanceOfficerThresholdInput =
+            highRiskMissingPersonAmbulanceBox.querySelector(
+                '#mf-ambulance-officer-threshold-input'
+            );
+
+        if (ambulanceOfficerThresholdToggle) {
+            ambulanceOfficerThresholdToggle.addEventListener(
+                'change',
+                function() {
+                    mfAmbulanceOfficerThresholdEnabled =
+                        this.checked === true;
+                    localStorage.setItem(
+                        MF_AMBULANCE_OFFICER_THRESHOLD_ENABLED_KEY,
+                        String(
+                            mfAmbulanceOfficerThresholdEnabled
+                        )
+                    );
+                    if (ambulanceOfficerThresholdInput) {
+                        ambulanceOfficerThresholdInput.disabled =
+                            !mfAmbulanceOfficerThresholdEnabled;
+                    }
+                    renderVehicleLoadList();
+                }
+            );
+        }
+
+        if (ambulanceOfficerThresholdInput) {
+            ambulanceOfficerThresholdInput.addEventListener(
+                'change',
+                function() {
+                    mfAmbulanceOfficerThreshold =
+                        normaliseConfiguredAmbulanceOfficerThreshold(
+                            this.value
+                        );
+                    this.value = String(
+                        mfAmbulanceOfficerThreshold
+                    );
+                    localStorage.setItem(
+                        MF_AMBULANCE_OFFICER_THRESHOLD_KEY,
+                        String(
+                            mfAmbulanceOfficerThreshold
+                        )
+                    );
+                    renderVehicleLoadList();
+                }
+            );
+        }
         advancedBody.appendChild(
             highRiskMissingPersonAmbulanceBox
         );
@@ -22993,7 +23089,140 @@ function isRoadRailUnitVehicleCheckbox(input) {
         );
     }
 
-    function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
+        function normaliseConfiguredAmbulanceOfficerThreshold(
+        value
+    ) {
+        const parsed = Number.parseInt(
+            String(value == null ? '' : value),
+            10
+        );
+
+        if (!Number.isFinite(parsed)) {
+            return MF_AMBULANCE_OFFICER_THRESHOLD_DEFAULT;
+        }
+
+        return Math.min(
+            MF_AMBULANCE_OFFICER_THRESHOLD_MAX,
+            Math.max(
+                MF_AMBULANCE_OFFICER_THRESHOLD_MIN,
+                parsed
+            )
+        );
+    }
+
+    function isAmbulanceOfficerRequirement(
+        originalName,
+        mappedName
+    ) {
+        return [originalName, mappedName].some(value => {
+            const cleaned = String(value || '')
+                .replace(/\s+/g, ' ')
+                .trim();
+
+            return /^(?:Required\s+)?(?:\d+\s+)?Ambulance Officers?$/i.test(
+                cleaned
+            );
+        });
+    }
+
+        function addConfiguredAmbulanceOfficerThresholdRequirement(
+        rows,
+        additionalRows = []
+    ) {
+        const sourceRows =
+            (Array.isArray(rows) ? rows : [])
+                .filter(Boolean);
+        const comparisonRows = [
+            ...sourceRows,
+            ...(Array.isArray(additionalRows)
+                ? additionalRows.filter(Boolean)
+                : [])
+        ];
+
+        if (!mfAmbulanceOfficerThresholdEnabled) {
+            return sourceRows.slice();
+        }
+
+        const threshold =
+            normaliseConfiguredAmbulanceOfficerThreshold(
+                mfAmbulanceOfficerThreshold
+            );
+        const ambulanceCount = comparisonRows.reduce(
+            (total, row) => {
+                const originalName =
+                    row.originalName ||
+                    row.unitName ||
+                    '';
+                const mappedName =
+                    row.unitName ||
+                    resolveUnitName(originalName);
+
+                if (
+                    !isAmbulanceTransportRequest(
+                        originalName,
+                        mappedName
+                    )
+                ) {
+                    return total;
+                }
+
+                return total + Math.max(
+                    0,
+                    Number(row.stillNeeded) || 0
+                );
+            },
+            0
+        );
+
+        if (ambulanceCount <= threshold) {
+            return sourceRows.slice();
+        }
+
+        const alreadyRequiresOfficer =
+            comparisonRows.some(row => {
+                const originalName =
+                    row.originalName ||
+                    row.unitName ||
+                    '';
+                const mappedName =
+                    row.unitName ||
+                    resolveUnitName(originalName);
+                const quantity = Math.max(
+                    0,
+                    Number(row.stillNeeded) || 0
+                );
+
+                return (
+                    quantity > 0 &&
+                    isAmbulanceOfficerRequirement(
+                        originalName,
+                        mappedName
+                    )
+                );
+            });
+
+        if (alreadyRequiresOfficer) {
+            return sourceRows.slice();
+        }
+
+        return [
+            ...sourceRows,
+            {
+                unitName: 'Ambulance Officer',
+                stillNeeded: 1,
+                source:
+                    'settings-ambulance-officer-threshold',
+                configuredAmbulanceOfficerThreshold:
+                    true,
+                configuredAmbulanceCount:
+                    ambulanceCount,
+                configuredAmbulanceThreshold:
+                    threshold
+            }
+        ];
+    }
+
+function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
         rows
     ) {
         const sourceRows =
@@ -23049,6 +23278,19 @@ function isRoadRailUnitVehicleCheckbox(input) {
             }
         ];
     }
+
+        function applyConfiguredFreshMissionVehicleRequirements(
+        rows,
+        additionalRows = []
+    ) {
+        return addConfiguredAmbulanceOfficerThresholdRequirement(
+            addConfiguredHighRiskMissingPersonAmbulanceRequirement(
+                rows
+            ),
+            additionalRows
+        );
+    }
+
 
     function getCurrentMissionValueScope() {
         const missionInfo =
@@ -28453,8 +28695,9 @@ let sessionRuntimeTicker = null;
             return [];
         }
 
-        return addConfiguredHighRiskMissingPersonAmbulanceRequirement(
-            cache.rows
+        return applyConfiguredFreshMissionVehicleRequirements(
+            cache.rows,
+            readUnitFinderPatientRequirementRows()
         )
             .filter(row => {
                 return Boolean(
@@ -33469,23 +33712,39 @@ let sessionRuntimeTicker = null;
             options
                 .includeConfiguredHighRiskMissingPersonAmbulance === true
         ) {
-            const rowCountBeforeConfiguredAmbulance =
-                requirementRows.length;
-
             requirementRows =
-                addConfiguredHighRiskMissingPersonAmbulanceRequirement(
-                    requirementRows
+                applyConfiguredFreshMissionVehicleRequirements(
+                    requirementRows,
+                    options
+                        .ambulanceOfficerThresholdAdditionalRows
                 );
 
-            if (
-                mfDebugEnabled &&
-                requirementRows.length >
-                    rowCountBeforeConfiguredAmbulance
-            ) {
-                debugLog(
-                    'HIGH-RISK MISSING PERSON AMBULANCE',
-                    'Settings rule added Ambulance x1 to the fresh Unit Finder requirement set.'
-                );
+            if (mfDebugEnabled) {
+                if (
+                    requirementRows.some(
+                        row =>
+                            row?.configuredHighRiskMissingPersonAmbulance ===
+                            true
+                    )
+                ) {
+                    debugLog(
+                        'HIGH-RISK MISSING PERSON AMBULANCE',
+                        'Settings rule added Ambulance x1 to the fresh Unit Finder requirement set.'
+                    );
+                }
+
+                if (
+                    requirementRows.some(
+                        row =>
+                            row?.configuredAmbulanceOfficerThreshold ===
+                            true
+                    )
+                ) {
+                    debugLog(
+                        'AMBULANCE OFFICER THRESHOLD',
+                        `Settings rule added Ambulance Officer x1 because ordinary Ambulance demand exceeded ${normaliseConfiguredAmbulanceOfficerThreshold(mfAmbulanceOfficerThreshold)}.`
+                    );
+                }
             }
         }
 
@@ -35518,7 +35777,9 @@ let sessionRuntimeTicker = null;
                     'MISSION HELP ATTACHMENT',
                     {
                         includeConfiguredHighRiskMissingPersonAmbulance:
-                            true
+                            true,
+                        ambulanceOfficerThresholdAdditionalRows:
+                            patientRequirementResult.rows
                     }
                 );
 
@@ -35545,7 +35806,9 @@ let sessionRuntimeTicker = null;
                     'VISIBLE FALLBACK',
                     {
                         includeConfiguredHighRiskMissingPersonAmbulance:
-                            true
+                            true,
+                        ambulanceOfficerThresholdAdditionalRows:
+                            patientRequirementResult.rows
                     }
                 );
 
@@ -35564,7 +35827,9 @@ let sessionRuntimeTicker = null;
                     vehicleList,
                     {
                         includeConfiguredHighRiskMissingPersonAmbulance:
-                            true
+                            true,
+                        ambulanceOfficerThresholdAdditionalRows:
+                            patientRequirementResult.rows
                     }
                 );
 
