@@ -45,6 +45,26 @@ jobs:
 
           git fetch origin main --force
           test "$(git show origin/main:src/missionchief-command-nexus.user.js | sed -n 's#^//[[:space:]]*@version[[:space:]]*##p' | head -n1 | xargs)" = "1.0.100"
+
+          python3 - <<'PY'
+          from pathlib import Path
+          source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8')
+          needle = 'addConfiguredHighRiskMissingPersonAmbulanceRequirement'
+          print(f'{needle} occurrences: {source.count(needle)}')
+          start = 0
+          occurrence = 0
+          while True:
+              index = source.find(needle, start)
+              if index < 0:
+                  break
+              occurrence += 1
+              left = max(0, index - 500)
+              right = min(len(source), index + len(needle) + 500)
+              print(f'--- occurrence {occurrence} at {index} ---')
+              print(source[left:right])
+              start = index + len(needle)
+          PY
+
           git show origin/main:scripts/build-v10101-ambulance-officer-threshold.py > scripts/build-v10101-ambulance-officer-threshold.py
           python3 scripts/build-v10101-ambulance-officer-threshold.py
           rm -f scripts/build-v10101-ambulance-officer-threshold.py
