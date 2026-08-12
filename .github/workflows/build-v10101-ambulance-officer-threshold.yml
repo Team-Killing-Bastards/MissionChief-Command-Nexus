@@ -225,6 +225,27 @@ jobs:
               + threshold[block_end:]
           )
           threshold_path.write_text(threshold, encoding='utf-8')
+
+          count_contract = (
+              "(combined.match(/includeConfiguredHighRiskMissingPersonAmbulance:/g) || []).length === 3"
+          )
+          current_contract = (
+              "(combined.match(/includeConfiguredHighRiskMissingPersonAmbulance:/g) || []).length === 2"
+          )
+          for path in (high_risk_path, threshold_path):
+              text = path.read_text(encoding='utf-8')
+              if text.count(count_contract) != 1:
+                  raise SystemExit(
+                      f'{path}: expected one stale three-route assertion, got '
+                      f'{text.count(count_contract)}'
+                  )
+              text = text.replace(count_contract, current_contract, 1)
+              text = text.replace(
+                  'Fresh attachment, visible fallback and legacy fallback routes',
+                  'Fresh attachment and visible fallback routes',
+                  1
+              )
+              path.write_text(text, encoding='utf-8')
           PY
 
           node --check src/missionchief-command-nexus.user.js
