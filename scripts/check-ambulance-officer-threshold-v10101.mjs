@@ -91,8 +91,8 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-expect(source.includes('// @version      1.0.101'), 'Expected Command Nexus 1.0.101');
-expect(source.includes(' * MODULE 2: MISSION FINDER V10.6.150'), 'Expected Mission Finder V10.6.150');
+expect(source.includes('// @version      1.0.102'), 'Expected Command Nexus 1.0.102');
+expect(source.includes(' * MODULE 2: MISSION FINDER V10.6.151'), 'Expected Mission Finder V10.6.151');
 
 for (const token of [
   "'mf_high_risk_missing_person_ambulance_v1'",
@@ -146,13 +146,14 @@ expect(officerContext.result.yes.every(Boolean), `Officer alias rejected: ${JSON
 expect(officerContext.result.no.every(value => value === false), `Non-officer alias captured: ${JSON.stringify(officerContext.result.no)}`);
 
 const thresholdHelper = extractFunction('addConfiguredAmbulanceOfficerThresholdRequirement');
-function buildThresholdHelper({ enabled, threshold }) {
+function buildThresholdHelper({ enabled, threshold, alreadySatisfied = false }) {
   return new Function(
     'mfAmbulanceOfficerThresholdEnabled',
     'mfAmbulanceOfficerThreshold',
     'normaliseConfiguredAmbulanceOfficerThreshold',
     'isAmbulanceTransportRequest',
     'isAmbulanceOfficerRequirement',
+    'hasAmbulanceOfficerThresholdAlreadySatisfied',
     'resolveUnitName',
     `${thresholdHelper}; return addConfiguredAmbulanceOfficerThresholdRequirement;`
   )(
@@ -164,6 +165,7 @@ function buildThresholdHelper({ enabled, threshold }) {
       return values.some(value => value === 'ambulance' || value === 'ambulances' || value === 'ambulance x 01');
     },
     (originalName, mappedName) => [originalName, mappedName].some(value => /^(?:required\s+)?(?:\d+\s+)?ambulance officers?$/i.test(String(value || '').trim())),
+    () => alreadySatisfied,
     value => value
   );
 }
@@ -215,6 +217,18 @@ const patientOfficer = buildThresholdHelper({ enabled: true, threshold: 5 })(
 );
 expect(!patientOfficer.some(row => row.configuredAmbulanceOfficerThreshold === true), 'A patient Ambulance Officer requirement must prevent a duplicate configured Officer');
 
+const alreadySatisfiedOfficer = buildThresholdHelper({
+  enabled: true,
+  threshold: 5,
+  alreadySatisfied: true
+})([
+  { unitName: 'Ambulance', stillNeeded: 8 }
+]);
+expect(
+  !alreadySatisfiedOfficer.some(row => row.configuredAmbulanceOfficerThreshold === true),
+  'An Officer already selected or satisfying the live mission must prevent a duplicate configured Officer'
+);
+
 const zeroOfficer = buildThresholdHelper({ enabled: true, threshold: 0 })([
   { unitName: 'Ambulance', stillNeeded: 1 }
 ]);
@@ -226,6 +240,55 @@ expect(wrapper.includes('addConfiguredAmbulanceOfficerThresholdRequirement('), '
 expect(wrapper.includes('additionalRows = []'), 'Fresh-rule wrapper must accept current patient demand');
 expect(wrapper.includes('additionalRows\n        );'), 'Fresh-rule wrapper must forward patient rows to the threshold helper');
 expect(wrapper.indexOf('addConfiguredAmbulanceOfficerThresholdRequirement(') < wrapper.indexOf('addConfiguredHighRiskMissingPersonAmbulanceRequirement('), 'Ambulance Officer must evaluate the final rows after the high-risk Ambulance rule');
+
+const officerVehicleMatcher = extractFunction('isAmbulanceOfficerVehicleCheckbox');
+for (const token of [
+  "typeIds.includes('34')",
+  'if (typeIds.length > 0)',
+  "normalised === 'ambulance officer'"
+]) expect(officerVehicleMatcher.includes(token), `Exact type-34 Ambulance Officer matcher missing ${token}`);
+
+const buildOfficerVehicleMatcher = ({ typeIds = [], values = [] }) => new Function(
+  'getVehicleTypeIdentifiers',
+  'getExtendedVehicleValues',
+  'normaliseVehicleText',
+  `${officerVehicleMatcher}; return isAmbulanceOfficerVehicleCheckbox;`
+)(
+  () => typeIds,
+  () => values,
+  value => String(value || '').toLowerCase().replace(/\s+/g, ' ').trim()
+);
+
+expect(buildOfficerVehicleMatcher({ typeIds: ['34'] })({}) === true, 'Exact MissionChief type 34 must match Ambulance Officer');
+expect(buildOfficerVehicleMatcher({ typeIds: ['5'], values: ['Ambulance Officer'] })({}) === false, 'A known non-34 vehicle type must not match by label');
+expect(buildOfficerVehicleMatcher({ values: ['Ambulance Officer'] })({}) === true, 'Exact-name fallback must work only when no type ID is exposed');
+expect(buildOfficerVehicleMatcher({ values: ['Ambulance'] })({}) === false, 'Ordinary Ambulance must not satisfy the Officer matcher');
+
+const satisfiedHelper = extractFunction('hasAmbulanceOfficerThresholdAlreadySatisfied');
+function evaluateSatisfied({ selected = 0, live = false, tracked = false }) {
+  return new Function(
+    'getLocalMissionInstanceKey',
+    'mfMissionUpdateRowsCache',
+    'countSelectedMatchingVehicles',
+    'vehicleLoadState',
+    `${satisfiedHelper}; return hasAmbulanceOfficerThresholdAlreadySatisfied();`
+  )(
+    () => 'mission:299',
+    { missionKey: 'mission:299', ambulanceOfficerSatisfied: live },
+    () => selected,
+    { ambulanceOfficer: tracked }
+  );
+}
+expect(evaluateSatisfied({ selected: 1 }) === true, 'An already-selected Officer must satisfy the threshold');
+expect(evaluateSatisfied({ live: true }) === true, 'A confirmed satisfied live Officer requirement must satisfy the threshold');
+expect(evaluateSatisfied({ tracked: true }) === true, 'An Officer selected by an earlier mission pass must satisfy the threshold');
+expect(evaluateSatisfied({}) === false, 'No selected, live or tracked Officer must leave the threshold actionable');
+
+const allMatchingVehicles = extractFunction('getAllMatchingVehicleCheckboxes');
+expect(allMatchingVehicles.includes('isAmbulanceOfficerVehicleCheckbox('), 'Unit Finder must use the exact type-34 Ambulance Officer matcher');
+
+const selectedMatchingVehicles = extractFunction('countSelectedMatchingVehicles');
+expect(selectedMatchingVehicles.includes('isAmbulanceOfficerVehicleCheckbox('), 'Selected-unit duplicate detection must use the exact type-34 matcher');
 
 const preloaded = extractFunction('getPreloadedMissionVehicleRequirementsForDisplay');
 expect(preloaded.includes('applyConfiguredFreshMissionVehicleRequirements('), 'Preloaded Vehicle Load must show the configured Officer row');
@@ -255,16 +318,33 @@ expect(
 expect(source.includes("'HIGH-RISK MISSING PERSON AMBULANCE'"), 'High-risk debug contract missing');
 expect(source.includes("'AMBULANCE OFFICER THRESHOLD'"), 'Ambulance Officer debug contract missing');
 
-
 const combined = extractFunction('handleCombinedLogic');
 expect((combined.match(/includeConfiguredHighRiskMissingPersonAmbulance:/g) || []).length === 3, 'Fresh attachment, visible fallback and legacy fallback routes must keep the configured-rule opt-in');
 expect((combined.match(/ambulanceOfficerThresholdAdditionalRows:/g) || []).length === 3, 'All fresh Unit Finder routes must pass patient demand to the threshold');
 expect((combined.match(/patientRequirementResult\.rows/g) || []).length >= 3, 'Current patient rows must feed all fresh threshold routes');
 const currentMissingIndex = combined.indexOf("'CURRENT MISSING REQUIREMENTS'");
 expect(currentMissingIndex >= 0, 'Current Missing Requirements route missing');
-const currentMissingWindow = combined.slice(currentMissingIndex - 250, currentMissingIndex + 300);
-expect(!currentMissingWindow.includes('includeConfiguredHighRiskMissingPersonAmbulance'), 'Current live shortages must not re-add a configured Ambulance Officer');
-expect(!currentMissingWindow.includes('ambulanceOfficerThresholdAdditionalRows'), 'Current live shortages must not feed the fresh Ambulance Officer threshold');
+const currentMissingWindow = combined.slice(currentMissingIndex - 350, currentMissingIndex + 450);
+expect(currentMissingWindow.includes('includeConfiguredAmbulanceOfficerThreshold:'), 'Unit Finder live-authority route must enable the Ambulance Officer threshold');
+expect(!currentMissingWindow.includes('includeConfiguredHighRiskMissingPersonAmbulance'), 'Unit Finder live-authority route must not re-enable unrelated fresh-mission rules');
+expect(!currentMissingWindow.includes('ambulanceOfficerThresholdAdditionalRows'), 'Unit Finder live-authority route must use only its authoritative live Ambulance rows');
+
+const missionUpdate = extractFunction('handleMissionUpdateUnits');
+expect(missionUpdate.includes('normaliseOperationalRequirementRows('), 'Mission Update must normalise its authoritative rows');
+expect(missionUpdate.includes('addConfiguredAmbulanceOfficerThresholdRequirement('), 'Mission Update must apply the Ambulance Officer threshold');
+expect(missionUpdate.indexOf('normaliseOperationalRequirementRows(') < missionUpdate.indexOf('addConfiguredAmbulanceOfficerThresholdRequirement('), 'Mission Update must apply the threshold after normalisation');
+expect(missionUpdate.includes('vehicleLoadState.ambulanceOfficer =\n                    true;'), 'Mission Update must remember a selected Officer for later passes');
+
+const processRows = extractFunction('processRequirementRows');
+expect(processRows.includes('includeConfiguredAmbulanceOfficerThreshold === true'), 'Shared Unit Finder processing must support the live threshold option');
+expect(processRows.includes('addConfiguredAmbulanceOfficerThresholdRequirement('), 'Shared Unit Finder processing must apply the threshold-only helper');
+expect(processRows.includes('vehicleLoadState.ambulanceOfficer =\n                    true;'), 'Unit Finder must remember a selected Officer for later passes');
+
+const autoModeStart = source.indexOf('async function runAutoModeLoop()');
+const autoModeEnd = source.indexOf('function suspendMissionFinderRuntimeForPageHide(', autoModeStart);
+const autoMode = source.slice(autoModeStart, autoModeEnd);
+expect(autoMode.includes('handleCombinedLogic({'), 'Auto Mode must continue through the shared Unit Finder route');
+expect(autoMode.includes('handleMissionUpdateUnits('), 'Auto Mode post-selection updates must continue through the fixed Mission Update route');
 
 for (const token of [
   'ambulanceOfficerThresholdEnabled:',
@@ -273,4 +353,4 @@ for (const token of [
   'highRiskMissingPersonMission:'
 ]) expect(source.includes(token), `Diagnostic contract missing ${token}`);
 
-console.log('PASS: user-set more-than-X mission plus patient Ambulance demand adds exactly one Ambulance Officer on fresh Unit Finder paths while preserving the existing high-risk rule and live-shortage authority.');
+console.log('PASS: issue #299 Ambulance Officer threshold works through Unit Finder, Auto Mode and Mission Update, selects exact type 34 and prevents duplicate Officers.');
