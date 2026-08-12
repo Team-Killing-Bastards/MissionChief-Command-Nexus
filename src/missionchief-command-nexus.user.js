@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.104
+// @version      1.0.105
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -64,7 +64,7 @@
     // excluded from the naming/personnel runtime.
     if (!TOOL_IS_TOP_WINDOW && !TOOL_IS_STATION_OVERVIEW_FRAME) return;
 
-    const UNIT_VERSION = '3.3.20';
+    const UNIT_VERSION = '3.3.21';
     const STATION_VERSION = '1.3.14';
     const PERSONNEL_VERSION = '1.3.9';
     const PERSONNEL_TRAINING_CODE = 'critical_care';
@@ -731,10 +731,13 @@
         "10": "RRV",
         "11": "Police Helicopter",
         "12": "DSU",
+        "13": "Armed Response Vehicle",
         "15": "Incident Command and Control Unit",
         "16": "Rescue Pump",
         "17": "Combined Aerial Rescue Pump",
+        "19": "Joint Response Unit",
         "20": "OTL",
+        "24": "Traffic Car",
         "25": "Armed Traffic Car",
         "26": "Heavy 4x4 Tanker",
         "27": "PRV",
@@ -749,6 +752,7 @@
         "38": "RPF",
         "39": "Operational Support Unit",
         "51": "PSU Carrier",
+        "52": "Firearms Personnel Carrier",
         "54": "Detention Van",
         "55": "Mounted Unit",
         "56": "MRAV",
@@ -810,7 +814,11 @@
         "Combined Aerial Rescue Pump": { code: "CARP", icon: "🚒🪜" },
         "Fire Officer": { code: "FO", icon: "🧑‍🚒" },
         "Police Car": { code: "PC", icon: "🚔" },
+        "Armed Response Vehicle": { code: "ARV", icon: "🚔🎯" },
+        "Joint Response Unit": { code: "JRU", icon: "🚔🚑" },
+        "Traffic Car": { code: "TC", icon: "🚔🚗" },
         "Armed Traffic Car": { code: "ATC", icon: "🚔🔫" },
+        "Firearms Personnel Carrier": { code: "FPC", icon: "🚔🛡️" },
         "Operational Support Unit": { code: "OSU", icon: "☢️🤿🦺" },
         "Mass Casualty Equipment": { code: "MCE", icon: "🏥" },
         "Welfare Vehicle": { code: "WV", icon: "🚌" },
@@ -890,7 +898,7 @@
             '3', '4', '6', '7', '15', '16', '17', '26', '29', '35', '36', '38', '39'
         ]),
         POLICE: Object.freeze([
-            '8', '11', '12', '20', '25', '51', '54', '55', '56', '91', '108', '115', '116'
+            '8', '11', '12', '13', '19', '20', '24', '25', '51', '52', '54', '55', '56', '91', '108', '115', '116'
         ]),
         AIR: Object.freeze([
             '9', '11', '65'
@@ -10698,7 +10706,7 @@
 
     function cleanText(text) {
         return String(text || '')
-            .replace(/🚑|🚒|🚓|🚁|🚤|🏥|🔥|🚨|☢️|🤿|🦺|🎖️|🚔|🚛|🧯|🚐|🚚|🚙|🚗|🚜|🚢|🛟|🎯|🏣|🧑‍🚒|🚌|🚒🪜|🚔🔫|🚔🥅|🚔🐎|⚠️|🛻|🟤|🛥️|✈️|🪜|📡|🛠️|🌊|🟡|🏔️|🐕|💣|❤️|💧|👷|🫧|1️⃣|2️⃣/g, '')
+            .replace(/🚑|🚒|🚓|🚁|🚤|🏥|🔥|🚨|☢️|🤿|🦺|🎖️|🚔|🚛|🧯|🚐|🚚|🚙|🚗|🚜|🚢|🛟|🎯|🛡️|🏣|🧑‍🚒|🚌|🚒🪜|🚔🔫|🚔🥅|🚔🐎|⚠️|🛻|🟤|🛥️|✈️|🪜|📡|🛠️|🌊|🟡|🏔️|🐕|💣|❤️|💧|👷|🫧|1️⃣|2️⃣/g, '')
             .replace(/\s+/g, ' ')
             .trim();
     }

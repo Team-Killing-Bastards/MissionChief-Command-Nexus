@@ -88,15 +88,15 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-expect(source.includes('// @version      1.0.96'), 'Expected Command Nexus 1.0.79');
-expect(source.includes('MISSION FINDER V10.6.145'), 'Expected Mission Finder V10.6.139');
+expect(source.includes('// @version      1.0.105'), 'Expected Command Nexus 1.0.79');
+expect(source.includes('MISSION FINDER V10.6.153'), 'Expected Mission Finder V10.6.139');
 expect(source.includes('480 * 1024 * 1024'), 'Soft cache flush threshold must be 480 MiB');
 expect(source.includes('640 * 1024 * 1024'), 'Guarded frame recycle threshold must remain 640 MiB');
 expect(source.includes("'missionchief-nexus-frame-runtime-reconcile-v1074'"), 'Missing frame-runtime reconciliation event');
 
 const namingModuleStart = source.slice(
   source.indexOf("if (window.__MC_NAMING_TOOLS_V428__) return;"),
-  source.indexOf("const UNIT_VERSION = '3.3.10';")
+  source.indexOf("const UNIT_VERSION = '3.3.21';")
 );
 expect(namingModuleStart.includes('window.top === window.self'), 'Naming/personnel runtime must identify its top-window owner');
 expect(namingModuleStart.includes('TOOL_IS_STATION_OVERVIEW_FRAME'), 'Naming/personnel runtime must recognise the exact Stations overview lightbox');

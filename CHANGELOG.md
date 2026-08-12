@@ -4,6 +4,29 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.105] - 2026-08-13
+
+### Added
+
+- Completed issue #295 using a sanitized live MissionChief UK Police purchase-page capture: type `13` Armed Response Vehicle (`ARV`), type `19` Joint Response Unit (`JRU`), type `24` Traffic Car (`TC`) and type `52` Firearms Personnel Carrier (`FPC`).
+- Added the four exact native mappings and naming rules to Unit Naming. Each class now appears under both Police and All classes and produces its approved callsign code with a distinct service-matched icon.
+- Recorded the verified IDs, canonical labels, approved codes and sanitized capture method in the permanent architecture contract and evidence record.
+- Mission Finder vehicle selection, Police requirement aliases and existing type-25 Armed Traffic Car behaviour remain unchanged.
+
+### Regression coverage
+
+- Added `scripts/check-police-unit-naming-classes-v10105.mjs` to execute the real Unit Naming class-option builder for Police and All classes and verify generated callsigns for all four mappings.
+- Refreshed obsolete release-baseline tokens across the retained regression scripts and repaired stale dashboard/preload harness assumptions, allowing all 69 permanent regressions to run successfully against the current source again.
+- Preserved the canonical userscript validator, repository integrity checks and the current Mission Finder regression baseline.
+
+### Changed engine baseline
+
+- Command Nexus increased from `1.0.104` to `1.0.105`.
+- Unit Naming increased from `3.3.20` to `3.3.21`.
+- Mission Finder remains `V10.6.153`.
+- Station Naming remains `1.3.14`.
+- Personnel Assignment remains `1.3.9`.
+
 ## [1.0.104] - 2026-08-12
 
 ### Added

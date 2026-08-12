@@ -17,7 +17,7 @@
 </tr>
 </table>
 
-**Current version:** `1.0.104` · **Mission Finder engine:** `V10.6.153` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
+**Current version:** `1.0.105` · **Mission Finder engine:** `V10.6.153` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)
@@ -255,6 +255,7 @@ High Volume Pump, Drone Operator, Co-Responder, and Lifeguard remain disabled pe
 - Police Inspector and Railway Police remain exact type-8 trained-personnel profiles.
 - Armed Personnel and Armed Response Personnel route to exact type-25 Armed Traffic Cars.
 - Armed Traffic Car selection verifies Roads Policing plus Firearms capability.
+- Unit Naming recognises the live UK Police purchase classes type `13` Armed Response Vehicle (`ARV`), type `19` Joint Response Unit (`JRU`), type `24` Traffic Car (`TC`) and type `52` Firearms Personnel Carrier (`FPC`).
 - Generic type-66 `4x4 Vehicle` matching is restored.
 - Search Advisor demand selects any exact registered vehicle carrying assigned `search_and_rescue`-trained staff; Police station personnel rows also preserve the persistent **Assigned To** binding when MissionChief marks the officer Available, while ambiguous vehicle names fail closed.
 - Trained-personnel selection now exhausts every ready compatible unit that can reduce a real course deficit before reporting a shortfall. Nominal seats and qualifications are tracked separately, so partly trained PSUs/IRVs cannot hide later trained coverage.

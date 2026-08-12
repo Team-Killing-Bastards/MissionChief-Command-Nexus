@@ -20,11 +20,17 @@ This checks required repository files, attribution, local documentation links, R
 node --check src/missionchief-command-nexus.user.js
 node scripts/validate-userscript.mjs
 node scripts/check-auto-stop-reason.mjs
+node scripts/check-police-unit-naming-classes-v10105.mjs
 ```
 
 The userscript validator checks the canonical metadata contract, version format, Greasy Fork size limits and prohibited update/download metadata. Pull requests that change the userscript must increase `@version` above the base branch.
 
 The Auto Mode stop-reason regression executes the persistent storage and status-display functions against a recreated Mission Control panel. It verifies exact-reason retention, timestamp rendering, isolation from temporary status updates, restart clearing and safe recovery from corrupt saved data.
+
+The Police Unit Naming regression executes the real station-type class-option
+builder and callsign generator. It protects the verified type `13`, `19`, `24`
+and `52` mappings, their approved codes, and their availability in both Police
+and All classes.
 
 Automated checks are necessary but cannot prove live MissionChief behaviour.
 

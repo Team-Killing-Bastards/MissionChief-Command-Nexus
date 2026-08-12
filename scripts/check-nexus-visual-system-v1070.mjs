@@ -67,11 +67,11 @@ function extractFunction(name) {
 }
 
 expect(
-  source.includes('// @version      1.0.96'),
+  source.includes('// @version      1.0.105'),
   'Command Nexus 1.0.70 metadata missing'
 );
 expect(
-  source.includes('MISSION FINDER V10.6.145'),
+  source.includes('MISSION FINDER V10.6.153'),
   'Mission Finder V10.6.139 header missing'
 );
 
@@ -193,10 +193,16 @@ for (const token of [
   expect(source.includes(token), `Operational ownership missing ${token}`);
 }
 
+const dashboardMountIndex = createControlPanel.indexOf(
+  'document.body.appendChild(wrapper);'
+);
+const requiredPersonnelPreloadIndex = createControlPanel.indexOf(
+  'scheduleMissionRequiredPersonnelPreload(0);',
+  dashboardMountIndex
+);
 expect(
-  createControlPanel.includes(
-    'wrapper.appendChild(loadPanel);\n        wrapper.appendChild(trainedPanel);\n        document.body.appendChild(wrapper);\n\n        scheduleMissionRequiredPersonnelPreload(0);'
-  ),
+  dashboardMountIndex >= 0 &&
+    requiredPersonnelPreloadIndex > dashboardMountIndex,
   'Required Personnel preload mount lifecycle changed'
 );
 

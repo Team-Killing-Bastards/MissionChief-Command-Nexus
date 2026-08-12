@@ -127,6 +127,24 @@ Bulk station naming, unit naming and personnel assignment must retain:
 - Verification after submitted changes.
 - Separation of genuine training shortages from technical failures.
 
+### Police Unit Naming identity contract
+
+Unit Naming uses MissionChief's native `vehicle_type_id` as the authority for
+vehicle identity. The following UK Police purchase-page mappings were captured
+from the live DOM on 13 August 2026 and are permanent unless new live evidence
+shows that MissionChief has changed them:
+
+| `vehicle_type_id` | Canonical MissionChief label | Naming code | Icon | Station class |
+|---:|---|---|---|---|
+| `13` | Armed Response Vehicle | `ARV` | 🚔🎯 | Police |
+| `19` | Joint Response Unit | `JRU` | 🚔🚑 | Police |
+| `24` | Traffic Car | `TC` | 🚔🚗 | Police |
+| `52` | Firearms Personnel Carrier | `FPC` | 🚔🛡️ | Police |
+
+Each mapping must remain available from both the Police selector and the
+unfiltered All classes selector. The sanitized capture record is retained in
+[issue #295 evidence](evidence/issue-295-police-unit-naming-ids.md).
+
 ## Target architecture
 
 The long-term target is logical modularity without sacrificing a single-file userscript distribution:

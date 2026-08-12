@@ -84,8 +84,8 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-expect(source.includes('// @version      1.0.101'), 'Expected Command Nexus 1.0.101');
-expect(source.includes('MISSION FINDER V10.6.150'), 'Expected Mission Finder V10.6.150');
+expect(source.includes('// @version      1.0.105'), 'Expected Command Nexus 1.0.101');
+expect(source.includes('MISSION FINDER V10.6.153'), 'Expected Mission Finder V10.6.150');
 
 const authority = extractFunction('hasCurrentMissionVehicleRequirementAuthorityForDisplay');
 for (const token of [
@@ -102,6 +102,8 @@ for (const token of [
   'getMissionRequirementPreloadState()',
   "cache.status !== 'loaded'",
   'hasCurrentMissionVehicleRequirementAuthorityForDisplay()',
+  'buildFreshAmbulanceOfficerThresholdAdditionalRows(',
+  'findPatientCount()',
   'applyConfiguredFreshMissionVehicleRequirements(',
   'readUnitFinderPatientRequirementRows()',
   'row.isTrainedPersonnelRequirement !== true',
@@ -143,9 +145,12 @@ expect(preload.includes('renderSelectedTrainedPersonnelPanel();'), 'Trained Pers
 expect(preload.includes('renderVehicleLoadList();'), 'Vehicle Load refresh missing after preload');
 
 let capturedPatientRows = null;
+let capturedPatientCount = null;
 const buildModel = new Function(
   'getMissionRequirementPreloadState',
   'hasCurrentMissionVehicleRequirementAuthorityForDisplay',
+  'buildFreshAmbulanceOfficerThresholdAdditionalRows',
+  'findPatientCount',
   'applyConfiguredFreshMissionVehicleRequirements',
   'readUnitFinderPatientRequirementRows',
   'shouldIgnoreRequiredMinimumRequirement',
@@ -170,8 +175,14 @@ const buildModel = new Function(
     ]
   }),
   () => false,
-  (rows, patientRows) => {
+  (patientRows, patientCount) => {
     capturedPatientRows = patientRows;
+    capturedPatientCount = patientCount;
+    return patientRows;
+  },
+  () => 2,
+  (rows, additionalRows) => {
+    capturedPatientRows = additionalRows;
     return rows;
   },
   () => [
@@ -190,7 +201,8 @@ const freshRows = buildModel();
 expect(
   Array.isArray(capturedPatientRows) &&
     capturedPatientRows.length === 1 &&
-    capturedPatientRows[0].stillNeeded === 2,
+    capturedPatientRows[0].stillNeeded === 2 &&
+    capturedPatientCount === 2,
   'Preloaded Vehicle Load must pass current patient-derived Ambulance demand into the configured fresh-mission rules'
 );
 expect(freshRows.length === 1, 'Fresh mission model must keep ordinary vehicles and exclude trained/patient rows');
@@ -202,6 +214,8 @@ expect(freshRows[0].status === 'retrying', 'Partial preloaded coverage must rema
 const blockedModel = new Function(
   'getMissionRequirementPreloadState',
   'hasCurrentMissionVehicleRequirementAuthorityForDisplay',
+  'buildFreshAmbulanceOfficerThresholdAdditionalRows',
+  'findPatientCount',
   'applyConfiguredFreshMissionVehicleRequirements',
   'readUnitFinderPatientRequirementRows',
   'shouldIgnoreRequiredMinimumRequirement',
@@ -211,6 +225,8 @@ const blockedModel = new Function(
 )(
   () => ({ status: 'loaded', rows: [{ unitName: 'Fire Engine', stillNeeded: 3 }] }),
   () => true,
+  () => [],
+  () => 0,
   rows => rows,
   () => [],
   () => false,
