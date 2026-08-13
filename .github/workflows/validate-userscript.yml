@@ -33,6 +33,7 @@ on:
       - 'scripts/check-officer-station-naming-v10108.mjs'
       - 'scripts/check-station-unit-naming-chain-v10109.mjs'
       - 'scripts/check-station-move-address-v10110.mjs'
+      - 'scripts/check-type22-town-only-naming-v10111.mjs'
       - 'scripts/check-naming-dispatch-centre-first-v1086.mjs'
       - 'scripts/check-naming-dispatch-centre-refresh-v1087.mjs'
       - 'scripts/check-naming-dispatch-centre-assignment-source-v1088.mjs'
@@ -96,6 +97,7 @@ on:
       - 'scripts/check-officer-station-naming-v10108.mjs'
       - 'scripts/check-station-unit-naming-chain-v10109.mjs'
       - 'scripts/check-station-move-address-v10110.mjs'
+      - 'scripts/check-type22-town-only-naming-v10111.mjs'
       - 'scripts/check-naming-dispatch-centre-first-v1086.mjs'
       - 'scripts/check-naming-dispatch-centre-refresh-v1087.mjs'
       - 'scripts/check-naming-dispatch-centre-assignment-source-v1088.mjs'
@@ -244,6 +246,9 @@ jobs:
 
       - name: Validate Station Naming Move Building address fallback
         run: node scripts/check-station-move-address-v10110.mjs
+
+      - name: Validate type-22 town-only Station and role-owned Unit Naming
+        run: node scripts/check-type22-town-only-naming-v10111.mjs
 
       - name: Validate Dispatch Centre-first naming flow
         run: node scripts/check-naming-dispatch-centre-first-v1086.mjs
