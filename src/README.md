@@ -10,7 +10,7 @@ src/missionchief-command-nexus.user.js
 
 | Item | Value |
 |---|---|
-| Command Nexus version | `1.0.105` |
+| Command Nexus version | `1.0.106` |
 | Mission Finder baseline | `V10.6.153` |
 | Unit, Station & Personnel baseline | `V4.2.8` |
 | Licence | MIT |
@@ -52,6 +52,7 @@ Before publishing a source change:
 - Run `node scripts/validate-userscript.mjs`.
 - Run `node scripts/check-auto-stop-reason.mjs`.
 - Run `node scripts/check-police-unit-naming-classes-v10105.mjs`.
+- Run `node scripts/check-recovery-unit-naming-classes-v10106.mjs`.
 - Run `node scripts/check-ios-compatibility.mjs`.
 - Run `node scripts/check-runtime-hardening.mjs`.
 - Run `node scripts/check-police-irv-fallback.mjs`.

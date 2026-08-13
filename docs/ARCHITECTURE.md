@@ -145,6 +145,22 @@ Each mapping must remain available from both the Police selector and the
 unfiltered All classes selector. The sanitized capture record is retained in
 [issue #295 evidence](evidence/issue-295-police-unit-naming-ids.md).
 
+### Recovery Unit Naming identity contract
+
+Recovery Unit Naming uses the same native `vehicle_type_id` authority. Type
+`105` is shown by the current MissionChief vehicle table as `Recovery Vehicle`,
+but it preserves the established `FRV` callsign for compatibility. Type `106`
+is the separate HGV class:
+
+| `vehicle_type_id` | Live MissionChief label | Naming code | Icon | Station class |
+|---:|---|---|---|---|
+| `105` | Recovery Vehicle | `FRV` | 🛻 | Recovery |
+| `106` | HGV Recovery Vehicle | `HGV` | 🚛 | Recovery |
+
+Both mappings must remain available from the Recovery selector and the
+unfiltered All classes selector. The legacy `Flatbed Recovery Vehicle` naming
+alias remains valid so existing `FRV` callsign generation is not broken.
+
 ## Target architecture
 
 The long-term target is logical modularity without sacrificing a single-file userscript distribution:

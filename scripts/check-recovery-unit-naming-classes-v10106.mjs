@@ -82,60 +82,48 @@ const makeVehicleName = makeVehicleNameFactory(vehicleInfo);
 
 const expectedClasses = [
   {
-    vehicleTypeId: '13',
-    vehicleType: 'Armed Response Vehicle',
-    code: 'ARV',
-    icon: '🚔🎯'
+    vehicleTypeId: '105',
+    vehicleType: 'Recovery Vehicle',
+    code: 'FRV',
+    icon: '🛻'
   },
   {
-    vehicleTypeId: '19',
-    vehicleType: 'Joint Response Unit',
-    code: 'JRU',
-    icon: '🚔🚑'
-  },
-  {
-    vehicleTypeId: '24',
-    vehicleType: 'Traffic Car',
-    code: 'TC',
-    icon: '🚔🚗'
-  },
-  {
-    vehicleTypeId: '52',
-    vehicleType: 'Firearms Personnel Carrier',
-    code: 'FPC',
-    icon: '🚔🛡️'
+    vehicleTypeId: '106',
+    vehicleType: 'HGV Recovery Vehicle',
+    code: 'HGV',
+    icon: '🚛'
   }
 ];
 
-const policeOptions = getOptions('POLICE');
+const recoveryOptions = getOptions('RECOVERY');
 const allOptions = getOptions('ALL');
 
 for (const expected of expectedClasses) {
   assert.equal(
     typeIdToVehicleType[expected.vehicleTypeId],
     expected.vehicleType,
-    `Type ${expected.vehicleTypeId} must retain its verified MissionChief label`
+    `Type ${expected.vehicleTypeId} must use its live MissionChief label`
   );
   assert.equal(
     vehicleInfo[expected.vehicleType]?.code,
     expected.code,
-    `${expected.vehicleType} must retain the approved ${expected.code} code`
+    `${expected.vehicleType} must use ${expected.code}`
   );
   assert.equal(
     vehicleInfo[expected.vehicleType]?.icon,
     expected.icon,
-    `${expected.vehicleType} must retain its distinct ${expected.icon} icon`
+    `${expected.vehicleType} must use ${expected.icon}`
   );
 
-  const policeOption = policeOptions.find(
+  const recoveryOption = recoveryOptions.find(
     option => option.vehicleTypeId === expected.vehicleTypeId
   );
   assert.ok(
-    policeOption,
-    `${expected.vehicleType} must appear in the Police class selector`
+    recoveryOption,
+    `${expected.vehicleType} must appear in the Recovery class selector`
   );
-  assert.equal(policeOption.vehicleType, expected.vehicleType);
-  assert.match(policeOption.label, new RegExp(`\\(${expected.code}\\)$`));
+  assert.equal(recoveryOption.vehicleType, expected.vehicleType);
+  assert.match(recoveryOption.label, new RegExp(`\\(${expected.code}\\)$`));
 
   const allOption = allOptions.find(
     option => option.vehicleTypeId === expected.vehicleTypeId
@@ -146,25 +134,33 @@ for (const expected of expectedClasses) {
   );
 
   const generatedName = makeVehicleName(
-    { callsignBase: 'Fife-PS' },
+    { callsignBase: 'GLEN-RECOVERY' },
     expected.vehicleType,
     1
   );
-  assert.ok(generatedName, `${expected.vehicleType} must have a naming rule`);
-  assert.ok(
-    generatedName.startsWith(`${expected.icon} `),
-    `${expected.vehicleType} generated an unexpected icon: ${generatedName}`
-  );
-  assert.ok(
-    generatedName.endsWith(`Fife-PS-${expected.code}-1`),
-    `${expected.vehicleType} generated an unexpected callsign: ${generatedName}`
+  assert.equal(
+    generatedName,
+    `${expected.icon} GLEN-RECOVERY-${expected.code}-1`,
+    `${expected.vehicleType} generated an unexpected callsign`
   );
 }
 
-assert.match(source, /^\/\/ @version\s+1\.0\.106$/m);
-assert.match(source, /const UNIT_VERSION = '3\.3\.22';/);
-assert.match(source, /MODULE 2: MISSION FINDER V10\.6\.153/);
+assert.notEqual(
+  expectedClasses[0].icon,
+  expectedClasses[1].icon,
+  'Recovery and HGV Recovery must remain visually distinct'
+);
+
+assert.equal(
+  makeVehicleName(
+    { callsignBase: 'GLEN-RECOVERY' },
+    'Flatbed Recovery Vehicle',
+    6
+  ),
+  '🛻 GLEN-RECOVERY-FRV-6',
+  'The existing Flatbed Recovery naming alias must remain compatible'
+);
 
 console.log(
-  'Issue #295 Police Unit Naming identity, classification and callsign contracts passed.'
+  'Recovery Unit Naming identity, class selector and callsign contracts passed.'
 );
