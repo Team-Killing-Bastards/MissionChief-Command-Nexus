@@ -4,6 +4,27 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.110] - 2026-08-14
+
+### Fixed
+
+- Changed Station Naming to prefer MissionChief's coordinate reverse-address response over the flattened Move Building text field. The Move page remains the fallback when coordinates or reverse lookup are unavailable.
+- Added guarded recovery for Move Building values that repeat the post town after a locality. The exact live value `Ladywalk, KY10 3EX Anstruther Easter Anstruther` now resolves to `ANSTRUTHER` instead of `ANSTRUTHER EASTER ANSTRUTHER`.
+- Preserved ordinary multi-word post towns such as `South Queensferry`, `St Andrews`, `Grantown-on-Spey`, and `Bridge of Allan`.
+
+### Regression coverage
+
+- Added `scripts/check-station-move-address-v10110.mjs` using the exact failed Move Building value reported from the live Station Naming run.
+- Covered reverse-address priority, Move-page fallback, an unseparated country suffix, repeated multi-word post towns, and unchanged ordinary multi-word post towns.
+
+### Changed engine baseline
+
+- Command Nexus increased from `1.0.109` to `1.0.110`.
+- Station Naming increased from `1.3.16` to `1.3.17`.
+- Mission Finder remains `V10.6.153`.
+- Unit Naming remains `3.3.23`.
+- Personnel Assignment remains `1.3.9`.
+
 ## [1.0.109] - 2026-08-13
 
 ### Fixed

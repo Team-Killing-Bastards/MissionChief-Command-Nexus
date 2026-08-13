@@ -15,7 +15,7 @@ function requireText(token, label) {
 }
 
 for (const [token, label] of [
-  ['// @version      1.0.109', 'v1.0.51 metadata'],
+  ['// @version      1.0.110', 'v1.0.51 metadata'],
   [' * MODULE 2: MISSION FINDER V10.6.153', 'Mission Finder V10.6.120'],
   ["const PERSONNEL_VERSION = '1.3.9';", 'Personnel v1.3.5'],
   ['const DEFAULT_MISSION_READY_DELAY = 1000;', '1000 ms default retained'],

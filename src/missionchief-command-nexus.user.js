@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.109
+// @version      1.0.110
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -65,7 +65,7 @@
     if (!TOOL_IS_TOP_WINDOW && !TOOL_IS_STATION_OVERVIEW_FRAME) return;
 
     const UNIT_VERSION = '3.3.23';
-    const STATION_VERSION = '1.3.16';
+    const STATION_VERSION = '1.3.17';
     const PERSONNEL_VERSION = '1.3.9';
     const PERSONNEL_TRAINING_CODE = 'critical_care';
     const PERSONNEL_TRAINING_LABEL = 'Critical Care';
@@ -5737,36 +5737,43 @@
     }
 
     async function resolveStationAddress(station, stationDoc) {
+        const coordinates = await getStationCoordinates(station, stationDoc);
+        let reverseError = '';
+
+        if (coordinates) {
+            stationDebug(`Coordinate address lookup: ${coordinates.latitude}, ${coordinates.longitude} (${coordinates.source})`);
+
+            const reverseResult = await fetchMissionChiefReverseAddress(
+                coordinates.latitude,
+                coordinates.longitude
+            );
+            if (reverseResult.address) {
+                return {
+                    address: reverseResult.address,
+                    source: `MissionChief reverse address via ${coordinates.source}`,
+                    latitude: coordinates.latitude,
+                    longitude: coordinates.longitude
+                };
+            }
+
+            reverseError = reverseResult.error || 'MissionChief reverse-address lookup returned no address.';
+            stationDebug(`Reverse-address lookup unavailable for ${station.displayName}: ${reverseError}`);
+        } else {
+            reverseError = 'No station coordinates could be found for the reverse-address lookup.';
+            stationDebug(`${reverseError} Station: ${station.displayName}`);
+        }
+
         const movePageResult = await fetchStationMoveAddress(station);
         if (movePageResult.address) return movePageResult;
 
         stationDebug(`Move-page address unavailable for ${station.displayName}: ${movePageResult.error || 'no #building_address returned'}`);
 
-        const coordinates = await getStationCoordinates(station, stationDoc);
-        if (!coordinates) {
-            return {
-                address: '',
-                source: 'none',
-                error: 'Move building is unavailable and no station coordinates could be found for the address fallback.'
-            };
-        }
-
-        stationDebug(`Coordinate fallback: ${coordinates.latitude}, ${coordinates.longitude} (${coordinates.source})`);
-
-        const reverseResult = await fetchMissionChiefReverseAddress(coordinates.latitude, coordinates.longitude);
-        if (!reverseResult.address) {
-            return {
-                address: '',
-                source: coordinates.source,
-                error: reverseResult.error || 'MissionChief reverse-address lookup returned no address.'
-            };
-        }
-
         return {
-            address: reverseResult.address,
-            source: `MissionChief reverse address via ${coordinates.source}`,
-            latitude: coordinates.latitude,
-            longitude: coordinates.longitude
+            address: '',
+            source: coordinates?.source || 'none',
+            error: [reverseError, movePageResult.error]
+                .filter(Boolean)
+                .join(' ')
         };
     }
 
@@ -5789,7 +5796,9 @@
 
             const html = await response.text();
             const doc = new DOMParser().parseFromString(html, 'text/html');
-            const address = String(doc.querySelector('#building_address')?.value || '').trim();
+            const address = normalizeStationAddressText(
+                doc.querySelector('#building_address')?.value || ''
+            );
 
             if (address) {
                 return {
@@ -6143,7 +6152,7 @@
     }
 
     function extractStationArea(address) {
-        const input = String(address || '').trim();
+        const input = normalizeStationAddressText(address);
         const postcodeRegex = /\b(GIR\s?0AA|(?:[A-PR-UWYZ][0-9][0-9A-HJKPSTUW]?|[A-PR-UWYZ][A-HK-Y][0-9][0-9ABEHMNPRV-Y]?)\s?[0-9][ABD-HJLNP-UW-Z]{2})\b/i;
         const match = input.match(postcodeRegex);
 
@@ -6165,10 +6174,45 @@
         const countryOnly = /^(UNITED KINGDOM|UK|SCOTLAND|ENGLAND|WALES|NORTHERN IRELAND)$/i;
         while (parts.length > 1 && countryOnly.test(parts[parts.length - 1])) parts.pop();
 
+        let area = parts.at(-1) || afterPostcode;
+        area = area
+            .replace(/(?:\s*,\s*|\s+)(?:UNITED KINGDOM|UK|SCOTLAND|ENGLAND|WALES|NORTHERN IRELAND)$/i, '')
+            .trim();
+
+        // MissionChief's Move Building field can collapse the locality and post
+        // town into one space-delimited value. If its terminal post town is
+        // repeated earlier in that value (for example "Anstruther Easter
+        // Anstruther"), retain the longest repeated terminal phrase. This is a
+        // guarded fallback only; structured reverse-address components remain
+        // authoritative and ordinary multi-word towns are left intact.
+        const words = area.split(/\s+/).filter(Boolean);
+        for (let suffixLength = Math.floor(words.length / 2); suffixLength >= 1; suffixLength -= 1) {
+            const suffixWords = words.slice(-suffixLength);
+            const suffixKey = suffixWords.join(' ').toUpperCase();
+            const precedingWords = words.slice(0, -suffixLength);
+            let repeated = false;
+
+            for (let index = 0; index <= precedingWords.length - suffixLength; index += 1) {
+                const candidateKey = precedingWords
+                    .slice(index, index + suffixLength)
+                    .join(' ')
+                    .toUpperCase();
+                if (candidateKey === suffixKey) {
+                    repeated = true;
+                    break;
+                }
+            }
+
+            if (repeated) {
+                area = suffixWords.join(' ');
+                break;
+            }
+        }
+
         return {
             postcode,
             afterPostcode,
-            area: parts.at(-1) || afterPostcode
+            area
         };
     }
 

@@ -25,6 +25,7 @@ node scripts/check-recovery-unit-naming-classes-v10106.mjs
 node scripts/check-road-rail-unit-naming-class-v10107.mjs
 node scripts/check-officer-station-naming-v10108.mjs
 node scripts/check-station-unit-naming-chain-v10109.mjs
+node scripts/check-station-move-address-v10110.mjs
 ```
 
 The userscript validator checks the canonical metadata contract, version format, Greasy Fork size limits and prohibited update/download metadata. Pull requests that change the userscript must increase `@version` above the base branch.
@@ -57,6 +58,12 @@ component separators, extracts the post town, assigns unique positive station
 sequences, and passes the complete station name into Unit Naming before the
 vehicle type and vehicle sequence are appended. It covers unnumbered and
 duplicate same-town stations as well as valid existing sequences.
+
+The Station Move Building address regression uses the exact flattened live
+value `Ladywalk, KY10 3EX Anstruther Easter Anstruther`. It proves that a
+structured MissionChief reverse address is preferred and that the Move-page
+fallback still extracts `Anstruther` if reverse lookup is unavailable, while
+ordinary multi-word post towns remain intact.
 
 Automated checks are necessary but cannot prove live MissionChief behaviour.
 

@@ -168,10 +168,14 @@ its sequence to the complete station name, for example `KIRK-FO1-FO-1`.
 
 ### Station address and sequence contract
 
-Station Naming must preserve structural separators returned by MissionChief's
-reverse-address endpoint before removing HTML. `<br>` elements and meaningful
-line breaks separate address components; flattening them into spaces can merge
-a locality and post town into one invalid station area.
+Station Naming must prefer MissionChief's coordinate reverse-address endpoint
+and preserve its structural separators before removing HTML. `<br>` elements
+and meaningful line breaks separate address components; flattening them into
+spaces can merge a locality and post town into one invalid station area. The
+Move Building address field is a fallback because MissionChief may expose its
+locality and post town as one space-delimited value. When that fallback repeats
+the terminal post town, Station Naming retains the longest repeated terminal
+phrase without shortening ordinary multi-word post towns.
 
 Every generated station name must have a positive sequence. Existing valid
 sequences are retained when unique. Unnumbered stations sharing a town and
