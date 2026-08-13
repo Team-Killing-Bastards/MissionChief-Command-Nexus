@@ -227,6 +227,9 @@ jobs:
       - name: Validate Recovery Unit Naming native classes
         run: node scripts/check-recovery-unit-naming-classes-v10106.mjs
 
+      - name: Validate Road Rail Unit Naming native class
+        run: node scripts/check-road-rail-unit-naming-class-v10107.mjs
+
       - name: Validate Dispatch Centre-first naming flow
         run: node scripts/check-naming-dispatch-centre-first-v1086.mjs
 

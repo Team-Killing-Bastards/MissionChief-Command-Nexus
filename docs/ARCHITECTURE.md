@@ -161,6 +161,14 @@ Both mappings must remain available from the Recovery selector and the
 unfiltered All classes selector. The legacy `Flatbed Recovery Vehicle` naming
 alias remains valid so existing `FRV` callsign generation is not broken.
 
+### Road Rail Unit Naming identity contract
+
+The Road Rail Unit is the Fire service vehicle with native MissionChief
+`vehicle_type_id` `107`. Unit Naming must expose its canonical `Road Rail Unit`
+label with the `RRU` callsign and 🚒🚆 icon under Fire and All classes. It must
+not be classified as Airfield, and it must remain separate from the type `59`
+Coastguard Rope Rescue Unit despite the historical shared abbreviation.
+
 ## Target architecture
 
 The long-term target is logical modularity without sacrificing a single-file userscript distribution:

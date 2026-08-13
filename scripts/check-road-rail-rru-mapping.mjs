@@ -11,7 +11,7 @@ function fail(message) {
 
 // Road Rail dispatch must not use names, callsigns or abbreviation fallback.
 for (const [token, label] of [
-  ['// @version      1.0.106', 'v1.0.51 metadata'],
+  ['// @version      1.0.107', 'current Command Nexus metadata'],
   [' * MODULE 2: MISSION FINDER V10.6.153', 'Mission Finder V10.6.120 header'],
   ['"Road Rail Unit": "Road Rail Unit",', 'singular canonical Road Rail alias'],
   ['"Road Rail Units": "Road Rail Unit",', 'plural canonical Road Rail alias'],
@@ -21,7 +21,7 @@ for (const [token, label] of [
   ['const roadRailOnly =', 'dedicated selector flag'],
   ['matches = isRoadRailUnitVehicleCheckbox(input);', 'dedicated selected-count verification'],
   ['"59": "Coastguard Rope Rescue Unit",', 'separate Coastguard type-59 mapping'],
-  ['"107": "RRU",', 'Fire type-107 display mapping'],
+  ['"107": "Road Rail Unit",', 'Fire type-107 Unit Naming mapping'],
 ]) {
   if (!source.includes(token)) fail(`Missing Road Rail RRU contract: ${label}`);
 }
