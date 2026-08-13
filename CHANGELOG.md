@@ -4,6 +4,27 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.108] - 2026-08-13
+
+### Fixed
+
+- Added Station Naming support for MissionChief building type `22` as an Ambulance Officer station using the `-AO` suffix.
+- Type 22 deliberately removes an existing trailing station sequence, so `KIRK-AO1` is renamed to `KIRK-AO`.
+- Other station types continue preserving their existing numeric sequence.
+
+### Regression coverage
+
+- Added `scripts/check-ambulance-officer-station-naming-v10108.mjs` to execute the real type map and station-name builder.
+- Covered type 22's Ambulance service classification, `-AO` suffix, disabled sequence preservation and exact `KIRK-AO1` to `KIRK-AO` result.
+
+### Changed engine baseline
+
+- Command Nexus increased from `1.0.107` to `1.0.108`.
+- Station Naming increased from `1.3.14` to `1.3.15`.
+- Unit Naming remains `3.3.23`.
+- Mission Finder remains `V10.6.153`.
+- Personnel Assignment remains `1.3.9`.
+
 ## [1.0.107] - 2026-08-13
 
 ### Fixed

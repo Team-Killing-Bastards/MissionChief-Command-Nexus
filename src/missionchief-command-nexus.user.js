@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.107
+// @version      1.0.108
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -65,7 +65,7 @@
     if (!TOOL_IS_TOP_WINDOW && !TOOL_IS_STATION_OVERVIEW_FRAME) return;
 
     const UNIT_VERSION = '3.3.23';
-    const STATION_VERSION = '1.3.14';
+    const STATION_VERSION = '1.3.15';
     const PERSONNEL_VERSION = '1.3.9';
     const PERSONNEL_TRAINING_CODE = 'critical_care';
     const PERSONNEL_TRAINING_LABEL = 'Critical Care';
@@ -949,6 +949,7 @@
         18: { stationType: 'FIRE',       suffix: '-FS',   label: 'Small fire station' },
         2:  { stationType: 'AMBULANCE',  suffix: '-AS',   label: 'Ambulance station' },
         20: { stationType: 'AMBULANCE',  suffix: '-AS',   label: 'Small ambulance station' },
+        22: { stationType: 'AMBULANCE',  suffix: '-AO',   label: 'Ambulance officer station', preserveSequence: false },
         6:  { stationType: 'POLICE',     suffix: '-PS',   label: 'Police station' },
         19: { stationType: 'POLICE',     suffix: '-PS',   label: 'Small police station' },
         5:  { stationType: 'AIR',        suffix: '-AA',   label: 'Air ambulance station' },
@@ -976,6 +977,7 @@
         18: 'FIRE',
         2: 'AMBULANCE',
         20: 'AMBULANCE',
+        22: 'AMBULANCE',
         5: 'AMBULANCE',
         6: 'POLICE',
         19: 'POLICE',
@@ -5603,7 +5605,7 @@
             stationLog(`Postcode: ${parsed.postcode}`, 'info');
             stationLog(`Detected area: ${formattedArea}`, 'after');
 
-            let proposedName = buildStationName(formattedArea, station.suffix, station.displayName);
+            let proposedName = buildStationName(formattedArea, station.suffix, station.displayName, station.preserveSequence !== false);
             setStationUiValue('after', proposedName);
             stationLog(`BEFORE: ${station.displayName}`, 'before');
             stationLog(`AFTER : ${proposedName}`, 'after');
@@ -5642,7 +5644,7 @@
             if (!nameInput || !saveButton) throw new Error('Station name field or Save button was not found.');
 
             const actualBefore = String(nameInput.value || '').trim();
-            proposedName = buildStationName(formattedArea, station.suffix, actualBefore);
+            proposedName = buildStationName(formattedArea, station.suffix, actualBefore, station.preserveSequence !== false);
             setStationUiValue('before', actualBefore || station.displayName);
             setStationUiValue('after', proposedName);
 
@@ -6059,8 +6061,10 @@
             .toUpperCase();
     }
 
-    function buildStationName(formattedArea, suffix, currentName) {
-        const sequence = getExistingStationSequence(currentName, suffix);
+    function buildStationName(formattedArea, suffix, currentName, preserveSequence = true) {
+        const sequence = preserveSequence
+            ? getExistingStationSequence(currentName, suffix)
+            : '';
         return `${formattedArea}${suffix}${sequence}`;
     }
 
