@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.108
+// @version      1.0.109
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -65,7 +65,7 @@
     if (!TOOL_IS_TOP_WINDOW && !TOOL_IS_STATION_OVERVIEW_FRAME) return;
 
     const UNIT_VERSION = '3.3.23';
-    const STATION_VERSION = '1.3.15';
+    const STATION_VERSION = '1.3.16';
     const PERSONNEL_VERSION = '1.3.9';
     const PERSONNEL_TRAINING_CODE = 'critical_care';
     const PERSONNEL_TRAINING_LABEL = 'Critical Care';
@@ -1036,7 +1036,8 @@
         activeIframe: null,
         buildingCoordinateCache: new Map(),
         buildingDataPromise: null,
-        activeControllers: new Set()
+        activeControllers: new Set(),
+        nameSequencesByBase: new Map()
     };
 
     const NAMING_DISPATCH_CENTRE_ALL = 'ALL';
@@ -5448,6 +5449,9 @@
         STATION_STATE.skippedCount = 0;
         STATION_STATE.previewedCount = 0;
         STATION_STATE.activeIframe = null;
+        STATION_STATE.nameSequencesByBase = createStationNameSequenceRegistry(
+            STATION_STATE.stations
+        );
 
         document.querySelector('#mc-station-pause').textContent = 'Pause';
         updateStationCounters();
@@ -5598,7 +5602,6 @@
             }
 
             const resolvedSuffix = suffixResult.suffix;
-            const preserveSequence = !station.dynamicSuffixRule;
             if (suffixResult.vehicleTypeId) {
                 stationLog(
                     `Dynamic station rule: building_type_id=${station.buildingTypeId} | ` +
@@ -5635,11 +5638,18 @@
             stationLog(`Postcode: ${parsed.postcode}`, 'info');
             stationLog(`Detected area: ${formattedArea}`, 'after');
 
+            const stationSequence = reserveStationNameSequence(
+                formattedArea,
+                resolvedSuffix,
+                station
+            );
+            stationLog(`Station sequence: ${stationSequence}`, 'info');
+
             let proposedName = buildStationName(
                 formattedArea,
                 resolvedSuffix,
                 station.displayName,
-                preserveSequence
+                stationSequence
             );
             setStationUiValue('after', proposedName);
             stationLog(`BEFORE: ${station.displayName}`, 'before');
@@ -5683,7 +5693,7 @@
                 formattedArea,
                 resolvedSuffix,
                 actualBefore,
-                preserveSequence
+                stationSequence
             );
             setStationUiValue('before', actualBefore || station.displayName);
             setStationUiValue('after', proposedName);
@@ -6024,7 +6034,7 @@
                 }
             }
 
-            address = String(address || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+            address = normalizeStationAddressText(address);
             if (!address) {
                 return { address: '', error: 'Reverse-address lookup returned an empty or invalid response.' };
             }
@@ -6033,6 +6043,18 @@
         } catch (error) {
             return { address: '', error: `Reverse-address lookup failed: ${error?.message || error}` };
         }
+    }
+
+    function normalizeStationAddressText(address) {
+        return String(address || '')
+            .replace(/<br\s*\/?>/gi, ', ')
+            .replace(/<\/(?:address|div|li|p|td|tr)>/gi, ', ')
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/\r?\n+/g, ', ')
+            .replace(/(?:\s*,\s*)+/g, ', ')
+            .replace(/^[\s,]+|[\s,]+$/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
     }
 
     function normalizeCoordinates(latitude, longitude) {
@@ -6160,18 +6182,107 @@
             .toUpperCase();
     }
 
-    function buildStationName(formattedArea, suffix, currentName, preserveSequence = true) {
-        const sequence = preserveSequence
-            ? getExistingStationSequence(currentName, suffix)
-            : '';
+    function buildStationName(formattedArea, suffix, currentName, sequenceOverride = '') {
+        const sequence = String(
+            sequenceOverride || getExistingStationSequence(currentName, suffix) || ''
+        ).trim();
         return `${formattedArea}${suffix}${sequence}`;
     }
 
     function getExistingStationSequence(currentName, suffix) {
         if (!suffix) return '';
         const escapedSuffix = suffix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const match = String(currentName || '').trim().match(new RegExp(`${escapedSuffix}\\s*(\\d+)$`, 'i'));
+        const match = String(currentName || '').trim().match(
+            new RegExp(`${escapedSuffix}[\\s-]*(\\d+)$`, 'i')
+        );
         return match ? match[1] : '';
+    }
+
+    function createStationNameSequenceRegistry(stations) {
+        const registry = new Map();
+        const knownSuffixes = [
+            ...Object.values(STATION_BUILDING_TYPE_INFO).map(info => info.suffix),
+            ...Object.values(STATION_OFFICER_SUFFIX_BY_VEHICLE_TYPE_ID)
+        ]
+            .filter(Boolean)
+            .sort((left, right) => right.length - left.length);
+
+        (stations || []).forEach((station, index) => {
+            const currentName = String(station?.displayName || '').trim();
+            if (!currentName) return;
+            const ownerKey = String(
+                station?.buildingId || station?.href || `station-index:${index}`
+            );
+
+            for (const suffix of knownSuffixes) {
+                const sequence = Number(getExistingStationSequence(currentName, suffix));
+                const escapedSuffix = suffix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const hasExistingSequence =
+                    Number.isInteger(sequence) && sequence > 0;
+                const match = hasExistingSequence
+                    ? currentName.match(
+                        new RegExp(`^(.*?)${escapedSuffix}[\\s-]*\\d+$`, 'i')
+                    )
+                    : currentName.match(
+                        new RegExp(`^(.*?)${escapedSuffix}\\s*$`, 'i')
+                    );
+                if (!match) continue;
+
+                const key = `${match[1]}${suffix}`
+                    .replace(/\s+/g, ' ')
+                    .trim()
+                    .toUpperCase();
+                if (!registry.has(key)) registry.set(key, new Map());
+                const sequenceOwners = registry.get(key);
+                if (hasExistingSequence) {
+                    if (!sequenceOwners.has(sequence)) {
+                        sequenceOwners.set(sequence, ownerKey);
+                    }
+                } else {
+                    let allocatedSequence = 1;
+                    while (sequenceOwners.has(allocatedSequence)) {
+                        allocatedSequence++;
+                    }
+                    sequenceOwners.set(allocatedSequence, ownerKey);
+                }
+                break;
+            }
+        });
+
+        return registry;
+    }
+
+    function reserveStationNameSequence(formattedArea, suffix, station) {
+        const key = `${formattedArea}${suffix}`
+            .replace(/\s+/g, ' ')
+            .trim()
+            .toUpperCase();
+        const sequenceOwners = STATION_STATE.nameSequencesByBase.get(key) || new Map();
+        STATION_STATE.nameSequencesByBase.set(key, sequenceOwners);
+        const currentName = String(station?.displayName || station || '').trim();
+        const ownerKey = String(
+            station?.buildingId || station?.href || `station-name:${currentName}`
+        );
+
+        for (const [reservedSequence, reservedOwner] of sequenceOwners) {
+            if (reservedOwner === ownerKey) return String(reservedSequence);
+        }
+
+        const existingSequence = Number(
+            getExistingStationSequence(currentName, suffix)
+        );
+        if (Number.isInteger(existingSequence) && existingSequence > 0) {
+            const existingOwner = sequenceOwners.get(existingSequence);
+            if (!existingOwner || existingOwner === ownerKey) {
+                sequenceOwners.set(existingSequence, ownerKey);
+                return String(existingSequence);
+            }
+        }
+
+        let sequence = 1;
+        while (sequenceOwners.has(sequence)) sequence++;
+        sequenceOwners.set(sequence, ownerKey);
+        return String(sequence);
     }
 
     function getBuildingIdFromHref(href) {

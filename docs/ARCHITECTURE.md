@@ -160,10 +160,26 @@ these mappings:
 
 The resolver must not use vehicle names as a fallback. Multiple rows of the
 same supported type are one unambiguous identity, but zero supported types or
-more than one distinct supported type must be skipped. Unlike ordinary station
-classes, this dynamic rule does not preserve a trailing sequence number: a
-location currently named `KIRK-AO1` becomes exactly `KIRK-AO`, `KIRK-FO`, or
-`KIRK-OTL` after the station address resolves to `KIRK`.
+more than one distinct supported type must be skipped. Dynamic locations use
+the same mandatory station sequence as every other supported station. The
+resulting station format is `TOWN-SERVICESEQUENCE`, such as `KIRK-AO1`,
+`KIRK-FO1`, or `KIRK-OTL1`. Unit Naming then appends the vehicle identity and
+its sequence to the complete station name, for example `KIRK-FO1-FO-1`.
+
+### Station address and sequence contract
+
+Station Naming must preserve structural separators returned by MissionChief's
+reverse-address endpoint before removing HTML. `<br>` elements and meaningful
+line breaks separate address components; flattening them into spaces can merge
+a locality and post town into one invalid station area.
+
+Every generated station name must have a positive sequence. Existing valid
+sequences are retained when unique. Unnumbered stations sharing a town and
+service receive the first free positive numbers in processing order, while
+duplicate existing numbers are separated deterministically. Station sequence
+format remains directly attached to the service suffix (`ANSTRUTHER-FS1`), and
+vehicle names retain the whole station name before their own type and sequence
+(`ANSTRUTHER-FS1-ICCU-1`).
 
 ### Recovery Unit Naming identity contract
 
