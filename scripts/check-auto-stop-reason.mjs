@@ -146,7 +146,7 @@ function createRuntime(localStorage, document) {
 }
 
 expect(
-  source.includes('// @version      1.0.105'),
+  source.includes('// @version      1.0.106'),
   'Expected Command Nexus 1.0.104 metadata'
 );
 expect(

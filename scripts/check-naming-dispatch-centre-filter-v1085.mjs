@@ -8,8 +8,8 @@ const fail = message => { console.error(`ERROR: ${message}`); process.exit(1); }
 const requireText = (text, label = text) => { if (!source.includes(text)) fail(`Missing naming Dispatch Centre contract: ${label}`); };
 
 for (const [text, label] of [
-  ['// @version      1.0.105', 'Command Nexus 1.0.88 metadata'],
-  ["const UNIT_VERSION = '3.3.21';", 'Unit Naming 3.3.13'],
+  ['// @version      1.0.106', 'Command Nexus 1.0.88 metadata'],
+  ["const UNIT_VERSION = '3.3.22';", 'Unit Naming 3.3.13'],
   ["const STATION_VERSION = '1.3.14';", 'Station Naming 1.3.7'],
   ['id="mc-namer-dispatch-centre" disabled', 'Unit Naming Dispatch Centre select'],
   ['id="mc-station-dispatch-centre" disabled', 'Station Naming Dispatch Centre select'],

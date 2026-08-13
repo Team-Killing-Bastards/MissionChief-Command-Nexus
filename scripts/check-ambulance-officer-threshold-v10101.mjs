@@ -91,7 +91,7 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-expect(source.includes('// @version      1.0.105'), 'Expected Command Nexus 1.0.104');
+expect(source.includes('// @version      1.0.106'), 'Expected Command Nexus 1.0.104');
 expect(source.includes(' * MODULE 2: MISSION FINDER V10.6.153'), 'Expected Mission Finder V10.6.153');
 
 for (const token of [

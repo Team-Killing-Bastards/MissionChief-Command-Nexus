@@ -29,6 +29,7 @@ on:
       - 'scripts/check-personnel-assignment-ios-completeness-v1084.mjs'
       - 'scripts/check-naming-dispatch-centre-filter-v1085.mjs'
       - 'scripts/check-police-unit-naming-classes-v10105.mjs'
+      - 'scripts/check-recovery-unit-naming-classes-v10106.mjs'
       - 'scripts/check-naming-dispatch-centre-first-v1086.mjs'
       - 'scripts/check-naming-dispatch-centre-refresh-v1087.mjs'
       - 'scripts/check-naming-dispatch-centre-assignment-source-v1088.mjs'
@@ -88,6 +89,7 @@ on:
       - 'scripts/check-personnel-assignment-ios-completeness-v1084.mjs'
       - 'scripts/check-naming-dispatch-centre-filter-v1085.mjs'
       - 'scripts/check-police-unit-naming-classes-v10105.mjs'
+      - 'scripts/check-recovery-unit-naming-classes-v10106.mjs'
       - 'scripts/check-naming-dispatch-centre-first-v1086.mjs'
       - 'scripts/check-naming-dispatch-centre-refresh-v1087.mjs'
       - 'scripts/check-naming-dispatch-centre-assignment-source-v1088.mjs'
@@ -221,6 +223,9 @@ jobs:
 
       - name: Validate Police Unit Naming native classes
         run: node scripts/check-police-unit-naming-classes-v10105.mjs
+
+      - name: Validate Recovery Unit Naming native classes
+        run: node scripts/check-recovery-unit-naming-classes-v10106.mjs
 
       - name: Validate Dispatch Centre-first naming flow
         run: node scripts/check-naming-dispatch-centre-first-v1086.mjs

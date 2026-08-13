@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.105
+// @version      1.0.106
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -64,7 +64,7 @@
     // excluded from the naming/personnel runtime.
     if (!TOOL_IS_TOP_WINDOW && !TOOL_IS_STATION_OVERVIEW_FRAME) return;
 
-    const UNIT_VERSION = '3.3.21';
+    const UNIT_VERSION = '3.3.22';
     const STATION_VERSION = '1.3.14';
     const PERSONNEL_VERSION = '1.3.9';
     const PERSONNEL_TRAINING_CODE = 'critical_care';
@@ -792,7 +792,8 @@
         "98": "Critical Care Transfer Ambulance",
         "99": "Mountain Rescue 4x4",
         "102": "Search Dog Unit SAR",
-        "105": "Flatbed Recovery Vehicle",
+        "105": "Recovery Vehicle",
+        "106": "HGV Recovery Vehicle",
         "107": "RRU",
         "108": "EIU",
         "109": "EOD Commander",
@@ -867,7 +868,9 @@
         "Critical Care Transfer Ambulance": { code: "CCT", icon: "🚑❤️" },
         "Mountain Rescue 4x4": { code: "MR4x4", icon: "🏔️" },
         "Search Dog Unit SAR": { code: "K9", icon: "🐕" },
+        "Recovery Vehicle": { code: "FRV", icon: "🛻" },
         "Flatbed Recovery Vehicle": { code: "FRV", icon: "🛻" },
+        "HGV Recovery Vehicle": { code: "HGV", icon: "🚛" },
         "RRV": { code: "RRV", icon: "🚑" },
         "RRU": { code: "RRU", icon: "🚒✈️" },
         "Rescue Support Unit (RSU)": { code: "RSU", icon: "🚒🛠️" },
@@ -919,7 +922,7 @@
             '109', '110', '111', '112', '113', '114'
         ]),
         RECOVERY: Object.freeze([
-            '105'
+            '105', '106'
         ])
     });
 

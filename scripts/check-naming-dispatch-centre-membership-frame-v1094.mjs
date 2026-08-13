@@ -62,8 +62,8 @@ class FixtureDocument {
   }
 }
 
-expect(source.includes('// @version      1.0.105'), 'Expected Command Nexus 1.0.94');
-expect(source.includes("const UNIT_VERSION = '3.3.21';"), 'Expected Unit Naming 3.3.19');
+expect(source.includes('// @version      1.0.106'), 'Expected Command Nexus 1.0.94');
+expect(source.includes("const UNIT_VERSION = '3.3.22';"), 'Expected Unit Naming 3.3.19');
 expect(source.includes("const STATION_VERSION = '1.3.14';"), 'Expected Station Naming 1.3.13');
 
 // The live failure is specifically cross-document: the naming UI can live in the

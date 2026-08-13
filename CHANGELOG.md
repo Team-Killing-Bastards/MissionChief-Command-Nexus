@@ -4,6 +4,29 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.106] - 2026-08-13
+
+### Added
+
+- Added native type `106` HGV Recovery Vehicle to Unit Naming with the `HGV` callsign and a distinct 🚛 icon.
+- Changed Unit Naming's type `105` display label to MissionChief's live `Recovery Vehicle` wording while preserving its established `FRV` callsign and 🛻 icon.
+- Both recovery classes now appear under Recovery and All classes. The existing `Flatbed Recovery Vehicle` naming alias remains compatible.
+- Mission Finder's exact type-105 Flatbed and type-106 HGV recovery selection routes remain unchanged.
+
+### Regression coverage
+
+- Added `scripts/check-recovery-unit-naming-classes-v10106.mjs` to execute the real Unit Naming class-option builder and callsign generator for both recovery types.
+- Covered Recovery and All selector availability, exact type IDs, distinct icons, generated callsigns and legacy Flatbed Recovery naming compatibility.
+- Preserved the Police Unit Naming, towing/recovery selector and current Mission Finder regression baselines.
+
+### Changed engine baseline
+
+- Command Nexus increased from `1.0.105` to `1.0.106`.
+- Unit Naming increased from `3.3.21` to `3.3.22`.
+- Mission Finder remains `V10.6.153`.
+- Station Naming remains `1.3.14`.
+- Personnel Assignment remains `1.3.9`.
+
 ## [1.0.105] - 2026-08-13
 
 ### Added
