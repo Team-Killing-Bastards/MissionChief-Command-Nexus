@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.107
+// @version      1.0.108
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -65,7 +65,7 @@
     if (!TOOL_IS_TOP_WINDOW && !TOOL_IS_STATION_OVERVIEW_FRAME) return;
 
     const UNIT_VERSION = '3.3.23';
-    const STATION_VERSION = '1.3.14';
+    const STATION_VERSION = '1.3.15';
     const PERSONNEL_VERSION = '1.3.9';
     const PERSONNEL_TRAINING_CODE = 'critical_care';
     const PERSONNEL_TRAINING_LABEL = 'Critical Care';
@@ -942,6 +942,13 @@
     };
 
 
+    const STATION_DYNAMIC_SUFFIX_OFFICER_VEHICLE = 'OFFICER_VEHICLE';
+    const STATION_OFFICER_SUFFIX_BY_VEHICLE_TYPE_ID = Object.freeze({
+        '3': '-FO',
+        '20': '-OTL',
+        '34': '-AO'
+    });
+
     // MissionChief's own building type IDs. These are read from the parent
     // .building_list_li element and do not depend on uploaded station images.
     const STATION_BUILDING_TYPE_INFO = {
@@ -953,6 +960,12 @@
         19: { stationType: 'POLICE',     suffix: '-PS',   label: 'Small police station' },
         5:  { stationType: 'AIR',        suffix: '-AA',   label: 'Air ambulance station' },
         13: { stationType: 'AIR',        suffix: '-PH',   label: 'Police helicopter station' },
+        22: {
+            stationType: 'OTHER',
+            suffix: '',
+            dynamicSuffixRule: STATION_DYNAMIC_SUFFIX_OFFICER_VEHICLE,
+            label: 'Officer response location'
+        },
         27: { stationType: 'RNLI',       suffix: '-RNLI', label: 'RNLI / lifeboat station' },
         28: { stationType: 'COASTGUARD', suffix: '-CG',   label: 'Coastguard station' },
         30: { stationType: 'COASTGUARD', suffix: '-CG',   label: 'Coastguard helicopter station' },
@@ -980,6 +993,7 @@
         6: 'POLICE',
         19: 'POLICE',
         13: 'POLICE',
+        22: 'OTHER',
         35: 'POLICE',
         27: 'SAR',
         28: 'SAR',
@@ -5269,6 +5283,7 @@
                         stationType: typeInfo.stationType
                     }),
                     suffix: typeInfo.suffix,
+                    dynamicSuffixRule: typeInfo.dynamicSuffixRule || '',
                     typeLabel: typeInfo.label
                 };
             })
@@ -5505,7 +5520,7 @@
                 setStationUiValue('status', 'Opening station');
 
                 stationLog(`Station ${displayPosition}/${STATION_STATE.queue.length}: ${station.displayName}`, 'station');
-                stationLog(`Type: ${station.typeLabel} | building_type_id=${station.buildingTypeId ?? 'unknown'} | suffix=${station.suffix || 'none'}`, 'info');
+                stationLog(`Type: ${station.typeLabel} | building_type_id=${station.buildingTypeId ?? 'unknown'} | suffix=${station.suffix || station.dynamicSuffixRule || 'none'}`, 'info');
 
                 const result = await processOneStationName(station);
 
@@ -5541,7 +5556,7 @@
     }
 
     async function processOneStationName(station) {
-        if (!station.suffix) {
+        if (!station.suffix && !station.dynamicSuffixRule) {
             stationLog(`Skipped: no safe naming rule exists for building_type_id=${station.buildingTypeId ?? 'unknown'}.`, 'error');
             return 'skipped';
         }
@@ -5575,6 +5590,23 @@
             if (STATION_STATE.stopped) return 'skipped';
 
             await waitIfStationNamingPaused();
+
+            const suffixResult = resolveStationNamingSuffix(station, doc);
+            if (!suffixResult.suffix) {
+                stationLog(`Skipped: ${suffixResult.error}`, 'error');
+                return 'skipped';
+            }
+
+            const resolvedSuffix = suffixResult.suffix;
+            const preserveSequence = !station.dynamicSuffixRule;
+            if (suffixResult.vehicleTypeId) {
+                stationLog(
+                    `Dynamic station rule: building_type_id=${station.buildingTypeId} | ` +
+                    `vehicle_type_id=${suffixResult.vehicleTypeId} | suffix=${resolvedSuffix}`,
+                    'info'
+                );
+            }
+
             setStationUiValue('status', 'Reading station address');
 
             // Do not depend on clicking Move building. MissionChief can block that page
@@ -5603,7 +5635,12 @@
             stationLog(`Postcode: ${parsed.postcode}`, 'info');
             stationLog(`Detected area: ${formattedArea}`, 'after');
 
-            let proposedName = buildStationName(formattedArea, station.suffix, station.displayName);
+            let proposedName = buildStationName(
+                formattedArea,
+                resolvedSuffix,
+                station.displayName,
+                preserveSequence
+            );
             setStationUiValue('after', proposedName);
             stationLog(`BEFORE: ${station.displayName}`, 'before');
             stationLog(`AFTER : ${proposedName}`, 'after');
@@ -5642,7 +5679,12 @@
             if (!nameInput || !saveButton) throw new Error('Station name field or Save button was not found.');
 
             const actualBefore = String(nameInput.value || '').trim();
-            proposedName = buildStationName(formattedArea, station.suffix, actualBefore);
+            proposedName = buildStationName(
+                formattedArea,
+                resolvedSuffix,
+                actualBefore,
+                preserveSequence
+            );
             setStationUiValue('before', actualBefore || station.displayName);
             setStationUiValue('after', proposedName);
 
@@ -6019,6 +6061,65 @@
         }
     }
 
+    function getStationOfficerVehicleTypeIds(doc) {
+        const matchedIds = new Set();
+        const vehicleElements = doc?.querySelectorAll?.(
+            '#vehicle_table [vehicle_type_id], #vehicle_table [data-vehicle-type-id]'
+        ) || [];
+
+        for (const element of vehicleElements) {
+            const vehicleTypeId = String(
+                element.getAttribute('vehicle_type_id') ||
+                element.getAttribute('data-vehicle-type-id') ||
+                ''
+            ).trim();
+
+            if (STATION_OFFICER_SUFFIX_BY_VEHICLE_TYPE_ID[vehicleTypeId]) {
+                matchedIds.add(vehicleTypeId);
+            }
+        }
+
+        return [...matchedIds];
+    }
+
+    function resolveStationNamingSuffix(station, doc) {
+        if (!station.dynamicSuffixRule) {
+            return { suffix: station.suffix || '', vehicleTypeId: '', error: '' };
+        }
+
+        if (station.dynamicSuffixRule !== STATION_DYNAMIC_SUFFIX_OFFICER_VEHICLE) {
+            return {
+                suffix: '',
+                vehicleTypeId: '',
+                error: `unknown dynamic station naming rule ${station.dynamicSuffixRule}.`
+            };
+        }
+
+        const vehicleTypeIds = getStationOfficerVehicleTypeIds(doc);
+        if (vehicleTypeIds.length === 1) {
+            const vehicleTypeId = vehicleTypeIds[0];
+            return {
+                suffix: STATION_OFFICER_SUFFIX_BY_VEHICLE_TYPE_ID[vehicleTypeId],
+                vehicleTypeId,
+                error: ''
+            };
+        }
+
+        if (!vehicleTypeIds.length) {
+            return {
+                suffix: '',
+                vehicleTypeId: '',
+                error: 'building type 22 has no supported officer vehicle. Expected vehicle_type_id 20 (OTL), 3 (FO), or 34 (AO).'
+            };
+        }
+
+        return {
+            suffix: '',
+            vehicleTypeId: '',
+            error: `building type 22 contains multiple officer vehicle types (${vehicleTypeIds.join(', ')}), so its suffix is ambiguous.`
+        };
+    }
+
     function extractStationArea(address) {
         const input = String(address || '').trim();
         const postcodeRegex = /\b(GIR\s?0AA|(?:[A-PR-UWYZ][0-9][0-9A-HJKPSTUW]?|[A-PR-UWYZ][A-HK-Y][0-9][0-9ABEHMNPRV-Y]?)\s?[0-9][ABD-HJLNP-UW-Z]{2})\b/i;
@@ -6059,8 +6160,10 @@
             .toUpperCase();
     }
 
-    function buildStationName(formattedArea, suffix, currentName) {
-        const sequence = getExistingStationSequence(currentName, suffix);
+    function buildStationName(formattedArea, suffix, currentName, preserveSequence = true) {
+        const sequence = preserveSequence
+            ? getExistingStationSequence(currentName, suffix)
+            : '';
         return `${formattedArea}${suffix}${sequence}`;
     }
 

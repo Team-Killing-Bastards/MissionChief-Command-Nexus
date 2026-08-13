@@ -31,7 +31,7 @@ function requireOrdered(text, first, second, label) {
 }
 
 for (const [token, label] of [
-  ['// @version      1.0.107', 'current Command Nexus metadata'],
+  ['// @version      1.0.108', 'current Command Nexus metadata'],
   [' * MODULE 2: MISSION FINDER V10.6.153', 'current Mission Finder header'],
   ['function isExplicitMissingVehicleRequirementRow(', 'explicit Missing Vehicles classifier'],
   ['function isExplicitMissingPersonnelRequirementRow(', 'explicit Missing Personnel classifier'],

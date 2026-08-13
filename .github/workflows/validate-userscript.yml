@@ -30,6 +30,7 @@ on:
       - 'scripts/check-naming-dispatch-centre-filter-v1085.mjs'
       - 'scripts/check-police-unit-naming-classes-v10105.mjs'
       - 'scripts/check-recovery-unit-naming-classes-v10106.mjs'
+      - 'scripts/check-officer-station-naming-v10108.mjs'
       - 'scripts/check-naming-dispatch-centre-first-v1086.mjs'
       - 'scripts/check-naming-dispatch-centre-refresh-v1087.mjs'
       - 'scripts/check-naming-dispatch-centre-assignment-source-v1088.mjs'
@@ -90,6 +91,7 @@ on:
       - 'scripts/check-naming-dispatch-centre-filter-v1085.mjs'
       - 'scripts/check-police-unit-naming-classes-v10105.mjs'
       - 'scripts/check-recovery-unit-naming-classes-v10106.mjs'
+      - 'scripts/check-officer-station-naming-v10108.mjs'
       - 'scripts/check-naming-dispatch-centre-first-v1086.mjs'
       - 'scripts/check-naming-dispatch-centre-refresh-v1087.mjs'
       - 'scripts/check-naming-dispatch-centre-assignment-source-v1088.mjs'
@@ -229,6 +231,9 @@ jobs:
 
       - name: Validate Road Rail Unit Naming native class
         run: node scripts/check-road-rail-unit-naming-class-v10107.mjs
+
+      - name: Validate Officer response location Station Naming
+        run: node scripts/check-officer-station-naming-v10108.mjs
 
       - name: Validate Dispatch Centre-first naming flow
         run: node scripts/check-naming-dispatch-centre-first-v1086.mjs

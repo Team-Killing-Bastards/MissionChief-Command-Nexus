@@ -23,6 +23,7 @@ node scripts/check-auto-stop-reason.mjs
 node scripts/check-police-unit-naming-classes-v10105.mjs
 node scripts/check-recovery-unit-naming-classes-v10106.mjs
 node scripts/check-road-rail-unit-naming-class-v10107.mjs
+node scripts/check-officer-station-naming-v10108.mjs
 ```
 
 The userscript validator checks the canonical metadata contract, version format, Greasy Fork size limits and prohibited update/download metadata. Pull requests that change the userscript must increase `@version` above the base branch.
@@ -43,6 +44,12 @@ The Road Rail Unit Naming regression protects verified type `107`, its canonical
 `Road Rail Unit` label, `RRU` callsign and 🚒🚆 icon. It also confirms that the
 class is available under Fire and All classes, excluded from Airfield, and does
 not weaken the exact type-107 Mission Finder dispatch rule.
+
+The officer response location Station Naming regression executes the real type
+`22` mapping, vehicle-table parser, dynamic suffix resolver and station-name
+builder. It protects exact type `20` → `-OTL`, type `3` → `-FO`, and type `34`
+→ `-AO` resolution, rejects empty or mixed identities, removes stale dynamic
+sequence numbers, and confirms that ordinary station numbering is unchanged.
 
 Automated checks are necessary but cannot prove live MissionChief behaviour.
 

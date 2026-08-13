@@ -33,9 +33,9 @@ function extractFunction(name) {
   fail(`Unterminated ${name}`);
 }
 
-expect(source.includes('// @version      1.0.107'), 'Expected Command Nexus 1.0.95');
+expect(source.includes('// @version      1.0.108'), 'Expected Command Nexus 1.0.95');
 expect(source.includes("const UNIT_VERSION = '3.3.23';"), 'Expected Unit Naming 3.3.20');
-expect(source.includes("const STATION_VERSION = '1.3.14';"), 'Expected Station Naming 1.3.14');
+expect(source.includes("const STATION_VERSION = '1.3.15';"), 'Expected Station Naming 1.3.15');
 
 const unitHandler = extractFunction('handleUnitDispatchCentreChange');
 const stationHandler = extractFunction('handleStationDispatchCentreChange');
