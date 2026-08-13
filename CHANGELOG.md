@@ -4,6 +4,28 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.109] - 2026-08-13
+
+### Fixed
+
+- Preserved MissionChief reverse-address line breaks as address-component separators before Station Naming extracts the post town. This stops responses such as `Anstruther Easter` plus `Anstruther` being flattened into the invalid town name `ANSTRUTHER EASTER ANSTRUTHER`.
+- Restored a mandatory station sequence to every generated station name, including building type `22`. The format is now consistently town, service and station sequence, such as `ANSTRUTHER-FS1`, `ANSTRUTHER-FO1`, and `ANSTRUTHER-FO2`.
+- Added a per-run sequence registry that preserves valid existing numbers, allocates the first free number to unnumbered stations, and separates duplicate existing numbers deterministically.
+- Confirmed Unit Naming uses the complete numbered station name before adding the vehicle type and vehicle sequence. A Fire Officer at `ANSTRUTHER-FO1` is therefore named `ANSTRUTHER-FO1-FO-1`; the station `FO` and vehicle `FO` represent separate layers and are both intentional.
+
+### Regression coverage
+
+- Added `scripts/check-station-unit-naming-chain-v10109.mjs` to execute reverse-address normalization, post-town extraction, station sequence allocation, station-name generation and Unit Naming as one chain.
+- Covered HTML and newline address separators, same-town officer station allocation, valid existing sequence preservation, duplicate sequence repair, all three officer service IDs, and unchanged ordinary station/unit naming.
+
+### Changed engine baseline
+
+- Command Nexus increased from `1.0.108` to `1.0.109`.
+- Station Naming increased from `1.3.15` to `1.3.16`.
+- Mission Finder remains `V10.6.153`.
+- Unit Naming remains `3.3.23`.
+- Personnel Assignment remains `1.3.9`.
+
 ## [1.0.108] - 2026-08-13
 
 ### Added

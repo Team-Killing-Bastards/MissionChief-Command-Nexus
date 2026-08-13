@@ -71,7 +71,7 @@ const resolveSuffixFactory = vm.runInNewContext(`(
 const namingFactory = vm.runInNewContext(`(
   function () {
     ${extractFunction('buildStationName', 'getExistingStationSequence')}
-    ${extractFunction('getExistingStationSequence', 'getBuildingIdFromHref')}
+    ${extractFunction('getExistingStationSequence', 'createStationNameSequenceRegistry')}
     return buildStationName;
   }
 )`);
@@ -164,16 +164,16 @@ const staticResult = resolveSuffix(
 assert.equal(staticResult.suffix, '-FS');
 
 assert.equal(
-  buildStationName('KIRK', '-AO', 'KIRK-AO1', false),
-  'KIRK-AO'
+  buildStationName('KIRK', '-AO', 'KIRK-AO1'),
+  'KIRK-AO1'
 );
 assert.equal(
-  buildStationName('KIRK', '-OTL', 'KIRK-AO1', false),
-  'KIRK-OTL'
+  buildStationName('KIRK', '-OTL', 'KIRK-AO1', '1'),
+  'KIRK-OTL1'
 );
 assert.equal(
-  buildStationName('KIRK', '-FO', 'KIRK-AO1', false),
-  'KIRK-FO'
+  buildStationName('KIRK', '-FO', 'KIRK-AO1', '1'),
+  'KIRK-FO1'
 );
 assert.equal(
   buildStationName('KIRK', '-FS', 'KIRK-FS2'),
@@ -182,9 +182,9 @@ assert.equal(
 );
 
 assert.match(source, /if \(!station\.suffix && !station\.dynamicSuffixRule\)/);
-assert.match(source, /const preserveSequence = !station\.dynamicSuffixRule;/);
+assert.match(source, /const stationSequence = reserveStationNameSequence\(/);
 assert.match(source, /vehicle_type_id=\$\{suffixResult\.vehicleTypeId\}/);
 
 console.log(
-  'Officer response location Station Naming contracts passed for exact type 20 OTL, type 3 FO and type 34 AO resolution.'
+  'Officer response location Station Naming contracts passed for exact type 20 OTL, type 3 FO and type 34 AO resolution with station sequences.'
 );
