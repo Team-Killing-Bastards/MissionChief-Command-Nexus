@@ -145,6 +145,26 @@ Each mapping must remain available from both the Police selector and the
 unfiltered All classes selector. The sanitized capture record is retained in
 [issue #295 evidence](evidence/issue-295-police-unit-naming-ids.md).
 
+### Dynamic officer station naming contract
+
+MissionChief building type `22` has no single safe static suffix because its
+role is determined by the vehicle housed at that location. Station Naming must
+read the native `vehicle_type_id` from `#vehicle_table` and apply exactly one of
+these mappings:
+
+| `vehicle_type_id` | Officer vehicle | Station suffix |
+|---:|---|---|
+| `20` | Operational Team Leader | `-OTL` |
+| `3` | Fire Officer | `-FO` |
+| `34` | Ambulance Officer | `-AO` |
+
+The resolver must not use vehicle names as a fallback. Multiple rows of the
+same supported type are one unambiguous identity, but zero supported types or
+more than one distinct supported type must be skipped. Unlike ordinary station
+classes, this dynamic rule does not preserve a trailing sequence number: a
+location currently named `KIRK-AO1` becomes exactly `KIRK-AO`, `KIRK-FO`, or
+`KIRK-OTL` after the station address resolves to `KIRK`.
+
 ### Recovery Unit Naming identity contract
 
 Recovery Unit Naming uses the same native `vehicle_type_id` authority. Type

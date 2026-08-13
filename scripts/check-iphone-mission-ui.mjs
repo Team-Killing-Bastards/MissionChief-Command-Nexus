@@ -81,7 +81,7 @@ function extractFunction(name) {
   fail(`Unable to find end of ${name}`);
 }
 
-requireText('// @version      1.0.107', 'current userscript metadata');
+requireText('// @version      1.0.108', 'current userscript metadata');
 requireText(' * MODULE 2: MISSION FINDER V10.6.153', 'current Mission Finder module header');
 requireText('function getMissionFinderPhoneScreenShortSide()', 'physical phone-screen detector');
 requireText('function isMissionFinderIphoneSafariWebsite()', 'strict iPhone Safari detector');

@@ -4,6 +4,28 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.108] - 2026-08-13
+
+### Added
+
+- Added Station Naming support for MissionChief building type `22` using the exact vehicle held at that location: type `20` produces `-OTL`, type `3` produces `-FO`, and type `34` produces `-AO`.
+- The dynamic rule reads only native `vehicle_type_id` attributes from the station vehicle table; it does not infer officer identity from mutable display text.
+- Dynamic officer locations do not preserve a stale numeric suffix, so `KIRK-AO1` is proposed as exactly `KIRK-AO`, `KIRK-FO`, or `KIRK-OTL` according to the vehicle found.
+- Empty locations, unsupported vehicles, and locations containing more than one distinct supported officer type fail closed with an explicit skip reason instead of risking an incorrect name.
+
+### Regression coverage
+
+- Added `scripts/check-officer-station-naming-v10108.mjs` to execute the real building-type mapping, exact vehicle-table parser, dynamic suffix resolver, and station-name builder.
+- Covered all three verified vehicle IDs, duplicate rows of one type, `data-vehicle-type-id`, empty/unsupported input, ambiguous mixed officer types, removal of the stale dynamic number, and preservation of ordinary station numbering.
+
+### Changed engine baseline
+
+- Command Nexus increased from `1.0.107` to `1.0.108`.
+- Station Naming increased from `1.3.14` to `1.3.15`.
+- Mission Finder remains `V10.6.153`.
+- Unit Naming remains `3.3.23`.
+- Personnel Assignment remains `1.3.9`.
+
 ## [1.0.107] - 2026-08-13
 
 ### Fixed
