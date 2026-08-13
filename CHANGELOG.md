@@ -4,6 +4,28 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.111] - 2026-08-14
+
+### Changed
+
+- Changed building type `22` response locations to town-only Station Naming. A station previously proposed as `ABERDOUR-FO1` is now named exactly `ABERDOUR`.
+- Removed the vehicle role and station sequence from type-22 station names. Unit Naming now owns both layers, producing names such as `ABERDOUR-FO-1`, `ABERDOUR-AO-1`, `ABERDOUR-OTL-1`, and `ABERDOUR-DSU-1`.
+- Removed the type-22 vehicle-table dependency from Station Naming. These response locations no longer need Station Naming to identify an FO, AO or OTL vehicle before the station can be named.
+- Retained the existing service suffix and station sequence rules for ordinary fire, ambulance, police and other supported station types.
+
+### Regression coverage
+
+- Added `scripts/check-type22-town-only-naming-v10111.mjs` around the exact live `ABERDOUR-FO1` case.
+- Covered town-only station output, FO/AO/OTL/DSU role ownership, Unit Naming sequences `1` and `2`, removal of the duplicate FO layer, and unchanged ordinary station naming.
+
+### Changed engine baseline
+
+- Command Nexus increased from `1.0.110` to `1.0.111`.
+- Station Naming increased from `1.3.17` to `1.3.18`.
+- Mission Finder remains `V10.6.153`.
+- Unit Naming remains `3.3.23`.
+- Personnel Assignment remains `1.3.9`.
+
 ## [1.0.110] - 2026-08-14
 
 ### Fixed

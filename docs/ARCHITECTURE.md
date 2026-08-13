@@ -145,26 +145,18 @@ Each mapping must remain available from both the Police selector and the
 unfiltered All classes selector. The sanitized capture record is retained in
 [issue #295 evidence](evidence/issue-295-police-unit-naming-ids.md).
 
-### Dynamic officer station naming contract
+### Town-only response location naming contract
 
-MissionChief building type `22` has no single safe static suffix because its
-role is determined by the vehicle housed at that location. Station Naming must
-read the native `vehicle_type_id` from `#vehicle_table` and apply exactly one of
-these mappings:
+MissionChief building type `22` uses a town-only station identity. Station
+Naming must not append a vehicle role or a station sequence and must not depend
+on the vehicle table. A response location in Kirkcaldy is therefore named
+`KIRKCALDY` regardless of whether it currently houses an FO, AO, OTL or DSU.
 
-| `vehicle_type_id` | Officer vehicle | Station suffix |
-|---:|---|---|
-| `20` | Operational Team Leader | `-OTL` |
-| `3` | Fire Officer | `-FO` |
-| `34` | Ambulance Officer | `-AO` |
-
-The resolver must not use vehicle names as a fallback. Multiple rows of the
-same supported type are one unambiguous identity, but zero supported types or
-more than one distinct supported type must be skipped. Dynamic locations use
-the same mandatory station sequence as every other supported station. The
-resulting station format is `TOWN-SERVICESEQUENCE`, such as `KIRK-AO1`,
-`KIRK-FO1`, or `KIRK-OTL1`. Unit Naming then appends the vehicle identity and
-its sequence to the complete station name, for example `KIRK-FO1-FO-1`.
+Unit Naming owns the vehicle role and the only sequence used for these
+locations. The expected outputs are `KIRKCALDY-FO-1`, `KIRKCALDY-AO-1`,
+`KIRKCALDY-OTL-1`, and `KIRKCALDY-DSU-1`. This prevents duplicated role layers
+such as `KIRKCALDY-FO1-FO-1`. Ordinary supported station types retain their
+`TOWN-SERVICESEQUENCE` contract.
 
 ### Station address and sequence contract
 
@@ -177,13 +169,14 @@ locality and post town as one space-delimited value. When that fallback repeats
 the terminal post town, Station Naming retains the longest repeated terminal
 phrase without shortening ordinary multi-word post towns.
 
-Every generated station name must have a positive sequence. Existing valid
-sequences are retained when unique. Unnumbered stations sharing a town and
-service receive the first free positive numbers in processing order, while
+Every generated ordinary station name must have a positive sequence. Existing
+valid sequences are retained when unique. Unnumbered stations sharing a town
+and service receive the first free positive numbers in processing order, while
 duplicate existing numbers are separated deterministically. Station sequence
 format remains directly attached to the service suffix (`ANSTRUTHER-FS1`), and
 vehicle names retain the whole station name before their own type and sequence
-(`ANSTRUTHER-FS1-ICCU-1`).
+(`ANSTRUTHER-FS1-ICCU-1`). Building type `22` is the deliberate town-only
+exception; its sequence comes from Unit Naming.
 
 ### Recovery Unit Naming identity contract
 

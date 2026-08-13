@@ -26,6 +26,7 @@ node scripts/check-road-rail-unit-naming-class-v10107.mjs
 node scripts/check-officer-station-naming-v10108.mjs
 node scripts/check-station-unit-naming-chain-v10109.mjs
 node scripts/check-station-move-address-v10110.mjs
+node scripts/check-type22-town-only-naming-v10111.mjs
 ```
 
 The userscript validator checks the canonical metadata contract, version format, Greasy Fork size limits and prohibited update/download metadata. Pull requests that change the userscript must increase `@version` above the base branch.
@@ -47,23 +48,26 @@ The Road Rail Unit Naming regression protects verified type `107`, its canonical
 class is available under Fire and All classes, excluded from Airfield, and does
 not weaken the exact type-107 Mission Finder dispatch rule.
 
-The officer response location Station Naming regression executes the real type
-`22` mapping, vehicle-table parser, dynamic suffix resolver and station-name
-builder. It protects exact type `20` → `-OTL`, type `3` → `-FO`, and type `34`
-→ `-AO` resolution, rejects empty or mixed identities, preserves numbered
-station identities, and confirms that ordinary station numbering is unchanged.
+The response-location Station Naming regression executes the real type `22`
+mapping, town-only station builder and Unit Naming callsign generator. It
+protects exact town-only station output and confirms that FO, AO, OTL and DSU
+roles plus their sequence are owned exclusively by Unit Naming. Ordinary
+station numbering remains unchanged.
 
 The Station-to-Unit Naming chain regression preserves reverse-address
-component separators, extracts the post town, assigns unique positive station
-sequences, and passes the complete station name into Unit Naming before the
-vehicle type and vehicle sequence are appended. It covers unnumbered and
-duplicate same-town stations as well as valid existing sequences.
+component separators and extracts the post town. It covers the type-22
+town-only exception, role and sequence ownership in Unit Naming, and isolation
+from the existing positive station-sequence rules used by ordinary stations.
 
 The Station Move Building address regression uses the exact flattened live
 value `Ladywalk, KY10 3EX Anstruther Easter Anstruther`. It proves that a
 structured MissionChief reverse address is preferred and that the Move-page
 fallback still extracts `Anstruther` if reverse lookup is unavailable, while
 ordinary multi-word post towns remain intact.
+
+The type-22 town-only regression uses the exact `ABERDOUR-FO1` live case. It
+proves that Station Naming returns `ABERDOUR`, while Unit Naming produces one
+role layer and the unit sequence: `ABERDOUR-FO-1` and `ABERDOUR-FO-2`.
 
 Automated checks are necessary but cannot prove live MissionChief behaviour.
 

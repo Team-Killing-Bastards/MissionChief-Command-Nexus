@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.110
+// @version      1.0.111
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -65,7 +65,7 @@
     if (!TOOL_IS_TOP_WINDOW && !TOOL_IS_STATION_OVERVIEW_FRAME) return;
 
     const UNIT_VERSION = '3.3.23';
-    const STATION_VERSION = '1.3.17';
+    const STATION_VERSION = '1.3.18';
     const PERSONNEL_VERSION = '1.3.9';
     const PERSONNEL_TRAINING_CODE = 'critical_care';
     const PERSONNEL_TRAINING_LABEL = 'Critical Care';
@@ -942,12 +942,7 @@
     };
 
 
-    const STATION_DYNAMIC_SUFFIX_OFFICER_VEHICLE = 'OFFICER_VEHICLE';
-    const STATION_OFFICER_SUFFIX_BY_VEHICLE_TYPE_ID = Object.freeze({
-        '3': '-FO',
-        '20': '-OTL',
-        '34': '-AO'
-    });
+    const STATION_NAMING_MODE_TOWN_ONLY = 'TOWN_ONLY';
 
     // MissionChief's own building type IDs. These are read from the parent
     // .building_list_li element and do not depend on uploaded station images.
@@ -963,8 +958,8 @@
         22: {
             stationType: 'OTHER',
             suffix: '',
-            dynamicSuffixRule: STATION_DYNAMIC_SUFFIX_OFFICER_VEHICLE,
-            label: 'Officer response location'
+            namingMode: STATION_NAMING_MODE_TOWN_ONLY,
+            label: 'Response location'
         },
         27: { stationType: 'RNLI',       suffix: '-RNLI', label: 'RNLI / lifeboat station' },
         28: { stationType: 'COASTGUARD', suffix: '-CG',   label: 'Coastguard station' },
@@ -5284,7 +5279,7 @@
                         stationType: typeInfo.stationType
                     }),
                     suffix: typeInfo.suffix,
-                    dynamicSuffixRule: typeInfo.dynamicSuffixRule || '',
+                    namingMode: typeInfo.namingMode || '',
                     typeLabel: typeInfo.label
                 };
             })
@@ -5524,7 +5519,11 @@
                 setStationUiValue('status', 'Opening station');
 
                 stationLog(`Station ${displayPosition}/${STATION_STATE.queue.length}: ${station.displayName}`, 'station');
-                stationLog(`Type: ${station.typeLabel} | building_type_id=${station.buildingTypeId ?? 'unknown'} | suffix=${station.suffix || station.dynamicSuffixRule || 'none'}`, 'info');
+                stationLog(
+                    `Type: ${station.typeLabel} | building_type_id=${station.buildingTypeId ?? 'unknown'} | ` +
+                    `format=${station.suffix || station.namingMode || 'none'}`,
+                    'info'
+                );
 
                 const result = await processOneStationName(station);
 
@@ -5560,7 +5559,8 @@
     }
 
     async function processOneStationName(station) {
-        if (!station.suffix && !station.dynamicSuffixRule) {
+        const isTownOnly = station.namingMode === STATION_NAMING_MODE_TOWN_ONLY;
+        if (!station.suffix && !isTownOnly) {
             stationLog(`Skipped: no safe naming rule exists for building_type_id=${station.buildingTypeId ?? 'unknown'}.`, 'error');
             return 'skipped';
         }
@@ -5595,32 +5595,25 @@
 
             await waitIfStationNamingPaused();
 
-            const suffixResult = resolveStationNamingSuffix(station, doc);
-            if (!suffixResult.suffix) {
-                stationLog(`Skipped: ${suffixResult.error}`, 'error');
-                return 'skipped';
-            }
-
-            const resolvedSuffix = suffixResult.suffix;
-            if (suffixResult.vehicleTypeId) {
+            const resolvedSuffix = station.suffix || '';
+            if (isTownOnly) {
                 stationLog(
-                    `Dynamic station rule: building_type_id=${station.buildingTypeId} | ` +
-                    `vehicle_type_id=${suffixResult.vehicleTypeId} | suffix=${resolvedSuffix}`,
+                    `Town-only station rule: building_type_id=${station.buildingTypeId} | ` +
+                    'Unit Naming owns the vehicle role and unit sequence.',
                     'info'
                 );
             }
 
             setStationUiValue('status', 'Reading station address');
 
-            // Do not depend on clicking Move building. MissionChief can block that page
-            // while vehicles are away. First try a read-only background request; when
-            // that is unavailable, use the station coordinates and MissionChief's own
-            // /reverse_address endpoint. The Move form is never submitted.
+            // Do not depend on clicking Move building. Prefer MissionChief's structured
+            // coordinate reverse address, then use a read-only Move-page request as the
+            // fallback. The Move form is never submitted.
             const addressResult = await resolveStationAddress(station, doc);
             const address = String(addressResult.address || '').trim();
 
             if (!address) {
-                throw new Error(addressResult.error || 'Station address could not be read from the Move page or coordinate fallback.');
+                throw new Error(addressResult.error || 'Station address could not be read from MissionChief reverse address or the Move-page fallback.');
             }
 
             setStationUiValue('address', address);
@@ -5638,18 +5631,26 @@
             stationLog(`Postcode: ${parsed.postcode}`, 'info');
             stationLog(`Detected area: ${formattedArea}`, 'after');
 
-            const stationSequence = reserveStationNameSequence(
-                formattedArea,
-                resolvedSuffix,
-                station
+            const stationSequence = isTownOnly
+                ? ''
+                : reserveStationNameSequence(
+                    formattedArea,
+                    resolvedSuffix,
+                    station
+                );
+            stationLog(
+                isTownOnly
+                    ? 'Station sequence: none (Unit Naming supplies the unit sequence)'
+                    : `Station sequence: ${stationSequence}`,
+                'info'
             );
-            stationLog(`Station sequence: ${stationSequence}`, 'info');
 
             let proposedName = buildStationName(
                 formattedArea,
                 resolvedSuffix,
                 station.displayName,
-                stationSequence
+                stationSequence,
+                station.namingMode
             );
             setStationUiValue('after', proposedName);
             stationLog(`BEFORE: ${station.displayName}`, 'before');
@@ -5693,7 +5694,8 @@
                 formattedArea,
                 resolvedSuffix,
                 actualBefore,
-                stationSequence
+                stationSequence,
+                station.namingMode
             );
             setStationUiValue('before', actualBefore || station.displayName);
             setStationUiValue('after', proposedName);
@@ -6092,65 +6094,6 @@
         }
     }
 
-    function getStationOfficerVehicleTypeIds(doc) {
-        const matchedIds = new Set();
-        const vehicleElements = doc?.querySelectorAll?.(
-            '#vehicle_table [vehicle_type_id], #vehicle_table [data-vehicle-type-id]'
-        ) || [];
-
-        for (const element of vehicleElements) {
-            const vehicleTypeId = String(
-                element.getAttribute('vehicle_type_id') ||
-                element.getAttribute('data-vehicle-type-id') ||
-                ''
-            ).trim();
-
-            if (STATION_OFFICER_SUFFIX_BY_VEHICLE_TYPE_ID[vehicleTypeId]) {
-                matchedIds.add(vehicleTypeId);
-            }
-        }
-
-        return [...matchedIds];
-    }
-
-    function resolveStationNamingSuffix(station, doc) {
-        if (!station.dynamicSuffixRule) {
-            return { suffix: station.suffix || '', vehicleTypeId: '', error: '' };
-        }
-
-        if (station.dynamicSuffixRule !== STATION_DYNAMIC_SUFFIX_OFFICER_VEHICLE) {
-            return {
-                suffix: '',
-                vehicleTypeId: '',
-                error: `unknown dynamic station naming rule ${station.dynamicSuffixRule}.`
-            };
-        }
-
-        const vehicleTypeIds = getStationOfficerVehicleTypeIds(doc);
-        if (vehicleTypeIds.length === 1) {
-            const vehicleTypeId = vehicleTypeIds[0];
-            return {
-                suffix: STATION_OFFICER_SUFFIX_BY_VEHICLE_TYPE_ID[vehicleTypeId],
-                vehicleTypeId,
-                error: ''
-            };
-        }
-
-        if (!vehicleTypeIds.length) {
-            return {
-                suffix: '',
-                vehicleTypeId: '',
-                error: 'building type 22 has no supported officer vehicle. Expected vehicle_type_id 20 (OTL), 3 (FO), or 34 (AO).'
-            };
-        }
-
-        return {
-            suffix: '',
-            vehicleTypeId: '',
-            error: `building type 22 contains multiple officer vehicle types (${vehicleTypeIds.join(', ')}), so its suffix is ambiguous.`
-        };
-    }
-
     function extractStationArea(address) {
         const input = normalizeStationAddressText(address);
         const postcodeRegex = /\b(GIR\s?0AA|(?:[A-PR-UWYZ][0-9][0-9A-HJKPSTUW]?|[A-PR-UWYZ][A-HK-Y][0-9][0-9ABEHMNPRV-Y]?)\s?[0-9][ABD-HJLNP-UW-Z]{2})\b/i;
@@ -6226,7 +6169,17 @@
             .toUpperCase();
     }
 
-    function buildStationName(formattedArea, suffix, currentName, sequenceOverride = '') {
+    function buildStationName(
+        formattedArea,
+        suffix,
+        currentName,
+        sequenceOverride = '',
+        namingMode = ''
+    ) {
+        if (namingMode === STATION_NAMING_MODE_TOWN_ONLY) {
+            return formattedArea;
+        }
+
         const sequence = String(
             sequenceOverride || getExistingStationSequence(currentName, suffix) || ''
         ).trim();
@@ -6244,10 +6197,8 @@
 
     function createStationNameSequenceRegistry(stations) {
         const registry = new Map();
-        const knownSuffixes = [
-            ...Object.values(STATION_BUILDING_TYPE_INFO).map(info => info.suffix),
-            ...Object.values(STATION_OFFICER_SUFFIX_BY_VEHICLE_TYPE_ID)
-        ]
+        const knownSuffixes = Object.values(STATION_BUILDING_TYPE_INFO)
+            .map(info => info.suffix)
             .filter(Boolean)
             .sort((left, right) => right.length - left.length);
 
