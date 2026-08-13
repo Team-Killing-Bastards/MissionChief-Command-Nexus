@@ -4,6 +4,29 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.107] - 2026-08-13
+
+### Fixed
+
+- Completed the Road Rail Unit's existing partial Unit Naming integration using its verified native type `107` identity.
+- Changed the naming label from the internal abbreviation `RRU` to MissionChief's canonical `Road Rail Unit` wording while retaining the `RRU` callsign.
+- Moved the class from the incorrect Airfield selector to Fire and retained it under All classes.
+- Replaced the aircraft-themed icon with the service-matched 🚒🚆 rail/fire icon.
+- Preserved Mission Finder's exact type-107-only selection and verification contract, including separation from the type `59` Coastguard Rope Rescue Unit.
+
+### Regression coverage
+
+- Added `scripts/check-road-rail-unit-naming-class-v10107.mjs` to execute the real Unit Naming class-option builder and callsign generator.
+- Covered the native type, canonical label, Fire and All availability, Airfield exclusion, icon, generated callsign and strict Mission Finder matcher.
+
+### Changed engine baseline
+
+- Command Nexus increased from `1.0.106` to `1.0.107`.
+- Unit Naming increased from `3.3.22` to `3.3.23`.
+- Mission Finder remains `V10.6.153`.
+- Station Naming remains `1.3.14`.
+- Personnel Assignment remains `1.3.9`.
+
 ## [1.0.106] - 2026-08-13
 
 ### Added

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.106
+// @version      1.0.107
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -64,7 +64,7 @@
     // excluded from the naming/personnel runtime.
     if (!TOOL_IS_TOP_WINDOW && !TOOL_IS_STATION_OVERVIEW_FRAME) return;
 
-    const UNIT_VERSION = '3.3.22';
+    const UNIT_VERSION = '3.3.23';
     const STATION_VERSION = '1.3.14';
     const PERSONNEL_VERSION = '1.3.9';
     const PERSONNEL_TRAINING_CODE = 'critical_care';
@@ -794,7 +794,7 @@
         "102": "Search Dog Unit SAR",
         "105": "Recovery Vehicle",
         "106": "HGV Recovery Vehicle",
-        "107": "RRU",
+        "107": "Road Rail Unit",
         "108": "EIU",
         "109": "EOD Commander",
         "110": "EOD Response Vehicle",
@@ -872,7 +872,7 @@
         "Flatbed Recovery Vehicle": { code: "FRV", icon: "🛻" },
         "HGV Recovery Vehicle": { code: "HGV", icon: "🚛" },
         "RRV": { code: "RRV", icon: "🚑" },
-        "RRU": { code: "RRU", icon: "🚒✈️" },
+        "Road Rail Unit": { code: "RRU", icon: "🚒🚆" },
         "Rescue Support Unit (RSU)": { code: "RSU", icon: "🚒🛠️" },
         "DSU": { code: "DSU", icon: "🚔🐕" },
         "OTL": { code: "OTL", icon: "🚔" },
@@ -898,7 +898,7 @@
             '5', '10', '27', '28', '30', '31', '33', '34', '96', '97', '98'
         ]),
         FIRE: Object.freeze([
-            '3', '4', '6', '7', '15', '16', '17', '26', '29', '35', '36', '38', '39'
+            '3', '4', '6', '7', '15', '16', '17', '26', '29', '35', '36', '38', '39', '107'
         ]),
         POLICE: Object.freeze([
             '8', '11', '12', '13', '19', '20', '24', '25', '51', '52', '54', '55', '56', '91', '108', '115', '116'
@@ -907,7 +907,7 @@
             '9', '11', '65'
         ]),
         AIRFIELD: Object.freeze([
-            '73', '75', '76', '77', '78', '79', '80', '81', '107'
+            '73', '75', '76', '77', '78', '79', '80', '81'
         ]),
         COASTGUARD: Object.freeze([
             '57', '58', '59', '60', '61', '62', '63', '65', '66', '70', '71', '72'

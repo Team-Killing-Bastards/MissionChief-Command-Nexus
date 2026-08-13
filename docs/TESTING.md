@@ -22,6 +22,7 @@ node scripts/validate-userscript.mjs
 node scripts/check-auto-stop-reason.mjs
 node scripts/check-police-unit-naming-classes-v10105.mjs
 node scripts/check-recovery-unit-naming-classes-v10106.mjs
+node scripts/check-road-rail-unit-naming-class-v10107.mjs
 ```
 
 The userscript validator checks the canonical metadata contract, version format, Greasy Fork size limits and prohibited update/download metadata. Pull requests that change the userscript must increase `@version` above the base branch.
@@ -37,6 +38,11 @@ The Recovery Unit Naming regression executes the same real class-option builder
 and callsign generator. It protects type `105` Recovery Vehicle and type `106`
 HGV Recovery Vehicle, their distinct icons, the Recovery and All selector
 entries, and the legacy Flatbed Recovery `FRV` naming alias.
+
+The Road Rail Unit Naming regression protects verified type `107`, its canonical
+`Road Rail Unit` label, `RRU` callsign and 🚒🚆 icon. It also confirms that the
+class is available under Fire and All classes, excluded from Airfield, and does
+not weaken the exact type-107 Mission Finder dispatch rule.
 
 Automated checks are necessary but cannot prove live MissionChief behaviour.
 
