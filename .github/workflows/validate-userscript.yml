@@ -322,6 +322,9 @@ jobs:
       - name: Validate Auto Mode prisoner cell gate
         run: node scripts/check-auto-prisoner-cell-gate.mjs
 
+      - name: Validate current prisoner Cell Selection and first green destination
+        run: node scripts/check-auto-prison-cell-success-v10113.mjs
+
       - name: Validate Fire Engine Update mapping and Auto Mode helper cleanup
         run: node scripts/check-fire-engine-update-mapping.mjs
 

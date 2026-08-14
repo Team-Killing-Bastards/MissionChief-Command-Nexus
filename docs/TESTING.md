@@ -28,6 +28,7 @@ node scripts/check-station-unit-naming-chain-v10109.mjs
 node scripts/check-station-move-address-v10110.mjs
 node scripts/check-type22-town-only-naming-v10111.mjs
 node scripts/check-naming-dispatch-centre-popout-v10112.mjs
+node scripts/check-auto-prison-cell-success-v10113.mjs
 ```
 
 The userscript validator checks the canonical metadata contract, version format, Greasy Fork size limits and prohibited update/download metadata. Pull requests that change the userscript must increase `@version` above the base branch.

@@ -20,8 +20,8 @@ function extractFunction(name) {
 }
 
 for (const [token, label] of [
-  ['// @version      1.0.112', 'v1.0.83 metadata'],
-  ['MISSION FINDER V10.6.153', 'Mission Finder V10.6.143'],
+  ['// @version      1.0.113', 'v1.0.83 metadata'],
+  ['MISSION FINDER V10.6.154', 'Mission Finder V10.6.143'],
   ['function mfIsExactPatientTransportAnchor(', 'exact patient route guard'],
   ['function mfFindExactPatientTransportAnchorDeep(', 'iframe-aware patient finder'],
   ['const MF_AUTO_PRISONER_CELL_DESTINATION_WAIT_MS = 8000;', 'cell maximum wait retained'],
