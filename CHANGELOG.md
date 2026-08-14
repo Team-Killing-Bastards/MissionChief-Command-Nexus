@@ -4,6 +4,27 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.113] - 2026-08-14
+
+### Fixed
+
+- Restored Auto Mode prisoner transport handling for MissionChief's current structured `Cell Selection` screen. The new markup identifies the active chooser with `data-transport-request-type="prisoner"` instead of the older explanatory sentence.
+- Scoped prison destinations to the active prisoner request and continued to select only the first visible, enabled `btn-success` destination with available cells. Full `btn-danger` destinations are ignored, so the supplied DALGETY BAY zero-cell row is skipped and CARDENDEN is selected.
+- Retained the legacy prisoner-alert detection as a fallback for older MissionChief page variants.
+
+### Regression coverage
+
+- Added `scripts/check-auto-prison-cell-success-v10113.mjs` using the supplied current transport-request structure and destination ordering.
+- Covered a red zero-cell destination first, stale zero-capacity and disabled green rows, first valid green selection, later green rows, active-request scoping, and the legacy alert fallback.
+
+### Changed engine baseline
+
+- Command Nexus increased from `1.0.112` to `1.0.113`.
+- Mission Finder increased from `V10.6.153` to `V10.6.154`.
+- Unit Naming remains `3.3.24`.
+- Station Naming remains `1.3.19`.
+- Personnel Assignment remains `1.3.9`.
+
 ## [1.0.112] - 2026-08-14
 
 ### Fixed

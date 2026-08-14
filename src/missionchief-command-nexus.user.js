@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.112
+// @version      1.0.113
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -11820,7 +11820,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.153
+         * MODULE 2: MISSION FINDER V10.6.154
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -12301,6 +12301,10 @@
     }
 
 
+    // V10.6.154: prisoner cell handoffs recognise MissionChief's structured
+    // data-transport-request prisoner block, then select the first usable
+    // green destination while ignoring full red cells. The legacy explanatory
+    // alert remains supported as a fallback.
     // V10.6.153: automatic Auto Mode safety stops persist their exact reason
     // and local timestamp in Mission Control until the user starts Auto Mode
     // again. Deliberate manual stops do not create an unexpected-stop warning.
@@ -43714,6 +43718,40 @@ function getActivePrisonerCellSelectionContext() {
     for (const candidateDocument of candidateDocuments) {
         if (!candidateDocument || !candidateDocument.querySelectorAll) {
             continue;
+        }
+
+        // MissionChief's current prisoner transport screen exposes the cell
+        // chooser as a structured transport-request block. Prefer that exact
+        // owner so the destination lookup stays scoped to the active vehicle,
+        // even when the old explanatory sentence is no longer rendered.
+        const structuredRequests = Array.from(
+            candidateDocument.querySelectorAll(
+                '[data-transport-request="true"][data-transport-request-type="prisoner"]'
+            )
+        );
+
+        for (const request of structuredRequests) {
+            const prisonSelect = request.querySelector?.(
+                '.prison-select[data-vehicle-id]'
+            );
+
+            if (!prisonSelect) continue;
+
+            const alert =
+                request.querySelector?.('.alert.alert-info') ||
+                request;
+
+            try {
+                if (!mfIsVisibleInOwnDocument(alert)) continue;
+            } catch (_error) {
+                continue;
+            }
+
+            return {
+                document: candidateDocument,
+                alert,
+                root: request
+            };
         }
 
         const alerts = Array.from(
