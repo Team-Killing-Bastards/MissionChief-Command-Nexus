@@ -4,6 +4,28 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.112] - 2026-08-14
+
+### Fixed
+
+- Restored Unit Naming and Station Naming in a standalone `/leitstellenansicht` window. MissionChief omits type-7 Dispatch Centre cards from that layout and exposes the same native ID/name pairs through `.leitstelle_selection[leitstelle]` navbar controls instead.
+- Retained type-7 building-card discovery in the embedded Stations layout, with full type-7 rows taking precedence when both native layouts expose the same Dispatch Centre.
+- Kept each station card's `leitstelle_building_id` as the authority for Dispatch Centre membership, including the `Unassigned / default` group.
+- Removed any need for the popout to depend on or inspect its opener window; all required centre and station data is read from its own MissionChief DOM.
+
+### Regression coverage
+
+- Added `scripts/check-naming-dispatch-centre-popout-v10112.mjs` using the exact standalone layout from the supplied live HTML: navbar Dispatch Centre controls, membership-bearing station cards, and no type-7 cards.
+- Covered centre-list readiness, station-assignment readiness, Unit/Station Naming filtering, and the unassigned group while preserving existing embedded-layout regressions.
+
+### Changed engine baseline
+
+- Command Nexus increased from `1.0.111` to `1.0.112`.
+- Unit Naming increased from `3.3.23` to `3.3.24`.
+- Station Naming increased from `1.3.18` to `1.3.19`.
+- Mission Finder remains `V10.6.153`.
+- Personnel Assignment remains `1.3.9`.
+
 ## [1.0.111] - 2026-08-14
 
 ### Changed

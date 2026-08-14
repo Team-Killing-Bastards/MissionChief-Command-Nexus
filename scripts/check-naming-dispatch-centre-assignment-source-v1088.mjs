@@ -25,9 +25,9 @@ function extractFunction(name) {
   fail(`Unterminated ${name}`);
 }
 
-expect(source.includes('// @version      1.0.111'), 'Expected current Command Nexus version');
-expect(source.includes("const UNIT_VERSION = '3.3.23';"), 'Expected current Unit Naming version');
-expect(source.includes("const STATION_VERSION = '1.3.18';"), 'Expected current Station Naming version');
+expect(source.includes('// @version      1.0.112'), 'Expected current Command Nexus version');
+expect(source.includes("const UNIT_VERSION = '3.3.24';"), 'Expected current Unit Naming version');
+expect(source.includes("const STATION_VERSION = '1.3.19';"), 'Expected current Station Naming version');
 
 const assignmentStart = source.indexOf('function getNamingStationRowBuildingId(');
 const assignmentLoader = source.slice(

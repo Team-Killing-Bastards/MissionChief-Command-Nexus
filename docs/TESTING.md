@@ -27,6 +27,7 @@ node scripts/check-officer-station-naming-v10108.mjs
 node scripts/check-station-unit-naming-chain-v10109.mjs
 node scripts/check-station-move-address-v10110.mjs
 node scripts/check-type22-town-only-naming-v10111.mjs
+node scripts/check-naming-dispatch-centre-popout-v10112.mjs
 ```
 
 The userscript validator checks the canonical metadata contract, version format, Greasy Fork size limits and prohibited update/download metadata. Pull requests that change the userscript must increase `@version` above the base branch.
@@ -68,6 +69,12 @@ ordinary multi-word post towns remain intact.
 The type-22 town-only regression uses the exact `ABERDOUR-FO1` live case. It
 proves that Station Naming returns `ABERDOUR`, while Unit Naming produces one
 role layer and the unit sequence: `ABERDOUR-FO-1` and `ABERDOUR-FO-2`.
+
+The standalone Stations popout regression recreates MissionChief's native
+`/leitstellenansicht` structure: Dispatch Centre ID/name controls in the navbar,
+station membership on `leitstelle_building_id`, and no type-7 building cards. It
+proves that both naming tools load their hierarchy and continue to filter the
+selected Dispatch Centre and unassigned stations correctly.
 
 Automated checks are necessary but cannot prove live MissionChief behaviour.
 
