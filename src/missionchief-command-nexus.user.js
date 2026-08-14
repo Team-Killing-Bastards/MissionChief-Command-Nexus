@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.111
+// @version      1.0.112
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -64,8 +64,8 @@
     // excluded from the naming/personnel runtime.
     if (!TOOL_IS_TOP_WINDOW && !TOOL_IS_STATION_OVERVIEW_FRAME) return;
 
-    const UNIT_VERSION = '3.3.23';
-    const STATION_VERSION = '1.3.18';
+    const UNIT_VERSION = '3.3.24';
+    const STATION_VERSION = '1.3.19';
     const PERSONNEL_VERSION = '1.3.9';
     const PERSONNEL_TRAINING_CODE = 'critical_care';
     const PERSONNEL_TRAINING_LABEL = 'Critical Care';
@@ -1579,6 +1579,29 @@
         return centres;
     }
 
+    function extractNamingDispatchCentresFromStationControls(root = document) {
+        const centres = new Map();
+        if (!root?.querySelectorAll) return centres;
+
+        // A standalone /leitstellenansicht window does not render Dispatch Centres
+        // as type-7 building cards. MissionChief exposes the same native ID/name
+        // pairs in the overview navbar instead, while ordinary station cards retain
+        // their authoritative leitstelle_building_id membership attributes.
+        root.querySelectorAll('.leitstelle_selection[leitstelle]').forEach(control => {
+            const id = String(control.getAttribute?.('leitstelle') || '').trim();
+            if (!/^\d+$/.test(id) || Number(id) <= 0) return;
+
+            const label =
+                cleanText(control.getAttribute?.('search_attribute') || '') ||
+                cleanText(control.textContent || '');
+            if (!label) return;
+
+            centres.set(id, label);
+        });
+
+        return centres;
+    }
+
     function getNamingDispatchCentreStationRowDocuments() {
         const documents = [];
         const addDocument = candidate => {
@@ -1610,7 +1633,12 @@
     function collectNamingDispatchCentresFromStationRows() {
         const centres = new Map();
         getNamingDispatchCentreStationRowDocuments().forEach(candidateDocument => {
+            extractNamingDispatchCentresFromStationControls(candidateDocument).forEach((label, id) => {
+                centres.set(String(id), label);
+            });
             extractNamingDispatchCentresFromStationRows(candidateDocument).forEach((label, id) => {
+                // Prefer a full type-7 building row when both native layouts expose
+                // the same Dispatch Centre.
                 centres.set(String(id), label);
             });
         });

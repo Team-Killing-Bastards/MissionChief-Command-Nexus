@@ -33,9 +33,9 @@ function extractFunction(name) {
   fail(`Unterminated ${name}`);
 }
 
-expect(source.includes('// @version      1.0.111'), 'Expected current Command Nexus 1.0.94');
-expect(source.includes("const UNIT_VERSION = '3.3.23';"), 'Expected current Unit Naming 3.3.19');
-expect(source.includes("const STATION_VERSION = '1.3.18';"), 'Expected current Station Naming 1.3.13');
+expect(source.includes('// @version      1.0.112'), 'Expected current Command Nexus 1.0.94');
+expect(source.includes("const UNIT_VERSION = '3.3.24';"), 'Expected current Unit Naming 3.3.19');
+expect(source.includes("const STATION_VERSION = '1.3.19';"), 'Expected current Station Naming 1.3.13');
 expect(source.includes('id="mc-namer-service"'), 'Unit Naming Service selector missing');
 expect(source.includes('id="mc-station-service"'), 'Station Naming Service selector missing');
 
