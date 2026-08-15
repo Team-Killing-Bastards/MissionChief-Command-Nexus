@@ -13,8 +13,8 @@ const source = await readFile(
   'utf8'
 );
 
-assert.ok(source.includes('// @version      1.0.113'));
-assert.ok(source.includes('MISSION FINDER V10.6.154'));
+assert.ok(source.includes('// @version      1.0.114'));
+assert.ok(source.includes('MISSION FINDER V10.6.155'));
 
 function section(startToken, endToken) {
   const start = source.indexOf(startToken);

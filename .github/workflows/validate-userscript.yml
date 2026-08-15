@@ -58,6 +58,7 @@ on:
       - 'scripts/check-auto-dispatch-eod-required-personnel.mjs'
       - 'scripts/check-road-rail-rru-mapping.mjs'
       - 'scripts/check-auto-prisoner-cell-gate.mjs'
+      - 'scripts/check-auto-prisoner-release-close-v10114.mjs'
       - 'scripts/check-fire-engine-update-mapping.mjs'
       - 'scripts/check-saved-position-helper-copy.mjs'
       - 'scripts/check-bulk-trained-register-update.mjs'
@@ -122,6 +123,7 @@ on:
       - 'scripts/check-auto-dispatch-eod-required-personnel.mjs'
       - 'scripts/check-road-rail-rru-mapping.mjs'
       - 'scripts/check-auto-prisoner-cell-gate.mjs'
+      - 'scripts/check-auto-prisoner-release-close-v10114.mjs'
       - 'scripts/check-fire-engine-update-mapping.mjs'
       - 'scripts/check-saved-position-helper-copy.mjs'
       - 'scripts/check-bulk-trained-register-update.mjs'
@@ -324,6 +326,9 @@ jobs:
 
       - name: Validate current prisoner Cell Selection and first green destination
         run: node scripts/check-auto-prison-cell-success-v10113.mjs
+
+      - name: Validate released-prisoner result close and owner capture
+        run: node scripts/check-auto-prisoner-release-close-v10114.mjs
 
       - name: Validate Fire Engine Update mapping and Auto Mode helper cleanup
         run: node scripts/check-fire-engine-update-mapping.mjs

@@ -28,7 +28,7 @@ function extractFunction(name, nextFunctionName) {
   return source.slice(start, end);
 }
 
-assert.ok(source.includes('// @version      1.0.113'));
+assert.ok(source.includes('// @version      1.0.114'));
 assert.ok(source.includes("const STATION_VERSION = '1.3.19';"));
 
 const townOnlyMode = vm.runInNewContext(

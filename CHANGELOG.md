@@ -4,6 +4,29 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.114] - 2026-08-15
+
+### Fixed
+
+- Completed the Auto Mode `Release Prisoners` flow after MissionChief replaces the cell-selection iframe with the exact `<div class="alert alert-success">The prisoners were released.</div>` result.
+- Captured the owning Vue `.vm--container` and stable `data-modal` identity before release navigation, then reacquired that same modal's live `span.lightbox-close[title="Close"]` control after the old iframe document detached.
+- Added a scoped Font Awesome `xmark` fallback that resolves the SVG to its interactive close ancestor without allowing an unrelated visible modal to be dismissed.
+- Preserved the current-mission release selector, duplicate-click guard, bounded waits, verified-close restart gate and fail-closed Auto Mode stop when either the exact success result or its owned close control cannot be confirmed.
+
+### Regression coverage
+
+- Added `scripts/check-auto-prisoner-release-close-v10114.mjs` with the supplied success result and Vue close-span structure.
+- Covered pre-navigation owner capture, detached result-document discovery, rejection of an unrelated modal with identical success text, live close-control reacquisition and close verification before Auto Mode restarts.
+- Extended the existing prisoner cell gate regression to require owner capture before the release click and exact success confirmation before the result modal is closed.
+
+### Changed engine baseline
+
+- Command Nexus increased from `1.0.113` to `1.0.114`.
+- Mission Finder increased from `V10.6.154` to `V10.6.155`.
+- Unit Naming remains `3.3.24`.
+- Station Naming remains `1.3.19`.
+- Personnel Assignment remains `1.3.9`.
+
 ## [1.0.113] - 2026-08-14
 
 ### Fixed

@@ -45,8 +45,8 @@ function extractFunction(name) {
   fail(`Unterminated ${name}`);
 }
 
-expect(source.includes('// @version      1.0.113'), 'Expected Command Nexus 1.0.82');
-expect(source.includes('MISSION FINDER V10.6.154'), 'Expected Mission Finder V10.6.143');
+expect(source.includes('// @version      1.0.114'), 'Expected Command Nexus 1.0.82');
+expect(source.includes('MISSION FINDER V10.6.155'), 'Expected Mission Finder V10.6.143');
 expect(source.includes('15 * 1000;'), 'Expected reduced idle scan cadence');
 
 const eventDocuments = extractFunction('getMissionEventCollectibleDocuments');
