@@ -39,22 +39,25 @@ function extractFunction(name) {
   fail(`Unterminated ${name}`);
 }
 
-expect(source.includes('// @version      1.0.121'), 'Expected Command Nexus 1.0.101');
-expect(source.includes(' * MODULE 2: MISSION FINDER V10.6.159'), 'Expected Mission Finder V10.6.150');
+expect(source.includes('// @version      1.0.122'), 'Expected Command Nexus 1.0.122');
+expect(source.includes(' * MODULE 2: MISSION FINDER V10.6.160'), 'Expected Mission Finder V10.6.160');
 
 const setMarker = 'const MF_POLICE_DRONE_REQUIREMENT_NAMES = new Set([';
 const setStart = source.indexOf(setMarker);
 const setEnd = source.indexOf(']);', setStart);
 expect(setStart >= 0 && setEnd > setStart, 'Police Drone requirement-name set missing');
 const droneSet = source.slice(setStart, setEnd + 3);
+for (const alias of ['police drone', 'police drones', 'required police drone', 'required police drones']) {
+  expect(droneSet.includes(`'${alias}'`), `Missing explicit Police Drone requirement alias: ${alias}`);
+}
 for (const alias of ['require drone', 'require drones', 'required drone', 'required drones', 'requires drone', 'requires drones']) {
-  expect(droneSet.includes(`'${alias}'`), `Missing reported Police Drone requirement alias: ${alias}`);
+  expect(!droneSet.includes(`'${alias}'`), `Generic Drone alias must not remain Police-only: ${alias}`);
 }
 expect(!/\n\s*'drone',/.test(droneSet), 'Bare Drone must not become a broad cross-service alias');
 expect(!/\n\s*'drones',/.test(droneSet), 'Bare Drones must not become a broad cross-service alias');
 
 for (const alias of ['Require Drone', 'Require Drones', 'Required Drone', 'Required Drones', 'Requires Drone', 'Requires Drones']) {
-  expect(source.includes(`"${alias}": "Police Helicopter"`), `Missing cross-reference alias: ${alias}`);
+  expect(source.includes(`"${alias}": "Drone"`), `Missing generic Drone cross-reference alias: ${alias}`);
 }
 
 const mode = extractFunction('getPoliceAirRequirementMode');
@@ -70,4 +73,4 @@ expect(/policeAirMode\s*===\s*'drone'[\s\S]{0,700}eligible\.filter\([\s\S]{0,160
 expect(source.includes('matches = isPoliceDroneCheckbox(input);'), 'Selected-unit verification must keep the exact Police Drone matcher');
 expect(source.includes('// Flexible wording only: Drone first, Police Helicopter fallback.'), 'Flexible helicopter-or-drone fallback contract missing');
 
-console.log('PASS: Require/Required/Requires Drone aliases enter the existing police drone-only route and select exact type 91 Police Drone Vehicle without creating a broad bare-Drone alias.');
+console.log('PASS: Explicit Police Drone wording remains exact type 91 and separate from generic Require/Required/Requires Drone aliases, without creating a broad bare-Drone alias.');

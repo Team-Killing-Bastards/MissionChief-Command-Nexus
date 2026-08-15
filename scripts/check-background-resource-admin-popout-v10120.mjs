@@ -92,7 +92,7 @@ function runOverviewGate({
   return context.result;
 }
 
-assert.ok(source.includes('// @version      1.0.121'));
+assert.ok(source.includes('// @version      1.0.122'));
 assert.ok(source.includes("const UNIT_VERSION = '3.3.27';"));
 assert.ok(source.includes("const STATION_VERSION = '1.3.22';"));
 

@@ -29,6 +29,7 @@ node scripts/check-station-move-address-v10110.mjs
 node scripts/check-type22-town-only-naming-v10111.mjs
 node scripts/check-naming-dispatch-centre-popout-v10112.mjs
 node scripts/check-naming-popout-late-membership-v10121.mjs
+node scripts/check-generic-drone-family-v10122.mjs
 node scripts/check-auto-prison-cell-success-v10113.mjs
 ```
 
@@ -84,6 +85,14 @@ cards. It proves that both Station and Unit Naming refresh the current native
 `leitstelle_building_id` rows, rebuild Dispatch Centre → Service → Station Type
 → Start From, and rebind already-loaded station snapshots after a manual
 Dispatch Centre refresh.
+
+The generic Drone-family regression uses the supplied `Required Drones` SAR
+mission wording. It proves that prefixed Require/Requires/Required Drone(s)
+accepts exact type `89` SAR Drone Vehicles and exact type `91` Police Drone
+Vehicles across shared selection and selected-unit verification. Explicit
+Police Drone remains type `91` only, Police Helicopter remains type `11` only,
+the explicit flexible wording retains Drone-first/helicopter fallback, and bare
+Drone/Drones prose remains excluded.
 
 Automated checks are necessary but cannot prove live MissionChief behaviour.
 

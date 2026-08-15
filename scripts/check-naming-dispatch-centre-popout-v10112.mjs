@@ -74,7 +74,7 @@ class PopoutDocument {
   }
 }
 
-expect(source.includes('// @version      1.0.121'), 'Expected Command Nexus 1.0.112');
+expect(source.includes('// @version      1.0.122'), 'Expected Command Nexus 1.0.112');
 expect(source.includes("const UNIT_VERSION = '3.3.27';"), 'Expected Unit Naming 3.3.27');
 expect(source.includes("const STATION_VERSION = '1.3.22';"), 'Expected Station Naming 1.3.22');
 

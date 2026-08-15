@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.121
+// @version      1.0.122
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -11717,7 +11717,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.159
+         * MODULE 2: MISSION FINDER V10.6.160
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -12551,6 +12551,10 @@
     const MF_EXACT_REGISTER_TRAINING_MAX_AGE_MS =
         180 * 24 * 60 * 60 * 1000;
 
+    // V10.6.160: Require/Requires/Required Drone(s) is a generic drone-family
+    // requirement. It accepts exact type-89 SAR Drone Vehicles and exact
+    // type-91 Police Drone Vehicles, while explicit Police Drone and Police
+    // Helicopter wording retains its established strict modes.
     // V10.6.159: Fire Engines or RIVs now exhausts exact type-76 RIVs first,
     // then fills only the remaining requirement with exact type-16 Rescue
     // Pumps. Both types count toward the same row; Water Ladders and CARPs
@@ -13359,10 +13363,12 @@
         'rapid intervention vehicles rivs'
     ]);
 
-    // V10.6.59: Police Air requirements have three distinct modes.
+    // V10.6.160: Drone and Police Air requirements have four distinct modes.
     // Only an explicit "Police Helicopter or Drone" requirement may use a
     // Drone first with a Police Helicopter as fallback. A helicopter-only row
-    // must never be satisfied by a Drone, and a drone-only row must use a Drone.
+    // must never be satisfied by a Drone, an explicit Police Drone row must
+    // use exact type 91, and prefixed generic Drone wording may use exact type
+    // 89 SAR or type 91 Police Drone Vehicles.
     const MF_POLICE_AIR_FLEXIBLE_REQUIREMENT_NAMES = new Set([
         'police helicopter or drone',
         'police helicopter or drones',
@@ -13388,15 +13394,21 @@
         'police drones',
         'required police drone',
         'required police drones',
+        'drone vehicle(police station)',
+        'drone vehicle (police station)',
+        'drone vehicle police station'
+    ]);
+
+    // MissionChief uses this prefixed wording without naming a service. Keep
+    // it separate from bare Drone/Drones so unrelated prose cannot trigger a
+    // vehicle requirement, but allow either exact in-game drone family.
+    const MF_GENERIC_DRONE_REQUIREMENT_NAMES = new Set([
         'require drone',
         'require drones',
         'required drone',
         'required drones',
         'requires drone',
-        'requires drones',
-        'drone vehicle(police station)',
-        'drone vehicle (police station)',
-        'drone vehicle police station'
+        'requires drones'
     ]);
 
     let mfMissionDocumentCache = {
@@ -13902,12 +13914,12 @@
         "Required Police Helicopter or Drones": "Police Helicopter",
         "Required Police Helicopters or Drone": "Police Helicopter",
         "Required Police Helicopters or Drones": "Police Helicopter",
-        "Require Drone": "Police Helicopter",
-        "Require Drones": "Police Helicopter",
-        "Required Drone": "Police Helicopter",
-        "Required Drones": "Police Helicopter",
-        "Requires Drone": "Police Helicopter",
-        "Requires Drones": "Police Helicopter",
+        "Require Drone": "Drone",
+        "Require Drones": "Drone",
+        "Required Drone": "Drone",
+        "Required Drones": "Drone",
+        "Requires Drone": "Drone",
+        "Requires Drones": "Drone",
         "Police Drone": "Police Helicopter",
         "Police Drones": "Police Helicopter",
         "Policehelicopter": "Police Helicopter",
@@ -15658,6 +15670,12 @@
         }
 
         if (
+            MF_GENERIC_DRONE_REQUIREMENT_NAMES.has(raw)
+        ) {
+            return 'generic-drone';
+        }
+
+        if (
             MF_POLICE_DRONE_REQUIREMENT_NAMES.has(raw)
         ) {
             return 'drone';
@@ -15777,6 +15795,60 @@
                 )
             );
         });
+    }
+
+    function isSarDroneCheckbox(
+        input
+    ) {
+        if (!input) return false;
+
+        // MissionChief UK Drone Vehicle from a Search and Rescue HQ.
+        const typeIds =
+            getVehicleTypeIdentifiers(
+                input
+            );
+
+        if (typeIds.includes('89')) {
+            return true;
+        }
+
+        // A known non-SAR type must not pass through a loose label match.
+        if (typeIds.length > 0) {
+            return false;
+        }
+
+        return getPoliceAirVehicleValues(
+            input
+        ).some(value => {
+            const cleaned =
+                normaliseSartecDisplayedName(
+                    value
+                );
+
+            return (
+                value ===
+                    'drone vehicle sar hq' ||
+                value ===
+                    'drone vehicle (sar hq)' ||
+                value ===
+                    'sar drone vehicle' ||
+                /^Drone\s+Vehicle\s*(?:\(\s*)?SAR\s+HQ(?:\s*\))?(?:\s|$)/i.test(
+                    cleaned
+                ) ||
+                /^SAR\s+Drone\s+Vehicle(?:\s|$)/i.test(
+                    cleaned
+                )
+            );
+        });
+    }
+
+    function isGenericDroneCheckbox(
+        input
+    ) {
+        return (
+            isSarDroneCheckbox(input) ||
+            isPoliceDroneCheckbox(input)
+        );
     }
 
 
@@ -16529,12 +16601,19 @@ function isRoadRailUnitVehicleCheckbox(input) {
 
         if (
             policeAirMode === 'flexible' ||
-            policeAirMode === 'drone'
+            policeAirMode === 'drone' ||
+            policeAirMode === 'generic-drone'
         ) {
             add('Police Drone');
             add('Police Drones');
             add('Drone Vehicle(Police Station)');
             add('Drone Vehicle (Police Station)');
+        }
+
+        if (policeAirMode === 'generic-drone') {
+            add('Drone Vehicle SAR HQ');
+            add('Drone Vehicle (SAR HQ)');
+            add('SAR Drone Vehicle');
         }
 
         if (lowerMapped === 'welfare vehicle' || lowerRaw.includes('welfare vehicle')) {
@@ -17876,6 +17955,10 @@ function isRoadRailUnitVehicleCheckbox(input) {
                         return isPoliceDroneCheckbox(input);
                     }
 
+                    if (policeAirMode === 'generic-drone') {
+                        return isGenericDroneCheckbox(input);
+                    }
+
                     return (
                         isPoliceHelicopterCheckbox(input) ||
                         isPoliceDroneCheckbox(input)
@@ -17894,6 +17977,14 @@ function isRoadRailUnitVehicleCheckbox(input) {
                 return sortVehicleCheckboxesByBestArrival(
                     eligible.filter(
                         isPoliceDroneCheckbox
+                    )
+                );
+            }
+
+            if (policeAirMode === 'generic-drone') {
+                return sortVehicleCheckboxesByBestArrival(
+                    eligible.filter(
+                        isGenericDroneCheckbox
                     )
                 );
             }
@@ -18227,6 +18318,8 @@ function isRoadRailUnitVehicleCheckbox(input) {
                 matches = isPoliceHelicopterCheckbox(input);
             } else if (policeAirMode === 'drone') {
                 matches = isPoliceDroneCheckbox(input);
+            } else if (policeAirMode === 'generic-drone') {
+                matches = isGenericDroneCheckbox(input);
             } else if (policeAirMode === 'flexible') {
                 matches =
                     isPoliceHelicopterCheckbox(input) ||
@@ -18581,6 +18674,14 @@ function isRoadRailUnitVehicleCheckbox(input) {
                 return eligible.find(
                     isPoliceDroneCheckbox
                 ) || null;
+            }
+
+            if (policeAirMode === 'generic-drone') {
+                return sortVehicleCheckboxesByBestArrival(
+                    eligible.filter(
+                        isGenericDroneCheckbox
+                    )
+                )[0] || null;
             }
 
             return (

@@ -4,6 +4,17 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.122] - 2026-08-16
+
+### Fixed
+
+- Corrected the supplied SAR mission case where `Required Drones` reported no available unit because Nexus treated the wording as Police Drone type `91` only.
+- `Require Drone(s)`, `Requires Drone(s)` and `Required Drone(s)` now use a strict generic Drone-family mode that accepts exact type `89` **Drone Vehicle SAR HQ** and exact type `91` **Police Drone Vehicle**, ordered by best arrival.
+- Explicit `Police Drone(s)` remains type `91` only, explicit `Police Helicopter(s)` remains type `11` only, and `Police Helicopter or Drone(s)` retains Police Drone-first with Police Helicopter fallback.
+- Bare `Drone` and `Drones` prose remains excluded, preventing unrelated cross-service text from creating dispatch demand.
+- Added permanent regression coverage for both exact Drone families, strict service-specific modes, shared fresh/update selection, selected-unit verification, ETA ordering and the bare-word guard.
+- Increased Mission Finder from `V10.6.159` to `V10.6.160` and the unified userscript from `1.0.121` to `1.0.122`. Unit Naming remains `3.3.27`, Station Naming remains `1.3.22`, and Personnel Assignment remains `1.3.10`.
+
 ## [1.0.121] - 2026-08-15
 
 ### Fixed
