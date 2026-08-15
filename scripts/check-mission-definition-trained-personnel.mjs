@@ -70,8 +70,8 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-requireText('// @version      1.0.117', 'v1.0.55 metadata');
-requireText(' * MODULE 2: MISSION FINDER V10.6.158', 'Mission Finder V10.6.120 header');
+requireText('// @version      1.0.118', 'v1.0.55 metadata');
+requireText(' * MODULE 2: MISSION FINDER V10.6.159', 'Mission Finder V10.6.120 header');
 requireText('function getTrainedPersonnelRequirementsFromFreeText(', 'free-text trained-personnel parser');
 requireText('function getMissionDefinitionTrainedPersonnelRequirements(', 'mission-definition row classifier');
 requireText('const trailingText =', 'adjacent quantity boundary');

@@ -17,7 +17,7 @@
 </tr>
 </table>
 
-**Current version:** `1.0.117` · **Mission Finder engine:** `V10.6.158` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
+**Current version:** `1.0.118` · **Mission Finder engine:** `V10.6.159` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)
@@ -229,6 +229,7 @@ Auto Mode validates readiness and final selected-unit state before dispatch. Cro
 - `Road Rail Unit` maps to `RRU`.
 - `Firefighters` converts to Rescue Pumps at 9 personnel per vehicle.
 - `Car Recovery` plus explicit car, truck, lorry, van or vehicle towing wording (for example `1 truck to tow`) uses exact type-105 Flatbed Recovery Vehicles.
+- `Fire Engines or RIVs` selects exact type-76 RIVs first, then tops up only the remaining count with exact type-16 Rescue Pumps; Water Ladders and CARPs are excluded.
 - `RIV or Major Foam Tender` uses RIV first and Major Foam Tender only when no RIV is available.
 
 High Volume Pump, Drone Operator, Co-Responder, and Lifeguard remain disabled pending sufficient evidence.
