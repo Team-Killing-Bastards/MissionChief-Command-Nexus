@@ -17,7 +17,7 @@
 </tr>
 </table>
 
-**Current version:** `1.0.118` · **Mission Finder engine:** `V10.6.159` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
+**Current version:** `1.0.119` · **Mission Finder engine:** `V10.6.159` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)
@@ -50,7 +50,7 @@ MissionChief Command Nexus combines two proven MartyBlyth systems into one maint
 
 ### 🧭 Resource Administration Engine
 
-- Station and vehicle naming
+- Background station and vehicle naming without opening each resource page
 - Dispatch Centre-first scoping for Unit Naming and Station Naming, including embedded and standalone `/leitstellenansicht` layouts
 - Personnel Assignment planning
 - Preview and controlled Live modes
@@ -127,10 +127,10 @@ The canonical source is [`src/missionchief-command-nexus.user.js`](src/missionch
 
 | Capability | Operational behaviour |
 |---|---|
-| **Station naming** | Builds and previews structured station names from available station and location data |
-| **Vehicle naming** | Applies repeatable captions and numbering across supported station and vehicle types |
+| **Station naming** | Builds and previews structured station names, then submits MissionChief's exact native edit form in the background and verifies the saved value |
+| **Vehicle naming** | Applies repeatable captions and numbering through background native-form requests, with exact vehicle-ID and post-save verification |
 | **Scoped processing** | Operates on a selected station scope with progress, pause, resume, and stop controls where supported |
-| **Personnel Assignment** | Finds trained personnel, plans eligible assignments, supports Preview and Live modes, and verifies submitted changes |
+| **Personnel Assignment** | Finds trained personnel, plans eligible assignments, and performs Live submissions plus fresh verification reads entirely in the background |
 | **Build Personnel Register** | Reads each discovered vehicle assignment page without changing assignments |
 | **Training intelligence** | Stores exact verified vehicle/personnel capability for specialist mission matching |
 | **Operational reporting** | Separates changed, skipped, failed, unfilled, and genuine training-shortage outcomes |
@@ -283,7 +283,7 @@ High Volume Pump, Drone Operator, Co-Responder, and Lifeguard remain disabled pe
 - Responsive station-list markup is recognised without weakening the desktop station-page guard.
 - Unit Naming, Station Naming, Personnel Assignment, and Build Personnel Register share one responsive station-discovery layer.
 - Resource Administration appears only on the rendered personal Stations view; Map, Missions, Chat, and Radio hide the same stateful panel instance.
-- Responsive `Details` links can use a hidden same-origin station iframe when the desktop lightbox binding is unavailable.
+- Station Naming, Unit Naming, and Personnel Assignment use same-origin background requests; they do not click `Details` links or open station/vehicle lightboxes.
 - Resource Administration uses safe-area insets, touch scrolling, pointer dragging, and deterministic cleanup.
 - Mission Control opens at the safe-area top, stacks to the mobile viewport, scrolls internally, and supports independent collapse controls.
 - Unit Finder reads the hidden or visible Requirements for this Mission source for the exact active mission before selecting units.

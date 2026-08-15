@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.118
+// @version      1.0.119
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -64,9 +64,12 @@
     // excluded from the naming/personnel runtime.
     if (!TOOL_IS_TOP_WINDOW && !TOOL_IS_STATION_OVERVIEW_FRAME) return;
 
-    const UNIT_VERSION = '3.3.24';
-    const STATION_VERSION = '1.3.19';
-    const PERSONNEL_VERSION = '1.3.9';
+    const UNIT_VERSION = '3.3.25';
+    const STATION_VERSION = '1.3.20';
+    const PERSONNEL_VERSION = '1.3.10';
+    // Command Nexus 1.0.119: Station and Unit Naming now submit MissionChief's
+    // native edit forms in the background; Personnel Assignment remains on its
+    // verified background request path. Resource links are never clicked.
     const PERSONNEL_TRAINING_CODE = 'critical_care';
     const PERSONNEL_TRAINING_LABEL = 'Critical Care';
     const PERSONNEL_TARGET_VEHICLE_TYPE_ID = '5';
@@ -1010,7 +1013,7 @@
         mode: "all",
         selectedUnitClass: UNIT_CLASS_ALL,
         runId: 0,
-        activeIframe: null
+        activeControllers: new Set()
     };
 
     const STATION_STATE = {
@@ -1028,7 +1031,6 @@
         renamedCount: 0,
         skippedCount: 0,
         previewedCount: 0,
-        activeIframe: null,
         buildingCoordinateCache: new Map(),
         buildingDataPromise: null,
         activeControllers: new Set(),
@@ -1100,9 +1102,12 @@
         STATE.stopped = true;
         STATE.paused = false;
 
-        const activeUnitIframe = STATE.activeIframe;
-        STATE.activeIframe = null;
-        releaseUnitIframeDocument(activeUnitIframe);
+        for (const controller of STATE.activeControllers) {
+            try {
+                controller.abort();
+            } catch (_error) {}
+        }
+        STATE.activeControllers.clear();
         STATE.stations = [];
         STATE.filteredStations = [];
         STATION_STATE.stopped = true;
@@ -1144,7 +1149,6 @@
         PERSONNEL_START_OPTION_BY_HREF.clear();
         PERSONNEL_HIGHLIGHTED_STATION_LINKS.clear();
 
-        STATION_STATE.activeIframe = null;
         STATION_STATE.buildingCoordinateCache.clear();
         STATION_STATE.buildingDataPromise = null;
         NAMING_DISPATCH_CENTRE_STATE.byBuildingId.clear();
@@ -1996,85 +2000,6 @@
         const expected = normaliseStationOverviewHref(href);
         if (!expected) return null;
         return getStationOverviewEntries().find(entry => entry.href === expected) || null;
-    }
-
-    function activateStationOverviewEntry(entry) {
-        const link = entry?.link;
-        if (!link?.isConnected) return false;
-
-        if (!isIosSafariWebsite() || link.classList.contains('lightbox-open')) {
-            link.click();
-            return true;
-        }
-
-        // Responsive iOS markup may expose a normal Details link without the
-        // desktop lightbox class. Temporarily opt that exact building link into
-        // MissionChief's delegated lightbox handler while preventing navigation.
-        link.classList.add('lightbox-open');
-        const preventNavigation = event => event.preventDefault();
-        link.addEventListener('click', preventNavigation, { capture: true, once: true });
-        link.click();
-        setTimeout(() => link.classList.remove('lightbox-open'), 0);
-        return true;
-    }
-
-    function createManagedStationIframe(stationHref, purpose = 'station') {
-        const href = normaliseStationOverviewHref(stationHref);
-        if (!href) return null;
-
-        document.querySelectorAll(
-            `iframe.mc-namer-managed-station-iframe[data-mc-purpose="${purpose}"]`
-        ).forEach(frame => frame.remove());
-
-        const iframe = document.createElement('iframe');
-        iframe.className = 'mc-namer-managed-station-iframe';
-        iframe.dataset.mcPurpose = purpose;
-        iframe.src = href;
-        iframe.setAttribute('aria-hidden', 'true');
-        iframe.tabIndex = -1;
-        Object.assign(iframe.style, {
-            position: 'fixed',
-            left: '-10000px',
-            top: '0',
-            width: '2px',
-            height: '2px',
-            opacity: '0.01',
-            pointerEvents: 'none',
-            border: '0'
-        });
-        document.body.appendChild(iframe);
-        return iframe;
-    }
-
-    function removeManagedStationIframe(iframe) {
-        if (!iframe?.classList?.contains('mc-namer-managed-station-iframe')) {
-            return false;
-        }
-        try {
-            iframe.src = 'about:blank';
-        } catch (_error) {}
-        iframe.remove();
-        return true;
-    }
-
-    async function openStationWorkflowIframe(entry, purpose, waitForIframe) {
-        if (!entry?.link?.isConnected) return null;
-
-        if (isIosSafariWebsite() && !entry.link.classList.contains('lightbox-open')) {
-            const managed = createManagedStationIframe(entry.href, purpose);
-            return managed ? await waitForIframe(entry.href, managed) : null;
-        }
-
-        activateStationOverviewEntry(entry);
-        const normal = await waitForIframe(entry.href, null, 24);
-        if (normal || !isIosSafariWebsite()) return normal;
-
-        // Safari can render a responsive Details link while MissionChief's
-        // lightbox binding is unavailable. Fall back to a same-origin managed
-        // iframe so naming and personnel-safe station reads still work without
-        // navigating away from the Stations tab.
-        const managed = createManagedStationIframe(entry.href, purpose);
-        return managed ? await waitForIframe(entry.href, managed) : null;
     }
 
     function ensureSingleNamingToolsPanel(preferredPanel = null) {
@@ -5471,7 +5396,6 @@
         STATION_STATE.renamedCount = 0;
         STATION_STATE.skippedCount = 0;
         STATION_STATE.previewedCount = 0;
-        STATION_STATE.activeIframe = null;
         STATION_STATE.nameSequencesByBase = createStationNameSequenceRegistry(
             STATION_STATE.stations
         );
@@ -5540,11 +5464,11 @@
 
                 setStationUiValue('progress', `${displayPosition} / ${STATION_STATE.queue.length}`);
                 setStationUiValue('current', station.displayName);
-                setStationUiValue('address', 'Opening station...');
+                setStationUiValue('address', 'Reading station...');
                 setStationUiValue('town', 'Waiting...');
                 setStationUiValue('before', station.displayName);
                 setStationUiValue('after', 'Waiting...');
-                setStationUiValue('status', 'Opening station');
+                setStationUiValue('status', 'Reading station');
 
                 stationLog(`Station ${displayPosition}/${STATION_STATE.queue.length}: ${station.displayName}`, 'station');
                 stationLog(
@@ -5569,8 +5493,6 @@
                 if (!STATION_STATE.stopped) await sleep(350);
             }
         } finally {
-            await closeStationNamingModal();
-            STATION_STATE.activeIframe = null;
             STATION_STATE.running = false;
             STATION_STATE.paused = false;
             document.querySelector('#mc-station-pause').textContent = 'Pause';
@@ -5593,32 +5515,20 @@
             return 'skipped';
         }
 
-        const stationEntry = findStationOverviewEntry(station.href);
-        const stationLink = stationEntry?.link || null;
-        if (!stationLink) {
-            stationLog(`Skipped: station link no longer exists for ${station.href}.`, 'error');
-            return 'skipped';
-        }
-
-        let iframe = null;
-
         try {
-            iframe = await openStationWorkflowIframe(
-                stationEntry,
-                'station-naming',
-                waitForStationNamingIframe
+            setStationUiValue('status', 'Reading station');
+            const stationPage = await stationFetchDocument(station.href, 12000);
+            const expectedBuildingId = String(
+                station.buildingId || getBuildingIdFromHref(station.href)
             );
-            STATION_STATE.activeIframe = iframe;
+            const returnedBuildingId = getBuildingIdFromHref(stationPage.href);
+            if (!expectedBuildingId || returnedBuildingId !== expectedBuildingId) {
+                throw new Error(
+                    `Station read returned the wrong building (${returnedBuildingId || 'none'}; expected ${expectedBuildingId || 'unknown'}).`
+                );
+            }
 
-            if (!iframe) throw new Error('Station lightbox iframe did not open.');
-
-            let doc = await waitForStationNamingDocument(
-                iframe,
-                currentDoc => currentDoc.querySelector(`a[href="${station.href}/edit"]`),
-                'normal station page'
-            );
-
-            if (!doc) throw new Error('Normal station page did not finish loading.');
+            const doc = stationPage.doc;
             if (STATION_STATE.stopped) return 'skipped';
 
             await waitIfStationNamingPaused();
@@ -5693,29 +5603,24 @@
             if (STATION_STATE.stopped) return 'skipped';
             await waitIfStationNamingPaused();
 
-            // The iframe is still on the normal station page because address reading
-            // now happens in the background. Open Edit directly from this page.
             if (STATION_STATE.stopped) return 'skipped';
 
-            setStationUiValue('status', 'Opening Edit');
-            const editLink = doc.querySelector(`a[href="${station.href}/edit"]`);
-            if (!editLink) throw new Error('Edit button was not found.');
+            setStationUiValue('status', 'Reading station edit form');
+            const editHref = `${station.href}/edit`;
+            const editPage = await stationFetchDocument(editHref, 12000);
+            if (getBuildingIdFromHref(editPage.href) !== expectedBuildingId) {
+                throw new Error('Station edit request returned a different building.');
+            }
 
-            stationDebug(`Clicking Edit: ${editLink.getAttribute('href')}`);
-            editLink.click();
-
-            doc = await waitForStationNamingDocument(
-                iframe,
-                currentDoc => currentDoc.querySelector('#building_name')
-                    && currentDoc.querySelector(`form[action="${station.href}"] input[name="_method"][value="patch"]`),
-                'Edit station page'
-            );
-
-            if (!doc) throw new Error('Edit station page or #building_name did not load.');
-
-            const nameInput = doc.querySelector('#building_name');
-            const saveButton = doc.querySelector('input.btn-success[type="submit"][value="Save"], button.btn-success[type="submit"]');
-            if (!nameInput || !saveButton) throw new Error('Station name field or Save button was not found.');
+            const prepared = prepareBackgroundNativeForm(editPage.doc, {
+                expectedAction: station.href,
+                inputSelector: '#building_name',
+                requiredMethodOverride: 'patch',
+                submitSelector: 'input.btn-success[type="submit"][value="Save"], button.btn-success[type="submit"]',
+                value: proposedName,
+                resourceLabel: `station ${expectedBuildingId}`
+            });
+            const nameInput = prepared.input;
 
             const actualBefore = String(nameInput.value || '').trim();
             proposedName = buildStationName(
@@ -5737,16 +5642,17 @@
             if (STATION_STATE.stopped) return 'skipped';
             await waitIfStationNamingPaused();
 
-            nameInput.focus();
-            nameInput.value = proposedName;
-            nameInput.dispatchEvent(new Event('input', { bubbles: true }));
-            nameInput.dispatchEvent(new Event('change', { bubbles: true }));
+            prepared.body.set(nameInput.name, proposedName);
 
             stationLog(`EDIT BEFORE: ${actualBefore}`, 'before');
             stationLog(`EDIT AFTER : ${proposedName}`, 'after');
-            setStationUiValue('status', 'Saving station');
+            setStationUiValue('status', 'Saving station in background');
 
-            saveButton.click();
+            await submitBackgroundNativeForm(
+                stationFetchWithTimeout,
+                prepared,
+                12000
+            );
 
             const saved = await verifyStationNameSaved(station.href, proposedName);
             if (!saved) throw new Error('Save could not be verified. The script did not count this station as renamed.');
@@ -5760,9 +5666,6 @@
             stationLog(`Skipped ${station.displayName}: ${error?.message || error}`, 'error');
             stationDebug(error?.stack || String(error));
             return 'skipped';
-        } finally {
-            await closeStationNamingModal();
-            STATION_STATE.activeIframe = null;
         }
     }
 
@@ -6106,13 +6009,145 @@
         return { latitude: lat, longitude: lng };
     }
 
+    function getSameOriginResourceUrl(url, resourceLabel = 'Resource') {
+        let resolved;
+        try {
+            resolved = new URL(String(url || ''), location.origin);
+        } catch (_error) {
+            throw new Error(`${resourceLabel} URL is invalid.`);
+        }
+
+        if (resolved.origin !== location.origin) {
+            throw new Error(`${resourceLabel} URL is not same-origin.`);
+        }
+
+        return resolved;
+    }
+
+    function prepareBackgroundNativeForm(doc, {
+        expectedAction,
+        inputSelector,
+        requiredMethodOverride = '',
+        submitSelector = 'input[type="submit"], button[type="submit"]',
+        value,
+        resourceLabel = 'resource'
+    }) {
+        const input = doc?.querySelector?.(inputSelector) || null;
+        const form = input?.closest?.('form') || null;
+        if (!input || !form) {
+            throw new Error(`The native ${resourceLabel} edit form or ${inputSelector} field was not returned.`);
+        }
+
+        const inputName = String(input.getAttribute('name') || '').trim();
+        if (!inputName) {
+            throw new Error(`The native ${resourceLabel} field has no submitted name.`);
+        }
+
+        const actionAttribute = String(form.getAttribute('action') || '').trim();
+        if (!actionAttribute) {
+            throw new Error(`The native ${resourceLabel} form has no action.`);
+        }
+
+        const actionUrl = getSameOriginResourceUrl(
+            actionAttribute,
+            `Native ${resourceLabel} form action`
+        );
+        const expectedActionUrl = getSameOriginResourceUrl(
+            expectedAction,
+            `Expected ${resourceLabel} form action`
+        );
+        if (
+            actionUrl.pathname !== expectedActionUrl.pathname ||
+            actionUrl.search !== expectedActionUrl.search
+        ) {
+            throw new Error(
+                `The native ${resourceLabel} form action did not match ${expectedActionUrl.pathname}${expectedActionUrl.search}.`
+            );
+        }
+
+        const method = String(form.getAttribute('method') || 'get').toUpperCase();
+        if (method !== 'POST') {
+            throw new Error(`The native ${resourceLabel} form method was ${method}, not POST.`);
+        }
+
+        if (requiredMethodOverride) {
+            const actualOverride = String(
+                form.querySelector('input[name="_method"]')?.value || ''
+            ).trim().toLowerCase();
+            if (actualOverride !== String(requiredMethodOverride).toLowerCase()) {
+                throw new Error(
+                    `The native ${resourceLabel} form did not contain the required ${requiredMethodOverride.toUpperCase()} override.`
+                );
+            }
+        }
+
+        const body = new FormData(form);
+        body.set(inputName, String(value ?? ''));
+
+        const submitControl = form.querySelector(submitSelector);
+        const submitName = String(submitControl?.getAttribute?.('name') || '').trim();
+        if (submitName && !submitControl.disabled) {
+            body.set(submitName, String(submitControl.value || ''));
+        }
+
+        const csrfToken = String(
+            doc.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+            document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+            ''
+        ).trim();
+        const headers = {
+            'Accept': 'text/html,application/xhtml+xml'
+        };
+        if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
+
+        return {
+            actionHref: `${actionUrl.pathname}${actionUrl.search}`,
+            body,
+            form,
+            headers,
+            input,
+            method,
+            resourceLabel
+        };
+    }
+
+    async function submitBackgroundNativeForm(
+        fetchWithTimeout,
+        prepared,
+        timeoutMs = 12000
+    ) {
+        const response = await fetchWithTimeout(prepared.actionHref, {
+            method: prepared.method,
+            credentials: 'same-origin',
+            cache: 'no-store',
+            redirect: 'follow',
+            headers: prepared.headers,
+            body: prepared.body
+        }, timeoutMs);
+
+        if (!response.ok) {
+            throw new Error(
+                `Native ${prepared.resourceLabel} save returned HTTP ${response.status}.`
+            );
+        }
+
+        try {
+            await response.text();
+        } catch (_error) {}
+        return response;
+    }
+
     async function stationFetchWithTimeout(url, options = {}, timeoutMs = 10000) {
+        const requestUrl = getSameOriginResourceUrl(url, 'Station request');
         const controller = new AbortController();
         STATION_STATE.activeControllers.add(controller);
         const timer = setTimeout(() => controller.abort(), timeoutMs);
 
         try {
-            return await fetch(url, {
+            return await fetch(`${requestUrl.pathname}${requestUrl.search}`, {
+                credentials: 'same-origin',
+                cache: 'no-store',
+                redirect: 'follow',
                 ...options,
                 signal: controller.signal
             });
@@ -6120,6 +6155,31 @@
             clearTimeout(timer);
             STATION_STATE.activeControllers.delete(controller);
         }
+    }
+
+    async function stationFetchDocument(url, timeoutMs = 10000) {
+        const requestUrl = getSameOriginResourceUrl(url, 'Station document');
+        const response = await stationFetchWithTimeout(requestUrl.href, {
+            headers: {
+                'Accept': 'text/html,application/xhtml+xml'
+            }
+        }, timeoutMs);
+
+        if (!response.ok) {
+            throw new Error(`Station request returned HTTP ${response.status}: ${requestUrl.pathname}`);
+        }
+
+        const html = await response.text();
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const responseUrl = getSameOriginResourceUrl(
+            response.url || requestUrl.href,
+            'Station response'
+        );
+        return {
+            response,
+            doc,
+            href: `${responseUrl.pathname}${responseUrl.search}`
+        };
     }
 
     function extractStationArea(address) {
@@ -6313,57 +6373,6 @@
         return match ? match[1] : '';
     }
 
-    async function waitForStationNamingIframe(stationHref, preferredIframe = null, maximumAttempts = 80) {
-        for (let i = 0; i < maximumAttempts; i++) {
-            if (STATION_STATE.stopped) return null;
-
-            const candidates = [
-                preferredIframe,
-                ...document.querySelectorAll(
-                    'iframe.lightbox_iframe[src^="/buildings/"], ' +
-                    'iframe#lssmv4-redesign-lightbox-iframe, ' +
-                    'iframe.mc-namer-managed-station-iframe'
-                )
-            ].filter(Boolean);
-
-            for (const iframe of candidates.reverse()) {
-                try {
-                    const doc = iframe.contentDocument;
-                    const currentPath = iframe.contentWindow?.location?.pathname || iframe.getAttribute('src') || '';
-                    if (doc && (currentPath.startsWith(stationHref) || doc.querySelector(`a[href="${stationHref}/move"], form[action="${stationHref}"], form[action="${stationHref}/move_do"]`))) {
-                        return iframe;
-                    }
-                } catch (error) {
-                    stationDebug(`Iframe access retry: ${error?.message || error}`);
-                }
-            }
-
-            await sleep(250);
-        }
-
-        return null;
-    }
-
-    async function waitForStationNamingDocument(iframe, predicate, label) {
-        for (let i = 0; i < 100; i++) {
-            if (STATION_STATE.stopped) return null;
-
-            try {
-                const doc = iframe?.contentDocument;
-                if (doc && doc.readyState !== 'loading' && predicate(doc)) {
-                    stationDebug(`${label} ready at ${iframe.contentWindow?.location?.pathname || iframe.getAttribute('src') || 'unknown path'}`);
-                    return doc;
-                }
-            } catch (error) {
-                stationDebug(`${label} wait retry: ${error?.message || error}`);
-            }
-
-            await sleep(200);
-        }
-
-        return null;
-    }
-
     async function verifyStationNameSaved(stationHref, expectedName) {
         for (let attempt = 1; attempt <= 14; attempt++) {
             if (STATION_STATE.stopped) return false;
@@ -6419,22 +6428,6 @@
             nameNode.setAttribute?.('data-building-name', newName);
         }
         if (container) container.setAttribute('search_attribute', newName);
-    }
-
-    async function closeStationNamingModal(iframe = STATION_STATE.activeIframe) {
-        if (removeManagedStationIframe(iframe)) {
-            if (STATION_STATE.activeIframe === iframe) STATION_STATE.activeIframe = null;
-            await sleep(50);
-            return;
-        }
-
-        const closeButtons = [...document.querySelectorAll('span.lightbox-close')];
-        const closeButton = closeButtons.reverse().find(button => button.offsetParent !== null) || closeButtons[0];
-
-        if (closeButton) {
-            closeButton.click();
-            await sleep(450);
-        }
     }
 
     async function waitIfStationNamingPaused() {
@@ -9918,19 +9911,28 @@
 
     async function personnelFetchResponse(url, options = {}, timeoutMs = 12000) {
         await waitForPersonnelRequestSlot();
+        const requestUrl = getSameOriginResourceUrl(
+            url,
+            'Personnel Assignment request'
+        );
 
         const controller = new AbortController();
         PERSONNEL_STATE.activeController = controller;
         const timer = setTimeout(() => controller.abort(), timeoutMs);
 
         try {
-            const response = await fetch(url, {
+            // Personnel Assignment is deliberately background-only. Do not replace
+            // this canonical request path with link clicks, lightboxes or iframes.
+            const response = await fetch(
+                `${requestUrl.pathname}${requestUrl.search}`,
+                {
                 credentials: 'same-origin',
                 cache: 'no-store',
                 redirect: 'follow',
                 ...options,
                 signal: controller.signal
-            });
+                }
+            );
             PERSONNEL_STATE.lastRequestAt = Date.now();
             return response;
         } finally {
@@ -10989,54 +10991,74 @@
         return `${info.icon ? info.icon + ' ' : ''}${station.callsignBase}-${info.code}-${count}`;
     }
 
-    function navigateUnitIframe(iframe, href) {
-        if (!iframe || !href) return false;
+    async function unitFetchWithTimeout(url, options = {}, timeoutMs = 12000) {
+        const requestUrl = getSameOriginResourceUrl(url, 'Unit Naming request');
+        const controller = new AbortController();
+        STATE.activeControllers.add(controller);
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
 
         try {
-            iframe.contentWindow.location.replace(href);
-            return true;
-        } catch (_error) {
+            return await fetch(`${requestUrl.pathname}${requestUrl.search}`, {
+                credentials: 'same-origin',
+                cache: 'no-store',
+                redirect: 'follow',
+                ...options,
+                signal: controller.signal
+            });
+        } finally {
+            clearTimeout(timer);
+            STATE.activeControllers.delete(controller);
+        }
+    }
+
+    async function unitFetchDocument(url, timeoutMs = 12000) {
+        const requestUrl = getSameOriginResourceUrl(url, 'Unit Naming document');
+        const response = await unitFetchWithTimeout(requestUrl.href, {
+            headers: {
+                'Accept': 'text/html,application/xhtml+xml'
+            }
+        }, timeoutMs);
+
+        if (!response.ok) {
+            throw new Error(`Unit Naming request returned HTTP ${response.status}: ${requestUrl.pathname}`);
+        }
+
+        const html = await response.text();
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const responseUrl = getSameOriginResourceUrl(
+            response.url || requestUrl.href,
+            'Unit Naming response'
+        );
+        return {
+            response,
+            doc,
+            href: `${responseUrl.pathname}${responseUrl.search}`
+        };
+    }
+
+    async function verifyUnitNameSaved(editHref, vehicleId, expectedName) {
+        for (let attempt = 1; attempt <= 12; attempt++) {
+            if (STATE.stopped) return false;
+            await sleep(attempt === 1 ? 450 : 300);
+
             try {
-                iframe.setAttribute('src', href);
-                return true;
-            } catch (_fallbackError) {
-                return false;
+                const editPage = await unitFetchDocument(editHref, 10000);
+                if (getVehicleIdFromHref(editPage.href) !== String(vehicleId)) {
+                    debug(`Vehicle verification returned the wrong ID on attempt ${attempt}.`);
+                    continue;
+                }
+
+                const savedName = String(
+                    editPage.doc.querySelector('#vehicle_caption')?.value || ''
+                ).trim();
+                debug(`Vehicle save verification attempt ${attempt}: "${savedName}"`);
+                if (savedName === expectedName) return true;
+            } catch (error) {
+                debug(`Vehicle save verification attempt ${attempt} failed: ${error?.message || error}`);
             }
         }
-    }
 
-    function releaseUnitIframeDocument(iframe) {
-        if (!iframe) return;
-
-        try {
-            iframe.contentWindow.location.replace('about:blank');
-        } catch (_error) {
-            try {
-                iframe.setAttribute('src', 'about:blank');
-            } catch (_fallbackError) {}
-        }
-    }
-
-    function getUnitModalCloseButton(iframe) {
-        const modal = iframe?.closest?.(
-            '.vm--modal, [role="dialog"], .lightbox, .modal'
-        );
-
-        const scoped = modal?.querySelector?.(
-            'span.lightbox-close, button.lightbox-close, .vm--modal-close, button.close'
-        );
-
-        if (scoped) return scoped;
-
-        const candidates = [
-            ...document.querySelectorAll(
-                'span.lightbox-close, button.lightbox-close, .vm--modal-close, button.close'
-            )
-        ];
-
-        return candidates.reverse().find(button => {
-            return button.offsetParent !== null;
-        }) || candidates[0] || null;
+        return false;
     }
 
     function getUnitClassOptionsForStationType(stationType) {
@@ -11279,11 +11301,6 @@
             return;
         }
 
-        if (STATE.activeIframe) {
-            releaseUnitIframeDocument(STATE.activeIframe);
-            STATE.activeIframe = null;
-        }
-
         if (!STATE.filteredStations.length) {
             log('No matching stations loaded. Press Refresh Stations first.', 'error');
             return;
@@ -11338,9 +11355,15 @@
 
         STATE.stopped = true;
         STATE.paused = false;
+        for (const controller of STATE.activeControllers) {
+            try {
+                controller.abort();
+            } catch (_error) {}
+        }
+        STATE.activeControllers.clear();
         document.querySelector('#mc-namer-pause').textContent = 'Pause';
         setStatus('Stopping...');
-        log('Stop requested. The current safe step will finish, then the run will close.', 'error');
+        log('Stop requested. Active Unit Naming requests were cancelled.', 'error');
     }
 
     function toggleDebug() {
@@ -11364,54 +11387,36 @@
 
                 const station = STATE.filteredStations[STATE.stationIndex];
 
-                setStatus('Opening station');
+                setStatus('Reading station in background');
                 setStation(station.displayName);
                 setVehicle('None');
                 setProgress(STATE.stationIndex, STATE.filteredStations.length);
 
                 log(`Station: ${station.displayName}`, 'station');
 
-                const stationEntry = findStationOverviewEntry(station.href);
-                const stationLink = stationEntry?.link || null;
+                try {
+                    const stationPage = await unitFetchDocument(station.href, 12000);
+                    const expectedBuildingId = String(
+                        station.buildingId || getBuildingIdFromHref(station.href)
+                    );
+                    const returnedBuildingId = getBuildingIdFromHref(stationPage.href);
+                    if (!expectedBuildingId || returnedBuildingId !== expectedBuildingId) {
+                        throw new Error(
+                            `Station read returned building ${returnedBuildingId || 'none'}; expected ${expectedBuildingId || 'unknown'}.`
+                        );
+                    }
+                    if (!stationPage.doc.querySelector('#vehicle_table')) {
+                        throw new Error('The station vehicle table was not returned.');
+                    }
 
-                if (!stationLink) {
-                    log(`Station link not found, skipped: ${station.displayName}`, 'error');
-                    STATE.stationIndex++;
-                    continue;
-                }
-
-                const iframe = await openStationWorkflowIframe(
-                    stationEntry,
-                    'unit-naming',
-                    waitForStationIframe
-                );
-
-                if (iframe) {
-                    STATE.activeIframe = iframe;
-                }
-
-                if (!iframe) {
-                    log(`Station iframe not found, skipped: ${station.displayName}`, 'error');
+                    await processStationVehicleQueue(stationPage.doc, station);
+                } catch (error) {
+                    if (STATE.stopped && error?.name === 'AbortError') break;
+                    log(`Station skipped: ${station.displayName} — ${error?.message || error}`, 'error');
+                    debug(error?.stack || String(error));
                     STATE.skippedCount++;
                     updateCounters();
-                    await closeStationModal(iframe);
-                    STATE.stationIndex++;
-                    continue;
                 }
-
-                const vehicleTableReady = await waitForVehicleTable(iframe);
-
-                if (!vehicleTableReady) {
-                    log(`Vehicle table did not load, skipped: ${station.displayName}`, 'error');
-                    STATE.skippedCount++;
-                    updateCounters();
-                    await closeStationModal(iframe);
-                    STATE.stationIndex++;
-                    continue;
-                }
-
-                await processStationVehicleQueue(iframe, station);
-                await closeStationModal(iframe);
 
                 if (STATE.mode === 'single') {
                     log('Single station mode complete.', 'done');
@@ -11421,10 +11426,6 @@
                 STATE.stationIndex++;
             }
         } finally {
-            if (STATE.activeIframe) {
-                await closeStationModal(STATE.activeIframe);
-            }
-
             if (runId !== STATE.runId) return;
 
             STATE.running = false;
@@ -11445,101 +11446,6 @@
                 log(`Finished. Renamed ${STATE.renamedCount}. Skipped ${STATE.skippedCount}.`, 'done');
             }
         }
-    }
-
-    async function waitForStationIframe(stationHref, preferredIframe = null, maximumAttempts = 80) {
-        const expectedHref = String(stationHref || '');
-        const expectedBuildingId = getBuildingIdFromHref(expectedHref);
-
-        for (let i = 0; i < maximumAttempts; i++) {
-            if (STATE.stopped) return null;
-
-            const candidates = [
-                preferredIframe,
-                ...document.querySelectorAll(
-                    'iframe.lightbox_iframe, iframe#lssmv4-redesign-lightbox-iframe, ' +
-                    '.vm--modal iframe[src*="/buildings/"], ' +
-                    'iframe.mc-namer-managed-station-iframe'
-                )
-            ].filter(Boolean);
-
-            for (const iframe of candidates.reverse()) {
-                try {
-                    const doc = iframe.contentDocument;
-                    if (!doc) continue;
-
-                    const currentPath = iframe.contentWindow?.location?.pathname || '';
-                    const sourcePath = iframe.getAttribute('src') || '';
-                    const currentBuildingId = getBuildingIdFromHref(currentPath || sourcePath);
-
-                    const exactStationMatch = Boolean(
-                        expectedHref && (
-                            currentPath.startsWith(expectedHref) ||
-                            sourcePath.startsWith(expectedHref) ||
-                            sourcePath.includes(expectedHref)
-                        )
-                    );
-
-                    const buildingIdMatch = Boolean(
-                        expectedBuildingId && currentBuildingId === expectedBuildingId
-                    );
-
-                    const documentMatch = Boolean(
-                        expectedHref && (
-                            doc.querySelector(`#vehicle_table`) ||
-                            doc.querySelector(`a[href="${expectedHref}/edit"]`) ||
-                            doc.querySelector(`a[href="${expectedHref}/move"]`) ||
-                            doc.querySelector(`form[action="${expectedHref}"]`)
-                        )
-                    );
-
-                    if (exactStationMatch || buildingIdMatch || documentMatch) {
-                        debug(`Station iframe found: ${currentPath || sourcePath || 'unknown path'}`);
-                        return iframe;
-                    }
-                } catch (error) {
-                    debug(`Station iframe access retry: ${error?.message || error}`);
-                }
-            }
-
-            await sleep(250);
-        }
-
-        return null;
-    }
-
-    async function waitForVehicleTable(iframe) {
-        for (let i = 0; i < 80; i++) {
-            if (STATE.stopped) return false;
-
-            try {
-                const doc = iframe.contentDocument;
-                if (doc && doc.querySelector('#vehicle_table tbody tr')) {
-                    await sleep(300);
-                    return true;
-                }
-            } catch (e) {}
-
-            await sleep(250);
-        }
-        return false;
-    }
-
-    async function waitForEditPage(iframe) {
-        for (let i = 0; i < 80; i++) {
-            if (STATE.stopped) return false;
-
-            try {
-                const doc = iframe.contentDocument;
-                if (doc && doc.querySelector('#vehicle_caption')) {
-                    await sleep(300);
-                    return true;
-                }
-            } catch (e) {}
-
-            await sleep(250);
-        }
-        return false;
     }
 
     function getVehicleQueueFromTable(doc) {
@@ -11580,15 +11486,12 @@
             .filter(vehicleMatchesSelectedUnitClass);
     }
 
-    async function processStationVehicleQueue(iframe, station) {
+    async function processStationVehicleQueue(stationDoc, station) {
         setStatus('Building vehicle queue');
 
-        // Build a lightweight string-only queue and release the station document
-        // before the first navigation. Holding the original document across every
-        // awaited edit page kept the full station DOM alive for the whole run.
-        const queue = getVehicleQueueFromTable(
-            iframe.contentDocument
-        );
+        // Only strings are retained from the fetched station document. Every edit
+        // is then fetched, submitted and verified independently in the background.
+        const queue = getVehicleQueueFromTable(stationDoc);
 
         debug(`Vehicle queue built for ${station.displayName}: ${queue.length}`);
 
@@ -11629,118 +11532,66 @@
                 counts[item.vehicleType]
             );
 
-            setStatus('Opening edit page');
+            setStatus('Reading vehicle edit form');
             setVehicle(item.editHref);
 
-            // Replace rather than append to the iframe history. This prevents a
-            // long rename run from retaining one browsing-history document for
-            // every vehicle edit page.
-            if (!navigateUnitIframe(iframe, item.editHref)) {
-                log(`Could not navigate to vehicle edit page: ${item.editHref}`, 'error');
-                STATE.skippedCount++;
-                updateCounters();
-                continue;
-            }
-
-            const editPageReady = await waitForEditPage(iframe);
-
-            if (!editPageReady) {
-                log(`Vehicle edit page did not load: ${item.editHref}`, 'error');
-                STATE.skippedCount++;
-                updateCounters();
-                continue;
-            }
-
-            let editDoc = iframe.contentDocument;
-            let captionInput = editDoc?.querySelector('#vehicle_caption') || null;
-            let saveBtn = editDoc?.querySelector(
-                'input[type="submit"][value="Save"], button[type="submit"]'
-            ) || null;
-
-            if (!captionInput || !saveBtn) {
-                log(`Caption or Save missing: ${item.editHref}`, 'error');
-                STATE.skippedCount++;
-                updateCounters();
-                editDoc = null;
-                captionInput = null;
-                saveBtn = null;
-                continue;
-            }
-
-            const before = captionInput.value;
-
-            setStatus('Saving vehicle');
-            setVehicle(newName);
-
-            captionInput.value = newName;
-            captionInput.dispatchEvent(new Event('input', { bubbles: true }));
-            captionInput.dispatchEvent(new Event('change', { bubbles: true }));
-
-            log(`BEFORE: ${before}`, 'before');
-            log(`AFTER : ${newName}`, 'after');
-
-            saveBtn.click();
-
-            STATE.renamedCount++;
-            updateCounters();
-
-            // Do not retain the completed edit document or its form controls
-            // during the post-save wait.
-            editDoc = null;
-            captionInput = null;
-            saveBtn = null;
-
-            await sleep(700);
-        }
-
-        navigateUnitIframe(iframe, station.href);
-        await waitForVehicleTable(iframe);
-        await sleep(300);
-    }
-
-    async function closeStationModal(iframe = STATE.activeIframe) {
-        setStatus('Closing station');
-
-        const activeIframe = iframe || STATE.activeIframe;
-        if (STATE.activeIframe === activeIframe) {
-            STATE.activeIframe = null;
-        }
-
-        if (removeManagedStationIframe(activeIframe)) {
-            await sleep(50);
-            return;
-        }
-
-        const closeBtn = getUnitModalCloseButton(activeIframe);
-
-        if (closeBtn) {
-            closeBtn.click();
-
-            // Give the framework a short opportunity to detach or hide the
-            // correct modal before its iframe document is cleared.
-            for (let attempt = 0; attempt < 15; attempt++) {
-                const modal = activeIframe?.closest?.(
-                    '.vm--modal, [role="dialog"], .lightbox, .modal'
-                );
-
-                if (
-                    !activeIframe?.isConnected ||
-                    (modal && modal.offsetParent === null)
-                ) {
-                    break;
+            try {
+                const editPage = await unitFetchDocument(item.editHref, 12000);
+                if (getVehicleIdFromHref(editPage.href) !== String(item.vehicleId)) {
+                    throw new Error('Vehicle edit request returned a different vehicle ID.');
                 }
 
-                await sleep(100);
-            }
-        } else {
-            log('Close button not found.', 'error');
-        }
+                const expectedAction = item.editHref.replace(/\/edit(?:\?.*)?$/, '');
+                const prepared = prepareBackgroundNativeForm(editPage.doc, {
+                    expectedAction,
+                    inputSelector: '#vehicle_caption',
+                    requiredMethodOverride: 'patch',
+                    submitSelector: 'input[type="submit"][value="Save"], button[type="submit"]',
+                    value: newName,
+                    resourceLabel: `vehicle ${item.vehicleId}`
+                });
+                const before = String(prepared.input.value || '').trim();
 
-        // MissionChief may hide and reuse the modal instead of removing it.
-        // Blank the associated iframe so its station/edit documents and history
-        // become collectible before the next station is opened.
-        releaseUnitIframeDocument(activeIframe);
-        await sleep(150);
+                if (before === newName) {
+                    log(`Already correct: ${newName}`, 'info');
+                    STATE.skippedCount++;
+                    updateCounters();
+                    continue;
+                }
+
+                setStatus('Saving vehicle in background');
+                setVehicle(newName);
+                log(`BEFORE: ${before}`, 'before');
+                log(`AFTER : ${newName}`, 'after');
+
+                await submitBackgroundNativeForm(
+                    unitFetchWithTimeout,
+                    prepared,
+                    12000
+                );
+
+                const saved = await verifyUnitNameSaved(
+                    item.editHref,
+                    item.vehicleId,
+                    newName
+                );
+                if (!saved) {
+                    throw new Error('Save could not be verified; this vehicle was not counted as renamed.');
+                }
+
+                STATE.renamedCount++;
+                updateCounters();
+                log(`Saved and verified: ${newName}`, 'done');
+            } catch (error) {
+                if (STATE.stopped && error?.name === 'AbortError') return;
+                log(`Vehicle skipped ${item.editHref}: ${error?.message || error}`, 'error');
+                debug(error?.stack || String(error));
+                STATE.skippedCount++;
+                updateCounters();
+            }
+
+            if (!STATE.stopped) await sleep(250);
+        }
     }
 
     async function waitIfPaused(runId = STATE.runId) {

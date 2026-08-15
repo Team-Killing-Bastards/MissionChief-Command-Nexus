@@ -64,7 +64,7 @@ const buildStationName = vm.runInNewContext(`(
 
 const makeVehicleName = vm.runInNewContext(`(
   function (VEHICLE_INFO) {
-    ${extractFunction('makeVehicleName', 'navigateUnitIframe')}
+    ${extractFunction('makeVehicleName', 'getUnitClassOptionsForStationType')}
     return makeVehicleName;
   }
 )`)(vehicleInfo);

@@ -4,6 +4,17 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.119] - 2026-08-15
+
+### Changed
+
+- Station Naming now reads the station and its exact native edit form through same-origin background requests, preserves MissionChief's hidden fields and CSRF token, and verifies the saved name without opening a station lightbox.
+- Unit Naming now reads station vehicle tables and each exact native vehicle edit form in the background, rejects mismatched vehicle IDs or form actions, and counts a rename only after a fresh edit-page verification.
+- Personnel Assignment remains on its established background GET/POST path, with a permanent regression contract preventing link clicks, lightboxes, iframe navigation, or unverified assignment counts.
+- Stop and lifecycle cleanup now abort active Station and Unit Naming requests.
+- Added permanent cross-workflow regression coverage for native-form integrity, same-origin resource validation, background-only operation, and post-save verification ordering.
+- Increased Unit Naming from `3.3.24` to `3.3.25`, Station Naming from `1.3.19` to `1.3.20`, Personnel Assignment from `1.3.9` to `1.3.10`, and the unified userscript from `1.0.118` to `1.0.119`.
+
 ## [1.0.118] - 2026-08-15
 
 ### Changed
