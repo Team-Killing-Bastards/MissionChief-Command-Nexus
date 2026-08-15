@@ -59,8 +59,8 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-expect(source.includes('// @version      1.0.114'), 'v1.0.79 metadata missing');
-expect(source.includes('MISSION FINDER V10.6.155'), 'V10.6.139 header missing');
+expect(source.includes('// @version      1.0.115'), 'v1.0.79 metadata missing');
+expect(source.includes('MISSION FINDER V10.6.156'), 'V10.6.139 header missing');
 expect(
   source.includes('/* Vehicle drawer top alignment and motion V1.0.73. */'),
   'V1.0.73 drawer motion marker missing'

@@ -4,6 +4,15 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.115] - 2026-08-15
+
+### Changed
+
+- Mission Update now treats each Missing on mission Still needed value as the current selection target and stops when the live Selected counter reaches it.
+- BASU, Welfare, HazMat, and HazMat/CBRN requirements now share Operational Support Units and dispatch only the largest Still needed amount.
+- Mission Finder increased from V10.6.155 to V10.6.156.
+- Increased the unified userscript version from `1.0.114` to `1.0.115`.
+
 ## [1.0.114] - 2026-08-15
 
 ### Fixed

@@ -31,8 +31,8 @@ function requireOrdered(text, first, second, label) {
 }
 
 for (const [token, label] of [
-  ['// @version      1.0.114', 'current Command Nexus metadata'],
-  [' * MODULE 2: MISSION FINDER V10.6.155', 'current Mission Finder header'],
+  ['// @version      1.0.115', 'current Command Nexus metadata'],
+  [' * MODULE 2: MISSION FINDER V10.6.156', 'current Mission Finder header'],
   ['function isExplicitMissingVehicleRequirementRow(', 'explicit Missing Vehicles classifier'],
   ['function isExplicitMissingPersonnelRequirementRow(', 'explicit Missing Personnel classifier'],
   ['function getMissionUpdateRowAuthority(', 'current-row authority ordering'],
@@ -49,7 +49,7 @@ for (const [token, label] of [
   ["source: 'data-raw-html-missing-vehicles'", 'escaped Missing Vehicles source marker'],
   ['const missingOnMissionTable =', 'per-table Missing on mission classification'],
   ['!missingOnMissionTable', 'zero Still needed fallback suppression'],
-  ['selected + reportedStillNeeded', 'current-selection total conversion'],
+  ['unitName,\n                        reportedStillNeeded,', 'Still needed current-selection target'],
   ["'missing-on-mission-table'", 'Mission Update table row source'],
   ["dispatchTargetMode: 'total'", 'current-selection total mode'],
   ['explicitMissingVehicles: true', 'current Missing Vehicles authority marker'],
@@ -125,5 +125,8 @@ if (combined.includes("explicitMissingRows,\n                    'CURRENT MISSIN
 if (source.includes("'data-requirement-type-vehicles',\n                {\n                    dispatchTargetMode: 'shortage'")) {
   fail('Structured Missing Vehicles is incorrectly additive instead of a current-selection total');
 }
+if (source.includes('selected + reportedStillNeeded')) {
+  fail('Missing on mission Still needed is incorrectly added on top of Selected');
+}
 
-console.log('Current Missing Vehicles/Personnel and Missing on mission tables outrank full mission totals, zero-shortage tables preserve existing-mission state, patient-only rows remain additive, and Auto Mode retains the new-mission versus Mission Update routing rule.');
+console.log('Current Missing Vehicles/Personnel and Missing on mission tables outrank full mission totals, Missing on mission Selected is subtracted once from Still needed, zero-shortage tables preserve existing-mission state, patient-only rows remain additive, and Auto Mode retains the new-mission versus Mission Update routing rule.');
