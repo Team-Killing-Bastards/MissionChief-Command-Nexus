@@ -14,8 +14,8 @@ function fail(message) {
 }
 
 for (const [token, label] of [
-  ['// @version      1.0.113', 'v1.0.51 metadata'],
-  [' * MODULE 2: MISSION FINDER V10.6.154', 'Mission Finder V10.6.120 header'],
+  ['// @version      1.0.114', 'v1.0.51 metadata'],
+  [' * MODULE 2: MISSION FINDER V10.6.155', 'Mission Finder V10.6.120 header'],
   ['[data-transport-request="true"][data-transport-request-type="prisoner"]', 'current structured prisoner request'],
   ['.prison-select[data-vehicle-id]', 'current vehicle cell selector'],
   ['the prisoners should be placed in a cell', 'normalised prisoner alert contract'],
@@ -30,12 +30,17 @@ for (const [token, label] of [
   ['MF_AUTO_PRISONER_RELEASE_STATE_KEY', 'release duplicate-click guard'],
   ['MF_AUTO_PRISONER_RELEASE_RESULT_WAIT_MS', 'release result wait guard'],
   ['span.lightbox-close[title="Close"]', 'release-result close selector'],
+  ['function captureAutoPrisonerReleaseOwnerContext(', 'pre-navigation Vue owner capture'],
+  ['function getAutoPrisonerReleaseSuccessContext(', 'exact release-success resolver'],
+  ['.alert.alert-success', 'released-prisoners success alert selector'],
+  ['the prisoners were released', 'exact released-prisoners result text'],
   ['function getTopmostAutoPrisonerReleaseDismissContext(', 'topmost release-result close chooser'],
   ['function closeAutoPrisonerReleaseDismissAfterClick(', 'release-result dismiss handler'],
   ['function getAutoPrisonerReleaseOwnerContainer(', 'release iframe to parent modal owner'],
   ['function resolveAutoPrisonerReleaseDismissContext(', 'live Vue modal reacquisition'],
   ["getAttribute('data-modal')", 'stable Vue modal identity'],
-  ['await closeAutoPrisonerReleaseDismissAfterClick(context);', 'release dismiss invocation with owner context'],
+  ['dismissContextBeforeClick', 'captured owner passed across release navigation'],
+  ['await closeAutoPrisonerReleaseDismissAfterClick(', 'release dismiss invocation with owner context'],
 ]) {
   if (!source.includes(token)) fail(`Missing Auto prisoner contract: ${label}`);
 }
@@ -107,11 +112,12 @@ if (!source.includes("prisonerReleaseResult === 'stuck'")) {
 }
 
 const releaseClick = finalBody.indexOf('realClickForQueueRestart(releaseLink);');
-const dismissCall = finalBody.indexOf('await closeAutoPrisonerReleaseDismissAfterClick(context);');
+const ownerCapture = finalBody.indexOf('captureAutoPrisonerReleaseOwnerContext(context)');
+const dismissCall = finalBody.indexOf('await closeAutoPrisonerReleaseDismissAfterClick(');
 const releaseReturn = finalBody.indexOf("return 'clicked';", dismissCall);
 
-if (!(releaseClick >= 0 && dismissCall > releaseClick && releaseReturn > dismissCall)) {
-  fail('Release Prisoners must click first, then close the result screen, then restart the Auto cycle');
+if (!(ownerCapture >= 0 && ownerCapture < releaseClick && dismissCall > releaseClick && releaseReturn > dismissCall)) {
+  fail('Release Prisoners must capture its modal owner, click, close the owned result screen, then restart the Auto cycle');
 }
 
 const dismissStart = source.indexOf('async function closeAutoPrisonerReleaseDismissAfterClick(');
@@ -119,8 +125,9 @@ const dismissEnd = source.indexOf('function getExactAutoReleasePrisonersLink(', 
 const dismissBody = source.slice(dismissStart, dismissEnd);
 
 for (const required of [
-  'getActivePrisonerCellSelectionContext()',
-  'getTopmostAutoPrisonerReleaseDismissContext(releaseContext)',
+  'getAutoPrisonerReleaseSuccessContext(',
+  "if (!successContext) return 'stuck';",
+  'getTopmostAutoPrisonerReleaseDismissContext(',
   'realClickForQueueRestart(',
   'resolveAutoPrisonerReleaseDismissContext(',
   'current.closeButton',
@@ -133,13 +140,13 @@ for (const required of [
   }
 }
 
-const prisonerAlertClearCheck = dismissBody.indexOf('getActivePrisonerCellSelectionContext()');
+const prisonerSuccessCheck = dismissBody.indexOf('getAutoPrisonerReleaseSuccessContext(');
 const resultCloseLookup = dismissBody.indexOf('resolveAutoPrisonerReleaseDismissContext(dismissContext)');
 const resultCloseClick = dismissBody.indexOf('realClickForQueueRestart(current.closeButton)');
 const resultCloseVerify = dismissBody.indexOf('isAutoPrisonerReleaseDismissContextVisible(');
 
-if (!(prisonerAlertClearCheck >= 0 && resultCloseLookup > prisonerAlertClearCheck && resultCloseClick > resultCloseLookup && resultCloseVerify > resultCloseClick)) {
-  fail('Release result must wait for the prisoner alert to clear, choose the topmost close span, click it and verify disappearance in that order');
+if (!(prisonerSuccessCheck >= 0 && resultCloseLookup > prisonerSuccessCheck && resultCloseClick > resultCloseLookup && resultCloseVerify > resultCloseClick)) {
+  fail('Release result must confirm the exact success alert, reacquire the owned close span, click it and verify disappearance in that order');
 }
 
 const visibleContextsStart = source.indexOf('function getVisibleAutoPrisonerReleaseDismissContexts(');
@@ -167,7 +174,7 @@ if (visibilityBody.includes('context.modal.isConnected === false')) {
 for (const token of [
   "['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']",
   'attempt === 3 && current.overlay',
-  'getTopmostAutoPrisonerReleaseDismissContext(releaseContext)',
+  'getTopmostAutoPrisonerReleaseDismissContext(',
 ]) {
   if (!dismissBody.includes(token)) fail(`Scoped prisoner close retry is missing: ${token}`);
 }

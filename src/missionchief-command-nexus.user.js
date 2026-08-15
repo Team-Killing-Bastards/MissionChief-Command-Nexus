@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.113
+// @version      1.0.114
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -11820,7 +11820,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.154
+         * MODULE 2: MISSION FINDER V10.6.155
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -12301,6 +12301,9 @@
     }
 
 
+    // V10.6.155: the exact released-prisoners success result is tied to the
+    // Vue modal captured before iframe navigation. Auto Mode reacquires and
+    // clicks that modal's live close control before restarting its cycle.
     // V10.6.154: prisoner cell handoffs recognise MissionChief's structured
     // data-transport-request prisoner block, then select the first usable
     // green destination while ignoring full red cells. The legacy explanatory
@@ -44096,6 +44099,240 @@ function findAutoPrisonerReleaseContainerByKey(candidateDocument, key) {
     }) || null;
 }
 
+function captureAutoPrisonerReleaseOwnerContext(releaseContext) {
+    const container =
+        getAutoPrisonerReleaseOwnerContainer(releaseContext);
+
+    if (!container?.querySelectorAll) return null;
+
+    return {
+        document: container.ownerDocument || document,
+        container,
+        containerKey:
+            getAutoPrisonerReleaseContainerKey(container),
+        order: Number.MAX_SAFE_INTEGER
+    };
+}
+
+function getAutoPrisonerReleaseCloseControl(
+    container,
+    modal,
+    visible
+) {
+    const scope = modal || container;
+    if (!scope?.querySelectorAll || !container?.contains) return null;
+
+    const direct = scope.querySelector(
+        '.control-btn-container span.lightbox-close[title="Close"], ' +
+        '.control-btn-container .lightbox-close[title="Close"], ' +
+        'span.lightbox-close[title="Close"], ' +
+        '.lightbox-close[title="Close"]'
+    );
+
+    if (
+        direct &&
+        container.contains(direct) &&
+        (!modal || modal.contains(direct)) &&
+        visible(direct)
+    ) {
+        return direct;
+    }
+
+    const markers = Array.from(scope.querySelectorAll(
+        'svg[data-icon="xmark"], ' +
+        'svg.svg-inline--fa.fa-xmark'
+    ));
+
+    for (const marker of markers) {
+        const control = marker.closest?.(
+            'span.lightbox-close[title="Close"], ' +
+            '.lightbox-close[title="Close"], ' +
+            'button, a[href], [role="button"]'
+        ) || marker.parentElement || null;
+
+        if (
+            control &&
+            container.contains(control) &&
+            (!modal || modal.contains(control)) &&
+            visible(control)
+        ) {
+            return control;
+        }
+    }
+
+    return null;
+}
+
+function getAutoPrisonerReleaseResultDocuments(
+    releaseContext,
+    dismissContext
+) {
+    const documents = [];
+    const seen = new Set();
+    const addDocument = candidateDocument => {
+        if (
+            !candidateDocument ||
+            !candidateDocument.querySelectorAll ||
+            seen.has(candidateDocument) ||
+            documents.length >= 24
+        ) {
+            return;
+        }
+
+        seen.add(candidateDocument);
+        documents.push(candidateDocument);
+    };
+
+    addDocument(releaseContext?.document);
+    addDocument(releaseContext?.alert?.ownerDocument);
+    addDocument(dismissContext?.document);
+    addDocument(dismissContext?.container?.ownerDocument);
+    addDocument(document);
+
+    if (
+        typeof mfGetAccessibleDocumentsForTransport ===
+        'function'
+    ) {
+        for (const candidateDocument of
+            mfGetAccessibleDocumentsForTransport(true)) {
+            addDocument(candidateDocument);
+        }
+    }
+
+    for (let index = 0; index < documents.length; index += 1) {
+        const candidateDocument = documents[index];
+
+        try {
+            addDocument(
+                candidateDocument.defaultView?.frameElement
+                    ?.ownerDocument
+            );
+        } catch (_error) {}
+
+        try {
+            const parentWindow =
+                candidateDocument.defaultView?.parent;
+            if (
+                parentWindow &&
+                parentWindow !== candidateDocument.defaultView
+            ) {
+                addDocument(parentWindow.document);
+            }
+        } catch (_error) {}
+
+        for (const frame of Array.from(
+            candidateDocument.querySelectorAll('iframe')
+        )) {
+            try {
+                addDocument(
+                    frame.contentDocument ||
+                    frame.contentWindow?.document
+                );
+            } catch (_error) {}
+        }
+    }
+
+    return documents;
+}
+
+function getAutoPrisonerReleaseSuccessContext(
+    releaseContext,
+    dismissContext
+) {
+    const currentDismissContext =
+        resolveAutoPrisonerReleaseDismissContext(
+            dismissContext
+        ) || dismissContext || null;
+    const expectedContainer =
+        currentDismissContext?.container || null;
+    const expectedKey = String(
+        currentDismissContext?.containerKey ||
+        getAutoPrisonerReleaseContainerKey(
+            expectedContainer
+        ) || ''
+    ).trim();
+
+    for (const candidateDocument of
+        getAutoPrisonerReleaseResultDocuments(
+            releaseContext,
+            currentDismissContext
+        )) {
+        const alerts = Array.from(
+            candidateDocument.querySelectorAll(
+                '.alert.alert-success'
+            )
+        );
+
+        for (const alert of alerts) {
+            try {
+                if (!mfIsVisibleInOwnDocument(alert)) continue;
+            } catch (_error) {
+                continue;
+            }
+
+            const text = String(
+                alert.innerText || alert.textContent || ''
+            )
+                .replace(/\s+/g, ' ')
+                .trim()
+                .toLowerCase();
+
+            if (!/^the prisoners were released\.?$/.test(text)) {
+                continue;
+            }
+
+            const resultContainer =
+                getAutoPrisonerReleaseOwnerContainer({
+                    document: candidateDocument,
+                    alert,
+                    root: alert
+                });
+            const resultKey =
+                getAutoPrisonerReleaseContainerKey(
+                    resultContainer
+                );
+
+            if (expectedContainer) {
+                const sameContainer =
+                    resultContainer === expectedContainer;
+                const sameKey = !!(
+                    expectedKey &&
+                    resultKey &&
+                    resultKey === expectedKey
+                );
+                const contained = !!(
+                    !resultContainer &&
+                    expectedContainer.contains?.(alert)
+                );
+
+                if (!sameContainer && !sameKey && !contained) {
+                    continue;
+                }
+            } else if (!resultContainer) {
+                continue;
+            }
+
+            const ownedDismissContext =
+                currentDismissContext ||
+                captureAutoPrisonerReleaseOwnerContext({
+                    document: candidateDocument,
+                    alert,
+                    root: alert
+                });
+
+            if (!ownedDismissContext) continue;
+
+            return {
+                document: candidateDocument,
+                alert,
+                dismissContext: ownedDismissContext
+            };
+        }
+    }
+
+    return null;
+}
+
 function resolveAutoPrisonerReleaseDismissContext(context) {
     if (!context) return null;
 
@@ -44147,13 +44384,11 @@ function resolveAutoPrisonerReleaseDismissContext(context) {
 
     if (!modal && !overlay) return null;
 
-    let closeButton = modal?.querySelector?.(
-        '.control-btn-container span.lightbox-close[title="Close"], ' +
-        '.control-btn-container .lightbox-close[title="Close"], ' +
-        'span.lightbox-close[title="Close"], ' +
-        '.lightbox-close[title="Close"]'
-    ) || null;
-    if (!visible(closeButton)) closeButton = null;
+    const closeButton = getAutoPrisonerReleaseCloseControl(
+        container,
+        modal,
+        visible
+    );
 
     let zIndex = 0;
     try {
@@ -44242,45 +44477,68 @@ function isAutoPrisonerReleaseDismissContextVisible(context) {
     return !!resolveAutoPrisonerReleaseDismissContext(context);
 }
 
-async function closeAutoPrisonerReleaseDismissAfterClick(releaseContext = null) {
+async function closeAutoPrisonerReleaseDismissAfterClick(
+    releaseContext = null,
+    initialDismissContext = null
+) {
     updateStatusBox(
         'Auto Mode: Release Prisoners clicked. Waiting for the result screen before restarting the mission cycle...'
     );
 
+    let dismissContext =
+        initialDismissContext ||
+        captureAutoPrisonerReleaseOwnerContext(releaseContext) ||
+        getTopmostAutoPrisonerReleaseDismissContext(
+            releaseContext
+        );
     const resultStarted = Date.now();
+    let successContext =
+        getAutoPrisonerReleaseSuccessContext(
+            releaseContext,
+            dismissContext
+        );
     while (
         autoModeRunning &&
         !isManualAutoStopActive() &&
-        getActivePrisonerCellSelectionContext() &&
+        !successContext &&
         Date.now() - resultStarted < MF_AUTO_PRISONER_RELEASE_RESULT_WAIT_MS
     ) {
         await wait(100);
+        successContext =
+            getAutoPrisonerReleaseSuccessContext(
+                releaseContext,
+                dismissContext
+            );
     }
 
     if (!autoModeRunning || isManualAutoStopActive()) return 'stuck';
-    if (getActivePrisonerCellSelectionContext()) return 'stuck';
+    if (!successContext) return 'stuck';
+
+    dismissContext =
+        successContext.dismissContext || dismissContext;
 
     const dismissStarted = Date.now();
-    let dismissContext = getTopmostAutoPrisonerReleaseDismissContext(
-        releaseContext
-    );
+    let liveDismissContext =
+        resolveAutoPrisonerReleaseDismissContext(
+            dismissContext
+        );
     while (
-        !dismissContext &&
+        !liveDismissContext?.closeButton &&
         autoModeRunning &&
         !isManualAutoStopActive() &&
         Date.now() - dismissStarted < MF_AUTO_PRISONER_RELEASE_DISMISS_WAIT_MS
     ) {
         await wait(100);
-        dismissContext = getTopmostAutoPrisonerReleaseDismissContext(
-            releaseContext
-        );
+        liveDismissContext =
+            resolveAutoPrisonerReleaseDismissContext(
+                dismissContext
+            );
     }
 
     if (!autoModeRunning || isManualAutoStopActive()) return 'stuck';
-    if (!dismissContext) {
-        clearAutoPrisonerReleaseState();
-        return 'none';
-    }
+    if (!liveDismissContext?.closeButton) return 'stuck';
+
+    dismissContext = liveDismissContext;
 
     updateStatusBox(
         'Auto Mode: closing the Release Prisoners result screen before restarting the mission cycle...'
@@ -44295,8 +44553,7 @@ async function closeAutoPrisonerReleaseDismissAfterClick(releaseContext = null) 
         Date.now() - closeStarted < MF_AUTO_PRISONER_RELEASE_DISMISS_CLOSE_WAIT_MS
     ) {
         const current =
-            resolveAutoPrisonerReleaseDismissContext(dismissContext) ||
-            getTopmostAutoPrisonerReleaseDismissContext(releaseContext);
+            resolveAutoPrisonerReleaseDismissContext(dismissContext);
 
         if (!current) {
             clearAutoPrisonerReleaseState();
@@ -44566,6 +44823,9 @@ async function handleAutoPrisonerReleaseAfterActions() {
         );
     }
 
+    const dismissContextBeforeClick =
+        captureAutoPrisonerReleaseOwnerContext(context) ||
+        getTopmostAutoPrisonerReleaseDismissContext(context);
     const clicked = realClickForQueueRestart(releaseLink);
 
     if (!clicked) {
@@ -44576,7 +44836,10 @@ async function handleAutoPrisonerReleaseAfterActions() {
     await wait(250);
 
     const dismissResult =
-        await closeAutoPrisonerReleaseDismissAfterClick(context);
+        await closeAutoPrisonerReleaseDismissAfterClick(
+            context,
+            dismissContextBeforeClick
+        );
 
     if (dismissResult === 'stuck') {
         return 'stuck';
