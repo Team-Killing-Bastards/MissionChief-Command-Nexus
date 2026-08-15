@@ -17,7 +17,7 @@
 </tr>
 </table>
 
-**Current version:** `1.0.121` · **Mission Finder engine:** `V10.6.159` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
+**Current version:** `1.0.122` · **Mission Finder engine:** `V10.6.160` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)
@@ -249,6 +249,7 @@ High Volume Pump, Drone Operator, Co-Responder, and Lifeguard remain disabled pe
 
 - Ordinary Police attendance prefers verified ordinary type-8 IRVs, then unknown or stale type-8 IRVs, and uses specialist-trained type-8 IRVs only when needed as a final fallback.
 - Any selected exact type-8 IRV counts toward generic Police Car attendance; named specialist requirements remain strict and live-verified.
+- Prefixed `Require` / `Requires` / `Required Drone(s)` wording accepts exact type-89 SAR Drone Vehicles and exact type-91 Police Drone Vehicles by best arrival. Explicit Police Drone, Police Helicopter and Police Helicopter-or-Drone wording retain their stricter service-specific modes; bare Drone/Drones prose is ignored.
 - Police Officer upgrade rows and visible `Missing Personnel` alerts convert at two officers per Police Car, including when the live requirements panel is present.
 - Supported trained-personnel requirements use best-available coverage rather than an all-or-nothing qualification gate. Multi-trained staff count toward every matching course they hold.
 - Level 1, Level 2, Sergeant and Police Medic demand can use exact type-51 PSUs at up to nine personnel or exact type-8 IRVs at two personnel. PSUs cover useful larger blocks and IRVs fill smaller remainders without unnecessary extra units.

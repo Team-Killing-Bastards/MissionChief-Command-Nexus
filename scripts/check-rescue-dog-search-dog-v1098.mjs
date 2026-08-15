@@ -41,8 +41,8 @@ function extractFunction(name) {
   fail(`Unterminated ${name}`);
 }
 
-expect(source.includes('// @version      1.0.121'), 'Expected Command Nexus 1.0.101');
-expect(source.includes(' * MODULE 2: MISSION FINDER V10.6.159'), 'Expected Mission Finder V10.6.150');
+expect(source.includes('// @version      1.0.122'), 'Expected Command Nexus 1.0.101');
+expect(source.includes(' * MODULE 2: MISSION FINDER V10.6.160'), 'Expected Mission Finder V10.6.150');
 
 const matcher = extractFunction('isRescueDogRequirementName');
 const context = { result: null };

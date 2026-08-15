@@ -5,7 +5,7 @@ const workflow = await readFile('.github/workflows/validate-userscript.yml', 'ut
 const fail = message => { console.error(`ERROR: ${message}`); process.exit(1); };
 const expect = (condition, message) => { if (!condition) fail(message); };
 
-expect(source.includes('// @version      1.0.121'), 'Expected Command Nexus 1.0.93');
+expect(source.includes('// @version      1.0.122'), 'Expected Command Nexus 1.0.93');
 expect(source.includes("const UNIT_VERSION = '3.3.27';"), 'Expected Unit Naming 3.3.18');
 expect(source.includes("const STATION_VERSION = '1.3.22';"), 'Expected Station Naming 1.3.12');
 expect(source.includes("'Refreshing…'"), 'Refresh action must expose a loading state');
