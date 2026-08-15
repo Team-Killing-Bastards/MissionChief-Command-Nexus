@@ -1,5 +1,5 @@
 name: Validate userscript
-# Includes mission-definition trained-personnel, on-scene trained-personnel authority, live Missing Personnel panel display, Required Personnel preload, preloaded Vehicle Load coverage, high-risk Missing Person Ambulance settings, normal and standalone Stations popup ownership, standalone background renamers, Dispatch Centres Show all enforced popup window, selected-trained-personnel UI, integrated mission dashboard, compact Nexus UI, HazMat vehicle/personnel-to-OSU, diagnostic export, dispatch-correction, memory lifecycle/recycle, deep idle/Auto Mode memory controls, bounded Ally Steal response timing, faster patient/prisoner transport response, complete iOS Personnel Assignment controls, Unit/Station Naming Dispatch Centre filters, centre-first flow, profile hierarchy, Service filtering, Dispatch Centre refresh parsing, resilient Retry action and null assignment handling, Missing-on-mission authority and single-pass update coverage.
+# Includes mission-definition trained-personnel, on-scene trained-personnel authority, live Missing Personnel panel display, Required Personnel preload, preloaded Vehicle Load coverage, high-risk Missing Person Ambulance settings, normal and standalone Stations popup ownership, standalone background renamers and late-rendered membership recovery, Dispatch Centres Show all enforced popup window, selected-trained-personnel UI, integrated mission dashboard, compact Nexus UI, HazMat vehicle/personnel-to-OSU, diagnostic export, dispatch-correction, memory lifecycle/recycle, deep idle/Auto Mode memory controls, bounded Ally Steal response timing, faster patient/prisoner transport response, complete iOS Personnel Assignment controls, Unit/Station Naming Dispatch Centre filters, centre-first flow, profile hierarchy, Service filtering, Dispatch Centre refresh parsing, resilient Retry action and null assignment handling, Missing-on-mission authority and single-pass update coverage.
 
 on:
   pull_request:
@@ -29,6 +29,7 @@ on:
       - 'scripts/check-personnel-assignment-ios-completeness-v1084.mjs'
       - 'scripts/check-background-resource-admin-v10119.mjs'
       - 'scripts/check-background-resource-admin-popout-v10120.mjs'
+      - 'scripts/check-naming-popout-late-membership-v10121.mjs'
       - 'scripts/check-naming-dispatch-centre-filter-v1085.mjs'
       - 'scripts/check-police-unit-naming-classes-v10105.mjs'
       - 'scripts/check-recovery-unit-naming-classes-v10106.mjs'
@@ -96,6 +97,7 @@ on:
       - 'scripts/check-personnel-assignment-ios-completeness-v1084.mjs'
       - 'scripts/check-background-resource-admin-v10119.mjs'
       - 'scripts/check-background-resource-admin-popout-v10120.mjs'
+      - 'scripts/check-naming-popout-late-membership-v10121.mjs'
       - 'scripts/check-naming-dispatch-centre-filter-v1085.mjs'
       - 'scripts/check-police-unit-naming-classes-v10105.mjs'
       - 'scripts/check-recovery-unit-naming-classes-v10106.mjs'
@@ -237,6 +239,9 @@ jobs:
 
       - name: Validate standalone Stations popout background renamers
         run: node scripts/check-background-resource-admin-popout-v10120.mjs
+
+      - name: Validate late-rendered standalone station memberships
+        run: node scripts/check-naming-popout-late-membership-v10121.mjs
 
       - name: Validate Unit and Station Naming Dispatch Centre filters
         run: node scripts/check-naming-dispatch-centre-filter-v1085.mjs

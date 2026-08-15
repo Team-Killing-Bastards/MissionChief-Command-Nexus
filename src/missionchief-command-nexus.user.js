@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.120
+// @version      1.0.121
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -75,13 +75,13 @@
     // from the naming/personnel runtime.
     if (!TOOL_IS_TOP_WINDOW && !TOOL_IS_STATION_OVERVIEW_FRAME) return;
 
-    const UNIT_VERSION = '3.3.26';
-    const STATION_VERSION = '1.3.21';
+    const UNIT_VERSION = '3.3.27';
+    const STATION_VERSION = '1.3.22';
     const PERSONNEL_VERSION = '1.3.10';
-    // Command Nexus 1.0.120: normal, embedded and standalone Stations layouts
-    // share the same verified background Station and Unit Naming form path.
-    // Personnel Assignment remains background-only. Resource links are never
-    // clicked and standalone windows never depend on their opener.
+    // Command Nexus 1.0.121: Unit and Station Naming rescan current native
+    // membership rows so an early standalone-popup snapshot cannot leave the
+    // Dispatch Centre cascade empty. Renaming and Personnel Assignment remain
+    // background-only; resource links and window.opener are never used.
     const PERSONNEL_TRAINING_CODE = 'critical_care';
     const PERSONNEL_TRAINING_LABEL = 'Critical Care';
     const PERSONNEL_TARGET_VEHICLE_TYPE_ID = '5';
@@ -1534,6 +1534,16 @@
         return key ? NAMING_DISPATCH_CENTRE_STATE.byBuildingId.get(key) || '' : '';
     }
 
+    function syncNamingStationDispatchCentreAssignments(stations) {
+        (stations || []).forEach(station => {
+            if (!station) return;
+            station.dispatchCentreId = getNamingDispatchCentreId(
+                station.buildingId
+            );
+        });
+        return stations || [];
+    }
+
     function stationMatchesNamingDispatchCentre(station, selectedDispatchCentre) {
         const selected = String(selectedDispatchCentre || NAMING_DISPATCH_CENTRE_ALL);
         if (selected === NAMING_DISPATCH_CENTRE_ALL) return true;
@@ -1919,6 +1929,16 @@
                 loadNamingDispatchCentreList(force),
                 loadNamingDispatchCentreData(force)
             ]);
+
+            // The standalone overview renders its native station cards after the
+            // navbar controls. A forced Dispatch Centre refresh can therefore
+            // replace an early empty membership snapshot after Unit or Station
+            // Naming already built its station objects. Rebind both snapshots
+            // before rebuilding the shared cascade.
+            if (assignmentsLoaded) {
+                syncNamingStationDispatchCentreAssignments(STATE.stations);
+                syncNamingStationDispatchCentreAssignments(STATION_STATE.stations);
+            }
 
             populateNamingDispatchCentreFilter('mc-namer-dispatch-centre');
             populateNamingDispatchCentreFilter('mc-station-dispatch-centre');
@@ -5225,7 +5245,13 @@
         stationLog('Refreshing station list and reading MissionChief building type IDs...', 'info');
 
         const stationEntries = getStationOverviewEntries();
-        await Promise.all([loadNamingDispatchCentreList(false), loadNamingDispatchCentreData(false)]);
+        await Promise.all([
+            loadNamingDispatchCentreList(false),
+            // Rescan current native rows. The standalone popup may have mounted
+            // after its first station entry but before every membership-bearing
+            // station card finished rendering.
+            loadNamingDispatchCentreData(true)
+        ]);
 
         STATION_STATE.stations = stationEntries
             .map((entry, index) => {
@@ -11220,7 +11246,12 @@
         log(`Unit class filter: ${getUnitClassDisplayLabel()}`, 'info');
 
         const stationEntries = getStationOverviewEntries();
-        await Promise.all([loadNamingDispatchCentreList(false), loadNamingDispatchCentreData(false)]);
+        await Promise.all([
+            loadNamingDispatchCentreList(false),
+            // Never reuse the early standalone-popup membership snapshot here.
+            // Refresh Stations is the authority boundary for the current rows.
+            loadNamingDispatchCentreData(true)
+        ]);
 
         STATE.stations = stationEntries.map((entry, index) => {
             const stationType =

@@ -28,6 +28,7 @@ node scripts/check-station-unit-naming-chain-v10109.mjs
 node scripts/check-station-move-address-v10110.mjs
 node scripts/check-type22-town-only-naming-v10111.mjs
 node scripts/check-naming-dispatch-centre-popout-v10112.mjs
+node scripts/check-naming-popout-late-membership-v10121.mjs
 node scripts/check-auto-prison-cell-success-v10113.mjs
 ```
 
@@ -76,6 +77,13 @@ The standalone Stations popout regression recreates MissionChief's native
 station membership on `leitstelle_building_id`, and no type-7 building cards. It
 proves that both naming tools load their hierarchy and continue to filter the
 selected Dispatch Centre and unassigned stations correctly.
+
+The late-rendered popup membership regression reproduces the standalone timing
+fault where Dispatch Centre controls load before membership-bearing station
+cards. It proves that both Station and Unit Naming refresh the current native
+`leitstelle_building_id` rows, rebuild Dispatch Centre → Service → Station Type
+→ Start From, and rebind already-loaded station snapshots after a manual
+Dispatch Centre refresh.
 
 Automated checks are necessary but cannot prove live MissionChief behaviour.
 

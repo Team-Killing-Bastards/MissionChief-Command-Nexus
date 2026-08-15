@@ -27,8 +27,8 @@ function extractFunction(name, nextFunctionName) {
   return source.slice(start, end);
 }
 
-assert.ok(source.includes('// @version      1.0.120'));
-assert.ok(source.includes("const STATION_VERSION = '1.3.21';"));
+assert.ok(source.includes('// @version      1.0.121'));
+assert.ok(source.includes("const STATION_VERSION = '1.3.22';"));
 
 const parserFactory = vm.runInNewContext(`(
   function () {
