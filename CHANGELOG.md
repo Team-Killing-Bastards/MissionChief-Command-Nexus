@@ -4,6 +4,16 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.117] - 2026-08-15
+
+### Changed
+
+- Railway Police Officer requirements now use the shared trained PSU and IRV vehicle pool.
+- A live-verified type-51 PSU can contribute up to 9 Railway Police Officers, while type-8 IRVs contribute 2 and handle smaller remainders.
+- Added regression coverage for Railway Police PSU planning and nine-officer trained coverage.
+- Advanced the Mission Finder engine from V10.6.157 to V10.6.158.
+- Increased the unified userscript version from `1.0.116` to `1.0.117`.
+
 ## [1.0.116] - 2026-08-15
 
 ### Changed

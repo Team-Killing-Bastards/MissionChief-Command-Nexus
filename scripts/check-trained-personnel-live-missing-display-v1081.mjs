@@ -65,8 +65,8 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-expect(source.includes('// @version      1.0.116'), 'Expected Command Nexus 1.0.81');
-expect(source.includes(' * MODULE 2: MISSION FINDER V10.6.157'), 'Expected Mission Finder V10.6.141');
+expect(source.includes('// @version      1.0.117'), 'Expected Command Nexus 1.0.81');
+expect(source.includes(' * MODULE 2: MISSION FINDER V10.6.158'), 'Expected Mission Finder V10.6.141');
 
 const helper = extractFunction(
   'getLiveMissionTrainedPersonnelRequirementsForDisplay'

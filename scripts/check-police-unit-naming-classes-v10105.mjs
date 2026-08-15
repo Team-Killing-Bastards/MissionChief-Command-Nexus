@@ -161,9 +161,9 @@ for (const expected of expectedClasses) {
   );
 }
 
-assert.match(source, /^\/\/ @version\s+1\.0\.116$/m);
+assert.match(source, /^\/\/ @version\s+1\.0\.117$/m);
 assert.match(source, /const UNIT_VERSION = '3\.3\.24';/);
-assert.match(source, /MODULE 2: MISSION FINDER V10\.6\.157/);
+assert.match(source, /MODULE 2: MISSION FINDER V10\.6\.158/);
 
 console.log(
   'Issue #295 Police Unit Naming identity, classification and callsign contracts passed.'

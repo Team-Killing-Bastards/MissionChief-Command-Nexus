@@ -80,8 +80,8 @@ function extractFunction(name) {
   fail(`Unable to extract function ${name}`);
 }
 
-expect(source.includes('// @version      1.0.116'), 'Expected Command Nexus 1.0.82');
-expect(source.includes('MISSION FINDER V10.6.157'), 'Expected Mission Finder V10.6.143');
+expect(source.includes('// @version      1.0.117'), 'Expected Command Nexus 1.0.82');
+expect(source.includes('MISSION FINDER V10.6.158'), 'Expected Mission Finder V10.6.143');
 
 for (const token of [
   'const MF_ALLY_SELECTION_CLEAR_SETTLE_MS = 150;',

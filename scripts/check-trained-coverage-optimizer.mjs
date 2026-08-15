@@ -87,9 +87,22 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-requireText('// @version      1.0.116', 'v1.0.51 metadata');
-requireText(' * MODULE 2: MISSION FINDER V10.6.157', 'V10.6.120 header');
+function extractFunctionUntil(name, nextName) {
+  const signature = `    function ${name}(`;
+  const nextSignature = `\n\n    function ${nextName}(`;
+  const start = source.indexOf(signature);
+  if (start < 0) fail(`Unable to find ${name}`);
+
+  const end = source.indexOf(nextSignature, start);
+  if (end < 0) fail(`Unable to find ${nextName} after ${name}`);
+
+  return source.slice(start, end);
+}
+
+requireText('// @version      1.0.117', 'v1.0.51 metadata');
+requireText(' * MODULE 2: MISSION FINDER V10.6.158', 'V10.6.120 header');
 requireText("const MF_PSU_COMPATIBLE_TRAINING_CODES =", 'PSU-compatible course list');
+requireText("'police_medic',\n            'railway_police'", 'Railway Police PSU-compatible course');
 requireText("'51': 9", 'type-51 PSU capacity nine');
 requireText("'8': 2", 'type-8 IRV capacity two');
 requireText("eligibleVehicleTypeIds: [\n                    '51',\n                    '8'", 'Public Order PSU plus IRV eligibility');
@@ -112,7 +125,7 @@ requireText('compatible units were still selected and can be sent', 'non-blockin
 requireText('if (trainedVehicleMissing.length > 0)', 'vehicle-capacity blocking gate');
 requireText("requirementType:\n                    'police_inspector_vehicle'", 'Inspector exact profile');
 requireText("eligibleVehicleTypeIds: [\n                    '25'", 'Armed Response exact type-25 profile');
-requireText("label:\n                'Railway Police Officer Trained Police IRV'", 'Railway exact IRV profile');
+requireText("addPsuCompatibleRequirement(\n            'railway_police'", 'Railway PSU plus IRV profile');
 
 const runtime = Function(
   `"use strict";\n` +
@@ -121,8 +134,12 @@ const runtime = Function(
   extractFunction('getTrainingRequirementEligibleTypeIds') + '\n' +
   extractFunction('getTrainingRequirementVehicleCapacity') + '\n' +
   extractFunction('getPreferredTrainedVehicleCountForRequirement') + '\n' +
+  extractFunctionUntil(
+    'normalisePublicOrderTrainedRequirements',
+    'isStrictLiveVerifiedTrainingEntry'
+  ) + '\n' +
   extractFunction('getTrainedVehicleSelectionScore') + '\n' +
-  `return {getPreferredTrainedVehicleCountForRequirement, getTrainedVehicleSelectionScore};`
+  `return {getPreferredTrainedVehicleCountForRequirement, normalisePublicOrderTrainedRequirements, getTrainedVehicleSelectionScore};`
 )();
 
 function publicOrderRequirement(personnelRequired) {
@@ -154,6 +171,29 @@ for (const [personnel, expectedVehicles] of planCases) {
   if (actual !== expectedVehicles) {
     fail(`Public Order plan ${personnel} expected ${expectedVehicles}, found ${actual}`);
   }
+}
+
+const railwayRequirements = runtime.normalisePublicOrderTrainedRequirements([
+  {
+    code: 'railway_police',
+    label: 'Railway Police Officer',
+    required: 12,
+  },
+]);
+const railwayRequirement = railwayRequirements.find(
+  requirement => requirement.code === 'railway_police_vehicle'
+);
+if (!railwayRequirement) {
+  fail('Railway Police personnel must produce a trained vehicle requirement');
+}
+if (
+  railwayRequirement.psuCompatible !== true ||
+  railwayRequirement.eligibleVehicleTypeIds.join(',') !== '51,8' ||
+  railwayRequirement.vehicleCapacityByType['51'] !== 9 ||
+  railwayRequirement.vehicleCapacityByType['8'] !== 2 ||
+  railwayRequirement.required !== 3
+) {
+  fail('Twelve Railway Police Officers must plan one nine-seat PSU plus two two-seat IRVs');
 }
 
 const score = (metrics, trainedPhase = true) =>
@@ -376,6 +416,18 @@ if (mixedLevelOne.remaining !== 0 || mixedLevelOne.capacityRemaining !== 0) {
   fail('One PSU plus the minimum IRV mixture must fully cover a 12-person trained requirement');
 }
 
+const railwayPsuCoverage = allocationRuntime.applyTrainingCandidateCoverage(
+  [remainingRequirement('railway_police', 9)],
+  {
+    typeId: '51',
+    profiles: Array.from({length: 9}, () => ['railway_police']),
+  },
+  null
+).remaining[0];
+if (railwayPsuCoverage.remaining !== 0 || railwayPsuCoverage.capacityRemaining !== 0) {
+  fail('One PSU with nine Railway Police Officers must fully cover a nine-officer requirement');
+}
+
 const untrainedFallback = allocationRuntime.applyTrainingCandidateCoverage(
   [remainingRequirement('level_1_public_order', 3)],
   {
@@ -388,4 +440,4 @@ if (untrainedFallback.remaining !== 3 || untrainedFallback.capacityRemaining !==
   fail('An untrained IRV must reduce only nominal capacity and preserve the complete training shortfall');
 }
 
-console.log('Trained coverage optimiser checks passed.');
+console.log('Trained coverage optimiser checks passed, including Railway Police PSU and IRV coverage.');

@@ -62,7 +62,7 @@ class FixtureDocument {
   }
 }
 
-expect(source.includes('// @version      1.0.116'), 'Expected Command Nexus 1.0.94');
+expect(source.includes('// @version      1.0.117'), 'Expected Command Nexus 1.0.94');
 expect(source.includes("const UNIT_VERSION = '3.3.24';"), 'Expected Unit Naming 3.3.19');
 expect(source.includes("const STATION_VERSION = '1.3.19';"), 'Expected Station Naming 1.3.13');
 

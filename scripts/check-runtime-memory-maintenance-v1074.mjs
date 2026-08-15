@@ -88,8 +88,8 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-expect(source.includes('// @version      1.0.116'), 'Expected Command Nexus 1.0.79');
-expect(source.includes('MISSION FINDER V10.6.157'), 'Expected Mission Finder V10.6.139');
+expect(source.includes('// @version      1.0.117'), 'Expected Command Nexus 1.0.79');
+expect(source.includes('MISSION FINDER V10.6.158'), 'Expected Mission Finder V10.6.139');
 expect(source.includes('480 * 1024 * 1024'), 'Soft cache flush threshold must be 480 MiB');
 expect(source.includes('640 * 1024 * 1024'), 'Guarded frame recycle threshold must remain 640 MiB');
 expect(source.includes("'missionchief-nexus-frame-runtime-reconcile-v1074'"), 'Missing frame-runtime reconciliation event');
