@@ -82,26 +82,27 @@ requireText(
 );
 
 requireText(
+  'async function stationFetchDocument(',
+  'background Station Naming reads'
+);
+requireText(
+  'async function unitFetchDocument(',
+  'background Unit Naming reads'
+);
+requireText(
+  'function prepareBackgroundNativeForm(',
+  'native background edit forms'
+);
+
+for (const forbiddenNamingFrameToken of [
   'function createManagedStationIframe(',
-  'same-origin station iframe fallback'
-);
-requireText(
-  'function removeManagedStationIframe(',
-  'managed iframe cleanup'
-);
-requireText(
   'async function openStationWorkflowIframe(',
-  'shared station workflow opener'
-);
-requireText(
-  'mc-namer-managed-station-iframe',
-  'managed iframe identity'
-);
-requireMinimum(
-  'openStationWorkflowIframe(',
-  3,
-  'station workflows using the shared iframe opener'
-);
+  'mc-namer-managed-station-iframe'
+]) {
+  if (source.includes(forbiddenNamingFrameToken)) {
+    fail(`Naming must remain background-only on iOS: ${forbiddenNamingFrameToken}`);
+  }
+}
 
 const forbiddenDesktopOnlySelector =
   "querySelectorAll('a.lightbox-open.list-group-item.active[href^=\"/buildings/\"]')";

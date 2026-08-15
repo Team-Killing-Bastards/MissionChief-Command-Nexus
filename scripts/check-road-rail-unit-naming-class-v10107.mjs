@@ -68,7 +68,7 @@ const getOptionsFactory = vm.runInNewContext(`(
 
 const makeVehicleNameFactory = vm.runInNewContext(`(
   function (VEHICLE_INFO) {
-    ${extractFunction('makeVehicleName', 'navigateUnitIframe')}
+    ${extractFunction('makeVehicleName', 'getUnitClassOptionsForStationType')}
     return makeVehicleName;
   }
 )`);

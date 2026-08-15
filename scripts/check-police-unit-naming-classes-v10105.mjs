@@ -68,7 +68,7 @@ const getOptionsFactory = vm.runInNewContext(`(
 
 const makeVehicleNameFactory = vm.runInNewContext(`(
   function (VEHICLE_INFO) {
-    ${extractFunction('makeVehicleName', 'navigateUnitIframe')}
+    ${extractFunction('makeVehicleName', 'getUnitClassOptionsForStationType')}
     return makeVehicleName;
   }
 )`);
@@ -161,8 +161,8 @@ for (const expected of expectedClasses) {
   );
 }
 
-assert.match(source, /^\/\/ @version\s+1\.0\.118$/m);
-assert.match(source, /const UNIT_VERSION = '3\.3\.24';/);
+assert.match(source, /^\/\/ @version\s+1\.0\.119$/m);
+assert.match(source, /const UNIT_VERSION = '3\.3\.25';/);
 assert.match(source, /MODULE 2: MISSION FINDER V10\.6\.159/);
 
 console.log(

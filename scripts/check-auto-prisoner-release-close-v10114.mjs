@@ -13,7 +13,7 @@ const source = await readFile(
   'utf8'
 );
 
-assert.ok(source.includes('// @version      1.0.118'));
+assert.ok(source.includes('// @version      1.0.119'));
 assert.ok(source.includes('MISSION FINDER V10.6.159'));
 
 function section(startToken, endToken) {

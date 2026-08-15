@@ -14,7 +14,7 @@ function fail(message) {
 }
 
 for (const [token, label] of [
-  ['// @version      1.0.118', 'v1.0.51 metadata'],
+  ['// @version      1.0.119', 'v1.0.51 metadata'],
   [' * MODULE 2: MISSION FINDER V10.6.159', 'Mission Finder V10.6.120 header'],
   ['[data-transport-request="true"][data-transport-request-type="prisoner"]', 'current structured prisoner request'],
   ['.prison-select[data-vehicle-id]', 'current vehicle cell selector'],

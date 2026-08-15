@@ -20,7 +20,7 @@ function requireText(text, label = text) {
 }
 
 for (const required of [
-  "const PERSONNEL_VERSION = '1.3.9';",
+  "const PERSONNEL_VERSION = '1.3.10';",
   '<button id="mc-personnel-refresh">Refresh Stations</button>',
   '<button id="mc-personnel-build-register"',
   '<button id="mc-personnel-full-register"',

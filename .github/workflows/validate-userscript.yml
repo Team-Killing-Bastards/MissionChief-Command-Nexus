@@ -27,6 +27,7 @@ on:
       - 'scripts/check-ally-steal-response-v1082.mjs'
       - 'scripts/check-auto-transport-response-v1083.mjs'
       - 'scripts/check-personnel-assignment-ios-completeness-v1084.mjs'
+      - 'scripts/check-background-resource-admin-v10119.mjs'
       - 'scripts/check-naming-dispatch-centre-filter-v1085.mjs'
       - 'scripts/check-police-unit-naming-classes-v10105.mjs'
       - 'scripts/check-recovery-unit-naming-classes-v10106.mjs'
@@ -92,6 +93,7 @@ on:
       - 'scripts/check-ally-steal-response-v1082.mjs'
       - 'scripts/check-auto-transport-response-v1083.mjs'
       - 'scripts/check-personnel-assignment-ios-completeness-v1084.mjs'
+      - 'scripts/check-background-resource-admin-v10119.mjs'
       - 'scripts/check-naming-dispatch-centre-filter-v1085.mjs'
       - 'scripts/check-police-unit-naming-classes-v10105.mjs'
       - 'scripts/check-recovery-unit-naming-classes-v10106.mjs'
@@ -227,6 +229,9 @@ jobs:
 
       - name: Validate complete iOS Safari Personnel Assignment controls
         run: node scripts/check-personnel-assignment-ios-completeness-v1084.mjs
+
+      - name: Validate background Resource Administration workflows
+        run: node scripts/check-background-resource-admin-v10119.mjs
 
       - name: Validate Unit and Station Naming Dispatch Centre filters
         run: node scripts/check-naming-dispatch-centre-filter-v1085.mjs

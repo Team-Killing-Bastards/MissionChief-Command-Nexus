@@ -68,8 +68,8 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-requireText('// @version      1.0.118', 'Command Nexus 1.0.64 metadata');
-requireText("const PERSONNEL_VERSION = '1.3.9';", 'Personnel Assignment 1.3.8');
+requireText('// @version      1.0.119', 'Command Nexus 1.0.64 metadata');
+requireText("const PERSONNEL_VERSION = '1.3.10';", 'Personnel Assignment 1.3.8');
 requireText(' * MODULE 2: MISSION FINDER V10.6.159', 'Mission Finder V10.6.127');
 requireText("code:\n                    'gw_gefahrgut',\n                label:\n                    'HazMat Unit'", 'HazMat trained-personnel pattern');
 requireText("requirementType:\n                'fire_hazmat_osu_trained_vehicle'", 'dedicated HazMat trained OSU route');
