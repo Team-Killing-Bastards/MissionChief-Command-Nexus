@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.119
+// @version      1.0.120
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -44,32 +44,44 @@
         }
     })();
 
+    const TOOL_IS_STATION_OVERVIEW_ROUTE =
+        /^\/leitstellenansicht\/?$/.test(
+            String(location.pathname || '')
+        );
+
+    const TOOL_IS_STANDALONE_STATION_OVERVIEW =
+        TOOL_IS_TOP_WINDOW &&
+        TOOL_IS_STATION_OVERVIEW_ROUTE;
+
     const TOOL_IS_STATION_OVERVIEW_FRAME = (() => {
-        if (TOOL_IS_TOP_WINDOW) return false;
+        if (
+            TOOL_IS_TOP_WINDOW ||
+            !TOOL_IS_STATION_OVERVIEW_ROUTE
+        ) return false;
         try {
             if (window.top.location.origin !== location.origin) return false;
         } catch (_error) {
             return false;
         }
 
-        return /^\/leitstellenansicht\/?$/.test(
-            String(location.pathname || '')
-        );
+        return true;
     })();
 
     // Resource Administration normally has one top-window owner. MissionChief's
     // normal Stations control opens the same /leitstellenansicht document in a
-    // same-origin lightbox iframe, so that exact frame is also an authoritative
-    // workspace host. Mission, building-detail and unrelated child frames stay
-    // excluded from the naming/personnel runtime.
+    // same-origin lightbox iframe, while middle-click opens it as a standalone
+    // top-level window. Both exact route shapes are authoritative workspace
+    // hosts. Mission, building-detail and unrelated child frames stay excluded
+    // from the naming/personnel runtime.
     if (!TOOL_IS_TOP_WINDOW && !TOOL_IS_STATION_OVERVIEW_FRAME) return;
 
-    const UNIT_VERSION = '3.3.25';
-    const STATION_VERSION = '1.3.20';
+    const UNIT_VERSION = '3.3.26';
+    const STATION_VERSION = '1.3.21';
     const PERSONNEL_VERSION = '1.3.10';
-    // Command Nexus 1.0.119: Station and Unit Naming now submit MissionChief's
-    // native edit forms in the background; Personnel Assignment remains on its
-    // verified background request path. Resource links are never clicked.
+    // Command Nexus 1.0.120: normal, embedded and standalone Stations layouts
+    // share the same verified background Station and Unit Naming form path.
+    // Personnel Assignment remains background-only. Resource links are never
+    // clicked and standalone windows never depend on their opener.
     const PERSONNEL_TRAINING_CODE = 'critical_care';
     const PERSONNEL_TRAINING_LABEL = 'Critical Care';
     const PERSONNEL_TARGET_VEHICLE_TYPE_ID = '5';
@@ -2467,7 +2479,10 @@
         const desktopStationSelector =
             'a.lightbox-open.list-group-item.active[href*="/buildings/"]';
 
-        if (TOOL_IS_STATION_OVERVIEW_FRAME) {
+        if (
+            TOOL_IS_STANDALONE_STATION_OVERVIEW ||
+            TOOL_IS_STATION_OVERVIEW_FRAME
+        ) {
             return entries.some(entry =>
                 entry.link?.isConnected
             );

@@ -17,7 +17,7 @@
 </tr>
 </table>
 
-**Current version:** `1.0.119` · **Mission Finder engine:** `V10.6.159` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
+**Current version:** `1.0.120` · **Mission Finder engine:** `V10.6.159` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)
@@ -50,7 +50,7 @@ MissionChief Command Nexus combines two proven MartyBlyth systems into one maint
 
 ### 🧭 Resource Administration Engine
 
-- Background station and vehicle naming without opening each resource page
+- Background station and vehicle naming from normal, embedded and popped-out Stations layouts without opening each resource page
 - Dispatch Centre-first scoping for Unit Naming and Station Naming, including embedded and standalone `/leitstellenansicht` layouts
 - Personnel Assignment planning
 - Preview and controlled Live modes

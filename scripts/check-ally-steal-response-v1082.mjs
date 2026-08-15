@@ -80,7 +80,7 @@ function extractFunction(name) {
   fail(`Unable to extract function ${name}`);
 }
 
-expect(source.includes('// @version      1.0.119'), 'Expected Command Nexus 1.0.82');
+expect(source.includes('// @version      1.0.120'), 'Expected Command Nexus 1.0.82');
 expect(source.includes('MISSION FINDER V10.6.159'), 'Expected Mission Finder V10.6.143');
 
 for (const token of [

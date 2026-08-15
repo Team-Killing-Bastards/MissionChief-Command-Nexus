@@ -31,7 +31,7 @@ function extractFunction(name) {
 }
 
 
-expect(source.includes('// @version      1.0.119'), 'Expected current Command Nexus version');
+expect(source.includes('// @version      1.0.120'), 'Expected current Command Nexus version');
 const listener = extractFunction('installNamingDispatchCentreRefreshListener');
 expect(listener.includes("document.addEventListener('click'"), 'Retry must use a delegated document click listener');
 expect(listener.includes('#mc-namer-refresh-dispatch-centres, #mc-station-refresh-dispatch-centres'), 'Delegated listener must own both Retry buttons');

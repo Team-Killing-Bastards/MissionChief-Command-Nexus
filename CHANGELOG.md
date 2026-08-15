@@ -4,6 +4,17 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.120] - 2026-08-15
+
+### Fixed
+
+- Resource Administration now recognises a popped-out top-level `/leitstellenansicht` window as an authoritative Stations workspace when its native station entries are connected, even though those links do not carry the desktop lightbox classes.
+- Station Naming and Unit Naming now run the same verified background native-form workflow from normal, embedded and standalone Stations layouts without opening station or vehicle pages.
+- The standalone window reads its own MissionChief DOM and same-origin forms; it does not inspect or depend on `window.opener`.
+- Preserved the same-origin embedded-frame gate, desktop Stations lifecycle and iOS rendered-entry lifecycle while keeping mission, building-detail and unrelated frames excluded.
+- Added executable regression coverage for the exact standalone lifecycle failure, background-only Station and Unit saves, disconnected-entry rejection, unrelated-page rejection and existing embedded/desktop paths.
+- Increased Unit Naming from `3.3.25` to `3.3.26`, Station Naming from `1.3.20` to `1.3.21`, and the unified userscript from `1.0.119` to `1.0.120`. Personnel Assignment remains `1.3.10` and Mission Finder remains `V10.6.159`.
+
 ## [1.0.119] - 2026-08-15
 
 ### Changed

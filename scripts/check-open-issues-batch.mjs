@@ -22,7 +22,7 @@ function extractBetween(startText, endText, label) {
   return source.slice(start, end);
 }
 
-requireText('// @version      1.0.119', 'current userscript metadata');
+requireText('// @version      1.0.120', 'current userscript metadata');
 requireText("const PERSONNEL_VERSION = '1.3.10';", 'current Personnel Assignment version');
 requireText(' * MODULE 2: MISSION FINDER V10.6.159', 'current Mission Finder header');
 
