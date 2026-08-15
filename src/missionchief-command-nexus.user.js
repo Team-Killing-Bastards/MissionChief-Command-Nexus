@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.116
+// @version      1.0.117
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -11820,7 +11820,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.157
+         * MODULE 2: MISSION FINDER V10.6.158
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -12654,6 +12654,10 @@
     const MF_EXACT_REGISTER_TRAINING_MAX_AGE_MS =
         180 * 24 * 60 * 60 * 1000;
 
+    // V10.6.158: Railway Police Officer shortages now share the trained PSU/
+    // IRV pool. Exact type-51 PSUs contribute up to nine verified
+    // railway_police-trained officers, while type-8 IRVs contribute two and
+    // remain preferred for small remainders.
     // V10.6.114: trained-personnel allocation now continues through every
     // ready compatible vehicle that can reduce an actual course deficit.
     // Vehicle-seat coverage and qualification coverage are tracked separately,
@@ -12746,7 +12750,8 @@
             'level_1_public_order',
             'level_2_public_order',
             'police_sergeant',
-            'police_medic'
+            'police_medic',
+            'railway_police'
         ]);
 
     const MF_TRAINED_VEHICLE_CAPACITY_BY_TYPE =
@@ -30737,9 +30742,10 @@ let sessionRuntimeTicker = null;
             });
         };
 
-        // Level 1, Level 2, Sergeant and Police Medic can share one PSU or IRV
-        // pool. Multi-trained staff count toward every course they hold. A PSU
-        // supplies up to nine personnel seats; IRVs fill small remainders.
+        // Level 1, Level 2, Sergeant, Police Medic and Railway Police can share
+        // one PSU or IRV pool. Multi-trained staff count toward every course
+        // they hold. A PSU supplies up to nine personnel seats; IRVs fill small
+        // remainders.
         addPsuCompatibleRequirement(
             'level_1_public_order',
             'Level 1 Public Order',
@@ -30783,20 +30789,11 @@ let sessionRuntimeTicker = null;
             policeMedicRequired
         );
 
-        addTrainedVehicleRequirement({
-            code:
-                'railway_police',
-            label:
-                'Railway Police Officer Trained Police IRV',
-            personnelRequired:
-                railwayPoliceRequired,
-            eligibleVehicleTypeIds: [
-                '8'
-            ],
-            vehicleCapacityByType: {
-                '8': 2
-            }
-        });
+        addPsuCompatibleRequirement(
+            'railway_police',
+            'Railway Police Officer',
+            railwayPoliceRequired
+        );
 
         addTrainedVehicleRequirement({
             code:
@@ -39627,7 +39624,7 @@ let sessionRuntimeTicker = null;
                     ) {
                         debugLog(
                             'RAILWAY POLICE TABLE COLLAPSE',
-                            `Railway Police Officer x${needed} captured from ${source}; selecting exact IRVs live-verified with 2 railway_police-trained personnel.`
+                            `Railway Police Officer x${needed} captured from ${source}; selecting exact PSUs with up to 9 or IRVs with up to 2 live-verified railway_police-trained personnel.`
                         );
                     }
 
