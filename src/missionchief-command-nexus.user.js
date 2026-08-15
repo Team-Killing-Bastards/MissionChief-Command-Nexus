@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.114
+// @version      1.0.115
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -11820,7 +11820,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.155
+         * MODULE 2: MISSION FINDER V10.6.156
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -33799,6 +33799,79 @@ let sessionRuntimeTicker = null;
         });
     }
 
+    function collapseSharedFireOperationalSupportRequirements(rows) {
+        const collapsed = [];
+        let sharedIndex = -1;
+        const sharedNames = [];
+
+        (Array.isArray(rows) ? rows : []).forEach(row => {
+            if (!row || row.isTrainedPersonnelRequirement) {
+                collapsed.push(row);
+                return;
+            }
+
+            const mappedName = resolveUnitName(row.unitName);
+
+            if (
+                !isFireOperationalSupportRequirement(
+                    row.unitName,
+                    mappedName
+                )
+            ) {
+                collapsed.push(row);
+                return;
+            }
+
+            const amount = Math.max(
+                0,
+                parseInt(row.stillNeeded, 10) || 0
+            );
+
+            sharedNames.push(
+                String(row.unitName || '')
+                    .replace(/\s+/g, ' ')
+                    .trim()
+            );
+
+            if (sharedIndex < 0) {
+                sharedIndex = collapsed.length;
+                collapsed.push({
+                    ...row,
+                    stillNeeded: amount
+                });
+                return;
+            }
+
+            const existing = collapsed[sharedIndex];
+            const existingAmount = Math.max(
+                0,
+                parseInt(existing?.stillNeeded, 10) || 0
+            );
+
+            if (amount > existingAmount) {
+                collapsed[sharedIndex] = {
+                    ...row,
+                    stillNeeded: amount
+                };
+            }
+        });
+
+        if (sharedIndex >= 0) {
+            collapsed[sharedIndex] = {
+                ...collapsed[sharedIndex],
+                sharedOperationalSupportRequirement: true,
+                sharedOperationalSupportNames:
+                    Array.from(
+                        new Set(
+                            sharedNames.filter(Boolean)
+                        )
+                    )
+            };
+        }
+
+        return collapsed;
+    }
+
     function getSupportedMissingPersonnelRowsFromText(
         text,
         options = {}
@@ -34054,7 +34127,13 @@ let sessionRuntimeTicker = null;
     }
 
 
-    function selectVehicleUnits(originalName, mappedName, amount, source) {
+    function selectVehicleUnits(
+        originalName,
+        mappedName,
+        amount,
+        source,
+        options = null
+    ) {
         if (!isCurrentMissionExecutionOwner('vehicle selection')) {
             const blockedRequired = Math.max(
                 0,
@@ -34093,6 +34172,20 @@ let sessionRuntimeTicker = null;
         const required = Math.max(0, parseInt(amount, 10) || 0);
         const selectionSource = String(source || 'UNKNOWN').toUpperCase();
         const key = buildSelectionKey(selectionSource, originalName, mappedName, required);
+        const isRequirementSatisfied = () => {
+            if (
+                typeof options?.isRequirementSatisfied !==
+                'function'
+            ) {
+                return false;
+            }
+
+            try {
+                return options.isRequirementSatisfied() === true;
+            } catch (_error) {
+                return false;
+            }
+        };
 
         if (required <= 0) {
             return { assigned: 0, required, missing: 0, skipped: true };
@@ -34115,8 +34208,14 @@ let sessionRuntimeTicker = null;
         }
         highDebugLog('SELECT DETAIL', `${selectionSource} | ${originalName} -> ${mappedName} | required=${required} | first=${checkboxes[0] ? getVehicleDebugName(checkboxes[0]) : 'none'}`);
 
-        // V9.2.1: The requirement quantity decides dispatch. The visual counter never controls this loop.
+        // The bounded requirement remains the hard click cap. Mission Update can
+        // additionally stop early when MissionChief's live Selected counter says
+        // the row is already covered (some vehicles satisfy more than one count).
         for (const checkbox of checkboxes.slice(0, required)) {
+            if (isRequirementSatisfied()) {
+                break;
+            }
+
             if (
                 detectAndLatchStaffingBlock(
                     `selection-loop-${selectionSource}`
@@ -34147,6 +34246,7 @@ let sessionRuntimeTicker = null;
 
         if (
             assigned < required &&
+            !isRequirementSatisfied() &&
             !strictVehicleTypeOnly &&
             !detectAndLatchStaffingBlock(
                 `before-fallback-${selectionSource}`
@@ -34160,7 +34260,10 @@ let sessionRuntimeTicker = null;
                     if (clickVehicleElement(fallback)) assigned += 1;
                     renderVehicleLoadList();
                 } else {
-                    while (assigned < required) {
+                    while (
+                        assigned < required &&
+                        !isRequirementSatisfied()
+                    ) {
                         if (!clickVehicleElement(fallback)) break;
                         assigned += 1;
                         renderVehicleLoadList();
@@ -34181,7 +34284,9 @@ let sessionRuntimeTicker = null;
             assigned,
             required,
             missing: Math.max(required - assigned, 0),
-            skipped: false
+            skipped: false,
+            liveRequirementSatisfied:
+                isRequirementSatisfied()
         };
     }
 
@@ -34211,6 +34316,105 @@ let sessionRuntimeTicker = null;
         return item?.liveRequirementDetails?.dispatchTargetMode === 'shortage'
             ? 'shortage'
             : 'total';
+    }
+
+    function getMissingOnMissionSelectedAmount(item) {
+        const details = item?.liveRequirementDetails;
+
+        if (
+            !details?.missingOnMissionTable ||
+            item?.convertedFromPersonnelRequirement
+        ) {
+            return null;
+        }
+
+        const rawUnitName = String(
+            details.missingOnMissionUnitName ||
+            item?.unitName ||
+            ''
+        )
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        const targetName = normaliseVehicleText(rawUnitName);
+
+        if (!targetName) {
+            return null;
+        }
+
+        let selectedAmount = null;
+
+        getActiveMissionRequirementContexts().forEach(context => {
+            const root = context?.root;
+            if (!root) return;
+
+            let tables = [];
+
+            try {
+                tables = Array.from(
+                    root.querySelectorAll(
+                        'table.table-striped.table-condensed, table.table'
+                    )
+                );
+            } catch (_error) {
+                return;
+            }
+
+            tables.forEach(table => {
+                if (
+                    !isMissingOnMissionUpdateTable(table) ||
+                    !isMissionElementVisible(table)
+                ) {
+                    return;
+                }
+
+                let rows = [];
+
+                try {
+                    rows = Array.from(
+                        table.querySelectorAll('tbody tr')
+                    );
+                } catch (_error) {
+                    return;
+                }
+
+                rows.forEach(row => {
+                    const cells = row.querySelectorAll?.('td');
+
+                    if (!cells || cells.length < 5) {
+                        return;
+                    }
+
+                    const rowName = normaliseVehicleText(
+                        cells[0].innerText ||
+                        cells[0].textContent ||
+                        ''
+                    );
+
+                    if (rowName !== targetName) {
+                        return;
+                    }
+
+                    const parsedSelected = parseInt(
+                        String(
+                            cells[4].innerText ||
+                            cells[4].textContent ||
+                            ''
+                        ).replace(/,/g, ''),
+                        10
+                    );
+
+                    if (Number.isFinite(parsedSelected)) {
+                        selectedAmount = Math.max(
+                            selectedAmount ?? 0,
+                            parsedSelected
+                        );
+                    }
+                });
+            });
+        });
+
+        return selectedAmount;
     }
 
     function isExplicitMissingVehicleRequirementRow(item) {
@@ -34367,6 +34571,11 @@ let sessionRuntimeTicker = null;
         requirementRows = normaliseOperationalRequirementRows(
             requirementRows
         );
+
+        requirementRows =
+            collapseSharedFireOperationalSupportRequirements(
+                requirementRows
+            );
 
         const includeConfiguredFreshMissionRules =
             options
@@ -39565,17 +39774,20 @@ let sessionRuntimeTicker = null;
                             : 0
                     );
 
-                    // The table's Still needed value is the additional shortage.
-                    // Convert it to a current-selection target so a second read of
-                    // the same table cannot select the shortage twice.
+                    // MissionChief does not subtract the live Selected column from
+                    // Still needed. Still needed is therefore the total target for
+                    // the current selection, not an additional amount to add on top.
+                    // Total mode subtracts matching checked vehicles before clicking.
                     recordUpdateRequirement(
                         unitName,
-                        selected + reportedStillNeeded,
+                        reportedStillNeeded,
                         'missing-on-mission-table',
                         {
                             dispatchTargetMode: 'total',
                             explicitMissingVehicles: true,
                             missingOnMissionTable: true,
+                            missingOnMissionUnitName:
+                                unitName,
                             missingOnMission,
                             enRoute,
                             selected,
@@ -41126,8 +41338,10 @@ let sessionRuntimeTicker = null;
         // the same personnel-to-vehicle conversion at the Upgrade entry point.
         // This restores SAR Commander -> Control Van parity with Unit Finder.
         const normalisedMissingRows =
-            normaliseOperationalRequirementRows(
-                rawMissingRows
+            collapseSharedFireOperationalSupportRequirements(
+                normaliseOperationalRequirementRows(
+                    rawMissingRows
+                )
             );
 
         const missingRows =
@@ -41305,6 +41519,11 @@ let sessionRuntimeTicker = null;
                     mappedName
                 );
 
+            const matchingSelectedFromLiveTable =
+                getMissingOnMissionSelectedAmount(
+                    item
+                );
+
             const trackedPatientSelected =
                 isTotalPatientFallback
                     ? getTrackedPatientUnitSelections(
@@ -41315,7 +41534,12 @@ let sessionRuntimeTicker = null;
             const matchingSelectedTotal =
                 Math.max(
                     matchingSelectedFromDom,
-                    trackedPatientSelected
+                    trackedPatientSelected,
+                    Number.isFinite(
+                        matchingSelectedFromLiveTable
+                    )
+                        ? matchingSelectedFromLiveTable
+                        : 0
                 );
 
             const effectiveRequired =
@@ -41351,7 +41575,7 @@ let sessionRuntimeTicker = null;
             if (mfDebugEnabled) {
                 debugLog(
                     'UPDATE CAP',
-                    `${item.unitName} -> ${mappedName} | mode=${targetMode} | panel target=${needed} | effective total=${effectiveRequired} | DOM selected=${matchingSelectedFromDom} | tracked patient selected=${trackedPatientSelected} | matching selected total=${matchingSelectedTotal} | counted toward requirement=${selectedBefore} | selecting at most=${remainingToSelect}`
+                    `${item.unitName} -> ${mappedName} | mode=${targetMode} | panel target=${needed} | effective total=${effectiveRequired} | DOM selected=${matchingSelectedFromDom} | live table selected=${Number.isFinite(matchingSelectedFromLiveTable) ? matchingSelectedFromLiveTable : 'n/a'} | tracked patient selected=${trackedPatientSelected} | matching selected total=${matchingSelectedTotal} | counted toward requirement=${selectedBefore} | selecting at most=${remainingToSelect}`
                 );
             }
 
@@ -41363,7 +41587,20 @@ let sessionRuntimeTicker = null;
                         item.unitName,
                         mappedName,
                         remainingToSelect,
-                        'UPDATE'
+                        'UPDATE',
+                        {
+                            isRequirementSatisfied: () => {
+                                const selected =
+                                    getMissingOnMissionSelectedAmount(
+                                        item
+                                    );
+
+                                return (
+                                    Number.isFinite(selected) &&
+                                    selected >= effectiveRequired
+                                );
+                            }
+                        }
                     );
             }
 
@@ -41375,6 +41612,19 @@ let sessionRuntimeTicker = null;
                     ),
                     effectiveRequired
                 );
+
+            const selectedFromLiveTable =
+                getMissingOnMissionSelectedAmount(
+                    item
+                );
+
+            const selectedFromCurrentLiveTable =
+                Number.isFinite(selectedFromLiveTable)
+                    ? Math.min(
+                        selectedFromLiveTable,
+                        effectiveRequired
+                    )
+                    : 0;
 
             // MissionChief can disable or replace a vehicle row immediately
             // after it is selected. The click has succeeded, but a fresh DOM
@@ -41398,7 +41648,8 @@ let sessionRuntimeTicker = null;
             const visualSelected =
                 Math.max(
                     selectedFromCurrentDom,
-                    selectedFromThisAttempt
+                    selectedFromThisAttempt,
+                    selectedFromCurrentLiveTable
                 );
 
             if (

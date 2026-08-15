@@ -41,8 +41,8 @@ function extractFunction(name) {
   fail(`Unterminated ${name}`);
 }
 
-expect(source.includes('// @version      1.0.114'), 'Expected Command Nexus 1.0.101');
-expect(source.includes(' * MODULE 2: MISSION FINDER V10.6.155'), 'Expected Mission Finder V10.6.150');
+expect(source.includes('// @version      1.0.115'), 'Expected Command Nexus 1.0.101');
+expect(source.includes(' * MODULE 2: MISSION FINDER V10.6.156'), 'Expected Mission Finder V10.6.150');
 
 const carMatcher = extractFunction('isCarsToTowRequirementName');
 expect(!carMatcher.includes('normalise('), 'Car towing matcher must not depend on an out-of-scope normalise helper');
