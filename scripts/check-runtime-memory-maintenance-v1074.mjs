@@ -88,7 +88,7 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-expect(source.includes('// @version      1.0.119'), 'Expected Command Nexus 1.0.79');
+expect(source.includes('// @version      1.0.120'), 'Expected Command Nexus 1.0.79');
 expect(source.includes('MISSION FINDER V10.6.159'), 'Expected Mission Finder V10.6.139');
 expect(source.includes('480 * 1024 * 1024'), 'Soft cache flush threshold must be 480 MiB');
 expect(source.includes('640 * 1024 * 1024'), 'Guarded frame recycle threshold must remain 640 MiB');
@@ -96,9 +96,11 @@ expect(source.includes("'missionchief-nexus-frame-runtime-reconcile-v1074'"), 'M
 
 const namingModuleStart = source.slice(
   source.indexOf("if (window.__MC_NAMING_TOOLS_V428__) return;"),
-  source.indexOf("const UNIT_VERSION = '3.3.25';")
+  source.indexOf("const UNIT_VERSION = '3.3.26';")
 );
 expect(namingModuleStart.includes('window.top === window.self'), 'Naming/personnel runtime must identify its top-window owner');
+expect(namingModuleStart.includes('TOOL_IS_STATION_OVERVIEW_ROUTE'), 'Naming/personnel runtime must share one exact Stations overview route classifier');
+expect(namingModuleStart.includes('TOOL_IS_STANDALONE_STATION_OVERVIEW'), 'Naming/personnel runtime must recognise the standalone Stations overview window');
 expect(namingModuleStart.includes('TOOL_IS_STATION_OVERVIEW_FRAME'), 'Naming/personnel runtime must recognise the exact Stations overview lightbox');
 expect(namingModuleStart.includes('window.top.location.origin !== location.origin'), 'Stations overview lightbox ownership must remain same-origin');
 expect(namingModuleStart.includes('leitstellenansicht'), 'Stations overview lightbox ownership must remain route-scoped');
