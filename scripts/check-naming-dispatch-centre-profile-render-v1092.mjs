@@ -27,9 +27,9 @@ function extractFunction(name) {
   fail(`Unterminated ${name}`);
 }
 
-expect(source.includes('// @version      1.0.120'), 'Expected Command Nexus 1.0.93');
-expect(source.includes("const UNIT_VERSION = '3.3.26';"), 'Expected Unit Naming 3.3.18');
-expect(source.includes("const STATION_VERSION = '1.3.21';"), 'Expected Station Naming 1.3.12');
+expect(source.includes('// @version      1.0.121'), 'Expected Command Nexus 1.0.93');
+expect(source.includes("const UNIT_VERSION = '3.3.27';"), 'Expected Unit Naming 3.3.18');
+expect(source.includes("const STATION_VERSION = '1.3.22';"), 'Expected Station Naming 1.3.12');
 const listLoader = extractFunction('loadNamingDispatchCentreList');
 expect(listLoader.includes('collectNamingDispatchCentresFromStationRows()'), 'v1.0.93 replacement native-row source missing');
 expect(!listLoader.includes('/profile/'), 'v1.0.92 profile route must not return');

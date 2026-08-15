@@ -4,6 +4,17 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.121] - 2026-08-15
+
+### Fixed
+
+- Fixed the standalone `/leitstellenansicht` timing failure where Dispatch Centre controls rendered first and an empty station-membership map was cached before the native station cards finished loading.
+- Unit Naming and Station Naming now rescan the current native `leitstelle_building_id` rows whenever their normal Refresh Stations path runs, so Dispatch Centre → Service → Station Type → Start From rebuilds from the complete popup DOM.
+- Refresh Dispatch Centres now reapplies the refreshed membership map to Unit and Station Naming snapshots that are already loaded instead of leaving their `dispatchCentreId` values stale.
+- Preserved exact native-row membership authority, true Unassigned/default stations, the same-origin document graph, standalone `window.opener` isolation and the verified background-only rename workflow.
+- Added a permanent late-render regression covering the initial empty snapshot, subsequent native-row render, forced recovery, existing-snapshot rebinding and downstream Fire & Rescue Service filtering.
+- Increased Unit Naming from `3.3.26` to `3.3.27`, Station Naming from `1.3.21` to `1.3.22`, and the unified userscript from `1.0.120` to `1.0.121`. Personnel Assignment remains `1.3.10` and Mission Finder remains `V10.6.159`.
+
 ## [1.0.120] - 2026-08-15
 
 ### Fixed

@@ -8,9 +8,9 @@ const fail = message => { console.error(`ERROR: ${message}`); process.exit(1); }
 const requireText = (text, label = text) => { if (!source.includes(text)) fail(`Missing naming Dispatch Centre contract: ${label}`); };
 
 for (const [text, label] of [
-  ['// @version      1.0.120', 'Command Nexus 1.0.88 metadata'],
-  ["const UNIT_VERSION = '3.3.26';", 'Unit Naming 3.3.13'],
-  ["const STATION_VERSION = '1.3.21';", 'Station Naming 1.3.7'],
+  ['// @version      1.0.121', 'Command Nexus 1.0.88 metadata'],
+  ["const UNIT_VERSION = '3.3.27';", 'Unit Naming 3.3.13'],
+  ["const STATION_VERSION = '1.3.22';", 'Station Naming 1.3.7'],
   ['id="mc-namer-dispatch-centre" disabled', 'Unit Naming Dispatch Centre select'],
   ['id="mc-station-dispatch-centre" disabled', 'Station Naming Dispatch Centre select'],
   ["const NAMING_DISPATCH_CENTRE_ALL = 'ALL';", 'All Dispatch Centres default'],
@@ -28,8 +28,8 @@ for (const [text, label] of [
 if ((source.match(/dispatchCentreId: getNamingDispatchCentreId\(entry\.buildingId\)/g) || []).length < 2) {
   fail('Both Unit Naming and Station Naming must map the Dispatch Centre relationship.');
 }
-if ((source.match(/loadNamingDispatchCentreData\(false\)/g) || []).length < 2) {
-  fail('Both naming tools must refresh authoritative station-to-centre assignments.');
+if ((source.match(/loadNamingDispatchCentreData\(true\)/g) || []).length < 2) {
+  fail('Both naming tools must rescan authoritative station-to-centre assignments.');
 }
 if (source.includes('mc-personnel-dispatch-centre')) {
   fail('Dispatch Centre filtering must not affect Personnel Assignment.');

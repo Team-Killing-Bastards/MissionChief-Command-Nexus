@@ -161,8 +161,8 @@ for (const expected of expectedClasses) {
   );
 }
 
-assert.match(source, /^\/\/ @version\s+1\.0\.120$/m);
-assert.match(source, /const UNIT_VERSION = '3\.3\.26';/);
+assert.match(source, /^\/\/ @version\s+1\.0\.121$/m);
+assert.match(source, /const UNIT_VERSION = '3\.3\.27';/);
 assert.match(source, /MODULE 2: MISSION FINDER V10\.6\.159/);
 
 console.log(
