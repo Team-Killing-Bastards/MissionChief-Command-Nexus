@@ -146,11 +146,11 @@ function createRuntime(localStorage, document) {
 }
 
 expect(
-  source.includes('// @version      1.0.117'),
+  source.includes('// @version      1.0.118'),
   'Expected Command Nexus 1.0.104 metadata'
 );
 expect(
-  source.includes('MODULE 2: MISSION FINDER V10.6.158'),
+  source.includes('MODULE 2: MISSION FINDER V10.6.159'),
   'Expected Mission Finder V10.6.153 header'
 );
 

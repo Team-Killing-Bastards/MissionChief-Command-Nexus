@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.117
+// @version      1.0.118
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -11820,7 +11820,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.158
+         * MODULE 2: MISSION FINDER V10.6.159
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -12654,6 +12654,10 @@
     const MF_EXACT_REGISTER_TRAINING_MAX_AGE_MS =
         180 * 24 * 60 * 60 * 1000;
 
+    // V10.6.159: Fire Engines or RIVs now exhausts exact type-76 RIVs first,
+    // then fills only the remaining requirement with exact type-16 Rescue
+    // Pumps. Both types count toward the same row; Water Ladders and CARPs
+    // remain excluded from this cross-reference.
     // V10.6.158: Railway Police Officer shortages now share the trained PSU/
     // IRV pool. Exact type-51 PSUs contribute up to nine verified
     // railway_police-trained officers, while type-8 IRVs contribute two and
@@ -15524,6 +15528,24 @@
         );
     }
 
+    function isFireEngineOrRivRequirement(
+        originalName
+    ) {
+        const raw =
+            String(
+                originalName || ''
+            )
+                .replace(
+                    /\s+/g,
+                    ' '
+                )
+                .trim();
+
+        return /^(?:Required\s+)?Fire\s+Engines?\s+or\s+RIVs?$/i.test(
+            raw
+        );
+    }
+
     function isMajorFoamTenderVehicleCheckbox(
         input
     ) {
@@ -15557,6 +15579,14 @@
         originalName,
         mappedName
     ) {
+        if (
+            isFireEngineOrRivRequirement(
+                originalName
+            )
+        ) {
+            return false;
+        }
+
         const raw =
             normaliseVehicleText(
                 originalName
@@ -15579,9 +15609,7 @@
             raw ===
                 'rapid intervention vehicle' ||
             raw ===
-                'rapid intervention vehicles' ||
-            raw ===
-                'fire engines or rivs'
+                'rapid intervention vehicles'
         );
     }
 
@@ -15592,6 +15620,29 @@
     function isRivVehicleCheckbox(
         input
     ) {
+        if (!input) return false;
+
+        const typeIdentifiers =
+            getVehicleTypeIdentifiers(
+                input
+            );
+
+        if (
+            typeIdentifiers.includes(
+                '76'
+            )
+        ) {
+            return true;
+        }
+
+        if (
+            typeIdentifiers.some(value =>
+                /^\d+$/.test(value)
+            )
+        ) {
+            return false;
+        }
+
         return getRivVehicleValues(
             input
         ).some(value => {
@@ -15618,6 +15669,66 @@
                 )
             );
         });
+    }
+
+    function isRescuePumpVehicleCheckbox(
+        input
+    ) {
+        if (!input) return false;
+
+        return getVehicleTypeIdentifiers(
+            input
+        ).includes(
+            '16'
+        );
+    }
+
+    function getFireEngineOrRivVehicleCheckboxes(
+        includeChecked = false
+    ) {
+        const eligible =
+            getVehicleCheckboxSnapshot().filter(input => {
+                if (input.disabled) {
+                    return false;
+                }
+
+                if (
+                    !includeChecked &&
+                    input.checked
+                ) {
+                    return false;
+                }
+
+                return (
+                    isRivVehicleCheckbox(
+                        input
+                    ) ||
+                    isRescuePumpVehicleCheckbox(
+                        input
+                    )
+                );
+            });
+
+        const rivMatches =
+            sortVehicleCheckboxesByBestArrival(
+                eligible.filter(
+                    isRivVehicleCheckbox
+                )
+            );
+
+        const rescuePumpMatches =
+            sortVehicleCheckboxesByBestArrival(
+                eligible.filter(
+                    input =>
+                        !isRivVehicleCheckbox(input) &&
+                        isRescuePumpVehicleCheckbox(input)
+                )
+            );
+
+        return [
+            ...rivMatches,
+            ...rescuePumpMatches
+        ];
     }
 
     function getPoliceAirRequirementMode(
@@ -17346,6 +17457,11 @@ function isRoadRailUnitVehicleCheckbox(input) {
                 mappedName
             );
 
+        const fireEngineOrRivPreferred =
+            isFireEngineOrRivRequirement(
+                originalName
+            );
+
         const rivTypeOnly =
             isRivRequirement(
                 originalName,
@@ -17592,6 +17708,33 @@ function isRoadRailUnitVehicleCheckbox(input) {
                     return isSeagoingVesselCheckbox(input);
                 })
             );
+        }
+
+        if (
+            fireEngineOrRivPreferred
+        ) {
+            const orderedMatches =
+                getFireEngineOrRivVehicleCheckboxes(
+                    includeChecked
+                );
+
+            if (mfDebugEnabled) {
+                const rivCount =
+                    orderedMatches.filter(
+                        isRivVehicleCheckbox
+                    ).length;
+
+                const rescuePumpCount =
+                    orderedMatches.length -
+                    rivCount;
+
+                debugLog(
+                    'RIV FIRE ENGINE PRIORITY',
+                    `${originalName} -> ${mappedName} | RIV matches=${rivCount} first | Rescue Pump remainder matches=${rescuePumpCount} | returned=${orderedMatches.length}`
+                );
+            }
+
+            return orderedMatches;
         }
 
 
@@ -18029,6 +18172,10 @@ function isRoadRailUnitVehicleCheckbox(input) {
             );
         const sartecPrefixOnly = isSartecRequirement(originalName, mappedName);
         const rrvTypeOnly = isRrvRequirement(originalName, mappedName);
+        const fireEngineOrRivPreferred =
+            isFireEngineOrRivRequirement(
+                originalName
+            );
         const rivTypeOnly = isRivRequirement(originalName, mappedName);
 
         const rivOrMajorFoamTenderPreferred =
@@ -18076,6 +18223,23 @@ function isRoadRailUnitVehicleCheckbox(input) {
                 originalName,
                 mappedName
             );
+
+        if (
+            fireEngineOrRivPreferred
+        ) {
+            return getVehicleCheckboxSnapshot().filter(input => {
+                if (!input.checked) return false;
+
+                return (
+                    isRivVehicleCheckbox(
+                        input
+                    ) ||
+                    isRescuePumpVehicleCheckbox(
+                        input
+                    )
+                );
+            }).length;
+        }
 
         if (
             rivOrMajorFoamTenderPreferred
@@ -34235,6 +34399,7 @@ let sessionRuntimeTicker = null;
         const strictVehicleTypeOnly = !!(
             isAmbulanceTransportRequest(originalName, mappedName) ||
             isFireEngineRequirement(originalName, mappedName) ||
+            isFireEngineOrRivRequirement(originalName) ||
             isFlatbedRecoveryVehicleRequirement(originalName, mappedName) ||
             isSearchDogUnitRequirement(originalName, mappedName) ||
             isHgvRecoveryVehicleRequirement(originalName, mappedName) ||

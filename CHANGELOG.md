@@ -4,6 +4,16 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.118] - 2026-08-15
+
+### Changed
+
+- Fire Engines or RIVs now selects exact type-76 RIVs first and fills only the remaining requirement with exact type-16 Rescue Pumps.
+- Mixed RIV and Rescue Pump selections count together toward the row while Water Ladders and Combined Aerial Rescue Pumps remain excluded.
+- Added permanent regression coverage for RIV-first ordering, exact remainder top-up, selection caps and selected-unit verification.
+- Advanced the Mission Finder engine from V10.6.158 to V10.6.159.
+- Increased the unified userscript version from `1.0.117` to `1.0.118`.
+
 ## [1.0.117] - 2026-08-15
 
 ### Changed

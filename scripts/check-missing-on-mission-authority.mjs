@@ -66,8 +66,8 @@ function sourceSlice(startToken, endToken, label) {
   return source.slice(start, end);
 }
 
-expect(source.includes('// @version      1.0.117'), 'Expected Command Nexus 1.0.104');
-expect(source.includes('MISSION FINDER V10.6.158'), 'Expected Mission Finder V10.6.153');
+expect(source.includes('// @version      1.0.118'), 'Expected Command Nexus 1.0.104');
+expect(source.includes('MISSION FINDER V10.6.159'), 'Expected Mission Finder V10.6.153');
 
 const headerFunction = extractFunction('getMissionUpdateTableHeaderTexts');
 const tableFunction = extractFunction('isMissingOnMissionUpdateTable');
@@ -322,6 +322,7 @@ const selectVehicleUnitsWithLiveStop = Function(
     renderVehicleLoadList,
     isAmbulanceTransportRequest,
     isFireEngineRequirement,
+    isFireEngineOrRivRequirement,
     isFlatbedRecoveryVehicleRequirement,
     isSearchDogUnitRequirement,
     isHgvRecoveryVehicleRequirement,
@@ -350,6 +351,7 @@ const selectVehicleUnitsWithLiveStop = Function(
     renderVehicleLoadList: () => {},
     isAmbulanceTransportRequest: () => false,
     isFireEngineRequirement: () => false,
+    isFireEngineOrRivRequirement: () => false,
     isFlatbedRecoveryVehicleRequirement: () => false,
     isSearchDogUnitRequirement: () => false,
     isHgvRecoveryVehicleRequirement: () => false,
