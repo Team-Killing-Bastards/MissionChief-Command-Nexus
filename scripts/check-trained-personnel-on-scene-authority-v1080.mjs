@@ -66,11 +66,11 @@ function extractFunction(name) {
 }
 
 expect(
-  source.includes('// @version      1.0.115'),
+  source.includes('// @version      1.0.116'),
   'Expected Command Nexus 1.0.80'
 );
 expect(
-  source.includes(' * MODULE 2: MISSION FINDER V10.6.156'),
+  source.includes(' * MODULE 2: MISSION FINDER V10.6.157'),
   'Expected Mission Finder V10.6.140'
 );
 

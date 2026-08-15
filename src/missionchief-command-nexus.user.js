@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.115
+// @version      1.0.116
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -11820,7 +11820,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.156
+         * MODULE 2: MISSION FINDER V10.6.157
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -34318,31 +34318,53 @@ let sessionRuntimeTicker = null;
             : 'total';
     }
 
-    function getMissingOnMissionSelectedAmount(item) {
+    function getMissingOnMissionRequirementState(item) {
         const details = item?.liveRequirementDetails;
 
         if (
-            !details?.missingOnMissionTable ||
-            item?.convertedFromPersonnelRequirement
+            item?.convertedFromPersonnelRequirement ||
+            item?.isTrainedPersonnelRequirement ||
+            (
+                !details?.missingOnMissionTable &&
+                (
+                    item?.isPatientAlertFallback ||
+                    item?.patientRequirementType
+                )
+            )
         ) {
             return null;
         }
 
-        const rawUnitName = String(
-            details.missingOnMissionUnitName ||
-            item?.unitName ||
-            ''
-        )
-            .replace(/\s+/g, ' ')
-            .trim();
+        const rawUnitNames = [
+            details?.missingOnMissionUnitName,
+            item?.originalName,
+            item?.unitName
+        ]
+            .map(value => String(value || '')
+                .replace(/\s+/g, ' ')
+                .trim()
+            )
+            .filter(Boolean);
 
-        const targetName = normaliseVehicleText(rawUnitName);
+        const targetNames = new Set(
+            rawUnitNames.map(normaliseVehicleText)
+        );
 
-        if (!targetName) {
+        const targetMappedNames = new Set(
+            rawUnitNames.map(value => {
+                return normaliseVehicleText(
+                    resolveUnitName(value) ||
+                    value
+                );
+            })
+        );
+
+        if (!targetNames.size) {
             return null;
         }
 
-        let selectedAmount = null;
+        const exactMatches = [];
+        const mappedMatches = [];
 
         getActiveMissionRequirementContexts().forEach(context => {
             const root = context?.root;
@@ -34385,36 +34407,180 @@ let sessionRuntimeTicker = null;
                         return;
                     }
 
-                    const rowName = normaliseVehicleText(
+                    const rawRowName = String(
                         cells[0].innerText ||
                         cells[0].textContent ||
                         ''
-                    );
+                    )
+                        .replace(/\s+/g, ' ')
+                        .trim();
 
-                    if (rowName !== targetName) {
+                    const rowName =
+                        normaliseVehicleText(
+                            rawRowName
+                        );
+
+                    const mappedRowName =
+                        normaliseVehicleText(
+                            resolveUnitName(
+                                rawRowName
+                            ) ||
+                            rawRowName
+                        );
+
+                    const exactMatch =
+                        targetNames.has(
+                            rowName
+                        );
+
+                    if (
+                        !exactMatch &&
+                        !targetMappedNames.has(
+                            mappedRowName
+                        )
+                    ) {
                         return;
                     }
 
-                    const parsedSelected = parseInt(
-                        String(
-                            cells[4].innerText ||
-                            cells[4].textContent ||
-                            ''
-                        ).replace(/,/g, ''),
-                        10
-                    );
+                    const values = [1, 2, 3, 4]
+                        .map(index => {
+                            return parseInt(
+                                String(
+                                    cells[index]?.innerText ||
+                                    cells[index]?.textContent ||
+                                    ''
+                                ).replace(/,/g, ''),
+                                10
+                            );
+                        });
 
-                    if (Number.isFinite(parsedSelected)) {
-                        selectedAmount = Math.max(
-                            selectedAmount ?? 0,
-                            parsedSelected
-                        );
+                    if (
+                        values.some(value =>
+                            !Number.isFinite(value)
+                        )
+                    ) {
+                        return;
                     }
+
+                    const state = {
+                        unitName:
+                            rawRowName,
+                        missingOnMission:
+                            Math.max(0, values[0]),
+                        enRoute:
+                            Math.max(0, values[1]),
+                        stillNeeded:
+                            Math.max(0, values[2]),
+                        selected:
+                            Math.max(0, values[3])
+                    };
+
+                    (
+                        exactMatch
+                            ? exactMatches
+                            : mappedMatches
+                    ).push(state);
                 });
             });
         });
 
-        return selectedAmount;
+        const matches =
+            exactMatches.length > 0
+                ? exactMatches
+                : mappedMatches;
+
+        if (!matches.length) {
+            return null;
+        }
+
+        const sortedMatches =
+            matches.slice().sort((left, right) => {
+                const leftTarget =
+                    getMissingOnMissionSelectionTarget(
+                        left,
+                        0
+                    );
+
+                const rightTarget =
+                    getMissingOnMissionSelectionTarget(
+                        right,
+                        0
+                    );
+
+                // Exact duplicate rows can briefly contain an old and a new
+                // value while MissionChief redraws the upgrade panel. The lower
+                // live shortage is the safe current cap. Canonical alias matches
+                // (notably BASU/Welfare/HazMat -> OSU) retain the largest target.
+                return exactMatches.length > 0
+                    ? leftTarget - rightTarget
+                    : rightTarget - leftTarget;
+            });
+
+        return {
+            ...sortedMatches[0],
+            selected:
+                Math.max(
+                    ...matches.map(
+                        state => state.selected
+                    )
+                )
+        };
+    }
+
+    function getMissingOnMissionSelectionTarget(
+        state,
+        fallbackTarget = 0
+    ) {
+        const fallback = Math.max(
+            0,
+            parseInt(fallbackTarget, 10) || 0
+        );
+
+        if (!state) {
+            return fallback;
+        }
+
+        const missingOnMission = Number(
+            state.missingOnMission
+        );
+
+        const enRoute = Number(
+            state.enRoute
+        );
+
+        const stillNeeded = Number(
+            state.stillNeeded
+        );
+
+        if (
+            !Number.isFinite(missingOnMission) ||
+            !Number.isFinite(enRoute) ||
+            !Number.isFinite(stillNeeded)
+        ) {
+            return fallback;
+        }
+
+        // MissionChief's Still needed column already accounts for En-route,
+        // but Selected remains separate. Recalculate from both live values and
+        // take the lower cap so a redraw can never select against a stale 1.
+        return Math.max(
+            0,
+            Math.min(
+                stillNeeded,
+                missingOnMission - enRoute
+            )
+        );
+    }
+
+    function getMissingOnMissionSelectedAmount(item) {
+        const state =
+            getMissingOnMissionRequirementState(
+                item
+            );
+
+        return state
+            ? state.selected
+            : null;
     }
 
     function isExplicitMissingVehicleRequirementRow(item) {
@@ -41519,10 +41685,23 @@ let sessionRuntimeTicker = null;
                     mappedName
                 );
 
-            const matchingSelectedFromLiveTable =
-                getMissingOnMissionSelectedAmount(
+            const initialMissingOnMissionState =
+                getMissingOnMissionRequirementState(
                     item
                 );
+
+            const initialMissingOnMissionTarget =
+                initialMissingOnMissionState
+                    ? getMissingOnMissionSelectionTarget(
+                        initialMissingOnMissionState,
+                        needed
+                    )
+                    : null;
+
+            const matchingSelectedFromLiveTable =
+                initialMissingOnMissionState
+                    ? initialMissingOnMissionState.selected
+                    : null;
 
             const trackedPatientSelected =
                 isTotalPatientFallback
@@ -41543,9 +41722,13 @@ let sessionRuntimeTicker = null;
                 );
 
             const effectiveRequired =
-                targetMode === 'shortage'
-                    ? matchingSelectedTotal + needed
-                    : needed;
+                Number.isFinite(
+                    initialMissingOnMissionTarget
+                )
+                    ? initialMissingOnMissionTarget
+                    : targetMode === 'shortage'
+                        ? matchingSelectedTotal + needed
+                        : needed;
 
             const selectedBefore =
                 Math.min(
@@ -41575,7 +41758,7 @@ let sessionRuntimeTicker = null;
             if (mfDebugEnabled) {
                 debugLog(
                     'UPDATE CAP',
-                    `${item.unitName} -> ${mappedName} | mode=${targetMode} | panel target=${needed} | effective total=${effectiveRequired} | DOM selected=${matchingSelectedFromDom} | live table selected=${Number.isFinite(matchingSelectedFromLiveTable) ? matchingSelectedFromLiveTable : 'n/a'} | tracked patient selected=${trackedPatientSelected} | matching selected total=${matchingSelectedTotal} | counted toward requirement=${selectedBefore} | selecting at most=${remainingToSelect}`
+                    `${item.unitName} -> ${mappedName} | mode=${targetMode} | panel target=${needed} | live missing=${initialMissingOnMissionState?.missingOnMission ?? 'n/a'} | live en-route=${initialMissingOnMissionState?.enRoute ?? 'n/a'} | live still needed=${initialMissingOnMissionState?.stillNeeded ?? 'n/a'} | effective total=${effectiveRequired} | DOM selected=${matchingSelectedFromDom} | live table selected=${Number.isFinite(matchingSelectedFromLiveTable) ? matchingSelectedFromLiveTable : 'n/a'} | tracked patient selected=${trackedPatientSelected} | matching selected total=${matchingSelectedTotal} | counted toward requirement=${selectedBefore} | selecting at most=${remainingToSelect}`
                 );
             }
 
@@ -41590,19 +41773,42 @@ let sessionRuntimeTicker = null;
                         'UPDATE',
                         {
                             isRequirementSatisfied: () => {
-                                const selected =
-                                    getMissingOnMissionSelectedAmount(
+                                const liveState =
+                                    getMissingOnMissionRequirementState(
                                         item
                                     );
 
+                                if (!liveState) {
+                                    return false;
+                                }
+
+                                const liveTarget =
+                                    getMissingOnMissionSelectionTarget(
+                                        liveState,
+                                        effectiveRequired
+                                    );
+
                                 return (
-                                    Number.isFinite(selected) &&
-                                    selected >= effectiveRequired
+                                    liveState.selected >=
+                                    liveTarget
                                 );
                             }
                         }
                     );
             }
+
+            const finalMissingOnMissionState =
+                getMissingOnMissionRequirementState(
+                    item
+                );
+
+            const confirmedEffectiveRequired =
+                finalMissingOnMissionState
+                    ? getMissingOnMissionSelectionTarget(
+                        finalMissingOnMissionState,
+                        effectiveRequired
+                    )
+                    : effectiveRequired;
 
             const selectedFromCurrentDom =
                 Math.min(
@@ -41610,19 +41816,19 @@ let sessionRuntimeTicker = null;
                         item.unitName,
                         mappedName
                     ),
-                    effectiveRequired
+                    confirmedEffectiveRequired
                 );
 
             const selectedFromLiveTable =
-                getMissingOnMissionSelectedAmount(
-                    item
-                );
+                finalMissingOnMissionState
+                    ? finalMissingOnMissionState.selected
+                    : null;
 
             const selectedFromCurrentLiveTable =
                 Number.isFinite(selectedFromLiveTable)
                     ? Math.min(
                         selectedFromLiveTable,
-                        effectiveRequired
+                        confirmedEffectiveRequired
                     )
                     : 0;
 
@@ -41634,7 +41840,7 @@ let sessionRuntimeTicker = null;
             // Mission Update attempt.
             const selectedFromThisAttempt =
                 Math.min(
-                    effectiveRequired,
+                    confirmedEffectiveRequired,
                     selectedBefore +
                     Math.max(
                         0,
@@ -41708,7 +41914,7 @@ let sessionRuntimeTicker = null;
             }
 
             const status =
-                visualSelected >= effectiveRequired
+                visualSelected >= confirmedEffectiveRequired
                     ? 'assigned'
                     : visualSelected > 0
                         ? 'retrying'
@@ -41717,7 +41923,7 @@ let sessionRuntimeTicker = null;
             addOrUpdateVehicleRow(
                 item.unitName,
                 mappedName,
-                effectiveRequired,
+                confirmedEffectiveRequired,
                 status,
                 visualSelected
             );
@@ -41726,10 +41932,10 @@ let sessionRuntimeTicker = null;
 
             if (
                 visualSelected <
-                effectiveRequired
+                confirmedEffectiveRequired
             ) {
                 const remaining =
-                    effectiveRequired -
+                    confirmedEffectiveRequired -
                     visualSelected;
 
                 missingAfterAttempt.push(

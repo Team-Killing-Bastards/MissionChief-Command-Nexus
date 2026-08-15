@@ -66,8 +66,8 @@ function sourceSlice(startToken, endToken, label) {
   return source.slice(start, end);
 }
 
-expect(source.includes('// @version      1.0.115'), 'Expected Command Nexus 1.0.104');
-expect(source.includes('MISSION FINDER V10.6.156'), 'Expected Mission Finder V10.6.153');
+expect(source.includes('// @version      1.0.116'), 'Expected Command Nexus 1.0.104');
+expect(source.includes('MISSION FINDER V10.6.157'), 'Expected Mission Finder V10.6.153');
 
 const headerFunction = extractFunction('getMissionUpdateTableHeaderTexts');
 const tableFunction = extractFunction('isMissingOnMissionUpdateTable');
@@ -187,8 +187,15 @@ expect(
   'Shared OSU diagnostics must retain every contributing live row'
 );
 
+let liveMissingValue = 6;
+let liveEnRouteValue = 3;
+let liveStillNeededValue = 3;
 let liveSelectedValue = 0;
 const textCell = value => ({ innerText: String(value), textContent: String(value) });
+const liveCell = getter => ({
+  get innerText() { return String(getter()); },
+  get textContent() { return String(getter()); },
+});
 const selectedCell = {
   get innerText() { return String(liveSelectedValue); },
   get textContent() { return String(liveSelectedValue); },
@@ -196,7 +203,13 @@ const selectedCell = {
 const fireOfficerRow = {
   querySelectorAll(selector) {
     return selector === 'td'
-      ? [textCell('Fire Officers'), textCell(6), textCell(3), textCell(3), selectedCell]
+      ? [
+          textCell('Fire Officers'),
+          liveCell(() => liveMissingValue),
+          liveCell(() => liveEnRouteValue),
+          liveCell(() => liveStillNeededValue),
+          selectedCell,
+        ]
       : [];
   },
 };
@@ -210,19 +223,31 @@ const missingRoot = {
     return [missingTable];
   },
 };
+const liveStateSource = extractFunction('getMissingOnMissionRequirementState');
+const liveTargetSource = extractFunction('getMissingOnMissionSelectionTarget');
 const liveSelectedSource = extractFunction('getMissingOnMissionSelectedAmount');
-const getMissingOnMissionSelectedAmount = Function(
+const liveRequirementHelpers = Function(
   'getActiveMissionRequirementContexts',
   'isMissingOnMissionUpdateTable',
   'isMissionElementVisible',
   'normaliseVehicleText',
-  `"use strict";\n${liveSelectedSource}\nreturn getMissingOnMissionSelectedAmount;`
+  'resolveUnitName',
+  `"use strict";\n${liveStateSource}\n${liveTargetSource}\n${liveSelectedSource}\nreturn { getMissingOnMissionRequirementState, getMissingOnMissionSelectionTarget, getMissingOnMissionSelectedAmount };`
 )(
   () => [{ root: missingRoot }],
   table => table === missingTable,
   () => true,
-  value => String(value || '').replace(/\s+/g, ' ').trim().toLowerCase()
+  value => String(value || '').replace(/\s+/g, ' ').trim().toLowerCase(),
+  value => {
+    const cleaned = String(value || '').replace(/\s+/g, ' ').trim();
+    return cleaned === 'Fire Officers' ? 'Fire Officer' : cleaned;
+  }
 );
+const {
+  getMissingOnMissionRequirementState,
+  getMissingOnMissionSelectionTarget,
+  getMissingOnMissionSelectedAmount,
+} = liveRequirementHelpers;
 const fireOfficerItem = {
   unitName: 'Fire Officers',
   liveRequirementDetails: {
@@ -233,6 +258,35 @@ const fireOfficerItem = {
 expect(getMissingOnMissionSelectedAmount(fireOfficerItem) === 0, 'Initial live Selected value was not read');
 liveSelectedValue = 4;
 expect(getMissingOnMissionSelectedAmount(fireOfficerItem) === 4, 'Updated live Selected value was not re-read after a click');
+
+liveMissingValue = 1;
+liveEnRouteValue = 1;
+liveStillNeededValue = 0;
+liveSelectedValue = 0;
+const enRouteSatisfiedState = getMissingOnMissionRequirementState(fireOfficerItem);
+expect(enRouteSatisfiedState?.missingOnMission === 1, 'Live Missing on mission value was not read');
+expect(enRouteSatisfiedState?.enRoute === 1, 'Live En-route value was not read');
+expect(enRouteSatisfiedState?.stillNeeded === 0, 'Live Still needed zero was not preserved');
+expect(
+  getMissingOnMissionSelectionTarget(enRouteSatisfiedState, 1) === 0,
+  'Missing 1 / En-route 1 / Still needed 0 must override a stale target of 1 with zero'
+);
+const staleDefinitionState = getMissingOnMissionRequirementState({
+  unitName: 'Fire Officer',
+  stillNeeded: 1,
+});
+expect(
+  getMissingOnMissionSelectionTarget(staleDefinitionState, 1) === 0,
+  'A canonical full-definition Fire Officer target must be capped by the current zero-shortage Fire Officers row'
+);
+liveSelectedValue = 1;
+expect(
+  getMissingOnMissionSelectionTarget(
+    getMissingOnMissionRequirementState(fireOfficerItem),
+    1
+  ) === 0,
+  'Missing 1 / En-route 1 / Still needed 0 / Selected 1 must select zero additional units'
+);
 expect(
   getMissingOnMissionSelectedAmount({ ...fireOfficerItem, convertedFromPersonnelRequirement: true }) === null,
   'Raw personnel counters must not be compared with converted vehicle targets'
@@ -322,9 +376,12 @@ const updateHandler = sourceSlice(
 );
 for (const token of [
   'collapseSharedFireOperationalSupportRequirements(',
+  'const initialMissingOnMissionState =',
+  'getMissingOnMissionSelectionTarget(',
   'const matchingSelectedFromLiveTable =',
-  'getMissingOnMissionSelectedAmount(',
+  'live en-route=',
   'isRequirementSatisfied: () =>',
+  'const confirmedEffectiveRequired =',
   'selectedFromCurrentLiveTable',
 ]) {
   expect(updateHandler.includes(token), `Mission Update live Selected reconciliation missing ${token}`);
@@ -370,9 +427,12 @@ const exactHtmlContract = `
 <div data-raw-html="&lt;div data-requirement-type=&quot;vehicles&quot;&gt;&lt;b&gt;Missing Vehicles:&lt;/b&gt; 2 Traffic Cars&lt;/div&gt;">
 <table class="table table-striped table-condensed">
 <thead><tr><th></th><th title="Missing on mission">Missing on mission</th><th title="En-route">En-route</th><th title="Still needed">Still needed</th><th title="Selected">Selected</th></tr></thead>
-<tbody><tr><td><b>Traffic Cars</b></td><td>2</td><td>0</td><td>2</td><td>0</td></tr></tbody>
+<tbody>
+<tr><td><b>Traffic Cars</b></td><td>2</td><td>0</td><td>2</td><td>0</td></tr>
+<tr><td><b>Fire Officer</b></td><td>1</td><td>1</td><td>0</td><td>1</td></tr>
+</tbody>
 </table>
 </div>`;
 expect(exactHtmlContract.includes('Missing on mission') && exactHtmlContract.includes('2 Traffic Cars'), 'Exact supplied fixture contract is incomplete');
 
-console.log('Missing on mission authority checks passed: Still needed is the target, the live Selected counter stops further clicks, BASU/Welfare/HazMat collapse to the maximum shared OSU demand, zero-shortage tables suppress fresh-mission Unit Finder, and patient rules remain active.');
+console.log('Missing on mission authority checks passed: Missing minus En-route caps the live Still needed target, Selected is subtracted once, BASU/Welfare/HazMat collapse to the maximum shared OSU demand, zero-shortage tables suppress fresh-mission Unit Finder, and patient rules remain active.');

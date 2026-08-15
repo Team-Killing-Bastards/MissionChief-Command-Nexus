@@ -4,6 +4,15 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [1.0.116] - 2026-08-15
+
+### Changed
+
+- Mission Update now recalculates the live requirement target from Missing on mission, En-route, Still needed, and Selected before every click.
+- A zero live shortage hard-stops stale mission-definition selections; 1 missing, 1 en-route, and 0 still needed now selects no additional unit.
+- Advanced the Mission Finder engine from V10.6.156 to V10.6.157.
+- Increased the unified userscript version from `1.0.115` to `1.0.116`.
+
 ## [1.0.115] - 2026-08-15
 
 ### Changed
