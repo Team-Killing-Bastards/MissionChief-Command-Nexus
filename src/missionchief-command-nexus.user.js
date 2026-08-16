@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.125
+// @version      1.0.126
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -11876,7 +11876,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.162
+         * MODULE 2: MISSION FINDER V10.6.163
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -12710,6 +12710,12 @@
     const MF_EXACT_REGISTER_TRAINING_MAX_AGE_MS =
         180 * 24 * 60 * 60 * 1000;
 
+    // V10.6.163: strict trained-personnel live verification now builds its
+    // candidate pool from exact compatible vehicle types before requiring fresh
+    // qualification evidence. This breaks the circular v10.6.161 gate where a
+    // missing or stale register entry could not enter the live scan that would
+    // refresh it. Final selection and dispatch remain fail-closed on fresh,
+    // complete exact-vehicle evidence.
     // V10.6.162: current native MissionChief UK mission-row evidence identifies
     // Search Dog Unit (SAR) as exact vehicle type 102. Rescue Dog and Search Dog
     // Unit requirements use that same ID as Unit Naming and fail closed on every
@@ -31922,7 +31928,7 @@ let sessionRuntimeTicker = null;
         return maximumCapacity;
     }
 
-    function isCheckboxEligibleForTrainingRequirement(
+    function isCheckboxVehicleTypeEligibleForTrainingRequirement(
         checkbox,
         requirement,
         registryEntry = null
@@ -31934,7 +31940,23 @@ let sessionRuntimeTicker = null;
                 registryEntry
             );
 
-        if (!vehicleTypeId) return false;
+        return !!vehicleTypeId;
+    }
+
+    function isCheckboxEligibleForTrainingRequirement(
+        checkbox,
+        requirement,
+        registryEntry = null
+    ) {
+        if (
+            !isCheckboxVehicleTypeEligibleForTrainingRequirement(
+                checkbox,
+                requirement,
+                registryEntry
+            )
+        ) {
+            return false;
+        }
 
         // Qualification-sensitive selection fails closed. A correct vehicle
         // type without a fresh, complete Personnel Register entry is not an
@@ -32825,8 +32847,14 @@ let sessionRuntimeTicker = null;
                             registry
                         );
 
+                    // This is the pre-verification pool. Exact compatible
+                    // vehicle types must be allowed in even when their register
+                    // entry is missing or stale, otherwise the live assignment
+                    // scan can never create fresh evidence for them. The later
+                    // selection path still requires strict authoritative
+                    // qualification evidence.
                     return requirementList.some(requirement => {
-                        return isCheckboxEligibleForTrainingRequirement(
+                        return isCheckboxVehicleTypeEligibleForTrainingRequirement(
                             checkbox,
                             requirement,
                             registryMatch.entry
