@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.126
+// @version      1.0.127
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -77,7 +77,7 @@
 
     const UNIT_VERSION = '3.3.27';
     const STATION_VERSION = '1.3.22';
-    const PERSONNEL_VERSION = '1.3.11';
+    const PERSONNEL_VERSION = '1.3.12';
     // Command Nexus 1.0.121: Unit and Station Naming rescan current native
     // membership rows so an early standalone-popup snapshot cannot leave the
     // Dispatch Centre cascade empty. Renaming and Personnel Assignment remain
@@ -132,20 +132,11 @@
     let PERSONNEL_SHORTFALL_CACHE_SIZE = -1;
     let PERSONNEL_SHORTFALL_CACHE = [];
 
-    const makeServicePreviewProfile = (id, label, serviceLabel) => ({
-        id,
-        label,
-        vehicle: `Mapped ${serviceLabel} vehicle(s)`,
-        requirement: `${label} on mapped vehicle seats`,
-        policy: `UI preview: ${label} has been added from the supplied ${serviceLabel} training list. Vehicle mapping and required seat counts still need confirmation before assignment can be enabled.`,
-        live: false,
-        stationTypes: []
-    });
-
     const makePoliceRule = ({
         id,
         label,
         vehicleTypeIds,
+        companionVehicleTypeIds = [],
         vehicleLabel,
         target,
         trainingAll,
@@ -156,6 +147,7 @@
         id,
         label,
         vehicleTypeIds: vehicleTypeIds.map(String),
+        companionVehicleTypeIds: companionVehicleTypeIds.map(String),
         vehicleLabel,
         target: Number(target),
         trainingAll: trainingAll.map(String),
@@ -187,7 +179,7 @@
             drone:
                 'Drone Operator',
             search_and_rescue:
-                'Police Search Advisor',
+                'Search Advisor',
             polizeihubschrauber:
                 'Police Aviation',
             railway_police_command:
@@ -206,6 +198,36 @@
                 'HazMat Unit',
             railway_fire:
                 'Railway Fire',
+            arff:
+                'Aircraft Rescue and Firefighting',
+            coresponder:
+                'Co-Responder',
+            pump:
+                'High Volume Pump',
+            gw_wasserrettung:
+                'Lifeguard',
+            coastal_rescue_pilot:
+                'Coastal Air Rescue Pilot',
+            coastal_command:
+                'Coastal Commander',
+            coastal_mud_rescue:
+                'Mud Rescue Operator',
+            ocean_navigation:
+                'Lifeboat Operator',
+            gw_hoehenrettung:
+                'Rope Rescue Operator',
+            flood_equipment:
+                'Flood First Responder',
+            jetski:
+                'Jet Ski Handling',
+            hover_boat_elw:
+                'Hovercraft Commander',
+            search_and_rescue_command:
+                'SAR Commander',
+            rescue_dogs:
+                'Search Dog Handler',
+            mountain_cave_rescue:
+                'Cave Rescue Specialist',
             critical_care:
                 'Critical Care',
             hazard_response_ems:
@@ -470,6 +492,48 @@
     });
 
     const FIRE_RULES = Object.freeze({
+        arffFoam: makePoliceRule({
+            id: 'fire_arff_major_foam', label: 'Aircraft Rescue and Firefighting',
+            vehicleTypeIds: ['75'], vehicleLabel: 'Major Foam Tender', target: 4,
+            trainingAll: ['arff'], trainingLabel: 'ARFF'
+        }),
+        arffRiv: makePoliceRule({
+            id: 'fire_arff_riv', label: 'Aircraft Rescue and Firefighting',
+            vehicleTypeIds: ['76'], vehicleLabel: 'RIV', target: 4,
+            trainingAll: ['arff'], trainingLabel: 'ARFF'
+        }),
+        arffCommand: makePoliceRule({
+            id: 'fire_arff_command', label: 'Aircraft Rescue and Firefighting',
+            vehicleTypeIds: ['77'], vehicleLabel: 'Airfield Firefighting Command Vehicle', target: 2,
+            trainingAll: ['arff'], trainingLabel: 'ARFF'
+        }),
+        arffStairs: makePoliceRule({
+            id: 'fire_arff_rescue_stairs', label: 'Aircraft Rescue and Firefighting',
+            vehicleTypeIds: ['78'], vehicleLabel: 'Rescue Stairs', target: 2,
+            trainingAll: ['arff'], trainingLabel: 'ARFF'
+        }),
+        coResponder: makePoliceRule({
+            id: 'fire_co_responder', label: 'Co-Responder Training',
+            vehicleTypeIds: ['18'], vehicleLabel: 'Co-Responder Vehicle', target: 1,
+            trainingAll: ['coresponder'], trainingLabel: 'Co-Responder'
+        }),
+        drone: makePoliceRule({
+            id: 'fire_drone', label: 'Drone Operator Training',
+            vehicleTypeIds: ['90'], vehicleLabel: 'Fire Station Drone Vehicle', target: 2,
+            trainingAll: ['drone'], trainingLabel: 'Drone Operator'
+        }),
+        highVolumePump: makePoliceRule({
+            id: 'fire_high_volume_pump', label: 'High Volume Pump Training',
+            vehicleTypeIds: ['40'], companionVehicleTypeIds: ['50'],
+            vehicleLabel: 'Prime Mover linked to an HVP pod', target: 2,
+            trainingAll: ['pump'], trainingLabel: 'High Volume Pump'
+        }),
+        lifeguard: makePoliceRule({
+            id: 'fire_lifeguard', label: 'Lifeguard Training',
+            vehicleTypeIds: ['73'], companionVehicleTypeIds: ['74'],
+            vehicleLabel: 'Light 4x4 linked to a Boat Trailer', target: 4,
+            trainingAll: ['gw_wasserrettung'], trainingLabel: 'Lifeguard'
+        }),
         incidentCommand: makePoliceRule({
             id: 'fire_level_1_incident_command', label: 'Level 1 Incident Commander Training',
             vehicleTypeIds: ['15'], vehicleLabel: 'Incident Command and Control Unit', target: 3,
@@ -485,6 +549,203 @@
             vehicleTypeIds: ['107'], vehicleLabel: 'RRU', target: 2,
             trainingAll: ['railway_fire'], trainingLabel: 'Railway Fire'
         })
+    });
+
+    const FIRE_ALL_RULES = Object.freeze([
+        FIRE_RULES.arffCommand,
+        FIRE_RULES.arffStairs,
+        FIRE_RULES.arffFoam,
+        FIRE_RULES.arffRiv,
+        FIRE_RULES.highVolumePump,
+        FIRE_RULES.coResponder,
+        FIRE_RULES.drone,
+        FIRE_RULES.lifeguard,
+        FIRE_RULES.incidentCommand,
+        FIRE_RULES.hazmatOsu,
+        FIRE_RULES.railway
+    ]);
+
+    const SAR_RULES = Object.freeze({
+        caveRescue: makePoliceRule({
+            id: 'sar_cave_rescue', label: 'Cave Rescue Training',
+            vehicleTypeIds: ['93', '99'], vehicleLabel: 'SAR or Mountain Rescue 4x4', target: 4,
+            trainingAll: ['mountain_cave_rescue'], trainingLabel: 'Cave Rescue Specialist'
+        }),
+        coastalAir: makePoliceRule({
+            id: 'sar_coastal_air_rescue', label: 'Coastal Air Rescue Operations Training',
+            vehicleTypeIds: ['64', '65'], vehicleLabel: 'Coastguard Rescue Helicopter', target: 4,
+            trainingAll: ['coastal_rescue_pilot'], trainingLabel: 'Coastal Air Rescue Pilot'
+        }),
+        coastalCommand: makePoliceRule({
+            id: 'sar_coastal_command', label: 'Coastal Command Training',
+            vehicleTypeIds: ['60'], vehicleLabel: 'Coastguard Commander', target: 5,
+            trainingAll: ['coastal_command'], trainingLabel: 'Coastal Commander'
+        }),
+        searchAdvisor: makePoliceRule({
+            id: 'sar_search_advisor', label: 'Coastguard Search Advisor Training',
+            vehicleTypeIds: ['86'], vehicleLabel: 'Operational Support Van', target: 3,
+            trainingAll: ['search_and_rescue'], trainingLabel: 'Search Advisor'
+        }),
+        dogHandling: makePoliceRule({
+            id: 'sar_dog_handling', label: 'Dog handling',
+            vehicleTypeIds: ['101', '102'], vehicleLabel: 'Search Dog Unit', target: 1,
+            trainingAll: ['rescue_dogs'], trainingLabel: 'Search Dog Handler'
+        }),
+        drone: makePoliceRule({
+            id: 'sar_drone', label: 'Drone Operator Training',
+            vehicleTypeIds: ['89'], vehicleLabel: 'SAR HQ Drone Vehicle', target: 2,
+            trainingAll: ['drone'], trainingLabel: 'Drone Operator'
+        }),
+        floodCrv: makePoliceRule({
+            id: 'sar_flood_crv', label: 'Flood First Responder Training',
+            vehicleTypeIds: ['57'], companionVehicleTypeIds: ['61'],
+            vehicleLabel: 'CRV linked to a Flood Rescue Unit', target: 5,
+            trainingAll: ['flood_equipment'], trainingLabel: 'Flood First Responder'
+        }),
+        floodMud: makePoliceRule({
+            id: 'sar_flood_mud', label: 'Flood First Responder Training',
+            vehicleTypeIds: ['58'], companionVehicleTypeIds: ['61'],
+            vehicleLabel: 'Mud Rescue Unit linked to a Flood Rescue Unit', target: 5,
+            trainingAll: ['flood_equipment'], trainingLabel: 'Flood First Responder'
+        }),
+        floodRope: makePoliceRule({
+            id: 'sar_flood_rope', label: 'Flood First Responder Training',
+            vehicleTypeIds: ['59'], companionVehicleTypeIds: ['61'],
+            vehicleLabel: 'Rope Rescue Unit linked to a Flood Rescue Unit', target: 5,
+            trainingAll: ['flood_equipment'], trainingLabel: 'Flood First Responder'
+        }),
+        floodCommander: makePoliceRule({
+            id: 'sar_flood_commander', label: 'Flood First Responder Training',
+            vehicleTypeIds: ['60'], companionVehicleTypeIds: ['61'],
+            vehicleLabel: 'Coastguard Commander linked to a Flood Rescue Unit', target: 5,
+            trainingAll: ['flood_equipment'], trainingLabel: 'Flood First Responder'
+        }),
+        floodSupport: makePoliceRule({
+            id: 'sar_flood_support', label: 'Flood First Responder Training',
+            vehicleTypeIds: ['63'], companionVehicleTypeIds: ['61'],
+            vehicleLabel: 'Support Unit linked to a Flood Rescue Unit', target: 8,
+            trainingAll: ['flood_equipment'], trainingLabel: 'Flood First Responder'
+        }),
+        floodLifeboat4x4: makePoliceRule({
+            id: 'sar_flood_lifeboat_4x4', label: 'Flood First Responder Training',
+            vehicleTypeIds: ['66'], companionVehicleTypeIds: ['61'],
+            vehicleLabel: '4x4 linked to a Flood Rescue Unit', target: 4,
+            trainingAll: ['flood_equipment'], trainingLabel: 'Flood First Responder'
+        }),
+        floodControlVan: makePoliceRule({
+            id: 'sar_flood_control_van', label: 'Flood First Responder Training',
+            vehicleTypeIds: ['85'], companionVehicleTypeIds: ['88'],
+            vehicleLabel: 'Control Van linked to a SAR Flood Rescue Trailer', target: 3,
+            trainingAll: ['flood_equipment'], trainingLabel: 'Flood First Responder'
+        }),
+        floodSupportVan: makePoliceRule({
+            id: 'sar_flood_support_van', label: 'Flood First Responder Training',
+            vehicleTypeIds: ['86'], companionVehicleTypeIds: ['88'],
+            vehicleLabel: 'Operational Support Van linked to a SAR Flood Rescue Trailer', target: 3,
+            trainingAll: ['flood_equipment'], trainingLabel: 'Flood First Responder'
+        }),
+        floodDrone: makePoliceRule({
+            id: 'sar_flood_drone', label: 'Flood First Responder Training',
+            vehicleTypeIds: ['89'], companionVehicleTypeIds: ['88'],
+            vehicleLabel: 'Drone Vehicle linked to a SAR Flood Rescue Trailer', target: 2,
+            trainingAll: ['flood_equipment'], trainingLabel: 'Flood First Responder'
+        }),
+        floodRrv: makePoliceRule({
+            id: 'sar_flood_rrv', label: 'Flood First Responder Training',
+            vehicleTypeIds: ['94'], companionVehicleTypeIds: ['88'],
+            vehicleLabel: 'SAR RRV linked to a SAR Flood Rescue Trailer', target: 1,
+            trainingAll: ['flood_equipment'], trainingLabel: 'Flood First Responder'
+        }),
+        hovercraft: makePoliceRule({
+            id: 'sar_hovercraft', label: 'Hovercraft Commander Training',
+            vehicleTypeIds: ['72'], companionVehicleTypeIds: ['71'],
+            vehicleLabel: 'Hovercraft Transporter linked to a Hovercraft Trailer', target: 3,
+            trainingAll: ['hover_boat_elw'], trainingLabel: 'Hovercraft Commander'
+        }),
+        jetSki: makePoliceRule({
+            id: 'sar_jet_ski', label: 'Jet Ski Handling',
+            vehicleTypeIds: ['66'], companionVehicleTypeIds: ['70'],
+            vehicleLabel: '4x4 linked to a Rescue Watercraft Trailer', target: 4,
+            trainingAll: ['jetski'], trainingLabel: 'Jet Ski Handling'
+        }),
+        lifeboatIlb: makePoliceRule({
+            id: 'sar_lifeboat_ilb', label: 'Lifeboat Operations Training',
+            vehicleTypeIds: ['68'], vehicleLabel: 'ILB', target: 4,
+            trainingAll: ['ocean_navigation'], trainingLabel: 'Lifeboat Operator'
+        }),
+        lifeboatAlb: makePoliceRule({
+            id: 'sar_lifeboat_alb', label: 'Lifeboat Operations Training',
+            vehicleTypeIds: ['69'], vehicleLabel: 'ALB', target: 7,
+            trainingAll: ['ocean_navigation'], trainingLabel: 'Lifeboat Operator'
+        }),
+        lifeguard: makePoliceRule({
+            id: 'sar_lifeguard', label: 'Lifeguard Training',
+            vehicleTypeIds: ['66'], companionVehicleTypeIds: ['67'],
+            vehicleLabel: '4x4 linked to an Inland Rescue Boat', target: 4,
+            trainingAll: ['gw_wasserrettung'], trainingLabel: 'Lifeguard'
+        }),
+        mudRescue: makePoliceRule({
+            id: 'sar_mud_rescue', label: 'Mud Rescue Training',
+            vehicleTypeIds: ['58'], vehicleLabel: 'Coastguard Mud Rescue Unit', target: 5,
+            trainingAll: ['coastal_mud_rescue'], trainingLabel: 'Mud Rescue Operator'
+        }),
+        ropeRescue: makePoliceRule({
+            id: 'sar_rope_rescue', label: 'Rope Rescue Training',
+            vehicleTypeIds: ['59'], vehicleLabel: 'Coastguard Rope Rescue Unit', target: 5,
+            trainingAll: ['gw_hoehenrettung'], trainingLabel: 'Rope Rescue Operator'
+        }),
+        searchManagement: makePoliceRule({
+            id: 'sar_search_management', label: 'Search Management Training',
+            vehicleTypeIds: ['85', '100'], vehicleLabel: 'SAR or Mountain Rescue Control Van', target: 3,
+            trainingAll: ['search_and_rescue_command'], trainingLabel: 'SAR Commander'
+        })
+    });
+
+    const SAR_ALL_RULES = Object.freeze([
+        SAR_RULES.coastalAir,
+        SAR_RULES.coastalCommand,
+        SAR_RULES.searchManagement,
+        SAR_RULES.searchAdvisor,
+        SAR_RULES.caveRescue,
+        SAR_RULES.mudRescue,
+        SAR_RULES.ropeRescue,
+        SAR_RULES.floodCrv,
+        SAR_RULES.floodMud,
+        SAR_RULES.floodRope,
+        SAR_RULES.floodCommander,
+        SAR_RULES.floodSupport,
+        SAR_RULES.floodLifeboat4x4,
+        SAR_RULES.floodControlVan,
+        SAR_RULES.floodSupportVan,
+        SAR_RULES.floodDrone,
+        SAR_RULES.floodRrv,
+        SAR_RULES.hovercraft,
+        SAR_RULES.jetSki,
+        SAR_RULES.lifeboatIlb,
+        SAR_RULES.lifeboatAlb,
+        SAR_RULES.lifeguard,
+        SAR_RULES.dogHandling,
+        SAR_RULES.drone
+    ]);
+
+    const FIRE_PROFILE_BUILDING_TYPE_IDS = Object.freeze(['0', '18']);
+
+    const SAR_PROFILE_BUILDING_TYPE_IDS = Object.freeze({
+        caveRescue: Object.freeze(['22', '31', '33']),
+        coastalAir: Object.freeze(['30']),
+        coastalCommand: Object.freeze(['22', '28']),
+        searchAdvisor: Object.freeze(['31']),
+        dogHandling: Object.freeze(['22', '31', '33']),
+        drone: Object.freeze(['31']),
+        flood: Object.freeze(['22', '27', '28', '31']),
+        hovercraft: Object.freeze(['27']),
+        jetSki: Object.freeze(['27']),
+        lifeboat: Object.freeze(['27']),
+        lifeguard: Object.freeze(['27']),
+        mudRescue: Object.freeze(['28']),
+        ropeRescue: Object.freeze(['28']),
+        searchManagement: Object.freeze(['31', '33']),
+        all: Object.freeze(['22', '27', '28', '30', '31', '33'])
     });
 
     // MissionChief UK medical vehicle/training contracts. Vehicle type IDs,
@@ -610,7 +871,16 @@
 
     const liveFireProfile = (id, label, vehicle, requirement, policy, rules) => ({
         id, label, vehicle, requirement, policy, live: true,
-        engine: 'police', stationTypes: ['FIRE'], rules
+        engine: 'personnel-rules', stationTypes: [],
+        buildingTypeIds: FIRE_PROFILE_BUILDING_TYPE_IDS,
+        rules
+    });
+
+    const liveSarProfile = (id, label, vehicle, requirement, policy, rules, buildingTypeIds) => ({
+        id, label, vehicle, requirement, policy, live: true,
+        engine: 'personnel-rules', stationTypes: [],
+        buildingTypeIds,
+        rules
     });
 
     const liveMedicalProfile = (
@@ -725,22 +995,27 @@
             label: 'Fire / Airfield',
             icon: '🚒✈️',
             profiles: [
-                makeServicePreviewProfile('fire_aircraft_rescue', 'Aircraft Rescue and Firefighting', 'Fire'),
-                makeServicePreviewProfile('fire_co_responder', 'Co-Responder Training', 'Fire'),
-                makeServicePreviewProfile('fire_drone_operator', 'Drone Operator Training', 'Fire'),
+                liveFireProfile('fire_aircraft_rescue', 'Aircraft Rescue and Firefighting', 'Major Foam Tender / RIV / Airfield Command / Rescue Stairs', 'Foam and RIV 4/4; Command and Rescue Stairs 2/2', 'LIVE: fills exact Airfield types 75 and 76 to 4 ARFF-trained personnel and types 77 and 78 to 2 while preserving existing occupants.', [FIRE_RULES.arffFoam, FIRE_RULES.arffRiv, FIRE_RULES.arffCommand, FIRE_RULES.arffStairs]),
+                liveFireProfile('fire_co_responder', 'Co-Responder Training', 'Co-Responder Vehicle', '1 Co-Responder-trained member per vehicle', 'LIVE: fills each exact type-18 Co-Responder Vehicle to 1/1 with coresponder-trained personnel.', [FIRE_RULES.coResponder]),
+                liveFireProfile('fire_drone_operator', 'Drone Operator Training', 'Fire Station Drone Vehicle', '2 Drone Operators per vehicle', 'LIVE: fills each exact type-90 Fire Station Drone Vehicle to 2/2 with drone-trained personnel.', [FIRE_RULES.drone]),
                 liveFireProfile('fire_hazmat', 'HazMat Unit', 'Operational Support Unit (OSU)', '6 HazMat-trained personnel per OSU', 'LIVE: fills each exact type-39 Fire OSU with 6 gw_gefahrgut-trained personnel. Type-7 HazMat Units are excluded.', [FIRE_RULES.hazmatOsu]),
-                makeServicePreviewProfile('fire_high_volume_pump', 'High Volume Pump Training', 'Fire'),
-                makeServicePreviewProfile('fire_lifeguard', 'Lifeguard Training', 'Fire'),
+                liveFireProfile('fire_high_volume_pump', 'High Volume Pump Training', 'Prime Mover linked to an HVP pod', '2 High Volume Pump-trained members per linked Prime Mover', 'LIVE: reads the station vehicle API and fills only an exact type-40 Prime Mover linked to a type-50 HVP pod. Ambiguous links are skipped.', [FIRE_RULES.highVolumePump]),
+                liveFireProfile('fire_lifeguard', 'Lifeguard Training', 'Light 4x4 linked to a Boat Trailer', '4 Lifeguards per linked Light 4x4', 'LIVE: reads the station vehicle API and fills only an exact type-73 Light 4x4 linked to a type-74 Boat Trailer. Ambiguous links are skipped.', [FIRE_RULES.lifeguard]),
                 liveFireProfile('fire_mobile_command', 'Level 1 Incident Commander Training', 'Incident Command and Control Unit (ICCU)', '3 Level 1 Incident Commanders per ICCU', "LIVE: fills each exact type-15 ICCU with 3 elw2-trained personnel while preserving its remaining seats.", [FIRE_RULES.incidentCommand]),
                 liveFireProfile('fire_railway', 'Railway Fire', 'RRU', '2 Railway Fire-trained personnel per RRU', 'LIVE: fills each exact type-107 RRU to 2/2 with railway_fire-trained personnel.', [FIRE_RULES.railway]),
                 {
                     id: 'all_fire',
                     label: 'Run all Fire / Airfield profiles',
                     vehicle: 'All mapped Fire and Airfield vehicle groups',
-                    requirement: 'Process enabled Fire and Airfield profiles in priority order',
-                    policy: 'Future batch option. Airfield training and vehicles are handled within Fire. It remains disabled until every Fire and Airfield profile has confirmed mappings.',
-                    live: false,
-                    stationTypes: ['FIRE', 'AIRFIELD']
+                    requirement: 'Process all verified Fire and Airfield profiles in safe priority order',
+                    policy: 'LIVE BATCH: preserves current occupants, resolves actual trailer and pod links, merges overlapping requirements onto one crew, and verifies every processed vehicle.',
+                    live: true,
+                    engine: 'personnel-rules',
+                    stationTypes: [],
+                    buildingTypeIds: FIRE_PROFILE_BUILDING_TYPE_IDS,
+                    rules: FIRE_ALL_RULES,
+                    batch: true,
+                    mergeOverlappingVehicleRules: true
                 }
             ]
         },
@@ -823,28 +1098,33 @@
             label: 'SAR / Mountain Rescue / Coastguard',
             icon: '🌊⛰️',
             profiles: [
-                makeServicePreviewProfile('sar_cave_rescue', 'Cave Rescue Training', 'SAR'),
-                makeServicePreviewProfile('sar_coastal_air_rescue', 'Coastal Air Rescue Operations Training', 'SAR'),
-                makeServicePreviewProfile('sar_coastal_command', 'Coastal Command Training', 'SAR'),
-                makeServicePreviewProfile('sar_search_advisor', 'Coastguard Search Advisor Training', 'SAR'),
-                makeServicePreviewProfile('sar_dog_handling', 'Dog handling', 'SAR'),
-                makeServicePreviewProfile('sar_drone_operator', 'Drone Operator Training', 'SAR'),
-                makeServicePreviewProfile('sar_flood_first_responder', 'Flood First Responder Training', 'SAR'),
-                makeServicePreviewProfile('sar_hovercraft_commander', 'Hovercraft Commander Training', 'SAR'),
-                makeServicePreviewProfile('sar_jet_ski', 'Jet Ski Handling', 'SAR'),
-                makeServicePreviewProfile('sar_lifeboat_operations', 'Lifeboat Operations Training', 'SAR'),
-                makeServicePreviewProfile('sar_lifeguard', 'Lifeguard Training', 'SAR'),
-                makeServicePreviewProfile('sar_mud_rescue', 'Mud Rescue Training', 'SAR'),
-                makeServicePreviewProfile('sar_rope_rescue', 'Rope Rescue Training', 'SAR'),
-                makeServicePreviewProfile('sar_search_management', 'Search Management Training', 'SAR'),
+                liveSarProfile('sar_cave_rescue', 'Cave Rescue Training', 'SAR or Mountain Rescue 4x4', '4 Cave Rescue Specialists per vehicle', 'LIVE: fills exact type-93 and type-99 4x4 vehicles to their live configured 4-seat maximum with mountain_cave_rescue-trained personnel.', [SAR_RULES.caveRescue], SAR_PROFILE_BUILDING_TYPE_IDS.caveRescue),
+                liveSarProfile('sar_coastal_air_rescue', 'Coastal Air Rescue Operations Training', 'Coastguard Rescue Helicopter', '4 Coastal Air Rescue Pilots per helicopter', 'LIVE: fills exact type-64 and type-65 Coastguard Rescue Helicopters to 4/4 with coastal_rescue_pilot-trained personnel.', [SAR_RULES.coastalAir], SAR_PROFILE_BUILDING_TYPE_IDS.coastalAir),
+                liveSarProfile('sar_coastal_command', 'Coastal Command Training', 'Coastguard Commander', '5 Coastal Commanders per vehicle', 'LIVE: fills each exact type-60 Coastguard Commander to 5/5 with coastal_command-trained personnel.', [SAR_RULES.coastalCommand], SAR_PROFILE_BUILDING_TYPE_IDS.coastalCommand),
+                liveSarProfile('sar_search_advisor', 'Coastguard Search Advisor Training', 'Operational Support Van', '3 Search Advisors per vehicle', 'LIVE: fills each exact type-86 Operational Support Van to 3/3 with search_and_rescue-trained personnel.', [SAR_RULES.searchAdvisor], SAR_PROFILE_BUILDING_TYPE_IDS.searchAdvisor),
+                liveSarProfile('sar_dog_handling', 'Dog handling', 'Search Dog Unit', '1 Search Dog Handler per vehicle', 'LIVE: fills exact type-101 and type-102 Search Dog Units to 1/1 with rescue_dogs-trained personnel.', [SAR_RULES.dogHandling], SAR_PROFILE_BUILDING_TYPE_IDS.dogHandling),
+                liveSarProfile('sar_drone_operator', 'Drone Operator Training', 'SAR HQ Drone Vehicle', '2 Drone Operators per vehicle', 'LIVE: fills each exact type-89 SAR HQ Drone Vehicle to 2/2 with drone-trained personnel.', [SAR_RULES.drone], SAR_PROFILE_BUILDING_TYPE_IDS.drone),
+                liveSarProfile('sar_flood_first_responder', 'Flood First Responder Training', 'Vehicle linked to a Flood Rescue trailer', 'Fill every seat of the actual linked towing vehicle', 'LIVE: resolves type-61 and type-88 flood trailers through the station API, then fills only their actual eligible towing vehicle with flood_equipment-trained personnel. Ambiguous links are skipped.', [SAR_RULES.floodCrv, SAR_RULES.floodMud, SAR_RULES.floodRope, SAR_RULES.floodCommander, SAR_RULES.floodSupport, SAR_RULES.floodLifeboat4x4, SAR_RULES.floodControlVan, SAR_RULES.floodSupportVan, SAR_RULES.floodDrone, SAR_RULES.floodRrv], SAR_PROFILE_BUILDING_TYPE_IDS.flood),
+                liveSarProfile('sar_hovercraft_commander', 'Hovercraft Commander Training', 'Hovercraft Transporter linked to a Hovercraft Trailer', '3 Hovercraft Commanders per linked transporter', 'LIVE: fills only an exact type-72 Hovercraft Transporter linked to a type-71 trailer, using the live 3-seat maximum from supplied evidence.', [SAR_RULES.hovercraft], SAR_PROFILE_BUILDING_TYPE_IDS.hovercraft),
+                liveSarProfile('sar_jet_ski', 'Jet Ski Handling', '4x4 linked to a Rescue Watercraft Trailer', '4 Jet Ski-trained personnel per linked 4x4', 'LIVE: fills only an exact type-66 4x4 linked to a type-70 Rescue Watercraft Trailer. Ambiguous links are skipped.', [SAR_RULES.jetSki], SAR_PROFILE_BUILDING_TYPE_IDS.jetSki),
+                liveSarProfile('sar_lifeboat_operations', 'Lifeboat Operations Training', 'ILB / ALB', 'ILB 4/4; ALB 7/7', 'LIVE: fills exact type-68 ILBs to 4/4 and type-69 ALBs to 7/7 with ocean_navigation-trained personnel.', [SAR_RULES.lifeboatIlb, SAR_RULES.lifeboatAlb], SAR_PROFILE_BUILDING_TYPE_IDS.lifeboat),
+                liveSarProfile('sar_lifeguard', 'Lifeguard Training', '4x4 linked to an Inland Rescue Boat', '4 Lifeguards per linked 4x4', 'LIVE: fills only an exact type-66 4x4 linked to a type-67 Inland Rescue Boat Trailer. Ambiguous links are skipped.', [SAR_RULES.lifeguard], SAR_PROFILE_BUILDING_TYPE_IDS.lifeguard),
+                liveSarProfile('sar_mud_rescue', 'Mud Rescue Training', 'Coastguard Mud Rescue Unit', '5 Mud Rescue Operators per vehicle', 'LIVE: fills each exact type-58 Mud Rescue Unit to 5/5 with coastal_mud_rescue-trained personnel.', [SAR_RULES.mudRescue], SAR_PROFILE_BUILDING_TYPE_IDS.mudRescue),
+                liveSarProfile('sar_rope_rescue', 'Rope Rescue Training', 'Coastguard Rope Rescue Unit', '5 Rope Rescue Operators per vehicle', 'LIVE: fills each exact type-59 Rope Rescue Unit to 5/5 with gw_hoehenrettung-trained personnel.', [SAR_RULES.ropeRescue], SAR_PROFILE_BUILDING_TYPE_IDS.ropeRescue),
+                liveSarProfile('sar_search_management', 'Search Management Training', 'SAR or Mountain Rescue Control Van', '3 SAR Commanders per vehicle', 'LIVE: fills exact type-85 and type-100 Control Vans to 3/3 with search_and_rescue_command-trained personnel.', [SAR_RULES.searchManagement], SAR_PROFILE_BUILDING_TYPE_IDS.searchManagement),
                 {
                     id: 'all_sar',
                     label: 'Run all SAR / Mountain Rescue profiles',
                     vehicle: 'All mapped SAR, Mountain Rescue, Coastguard and Water Rescue vehicle groups',
-                    requirement: 'Process enabled SAR and Mountain Rescue profiles in priority order',
-                    policy: 'Future batch option. It remains disabled until every SAR profile has confirmed mappings.',
-                    live: false,
-                    stationTypes: ['SAR', 'COASTGUARD', 'RNLI']
+                    requirement: 'Process all verified profiles and combine overlapping training on each crew',
+                    policy: 'LIVE BATCH: preserves current occupants, resolves each actual trailer-to-tractor link, combines overlapping qualifications on the same vehicle, and verifies the station-wide result.',
+                    live: true,
+                    engine: 'personnel-rules',
+                    stationTypes: [],
+                    buildingTypeIds: SAR_PROFILE_BUILDING_TYPE_IDS.all,
+                    rules: SAR_ALL_RULES,
+                    batch: true,
+                    mergeOverlappingVehicleRules: true
                 }
             ]
         },
@@ -878,6 +1158,7 @@
         "15": "Incident Command and Control Unit",
         "16": "Rescue Pump",
         "17": "Combined Aerial Rescue Pump",
+        "18": "Co-Responder Vehicle",
         "19": "Joint Response Unit",
         "20": "OTL",
         "24": "Traffic Car",
@@ -894,6 +1175,8 @@
         "36": "F/WrC",
         "38": "RPF",
         "39": "Operational Support Unit",
+        "40": "PM",
+        "50": "HVP",
         "51": "PSU Carrier",
         "52": "Firearms Personnel Carrier",
         "54": "Detention Van",
@@ -906,9 +1189,10 @@
         "61": "Flood Rescue Unit Trailer",
         "62": "Flood Rescue Unit",
         "63": "Support Unit",
+        "64": "Coastguard Rescue Helicopter",
         "65": "Coastguard Rescue Helicopter Large",
         "66": "4x4 Vehicle",
-        "67": "ILB Trainer",
+        "67": "Inland Rescue Boat (Trailer)",
         "68": "ILB",
         "69": "ALB",
         "70": "Rescue Watercraft Trailer",
@@ -928,12 +1212,16 @@
         "87": "Operational Support Trailer",
         "88": "SAR Flood Rescue Trailer",
         "89": "Drone Vehicle SAR HQ",
+        "90": "Drone Vehicle (Fire Station)",
         "91": "Police Drone Vehicle",
+        "92": "Personal SAR Vehicle",
         "93": "SAR 4x4",
+        "94": "RRV",
         "96": "Specialist Paramedic RRV",
         "97": "Patient Transport Service Ambulance",
         "98": "Critical Care Transfer Ambulance",
         "99": "Mountain Rescue 4x4",
+        "100": "Control Van (Mountain Rescue)",
         "102": "Search Dog Unit SAR",
         "105": "Recovery Vehicle",
         "106": "HGV Recovery Vehicle",
@@ -956,6 +1244,7 @@
         "Air Ambulance": { code: "AA", icon: "🚁" },
         "Rescue Pump": { code: "RP", icon: "🚒" },
         "Combined Aerial Rescue Pump": { code: "CARP", icon: "🚒🪜" },
+        "Co-Responder Vehicle": { code: "CoR", icon: "🚒🚑" },
         "Fire Officer": { code: "FO", icon: "🧑‍🚒" },
         "Police Car": { code: "PC", icon: "🚔" },
         "Armed Response Vehicle": { code: "ARV", icon: "🚔🎯" },
@@ -964,6 +1253,8 @@
         "Armed Traffic Car": { code: "ATC", icon: "🚔🔫" },
         "Firearms Personnel Carrier": { code: "FPC", icon: "🚔🛡️" },
         "Operational Support Unit": { code: "OSU", icon: "☢️🤿🦺" },
+        "PM": { code: "PM", icon: "🚒🚛" },
+        "HVP": { code: "HVP", icon: "🚒💦" },
         "Mass Casualty Equipment": { code: "MCE", icon: "🏥" },
         "Welfare Vehicle": { code: "WV", icon: "🚌" },
         "HazMat Unit": { code: "HMAT", icon: "☢️" },
@@ -981,11 +1272,12 @@
         "Coastguard Rope Rescue Unit": { code: "CRRU", icon: "⚠️🧗" },
         "Coastguard Commander": { code: "CGC", icon: "⚠️👨‍✈️" },
         "Coastguard Rescue Helicopter Large": { code: "CGH", icon: "🚁⚠️" },
+        "Coastguard Rescue Helicopter": { code: "CGH", icon: "🚁⚠️" },
         "Flood Rescue Unit Trailer": { code: "FRUT", icon: "🛟" },
         "Flood Rescue Unit": { code: "FRU", icon: "🛟" },
         "Support Unit": { code: "SU", icon: "⚠️🚐" },
         "4x4 Vehicle": { code: "4x4", icon: "🛟" },
-        "ILB Trainer": { code: "ILBT", icon: "🚤" },
+        "Inland Rescue Boat (Trailer)": { code: "IRB", icon: "🚤" },
         "ILB": { code: "ILB", icon: "🚤" },
         "ALB": { code: "ALB", icon: "🚤" },
         "Boat Trailer": { code: "BT", icon: "🚤" },
@@ -1005,11 +1297,14 @@
         "Operational Support Trailer": { code: "OST", icon: "🛠️" },
         "SAR Flood Rescue Trailer": { code: "SFR", icon: "🌊" },
         "Drone Vehicle SAR HQ": { code: "DRV", icon: "🚁" },
+        "Drone Vehicle (Fire Station)": { code: "FDV", icon: "🚒🚁" },
+        "Personal SAR Vehicle": { code: "PSV", icon: "🟡🚙" },
         "SAR 4x4": { code: "SAR4x4", icon: "🟡" },
         "Specialist Paramedic RRV": { code: "SP-RRV", icon: "🚑" },
         "Patient Transport Service Ambulance": { code: "PTS", icon: "🚑" },
         "Critical Care Transfer Ambulance": { code: "CCT", icon: "🚑❤️" },
         "Mountain Rescue 4x4": { code: "MR4x4", icon: "🏔️" },
+        "Control Van (Mountain Rescue)": { code: "CV", icon: "🏔️📡" },
         "Search Dog Unit SAR": { code: "K9", icon: "🐕" },
         "Recovery Vehicle": { code: "FRV", icon: "🛻" },
         "Flatbed Recovery Vehicle": { code: "FRV", icon: "🛻" },
@@ -1107,7 +1402,8 @@
         27: { stationType: 'RNLI',       suffix: '-RNLI', label: 'RNLI / lifeboat station' },
         28: { stationType: 'COASTGUARD', suffix: '-CG',   label: 'Coastguard station' },
         30: { stationType: 'COASTGUARD', suffix: '-CG',   label: 'Coastguard helicopter station' },
-        33: { stationType: 'SAR',        suffix: '-SAR',  label: 'Search and rescue station' },
+        31: { stationType: 'SAR',        suffix: '-SAR',  label: 'Search and Rescue HQ' },
+        33: { stationType: 'SAR',        suffix: '-SAR',  label: 'Mountain Rescue station' },
         34: { stationType: 'RECOVERY',   suffix: '-REC',  label: 'Recovery station' },
         35: { stationType: 'EOD',        suffix: '-EOD',  label: 'EOD / bomb disposal station' }
     };
@@ -1136,6 +1432,7 @@
         27: 'SAR',
         28: 'SAR',
         30: 'SAR',
+        31: 'SAR',
         33: 'SAR',
         34: 'RECOVERY'
     });
@@ -2654,7 +2951,7 @@
         addPanel();
         log(`Unit Naming Tool v${UNIT_VERSION} loaded. Press Refresh Stations first.`, 'info');
         stationLog(`Station Naming Tool v${STATION_VERSION} loaded. Refresh stations, choose Preview or Rename and Save, then press Start.`, 'info');
-        personnelLog(`Personnel Assignment v${PERSONNEL_VERSION} loaded. Medical Critical Care and the verified Police profiles are live; other services remain in safe UI preview.`, 'info');
+        personnelLog(`Personnel Assignment v${PERSONNEL_VERSION} loaded. Verified Medical, Fire/Airfield, Police, and SAR/Coastguard profiles are live; All Services remains in safe UI preview.`, 'info');
         updatePersonnelTrainingRegistryStatus();
     }
 
@@ -8971,7 +9268,14 @@
     }
 
     function selectPoliceRuleVehicles({ rule, allVehicles, personnel, reservedPersonnelIds, claimedVehicleIds, batch }) {
-        const matchingVehicles = allVehicles.filter(vehicle => rule.vehicleTypeIds.includes(vehicle.vehicleTypeId) && !claimedVehicleIds.has(vehicle.vehicleId));
+        const fixedVehicleIds = Array.isArray(rule.fixedVehicleIds)
+            ? new Set(rule.fixedVehicleIds.map(String))
+            : null;
+        const matchingVehicles = allVehicles.filter(vehicle =>
+            rule.vehicleTypeIds.includes(vehicle.vehicleTypeId)
+            && (!fixedVehicleIds || fixedVehicleIds.has(vehicle.vehicleId))
+            && !claimedVehicleIds.has(vehicle.vehicleId)
+        );
         if (!batch || !rule.sharedVehiclePool) return matchingVehicles;
 
         const existing = matchingVehicles.filter(vehicle =>
@@ -8995,6 +9299,273 @@
             .slice(0, additionalVehicleCount);
 
         return [...existing, ...additional];
+    }
+
+    function getPersonnelBuildingVehicleApiRecords(payload) {
+        if (Array.isArray(payload)) return payload;
+        if (Array.isArray(payload?.vehicles)) return payload.vehicles;
+        if (Array.isArray(payload?.result)) return payload.result;
+        if (Array.isArray(payload?.data)) return payload.data;
+        return [];
+    }
+
+    function getPersonnelApiVehicleId(record) {
+        return String(record?.id ?? record?.vehicle_id ?? '').trim();
+    }
+
+    function getPersonnelApiVehicleTypeId(record) {
+        return String(
+            record?.vehicle_type
+            ?? record?.vehicle_type_id
+            ?? ''
+        ).trim();
+    }
+
+    function getPersonnelApiTractiveVehicleId(record) {
+        const value =
+            record?.tractive_vehicle_id
+            ?? record?.tractiveVehicleId
+            ?? '';
+        if (value === 0 || value === '0') return '';
+        return String(value).trim();
+    }
+
+    function isPersonnelApiTractiveRandom(record) {
+        const value =
+            record?.tractive_random
+            ?? record?.tractiveRandom;
+        return value === true || value === 1 || value === '1';
+    }
+
+    async function resolvePersonnelCompanionVehicleIds(station, rules, allVehicles) {
+        const companionRules = rules.filter(rule =>
+            Array.isArray(rule.companionVehicleTypeIds)
+            && rule.companionVehicleTypeIds.length
+        );
+        const resolvedByRuleId = new Map();
+        if (!companionRules.length) return resolvedByRuleId;
+
+        const buildingId = String(
+            station?.buildingId
+            || getBuildingIdFromHref(station?.href || '')
+            || ''
+        );
+        if (!/^\d+$/.test(buildingId)) {
+            personnelLog('Companion-vehicle lookup skipped: the station building ID is unavailable.', 'error');
+            companionRules.forEach(rule => resolvedByRuleId.set(rule.id, new Set()));
+            return resolvedByRuleId;
+        }
+
+        let records = [];
+        try {
+            const response = await personnelFetchResponse(
+                `/api/buildings/${buildingId}/vehicles`,
+                {
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                },
+                14000
+            );
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            records = getPersonnelBuildingVehicleApiRecords(
+                await response.json()
+            );
+            if (!records.length) {
+                throw new Error('the vehicle API returned no records');
+            }
+        } catch (error) {
+            personnelLog(
+                `Companion-vehicle lookup failed at ${station.displayName}: ${error?.message || error}. Trailer and pod profiles were skipped safely.`,
+                'error'
+            );
+            companionRules.forEach(rule => resolvedByRuleId.set(rule.id, new Set()));
+            return resolvedByRuleId;
+        }
+
+        const stationTargetVehicleIds = new Set(
+            allVehicles.map(vehicle => String(vehicle.vehicleId))
+        );
+        const recordById = new Map(
+            records
+                .map(record => [getPersonnelApiVehicleId(record), record])
+                .filter(([vehicleId]) => vehicleId)
+        );
+
+        companionRules.forEach(rule => {
+            const targetTypeIds = new Set(rule.vehicleTypeIds.map(String));
+            const companionTypeIds = new Set(
+                rule.companionVehicleTypeIds.map(String)
+            );
+            const targetRecords = records.filter(record => {
+                const vehicleId = getPersonnelApiVehicleId(record);
+                return stationTargetVehicleIds.has(vehicleId)
+                    && targetTypeIds.has(getPersonnelApiVehicleTypeId(record));
+            });
+            const companionRecords = records.filter(record =>
+                companionTypeIds.has(getPersonnelApiVehicleTypeId(record))
+            );
+            const targetIds = new Set(
+                targetRecords.map(getPersonnelApiVehicleId)
+            );
+            const companionIds = new Set(
+                companionRecords.map(getPersonnelApiVehicleId)
+            );
+            const linkedTargetIds = new Set();
+            const companionHasConflictingExplicitLink =
+                companionRecords.some(companion => {
+                    if (isPersonnelApiTractiveRandom(companion)) return false;
+                    const tractiveVehicleId =
+                        getPersonnelApiTractiveVehicleId(companion);
+                    return Boolean(tractiveVehicleId)
+                        && !targetIds.has(tractiveVehicleId);
+                });
+            const targetHasConflictingExplicitLink =
+                targetRecords.some(target => {
+                    if (isPersonnelApiTractiveRandom(target)) return false;
+                    const companionVehicleId =
+                        getPersonnelApiTractiveVehicleId(target);
+                    return Boolean(companionVehicleId)
+                        && !companionIds.has(companionVehicleId);
+                });
+
+            companionRecords.forEach(companion => {
+                if (isPersonnelApiTractiveRandom(companion)) return;
+                const tractiveVehicleId =
+                    getPersonnelApiTractiveVehicleId(companion);
+                if (targetIds.has(tractiveVehicleId)) {
+                    linkedTargetIds.add(tractiveVehicleId);
+                }
+            });
+
+            // The current API stores the link on the trailer/pod record. Keep
+            // this guarded reverse check for compatible payload variants.
+            targetRecords.forEach(target => {
+                if (isPersonnelApiTractiveRandom(target)) return;
+                const companionVehicleId =
+                    getPersonnelApiTractiveVehicleId(target);
+                if (companionIds.has(companionVehicleId)) {
+                    linkedTargetIds.add(getPersonnelApiVehicleId(target));
+                }
+            });
+
+            // A unique one-to-one station combination is deterministic even
+            // when the game leaves the trailer in random-tractive mode.
+            if (
+                !linkedTargetIds.size
+                && targetRecords.length === 1
+                && companionRecords.length === 1
+                && !companionHasConflictingExplicitLink
+                && !targetHasConflictingExplicitLink
+            ) {
+                linkedTargetIds.add(
+                    getPersonnelApiVehicleId(targetRecords[0])
+                );
+                personnelDebug(
+                    `${rule.label}: resolved the only eligible ${rule.vehicleLabel} and companion at ${station.displayName}.`
+                );
+            }
+
+            resolvedByRuleId.set(rule.id, linkedTargetIds);
+
+            if (!linkedTargetIds.size) {
+                const reason = !companionRecords.length
+                    ? `no companion type ${[...companionTypeIds].join('/')}`
+                    : !targetRecords.length
+                        ? `no eligible towing type ${[...targetTypeIds].join('/')}`
+                        : 'the trailer-to-tractor relationship is ambiguous';
+                personnelLog(
+                    `${rule.label}: ${reason} at ${station.displayName}; no vehicle was assigned by this rule.`,
+                    'info'
+                );
+            } else {
+                personnelDebug(
+                    `${rule.label}: resolved ${linkedTargetIds.size} linked towing vehicle(s) from ${companionRecords.length} companion vehicle(s).`
+                );
+            }
+
+            // Ensure an API record that references a missing vehicle cannot be
+            // treated as linked merely because its ID happens to be present.
+            linkedTargetIds.forEach(vehicleId => {
+                if (!recordById.has(vehicleId)) linkedTargetIds.delete(vehicleId);
+            });
+        });
+
+        return resolvedByRuleId;
+    }
+
+    function mergePersonnelRulesByVehicle(rules, allVehicles) {
+        const mergedRules = [];
+
+        allVehicles.forEach(vehicle => {
+            const applicableRules = rules.filter(rule => {
+                if (!rule.vehicleTypeIds.includes(vehicle.vehicleTypeId)) {
+                    return false;
+                }
+                if (!Array.isArray(rule.fixedVehicleIds)) return true;
+                return rule.fixedVehicleIds.map(String).includes(vehicle.vehicleId);
+            });
+            if (!applicableRules.length) return;
+
+            const trainingAll = [...new Set(
+                applicableRules.flatMap(rule => rule.trainingAll)
+            )];
+            const labels = [...new Set(
+                applicableRules.map(rule => rule.label)
+            )];
+            const trainingLabels = trainingAll.map(code =>
+                POLICE_TRAINING_LABELS[code] || code
+            );
+            const sourceRuleIds = applicableRules.map(rule => rule.id);
+
+            mergedRules.push(Object.freeze({
+                id: `personnel_vehicle_${vehicle.vehicleId}_${sourceRuleIds.join('_')}`,
+                label: labels.join(' + '),
+                vehicleTypeIds: [vehicle.vehicleTypeId],
+                companionVehicleTypeIds: [],
+                fixedVehicleIds: [vehicle.vehicleId],
+                vehicleLabel: vehicle.name || applicableRules[0].vehicleLabel,
+                target: Math.max(...applicableRules.map(rule => rule.target)),
+                trainingAll,
+                trainingLabel: trainingLabels.join(' + '),
+                preferWithout: [...new Set(
+                    applicableRules.flatMap(rule => rule.preferWithout || [])
+                )].filter(code => !trainingAll.includes(code)),
+                sharedVehiclePool: false,
+                sourceRuleIds
+            }));
+        });
+
+        return mergedRules;
+    }
+
+    async function preparePersonnelRulesForStation(station, profile, configuredRules, allVehicles) {
+        const companionVehicleIds =
+            await resolvePersonnelCompanionVehicleIds(
+                station,
+                configuredRules,
+                allVehicles
+            );
+
+        const resolvedRules = configuredRules.flatMap(rule => {
+            if (!rule.companionVehicleTypeIds?.length) return [rule];
+            const fixedVehicleIds = [
+                ...(companionVehicleIds.get(rule.id) || [])
+            ];
+            return fixedVehicleIds.length
+                ? [{ ...rule, fixedVehicleIds }]
+                : [];
+        });
+
+        if (profile.mergeOverlappingVehicleRules === true) {
+            return mergePersonnelRulesByVehicle(
+                resolvedRules,
+                allVehicles
+            );
+        }
+        return resolvedRules;
     }
 
     function calculatePersonnelQualificationShortfall(personnel, slotRules) {
@@ -9049,8 +9620,8 @@
                 .replace(/^-|-$/g, '')
             || 'personnel';
         const stationPage = await personnelFetchDocument(station.href, 14000);
-        const rules = Array.isArray(profile.rules) ? profile.rules : [];
-        const targetTypeIds = [...new Set(rules.flatMap(rule => rule.vehicleTypeIds))];
+        const configuredRules = Array.isArray(profile.rules) ? profile.rules : [];
+        const targetTypeIds = [...new Set(configuredRules.flatMap(rule => rule.vehicleTypeIds))];
         const allVehicles = getPersonnelVehicleQueue(stationPage.doc, targetTypeIds);
 
         if (!allVehicles.length) {
@@ -9082,6 +9653,13 @@
                 vehicles: []
             };
         }
+
+        const rules = await preparePersonnelRulesForStation(
+            station,
+            profile,
+            configuredRules,
+            allVehicles
+        );
 
         const baselinePage = await personnelFetchDocument(allVehicles[0].assignmentHref, 14000);
         const baselineAssignment = parseVehicleAssignmentPage(baselinePage.doc, allVehicles[0].vehicleId);
@@ -11876,7 +12454,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.163
+         * MODULE 2: MISSION FINDER V10.6.164
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -12710,6 +13288,10 @@
     const MF_EXACT_REGISTER_TRAINING_MAX_AGE_MS =
         180 * 24 * 60 * 60 * 1000;
 
+    // V10.6.164: Aerial Appliance Truck(s) or Rescue Stairs now exhausts
+    // exact type-78 Rescue Stairs first, then fills only the remaining
+    // requirement with exact type-17 CARPs. Both types count toward the same
+    // row and every other Fire or Airfield vehicle remains excluded.
     // V10.6.163: strict trained-personnel live verification now builds its
     // candidate pool from exact compatible vehicle types before requiring fresh
     // qualification evidence. This breaks the circular v10.6.161 gate where a
@@ -14206,7 +14788,10 @@
          *************************************************/
         "Airfield Operations Vehicle": "Airfield Operations Vehicle",
         "Airfield Operations Vehicles": "Airfield Operations Vehicle",
+        "Aerial Appliance Truck or Rescue Stairs": "Rescue Stairs",
         "Aerial Appliance Trucks or Rescue Stairs": "Rescue Stairs",
+        "Required Aerial Appliance Truck or Rescue Stairs": "Rescue Stairs",
+        "Required Aerial Appliance Trucks or Rescue Stairs": "Rescue Stairs",
         "Fire Engines or RIVs": "RIV",
         "RIV": "RIV",
         "RIVs": "RIV",
@@ -15610,6 +16195,96 @@
             mapped ===
                 'rivs or major foam tenders'
         );
+    }
+
+    function isAerialApplianceOrRescueStairsRequirement(
+        originalName
+    ) {
+        const raw =
+            String(
+                originalName || ''
+            )
+                .replace(
+                    /\s+/g,
+                    ' '
+                )
+                .trim();
+
+        return /^(?:Required\s+)?Aerial\s+Appliance\s+Trucks?\s+or\s+Rescue\s+Stairs?$/i.test(
+            raw
+        );
+    }
+
+    function isRescueStairsVehicleCheckbox(
+        input
+    ) {
+        if (!input) return false;
+
+        return getVehicleTypeIdentifiers(
+            input
+        ).includes(
+            '78'
+        );
+    }
+
+    function isCarpVehicleCheckbox(
+        input
+    ) {
+        if (!input) return false;
+
+        return getVehicleTypeIdentifiers(
+            input
+        ).includes(
+            '17'
+        );
+    }
+
+    function getAerialApplianceOrRescueStairsVehicleCheckboxes(
+        includeChecked = false
+    ) {
+        const eligible =
+            getVehicleCheckboxSnapshot().filter(input => {
+                if (input.disabled) {
+                    return false;
+                }
+
+                if (
+                    !includeChecked &&
+                    input.checked
+                ) {
+                    return false;
+                }
+
+                return (
+                    isRescueStairsVehicleCheckbox(
+                        input
+                    ) ||
+                    isCarpVehicleCheckbox(
+                        input
+                    )
+                );
+            });
+
+        const rescueStairsMatches =
+            sortVehicleCheckboxesByBestArrival(
+                eligible.filter(
+                    isRescueStairsVehicleCheckbox
+                )
+            );
+
+        const carpMatches =
+            sortVehicleCheckboxesByBestArrival(
+                eligible.filter(
+                    input =>
+                        !isRescueStairsVehicleCheckbox(input) &&
+                        isCarpVehicleCheckbox(input)
+                )
+            );
+
+        return [
+            ...rescueStairsMatches,
+            ...carpMatches
+        ];
     }
 
     function isFireEngineOrRivRequirement(
@@ -17610,6 +18285,11 @@ function isRoadRailUnitVehicleCheckbox(input) {
                 mappedName
             );
 
+        const aerialApplianceOrRescueStairsPreferred =
+            isAerialApplianceOrRescueStairsRequirement(
+                originalName
+            );
+
         const fireEngineOrRivPreferred =
             isFireEngineOrRivRequirement(
                 originalName
@@ -17861,6 +18541,33 @@ function isRoadRailUnitVehicleCheckbox(input) {
                     return isSeagoingVesselCheckbox(input);
                 })
             );
+        }
+
+        if (
+            aerialApplianceOrRescueStairsPreferred
+        ) {
+            const orderedMatches =
+                getAerialApplianceOrRescueStairsVehicleCheckboxes(
+                    includeChecked
+                );
+
+            if (mfDebugEnabled) {
+                const rescueStairsCount =
+                    orderedMatches.filter(
+                        isRescueStairsVehicleCheckbox
+                    ).length;
+
+                const carpCount =
+                    orderedMatches.length -
+                    rescueStairsCount;
+
+                debugLog(
+                    'RESCUE STAIRS CARP PRIORITY',
+                    `${originalName} -> ${mappedName} | Rescue Stairs matches=${rescueStairsCount} first | CARP remainder matches=${carpCount} | returned=${orderedMatches.length}`
+                );
+            }
+
+            return orderedMatches;
         }
 
         if (
@@ -18337,6 +19044,10 @@ function isRoadRailUnitVehicleCheckbox(input) {
             );
         const sartecPrefixOnly = isSartecRequirement(originalName, mappedName);
         const rrvTypeOnly = isRrvRequirement(originalName, mappedName);
+        const aerialApplianceOrRescueStairsPreferred =
+            isAerialApplianceOrRescueStairsRequirement(
+                originalName
+            );
         const fireEngineOrRivPreferred =
             isFireEngineOrRivRequirement(
                 originalName
@@ -18388,6 +19099,23 @@ function isRoadRailUnitVehicleCheckbox(input) {
                 originalName,
                 mappedName
             );
+
+        if (
+            aerialApplianceOrRescueStairsPreferred
+        ) {
+            return getVehicleCheckboxSnapshot().filter(input => {
+                if (!input.checked) return false;
+
+                return (
+                    isRescueStairsVehicleCheckbox(
+                        input
+                    ) ||
+                    isCarpVehicleCheckbox(
+                        input
+                    )
+                );
+            }).length;
+        }
 
         if (
             fireEngineOrRivPreferred
@@ -34597,6 +35325,7 @@ let sessionRuntimeTicker = null;
         const strictVehicleTypeOnly = !!(
             isAmbulanceTransportRequest(originalName, mappedName) ||
             isFireEngineRequirement(originalName, mappedName) ||
+            isAerialApplianceOrRescueStairsRequirement(originalName) ||
             isFireEngineOrRivRequirement(originalName) ||
             isFlatbedRecoveryVehicleRequirement(originalName, mappedName) ||
             isSearchDogUnitRequirement(originalName, mappedName) ||
