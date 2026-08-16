@@ -14,6 +14,17 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Refreshed current operational documentation for the `1.0.122` production baseline and separated it from immutable versioned handovers and incident records.
 - Kept the canonical userscript unchanged, so this repository-maintenance set does not create a new userscript release.
 
+## [1.0.126] - 2026-08-16
+
+### Fixed
+
+- Closed issue #331 by repairing the trained-personnel live-verification candidate pool broken in `v1.0.123`.
+- Exact compatible vehicles with missing or stale Personnel Register entries can now enter the live assignment-page scan that creates fresh qualification evidence.
+- Removed the circular gate where the pre-verification pool required a vehicle to already have the fresh evidence that its own scan was responsible for producing.
+- Preserved strict fail-closed final selection, readiness and Auto Mode dispatch: missing, stale, partial or wrong-type evidence still cannot satisfy a trained-personnel requirement.
+- Added sanitized incident evidence and a permanent regression that separately locks pre-verification type eligibility and final evidence-backed selection.
+- Increased Mission Finder from `V10.6.162` to `V10.6.163` and the unified userscript from `1.0.125` to `1.0.126`. Resource Administration remains `V4.2.8`, Unit Naming remains `3.3.27`, Station Naming remains `1.3.22`, and Personnel Assignment remains `1.3.11`.
+
 ## [1.0.125] - 2026-08-16
 
 ### Added
