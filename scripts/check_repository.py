@@ -36,6 +36,7 @@ REQUIRED_FILES = (
     "docs/repository-automation-cleanup-2026-08-16.md",
     "docs/media/readme-hero.svg",
     "scripts/validate-userscript.mjs",
+    "scripts/check_workflow_yaml.py",
     "scripts/check-version-agnostic-regressions.mjs",
     "scripts/check-ios-compatibility.mjs",
     "src/README.md",
@@ -410,6 +411,16 @@ def check_no_temporary_executables() -> None:
         fail("Userscript validation workflow must not contain one-shot version builders")
 
 
+def check_workflow_validation_gate() -> None:
+    repository_workflow = (
+        ROOT / ".github/workflows/repository-quality.yml"
+    ).read_text(encoding="utf-8")
+    if "PyYAML==6.0.2" not in repository_workflow:
+        fail("Repository Quality must install the pinned workflow YAML parser")
+    if "python3 scripts/check_workflow_yaml.py" not in repository_workflow:
+        fail("Repository Quality must parse every permanent workflow YAML file")
+
+
 def main() -> None:
     check_required_files()
     check_attribution()
@@ -419,6 +430,7 @@ def main() -> None:
     check_userscript_metadata_and_version()
     check_current_documentation()
     check_no_temporary_executables()
+    check_workflow_validation_gate()
     print("Repository integrity checks passed.")
 
 
