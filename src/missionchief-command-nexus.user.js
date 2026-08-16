@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.124
+// @version      1.0.125
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -77,7 +77,7 @@
 
     const UNIT_VERSION = '3.3.27';
     const STATION_VERSION = '1.3.22';
-    const PERSONNEL_VERSION = '1.3.10';
+    const PERSONNEL_VERSION = '1.3.11';
     // Command Nexus 1.0.121: Unit and Station Naming rescan current native
     // membership rows so an early standalone-popup snapshot cannot leave the
     // Dispatch Centre cascade empty. Renaming and Personnel Assignment remain
@@ -205,7 +205,21 @@
             gw_gefahrgut:
                 'HazMat Unit',
             railway_fire:
-                'Railway Fire'
+                'Railway Fire',
+            critical_care:
+                'Critical Care',
+            hazard_response_ems:
+                'HART Training',
+            elw2_ems:
+                'Tactical Command Course',
+            special_operation_response:
+                'SORT Training',
+            ems_mobile_command:
+                'Ambulance Officer',
+            midwife:
+                'Midwifery Training',
+            paramedic_advanced:
+                'Specialist Paramedic Training'
         });
 
     const POLICE_RULES = Object.freeze({
@@ -473,6 +487,95 @@
         })
     });
 
+    // MissionChief UK medical vehicle/training contracts. Vehicle type IDs,
+    // native seat maxima and academy keys are recorded in the issue-17 evidence
+    // file and remain exact: no neighbouring medical vehicle can substitute.
+    const MEDICAL_RULES = Object.freeze({
+        ambulanceOfficer: makePoliceRule({
+            id: 'medical_ambulance_officer',
+            label: 'Ambulance Officer',
+            vehicleTypeIds: ['34'],
+            vehicleLabel: 'Ambulance Officer vehicle',
+            target: 1,
+            trainingAll: ['ems_mobile_command'],
+            trainingLabel: 'Ambulance Officer'
+        }),
+        hart: makePoliceRule({
+            id: 'medical_hart',
+            label: 'HART Training',
+            vehicleTypeIds: ['27', '28', '30'],
+            vehicleLabel: 'PRV, SRV or ATV Carrier',
+            target: 2,
+            trainingAll: ['hazard_response_ems'],
+            trainingLabel: 'HART Training'
+        }),
+        tacticalCommand: makePoliceRule({
+            id: 'medical_tactical_command',
+            label: 'Tactical Command Course',
+            vehicleTypeIds: ['31'],
+            vehicleLabel: 'Ambulance Control Unit',
+            target: 2,
+            trainingAll: ['elw2_ems'],
+            trainingLabel: 'Tactical Command Course'
+        }),
+        sort: makePoliceRule({
+            id: 'medical_sort',
+            label: 'SORT Training',
+            vehicleTypeIds: ['32', '33'],
+            vehicleLabel: 'CBRN Vehicle or Mass Casualty Equipment',
+            target: 2,
+            trainingAll: ['special_operation_response'],
+            trainingLabel: 'SORT Training'
+        }),
+        midwifery: makePoliceRule({
+            id: 'medical_midwifery',
+            label: 'Midwifery Training',
+            vehicleTypeIds: ['95'],
+            vehicleLabel: 'Community Midwife vehicle',
+            target: 2,
+            trainingAll: ['midwife'],
+            trainingLabel: 'Midwifery Training'
+        }),
+        specialistParamedic: makePoliceRule({
+            id: 'medical_specialist_paramedic',
+            label: 'Specialist Paramedic Training',
+            vehicleTypeIds: ['96'],
+            vehicleLabel: 'Specialist Paramedic RRV',
+            target: 2,
+            trainingAll: ['paramedic_advanced'],
+            trainingLabel: 'Specialist Paramedic Training'
+        }),
+        criticalCare: makePoliceRule({
+            id: 'medical_critical_care',
+            label: 'Critical Care',
+            vehicleTypeIds: ['5'],
+            vehicleLabel: 'Ambulance',
+            target: 1,
+            trainingAll: ['critical_care'],
+            trainingLabel: 'Critical Care'
+        })
+    });
+
+    const MEDICAL_ALL_RULES = Object.freeze([
+        MEDICAL_RULES.ambulanceOfficer,
+        MEDICAL_RULES.hart,
+        MEDICAL_RULES.tacticalCommand,
+        MEDICAL_RULES.sort,
+        MEDICAL_RULES.midwifery,
+        MEDICAL_RULES.specialistParamedic,
+        MEDICAL_RULES.criticalCare
+    ]);
+
+    const MEDICAL_PROFILE_BUILDING_TYPE_IDS = Object.freeze({
+        ambulanceOfficer: Object.freeze(['2', '20', '22', '25']),
+        hart: Object.freeze(['25']),
+        tacticalCommand: Object.freeze(['2', '20', '21', '25']),
+        sort: Object.freeze(['2', '20', '21', '25']),
+        midwifery: Object.freeze(['2', '20', '21', '22', '32']),
+        specialistParamedic: Object.freeze(['2', '20', '21', '22', '32']),
+        all: Object.freeze(['2', '20', '21', '22', '25', '32'])
+    });
+
     const POLICE_ALL_RULES = Object.freeze([
         POLICE_RULES.eodCommander,
         POLICE_RULES.searchAdvisor,
@@ -510,9 +613,30 @@
         engine: 'police', stationTypes: ['FIRE'], rules
     });
 
-    // Medical specialist profiles stay in UI preview until their exact vehicle,
-    // capacity and training-code mappings have been captured and verified. Critical
-    // Care remains the proven Medical live engine and is exclusive to normal Ambulances.
+    const liveMedicalProfile = (
+        id,
+        label,
+        vehicle,
+        requirement,
+        policy,
+        rules,
+        buildingTypeIds
+    ) => ({
+        id,
+        label,
+        vehicle,
+        requirement,
+        policy,
+        live: true,
+        engine: 'personnel-rules',
+        stationTypes: [],
+        buildingTypeIds,
+        rules
+    });
+
+    // Critical Care retains its established dedicated engine when selected alone.
+    // The verified specialist profiles use the shared rule engine; the Medical
+    // batch runs every specialist first and its exact type-5 Critical Care rule last.
     const PERSONNEL_SERVICE_DEFINITIONS = {
         medical: {
             label: 'Medical',
@@ -528,68 +652,72 @@
                     engine: 'medical-critical-care',
                     stationTypes: ['AMBULANCE']
                 },
-                {
-                    id: 'ambulance_officer',
-                    label: 'Ambulance Officer',
-                    vehicle: 'Ambulance Officer vehicle',
-                    requirement: 'Ambulance Officer-trained staff',
-                    policy: 'UI preview: the exact vehicle capacity and training mapping still require a verified assignment-page capture before this profile can safely go live.',
-                    live: false,
-                    stationTypes: ['AMBULANCE']
-                },
-                {
-                    id: 'hart',
-                    label: 'HART Training',
-                    vehicle: 'PRV / SRV and mapped HART vehicles',
-                    requirement: 'HART-trained staff',
-                    policy: 'UI preview: HART vehicle-by-vehicle staffing rules still require verified assignment-page captures.',
-                    live: false,
-                    stationTypes: ['AMBULANCE']
-                },
-                {
-                    id: 'midwifery',
-                    label: 'Midwifery Training',
-                    vehicle: 'Community Midwife vehicle',
-                    requirement: 'Midwifery-trained staff',
-                    policy: 'UI preview: the Community Midwife vehicle type, capacity and exact training code are not yet verified.',
-                    live: false,
-                    stationTypes: ['AMBULANCE']
-                },
-                {
-                    id: 'sort',
-                    label: 'SORT Training',
-                    vehicle: 'Mass Casualty / CBRN medical vehicles',
-                    requirement: 'SORT-trained staff',
-                    policy: 'UI preview: the exact SORT vehicle family, capacities and training code still need verified assignment pages.',
-                    live: false,
-                    stationTypes: ['AMBULANCE']
-                },
-                {
-                    id: 'specialist_paramedic',
-                    label: 'Specialist Paramedic Training',
-                    vehicle: 'Specialist Paramedic RRV',
-                    requirement: 'Specialist Paramedic-trained staff',
-                    policy: 'UI preview: the Specialist Paramedic RRV vehicle capacity and exact training code still need verification.',
-                    live: false,
-                    stationTypes: ['AMBULANCE']
-                },
-                {
-                    id: 'tactical_command',
-                    label: 'Tactical Command Course',
-                    vehicle: 'Ambulance command vehicles',
-                    requirement: 'Tactical Command-trained staff',
-                    policy: 'UI preview: command vehicle mappings, capacities and exact training code still need verification.',
-                    live: false,
-                    stationTypes: ['AMBULANCE']
-                },
+                liveMedicalProfile(
+                    'ambulance_officer',
+                    'Ambulance Officer',
+                    'Ambulance Officer vehicle',
+                    '1 Ambulance Officer-trained member per vehicle',
+                    'LIVE: fills each exact type-34 Ambulance Officer vehicle to 1/1 with ems_mobile_command-trained personnel.',
+                    [MEDICAL_RULES.ambulanceOfficer],
+                    MEDICAL_PROFILE_BUILDING_TYPE_IDS.ambulanceOfficer
+                ),
+                liveMedicalProfile(
+                    'hart',
+                    'HART Training',
+                    'PRV / SRV / ATV Carrier',
+                    '2 HART-trained personnel per vehicle',
+                    'LIVE: fills exact type-27 PRVs, type-28 SRVs and type-30 ATV Carriers to 2/2 with hazard_response_ems-trained personnel.',
+                    [MEDICAL_RULES.hart],
+                    MEDICAL_PROFILE_BUILDING_TYPE_IDS.hart
+                ),
+                liveMedicalProfile(
+                    'midwifery',
+                    'Midwifery Training',
+                    'Community Midwife vehicle',
+                    '2 Midwifery-trained personnel per vehicle',
+                    'LIVE: fills each exact type-95 Community Midwife vehicle to 2/2 with midwife-trained personnel.',
+                    [MEDICAL_RULES.midwifery],
+                    MEDICAL_PROFILE_BUILDING_TYPE_IDS.midwifery
+                ),
+                liveMedicalProfile(
+                    'sort',
+                    'SORT Training',
+                    'CBRN Vehicle / Mass Casualty Equipment',
+                    '2 SORT-trained personnel per vehicle',
+                    'LIVE: fills exact type-32 CBRN Vehicles and type-33 Mass Casualty Equipment to 2/2 with special_operation_response-trained personnel.',
+                    [MEDICAL_RULES.sort],
+                    MEDICAL_PROFILE_BUILDING_TYPE_IDS.sort
+                ),
+                liveMedicalProfile(
+                    'specialist_paramedic',
+                    'Specialist Paramedic Training',
+                    'Specialist Paramedic RRV',
+                    '2 Specialist Paramedic-trained personnel per vehicle',
+                    'LIVE: fills each exact type-96 Specialist Paramedic RRV to 2/2 with paramedic_advanced-trained personnel.',
+                    [MEDICAL_RULES.specialistParamedic],
+                    MEDICAL_PROFILE_BUILDING_TYPE_IDS.specialistParamedic
+                ),
+                liveMedicalProfile(
+                    'tactical_command',
+                    'Tactical Command Course',
+                    'Ambulance Control Unit',
+                    '2 Tactical Command-trained personnel per vehicle',
+                    'LIVE: fills each exact type-31 Ambulance Control Unit to 2/2 with elw2_ems-trained personnel. ATV Carriers remain HART-only.',
+                    [MEDICAL_RULES.tacticalCommand],
+                    MEDICAL_PROFILE_BUILDING_TYPE_IDS.tacticalCommand
+                ),
                 {
                     id: 'all_medical',
                     label: 'Run all Medical profiles',
                     vehicle: 'All mapped medical vehicle groups',
                     requirement: 'Specialist profiles first; Critical Care Ambulances last',
-                    policy: 'UI preview: this batch option will be enabled only after every Medical specialist profile is individually verified and live.',
-                    live: false,
-                    stationTypes: ['AMBULANCE']
+                    policy: 'LIVE BATCH: preserves current assignments, fills every exact specialist medical vehicle first, fills normal Ambulances with Critical Care personnel last, then verifies the station-wide result.',
+                    live: true,
+                    engine: 'personnel-rules',
+                    stationTypes: [],
+                    buildingTypeIds: MEDICAL_PROFILE_BUILDING_TYPE_IDS.all,
+                    rules: MEDICAL_ALL_RULES,
+                    batch: true
                 }
             ]
         },
@@ -6530,11 +6658,20 @@
         return Array.isArray(profile?.stationTypes) ? profile.stationTypes.map(String) : [];
     }
 
+    function getPersonnelProfileBuildingTypeIds() {
+        const profile = getPersonnelProfileDefinition();
+        return Array.isArray(profile?.buildingTypeIds) ? profile.buildingTypeIds.map(String) : [];
+    }
+
     function getPersonnelStationScopeLabel() {
         const service = getPersonnelServiceDefinition();
         const stationTypes = getPersonnelProfileStationTypes();
 
-        if (service === PERSONNEL_SERVICE_DEFINITIONS.medical) return 'ambulance stations';
+        if (service === PERSONNEL_SERVICE_DEFINITIONS.medical) {
+            return getPersonnelProfileBuildingTypeIds().length
+                ? 'relevant medical stations'
+                : 'ambulance stations';
+        }
         if (stationTypes.length === 1 && stationTypes[0] === 'AIR') return 'police aviation stations';
         if (stationTypes.length === 1 && stationTypes[0] === 'EOD') return 'EOD / bomb disposal stations';
         if (service === PERSONNEL_SERVICE_DEFINITIONS.police) return 'relevant Police stations';
@@ -6562,6 +6699,7 @@
         }
 
         const allowedStationTypes = new Set(getPersonnelProfileStationTypes());
+        const allowedBuildingTypeIds = new Set(getPersonnelProfileBuildingTypeIds());
         const scopeLabel = getPersonnelStationScopeLabel();
         setPersonnelUiValue('status', `Refreshing ${scopeLabel}...`);
         personnelLog(`Refreshing ${scopeLabel}...`, 'info');
@@ -6584,7 +6722,14 @@
                     STATION_BUILDING_TYPE_INFO[entry.buildingTypeId]?.stationType ||
                     detectStationType(entry.displayName)
             }))
-            .filter(station => station.href && station.buildingId && allowedStationTypes.has(station.stationType));
+            .filter(station =>
+                station.href
+                && station.buildingId
+                && (
+                    allowedStationTypes.has(station.stationType)
+                    || allowedBuildingTypeIds.has(String(station.buildingTypeId))
+                )
+            );
 
         PERSONNEL_STATE.filteredStations = [...PERSONNEL_STATE.stations];
         populatePersonnelStartDropdown();
@@ -8462,7 +8607,10 @@
 
     async function processOnePersonnelStation(station) {
         const profile = getPersonnelProfileDefinition();
-        if (profile?.engine === 'police') {
+        if (
+            profile?.engine === 'police'
+            || profile?.engine === 'personnel-rules'
+        ) {
             return processOnePoliceStation(station, profile);
         }
         return processOneMedicalCriticalCareStation(station);
@@ -8889,13 +9037,24 @@
     }
 
     async function processOnePoliceStation(station, profile) {
+        const serviceLabel =
+            String(
+                getPersonnelServiceDefinition()?.label
+                || 'Personnel'
+            );
+        const serviceSourceLabel =
+            serviceLabel
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-|-$/g, '')
+            || 'personnel';
         const stationPage = await personnelFetchDocument(station.href, 14000);
         const rules = Array.isArray(profile.rules) ? profile.rules : [];
         const targetTypeIds = [...new Set(rules.flatMap(rule => rule.vehicleTypeIds))];
         const allVehicles = getPersonnelVehicleQueue(stationPage.doc, targetTypeIds);
 
         if (!allVehicles.length) {
-            personnelLog('No vehicles mapped to the selected Police profile were found at this station.', 'debug');
+            personnelLog(`No vehicles mapped to the selected ${serviceLabel} profile were found at this station.`, 'debug');
             return {
                 stationName: station.displayName,
                 stationHref: station.href,
@@ -8934,7 +9093,7 @@
                 allVehicles,
             personnel,
             source:
-                'police-station-scan'
+                `${serviceSourceLabel}-station-scan`
         });
 
         const reservedPersonnelIds = new Set();
@@ -8957,7 +9116,7 @@
         const unionQualified = personnel.filter(person => rules.some(rule => personnelMatchesRule(person, rule)));
         const availableAtScan = unionQualified.filter(person => person.available).length;
 
-        personnelLog(`Mapped Police vehicles at station: ${allVehicles.length}`, 'info');
+        personnelLog(`Mapped ${serviceLabel} vehicles at station: ${allVehicles.length}`, 'info');
         personnelLog(`Profile rule groups: ${rules.length} | Qualified personnel visible: ${unionQualified.length}`, 'info');
         if (Number.isFinite(stationUnitsNeeded)) {
             personnelLog(`Units still required before this station: ${stationUnitsNeeded}. Only fully covered vehicles count.`, 'info');
@@ -9020,7 +9179,7 @@
                 for (let slotIndex = 0; slotIndex < rule.target; slotIndex++) qualificationSlots.push(rule);
 
                 setPersonnelUiValue('vehicle', vehicle.name || vehicle.vehicleId);
-                setPersonnelUiValue('status', PERSONNEL_STATE.action === 'assign' ? 'Checking Police vehicle' : 'Building Police preview');
+                setPersonnelUiValue('status', PERSONNEL_STATE.action === 'assign' ? `Checking ${serviceLabel} vehicle` : `Building ${serviceLabel} preview`);
                 personnelLog(`${rule.label} vehicle ${vehicleIndex + 1}/${ruleVehicles.length}: ${vehicle.name}`, 'station');
 
                 const baselineAssigned =
@@ -9164,7 +9323,7 @@
                                 personnel:
                                     verification.rows,
                                 source:
-                                    'police-vehicle-verification'
+                                    `${serviceSourceLabel}-vehicle-verification`
                             });
 
                             const verifiedIds = new Set(
@@ -9264,9 +9423,9 @@
         let availableAtEnd = Math.max(0, availableAtScan - (PERSONNEL_STATE.action === 'preview' ? stationPlanned : stationAssigned));
 
         if (PERSONNEL_STATE.action === 'assign' && !PERSONNEL_STATE.stopped && vehicleReports.length) {
-            setPersonnelUiValue('status', 'Final Police station verification');
-            setPersonnelUiValue('vehicle', 'All mapped Police vehicles');
-            personnelLog('Running final station-wide Police verification...', 'info');
+            setPersonnelUiValue('status', `Final ${serviceLabel} station verification`);
+            setPersonnelUiValue('vehicle', `All mapped ${serviceLabel} vehicles`);
+            personnelLog(`Running final station-wide ${serviceLabel} verification...`, 'info');
 
             try {
                 await waitPersonnelDelay(900);
@@ -9280,7 +9439,7 @@
                     personnel:
                         finalAssignment.rows,
                     source:
-                        'police-final-verification'
+                        `${serviceSourceLabel}-final-verification`
                 });
 
                 availableAtEnd = finalAssignment.rows.filter(person => person.available && rules.some(rule => personnelMatchesRule(person, rule))).length;
@@ -9335,13 +9494,13 @@
                 });
 
                 afterActionVerified = true;
-                personnelLog(`Final Police station verification passed. Unfilled positions: ${stationAssignmentShortfall}.`, stationAssignmentShortfall ? 'error' : 'done');
+                personnelLog(`Final ${serviceLabel} station verification passed. Unfilled positions: ${stationAssignmentShortfall}.`, stationAssignmentShortfall ? 'error' : 'done');
             } catch (error) {
                 verificationError = error?.message || String(error);
                 vehicleReports.forEach(vehicleReport => {
                     if (vehicleReport.verificationStatus !== 'skipped') vehicleReport.verificationStatus = 'individual-verification-only';
                 });
-                personnelLog(`Final Police station verification failed: ${verificationError}`, 'error');
+                personnelLog(`Final ${serviceLabel} station verification failed: ${verificationError}`, 'error');
             }
         }
 
@@ -9398,7 +9557,7 @@
             stationHref: station.href,
             personnelPageHref: baselinePage.href,
             profileLabel: profile.label,
-            qualificationLabel: profile.batch ? 'Mapped Police qualifications' : (rules[0]?.trainingLabel || profile.label),
+            qualificationLabel: profile.batch ? `Mapped ${serviceLabel} qualifications` : (rules[0]?.trainingLabel || profile.label),
             vehicleCount: vehicleReports.length,
             ambulances: vehicleReports.length,
             required,

@@ -17,7 +17,7 @@
 </tr>
 </table>
 
-**Current version:** `1.0.124` · **Mission Finder engine:** `V10.6.162` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
+**Current version:** `1.0.125` · **Mission Finder engine:** `V10.6.162` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)
@@ -130,7 +130,7 @@ The canonical source is [`src/missionchief-command-nexus.user.js`](src/missionch
 | **Station naming** | Builds and previews structured station names, then submits MissionChief's exact native edit form in the background and verifies the saved value |
 | **Vehicle naming** | Applies repeatable captions and numbering through background native-form requests, with exact vehicle-ID and post-save verification |
 | **Scoped processing** | Operates on a selected station scope with progress, pause, resume, and stop controls where supported |
-| **Personnel Assignment** | Finds trained personnel, plans eligible assignments, and performs Live submissions plus fresh verification reads entirely in the background |
+| **Personnel Assignment** | Finds trained personnel, plans eligible assignments, and performs Live submissions plus fresh verification reads entirely in the background; all Medical profiles use exact UK vehicle, course and seat mappings |
 | **Build Personnel Register** | Reads each discovered vehicle assignment page without changing assignments |
 | **Training intelligence** | Stores exact verified vehicle/personnel capability for specialist mission matching |
 | **Operational reporting** | Separates changed, skipped, failed, unfilled, and genuine training-shortage outcomes |
@@ -327,7 +327,7 @@ Command Nexus is operational software, not a claim that every MissionChief UK ve
 | Limitation | Current position |
 |---|---|
 | **Country coverage** | MissionChief UK only |
-| **Training profiles** | Remaining Medical, Fire, Airfield, SAR, Mountain Rescue, and Coastguard profiles are tracked through issues |
+| **Training profiles** | Medical profiles are live with exact mappings; remaining Fire, Airfield, SAR, Mountain Rescue, and Coastguard profiles are tracked through issues |
 | **External requirements data** | Some specialist logic depends on stable requirement data exposed by MissionChief or compatible panels |
 | **PSU personnel assignment** | Mission dispatch now uses nine-seat PSU coverage; automatic station personnel assignment into PSU seats remains tracked separately |
 | **Interface consolidation** | One installation still contains two retained operational control surfaces |

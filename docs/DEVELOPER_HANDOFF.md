@@ -12,10 +12,10 @@ This is the first document to read when resuming MissionChief Command Nexus deve
 | Repository | `Team-Killing-Bastards/MissionChief-Command-Nexus` |
 | Default branch | `main` |
 | Canonical userscript | `src/missionchief-command-nexus.user.js` |
-| Command Nexus version | `1.0.124` |
+| Command Nexus version | `1.0.125` |
 | Mission Finder baseline | `V10.6.162` |
 | Resource Administration module | `V4.2.8` |
-| Unit / Station / Personnel UI versions | `3.3.27` / `1.3.22` / `1.3.10` |
+| Unit / Station / Personnel UI versions | `3.3.27` / `1.3.22` / `1.3.11` |
 | Userscript author metadata | `MartyBlyth` |
 | MissionChief domains | `www.missionchief.co.uk` and `police.missionchief.co.uk` |
 | Distribution source | Canonical userscript on trusted `main` |
@@ -48,6 +48,7 @@ The single-file shape is deliberate. Logical consolidation may continue, but est
 - One canonical `.user.js` source and one metadata block are published from `main`.
 - Duplicate-initialisation protection and independent engine startup isolation are retained.
 - Unit Naming, Station Naming and Personnel Assignment use background native forms instead of opening every resource page.
+- Medical Personnel Assignment provides live exact Ambulance Officer, HART, Tactical Command, SORT, Midwifery and Specialist Paramedic profiles plus a specialist-first batch; the established standalone Critical Care engine remains unchanged.
 - Mission requirements, selected and en-route reconciliation, trained-personnel capability, dispatch, Auto Mode and transport continuation are implemented.
 - Qualification-sensitive selection fails closed: only fresh, complete Personnel Register evidence satisfies trained-personnel demand, and Auto Mode stops without dispatch when verified coverage remains short.
 - Search Dog Unit (SAR) uses exact native MissionChief UK type `102` across Mission Finder selection, selected-unit verification and Unit Naming.
