@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.123
+// @version      1.0.124
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -11717,7 +11717,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.161
+         * MODULE 2: MISSION FINDER V10.6.162
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -12551,6 +12551,10 @@
     const MF_EXACT_REGISTER_TRAINING_MAX_AGE_MS =
         180 * 24 * 60 * 60 * 1000;
 
+    // V10.6.162: current native MissionChief UK mission-row evidence identifies
+    // Search Dog Unit (SAR) as exact vehicle type 102. Rescue Dog and Search Dog
+    // Unit requirements use that same ID as Unit Naming and fail closed on every
+    // other known vehicle type.
     // V10.6.161: qualification-sensitive selection fails closed. Only fresh,
     // complete Personnel Register evidence can select and satisfy trained-
     // personnel requirements. Missing, stale or partial evidence blocks ready
@@ -16511,6 +16515,8 @@ function isRoadRailUnitVehicleCheckbox(input) {
             .includes('106');
     }
 
+    const MF_SEARCH_DOG_UNIT_TYPE_ID = '102';
+
     function isRescueDogRequirementName(value) {
         const cleaned = String(value || '')
             .replace(/\s+/g, ' ')
@@ -16528,7 +16534,7 @@ function isRoadRailUnitVehicleCheckbox(input) {
     function isSearchDogUnitVehicleCheckbox(input) {
         if (!input) return false;
         return getVehicleTypeIdentifiers(input)
-            .includes('101');
+            .includes(MF_SEARCH_DOG_UNIT_TYPE_ID);
     }
 
     function getVehicleMatchCandidates(originalName, mappedName) {

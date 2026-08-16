@@ -1,6 +1,6 @@
 # Architecture
 
-This document describes the architecture in the current MissionChief Command Nexus v1.0.123 production source and the direction for future consolidation.
+This document describes the architecture in the current MissionChief Command Nexus v1.0.124 production source and the direction for future consolidation.
 
 > Source-code direction and final technical decisions remain with **MartyBlyth**, the project developer. Conroy1988 provides repository and documentation support only.
 
@@ -12,7 +12,7 @@ The canonical distributable is a single userscript:
 src/missionchief-command-nexus.user.js
 ```
 
-The canonical module baseline is Resource Administration `V4.2.8` and Mission Finder `V10.6.161`. The Resource Administration interfaces report Unit Naming `3.3.27`, Station Naming `1.3.22` and Personnel Assignment `1.3.10`. Exact release and component-version validation belongs to `scripts/validate-userscript.mjs`; behavioral regressions do not pin these numbers.
+The canonical module baseline is Resource Administration `V4.2.8` and Mission Finder `V10.6.162`. The Resource Administration interfaces report Unit Naming `3.3.27`, Station Naming `1.3.22` and Personnel Assignment `1.3.10`. Exact release and component-version validation belongs to `scripts/validate-userscript.mjs`; behavioral regressions do not pin these numbers.
 
 It contains one userscript metadata block, one outer installation guard and two retained runtime engines:
 
@@ -205,6 +205,20 @@ The Road Rail Unit is the Fire service vehicle with native MissionChief
 label with the `RRU` callsign and 🚒🚆 icon under Fire and All classes. It must
 not be classified as Airfield, and it must remain separate from the type `59`
 Coastguard Rope Rescue Unit despite the historical shared abbreviation.
+
+### Search Dog Unit identity contract
+
+MissionChief UK exposes Search Dog Unit (SAR) as native `vehicle_type_id` `102`
+on both the mission vehicle checkbox and its containing type cell. Rescue Dog
+and Search Dog Unit requirements must therefore use exact type `102` for fresh
+selection and selected-unit verification. Police Dog and Dog Support Unit
+wording remains separate from this SAR rule and continues to use its own exact
+Police identity.
+
+Unit Naming already maps type `102` to `Search Dog Unit SAR` with the `K9`
+callsign. A permanent consistency regression prevents Mission Finder and Unit
+Naming from drifting to different IDs. The sanitized native mission-row capture
+is retained in [issue #300 evidence](evidence/issue-300-search-dog-vehicle-type.md).
 
 ## Target architecture
 

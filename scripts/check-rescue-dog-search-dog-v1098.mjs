@@ -57,15 +57,16 @@ expect(context.result.no.every(value => value === false), `Unrelated requirement
 const classifier = extractFunction('isSearchDogUnitRequirement');
 expect(classifier.includes('isRescueDogRequirementName(value)'), 'Search Dog classifier must consume the strict Rescue/Search Dog requirement-name matcher');
 const checkbox = extractFunction('isSearchDogUnitVehicleCheckbox');
-expect(checkbox.includes(".includes('101')"), 'Search Dog Unit must be exact MissionChief vehicle type 101');
+expect(source.includes("const MF_SEARCH_DOG_UNIT_TYPE_ID = '102';"), 'Search Dog Unit must declare verified MissionChief vehicle type 102');
+expect(checkbox.includes('.includes(MF_SEARCH_DOG_UNIT_TYPE_ID)'), 'Search Dog selector must consume the verified type-102 constant');
 
 expect((source.match(/const searchDogUnitOnly =/g) || []).length >= 2, 'Search Dog strict declarations missing from shared selection paths');
 expect(source.includes('if (searchDogUnitOnly) {'), 'Search Dog strict quick-selection branch missing');
-expect(source.includes('return isSearchDogUnitVehicleCheckbox(input);'), 'Search Dog exact type-101 candidate filter missing');
+expect(source.includes('return isSearchDogUnitVehicleCheckbox(input);'), 'Search Dog exact type-102 candidate filter missing');
 expect(source.includes('matches = isSearchDogUnitVehicleCheckbox(input);'), 'Search Dog selected-vehicle verification missing');
 expect(source.includes('isSearchDogUnitRequirement(originalName, mappedName) ||'), 'Search Dog generic-fallback guard missing');
 
 expect(extractFunction('isFlatbedRecoveryVehicleCheckbox').includes(".includes('105')"), 'Flatbed Recovery type 105 regression');
 expect(extractFunction('isHgvRecoveryVehicleCheckbox').includes(".includes('106')"), 'HGV Recovery type 106 regression');
 
-console.log('PASS: Rescue Dog and Search Dog Unit requirement aliases route only to exact Search Dog Unit type 101 across candidate selection, selected-unit verification and strict generic-fallback protection.');
+console.log('PASS: Rescue Dog and Search Dog Unit requirement aliases route only to verified exact Search Dog Unit type 102 across candidate selection, selected-unit verification and strict generic-fallback protection.');
