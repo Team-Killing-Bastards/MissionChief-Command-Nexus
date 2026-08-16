@@ -17,7 +17,7 @@
 </tr>
 </table>
 
-**Current version:** `1.0.123` · **Mission Finder engine:** `V10.6.161` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
+**Current version:** `1.0.124` · **Mission Finder engine:** `V10.6.162` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)
@@ -251,17 +251,18 @@ High Volume Pump, Drone Operator, Co-Responder, and Lifeguard remain disabled pe
 - Any selected exact type-8 IRV counts toward generic Police Car attendance; named specialist requirements remain strict and live-verified.
 - Prefixed `Require` / `Requires` / `Required Drone(s)` wording accepts exact type-89 SAR Drone Vehicles and exact type-91 Police Drone Vehicles by best arrival. Explicit Police Drone, Police Helicopter and Police Helicopter-or-Drone wording retain their stricter service-specific modes; bare Drone/Drones prose is ignored.
 - Police Officer upgrade rows and visible `Missing Personnel` alerts convert at two officers per Police Car, including when the live requirements panel is present.
-- Supported trained-personnel requirements use best-available coverage rather than an all-or-nothing qualification gate. Multi-trained staff count toward every matching course they hold.
-- Level 1, Level 2, Sergeant and Police Medic demand can use exact type-51 PSUs at up to nine personnel or exact type-8 IRVs at two personnel. PSUs cover useful larger blocks and IRVs fill smaller remainders without unnecessary extra units.
-- Partially trained units remain eligible. When training is insufficient, correct-type fallback vehicles are still selected and the exact remaining training shortfall is reported without blocking dispatch.
+- Supported trained-personnel requirements fail closed unless fresh, complete Personnel Register evidence proves the actual qualifications assigned to each exact vehicle. Multi-trained staff count toward every matching course they hold.
+- Level 1, Level 2, Sergeant, Railway Police and Police Medic demand can use exact type-51 PSUs at up to nine personnel or exact type-8 IRVs at two personnel only when that register-backed training is verified. PSUs cover useful larger blocks and IRVs fill smaller remainders without unnecessary extra units.
+- Missing, stale or partial training evidence never falls back to nominal seats or an untrained correct-type vehicle. Unit Finder and Mission Update remain blocked, and Auto Mode does not click Dispatch, while verified coverage is short.
 - Police Inspector and Railway Police remain exact type-8 trained-personnel profiles.
 - Armed Personnel and Armed Response Personnel route to exact type-25 Armed Traffic Cars.
 - Armed Traffic Car selection verifies Roads Policing plus Firearms capability.
 - Unit Naming recognises the live UK Police purchase classes type `13` Armed Response Vehicle (`ARV`), type `19` Joint Response Unit (`JRU`), type `24` Traffic Car (`TC`) and type `52` Firearms Personnel Carrier (`FPC`).
 - Unit Naming recognises Recovery station type `105` as the live `Recovery Vehicle` label while preserving its existing `FRV` callsign, and adds type `106` HGV Recovery Vehicle (`HGV`) as a separate class with a distinct icon.
+- Native MissionChief UK mission-row evidence identifies Search Dog Unit (SAR) as exact type `102`. Rescue Dog and Search Dog Unit requirements use that same strict ID as Unit Naming; Police Dog / Dog Support Unit type `12` remains separate.
 - Generic type-66 `4x4 Vehicle` matching is restored.
 - Search Advisor demand selects any exact registered vehicle carrying assigned `search_and_rescue`-trained staff; Police station personnel rows also preserve the persistent **Assigned To** binding when MissionChief marks the officer Available, while ambiguous vehicle names fail closed.
-- Trained-personnel selection now exhausts every ready compatible unit that can reduce a real course deficit before reporting a shortfall. Nominal seats and qualifications are tracked separately, so partly trained PSUs/IRVs cannot hide later trained coverage.
+- Trained-personnel selection exhausts every ready, fresh-register-verified compatible unit that can reduce a real course deficit before reporting and blocking on the remaining shortfall. Nominal seats cannot satisfy qualification demand.
 - SAR Commander demand converts to Control Van capability.
 - `Operational Support or SAR Vehicle` selects and verifies the exact type-86 Operational Support Van.
 - Seagoing Vessel requirements recognise supported ALB / ABL / All-weather Lifeboat variants.

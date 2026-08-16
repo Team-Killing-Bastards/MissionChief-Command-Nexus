@@ -14,6 +14,16 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Refreshed current operational documentation for the `1.0.122` production baseline and separated it from immutable versioned handovers and incident records.
 - Kept the canonical userscript unchanged, so this repository-maintenance set does not create a new userscript release.
 
+## [1.0.124] - 2026-08-16
+
+### Fixed
+
+- Resolved issue #300 from user-supplied native MissionChief UK mission-row evidence: Search Dog Unit (SAR) is exact `vehicle_type_id` `102`, not `101`.
+- Aligned Rescue Dog and Search Dog Unit candidate selection and selected-unit verification with Unit Naming's existing exact type-`102` identity.
+- Retained strict specialist behavior: Police Dog / Dog Support Unit wording remains separate, and no generic vehicle fallback can satisfy Search Dog demand.
+- Added a sanitized evidence record for the native mission route and row attributes plus a permanent consistency regression that checks the Mission Finder selector and Unit Naming map use the same verified ID.
+- Increased Mission Finder from `V10.6.161` to `V10.6.162` and the unified userscript from `1.0.123` to `1.0.124`. Resource Administration remains `V4.2.8`, Unit Naming remains `3.3.27`, Station Naming remains `1.3.22`, and Personnel Assignment remains `1.3.10`.
+
 ## [1.0.123] - 2026-08-16
 
 ### Fixed

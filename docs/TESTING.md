@@ -28,6 +28,11 @@ Every permanent behavioral regression is named `scripts/check-*.mjs`. The workfl
 
 When a defect is fixed, add a focused executable regression to this set. Do not add a one-use builder, trigger file, self-modifying repair workflow or version-specific validation job to permanent automation.
 
+Native specialist identity changes must retain sanitized DOM evidence and test
+every consumer of the ID. Search Dog Unit is the current reference case:
+`scripts/check-search-dog-vehicle-type-consistency.mjs` verifies the evidence,
+Mission Finder selector and Unit Naming map all use exact type `102`.
+
 Automated checks are necessary but cannot prove live MissionChief behaviour.
 
 ## Live test layers
