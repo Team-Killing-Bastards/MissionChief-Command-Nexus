@@ -14,6 +14,18 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Refreshed current operational documentation for the `1.0.122` production baseline and separated it from immutable versioned handovers and incident records.
 - Kept the canonical userscript unchanged, so this repository-maintenance set does not create a new userscript release.
 
+## [1.0.125] - 2026-08-16
+
+### Added
+
+- Completed issue #17 by enabling live Ambulance Officer, HART, Tactical Command, SORT, Midwifery and Specialist Paramedic Personnel Assignment profiles with exact MissionChief UK vehicle types, academy keys and native seat targets.
+- Added explicit specialist station scopes for Ambulance Stations, Small Ambulance Stations, Urgent Treatment Centers, Home Response Locations, HART Bases and GP Surgeries according to each eligible vehicle family.
+- Enabled `Run all Medical profiles` in specialist-first order with Critical Care Ambulances last, while preserving the established standalone Critical Care engine.
+- Reused the verified background assignment path for both Preview and Live, including exact live-page vehicle-type rejection, per-vehicle confirmation and final station-wide verification.
+- Kept training shortfall and assignment shortfall separate for quantities above one and added permanent mapping, batch-order, scope, preview/live and verification regression coverage.
+- Recorded the current source evidence and resolved the stale ATV association: exact type `30` ATV Carrier uses HART `hazard_response_ems`; Tactical Command `elw2_ems` belongs to exact type `31` Ambulance Control Unit.
+- Increased Personnel Assignment from `1.3.10` to `1.3.11` and the unified userscript from `1.0.124` to `1.0.125`. Resource Administration remains `V4.2.8`, Unit Naming remains `3.3.27`, Station Naming remains `1.3.22`, and Mission Finder remains `V10.6.162`.
+
 ## [1.0.124] - 2026-08-16
 
 ### Fixed

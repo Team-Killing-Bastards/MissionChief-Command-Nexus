@@ -33,6 +33,12 @@ every consumer of the ID. Search Dog Unit is the current reference case:
 `scripts/check-search-dog-vehicle-type-consistency.mjs` verifies the evidence,
 Mission Finder selector and Unit Naming map all use exact type `102`.
 
+Medical Personnel Assignment mappings are guarded by
+`scripts/check-medical-personnel-assignment-profiles.mjs`. It verifies every
+vehicle type, academy key, seat target and eligible building scope; the
+specialist-first batch order; quantities above one; shared Preview/Live routing;
+fresh final verification; and separate training versus assignment shortfalls.
+
 Automated checks are necessary but cannot prove live MissionChief behaviour.
 
 ## Live test layers

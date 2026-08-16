@@ -5,17 +5,18 @@ MissionChief Command Nexus is an actively released userscript. This roadmap reco
 **Developer and technical owner:** MartyBlyth  
 **Repository and documentation support:** Conroy1988
 
-## Current production baseline — v1.0.124
+## Current production baseline — v1.0.125
 
 - [x] Publish one canonical userscript on trusted `main`.
-- [x] Release Command Nexus `1.0.124` with Mission Finder `V10.6.162`.
-- [x] Retain Resource Administration `V4.2.8`, with Unit Naming `3.3.27`, Station Naming `1.3.22` and Personnel Assignment `1.3.10`.
+- [x] Release Command Nexus `1.0.125` with Mission Finder `V10.6.162`.
+- [x] Retain Resource Administration `V4.2.8`, with Unit Naming `3.3.27`, Station Naming `1.3.22` and Personnel Assignment `1.3.11`.
 - [x] Protect duplicate initialization and independent engine startup.
 - [x] Provide Unit Naming, Station Naming and Personnel Assignment through background native-form workflows.
 - [x] Provide requirement parsing, patient handling, trained-capability selection, Mission Update, dispatch, Auto Mode and queue continuation.
 - [x] Reconcile selected and en-route capability before mission-upgrade selection.
 - [x] Fail closed when fresh, complete Personnel Register evidence does not verify the full trained-personnel requirement.
 - [x] Align Search Dog Unit selection, verification and naming to evidence-backed native type `102`.
+- [x] Complete all Medical Personnel Assignment profiles with exact UK vehicle, academy, seat and eligible-building mappings.
 - [x] Run canonical version validation and the complete permanent behavioral regression suite.
 - [x] Reconcile GitHub Release assets, Greasy Fork synchronization and one Discord delivery receipt for each userscript release.
 

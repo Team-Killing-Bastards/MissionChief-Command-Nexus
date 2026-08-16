@@ -1,6 +1,6 @@
 # Architecture
 
-This document describes the architecture in the current MissionChief Command Nexus v1.0.124 production source and the direction for future consolidation.
+This document describes the architecture in the current MissionChief Command Nexus v1.0.125 production source and the direction for future consolidation.
 
 > Source-code direction and final technical decisions remain with **MartyBlyth**, the project developer. Conroy1988 provides repository and documentation support only.
 
@@ -12,7 +12,7 @@ The canonical distributable is a single userscript:
 src/missionchief-command-nexus.user.js
 ```
 
-The canonical module baseline is Resource Administration `V4.2.8` and Mission Finder `V10.6.162`. The Resource Administration interfaces report Unit Naming `3.3.27`, Station Naming `1.3.22` and Personnel Assignment `1.3.10`. Exact release and component-version validation belongs to `scripts/validate-userscript.mjs`; behavioral regressions do not pin these numbers.
+The canonical module baseline is Resource Administration `V4.2.8` and Mission Finder `V10.6.162`. The Resource Administration interfaces report Unit Naming `3.3.27`, Station Naming `1.3.22` and Personnel Assignment `1.3.11`. Exact release and component-version validation belongs to `scripts/validate-userscript.mjs`; behavioral regressions do not pin these numbers.
 
 It contains one userscript metadata block, one outer installation guard and two retained runtime engines:
 
@@ -130,6 +130,8 @@ Bulk station naming, unit naming and personnel assignment must retain:
 - Per-item success, skip and failure reporting.
 - Verification after submitted changes.
 - Separation of genuine training shortages from technical failures.
+
+Medical Personnel Assignment keeps the standalone Critical Care path on its established exact type-5 engine. Ambulance Officer, HART, Tactical Command, SORT, Midwifery and Specialist Paramedic use the shared rule engine with exact vehicle types, academy keys, native seat targets and eligible medical building types. The all-Medical batch processes those specialists before its exact type-5 Critical Care tail, preserves existing assignments and performs fresh per-vehicle plus final station verification in Live mode.
 
 ### Police Unit Naming identity contract
 
