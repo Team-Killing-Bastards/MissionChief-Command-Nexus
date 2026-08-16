@@ -35,6 +35,9 @@ REQUIRED_FILES = (
     "docs/GREASY_FORK_SETUP.md",
     "docs/repository-automation-cleanup-2026-08-16.md",
     "docs/media/readme-hero.svg",
+    "docs/media/readme-operational-chain.svg",
+    "docs/media/readme-command-surfaces.svg",
+    "docs/media/README.md",
     "scripts/validate-userscript.mjs",
     "scripts/check_workflow_yaml.py",
     "scripts/check-version-agnostic-regressions.mjs",
@@ -208,6 +211,13 @@ def check_readme_presentation() -> None:
 
     if 'src="docs/media/readme-hero.svg"' not in readme:
         fail("README must use the repository-hosted Command Nexus hero artwork")
+
+    for artwork in (
+        "docs/media/readme-operational-chain.svg",
+        "docs/media/readme-command-surfaces.svg",
+    ):
+        if f'src="{artwork}"' not in readme:
+            fail(f"README must use the repository-hosted artwork: {artwork}")
 
     if "img.shields.io" in readme:
         fail(

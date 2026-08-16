@@ -11,7 +11,10 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Removed obsolete one-use builders, trigger files and historical repair/inspection workflows from permanent repository automation.
 - Centralized canonical release and component-version validation in `scripts/validate-userscript.mjs`; permanent behavioral regressions are now version-agnostic and automatically discovered by the validation workflow.
 - Added a permanent Repository Quality gate that parses every retained GitHub Actions workflow with a pinned YAML parser before repository checks continue.
-- Refreshed current operational documentation for the `1.0.122` production baseline and separated it from immutable versioned handovers and incident records.
+- Refreshed current operational documentation for the `1.0.127` production baseline and separated it from immutable versioned handovers and incident records.
+- Rebuilt the repository front page as a complete command-centre product brief with three self-contained cinematic visual compositions, a current capability atlas, exact all-service coverage, responsive-platform guidance and explicit production-versus-roadmap boundaries.
+- Corrected the support policy's retired pre-release language and aligned its iPhone/iPad Safari scope with the evidence-backed compatibility contracts.
+- Extended repository presentation validation to protect every required README artwork and its local documentation.
 - Kept the canonical userscript unchanged, so this repository-maintenance set does not create a new userscript release.
 
 ## [1.0.127] - 2026-08-16

@@ -1,6 +1,6 @@
 # Support
 
-MissionChief Command Nexus currently provides one merged v1.0.1 userscript from the canonical `main` source. It remains a development baseline until the compatibility, migration and release gates are completed and approved by MartyBlyth.
+MissionChief Command Nexus provides one production userscript from the canonical `main` source, synchronized through the supported Greasy Fork route. The support baseline is always the version declared by the canonical source and latest synchronized release; source changes remain subject to validation, live evidence and MartyBlyth's release approval.
 
 ## Supported support routes
 
@@ -53,7 +53,9 @@ Do not repeatedly reproduce a destructive defect merely to gather more evidence.
 
 - Current `main` and the latest publicly synchronized build receive best-effort support.
 - Compatibility is claimed only for environments with recorded evidence.
-- Mobile, Safari and interacting-script combinations remain unsupported until validated.
+- Desktop browsers remain the primary full-surface target.
+- The documented iPhone and iPad Safari website workflows are supported where their recorded compatibility contracts apply, including Resource Administration and active-mission Unit Finder selection.
+- Other mobile browsers, native-app webviews and interacting-script combinations remain outside support until equivalent evidence exists.
 - Older versions may be investigated when the issue remains reproducible on the current baseline.
 - The project cannot provide MissionChief account recovery, official game support, alliance administration or guarantees about actions taken by the game operator.
 - No response-time guarantee is offered.
