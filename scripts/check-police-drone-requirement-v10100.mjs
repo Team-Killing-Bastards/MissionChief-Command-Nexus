@@ -39,8 +39,6 @@ function extractFunction(name) {
   fail(`Unterminated ${name}`);
 }
 
-expect(source.includes('// @version      1.0.122'), 'Expected Command Nexus 1.0.122');
-expect(source.includes(' * MODULE 2: MISSION FINDER V10.6.160'), 'Expected Mission Finder V10.6.160');
 
 const setMarker = 'const MF_POLICE_DRONE_REQUIREMENT_NAMES = new Set([';
 const setStart = source.indexOf(setMarker);

@@ -51,10 +51,12 @@ Run from the repository root:
 ```bash
 node --check src/missionchief-command-nexus.user.js
 node scripts/validate-userscript.mjs
+for check in scripts/check-*.mjs; do node "$check"; done
 python3 scripts/check_repository.py
+git diff --check
 ```
 
-The userscript pull-request workflow also requires a higher `@version` than the base branch when source code changes.
+The userscript pull-request workflow discovers and runs the complete permanent regression suite. It also requires a higher `@version` than the base branch when source code changes. Canonical release and component-version assertions belong only to `validate-userscript.mjs`; behavioral checks must remain version-agnostic.
 
 ## Required live checks
 
@@ -93,30 +95,29 @@ Record exact domains, browsers, userscript managers, operating systems and inter
 
 The supported publication flow is:
 
-1. Put the approved source on `main`.
-2. GitHub sends the configured push event to the private synchronization webhook.
-3. The external service fetches the raw canonical userscript.
-4. A new build is published only when its metadata and higher version are valid.
-5. Verify the served version and code.
-6. Perform a clean install or update test from the public route.
+1. Merge the approved source to trusted `main`.
+2. Repository Quality validates trusted main and inspects the canonical version's release state.
+3. If the version is already complete, reconciliation stops without duplicate assets or notifications.
+4. If the version is new or incomplete, the reusable release workflow validates, packages and reconciles the release.
+5. Greasy Fork synchronization fetches the raw canonical userscript and accepts only valid higher versions.
+6. Verify the served version and code, then perform a clean install or update test.
+7. Verify one Discord delivery receipt for the version.
 
-A successful webhook response proves delivery, not correct publication. Verify the served source directly.
+A successful webhook or workflow response proves delivery activity, not correct publication. Verify the served source and recorded receipts directly.
 
 ## GitHub Release packaging
 
-After the approved version is visible and verified through the public update route:
+For a new canonical version, release reconciliation:
 
-1. Create the matching tag, for example `v1.0.2` for `@version 1.0.2`.
-2. Push the tag.
-3. The release workflow checks that the tagged commit is contained in `main`.
-4. The workflow runs repository and userscript validation.
-5. The workflow checks that the tag exactly matches `@version`.
-6. The workflow copies the canonical source to a versioned `.user.js` asset.
-7. The workflow generates a SHA-256 checksum file.
-8. GitHub creates the release from the verified existing tag.
-9. Verify both assets against the approved source.
+1. Requires a matching tag, for example `v1.0.123` for `@version 1.0.123`.
+2. Confirms the tagged commit is contained in trusted `main`.
+3. Runs repository, syntax, metadata and permanent regression validation.
+4. Copies the canonical source to a versioned `.user.js` asset.
+5. Generates and verifies the SHA-256 checksum asset.
+6. Creates or repairs the GitHub Release idempotently.
+7. Records the verified external-delivery outcome.
 
-A GitHub tag or release does not publish the external userscript. The approved `main` source and synchronization webhook perform that publication.
+A GitHub tag or release does not by itself prove the external userscript was published. The approved `main` source, synchronization result and served-source verification together provide that evidence.
 
 ## Release notes
 
@@ -146,6 +147,10 @@ For a serious live defect, prioritize stopping unsafe dispatch, repeated submiss
 
 ## Completion record
 
-Update the [master v1.0.x tracker](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/10) with the source commit, public version, tag, release URL, checksum, tested environments and approval outcome.
+For every production release, record the pull request, merge commit, public version, tag, release URL, checksums, tested environments, Greasy Fork result, Discord receipt and approval outcome in the relevant GitHub issue or release record.
+
+After a production release or an owner-approved operating-contract change, update the connected Google Memory Bank and Rules documents with what actually merged—not the planned state. Include the PR, merge commit, canonical versions, permanent regression or repository guard, delivery outcome and any rule that future work must preserve. Read the edited sections back to verify the records before declaring the work complete.
+
+Repository-only maintenance must record that the canonical userscript was unchanged and that release reconciliation correctly avoided a duplicate publication.
 
 Start with [Developer Handoff](DEVELOPER_HANDOFF.md) when resuming development.

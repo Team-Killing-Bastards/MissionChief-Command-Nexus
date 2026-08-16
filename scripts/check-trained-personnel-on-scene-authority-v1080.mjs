@@ -65,14 +65,6 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-expect(
-  source.includes('// @version      1.0.122'),
-  'Expected Command Nexus 1.0.80'
-);
-expect(
-  source.includes(' * MODULE 2: MISSION FINDER V10.6.160'),
-  'Expected Mission Finder V10.6.140'
-);
 
 const rowClassifier = extractFunction(
   'isMissionDefinitionRequiredPersonnelRequirementRow'

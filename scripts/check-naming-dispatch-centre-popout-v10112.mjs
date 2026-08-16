@@ -74,9 +74,6 @@ class PopoutDocument {
   }
 }
 
-expect(source.includes('// @version      1.0.122'), 'Expected Command Nexus 1.0.112');
-expect(source.includes("const UNIT_VERSION = '3.3.27';"), 'Expected Unit Naming 3.3.27');
-expect(source.includes("const STATION_VERSION = '1.3.22';"), 'Expected Station Naming 1.3.22');
 
 // Exact standalone /leitstellenansicht shape from the supplied live HTML: the
 // navbar has Dispatch Centre ID/name controls, station cards have membership,
@@ -187,4 +184,4 @@ expect(controlsParser.includes(".leitstelle_selection[leitstelle]"), 'Standalone
 expect(controlsParser.includes("getAttribute?.('leitstelle')"), 'Standalone popout Dispatch Centre ID authority missing');
 expect(!controlsParser.includes('window.opener'), 'Popout must use its own complete native DOM without coupling to the opener');
 
-console.log('PASS: v1.0.112 restores Unit and Station Naming Dispatch Centre loading in a standalone /leitstellenansicht window.');
+console.log('PASS: Unit and Station Naming load Dispatch Centres in a standalone /leitstellenansicht window.');

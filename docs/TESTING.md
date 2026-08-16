@@ -19,80 +19,14 @@ This checks required repository files, attribution, local documentation links, R
 ```bash
 node --check src/missionchief-command-nexus.user.js
 node scripts/validate-userscript.mjs
-node scripts/check-auto-stop-reason.mjs
-node scripts/check-police-unit-naming-classes-v10105.mjs
-node scripts/check-recovery-unit-naming-classes-v10106.mjs
-node scripts/check-road-rail-unit-naming-class-v10107.mjs
-node scripts/check-officer-station-naming-v10108.mjs
-node scripts/check-station-unit-naming-chain-v10109.mjs
-node scripts/check-station-move-address-v10110.mjs
-node scripts/check-type22-town-only-naming-v10111.mjs
-node scripts/check-naming-dispatch-centre-popout-v10112.mjs
-node scripts/check-naming-popout-late-membership-v10121.mjs
-node scripts/check-generic-drone-family-v10122.mjs
-node scripts/check-auto-prison-cell-success-v10113.mjs
+for check in scripts/check-*.mjs; do node "$check"; done
 ```
 
-The userscript validator checks the canonical metadata contract, version format, Greasy Fork size limits and prohibited update/download metadata. Pull requests that change the userscript must increase `@version` above the base branch.
+`validate-userscript.mjs` is the single owner of canonical release and component-version checks. It validates metadata, semantic versions, exactly one Resource Administration and Mission Finder header, Greasy Fork size limits and prohibited update/download metadata. Pull requests that change the canonical userscript must increase `@version` above the base branch.
 
-The Auto Mode stop-reason regression executes the persistent storage and status-display functions against a recreated Mission Control panel. It verifies exact-reason retention, timestamp rendering, isolation from temporary status updates, restart clearing and safe recovery from corrupt saved data.
+Every permanent behavioral regression is named `scripts/check-*.mjs`. The workflow discovers and runs the complete set automatically. Those checks assert behavior, selectors, types, calculations and lifecycle contracts without pinning current release or component versions. `check-version-agnostic-regressions.mjs` fails if a behavioral check reintroduces a pinned version.
 
-The Police Unit Naming regression executes the real station-type class-option
-builder and callsign generator. It protects the verified type `13`, `19`, `24`
-and `52` mappings, their approved codes, and their availability in both Police
-and All classes.
-
-The Recovery Unit Naming regression executes the same real class-option builder
-and callsign generator. It protects type `105` Recovery Vehicle and type `106`
-HGV Recovery Vehicle, their distinct icons, the Recovery and All selector
-entries, and the legacy Flatbed Recovery `FRV` naming alias.
-
-The Road Rail Unit Naming regression protects verified type `107`, its canonical
-`Road Rail Unit` label, `RRU` callsign and 🚒🚆 icon. It also confirms that the
-class is available under Fire and All classes, excluded from Airfield, and does
-not weaken the exact type-107 Mission Finder dispatch rule.
-
-The response-location Station Naming regression executes the real type `22`
-mapping, town-only station builder and Unit Naming callsign generator. It
-protects exact town-only station output and confirms that FO, AO, OTL and DSU
-roles plus their sequence are owned exclusively by Unit Naming. Ordinary
-station numbering remains unchanged.
-
-The Station-to-Unit Naming chain regression preserves reverse-address
-component separators and extracts the post town. It covers the type-22
-town-only exception, role and sequence ownership in Unit Naming, and isolation
-from the existing positive station-sequence rules used by ordinary stations.
-
-The Station Move Building address regression uses the exact flattened live
-value `Ladywalk, KY10 3EX Anstruther Easter Anstruther`. It proves that a
-structured MissionChief reverse address is preferred and that the Move-page
-fallback still extracts `Anstruther` if reverse lookup is unavailable, while
-ordinary multi-word post towns remain intact.
-
-The type-22 town-only regression uses the exact `ABERDOUR-FO1` live case. It
-proves that Station Naming returns `ABERDOUR`, while Unit Naming produces one
-role layer and the unit sequence: `ABERDOUR-FO-1` and `ABERDOUR-FO-2`.
-
-The standalone Stations popout regression recreates MissionChief's native
-`/leitstellenansicht` structure: Dispatch Centre ID/name controls in the navbar,
-station membership on `leitstelle_building_id`, and no type-7 building cards. It
-proves that both naming tools load their hierarchy and continue to filter the
-selected Dispatch Centre and unassigned stations correctly.
-
-The late-rendered popup membership regression reproduces the standalone timing
-fault where Dispatch Centre controls load before membership-bearing station
-cards. It proves that both Station and Unit Naming refresh the current native
-`leitstelle_building_id` rows, rebuild Dispatch Centre → Service → Station Type
-→ Start From, and rebind already-loaded station snapshots after a manual
-Dispatch Centre refresh.
-
-The generic Drone-family regression uses the supplied `Required Drones` SAR
-mission wording. It proves that prefixed Require/Requires/Required Drone(s)
-accepts exact type `89` SAR Drone Vehicles and exact type `91` Police Drone
-Vehicles across shared selection and selected-unit verification. Explicit
-Police Drone remains type `91` only, Police Helicopter remains type `11` only,
-the explicit flexible wording retains Drone-first/helicopter fallback, and bare
-Drone/Drones prose remains excluded.
+When a defect is fixed, add a focused executable regression to this set. Do not add a one-use builder, trigger file, self-modifying repair workflow or version-specific validation job to permanent automation.
 
 Automated checks are necessary but cannot prove live MissionChief behaviour.
 
@@ -196,7 +130,7 @@ Use one row per tested environment:
 
 | Command Nexus | Commit | Domain | Browser | Userscript manager | OS/device | Other scripts | Test scope | Result | Evidence |
 |---|---|---|---|---|---|---|---|---|---|
-| `1.0.1` | _SHA_ | MissionChief UK | _Name/version_ | _Name/version_ | _Platform_ | _List_ | _Workflows_ | Pass / Partial / Fail | _Issue, log or notes_ |
+| _current `@version`_ | _SHA_ | MissionChief UK | _Name/version_ | _Name/version_ | _Platform_ | _List_ | _Workflows_ | Pass / Partial / Fail | _Issue, log or notes_ |
 
 Do not convert an untested environment into a compatibility claim.
 

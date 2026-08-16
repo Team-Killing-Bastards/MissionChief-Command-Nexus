@@ -1,7 +1,0 @@
-MissionChief Command Nexus Greasy Fork synchronization trigger
-
-Requested release: 1.0.83
-Canonical source: main/src/missionchief-command-nexus.user.js
-Triggered: 2026-08-06T00:13:00+01:00
-
-This file exists only to generate a normal main-branch push event so the configured Greasy Fork synchronization webhook refetches the canonical raw userscript.

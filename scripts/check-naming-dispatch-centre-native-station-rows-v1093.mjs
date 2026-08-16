@@ -64,9 +64,6 @@ class Root {
   }
 }
 
-expect(source.includes('// @version      1.0.122'), 'Expected Command Nexus 1.0.93');
-expect(source.includes("const UNIT_VERSION = '3.3.27';"), 'Expected Unit Naming 3.3.18');
-expect(source.includes("const STATION_VERSION = '1.3.22';"), 'Expected Station Naming 1.3.12');
 
 const root = new Root([
   new Row({ id:'building_list_2634040', name:'LODON DISPATCH', href:'/buildings/2634040' }),
@@ -118,4 +115,4 @@ expect(!source.includes('resolveNamingOwnProfilePath'), 'Profile route resolver 
 expect(!source.includes('loadNamingDispatchCentresFromRenderedProfile'), 'Hidden profile renderer must be removed');
 expect(source.includes('function getNamingDispatchCentreStationRowDocuments('), 'Cross-frame native station-row document collector missing');
 
-console.log('PASS: v1.0.93 discovers Dispatch Centres from native type-7 building rows and keeps row-level membership authority.');
+console.log('PASS: Native type-7 building rows provide Dispatch Centre identity while station rows retain membership authority.');

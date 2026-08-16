@@ -1,23 +1,24 @@
 # Command Nexus Documentation
 
-This directory contains the current engineering, validation, migration and release documentation for MissionChief Command Nexus.
+This directory separates current operating guidance from versioned historical records. The current production baseline is Command Nexus `1.0.122` with Mission Finder `V10.6.160`.
 
-## Start here
+## Current operational documentation
 
-- [v1.0.3 Release Handover](HANDOVER_V1_0_3_RELEASE.md) — urgent publication status, GitHub service blocker, recovery procedure and acceptance checklist tracked in issue #33.
-- [Developer Handoff](DEVELOPER_HANDOFF.md) — current v1.0.1 baseline, implementation shape, risks and safe resume workflow.
-- [Project Roadmap](ROADMAP.md) — implemented baseline, validation gaps and phased path to the first formal release.
+- [Developer Handoff](DEVELOPER_HANDOFF.md) — verified baseline, implementation shape, risks and safe resume workflow.
+- [Architecture](ARCHITECTURE.md) — current runtime boundaries, safety contracts and consolidation direction.
+- [Project Roadmap](ROADMAP.md) — completed production foundation and active engineering priorities.
+- [Testing Strategy](TESTING.md) — complete automated gate, live workflow coverage and evidence rules.
+- [Migration Guide](MIGRATION.md) — safe transition from legacy installations and rollback expectations.
+- [Release Process](RELEASE_PROCESS.md) — versioning, approval, trusted-main reconciliation and completion records.
+- [Greasy Fork Automated Release Setup](GREASY_FORK_SETUP.md) — synchronization configuration, verification and recovery.
 
-## Engineering
+## Historical records
 
-- [Architecture](ARCHITECTURE.md) — current two-engine merged architecture, shared registry and consolidation direction.
-- [Testing Strategy](TESTING.md) — automated checks, live workflow coverage, compatibility evidence and release blockers.
-- [Migration Guide](MIGRATION.md) — safe transition from the two legacy installations and rollback expectations.
+These files preserve the exact state and recovery context of a past version. They are not current operating instructions and should remain immutable except for a clearly marked archival correction.
 
-## Distribution and release
-
-- [Release Process](RELEASE_PROCESS.md) — versioning, validation, approval, synchronization and GitHub Release controls.
-- [Greasy Fork Automated Release Setup](GREASY_FORK_SETUP.md) — webhook configuration, normal publication, rollback and troubleshooting.
+- [v1.0.3 Release Handover](HANDOVER_V1_0_3_RELEASE.md) — historical release-blocker and recovery record.
+- [v1.0.82 Discord Release Layout Incident](discord-release-layout-incident-v1.0.82.md) — historical notification incident and verification record.
+- [Repository Automation Cleanup — 2026-08-16](repository-automation-cleanup-2026-08-16.md) — obsolete executable-artifact and stale pull-request classification record.
 
 ## Canonical project resources
 
@@ -28,11 +29,11 @@ This directory contains the current engineering, validation, migration and relea
 - [Contributing guide](../CONTRIBUTING.md)
 - [Support policy](../SUPPORT.md)
 - [Security policy](../SECURITY.md)
-- [Master release tracker](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/10)
+- [Active GitHub issues](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues)
 
 ## Authority and attribution
 
 **MartyBlyth is the project developer, technical owner and final release authority.**  
 **Conroy1988 assists with repository setup, documentation and general project support; he is not a userscript developer.**
 
-Documentation must distinguish implemented code from tested and release-approved behaviour.
+Documentation must distinguish implemented code, executable regression coverage, live-tested evidence and release-approved behavior.

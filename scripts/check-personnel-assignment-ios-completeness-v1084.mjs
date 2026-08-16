@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Owner-authorised validation retrigger for Command Nexus v1.0.84.
+// Protect the complete Personnel Assignment control surface on iOS Safari.
 
 import { readFile } from 'node:fs/promises';
 
@@ -20,7 +20,6 @@ function requireText(text, label = text) {
 }
 
 for (const required of [
-  "const PERSONNEL_VERSION = '1.3.10';",
   '<button id="mc-personnel-refresh">Refresh Stations</button>',
   '<button id="mc-personnel-build-register"',
   '<button id="mc-personnel-full-register"',

@@ -1,13 +1,12 @@
 #!/usr/bin/env node
 import { readFile } from 'node:fs/promises';
 
-// v1.0.92 proved that a plain hidden /profile iframe does not reproduce the
-// LSSMV4/Vue profile modal + selected Buildings tab. Protect its removal and
-// chain the replacement v1.0.93 native-row regression through the registered gate.
+// A plain hidden /profile iframe does not reproduce the LSSMV4/Vue profile
+// modal and selected Buildings tab. Protect its removal and chain the native-row
+// replacement regression through this permanent check.
 await import('./check-naming-dispatch-centre-native-station-rows-v1093.mjs');
 
 const source = await readFile('src/missionchief-command-nexus.user.js', 'utf8');
-const workflow = await readFile('.github/workflows/validate-userscript.yml', 'utf8');
 const hierarchyCheck = await readFile('scripts/check-naming-dispatch-centre-profile-hierarchy-v1091.mjs', 'utf8');
 const fail = message => { console.error(`ERROR: ${message}`); process.exit(1); };
 const expect = (condition, message) => { if (!condition) fail(message); };
@@ -27,16 +26,12 @@ function extractFunction(name) {
   fail(`Unterminated ${name}`);
 }
 
-expect(source.includes('// @version      1.0.122'), 'Expected Command Nexus 1.0.93');
-expect(source.includes("const UNIT_VERSION = '3.3.27';"), 'Expected Unit Naming 3.3.18');
-expect(source.includes("const STATION_VERSION = '1.3.22';"), 'Expected Station Naming 1.3.12');
 const listLoader = extractFunction('loadNamingDispatchCentreList');
-expect(listLoader.includes('collectNamingDispatchCentresFromStationRows()'), 'v1.0.93 replacement native-row source missing');
-expect(!listLoader.includes('/profile/'), 'v1.0.92 profile route must not return');
-expect(!source.includes('loadNamingDispatchCentresFromRenderedProfile'), 'v1.0.92 hidden profile renderer must stay removed');
-expect(!source.includes('extractNamingDispatchCentresFromProfileDocument'), 'v1.0.92 profile DOM parser must stay removed');
+expect(listLoader.includes('collectNamingDispatchCentresFromStationRows()'), 'Replacement native-row source missing');
+expect(!listLoader.includes('/profile/'), 'Superseded profile route must not return');
+expect(!source.includes('loadNamingDispatchCentresFromRenderedProfile'), 'Hidden profile renderer must stay removed');
+expect(!source.includes('extractNamingDispatchCentresFromProfileDocument'), 'Profile DOM parser must stay removed');
 expect(!source.includes('.profile-dispatchcenter'), 'LSSMV4 profile-only selector must stay removed');
-expect(workflow.includes('scripts/check-naming-dispatch-centre-profile-hierarchy-v1091.mjs'), 'Registered hierarchy regression must remain in Validate userscript');
-expect(hierarchyCheck.includes("check-naming-dispatch-centre-profile-render-v1092.mjs"), 'Registered hierarchy regression must continue chaining the v1.0.92 supersession guard');
+expect(hierarchyCheck.includes("check-naming-dispatch-centre-profile-render-v1092.mjs"), 'Hierarchy regression must continue chaining the superseded-profile guard');
 
-console.log('PASS: failed v1.0.92 hidden-profile acquisition is permanently superseded by v1.0.93 native station rows.');
+console.log('PASS: Failed hidden-profile acquisition remains superseded by native station rows.');

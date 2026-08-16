@@ -66,14 +66,6 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-expect(
-  source.includes('// @version      1.0.122'),
-  'Command Nexus 1.0.70 metadata missing'
-);
-expect(
-  source.includes('MISSION FINDER V10.6.160'),
-  'Mission Finder V10.6.139 header missing'
-);
 
 const addPanel = extractFunction('addPanel');
 const switchToolTab = extractFunction('switchToolTab');
@@ -227,5 +219,5 @@ expect(
 );
 
 console.log(
-  'Command Nexus V1.0.70 visual system, responsive layout and ownership checks passed.'
+  'Command Nexus visual system, responsive layout and ownership checks passed.'
 );

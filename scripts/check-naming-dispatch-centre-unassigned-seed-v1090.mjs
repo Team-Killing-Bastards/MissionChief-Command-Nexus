@@ -35,16 +35,15 @@ class FixtureRow {
   constructor(dc) { this.dataset = {}; this.attrs = { leitstelle_building_id: dc }; }
   getAttribute(name) { return this.attrs[name] ?? ''; }
 }
-expect(source.includes('// @version      1.0.122'), 'Expected current Command Nexus version');
 const context = { String, Number, row: new FixtureRow('null'), result: null };
 vm.runInNewContext(`${extractFunction('getNamingStationRowDispatchCentreId')}
 result = getNamingStationRowDispatchCentreId(row);`, context);
 expect(context.result === '', `Literal null must remain unassigned, got ${context.result}`);
-expect(!source.includes('function loadNamingDispatchCentreSeedBuildingIds('), 'Superseded station-seed loader must be removed in v1.0.91');
-expect(!source.includes('function getNamingDispatchCentreSeedBuildingIds('), 'Superseded station-seed chooser must be removed in v1.0.91');
-expect(!source.includes('extractNamingDispatchCentreSeedBuildingIdsFromHtml'), 'Superseded Stations seed parser must be removed in v1.0.91');
+expect(!source.includes('function loadNamingDispatchCentreSeedBuildingIds('), 'Superseded station-seed loader must remain removed');
+expect(!source.includes('function getNamingDispatchCentreSeedBuildingIds('), 'Superseded station-seed chooser must remain removed');
+expect(!source.includes('extractNamingDispatchCentreSeedBuildingIdsFromHtml'), 'Superseded Stations seed parser must remain removed');
 const listLoader = extractFunction('loadNamingDispatchCentreList');
 expect(!listLoader.includes('/leitstellenansicht'), 'Centre discovery must not fall back to Stations HTML');
 expect(!listLoader.includes('/edit'), 'Centre discovery must not fall back to building edit pages');
 
-console.log('PASS: v1.0.90 null-normalisation remains protected and its failed seed architecture is removed by v1.0.91.');
+console.log('PASS: Null assignment normalization remains protected and the failed station-seed architecture remains removed.');

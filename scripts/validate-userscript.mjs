@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-// Validation entry point; touched to run the final v1.0.86 PR gate.
+// Canonical distribution and component-version validation entry point.
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -21,6 +21,13 @@ const REQUIRED_KEYS = [
   'run-at',
 ];
 const FORBIDDEN_DISTRIBUTION_KEYS = ['updateURL', 'downloadURL', 'installURL'];
+const COMPONENT_VERSION_PATTERNS = new Map([
+  ['Resource Administration module', /MODULE 1: UNIT, STATION & PERSONNEL TOOLS V(\d+(?:\.\d+){2})/g],
+  ['Mission Finder module', /MODULE 2: MISSION FINDER V(\d+(?:\.\d+){2})/g],
+  ['Unit Naming', /const UNIT_VERSION = '(\d+(?:\.\d+){2})';/g],
+  ['Station Naming', /const STATION_VERSION = '(\d+(?:\.\d+){2})';/g],
+  ['Personnel Assignment', /const PERSONNEL_VERSION = '(\d+(?:\.\d+){2})';/g],
+]);
 
 function fail(message) {
   console.error(`ERROR: ${message}`);
@@ -50,6 +57,19 @@ function getSingle(metadata, key) {
     throw new Error(`Expected exactly one @${key}; found ${values.length}.`);
   }
   return values[0];
+}
+
+function parseComponentVersions(code) {
+  const versions = new Map();
+  for (const [label, pattern] of COMPONENT_VERSION_PATTERNS) {
+    const matches = [...code.matchAll(pattern)];
+    if (matches.length !== 1) {
+      throw new Error(`Expected exactly one ${label} version; found ${matches.length}.`);
+    }
+    parseVersion(matches[0][1]);
+    versions.set(label, matches[0][1]);
+  }
+  return versions;
 }
 
 function parseVersion(version) {
@@ -94,9 +114,14 @@ function main() {
   const code = fs.readFileSync(absolutePath, 'utf8');
   const metadata = parseMetadata(code);
   const version = getSingle(metadata, 'version');
+  const componentVersions = parseComponentVersions(code);
 
   if (process.argv.includes('--print-version')) {
     process.stdout.write(version);
+    return;
+  }
+  if (process.argv.includes('--print-mission-finder-version')) {
+    process.stdout.write(componentVersions.get('Mission Finder module'));
     return;
   }
 
@@ -163,7 +188,11 @@ function main() {
   }
 
   if (process.exitCode) return;
-  console.log(`Userscript validation passed: version ${version}, ${size} bytes.`);
+  console.log(
+    `Userscript validation passed: version ${version}, ` +
+    `Mission Finder ${componentVersions.get('Mission Finder module')}, ` +
+    `${size} bytes.`
+  );
 }
 
 try {

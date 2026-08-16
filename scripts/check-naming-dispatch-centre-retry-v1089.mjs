@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import { readFile } from 'node:fs/promises';
 const source = await readFile('src/missionchief-command-nexus.user.js', 'utf8');
-const workflow = await readFile('.github/workflows/validate-userscript.yml', 'utf8');
 const fail = message => { console.error(`ERROR: ${message}`); process.exit(1); };
 const expect = (condition, message) => { if (!condition) fail(message); };
 
@@ -31,7 +30,6 @@ function extractFunction(name) {
 }
 
 
-expect(source.includes('// @version      1.0.122'), 'Expected current Command Nexus version');
 const listener = extractFunction('installNamingDispatchCentreRefreshListener');
 expect(listener.includes("document.addEventListener('click'"), 'Retry must use a delegated document click listener');
 expect(listener.includes('#mc-namer-refresh-dispatch-centres, #mc-station-refresh-dispatch-centres'), 'Delegated listener must own both Retry buttons');
@@ -47,6 +45,4 @@ expect(refresh.includes("button.dataset.dispatchCentreRefreshState = 'loading'")
 expect(refresh.includes('button.disabled = false'), 'Retry must re-enable after every attempt');
 expect(refresh.includes('Retry Dispatch Centres. ${failureReason}'), 'Retry title must expose the failure reason');
 expect(source.includes('pointer-events:auto; touch-action:manipulation;'), 'Retry buttons need pointer/touch affordance');
-expect(workflow.includes('scripts/check-naming-dispatch-centre-retry-v1089.mjs'), 'v1.0.89 Retry regression must remain registered');
-
-console.log('PASS: v1.0.89 delegated Retry/loading/error interaction remains protected under the v1.0.91 profile hierarchy.');
+console.log('PASS: Delegated Retry, loading and failure interactions remain protected within the Dispatch Centre hierarchy.');

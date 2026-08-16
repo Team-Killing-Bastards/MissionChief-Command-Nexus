@@ -41,7 +41,7 @@ Command Nexus now contains both systems in one `.user.js` file. The supported op
 
 ## Current storage position
 
-The merged v1.0.1 source retains versioned keys from both established engines. This preserves existing behaviour, but a complete formal migration matrix has not yet been proven for every combination of stored data.
+The current Command Nexus `1.0.122` source retains versioned keys from both established engines. This preserves existing behaviour, but a complete formal migration matrix has not yet been proven for every combination of stored data.
 
 Development must therefore distinguish between:
 
@@ -52,7 +52,7 @@ Development must therefore distinguish between:
 
 ## Migration test matrix
 
-Each row requires evidence before the first formal release:
+Each row requires evidence before migration coverage can be claimed complete:
 
 | Starting state | Required result | Status |
 |---|---|---|
@@ -67,7 +67,7 @@ Test evidence should record the exact Command Nexus commit, legacy versions, dom
 
 ## Rollback
 
-During pre-release development:
+During migration validation or incident recovery:
 
 1. Stop any active automation or batch process.
 2. Disable Command Nexus.

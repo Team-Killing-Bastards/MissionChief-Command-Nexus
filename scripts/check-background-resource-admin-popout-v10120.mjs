@@ -92,12 +92,9 @@ function runOverviewGate({
   return context.result;
 }
 
-assert.ok(source.includes('// @version      1.0.122'));
-assert.ok(source.includes("const UNIT_VERSION = '3.3.27';"));
-assert.ok(source.includes("const STATION_VERSION = '1.3.22';"));
 
 const startupStart = source.indexOf('const TOOL_IS_TOP_WINDOW');
-const startupEnd = source.indexOf("const UNIT_VERSION = '3.3.27';", startupStart);
+const startupEnd = source.indexOf("const UNIT_VERSION = '", startupStart);
 assert.ok(startupStart >= 0 && startupEnd > startupStart);
 const startup = source.slice(startupStart, startupEnd);
 

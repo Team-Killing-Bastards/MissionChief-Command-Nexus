@@ -1,150 +1,22 @@
 name: Validate userscript
-# Includes mission-definition trained-personnel, on-scene trained-personnel authority, live Missing Personnel panel display, Required Personnel preload, preloaded Vehicle Load coverage, high-risk Missing Person Ambulance settings, exact SAR/Police generic Drone-family selection, normal and standalone Stations popup ownership, standalone background renamers and late-rendered membership recovery, Dispatch Centres Show all enforced popup window, selected-trained-personnel UI, integrated mission dashboard, compact Nexus UI, HazMat vehicle/personnel-to-OSU, diagnostic export, dispatch-correction, memory lifecycle/recycle, deep idle/Auto Mode memory controls, bounded Ally Steal response timing, faster patient/prisoner transport response, complete iOS Personnel Assignment controls, Unit/Station Naming Dispatch Centre filters, centre-first flow, profile hierarchy, Service filtering, Dispatch Centre refresh parsing, resilient Retry action and null assignment handling, Missing-on-mission authority and single-pass update coverage.
 
 on:
   pull_request:
     paths:
       - 'src/**'
-      - 'scripts/validate-userscript.mjs'
-      - 'scripts/check-ios-compatibility.mjs'
-      - 'scripts/check-runtime-hardening.mjs'
-      - 'scripts/check-police-irv-fallback.mjs'
-      - 'scripts/check-ios-unit-finder-selection.mjs'
-      - 'scripts/check-ios-mission-requirements-source.mjs'
-      - 'scripts/check-iphone-mission-ui.mjs'
-      - 'scripts/check-open-issues-batch.mjs'
-      - 'scripts/check-missing-requirements-priority.mjs'
-      - 'scripts/check-missing-on-mission-authority.mjs'
-      - 'scripts/check-mission-update-single-pass.mjs'
-      - 'scripts/check-trained-personnel-panel.mjs'
-      - 'scripts/check-hazmat-osu-issue-215.mjs'
-      - 'scripts/check-hazmat-personnel-osu.mjs'
-      - 'scripts/check-trained-coverage-optimizer.mjs'
-      - 'scripts/check-mission-definition-trained-personnel.mjs'
-      - 'scripts/check-mission-definition-personnel-preload.mjs'
-      - 'scripts/check-trained-personnel-on-scene-authority-v1080.mjs'
-      - 'scripts/check-trained-personnel-live-missing-display-v1081.mjs'
-      - 'scripts/check-ally-steal-response-v1082.mjs'
-      - 'scripts/check-auto-transport-response-v1083.mjs'
-      - 'scripts/check-personnel-assignment-ios-completeness-v1084.mjs'
-      - 'scripts/check-background-resource-admin-v10119.mjs'
-      - 'scripts/check-background-resource-admin-popout-v10120.mjs'
-      - 'scripts/check-naming-popout-late-membership-v10121.mjs'
-      - 'scripts/check-generic-drone-family-v10122.mjs'
-      - 'scripts/check-naming-dispatch-centre-filter-v1085.mjs'
-      - 'scripts/check-police-unit-naming-classes-v10105.mjs'
-      - 'scripts/check-recovery-unit-naming-classes-v10106.mjs'
-      - 'scripts/check-officer-station-naming-v10108.mjs'
-      - 'scripts/check-station-unit-naming-chain-v10109.mjs'
-      - 'scripts/check-station-move-address-v10110.mjs'
-      - 'scripts/check-type22-town-only-naming-v10111.mjs'
-      - 'scripts/check-naming-dispatch-centre-first-v1086.mjs'
-      - 'scripts/check-naming-dispatch-centre-refresh-v1087.mjs'
-      - 'scripts/check-naming-dispatch-centre-assignment-source-v1088.mjs'
-      - 'scripts/check-naming-dispatch-centre-retry-v1089.mjs'
-      - 'scripts/check-naming-dispatch-centre-unassigned-seed-v1090.mjs'
-      - 'scripts/check-naming-dispatch-centre-profile-hierarchy-v1091.mjs'
-      - 'scripts/check-unit-finder-diagnostic-export.mjs'
-      - 'scripts/check-mission-dashboard-v1069.mjs'
-      - 'scripts/check-nexus-visual-system-v1070.mjs'
-      - 'scripts/check-compact-nexus-ui-v1071.mjs'
-      - 'scripts/check-vehicle-load-drawer-v1072.mjs'
-      - 'scripts/check-vehicle-load-preloaded-requirements-v1075.mjs'
-      - 'scripts/check-high-risk-missing-person-ambulance-v1076.mjs'
-      - 'scripts/check-station-overview-popup-v1077.mjs'
-      - 'scripts/check-dispatch-centres-show-all-popup-v1078.mjs'
-      - 'scripts/check-dispatch-centres-popup-window-v1079.mjs'
-      - 'scripts/check-vehicle-drawer-animation-v1073.mjs'
-      - 'scripts/check-auto-memory-lifecycle.mjs'
-      - 'scripts/check-auto-memory-recycle.mjs'
-      - 'scripts/check-runtime-memory-maintenance-v1074.mjs'
-      - 'scripts/check-runtime-memory-deep-dive-v1082.mjs'
-      - 'scripts/check-auto-dispatch-eod-required-personnel.mjs'
-      - 'scripts/check-road-rail-rru-mapping.mjs'
-      - 'scripts/check-auto-prisoner-cell-gate.mjs'
-      - 'scripts/check-auto-prisoner-release-close-v10114.mjs'
-      - 'scripts/check-fire-engine-update-mapping.mjs'
-      - 'scripts/check-saved-position-helper-copy.mjs'
-      - 'scripts/check-bulk-trained-register-update.mjs'
-      - 'scripts/check-hems-ambulance-eta-priority.mjs'
-      - 'scripts/check-police-search-advisor-register.mjs'
+      - 'scripts/**/*.mjs'
       - '.github/workflows/validate-userscript.yml'
   push:
     branches:
       - main
     paths:
       - 'src/**'
-      - 'scripts/validate-userscript.mjs'
-      - 'scripts/check-ios-compatibility.mjs'
-      - 'scripts/check-runtime-hardening.mjs'
-      - 'scripts/check-police-irv-fallback.mjs'
-      - 'scripts/check-ios-unit-finder-selection.mjs'
-      - 'scripts/check-ios-mission-requirements-source.mjs'
-      - 'scripts/check-iphone-mission-ui.mjs'
-      - 'scripts/check-open-issues-batch.mjs'
-      - 'scripts/check-missing-requirements-priority.mjs'
-      - 'scripts/check-missing-on-mission-authority.mjs'
-      - 'scripts/check-mission-update-single-pass.mjs'
-      - 'scripts/check-trained-personnel-panel.mjs'
-      - 'scripts/check-hazmat-osu-issue-215.mjs'
-      - 'scripts/check-hazmat-personnel-osu.mjs'
-      - 'scripts/check-trained-coverage-optimizer.mjs'
-      - 'scripts/check-mission-definition-trained-personnel.mjs'
-      - 'scripts/check-mission-definition-personnel-preload.mjs'
-      - 'scripts/check-trained-personnel-on-scene-authority-v1080.mjs'
-      - 'scripts/check-trained-personnel-live-missing-display-v1081.mjs'
-      - 'scripts/check-ally-steal-response-v1082.mjs'
-      - 'scripts/check-auto-transport-response-v1083.mjs'
-      - 'scripts/check-personnel-assignment-ios-completeness-v1084.mjs'
-      - 'scripts/check-background-resource-admin-v10119.mjs'
-      - 'scripts/check-background-resource-admin-popout-v10120.mjs'
-      - 'scripts/check-naming-popout-late-membership-v10121.mjs'
-      - 'scripts/check-generic-drone-family-v10122.mjs'
-      - 'scripts/check-naming-dispatch-centre-filter-v1085.mjs'
-      - 'scripts/check-police-unit-naming-classes-v10105.mjs'
-      - 'scripts/check-recovery-unit-naming-classes-v10106.mjs'
-      - 'scripts/check-officer-station-naming-v10108.mjs'
-      - 'scripts/check-station-unit-naming-chain-v10109.mjs'
-      - 'scripts/check-station-move-address-v10110.mjs'
-      - 'scripts/check-type22-town-only-naming-v10111.mjs'
-      - 'scripts/check-naming-dispatch-centre-first-v1086.mjs'
-      - 'scripts/check-naming-dispatch-centre-refresh-v1087.mjs'
-      - 'scripts/check-naming-dispatch-centre-assignment-source-v1088.mjs'
-      - 'scripts/check-naming-dispatch-centre-retry-v1089.mjs'
-      - 'scripts/check-naming-dispatch-centre-unassigned-seed-v1090.mjs'
-      - 'scripts/check-naming-dispatch-centre-profile-hierarchy-v1091.mjs'
-      - 'scripts/check-unit-finder-diagnostic-export.mjs'
-      - 'scripts/check-mission-dashboard-v1069.mjs'
-      - 'scripts/check-nexus-visual-system-v1070.mjs'
-      - 'scripts/check-compact-nexus-ui-v1071.mjs'
-      - 'scripts/check-vehicle-load-drawer-v1072.mjs'
-      - 'scripts/check-vehicle-load-preloaded-requirements-v1075.mjs'
-      - 'scripts/check-high-risk-missing-person-ambulance-v1076.mjs'
-      - 'scripts/check-station-overview-popup-v1077.mjs'
-      - 'scripts/check-dispatch-centres-show-all-popup-v1078.mjs'
-      - 'scripts/check-dispatch-centres-popup-window-v1079.mjs'
-      - 'scripts/check-vehicle-drawer-animation-v1073.mjs'
-      - 'scripts/check-auto-memory-lifecycle.mjs'
-      - 'scripts/check-auto-memory-recycle.mjs'
-      - 'scripts/check-runtime-memory-maintenance-v1074.mjs'
-      - 'scripts/check-runtime-memory-deep-dive-v1082.mjs'
-      - 'scripts/check-auto-dispatch-eod-required-personnel.mjs'
-      - 'scripts/check-road-rail-rru-mapping.mjs'
-      - 'scripts/check-auto-prisoner-cell-gate.mjs'
-      - 'scripts/check-auto-prisoner-release-close-v10114.mjs'
-      - 'scripts/check-fire-engine-update-mapping.mjs'
-      - 'scripts/check-saved-position-helper-copy.mjs'
-      - 'scripts/check-bulk-trained-register-update.mjs'
-      - 'scripts/check-hems-ambulance-eta-priority.mjs'
-      - 'scripts/check-police-search-advisor-register.mjs'
+      - 'scripts/**/*.mjs'
       - '.github/workflows/validate-userscript.yml'
-      - '.github/v1086-active-builder-trigger.txt'
   workflow_dispatch:
 
 permissions:
-  contents: write
-  issues: write
-  pull-requests: write
+  contents: read
 
 concurrency:
   group: validate-userscript-${{ github.workflow }}-${{ github.ref }}
@@ -163,260 +35,26 @@ jobs:
           fetch-depth: 0
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version: '24'
+          package-manager-cache: false
 
       - name: Validate JavaScript syntax
         run: node --check src/missionchief-command-nexus.user.js
 
-      - name: Validate metadata and Greasy Fork limits
+      - name: Validate canonical metadata and module versions
         run: node scripts/validate-userscript.mjs
 
-      - name: Validate iOS Safari compatibility contracts
-        run: node scripts/check-ios-compatibility.mjs
-
-      - name: Validate runtime performance and lifecycle contracts
-        run: node scripts/check-runtime-hardening.mjs
-
-      - name: Validate normal Police IRV fallback contracts
-        run: node scripts/check-police-irv-fallback.mjs
-
-      - name: Validate iOS Safari Unit Finder selection contracts
-        run: node scripts/check-ios-unit-finder-selection.mjs
-
-      - name: Validate iOS Safari mission requirement source contracts
-        run: node scripts/check-ios-mission-requirements-source.mjs
-
-      - name: Validate iPhone Safari Mission Finder UI contracts
-        run: node scripts/check-iphone-mission-ui.mjs
-
-      - name: Validate current open issue batch contracts
-        run: node scripts/check-open-issues-batch.mjs
-
-      - name: Validate current missing-requirements priority contracts
-        run: node scripts/check-missing-requirements-priority.mjs
-
-      - name: Validate Missing on mission authority
-        run: node scripts/check-missing-on-mission-authority.mjs
-
-      - name: Validate Mission Update single-pass selection
-        run: node scripts/check-mission-update-single-pass.mjs
-
-      - name: Validate selected trained-personnel panel
-        run: node scripts/check-trained-personnel-panel.mjs
-
-      - name: Validate Issue 215 HazMat to exact OSU mapping
-        run: node scripts/check-hazmat-osu-issue-215.mjs
-
-      - name: Validate HazMat Missing Personnel OSU capacity
-        run: node scripts/check-hazmat-personnel-osu.mjs
-
-      - name: Validate trained-personnel coverage optimiser contracts
-        run: node scripts/check-trained-coverage-optimizer.mjs
-
-      - name: Validate mission-definition trained-personnel parsing
-        run: node scripts/check-mission-definition-trained-personnel.mjs
-
-      - name: Validate mission-definition Required Personnel preload
-        run: node scripts/check-mission-definition-personnel-preload.mjs
-
-      - name: Validate trained-personnel on-scene authority
-        run: node scripts/check-trained-personnel-on-scene-authority-v1080.mjs
-
-      - name: Validate live Missing Personnel panel display
-        run: node scripts/check-trained-personnel-live-missing-display-v1081.mjs
-
-      - name: Validate bounded Ally Steal response timing
-        run: node scripts/check-ally-steal-response-v1082.mjs
-
-      - name: Validate faster patient and prisoner transport response
-        run: node scripts/check-auto-transport-response-v1083.mjs
-
-      - name: Validate complete iOS Safari Personnel Assignment controls
-        run: node scripts/check-personnel-assignment-ios-completeness-v1084.mjs
-
-      - name: Validate background Resource Administration workflows
-        run: node scripts/check-background-resource-admin-v10119.mjs
-
-      - name: Validate standalone Stations popout background renamers
-        run: node scripts/check-background-resource-admin-popout-v10120.mjs
-
-      - name: Validate late-rendered standalone station memberships
-        run: node scripts/check-naming-popout-late-membership-v10121.mjs
-
-      - name: Validate exact generic Drone-family selection
-        run: node scripts/check-generic-drone-family-v10122.mjs
-
-      - name: Validate Unit and Station Naming Dispatch Centre filters
-        run: node scripts/check-naming-dispatch-centre-filter-v1085.mjs
-
-      - name: Validate Police Unit Naming native classes
-        run: node scripts/check-police-unit-naming-classes-v10105.mjs
-
-      - name: Validate Recovery Unit Naming native classes
-        run: node scripts/check-recovery-unit-naming-classes-v10106.mjs
-
-      - name: Validate Road Rail Unit Naming native class
-        run: node scripts/check-road-rail-unit-naming-class-v10107.mjs
-
-      - name: Validate Officer response location Station Naming
-        run: node scripts/check-officer-station-naming-v10108.mjs
-
-      - name: Validate Station to Unit Naming chain
-        run: node scripts/check-station-unit-naming-chain-v10109.mjs
-
-      - name: Validate Station Naming Move Building address fallback
-        run: node scripts/check-station-move-address-v10110.mjs
-
-      - name: Validate type-22 town-only Station and role-owned Unit Naming
-        run: node scripts/check-type22-town-only-naming-v10111.mjs
-
-      - name: Validate Dispatch Centre-first naming flow
-        run: node scripts/check-naming-dispatch-centre-first-v1086.mjs
-
-      - name: Validate Dispatch Centre refresh parser and retry state
-        run: node scripts/check-naming-dispatch-centre-refresh-v1087.mjs
-
-      - name: Validate Dispatch Centre assignment source
-        run: node scripts/check-naming-dispatch-centre-assignment-source-v1088.mjs
-
-      - name: Validate resilient Dispatch Centre Retry action
-        run: node scripts/check-naming-dispatch-centre-retry-v1089.mjs
-
-      - name: Validate null Dispatch Centre assignment handling
-        run: node scripts/check-naming-dispatch-centre-unassigned-seed-v1090.mjs
-
-      - name: Validate profile Dispatch Centre and Service hierarchy
-        run: node scripts/check-naming-dispatch-centre-profile-hierarchy-v1091.mjs
-
-      - name: Validate Unit Finder diagnostic export
-        run: node scripts/check-unit-finder-diagnostic-export.mjs
-
-      - name: Validate integrated MissionChief Nexus dashboard
-        run: node scripts/check-mission-dashboard-v1069.mjs
-
-      - name: Validate Command Nexus visual system
-        run: node scripts/check-nexus-visual-system-v1070.mjs
-
-      - name: Validate compact Nexus UI and disclosures
-        run: node scripts/check-compact-nexus-ui-v1071.mjs
-
-      - name: Validate attached Vehicle Load drawer
-        run: node scripts/check-vehicle-load-drawer-v1072.mjs
-
-      - name: Validate fresh-mission preloaded Vehicle Load requirements
-        run: node scripts/check-vehicle-load-preloaded-requirements-v1075.mjs
-
-      - name: Validate high-risk Missing Person Ambulance setting
-        run: node scripts/check-high-risk-missing-person-ambulance-v1076.mjs
-
-      - name: Validate normal Stations overview popup ownership
-        run: node scripts/check-station-overview-popup-v1077.mjs
-
-      - name: Validate Dispatch Centres Show all middle-click popup
-        run: node scripts/check-dispatch-centres-show-all-popup-v1078.mjs
-
-      - name: Validate Dispatch Centres popup-window enforcement
-        run: node scripts/check-dispatch-centres-popup-window-v1079.mjs
-
-      - name: Validate top-aligned animated Vehicle drawer and action order
-        run: node scripts/check-vehicle-drawer-animation-v1073.mjs
-
-      - name: Validate Auto Mode memory lifecycle
-        run: node scripts/check-auto-memory-lifecycle.mjs
-
-      - name: Validate Auto Mode memory recycle guard
-        run: node scripts/check-auto-memory-recycle.mjs
-
-      - name: Validate runtime memory maintenance and frame ownership
-        run: node scripts/check-runtime-memory-maintenance-v1074.mjs
-
-      - name: Validate deep idle and Auto Mode memory controls
-        run: node scripts/check-runtime-memory-deep-dive-v1082.mjs
-
-      - name: Validate Auto Mode EOD and composite personnel corrections
-        run: node scripts/check-auto-dispatch-eod-required-personnel.mjs
-
-      - name: Validate Road Rail Unit to RRU mapping
-        run: node scripts/check-road-rail-rru-mapping.mjs
-
-      - name: Validate Auto Mode prisoner cell gate
-        run: node scripts/check-auto-prisoner-cell-gate.mjs
-
-      - name: Validate current prisoner Cell Selection and first green destination
-        run: node scripts/check-auto-prison-cell-success-v10113.mjs
-
-      - name: Validate released-prisoner result close and owner capture
-        run: node scripts/check-auto-prisoner-release-close-v10114.mjs
-
-      - name: Validate Fire Engine Update mapping and Auto Mode helper cleanup
-        run: node scripts/check-fire-engine-update-mapping.mjs
-
-      - name: Validate saved-position helper copy removal
-        run: node scripts/check-saved-position-helper-copy.mjs
-
-      - name: Validate bulk trained-register, Search Advisor and recovery update
-        run: node scripts/check-bulk-trained-register-update.mjs
-
-      - name: Validate HEMS ambulance ETA priority
-        run: node scripts/check-hems-ambulance-eta-priority.mjs
-
-      - name: Validate Police Search Advisor register coverage
-        run: node scripts/check-police-search-advisor-register.mjs
-
-      - name: Require a version increase when code changes
+      - name: Run complete permanent regression suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          for check in scripts/check-*.mjs; do
+            echo "Running ${check}"
+            node "${check}"
+          done
+
+      - name: Require a version increase when distributable source changes
         if: github.event_name == 'pull_request'
         run: node scripts/validate-userscript.mjs --base-ref "origin/${{ github.base_ref }}"
-
-  build_v1086:
-    name: One-shot v1.0.86 builder
-    if: github.event_name == 'push' && github.event.head_commit.message == 'Run active v1.0.86 builder'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Check out v1.0.86 feature branch
-        uses: actions/checkout@v6
-        with:
-          ref: fix/dispatch-centre-first-v1086
-          fetch-depth: 0
-          token: ${{ github.token }}
-
-      - name: Build and validate v1.0.86
-        run: |
-          set -euo pipefail
-          python3 scripts/build-v1086-dispatch-centre-first.py
-          python3 scripts/build-v1086-post.py
-          rm -f scripts/build-v1086-dispatch-centre-first.py scripts/build-v1086-post.py scripts/v1086-dispatch-centre-helpers.txt
-          node --check src/missionchief-command-nexus.user.js
-          for check in scripts/check-*.mjs; do
-            echo "Running $check"
-            node "$check"
-          done
-          git diff --check
-
-      - name: Push clean candidate
-        run: |
-          set -euo pipefail
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
-          git diff --cached --check
-          git commit -m 'Fix Dispatch Centre-first naming flow for v1.0.86'
-          git push origin HEAD:fix/dispatch-centre-first-v1086
-
-      - name: Report build success
-        if: success()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: >-
-          gh pr comment 262 --repo "$GITHUB_REPOSITORY" --body
-          'v1.0.86 ACTIVE BUILDER PASS: clean candidate pushed after full regression suite.'
-
-      - name: Report build failure
-        if: failure()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: >-
-          gh pr comment 262 --repo "$GITHUB_REPOSITORY" --body
-          "v1.0.86 ACTIVE BUILDER FAILED: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"

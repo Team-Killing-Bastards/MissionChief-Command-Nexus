@@ -33,8 +33,10 @@ REQUIRED_FILES = (
     "docs/MIGRATION.md",
     "docs/RELEASE_PROCESS.md",
     "docs/GREASY_FORK_SETUP.md",
+    "docs/repository-automation-cleanup-2026-08-16.md",
     "docs/media/readme-hero.svg",
     "scripts/validate-userscript.mjs",
+    "scripts/check-version-agnostic-regressions.mjs",
     "scripts/check-ios-compatibility.mjs",
     "src/README.md",
     "src/missionchief-command-nexus.user.js",
@@ -51,6 +53,19 @@ USERSCRIPT_VERSION = re.compile(r"^//\s*@version\s+(\S+)\s*$", re.MULTILINE)
 README_VERSION = re.compile(r"\*\*Current version:\*\*\s*`([^`]+)`")
 SOURCE_README_VERSION = re.compile(r"\|\s*Command Nexus version\s*\|\s*`([^`]+)`\s*\|")
 CHANGELOG_VERSION = re.compile(r"^##\s+\[([^\]]+)\]", re.MULTILINE)
+MISSION_FINDER_VERSION = re.compile(
+    r"MODULE 2: MISSION FINDER V(\d+(?:\.\d+){2})"
+)
+RESOURCE_ADMIN_VERSION = re.compile(
+    r"MODULE 1: UNIT, STATION & PERSONNEL TOOLS V(\d+(?:\.\d+){2})"
+)
+COMPONENT_VERSIONS = {
+    "Unit Naming": re.compile(r"const UNIT_VERSION = '(\d+(?:\.\d+){2})';"),
+    "Station Naming": re.compile(r"const STATION_VERSION = '(\d+(?:\.\d+){2})';"),
+    "Personnel Assignment": re.compile(
+        r"const PERSONNEL_VERSION = '(\d+(?:\.\d+){2})';"
+    ),
+}
 
 
 def fail(message: str) -> None:
@@ -216,6 +231,24 @@ def read_canonical_version() -> str:
     return match.group(1)
 
 
+def read_canonical_component_versions() -> dict[str, str]:
+    canonical = (ROOT / "src/missionchief-command-nexus.user.js").read_text(
+        encoding="utf-8"
+    )
+    patterns = {
+        "Resource Administration": RESOURCE_ADMIN_VERSION,
+        "Mission Finder": MISSION_FINDER_VERSION,
+        **COMPONENT_VERSIONS,
+    }
+    versions: dict[str, str] = {}
+    for label, pattern in patterns.items():
+        matches = pattern.findall(canonical)
+        if len(matches) != 1:
+            fail(f"Canonical userscript must contain exactly one {label} version")
+        versions[label] = matches[0]
+    return versions
+
+
 def check_userscript_metadata_and_version() -> None:
     scripts = sorted(ROOT.rglob("*.user.js"))
     if not scripts:
@@ -264,29 +297,49 @@ def check_userscript_metadata_and_version() -> None:
 
 
 def check_current_documentation() -> None:
+    canonical_version = read_canonical_version()
+    component_versions = read_canonical_component_versions()
+    mission_finder = component_versions["Mission Finder"]
+
     required_phrases = {
         "docs/DEVELOPER_HANDOFF.md": (
             "Current verified baseline",
             "What is not yet proven complete",
             "Safe first development workflow",
+            f"| Command Nexus version | `{canonical_version}` |",
+            f"| Mission Finder baseline | `V{mission_finder}` |",
         ),
         "docs/ARCHITECTURE.md": (
             "Current architecture",
             "What remains separate",
             "Target architecture",
+            f"Command Nexus v{canonical_version}",
+            f"Mission Finder `V{mission_finder}`",
         ),
         "docs/ROADMAP.md": (
-            "Current baseline — merged v1.0.1",
-            "Phase 7 — First formal release",
+            f"Current production baseline — v{canonical_version}",
+            f"Mission Finder `V{mission_finder}`",
+            "Phase 7 — Formal release (completed)",
         ),
         "docs/MIGRATION.md": (
             "Migration test matrix",
             "Rollback",
+            f"Command Nexus `{canonical_version}`",
         ),
         "docs/TESTING.md": (
             "Automated validation",
             "Compatibility matrix",
             "Release-blocking failures",
+            "check-version-agnostic-regressions.mjs",
+        ),
+        "docs/README.md": (
+            "Current operational documentation",
+            "Historical records",
+            f"Command Nexus `{canonical_version}` with Mission Finder `V{mission_finder}`",
+        ),
+        "docs/RELEASE_PROCESS.md": (
+            "Google Memory Bank and Rules documents",
+            "Repository-only maintenance",
         ),
     }
 
@@ -296,18 +349,65 @@ def check_current_documentation() -> None:
             if phrase not in text:
                 fail(f"{relative} is missing current-state section: {phrase!r}")
 
-    stale_claims = (
-        "unified codebase exists",
-        "There is no unified installation package yet",
-        "unified userscript has not yet been published from this repository",
+    operational_files = tuple(ROOT / relative for relative in required_phrases)
+    operational_docs = "\n".join(
+        path.read_text(encoding="utf-8") for path in operational_files
     )
-    documentation = "\n".join(
-        path.read_text(encoding="utf-8")
-        for path in (ROOT / "docs").rglob("*.md")
+    stale_patterns = (
+        (r"\bv1\.0\.1(?!\d)", "v1.0.1 presented in current operating guidance"),
+        (r"\bV10\.6\.69\b", "the imported Mission Finder baseline"),
+        (r"Current baseline — merged", "the pre-release roadmap baseline"),
+        (r"urgent publication status", "the historical v1.0.3 blocker"),
+        (r"before the first formal release", "the pre-release migration gate"),
+        (r"There is no unified installation package yet", "the pre-merge package state"),
+        (
+            r"unified userscript has not yet been published from this repository",
+            "the pre-publication state",
+        ),
     )
-    for claim in stale_claims:
-        if claim.lower() in documentation.lower():
-            fail(f"Documentation still contains stale planning claim: {claim!r}")
+    for pattern, label in stale_patterns:
+        if re.search(pattern, operational_docs, re.IGNORECASE):
+            fail(f"Current documentation still contains {label}")
+
+
+def check_no_temporary_executables() -> None:
+    forbidden_patterns = (
+        (".github", re.compile(r".*(?:trigger.*\.txt|\.trigger)$", re.IGNORECASE)),
+        (
+            ".github/workflows",
+            re.compile(
+                r"(?:build|fix|inspect|run)-.*-v\d+\.ya?ml$", re.IGNORECASE
+            ),
+        ),
+        (
+            "scripts",
+            re.compile(
+                r"(?:apply|build|repair)-.*-v\d+\.(?:js|mjs|py)$", re.IGNORECASE
+            ),
+        ),
+    )
+    violations: list[str] = []
+    for relative_root, pattern in forbidden_patterns:
+        directory = ROOT / relative_root
+        if not directory.exists():
+            continue
+        for path in directory.iterdir():
+            if path.is_file() and pattern.fullmatch(path.name):
+                violations.append(str(path.relative_to(ROOT)))
+
+    if violations:
+        fail(
+            "Temporary one-use executable artifacts must not be tracked:\n  "
+            + "\n  ".join(sorted(violations))
+        )
+
+    validation_workflow = (
+        ROOT / ".github/workflows/validate-userscript.yml"
+    ).read_text(encoding="utf-8")
+    if "for check in scripts/check-*.mjs" not in validation_workflow:
+        fail("Userscript validation workflow must run the complete regression suite")
+    if re.search(r"^\s{2}build_v\d+:\s*$", validation_workflow, re.MULTILINE):
+        fail("Userscript validation workflow must not contain one-shot version builders")
 
 
 def main() -> None:
@@ -318,6 +418,7 @@ def main() -> None:
     check_readme_presentation()
     check_userscript_metadata_and_version()
     check_current_documentation()
+    check_no_temporary_executables()
     print("Repository integrity checks passed.")
 
 

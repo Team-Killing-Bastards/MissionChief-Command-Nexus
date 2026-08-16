@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 import { readFile } from 'node:fs/promises';
 const source = await readFile('src/missionchief-command-nexus.user.js', 'utf8');
-const workflow = await readFile('.github/workflows/validate-userscript.yml', 'utf8');
 const fail = message => { console.error(`ERROR: ${message}`); process.exit(1); };
 const expect = (condition, message) => { if (!condition) fail(message); };
 
@@ -25,9 +24,6 @@ function extractFunction(name) {
   fail(`Unterminated ${name}`);
 }
 
-expect(source.includes('// @version      1.0.122'), 'Expected current Command Nexus version');
-expect(source.includes("const UNIT_VERSION = '3.3.27';"), 'Expected current Unit Naming version');
-expect(source.includes("const STATION_VERSION = '1.3.22';"), 'Expected current Station Naming version');
 
 const assignmentStart = source.indexOf('function getNamingStationRowBuildingId(');
 const assignmentLoader = source.slice(
@@ -49,6 +45,4 @@ expect(!listLoader.includes('/leitstellenansicht'), 'Centre list must not fetch 
 expect(!listLoader.includes('/edit'), 'Centre list must not depend on a building edit page');
 expect(!listLoader.includes('/profile/'), 'Centre list must not depend on a profile route');
 expect(!source.includes('mc-personnel-dispatch-centre'), 'Personnel Assignment must remain outside Dispatch Centre filtering');
-expect(workflow.includes('scripts/check-naming-dispatch-centre-assignment-source-v1088.mjs'), 'v1.0.88 authority regression must remain registered');
-
-console.log('PASS: station membership and Dispatch Centre names are both native-row authoritative under v1.0.93.');
+console.log('PASS: Station membership and Dispatch Centre names are both native-row authoritative.');
