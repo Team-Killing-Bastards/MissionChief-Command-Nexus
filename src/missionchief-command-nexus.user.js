@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.122
+// @version      1.0.123
 // @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
 // @author       MartyBlyth
 // @license      MIT
@@ -11717,7 +11717,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.160
+         * MODULE 2: MISSION FINDER V10.6.161
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -12551,6 +12551,10 @@
     const MF_EXACT_REGISTER_TRAINING_MAX_AGE_MS =
         180 * 24 * 60 * 60 * 1000;
 
+    // V10.6.161: qualification-sensitive selection fails closed. Only fresh,
+    // complete Personnel Register evidence can select and satisfy trained-
+    // personnel requirements. Missing, stale or partial evidence blocks ready
+    // state and Auto Mode stops without clicking Dispatch.
     // V10.6.160: Require/Requires/Required Drone(s) is a generic drone-family
     // requirement. It accepts exact type-89 SAR Drone Vehicles and exact
     // type-91 Police Drone Vehicles, while explicit Police Drone and Police
@@ -12570,12 +12574,12 @@
     // Live verification now walks the complete ready compatible pool in batches
     // and stops only after the real per-course quantities are covered or the pool
     // is exhausted. Only then is a genuine training shortfall reported.
-    // V10.6.110: trained-personnel selection now optimises exact vehicle
-    // coverage instead of treating full qualification as a dispatch gate.
+    // V10.6.110 introduced exact vehicle-capacity optimisation. Its untrained
+    // capacity fallback is superseded by the V10.6.161 fail-closed gate.
     // Multi-trained crews reduce every matching course, type-51 PSUs provide
-    // up to nine seats for compatible Public Order demand, IRVs fill smaller
-    // remainders, and correct-type untrained fallback units are still selected
-    // while the remaining training shortfall is reported without blocking.
+    // up to nine seats for compatible Public Order demand and IRVs fill smaller
+    // remainders. The former correct-type untrained fallback is no longer an
+    // active selection or dispatch path.
     // V10.6.100: visible current-mission Missing Vehicles or supported Missing
     // Personnel alerts now take authority before the full mission-help attachment.
     // Explicit missing-vehicle quantities are treated as the target selected count
@@ -14139,6 +14143,8 @@
         patients: 0,
         ambulances: 0,
         ambulanceOfficer: false,
+        trainedPersonnelBlocked: false,
+        trainedPersonnelBlockText: '',
         ready: false
     };
 
@@ -21683,6 +21689,8 @@ function isRoadRailUnitVehicleCheckbox(input) {
                     // selection key in memory. Start this manual update as
                     // a fresh pass so Fire Engine and other repeated update
                     // requirements are actually searched again.
+                    vehicleLoadState.trainedPersonnelBlocked = false;
+                    vehicleLoadState.trainedPersonnelBlockText = '';
                     clearSelectionGuards();
 
                     const manualUpdateRows =
@@ -24498,8 +24506,35 @@ let sessionRuntimeTicker = null;
             patients: 0,
             ambulances: 0,
             ambulanceOfficer: false,
+            trainedPersonnelBlocked: false,
+            trainedPersonnelBlockText: '',
             ready: false
         };
+    }
+
+    function blockTrainedPersonnelDispatch(
+        shortfalls,
+        source = 'Trained-personnel selection'
+    ) {
+        const detail = (Array.isArray(shortfalls) ? shortfalls : [shortfalls])
+            .map(value => String(value || '').trim())
+            .filter(Boolean)
+            .join(' | ') ||
+            'Verified trained personnel are still missing.';
+
+        vehicleLoadState.trainedPersonnelBlocked = true;
+        vehicleLoadState.trainedPersonnelBlockText = detail;
+        changeDispatchBoxColor(false);
+        updateStatusBox(
+            `${source}: verified trained personnel are still missing. Dispatch blocked.`
+        );
+
+        if (mfDebugEnabled) {
+            debugLog(
+                'TRAINED PERSONNEL FAIL CLOSED',
+                `${source} | ${detail}`
+            );
+        }
     }
 
     function addOrUpdateVehicleRow(originalName, mappedName, required, status, selected) {
@@ -26044,6 +26079,8 @@ let sessionRuntimeTicker = null;
             patients: 0,
             ambulances: 0,
             ambulanceOfficer: false,
+            trainedPersonnelBlocked: false,
+            trainedPersonnelBlockText: '',
             ready: false
         };
 
@@ -31734,11 +31771,19 @@ let sessionRuntimeTicker = null;
 
         if (!vehicleTypeId) return false;
 
+        // Qualification-sensitive selection fails closed. A correct vehicle
+        // type without a fresh, complete Personnel Register entry is not an
+        // eligible trained-personnel candidate.
+        if (
+            !isAuthoritativeLivePoliceTrainingEntry(
+                registryEntry
+            )
+        ) {
+            return false;
+        }
+
         if (requirement?.registryAnyVehicle === true) {
             return !!(
-                isAuthoritativeLivePoliceTrainingEntry(
-                    registryEntry
-                ) &&
                 getRegistryTrainingQualifiedCount(
                     requirement,
                     registryEntry
@@ -31777,34 +31822,29 @@ let sessionRuntimeTicker = null;
         }
 
         if (
-            isAuthoritativeLivePoliceTrainingEntry(
+            !isAuthoritativeLivePoliceTrainingEntry(
                 registryEntry
             )
         ) {
-            return registryEntry
-                .assignedTrainingProfiles
-                .slice(0, maximumCapacity)
-                .map(profile => {
-                    return Array.from(
-                        new Set(
-                            (
-                                Array.isArray(profile)
-                                    ? profile
-                                    : []
-                            )
-                                .map(String)
-                                .filter(Boolean)
-                        )
-                    );
-                });
+            return [];
         }
 
-        // Unknown/stale candidates remain usable as untrained fallback. Their
-        // exact vehicle type defines the maximum nominal personnel capacity.
-        return Array.from(
-            { length: maximumCapacity },
-            () => []
-        );
+        return registryEntry
+            .assignedTrainingProfiles
+            .slice(0, maximumCapacity)
+            .map(profile => {
+                return Array.from(
+                    new Set(
+                        (
+                            Array.isArray(profile)
+                                ? profile
+                                : []
+                        )
+                            .map(String)
+                            .filter(Boolean)
+                    )
+                );
+            });
     }
 
     function doesTrainingProfileSatisfyRequirement(
@@ -33495,14 +33535,14 @@ let sessionRuntimeTicker = null;
                 checkbox => checkbox.checked
             );
 
-        // Correct-type vehicle coverage is the dispatch gate. A training
-        // shortage remains visible but does not block the selected units.
+        // Verified qualification coverage is the dispatch gate. Nominal seats
+        // on a correct-type vehicle never satisfy a trained-personnel row.
         return getRemainingTrainedPersonnelRequirements(
             requirements,
             selected,
             registry
         ).every(requirement => {
-            return requirement.capacityRemaining <= 0;
+            return requirement.remaining <= 0;
         });
     }
 
@@ -33519,24 +33559,18 @@ let sessionRuntimeTicker = null;
     }
 
     function getTrainedVehicleSelectionScore(
-        metrics,
-        trainedPhase
+        metrics
     ) {
         if (!metrics?.eligible) {
             return Number.NEGATIVE_INFINITY;
         }
 
-        if (
-            trainedPhase &&
-            metrics.trainedUseful <= 0
-        ) {
+        if (metrics.trainedUseful <= 0) {
             return Number.NEGATIVE_INFINITY;
         }
 
         const trainingScore =
-            trainedPhase
-                ? metrics.trainedUseful * 1000000
-                : 0;
+            metrics.trainedUseful * 1000000;
 
         const capacityScore =
             metrics.capacityUseful * 100000;
@@ -33627,23 +33661,12 @@ let sessionRuntimeTicker = null;
                 registry
             );
 
-        const initiallyVehicleCovered =
-            remaining.every(requirement => {
-                return requirement.capacityRemaining <= 0;
-            });
-
         const initiallyTrainingCovered =
             remaining.every(requirement => {
                 return requirement.remaining <= 0;
             });
 
-        // Do not return merely because nominal seats are covered. If a course
-        // deficit remains, continue through the ready trained pool so a second
-        // PSU/IRV can replace a false shortfall with real qualified coverage.
-        if (
-            initiallyVehicleCovered &&
-            initiallyTrainingCovered
-        ) {
+        if (initiallyTrainingCovered) {
             return {
                 satisfied:
                     true,
@@ -33712,18 +33735,13 @@ let sessionRuntimeTicker = null;
         const used = new Set();
         let selectedVehicles = 0;
         let trainedVehicles = 0;
-        let fallbackVehicles = 0;
 
-        const runSelectionPhase = trainedPhase => {
-            const hasRemainingPhaseNeed = () => {
-                return remaining.some(requirement => {
-                    return trainedPhase
-                        ? requirement.remaining > 0
-                        : requirement.capacityRemaining > 0;
-                });
-            };
-
-            while (hasRemainingPhaseNeed()) {
+        const runTrainedSelection = () => {
+            while (
+                remaining.some(requirement => {
+                    return requirement.remaining > 0;
+                })
+            ) {
                 let bestCheckbox = null;
                 let bestEntry = null;
                 let bestMetrics = null;
@@ -33750,8 +33768,7 @@ let sessionRuntimeTicker = null;
 
                     const score =
                         getTrainedVehicleSelectionScore(
-                            metrics,
-                            trainedPhase
+                            metrics
                         );
 
                     if (
@@ -33773,10 +33790,7 @@ let sessionRuntimeTicker = null;
                 if (
                     !bestCheckbox ||
                     !bestMetrics?.eligible ||
-                    (
-                        trainedPhase &&
-                        bestMetrics.trainedUseful <= 0
-                    )
+                    bestMetrics.trainedUseful <= 0
                 ) {
                     break;
                 }
@@ -33789,11 +33803,7 @@ let sessionRuntimeTicker = null;
 
                 selectedVehicles += 1;
 
-                if (bestMetrics.trainedUseful > 0) {
-                    trainedVehicles += 1;
-                } else {
-                    fallbackVehicles += 1;
-                }
+                trainedVehicles += 1;
 
                 remaining =
                     applyTrainingCandidateToRemaining(
@@ -33804,9 +33814,7 @@ let sessionRuntimeTicker = null;
 
                 if (mfDebugEnabled) {
                     debugLog(
-                        trainedPhase
-                            ? 'TRAINED COVERAGE CLICK'
-                            : 'TRAINING FALLBACK CLICK',
+                        'TRAINED COVERAGE CLICK',
                         `${source} | ${getVehicleDebugName(bestCheckbox)} | ` +
                         `trained=${bestMetrics.trainedUseful} | ` +
                         `capacity=${bestMetrics.capacityUseful} | ` +
@@ -33818,12 +33826,10 @@ let sessionRuntimeTicker = null;
             }
         };
 
-        // Phase one chooses the best available trained coverage. Phase two is
-        // deliberately allowed to select correct-type vehicles with no verified
-        // training so the mission can still be sent; the training deficit is
-        // returned separately and never hidden.
-        runSelectionPhase(true);
-        runSelectionPhase(false);
+        // Only fresh, complete Personnel Register evidence can select a
+        // qualification-sensitive vehicle. Missing, stale and partial evidence
+        // remains a blocking shortage; there is no nominal-capacity fallback.
+        runTrainedSelection();
 
         const vehicleCoverageSatisfied =
             remaining.every(requirement => {
@@ -33837,12 +33843,13 @@ let sessionRuntimeTicker = null;
 
         return {
             satisfied:
-                vehicleCoverageSatisfied,
+                trainingSatisfied,
             vehicleCoverageSatisfied,
             trainingSatisfied,
             selectedVehicles,
             trainedVehicles,
-            fallbackVehicles,
+            fallbackVehicles:
+                0,
             selectedVehicleCount:
                 countSelectedTrainingVehicles(
                     requirements,
@@ -35045,19 +35052,13 @@ let sessionRuntimeTicker = null;
                     unitText,
                     result.trainingSatisfied
                         ? 'Assigned trained vehicles'
-                        : 'Assigned vehicles · training shortfall',
+                        : 'Verified trained vehicles still needed',
                     displayedTarget,
-                    !result.vehicleCoverageSatisfied
-                        ? (
-                            selectedCount > 0
-                                ? 'retrying'
-                                : 'missing'
-                        )
-                        : (
-                            result.trainingSatisfied
-                                ? 'assigned'
-                                : 'retrying'
-                        ),
+                    result.trainingSatisfied
+                        ? 'assigned'
+                        : selectedCount > 0
+                            ? 'retrying'
+                            : 'missing',
                     selectedCount
                 );
 
@@ -35200,6 +35201,30 @@ let sessionRuntimeTicker = null;
             return false;
         }
 
+        if (trainedPersonnelWarnings.length > 0) {
+            const warningText =
+                trainedPersonnelWarnings.join('\n');
+
+            blockTrainedPersonnelDispatch(
+                trainedPersonnelWarnings,
+                'Unit Finder'
+            );
+
+            console.warn(
+                '[Mission Finder] Verified trained-personnel shortage blocked dispatch:',
+                warningText
+            );
+
+            if (!autoModeRunning) {
+                originalAlert.call(
+                    window,
+                    `Verified trained-personnel shortage — dispatch blocked:\n\n${warningText}`
+                );
+            }
+
+            return false;
+        }
+
         if (trainedVehicleMissing.length > 0) {
             changeDispatchBoxColor(false);
             updateStatusBox(
@@ -35225,27 +35250,6 @@ let sessionRuntimeTicker = null;
         }
 
         changeDispatchBoxColor(true);
-
-        if (trainedPersonnelWarnings.length > 0) {
-            const warningText =
-                trainedPersonnelWarnings.join('\n');
-
-            updateStatusBox(
-                `Vehicles selected. Training shortfall reported: ${warningText}`
-            );
-
-            console.warn(
-                '[Mission Finder] Training shortfall; compatible units remain selected:',
-                warningText
-            );
-
-            if (!autoModeRunning) {
-                originalAlert.call(
-                    window,
-                    `Training shortfall — compatible units were still selected and can be sent:\n\n${warningText}`
-                );
-            }
-        }
 
         return true;
     }
@@ -41774,19 +41778,13 @@ let sessionRuntimeTicker = null;
                     item.unitName,
                     result.trainingSatisfied
                         ? 'Assigned trained vehicles'
-                        : 'Assigned vehicles · training shortfall',
+                        : 'Verified trained vehicles still needed',
                     displayedTarget,
-                    !result.vehicleCoverageSatisfied
-                        ? (
-                            selectedCount > 0
-                                ? 'retrying'
-                                : 'missing'
-                        )
-                        : (
-                            result.trainingSatisfied
-                                ? 'assigned'
-                                : 'retrying'
-                        ),
+                    result.trainingSatisfied
+                        ? 'assigned'
+                        : selectedCount > 0
+                            ? 'retrying'
+                            : 'missing',
                     selectedCount
                 );
 
@@ -42110,6 +42108,29 @@ let sessionRuntimeTicker = null;
             }
         });
 
+        if (trainedPersonnelWarnings.length > 0) {
+            const warningText =
+                trainedPersonnelWarnings.join('\n');
+
+            blockTrainedPersonnelDispatch(
+                trainedPersonnelWarnings,
+                'Mission Update'
+            );
+
+            console.warn(
+                '[Mission Finder] Mission Update verified trained-personnel shortage blocked dispatch:',
+                warningText
+            );
+
+            if (showAlerts && !autoModeRunning) {
+                alert(
+                    `Verified trained-personnel shortage — dispatch blocked:\n\n${warningText}`
+                );
+            }
+
+            return false;
+        }
+
         if (missingAfterAttempt.length > 0) {
             if (showAlerts && !autoModeRunning) {
                 alert(`Mission update units still missing:\n\n${missingAfterAttempt.join('\n')}`);
@@ -42125,29 +42146,9 @@ let sessionRuntimeTicker = null;
             return false;
         }
 
-        if (trainedPersonnelWarnings.length > 0) {
-            const warningText =
-                trainedPersonnelWarnings.join('\n');
-
-            updateStatusBox(
-                `Mission update vehicles assigned with training shortfall: ${warningText}`
-            );
-
-            console.warn(
-                '[Mission Finder] Mission Update training shortfall; compatible units remain selected:',
-                warningText
-            );
-
-            if (showAlerts && !autoModeRunning) {
-                alert(
-                    `Training shortfall — compatible units were still selected and can be sent:\n\n${warningText}`
-                );
-            }
-        } else {
-            updateStatusBox(
-                "Mission update vehicles and supported personnel units assigned."
-            );
-        }
+        updateStatusBox(
+            "Mission update vehicles and supported personnel units assigned."
+        );
         changeDispatchBoxColor(true);
 
         if (
@@ -49038,25 +49039,43 @@ async function handleAutoPrisonerReleaseAfterActions() {
             if (!vehicleLoadState.ready) {
                 const staffingBlocked =
                     !!personnelQualificationAlert ||
-                    mfStaffingBlockActive;
+                    mfStaffingBlockActive ||
+                    vehicleLoadState.trainedPersonnelBlocked === true;
+
+                if (staffingBlocked) {
+                    const blockText =
+                        String(
+                            vehicleLoadState.trainedPersonnelBlockText ||
+                            mfStaffingBlockText ||
+                            personnelQualificationAlert ||
+                            'Verified trained personnel are still missing.'
+                        ).trim();
+
+                    addMissionLogEntry(
+                        'skipped',
+                        getCurrentMissionName(),
+                        'Verified trained-personnel shortage; dispatch blocked',
+                        null
+                    );
+
+                    stopAutoMode(
+                        `Auto stopped: ${blockText} Dispatch was not clicked.`
+                    );
+                    break;
+                }
 
                 updateStatusBox(
-                    staffingBlocked
-                        ? 'Auto Mode: staffing/qualification shortage. No more vehicles selected; dispatching to skip mission...'
-                        : 'Auto Mode: units not ready. Dispatching to skip mission...'
+                    'Auto Mode: units not ready. Dispatching to skip mission...'
                 );
 
                 addMissionLogEntry(
                     'skipped',
                     getCurrentMissionName(),
-                    staffingBlocked
-                        ? 'Staffing/qualification shortage'
-                        : 'Units not ready',
+                    'Units not ready',
                     null
                 );
 
                 if (
-                    !staffingBlocked &&
                     getCurrentAutoDispatchSelectionState()
                         .selectedCount === 0
                 ) {

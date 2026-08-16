@@ -111,19 +111,25 @@ requireText('trainingProfilesComplete', 'authoritative profile scan marker');
 requireText('applyTrainingCandidateCoverage(', 'profile-aware coverage allocator');
 requireText('combinationCounts[combinationKey]', 'multi-course combination count');
 requireText('capacityRemaining:', 'separate nominal vehicle-capacity vector');
-requireText('runSelectionPhase(true);', 'trained coverage phase');
-requireText('trainedPhase\n                        ? requirement.remaining > 0', 'trained phase follows qualification deficits');
+requireText('runTrainedSelection();', 'strict trained coverage phase');
 requireText('trainedUseful > 0 ||\n                capacityUseful > 0', 'training remains eligible after nominal seats are covered');
 requireText('...remainingCandidates\n        ];', 'complete ready compatible verification pool');
-requireText('runSelectionPhase(false);', 'correct-type fallback phase');
 requireText('vehicleCoverageSatisfied', 'vehicle coverage result');
 requireText('trainingSatisfied', 'training coverage result');
+requireText('satisfied:\n                trainingSatisfied', 'verified training is the result gate');
 requireText('formatTrainedPersonnelShortfall(', 'training shortfall reporter');
-requireText('compatible units were still selected and can be sent', 'non-blocking shortfall notice');
-requireText('if (trainedVehicleMissing.length > 0)', 'vehicle-capacity blocking gate');
+requireText('blockTrainedPersonnelDispatch(', 'blocking training-shortfall gate');
+requireText('Dispatch was not clicked.', 'Auto Mode fail-closed stop');
 requireText("requirementType:\n                    'police_inspector_vehicle'", 'Inspector exact profile');
 requireText("eligibleVehicleTypeIds: [\n                    '25'", 'Armed Response exact type-25 profile');
 requireText("addPsuCompatibleRequirement(\n            'railway_police'", 'Railway PSU plus IRV profile');
+
+if (source.includes('runSelectionPhase(false);')) {
+  fail('Correct-type untrained fallback selection must not return');
+}
+if (source.includes('compatible units were still selected and can be sent')) {
+  fail('The UI must not advertise unverified trained-personnel coverage as sendable');
+}
 
 const runtime = Function(
   `"use strict";\n` +
@@ -194,8 +200,8 @@ if (
   fail('Twelve Railway Police Officers must plan one nine-seat PSU plus two two-seat IRVs');
 }
 
-const score = (metrics, trainedPhase = true) =>
-  runtime.getTrainedVehicleSelectionScore(metrics, trainedPhase);
+const score = metrics =>
+  runtime.getTrainedVehicleSelectionScore(metrics);
 
 const irvForThree = score({
   eligible: true,
@@ -257,28 +263,16 @@ if (multiTrainedPsu <= multiTrainedIrv) {
   fail('A PSU covering several simultaneous courses must outrank one IRV');
 }
 
-const fallbackScore = score({
+const unverifiedScore = score({
   eligible: true,
   trainedUseful: 0,
   capacityUseful: 2,
   coveredCategories: 0,
   overshoot: 0,
   isPsu: false,
-}, false);
-if (!Number.isFinite(fallbackScore)) {
-  fail('Correct-type untrained fallback vehicles must remain selectable');
-}
-
-const trainedOnlyScore = score({
-  eligible: true,
-  trainedUseful: 0,
-  capacityUseful: 2,
-  coveredCategories: 0,
-  overshoot: 0,
-  isPsu: false,
-}, true);
-if (trainedOnlyScore !== Number.NEGATIVE_INFINITY) {
-  fail('Untrained vehicles must not enter the trained-coverage phase');
+});
+if (unverifiedScore !== Number.NEGATIVE_INFINITY) {
+  fail('Nominal capacity without verified training must fail closed');
 }
 
 const allocationRuntime = Function(
@@ -435,7 +429,7 @@ const untrainedFallback = allocationRuntime.applyTrainingCandidateCoverage(
   null
 ).remaining[0];
 if (untrainedFallback.remaining !== 3 || untrainedFallback.capacityRemaining !== 1) {
-  fail('An untrained IRV must reduce only nominal capacity and preserve the complete training shortfall');
+  fail('The diagnostic allocator must preserve the complete training shortfall for an untrained IRV');
 }
 
-console.log('Trained coverage optimiser checks passed, including Railway Police PSU and IRV coverage.');
+console.log('Trained coverage optimiser checks passed with strict verified-qualification dispatch gating.');
