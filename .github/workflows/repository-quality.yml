@@ -31,6 +31,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Install workflow YAML parser
+        run: python3 -m pip install --disable-pip-version-check --no-cache-dir 'PyYAML==6.0.2'
+
+      - name: Parse permanent workflow YAML
+        run: python3 scripts/check_workflow_yaml.py
+
       - name: Compile repository checker
         run: python3 -m py_compile scripts/check_repository.py
 
