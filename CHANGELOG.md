@@ -14,6 +14,17 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Refreshed current operational documentation for the `1.0.122` production baseline and separated it from immutable versioned handovers and incident records.
 - Kept the canonical userscript unchanged, so this repository-maintenance set does not create a new userscript release.
 
+## [1.0.123] - 2026-08-16
+
+### Fixed
+
+- Aligned trained-personnel selection with the locked strict fail-closed safety contract across Unit Finder, Mission Update and Auto Mode.
+- Only fresh, complete, exact-vehicle Personnel Register evidence now selects and satisfies qualification-sensitive requirements; correct vehicle type or nominal seating capacity alone is insufficient.
+- Removed the untrained correct-type fallback phase. Missing, stale and partial evidence remains an explicit verified-training shortage and keeps the mission not-ready.
+- Auto Mode now stops without clicking Dispatch when a staffing or verified qualification shortage remains instead of dispatching selected units to skip the mission.
+- Added permanent coverage for missing, stale, partial and fully verified Personnel Register states, strict satisfaction, blocked UI state and the no-dispatch Auto Mode path.
+- Increased Mission Finder from `V10.6.160` to `V10.6.161` and the unified userscript from `1.0.122` to `1.0.123`. Resource Administration remains `V4.2.8`, Unit Naming remains `3.3.27`, Station Naming remains `1.3.22`, and Personnel Assignment remains `1.3.10`.
+
 ## [1.0.122] - 2026-08-16
 
 ### Fixed

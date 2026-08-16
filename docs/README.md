@@ -1,6 +1,6 @@
 # Command Nexus Documentation
 
-This directory separates current operating guidance from versioned historical records. The current production baseline is Command Nexus `1.0.122` with Mission Finder `V10.6.160`.
+This directory separates current operating guidance from versioned historical records. The current production baseline is Command Nexus `1.0.123` with Mission Finder `V10.6.161`.
 
 ## Current operational documentation
 

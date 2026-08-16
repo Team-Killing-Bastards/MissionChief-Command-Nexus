@@ -1,6 +1,6 @@
 # Architecture
 
-This document describes the architecture in the current MissionChief Command Nexus v1.0.122 production source and the direction for future consolidation.
+This document describes the architecture in the current MissionChief Command Nexus v1.0.123 production source and the direction for future consolidation.
 
 > Source-code direction and final technical decisions remain with **MartyBlyth**, the project developer. Conroy1988 provides repository and documentation support only.
 
@@ -12,7 +12,7 @@ The canonical distributable is a single userscript:
 src/missionchief-command-nexus.user.js
 ```
 
-The canonical module baseline is Resource Administration `V4.2.8` and Mission Finder `V10.6.160`. The Resource Administration interfaces report Unit Naming `3.3.27`, Station Naming `1.3.22` and Personnel Assignment `1.3.10`. Exact release and component-version validation belongs to `scripts/validate-userscript.mjs`; behavioral regressions do not pin these numbers.
+The canonical module baseline is Resource Administration `V4.2.8` and Mission Finder `V10.6.161`. The Resource Administration interfaces report Unit Naming `3.3.27`, Station Naming `1.3.22` and Personnel Assignment `1.3.10`. Exact release and component-version validation belongs to `scripts/validate-userscript.mjs`; behavioral regressions do not pin these numbers.
 
 It contains one userscript metadata block, one outer installation guard and two retained runtime engines:
 
@@ -47,6 +47,8 @@ The source intentionally retains the established module guards and startup isola
 ## What is genuinely shared
 
 The most important current integration point is the vehicle-training registry. Personnel administration can record verified training capability against vehicle identity, and mission selection can use that information for qualification-sensitive requirements.
+
+Qualification-sensitive dispatch is fail-closed. A candidate must have a fresh, complete, exact-vehicle Personnel Register entry, and the verified assigned training profiles must cover the real course quantity. Correct vehicle type or nominal seating capacity alone cannot satisfy the requirement. Unit Finder and Mission Update remain not-ready on missing, stale or partial evidence; Auto Mode stops before Dispatch.
 
 Shared operational concerns also include:
 

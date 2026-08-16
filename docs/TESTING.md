@@ -103,6 +103,8 @@ Confirm:
 - Stale panels cannot dispatch.
 - Zero-selection failure stops safely.
 - Staffing or qualification shortages are surfaced.
+- Missing, stale and partially verified Personnel Register evidence keeps trained-personnel dispatch blocked; only complete verified coverage becomes ready.
+- Auto Mode stops without clicking Dispatch when verified trained-personnel coverage remains short.
 - A mission is not submitted twice.
 - Mission changes restart selection rather than reusing stale state.
 - Queue continuation opens the intended next mission.
