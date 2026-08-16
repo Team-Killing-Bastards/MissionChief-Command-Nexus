@@ -63,6 +63,15 @@ MissionChief Command Nexus is an actively released userscript. This roadmap reco
 - [ ] Keep temporary build mechanisms out of tracked permanent automation.
 - [ ] Record each production or operating-contract change in GitHub and the connected project operating records.
 
+### 6. Opt-in mission analytics — proposed
+
+- [ ] Complete [issue #334](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/334) only after the pairing, local-credential, bounded-outbox, idempotent-upload and privacy contracts are proven.
+- [ ] Keep logging disabled by default and present visible paired, queued, synchronized and failed states.
+- [ ] Route manual Dispatch, Dispatch & Share, Auto Mode and future dispatch paths through one evidence-backed event schema.
+- [ ] Treat live cross-origin transport, server-side credential hashing and separation of advertised versus awarded credits as release blockers.
+
+This capability is not part of the current production baseline.
+
 ## Phase 7 — Formal release (completed)
 
 The original first-release milestone is complete. Command Nexus has a production release line, canonical tags, verified GitHub assets, Greasy Fork delivery and Discord release notification evidence. Future releases use the current [Release Process](RELEASE_PROCESS.md), not the old pre-release checklist.
