@@ -5,10 +5,10 @@ MissionChief Command Nexus is an actively released userscript. This roadmap reco
 **Developer and technical owner:** MartyBlyth  
 **Repository and documentation support:** Conroy1988
 
-## Current production baseline — v1.0.127
+## Current production baseline — v1.1.0
 
 - [x] Publish one canonical userscript on trusted `main`.
-- [x] Release Command Nexus `1.0.127` with Mission Finder `V10.6.164`.
+- [x] Release Command Nexus `1.1.0` with Mission Finder `V10.7.0`.
 - [x] Retain Resource Administration `V4.2.8`, with Unit Naming `3.3.27`, Station Naming `1.3.22` and Personnel Assignment `1.3.12`.
 - [x] Protect duplicate initialization and independent engine startup.
 - [x] Provide Unit Naming, Station Naming and Personnel Assignment through background native-form workflows.
@@ -21,6 +21,7 @@ MissionChief Command Nexus is an actively released userscript. This roadmap reco
 - [x] Complete issue #18 Fire/Airfield Personnel Assignment profiles with exact mappings and fail-closed pod/trailer authority.
 - [x] Complete issue #19 SAR/Coastguard Personnel Assignment profiles with exact mappings, live seat overrides and overlap-safe batching.
 - [x] Route Aerial Appliance Truck(s) or Rescue Stairs through exact Rescue Stairs-first, CARP-remainder selection.
+- [x] Add an opt-in, paired Mission Analytics Logger with bounded five-minute uploads, exact dispatched-unit rows and a separately deployed Google Apps Script / Sheets backend.
 - [x] Run canonical version validation and the complete permanent behavioral regression suite.
 - [x] Reconcile GitHub Release assets, Greasy Fork synchronization and one Discord delivery receipt for each userscript release.
 
@@ -62,15 +63,16 @@ MissionChief Command Nexus is an actively released userscript. This roadmap reco
 - [ ] Keep trusted-main publication idempotent and retain a documented recovery path.
 - [ ] Keep temporary build mechanisms out of tracked permanent automation.
 - [ ] Record each production or operating-contract change in GitHub and the connected project operating records.
+- [x] Implement fail-closed MissionChief transaction-to-mission matching: prefer a ledger mission ID + normalized title, otherwise require one unique normalized title inside the bounded completion window; retain ambiguous rows as pending for live verification.
 
-### 6. Opt-in mission analytics — proposed
+### 6. Opt-in mission analytics — delivered and monitored
 
-- [ ] Complete [issue #334](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/334) only after the pairing, local-credential, bounded-outbox, idempotent-upload and privacy contracts are proven.
-- [ ] Keep logging disabled by default and present visible paired, queued, synchronized and failed states.
-- [ ] Route manual Dispatch, Dispatch & Share, Auto Mode and future dispatch paths through one evidence-backed event schema.
-- [ ] Treat live cross-origin transport, server-side credential hashing and separation of advertised versus awarded credits as release blockers.
-
-This capability is not part of the current production baseline.
+- [x] Complete [issue #334](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/334) with proven pairing, local-credential, bounded-outbox, idempotent-upload and privacy contracts.
+- [x] Keep logging disabled by default and present visible paired, queued, synchronized and failed states.
+- [x] Route manual Dispatch, Dispatch & Share, Auto Mode and Ally Steal paths through one evidence-backed event schema.
+- [x] Verify live cross-origin transport, server-side credential hashing and separation of advertised versus awarded credits.
+- [x] Add mission completion timing, exact native Credits-ledger matching, weekly archives and compact all-weeks Dashboard Data.
+- [ ] Continue monitoring multi-browser live batches, MissionChief transaction variants and weekly rollover evidence after release.
 
 ## Phase 7 — Formal release (completed)
 

@@ -1,6 +1,6 @@
 # Command Nexus Documentation
 
-This directory separates current operating guidance from versioned historical records. The current production baseline is Command Nexus `1.0.127` with Mission Finder `V10.6.164`.
+This directory separates current operating guidance from versioned historical records. The current production baseline is Command Nexus `1.1.0` with Mission Finder `V10.7.0`.
 
 ## Current operational documentation
 
@@ -11,6 +11,7 @@ This directory separates current operating guidance from versioned historical re
 - [Migration Guide](MIGRATION.md) — safe transition from legacy installations and rollback expectations.
 - [Release Process](RELEASE_PROCESS.md) — versioning, approval, trusted-main reconciliation and completion records.
 - [Greasy Fork Automated Release Setup](GREASY_FORK_SETUP.md) — synchronization configuration, verification and recovery.
+- [MissionChief User Logger backend](../integrations/google-apps-script/README.md) — paired Google Apps Script deployment, workbook schema, backups and privacy boundary.
 
 ## Historical records
 

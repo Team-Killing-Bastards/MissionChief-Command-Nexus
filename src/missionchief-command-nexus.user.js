@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.0.127
-// @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
+// @version      1.1.0
+// @description  Unified MissionChief UK toolkit for mission dispatch, resource administration, trained-personnel assignment and opt-in mission analytics.
 // @author       MartyBlyth
 // @license      MIT
 // @homepageURL  https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
@@ -12454,7 +12454,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.164
+         * MODULE 2: MISSION FINDER V10.7.0
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -13288,6 +13288,11 @@
     const MF_EXACT_REGISTER_TRAINING_MAX_AGE_MS =
         180 * 24 * 60 * 60 * 1000;
 
+    // V10.7.0: optional paired mission analytics records observed missions and
+    // exact dispatch selections in a bounded local outbox, then uploads an
+    // idempotent batch to the configured Google Apps Script endpoint every
+    // five minutes. Logging is off by default and never records personnel
+    // names, passwords or cookies.
     // V10.6.164: Aerial Appliance Truck(s) or Rescue Stairs now exhausts
     // exact type-78 Rescue Stairs first, then fills only the remaining
     // requirement with exact type-17 CARPs. Both types count toward the same
@@ -14252,6 +14257,76 @@
 
     const SESSION_STATS_KEY = 'mf_session_stats_v1';
     const SESSION_REFRESH_FLAG = 'mf_session_manual_refresh_checked';
+    const MF_MISSION_LOGGER_SCHEMA_VERSION = 1;
+    const MF_MISSION_LOGGER_CLIENT_VERSION = '1.1.0';
+    const MF_MISSION_LOGGER_MISSION_FINDER_VERSION =
+        '10.7.0';
+    const MF_MISSION_LOGGER_ENABLED_KEY =
+        'mf_mission_logger_enabled_v1';
+    const MF_MISSION_LOGGER_ENDPOINT_KEY =
+        'mf_mission_logger_endpoint_v1';
+    const MF_MISSION_LOGGER_IDENTITY_KEY =
+        'mf_mission_logger_identity_v1';
+    const MF_MISSION_LOGGER_QUEUE_KEY =
+        'mf_mission_logger_queue_v1';
+    const MF_MISSION_LOGGER_PENDING_BATCH_KEY =
+        'mf_mission_logger_pending_batch_v1';
+    const MF_MISSION_LOGGER_SYNC_LOCK_KEY =
+        'mf_mission_logger_sync_lock_v1';
+    const MF_MISSION_LOGGER_STATE_KEY =
+        'mf_mission_logger_state_v1';
+    const MF_MISSION_LOGGER_OBSERVED_KEY =
+        'mf_mission_logger_observed_v1';
+    const MF_MISSION_LOGGER_LAST_DISPATCH_KEY =
+        'mf_mission_logger_last_dispatch_v1';
+    const MF_MISSION_LOGGER_MISSION_REGISTRY_KEY =
+        'mf_mission_logger_missions_v1';
+    const MF_MISSION_LOGGER_MISSION_REGISTRY_DAYS = 35;
+    const MF_MISSION_LOGGER_MAX_MISSION_REGISTRY = 2000;
+    const MF_MISSION_LOGGER_SYNC_INTERVAL_MS =
+        5 * 60 * 1000;
+    const MF_MISSION_LOGGER_CREDIT_RECONCILE_INTERVAL_MS =
+        60 * 1000;
+    const MF_MISSION_LOGGER_CREDIT_MIN_FETCH_GAP_MS =
+        5000;
+    const MF_MISSION_LOGGER_CREDIT_MATCH_WINDOW_MS =
+        2 * 60 * 1000;
+    const MF_MISSION_LOGGER_CREDIT_AUTO_LOOKBACK_MS =
+        30 * 60 * 1000;
+    const MF_MISSION_LOGGER_CREDIT_MAX_PAGES = 3;
+    const MF_MISSION_LOGGER_CREDIT_RETRY_DELAYS_MS =
+        Object.freeze([2500, 15000, 45000]);
+    const MF_MISSION_LOGGER_REQUEST_TIMEOUT_MS =
+        30000;
+    const MF_MISSION_LOGGER_DISPATCH_DEDUPE_MS =
+        15000;
+    const MF_MISSION_LOGGER_MAX_QUEUE_EVENTS = 300;
+    const MF_MISSION_LOGGER_MAX_QUEUE_CHARS = 3000000;
+    const MF_MISSION_LOGGER_BATCH_SIZE = 40;
+    const MF_MISSION_LOGGER_DEFAULT_ENDPOINT =
+        'https://script.google.com/macros/s/AKfycbxYE6DOCm8rNk1BAO7hL9hN93vpQmrWm4zfkh-DhXf7mmaBdeCHSxSeyOlMahwaUiT-/exec';
+    const MF_MISSION_LOGGER_MESSAGE_SOURCE =
+        'missionchief-nexus-logger';
+    let mfMissionLoggerEnabled =
+        localStorage.getItem(
+            MF_MISSION_LOGGER_ENABLED_KEY
+        ) === 'true';
+    let mfMissionLoggerEndpoint = '';
+    let mfMissionLoggerSyncTimer = null;
+    let mfMissionLoggerInitialSyncTimer = null;
+    let mfMissionLoggerSyncActive = false;
+    let mfMissionLoggerCreditTimer = null;
+    let mfMissionLoggerCreditInitialTimer = null;
+    let mfMissionLoggerCreditReconcileActive = false;
+    let mfMissionLoggerCreditLastFetchAt = 0;
+    const mfMissionLoggerCreditRetryTimers = new Set();
+    let mfMissionLoggerMessageHandler = null;
+    let mfMissionLoggerStorageHandler = null;
+    let mfMissionLoggerDispatchClickHandler = null;
+    let mfMissionLoggerCompletionHook = null;
+    let mfMissionLoggerLastDispatchFingerprint = '';
+    let mfMissionLoggerLastDispatchAt = 0;
+    const mfMissionLoggerPendingRequests = new Map();
     const DEFAULT_MISSION_READY_DELAY = 1000;
     const MF_READY_DELAY_10_6_58_MIGRATION_KEY =
         'mf_ready_delay_10_6_58_migrated';
@@ -22368,6 +22443,222 @@ function isRoadRailUnitVehicleCheckbox(input) {
             }
         );
 
+        const missionLoggerBox = document.createElement('div');
+        missionLoggerBox.id = 'mf-mission-logger-box';
+        missionLoggerBox.className = 'mf2026-box';
+        missionLoggerBox.innerHTML = `
+            <div class="mf2026-section-title">Mission Analytics Logger</div>
+            <label class="mf2026-checkbox-row mf-dashboard-toggle-row">
+                <input id="mf-mission-logger-toggle"
+                       type="checkbox"
+                       ${mfMissionLoggerEnabled ? 'checked' : ''}>
+                <span>Send my mission analytics automatically</span>
+            </label>
+            <label class="mf2026-small" style="display:block;margin-top:8px;">
+                Google logger endpoint
+                <input id="mf-mission-logger-endpoint"
+                       type="url"
+                       inputmode="url"
+                       autocomplete="off"
+                       spellcheck="false"
+                       placeholder="https://script.google.com/macros/s/.../exec"
+                       value="${escapeHtml(mfMissionLoggerEndpoint)}"
+                       style="width:100%;box-sizing:border-box;margin-top:4px;">
+            </label>
+            <div id="mf-mission-logger-profile" class="mf2026-small" style="margin-top:8px;"></div>
+            <div id="mf-mission-logger-state" class="mf2026-small" style="margin-top:3px;"></div>
+            <label class="mf2026-small" style="display:block;margin-top:8px;">
+                One-time pairing code
+                <input id="mf-mission-logger-code"
+                       type="text"
+                       inputmode="text"
+                       autocomplete="one-time-code"
+                       autocapitalize="characters"
+                       spellcheck="false"
+                       maxlength="48"
+                       placeholder="XXXX-XXXX-XXXX"
+                       style="width:100%;box-sizing:border-box;margin-top:4px;text-transform:uppercase;">
+            </label>
+            <button id="mf-mission-logger-pair"
+                    type="button"
+                    class="mf2026-button"
+                    style="width:100%;margin-top:7px;background:#0d6efd;color:white;">
+                Pair this browser
+            </button>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">
+                <button id="mf-mission-logger-sync"
+                        type="button"
+                        class="mf2026-button"
+                        style="background:#198754;color:white;">
+                    Sync now
+                </button>
+                <button id="mf-mission-logger-disconnect"
+                        type="button"
+                        class="mf2026-button"
+                        style="background:#6c757d;color:white;">
+                    Disconnect
+                </button>
+            </div>
+            <div id="mf-mission-logger-queue" class="mf2026-small" style="margin-top:7px;"></div>
+            <div id="mf-mission-logger-last-sync" class="mf2026-small" style="margin-top:2px;"></div>
+            <div id="mf-mission-logger-credit-status" class="mf2026-small" style="margin-top:2px;"></div>
+            <div id="mf-mission-logger-error" class="mf2026-small mf2026-warn" style="margin-top:4px;" hidden></div>
+            <div class="mf2026-small" style="margin-top:7px;">
+                Records mission identifiers/URLs, advertised and exact awarded value, requirements, current casualty counts, available generator information and selected vehicle IDs/types/names. Exact awards are matched locally against MissionChief's own Credits transactions; the rest of the account ledger is never uploaded. Uploads use a persistent five-minute batch queue. Passwords, cookies and personnel names are never collected.
+            </div>
+            <div class="mf2026-small" style="margin-top:4px;">
+                Each paired browser has its own player identity. Disconnecting removes its credential and any unsent events from this browser.
+            </div>
+        `;
+        advancedBody.appendChild(missionLoggerBox);
+
+        const missionLoggerToggle =
+            missionLoggerBox.querySelector(
+                '#mf-mission-logger-toggle'
+            );
+        const missionLoggerEndpointInput =
+            missionLoggerBox.querySelector(
+                '#mf-mission-logger-endpoint'
+            );
+        const missionLoggerCodeInput =
+            missionLoggerBox.querySelector(
+                '#mf-mission-logger-code'
+            );
+        const missionLoggerPairButton =
+            missionLoggerBox.querySelector(
+                '#mf-mission-logger-pair'
+            );
+        const missionLoggerSyncButton =
+            missionLoggerBox.querySelector(
+                '#mf-mission-logger-sync'
+            );
+        const missionLoggerDisconnectButton =
+            missionLoggerBox.querySelector(
+                '#mf-mission-logger-disconnect'
+            );
+
+        missionLoggerToggle?.addEventListener(
+            'change',
+            function() {
+                mfMissionLoggerEnabled =
+                    this.checked === true;
+                localStorage.setItem(
+                    MF_MISSION_LOGGER_ENABLED_KEY,
+                    String(mfMissionLoggerEnabled)
+                );
+
+                if (mfMissionLoggerEnabled) {
+                    recordMissionLoggerObservedEvent();
+                    startMissionLoggerSyncTimer();
+                } else {
+                    stopMissionLoggerSyncTimer();
+                    stopMissionLoggerCreditReconciliation();
+                }
+
+                renderMissionLoggerStatus();
+                updateStatusBox(
+                    `Mission Analytics Logger ${mfMissionLoggerEnabled ? 'enabled' : 'disabled'}.`
+                );
+            }
+        );
+
+        function saveMissionLoggerEndpointInput() {
+            const raw = String(
+                missionLoggerEndpointInput?.value || ''
+            ).trim();
+            const endpoint =
+                normaliseMissionLoggerEndpoint(raw);
+
+            if (raw && !endpoint) {
+                writeMissionLoggerState({
+                    lastError:
+                        'Use the deployed Google Apps Script /exec endpoint.'
+                });
+                return false;
+            }
+
+            mfMissionLoggerEndpoint = endpoint;
+            localStorage.setItem(
+                MF_MISSION_LOGGER_ENDPOINT_KEY,
+                endpoint
+            );
+            writeMissionLoggerState({
+                lastError: ''
+            });
+            startMissionLoggerSyncTimer();
+            return true;
+        }
+
+        missionLoggerEndpointInput?.addEventListener(
+            'change',
+            saveMissionLoggerEndpointInput
+        );
+
+        missionLoggerPairButton?.addEventListener(
+            'click',
+            async function() {
+                if (!saveMissionLoggerEndpointInput()) {
+                    return;
+                }
+
+                const originalText = this.textContent;
+                this.disabled = true;
+                this.textContent = 'Pairing...';
+
+                try {
+                    const response =
+                        await pairMissionLoggerBrowser(
+                            missionLoggerCodeInput?.value
+                        );
+                    if (missionLoggerCodeInput) {
+                        missionLoggerCodeInput.value = '';
+                    }
+                    updateStatusBox(
+                        `Mission logger paired to ${response.playerName || response.playerId}.`
+                    );
+                } catch (error) {
+                    writeMissionLoggerState({
+                        lastError: String(
+                            error?.message ||
+                            'Mission logger pairing failed.'
+                        ).slice(0, 500)
+                    });
+                } finally {
+                    this.textContent = originalText;
+                    renderMissionLoggerStatus();
+                }
+            }
+        );
+
+        missionLoggerSyncButton?.addEventListener(
+            'click',
+            async function() {
+                const originalText = this.textContent;
+                this.disabled = true;
+                this.textContent = 'Syncing...';
+                await syncMissionLoggerNow({ manual: true });
+                this.textContent = originalText;
+                renderMissionLoggerStatus();
+            }
+        );
+
+        missionLoggerDisconnectButton?.addEventListener(
+            'click',
+            async function() {
+                const originalText = this.textContent;
+                this.disabled = true;
+                this.textContent = 'Disconnecting...';
+                await disconnectMissionLoggerBrowser();
+                this.textContent = originalText;
+                updateStatusBox(
+                    'Mission logger disconnected from this browser.'
+                );
+                renderMissionLoggerStatus();
+            }
+        );
+
+        renderMissionLoggerStatus();
+
         const queueRestartBox = document.createElement('div');
         queueRestartBox.className = 'mf2026-box';
         queueRestartBox.innerHTML = `
@@ -24901,6 +25192,185 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
         return 0;
     }
 
+    function extractMissionAdvertisedCreditsFromDocument(doc) {
+        if (!doc) return 0;
+
+        const attributeCandidates = Array.from(
+            doc.querySelectorAll?.(
+                '[data-mission-credits], [data-credits], [data-reward]'
+            ) || []
+        );
+
+        for (const element of attributeCandidates) {
+            const raw =
+                element.getAttribute?.('data-mission-credits') ||
+                element.getAttribute?.('data-credits') ||
+                element.getAttribute?.('data-reward') ||
+                '';
+            const parsed = parseInt(
+                String(raw).replace(/[^\d]/g, ''),
+                10
+            );
+
+            if (
+                Number.isFinite(parsed) &&
+                parsed > 0 &&
+                parsed < 100000000
+            ) {
+                return parsed;
+            }
+        }
+
+        const rows = Array.from(
+            doc.querySelectorAll?.(
+                'table tbody tr, table tr'
+            ) || []
+        );
+
+        for (const row of rows) {
+            const cells = Array.from(
+                row.querySelectorAll?.('td, th') || []
+            ).map(cell => {
+                return String(cell.textContent || '')
+                    .replace(/\u00a0/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+            });
+
+            if (cells.length < 2) continue;
+
+            const label = cells[0]
+                .replace(/\s*:\s*$/, '')
+                .trim();
+
+            if (
+                !/^(?:average\s+credits?|mission\s+value|reward)$/i
+                    .test(label)
+            ) {
+                continue;
+            }
+
+            const parsed = parseCreditValueFromText(
+                `${label}: ${cells.slice(1).join(' ')}`
+            );
+
+            if (parsed > 0) return parsed;
+        }
+
+        return parseCreditValueFromText(
+            doc.body?.innerText ||
+            doc.body?.textContent ||
+            ''
+        );
+    }
+
+    function extractMissionGeneratorFromDocument(doc) {
+        const empty = {
+            stationId: '',
+            stationName: '',
+            source: ''
+        };
+        if (!doc) return empty;
+
+        const explicit = doc.querySelector?.(
+            '[data-generator-building-id], [data-generator-building-name], ' +
+            '[data-generated-by], #mission_generated_by, .mission-generated-by'
+        );
+        if (explicit) {
+            const link = explicit.matches?.('a[href*="/buildings/"]')
+                ? explicit
+                : explicit.querySelector?.(
+                    'a[href*="/buildings/"]'
+                );
+            const id = String(
+                explicit.getAttribute?.(
+                    'data-generator-building-id'
+                ) ||
+                link?.getAttribute?.('href')?.match(
+                    /\/buildings\/(\d+)/i
+                )?.[1] ||
+                ''
+            ).trim();
+            const name = trimMissionLoggerText(
+                explicit.getAttribute?.(
+                    'data-generator-building-name'
+                ) ||
+                explicit.getAttribute?.('data-generated-by') ||
+                link?.textContent ||
+                explicit.textContent ||
+                '',
+                160
+            );
+
+            if (id || name) {
+                return {
+                    stationId: /^\d+$/.test(id) ? id : '',
+                    stationName: name,
+                    source: 'mission-definition'
+                };
+            }
+        }
+
+        const rows = Array.from(
+            doc.querySelectorAll?.(
+                'table tbody tr, table tr'
+            ) || []
+        );
+
+        for (const row of rows) {
+            const cells = Array.from(
+                row.querySelectorAll?.('td, th') || []
+            );
+            if (cells.length < 2) continue;
+
+            const label = trimMissionLoggerText(
+                cells[0]?.textContent || '',
+                120
+            ).replace(/\s*:\s*$/, '');
+            if (
+                !/^(?:generated\s+by|generating\s+(?:station|building)|generator)$/i
+                    .test(label)
+            ) {
+                continue;
+            }
+
+            const valueCell = cells.slice(1).find(cell => {
+                return trimMissionLoggerText(
+                    cell?.textContent || '',
+                    160
+                );
+            });
+            const link = valueCell?.querySelector?.(
+                'a[href*="/buildings/"]'
+            );
+            const id = String(
+                link?.getAttribute?.('href')?.match(
+                    /\/buildings\/(\d+)/i
+                )?.[1] ||
+                valueCell?.getAttribute?.(
+                    'data-generator-building-id'
+                ) ||
+                ''
+            ).trim();
+            const name = trimMissionLoggerText(
+                link?.textContent ||
+                valueCell?.textContent ||
+                '',
+                160
+            );
+
+            if (id || name) {
+                return {
+                    stationId: /^\d+$/.test(id) ? id : '',
+                    stationName: name,
+                    source: 'mission-definition'
+                };
+            }
+        }
+
+        return empty;
+    }
+
     function getMissionCredits() {
         const scope = getCurrentMissionValueScope();
 
@@ -24949,7 +25419,3667 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
             ''
         ).replace(/\s+/g, ' ').trim();
 
-        return parseCreditValueFromText(scopeText);
+        const visibleCredits =
+            parseCreditValueFromText(scopeText);
+
+        if (visibleCredits > 0) {
+            return visibleCredits;
+        }
+
+        const markerCredits = Math.max(
+            0,
+            parseInt(
+                getMissionLoggerMissionSnapshot()
+                    .advertisedCredits,
+                10
+            ) || 0
+        );
+
+        if (markerCredits > 0) {
+            return markerCredits;
+        }
+
+        return getCachedMissionAdvertisedCredits();
+    }
+
+    function createMissionLoggerId(prefix = 'id') {
+        let value = '';
+
+        try {
+            if (typeof crypto?.randomUUID === 'function') {
+                value = crypto.randomUUID();
+            } else if (typeof crypto?.getRandomValues === 'function') {
+                const bytes = new Uint8Array(16);
+                crypto.getRandomValues(bytes);
+                value = Array.from(bytes)
+                    .map(byte => byte.toString(16).padStart(2, '0'))
+                    .join('');
+            }
+        } catch (_error) {}
+
+        if (!value) {
+            value = `${Date.now().toString(36)}-${Math.random()
+                .toString(36)
+                .slice(2)}-${Math.random().toString(36).slice(2)}`;
+        }
+
+        return `${String(prefix || 'id')}-${value}`;
+    }
+
+    function normaliseMissionLoggerEndpoint(value) {
+        const raw = String(value || '').trim();
+        if (!raw) return '';
+
+        try {
+            const url = new URL(raw);
+            const validHost =
+                url.protocol === 'https:' &&
+                url.hostname === 'script.google.com';
+            const validPath =
+                /^\/macros\/s\/[A-Za-z0-9_-]+\/(?:exec|dev)\/?$/.test(
+                    url.pathname
+                );
+
+            if (!validHost || !validPath) return '';
+            url.search = '';
+            url.hash = '';
+            return url.href.replace(/\/$/, '');
+        } catch (_error) {
+            return '';
+        }
+    }
+
+    mfMissionLoggerEndpoint = normaliseMissionLoggerEndpoint(
+        localStorage.getItem(
+            MF_MISSION_LOGGER_ENDPOINT_KEY
+        ) || MF_MISSION_LOGGER_DEFAULT_ENDPOINT
+    );
+
+    function readMissionLoggerIdentity() {
+        try {
+            const parsed = JSON.parse(
+                localStorage.getItem(
+                    MF_MISSION_LOGGER_IDENTITY_KEY
+                ) || 'null'
+            );
+
+            if (
+                !parsed ||
+                typeof parsed !== 'object' ||
+                !/^[A-Za-z0-9_-]{3,80}$/.test(
+                    String(parsed.playerId || '')
+                ) ||
+                !/^[A-Za-z0-9_-]{8,160}$/.test(
+                    String(parsed.deviceId || '')
+                ) ||
+                String(parsed.token || '').length < 24
+            ) {
+                return null;
+            }
+
+            return {
+                playerId: String(parsed.playerId),
+                playerName: String(
+                    parsed.playerName || parsed.playerId
+                ).slice(0, 120),
+                deviceId: String(parsed.deviceId),
+                deviceLabel: String(
+                    parsed.deviceLabel || 'MissionChief browser'
+                ).slice(0, 120),
+                token: String(parsed.token),
+                pairedAt: String(parsed.pairedAt || '')
+            };
+        } catch (_error) {
+            return null;
+        }
+    }
+
+    function writeMissionLoggerIdentity(identity) {
+        localStorage.setItem(
+            MF_MISSION_LOGGER_IDENTITY_KEY,
+            JSON.stringify(identity)
+        );
+    }
+
+    function createDefaultMissionLoggerState() {
+        return {
+            lastAttemptAt: 0,
+            lastSuccessAt: 0,
+            lastError: '',
+            lastCreditCheckAt: 0,
+            lastCreditMatchAt: 0,
+            lastCreditError: '',
+            totalMatchedCreditEvents: 0,
+            totalUploadedEvents: 0,
+            droppedEvents: 0
+        };
+    }
+
+    function readMissionLoggerState() {
+        try {
+            const parsed = JSON.parse(
+                localStorage.getItem(
+                    MF_MISSION_LOGGER_STATE_KEY
+                ) || 'null'
+            );
+
+            return Object.assign(
+                createDefaultMissionLoggerState(),
+                parsed && typeof parsed === 'object'
+                    ? parsed
+                    : {}
+            );
+        } catch (_error) {
+            return createDefaultMissionLoggerState();
+        }
+    }
+
+    function writeMissionLoggerState(update) {
+        const state = Object.assign(
+            readMissionLoggerState(),
+            update && typeof update === 'object'
+                ? update
+                : {}
+        );
+
+        localStorage.setItem(
+            MF_MISSION_LOGGER_STATE_KEY,
+            JSON.stringify(state)
+        );
+        renderMissionLoggerStatus();
+        return state;
+    }
+
+    function readMissionLoggerQueue() {
+        try {
+            const parsed = JSON.parse(
+                localStorage.getItem(
+                    MF_MISSION_LOGGER_QUEUE_KEY
+                ) || '[]'
+            );
+
+            return Array.isArray(parsed)
+                ? parsed.filter(event => {
+                    return !!(
+                        event &&
+                        typeof event === 'object' &&
+                        event.eventId
+                    );
+                })
+                : [];
+        } catch (_error) {
+            return [];
+        }
+    }
+
+    function boundMissionLoggerQueue(events) {
+        let queue = Array.isArray(events)
+            ? events.slice(-MF_MISSION_LOGGER_MAX_QUEUE_EVENTS)
+            : [];
+        let dropped = Math.max(
+            0,
+            (Array.isArray(events) ? events.length : 0) -
+                queue.length
+        );
+        let encoded = JSON.stringify(queue);
+
+        while (
+            encoded.length >
+                MF_MISSION_LOGGER_MAX_QUEUE_CHARS &&
+            queue.length > 1
+        ) {
+            queue.shift();
+            dropped += 1;
+            encoded = JSON.stringify(queue);
+        }
+
+        return { queue, encoded, dropped };
+    }
+
+    function writeMissionLoggerQueue(events) {
+        const bounded = boundMissionLoggerQueue(events);
+
+        try {
+            localStorage.setItem(
+                MF_MISSION_LOGGER_QUEUE_KEY,
+                bounded.encoded
+            );
+        } catch (_error) {
+            const fallback = boundMissionLoggerQueue(
+                bounded.queue.slice(-80)
+            );
+            localStorage.setItem(
+                MF_MISSION_LOGGER_QUEUE_KEY,
+                fallback.encoded
+            );
+            bounded.dropped += Math.max(
+                0,
+                bounded.queue.length - fallback.queue.length
+            );
+            bounded.queue = fallback.queue;
+        }
+
+        if (bounded.dropped > 0) {
+            const state = readMissionLoggerState();
+            writeMissionLoggerState({
+                droppedEvents:
+                    Math.max(
+                        0,
+                        Number(state.droppedEvents || 0)
+                    ) + bounded.dropped,
+                lastError:
+                    `${bounded.dropped} oldest logger event${bounded.dropped === 1 ? '' : 's'} dropped because the local outbox reached its safety limit.`
+            });
+        } else {
+            renderMissionLoggerStatus();
+        }
+
+        return bounded.queue;
+    }
+
+    function queueMissionLoggerEvent(event) {
+        if (
+            !mfMissionLoggerEnabled ||
+            !readMissionLoggerIdentity() ||
+            !event ||
+            typeof event !== 'object'
+        ) {
+            return false;
+        }
+
+        const queue = readMissionLoggerQueue();
+
+        if (
+            queue.some(existing => {
+                return existing.eventId === event.eventId;
+            })
+        ) {
+            return false;
+        }
+
+        queue.push(event);
+        writeMissionLoggerQueue(queue);
+        rememberMissionLoggerEvent(event);
+        return true;
+    }
+
+    function readMissionLoggerPendingBatch() {
+        try {
+            const parsed = JSON.parse(
+                localStorage.getItem(
+                    MF_MISSION_LOGGER_PENDING_BATCH_KEY
+                ) || 'null'
+            );
+
+            if (
+                !parsed ||
+                typeof parsed !== 'object' ||
+                !parsed.batchId ||
+                !Array.isArray(parsed.eventIds)
+            ) {
+                return null;
+            }
+
+            return parsed;
+        } catch (_error) {
+            return null;
+        }
+    }
+
+    function writeMissionLoggerPendingBatch(batch) {
+        if (!batch) {
+            localStorage.removeItem(
+                MF_MISSION_LOGGER_PENDING_BATCH_KEY
+            );
+            return;
+        }
+
+        localStorage.setItem(
+            MF_MISSION_LOGGER_PENDING_BATCH_KEY,
+            JSON.stringify(batch)
+        );
+    }
+
+    function isTrustedMissionLoggerResponseOrigin(origin) {
+        try {
+            const url = new URL(String(origin || ''));
+            return url.protocol === 'https:' && (
+                url.hostname === 'script.google.com' ||
+                url.hostname === 'script.googleusercontent.com' ||
+                url.hostname.endsWith('.googleusercontent.com')
+            );
+        } catch (_error) {
+            return false;
+        }
+    }
+
+    function isMissionLoggerResponseWindow(source, frame) {
+        const expectedWindow = frame?.contentWindow;
+        if (!source || !expectedWindow) return false;
+
+        let currentWindow = source;
+
+        // Apps Script can serve HtmlService output inside one or more Google
+        // sandbox frames. The postMessage source is then a child of the form's
+        // target iframe instead of the target iframe itself. Walk only the
+        // browser-exposed parent chain and require it to reach that exact
+        // request iframe; the nonce and trusted Google-origin checks still
+        // apply independently.
+        for (let depth = 0; depth < 6; depth += 1) {
+            if (currentWindow === expectedWindow) return true;
+
+            try {
+                const parentWindow = currentWindow.parent;
+                if (
+                    !parentWindow ||
+                    parentWindow === currentWindow
+                ) {
+                    break;
+                }
+                currentWindow = parentWindow;
+            } catch (_error) {
+                return false;
+            }
+        }
+
+        return false;
+    }
+
+    function cleanupMissionLoggerRequest(requestId) {
+        const pending =
+            mfMissionLoggerPendingRequests.get(requestId);
+        if (!pending) return;
+
+        clearTimeout(pending.timeoutId);
+        pending.form?.remove();
+        pending.frame?.remove();
+        mfMissionLoggerPendingRequests.delete(requestId);
+    }
+
+    function installMissionLoggerMessageHandler() {
+        if (mfMissionLoggerMessageHandler) return;
+
+        mfMissionLoggerMessageHandler = event => {
+            const data = event?.data;
+
+            if (
+                !data ||
+                typeof data !== 'object' ||
+                data.source !==
+                    MF_MISSION_LOGGER_MESSAGE_SOURCE ||
+                !data.requestId
+            ) {
+                return;
+            }
+
+            const requestId = String(data.requestId);
+            const pending =
+                mfMissionLoggerPendingRequests.get(requestId);
+
+            if (
+                !pending ||
+                !isMissionLoggerResponseWindow(
+                    event.source,
+                    pending.frame
+                ) ||
+                !isTrustedMissionLoggerResponseOrigin(
+                    event.origin
+                )
+            ) {
+                return;
+            }
+
+            cleanupMissionLoggerRequest(requestId);
+
+            if (data.ok === true) {
+                pending.resolve(data);
+                return;
+            }
+
+            const error = new Error(
+                String(
+                    data.error ||
+                    'Google logger rejected the request.'
+                )
+            );
+            error.code = String(data.code || 'LOGGER_REJECTED');
+            pending.reject(error);
+        };
+
+        window.addEventListener(
+            'message',
+            mfMissionLoggerMessageHandler
+        );
+
+        try {
+            if (
+                window.top !== window &&
+                window.top.location.origin ===
+                    window.location.origin
+            ) {
+                window.top.addEventListener(
+                    'message',
+                    mfMissionLoggerMessageHandler
+                );
+            }
+        } catch (_error) {}
+    }
+
+    function submitMissionLoggerRequest(action, payload) {
+        const endpoint = normaliseMissionLoggerEndpoint(
+            mfMissionLoggerEndpoint
+        );
+
+        if (!endpoint) {
+            return Promise.reject(
+                new Error(
+                    'A valid Google Apps Script logger endpoint is required.'
+                )
+            );
+        }
+
+        installMissionLoggerMessageHandler();
+
+        const requestId = createMissionLoggerId('request');
+        const frameName =
+            `mf-mission-logger-${requestId}`;
+        const frame = document.createElement('iframe');
+        frame.name = frameName;
+        frame.hidden = true;
+        frame.setAttribute('aria-hidden', 'true');
+        frame.style.display = 'none';
+
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = endpoint;
+        form.target = frameName;
+        form.enctype =
+            'application/x-www-form-urlencoded';
+        form.style.display = 'none';
+
+        const requestPayload = Object.assign(
+            {},
+            payload && typeof payload === 'object'
+                ? payload
+                : {},
+            {
+                action: String(action || ''),
+                requestId,
+                replyOrigin: window.location.origin,
+                schemaVersion:
+                    MF_MISSION_LOGGER_SCHEMA_VERSION,
+                clientVersion:
+                    MF_MISSION_LOGGER_CLIENT_VERSION
+            }
+        );
+
+        const fields = {
+            payload: JSON.stringify(requestPayload),
+            request_id: requestId,
+            reply_origin: window.location.origin
+        };
+
+        Object.entries(fields).forEach(([name, value]) => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = name;
+            input.value = String(value);
+            form.appendChild(input);
+        });
+
+        document.body.appendChild(frame);
+        document.body.appendChild(form);
+
+        return new Promise((resolve, reject) => {
+            const timeoutId = setTimeout(() => {
+                cleanupMissionLoggerRequest(requestId);
+                reject(
+                    new Error(
+                        'Google logger request timed out. The batch remains queued.'
+                    )
+                );
+            }, MF_MISSION_LOGGER_REQUEST_TIMEOUT_MS);
+
+            mfMissionLoggerPendingRequests.set(
+                requestId,
+                {
+                    resolve,
+                    reject,
+                    timeoutId,
+                    frame,
+                    form
+                }
+            );
+
+            try {
+                form.submit();
+            } catch (error) {
+                cleanupMissionLoggerRequest(requestId);
+                reject(error);
+            }
+        });
+    }
+
+    function getMissionLoggerDeviceLabel() {
+        const platform = String(
+            navigator.userAgentData?.platform ||
+            navigator.platform ||
+            ''
+        ).trim();
+        const browser = /Edg\//i.test(navigator.userAgent)
+            ? 'Edge'
+            : /Chrome\//i.test(navigator.userAgent)
+                ? 'Chrome'
+                : /Safari\//i.test(navigator.userAgent)
+                    ? 'Safari'
+                    : /Firefox\//i.test(navigator.userAgent)
+                        ? 'Firefox'
+                        : 'Browser';
+
+        return [platform, browser]
+            .filter(Boolean)
+            .join(' · ')
+            .slice(0, 120) ||
+            'MissionChief browser';
+    }
+
+    async function pairMissionLoggerBrowser(pairingCode) {
+        const code = String(pairingCode || '')
+            .toUpperCase()
+            .replace(/[^A-Z0-9]/g, '');
+
+        if (code.length < 8 || code.length > 40) {
+            throw new Error(
+                'Enter the one-time pairing code created in the Google logger.'
+            );
+        }
+
+        const existingIdentity =
+            readMissionLoggerIdentity();
+        const deviceId =
+            existingIdentity?.deviceId ||
+            createMissionLoggerId('device');
+        const deviceLabel = getMissionLoggerDeviceLabel();
+        const response = await submitMissionLoggerRequest(
+            'pair',
+            {
+                pairingCode: code,
+                deviceId,
+                deviceLabel
+            }
+        );
+
+        if (
+            !response.token ||
+            !response.playerId ||
+            String(response.token).length < 24
+        ) {
+            throw new Error(
+                'The logger returned an invalid pairing response.'
+            );
+        }
+
+        writeMissionLoggerIdentity({
+            playerId: String(response.playerId),
+            playerName: String(
+                response.playerName || response.playerId
+            ).slice(0, 120),
+            deviceId,
+            deviceLabel,
+            token: String(response.token),
+            pairedAt: String(
+                response.pairedAt || new Date().toISOString()
+            )
+        });
+
+        mfMissionLoggerEnabled = true;
+        localStorage.setItem(
+            MF_MISSION_LOGGER_ENABLED_KEY,
+            'true'
+        );
+        writeMissionLoggerState({
+            lastError: '',
+            lastCreditCheckAt: 0,
+            lastCreditMatchAt: 0,
+            lastCreditError: '',
+            totalMatchedCreditEvents: 0
+        });
+        startMissionLoggerSyncTimer();
+        recordMissionLoggerObservedEvent();
+        renderMissionLoggerStatus();
+        return response;
+    }
+
+    function acquireMissionLoggerSyncLock() {
+        const now = Date.now();
+        const owner = `${MF_INSTANCE_TOKEN}:${createMissionLoggerId('sync')}`;
+
+        try {
+            const existing = JSON.parse(
+                localStorage.getItem(
+                    MF_MISSION_LOGGER_SYNC_LOCK_KEY
+                ) || 'null'
+            );
+
+            if (
+                existing &&
+                Number(existing.expiresAt || 0) > now
+            ) {
+                return '';
+            }
+
+            localStorage.setItem(
+                MF_MISSION_LOGGER_SYNC_LOCK_KEY,
+                JSON.stringify({
+                    owner,
+                    expiresAt:
+                        now +
+                        MF_MISSION_LOGGER_REQUEST_TIMEOUT_MS +
+                        15000
+                })
+            );
+
+            const confirmed = JSON.parse(
+                localStorage.getItem(
+                    MF_MISSION_LOGGER_SYNC_LOCK_KEY
+                ) || 'null'
+            );
+
+            return confirmed?.owner === owner
+                ? owner
+                : '';
+        } catch (_error) {
+            return '';
+        }
+    }
+
+    function releaseMissionLoggerSyncLock(owner) {
+        if (!owner) return;
+
+        try {
+            const existing = JSON.parse(
+                localStorage.getItem(
+                    MF_MISSION_LOGGER_SYNC_LOCK_KEY
+                ) || 'null'
+            );
+
+            if (existing?.owner === owner) {
+                localStorage.removeItem(
+                    MF_MISSION_LOGGER_SYNC_LOCK_KEY
+                );
+            }
+        } catch (_error) {}
+    }
+
+    async function syncMissionLoggerNow(options = {}) {
+        if (mfMissionLoggerSyncActive) return false;
+        if (!mfMissionLoggerEnabled) return false;
+
+        const identity = readMissionLoggerIdentity();
+        if (!identity || !mfMissionLoggerEndpoint) {
+            renderMissionLoggerStatus();
+            return false;
+        }
+
+        await reconcileMissionLoggerCreditTransactions({
+            force: options.manual === true,
+            includeOlder: options.manual === true,
+            maxPages:
+                options.manual === true
+                    ? MF_MISSION_LOGGER_CREDIT_MAX_PAGES
+                    : 1
+        });
+
+        if (isMissionPage()) {
+            try {
+                const currentMissionId = String(
+                    getCurrentMissionIdForQueueRestart() || ''
+                );
+                const needsDefinitionEnrichment =
+                    readMissionLoggerQueue().some(event => {
+                        return (
+                            String(event?.missionId || '') ===
+                                currentMissionId &&
+                            (
+                                Number(
+                                    event?.advertisedCredits || 0
+                                ) <= 0 ||
+                                !Array.isArray(
+                                    event?.requirements
+                                ) ||
+                                event.requirements.length === 0 ||
+                                !event?.generatorStationName
+                            )
+                        );
+                    });
+
+                if (needsDefinitionEnrichment) {
+                    await preloadMissionRequiredPersonnel();
+                }
+            } catch (_error) {}
+
+            enrichMissionLoggerQueuedEventsFromCurrentMission();
+        }
+
+        const queue = readMissionLoggerQueue();
+        if (queue.length === 0) {
+            if (options.manual === true) {
+                writeMissionLoggerState({
+                    lastError: ''
+                });
+            }
+            renderMissionLoggerStatus();
+            return true;
+        }
+
+        const lockOwner = acquireMissionLoggerSyncLock();
+        if (!lockOwner) return false;
+
+        let pending = readMissionLoggerPendingBatch();
+        const queueById = new Map(
+            queue.map(event => [event.eventId, event])
+        );
+
+        if (pending) {
+            pending.eventIds = pending.eventIds.filter(
+                eventId => queueById.has(eventId)
+            );
+
+            if (pending.eventIds.length === 0) {
+                pending = null;
+                writeMissionLoggerPendingBatch(null);
+            } else {
+                writeMissionLoggerPendingBatch(pending);
+            }
+        }
+
+        if (!pending) {
+            const events = queue.slice(
+                0,
+                MF_MISSION_LOGGER_BATCH_SIZE
+            );
+            pending = {
+                batchId: createMissionLoggerId('batch'),
+                eventIds: events.map(event => event.eventId),
+                createdAt: new Date().toISOString()
+            };
+            writeMissionLoggerPendingBatch(pending);
+        }
+
+        const batchEvents = pending.eventIds
+            .map(eventId => queueById.get(eventId))
+            .filter(Boolean);
+
+        if (batchEvents.length === 0) {
+            writeMissionLoggerPendingBatch(null);
+            releaseMissionLoggerSyncLock(lockOwner);
+            return false;
+        }
+
+        mfMissionLoggerSyncActive = true;
+        writeMissionLoggerState({
+            lastAttemptAt: Date.now(),
+            lastError: ''
+        });
+
+        try {
+            const response = await submitMissionLoggerRequest(
+                'upload',
+                {
+                    token: identity.token,
+                    playerId: identity.playerId,
+                    deviceId: identity.deviceId,
+                    batchId: pending.batchId,
+                    events: batchEvents
+                }
+            );
+
+            if (
+                response.batchId &&
+                String(response.batchId) !==
+                    String(pending.batchId)
+            ) {
+                throw new Error(
+                    'Google logger acknowledged a different batch.'
+                );
+            }
+
+            const acknowledged = new Set(
+                pending.eventIds
+            );
+            const remaining = readMissionLoggerQueue()
+                .filter(event => {
+                    return !acknowledged.has(event.eventId);
+                });
+
+            writeMissionLoggerQueue(remaining);
+            writeMissionLoggerPendingBatch(null);
+
+            const state = readMissionLoggerState();
+            writeMissionLoggerState({
+                lastSuccessAt: Date.now(),
+                lastError: '',
+                totalUploadedEvents:
+                    Math.max(
+                        0,
+                        Number(state.totalUploadedEvents || 0)
+                    ) + batchEvents.length
+            });
+            return true;
+        } catch (error) {
+            writeMissionLoggerState({
+                lastError: String(
+                    error?.message ||
+                    'Google logger upload failed.'
+                ).slice(0, 500)
+            });
+            return false;
+        } finally {
+            mfMissionLoggerSyncActive = false;
+            releaseMissionLoggerSyncLock(lockOwner);
+            renderMissionLoggerStatus();
+        }
+    }
+
+    function stopMissionLoggerSyncTimer() {
+        if (mfMissionLoggerInitialSyncTimer) {
+            clearTimeout(mfMissionLoggerInitialSyncTimer);
+            mfMissionLoggerInitialSyncTimer = null;
+        }
+        if (mfMissionLoggerSyncTimer) {
+            clearInterval(mfMissionLoggerSyncTimer);
+            mfMissionLoggerSyncTimer = null;
+        }
+    }
+
+    function startMissionLoggerSyncTimer() {
+        if (!MF_IS_TOP_WINDOW) return;
+
+        if (
+            !mfMissionLoggerEnabled ||
+            !mfMissionLoggerEndpoint ||
+            !readMissionLoggerIdentity()
+        ) {
+            stopMissionLoggerSyncTimer();
+            stopMissionLoggerCreditReconciliation();
+            return;
+        }
+
+        startMissionLoggerCreditReconciliation();
+
+        if (
+            mfMissionLoggerInitialSyncTimer ||
+            mfMissionLoggerSyncTimer
+        ) {
+            return;
+        }
+
+        const state = readMissionLoggerState();
+        const elapsed = Math.max(
+            0,
+            Date.now() - Number(state.lastAttemptAt || 0)
+        );
+        const initialDelay = state.lastAttemptAt
+            ? Math.max(
+                1000,
+                MF_MISSION_LOGGER_SYNC_INTERVAL_MS - elapsed
+            )
+            : 5000;
+
+        mfMissionLoggerInitialSyncTimer = setTimeout(
+            async () => {
+                mfMissionLoggerInitialSyncTimer = null;
+                await syncMissionLoggerNow();
+
+                if (
+                    !mfMissionLoggerEnabled ||
+                    mfMissionLoggerSyncTimer
+                ) {
+                    return;
+                }
+
+                mfMissionLoggerSyncTimer = setInterval(
+                    () => {
+                        void syncMissionLoggerNow();
+                    },
+                    MF_MISSION_LOGGER_SYNC_INTERVAL_MS
+                );
+            },
+            Math.min(
+                MF_MISSION_LOGGER_SYNC_INTERVAL_MS,
+                initialDelay
+            )
+        );
+    }
+
+    function installMissionLoggerStorageListener() {
+        if (mfMissionLoggerStorageHandler) return;
+
+        mfMissionLoggerStorageHandler = event => {
+            if (
+                !event ||
+                ![
+                    MF_MISSION_LOGGER_ENABLED_KEY,
+                    MF_MISSION_LOGGER_ENDPOINT_KEY,
+                    MF_MISSION_LOGGER_IDENTITY_KEY,
+                    MF_MISSION_LOGGER_QUEUE_KEY,
+                    MF_MISSION_LOGGER_STATE_KEY
+                ].includes(event.key)
+            ) {
+                return;
+            }
+
+            mfMissionLoggerEnabled =
+                localStorage.getItem(
+                    MF_MISSION_LOGGER_ENABLED_KEY
+                ) === 'true';
+            mfMissionLoggerEndpoint =
+                normaliseMissionLoggerEndpoint(
+                    localStorage.getItem(
+                        MF_MISSION_LOGGER_ENDPOINT_KEY
+                    ) ||
+                    MF_MISSION_LOGGER_DEFAULT_ENDPOINT
+                );
+
+            if (MF_IS_TOP_WINDOW) {
+                startMissionLoggerSyncTimer();
+            }
+            renderMissionLoggerStatus();
+        };
+
+        window.addEventListener(
+            'storage',
+            mfMissionLoggerStorageHandler
+        );
+    }
+
+    async function disconnectMissionLoggerBrowser() {
+        const identity = readMissionLoggerIdentity();
+
+        if (identity && mfMissionLoggerEndpoint) {
+            try {
+                await submitMissionLoggerRequest(
+                    'revoke',
+                    {
+                        token: identity.token,
+                        playerId: identity.playerId,
+                        deviceId: identity.deviceId
+                    }
+                );
+            } catch (_error) {
+                // Local disconnection still removes the credential. The
+                // Google admin sheet can revoke a stranded device explicitly.
+            }
+        }
+
+        localStorage.removeItem(
+            MF_MISSION_LOGGER_IDENTITY_KEY
+        );
+        localStorage.removeItem(
+            MF_MISSION_LOGGER_PENDING_BATCH_KEY
+        );
+        localStorage.removeItem(
+            MF_MISSION_LOGGER_QUEUE_KEY
+        );
+        localStorage.removeItem(
+            MF_MISSION_LOGGER_OBSERVED_KEY
+        );
+        localStorage.removeItem(
+            MF_MISSION_LOGGER_LAST_DISPATCH_KEY
+        );
+        localStorage.removeItem(
+            MF_MISSION_LOGGER_MISSION_REGISTRY_KEY
+        );
+        localStorage.removeItem(
+            MF_MISSION_LOGGER_SYNC_LOCK_KEY
+        );
+        mfMissionLoggerEnabled = false;
+        localStorage.setItem(
+            MF_MISSION_LOGGER_ENABLED_KEY,
+            'false'
+        );
+        stopMissionLoggerSyncTimer();
+        stopMissionLoggerCreditReconciliation();
+        writeMissionLoggerState({
+            lastCreditCheckAt: 0,
+            lastCreditMatchAt: 0,
+            lastCreditError: '',
+            totalMatchedCreditEvents: 0
+        });
+        renderMissionLoggerStatus();
+    }
+
+    function trimMissionLoggerText(value, maxLength = 300) {
+        const text = String(value || '')
+            .replace(/\u00a0/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        return text.slice(0, Math.max(1, maxLength));
+    }
+
+    function getMissionLoggerDefinitionId() {
+        const missionInfo =
+            getActiveVisibleMissionInfo?.() ||
+            document.querySelector('#mission_general_info');
+        const attributes = [
+            'data-mission-type-id',
+            'data-mission-definition-id',
+            'data-einsatz-id',
+            'mission_type_id'
+        ];
+
+        for (const attribute of attributes) {
+            const value = String(
+                missionInfo?.getAttribute?.(attribute) || ''
+            ).trim();
+            if (/^\d+$/.test(value)) return value;
+        }
+
+        const helpLink = getActiveMissionHelpLink?.();
+        const href = String(
+            helpLink?.href ||
+            helpLink?.getAttribute?.('href') ||
+            ''
+        );
+        const match = href.match(
+            /\/(?:einsaetze|missions\/help)\/(\d+)/i
+        );
+        return match ? match[1] : '';
+    }
+
+    function getMissionLoggerSameOriginWindows() {
+        const windows = [];
+        const addWindow = candidate => {
+            if (!candidate || windows.includes(candidate)) return;
+
+            try {
+                if (
+                    candidate.location.origin !==
+                    window.location.origin
+                ) {
+                    return;
+                }
+                windows.push(candidate);
+            } catch (_error) {}
+        };
+
+        addWindow(window);
+        try { addWindow(window.parent); } catch (_error) {}
+        try { addWindow(window.top); } catch (_error) {}
+
+        windows.slice().forEach(candidate => {
+            try {
+                Array.from(
+                    candidate.document.querySelectorAll('iframe')
+                ).slice(0, 20).forEach(frame => {
+                    addWindow(frame.contentWindow);
+                });
+            } catch (_error) {}
+        });
+
+        return windows;
+    }
+
+    function getMissionLoggerCacheRecord(cache, id) {
+        if (!cache || !id) return null;
+
+        const numericId = Number(id);
+        const keys = [
+            id,
+            Number.isFinite(numericId) ? numericId : id
+        ];
+
+        if (typeof cache.get === 'function') {
+            for (const key of keys) {
+                try {
+                    const value = cache.get(key);
+                    if (value) return value;
+                } catch (_error) {}
+            }
+        }
+
+        if (Array.isArray(cache)) {
+            return cache.find(item => {
+                return String(
+                    item?.id ??
+                    item?.mission_id ??
+                    item?.building_id ??
+                    ''
+                ) === id;
+            }) || null;
+        }
+
+        if (typeof cache === 'object') {
+            for (const key of keys) {
+                try {
+                    if (cache[key]) return cache[key];
+                } catch (_error) {}
+            }
+        }
+
+        return null;
+    }
+
+    function getMissionLoggerBuildingName(buildingId) {
+        const id = String(buildingId || '').trim();
+        if (!/^\d+$/.test(id)) return '';
+
+        for (const candidate of getMissionLoggerSameOriginWindows()) {
+            const cacheNames = [
+                'building_markers_params_cache_per_id',
+                'buildings_data'
+            ];
+
+            for (const cacheName of cacheNames) {
+                try {
+                    const building = getMissionLoggerCacheRecord(
+                        candidate[cacheName],
+                        id
+                    );
+                    const name = trimMissionLoggerText(
+                        building?.name ||
+                        building?.caption ||
+                        '',
+                        160
+                    );
+                    if (name) return name;
+                } catch (_error) {}
+            }
+
+            try {
+                const row = candidate.document.querySelector(
+                    `#building_list_${id}, [data-building_id="${id}"]`
+                );
+                const name = trimMissionLoggerText(
+                    row?.querySelector(
+                        '.map_position_mover, .building_list_caption a:not(.btn)'
+                    )?.textContent ||
+                    '',
+                    160
+                );
+                if (name) return name;
+            } catch (_error) {}
+        }
+
+        return '';
+    }
+
+    function getMissionLoggerMissionSnapshot() {
+        const missionId = String(
+            getCurrentMissionIdForQueueRestart() || ''
+        ).trim();
+        const snapshot = {
+            missionId,
+            missionDefinitionId: '',
+            advertisedCredits: 0,
+            patientCount: 0,
+            possiblePatientCount: 0,
+            prisonerCount: null,
+            possiblePrisonerCount: null,
+            generatorStationId: '',
+            generatorStationName: '',
+            generatorSource: '',
+            source: ''
+        };
+
+        if (!/^\d+$/.test(missionId)) return snapshot;
+
+        const numberOrNull = value => {
+            const parsed = Number(value);
+            return Number.isFinite(parsed) && parsed >= 0
+                ? parsed
+                : null;
+        };
+        const applyCountPair = (value, currentKey, possibleKey) => {
+            const pair = Array.isArray(value)
+                ? value
+                : [value, null];
+            const current = numberOrNull(pair[0]);
+            const possible = numberOrNull(pair[1]);
+
+            if (current !== null) {
+                snapshot[currentKey] = Math.max(
+                    Number(snapshot[currentKey] || 0),
+                    current
+                );
+            }
+            if (possible !== null) {
+                const existing = snapshot[possibleKey];
+                snapshot[possibleKey] = existing === null
+                    ? possible
+                    : Math.max(Number(existing || 0), possible);
+            }
+        };
+
+        for (const candidate of getMissionLoggerSameOriginWindows()) {
+            let mission = null;
+            try {
+                mission = getMissionLoggerCacheRecord(
+                    candidate.missions_data,
+                    missionId
+                );
+            } catch (_error) {}
+
+            if (mission) {
+                snapshot.source = snapshot.source || 'mission-marker';
+                snapshot.missionDefinitionId = String(
+                    mission.mtid ||
+                    mission.mission_type_id ||
+                    snapshot.missionDefinitionId ||
+                    ''
+                );
+                snapshot.advertisedCredits = Math.max(
+                    snapshot.advertisedCredits,
+                    numberOrNull(
+                        mission.average_credits ??
+                        mission.advertised_credits
+                    ) || 0
+                );
+                applyCountPair(
+                    [
+                        mission.patients_count,
+                        mission.possible_patients_count
+                    ],
+                    'patientCount',
+                    'possiblePatientCount'
+                );
+                applyCountPair(
+                    [
+                        mission.prisoners_count,
+                        mission.possible_prisoners_count
+                    ],
+                    'prisonerCount',
+                    'possiblePrisonerCount'
+                );
+
+                const generatorId = String(
+                    mission.generator_building_id ??
+                    mission.generated_by_building_id ??
+                    mission.building_id ??
+                    ''
+                ).trim();
+                if (/^\d+$/.test(generatorId)) {
+                    snapshot.generatorStationId = generatorId;
+                    snapshot.generatorSource = 'mission-marker';
+                }
+
+                const generatorName = trimMissionLoggerText(
+                    mission.generator_building_name ??
+                    mission.generated_by_name ??
+                    mission.generated_by ??
+                    '',
+                    160
+                );
+                if (generatorName) {
+                    snapshot.generatorStationName = generatorName;
+                    snapshot.generatorSource =
+                        snapshot.generatorSource ||
+                        'mission-marker';
+                }
+            }
+
+            let row = null;
+            try {
+                row = candidate.document.getElementById(
+                    `mission_${missionId}`
+                );
+            } catch (_error) {}
+            if (!row) continue;
+
+            snapshot.source = snapshot.source || 'mission-list';
+            snapshot.missionDefinitionId = String(
+                row.getAttribute('mission_type_id') ||
+                row.getAttribute('data-mission-type-id') ||
+                snapshot.missionDefinitionId ||
+                ''
+            );
+
+            try {
+                const sortable = JSON.parse(
+                    row.getAttribute('data-sortable-by') ||
+                    row.getAttribute('data-sortable_by') ||
+                    '{}'
+                );
+                snapshot.advertisedCredits = Math.max(
+                    snapshot.advertisedCredits,
+                    numberOrNull(sortable.average_credits) || 0
+                );
+                applyCountPair(
+                    sortable.patients_count,
+                    'patientCount',
+                    'possiblePatientCount'
+                );
+                applyCountPair(
+                    sortable.prisoners_count,
+                    'prisonerCount',
+                    'possiblePrisonerCount'
+                );
+            } catch (_error) {}
+        }
+
+        if (
+            snapshot.generatorStationId &&
+            !snapshot.generatorStationName
+        ) {
+            snapshot.generatorStationName =
+                getMissionLoggerBuildingName(
+                    snapshot.generatorStationId
+                );
+        }
+
+        return snapshot;
+    }
+
+    function getMissionLoggerGenerator() {
+        const snapshot = getMissionLoggerMissionSnapshot();
+        const roots = [];
+        const addRoot = root => {
+            if (root && !roots.includes(root)) roots.push(root);
+        };
+
+        addRoot(getActiveVisibleMissionInfo?.());
+        addRoot(document.querySelector('#mission_general_info'));
+        try {
+            getActiveMissionRequirementContexts()
+                .forEach(context => addRoot(context.root));
+        } catch (_error) {}
+
+        for (const candidate of getMissionLoggerSameOriginWindows()) {
+            try {
+                addRoot(
+                    candidate.document.querySelector(
+                        '#mission_general_info'
+                    )
+                );
+            } catch (_error) {}
+        }
+
+        for (const scope of roots) {
+            const explicitGenerator =
+                scope.querySelector?.(
+                    '[data-generator-building-id], [data-generator-building-name]'
+                );
+            const labelledGeneratorRow = Array.from(
+                scope.querySelectorAll?.(
+                    'table tbody tr, table tr'
+                ) || []
+            ).find(row => {
+                const label = trimMissionLoggerText(
+                    row.querySelector?.('th, td')?.textContent || '',
+                    120
+                ).replace(/\s*:\s*$/, '');
+                return /^(?:generated\s+by|generating\s+(?:station|building)|generator)$/i
+                    .test(label);
+            });
+            const labelledCells = Array.from(
+                labelledGeneratorRow?.querySelectorAll?.(
+                    'td, th'
+                ) || []
+            );
+            const genericScopeBuildingId =
+                scope.id === 'mission_general_info'
+                    ? (
+                        scope.getAttribute?.('data-building-id') ||
+                        scope.getAttribute?.('building_id')
+                    )
+                    : '';
+            const stationId = [
+                explicitGenerator?.getAttribute?.(
+                    'data-generator-building-id'
+                ),
+                scope.getAttribute?.('data-generator-building-id'),
+                labelledGeneratorRow?.getAttribute?.(
+                    'data-generator-building-id'
+                ),
+                genericScopeBuildingId
+            ].map(value => String(value || '').trim())
+                .find(value => /^\d+$/.test(value)) || '';
+            const stationLink =
+                explicitGenerator?.closest?.('a[href*="/buildings/"]') ||
+                explicitGenerator?.querySelector?.(
+                    'a[href*="/buildings/"]'
+                ) ||
+                labelledGeneratorRow?.querySelector?.(
+                    'a[href*="/buildings/"]'
+                );
+            const linkMatch = String(
+                stationLink?.getAttribute?.('href') || ''
+            ).match(/\/buildings\/(\d+)/i);
+            const resolvedId = stationId || linkMatch?.[1] || '';
+            const resolvedName = trimMissionLoggerText(
+                explicitGenerator?.getAttribute?.(
+                    'data-generator-building-name'
+                ) ||
+                explicitGenerator?.textContent ||
+                stationLink?.textContent ||
+                labelledCells.slice(1)
+                    .map(cell => cell.textContent || '')
+                    .join(' ') ||
+                '',
+                160
+            );
+
+            if (resolvedId || resolvedName) {
+                return {
+                    stationId: resolvedId,
+                    stationName:
+                        resolvedName ||
+                        getMissionLoggerBuildingName(resolvedId),
+                    source: 'mission-page'
+                };
+            }
+        }
+
+        if (
+            snapshot.generatorStationId ||
+            snapshot.generatorStationName
+        ) {
+            return {
+                stationId: snapshot.generatorStationId,
+                stationName: snapshot.generatorStationName,
+                source:
+                    snapshot.generatorSource ||
+                    snapshot.source ||
+                    'mission-marker'
+            };
+        }
+
+        const cached = getCachedMissionGenerator();
+        return {
+            stationId: cached.stationId,
+            stationName: cached.stationName,
+            source: cached.source
+        };
+    }
+
+    function getMissionLoggerOwnership() {
+        const scope = getCurrentMissionValueScope();
+        const text = trimMissionLoggerText(
+            scope?.querySelector?.(
+                '.mission_owner, .mission-owner, [data-mission-owner], [class*="alliance"]'
+            )?.textContent ||
+            '',
+            240
+        ).toLowerCase();
+
+        if (/alliance|shared|association/.test(text)) {
+            return 'alliance';
+        }
+        return 'own';
+    }
+
+    function getMissionLoggerRequirements() {
+        const rows = [];
+        const seen = new Set();
+        const add = (kind, name, required, stillNeeded, source) => {
+            const cleanName = trimMissionLoggerText(name, 240);
+            if (!cleanName) return;
+
+            const item = {
+                kind: trimMissionLoggerText(kind, 40),
+                name: cleanName,
+                required: Math.max(
+                    0,
+                    parseInt(required, 10) || 0
+                ),
+                stillNeeded: Math.max(
+                    0,
+                    parseInt(stillNeeded, 10) || 0
+                ),
+                source: trimMissionLoggerText(source, 80)
+            };
+            const key = [
+                item.kind,
+                item.name,
+                item.required,
+                item.stillNeeded,
+                item.source
+            ].join('|');
+
+            if (seen.has(key)) return;
+            seen.add(key);
+            rows.push(item);
+        };
+
+        try {
+            vehicleLoadState.rows.forEach(row => {
+                add(
+                    'vehicle',
+                    row.originalName || row.mappedName,
+                    row.required,
+                    Math.max(
+                        0,
+                        Number(row.required || 0) -
+                            Number(row.selected || 0)
+                    ),
+                    'nexus-selection'
+                );
+            });
+        } catch (_error) {}
+
+        try {
+            readMissionUpdateRows({ silent: true })
+                .slice(0, 200)
+                .forEach(row => {
+                    add(
+                        row.personnelRequirementType
+                            ? 'personnel'
+                            : row.patientRequirementType
+                                ? 'patient'
+                                : 'vehicle',
+                        row.unitName ||
+                            row.originalName ||
+                            row.name,
+                        row.required || row.stillNeeded,
+                        row.stillNeeded,
+                        row.source || 'mission-update'
+                    );
+                });
+        } catch (_error) {}
+
+        try {
+            getPreloadedMissionTrainedPersonnelRequirements()
+                .slice(0, 100)
+                .forEach(row => {
+                    add(
+                        'personnel',
+                        row.label || row.code,
+                        row.required,
+                        row.required,
+                        'mission-definition'
+                    );
+                });
+        } catch (_error) {}
+
+        return rows.slice(0, 250);
+    }
+
+    function getMissionLoggerSelectedUnits() {
+        let selected = [];
+
+        try {
+            selected = getVehicleCheckboxSnapshot(true)
+                .filter(checkbox => checkbox.checked)
+                .slice(0, 500);
+        } catch (_error) {}
+
+        return selected.map(checkbox => {
+            const row = checkbox.closest?.('tr');
+            const stationLink = row?.querySelector?.(
+                'a[href*="/buildings/"]'
+            );
+            const stationMatch = String(
+                stationLink?.getAttribute?.('href') || ''
+            ).match(/\/buildings\/(\d+)/i);
+            const typeIds = getVehicleTypeIdentifiers(
+                checkbox
+            );
+            const typeName = trimMissionLoggerText(
+                checkbox.getAttribute?.(
+                    'vehicle_type_caption'
+                ) ||
+                row?.getAttribute?.(
+                    'vehicle_type_caption'
+                ) ||
+                row?.querySelector?.(
+                    'td[vehicle_type_id], td[data-vehicle-type-id]'
+                )?.textContent ||
+                '',
+                160
+            );
+
+            return {
+                vehicleId: getMissionVehicleId(checkbox),
+                vehicleTypeId: typeIds[0] || '',
+                vehicleName: trimMissionLoggerText(
+                    getVehicleDebugName(checkbox),
+                    180
+                ),
+                vehicleTypeName: typeName,
+                stationId: stationMatch?.[1] || '',
+                stationName: trimMissionLoggerText(
+                    stationLink?.textContent || '',
+                    180
+                ),
+                status: trimMissionLoggerText(
+                    checkbox.getAttribute?.('status') ||
+                    row?.getAttribute?.('status') ||
+                    row?.querySelector?.(
+                        '.vehicle_status, [data-status]'
+                    )?.textContent ||
+                    '',
+                    80
+                )
+            };
+        });
+    }
+
+    function createMissionLoggerEvent(
+        eventType,
+        options = {}
+    ) {
+        const identity = readMissionLoggerIdentity();
+        if (!identity) return null;
+
+        const missionSnapshot =
+            getMissionLoggerMissionSnapshot();
+        const generator = getMissionLoggerGenerator();
+        const livePatientCount = (() => {
+            try {
+                return Math.max(0, findPatientCount(true));
+            } catch (_error) {
+                return 0;
+            }
+        })();
+        const patientCount = Math.max(
+            livePatientCount,
+            Number(missionSnapshot.patientCount || 0)
+        );
+        const missionId =
+            getCurrentMissionIdForQueueRestart();
+        const missionName = getCurrentMissionName();
+        const capturedAt = new Date().toISOString();
+        const normalisedEventType = trimMissionLoggerText(
+            eventType,
+            60
+        );
+        const eventUnits = options.includeUnits === false
+            ? []
+            : Array.isArray(options.units)
+                ? options.units
+                : getMissionLoggerSelectedUnits();
+        const missionRegistry =
+            readMissionLoggerMissionRegistry();
+        const previousMission = missionRegistry[
+            createMissionLoggerRegistryKey(
+                identity.playerId,
+                missionId
+            )
+        ] || {};
+        const eventFirstObservedAt =
+            normalisedEventType === 'mission-observed'
+                ? earlierMissionLoggerIso(
+                    previousMission.firstObservedAt,
+                    capturedAt
+                )
+                : previousMission.firstObservedAt || '';
+        const eventFirstUnitSentAt =
+            normalisedEventType === 'dispatch'
+                ? earlierMissionLoggerIso(
+                    previousMission.firstUnitSentAt,
+                    capturedAt
+                )
+                : previousMission.firstUnitSentAt || '';
+        const eventDispatchCount = Math.max(
+            0,
+            Number(previousMission.dispatchCount || 0) +
+                (normalisedEventType === 'dispatch' ? 1 : 0)
+        );
+        const eventUnitCount = Math.max(
+            0,
+            Number(previousMission.unitCount || 0) +
+                (normalisedEventType === 'dispatch'
+                    ? eventUnits.length
+                    : 0)
+        );
+
+        return {
+            schemaVersion:
+                MF_MISSION_LOGGER_SCHEMA_VERSION,
+            eventId: createMissionLoggerId('event'),
+            eventType: normalisedEventType,
+            capturedAt,
+            playerId: identity.playerId,
+            deviceId: identity.deviceId,
+            missionId: String(missionId || ''),
+            missionDefinitionId:
+                getMissionLoggerDefinitionId() ||
+                missionSnapshot.missionDefinitionId,
+            missionName: trimMissionLoggerText(
+                missionName,
+                240
+            ),
+            missionUrl: missionId
+                ? `${window.location.origin}/missions/${missionId}`
+                : '',
+            ownership: getMissionLoggerOwnership(),
+            generatorStationId: generator.stationId,
+            generatorStationName: generator.stationName,
+            dispatchMode: trimMissionLoggerText(
+                options.dispatchMode || '',
+                80
+            ),
+            shared: options.shared === true,
+            advertisedCredits: Math.max(
+                0,
+                Number.isFinite(Number(options.credits))
+                    ? Number(options.credits)
+                    : getMissionCredits()
+            ),
+            actualCredits:
+                options.actualCredits !== null &&
+                options.actualCredits !== undefined &&
+                options.actualCredits !== '' &&
+                Number.isFinite(Number(options.actualCredits)) &&
+                Number(options.actualCredits) >= 0
+                    ? Number(options.actualCredits)
+                    : null,
+            patientCount,
+            prisonerCount:
+                missionSnapshot.prisonerCount,
+            transportCount: null,
+            requirements: getMissionLoggerRequirements(),
+            units: eventUnits,
+            metadata: {
+                ...(
+                    options.metadata &&
+                    typeof options.metadata === 'object'
+                        ? options.metadata
+                        : {}
+                ),
+                source: 'missionchief-command-nexus',
+                ready:
+                    options.ready === undefined
+                        ? vehicleLoadState.ready === true
+                        : options.ready === true,
+                reason: trimMissionLoggerText(
+                    options.reason || '',
+                    300
+                ),
+                autoMode:
+                    options.autoMode === true,
+                dispatchFingerprint:
+                    trimMissionLoggerText(
+                        options.dispatchFingerprint || '',
+                        4000
+                    ),
+                generatorSource:
+                    generator.source || '',
+                missionSnapshotSource:
+                    missionSnapshot.source || '',
+                possiblePatientCount: Math.max(
+                    0,
+                    Number(
+                        missionSnapshot.possiblePatientCount || 0
+                    )
+                ),
+                possiblePrisonerCount:
+                    missionSnapshot.possiblePrisonerCount,
+                firstObservedAt:
+                    eventFirstObservedAt,
+                firstUnitSentAt:
+                    eventFirstUnitSentAt,
+                dispatchCount:
+                    eventDispatchCount,
+                unitCount:
+                    eventUnitCount,
+                missionFinderVersion:
+                    MF_MISSION_LOGGER_MISSION_FINDER_VERSION
+            }
+        };
+    }
+
+    function createMissionLoggerRegistryKey(
+        playerId,
+        missionId
+    ) {
+        const player = String(playerId || '').trim();
+        const mission = String(missionId || '').trim();
+        return player && mission
+            ? `${player}|${mission}`
+            : '';
+    }
+
+    function readMissionLoggerMissionRegistry() {
+        try {
+            const parsed = JSON.parse(
+                localStorage.getItem(
+                    MF_MISSION_LOGGER_MISSION_REGISTRY_KEY
+                ) || '{}'
+            );
+            return parsed && typeof parsed === 'object'
+                ? parsed
+                : {};
+        } catch (_error) {
+            return {};
+        }
+    }
+
+    function writeMissionLoggerMissionRegistry(registry) {
+        const cutoff =
+            Date.now() -
+            MF_MISSION_LOGGER_MISSION_REGISTRY_DAYS *
+                24 * 60 * 60 * 1000;
+        const entries = Object.entries(
+            registry && typeof registry === 'object'
+                ? registry
+                : {}
+        ).filter(([, record]) => {
+            return !!(
+                record &&
+                typeof record === 'object' &&
+                Number(record.lastSeenAt || 0) >= cutoff
+            );
+        }).sort((left, right) => {
+            return Number(right[1].lastSeenAt || 0) -
+                Number(left[1].lastSeenAt || 0);
+        }).slice(0, MF_MISSION_LOGGER_MAX_MISSION_REGISTRY);
+
+        const bounded = Object.fromEntries(entries);
+        try {
+            localStorage.setItem(
+                MF_MISSION_LOGGER_MISSION_REGISTRY_KEY,
+                JSON.stringify(bounded)
+            );
+        } catch (_error) {
+            try {
+                localStorage.setItem(
+                    MF_MISSION_LOGGER_MISSION_REGISTRY_KEY,
+                    JSON.stringify(
+                        Object.fromEntries(entries.slice(0, 500))
+                    )
+                );
+            } catch (_ignored) {}
+        }
+    }
+
+    function earlierMissionLoggerIso(left, right) {
+        const leftTime = Date.parse(String(left || ''));
+        const rightTime = Date.parse(String(right || ''));
+        if (!Number.isFinite(leftTime)) {
+            return Number.isFinite(rightTime)
+                ? new Date(rightTime).toISOString()
+                : '';
+        }
+        if (!Number.isFinite(rightTime)) {
+            return new Date(leftTime).toISOString();
+        }
+        return new Date(Math.min(leftTime, rightTime))
+            .toISOString();
+    }
+
+    function rememberMissionLoggerEvent(event) {
+        const playerId = String(event?.playerId || '').trim();
+        const missionId = String(event?.missionId || '').trim();
+        const key = createMissionLoggerRegistryKey(
+            playerId,
+            missionId
+        );
+        if (!key) return;
+
+        const registry = readMissionLoggerMissionRegistry();
+        const previous =
+            registry[key] && typeof registry[key] === 'object'
+                ? registry[key]
+                : {};
+        const capturedAt = Number.isFinite(
+            Date.parse(String(event.capturedAt || ''))
+        )
+            ? new Date(event.capturedAt).toISOString()
+            : new Date().toISOString();
+        const metadata =
+            event.metadata && typeof event.metadata === 'object'
+                ? event.metadata
+                : {};
+        const eventType = String(
+            event.eventType || ''
+        ).toLowerCase();
+        const units = Array.isArray(event.units)
+            ? event.units
+            : [];
+        const next = {
+            ...previous,
+            playerId,
+            missionId,
+            missionDefinitionId: String(
+                event.missionDefinitionId ||
+                previous.missionDefinitionId ||
+                ''
+            ),
+            missionName: trimMissionLoggerText(
+                event.missionName || previous.missionName || '',
+                240
+            ),
+            missionUrl: trimMissionLoggerText(
+                event.missionUrl || previous.missionUrl || '',
+                500
+            ),
+            ownership: trimMissionLoggerText(
+                event.ownership || previous.ownership || '',
+                40
+            ),
+            generatorStationId: String(
+                event.generatorStationId ||
+                previous.generatorStationId ||
+                ''
+            ),
+            generatorStationName: trimMissionLoggerText(
+                event.generatorStationName ||
+                previous.generatorStationName ||
+                '',
+                160
+            ),
+            advertisedCredits: Math.max(
+                0,
+                Number(previous.advertisedCredits || 0),
+                Number(event.advertisedCredits || 0)
+            ),
+            patientCount: Math.max(
+                0,
+                Number(previous.patientCount || 0),
+                Number(event.patientCount || 0)
+            ),
+            prisonerCount:
+                event.prisonerCount === null ||
+                event.prisonerCount === undefined
+                    ? previous.prisonerCount ?? null
+                    : Math.max(
+                        0,
+                        Number(previous.prisonerCount || 0),
+                        Number(event.prisonerCount || 0)
+                    ),
+            firstObservedAt: earlierMissionLoggerIso(
+                previous.firstObservedAt,
+                metadata.firstObservedAt ||
+                    (eventType === 'mission-observed'
+                        ? capturedAt
+                        : '')
+            ),
+            firstUnitSentAt: earlierMissionLoggerIso(
+                previous.firstUnitSentAt,
+                metadata.firstUnitSentAt ||
+                    (eventType === 'dispatch'
+                        ? capturedAt
+                        : '')
+            ),
+            completedAt: earlierMissionLoggerIso(
+                previous.completedAt,
+                metadata.completedAt ||
+                    (eventType === 'mission-completed'
+                        ? capturedAt
+                        : '')
+            ),
+            dispatchCount: Number(previous.dispatchCount || 0),
+            unitCount: Number(previous.unitCount || 0),
+            firstDispatchMode:
+                previous.firstDispatchMode ||
+                (eventType === 'dispatch'
+                    ? trimMissionLoggerText(
+                        event.dispatchMode || '',
+                        80
+                    )
+                    : ''),
+            lastSeenAt: Date.now()
+        };
+
+        if (eventType === 'dispatch') {
+            next.dispatchCount = Math.max(
+                next.dispatchCount + 1,
+                Number(metadata.dispatchCount || 0)
+            );
+            next.unitCount = Math.max(
+                next.unitCount + units.length,
+                Number(metadata.unitCount || 0)
+            );
+        } else {
+            next.dispatchCount = Math.max(
+                next.dispatchCount,
+                Number(metadata.dispatchCount || 0)
+            );
+            next.unitCount = Math.max(
+                next.unitCount,
+                Number(metadata.unitCount || 0)
+            );
+        }
+
+        if (
+            event.actualCredits !== null &&
+            event.actualCredits !== undefined &&
+            event.actualCredits !== '' &&
+            Number.isFinite(Number(event.actualCredits))
+        ) {
+            next.actualCredits = Math.max(
+                0,
+                Number(previous.actualCredits || 0),
+                Number(event.actualCredits)
+            );
+            next.actualCreditsSource = trimMissionLoggerText(
+                metadata.actualCreditsSource ||
+                previous.actualCreditsSource ||
+                '',
+                80
+            );
+
+            const transactionId = trimMissionLoggerText(
+                metadata.creditTransactionId || '',
+                180
+            );
+            if (transactionId) {
+                next.actualCreditsTransactionId = transactionId;
+                next.actualCreditsCapturedAt =
+                    metadata.creditTransactionAt ||
+                    capturedAt;
+            }
+        }
+
+        registry[key] = next;
+        writeMissionLoggerMissionRegistry(registry);
+    }
+
+    function parseMissionLoggerCreditAmount(value) {
+        const text = String(value || '')
+            .replace(/\u00a0/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        if (!text) return null;
+
+        const match = text.match(/\d[\d\s,.]*/);
+        if (!match) return null;
+
+        const digits = match[0].replace(/[^\d]/g, '');
+        const amount = Number(digits);
+        if (!digits || !Number.isFinite(amount)) return null;
+
+        const negative =
+            /[-−–]\s*\d/.test(text) ||
+            /^\s*\([^)]*\d[^)]*\)\s*$/.test(text);
+        return negative ? -amount : amount;
+    }
+
+    function parseMissionLoggerCreditTimestamp(value) {
+        const raw = String(value || '').trim();
+        if (!raw) return '';
+
+        if (/^\d{9,17}(?:\.\d+)?$/.test(raw)) {
+            let timestamp = Number(raw);
+            while (timestamp > 100000000000000) {
+                timestamp /= 1000;
+            }
+            if (timestamp < 100000000000) {
+                timestamp *= 1000;
+            }
+            const numericDate = new Date(timestamp);
+            if (Number.isFinite(numericDate.getTime())) {
+                return numericDate.toISOString();
+            }
+        }
+
+        const parsed = Date.parse(raw);
+        return Number.isFinite(parsed)
+            ? new Date(parsed).toISOString()
+            : '';
+    }
+
+    function hashMissionLoggerCreditValue(value) {
+        const text = String(value || '');
+        let hash = 2166136261;
+
+        for (let index = 0; index < text.length; index += 1) {
+            hash ^= text.charCodeAt(index);
+            hash = Math.imul(hash, 16777619);
+        }
+
+        return (hash >>> 0).toString(36);
+    }
+
+    function normaliseMissionLoggerCreditDescription(value) {
+        return String(value || '')
+            .normalize('NFKC')
+            .replace(/^\s*\[\s*alliance\s*\]\s*/i, '')
+            .replace(/\s*\(\s*fire alarm system\s*\)\s*/gi, ' ')
+            .replace(/\s*-\s*false alarm\s*$/i, '')
+            .replace(/[’‘]/g, "'")
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+    function parseMissionLoggerCreditTransactionsFromDocument(doc) {
+        if (!doc) return [];
+
+        // MissionChief's native Credits list exposes one transaction per row:
+        // signed amount, description and a machine-readable data-logged-at
+        // timestamp. Keep the parser local to the signed-in page and return
+        // only bounded fields needed for mission reconciliation.
+        const rows = Array.from(
+            doc.querySelectorAll?.('table tbody tr') || []
+        );
+
+        return rows.map(row => {
+            const cells = Array.from(
+                row.querySelectorAll?.('td, th') || []
+            );
+            if (cells.length < 3) return null;
+
+            const amount = parseMissionLoggerCreditAmount(
+                cells[0]?.textContent || ''
+            );
+            const description = trimMissionLoggerText(
+                cells[1]?.textContent || '',
+                240
+            );
+            const missionName = trimMissionLoggerText(
+                description
+                    .replace(
+                        /^\s*\[\s*alliance\s*\]\s*/i,
+                        ''
+                    )
+                    .replace(
+                        /\s*\(\s*fire alarm system\s*\)\s*/gi,
+                        ' '
+                    )
+                    .replace(
+                        /\s*-\s*false alarm\s*$/i,
+                        ''
+                    ),
+                240
+            );
+            const loggedElement =
+                cells[2]?.querySelector?.(
+                    '[data-logged-at], time[datetime]'
+                ) ||
+                row.querySelector?.(
+                    '[data-logged-at], time[datetime]'
+                );
+            const loggedAtRaw = [
+                row.getAttribute?.('data-logged-at'),
+                cells[2]?.getAttribute?.('data-logged-at'),
+                loggedElement?.getAttribute?.('data-logged-at'),
+                loggedElement?.getAttribute?.('datetime'),
+                cells[2]?.textContent
+            ].map(value => String(value || '').trim())
+                .find(Boolean) || '';
+            const transactionAt =
+                parseMissionLoggerCreditTimestamp(loggedAtRaw);
+            const missionElement =
+                row.querySelector?.(
+                    '[data-mission-id], a[href*="/missions/"], a[href*="/mission/"]'
+                );
+            const missionId = [
+                row.getAttribute?.('data-mission-id'),
+                cells[1]?.getAttribute?.('data-mission-id'),
+                missionElement?.getAttribute?.('data-mission-id'),
+                String(
+                    missionElement?.getAttribute?.('href') || ''
+                ).match(/\/missions?\/(\d+)/i)?.[1]
+            ].map(value => String(value || '').trim())
+                .find(value => /^\d+$/.test(value)) || '';
+            const explicitTransactionId = [
+                row.getAttribute?.('data-transaction-id'),
+                row.getAttribute?.('data-credit-id'),
+                row.getAttribute?.('data-entry-id'),
+                cells[0]?.getAttribute?.('data-transaction-id')
+            ].map(value => trimMissionLoggerText(value, 180))
+                .find(Boolean) || '';
+
+            if (
+                amount === null ||
+                !description ||
+                !transactionAt
+            ) {
+                return null;
+            }
+
+            const transactionId =
+                explicitTransactionId ||
+                `credit-${hashMissionLoggerCreditValue([
+                    transactionAt,
+                    amount,
+                    description,
+                    missionId
+                ].join('|'))}`;
+
+            return {
+                transactionId,
+                amount,
+                description,
+                missionName,
+                normalisedDescription:
+                    normaliseMissionLoggerCreditDescription(
+                        description
+                    ),
+                transactionAt,
+                missionId,
+                sourcePath: '/credits'
+            };
+        }).filter(Boolean);
+    }
+
+    function missionLoggerRecordHasActualCredits(record) {
+        return !!(
+            record &&
+            Number.isFinite(Number(record.actualCredits)) &&
+            Number(record.actualCredits) > 0
+        );
+    }
+
+    function countPendingMissionLoggerCredits(
+        registry = readMissionLoggerMissionRegistry(),
+        identity = readMissionLoggerIdentity(),
+        maxAgeMs = Number.POSITIVE_INFINITY
+    ) {
+        if (!identity) return 0;
+
+        return Object.values(
+            registry && typeof registry === 'object'
+                ? registry
+                : {}
+        ).filter(record => {
+            const completedAt = Date.parse(
+                String(record?.completedAt || '')
+            );
+            const withinAge =
+                !Number.isFinite(maxAgeMs) ||
+                (
+                    Number.isFinite(completedAt) &&
+                    Date.now() - completedAt <= maxAgeMs
+                );
+            return !!(
+                record &&
+                String(record.playerId || '') ===
+                    String(identity.playerId || '') &&
+                record.firstUnitSentAt &&
+                record.completedAt &&
+                withinAge &&
+                !missionLoggerRecordHasActualCredits(record)
+            );
+        }).length;
+    }
+
+    function findMissionLoggerCreditMatch(
+        transaction,
+        registry = readMissionLoggerMissionRegistry(),
+        identity = readMissionLoggerIdentity()
+    ) {
+        if (
+            !transaction ||
+            !identity ||
+            !Number.isFinite(Number(transaction.amount)) ||
+            Number(transaction.amount) <= 0
+        ) {
+            return null;
+        }
+
+        const records = Object.entries(
+            registry && typeof registry === 'object'
+                ? registry
+                : {}
+        );
+        const transactionId = String(
+            transaction.transactionId || ''
+        );
+
+        if (
+            transactionId &&
+            records.some(([, record]) => {
+                return String(
+                    record?.actualCreditsTransactionId || ''
+                ) === transactionId;
+            })
+        ) {
+            return null;
+        }
+
+        const completed = records.filter(([, record]) => {
+            return !!(
+                record &&
+                String(record.playerId || '') ===
+                    String(identity.playerId || '') &&
+                record.firstUnitSentAt &&
+                record.completedAt
+            );
+        });
+        const pending = completed.filter(([, record]) => {
+            return !missionLoggerRecordHasActualCredits(record);
+        });
+
+        const description =
+            transaction.normalisedDescription ||
+            normaliseMissionLoggerCreditDescription(
+                transaction.description
+            );
+
+        const explicitMissionId = String(
+            transaction.missionId || ''
+        );
+        if (explicitMissionId) {
+            const exact = pending.find(([, record]) => {
+                // A mission can also have patient/prisoner transactions. An
+                // exposed mission ID is therefore authoritative only together
+                // with the normalized mission-award title.
+                return (
+                    String(record.missionId || '') ===
+                        explicitMissionId &&
+                    description &&
+                    normaliseMissionLoggerCreditDescription(
+                        record.missionName
+                    ) === description
+                );
+            });
+            if (exact) {
+                return {
+                    key: exact[0],
+                    record: exact[1],
+                    strategy: 'mission-id',
+                    distanceMs: 0
+                };
+            }
+        }
+
+        const transactionTime = Date.parse(
+            String(transaction.transactionAt || '')
+        );
+        if (!Number.isFinite(transactionTime) || !description) {
+            return null;
+        }
+
+        const titleAndTimeMatches = completed.map(([key, record]) => {
+            const completedTime = Date.parse(
+                String(record.completedAt || '')
+            );
+            const distanceMs = Number.isFinite(completedTime)
+                ? Math.abs(transactionTime - completedTime)
+                : Number.POSITIVE_INFINITY;
+
+            return {
+                key,
+                record,
+                distanceMs,
+                title:
+                    normaliseMissionLoggerCreditDescription(
+                        record.missionName
+                    )
+            };
+        }).filter(candidate => {
+            return (
+                candidate.title === description &&
+                candidate.distanceMs <=
+                    MF_MISSION_LOGGER_CREDIT_MATCH_WINDOW_MS
+            );
+        });
+
+        if (titleAndTimeMatches.length !== 1) return null;
+        if (
+            missionLoggerRecordHasActualCredits(
+                titleAndTimeMatches[0].record
+            )
+        ) {
+            return null;
+        }
+
+        return {
+            ...titleAndTimeMatches[0],
+            strategy: 'unique-title-time'
+        };
+    }
+
+    function recordMissionLoggerCreditTransaction(
+        transaction,
+        match
+    ) {
+        const identity = readMissionLoggerIdentity();
+        const record = match?.record;
+        if (!identity || !record || !transaction) return false;
+
+        const amount = Number(transaction.amount);
+        if (!Number.isFinite(amount) || amount <= 0) return false;
+
+        const event = {
+            schemaVersion:
+                MF_MISSION_LOGGER_SCHEMA_VERSION,
+            eventId: createMissionLoggerId('event'),
+            eventType: 'mission-credit',
+            capturedAt:
+                transaction.transactionAt ||
+                new Date().toISOString(),
+            playerId: identity.playerId,
+            deviceId: identity.deviceId,
+            missionId: String(record.missionId || ''),
+            missionDefinitionId: String(
+                record.missionDefinitionId || ''
+            ),
+            missionName: trimMissionLoggerText(
+                transaction.missionName ||
+                record.missionName ||
+                transaction.description ||
+                '',
+                240
+            ),
+            missionUrl: trimMissionLoggerText(
+                record.missionUrl ||
+                `${window.location.origin}/missions/${record.missionId}`,
+                500
+            ),
+            ownership: /^\s*\[\s*alliance\s*\]/i.test(
+                transaction.description || ''
+            )
+                ? 'alliance'
+                : trimMissionLoggerText(
+                    record.ownership || 'own',
+                    40
+                ),
+            generatorStationId: String(
+                record.generatorStationId || ''
+            ),
+            generatorStationName: trimMissionLoggerText(
+                record.generatorStationName || '',
+                160
+            ),
+            dispatchMode: trimMissionLoggerText(
+                record.firstDispatchMode || '',
+                80
+            ),
+            shared: false,
+            advertisedCredits: Math.max(
+                0,
+                Number(record.advertisedCredits || 0)
+            ),
+            actualCredits: amount,
+            patientCount: Math.max(
+                0,
+                Number(record.patientCount || 0)
+            ),
+            prisonerCount:
+                record.prisonerCount ?? null,
+            transportCount: null,
+            requirements: [],
+            units: [],
+            metadata: {
+                source: 'missionchief-command-nexus',
+                completionSource:
+                    'native-mission-finish',
+                completionVerified: true,
+                firstObservedAt:
+                    record.firstObservedAt || '',
+                firstUnitSentAt:
+                    record.firstUnitSentAt || '',
+                completedAt:
+                    record.completedAt || '',
+                dispatchCount: Math.max(
+                    0,
+                    Number(record.dispatchCount || 0)
+                ),
+                unitCount: Math.max(
+                    0,
+                    Number(record.unitCount || 0)
+                ),
+                actualCreditsSource:
+                    'missionchief-credit-ledger',
+                creditTransactionId: trimMissionLoggerText(
+                    transaction.transactionId,
+                    180
+                ),
+                creditTransactionAt:
+                    transaction.transactionAt || '',
+                creditTransactionDescription:
+                    trimMissionLoggerText(
+                        transaction.description,
+                        240
+                    ),
+                creditTransactionSourcePath:
+                    transaction.sourcePath || '/credits',
+                creditMatchStrategy: match.strategy,
+                creditMatchDistanceMs: Math.max(
+                    0,
+                    Number(match.distanceMs || 0)
+                ),
+                missionFinderVersion:
+                    MF_MISSION_LOGGER_MISSION_FINDER_VERSION
+            }
+        };
+
+        return queueMissionLoggerEvent(event);
+    }
+
+    async function fetchMissionLoggerCreditLedgerPage(page = 1) {
+        const pageNumber = Math.max(
+            1,
+            parseInt(page, 10) || 1
+        );
+        const url = new URL(
+            '/credits',
+            window.location.origin
+        );
+        url.searchParams.set('page', String(pageNumber));
+
+        const response = await window.fetch(url.href, {
+            method: 'GET',
+            credentials: 'same-origin',
+            cache: 'no-store',
+            headers: {
+                Accept: 'text/html'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(
+                `MissionChief Credits returned HTTP ${response.status}.`
+            );
+        }
+
+        const html = await response.text();
+        const doc = new DOMParser().parseFromString(
+            html,
+            'text/html'
+        );
+        return parseMissionLoggerCreditTransactionsFromDocument(
+            doc
+        );
+    }
+
+    async function reconcileMissionLoggerCreditTransactions(
+        options = {}
+    ) {
+        if (
+            !MF_IS_TOP_WINDOW ||
+            !mfMissionLoggerEnabled ||
+            !readMissionLoggerIdentity() ||
+            mfMissionLoggerCreditReconcileActive
+        ) {
+            return 0;
+        }
+
+        if (
+            countPendingMissionLoggerCredits(
+                undefined,
+                undefined,
+                options.includeOlder === true
+                    ? Number.POSITIVE_INFINITY
+                    : MF_MISSION_LOGGER_CREDIT_AUTO_LOOKBACK_MS
+            ) <= 0
+        ) {
+            return 0;
+        }
+
+        const now = Date.now();
+        if (
+            options.force !== true &&
+            now - mfMissionLoggerCreditLastFetchAt <
+                MF_MISSION_LOGGER_CREDIT_MIN_FETCH_GAP_MS
+        ) {
+            return 0;
+        }
+
+        mfMissionLoggerCreditReconcileActive = true;
+        mfMissionLoggerCreditLastFetchAt = now;
+        let matched = 0;
+
+        try {
+            const requestedPages = parseInt(
+                options.maxPages,
+                10
+            );
+            const maxPages = Math.min(
+                MF_MISSION_LOGGER_CREDIT_MAX_PAGES,
+                Math.max(
+                    1,
+                    Number.isFinite(requestedPages)
+                        ? requestedPages
+                        : 1
+                )
+            );
+
+            for (let page = 1; page <= maxPages; page += 1) {
+                const transactions =
+                    await fetchMissionLoggerCreditLedgerPage(page);
+                const ordered = transactions.slice().sort(
+                    (left, right) => {
+                        return Date.parse(left.transactionAt) -
+                            Date.parse(right.transactionAt);
+                    }
+                );
+
+                for (const transaction of ordered) {
+                    const registry =
+                        readMissionLoggerMissionRegistry();
+                    const match = findMissionLoggerCreditMatch(
+                        transaction,
+                        registry,
+                        readMissionLoggerIdentity()
+                    );
+                    if (
+                        match &&
+                        recordMissionLoggerCreditTransaction(
+                            transaction,
+                            match
+                        )
+                    ) {
+                        matched += 1;
+                    }
+                }
+
+                if (transactions.length < 20) break;
+            }
+
+            const state = readMissionLoggerState();
+            writeMissionLoggerState({
+                lastCreditCheckAt: Date.now(),
+                lastCreditMatchAt:
+                    matched > 0
+                        ? Date.now()
+                        : state.lastCreditMatchAt,
+                lastCreditError: '',
+                totalMatchedCreditEvents:
+                    Math.max(
+                        0,
+                        Number(
+                            state.totalMatchedCreditEvents || 0
+                        )
+                    ) + matched
+            });
+            return matched;
+        } catch (error) {
+            writeMissionLoggerState({
+                lastCreditCheckAt: Date.now(),
+                lastCreditError: String(
+                    error?.message ||
+                    'MissionChief Credits could not be checked.'
+                ).slice(0, 300)
+            });
+            return 0;
+        } finally {
+            mfMissionLoggerCreditReconcileActive = false;
+        }
+    }
+
+    function scheduleMissionLoggerCreditReconciliation() {
+        if (
+            !MF_IS_TOP_WINDOW ||
+            !mfMissionLoggerEnabled ||
+            !readMissionLoggerIdentity()
+        ) {
+            return;
+        }
+
+        MF_MISSION_LOGGER_CREDIT_RETRY_DELAYS_MS
+            .forEach(delay => {
+                const timer = setTimeout(() => {
+                    mfMissionLoggerCreditRetryTimers.delete(
+                        timer
+                    );
+                    void reconcileMissionLoggerCreditTransactions();
+                }, delay);
+                mfMissionLoggerCreditRetryTimers.add(timer);
+            });
+    }
+
+    function stopMissionLoggerCreditReconciliation() {
+        if (mfMissionLoggerCreditInitialTimer) {
+            clearTimeout(mfMissionLoggerCreditInitialTimer);
+            mfMissionLoggerCreditInitialTimer = null;
+        }
+        if (mfMissionLoggerCreditTimer) {
+            clearInterval(mfMissionLoggerCreditTimer);
+            mfMissionLoggerCreditTimer = null;
+        }
+        mfMissionLoggerCreditRetryTimers.forEach(timer => {
+            clearTimeout(timer);
+        });
+        mfMissionLoggerCreditRetryTimers.clear();
+    }
+
+    function startMissionLoggerCreditReconciliation() {
+        if (!MF_IS_TOP_WINDOW) return;
+
+        if (
+            !mfMissionLoggerEnabled ||
+            !readMissionLoggerIdentity()
+        ) {
+            stopMissionLoggerCreditReconciliation();
+            return;
+        }
+
+        if (
+            mfMissionLoggerCreditInitialTimer ||
+            mfMissionLoggerCreditTimer
+        ) {
+            return;
+        }
+
+        mfMissionLoggerCreditInitialTimer = setTimeout(() => {
+            mfMissionLoggerCreditInitialTimer = null;
+            void reconcileMissionLoggerCreditTransactions({
+                maxPages: 1
+            });
+
+            if (
+                !mfMissionLoggerEnabled ||
+                mfMissionLoggerCreditTimer
+            ) {
+                return;
+            }
+
+            mfMissionLoggerCreditTimer = setInterval(() => {
+                void reconcileMissionLoggerCreditTransactions({
+                    maxPages: 1
+                });
+            }, MF_MISSION_LOGGER_CREDIT_RECONCILE_INTERVAL_MS);
+        }, 7000);
+    }
+
+    function getMissionLoggerNativeCompletionSnapshot(args) {
+        const identity = readMissionLoggerIdentity();
+        if (!identity) return null;
+
+        const registry = readMissionLoggerMissionRegistry();
+        const candidates = Array.from(args || []);
+        const objects = [];
+        const missionIds = [];
+        const seen = new Set();
+        const addMissionId = value => {
+            const id = String(value ?? '').trim();
+            if (/^\d+$/.test(id) && !missionIds.includes(id)) {
+                missionIds.push(id);
+            }
+        };
+        const addObject = value => {
+            if (
+                !value ||
+                typeof value !== 'object' ||
+                seen.has(value) ||
+                objects.length >= 24
+            ) {
+                return;
+            }
+            seen.add(value);
+            objects.push(value);
+        };
+
+        candidates.forEach((candidate, index) => {
+            if (candidate && typeof candidate === 'object') {
+                addObject(candidate);
+            } else if (index === 0) {
+                addMissionId(candidate);
+            }
+        });
+
+        for (let index = 0; index < objects.length; index += 1) {
+            const object = objects[index];
+            [
+                object.id,
+                object.mission_id,
+                object.missionId
+            ].forEach(addMissionId);
+            [
+                object.mission,
+                object.mission_data,
+                object.missionData,
+                object.data,
+                object.detail
+            ].forEach(addObject);
+        }
+
+        const missionId = missionIds.find(id => {
+            return !!registry[
+                createMissionLoggerRegistryKey(
+                    identity.playerId,
+                    id
+                )
+            ];
+        });
+        if (!missionId) return null;
+
+        const key = createMissionLoggerRegistryKey(
+            identity.playerId,
+            missionId
+        );
+        const record = registry[key];
+        if (!record?.firstUnitSentAt || record.completedAt) {
+            return null;
+        }
+
+        const missionObject = objects.find(object => {
+            return [
+                object.id,
+                object.mission_id,
+                object.missionId
+            ].some(value => String(value ?? '') === missionId);
+        }) || objects[0] || {};
+        const firstFiniteNumber = keys => {
+            for (const object of objects) {
+                for (const keyName of keys) {
+                    const value = object?.[keyName];
+                    if (
+                        value !== null &&
+                        value !== undefined &&
+                        value !== '' &&
+                        Number.isFinite(Number(value)) &&
+                        Number(value) >= 0
+                    ) {
+                        return Number(value);
+                    }
+                }
+            }
+            return null;
+        };
+        const actualCredits = firstFiniteNumber([
+            'actual_credits',
+            'actualCredits',
+            'earned_credits',
+            'earnedCredits',
+            'credited_amount',
+            'creditedAmount'
+        ]);
+        const advertisedCredits = Math.max(
+            0,
+            Number(record.advertisedCredits || 0),
+            Number(
+                firstFiniteNumber([
+                    'average_credits',
+                    'advertised_credits',
+                    'advertisedCredits'
+                ]) || 0
+            )
+        );
+        const nativeCompletedAt = [
+            missionObject.completed_at,
+            missionObject.completedAt,
+            missionObject.finished_at,
+            missionObject.finishedAt
+        ].map(value => Date.parse(String(value || '')))
+            .find(Number.isFinite);
+        const completedAt = nativeCompletedAt
+            ? new Date(nativeCompletedAt).toISOString()
+            : new Date().toISOString();
+
+        return {
+            identity,
+            record,
+            missionId,
+            missionObject,
+            actualCredits,
+            advertisedCredits,
+            completedAt
+        };
+    }
+
+    function recordMissionLoggerNativeCompletion(args) {
+        if (!mfMissionLoggerEnabled) return false;
+        const snapshot =
+            getMissionLoggerNativeCompletionSnapshot(args);
+        if (!snapshot) return false;
+
+        const { identity, record } = snapshot;
+        const event = {
+            schemaVersion:
+                MF_MISSION_LOGGER_SCHEMA_VERSION,
+            eventId: createMissionLoggerId('event'),
+            eventType: 'mission-completed',
+            capturedAt: snapshot.completedAt,
+            playerId: identity.playerId,
+            deviceId: identity.deviceId,
+            missionId: snapshot.missionId,
+            missionDefinitionId: String(
+                record.missionDefinitionId || ''
+            ),
+            missionName: trimMissionLoggerText(
+                snapshot.missionObject.caption ||
+                snapshot.missionObject.name ||
+                record.missionName ||
+                '',
+                240
+            ),
+            missionUrl: trimMissionLoggerText(
+                record.missionUrl ||
+                `${window.location.origin}/missions/${snapshot.missionId}`,
+                500
+            ),
+            ownership: trimMissionLoggerText(
+                record.ownership || 'own',
+                40
+            ),
+            generatorStationId: String(
+                record.generatorStationId || ''
+            ),
+            generatorStationName: trimMissionLoggerText(
+                record.generatorStationName || '',
+                160
+            ),
+            dispatchMode: trimMissionLoggerText(
+                record.firstDispatchMode || '',
+                80
+            ),
+            shared: false,
+            advertisedCredits:
+                snapshot.advertisedCredits,
+            actualCredits: snapshot.actualCredits,
+            patientCount: Math.max(
+                0,
+                Number(record.patientCount || 0)
+            ),
+            prisonerCount:
+                record.prisonerCount ?? null,
+            transportCount: null,
+            requirements: [],
+            units: [],
+            metadata: {
+                source: 'missionchief-command-nexus',
+                completionSource: 'native-mission-finish',
+                completionVerified: true,
+                firstObservedAt:
+                    record.firstObservedAt || '',
+                firstUnitSentAt:
+                    record.firstUnitSentAt,
+                completedAt: snapshot.completedAt,
+                dispatchCount: Math.max(
+                    0,
+                    Number(record.dispatchCount || 0)
+                ),
+                unitCount: Math.max(
+                    0,
+                    Number(record.unitCount || 0)
+                ),
+                actualCreditsSource:
+                    snapshot.actualCredits === null
+                        ? 'pending-transaction-match'
+                        : 'native-completion-payload',
+                missionFinderVersion:
+                    MF_MISSION_LOGGER_MISSION_FINDER_VERSION
+            }
+        };
+
+        return queueMissionLoggerEvent(event);
+    }
+
+    function installMissionLoggerCompletionCapture() {
+        if (!MF_IS_TOP_WINDOW) return false;
+        if (
+            mfMissionLoggerCompletionHook &&
+            window.missionFinish ===
+                mfMissionLoggerCompletionHook.wrapper
+        ) {
+            return true;
+        }
+
+        const original = window.missionFinish;
+        if (typeof original !== 'function') return false;
+
+        const wrapper = function (...args) {
+            let captured = false;
+            try {
+                captured =
+                    recordMissionLoggerNativeCompletion(args);
+            } catch (_error) {}
+            try {
+                return original.apply(this, args);
+            } finally {
+                if (captured) {
+                    scheduleMissionLoggerCreditReconciliation();
+                }
+            }
+        };
+
+        try {
+            window.missionFinish = wrapper;
+        } catch (_error) {
+            return false;
+        }
+        if (window.missionFinish !== wrapper) return false;
+
+        mfMissionLoggerCompletionHook = {
+            original,
+            wrapper
+        };
+        return true;
+    }
+
+    function removeMissionLoggerCompletionCapture() {
+        const hook = mfMissionLoggerCompletionHook;
+        if (!hook) return;
+        try {
+            if (window.missionFinish === hook.wrapper) {
+                window.missionFinish = hook.original;
+            }
+        } catch (_error) {}
+        mfMissionLoggerCompletionHook = null;
+    }
+
+    function recordMissionLoggerDispatchEvent(snapshot) {
+        if (!snapshot) return false;
+        return queueMissionLoggerEvent(snapshot);
+    }
+
+    function enrichMissionLoggerQueuedEventsFromCurrentMission() {
+        const missionSnapshot =
+            getMissionLoggerMissionSnapshot();
+        const advertisedCredits = Math.max(
+            0,
+            parseInt(getMissionCredits(), 10) || 0,
+            parseInt(
+                missionSnapshot.advertisedCredits,
+                10
+            ) || 0
+        );
+        const missionId = String(
+            getCurrentMissionIdForQueueRestart() || ''
+        );
+
+        if (!missionId) return false;
+
+        const generator = getMissionLoggerGenerator();
+        const requirements = getMissionLoggerRequirements();
+        const missionDefinitionId =
+            getMissionLoggerDefinitionId() ||
+            missionSnapshot.missionDefinitionId;
+        const missionName = trimMissionLoggerText(
+            getCurrentMissionName(),
+            240
+        );
+        const missionUrl =
+            `${window.location.origin}/missions/${missionId}`;
+        let livePatientCount = 0;
+        try {
+            livePatientCount = Math.max(
+                0,
+                findPatientCount(true)
+            );
+        } catch (_error) {}
+        const patientCount = Math.max(
+            livePatientCount,
+            Number(missionSnapshot.patientCount || 0)
+        );
+
+        const queue = readMissionLoggerQueue();
+        let changed = false;
+
+        const enriched = queue.map(event => {
+            if (
+                String(event?.missionId || '') !== missionId
+            ) {
+                return event;
+            }
+
+            const next = { ...event };
+            let eventChanged = false;
+            const setIfMissing = (key, value) => {
+                if (
+                    next[key] ||
+                    value === null ||
+                    value === undefined ||
+                    value === ''
+                ) {
+                    return;
+                }
+                next[key] = value;
+                eventChanged = true;
+            };
+
+            if (
+                advertisedCredits > 0 &&
+                Number(next.advertisedCredits || 0) <= 0
+            ) {
+                next.advertisedCredits = advertisedCredits;
+                eventChanged = true;
+            }
+
+            if (
+                patientCount >
+                Number(next.patientCount || 0)
+            ) {
+                next.patientCount = patientCount;
+                eventChanged = true;
+            }
+
+            if (
+                missionSnapshot.prisonerCount !== null &&
+                Number(missionSnapshot.prisonerCount) >
+                    Number(next.prisonerCount ?? -1)
+            ) {
+                next.prisonerCount =
+                    Number(missionSnapshot.prisonerCount);
+                eventChanged = true;
+            }
+
+            if (
+                (!Array.isArray(next.requirements) ||
+                    next.requirements.length === 0) &&
+                requirements.length > 0
+            ) {
+                next.requirements = requirements;
+                eventChanged = true;
+            }
+
+            setIfMissing('missionUrl', missionUrl);
+            setIfMissing(
+                'missionDefinitionId',
+                missionDefinitionId
+            );
+            setIfMissing('missionName', missionName);
+            setIfMissing(
+                'generatorStationId',
+                generator.stationId
+            );
+            setIfMissing(
+                'generatorStationName',
+                generator.stationName
+            );
+
+            const metadata = {
+                ...(next.metadata &&
+                typeof next.metadata === 'object'
+                    ? next.metadata
+                    : {})
+            };
+            const metadataUpdates = {
+                generatorSource:
+                    generator.source || '',
+                missionSnapshotSource:
+                    missionSnapshot.source || '',
+                possiblePatientCount: Math.max(
+                    0,
+                    Number(
+                        missionSnapshot.possiblePatientCount || 0
+                    )
+                ),
+                possiblePrisonerCount:
+                    missionSnapshot.possiblePrisonerCount
+            };
+
+            Object.entries(metadataUpdates)
+                .forEach(([key, value]) => {
+                    if (
+                        metadata[key] ||
+                        value === null ||
+                        value === undefined ||
+                        value === '' ||
+                        value === 0
+                    ) {
+                        return;
+                    }
+                    metadata[key] = value;
+                    eventChanged = true;
+                });
+
+            if (eventChanged) {
+                metadata.enrichedAt =
+                    new Date().toISOString();
+                next.metadata = metadata;
+                changed = true;
+                return next;
+            }
+
+            return event;
+        });
+
+        if (changed) {
+            writeMissionLoggerQueue(enriched);
+        }
+
+        return changed;
+    }
+
+    function readMissionLoggerObservedRegistry() {
+        try {
+            const parsed = JSON.parse(
+                localStorage.getItem(
+                    MF_MISSION_LOGGER_OBSERVED_KEY
+                ) || '{}'
+            );
+            return parsed && typeof parsed === 'object'
+                ? parsed
+                : {};
+        } catch (_error) {
+            return {};
+        }
+    }
+
+    function recordMissionLoggerObservedEvent() {
+        if (
+            !mfMissionLoggerEnabled ||
+            !readMissionLoggerIdentity() ||
+            !isMissionPage()
+        ) {
+            return false;
+        }
+
+        const missionId =
+            getCurrentMissionIdForQueueRestart();
+        if (!missionId) return false;
+
+        const now = Date.now();
+        const registry = readMissionLoggerObservedRegistry();
+        const key = String(missionId);
+
+        if (
+            now - Number(registry[key] || 0) <
+            24 * 60 * 60 * 1000
+        ) {
+            return false;
+        }
+
+        Object.entries(registry).forEach(([id, timestamp]) => {
+            if (
+                now - Number(timestamp || 0) >
+                7 * 24 * 60 * 60 * 1000
+            ) {
+                delete registry[id];
+            }
+        });
+
+        const queued = queueMissionLoggerEvent(
+            createMissionLoggerEvent(
+                'mission-observed',
+                { includeUnits: false }
+            )
+        );
+        if (!queued) return false;
+
+        registry[key] = now;
+        const entries = Object.entries(registry)
+            .sort((left, right) => {
+                return Number(right[1]) - Number(left[1]);
+            })
+            .slice(0, 500);
+
+        localStorage.setItem(
+            MF_MISSION_LOGGER_OBSERVED_KEY,
+            JSON.stringify(Object.fromEntries(entries))
+        );
+        return true;
+    }
+
+    function getMissionLoggerDispatchControl(target) {
+        const element = target?.closest?.(
+            'a.alert_next, a.alert_next_alliance, a#mission_alarm_btn, button#mission_alarm_btn'
+        );
+
+        if (!element || !isMissionPage()) return null;
+        if (element.id === 'mission_next_mission_btn') {
+            return null;
+        }
+        if (
+            element.hasAttribute('disabled') ||
+            element.getAttribute('aria-disabled') === 'true' ||
+            element.classList.contains('disabled')
+        ) {
+            return null;
+        }
+
+        const text = trimMissionLoggerText(
+            `${element.textContent || ''} ${element.getAttribute('title') || ''}`,
+            180
+        ).toLowerCase();
+
+        if (
+            element.classList.contains('alert_next') ||
+            element.classList.contains('alert_next_alliance') ||
+            /dispatch|alarm/.test(text)
+        ) {
+            return element;
+        }
+
+        return null;
+    }
+
+    function createMissionLoggerDispatchFingerprint(
+        missionId,
+        dispatchMode,
+        units
+    ) {
+        const selectedIds = (
+            Array.isArray(units) ? units : []
+        ).map(unit => {
+            return trimMissionLoggerText(
+                unit?.vehicleId ||
+                unit?.vehicleName ||
+                '',
+                180
+            );
+        }).filter(Boolean).sort();
+
+        return JSON.stringify([
+            String(missionId || ''),
+            trimMissionLoggerText(dispatchMode, 80),
+            selectedIds
+        ]);
+    }
+
+    function isDuplicateMissionLoggerDispatch(
+        fingerprint,
+        timestamp = Date.now()
+    ) {
+        let storedFingerprint =
+            mfMissionLoggerLastDispatchFingerprint;
+        let storedAt =
+            mfMissionLoggerLastDispatchAt;
+
+        try {
+            const stored = JSON.parse(
+                localStorage.getItem(
+                    MF_MISSION_LOGGER_LAST_DISPATCH_KEY
+                ) || 'null'
+            );
+            if (
+                stored &&
+                typeof stored === 'object' &&
+                Number(stored.timestamp || 0) > storedAt
+            ) {
+                storedFingerprint = String(
+                    stored.fingerprint || ''
+                );
+                storedAt = Number(stored.timestamp || 0);
+            }
+        } catch (_error) {}
+
+        const duplicate =
+            fingerprint === storedFingerprint &&
+            timestamp - storedAt <
+                MF_MISSION_LOGGER_DISPATCH_DEDUPE_MS;
+
+        mfMissionLoggerLastDispatchFingerprint =
+            fingerprint;
+        mfMissionLoggerLastDispatchAt = timestamp;
+        try {
+            localStorage.setItem(
+                MF_MISSION_LOGGER_LAST_DISPATCH_KEY,
+                JSON.stringify({
+                    fingerprint,
+                    timestamp
+                })
+            );
+        } catch (_error) {}
+
+        return duplicate;
+    }
+
+    function installMissionLoggerDispatchCapture() {
+        if (mfMissionLoggerDispatchClickHandler) return;
+
+        mfMissionLoggerDispatchClickHandler = event => {
+            if (
+                !mfMissionLoggerEnabled ||
+                !readMissionLoggerIdentity()
+            ) {
+                return;
+            }
+
+            const control =
+                getMissionLoggerDispatchControl(event.target);
+            if (!control) return;
+
+            const shared =
+                control.classList.contains(
+                    'alert_next_alliance'
+                ) ||
+                /share/i.test(
+                    `${control.textContent || ''} ${control.getAttribute('title') || ''}`
+                );
+            const allySteal = !!readAllyStealPendingState();
+            const isAuto =
+                autoModeRunning === true ||
+                sessionStorage.getItem(
+                    'mf_auto_mode_running'
+                ) === 'true';
+            const dispatchMode = allySteal
+                ? 'ally-steal'
+                : isAuto
+                    ? vehicleLoadState.ready
+                        ? (shared ? 'auto-share' : 'auto')
+                        : 'auto-not-ready'
+                    : (shared ? 'manual-share' : 'manual');
+            const selectedUnits =
+                getMissionLoggerSelectedUnits();
+            const fingerprint =
+                createMissionLoggerDispatchFingerprint(
+                getCurrentMissionIdForQueueRestart(),
+                dispatchMode,
+                selectedUnits
+            );
+            const now = Date.now();
+
+            if (
+                isDuplicateMissionLoggerDispatch(
+                    fingerprint,
+                    now
+                )
+            ) {
+                return;
+            }
+
+            recordMissionLoggerDispatchEvent(
+                createMissionLoggerEvent(
+                    'dispatch',
+                    {
+                        dispatchMode,
+                        shared,
+                        units: selectedUnits,
+                        ready:
+                            vehicleLoadState.ready === true,
+                        autoMode: isAuto,
+                        dispatchFingerprint:
+                            fingerprint,
+                        reason:
+                            'Native MissionChief dispatch control clicked'
+                    }
+                )
+            );
+        };
+
+        document.addEventListener(
+            'click',
+            mfMissionLoggerDispatchClickHandler,
+            true
+        );
+    }
+
+    function removeMissionLoggerDispatchCapture() {
+        if (!mfMissionLoggerDispatchClickHandler) return;
+        document.removeEventListener(
+            'click',
+            mfMissionLoggerDispatchClickHandler,
+            true
+        );
+        mfMissionLoggerDispatchClickHandler = null;
+    }
+
+    function suspendMissionLoggerRuntime() {
+        stopMissionLoggerSyncTimer();
+        stopMissionLoggerCreditReconciliation();
+        removeMissionLoggerDispatchCapture();
+        removeMissionLoggerCompletionCapture();
+    }
+
+    function cleanupMissionLoggerRuntime() {
+        suspendMissionLoggerRuntime();
+
+        if (mfMissionLoggerStorageHandler) {
+            window.removeEventListener(
+                'storage',
+                mfMissionLoggerStorageHandler
+            );
+            mfMissionLoggerStorageHandler = null;
+        }
+
+        if (mfMissionLoggerMessageHandler) {
+            window.removeEventListener(
+                'message',
+                mfMissionLoggerMessageHandler
+            );
+            try {
+                if (
+                    window.top !== window &&
+                    window.top.location.origin ===
+                        window.location.origin
+                ) {
+                    window.top.removeEventListener(
+                        'message',
+                        mfMissionLoggerMessageHandler
+                    );
+                }
+            } catch (_error) {}
+            mfMissionLoggerMessageHandler = null;
+        }
+
+        Array.from(
+            mfMissionLoggerPendingRequests.keys()
+        ).forEach(cleanupMissionLoggerRequest);
+        mfMissionLoggerSyncActive = false;
+    }
+
+    function formatMissionLoggerTimestamp(timestamp) {
+        const value = Number(timestamp || 0);
+        if (!value) return 'Never';
+
+        try {
+            return new Date(value).toLocaleString([], {
+                day: '2-digit',
+                month: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        } catch (_error) {
+            return 'Unknown';
+        }
+    }
+
+    function renderMissionLoggerStatus() {
+        const toggle = document.getElementById(
+            'mf-mission-logger-toggle'
+        );
+        const endpointInput = document.getElementById(
+            'mf-mission-logger-endpoint'
+        );
+        const profile = document.getElementById(
+            'mf-mission-logger-profile'
+        );
+        const status = document.getElementById(
+            'mf-mission-logger-state'
+        );
+        const queue = document.getElementById(
+            'mf-mission-logger-queue'
+        );
+        const lastSync = document.getElementById(
+            'mf-mission-logger-last-sync'
+        );
+        const creditStatus = document.getElementById(
+            'mf-mission-logger-credit-status'
+        );
+        const error = document.getElementById(
+            'mf-mission-logger-error'
+        );
+        const pairButton = document.getElementById(
+            'mf-mission-logger-pair'
+        );
+        const syncButton = document.getElementById(
+            'mf-mission-logger-sync'
+        );
+        const disconnectButton = document.getElementById(
+            'mf-mission-logger-disconnect'
+        );
+
+        if (
+            !toggle &&
+            !profile &&
+            !status
+        ) return;
+
+        const identity = readMissionLoggerIdentity();
+        const state = readMissionLoggerState();
+        const queueCount = readMissionLoggerQueue().length;
+        const pendingCreditCount =
+            countPendingMissionLoggerCredits();
+        const endpointReady =
+            !!normaliseMissionLoggerEndpoint(
+                mfMissionLoggerEndpoint
+            );
+
+        if (toggle) {
+            toggle.checked = mfMissionLoggerEnabled;
+        }
+        if (
+            endpointInput &&
+            document.activeElement !== endpointInput
+        ) {
+            endpointInput.value =
+                mfMissionLoggerEndpoint;
+        }
+        if (endpointInput) {
+            endpointInput.disabled = !!identity;
+        }
+        if (profile) {
+            profile.textContent = identity
+                ? `Paired profile: ${identity.playerName}`
+                : 'Profile: not paired';
+        }
+        if (status) {
+            status.textContent = !mfMissionLoggerEnabled
+                ? 'Logger is off.'
+                : !endpointReady
+                    ? 'Setup required: enter the Google logger endpoint.'
+                    : !identity
+                        ? 'Setup required: enter a one-time pairing code.'
+                        : mfMissionLoggerSyncActive
+                            ? 'Uploading a logger batch...'
+                            : 'Automatic logging is active.';
+            status.classList.toggle(
+                'mf2026-good',
+                !!(
+                    mfMissionLoggerEnabled &&
+                    endpointReady &&
+                    identity &&
+                    !state.lastError
+                )
+            );
+            status.classList.toggle(
+                'mf2026-warn',
+                !!state.lastError ||
+                (mfMissionLoggerEnabled &&
+                    (!endpointReady || !identity))
+            );
+        }
+        if (queue) {
+            queue.textContent =
+                `Queued events: ${queueCount}`;
+        }
+        if (lastSync) {
+            lastSync.textContent =
+                `Last upload: ${formatMissionLoggerTimestamp(state.lastSuccessAt)}`;
+        }
+        if (creditStatus) {
+            creditStatus.textContent = !mfMissionLoggerEnabled
+                ? 'Actual credits: logger is off.'
+                : !identity
+                ? 'Actual credits: available after pairing.'
+                : state.lastCreditError
+                    ? `Actual credits: transaction check delayed — ${state.lastCreditError}`
+                    : pendingCreditCount > 0
+                        ? `Actual credits: ${pendingCreditCount} completed mission${pendingCreditCount === 1 ? '' : 's'} awaiting an exact transaction match.`
+                        : 'Actual credits: exact transaction matching active.';
+            creditStatus.classList.toggle(
+                'mf2026-warn',
+                !!state.lastCreditError
+            );
+            creditStatus.classList.toggle(
+                'mf2026-good',
+                !!identity &&
+                !state.lastCreditError &&
+                pendingCreditCount === 0
+            );
+        }
+        if (error) {
+            error.textContent = state.lastError
+                ? `Last error: ${state.lastError}`
+                : '';
+            error.hidden = !state.lastError;
+        }
+        if (pairButton) {
+            pairButton.disabled =
+                !mfMissionLoggerEnabled ||
+                !endpointReady ||
+                !!identity;
+        }
+        if (syncButton) {
+            syncButton.disabled =
+                !mfMissionLoggerEnabled ||
+                !endpointReady ||
+                !identity ||
+                mfMissionLoggerSyncActive;
+        }
+        if (disconnectButton) {
+            disconnectButton.disabled = !identity;
+        }
     }
 
     function formatRuntime(ms) {
@@ -29649,6 +33779,10 @@ let sessionRuntimeTicker = null;
 
     function extractLiveMissionRequirementRows(html) {
         const doc = new DOMParser().parseFromString(html, 'text/html');
+        const advertisedCredits =
+            extractMissionAdvertisedCreditsFromDocument(doc);
+        const generator =
+            extractMissionGeneratorFromDocument(doc);
 
         const candidateTables =
             Array.from(
@@ -29992,6 +34126,22 @@ let sessionRuntimeTicker = null;
                     missionRequirementTableCount: {
                         value: candidateTables.length,
                         enumerable: false
+                    },
+                    advertisedCredits: {
+                        value: advertisedCredits,
+                        enumerable: false
+                    },
+                    generatorStationId: {
+                        value: generator.stationId,
+                        enumerable: false
+                    },
+                    generatorStationName: {
+                        value: generator.stationName,
+                        enumerable: false
+                    },
+                    generatorSource: {
+                        value: generator.source,
+                        enumerable: false
                     }
                 }
             );
@@ -30256,6 +34406,10 @@ let sessionRuntimeTicker = null;
         sourceUrl: '',
         status: 'idle',
         rows: [],
+        advertisedCredits: 0,
+        generatorStationId: '',
+        generatorStationName: '',
+        generatorSource: '',
         loadedAt: 0,
         attempts: 0,
         error: ''
@@ -30322,6 +34476,10 @@ let sessionRuntimeTicker = null;
             sourceUrl: '',
             status: 'idle',
             rows: [],
+            advertisedCredits: 0,
+            generatorStationId: '',
+            generatorStationName: '',
+            generatorSource: '',
             loadedAt: 0,
             attempts: 0,
             error: ''
@@ -30387,6 +34545,55 @@ let sessionRuntimeTicker = null;
         return cloneMissionRequirementRows(cache.rows);
     }
 
+    function getCachedMissionAdvertisedCredits() {
+        const missionKey =
+            synchroniseMissionRequirementPreloadCache();
+        const cache = mfMissionRequirementPreloadCache;
+
+        if (
+            cache.status !== 'loaded' ||
+            cache.missionKey !== missionKey
+        ) {
+            return 0;
+        }
+
+        return Math.max(
+            0,
+            parseInt(cache.advertisedCredits, 10) || 0
+        );
+    }
+
+    function getCachedMissionGenerator() {
+        const missionKey =
+            synchroniseMissionRequirementPreloadCache();
+        const cache = mfMissionRequirementPreloadCache;
+
+        if (
+            cache.status !== 'loaded' ||
+            cache.missionKey !== missionKey
+        ) {
+            return {
+                stationId: '',
+                stationName: '',
+                source: ''
+            };
+        }
+
+        return {
+            stationId: String(
+                cache.generatorStationId || ''
+            ),
+            stationName: trimMissionLoggerText(
+                cache.generatorStationName || '',
+                160
+            ),
+            source: trimMissionLoggerText(
+                cache.generatorSource || '',
+                80
+            )
+        };
+    }
+
     function setCachedMissionRequirementRows(
         missionKey,
         sourceDescriptor,
@@ -30404,6 +34611,21 @@ let sessionRuntimeTicker = null;
 
         const clonedRows =
             cloneMissionRequirementRows(rows);
+        const advertisedCredits = Math.max(
+            0,
+            parseInt(rows?.advertisedCredits, 10) || 0
+        );
+        const generatorStationId = String(
+            rows?.generatorStationId || ''
+        ).trim();
+        const generatorStationName = trimMissionLoggerText(
+            rows?.generatorStationName || '',
+            160
+        );
+        const generatorSource = trimMissionLoggerText(
+            rows?.generatorSource || '',
+            80
+        );
 
         mfMissionRequirementPreloadCache = {
             missionKey,
@@ -30411,11 +34633,20 @@ let sessionRuntimeTicker = null;
                 String(sourceDescriptor?.url || ''),
             status: 'loaded',
             rows: clonedRows,
+            advertisedCredits,
+            generatorStationId:
+                /^\d+$/.test(generatorStationId)
+                    ? generatorStationId
+                    : '',
+            generatorStationName,
+            generatorSource,
             loadedAt: Date.now(),
             attempts:
                 mfMissionRequirementPreloadCache.attempts,
             error: ''
         };
+
+        enrichMissionLoggerQueuedEventsFromCurrentMission();
 
         return cloneMissionRequirementRows(clonedRows);
     }
@@ -50163,6 +54394,9 @@ async function handleAutoPrisonerReleaseAfterActions() {
         }
 
         synchroniseMissionInstanceState('initialize');
+        installMissionLoggerStorageListener();
+        installMissionLoggerDispatchCapture();
+        recordMissionLoggerObservedEvent();
         cleanupDuplicatePanels();
         scheduleMissionFinderIphoneNativePickerSync(
             'initialize',
@@ -51352,6 +55586,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
 
         stopSessionRuntimeTicker();
         stopMissionFinderRuntimeMemoryMaintenance();
+        suspendMissionLoggerRuntime();
         cancelTrainedPersonnelPanelRefresh();
         removeMissionFinderRuntimeMemoryActivityTracking();
 
@@ -51395,6 +55630,10 @@ async function handleAutoPrisonerReleaseAfterActions() {
         if (!mfMainMutationObserver) {
             startMissionFinderObserver();
         }
+
+        installMissionLoggerStorageListener();
+        installMissionLoggerDispatchCapture();
+        recordMissionLoggerObservedEvent();
 
         if (
             wasSuspended &&
@@ -51558,6 +55797,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
 
         stopSessionRuntimeTicker();
         stopMissionFinderRuntimeMemoryMaintenance();
+        suspendMissionLoggerRuntime();
         removeMissionFinderRuntimeMemoryActivityTracking();
         stopMissionEventCollectibleCollector();
         stopBackgroundWatcherIntervalsOnly();
@@ -51632,6 +55872,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
 
         stopSessionRuntimeTicker();
         stopMissionFinderRuntimeMemoryMaintenance();
+        cleanupMissionLoggerRuntime();
         removeMissionFinderRuntimeMemoryActivityTracking();
         stopMissionEventCollectibleCollector();
         cleanupMissionFinderIphoneNativePickerSurfaces();
@@ -51730,6 +55971,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
     function reconcileMissionFinderAfterPageShow() {
         mfRuntimeSuspendedForPageHide = false;
         startMissionEventCollectibleCollector();
+        installMissionLoggerStorageListener();
         invalidateVehicleCheckboxCache();
         invalidateMissionContextCaches();
         invalidatePatientCountCache();
@@ -51749,6 +55991,11 @@ async function handleAutoPrisonerReleaseAfterActions() {
             );
             return;
         }
+
+        installMissionLoggerDispatchCapture();
+        installMissionLoggerCompletionCapture();
+        startMissionLoggerSyncTimer();
+        recordMissionLoggerObservedEvent();
 
         const missionPage = isMissionPage();
         const wrapper = document.getElementById(
@@ -51823,6 +56070,11 @@ async function handleAutoPrisonerReleaseAfterActions() {
 
         installMissionFinderRuntimeCleanup();
         installMissionFinderFrameRuntimeReconciliation();
+        installMissionLoggerStorageListener();
+
+        if (MF_IS_TOP_WINDOW) {
+            startMissionLoggerSyncTimer();
+        }
 
         if (!shouldKeepMissionFinderObserverForCurrentFrame()) {
             suspendMissionFinderRuntimeForInactiveFrame(
@@ -51835,6 +56087,8 @@ async function handleAutoPrisonerReleaseAfterActions() {
         installIssueRecorderWatchers();
         installPersonnelRegistryUpdateHandler();
         installMissionFinderRuntimeMemoryActivityTracking();
+        installMissionLoggerDispatchCapture();
+        installMissionLoggerCompletionCapture();
 
         if (MF_IS_TOP_WINDOW) {
             installManualMissionClickFlagClearer();

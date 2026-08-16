@@ -41,7 +41,7 @@ Command Nexus now contains both systems in one `.user.js` file. The supported op
 
 ## Current storage position
 
-The current Command Nexus `1.0.127` source retains versioned keys from both established engines. This preserves existing behaviour, but a complete formal migration matrix has not yet been proven for every combination of stored data.
+The current Command Nexus `1.1.0` source retains versioned keys from both established engines. This preserves existing behaviour, but a complete formal migration matrix has not yet been proven for every combination of stored data.
 
 Development must therefore distinguish between:
 
@@ -49,6 +49,8 @@ Development must therefore distinguish between:
 - Shared training-registry data already used by both engines.
 - Conflicting preferences that need explicit precedence rules.
 - Unknown or malformed data that must not be deleted silently.
+
+The `1.1.0` Mission Analytics Logger adds independent `mf_mission_logger_*_v1` local-storage records. It starts disabled, requires explicit pairing before events can enter its outbox and does not change either legacy engine's settings. Disconnect removes the device credential, pending batch, unsent events, player-specific observation/completion registry and last-dispatch retry guard; it does not delete Resource Administration, Mission Finder or Personnel Register data.
 
 ## Migration test matrix
 

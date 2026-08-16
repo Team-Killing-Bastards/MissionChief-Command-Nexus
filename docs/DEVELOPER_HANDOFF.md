@@ -12,8 +12,8 @@ This is the first document to read when resuming MissionChief Command Nexus deve
 | Repository | `Team-Killing-Bastards/MissionChief-Command-Nexus` |
 | Default branch | `main` |
 | Canonical userscript | `src/missionchief-command-nexus.user.js` |
-| Command Nexus version | `1.0.127` |
-| Mission Finder baseline | `V10.6.164` |
+| Command Nexus version | `1.1.0` |
+| Mission Finder baseline | `V10.7.0` |
 | Resource Administration module | `V4.2.8` |
 | Unit / Station / Personnel UI versions | `3.3.27` / `1.3.22` / `1.3.12` |
 | Userscript author metadata | `MartyBlyth` |
@@ -38,7 +38,11 @@ MissionChief Command Nexus
     ├── Unit Finder and Mission Update
     ├── Qualification-aware selection
     ├── Auto Mode and dispatch
-    └── Queue and transport continuation
+    ├── Queue and transport continuation
+    └── Opt-in mission analytics client
+
+Google integration
+└── Separately deployed Apps Script logger backend and native Sheet
 ```
 
 The single-file shape is deliberate. Logical consolidation may continue, but established behavior must remain protected by executable regressions before structural refactoring.
@@ -53,6 +57,8 @@ The single-file shape is deliberate. Logical consolidation may continue, but est
 - Mission requirements, selected and en-route reconciliation, trained-personnel capability, dispatch, Auto Mode and transport continuation are implemented.
 - Qualification-sensitive selection fails closed: exact compatible vehicles with missing or stale evidence first enter live assignment-page verification, but only fresh, complete Personnel Register evidence satisfies trained-personnel demand and Auto Mode stops without dispatch when verified coverage remains short.
 - Search Dog Unit (SAR) uses exact native MissionChief UK type `102` across Mission Finder selection, selected-unit verification and Unit Naming.
+- The Mission Analytics Logger is off by default, pairs each browser to a stable player profile, enriches early observations from the live mission list and definition cache, captures exact dispatch selections in a bounded local outbox and uploads idempotent five-minute batches to the configured Google Apps Script backend. A persistent client guard and independent backend semantic guard suppress exact dispatch retries. Disconnect clears unsent profile-specific events.
+- The repository contains the Apps Script backend, manifest, deployment guide and permanent logger contract regression. It records native completion timing, matches exact awarded credits from MissionChief's same-origin Credits ledger, maintains Mission Summary and all-weeks Dashboard Data, and performs copy-verified weekly raw archives. Mission-ID + title matches are preferred; a title/time match must be unique or the row remains pending.
 - Mission and Resource Administration behavior is protected by permanent `scripts/check-*.mjs` regressions.
 - Canonical release and component versions are validated only by `scripts/validate-userscript.mjs`; behavioral checks are version-agnostic.
 - Trusted main events reconcile GitHub Release assets and external delivery without republishing an already-complete version.
