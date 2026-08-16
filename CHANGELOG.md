@@ -8,6 +8,7 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ### Changed
 
+- Replaced the README hero's human figure with a completely unoccupied operations environment, preventing the artwork from implying a contributor's likeness or authorship while preserving the Command Nexus identity and operational narrative.
 - Removed obsolete one-use builders, trigger files and historical repair/inspection workflows from permanent repository automation.
 - Centralized canonical release and component-version validation in `scripts/validate-userscript.mjs`; permanent behavioral regressions are now version-agnostic and automatically discovered by the validation workflow.
 - Added a permanent Repository Quality gate that parses every retained GitHub Actions workflow with a pinned YAML parser before repository checks continue.
