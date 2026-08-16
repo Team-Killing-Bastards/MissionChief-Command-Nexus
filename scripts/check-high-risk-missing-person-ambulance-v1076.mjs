@@ -98,8 +98,6 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-expect(source.includes('// @version      1.0.122'), 'Expected Command Nexus 1.0.104');
-expect(source.includes('MISSION FINDER V10.6.160'), 'Expected Mission Finder V10.6.153');
 
 for (const token of [
   "const MF_HIGH_RISK_MISSING_PERSON_AMBULANCE_KEY =",

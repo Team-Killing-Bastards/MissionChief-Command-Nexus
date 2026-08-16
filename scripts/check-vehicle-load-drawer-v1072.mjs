@@ -54,8 +54,6 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-expect(source.includes('// @version      1.0.122'), 'v1.0.72 metadata missing');
-expect(source.includes('MISSION FINDER V10.6.160'), 'V10.6.135 header missing');
 
 const control = extractFunction('createControlPanel');
 const styles = extractFunction('injectStyles');
@@ -118,4 +116,4 @@ for (const token of [
   expect(source.includes(token), `Operational ownership missing ${token}`);
 }
 
-console.log('Attached Vehicle Load drawer V1.0.72 checks passed.');
+console.log('Attached Vehicle Load drawer checks passed.');

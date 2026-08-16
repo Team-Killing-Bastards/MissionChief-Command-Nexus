@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Final owner-authorised validation trigger for Command Nexus v1.0.84.
+// Protect single-pass selection across fresh missions and Mission Update.
 import { readFile } from 'node:fs/promises';
 
 const source = await readFile('src/missionchief-command-nexus.user.js', 'utf8');
@@ -21,8 +21,6 @@ function sliceBetween(startToken, endToken, label) {
   return source.slice(start, end);
 }
 
-expect(source.includes('// @version      1.0.122'), 'Expected Command Nexus 1.0.104');
-expect(source.includes(' * MODULE 2: MISSION FINDER V10.6.160'), 'Expected Mission Finder V10.6.153');
 
 const helperSource = sliceBetween(
   '    function shouldRunPostSelectionMissionUpdate(selectionRunState) {',

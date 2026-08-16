@@ -145,14 +145,6 @@ function createRuntime(localStorage, document) {
   return runtimeFactory(localStorage, document);
 }
 
-expect(
-  source.includes('// @version      1.0.122'),
-  'Expected Command Nexus 1.0.104 metadata'
-);
-expect(
-  source.includes('MODULE 2: MISSION FINDER V10.6.160'),
-  'Expected Mission Finder V10.6.153 header'
-);
 
 const controlPanel = extractFunction('createControlPanel');
 for (const token of [

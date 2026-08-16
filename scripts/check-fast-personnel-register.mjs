@@ -10,8 +10,6 @@ function fail(message) {
 }
 
 for (const [token, label] of [
-  ['// @version      1.0.122', 'v1.0.51 metadata'],
-  ["const PERSONNEL_VERSION = '1.3.10';", 'Personnel v1.3.7'],
   ['const PERSONNEL_REGISTER_MAX_CONCURRENCY = 3;', 'bounded desktop concurrency'],
   ['const PERSONNEL_REGISTER_LAUNCH_GAP_MS = 350;', 'shared request launch pacing'],
   ['const PERSONNEL_REGISTER_REVERIFY_AGE_MS = 30 * 24 * 60 * 60 * 1000;', 'periodic exact reverification'],

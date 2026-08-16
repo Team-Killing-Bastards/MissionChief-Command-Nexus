@@ -1,6 +1,6 @@
 # Architecture
 
-This document describes the architecture that exists in the merged MissionChief Command Nexus v1.0.1 source and the direction for future consolidation.
+This document describes the architecture in the current MissionChief Command Nexus v1.0.122 production source and the direction for future consolidation.
 
 > Source-code direction and final technical decisions remain with **MartyBlyth**, the project developer. Conroy1988 provides repository and documentation support only.
 
@@ -11,6 +11,8 @@ The canonical distributable is a single userscript:
 ```text
 src/missionchief-command-nexus.user.js
 ```
+
+The canonical module baseline is Resource Administration `V4.2.8` and Mission Finder `V10.6.160`. The Resource Administration interfaces report Unit Naming `3.3.27`, Station Naming `1.3.22` and Personnel Assignment `1.3.10`. Exact release and component-version validation belongs to `scripts/validate-userscript.mjs`; behavioral regressions do not pin these numbers.
 
 It contains one userscript metadata block, one outer installation guard and two retained runtime engines:
 
@@ -94,7 +96,7 @@ The source currently retains versioned keys inherited from the established engin
 - Identify keys that must remain backward compatible.
 - Validate data before migration.
 - Define precedence where both legacy scripts stored overlapping preferences.
-- Keep recoverable legacy data through the first stable release cycle.
+- Keep recoverable legacy data through the documented support and rollback window.
 - Never silently delete unknown or malformed user data.
 - Increase the Command Nexus version when a migration ships.
 
@@ -230,7 +232,7 @@ The repository may continue to publish one generated or maintained `.user.js` fi
 
 ## Distribution architecture
 
-The authoritative source is the raw `main` file. Approved publication follows:
+The authoritative source is the canonical userscript on trusted `main`. Approved publication follows:
 
 ```text
 Focused source change
@@ -243,11 +245,15 @@ Live regression evidence
         ↓
 MartyBlyth approval
         ↓
-Approved main source
+Approved pull-request merge to main
         ↓
-External synchronization
+Idempotent release-state reconciliation
         ↓
-Matching version tag and GitHub Release checksum
+Matching tag, verified GitHub assets and Greasy Fork synchronization
+        ↓
+Single verified Discord delivery receipt
 ```
+
+Repository-only changes keep the current userscript version. The release-state gate detects the already-complete version and must not create duplicate assets or notifications.
 
 See [Developer Handoff](DEVELOPER_HANDOFF.md), [Testing Strategy](TESTING.md) and [Release Process](RELEASE_PROCESS.md).

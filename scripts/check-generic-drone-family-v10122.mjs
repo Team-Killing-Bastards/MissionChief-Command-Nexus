@@ -58,8 +58,6 @@ function extractStringSet(name) {
   );
 }
 
-expect(source.includes('// @version      1.0.122'), 'Expected Command Nexus 1.0.122');
-expect(source.includes(' * MODULE 2: MISSION FINDER V10.6.160'), 'Expected Mission Finder V10.6.160');
 
 const flexibleNames = extractStringSet('MF_POLICE_AIR_FLEXIBLE_REQUIREMENT_NAMES');
 const helicopterNames = extractStringSet('MF_POLICE_HELICOPTER_REQUIREMENT_NAMES');

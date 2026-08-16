@@ -22,9 +22,6 @@ function extractBetween(startText, endText, label) {
   return source.slice(start, end);
 }
 
-requireText('// @version      1.0.122', 'current userscript metadata');
-requireText("const PERSONNEL_VERSION = '1.3.10';", 'current Personnel Assignment version');
-requireText(' * MODULE 2: MISSION FINDER V10.6.160', 'current Mission Finder header');
 
 // #126 PSU registry and assigned staff.
 requireText('function getPersonnelVehicleTypeIdFromRow(row)', 'broad vehicle-type discovery');

@@ -31,8 +31,6 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-expect(source.includes('// @version      1.0.122'), 'Command Nexus 1.0.69 metadata missing');
-expect(source.includes('MISSION FINDER V10.6.160'), 'Mission Finder V10.6.139 header missing');
 const panel = extractFunction('createControlPanel');
 const startScanner = extractFunction('startMissionEventCollectibleCollector');
 const styles = extractFunction('injectStyles');
@@ -72,4 +70,4 @@ expect(
   'Required Personnel preload lifecycle must remain intact after dashboard mount'
 );
 
-console.log('Mission dashboard V10.6.132 ownership and lifecycle checks passed.');
+console.log('Mission dashboard ownership and lifecycle checks passed.');

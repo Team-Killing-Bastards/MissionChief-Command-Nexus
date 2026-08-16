@@ -62,9 +62,6 @@ class FixtureDocument {
   }
 }
 
-expect(source.includes('// @version      1.0.122'), 'Expected Command Nexus 1.0.94');
-expect(source.includes("const UNIT_VERSION = '3.3.27';"), 'Expected Unit Naming 3.3.19');
-expect(source.includes("const STATION_VERSION = '1.3.22';"), 'Expected Station Naming 1.3.13');
 
 // The live failure is specifically cross-document: the naming UI can live in the
 // top Stations host while the native building rows carrying leitstelle_building_id
@@ -158,4 +155,4 @@ const assignmentLoader = extractFunction('refreshNamingDispatchCentreAssignments
 expect(assignmentLoader.includes('getNamingDispatchCentreStationRowDocuments()'), 'Membership loader must use the same cross-frame document collection as centre discovery');
 expect(!assignmentLoader.includes('...document.querySelectorAll('), 'Membership loader must not be restricted to the current document');
 
-console.log('PASS: v1.0.94 joins frame-hosted station leitstelle_building_id assignments to Dispatch Centre, Service and Unassigned filtering.');
+console.log('PASS: Frame-hosted station assignments feed Dispatch Centre, Service and Unassigned filtering.');

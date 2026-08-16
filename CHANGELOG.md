@@ -4,6 +4,15 @@ All notable changes to MissionChief Command Nexus are documented here.
 
 The project uses Semantic Versioning for the unified userscript release line.
 
+## [Unreleased]
+
+### Changed
+
+- Removed obsolete one-use builders, trigger files and historical repair/inspection workflows from permanent repository automation.
+- Centralized canonical release and component-version validation in `scripts/validate-userscript.mjs`; permanent behavioral regressions are now version-agnostic and automatically discovered by the validation workflow.
+- Refreshed current operational documentation for the `1.0.122` production baseline and separated it from immutable versioned handovers and incident records.
+- Kept the canonical userscript unchanged, so this repository-maintenance set does not create a new userscript release.
+
 ## [1.0.122] - 2026-08-16
 
 ### Fixed

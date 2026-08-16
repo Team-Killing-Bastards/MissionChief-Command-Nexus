@@ -99,8 +99,6 @@ function extractFunctionUntil(name, nextName) {
   return source.slice(start, end);
 }
 
-requireText('// @version      1.0.122', 'v1.0.51 metadata');
-requireText(' * MODULE 2: MISSION FINDER V10.6.160', 'V10.6.120 header');
 requireText("const MF_PSU_COMPATIBLE_TRAINING_CODES =", 'PSU-compatible course list');
 requireText("'police_medic',\n            'railway_police'", 'Railway Police PSU-compatible course');
 requireText("'51': 9", 'type-51 PSU capacity nine');

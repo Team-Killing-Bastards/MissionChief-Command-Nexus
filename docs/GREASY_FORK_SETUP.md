@@ -17,7 +17,9 @@ Greasy Fork fetches the raw main-branch userscript
         ↓
 Greasy Fork publishes only when @version is newer
         ↓
-version tag creates the matching GitHub Release and checksum
+trusted-main release reconciliation creates the matching tag and verified assets
+        ↓
+one verified Discord delivery receipt
 ```
 
 Greasy Fork's public API is read-only and does not provide an API that can directly publish script updates. Its supported automated route is external code synchronization plus a GitHub webhook.
@@ -93,6 +95,7 @@ Every intended Greasy Fork update follows this order:
    ```bash
    node --check src/missionchief-command-nexus.user.js
    node scripts/validate-userscript.mjs
+   for check in scripts/check-*.mjs; do node "$check"; done
    python3 scripts/check_repository.py
    ```
 
@@ -101,12 +104,12 @@ Every intended Greasy Fork update follows this order:
 8. Complete the relevant manual MissionChief regression tests.
 9. Obtain MartyBlyth's release approval.
 10. Merge the pull request to `main`.
-11. Verify the Greasy Fork webhook delivery and resulting script version.
-12. Test installation/update from Greasy Fork.
-13. Create and push the matching version tag, for example `v1.0.1` for `@version 1.0.1`.
-14. Verify the GitHub release contains the `.user.js` asset and SHA-256 file.
+11. Verify trusted-main release reconciliation created the matching tag and GitHub Release exactly once.
+12. Verify the Greasy Fork webhook delivery and resulting script version.
+13. Test installation/update from Greasy Fork.
+14. Verify the GitHub Release contains the `.user.js` asset, SHA-256 file and one Discord delivery receipt.
 
-The tag creates the GitHub Release. It does not publish to Greasy Fork; the merge/push to `main` and Greasy Fork webhook perform that publication.
+The trusted-main workflow creates or repairs the matching tag and GitHub Release idempotently. The tag does not publish to Greasy Fork; the merge/push to `main` and Greasy Fork webhook perform that publication.
 
 ## Version rules
 
@@ -131,8 +134,10 @@ Examples:
 - Greasy Fork 2 MB size check.
 - Prohibition of `@updateURL`, `@downloadURL` and `@installURL`, so Greasy Fork remains responsible for Greasy Fork-installed updates.
 - Pull request failure when source changes without an increased version.
+- Automatic discovery and execution of every permanent `scripts/check-*.mjs` regression.
+- A repository guard against behavioral tests pinning release or component versions.
 - Tag-to-`@version` matching.
-- Automatic GitHub Release asset and SHA-256 generation.
+- Automatic, idempotent GitHub Release asset, SHA-256 and Discord-receipt reconciliation.
 
 ## Emergency stop
 

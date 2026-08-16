@@ -41,8 +41,6 @@ function extractFunction(name) {
   fail(`Unterminated ${name}`);
 }
 
-expect(source.includes('// @version      1.0.122'), 'Expected Command Nexus 1.0.101');
-expect(source.includes(' * MODULE 2: MISSION FINDER V10.6.160'), 'Expected Mission Finder V10.6.150');
 
 const carMatcher = extractFunction('isCarsToTowRequirementName');
 expect(!carMatcher.includes('normalise('), 'Car towing matcher must not depend on an out-of-scope normalise helper');
@@ -83,4 +81,4 @@ expect(source.includes('isHgvRecoveryVehicleRequirement(originalName, mappedName
 expect(source.includes("source: 'data-raw-html-missing-vehicles'"), 'Escaped data-raw-html missing-vehicle ingestion must remain active');
 expect(source.includes('getGenericMissingVehicleRowsFromText(text).forEach(row => {'), 'Missing-vehicle generic parser path must remain active for truck-to-tow text');
 
-console.log('PASS: v1.0.97 restores the v1.0.95 car towing matcher, keeps Flatbed Recovery exact type 105, and routes explicit truck/HGV/lorry towing to exact HGV Recovery type 106 without breaking shared Unit Finder/Upgrade/Auto matching.');
+console.log('PASS: Car towing keeps Flatbed Recovery exact type 105, while truck/HGV/lorry towing uses exact HGV Recovery type 106 across Unit Finder, Mission Update and Auto Mode.');
