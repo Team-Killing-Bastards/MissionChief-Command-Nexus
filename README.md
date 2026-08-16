@@ -17,7 +17,7 @@
 </tr>
 </table>
 
-**Current version:** `1.0.126` · **Mission Finder engine:** `V10.6.163` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
+**Current version:** `1.0.127` · **Mission Finder engine:** `V10.6.164` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)
@@ -130,7 +130,7 @@ The canonical source is [`src/missionchief-command-nexus.user.js`](src/missionch
 | **Station naming** | Builds and previews structured station names, then submits MissionChief's exact native edit form in the background and verifies the saved value |
 | **Vehicle naming** | Applies repeatable captions and numbering through background native-form requests, with exact vehicle-ID and post-save verification |
 | **Scoped processing** | Operates on a selected station scope with progress, pause, resume, and stop controls where supported |
-| **Personnel Assignment** | Finds trained personnel, plans eligible assignments, and performs Live submissions plus fresh verification reads entirely in the background; all Medical profiles use exact UK vehicle, course and seat mappings |
+| **Personnel Assignment** | Finds trained personnel, plans eligible assignments, and performs Live submissions plus fresh verification reads entirely in the background; Medical, Fire/Airfield, Police and SAR/Coastguard profiles use exact UK vehicle, course, seat and building mappings |
 | **Build Personnel Register** | Reads each discovered vehicle assignment page without changing assignments |
 | **Training intelligence** | Stores exact verified vehicle/personnel capability for specialist mission matching |
 | **Operational reporting** | Separates changed, skipped, failed, unfilled, and genuine training-shortage outcomes |
@@ -224,6 +224,8 @@ Auto Mode validates readiness and final selected-unit state before dispatch. Cro
 - Railway Fire: 2 trained personnel per exact type-107 RRU.
 - Level 1 Incident Commander: 3 trained personnel per exact type-15 ICCU.
 - HazMat Unit: 6 trained personnel per exact type-39 Fire OSU.
+- ARFF fills exact Airfield types 75/76 to four personnel and types 77/78 to two; Co-Responder and Fire Drone use exact types 18 and 90.
+- High Volume Pump and Fire Lifeguard resolve the actual type-40/type-50 and type-73/type-74 tractor-companion relationship before assigning personnel; ambiguous links fail closed.
 - BASU, Welfare, and HazMat reuse one selected Fire OSU; type-86 SAR vans remain separate.
 - `Fire, rescue or aerial appliance` maps to `Rescue Pump`.
 - `Road Rail Unit` maps to `RRU`.
@@ -232,7 +234,7 @@ Auto Mode validates readiness and final selected-unit state before dispatch. Cro
 - `Fire Engines or RIVs` selects exact type-76 RIVs first, then tops up only the remaining count with exact type-16 Rescue Pumps; Water Ladders and CARPs are excluded.
 - `RIV or Major Foam Tender` uses RIV first and Major Foam Tender only when no RIV is available.
 
-High Volume Pump, Drone Operator, Co-Responder, and Lifeguard remain disabled pending sufficient evidence.
+`Run all Fire / Airfield profiles` applies the same exact mappings in one verified batch.
 
 ### Live requirements authority
 
@@ -265,6 +267,7 @@ High Volume Pump, Drone Operator, Co-Responder, and Lifeguard remain disabled pe
 - Trained-personnel selection exhausts every ready, fresh-register-verified compatible unit that can reduce a real course deficit before reporting and blocking on the remaining shortfall. Nominal seats cannot satisfy qualification demand.
 - SAR Commander demand converts to Control Van capability.
 - `Operational Support or SAR Vehicle` selects and verifies the exact type-86 Operational Support Van.
+- Personnel Assignment provides live Cave, Coastal Air/Command/Search, Dog, Drone, Flood, Hovercraft, Jet Ski, Lifeboat, Lifeguard, Mud, Rope and Search Management profiles. The SAR batch combines overlapping qualifications onto the same actual linked crew.
 - Seagoing Vessel requirements recognise supported ALB / ABL / All-weather Lifeboat variants.
 - ATV Carrier matching uses authoritative vehicle type `30` without confusing it with Armed Traffic Cars.
 - Patient and ambulance demand is reconciled across repeated selection passes.
@@ -327,7 +330,7 @@ Command Nexus is operational software, not a claim that every MissionChief UK ve
 | Limitation | Current position |
 |---|---|
 | **Country coverage** | MissionChief UK only |
-| **Training profiles** | Medical profiles are live with exact mappings; remaining Fire, Airfield, SAR, Mountain Rescue, and Coastguard profiles are tracked through issues |
+| **Training profiles** | Medical, Fire/Airfield, Police and SAR/Coastguard profiles are live with exact mappings; the cross-service aggregate remains a future option |
 | **External requirements data** | Some specialist logic depends on stable requirement data exposed by MissionChief or compatible panels |
 | **PSU personnel assignment** | Mission dispatch now uses nine-seat PSU coverage; automatic station personnel assignment into PSU seats remains tracked separately |
 | **Interface consolidation** | One installation still contains two retained operational control surfaces |

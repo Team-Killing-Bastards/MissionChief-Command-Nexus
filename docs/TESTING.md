@@ -39,6 +39,13 @@ vehicle type, academy key, seat target and eligible building scope; the
 specialist-first batch order; quantities above one; shared Preview/Live routing;
 fresh final verification; and separate training versus assignment shortfalls.
 
+Fire/Airfield and SAR/Coastguard mappings are guarded by
+`scripts/check-fire-airfield-personnel-assignment-profiles.mjs` and
+`scripts/check-sar-coastguard-personnel-assignment-profiles.mjs`.
+`scripts/check-personnel-companion-vehicle-rules.mjs` separately executes
+explicit trailer links, deterministic one-to-one fallback, ambiguous and failed
+API fail-closed paths, exact tractor filtering and overlap-safe crew merging.
+
 Automated checks are necessary but cannot prove live MissionChief behaviour.
 
 ## Live test layers

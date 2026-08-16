@@ -14,6 +14,21 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Refreshed current operational documentation for the `1.0.122` production baseline and separated it from immutable versioned handovers and incident records.
 - Kept the canonical userscript unchanged, so this repository-maintenance set does not create a new userscript release.
 
+## [1.0.127] - 2026-08-16
+
+### Added
+
+- Completed issue #18 by enabling live Aircraft Rescue and Firefighting, Co-Responder, Fire Drone, High Volume Pump and Fire Lifeguard Personnel Assignment profiles with exact UK vehicle types, training keys, seat targets and Fire Station scopes.
+- Completed issue #19 by enabling every listed SAR, Mountain Rescue, Coastguard and Lifeboat profile with exact vehicle, academy, live-seat and eligible-building mappings, plus a live full-service batch.
+- Added same-origin station vehicle-API authority for HVP pods, Boat, Flood, Hovercraft, Rescue Watercraft and Inland Rescue Boat trailers. Explicit `tractive_vehicle_id` links are preferred, a unique one-to-one pair is the only fallback, and ambiguity fails closed without assigning an unrelated tractor.
+- SAR batch runs now merge overlapping qualifications onto the same actual crew, preventing Mud/Flood, Search/Flood, Drone/Flood and other shared-vehicle rules from competing for separate seats.
+- Recorded sanitized issue #18/#19 mapping decisions and added permanent Fire, SAR, companion-link, overlap, quantity, building-scope and live-batch regressions.
+- Added singular, plural and `Required` cross-reference aliases for **Aerial Appliance Truck(s) or Rescue Stairs**.
+- The shared Unit Finder and Mission Update selector now exhausts exact type `78` Rescue Stairs first, then fills only the remaining quantity with exact type `17` Combined Aerial Rescue Pumps (CARPs).
+- Both exact vehicle types count toward selected-unit verification, while Water Ladders, Rescue Pumps and every other Fire or Airfield vehicle remain excluded from this combined requirement.
+- Blocked generic quick-select fallback for this specialist mixed pool and added a permanent regression for alias recognition, exact type ownership, ordering, remainder selection and selected-unit accounting.
+- Increased Mission Finder from `V10.6.163` to `V10.6.164`, Personnel Assignment from `1.3.11` to `1.3.12`, and the unified userscript from `1.0.126` to `1.0.127`. Resource Administration remains `V4.2.8`, Unit Naming remains `3.3.27`, and Station Naming remains `1.3.22`.
+
 ## [1.0.126] - 2026-08-16
 
 ### Fixed

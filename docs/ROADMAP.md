@@ -5,11 +5,11 @@ MissionChief Command Nexus is an actively released userscript. This roadmap reco
 **Developer and technical owner:** MartyBlyth  
 **Repository and documentation support:** Conroy1988
 
-## Current production baseline — v1.0.126
+## Current production baseline — v1.0.127
 
 - [x] Publish one canonical userscript on trusted `main`.
-- [x] Release Command Nexus `1.0.126` with Mission Finder `V10.6.163`.
-- [x] Retain Resource Administration `V4.2.8`, with Unit Naming `3.3.27`, Station Naming `1.3.22` and Personnel Assignment `1.3.11`.
+- [x] Release Command Nexus `1.0.127` with Mission Finder `V10.6.164`.
+- [x] Retain Resource Administration `V4.2.8`, with Unit Naming `3.3.27`, Station Naming `1.3.22` and Personnel Assignment `1.3.12`.
 - [x] Protect duplicate initialization and independent engine startup.
 - [x] Provide Unit Naming, Station Naming and Personnel Assignment through background native-form workflows.
 - [x] Provide requirement parsing, patient handling, trained-capability selection, Mission Update, dispatch, Auto Mode and queue continuation.
@@ -18,6 +18,9 @@ MissionChief Command Nexus is an actively released userscript. This roadmap reco
 - [x] Admit missing and stale exact-type vehicles to live verification before enforcing the final evidence-backed selection gate.
 - [x] Align Search Dog Unit selection, verification and naming to evidence-backed native type `102`.
 - [x] Complete all Medical Personnel Assignment profiles with exact UK vehicle, academy, seat and eligible-building mappings.
+- [x] Complete issue #18 Fire/Airfield Personnel Assignment profiles with exact mappings and fail-closed pod/trailer authority.
+- [x] Complete issue #19 SAR/Coastguard Personnel Assignment profiles with exact mappings, live seat overrides and overlap-safe batching.
+- [x] Route Aerial Appliance Truck(s) or Rescue Stairs through exact Rescue Stairs-first, CARP-remainder selection.
 - [x] Run canonical version validation and the complete permanent behavioral regression suite.
 - [x] Reconcile GitHub Release assets, Greasy Fork synchronization and one Discord delivery receipt for each userscript release.
 
