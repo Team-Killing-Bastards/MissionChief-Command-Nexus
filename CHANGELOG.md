@@ -6,10 +6,26 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
+No changes have been queued after `1.1.3`.
+
+## [1.1.3] - 2026-08-17
+
+### Added
+
+- Added true generated-mission capture for the opt-in Mission Analytics Logger. Nexus now records each new mission belonging to the signed-in player when MissionChief adds it to the native mission list, without requiring that mission's detail page to be opened first.
+- Reused MissionChief's native `missionMarkerAdd` callback and the existing top-window mutation observer as a bounded fallback. Initial mission-list hydration is recorded only as a local baseline, preventing a refresh or userscript update from falsely importing the whole existing mission list as newly generated.
+
 ### Fixed
 
+- Fixed dispatch journey evidence remaining blank because MissionChief may expose distance and ETA on the selected checkbox or a native metric cell rather than the enclosing row. One shared reader now checks those exact native attributes and explicit unit-labelled values, and vehicle arrival sorting uses the same evidence path.
 - Preserved Google Sheets dashboard and analysis formula references during logger rebuilds by clearing source data cells instead of deleting the referenced rows.
 - Blocked duplicate active player display names and directs additional browsers to **Create another device pairing**, preventing ambiguous dashboard player filters.
+
+### Security and compatibility
+
+- Generated-mission capture accepts only a mission whose native owner ID exactly matches the current signed-in user. Alliance missions owned by another player and records without exact ownership evidence fail closed.
+- Preserved the existing logger endpoint, player/browser pairings, local queue, spreadsheet and dashboard. Historical journey rows with missing evidence cannot be reconstructed; new distance/ETA evidence begins with dispatches captured by `1.1.3`.
+- Increased the unified userscript from `1.1.2` to `1.1.3` and Mission Finder from `V10.7.0` to `V10.7.1`. Resource Administration remains `V4.2.8`, Unit Naming remains `3.3.27`, Station Naming remains `1.3.22`, and Personnel Assignment remains `1.3.12`.
 
 ## [1.1.2] - 2026-08-17
 
