@@ -34,6 +34,7 @@ jobs:
 
           code_path = Path("integrations/google-apps-script/Code.gs")
           code = code_path.read_text(encoding="utf-8")
+
           code = replace_once(
               code,
               "  buildId: '1.1.2-journey-1',",
@@ -63,12 +64,19 @@ jobs:
               "formula-preserving logger clear",
           )
 
-          old_player_guard = """    if (findRowByValue_(players, 1, playerId)) {
-              throw new Error('That player ID already exists.');
-            }
-
-            players.appendRow(["""
-          new_player_guard = """    const existingDisplayName = findActivePlayerByDisplayName_(
+          create_start = code.index(
+              "function createMissionChiefPlayerPairing() {"
+          )
+          create_end = code.index(
+              "\n}\n\nfunction createMissionChiefDevicePairing() {",
+              create_start,
+          ) + 2
+          create_body = code[create_start:create_end]
+          players_line = (
+              "    const players = spreadsheet.getSheetByName("
+              "MC_LOGGER_SHEETS.players.name);\n\n"
+          )
+          guard = """    const existingDisplayName = findActivePlayerByDisplayName_(
               players,
               displayName
             );
@@ -80,23 +88,18 @@ jobs:
               );
             }
 
-            if (findRowByValue_(players, 1, playerId)) {
-              throw new Error('That player ID already exists.');
-            }
-
-            players.appendRow(["""
-          code = replace_once(
-              code,
-              old_player_guard,
-              new_player_guard,
-              "duplicate display-name guard",
+          """
+          if "findActivePlayerByDisplayName_(" in create_body:
+              raise SystemExit("duplicate display-name guard already exists")
+          create_body = replace_once(
+              create_body,
+              players_line,
+              players_line + guard,
+              "create-player sheet anchor",
           )
+          code = code[:create_start] + create_body + code[create_end:]
 
-          helper_marker = """}
-
-          function createMissionChiefDevicePairing() {"""
-          helper = """}
-
+          helper = """
           function findActivePlayerByDisplayName_(sheet, displayName) {
             if (!sheet || sheet.getLastRow() < 2) return null;
             const target = cleanText_(displayName, 120).toLowerCase();
@@ -122,14 +125,10 @@ jobs:
             }
             return null;
           }
-
-          function createMissionChiefDevicePairing() {"""
-          code = replace_once(
-              code,
-              helper_marker,
-              helper,
-              "active display-name helper",
-          )
+          """
+          if "function findActivePlayerByDisplayName_(" in code:
+              raise SystemExit("active display-name helper already exists")
+          code = code.rstrip() + "\n\n" + helper.strip() + "\n"
           code_path.write_text(code, encoding="utf-8")
 
           readme_path = Path("integrations/google-apps-script/README.md")
@@ -144,15 +143,19 @@ jobs:
 
           changelog_path = Path("CHANGELOG.md")
           changelog = changelog_path.read_text(encoding="utf-8")
-          changelog = replace_once(
-              changelog,
-              "No changes have been queued after `1.1.2`.",
-              """### Fixed
+          old_unreleased = "No changes have been queued after `1.1.2`."
+          new_unreleased = """### Fixed
 
           - Preserved Google Sheets dashboard and analysis formula references during logger rebuilds by clearing source data cells instead of deleting the referenced rows.
-          - Blocked duplicate active player display names and directs additional browsers to **Create another device pairing**, preventing ambiguous dashboard player filters.""",
-              "unreleased changelog",
-          )
+          - Blocked duplicate active player display names and directs additional browsers to **Create another device pairing**, preventing ambiguous dashboard player filters."""
+          if old_unreleased in changelog:
+              changelog = changelog.replace(
+                  old_unreleased,
+                  new_unreleased,
+                  1,
+              )
+          elif new_unreleased not in changelog:
+              raise SystemExit("Unreleased changelog anchor was not found")
           changelog_path.write_text(changelog, encoding="utf-8")
 
           test_path = Path("scripts/check-logger-dashboard-rebuild-safety.mjs")
@@ -186,11 +189,13 @@ jobs:
           );
           assert.match(createPlayerBody, /Create another device pairing/);
 
-          const displayGuardBody = extractFunction(
-            'findActivePlayerByDisplayName_'
+          const helperStart = backend.indexOf(
+            'function findActivePlayerByDisplayName_('
           );
-          assert.match(displayGuardBody, /toLowerCase\\(\\)/);
-          assert.match(displayGuardBody, /ACTIVE/);
+          assert.notEqual(helperStart, -1);
+          const helperBody = backend.slice(helperStart);
+          assert.match(helperBody, /toLowerCase\\(\\)/);
+          assert.match(helperBody, /ACTIVE/);
 
           assert.match(
             backend,
@@ -205,7 +210,7 @@ jobs:
           )
           PY
 
-      - name: Run permanent validation
+      - name: Run targeted validation
         shell: bash
         run: |
           node -e "new Function(require('fs').readFileSync('integrations/google-apps-script/Code.gs','utf8'))"
@@ -213,12 +218,12 @@ jobs:
           node scripts/check-mission-user-logger.mjs
           node scripts/check-mission-journey-metrics.mjs
           node scripts/validate-userscript.mjs
-          python3 scripts/check_repository.py
 
       - name: Commit repaired backend
         shell: bash
         run: |
           rm .github/workflows/apply-dashboard-rebuild-fix.yml
+          python3 scripts/check_repository.py
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
