@@ -1,0 +1,1201 @@
+### readMissionLoggerUnitJourneyMetrics
+function readMissionLoggerUnitJourneyMetrics(row) {
+        const parseMetric = value => {
+            const raw = String(value ?? '')
+                .replace(/\u00a0/g, ' ')
+                .trim();
+            if (!raw) return null;
+
+            const normalised = raw.includes('.')
+                ? raw.replace(/,/g, '')
+                : raw.replace(',', '.');
+            const number = Number(normalised);
+            return Number.isFinite(number) && number >= 0
+                ? number
+                : null;
+        };
+
+        const distanceKm = parseMetric(
+            row?.getAttribute?.('data-distance')
+        );
+        const etaSeconds = parseMetric(
+            row?.getAttribute?.('data-sortvalue') ||
+            row?.getAttribute?.('timevalue')
+        );
+
+        return {
+            estimatedDistanceKm:
+                distanceKm === null
+                    ? null
+                    : Math.round(distanceKm * 1000) / 1000,
+            estimatedEtaSeconds:
+                etaSeconds === null
+                    ? null
+                    : Math.round(etaSeconds)
+        };
+    }
+
+
+### getMissionLoggerSelectedUnits
+function getMissionLoggerSelectedUnits() {
+        let selected = [];
+
+        try {
+            selected = getVehicleCheckboxSnapshot(true)
+                .filter(checkbox => checkbox.checked)
+                .slice(0, 500);
+        } catch (_error) {}
+
+        return selected.map(checkbox => {
+            const row = checkbox.closest?.('tr');
+            const journeyMetrics =
+                readMissionLoggerUnitJourneyMetrics(row);
+            const stationLink = row?.querySelector?.(
+                'a[href*="/buildings/"]'
+            );
+            const stationMatch = String(
+                stationLink?.getAttribute?.('href') || ''
+            ).match(/\/buildings\/(\d+)/i);
+            const typeIds = getVehicleTypeIdentifiers(
+                checkbox
+            );
+            const typeName = trimMissionLoggerText(
+                checkbox.getAttribute?.(
+                    'vehicle_type_caption'
+                ) ||
+                row?.getAttribute?.(
+                    'vehicle_type_caption'
+                ) ||
+                row?.querySelector?.(
+                    'td[vehicle_type_id], td[data-vehicle-type-id]'
+                )?.textContent ||
+                '',
+                160
+            );
+
+            return {
+                vehicleId: getMissionVehicleId(checkbox),
+                vehicleTypeId: typeIds[0] || '',
+                vehicleName: trimMissionLoggerText(
+                    getVehicleDebugName(checkbox),
+                    180
+                ),
+                vehicleTypeName: typeName,
+                stationId: stationMatch?.[1] || '',
+                stationName: trimMissionLoggerText(
+                    stationLink?.textContent || '',
+                    180
+                ),
+                status: trimMissionLoggerText(
+                    checkbox.getAttribute?.('status') ||
+                    row?.getAttribute?.('status') ||
+                    row?.querySelector?.(
+                        '.vehicle_status, [data-status]'
+                    )?.textContent ||
+                    '',
+                    80
+                ),
+                estimatedDistanceKm:
+                    journeyMetrics.estimatedDistanceKm,
+                estimatedEtaSeconds:
+                    journeyMetrics.estimatedEtaSeconds
+            };
+        });
+    }
+
+
+### createMissionLoggerEvent
+function createMissionLoggerEvent(
+        eventType,
+        options = {}
+
+
+### recordMissionLoggerObservedEvent
+function recordMissionLoggerObservedEvent() {
+        if (
+            !mfMissionLoggerEnabled ||
+            !readMissionLoggerIdentity() ||
+            !isMissionPage()
+        ) {
+            return false;
+        }
+
+        const missionId =
+            getCurrentMissionIdForQueueRestart();
+        if (!missionId) return false;
+
+        const now = Date.now();
+        const registry = readMissionLoggerObservedRegistry();
+        const key = String(missionId);
+
+        if (
+            now - Number(registry[key] || 0) <
+            24 * 60 * 60 * 1000
+        ) {
+            return false;
+        }
+
+        Object.entries(registry).forEach(([id, timestamp]) => {
+            if (
+                now - Number(timestamp || 0) >
+                7 * 24 * 60 * 60 * 1000
+            ) {
+                delete registry[id];
+            }
+        });
+
+        const queued = queueMissionLoggerEvent(
+            createMissionLoggerEvent(
+                'mission-observed',
+                { includeUnits: false }
+            )
+        );
+        if (!queued) return false;
+
+        registry[key] = now;
+        const entries = Object.entries(registry)
+            .sort((left, right) => {
+                return Number(right[1]) - Number(left[1]);
+            })
+            .slice(0, 500);
+
+        localStorage.setItem(
+            MF_MISSION_LOGGER_OBSERVED_KEY,
+            JSON.stringify(Object.fromEntries(entries))
+        );
+        return true;
+    }
+
+
+### getMissionLoggerMissionSnapshot
+function getMissionLoggerMissionSnapshot() {
+        const missionId = String(
+            getCurrentMissionIdForQueueRestart() || ''
+        ).trim();
+        const snapshot = {
+            missionId,
+            missionDefinitionId: '',
+            advertisedCredits: 0,
+            patientCount: 0,
+            possiblePatientCount: 0,
+            prisonerCount: null,
+            possiblePrisonerCount: null,
+            generatorStationId: '',
+            generatorStationName: '',
+            generatorSource: '',
+            source: ''
+        };
+
+        if (!/^\d+$/.test(missionId)) return snapshot;
+
+        const numberOrNull = value => {
+            const parsed = Number(value);
+            return Number.isFinite(parsed) && parsed >= 0
+                ? parsed
+                : null;
+        };
+        const applyCountPair = (value, currentKey, possibleKey) => {
+            const pair = Array.isArray(value)
+                ? value
+                : [value, null];
+            const current = numberOrNull(pair[0]);
+            const possible = numberOrNull(pair[1]);
+
+            if (current !== null) {
+                snapshot[currentKey] = Math.max(
+                    Number(snapshot[currentKey] || 0),
+                    current
+                );
+            }
+            if (possible !== null) {
+                const existing = snapshot[possibleKey];
+                snapshot[possibleKey] = existing === null
+                    ? possible
+                    : Math.max(Number(existing || 0), possible);
+            }
+        };
+
+        for (const candidate of getMissionLoggerSameOriginWindows()) {
+            let mission = null;
+            try {
+                mission = getMissionLoggerCacheRecord(
+                    candidate.missions_data,
+                    missionId
+                );
+            } catch (_error) {}
+
+            if (mission) {
+                snapshot.source = snapshot.source || 'mission-marker';
+                snapshot.missionDefinitionId = String(
+                    mission.mtid ||
+                    mission.mission_type_id ||
+                    snapshot.missionDefinitionId ||
+                    ''
+                );
+                snapshot.advertisedCredits = Math.max(
+                    snapshot.advertisedCredits,
+                    numberOrNull(
+                        mission.average_credits ??
+                        mission.advertised_credits
+                    ) || 0
+                );
+                applyCountPair(
+                    [
+                        mission.patients_count,
+                        mission.possible_patients_count
+                    ],
+                    'patientCount',
+                    'possiblePatientCount'
+                );
+                applyCountPair(
+                    [
+                        mission.prisoners_count,
+                        mission.possible_prisoners_count
+                    ],
+                    'prisonerCount',
+                    'possiblePrisonerCount'
+                );
+
+                const generatorId = String(
+                    mission.generator_building_id ??
+                    mission.generated_by_building_id ??
+                    mission.building_id ??
+                    ''
+                ).trim();
+                if (/^\d+$/.test(generatorId)) {
+                    snapshot.generatorStationId = generatorId;
+                    snapshot.generatorSource = 'mission-marker';
+                }
+
+                const generatorName = trimMissionLoggerText(
+                    mission.generator_building_name ??
+                    mission.generated_by_name ??
+                    mission.generated_by ??
+                    '',
+                    160
+                );
+                if (generatorName) {
+                    snapshot.generatorStationName = generatorName;
+                    snapshot.generatorSource =
+                        snapshot.generatorSource ||
+                        'mission-marker';
+                }
+            }
+
+            let row = null;
+            try {
+                row = candidate.document.getElementById(
+                    `mission_${missionId}`
+                );
+            } catch (_error) {}
+            if (!row) continue;
+
+            snapshot.source = snapshot.source || 'mission-list';
+            snapshot.missionDefinitionId = String(
+                row.getAttribute('mission_type_id') ||
+                row.getAttribute('data-mission-type-id') ||
+                snapshot.missionDefinitionId ||
+                ''
+            );
+
+            try {
+                const sortable = JSON.parse(
+                    row.getAttribute('data-sortable-by') ||
+                    row.getAttribute('data-sortable_by') ||
+                    '{}'
+                );
+                snapshot.advertisedCredits = Math.max(
+                    snapshot.advertisedCredits,
+                    numberOrNull(sortable.average_credits) || 0
+                );
+                applyCountPair(
+                    sortable.patients_count,
+                    'patientCount',
+                    'possiblePatientCount'
+                );
+                applyCountPair(
+                    sortable.prisoners_count,
+                    'prisonerCount',
+                    'possiblePrisonerCount'
+                );
+            } catch (_error) {}
+        }
+
+        if (
+            snapshot.generatorStationId &&
+            !snapshot.generatorStationName
+        ) {
+            snapshot.generatorStationName =
+                getMissionLoggerBuildingName(
+                    snapshot.generatorStationId
+                );
+        }
+
+        return snapshot;
+    }
+
+
+### readMissionLoggerObservedRegistry
+function readMissionLoggerObservedRegistry() {
+        try {
+            const parsed = JSON.parse(
+                localStorage.getItem(
+                    MF_MISSION_LOGGER_OBSERVED_KEY
+                ) || '{}'
+            );
+            return parsed && typeof parsed === 'object'
+                ? parsed
+                : {};
+        } catch (_error) {
+            return {};
+        }
+    }
+
+
+### writeMissionLoggerObservedRegistry
+MISSING
+
+
+### startMissionLoggerSyncTimer
+function startMissionLoggerSyncTimer() {
+        if (!MF_IS_TOP_WINDOW) return;
+
+        installMissionLoggerConnectivityListener();
+
+        if (
+            !mfMissionLoggerEnabled ||
+            !mfMissionLoggerEndpoint ||
+            !readMissionLoggerIdentity()
+        ) {
+            stopMissionLoggerSyncTimer();
+            stopMissionLoggerCreditReconciliation();
+            return;
+        }
+
+        startMissionLoggerCreditReconciliation();
+
+        if (
+            mfMissionLoggerInitialSyncTimer ||
+            mfMissionLoggerSyncTimer
+        ) {
+            return;
+        }
+
+        const state = readMissionLoggerState();
+        const elapsed = Math.max(
+            0,
+            Date.now() - Number(state.lastAttemptAt || 0)
+        );
+        const initialDelay = state.lastAttemptAt
+            ? Math.max(
+                1000,
+                MF_MISSION_LOGGER_SYNC_INTERVAL_MS - elapsed
+            )
+            : 5000;
+
+        mfMissionLoggerInitialSyncTimer = setTimeout(
+            async () => {
+                mfMissionLoggerInitialSyncTimer = null;
+                await syncMissionLoggerNow();
+
+                if (
+                    !mfMissionLoggerEnabled ||
+                    mfMissionLoggerSyncTimer
+                ) {
+                    return;
+                }
+
+                mfMissionLoggerSyncTimer = setInterval(
+                    () => {
+                        void syncMissionLoggerNow();
+                    },
+                    MF_MISSION_LOGGER_SYNC_INTERVAL_MS
+                );
+            },
+            Math.min(
+                MF_MISSION_LOGGER_SYNC_INTERVAL_MS,
+                initialDelay
+            )
+        );
+    }
+
+
+### initialiseMissionFinder
+MISSING
+
+
+### resumeMissionFinderRuntime
+MISSING
+
+
+### startMissionFinderObserver
+function startMissionFinderObserver() {
+        if (mfMainMutationObserver) return;
+
+        installMissionFinderRuntimeCleanup();
+        installMissionFinderFrameRuntimeReconciliation();
+        installMissionLoggerStorageListener();
+
+        if (MF_IS_TOP_WINDOW) {
+            startMissionLoggerSyncTimer();
+        }
+
+        if (!shouldKeepMissionFinderObserverForCurrentFrame()) {
+            suspendMissionFinderRuntimeForInactiveFrame(
+                'startup frame is not the active mission owner'
+            );
+            return;
+        }
+
+        mfRuntimeSuspendedForInactiveFrame = false;
+        installIssueRecorderWatchers();
+        installPersonnelRegistryUpdateHandler();
+        installMissionFinderRuntimeMemoryActivityTracking();
+        installMissionLoggerDispatchCapture();
+        installMissionLoggerCompletionCapture();
+
+        if (MF_IS_TOP_WINDOW) {
+            installManualMissionClickFlagClearer();
+            installBackgroundWatcherSupervisor();
+            compactMissionFinderPersistentStorage();
+
+            if (
+                localStorage.getItem(
+                    'mf_post_transport_rehook_pending_v1'
+                ) === 'true' ||
+                isRecentTransportRehookWindowActive()
+            ) {
+                forceAutoModeBackOnForTransportRehook();
+
+                setTimeout(() => {
+                    openFirstMissionAfterTransportAutoClose(
+                        'startup-pending-rehook'
+                    );
+                }, 2500);
+            }
+        }
+
+        if (isMissionPage()) initialize();
+
+        mfMainMutationObserver = new MutationObserver(records => {
+            releaseRemovedMissionFinderFrameRuntimes(records);
+            scheduleMissionFinderMutationWork(records);
+        });
+
+        mfMainMutationObserver.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+
+        if (isMissionPage()) {
+            startMissionFinderRuntimeMemoryMaintenance();
+        }
+
+        scheduleAutoMemoryRecycleResume();
+    }
+
+
+### handleMissionFinderMutationBatch
+MISSING
+
+
+### getVehicleCheckboxSnapshot
+function getVehicleCheckboxSnapshot(
+        forceRefresh = false
+    ) {
+        const now = Date.now();
+        const selectionDocument =
+            getVehicleSelectionDocument(
+                forceRefresh
+            );
+        const cachedNodes =
+            mfVehicleCheckboxCache.nodes;
+        const firstNode = cachedNodes[0];
+        const lastNode =
+            cachedNodes[
+                cachedNodes.length - 1
+            ];
+        const cacheStillConnected =
+            cachedNodes.length === 0 ||
+            (
+                firstNode?.isConnected !== false &&
+                lastNode?.isConnected !== false
+            );
+        const cacheMatchesDocument =
+            mfVehicleCheckboxCache.document ===
+            selectionDocument;
+
+        if (
+            !forceRefresh &&
+            now <
+                mfVehicleCheckboxCache.expiresAt &&
+            cacheStillConnected &&
+            cacheMatchesDocument
+        ) {
+            return cachedNodes;
+        }
+
+        let nodes = [];
+
+        try {
+            nodes = Array.from(
+                selectionDocument.querySelectorAll(
+                    'input.vehicle_checkbox'
+                )
+            );
+        } catch (_error) {}
+
+        mfVehicleCheckboxCache = {
+            expiresAt:
+                now +
+                (nodes.length ? 500 : 120),
+            nodes,
+            document: selectionDocument
+        };
+
+        return nodes;
+    }
+
+
+### sortVehicleCheckboxesByBestArrival
+function sortVehicleCheckboxesByBestArrival(matches) {
+        const getMetrics = input => {
+            const now = Date.now();
+            const cached = mfVehicleArrivalMetricCache.get(input);
+
+            if (cached && now < cached.expiresAt) {
+                return cached;
+            }
+
+            const row = input?.closest?.('tr');
+            const metrics = {
+                delay: parseFloat(
+                    row?.getAttribute('data-sortvalue') ||
+                    row?.getAttribute('timevalue') ||
+                    '999999'
+                ),
+                distance: parseFloat(
+                    row?.getAttribute('data-distance') ||
+                    '999999'
+                ),
+                expiresAt: now + 500
+            };
+
+            mfVehicleArrivalMetricCache.set(input, metrics);
+            return metrics;
+        };
+
+        matches.sort((a, b) => {
+            const metricsA = getMetrics(a);
+            const metricsB = getMetrics(b);
+            return (
+                metricsA.delay - metricsB.delay ||
+                metricsA.distance - metricsB.distance
+            );
+        });
+
+        return matches;
+    }
+
+
+### MATCH CONTEXTS
+
+--- missionMarker around line 32743 ---
+
+032739:                                                 ' '
+
+032740:                                             )
+
+032741:                                             .trim();
+
+032742: 
+
+032743:                                     const hasMissionMarker =
+
+032744:                                         !!container
+
+032745:                                             .querySelector(
+
+032746:                                                 '#mission_general_info, #mission_alarm_btn, #alarm_button, input.vehicle_checkbox, #mission_help'
+
+032747:                                             );
+
+--- missionMarker around line 32756 ---
+
+032752:                                                 value
+
+032753:                                             );
+
+032754: 
+
+032755:                                     if (
+
+032756:                                         hasMissionMarker ||
+
+032757:                                         hasUpdateText
+
+032758:                                     ) {
+
+032759:                                         addContext(
+
+032760:                                             container,
+
+--- missions_data around line 26708 ---
+
+026704:         for (const candidate of getMissionLoggerSameOriginWindows()) {
+
+026705:             let mission = null;
+
+026706:             try {
+
+026707:                 mission = getMissionLoggerCacheRecord(
+
+026708:                     candidate.missions_data,
+
+026709:                     missionId
+
+026710:                 );
+
+026711:             } catch (_error) {}
+
+026712: 
+
+--- mission.*add around line 6020 ---
+
+006016:             const addressResult = await resolveStationAddress(station, doc);
+
+006017:             const address = String(addressResult.address || '').trim();
+
+006018: 
+
+006019:             if (!address) {
+
+006020:                 throw new Error(addressResult.error || 'Station address could not be read from MissionChief reverse address or the Move-page fallback.');
+
+006021:             }
+
+006022: 
+
+006023:             setStationUiValue('address', address);
+
+006024:             stationLog(`Address: ${address}`, 'info');
+
+--- mission.*add around line 6145 ---
+
+006141: 
+
+006142:         if (coordinates) {
+
+006143:             stationDebug(`Coordinate address lookup: ${coordinates.latitude}, ${coordinates.longitude} (${coordinates.source})`);
+
+006144: 
+
+006145:             const reverseResult = await fetchMissionChiefReverseAddress(
+
+006146:                 coordinates.latitude,
+
+006147:                 coordinates.longitude
+
+006148:             );
+
+006149:             if (reverseResult.address) {
+
+--- mission.*add around line 6152 ---
+
+006148:             );
+
+006149:             if (reverseResult.address) {
+
+006150:                 return {
+
+006151:                     address: reverseResult.address,
+
+006152:                     source: `MissionChief reverse address via ${coordinates.source}`,
+
+006153:                     latitude: coordinates.latitude,
+
+006154:                     longitude: coordinates.longitude
+
+006155:                 };
+
+006156:             }
+
+--- mission.*add around line 6158 ---
+
+006154:                     longitude: coordinates.longitude
+
+006155:                 };
+
+006156:             }
+
+006157: 
+
+006158:             reverseError = reverseResult.error || 'MissionChief reverse-address lookup returned no address.';
+
+006159:             stationDebug(`Reverse-address lookup unavailable for ${station.displayName}: ${reverseError}`);
+
+006160:         } else {
+
+006161:             reverseError = 'No station coordinates could be found for the reverse-address lookup.';
+
+006162:             stationDebug(`${reverseError} Station: ${station.displayName}`);
+
+--- mission.*add around line 6408 ---
+
+006404: 
+
+006405:         return [];
+
+006406:     }
+
+006407: 
+
+006408:     async function fetchMissionChiefReverseAddress(latitude, longitude) {
+
+006409:         const coordinates = normalizeCoordinates(latitude, longitude);
+
+006410:         if (!coordinates) {
+
+006411:             return { address: '', error: 'Invalid coordinates were supplied to the reverse-address lookup.' };
+
+006412:         }
+
+--- mission.*add around line 13343 ---
+
+013339:     // V10.6.100: visible current-mission Missing Vehicles or supported Missing
+
+013340:     // Personnel alerts now take authority before the full mission-help attachment.
+
+013341:     // Explicit missing-vehicle quantities are treated as the target selected count
+
+013342:     // for the current dispatch pass, so repeated Unit Finder/Mission Update checks
+
+013343:     // cannot resend the full mission or add the same shortage twice.
+
+013344:     // V10.6.99: the active iPhone native-picker disclosure/wrapper was removed.
+
+013345:     // MissionChief's own quick-select DOM is now left structurally untouched and
+
+013346:     // receives only passive document-owned selector CSS, eliminating the native/
+
+013347:     // enhanced reattachment race while preserving Mission and Vehicle launchers.
+
+--- mission.*add around line 22322 ---
+
+022318:                    value="${missionReadyDelayMs}">
+
+022319:         `;
+
+022320:         advancedBody.appendChild(delayBox);
+
+022321: 
+
+022322:         delayBox.querySelector('#mf-mission-ready-delay-input').addEventListener('change', function() {
+
+022323:             const value = parseInt(this.value, 10);
+
+022324:             missionReadyDelayMs = Number.isFinite(value) ? Math.max(500, Math.min(15000, value)) : DEFAULT_MISSION_READY_DELAY;
+
+022325:             this.value = missionReadyDelayMs;
+
+022326:             localStorage.setItem('mf_mission_ready_delay_ms', String(missionReadyDelayMs));
+
+--- mission.*add around line 22544 ---
+
+022540:             missionLoggerBox.querySelector(
+
+022541:                 '#mf-mission-logger-disconnect'
+
+022542:             );
+
+022543: 
+
+022544:         missionLoggerToggle?.addEventListener(
+
+022545:             'change',
+
+022546:             function() {
+
+022547:                 mfMissionLoggerEnabled =
+
+022548:                     this.checked === true;
+
+--- mission.*add around line 22596 ---
+
+022592:             startMissionLoggerSyncTimer();
+
+022593:             return true;
+
+022594:         }
+
+022595: 
+
+022596:         missionLoggerEndpointInput?.addEventListener(
+
+022597:             'change',
+
+022598:             saveMissionLoggerEndpointInput
+
+022599:         );
+
+022600: 
+
+--- mission.*add around line 22601 ---
+
+022597:             'change',
+
+022598:             saveMissionLoggerEndpointInput
+
+022599:         );
+
+022600: 
+
+022601:         missionLoggerPairButton?.addEventListener(
+
+022602:             'click',
+
+022603:             async function() {
+
+022604:                 if (!saveMissionLoggerEndpointInput()) {
+
+022605:                     return;
+
+--- mission.*add around line 22637 ---
+
+022633:                 }
+
+022634:             }
+
+022635:         );
+
+022636: 
+
+022637:         missionLoggerSyncButton?.addEventListener(
+
+022638:             'click',
+
+022639:             async function() {
+
+022640:                 const originalText = this.textContent;
+
+022641:                 this.disabled = true;
+
+--- mission.*add around line 22649 ---
+
+022645:                 renderMissionLoggerStatus();
+
+022646:             }
+
+022647:         );
+
+022648: 
+
+022649:         missionLoggerDisconnectButton?.addEventListener(
+
+022650:             'click',
+
+022651:             async function() {
+
+022652:                 const originalText = this.textContent;
+
+022653:                 this.disabled = true;
+
+--- mission.*add around line 22842 ---
+
+022838:         missionUpdateBtn.textContent = 'Mission Update';
+
+022839:         missionUpdateBtn.className = 'mf2026-button';
+
+022840:         missionUpdateBtn.style.backgroundColor = '#0d6efd';
+
+022841:         missionUpdateBtn.style.color = 'white';
+
+022842:         missionUpdateBtn.addEventListener(
+
+022843:             'click',
+
+022844:             async function() {
+
+022845:                 if (
+
+022846:                     missionUpdateBtn.disabled
+
+--- mission.*add around line 23491 ---
+
+023487:             });
+
+023488:         }
+
+023489: 
+
+023490:         if (missionFinderIphoneSafari) {
+
+023491:             iphoneMissionLauncherButton.addEventListener(
+
+023492:                 'click',
+
+023493:                 function(event) {
+
+023494:                     consumeIphoneDisclosureEvent(event);
+
+023495:                     toggleIphoneLauncherPanel('mission');
+
+--- mission.*add around line 28507 ---
+
+028503:                         timer
+
+028504:                     );
+
+028505:                     void reconcileMissionLoggerCreditTransactions();
+
+028506:                 }, delay);
+
+028507:                 mfMissionLoggerCreditRetryTimers.add(timer);
+
+028508:             });
+
+028509:     }
+
+028510: 
+
+028511:     function stopMissionLoggerCreditReconciliation() {
+
+--- mission.*add around line 42633 ---
+
+042629:                     explicitMissingRows.length > 0
+
+042630:                         ? explicitMissingRows
+
+042631:                             .map(row => `${row.unitName} x${row.stillNeeded}`)
+
+042632:                             .join(' | ')
+
+042633:                         : 'Missing on mission table is authoritative with zero additional vehicle shortage.'
+
+042634:                 );
+
+042635:             }
+
+042636: 
+
+042637:             // readMissionUpdateRows has already removed unrelated full mission
+
+--- mission.*add around line 44883 ---
+
+044879: 
+
+044880:         // Some MissionChief layouts temporarily place the alert outside the
+
+044881:         // patient card. Accept that fallback only when the current mission
+
+044882:         // container also has a visible positive Patients badge. A leftover
+
+044883:         // patient alert from a previous mission cannot then add an ambulance
+
+044884:         // to a Police-only Mission Update.
+
+044885:         return (
+
+044886:             Math.max(
+
+044887:                 0,
+
+--- mission.*add around line 55215 ---
+
+055211:                     pageMissionKey &&
+
+055212:                     pageMissionKey !== missionKeyAtStart
+
+055213:                 ) {
+
+055214:                     loadFailureReason =
+
+055215:                         'mission changed while an additional vehicle page was loading';
+
+055216:                     break;
+
+055217:                 }
+
+055218: 
+
+055219:                 invalidateVehicleCheckboxCache();
+
+--- newMission around line 48913 ---
+
+048909:             debugLog('QUEUE OPEN GUARD', `RELEASED | reason=${reason || 'unknown'}`);
+
+048910:         }
+
+048911:     }
+
+048912: 
+
+048913:     function shouldBlockOpeningNewMissionForTransport(reason) {
+
+048914:         if (isManualAutoStopActive()) return true;
+
+048915: 
+
+048916:         let visibleApproach = false;
+
+048917:         let vehicleTransport = false;
+
+--- newMission around line 49204 ---
+
+049200:     function canOpenMainMissionFromMainList(reason) {
+
+049201:         if (isManualAutoStopActive()) return false;
+
+049202:         if (isMainMissionOpeningPending(reason || 'main-list-open')) return false;
+
+049203:         if (isMainMissionOpenLockActive(reason || 'main-list-open')) return false;
+
+049204:         if (shouldBlockOpeningNewMissionForTransport(reason || 'main-list-open')) return false;
+
+049205: 
+
+049206:         // A blank/loading MissionChief modal is still an active open request.
+
+049207:         // Never click another Dispatch button while one exists.
+
+049208:         if (hasVisibleQueueOpenModal(reason || 'main-list-open')) {
+
+--- newMission around line 51875 ---
+
+051871:         try {
+
+051872:             // During the first few seconds after the final Approach click,
+
+051873:             // MissionChief may still be closing/refreshing the vehicle screen.
+
+051874:             // Do not clear the pending rehook if this blocks; just retry later.
+
+051875:             if (shouldBlockOpeningNewMissionForTransport(`hard-rehook-${reason}`)) {
+
+051876:                 return false;
+
+051877:             }
+
+051878: 
+
+051879:             if (isCurrentMissionWindowStillOpenForSafeOpen(`hard-rehook-${reason}`)) {
+
+--- data-distance around line 18234 ---
+
+018230:                     row?.getAttribute('timevalue') ||
+
+018231:                     '999999'
+
+018232:                 ),
+
+018233:                 distance: parseFloat(
+
+018234:                     row?.getAttribute('data-distance') ||
+
+018235:                     '999999'
+
+018236:                 ),
+
+018237:                 expiresAt: now + 500
+
+018238:             };
+
+--- data-distance around line 27064 ---
+
+027060:                 : null;
+
+027061:         };
+
+027062: 
+
+027063:         const distanceKm = parseMetric(
+
+027064:             row?.getAttribute?.('data-distance')
+
+027065:         );
+
+027066:         const etaSeconds = parseMetric(
+
+027067:             row?.getAttribute?.('data-sortvalue') ||
+
+027068:             row?.getAttribute?.('timevalue')
+
+--- data-sortvalue around line 18229 ---
+
+018225: 
+
+018226:             const row = input?.closest?.('tr');
+
+018227:             const metrics = {
+
+018228:                 delay: parseFloat(
+
+018229:                     row?.getAttribute('data-sortvalue') ||
+
+018230:                     row?.getAttribute('timevalue') ||
+
+018231:                     '999999'
+
+018232:                 ),
+
+018233:                 distance: parseFloat(
+
+--- data-sortvalue around line 27067 ---
+
+027063:         const distanceKm = parseMetric(
+
+027064:             row?.getAttribute?.('data-distance')
+
+027065:         );
+
+027066:         const etaSeconds = parseMetric(
+
+027067:             row?.getAttribute?.('data-sortvalue') ||
+
+027068:             row?.getAttribute?.('timevalue')
+
+027069:         );
+
+027070: 
+
+027071:         return {
+
+--- timevalue around line 18230 ---
+
+018226:             const row = input?.closest?.('tr');
+
+018227:             const metrics = {
+
+018228:                 delay: parseFloat(
+
+018229:                     row?.getAttribute('data-sortvalue') ||
+
+018230:                     row?.getAttribute('timevalue') ||
+
+018231:                     '999999'
+
+018232:                 ),
+
+018233:                 distance: parseFloat(
+
+018234:                     row?.getAttribute('data-distance') ||
+
+--- timevalue around line 27068 ---
+
+027064:             row?.getAttribute?.('data-distance')
+
+027065:         );
+
+027066:         const etaSeconds = parseMetric(
+
+027067:             row?.getAttribute?.('data-sortvalue') ||
+
+027068:             row?.getAttribute?.('timevalue')
+
+027069:         );
+
+027070: 
+
+027071:         return {
+
+027072:             estimatedDistanceKm:
