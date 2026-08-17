@@ -33,8 +33,23 @@ jobs:
           end = raw.index("\n          PY\n", start)
           body = raw[start:end]
           rebuilt = []
+          triple = None
           for line in body.splitlines():
-              rebuilt.append(line[10:] if line.startswith('          ') else line)
+              if triple is None:
+                  output = line[10:] if line.startswith('          ') else line
+                  single_count = output.count("'''")
+                  double_count = output.count('"""')
+                  if single_count % 2 == 1:
+                      triple = "'''"
+                  elif double_count % 2 == 1:
+                      triple = '"""'
+              else:
+                  output = line
+                  if output.count(triple) % 2 == 1:
+                      triple = None
+              rebuilt.append(output)
+          if triple is not None:
+              raise SystemExit(f'Unclosed staged builder string: {triple}')
           script_path = Path('/tmp/apply-mission-generation-journey.py')
           script_path.write_text('\n'.join(rebuilt) + '\n', encoding='utf-8')
           PY
@@ -58,6 +73,7 @@ jobs:
             exit "$status"
           fi
           rm -f tmp/mission-generation-journey-builder-source.txt
+          rm -f tmp/mission-generation-builder-error.txt
 
       - name: Validate JavaScript syntax
         shell: bash
