@@ -1,0 +1,58 @@
+name: Apply mission generation and journey capture update
+
+on:
+  push:
+    branches:
+      - feature/logger-generated-missions-journey-evidence
+    paths:
+      - .github/workflows/apply-mission-generation-journey-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v6
+        with:
+          ref: feature/logger-generated-missions-journey-evidence
+          fetch-depth: 0
+
+      - name: Apply source and regression changes
+        run: python3 .github/apply-mission-generation-journey-fix.py
+
+      - name: Validate source syntax
+        run: |
+          node --check src/missionchief-command-nexus.user.js
+          node -e "new Function(require('fs').readFileSync('integrations/google-apps-script/Code.gs','utf8'))"
+
+      - name: Run targeted logger regressions
+        run: |
+          node scripts/check-mission-list-generation-logger.mjs
+          node scripts/check-mission-journey-metrics.mjs
+          node scripts/check-mission-user-logger.mjs
+          node scripts/check-logger-dashboard-rebuild-safety.mjs
+
+      - name: Run canonical validation
+        run: |
+          node scripts/validate-userscript.mjs
+          python3 scripts/check_repository.py
+
+      - name: Run all permanent behavioural regressions
+        run: |
+          for check in scripts/check-*.mjs; do
+            node "$check"
+          done
+
+      - name: Commit feature changes
+        run: |
+          rm .github/workflows/apply-mission-generation-journey-fix.yml
+          rm .github/apply-mission-generation-journey-fix.py
+          python3 scripts/check_repository.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Capture generated missions and journey evidence"
+          git push origin HEAD:feature/logger-generated-missions-journey-evidence
