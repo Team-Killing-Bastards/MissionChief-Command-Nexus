@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.1.1
+// @version      1.1.2
 // @description  Unified MissionChief UK toolkit for mission dispatch, resource administration, trained-personnel assignment and opt-in mission analytics.
 // @author       MartyBlyth
 // @license      MIT
@@ -14258,7 +14258,7 @@
     const SESSION_STATS_KEY = 'mf_session_stats_v1';
     const SESSION_REFRESH_FLAG = 'mf_session_manual_refresh_checked';
     const MF_MISSION_LOGGER_SCHEMA_VERSION = 1;
-    const MF_MISSION_LOGGER_CLIENT_VERSION = '1.1.1';
+    const MF_MISSION_LOGGER_CLIENT_VERSION = '1.1.2';
     const MF_MISSION_LOGGER_MISSION_FINDER_VERSION =
         '10.7.0';
     const MF_MISSION_LOGGER_ENABLED_KEY =
@@ -22508,7 +22508,7 @@ function isRoadRailUnitVehicleCheckbox(input) {
             <div id="mf-mission-logger-credit-status" class="mf2026-small" style="margin-top:2px;"></div>
             <div id="mf-mission-logger-error" class="mf2026-small mf2026-warn" style="margin-top:4px;" hidden></div>
             <div class="mf2026-small" style="margin-top:7px;">
-                Records mission identifiers/URLs, advertised and exact awarded value, requirements, current casualty counts, available generator information and selected vehicle IDs/types/names. Exact awards are matched locally against MissionChief's own Credits transactions; the rest of the account ledger is never uploaded. Missed completions are recovered from exact MissionChief credit transactions when this browser reconnects. Uploads use a persistent five-minute batch queue. Passwords, cookies and personnel names are never collected.
+                Records mission identifiers/URLs, advertised and exact awarded value, requirements, current casualty counts, available generator information, selected vehicle IDs/types/names and MissionChief's dispatch-time estimated route distance/ETA for each selected unit. Exact awards are matched locally against MissionChief's own Credits transactions; the rest of the account ledger is never uploaded. Missed completions are recovered from exact MissionChief credit transactions when this browser reconnects. Uploads use a persistent five-minute batch queue. Passwords, cookies and personnel names are never collected.
             </div>
             <div class="mf2026-small" style="margin-top:4px;">
                 Each paired browser has its own player identity. Disconnecting removes its credential and any unsent events from this browser.
@@ -27044,6 +27044,42 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
         return rows.slice(0, 250);
     }
 
+    function readMissionLoggerUnitJourneyMetrics(row) {
+        const parseMetric = value => {
+            const raw = String(value ?? '')
+                .replace(/\u00a0/g, ' ')
+                .trim();
+            if (!raw) return null;
+
+            const normalised = raw.includes('.')
+                ? raw.replace(/,/g, '')
+                : raw.replace(',', '.');
+            const number = Number(normalised);
+            return Number.isFinite(number) && number >= 0
+                ? number
+                : null;
+        };
+
+        const distanceKm = parseMetric(
+            row?.getAttribute?.('data-distance')
+        );
+        const etaSeconds = parseMetric(
+            row?.getAttribute?.('data-sortvalue') ||
+            row?.getAttribute?.('timevalue')
+        );
+
+        return {
+            estimatedDistanceKm:
+                distanceKm === null
+                    ? null
+                    : Math.round(distanceKm * 1000) / 1000,
+            estimatedEtaSeconds:
+                etaSeconds === null
+                    ? null
+                    : Math.round(etaSeconds)
+        };
+    }
+
     function getMissionLoggerSelectedUnits() {
         let selected = [];
 
@@ -27055,6 +27091,8 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
 
         return selected.map(checkbox => {
             const row = checkbox.closest?.('tr');
+            const journeyMetrics =
+                readMissionLoggerUnitJourneyMetrics(row);
             const stationLink = row?.querySelector?.(
                 'a[href*="/buildings/"]'
             );
@@ -27099,7 +27137,11 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
                     )?.textContent ||
                     '',
                     80
-                )
+                ),
+                estimatedDistanceKm:
+                    journeyMetrics.estimatedDistanceKm,
+                estimatedEtaSeconds:
+                    journeyMetrics.estimatedEtaSeconds
             };
         });
     }

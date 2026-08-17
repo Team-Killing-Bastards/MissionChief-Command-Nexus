@@ -10,7 +10,7 @@
 
 const MC_LOGGER = Object.freeze({
   schemaVersion: 1,
-  buildId: '1.1.0-dashboard-2',
+  buildId: '1.1.2-journey-1',
   timezone: 'Europe/London',
   maxPayloadChars: 2800000,
   maxEventsPerBatch: 40,
@@ -118,7 +118,9 @@ const MC_LOGGER_SHEETS = Object.freeze({
       'station_id',
       'station_name',
       'vehicle_status',
-      'dispatch_mode'
+      'dispatch_mode',
+      'estimated_distance_km',
+      'estimated_eta_seconds'
     ])
   }),
   uploads: Object.freeze({
@@ -185,6 +187,28 @@ const MC_LOGGER_SHEETS = Object.freeze({
       'avg_response_seconds',
       'avg_mission_duration_seconds',
       'pending_credits',
+      'updated_at'
+    ])
+  }),
+  journeys: Object.freeze({
+    name: 'Journey Data',
+    headers: Object.freeze([
+      'week_key',
+      'period_start',
+      'period_end',
+      'player_id',
+      'station_key',
+      'station_id',
+      'station_name',
+      'unit_journeys',
+      'distance_km_total',
+      'distance_km_count',
+      'distance_km_max',
+      'eta_seconds_total',
+      'eta_seconds_count',
+      'eta_seconds_max',
+      'missing_distance_count',
+      'missing_eta_count',
       'updated_at'
     ])
   }),
@@ -298,6 +322,7 @@ function initialiseMissionChiefLogger() {
   trimLoggerWorkbookColumns_(spreadsheet);
   formatLoggerWorkbook_(spreadsheet);
   rebuildMissionSummaryFromRawIfNeeded_(spreadsheet);
+  rebuildJourneyDataFromRawIfNeeded_(spreadsheet);
   spreadsheet.setSpreadsheetTimeZone(MC_LOGGER.timezone);
   SpreadsheetApp.flush();
   SpreadsheetApp.getUi().alert(
@@ -434,6 +459,7 @@ function doGet() {
         'mission-summary',
         'native-completion',
         'credit-ledger-match',
+        'dispatch-journey-metrics',
         'weekly-archive',
         'batch-ledger'
       ],
@@ -759,6 +785,11 @@ function handleLoggerUpload_(payload) {
         summaryChanges,
         receivedAt
       );
+      applyJourneyUnitRows_(
+        spreadsheet,
+        missingUnitRows,
+        receivedAt
+      );
       upsertLoggerBatchLedger_(spreadsheet, {
         batchId: batchId,
         playerId: playerId,
@@ -813,6 +844,11 @@ function handleLoggerUpload_(payload) {
     applyDashboardSummaryChanges_(
       spreadsheet,
       summaryChanges,
+      receivedAt
+    );
+    applyJourneyUnitRows_(
+      spreadsheet,
+      prepared.unitRows,
       receivedAt
     );
     upsertLoggerBatchLedger_(spreadsheet, {
@@ -956,7 +992,9 @@ function prepareLoggerBatchRows_(events, batchId, playerId, deviceId, receivedAt
         safeSheetText_(cleanIdentifier_(unit.stationId, 80)),
         safeSheetText_(cleanText_(unit.stationName, 180)),
         safeSheetText_(cleanText_(unit.status, 80)),
-        safeSheetText_(dispatchMode)
+        safeSheetText_(dispatchMode),
+        cleanNumberOrBlank_(unit.estimatedDistanceKm, 0, 100000),
+        cleanNumberOrBlank_(unit.estimatedEtaSeconds, 0, 604800)
       ]);
     });
   });
@@ -1302,6 +1340,133 @@ function applyDashboardSummaryChanges_(spreadsheet, changes, updatedAt) {
   appendRows_(sheet, newRows);
 }
 
+function loggerJourneyStationKey_(stationId, stationName) {
+  const id = cleanIdentifier_(stationId, 80);
+  if (id) return 'id:' + id;
+
+  const name = cleanText_(stationName, 180).toLowerCase();
+  return name ? 'name:' + name : 'unknown';
+}
+
+function loggerJourneyMetricOrNull_(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const number = Number(value);
+  return Number.isFinite(number) && number >= 0 ? number : null;
+}
+
+function missionJourneyContribution_(unitRow) {
+  if (!Array.isArray(unitRow)) return null;
+  const capturedAt = loggerDateOrNull_(unitRow[5]);
+  const playerId = cleanIdentifier_(unitRow[2], 80);
+  if (!capturedAt || !playerId) return null;
+
+  const stationId = cleanIdentifier_(unitRow[10], 80);
+  const stationName = cleanText_(unitRow[11], 180) || 'Unknown / not logged';
+  const weekInfo = getLoggerIsoWeekInfo_(capturedAt);
+  const distanceKm = loggerJourneyMetricOrNull_(unitRow[14]);
+  const etaSeconds = loggerJourneyMetricOrNull_(unitRow[15]);
+
+  return {
+    weekKey: weekInfo.weekKey,
+    periodStart: weekInfo.startKey,
+    periodEnd: weekInfo.endKey,
+    playerId: playerId,
+    stationKey: loggerJourneyStationKey_(stationId, stationName),
+    stationId: stationId,
+    stationName: stationName,
+    distanceKm: distanceKm,
+    etaSeconds: etaSeconds
+  };
+}
+
+function applyJourneyUnitRows_(spreadsheet, unitRows, updatedAt) {
+  if (!Array.isArray(unitRows) || unitRows.length === 0) return 0;
+  const sheet = spreadsheet.getSheetByName(MC_LOGGER_SHEETS.journeys.name);
+  const width = MC_LOGGER_SHEETS.journeys.headers.length;
+  const existingRows = sheet.getLastRow() >= 2
+    ? sheet.getRange(2, 1, sheet.getLastRow() - 1, width).getValues()
+    : [];
+  const rowsByKey = {};
+  existingRows.forEach(function(row, index) {
+    const key = [row[0], row[3], row[4]].join('|');
+    rowsByKey[key] = { rowNumber: index + 2, values: row };
+  });
+  const touched = {};
+
+  unitRows.forEach(function(unitRow) {
+    const contribution = missionJourneyContribution_(unitRow);
+    if (!contribution) return;
+    const key = [
+      contribution.weekKey,
+      contribution.playerId,
+      contribution.stationKey
+    ].join('|');
+    if (!touched[key]) {
+      const existing = rowsByKey[key];
+      touched[key] = {
+        rowNumber: existing ? existing.rowNumber : 0,
+        values: existing ? existing.values.slice() : new Array(width).fill('')
+      };
+    }
+
+    const row = touched[key].values;
+    row[0] = contribution.weekKey;
+    row[1] = contribution.periodStart;
+    row[2] = contribution.periodEnd;
+    row[3] = contribution.playerId;
+    row[4] = contribution.stationKey;
+    row[5] = contribution.stationId;
+    row[6] = contribution.stationName;
+    row[7] = loggerNumber_(row[7], 0) + 1;
+
+    if (contribution.distanceKm === null) {
+      row[14] = loggerNumber_(row[14], 0) + 1;
+    } else {
+      row[8] = Math.round(
+        (loggerNumber_(row[8], 0) + contribution.distanceKm) * 1000
+      ) / 1000;
+      row[9] = loggerNumber_(row[9], 0) + 1;
+      row[10] = Math.max(
+        loggerNumber_(row[10], 0),
+        contribution.distanceKm
+      );
+    }
+
+    if (contribution.etaSeconds === null) {
+      row[15] = loggerNumber_(row[15], 0) + 1;
+    } else {
+      row[11] = loggerNumber_(row[11], 0) + contribution.etaSeconds;
+      row[12] = loggerNumber_(row[12], 0) + 1;
+      row[13] = Math.max(
+        loggerNumber_(row[13], 0),
+        contribution.etaSeconds
+      );
+    }
+    row[16] = updatedAt;
+  });
+
+  const newRows = [];
+  Object.keys(touched).forEach(function(key) {
+    const touchedRow = touched[key];
+    if (touchedRow.rowNumber) {
+      sheet.getRange(touchedRow.rowNumber, 1, 1, width)
+        .setValues([touchedRow.values]);
+    } else {
+      newRows.push(touchedRow.values);
+    }
+  });
+  appendRows_(sheet, newRows);
+  return Object.keys(touched).length;
+}
+
+function rebuildJourneyDataFromRawIfNeeded_(spreadsheet) {
+  const journeySheet = spreadsheet.getSheetByName(MC_LOGGER_SHEETS.journeys.name);
+  const unitSheet = spreadsheet.getSheetByName(MC_LOGGER_SHEETS.units.name);
+  if (journeySheet.getLastRow() >= 2 || unitSheet.getLastRow() < 2) return false;
+  applyJourneyUnitRows_(spreadsheet, getDataRows_(unitSheet), new Date());
+  return journeySheet.getLastRow() >= 2;
+}
+
 function createLoggerBatchChecksum_(playerId, deviceId, prepared) {
   const eventIdentities = (prepared.eventRows || []).map(function(row) {
     return [
@@ -1598,6 +1763,7 @@ function ensureLoggerWorkbook_(spreadsheet) {
   Object.keys(MC_LOGGER_SHEETS).forEach(function(key) {
     ensureLoggerSheet_(spreadsheet, MC_LOGGER_SHEETS[key]);
   });
+  rebuildJourneyDataFromRawIfNeeded_(spreadsheet);
 }
 
 function ensureLoggerSheet_(spreadsheet, definition) {
@@ -1615,13 +1781,31 @@ function ensureLoggerSheet_(spreadsheet, definition) {
   const hasAnyHeader = current.some(function(value) { return String(value).trim() !== ''; });
 
   if (hasAnyHeader) {
-    definition.headers.forEach(function(header, index) {
-      if (String(current[index] || '').trim() !== header) {
+    let missingFrom = width;
+    for (let index = 0; index < width; index += 1) {
+      const value = String(current[index] || '').trim();
+      if (!value) {
+        missingFrom = index;
+        break;
+      }
+      if (value !== definition.headers[index]) {
         throw new Error(
           definition.name + ' has an unexpected header in column ' + (index + 1) + '. Repair it manually before logging.'
         );
       }
-    });
+    }
+    for (let index = missingFrom; index < width; index += 1) {
+      if (String(current[index] || '').trim()) {
+        throw new Error(
+          definition.name + ' has a non-contiguous header in column ' + (index + 1) + '. Repair it manually before logging.'
+        );
+      }
+    }
+    if (missingFrom < width) {
+      const missingHeaders = definition.headers.slice(missingFrom);
+      sheet.getRange(1, missingFrom + 1, 1, missingHeaders.length)
+        .setValues([missingHeaders]);
+    }
   } else {
     sheet.getRange(1, 1, 1, width).setValues([definition.headers.slice()]);
   }
@@ -1670,10 +1854,22 @@ function trimLoggerWorkbookColumns_(spreadsheet) {
 function formatLoggerSheet_(sheet, definition) {
   const dataRows = Math.max(1, sheet.getMaxRows() - 1);
   definition.headers.forEach(function(header, index) {
-    if (!/_at$/.test(String(header || ''))) return;
-    sheet.getRange(2, index + 1, dataRows, 1)
-      .setNumberFormat('dd/MM/yyyy HH:mm:ss');
-    sheet.setColumnWidth(index + 1, 165);
+    const name = String(header || '');
+    if (/_at$/.test(name)) {
+      sheet.getRange(2, index + 1, dataRows, 1)
+        .setNumberFormat('dd/MM/yyyy HH:mm:ss');
+      sheet.setColumnWidth(index + 1, 165);
+      return;
+    }
+    if (/distance_km/.test(name)) {
+      sheet.getRange(2, index + 1, dataRows, 1)
+        .setNumberFormat('0.000');
+      return;
+    }
+    if (/eta_seconds/.test(name)) {
+      sheet.getRange(2, index + 1, dataRows, 1)
+        .setNumberFormat('0');
+    }
   });
 }
 
@@ -1710,6 +1906,7 @@ function seedLoggerConfiguration_(spreadsheet) {
     ['max_events_per_batch', MC_LOGGER.maxEventsPerBatch, 'Maximum events accepted in one five-minute upload.'],
     ['deployment_url', '', 'Paste the deployed Apps Script /exec URL here for the admins reference.'],
     ['actual_credit_capture', 'LIVE_EXACT_TRANSACTION_MATCH', 'Exact mission awards are matched locally against MissionChief Credits transactions; ambiguous transactions remain pending.'],
+    ['dispatch_journey_metrics', 'DISTANCE_KM_AND_ETA_SECONDS', 'Stores MissionChief dispatch-time estimated route distance and arrival delay for each selected unit.'],
     ['weekly_archive_schedule', 'MONDAY_03:15_EUROPE_LONDON', 'Archives the completed ISO week after the Sunday daily backup.'],
     ['weekly_archive_cell_safety', MC_LOGGER.archiveSafetyCellThreshold, 'Schedules an early archive before the workbook reaches the Google Sheets hard limit.'],
     ['batch_ledger_retention_days', MC_LOGGER.batchLedgerRetentionDays, 'Retains compact accepted-batch identities across weekly rollovers.']
@@ -1995,7 +2192,7 @@ function rebuildMissionChiefMissionSummary() {
   const ui = SpreadsheetApp.getUi();
   const confirmation = ui.alert(
     'Rebuild mission summary',
-    'This rebuilds Mission Summary and Dashboard Data from the raw rows currently held in this live workbook. Weekly archive files are not modified.',
+    'This rebuilds Mission Summary, Dashboard Data and Journey Data from the raw rows currently held in this live workbook. Weekly archive files are not modified.',
     ui.ButtonSet.OK_CANCEL
   );
   if (confirmation !== ui.Button.OK) return;
@@ -2007,20 +2204,26 @@ function rebuildMissionChiefMissionSummary() {
     ensureLoggerWorkbook_(spreadsheet);
     const summarySheet = spreadsheet.getSheetByName(MC_LOGGER_SHEETS.summaries.name);
     const dashboardSheet = spreadsheet.getSheetByName(MC_LOGGER_SHEETS.dashboard.name);
+    const journeySheet = spreadsheet.getSheetByName(MC_LOGGER_SHEETS.journeys.name);
     clearLoggerSheetData_(summarySheet);
     clearLoggerSheetData_(dashboardSheet);
+    clearLoggerSheetData_(journeySheet);
     const now = new Date();
+    const rawUnitRows = getDataRows_(
+      spreadsheet.getSheetByName(MC_LOGGER_SHEETS.units.name)
+    );
     const changes = upsertMissionSummaryRows_(
       spreadsheet,
       getDataRows_(spreadsheet.getSheetByName(MC_LOGGER_SHEETS.events.name)),
-      getDataRows_(spreadsheet.getSheetByName(MC_LOGGER_SHEETS.units.name)),
+      rawUnitRows,
       now
     );
     applyDashboardSummaryChanges_(spreadsheet, changes, now);
+    applyJourneyUnitRows_(spreadsheet, rawUnitRows, now);
     SpreadsheetApp.flush();
     ui.alert(
       'Mission summary rebuilt',
-      changes.length + ' mission summaries are available and Dashboard Data has been refreshed.',
+      changes.length + ' mission summaries are available and Dashboard Data plus Journey Data have been refreshed.',
       ui.ButtonSet.OK
     );
   } finally {

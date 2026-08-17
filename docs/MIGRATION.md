@@ -41,7 +41,7 @@ Command Nexus now contains both systems in one `.user.js` file. The supported op
 
 ## Current storage position
 
-The current Command Nexus `1.1.1` source retains versioned keys from both established engines. This preserves existing behaviour, but a complete formal migration matrix has not yet been proven for every combination of stored data.
+The current Command Nexus `1.1.2` source retains versioned keys from both established engines. This preserves existing behaviour, but a complete formal migration matrix has not yet been proven for every combination of stored data.
 
 Development must therefore distinguish between:
 
@@ -53,6 +53,8 @@ Development must therefore distinguish between:
 The `1.1.0` Mission Analytics Logger adds independent `mf_mission_logger_*_v1` local-storage records. It starts disabled, requires explicit pairing before events can enter its outbox and does not change either legacy engine's settings. Disconnect removes the device credential, pending batch, unsent events, player-specific observation/completion registry and last-dispatch retry guard; it does not delete Resource Administration, Mission Finder or Personnel Register data.
 
 The `1.1.1` reconnect recovery reuses those same versioned records and the configured Apps Script endpoint. It adds only compatible checkpoint fields inside the existing logger state object, so paired browsers retain their player/device identity, token, queued events, dashboard and spreadsheet links without re-pairing or redeployment.
+
+The `1.1.2` journey update adds optional fields to each newly captured selected-unit object and appends two columns to the existing `Dispatch Units` schema. Older queued events and historical rows remain valid with blank metrics. Deploy the replacement `Code.gs` as a new version of the existing web app and run `initialiseMissionChiefLogger`; the deployment URL, spreadsheet ID, player/device pairings, local queue and dashboard links remain unchanged.
 
 ## Migration test matrix
 

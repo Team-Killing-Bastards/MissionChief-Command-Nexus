@@ -6,7 +6,23 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
-No changes have been queued after `1.1.1`.
+No changes have been queued after `1.1.2`.
+
+## [1.1.2] - 2026-08-17
+
+### Added
+
+- Added per-unit dispatch journey evidence to the opt-in Mission Analytics Logger. Nexus now records MissionChief's own dispatch-time estimated route distance in kilometres and arrival delay in seconds for every selected unit when those native row attributes are available.
+- Added `estimated_distance_km` and `estimated_eta_seconds` to `Dispatch Units`, including weekly raw archives and daily JSON backups. Missing or invalid MissionChief attributes remain blank instead of being estimated.
+- Added compact all-weeks `Journey Data`, grouped by ISO week, player and station with journey counts, distance/ETA totals, evidence counts, maxima and explicit missing-evidence counts. This retained aggregate survives the verified weekly raw rollover without allowing the live workbook to grow at raw-unit-row speed.
+- Replaced the dashboard's reserved distance placeholder with player/date-filtered station coverage and live-week furthest-dispatch tables. Station coverage exposes average/max distance and ETA; the raw table retains the individual unit, type, dispatch time and mission ID needed to investigate outliers.
+
+### Security and compatibility
+
+- Kept journey capture inside the existing explicit opt-in, paired logger boundary. Passwords, cookies and personnel names remain excluded, and the in-product disclosure now names the distance/ETA evidence being uploaded.
+- Added a fail-closed, append-only sheet migration: existing `Dispatch Units` rows are preserved, the two trailing headers are added safely, and any unexpected or non-contiguous schema still blocks logging for manual repair.
+- Preserved the existing Apps Script `/exec` URL, spreadsheet, dashboard, player/browser pairings, local queue and historical rows. Deploying the new `Code.gs` version and running initialization requires no new link, pairing code or browser setup.
+- Increased the unified userscript from `1.1.1` to `1.1.2`. Mission Finder remains `V10.7.0`, Resource Administration remains `V4.2.8`, Unit Naming remains `3.3.27`, Station Naming remains `1.3.22`, and Personnel Assignment remains `1.3.12`.
 
 ## [1.1.1] - 2026-08-17
 
