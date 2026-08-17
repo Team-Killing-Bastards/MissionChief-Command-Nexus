@@ -1,0 +1,2874 @@
+### createMissionLoggerEvent
+function createMissionLoggerEvent(
+        eventType,
+        options = {}
+    ) {
+        const identity = readMissionLoggerIdentity();
+        if (!identity) return null;
+
+        const missionSnapshot =
+            getMissionLoggerMissionSnapshot();
+        const generator = getMissionLoggerGenerator();
+        const livePatientCount = (() => {
+            try {
+                return Math.max(0, findPatientCount(true));
+            } catch (_error) {
+                return 0;
+            }
+        })();
+        const patientCount = Math.max(
+            livePatientCount,
+            Number(missionSnapshot.patientCount || 0)
+        );
+        const missionId =
+            getCurrentMissionIdForQueueRestart();
+        const missionName = getCurrentMissionName();
+        const capturedAt = new Date().toISOString();
+        const normalisedEventType = trimMissionLoggerText(
+            eventType,
+            60
+        );
+        const eventUnits = options.includeUnits === false
+            ? []
+            : Array.isArray(options.units)
+                ? options.units
+                : getMissionLoggerSelectedUnits();
+        const missionRegistry =
+            readMissionLoggerMissionRegistry();
+        const previousMission = missionRegistry[
+            createMissionLoggerRegistryKey(
+                identity.playerId,
+                missionId
+            )
+        ] || {};
+        const eventFirstObservedAt =
+            normalisedEventType === 'mission-observed'
+                ? earlierMissionLoggerIso(
+                    previousMission.firstObservedAt,
+                    capturedAt
+                )
+                : previousMission.firstObservedAt || '';
+        const eventFirstUnitSentAt =
+            normalisedEventType === 'dispatch'
+                ? earlierMissionLoggerIso(
+                    previousMission.firstUnitSentAt,
+                    capturedAt
+                )
+                : previousMission.firstUnitSentAt || '';
+        const eventDispatchCount = Math.max(
+            0,
+            Number(previousMission.dispatchCount || 0) +
+                (normalisedEventType === 'dispatch' ? 1 : 0)
+        );
+        const eventUnitCount = Math.max(
+            0,
+            Number(previousMission.unitCount || 0) +
+                (normalisedEventType === 'dispatch'
+                    ? eventUnits.length
+                    : 0)
+        );
+
+        return {
+            schemaVersion:
+                MF_MISSION_LOGGER_SCHEMA_VERSION,
+            eventId: createMissionLoggerId('event'),
+            eventType: normalisedEventType,
+            capturedAt,
+            playerId: identity.playerId,
+            deviceId: identity.deviceId,
+            missionId: String(missionId || ''),
+            missionDefinitionId:
+                getMissionLoggerDefinitionId() ||
+                missionSnapshot.missionDefinitionId,
+            missionName: trimMissionLoggerText(
+                missionName,
+                240
+            ),
+            missionUrl: missionId
+                ? `${window.location.origin}/missions/${missionId}`
+                : '',
+            ownership: getMissionLoggerOwnership(),
+            generatorStationId: generator.stationId,
+            generatorStationName: generator.stationName,
+            dispatchMode: trimMissionLoggerText(
+                options.dispatchMode || '',
+                80
+            ),
+            shared: options.shared === true,
+            advertisedCredits: Math.max(
+                0,
+                Number.isFinite(Number(options.credits))
+                    ? Number(options.credits)
+                    : getMissionCredits()
+            ),
+            actualCredits:
+                options.actualCredits !== null &&
+                options.actualCredits !== undefined &&
+                options.actualCredits !== '' &&
+                Number.isFinite(Number(options.actualCredits)) &&
+                Number(options.actualCredits) >= 0
+                    ? Number(options.actualCredits)
+                    : null,
+            patientCount,
+            prisonerCount:
+                missionSnapshot.prisonerCount,
+            transportCount: null,
+            requirements: getMissionLoggerRequirements(),
+            units: eventUnits,
+            metadata: {
+                ...(
+                    options.metadata &&
+                    typeof options.metadata === 'object'
+                        ? options.metadata
+                        : {}
+                ),
+                source: 'missionchief-command-nexus',
+                ready:
+                    options.ready === undefined
+                        ? vehicleLoadState.ready === true
+                        : options.ready === true,
+                reason: trimMissionLoggerText(
+                    options.reason || '',
+                    300
+                ),
+                autoMode:
+                    options.autoMode === true,
+                dispatchFingerprint:
+                    trimMissionLoggerText(
+                        options.dispatchFingerprint || '',
+                        4000
+                    ),
+                generatorSource:
+                    generator.source || '',
+                missionSnapshotSource:
+                    missionSnapshot.source || '',
+                possiblePatientCount: Math.max(
+                    0,
+                    Number(
+                        missionSnapshot.possiblePatientCount || 0
+                    )
+                ),
+                possiblePrisonerCount:
+                    missionSnapshot.possiblePrisonerCount,
+                firstObservedAt:
+                    eventFirstObservedAt,
+                firstUnitSentAt:
+                    eventFirstUnitSentAt,
+                dispatchCount:
+                    eventDispatchCount,
+                unitCount:
+                    eventUnitCount,
+                missionFinderVersion:
+                    MF_MISSION_LOGGER_MISSION_FINDER_VERSION
+            }
+        };
+    }
+
+
+### getMissionLoggerOwnership
+function getMissionLoggerOwnership() {
+        const scope = getCurrentMissionValueScope();
+        const text = trimMissionLoggerText(
+            scope?.querySelector?.(
+                '.mission_owner, .mission-owner, [data-mission-owner], [class*="alliance"]'
+            )?.textContent ||
+            '',
+            240
+        ).toLowerCase();
+
+        if (/alliance|shared|association/.test(text)) {
+            return 'alliance';
+        }
+        return 'own';
+    }
+
+
+### getMissionLoggerMissionSnapshot
+function getMissionLoggerMissionSnapshot() {
+        const missionId = String(
+            getCurrentMissionIdForQueueRestart() || ''
+        ).trim();
+        const snapshot = {
+            missionId,
+            missionDefinitionId: '',
+            advertisedCredits: 0,
+            patientCount: 0,
+            possiblePatientCount: 0,
+            prisonerCount: null,
+            possiblePrisonerCount: null,
+            generatorStationId: '',
+            generatorStationName: '',
+            generatorSource: '',
+            source: ''
+        };
+
+        if (!/^\d+$/.test(missionId)) return snapshot;
+
+        const numberOrNull = value => {
+            const parsed = Number(value);
+            return Number.isFinite(parsed) && parsed >= 0
+                ? parsed
+                : null;
+        };
+        const applyCountPair = (value, currentKey, possibleKey) => {
+            const pair = Array.isArray(value)
+                ? value
+                : [value, null];
+            const current = numberOrNull(pair[0]);
+            const possible = numberOrNull(pair[1]);
+
+            if (current !== null) {
+                snapshot[currentKey] = Math.max(
+                    Number(snapshot[currentKey] || 0),
+                    current
+                );
+            }
+            if (possible !== null) {
+                const existing = snapshot[possibleKey];
+                snapshot[possibleKey] = existing === null
+                    ? possible
+                    : Math.max(Number(existing || 0), possible);
+            }
+        };
+
+        for (const candidate of getMissionLoggerSameOriginWindows()) {
+            let mission = null;
+            try {
+                mission = getMissionLoggerCacheRecord(
+                    candidate.missions_data,
+                    missionId
+                );
+            } catch (_error) {}
+
+            if (mission) {
+                snapshot.source = snapshot.source || 'mission-marker';
+                snapshot.missionDefinitionId = String(
+                    mission.mtid ||
+                    mission.mission_type_id ||
+                    snapshot.missionDefinitionId ||
+                    ''
+                );
+                snapshot.advertisedCredits = Math.max(
+                    snapshot.advertisedCredits,
+                    numberOrNull(
+                        mission.average_credits ??
+                        mission.advertised_credits
+                    ) || 0
+                );
+                applyCountPair(
+                    [
+                        mission.patients_count,
+                        mission.possible_patients_count
+                    ],
+                    'patientCount',
+                    'possiblePatientCount'
+                );
+                applyCountPair(
+                    [
+                        mission.prisoners_count,
+                        mission.possible_prisoners_count
+                    ],
+                    'prisonerCount',
+                    'possiblePrisonerCount'
+                );
+
+                const generatorId = String(
+                    mission.generator_building_id ??
+                    mission.generated_by_building_id ??
+                    mission.building_id ??
+                    ''
+                ).trim();
+                if (/^\d+$/.test(generatorId)) {
+                    snapshot.generatorStationId = generatorId;
+                    snapshot.generatorSource = 'mission-marker';
+                }
+
+                const generatorName = trimMissionLoggerText(
+                    mission.generator_building_name ??
+                    mission.generated_by_name ??
+                    mission.generated_by ??
+                    '',
+                    160
+                );
+                if (generatorName) {
+                    snapshot.generatorStationName = generatorName;
+                    snapshot.generatorSource =
+                        snapshot.generatorSource ||
+                        'mission-marker';
+                }
+            }
+
+            let row = null;
+            try {
+                row = candidate.document.getElementById(
+                    `mission_${missionId}`
+                );
+            } catch (_error) {}
+            if (!row) continue;
+
+            snapshot.source = snapshot.source || 'mission-list';
+            snapshot.missionDefinitionId = String(
+                row.getAttribute('mission_type_id') ||
+                row.getAttribute('data-mission-type-id') ||
+                snapshot.missionDefinitionId ||
+                ''
+            );
+
+            try {
+                const sortable = JSON.parse(
+                    row.getAttribute('data-sortable-by') ||
+                    row.getAttribute('data-sortable_by') ||
+                    '{}'
+                );
+                snapshot.advertisedCredits = Math.max(
+                    snapshot.advertisedCredits,
+                    numberOrNull(sortable.average_credits) || 0
+                );
+                applyCountPair(
+                    sortable.patients_count,
+                    'patientCount',
+                    'possiblePatientCount'
+                );
+                applyCountPair(
+                    sortable.prisoners_count,
+                    'prisonerCount',
+                    'possiblePrisonerCount'
+                );
+            } catch (_error) {}
+        }
+
+        if (
+            snapshot.generatorStationId &&
+            !snapshot.generatorStationName
+        ) {
+            snapshot.generatorStationName =
+                getMissionLoggerBuildingName(
+                    snapshot.generatorStationId
+                );
+        }
+
+        return snapshot;
+    }
+
+
+### getMissionLoggerSameOriginWindows
+function getMissionLoggerSameOriginWindows() {
+        const windows = [];
+        const addWindow = candidate => {
+            if (!candidate || windows.includes(candidate)) return;
+
+            try {
+                if (
+                    candidate.location.origin !==
+                    window.location.origin
+                ) {
+                    return;
+                }
+                windows.push(candidate);
+            } catch (_error) {}
+        };
+
+        addWindow(window);
+        try { addWindow(window.parent); } catch (_error) {}
+        try { addWindow(window.top); } catch (_error) {}
+
+        windows.slice().forEach(candidate => {
+            try {
+                Array.from(
+                    candidate.document.querySelectorAll('iframe')
+                ).slice(0, 20).forEach(frame => {
+                    addWindow(frame.contentWindow);
+                });
+            } catch (_error) {}
+        });
+
+        return windows;
+    }
+
+
+### getMissionLoggerCacheRecord
+function getMissionLoggerCacheRecord(cache, id) {
+        if (!cache || !id) return null;
+
+        const numericId = Number(id);
+        const keys = [
+            id,
+            Number.isFinite(numericId) ? numericId : id
+        ];
+
+        if (typeof cache.get === 'function') {
+            for (const key of keys) {
+                try {
+                    const value = cache.get(key);
+                    if (value) return value;
+                } catch (_error) {}
+            }
+        }
+
+        if (Array.isArray(cache)) {
+            return cache.find(item => {
+                return String(
+                    item?.id ??
+                    item?.mission_id ??
+                    item?.building_id ??
+                    ''
+                ) === id;
+            }) || null;
+        }
+
+        if (typeof cache === 'object') {
+            for (const key of keys) {
+                try {
+                    if (cache[key]) return cache[key];
+                } catch (_error) {}
+            }
+        }
+
+        return null;
+    }
+
+
+### queueMissionLoggerEvent
+function queueMissionLoggerEvent(event) {
+        if (
+            !mfMissionLoggerEnabled ||
+            !readMissionLoggerIdentity() ||
+            !event ||
+            typeof event !== 'object'
+        ) {
+            return false;
+        }
+
+        const queue = readMissionLoggerQueue();
+
+        if (
+            queue.some(existing => {
+                return existing.eventId === event.eventId;
+            })
+        ) {
+            return false;
+        }
+
+        queue.push(event);
+        writeMissionLoggerQueue(queue);
+        rememberMissionLoggerEvent(event);
+        return true;
+    }
+
+
+### startMissionFinderObserver
+function startMissionFinderObserver() {
+        if (mfMainMutationObserver) return;
+
+        installMissionFinderRuntimeCleanup();
+        installMissionFinderFrameRuntimeReconciliation();
+        installMissionLoggerStorageListener();
+
+        if (MF_IS_TOP_WINDOW) {
+            startMissionLoggerSyncTimer();
+        }
+
+        if (!shouldKeepMissionFinderObserverForCurrentFrame()) {
+            suspendMissionFinderRuntimeForInactiveFrame(
+                'startup frame is not the active mission owner'
+            );
+            return;
+        }
+
+        mfRuntimeSuspendedForInactiveFrame = false;
+        installIssueRecorderWatchers();
+        installPersonnelRegistryUpdateHandler();
+        installMissionFinderRuntimeMemoryActivityTracking();
+        installMissionLoggerDispatchCapture();
+        installMissionLoggerCompletionCapture();
+
+        if (MF_IS_TOP_WINDOW) {
+            installManualMissionClickFlagClearer();
+            installBackgroundWatcherSupervisor();
+            compactMissionFinderPersistentStorage();
+
+            if (
+                localStorage.getItem(
+                    'mf_post_transport_rehook_pending_v1'
+                ) === 'true' ||
+                isRecentTransportRehookWindowActive()
+            ) {
+                forceAutoModeBackOnForTransportRehook();
+
+                setTimeout(() => {
+                    openFirstMissionAfterTransportAutoClose(
+                        'startup-pending-rehook'
+                    );
+                }, 2500);
+            }
+        }
+
+        if (isMissionPage()) initialize();
+
+        mfMainMutationObserver = new MutationObserver(records => {
+            releaseRemovedMissionFinderFrameRuntimes(records);
+            scheduleMissionFinderMutationWork(records);
+        });
+
+        mfMainMutationObserver.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+
+        if (isMissionPage()) {
+            startMissionFinderRuntimeMemoryMaintenance();
+        }
+
+        scheduleAutoMemoryRecycleResume();
+    }
+
+
+### stopMissionLoggerSyncTimer
+function stopMissionLoggerSyncTimer() {
+        if (mfMissionLoggerInitialSyncTimer) {
+            clearTimeout(mfMissionLoggerInitialSyncTimer);
+            mfMissionLoggerInitialSyncTimer = null;
+        }
+        if (mfMissionLoggerSyncTimer) {
+            clearInterval(mfMissionLoggerSyncTimer);
+            mfMissionLoggerSyncTimer = null;
+        }
+    }
+
+
+### disconnectMissionLoggerBrowser
+function disconnectMissionLoggerBrowser() {
+        const identity = readMissionLoggerIdentity();
+
+        if (identity && mfMissionLoggerEndpoint) {
+            try {
+                await submitMissionLoggerRequest(
+                    'revoke',
+                    {
+                        token: identity.token,
+                        playerId: identity.playerId,
+                        deviceId: identity.deviceId
+                    }
+                );
+            } catch (_error) {
+                // Local disconnection still removes the credential. The
+                // Google admin sheet can revoke a stranded device explicitly.
+            }
+        }
+
+        localStorage.removeItem(
+            MF_MISSION_LOGGER_IDENTITY_KEY
+        );
+        localStorage.removeItem(
+            MF_MISSION_LOGGER_PENDING_BATCH_KEY
+        );
+        localStorage.removeItem(
+            MF_MISSION_LOGGER_QUEUE_KEY
+        );
+        localStorage.removeItem(
+            MF_MISSION_LOGGER_OBSERVED_KEY
+        );
+        localStorage.removeItem(
+            MF_MISSION_LOGGER_LAST_DISPATCH_KEY
+        );
+        localStorage.removeItem(
+            MF_MISSION_LOGGER_MISSION_REGISTRY_KEY
+        );
+        localStorage.removeItem(
+            MF_MISSION_LOGGER_SYNC_LOCK_KEY
+        );
+        mfMissionLoggerEnabled = false;
+        localStorage.setItem(
+            MF_MISSION_LOGGER_ENABLED_KEY,
+            'false'
+        );
+        stopMissionLoggerSyncTimer();
+        stopMissionLoggerCreditReconciliation();
+        writeMissionLoggerState({
+            lastCreditCheckAt: 0,
+            lastCreditSuccessAt: 0,
+            lastCreditMatchAt: 0,
+            lastCreditError: '',
+            totalMatchedCreditEvents: 0,
+            totalOfflineRecoveredCreditEvents: 0,
+            offlineCreditRecoveryVersion: 0,
+            offlineCreditCatchupNextPage: 1,
+            offlineCreditCatchupFloorAt: 0,
+            offlineCreditCatchupDeferred: false
+        });
+        renderMissionLoggerStatus();
+    }
+
+
+### installMissionFinderRuntimeCleanup
+function installMissionFinderRuntimeCleanup() {
+        if (mfRuntimeCleanupInstalled) return;
+        mfRuntimeCleanupInstalled = true;
+
+        mfRuntimePageHideHandler = event => {
+            if (
+                shouldPreserveMissionFinderRuntimeOnPageHide(
+                    event?.persisted
+                )
+            ) {
+                suspendMissionFinderRuntimeForPageHide(
+                    'browser back-forward cache pagehide'
+                );
+                return;
+            }
+
+            cleanupMissionFinderRuntime();
+        };
+
+        mfRuntimePageShowHandler = event => {
+            if (!event?.persisted) return;
+            reconcileMissionFinderAfterPageShow();
+        };
+
+        window.addEventListener(
+            'pagehide',
+            mfRuntimePageHideHandler
+        );
+        window.addEventListener(
+            'pageshow',
+            mfRuntimePageShowHandler,
+            { passive: true }
+        );
+    }
+
+
+### scheduleMissionFinderMutationWork
+function scheduleMissionFinderMutationWork(records = []) {
+        const flags = classifyMissionFinderMutations(records);
+
+        if (!flags.relevant) return;
+
+        mfRuntimeMemoryLastMutationAt = Date.now();
+
+        mergeMainMutationFlags(flags);
+
+        if (mfMainMutationFlushTimer) return;
+
+        mfMainMutationFlushTimer = setTimeout(
+            flushMissionFinderMutationWork,
+            200
+        );
+    }
+
+
+### flushMissionFinderMutationWork
+function flushMissionFinderMutationWork() {
+        mfMainMutationFlushTimer = null;
+
+        const flags = { ...mfMainMutationFlags };
+        resetMainMutationFlags();
+
+        if (flags.vehicleListChanged) {
+            invalidateVehicleCheckboxCache();
+            mfDispatchReadinessExpensiveCache.expiresAt = 0;
+        }
+
+        if (flags.missionContextChanged) {
+            invalidateMissionContextCaches();
+        }
+
+        if (flags.patientChanged) {
+            invalidatePatientCountCache();
+            mfDispatchReadinessExpensiveCache.expiresAt = 0;
+        }
+
+        if (flags.transportChanged) {
+            invalidateTransportCaches();
+        }
+
+
+        const missionPage = isMissionPage();
+        const wrapper = document.getElementById('mission-finder-wrapper');
+
+        if (!missionPage) {
+            cleanupMissionFinderIphoneNativePickerSurfaces();
+            stopMissionFinderRuntimeMemoryMaintenance();
+        }
+
+        if (
+            missionPage &&
+            wrapper &&
+            !isCurrentMissionExecutionOwner('mutation ownership check')
+        ) {
+            removeMissionFinderPanelForClosedMission(
+                'previous mission instance lost ownership'
+            );
+            suspendMissionFinderRuntimeForInactiveFrame(
+                'previous mission instance lost ownership'
+            );
+        } else if (missionPage && !wrapper) {
+            initialize();
+        } else if (!missionPage && wrapper) {
+            removeMissionFinderPanelForClosedMission(
+                'coalesced mission DOM change'
+            );
+        }
+
+        if (flags.panelChanged) {
+            const wrappers = document.querySelectorAll(
+                '#mission-finder-wrapper'
+            );
+
+            const controlPanel = document.getElementById(
+                'control-panel'
+            );
+
+            if (
+                wrappers.length > 1 ||
+                (
+                    controlPanel &&
+                    !controlPanel.closest('#mission-finder-wrapper')
+                )
+            ) {
+                cleanupDuplicatePanels();
+            }
+        }
+
+        const shouldRefreshTrainedPersonnelPanel =
+            flags.missionContextChanged ||
+            flags.vehicleListChanged ||
+            flags.patientChanged;
+
+        if (
+            missionPage &&
+            wrapper &&
+            shouldRefreshTrainedPersonnelPanel
+        ) {
+            invalidateLiveTrainedPersonnelDisplayCache();
+            scheduleTrainedPersonnelPanelRefresh();
+        }
+
+        if (autoModeRunning && missionPage && flags.relevant) {
+            scheduleAutoModeLoopResume(
+                'filtered/coalesced DOM mutation'
+            );
+        }
+    }
+
+
+### CONTEXT const MF_MISSION_LOGGER_CLIENT_VERSION
+
+014249:     const MF_RECORDER_ENABLED_KEY = 'mf_issue_recorder_enabled_v1';
+
+014250:     const MF_RECORDER_MAX_ENTRIES = 40;
+
+014251:     const MF_RECORDER_MAX_BYTES = 1500000;
+
+014252:     let mfIssueRecorderEnabled = false;
+
+014253:     localStorage.setItem(MF_RECORDER_ENABLED_KEY, 'false');
+
+014254:     let mfIssueRecorderLastDangerFingerprint = '';
+
+014255:     let mfIssueRecorderLastDangerAt = 0;
+
+014256:     let mfIssueRecorderLastClickAt = 0;
+
+014257: 
+
+014258:     const SESSION_STATS_KEY = 'mf_session_stats_v1';
+
+014259:     const SESSION_REFRESH_FLAG = 'mf_session_manual_refresh_checked';
+
+014260:     const MF_MISSION_LOGGER_SCHEMA_VERSION = 1;
+
+014261:     const MF_MISSION_LOGGER_CLIENT_VERSION = '1.1.2';
+
+014262:     const MF_MISSION_LOGGER_MISSION_FINDER_VERSION =
+
+014263:         '10.7.0';
+
+014264:     const MF_MISSION_LOGGER_ENABLED_KEY =
+
+014265:         'mf_mission_logger_enabled_v1';
+
+014266:     const MF_MISSION_LOGGER_ENDPOINT_KEY =
+
+014267:         'mf_mission_logger_endpoint_v1';
+
+014268:     const MF_MISSION_LOGGER_IDENTITY_KEY =
+
+014269:         'mf_mission_logger_identity_v1';
+
+014270:     const MF_MISSION_LOGGER_QUEUE_KEY =
+
+014271:         'mf_mission_logger_queue_v1';
+
+014272:     const MF_MISSION_LOGGER_PENDING_BATCH_KEY =
+
+014273:         'mf_mission_logger_pending_batch_v1';
+
+014274:     const MF_MISSION_LOGGER_SYNC_LOCK_KEY =
+
+014275:         'mf_mission_logger_sync_lock_v1';
+
+014276:     const MF_MISSION_LOGGER_STATE_KEY =
+
+014277:         'mf_mission_logger_state_v1';
+
+014278:     const MF_MISSION_LOGGER_OBSERVED_KEY =
+
+014279:         'mf_mission_logger_observed_v1';
+
+014280:     const MF_MISSION_LOGGER_LAST_DISPATCH_KEY =
+
+### CONTEXT let mfMissionLoggerEnabled
+
+014301:         Object.freeze([2500, 15000, 45000]);
+
+014302:     const MF_MISSION_LOGGER_REQUEST_TIMEOUT_MS =
+
+014303:         30000;
+
+014304:     const MF_MISSION_LOGGER_DISPATCH_DEDUPE_MS =
+
+014305:         15000;
+
+014306:     const MF_MISSION_LOGGER_MAX_QUEUE_EVENTS = 300;
+
+014307:     const MF_MISSION_LOGGER_MAX_QUEUE_CHARS = 3000000;
+
+014308:     const MF_MISSION_LOGGER_BATCH_SIZE = 40;
+
+014309:     const MF_MISSION_LOGGER_DEFAULT_ENDPOINT =
+
+014310:         'https://script.google.com/macros/s/AKfycbxYE6DOCm8rNk1BAO7hL9hN93vpQmrWm4zfkh-DhXf7mmaBdeCHSxSeyOlMahwaUiT-/exec';
+
+014311:     const MF_MISSION_LOGGER_MESSAGE_SOURCE =
+
+014312:         'missionchief-nexus-logger';
+
+014313:     let mfMissionLoggerEnabled =
+
+014314:         localStorage.getItem(
+
+014315:             MF_MISSION_LOGGER_ENABLED_KEY
+
+014316:         ) === 'true';
+
+014317:     let mfMissionLoggerEndpoint = '';
+
+014318:     let mfMissionLoggerSyncTimer = null;
+
+014319:     let mfMissionLoggerInitialSyncTimer = null;
+
+014320:     let mfMissionLoggerSyncActive = false;
+
+014321:     let mfMissionLoggerCreditTimer = null;
+
+014322:     let mfMissionLoggerCreditInitialTimer = null;
+
+014323:     let mfMissionLoggerCreditReconcileActive = false;
+
+014324:     let mfMissionLoggerCreditLastFetchAt = 0;
+
+014325:     const mfMissionLoggerCreditRetryTimers = new Set();
+
+014326:     let mfMissionLoggerMessageHandler = null;
+
+014327:     let mfMissionLoggerStorageHandler = null;
+
+014328:     let mfMissionLoggerOnlineHandler = null;
+
+014329:     let mfMissionLoggerDispatchClickHandler = null;
+
+014330:     let mfMissionLoggerCompletionHook = null;
+
+014331:     let mfMissionLoggerLastDispatchFingerprint = '';
+
+014332:     let mfMissionLoggerLastDispatchAt = 0;
+
+### CONTEXT startMissionFinderObserver();
+
+056051:         if (MF_IS_TOP_WINDOW) return;
+
+056052: 
+
+056053:         if (!shouldKeepMissionFinderObserverForCurrentFrame()) {
+
+056054:             suspendMissionFinderRuntimeForInactiveFrame(reason);
+
+056055:             return;
+
+056056:         }
+
+056057: 
+
+056058:         const wasSuspended =
+
+056059:             mfRuntimeSuspendedForInactiveFrame;
+
+056060:         mfRuntimeSuspendedForInactiveFrame = false;
+
+056061: 
+
+056062:         if (!mfMainMutationObserver) {
+
+056063:             startMissionFinderObserver();
+
+056064:         }
+
+056065: 
+
+056066:         installMissionLoggerStorageListener();
+
+056067:         installMissionLoggerDispatchCapture();
+
+056068:         recordMissionLoggerObservedEvent();
+
+056069: 
+
+056070:         if (
+
+056071:             wasSuspended &&
+
+056072:             isMissionPage() &&
+
+056073:             !document.getElementById(
+
+056074:                 'mission-finder-wrapper'
+
+056075:             )
+
+056076:         ) {
+
+056077:             initialize();
+
+056078:         }
+
+056079: 
+
+056080:         startMissionFinderRuntimeMemoryMaintenance();
+
+056081:     }
+
+056082: 
+
+056405:         startMissionEventCollectibleCollector();
+
+056406:         installMissionLoggerStorageListener();
+
+056407:         invalidateVehicleCheckboxCache();
+
+056408:         invalidateMissionContextCaches();
+
+056409:         invalidatePatientCountCache();
+
+056410:         invalidateTransportCaches();
+
+056411:         resetMainMutationFlags();
+
+056412: 
+
+056413:         if (
+
+056414:             document.body &&
+
+056415:             !mfMainMutationObserver
+
+056416:         ) {
+
+056417:             startMissionFinderObserver();
+
+056418:         }
+
+056419: 
+
+056420:         if (!shouldKeepMissionFinderObserverForCurrentFrame()) {
+
+056421:             suspendMissionFinderRuntimeForInactiveFrame(
+
+056422:                 'bfcache frame is not the active mission owner'
+
+056423:             );
+
+056424:             return;
+
+056425:         }
+
+056426: 
+
+056427:         installMissionLoggerDispatchCapture();
+
+056428:         installMissionLoggerCompletionCapture();
+
+056429:         startMissionLoggerSyncTimer();
+
+056430:         recordMissionLoggerObservedEvent();
+
+056431: 
+
+056432:         const missionPage = isMissionPage();
+
+056433:         const wrapper = document.getElementById(
+
+056434:             'mission-finder-wrapper'
+
+056435:         );
+
+056436: 
+
+056554:             childList: true,
+
+056555:             subtree: true
+
+056556:         });
+
+056557: 
+
+056558:         if (isMissionPage()) {
+
+056559:             startMissionFinderRuntimeMemoryMaintenance();
+
+056560:         }
+
+056561: 
+
+056562:         scheduleAutoMemoryRecycleResume();
+
+056563:     }
+
+056564: 
+
+056565:     if (document.body) {
+
+056566:         startMissionFinderObserver();
+
+056567:     } else {
+
+056568:         document.addEventListener(
+
+056569:             'DOMContentLoaded',
+
+056570:             startMissionFinderObserver,
+
+056571:             { once: true }
+
+056572:         );
+
+056573:     }
+
+056574: 
+
+056575: })();
+
+056576:     } catch (error) {
+
+056577:         console.error('[MissionChief Complete Tools] Mission Finder module startup failed:', error);
+
+056578:     }
+
+056579: })();
+
+056580: 
+
+056581: /* Dispatch Centres Show all popup-window enforcement V1.0.79. */
+
+056582: (function() {
+
+056583:     'use strict';
+
+056584: 
+
+056585:     const SHOW_ALL_SELECTOR =
+
+### CONTEXT missionMarkerAdd
+
+### CONTEXT MF_IS_TOP_WINDOW
+
+012680:                         link,
+
+012681:                         claim
+
+012682:                     );
+
+012683:                 }
+
+012684:             }
+
+012685:         } finally {
+
+012686:             mfEventCollectibleScanRunning = false;
+
+012687:         }
+
+012688:     }
+
+012689: 
+
+012690:     function startMissionEventCollectibleCollector() {
+
+012691:         if (
+
+012692:             !MF_IS_TOP_WINDOW ||
+
+012693:             !mfEventScannerEnabled ||
+
+012694:             mfEventCollectibleScanTimer !== null
+
+012695:         ) {
+
+012696:             return;
+
+012697:         }
+
+012698: 
+
+012699:         void scanMissionEventCollectibles();
+
+012700: 
+
+012701:         mfEventCollectibleScanTimer =
+
+012702:             window.setInterval(
+
+012703:                 () => {
+
+012704:                     void scanMissionEventCollectibles();
+
+012705:                 },
+
+012706:                 MF_EVENT_COLLECTIBLE_SCAN_INTERVAL_MS
+
+012707:             );
+
+012708:     }
+
+012709: 
+
+012710:     function stopMissionEventCollectibleCollector() {
+
+012711:         if (mfEventCollectibleScanTimer !== null) {
+
+012711:         if (mfEventCollectibleScanTimer !== null) {
+
+012712:             window.clearInterval(
+
+012713:                 mfEventCollectibleScanTimer
+
+012714:             );
+
+012715:             mfEventCollectibleScanTimer = null;
+
+012716:         }
+
+012717: 
+
+012718:         mfEventCollectibleScanRunning = false;
+
+012719:         mfEventCollectibleClaimTimes.clear();
+
+012720:     }
+
+012721: 
+
+012722: 
+
+012723:     const MF_IS_TOP_WINDOW = (() => {
+
+012724:         try {
+
+012725:             return window.top === window.self;
+
+012726:         } catch (error) {
+
+012727:             return true;
+
+012728:         }
+
+012729:     })();
+
+012730: 
+
+012731:     function isMissionPage() {
+
+012732:         return !!document.querySelector('#mission_general_info');
+
+012733:     }
+
+012734: 
+
+012735:     if (window.missionFinder2026Initialized) return;
+
+012736: 
+
+012737:     window.missionFinder2026Initialized = true;
+
+012738:     window.missionFinderInitialized = true;
+
+012739: 
+
+012740:     startMissionEventCollectibleCollector();
+
+012741: 
+
+012742:     let autoModeRunning =
+
+013783:         mfRuntimeMemoryActivityHandler = null;
+
+013784:     }
+
+013785: 
+
+013786:     function pruneMissionFinderIphoneNativePickerDocuments() {
+
+013787:         mfIphoneNativePickerDocuments.forEach(candidateDocument => {
+
+013788:             if (!isCachedMissionDocumentUsable(candidateDocument)) {
+
+013789:                 mfIphoneNativePickerDocuments.delete(candidateDocument);
+
+013790:             }
+
+013791:         });
+
+013792:     }
+
+013793: 
+
+013794:     function compactMissionFinderPersistentStorage() {
+
+013795:         if (!MF_IS_TOP_WINDOW) return;
+
+013796: 
+
+013797:         let legacyRecorderRemoved = false;
+
+013798:         let diagnosticCharsBefore = 0;
+
+013799:         let diagnosticCharsAfter = 0;
+
+013800: 
+
+013801:         try {
+
+013802:             legacyRecorderRemoved =
+
+013803:                 localStorage.getItem(MF_RECORDER_KEY) !== null;
+
+013804:             localStorage.removeItem(MF_RECORDER_KEY);
+
+013805:         } catch (_error) {}
+
+013806: 
+
+013807:         try {
+
+013808:             const raw = localStorage.getItem(
+
+013809:                 MF_UNIT_FINDER_DIAGNOSTICS_KEY
+
+013810:             ) || '[]';
+
+013811:             diagnosticCharsBefore = raw.length;
+
+013812: 
+
+013813:             const parsed = JSON.parse(raw);
+
+013814:             const bounded =
+
+015405:         } catch (_error) {}
+
+015406: 
+
+015407:         const cachedVehicleNodes = Array.isArray(
+
+015408:             mfVehicleCheckboxCache?.nodes
+
+015409:         )
+
+015410:             ? mfVehicleCheckboxCache.nodes
+
+015411:             : [];
+
+015412: 
+
+015413:         return {
+
+015414:             capturedAt: new Date().toISOString(),
+
+015415:             heap,
+
+015416:             runtime: {
+
+015417:                 isTopWindow: MF_IS_TOP_WINDOW,
+
+015418:                 autoModeRunning:
+
+015419:                     autoModeRunning === true,
+
+015420:                 eventCollectorTimerActive:
+
+015421:                     mfEventCollectibleScanTimer !== null,
+
+015422:                 eventCollectorScanRunning:
+
+015423:                     mfEventCollectibleScanRunning === true,
+
+015424:                 eventCollectorTrackedClaims:
+
+015425:                     mfEventCollectibleClaimTimes.size,
+
+015426:                 mainMutationObserverActive:
+
+015427:                     mfMainMutationObserver !== null,
+
+015428:                 backgroundSupervisorActive:
+
+015429:                     mfBackgroundWatcherSupervisorTimer !== null,
+
+015430:                 sessionRuntimeTickerActive:
+
+015431:                     sessionRuntimeTicker !== null,
+
+015432:                 runtimeSuspendedForPageHide:
+
+015433:                     mfRuntimeSuspendedForPageHide === true,
+
+015434:                 runtimeSuspendedForInactiveFrame:
+
+015435:                     mfRuntimeSuspendedForInactiveFrame === true,
+
+015436:                 memoryMaintenanceTimerActive:
+
+026300:     function stopMissionLoggerSyncTimer() {
+
+026301:         if (mfMissionLoggerInitialSyncTimer) {
+
+026302:             clearTimeout(mfMissionLoggerInitialSyncTimer);
+
+026303:             mfMissionLoggerInitialSyncTimer = null;
+
+026304:         }
+
+026305:         if (mfMissionLoggerSyncTimer) {
+
+026306:             clearInterval(mfMissionLoggerSyncTimer);
+
+026307:             mfMissionLoggerSyncTimer = null;
+
+026308:         }
+
+026309:     }
+
+026310: 
+
+026311:     function startMissionLoggerSyncTimer() {
+
+026312:         if (!MF_IS_TOP_WINDOW) return;
+
+026313: 
+
+026314:         installMissionLoggerConnectivityListener();
+
+026315: 
+
+026316:         if (
+
+026317:             !mfMissionLoggerEnabled ||
+
+026318:             !mfMissionLoggerEndpoint ||
+
+026319:             !readMissionLoggerIdentity()
+
+026320:         ) {
+
+026321:             stopMissionLoggerSyncTimer();
+
+026322:             stopMissionLoggerCreditReconciliation();
+
+026323:             return;
+
+026324:         }
+
+026325: 
+
+026326:         startMissionLoggerCreditReconciliation();
+
+026327: 
+
+026328:         if (
+
+026329:             mfMissionLoggerInitialSyncTimer ||
+
+026330:             mfMissionLoggerSyncTimer
+
+026331:         ) {
+
+026390:             mfMissionLoggerEnabled =
+
+026391:                 localStorage.getItem(
+
+026392:                     MF_MISSION_LOGGER_ENABLED_KEY
+
+026393:                 ) === 'true';
+
+026394:             mfMissionLoggerEndpoint =
+
+026395:                 normaliseMissionLoggerEndpoint(
+
+026396:                     localStorage.getItem(
+
+026397:                         MF_MISSION_LOGGER_ENDPOINT_KEY
+
+026398:                     ) ||
+
+026399:                     MF_MISSION_LOGGER_DEFAULT_ENDPOINT
+
+026400:                 );
+
+026401: 
+
+026402:             if (MF_IS_TOP_WINDOW) {
+
+026403:                 startMissionLoggerSyncTimer();
+
+026404:             }
+
+026405:             renderMissionLoggerStatus();
+
+026406:         };
+
+026407: 
+
+026408:         window.addEventListener(
+
+026409:             'storage',
+
+026410:             mfMissionLoggerStorageHandler
+
+026411:         );
+
+026412:     }
+
+026413: 
+
+026414:     function installMissionLoggerConnectivityListener() {
+
+026415:         if (!MF_IS_TOP_WINDOW || mfMissionLoggerOnlineHandler) {
+
+026416:             return;
+
+026417:         }
+
+026418: 
+
+026419:         mfMissionLoggerOnlineHandler = () => {
+
+026420:             if (
+
+026421:                 !mfMissionLoggerEnabled ||
+
+026403:                 startMissionLoggerSyncTimer();
+
+026404:             }
+
+026405:             renderMissionLoggerStatus();
+
+026406:         };
+
+026407: 
+
+026408:         window.addEventListener(
+
+026409:             'storage',
+
+026410:             mfMissionLoggerStorageHandler
+
+026411:         );
+
+026412:     }
+
+026413: 
+
+026414:     function installMissionLoggerConnectivityListener() {
+
+026415:         if (!MF_IS_TOP_WINDOW || mfMissionLoggerOnlineHandler) {
+
+026416:             return;
+
+026417:         }
+
+026418: 
+
+026419:         mfMissionLoggerOnlineHandler = () => {
+
+026420:             if (
+
+026421:                 !mfMissionLoggerEnabled ||
+
+026422:                 !mfMissionLoggerEndpoint ||
+
+026423:                 !readMissionLoggerIdentity()
+
+026424:             ) {
+
+026425:                 return;
+
+026426:             }
+
+026427: 
+
+026428:             void syncMissionLoggerNow({
+
+026429:                 reconnected: true
+
+026430:             });
+
+026431:         };
+
+026432: 
+
+026433:         window.addEventListener(
+
+026434:             'online',
+
+028151:             html,
+
+028152:             'text/html'
+
+028153:         );
+
+028154:         return parseMissionLoggerCreditTransactionsFromDocument(
+
+028155:             doc
+
+028156:         );
+
+028157:     }
+
+028158: 
+
+028159:     async function reconcileMissionLoggerCreditTransactions(
+
+028160:         options = {}
+
+028161:     ) {
+
+028162:         if (
+
+028163:             !MF_IS_TOP_WINDOW ||
+
+028164:             !mfMissionLoggerEnabled ||
+
+028165:             !readMissionLoggerIdentity() ||
+
+028166:             mfMissionLoggerCreditReconcileActive
+
+028167:         ) {
+
+028168:             return 0;
+
+028169:         }
+
+028170: 
+
+028171:         const now = Date.now();
+
+028172:         const identity = readMissionLoggerIdentity();
+
+028173:         const registry = readMissionLoggerMissionRegistry();
+
+028174:         const stateBefore = readMissionLoggerState();
+
+028175:         const lastCreditSuccessAt = Math.max(
+
+028176:             0,
+
+028177:             Number(
+
+028178:                 stateBefore.lastCreditSuccessAt ||
+
+028179:                 (
+
+028180:                     !stateBefore.lastCreditError
+
+028181:                         ? stateBefore.lastCreditCheckAt
+
+028182:                         : 0
+
+028480:                     error?.message ||
+
+028481:                     'MissionChief Credits could not be checked.'
+
+028482:                 ).slice(0, 300)
+
+028483:             });
+
+028484:             return 0;
+
+028485:         } finally {
+
+028486:             mfMissionLoggerCreditReconcileActive = false;
+
+028487:         }
+
+028488:     }
+
+028489: 
+
+028490:     function scheduleMissionLoggerCreditReconciliation() {
+
+028491:         if (
+
+028492:             !MF_IS_TOP_WINDOW ||
+
+028493:             !mfMissionLoggerEnabled ||
+
+028494:             !readMissionLoggerIdentity()
+
+028495:         ) {
+
+028496:             return;
+
+028497:         }
+
+028498: 
+
+028499:         MF_MISSION_LOGGER_CREDIT_RETRY_DELAYS_MS
+
+028500:             .forEach(delay => {
+
+028501:                 const timer = setTimeout(() => {
+
+028502:                     mfMissionLoggerCreditRetryTimers.delete(
+
+028503:                         timer
+
+028504:                     );
+
+028505:                     void reconcileMissionLoggerCreditTransactions();
+
+028506:                 }, delay);
+
+028507:                 mfMissionLoggerCreditRetryTimers.add(timer);
+
+028508:             });
+
+028509:     }
+
+028510: 
+
+028511:     function stopMissionLoggerCreditReconciliation() {
+
+028515:         }
+
+028516:         if (mfMissionLoggerCreditTimer) {
+
+028517:             clearInterval(mfMissionLoggerCreditTimer);
+
+028518:             mfMissionLoggerCreditTimer = null;
+
+028519:         }
+
+028520:         mfMissionLoggerCreditRetryTimers.forEach(timer => {
+
+028521:             clearTimeout(timer);
+
+028522:         });
+
+028523:         mfMissionLoggerCreditRetryTimers.clear();
+
+028524:     }
+
+028525: 
+
+028526:     function startMissionLoggerCreditReconciliation() {
+
+028527:         if (!MF_IS_TOP_WINDOW) return;
+
+028528: 
+
+028529:         if (
+
+028530:             !mfMissionLoggerEnabled ||
+
+028531:             !readMissionLoggerIdentity()
+
+028532:         ) {
+
+028533:             stopMissionLoggerCreditReconciliation();
+
+028534:             return;
+
+028535:         }
+
+028536: 
+
+028537:         if (
+
+028538:             mfMissionLoggerCreditInitialTimer ||
+
+028539:             mfMissionLoggerCreditTimer
+
+028540:         ) {
+
+028541:             return;
+
+028542:         }
+
+028543: 
+
+028544:         mfMissionLoggerCreditInitialTimer = setTimeout(() => {
+
+028545:             mfMissionLoggerCreditInitialTimer = null;
+
+028546:             void reconcileMissionLoggerCreditTransactions({
+
+028778:                     snapshot.actualCredits === null
+
+028779:                         ? 'pending-transaction-match'
+
+028780:                         : 'native-completion-payload',
+
+028781:                 missionFinderVersion:
+
+028782:                     MF_MISSION_LOGGER_MISSION_FINDER_VERSION
+
+028783:             }
+
+028784:         };
+
+028785: 
+
+028786:         return queueMissionLoggerEvent(event);
+
+028787:     }
+
+028788: 
+
+028789:     function installMissionLoggerCompletionCapture() {
+
+028790:         if (!MF_IS_TOP_WINDOW) return false;
+
+028791:         if (
+
+028792:             mfMissionLoggerCompletionHook &&
+
+028793:             window.missionFinish ===
+
+028794:                 mfMissionLoggerCompletionHook.wrapper
+
+028795:         ) {
+
+028796:             return true;
+
+028797:         }
+
+028798: 
+
+028799:         const original = window.missionFinish;
+
+028800:         if (typeof original !== 'function') return false;
+
+028801: 
+
+028802:         const wrapper = function (...args) {
+
+028803:             let captured = false;
+
+028804:             try {
+
+028805:                 captured =
+
+028806:                     recordMissionLoggerNativeCompletion(args);
+
+028807:             } catch (_error) {}
+
+028808:             try {
+
+028809:                 return original.apply(this, args);
+
+041928:             allyStealDebugLog(
+
+041929:                 'RESUME AFTER REFRESH',
+
+041930:                 {
+
+041931:                     source,
+
+041932:                     pending,
+
+041933:                     href:
+
+041934:                         window.location.href,
+
+041935:                     missionName:
+
+041936:                         getCurrentMissionName(),
+
+041937:                     missionId:
+
+041938:                         getCurrentMissionIdForQueueRestart(),
+
+041939:                     isTopWindow:
+
+041940:                         MF_IS_TOP_WINDOW,
+
+041941:                     hasFrameElement:
+
+041942:                         !!window.frameElement,
+
+041943:                     accessibleDocuments:
+
+041944:                         getAllyStealAccessibleDocuments()
+
+041945:                             .length
+
+041946:                 }
+
+041947:             );
+
+041948: 
+
+041949:             updateStatusBox(
+
+041950:                 `Ally Steal: resumed after refresh. Waiting for ${pending.vehicleName || 'Fire Officer'} confirmation...`
+
+041951:             );
+
+041952: 
+
+041953:             const elapsed =
+
+041954:                 Date.now() -
+
+041955:                 Number(
+
+041956:                     pending.clickedAt ||
+
+041957:                     Date.now()
+
+041958:                 );
+
+041959: 
+
+047818:                 if (value && /^\d+$/.test(String(value))) return String(value);
+
+047819:             }
+
+047820: 
+
+047821:             const missionLink = missionInfo.querySelector && missionInfo.querySelector('a[href*="/missions/"], a[href*="mission_id="]');
+
+047822:             const linkId = parseMissionIdFromHrefForQueueRestart(missionLink ? (missionLink.href || missionLink.getAttribute('href')) : '');
+
+047823:             if (linkId) return linkId;
+
+047824:         }
+
+047825: 
+
+047826:         return parseMissionIdFromHrefForQueueRestart(window.location.href);
+
+047827:     }
+
+047828: 
+
+047829:     function isSilentQueueWatchActive() {
+
+047830:         if (!MF_IS_TOP_WINDOW) return false;
+
+047831:         if (isManualAutoStopActive()) return false;
+
+047832:         if (!mfQueueRestartEnabled) return false;
+
+047833: 
+
+047834:         const autoActive =
+
+047835:             autoModeRunning === true ||
+
+047836:             sessionStorage.getItem('mf_auto_mode_running') === 'true' ||
+
+047837:             localStorage.getItem('mf_auto_mode_running') === 'true';
+
+047838: 
+
+047839:         if (!autoActive) return false;
+
+047840: 
+
+047841:         if (
+
+047842:             isPostTransportRehookPending() ||
+
+047843:             wasTransportSequenceActive() ||
+
+047844:             getTransportRehookLockRemaining() > 0
+
+047845:         ) {
+
+047846:             return false;
+
+047847:         }
+
+047848: 
+
+047849:         const normalQueueWait =
+
+047924: 
+
+047925:                 return true;
+
+047926:             }
+
+047927: 
+
+047928:             await wait(400);
+
+047929:         }
+
+047930: 
+
+047931:         return false;
+
+047932:     }
+
+047933: 
+
+047934: 
+
+047935:     function startSilentQueueWatcher() {
+
+047936:         if (!MF_IS_TOP_WINDOW) return;
+
+047937:         if (mfSilentQueueWatcherTimer) return;
+
+047938: 
+
+047939:         mfSilentQueueWatcherTimer = setInterval(async () => {
+
+047940:             if (isManualAutoStopActive()) return;
+
+047941:             if (!isSilentQueueWatchActive()) return;
+
+047942:             if (mfSilentQueueOpening) return;
+
+047943:             if (isMainMissionOpeningPending('silent-queue-watch')) return;
+
+047944:             if (sessionStorage.getItem(MF_QUEUE_OPENING_MISSION_FLAG) === 'true') return;
+
+047945: 
+
+047946:             // This catches empty/loading Vue modals as well as completed mission screens.
+
+047947:             if (hasVisibleQueueOpenModal('silent-queue-watch')) return;
+
+047948:             if (!canOpenMainMissionFromMainList('silent-queue-watch')) return;
+
+047949:             if (isMissionScreenVisibleForQueueRestart()) return;
+
+047950: 
+
+047951:             const queueCountState =
+
+047952:                 getQueueRestartCountState();
+
+047953: 
+
+047954:             if (mfDebugEnabled) {
+
+047955:                 debugLog(
+
+047965:                 );
+
+047966:                 return;
+
+047967:             }
+
+047968: 
+
+047969:             await openFirstMissionFromSilentQueueWatcher(
+
+047970:                 'silent-threshold'
+
+047971:             );
+
+047972:         }, 2000);
+
+047973:     }
+
+047974: 
+
+047975: 
+
+047976:     async function openFirstMissionFromSilentQueueWatcher(reason) {
+
+047977:         if (!MF_IS_TOP_WINDOW) return;
+
+047978:         if (mfSilentQueueOpening) return false;
+
+047979:         if (!isSilentQueueWatchActive()) return false;
+
+047980:         if (isMainMissionOpeningPending(`silent-open-${reason}`)) return false;
+
+047981:         if (sessionStorage.getItem(MF_QUEUE_OPENING_MISSION_FLAG) === 'true') return false;
+
+047982:         if (hasVisibleQueueOpenModal(`silent-open-${reason}`)) return false;
+
+047983:         if (!canOpenMainMissionFromMainList(`silent-open-${reason}`)) return false;
+
+047984: 
+
+047985:         if (isMissionScreenVisibleForQueueRestart()) return false;
+
+047986: 
+
+047987:         const queueCountState =
+
+047988:             getQueueRestartCountState();
+
+047989: 
+
+047990:         if (!queueCountState.reached) {
+
+047991:             reportQueueRestartCountWait(
+
+047992:                 queueCountState,
+
+047993:                 `silent-open-${reason}`
+
+047994:             );
+
+047995:             return false;
+
+047996:         }
+
+051852:         localStorage.setItem('mf_auto_mode_running', 'true');
+
+051853: 
+
+051854:         return true;
+
+051855:     }
+
+051856: 
+
+051857:     function findAnyMainScreenMissionOpenButton() {
+
+051858:         // Exact mission Dispatch buttons only.
+
+051859:         // Generic lightbox links caused building/vehicle screens to be opened.
+
+051860:         return findFirstMissionButtonForQueueRestart();
+
+051861:     }
+
+051862: 
+
+051863:     async function hardOpenFirstMissionFromMainAfterTransport(reason) {
+
+051864:         if (!MF_IS_TOP_WINDOW) return false;
+
+051865:         if (isManualAutoStopActive()) return false;
+
+051866:         if (!isTransportAutomationAllowed()) return false;
+
+051867:         if (!mfTransportShellReadyForRehook(`hard-${reason}`)) return false;
+
+051868: 
+
+051869:         if (!acquireTransportRehookLock(`hard-rehook-${reason}`, 28000)) return false;
+
+051870: 
+
+051871:         try {
+
+051872:             // During the first few seconds after the final Approach click,
+
+051873:             // MissionChief may still be closing/refreshing the vehicle screen.
+
+051874:             // Do not clear the pending rehook if this blocks; just retry later.
+
+051875:             if (shouldBlockOpeningNewMissionForTransport(`hard-rehook-${reason}`)) {
+
+051876:                 return false;
+
+051877:             }
+
+051878: 
+
+051879:             if (isCurrentMissionWindowStillOpenForSafeOpen(`hard-rehook-${reason}`)) {
+
+051880:                 if (mfDebugEnabled) {
+
+051881:                     debugLog('TRANSPORT REHOOK', `${reason}: mission window still open; waiting for next rehook tick.`);
+
+051882:                 }
+
+051883:                 return false;
+
+052108:             releaseTransportRehookLock(`hard-rehook-${reason}-finally`);
+
+052109:         }
+
+052110:     }
+
+052111: 
+
+052112:     function wasTransportSequenceActive() {
+
+052113:         return mfTransportSequenceActive ||
+
+052114:             sessionStorage.getItem('mf_transport_sequence_active_v1') === 'true' ||
+
+052115:             sessionStorage.getItem('mf_brute_transport_sent_v1') === 'true' ||
+
+052116:             sessionStorage.getItem('mf_transport_sent_in_vehicle_modal_v1') === 'true';
+
+052117:     }
+
+052118: 
+
+052119:     async function openFirstMissionAfterTransportAutoClose(reason) {
+
+052120:         if (!MF_IS_TOP_WINDOW) return false;
+
+052121:         if (isManualAutoStopActive()) return false;
+
+052122:         if (!isTransportAutomationAllowed()) return false;
+
+052123: 
+
+052124:         if (isTransportRehookLockActive(`open-after-transport-${reason}`)) {
+
+052125:             return false;
+
+052126:         }
+
+052127: 
+
+052128:         if (mfTransportContinuationRunning || mfPostTransportOpening) {
+
+052129:             return false;
+
+052130:         }
+
+052131: 
+
+052132:         if (!isPostTransportRehookPending()) return false;
+
+052133:         if (hasVisibleApproachButtonForTransportRehook()) return false;
+
+052134:         if (!mfTransportShellReadyForRehook(reason)) return false;
+
+052135: 
+
+052136:         mfTransportContinuationRunning = true;
+
+052137:         mfPostTransportOpening = true;
+
+052138: 
+
+052139:         try {
+
+052165:             }
+
+052166: 
+
+052167:             return await hardOpenFirstMissionFromMainAfterTransport(reason);
+
+052168:         } finally {
+
+052169:             mfTransportContinuationRunning = false;
+
+052170:             mfPostTransportOpening = false;
+
+052171:         }
+
+052172:     }
+
+052173: 
+
+052174: 
+
+052175: 
+
+052176:     function startPostTransportRehookWatcher() {
+
+052177:         if (!MF_IS_TOP_WINDOW) return;
+
+052178:         if (mfPostTransportRehookTimer) return;
+
+052179: 
+
+052180:         mfPostTransportRehookTimer = setInterval(async () => {
+
+052181:             if (isManualAutoStopActive()) return;
+
+052182:             if (!isTransportAutomationAllowed()) return;
+
+052183:             if (!isPostTransportRehookPending()) return;
+
+052184:             if (mfPostTransportOpening || mfTransportContinuationRunning) return;
+
+052185:             if (isMainMissionOpeningPending('post-transport-watch')) return;
+
+052186:             if (hasVisibleApproachButtonForTransportRehook()) return;
+
+052187: 
+
+052188:             await openFirstMissionAfterTransportAutoClose(
+
+052189:                 'post-transport-watch'
+
+052190:             );
+
+052191:         }, 1200);
+
+052192:     }
+
+052193: 
+
+052194: 
+
+052195: 
+
+052196:     function closeVehicleTransportModalIfDone(reason) {
+
+052540: 
+
+052541:             await wait(4000);
+
+052542: 
+
+052543:             return clicked;
+
+052544:         } finally {
+
+052545:             mfBruteApproachClicking = false;
+
+052546:             mfTransportApproachClicking = false;
+
+052547:         }
+
+052548:     }
+
+052549: 
+
+052550: 
+
+052551:     function startBruteApproachTransportWatcher() {
+
+052552:         if (!MF_IS_TOP_WINDOW) return;
+
+052553:         if (mfBruteApproachWatcherTimer) return;
+
+052554: 
+
+052555:         mfBruteApproachWatcherTimer = setInterval(async () => {
+
+052556:             if (isManualAutoStopActive()) return;
+
+052557: 
+
+052558:             // Auto guard: this must not run when Auto Mode is off,
+
+052559:             // unless a valid post-transport rehook is pending from an Auto Mode run.
+
+052560:             if (!isTransportAutomationAllowed()) return;
+
+052561: 
+
+052562:             // Most Auto Mode ticks are normal missions, not transport screens.
+
+052563:             // A cheap preflight avoids full modal/body scans until a vehicle
+
+052564:             // transport surface or exact Approach button actually exists.
+
+052565:             if (!mfHasPotentialTransportUi()) return;
+
+052566: 
+
+052567:             const button = mfBruteFindFirstApproachButton();
+
+052568: 
+
+052569:             if (button) {
+
+052570:                 await mfBruteClickFirstApproach('global-brute-watch');
+
+052571:                 return;
+
+055722:     function stopBruteApproachTransportWatcher() {
+
+055723:         if (!mfBruteApproachWatcherTimer) return;
+
+055724:         clearInterval(mfBruteApproachWatcherTimer);
+
+055725:         mfBruteApproachWatcherTimer = null;
+
+055726:     }
+
+055727: 
+
+055728:     function stopPostTransportRehookWatcher() {
+
+055729:         if (!mfPostTransportRehookTimer) return;
+
+055730:         clearInterval(mfPostTransportRehookTimer);
+
+055731:         mfPostTransportRehookTimer = null;
+
+055732:     }
+
+055733:     function syncBackgroundAutomationWatchers() {
+
+055734:         if (!MF_IS_TOP_WINDOW) return;
+
+055735: 
+
+055736:         autoModeRunning =
+
+055737:             !isManualAutoStopActive() &&
+
+055738:             (
+
+055739:                 sessionStorage.getItem('mf_auto_mode_running') === 'true' ||
+
+055740:                 localStorage.getItem('mf_auto_mode_running') === 'true'
+
+055741:             );
+
+055742: 
+
+055743:         mfQueueRestartEnabled =
+
+055744:             localStorage.getItem(
+
+055745:                 'mf_next_queue_restart_enabled_v10'
+
+055746:             ) !== 'false';
+
+055747: 
+
+055748:         const silentQueueRequired = Boolean(
+
+055749:             sessionStorage.getItem(
+
+055750:                 MF_QUEUE_WAIT_ACTIVE_FLAG
+
+055751:             ) === 'true' ||
+
+055752:             sessionStorage.getItem(
+
+055753:                 MF_FINAL_QUEUE_DISPATCH_FLAG
+
+055771:         } else {
+
+055772:             stopBruteApproachTransportWatcher();
+
+055773:         }
+
+055774: 
+
+055775:         if (postTransportWatcherRequired) {
+
+055776:             startPostTransportRehookWatcher();
+
+055777:         } else {
+
+055778:             stopPostTransportRehookWatcher();
+
+055779:         }
+
+055780:     }
+
+055781: 
+
+055782:     function installBackgroundWatcherSupervisor() {
+
+055783:         if (!MF_IS_TOP_WINDOW) return;
+
+055784: 
+
+055785:         if (!mfBackgroundStorageHandler) {
+
+055786:             mfBackgroundStorageHandler = function(event) {
+
+055787:                 const key = String(event?.key || '');
+
+055788: 
+
+055789:                 if (
+
+055790:                     !key ||
+
+055791:                     key.startsWith('mf_')
+
+055792:                 ) {
+
+055793:                     syncBackgroundAutomationWatchers();
+
+055794:                 }
+
+055795:             };
+
+055796: 
+
+055797:             window.addEventListener(
+
+055798:                 'storage',
+
+055799:                 mfBackgroundStorageHandler
+
+055800:             );
+
+055801:         }
+
+055802: 
+
+055949: 
+
+055950:         if (mfMainMutationFlushTimer) return;
+
+055951: 
+
+055952:         mfMainMutationFlushTimer = setTimeout(
+
+055953:             flushMissionFinderMutationWork,
+
+055954:             200
+
+055955:         );
+
+055956:     }
+
+055957: 
+
+055958: 
+
+055959: 
+
+055960:     function shouldKeepMissionFinderObserverForCurrentFrame() {
+
+055961:         if (MF_IS_TOP_WINDOW) return true;
+
+055962:         if (!document.body || !isMissionPage()) return false;
+
+055963: 
+
+055964:         try {
+
+055965:             return getPrimaryMissionRequirementDocument() === document;
+
+055966:         } catch (_error) {
+
+055967:             // Preserve the current runtime when cross-frame inspection is
+
+055968:             // temporarily unavailable rather than risking an operational stop.
+
+055969:             return true;
+
+055970:         }
+
+055971:     }
+
+055972: 
+
+055973:     function suspendMissionFinderRuntimeForInactiveFrame(
+
+055974:         reason = ''
+
+055975:     ) {
+
+055976:         if (MF_IS_TOP_WINDOW) return false;
+
+055977: 
+
+055978:         if (mfMainMutationObserver) {
+
+055979:             mfMainMutationObserver.disconnect();
+
+055980:             mfMainMutationObserver = null;
+
+055964:         try {
+
+055965:             return getPrimaryMissionRequirementDocument() === document;
+
+055966:         } catch (_error) {
+
+055967:             // Preserve the current runtime when cross-frame inspection is
+
+055968:             // temporarily unavailable rather than risking an operational stop.
+
+055969:             return true;
+
+055970:         }
+
+055971:     }
+
+055972: 
+
+055973:     function suspendMissionFinderRuntimeForInactiveFrame(
+
+055974:         reason = ''
+
+055975:     ) {
+
+055976:         if (MF_IS_TOP_WINDOW) return false;
+
+055977: 
+
+055978:         if (mfMainMutationObserver) {
+
+055979:             mfMainMutationObserver.disconnect();
+
+055980:             mfMainMutationObserver = null;
+
+055981:         }
+
+055982: 
+
+055983:         if (mfMainMutationFlushTimer) {
+
+055984:             clearTimeout(mfMainMutationFlushTimer);
+
+055985:             mfMainMutationFlushTimer = null;
+
+055986:         }
+
+055987: 
+
+055988:         if (mfAutoLoopResumeTimer) {
+
+055989:             clearTimeout(mfAutoLoopResumeTimer);
+
+055990:             mfAutoLoopResumeTimer = null;
+
+055991:         }
+
+055992: 
+
+055993:         if (mfDebugRenderFrame !== null) {
+
+055994:             try {
+
+055995:                 cancelAnimationFrame(mfDebugRenderFrame);
+
+056039:         }
+
+056040: 
+
+056041:         mfRuntimeSuspendedForInactiveFrame = true;
+
+056042:         mfRuntimeMemoryLastReason =
+
+056043:             String(reason || 'inactive mission frame');
+
+056044: 
+
+056045:         return true;
+
+056046:     }
+
+056047: 
+
+056048:     function reconcileMissionFinderFrameRuntime(
+
+056049:         reason = 'top-window ownership check'
+
+056050:     ) {
+
+056051:         if (MF_IS_TOP_WINDOW) return;
+
+056052: 
+
+056053:         if (!shouldKeepMissionFinderObserverForCurrentFrame()) {
+
+056054:             suspendMissionFinderRuntimeForInactiveFrame(reason);
+
+056055:             return;
+
+056056:         }
+
+056057: 
+
+056058:         const wasSuspended =
+
+056059:             mfRuntimeSuspendedForInactiveFrame;
+
+056060:         mfRuntimeSuspendedForInactiveFrame = false;
+
+056061: 
+
+056062:         if (!mfMainMutationObserver) {
+
+056063:             startMissionFinderObserver();
+
+056064:         }
+
+056065: 
+
+056066:         installMissionLoggerStorageListener();
+
+056067:         installMissionLoggerDispatchCapture();
+
+056068:         recordMissionLoggerObservedEvent();
+
+056069: 
+
+056070:         if (
+
+056092:             const EventConstructor =
+
+056093:                 ownerWindow.CustomEvent || CustomEvent;
+
+056094: 
+
+056095:             candidateDocument.dispatchEvent(
+
+056096:                 new EventConstructor(
+
+056097:                     MF_FRAME_RUNTIME_RECONCILE_EVENT,
+
+056098:                     { detail }
+
+056099:                 )
+
+056100:             );
+
+056101:         } catch (_error) {}
+
+056102:     }
+
+056103:     function reconcileMissionFinderFrameRuntimesFromTop() {
+
+056104:         if (!MF_IS_TOP_WINDOW) return;
+
+056105: 
+
+056106:         try {
+
+056107:             getMissionAccessibleDocuments(false)
+
+056108:                 .forEach(candidateDocument => {
+
+056109:                     if (candidateDocument === document) return;
+
+056110:                     dispatchMissionFinderFrameRuntimeEvent(
+
+056111:                         candidateDocument,
+
+056112:                         {
+
+056113:                             reason:
+
+056114:                                 'top-window ownership supervisor'
+
+056115:                         }
+
+056116:                     );
+
+056117:                 });
+
+056118:         } catch (_error) {}
+
+056119:     }
+
+056120: 
+
+056121:     function releaseRemovedMissionFinderFrameRuntimes(
+
+056122:         records = []
+
+056123:     ) {
+
+056112:                         {
+
+056113:                             reason:
+
+056114:                                 'top-window ownership supervisor'
+
+056115:                         }
+
+056116:                     );
+
+056117:                 });
+
+056118:         } catch (_error) {}
+
+056119:     }
+
+056120: 
+
+056121:     function releaseRemovedMissionFinderFrameRuntimes(
+
+056122:         records = []
+
+056123:     ) {
+
+056124:         if (!MF_IS_TOP_WINDOW) return;
+
+056125: 
+
+056126:         const frames = new Set();
+
+056127: 
+
+056128:         const addFrames = node => {
+
+056129:             if (!node || node.nodeType !== Node.ELEMENT_NODE) {
+
+056130:                 return;
+
+056131:             }
+
+056132: 
+
+056133:             if (node.matches?.('iframe')) {
+
+056134:                 frames.add(node);
+
+056135:             }
+
+056136: 
+
+056137:             try {
+
+056138:                 node.querySelectorAll?.('iframe')
+
+056139:                     .forEach(frame => frames.add(frame));
+
+056140:             } catch (_error) {}
+
+056141:         };
+
+056142: 
+
+056143:         records.forEach(record => {
+
+056495:             mfRuntimePageShowHandler,
+
+056496:             { passive: true }
+
+056497:         );
+
+056498:     }
+
+056499: 
+
+056500:     function startMissionFinderObserver() {
+
+056501:         if (mfMainMutationObserver) return;
+
+056502: 
+
+056503:         installMissionFinderRuntimeCleanup();
+
+056504:         installMissionFinderFrameRuntimeReconciliation();
+
+056505:         installMissionLoggerStorageListener();
+
+056506: 
+
+056507:         if (MF_IS_TOP_WINDOW) {
+
+056508:             startMissionLoggerSyncTimer();
+
+056509:         }
+
+056510: 
+
+056511:         if (!shouldKeepMissionFinderObserverForCurrentFrame()) {
+
+056512:             suspendMissionFinderRuntimeForInactiveFrame(
+
+056513:                 'startup frame is not the active mission owner'
+
+056514:             );
+
+056515:             return;
+
+056516:         }
+
+056517: 
+
+056518:         mfRuntimeSuspendedForInactiveFrame = false;
+
+056519:         installIssueRecorderWatchers();
+
+056520:         installPersonnelRegistryUpdateHandler();
+
+056521:         installMissionFinderRuntimeMemoryActivityTracking();
+
+056522:         installMissionLoggerDispatchCapture();
+
+056523:         installMissionLoggerCompletionCapture();
+
+056524: 
+
+056525:         if (MF_IS_TOP_WINDOW) {
+
+056526:             installManualMissionClickFlagClearer();
+
+056513:                 'startup frame is not the active mission owner'
+
+056514:             );
+
+056515:             return;
+
+056516:         }
+
+056517: 
+
+056518:         mfRuntimeSuspendedForInactiveFrame = false;
+
+056519:         installIssueRecorderWatchers();
+
+056520:         installPersonnelRegistryUpdateHandler();
+
+056521:         installMissionFinderRuntimeMemoryActivityTracking();
+
+056522:         installMissionLoggerDispatchCapture();
+
+056523:         installMissionLoggerCompletionCapture();
+
+056524: 
+
+056525:         if (MF_IS_TOP_WINDOW) {
+
+056526:             installManualMissionClickFlagClearer();
+
+056527:             installBackgroundWatcherSupervisor();
+
+056528:             compactMissionFinderPersistentStorage();
+
+056529: 
+
+056530:             if (
+
+056531:                 localStorage.getItem(
+
+056532:                     'mf_post_transport_rehook_pending_v1'
+
+056533:                 ) === 'true' ||
+
+056534:                 isRecentTransportRehookWindowActive()
+
+056535:             ) {
+
+056536:                 forceAutoModeBackOnForTransportRehook();
+
+056537: 
+
+056538:                 setTimeout(() => {
+
+056539:                     openFirstMissionAfterTransportAutoClose(
+
+056540:                         'startup-pending-rehook'
+
+056541:                     );
+
+056542:                 }, 2500);
+
+056543:             }
+
+056544:         }
