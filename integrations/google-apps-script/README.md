@@ -28,7 +28,7 @@ For an existing live logger, replace `Code.gs`, then use **Deploy > Manage
 deployments > Edit**, select **New version**, and deploy. The `/exec` URL and
 paired browser tokens remain unchanged; creating a separate deployment is not
 required. Open the existing `/exec` URL in an incognito window afterwards and
-confirm the JSON contains `"buildId":"1.1.2-journey-1"`. If that marker
+confirm the JSON contains `"buildId":"1.1.2-dashboard-guard-1"`. If that marker
 is missing, Google is still serving the prior deployment even if the script
 editor contains the new code.
 
@@ -156,7 +156,7 @@ Use this sequence before the first automatic Monday run:
 1. Replace `Code.gs`, save it, and update the existing web-app deployment to a
    **New version**. Keep the existing deployment and `/exec` URL.
 2. Open `/exec` in incognito and verify the response contains
-   `"buildId":"1.1.2-journey-1"`, the `"credit-ledger-match"` feature and
+   `"buildId":"1.1.2-dashboard-guard-1"`, the `"credit-ledger-match"` feature and
    the `"dispatch-journey-metrics"` feature.
 3. Run `initialiseMissionChiefLogger`. This safely appends the two trailing
    `Dispatch Units` headers, creates/repairs the summary, dashboard, journey,
