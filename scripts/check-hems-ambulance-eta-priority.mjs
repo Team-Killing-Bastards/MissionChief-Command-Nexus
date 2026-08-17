@@ -53,8 +53,25 @@ for (const [types, expected, label] of [
 const sorterSource = extractFunction('sortVehicleCheckboxesByBestArrival');
 const sorter = Function(
   'mfVehicleArrivalMetricCache',
+  'readMissionLoggerUnitJourneyMetrics',
   `"use strict";\n${sorterSource}\nreturn sortVehicleCheckboxesByBestArrival;`
-)(new WeakMap());
+)(
+  new WeakMap(),
+  input => {
+    const row = input?.closest?.('tr');
+    const metric = name => {
+      const value = Number(row?.getAttribute?.(name));
+      return Number.isFinite(value) && value >= 0
+        ? value
+        : null;
+    };
+    return {
+      estimatedEtaSeconds:
+        metric('data-sortvalue') ?? metric('timevalue'),
+      estimatedDistanceKm: metric('data-distance'),
+    };
+  }
+);
 function vehicle(delay, distance, type) {
   const row = {
     getAttribute(name) {

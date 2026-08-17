@@ -98,13 +98,24 @@ const metricReaderSource = extractFunction(
 const readMetrics = Function(
   `"use strict"; ${metricReaderSource}; return readMissionLoggerUnitJourneyMetrics;`
 )();
-const row = attributes => ({
+const node = (attributes = {}, descendants = [], textContent = '') => ({
+  textContent,
   getAttribute(name) {
     return Object.prototype.hasOwnProperty.call(attributes, name)
       ? attributes[name]
       : null;
   },
+  querySelectorAll() {
+    return descendants;
+  },
+  matches(selector) {
+    return selector === 'tr' && attributes.__row === true;
+  },
+  closest() {
+    return attributes.__closest || null;
+  },
 });
+const row = attributes => node(attributes);
 
 const exact = readMetrics(row({
   'data-distance': '83.8574',
@@ -124,9 +135,38 @@ const missing = readMetrics(row({}));
 expect(missing.estimatedDistanceKm === null, 'Missing distance must remain blank');
 expect(missing.estimatedEtaSeconds === null, 'Missing ETA must remain blank');
 
+const nestedDistance = node({ 'data-distance-km': '12.75' });
+const nestedEta = node({ 'data-arrival-seconds': '420' });
+const nestedRow = node({ __row: true }, [nestedDistance, nestedEta]);
+const nestedCheckbox = node({ __closest: nestedRow });
+const nested = readMetrics(nestedCheckbox);
+expect(nested.estimatedDistanceKm === 12.75, 'Journey capture must read distance from a native descendant metric cell');
+expect(nested.estimatedEtaSeconds === 420, 'Journey capture must read ETA from a native descendant metric cell');
+
+const visibleEvidence = node(
+  { title: 'Route distance 3.4 km; ETA 7 min' },
+  [],
+  ''
+);
+const visibleRow = node({ __row: true }, [visibleEvidence]);
+const visibleCheckbox = node({ __closest: visibleRow });
+const visible = readMetrics(visibleCheckbox);
+expect(visible.estimatedDistanceKm === 3.4, 'Explicit kilometre text must remain valid native journey evidence');
+expect(visible.estimatedEtaSeconds === 420, 'Explicit ETA minute text must convert to seconds');
+
+const arrivalSort = extractFunction(source, 'sortVehicleCheckboxesByBestArrival');
+expect(
+  arrivalSort.includes('readMissionLoggerUnitJourneyMetrics(input)'),
+  'Vehicle arrival sorting and logger capture must use the same native metric reader'
+);
+expect(
+  !arrivalSort.includes("getAttribute('data-distance')"),
+  'Arrival sorting must not retain the old row-only distance path'
+);
+
 const selectedUnits = extractFunction(source, 'getMissionLoggerSelectedUnits');
 for (const token of [
-  'readMissionLoggerUnitJourneyMetrics(row)',
+  'readMissionLoggerUnitJourneyMetrics(checkbox)',
   'estimatedDistanceKm:',
   'estimatedEtaSeconds:',
 ]) {

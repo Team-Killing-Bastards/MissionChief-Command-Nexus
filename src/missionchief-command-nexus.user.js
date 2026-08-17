@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.1.2
+// @version      1.1.3
 // @description  Unified MissionChief UK toolkit for mission dispatch, resource administration, trained-personnel assignment and opt-in mission analytics.
 // @author       MartyBlyth
 // @license      MIT
@@ -12454,7 +12454,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.7.0
+         * MODULE 2: MISSION FINDER V10.7.1
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -14258,9 +14258,9 @@
     const SESSION_STATS_KEY = 'mf_session_stats_v1';
     const SESSION_REFRESH_FLAG = 'mf_session_manual_refresh_checked';
     const MF_MISSION_LOGGER_SCHEMA_VERSION = 1;
-    const MF_MISSION_LOGGER_CLIENT_VERSION = '1.1.2';
+    const MF_MISSION_LOGGER_CLIENT_VERSION = '1.1.3';
     const MF_MISSION_LOGGER_MISSION_FINDER_VERSION =
-        '10.7.0';
+        '10.7.1';
     const MF_MISSION_LOGGER_ENABLED_KEY =
         'mf_mission_logger_enabled_v1';
     const MF_MISSION_LOGGER_ENDPOINT_KEY =
@@ -14306,6 +14306,10 @@
     const MF_MISSION_LOGGER_MAX_QUEUE_EVENTS = 300;
     const MF_MISSION_LOGGER_MAX_QUEUE_CHARS = 3000000;
     const MF_MISSION_LOGGER_BATCH_SIZE = 40;
+    const MF_MISSION_LOGGER_OBSERVED_RETENTION_MS =
+        7 * 24 * 60 * 60 * 1000;
+    const MF_MISSION_LOGGER_OBSERVED_MAX_ENTRIES = 5000;
+    const MF_MISSION_LOGGER_GENERATION_ARM_DELAY_MS = 1500;
     const MF_MISSION_LOGGER_DEFAULT_ENDPOINT =
         'https://script.google.com/macros/s/AKfycbxYE6DOCm8rNk1BAO7hL9hN93vpQmrWm4zfkh-DhXf7mmaBdeCHSxSeyOlMahwaUiT-/exec';
     const MF_MISSION_LOGGER_MESSAGE_SOURCE =
@@ -14328,6 +14332,10 @@
     let mfMissionLoggerOnlineHandler = null;
     let mfMissionLoggerDispatchClickHandler = null;
     let mfMissionLoggerCompletionHook = null;
+    let mfMissionLoggerMissionMarkerWrapper = null;
+    let mfMissionLoggerGenerationArmTimer = null;
+    let mfMissionLoggerGenerationArmed = false;
+    let mfMissionLoggerGenerationInstalled = false;
     let mfMissionLoggerLastDispatchFingerprint = '';
     let mfMissionLoggerLastDispatchAt = 0;
     const mfMissionLoggerPendingRequests = new Map();
@@ -18214,7 +18222,7 @@ function isRoadRailUnitVehicleCheckbox(input) {
         return clickIssued;
     }
 
-    function sortVehicleCheckboxesByBestArrival(matches) {
+        function sortVehicleCheckboxesByBestArrival(matches) {
         const getMetrics = input => {
             const now = Date.now();
             const cached = mfVehicleArrivalMetricCache.get(input);
@@ -18223,17 +18231,13 @@ function isRoadRailUnitVehicleCheckbox(input) {
                 return cached;
             }
 
-            const row = input?.closest?.('tr');
+            const journey =
+                readMissionLoggerUnitJourneyMetrics(input);
             const metrics = {
-                delay: parseFloat(
-                    row?.getAttribute('data-sortvalue') ||
-                    row?.getAttribute('timevalue') ||
-                    '999999'
-                ),
-                distance: parseFloat(
-                    row?.getAttribute('data-distance') ||
-                    '999999'
-                ),
+                delay:
+                    journey.estimatedEtaSeconds ?? 999999,
+                distance:
+                    journey.estimatedDistanceKm ?? 999999,
                 expiresAt: now + 500
             };
 
@@ -22508,7 +22512,7 @@ function isRoadRailUnitVehicleCheckbox(input) {
             <div id="mf-mission-logger-credit-status" class="mf2026-small" style="margin-top:2px;"></div>
             <div id="mf-mission-logger-error" class="mf2026-small mf2026-warn" style="margin-top:4px;" hidden></div>
             <div class="mf2026-small" style="margin-top:7px;">
-                Records mission identifiers/URLs, advertised and exact awarded value, requirements, current casualty counts, available generator information, selected vehicle IDs/types/names and MissionChief's dispatch-time estimated route distance/ETA for each selected unit. Exact awards are matched locally against MissionChief's own Credits transactions; the rest of the account ledger is never uploaded. Missed completions are recovered from exact MissionChief credit transactions when this browser reconnects. Uploads use a persistent five-minute batch queue. Passwords, cookies and personnel names are never collected.
+                Records each new mission generated for this player from MissionChief's native mission list, plus mission identifiers/URLs, advertised and exact awarded value, requirements, current casualty counts, available generator information, selected vehicle IDs/types/names and MissionChief's dispatch-time estimated route distance/ETA for each selected unit. Exact awards are matched locally against MissionChief's own Credits transactions; the rest of the account ledger is never uploaded. Missed completions are recovered from exact MissionChief credit transactions when this browser reconnects. Uploads use a persistent five-minute batch queue. Passwords, cookies and personnel names are never collected.
             </div>
             <div class="mf2026-small" style="margin-top:4px;">
                 Each paired browser has its own player identity. Disconnecting removes its credential and any unsent events from this browser.
@@ -27044,8 +27048,8 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
         return rows.slice(0, 250);
     }
 
-    function readMissionLoggerUnitJourneyMetrics(row) {
-        const parseMetric = value => {
+        function readMissionLoggerUnitJourneyMetrics(source) {
+        const parseNumber = value => {
             const raw = String(value ?? '')
                 .replace(/\u00a0/g, ' ')
                 .trim();
@@ -27060,13 +27064,203 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
                 : null;
         };
 
-        const distanceKm = parseMetric(
-            row?.getAttribute?.('data-distance')
+        const parseDistance = value => {
+            const direct = parseNumber(value);
+            if (direct !== null) return direct;
+
+            const raw = String(value ?? '')
+                .replace(/\u00a0/g, ' ')
+                .trim();
+            const match = raw.match(
+                /(\d+(?:[.,]\d+)?)\s*(km|kilomet(?:er|re)s?|m|met(?:er|re)s?)\b/i
+            );
+            if (!match) return null;
+
+            const number = parseNumber(match[1]);
+            if (number === null) return null;
+            return /^k/i.test(match[2])
+                ? number
+                : number / 1000;
+        };
+
+        const parseEta = value => {
+            const direct = parseNumber(value);
+            if (direct !== null) return direct;
+
+            const raw = String(value ?? '')
+                .replace(/\u00a0/g, ' ')
+                .trim()
+                .toLowerCase();
+            if (!raw) return null;
+
+            const clock = raw.match(
+                /(?:^|\D)(\d{1,3}):([0-5]\d)(?::([0-5]\d))?(?:\D|$)/
+            );
+            if (clock) {
+                if (clock[3] !== undefined) {
+                    return (
+                        Number(clock[1]) * 3600 +
+                        Number(clock[2]) * 60 +
+                        Number(clock[3])
+                    );
+                }
+                return Number(clock[1]) * 60 + Number(clock[2]);
+            }
+
+            let total = 0;
+            let matched = false;
+            for (const part of raw.matchAll(
+                /(\d+(?:[.,]\d+)?)\s*(hours?|hrs?|hr|h|minutes?|mins?|min|seconds?|secs?|sec|s)\b/g
+            )) {
+                const number = parseNumber(part[1]);
+                if (number === null) continue;
+                matched = true;
+                const unit = part[2];
+                if (/^h/.test(unit)) total += number * 3600;
+                else if (/^m/.test(unit)) total += number * 60;
+                else total += number;
+            }
+            return matched ? total : null;
+        };
+
+        const row = source?.closest?.('tr') ||
+            (source?.matches?.('tr') ? source : null);
+        const distanceNodes = [];
+        const etaNodes = [];
+        const textNodes = [];
+        const addNode = (collection, node) => {
+            if (node && !collection.includes(node)) {
+                collection.push(node);
+            }
+        };
+
+        [source, row].forEach(node => {
+            addNode(distanceNodes, node);
+            addNode(etaNodes, node);
+            addNode(textNodes, node);
+        });
+
+        const collect = (root, selectors, collection) => {
+            if (!root?.querySelectorAll) return;
+            selectors.forEach(selector => {
+                try {
+                    Array.from(root.querySelectorAll(selector))
+                        .slice(0, 30)
+                        .forEach(node => addNode(collection, node));
+                } catch (_error) {}
+            });
+        };
+
+        [source, row].forEach(root => {
+            collect(
+                root,
+                [
+                    '[data-distance-km]',
+                    '[data-route-distance-km]',
+                    '[data-route-distance]',
+                    '[data-distance]',
+                    '[distance]'
+                ],
+                distanceNodes
+            );
+            collect(
+                root,
+                [
+                    '[data-eta-seconds]',
+                    '[data-arrival-seconds]',
+                    '[data-duration-seconds]',
+                    '[data-timevalue]',
+                    '[timevalue]',
+                    '[data-sortvalue]',
+                    '[data-eta]'
+                ],
+                etaNodes
+            );
+            collect(
+                root,
+                [
+                    '.vehicle_distance',
+                    '.vehicle-distance',
+                    '[class*="distance"]',
+                    '.vehicle_arrival_time',
+                    '.vehicle-arrival-time',
+                    '.vehicle_eta',
+                    '.vehicle-eta',
+                    '[class*="arrival"]',
+                    '[class*="eta"]',
+                    'td'
+                ],
+                textNodes
+            );
+        });
+
+        const readAttribute = (nodes, names, parser) => {
+            for (const node of nodes) {
+                for (const name of names) {
+                    const value = node?.getAttribute?.(name);
+                    if (value === null || value === undefined || value === '') {
+                        continue;
+                    }
+                    const parsed = parser(value);
+                    if (parsed !== null) return parsed;
+                }
+            }
+            return null;
+        };
+
+        let distanceKm = readAttribute(
+            distanceNodes,
+            [
+                'data-distance-km',
+                'data-route-distance-km',
+                'data-route-distance',
+                'data-distance',
+                'distance'
+            ],
+            parseDistance
         );
-        const etaSeconds = parseMetric(
-            row?.getAttribute?.('data-sortvalue') ||
-            row?.getAttribute?.('timevalue')
+        let etaSeconds = readAttribute(
+            etaNodes,
+            [
+                'data-eta-seconds',
+                'data-arrival-seconds',
+                'data-duration-seconds',
+                'data-timevalue',
+                'timevalue',
+                'data-sortvalue',
+                'data-eta'
+            ],
+            parseEta
         );
+
+        const readText = parser => {
+            for (const node of textNodes) {
+                for (const value of [
+                    node?.getAttribute?.('aria-label'),
+                    node?.getAttribute?.('title'),
+                    node?.getAttribute?.('data-content'),
+                    node?.textContent
+                ]) {
+                    const parsed = parser(value);
+                    if (parsed !== null) return parsed;
+                }
+            }
+            return null;
+        };
+
+        if (distanceKm === null) {
+            distanceKm = readText(parseDistance);
+        }
+        if (etaSeconds === null) {
+            etaSeconds = readText(parseEta);
+        }
+
+        if (distanceKm !== null && distanceKm > 100000) {
+            distanceKm = null;
+        }
+        if (etaSeconds !== null && etaSeconds > 604800) {
+            etaSeconds = null;
+        }
 
         return {
             estimatedDistanceKm:
@@ -27092,7 +27286,7 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
         return selected.map(checkbox => {
             const row = checkbox.closest?.('tr');
             const journeyMetrics =
-                readMissionLoggerUnitJourneyMetrics(row);
+                readMissionLoggerUnitJourneyMetrics(checkbox);
             const stationLink = row?.querySelector?.(
                 'a[href*="/buildings/"]'
             );
@@ -29028,6 +29222,524 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
         }
     }
 
+        function writeMissionLoggerObservedRegistry(registry) {
+        const now = Date.now();
+        const entries = Object.entries(
+            registry && typeof registry === 'object'
+                ? registry
+                : {}
+        )
+            .filter(([, timestamp]) => {
+                const value = Number(timestamp || 0);
+                return (
+                    value > 0 &&
+                    now - value <=
+                        MF_MISSION_LOGGER_OBSERVED_RETENTION_MS
+                );
+            })
+            .sort((left, right) => {
+                return Number(right[1]) - Number(left[1]);
+            })
+            .slice(0, MF_MISSION_LOGGER_OBSERVED_MAX_ENTRIES);
+
+        localStorage.setItem(
+            MF_MISSION_LOGGER_OBSERVED_KEY,
+            JSON.stringify(Object.fromEntries(entries))
+        );
+    }
+
+    function getMissionLoggerCurrentUserId() {
+        for (const candidate of getMissionLoggerSameOriginWindows()) {
+            for (const value of [
+                candidate?.user_id,
+                candidate?.current_user_id,
+                candidate?.currentUser?.id,
+                candidate?.user?.id
+            ]) {
+                const id = String(value ?? '').trim();
+                if (/^\d+$/.test(id)) return id;
+            }
+        }
+
+        try {
+            const userLink = document.querySelector(
+                '#navbar-main-user a[href*="/profile/"], ' +
+                'a.navbar-user[href*="/profile/"]'
+            );
+            const match = String(
+                userLink?.getAttribute?.('href') || ''
+            ).match(/\/profile\/(\d+)/i);
+            if (match) return match[1];
+        } catch (_error) {}
+
+        return '';
+    }
+
+    function getMissionLoggerMissionListRows(root) {
+        const rows = [];
+        const selector = [
+            '#mission_list .missionSideBarEntry[id^="mission_"]',
+            '#mission_list .missionSideBarEntry[mission_id]',
+            '.missionSideBarEntry[id^="mission_"]',
+            '.missionSideBarEntry[mission_id]'
+        ].join(',');
+        const add = row => {
+            if (row && !rows.includes(row)) rows.push(row);
+        };
+
+        try {
+            if (root?.matches?.(selector)) add(root);
+        } catch (_error) {}
+        try {
+            Array.from(root?.querySelectorAll?.(selector) || [])
+                .forEach(add);
+        } catch (_error) {}
+
+        return rows;
+    }
+
+    function getMissionLoggerMissionListRecord(
+        suppliedMission,
+        row
+    ) {
+        const missionId = (() => {
+            for (const value of [
+                suppliedMission?.id,
+                suppliedMission?.mission_id,
+                row?.getAttribute?.('mission_id'),
+                row?.getAttribute?.('data-mission-id'),
+                String(row?.id || '').match(/^mission_(\d+)$/)?.[1]
+            ]) {
+                const id = String(value ?? '').trim();
+                if (/^\d+$/.test(id)) return id;
+            }
+            return '';
+        })();
+        if (!missionId) return null;
+
+        let mission = suppliedMission &&
+            typeof suppliedMission === 'object'
+                ? suppliedMission
+                : null;
+        if (!mission) {
+            for (const candidate of getMissionLoggerSameOriginWindows()) {
+                try {
+                    mission = getMissionLoggerCacheRecord(
+                        candidate.missions_data,
+                        missionId
+                    );
+                } catch (_error) {}
+                if (mission) break;
+            }
+        }
+
+        const currentUserId = getMissionLoggerCurrentUserId();
+        const ownerId = (() => {
+            for (const value of [
+                mission?.user_id,
+                mission?.userId,
+                mission?.owner_id,
+                mission?.ownerId,
+                row?.getAttribute?.('user_id'),
+                row?.getAttribute?.('data-user-id'),
+                row?.getAttribute?.('owner_id'),
+                row?.getAttribute?.('data-owner-id')
+            ]) {
+                const id = String(value ?? '').trim();
+                if (/^\d+$/.test(id)) return id;
+            }
+            return '';
+        })();
+
+        if (
+            !currentUserId ||
+            !ownerId ||
+            ownerId !== currentUserId
+        ) {
+            return null;
+        }
+
+        const numberOrNull = value => {
+            if (value === null || value === undefined || value === '') {
+                return null;
+            }
+            const number = Number(value);
+            return Number.isFinite(number) && number >= 0
+                ? number
+                : null;
+        };
+        let sortable = {};
+        try {
+            sortable = JSON.parse(
+                row?.getAttribute?.('data-sortable-by') ||
+                row?.getAttribute?.('data-sortable_by') ||
+                '{}'
+            );
+        } catch (_error) {}
+
+        const missionName = trimMissionLoggerText(
+            mission?.caption ||
+            mission?.name ||
+            mission?.title ||
+            row?.querySelector?.(
+                '.missionSideBarEntrySearchHelper, ' +
+                '.mission_caption, a[href*="/missions/"]'
+            )?.textContent ||
+            '',
+            240
+        );
+        const missionDefinitionId = (() => {
+            for (const value of [
+                mission?.mtid,
+                mission?.mission_type_id,
+                mission?.missionTypeId,
+                row?.getAttribute?.('mission_type_id'),
+                row?.getAttribute?.('data-mission-type-id')
+            ]) {
+                const id = String(value ?? '').trim();
+                if (/^\d+$/.test(id)) return id;
+            }
+            return '';
+        })();
+        const generatorStationId = (() => {
+            for (const value of [
+                mission?.generator_building_id,
+                mission?.generated_by_building_id,
+                mission?.building_id
+            ]) {
+                const id = String(value ?? '').trim();
+                if (/^\d+$/.test(id)) return id;
+            }
+            return '';
+        })();
+        const generatorStationName = trimMissionLoggerText(
+            mission?.generator_building_name ||
+            mission?.generated_by_name ||
+            mission?.generated_by ||
+            (
+                generatorStationId
+                    ? getMissionLoggerBuildingName(
+                        generatorStationId
+                    )
+                    : ''
+            ),
+            180
+        );
+        const allianceId = String(
+            mission?.alliance_id ??
+            mission?.allianceId ??
+            row?.getAttribute?.('alliance_id') ??
+            row?.getAttribute?.('data-alliance-id') ??
+            ''
+        ).trim();
+
+        return {
+            missionId,
+            missionDefinitionId,
+            missionName,
+            missionUrl:
+                `${window.location.origin}/missions/${missionId}`,
+            ownership: 'own',
+            shared:
+                allianceId !== '' &&
+                allianceId !== '0' &&
+                allianceId !== 'null',
+            advertisedCredits: Math.max(
+                0,
+                numberOrNull(
+                    mission?.average_credits ??
+                    mission?.advertised_credits ??
+                    sortable.average_credits
+                ) || 0
+            ),
+            patientCount: Math.max(
+                0,
+                numberOrNull(
+                    mission?.patients_count ??
+                    sortable.patients_count?.[0] ??
+                    sortable.patients_count
+                ) || 0
+            ),
+            possiblePatientCount: Math.max(
+                0,
+                numberOrNull(
+                    mission?.possible_patients_count ??
+                    sortable.patients_count?.[1]
+                ) || 0
+            ),
+            prisonerCount: numberOrNull(
+                mission?.prisoners_count ??
+                sortable.prisoners_count?.[0] ??
+                sortable.prisoners_count
+            ),
+            possiblePrisonerCount: numberOrNull(
+                mission?.possible_prisoners_count ??
+                sortable.prisoners_count?.[1]
+            ),
+            generatorStationId,
+            generatorStationName,
+            generatorSource:
+                generatorStationId || generatorStationName
+                    ? 'mission-marker'
+                    : ''
+        };
+    }
+
+    function createMissionLoggerGeneratedEvent(record) {
+        const identity = readMissionLoggerIdentity();
+        if (!identity || !record?.missionId) return null;
+
+        const capturedAt = new Date().toISOString();
+        const missionRegistry = readMissionLoggerMissionRegistry();
+        const previousMission = missionRegistry[
+            createMissionLoggerRegistryKey(
+                identity.playerId,
+                record.missionId
+            )
+        ] || {};
+
+        return {
+            schemaVersion:
+                MF_MISSION_LOGGER_SCHEMA_VERSION,
+            eventId: createMissionLoggerId('event'),
+            eventType: 'mission-observed',
+            capturedAt,
+            playerId: identity.playerId,
+            deviceId: identity.deviceId,
+            missionId: record.missionId,
+            missionDefinitionId:
+                record.missionDefinitionId || '',
+            missionName: record.missionName || '',
+            missionUrl: record.missionUrl || '',
+            ownership: 'own',
+            generatorStationId:
+                record.generatorStationId || '',
+            generatorStationName:
+                record.generatorStationName || '',
+            dispatchMode: '',
+            shared: record.shared === true,
+            advertisedCredits: Math.max(
+                0,
+                Number(record.advertisedCredits || 0)
+            ),
+            actualCredits: null,
+            patientCount: Math.max(
+                0,
+                Number(record.patientCount || 0)
+            ),
+            prisonerCount:
+                record.prisonerCount,
+            transportCount: null,
+            requirements: [],
+            units: [],
+            metadata: {
+                source: 'missionchief-command-nexus',
+                observationSource:
+                    'mission-list-generated',
+                ready: false,
+                reason: '',
+                autoMode: false,
+                dispatchFingerprint: '',
+                generatorSource:
+                    record.generatorSource || '',
+                missionSnapshotSource:
+                    'mission-list-generated',
+                possiblePatientCount: Math.max(
+                    0,
+                    Number(
+                        record.possiblePatientCount || 0
+                    )
+                ),
+                possiblePrisonerCount:
+                    record.possiblePrisonerCount,
+                firstObservedAt: earlierMissionLoggerIso(
+                    previousMission.firstObservedAt,
+                    capturedAt
+                ),
+                firstUnitSentAt:
+                    previousMission.firstUnitSentAt || '',
+                dispatchCount: Math.max(
+                    0,
+                    Number(previousMission.dispatchCount || 0)
+                ),
+                unitCount: Math.max(
+                    0,
+                    Number(previousMission.unitCount || 0)
+                ),
+                missionFinderVersion:
+                    MF_MISSION_LOGGER_MISSION_FINDER_VERSION
+            }
+        };
+    }
+
+    function recordMissionLoggerGeneratedMission(
+        suppliedMission,
+        row,
+        options = {}
+    ) {
+        if (!MF_IS_TOP_WINDOW) return false;
+
+        const record = getMissionLoggerMissionListRecord(
+            suppliedMission,
+            row
+        );
+        if (!record) return false;
+
+        const now = Date.now();
+        const registry = readMissionLoggerObservedRegistry();
+        const existingAt = Number(
+            registry[record.missionId] || 0
+        );
+        if (
+            existingAt > 0 &&
+            now - existingAt <=
+                MF_MISSION_LOGGER_OBSERVED_RETENTION_MS
+        ) {
+            return false;
+        }
+
+        if (
+            options.baselineOnly === true ||
+            !mfMissionLoggerGenerationArmed ||
+            !mfMissionLoggerEnabled ||
+            !readMissionLoggerIdentity()
+        ) {
+            registry[record.missionId] = now;
+            writeMissionLoggerObservedRegistry(registry);
+            return false;
+        }
+
+        const queued = queueMissionLoggerEvent(
+            createMissionLoggerGeneratedEvent(record)
+        );
+        if (!queued) return false;
+
+        registry[record.missionId] = now;
+        writeMissionLoggerObservedRegistry(registry);
+        return true;
+    }
+
+    function scanMissionLoggerMissionList(
+        root,
+        baselineOnly
+    ) {
+        let count = 0;
+        getMissionLoggerMissionListRows(root).forEach(row => {
+            if (
+                recordMissionLoggerGeneratedMission(
+                    null,
+                    row,
+                    { baselineOnly: baselineOnly === true }
+                )
+            ) {
+                count += 1;
+            }
+        });
+        return count;
+    }
+
+    function scheduleMissionLoggerGenerationArm() {
+        if (mfMissionLoggerGenerationArmed) return;
+        if (mfMissionLoggerGenerationArmTimer) {
+            clearTimeout(mfMissionLoggerGenerationArmTimer);
+        }
+
+        mfMissionLoggerGenerationArmTimer = setTimeout(
+            () => {
+                mfMissionLoggerGenerationArmTimer = null;
+                scanMissionLoggerMissionList(
+                    document,
+                    true
+                );
+                mfMissionLoggerGenerationArmed = true;
+            },
+            MF_MISSION_LOGGER_GENERATION_ARM_DELAY_MS
+        );
+    }
+
+    function installMissionLoggerMissionGenerationCapture() {
+        if (!MF_IS_TOP_WINDOW) return;
+
+        if (!mfMissionLoggerGenerationInstalled) {
+            mfMissionLoggerGenerationInstalled = true;
+            scanMissionLoggerMissionList(document, true);
+            scheduleMissionLoggerGenerationArm();
+        }
+
+        const nativeMissionMarkerAdd =
+            window.missionMarkerAdd;
+        if (
+            typeof nativeMissionMarkerAdd !== 'function' ||
+            nativeMissionMarkerAdd ===
+                mfMissionLoggerMissionMarkerWrapper ||
+            nativeMissionMarkerAdd
+                .__mfMissionLoggerGenerationWrapper === true
+        ) {
+            return;
+        }
+
+        const wrapper = function(...args) {
+            const result = nativeMissionMarkerAdd.apply(
+                this,
+                args
+            );
+            try {
+                recordMissionLoggerGeneratedMission(
+                    args[0],
+                    null,
+                    {
+                        baselineOnly:
+                            !mfMissionLoggerGenerationArmed
+                    }
+                );
+            } catch (_error) {}
+            return result;
+        };
+        try {
+            Object.defineProperty(
+                wrapper,
+                '__mfMissionLoggerGenerationWrapper',
+                { value: true }
+            );
+        } catch (_error) {}
+
+        mfMissionLoggerMissionMarkerWrapper = wrapper;
+        window.missionMarkerAdd = wrapper;
+    }
+
+    function observeMissionLoggerMissionListMutations(records) {
+        if (!MF_IS_TOP_WINDOW) return;
+
+        installMissionLoggerMissionGenerationCapture();
+        let sawMissionRows = false;
+        (records || []).forEach(record => {
+            Array.from(record?.addedNodes || [])
+                .forEach(node => {
+                    const rows =
+                        getMissionLoggerMissionListRows(node);
+                    if (rows.length === 0) return;
+                    sawMissionRows = true;
+                    rows.forEach(row => {
+                        recordMissionLoggerGeneratedMission(
+                            null,
+                            row,
+                            {
+                                baselineOnly:
+                                    !mfMissionLoggerGenerationArmed
+                            }
+                        );
+                    });
+                });
+        });
+
+        if (
+            sawMissionRows &&
+            !mfMissionLoggerGenerationArmed
+        ) {
+            scheduleMissionLoggerGenerationArm();
+        }
+    }
+
     function recordMissionLoggerObservedEvent() {
         if (
             !mfMissionLoggerEnabled ||
@@ -29046,20 +29758,11 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
         const key = String(missionId);
 
         if (
-            now - Number(registry[key] || 0) <
-            24 * 60 * 60 * 1000
+            now - Number(registry[key] || 0) <=
+            MF_MISSION_LOGGER_OBSERVED_RETENTION_MS
         ) {
             return false;
         }
-
-        Object.entries(registry).forEach(([id, timestamp]) => {
-            if (
-                now - Number(timestamp || 0) >
-                7 * 24 * 60 * 60 * 1000
-            ) {
-                delete registry[id];
-            }
-        });
 
         const queued = queueMissionLoggerEvent(
             createMissionLoggerEvent(
@@ -29070,16 +29773,7 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
         if (!queued) return false;
 
         registry[key] = now;
-        const entries = Object.entries(registry)
-            .sort((left, right) => {
-                return Number(right[1]) - Number(left[1]);
-            })
-            .slice(0, 500);
-
-        localStorage.setItem(
-            MF_MISSION_LOGGER_OBSERVED_KEY,
-            JSON.stringify(Object.fromEntries(entries))
-        );
+        writeMissionLoggerObservedRegistry(registry);
         return true;
     }
 
@@ -56505,6 +57199,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
         installMissionLoggerStorageListener();
 
         if (MF_IS_TOP_WINDOW) {
+            installMissionLoggerMissionGenerationCapture();
             startMissionLoggerSyncTimer();
         }
 
@@ -56547,6 +57242,9 @@ async function handleAutoPrisonerReleaseAfterActions() {
 
         mfMainMutationObserver = new MutationObserver(records => {
             releaseRemovedMissionFinderFrameRuntimes(records);
+            if (MF_IS_TOP_WINDOW) {
+                observeMissionLoggerMissionListMutations(records);
+            }
             scheduleMissionFinderMutationWork(records);
         });
 
