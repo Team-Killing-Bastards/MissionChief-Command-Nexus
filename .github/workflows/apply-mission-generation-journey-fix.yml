@@ -149,6 +149,23 @@ jobs:
               encoding='utf-8'
           )
 
+          architecture_path = Path('docs/ARCHITECTURE.md')
+          architecture = architecture_path.read_text(encoding='utf-8')
+          old_baseline = (
+              'The canonical module baseline is Resource Administration '
+              '`V4.2.8` and Mission Finder `V10.7.0`.'
+          )
+          new_baseline = (
+              'The canonical module baseline is Resource Administration '
+              '`V4.2.8` and Mission Finder `V10.7.1`.'
+          )
+          if architecture.count(old_baseline) != 1:
+              raise SystemExit('Unable to update Architecture module baseline')
+          architecture_path.write_text(
+              architecture.replace(old_baseline, new_baseline, 1),
+              encoding='utf-8'
+          )
+
           script_path = Path('/tmp/apply-mission-generation-journey.py')
           script_path.write_text('\n'.join(rebuilt) + '\n', encoding='utf-8')
           PY
