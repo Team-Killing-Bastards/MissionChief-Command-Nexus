@@ -1,0 +1,66 @@
+name: Finalise mission generation and journey capture update
+
+on:
+  push:
+    branches:
+      - feature/logger-generated-missions-journey-evidence
+    paths:
+      - .github/workflows/finalise-mission-generation-journey-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  finalise:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v6
+        with:
+          ref: feature/logger-generated-missions-journey-evidence
+          fetch-depth: 0
+
+      - name: Ensure feature patch has been applied
+        shell: bash
+        run: |
+          if grep -q '^// @version      1.1.2$' src/missionchief-command-nexus.user.js; then
+            test -f .github/apply-mission-generation-journey-fix.py
+            python3 .github/apply-mission-generation-journey-fix.py
+          fi
+          grep -q '^// @version      1.1.3$' src/missionchief-command-nexus.user.js
+          grep -q 'MODULE 2: MISSION FINDER V10.7.1' src/missionchief-command-nexus.user.js
+
+      - name: Remove temporary files and accidental branch debris
+        shell: bash
+        run: |
+          rm -f NOOP DO_NOT_CREATE ignore tmp/should-not-exist
+          rm -f .github/workflows/apply-mission-generation-journey-fix.yml
+          rm -f .github/workflows/finalise-mission-generation-journey-fix.yml
+          rm -f .github/apply-mission-generation-journey-fix.py
+
+      - name: Run full validation
+        shell: bash
+        run: |
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/check-mission-list-generation-logger.mjs
+          node scripts/check-mission-journey-metrics.mjs
+          node scripts/check-mission-user-logger.mjs
+          node scripts/check-logger-dashboard-rebuild-safety.mjs
+          node scripts/validate-userscript.mjs
+          python3 scripts/check_repository.py
+          for check in scripts/check-*.mjs; do
+            node "$check"
+          done
+
+      - name: Commit final feature branch
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo 'No finalisation changes required.'
+          else
+            git commit -m "Finalise generated mission and journey capture"
+            git push origin HEAD:feature/logger-generated-missions-journey-evidence
+          fi
