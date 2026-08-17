@@ -28,7 +28,7 @@ For an existing live logger, replace `Code.gs`, then use **Deploy > Manage
 deployments > Edit**, select **New version**, and deploy. The `/exec` URL and
 paired browser tokens remain unchanged; creating a separate deployment is not
 required. Open the existing `/exec` URL in an incognito window afterwards and
-confirm the JSON contains `"buildId":"1.1.0-dashboard-2"`. If that marker
+confirm the JSON contains `"buildId":"1.1.2-journey-1"`. If that marker
 is missing, Google is still serving the prior deployment even if the script
 editor contains the new code.
 
@@ -75,7 +75,9 @@ one browser without affecting the player's other devices.
   requirements and dispatch mode. Possible casualty totals and the generator
   source are retained in `metadata_json`.
 - `Dispatch Units`: the exact selected vehicle IDs, types, names and stations
-  linked back to their dispatch event.
+  linked back to their dispatch event, plus MissionChief's dispatch-time
+  estimated route distance in kilometres and arrival delay in seconds when
+  those native row attributes are available.
 - `Uploads`: five-minute batch audit and duplicate acknowledgement.
 - `Mission Summary`: one row per player/mission, including first observation,
   first unit sent, native completion time, response time, mission duration and
@@ -83,6 +85,10 @@ one browser without affecting the player's other devices.
 - `Dashboard Data`: compact daily/player totals retained in the live workbook
   across every archived week, so dashboards can read history plus the current
   week without opening every raw archive.
+- `Journey Data`: compact ISO-week/player/station totals, evidence counts,
+  maxima and missing-evidence counts for selected-unit distance and ETA. It is
+  retained in the live workbook so station-placement analysis survives weekly
+  raw rollover without retaining every unit row in the master file.
 - `Archive Index`: weekly archive file links, row counts and copy/purge
   verification state.
 - `Batch Ledger`: compact accepted-batch identities retained for 35 days so a
@@ -95,6 +101,13 @@ one browser without affecting the player's other devices.
 All operational `*_at` columns use `dd/MM/yyyy HH:mm:ss` in the workbook's
 `Europe/London` timezone. The underlying values remain native date-times, not
 formatted text.
+
+`estimated_distance_km` and `estimated_eta_seconds` are MissionChief's route
+estimates at the moment the unit is selected for dispatch. They are not GPS
+tracking or a measured final journey. Nexus stores a blank when MissionChief
+does not expose a valid value rather than inventing one. The Dashboard station
+table can read retained `Journey Data` across archived weeks; the individual
+furthest-dispatch table reads the raw rows still held in the live week.
 
 Advertised mission value and actual awarded credits are deliberately separate.
 Nexus captures MissionChief's native mission-finish signal and records first
@@ -109,8 +122,13 @@ If every paired browser was offline when a dispatched mission completed, Nexus
 resumes through the same ledger on startup, reconnection or manual Sync. Offline
 recovery requires the exact mission ID and normalized title, uses the ledger
 timestamp as the finish time, and sends the exact award through the existing
-queue and endpoint. No Apps Script redeployment, new spreadsheet, new link or
-new pairing code is required for the `1.1.1` client update.
+queue and endpoint.
+
+The `1.1.2` journey fields require the replacement backend to be deployed as a
+new version of the existing web app. They do not require a new spreadsheet,
+deployment URL, dashboard link or pairing code. Existing devices, tokens,
+queued events and historical rows remain valid; older rows simply have blank
+journey evidence.
 
 MissionChief does not expose a specific generator building for every mission.
 When an explicit building ID/name exists it is stored. Otherwise the mission
@@ -138,14 +156,16 @@ Use this sequence before the first automatic Monday run:
 1. Replace `Code.gs`, save it, and update the existing web-app deployment to a
    **New version**. Keep the existing deployment and `/exec` URL.
 2. Open `/exec` in incognito and verify the response contains
-   `"buildId":"1.1.0-dashboard-2"` and the
-   `"credit-ledger-match"` feature.
-3. Run `initialiseMissionChiefLogger`. This creates/repairs the four summary,
-   dashboard, archive-index and batch-ledger tabs and the `Weekly Archives`
-   folder.
+   `"buildId":"1.1.2-journey-1"`, the `"credit-ledger-match"` feature and
+   the `"dispatch-journey-metrics"` feature.
+3. Run `initialiseMissionChiefLogger`. This safely appends the two trailing
+   `Dispatch Units` headers, creates/repairs the summary, dashboard, journey,
+   archive-index and batch-ledger tabs, and creates the `Weekly Archives`
+   folder. Existing rows are not removed.
 4. If any uploads reached the previous deployment after initialisation, run
    **Logger Admin > Rebuild mission summary + dashboard** once. This backfills
-   completion and timing from all raw rows still in the live workbook.
+   completion, timing and Journey Data from all raw rows still in the live
+   workbook. Pre-`1.1.2` unit rows correctly count as missing journey evidence.
 5. Reload the spreadsheet so the **Logger Admin** menu refreshes.
 6. Run **Preview tonight's weekly rollover** and note the row counts.
 7. Run **Test archive copy now (keeps live rows)**. A successful result means

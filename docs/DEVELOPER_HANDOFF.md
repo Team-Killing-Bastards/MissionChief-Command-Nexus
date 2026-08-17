@@ -12,7 +12,7 @@ This is the first document to read when resuming MissionChief Command Nexus deve
 | Repository | `Team-Killing-Bastards/MissionChief-Command-Nexus` |
 | Default branch | `main` |
 | Canonical userscript | `src/missionchief-command-nexus.user.js` |
-| Command Nexus version | `1.1.1` |
+| Command Nexus version | `1.1.2` |
 | Mission Finder baseline | `V10.7.0` |
 | Resource Administration module | `V4.2.8` |
 | Unit / Station / Personnel UI versions | `3.3.27` / `1.3.22` / `1.3.12` |
@@ -57,8 +57,8 @@ The single-file shape is deliberate. Logical consolidation may continue, but est
 - Mission requirements, selected and en-route reconciliation, trained-personnel capability, dispatch, Auto Mode and transport continuation are implemented.
 - Qualification-sensitive selection fails closed: exact compatible vehicles with missing or stale evidence first enter live assignment-page verification, but only fresh, complete Personnel Register evidence satisfies trained-personnel demand and Auto Mode stops without dispatch when verified coverage remains short.
 - Search Dog Unit (SAR) uses exact native MissionChief UK type `102` across Mission Finder selection, selected-unit verification and Unit Naming.
-- The Mission Analytics Logger is off by default, pairs each browser to a stable player profile, enriches early observations from the live mission list and definition cache, captures exact dispatch selections in a bounded local outbox and uploads idempotent five-minute batches to the configured Google Apps Script backend. A persistent client guard and independent backend semantic guard suppress exact dispatch retries. On reconnect, an exact mission-ID + title ledger match can recover the finish time and awarded credits for a dispatched mission completed while all paired browsers were offline. Disconnect clears unsent profile-specific events.
-- The repository contains the Apps Script backend, manifest, deployment guide and permanent logger contract regression. It records native completion timing, matches exact awarded credits from MissionChief's same-origin Credits ledger, maintains Mission Summary and all-weeks Dashboard Data, and performs copy-verified weekly raw archives. Mission-ID + title matches are preferred; a title/time match must be unique or the row remains pending.
+- The Mission Analytics Logger is off by default, pairs each browser to a stable player profile, enriches early observations from the live mission list and definition cache, captures exact dispatch selections plus MissionChief's available dispatch-time route distance/ETA in a bounded local outbox and uploads idempotent five-minute batches to the configured Google Apps Script backend. A persistent client guard and independent backend semantic guard suppress exact dispatch retries. On reconnect, an exact mission-ID + title ledger match can recover the finish time and awarded credits for a dispatched mission completed while all paired browsers were offline. Disconnect clears unsent profile-specific events.
+- The repository contains the Apps Script backend, manifest, deployment guide and permanent logger contract regressions. It records native completion timing, matches exact awarded credits from MissionChief's same-origin Credits ledger, maintains Mission Summary, all-weeks Dashboard Data and compact weekly station Journey Data, and performs copy-verified weekly raw archives. Mission-ID + title matches are preferred; a title/time match must be unique or the row remains pending.
 - Mission and Resource Administration behavior is protected by permanent `scripts/check-*.mjs` regressions.
 - Canonical release and component versions are validated only by `scripts/validate-userscript.mjs`; behavioral checks are version-agnostic.
 - Trusted main events reconcile GitHub Release assets and external delivery without republishing an already-complete version.

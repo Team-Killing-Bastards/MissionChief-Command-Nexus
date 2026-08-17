@@ -19,7 +19,7 @@
 </tr>
 </table>
 
-**Current version:** `1.1.1` · **Mission Finder engine:** `V10.7.0` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
+**Current version:** `1.1.2` · **Mission Finder engine:** `V10.7.0` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)
@@ -86,7 +86,7 @@ The current production line is not merely a merged pair of scripts. It is a guar
 <td width="50%" valign="top"><strong>ACTIVE-MISSION OWNERSHIP</strong><br><sub>Mission requirements, vehicle controls, selections and final confirmation stay bound to the exact active mission document—even across responsive pages, same-origin frames, lightboxes and iOS Safari layouts.</sub></td>
 </tr>
 <tr>
-<td width="50%" valign="top"><strong>PAIRED MISSION ANALYTICS</strong><br><sub>Disabled-by-default browser pairing records player-separated mission demand, dispatch snapshots, timing and completion evidence through a bounded five-minute queue.</sub></td>
+<td width="50%" valign="top"><strong>PAIRED MISSION ANALYTICS</strong><br><sub>Disabled-by-default browser pairing records player-separated mission demand, dispatch snapshots, journey distance/ETA, timing and completion evidence through a bounded five-minute queue.</sub></td>
 <td width="50%" valign="top"><strong>EXACT CREDIT EVIDENCE</strong><br><sub>Actual awards are accepted only from an exact native Credits-ledger match. Advertised averages remain separate and ambiguous transactions remain pending.</sub></td>
 </tr>
 </table>
@@ -137,7 +137,7 @@ Unit Finder prepares. Mission Update reconciles. Auto Mode checks readiness and 
 | **Auto Mode** | Runs a managed read → load → match → verify → dispatch → continue cycle with explicit stop reasons |
 | **Patients and custody** | Reconciles ambulances, patient transports, prisoners and continuation actions when static mission text is incomplete |
 | **Mission lifecycle** | Handles upgrades, Dispatch & Share, queue continuation, end-of-queue recovery and the current seasonal collectible route |
-| **Mission Analytics** | Records exact selected units, first-dispatch and completion timing, advertised value and evidence-backed actual credits for explicitly paired browsers |
+| **Mission Analytics** | Records exact selected units, dispatch-time route distance/ETA, first-dispatch and completion timing, advertised value and evidence-backed actual credits for explicitly paired browsers |
 | **Diagnostics** | Records selection, skip, blocker and failure decisions while guarding mission ownership, repeated actions and long-session cleanup |
 
 <details>
@@ -193,11 +193,11 @@ Unit Finder prepares. Mission Update reconciles. Auto Mode checks readiness and 
 
 - **Mission Analytics Logger** is disabled by default. A player must enable it and redeem a one-use pairing code before any event can enter the local outbox.
 - Pairing assigns one stable player profile and a separate revocable identity to every browser/origin, so multiple players and multiple devices remain distinct in the same backend workbook.
-- The logger records mission identity, advertised value, live demand, patient/prisoner counts, available generator information and the exact selected vehicle IDs, types, names, stations and status for native manual, shared, Auto Mode and Ally Steal dispatch controls.
+- The logger records mission identity, advertised value, live demand, patient/prisoner counts, available generator information and the exact selected vehicle IDs, types, names, stations and status for native manual, shared, Auto Mode and Ally Steal dispatch controls. When MissionChief exposes them, each selected row also contributes its dispatch-time estimated route distance and ETA; missing values stay blank.
 - A persistent bounded queue sends batches every five minutes. Stable batch IDs and independent backend deduplication make retries safe, including repair when an earlier write stopped before all dispatched-unit rows were stored.
 - MissionChief's native finish callback records completion for missions dispatched by the paired browser. Mission Summary exposes first observed, first unit sent, completion, response time and mission duration even after the mission closes.
 - After completion, Nexus reads the signed-in player's native Credits list locally and records an award only for the same mission ID and title, or a unique title/time match. Ambiguous transactions remain `PENDING_TRANSACTION`.
-- Raw Mission Events, Dispatch Units and Uploads move into verified ISO-week archive spreadsheets. Compact Dashboard Data remains in the live workbook across all weeks.
+- Raw Mission Events, Dispatch Units and Uploads move into verified ISO-week archive spreadsheets. Compact Dashboard Data and weekly player/station Journey Data remain live across all weeks, preserving placement analytics without retaining every raw unit row in the master workbook.
 - Passwords, cookies, personnel names and the full Credits ledger are never uploaded. The backend stores hashes rather than raw pairing codes or device tokens and supports individual-device revocation.
 
 Deployment and administration are documented in the [Google Apps Script logger guide](integrations/google-apps-script/README.md).
@@ -328,7 +328,7 @@ Validation covers JavaScript syntax, metadata, component versions, the entire pe
 
 ## On the command horizon
 
-Version `1.1.1` extends [issue #334's opt-in Mission Analytics Logger](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/334) with secure player/browser pairing, bounded Google sync, exact dispatch snapshots, mission timing, weekly archives, evidence-backed awarded credits and resumable completion recovery after every paired browser was offline.
+Version `1.1.2` extends [issue #334's opt-in Mission Analytics Logger](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/334) with per-unit dispatch-time estimated route distance and ETA, compact long-term station journey evidence, and dashboard views for spotting stations that repeatedly send resources too far. Secure pairing, bounded Google sync, exact dispatch snapshots, mission timing, weekly archives, evidence-backed awarded credits and offline completion recovery remain in place.
 
 The [issue tracker](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues) remains the authoritative queue. The [roadmap](docs/ROADMAP.md) records longer-lived engineering priorities.
 
