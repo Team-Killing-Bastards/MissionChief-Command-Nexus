@@ -103,6 +103,40 @@ jobs:
           userscript = userscript.replace(mutation_old, mutation_new, 1)
           userscript_path.write_text(userscript, encoding='utf-8')
 
+          hems_path = Path('scripts/check-hems-ambulance-eta-priority.mjs')
+          hems = hems_path.read_text(encoding='utf-8')
+          old_sorter = """const sorter = Function(
+            'mfVehicleArrivalMetricCache',
+            `\"use strict\";\\n${sorterSource}\\nreturn sortVehicleCheckboxesByBestArrival;`
+          )(new WeakMap());"""
+          new_sorter = """const sorter = Function(
+            'mfVehicleArrivalMetricCache',
+            'readMissionLoggerUnitJourneyMetrics',
+            `\"use strict\";\\n${sorterSource}\\nreturn sortVehicleCheckboxesByBestArrival;`
+          )(
+            new WeakMap(),
+            input => {
+              const row = input?.closest?.('tr');
+              const metric = name => {
+                const value = Number(row?.getAttribute?.(name));
+                return Number.isFinite(value) && value >= 0
+                  ? value
+                  : null;
+              };
+              return {
+                estimatedEtaSeconds:
+                  metric('data-sortvalue') ?? metric('timevalue'),
+                estimatedDistanceKm: metric('data-distance'),
+              };
+            }
+          );"""
+          if hems.count(old_sorter) != 1:
+              raise SystemExit('Unable to update isolated HEMS sorter harness')
+          hems_path.write_text(
+              hems.replace(old_sorter, new_sorter, 1),
+              encoding='utf-8'
+          )
+
           script_path = Path('/tmp/apply-mission-generation-journey.py')
           script_path.write_text('\n'.join(rebuilt) + '\n', encoding='utf-8')
           PY
@@ -114,128 +148,6 @@ jobs:
           fi
           if [ "$status" -eq 0 ]; then
             python3 /tmp/apply-mission-generation-journey.py >> /tmp/builder-output.txt 2>&1
-            status=$?
-          fi
-          if [ "$status" -eq 0 ]; then
-            python3 <<'PY' >> /tmp/builder-output.txt 2>&1
-          from pathlib import Path
-
-          path = Path('src/missionchief-command-nexus.user.js')
-          source = path.read_text(encoding='utf-8')
-          marker = 'function sortVehicleCheckboxesByBestArrival('
-          start = source.index(marker)
-          brace = source.index('{', start)
-          depth = 0
-          quote = None
-          escaped = False
-          line_comment = False
-          block_comment = False
-          end = None
-          index = brace
-          while index < len(source):
-              character = source[index]
-              next_character = source[index + 1] if index + 1 < len(source) else ''
-              if line_comment:
-                  if character == '\n':
-                      line_comment = False
-                  index += 1
-                  continue
-              if block_comment:
-                  if character == '*' and next_character == '/':
-                      block_comment = False
-                      index += 2
-                      continue
-                  index += 1
-                  continue
-              if quote:
-                  if escaped:
-                      escaped = False
-                  elif character == '\\':
-                      escaped = True
-                  elif character == quote:
-                      quote = None
-                  index += 1
-                  continue
-              if character == '/' and next_character == '/':
-                  line_comment = True
-                  index += 2
-                  continue
-              if character == '/' and next_character == '*':
-                  block_comment = True
-                  index += 2
-                  continue
-              if character in ('"', "'", '`'):
-                  quote = character
-                  index += 1
-                  continue
-              if character == '{':
-                  depth += 1
-              elif character == '}':
-                  depth -= 1
-                  if depth == 0:
-                      end = index + 1
-                      break
-              index += 1
-          if end is None:
-              raise SystemExit('Unable to bound arrival sorter')
-
-          replacement = r'''function sortVehicleCheckboxesByBestArrival(matches) {
-        const getMetrics = input => {
-            const now = Date.now();
-            const cached = mfVehicleArrivalMetricCache.get(input);
-
-            if (cached && now < cached.expiresAt) {
-                return cached;
-            }
-
-            const row = input?.closest?.('tr');
-            const fallbackMetric = name => {
-                const value = Number(
-                    row?.getAttribute?.(name)
-                );
-                return Number.isFinite(value) && value >= 0
-                    ? value
-                    : null;
-            };
-            const journey =
-                typeof readMissionLoggerUnitJourneyMetrics ===
-                    'function'
-                    ? readMissionLoggerUnitJourneyMetrics(input)
-                    : {
-                        estimatedEtaSeconds:
-                            fallbackMetric('data-sortvalue') ??
-                            fallbackMetric('timevalue'),
-                        estimatedDistanceKm:
-                            fallbackMetric('data-distance')
-                    };
-            const metrics = {
-                delay:
-                    journey.estimatedEtaSeconds ?? 999999,
-                distance:
-                    journey.estimatedDistanceKm ?? 999999,
-                expiresAt: now + 500
-            };
-
-            mfVehicleArrivalMetricCache.set(input, metrics);
-            return metrics;
-        };
-
-        matches.sort((a, b) => {
-            const metricsA = getMetrics(a);
-            const metricsB = getMetrics(b);
-            return (
-                metricsA.delay - metricsB.delay ||
-                metricsA.distance - metricsB.distance
-            );
-        });
-
-        return matches;
-    }'''
-          path.write_text(
-              source[:start] + replacement + source[end:],
-              encoding='utf-8'
-          )
-          PY
             status=$?
           fi
 
