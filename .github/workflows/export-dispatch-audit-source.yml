@@ -1,9 +1,9 @@
 name: Export dispatch audit source
 
 on:
-  push:
+  pull_request:
     branches:
-      - fix/logger-dispatch-path-audit
+      - main
     paths:
       - .github/workflows/export-dispatch-audit-source.yml
 
