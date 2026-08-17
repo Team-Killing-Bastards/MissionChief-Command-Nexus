@@ -50,8 +50,60 @@ jobs:
               rebuilt.append(output)
           if triple is not None:
               raise SystemExit(f'Unclosed staged builder string: {triple}')
+
+          script = '\n'.join(rebuilt) + '\n'
+          strict_guard = (
+              "    if count != 1:\n"
+              "        raise SystemExit(f'{label}: expected one match, found {count}')\n"
+          )
+          idempotent_guard = (
+              "    if count != 1:\n"
+              "        if count == 0 and new in text:\n"
+              "            return text\n"
+              "        raise SystemExit(f'{label}: expected one match, found {count}')\n"
+          )
+          if strict_guard not in script:
+              raise SystemExit('Could not make staged replace_once idempotent')
+          script = script.replace(strict_guard, idempotent_guard, 1)
+
+          userscript_path = Path('src/missionchief-command-nexus.user.js')
+          userscript = userscript_path.read_text(encoding='utf-8')
+          observer_old = (
+              "        if (MF_IS_TOP_WINDOW) {\n"
+              "            startMissionLoggerSyncTimer();\n"
+              "        }\n"
+          )
+          observer_new = (
+              "        if (MF_IS_TOP_WINDOW) {\n"
+              "            installMissionLoggerMissionGenerationCapture();\n"
+              "            startMissionLoggerSyncTimer();\n"
+              "        }\n"
+          )
+          mutation_old = (
+              "        mfMainMutationObserver = new MutationObserver(records => {\n"
+              "            releaseRemovedMissionFinderFrameRuntimes(records);\n"
+              "            scheduleMissionFinderMutationWork(records);\n"
+              "        });\n"
+          )
+          mutation_new = (
+              "        mfMainMutationObserver = new MutationObserver(records => {\n"
+              "            releaseRemovedMissionFinderFrameRuntimes(records);\n"
+              "            if (MF_IS_TOP_WINDOW) {\n"
+              "                observeMissionLoggerMissionListMutations(records);\n"
+              "            }\n"
+              "            scheduleMissionFinderMutationWork(records);\n"
+              "        });\n"
+          )
+          if userscript.count(observer_old) != 1:
+              raise SystemExit('Could not locate top-window observer startup')
+          if userscript.count(mutation_old) != 1:
+              raise SystemExit('Could not locate main mutation observer')
+          userscript = userscript.replace(observer_old, observer_new, 1)
+          userscript = userscript.replace(mutation_old, mutation_new, 1)
+          userscript_path.write_text(userscript, encoding='utf-8')
+
           script_path = Path('/tmp/apply-mission-generation-journey.py')
-          script_path.write_text('\n'.join(rebuilt) + '\n', encoding='utf-8')
+          script_path.write_text(script, encoding='utf-8')
           PY
 
           set +e
