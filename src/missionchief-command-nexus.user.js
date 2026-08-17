@@ -18222,7 +18222,7 @@ function isRoadRailUnitVehicleCheckbox(input) {
         return clickIssued;
     }
 
-        function sortVehicleCheckboxesByBestArrival(matches) {
+    function sortVehicleCheckboxesByBestArrival(matches) {
         const getMetrics = input => {
             const now = Date.now();
             const cached = mfVehicleArrivalMetricCache.get(input);
@@ -27048,7 +27048,7 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
         return rows.slice(0, 250);
     }
 
-        function readMissionLoggerUnitJourneyMetrics(source) {
+    function readMissionLoggerUnitJourneyMetrics(source) {
         const parseNumber = value => {
             const raw = String(value ?? '')
                 .replace(/\u00a0/g, ' ')
@@ -27064,8 +27064,13 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
                 : null;
         };
 
-        const parseDistance = value => {
-            const direct = parseNumber(value);
+        const parseDistance = (
+            value,
+            allowBareNumber = true
+        ) => {
+            const direct = allowBareNumber
+                ? parseNumber(value)
+                : null;
             if (direct !== null) return direct;
 
             const raw = String(value ?? '')
@@ -27083,8 +27088,13 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
                 : number / 1000;
         };
 
-        const parseEta = value => {
-            const direct = parseNumber(value);
+        const parseEta = (
+            value,
+            allowBareNumber = true
+        ) => {
+            const direct = allowBareNumber
+                ? parseNumber(value)
+                : null;
             if (direct !== null) return direct;
 
             const raw = String(value ?? '')
@@ -27233,15 +27243,24 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
             parseEta
         );
 
-        const readText = parser => {
+        const readText = (
+            parser,
+            semanticSelector
+        ) => {
             for (const node of textNodes) {
+                const allowBareNumber =
+                    !!semanticSelector &&
+                    node?.matches?.(semanticSelector) === true;
                 for (const value of [
                     node?.getAttribute?.('aria-label'),
                     node?.getAttribute?.('title'),
                     node?.getAttribute?.('data-content'),
                     node?.textContent
                 ]) {
-                    const parsed = parser(value);
+                    const parsed = parser(
+                        value,
+                        allowBareNumber
+                    );
                     if (parsed !== null) return parsed;
                 }
             }
@@ -27249,10 +27268,16 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
         };
 
         if (distanceKm === null) {
-            distanceKm = readText(parseDistance);
+            distanceKm = readText(
+                parseDistance,
+                '.vehicle_distance, .vehicle-distance, [class*="distance"]'
+            );
         }
         if (etaSeconds === null) {
-            etaSeconds = readText(parseEta);
+            etaSeconds = readText(
+                parseEta,
+                '.vehicle_arrival_time, .vehicle-arrival-time, .vehicle_eta, .vehicle-eta, [class*="arrival"], [class*="eta"]'
+            );
         }
 
         if (distanceKm !== null && distanceKm > 100000) {
@@ -29222,7 +29247,7 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
         }
     }
 
-        function writeMissionLoggerObservedRegistry(registry) {
+    function writeMissionLoggerObservedRegistry(registry) {
         const now = Date.now();
         const entries = Object.entries(
             registry && typeof registry === 'object'

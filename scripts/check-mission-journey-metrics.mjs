@@ -154,6 +154,13 @@ const visible = readMetrics(visibleCheckbox);
 expect(visible.estimatedDistanceKm === 3.4, 'Explicit kilometre text must remain valid native journey evidence');
 expect(visible.estimatedEtaSeconds === 420, 'Explicit ETA minute text must convert to seconds');
 
+const unrelatedNumber = node({}, [], '34');
+const unrelatedRow = node({ __row: true }, [unrelatedNumber]);
+const unrelatedCheckbox = node({ __closest: unrelatedRow });
+const unrelated = readMetrics(unrelatedCheckbox);
+expect(unrelated.estimatedDistanceKm === null, 'An unlabelled numeric vehicle cell must not become distance evidence');
+expect(unrelated.estimatedEtaSeconds === null, 'An unlabelled numeric vehicle cell must not become ETA evidence');
+
 const arrivalSort = extractFunction(source, 'sortVehicleCheckboxesByBestArrival');
 expect(
   arrivalSort.includes('readMissionLoggerUnitJourneyMetrics(input)'),
