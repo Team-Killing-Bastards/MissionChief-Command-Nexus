@@ -1,0 +1,68 @@
+==> scripts/check-aerial-appliance-rescue-stairs-priority.mjs
+PASS: Aerial Appliance Truck(s) or Rescue Stairs uses exact type-78 Rescue Stairs first, tops up only the remainder with exact type-17 CARPs, counts both toward the row, and excludes every other vehicle type.
+==> scripts/check-ally-steal-response-v1082.mjs
+Ally Steal response timing and safety contracts passed.
+==> scripts/check-ambulance-officer-threshold-v10101.mjs
+PASS: issue #299 Ambulance Officer threshold works through fresh patient-badge Unit Finder, late fresh recovery, Auto Mode and Mission Update, selects exact type 34 and prevents duplicate Officers.
+==> scripts/check-auto-dispatch-eod-required-personnel.mjs
+Auto single-pass, EOD separation and Required Personnel regression passed.
+==> scripts/check-auto-memory-lifecycle.mjs
+Auto Mode memory lifecycle and diagnostic checks passed.
+==> scripts/check-auto-memory-recycle.mjs
+Auto Mode memory recycle and lifecycle suspension checks passed.
+==> scripts/check-auto-patient-transport-anchor.mjs
+Auto Mode patient transport anchor checks passed.
+==> scripts/check-auto-patient-transport-iframe.mjs
+Iframe-aware patient transport checks passed.
+==> scripts/check-auto-prison-cell-success-v10113.mjs
+PASS: Auto Mode detects the current prisoner Cell Selection block, ignores red/full and unusable green destinations, and selects the first usable btn-success cell while retaining the legacy alert fallback.
+==> scripts/check-auto-prisoner-cell-gate.mjs
+Auto Mode prefers active cells, completes the exact current-mission release fallback, follows the owning Vue vm--container/data-modal identity, reacquires replacement close spans and verifies the current lightbox is gone before restart.
+==> scripts/check-auto-prisoner-release-close-v10114.mjs
+PASS: Auto Mode captures the prisoner modal before release navigation, waits for the exact released-prisoners success alert, rejects unrelated modals, reacquires the live parent lightbox-close span and verifies closure before restart.
+==> scripts/check-auto-stop-reason.mjs
+Persistent Auto Mode stop-reason checks passed.
+==> scripts/check-auto-transport-response-v1083.mjs
+Auto Mode transport response contracts passed: patient retries and prisoner UI polling are faster while route identity, ownership, duplicate-click guards and fail-closed timeouts remain intact.
+==> scripts/check-background-resource-admin-popout-v10120.mjs
+Standalone /leitstellenansicht background Station and Unit Naming contracts passed.
+==> scripts/check-background-resource-admin-v10119.mjs
+Background Station Naming, Unit Naming and Personnel Assignment contracts passed.
+==> scripts/check-bulk-trained-register-update.mjs
+PASS: Explicit Police Drone wording remains exact type 91 and separate from generic Require/Required/Requires Drone aliases, without creating a broad bare-Drone alias.
+PASS: Rescue Dog and Search Dog Unit requirement aliases route only to verified exact Search Dog Unit type 102 across candidate selection, selected-unit verification and strict generic-fallback protection.
+PASS: Car towing keeps Flatbed Recovery exact type 105, while truck/HGV/lorry towing uses exact HGV Recovery type 106 across Unit Finder, Mission Update and Auto Mode.
+Bulk update contracts passed: delay helper removed, all-vehicle exact personnel profiles trusted, Search Advisor uses trained assigned units, and explicit car/truck/lorry/van/vehicle towing aliases use exact type-105 recovery vehicles.
+==> scripts/check-compact-nexus-ui-v1071.mjs
+Command Nexus compact shell and progressive disclosure checks passed.
+==> scripts/check-dispatch-centres-popup-window-v1079.mjs
+Dispatch Centres popup-window enforcement checks passed.
+==> scripts/check-dispatch-centres-show-all-popup-v1078.mjs
+Dispatch Centres Show all middle-click popup checks passed.
+==> scripts/check-fast-personnel-register.mjs
+Fast personnel register contracts passed: routine refresh reuses unchanged exact records, unsafe or changed vehicles are verified, full audit remains available and exact page requests are bounded.
+==> scripts/check-fire-airfield-personnel-assignment-profiles.mjs
+PASS: all Fire/Airfield Personnel Assignment profiles are live with exact vehicle, companion, training, seat and building contracts, including the complete safe batch.
+==> scripts/check-fire-engine-or-riv-priority-v10118.mjs
+PASS: Fire Engines or RIVs uses exact type-76 RIVs first, tops up only the remainder with exact type-16 Rescue Pumps, counts both toward the row, and never substitutes Water Ladders or CARPs.
+==> scripts/check-fire-engine-update-mapping.mjs
+Fire Engine Update selection is restricted to pump-capable Fire types 0/16/17, excludes Ambulance type 5 and removes only the Auto Mode explanatory helper copy beneath the queue checkbox.
+==> scripts/check-generic-drone-family-v10122.mjs
+PASS: Required Drone(s) accepts exact type 89 SAR or type 91 Police Drone Vehicles across shared selection and verification, while explicit Police/Helicopter modes and the bare-Drone guard remain strict.
+==> scripts/check-hazmat-osu-issue-215.mjs
+Issue #215 regression passed: HazMat requirements preserve quantity, count selected OSUs and accept only exact type-39 Operational Support Units across Unit Finder and Mission Update.
+==> scripts/check-hazmat-personnel-osu.mjs
+HazMat personnel regression passed: 4 missing gw_gefahrgut-trained staff select one exact type-39 OSU at six personnel per vehicle, while ordinary HazMat vehicle quantities remain separate.
+==> scripts/check-hems-ambulance-eta-priority.mjs
+<anonymous_script>:15
+                readMissionLoggerUnitJourneyMetrics(input);
+                ^
+
+ReferenceError: readMissionLoggerUnitJourneyMetrics is not defined
+    at getMetrics (eval at <anonymous> (file:///home/runner/work/MissionChief-Command-Nexus/MissionChief-Command-Nexus/scripts/check-hems-ambulance-eta-priority.mjs:54:16), <anonymous>:15:17)
+    at eval (eval at <anonymous> (file:///home/runner/work/MissionChief-Command-Nexus/MissionChief-Command-Nexus/scripts/check-hems-ambulance-eta-priority.mjs:54:16), <anonymous>:29:30)
+    at Array.sort (<anonymous>)
+    at sortVehicleCheckboxesByBestArrival (eval at <anonymous> (file:///home/runner/work/MissionChief-Command-Nexus/MissionChief-Command-Nexus/scripts/check-hems-ambulance-eta-priority.mjs:54:16), <anonymous>:28:17)
+    at file:///home/runner/work/MissionChief-Command-Nexus/MissionChief-Command-Nexus/scripts/check-hems-ambulance-eta-priority.mjs:70:5
+
+Node.js v22.23.2
