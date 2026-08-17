@@ -52,19 +52,19 @@ jobs:
               raise SystemExit(f'Unclosed staged builder string: {triple}')
 
           script = '\n'.join(rebuilt) + '\n'
-          strict_guard = (
-              "    if count != 1:\n"
-              "        raise SystemExit(f'{label}: expected one match, found {count}')\n"
-          )
-          idempotent_guard = (
-              "    if count != 1:\n"
-              "        if count == 0 and new in text:\n"
-              "            return text\n"
-              "        raise SystemExit(f'{label}: expected one match, found {count}')\n"
-          )
-          if strict_guard not in script:
-              raise SystemExit('Could not make staged replace_once idempotent')
-          script = script.replace(strict_guard, idempotent_guard, 1)
+          for label in [
+              'top-window logger startup',
+              'existing top-window mutation observer integration',
+          ]:
+              label_at = script.index(repr(label))
+              call_at = script.rfind('source = replace_once(', 0, label_at)
+              if call_at < 0:
+                  raise SystemExit(f'Could not locate staged call for {label}')
+              line_start = script.rfind('\n', 0, call_at) + 1
+              call_end = script.index('\n)', label_at) + 2
+              if call_end < len(script) and script[call_end] == '\n':
+                  call_end += 1
+              script = script[:line_start] + script[call_end:]
 
           userscript_path = Path('src/missionchief-command-nexus.user.js')
           userscript = userscript_path.read_text(encoding='utf-8')
@@ -120,7 +120,7 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add tmp/mission-generation-builder-error.txt
-            git commit -m "Record mission logger builder failure"
+            git commit -m "Record mission logger builder failure" || true
             git push origin HEAD:fix/mission-generation-and-journey-capture
             exit "$status"
           fi
