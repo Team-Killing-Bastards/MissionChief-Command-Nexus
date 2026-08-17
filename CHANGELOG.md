@@ -6,7 +6,21 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
-No changes have been queued after `1.1.0`.
+No changes have been queued after `1.1.1`.
+
+## [1.1.1] - 2026-08-17
+
+### Fixed
+
+- Recovered dispatched missions that finish while every paired browser is offline. On startup, reconnect or manual sync, Nexus now resumes through the signed-in player's same-origin MissionChief `/credits` ledger and reconstructs the missing completion only when the transaction exposes the exact mission ID and normalized mission title.
+- Recorded the authoritative ledger transaction time as the recovered mission finish time and the exact transaction amount as actual awarded credits, then sent the result through the existing bounded Google logger queue and configured Apps Script endpoint.
+- Added a resumable ledger page/floor checkpoint, automatic online-event catch-up and queue-headroom pauses so a long offline period cannot silently overflow the existing 300-event outbox. Failed ledger requests do not advance the successful checkpoint.
+
+### Security and compatibility
+
+- Kept title-only, patient, prisoner and other side transactions fail-closed for offline recovery; the existing unique title/time fallback remains limited to missions whose native completion time was already captured.
+- Preserved all existing Mission Analytics links and storage: the Google Apps Script deployment URL, spreadsheet/dashboard, Greasy Fork install/update path, player/browser pairing and queued events require no migration or re-pairing.
+- Increased the unified userscript from `1.1.0` to `1.1.1`. Mission Finder remains `V10.7.0`, Resource Administration remains `V4.2.8`, Unit Naming remains `3.3.27`, Station Naming remains `1.3.22`, and Personnel Assignment remains `1.3.12`.
 
 ## [1.1.0] - 2026-08-16
 
