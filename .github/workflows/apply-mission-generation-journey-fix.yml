@@ -217,9 +217,28 @@ jobs:
       - name: Validate release and repository
         shell: bash
         run: |
-          node scripts/validate-userscript.mjs --base-ref origin/main
-          python3 scripts/check_repository.py
-          git diff --check
+          set +e
+          mkdir -p tmp
+          : > tmp/mission-generation-validation-error.txt
+          node scripts/validate-userscript.mjs --base-ref origin/main 2>&1 | tee -a tmp/mission-generation-validation-error.txt
+          status=${PIPESTATUS[0]}
+          if [ "$status" -eq 0 ]; then
+            python3 scripts/check_repository.py 2>&1 | tee -a tmp/mission-generation-validation-error.txt
+            status=${PIPESTATUS[0]}
+          fi
+          if [ "$status" -eq 0 ]; then
+            git diff --check 2>&1 | tee -a tmp/mission-generation-validation-error.txt
+            status=${PIPESTATUS[0]}
+          fi
+          if [ "$status" -ne 0 ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add tmp/mission-generation-validation-error.txt
+            git commit -m "Record mission logger validation failure" || true
+            git push origin HEAD:fix/mission-generation-and-journey-capture
+            exit "$status"
+          fi
+          rm -f tmp/mission-generation-validation-error.txt
 
       - name: Commit production change
         shell: bash
