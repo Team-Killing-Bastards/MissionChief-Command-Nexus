@@ -134,6 +134,7 @@ requireText(source, 'Pair this browser', 'one-time pairing control');
 requireText(source, 'Queued events:', 'visible outbox status');
 requireText(source, 'Last upload:', 'visible upload status');
 requireText(source, 'exact transaction matching active', 'visible exact-credit status');
+requireText(source, 'offline completion', 'visible offline-recovery status');
 requireText(source, "'/credits'", 'same-origin MissionChief Credits ledger');
 requireText(source, 'Passwords, cookies and personnel names are never collected.', 'privacy disclosure');
 
@@ -402,6 +403,10 @@ const ledgerHasActual = extractFunction(
   source,
   'missionLoggerRecordHasActualCredits'
 );
+const offlineCreditCandidates = extractFunction(
+  source,
+  'getMissionLoggerOfflineCreditCandidates'
+);
 const ledgerMatcher = extractFunction(
   source,
   'findMissionLoggerCreditMatch'
@@ -416,12 +421,14 @@ const ledgerRuntime = Function(
    ${ledgerDescriptionNormaliser}
    ${ledgerDocumentParser}
    ${ledgerHasActual}
+   ${offlineCreditCandidates}
    ${ledgerMatcher}
    return {
      amount: parseMissionLoggerCreditAmount,
      timestamp: parseMissionLoggerCreditTimestamp,
      normalise: normaliseMissionLoggerCreditDescription,
      parse: parseMissionLoggerCreditTransactionsFromDocument,
+     offlineCandidates: getMissionLoggerOfflineCreditCandidates,
      match: findMissionLoggerCreditMatch
    };`
 )();
@@ -489,6 +496,79 @@ const pendingCreditRegistry = {
 expect(
   ledgerRuntime.match(parsedLedger[0], pendingCreditRegistry, creditIdentity)?.strategy === 'mission-id',
   'An exposed ledger mission ID plus the mission title must be the preferred exact match'
+);
+const offlineCreditRegistry = {
+  'marty|123': {
+    playerId: 'marty',
+    missionId: '123',
+    missionName: 'Warehouse Fire',
+    firstUnitSentAt: '2026-08-16T12:00:00.000Z',
+    completedAt: '',
+  },
+};
+expect(
+  ledgerRuntime.offlineCandidates(
+    offlineCreditRegistry,
+    creditIdentity
+  ).length === 1,
+  'A dispatched mission without a completion callback must enter the offline recovery pool'
+);
+expect(
+  ledgerRuntime.match(
+    parsedLedger[0],
+    offlineCreditRegistry,
+    creditIdentity
+  ) === null,
+  'Normal credit matching must not infer an offline completion without explicit recovery authority'
+);
+expect(
+  ledgerRuntime.match(
+    parsedLedger[0],
+    offlineCreditRegistry,
+    creditIdentity,
+    { allowOfflineRecovery: true }
+  )?.strategy === 'offline-mission-id',
+  'Offline recovery must accept an exact mission ID plus normalized mission title after dispatch'
+);
+expect(
+  ledgerRuntime.match(
+    {
+      ...parsedLedger[0],
+      transactionId: 'txn-before-dispatch',
+      transactionAt: '2026-08-16T11:50:00.000Z',
+    },
+    offlineCreditRegistry,
+    creditIdentity,
+    { allowOfflineRecovery: true }
+  ) === null,
+  'Offline recovery must reject a transaction from before the first unit was sent'
+);
+expect(
+  ledgerRuntime.match(
+    {
+      ...parsedLedger[0],
+      transactionId: 'txn-offline-patient',
+      description: 'Patient Treatment',
+      normalisedDescription: 'patient treatment',
+    },
+    offlineCreditRegistry,
+    creditIdentity,
+    { allowOfflineRecovery: true }
+  ) === null,
+  'Offline recovery must reject patient and other side transactions even when the mission ID is exposed'
+);
+expect(
+  ledgerRuntime.match(
+    {
+      ...parsedLedger[0],
+      transactionId: 'txn-offline-title-only',
+      missionId: '',
+    },
+    offlineCreditRegistry,
+    creditIdentity,
+    { allowOfflineRecovery: true }
+  ) === null,
+  'Offline recovery must fail closed when the ledger does not expose a mission ID'
 );
 expect(
   ledgerRuntime.match(
@@ -565,12 +645,96 @@ const ledgerRecord = extractFunction(
 for (const token of [
   "eventType: 'mission-credit'",
   "'missionchief-credit-ledger'",
+  "'credit-ledger-offline-recovery'",
+  "'offline-mission-id'",
   'creditTransactionId:',
   'creditMatchStrategy:',
   'actualCredits: amount',
 ]) {
   expect(ledgerRecord.includes(token), `Exact credit event missing ${token}`);
 }
+
+let recoveredCreditEvent = null;
+const recordCreditRuntime = Function(
+  'readMissionLoggerIdentity',
+  'queueMissionLoggerEvent',
+  'window',
+  `"use strict";
+   const MF_MISSION_LOGGER_SCHEMA_VERSION = 1;
+   const MF_MISSION_LOGGER_MISSION_FINDER_VERSION = '10.7.0';
+   const createMissionLoggerId = () => 'event-offline-recovered';
+   ${trimLoggerText}
+   ${ledgerRecord}
+   return recordMissionLoggerCreditTransaction;`
+)(
+  () => creditIdentity,
+  event => {
+    recoveredCreditEvent = event;
+    return true;
+  },
+  { location: { origin: 'https://www.missionchief.co.uk' } }
+);
+expect(
+  recordCreditRuntime(parsedLedger[0], {
+    key: 'marty|123',
+    record: offlineCreditRegistry['marty|123'],
+    strategy: 'offline-mission-id',
+    distanceMs: 903000,
+  }) === true,
+  'An exact offline credit match must queue a recovered mission event'
+);
+expect(
+  recoveredCreditEvent?.metadata?.completedAt ===
+    parsedLedger[0].transactionAt,
+  'Offline recovery must use the MissionChief transaction timestamp as the finish time'
+);
+expect(
+  recoveredCreditEvent?.metadata?.completionSource ===
+    'credit-ledger-offline-recovery',
+  'Offline recovery must preserve an auditable completion source'
+);
+expect(
+  recoveredCreditEvent?.metadata?.offlineRecovered === true,
+  'Offline recovery must explicitly mark the delayed completion'
+);
+expect(
+  recoveredCreditEvent?.actualCredits === parsedLedger[0].amount,
+  'Offline recovery must preserve the exact awarded credits'
+);
+
+const creditReconciliation = extractFunction(
+  source,
+  'reconcileMissionLoggerCreditTransactions'
+);
+for (const token of [
+  'MF_MISSION_LOGGER_CREDIT_CATCHUP_PAGES_PER_RUN',
+  'offlineCreditCatchupNextPage',
+  'offlineCreditCatchupFloorAt',
+  'MF_MISSION_LOGGER_MAX_QUEUE_EVENTS -',
+  'nextPage = page;',
+  'if (scanDeferredForQueue) break;',
+  'allowOfflineRecovery',
+  'totalOfflineRecoveredCreditEvents',
+  'lastCreditSuccessAt',
+]) {
+  expect(
+    creditReconciliation.includes(token),
+    `Offline credit reconciliation missing ${token}`
+  );
+}
+
+const connectivityListener = extractFunction(
+  source,
+  'installMissionLoggerConnectivityListener'
+);
+expect(
+  connectivityListener.includes("addEventListener(\n            'online'"),
+  'Logger must schedule catch-up when the browser reconnects'
+);
+expect(
+  connectivityListener.includes('reconnected: true'),
+  'Reconnect sync must request the offline recovery path'
+);
 
 const registryKey = extractFunction(
   source,
@@ -685,6 +849,7 @@ expect(
 const cleanup = extractFunction(source, 'cleanupMissionLoggerRuntime');
 expect(cleanup.includes('stopMissionLoggerSyncTimer()') || cleanup.includes('suspendMissionLoggerRuntime()'), 'Logger cleanup must stop timers');
 expect(cleanup.includes("removeEventListener(\n                'storage'"), 'Logger cleanup must remove its storage listener');
+expect(cleanup.includes("removeEventListener(\n                'online'"), 'Logger cleanup must remove its connectivity listener');
 expect(cleanup.includes("removeEventListener(\n                'message'"), 'Logger cleanup must remove its response listener');
 
 const disconnect = extractFunction(source, 'disconnectMissionLoggerBrowser');

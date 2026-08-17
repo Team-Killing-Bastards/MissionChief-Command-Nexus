@@ -19,7 +19,7 @@
 </tr>
 </table>
 
-**Current version:** `1.1.0` · **Mission Finder engine:** `V10.7.0` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
+**Current version:** `1.1.1` · **Mission Finder engine:** `V10.7.0` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)
@@ -328,7 +328,7 @@ Validation covers JavaScript syntax, metadata, component versions, the entire pe
 
 ## On the command horizon
 
-Version `1.1.0` delivers [issue #334's opt-in Mission Analytics Logger](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/334) with secure player/browser pairing, bounded Google sync, exact dispatch snapshots, mission timing, weekly archives and evidence-backed awarded credits.
+Version `1.1.1` extends [issue #334's opt-in Mission Analytics Logger](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/334) with secure player/browser pairing, bounded Google sync, exact dispatch snapshots, mission timing, weekly archives, evidence-backed awarded credits and resumable completion recovery after every paired browser was offline.
 
 The [issue tracker](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues) remains the authoritative queue. The [roadmap](docs/ROADMAP.md) records longer-lived engineering priorities.
 

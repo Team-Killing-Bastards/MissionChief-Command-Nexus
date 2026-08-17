@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.1.0
+// @version      1.1.1
 // @description  Unified MissionChief UK toolkit for mission dispatch, resource administration, trained-personnel assignment and opt-in mission analytics.
 // @author       MartyBlyth
 // @license      MIT
@@ -14258,7 +14258,7 @@
     const SESSION_STATS_KEY = 'mf_session_stats_v1';
     const SESSION_REFRESH_FLAG = 'mf_session_manual_refresh_checked';
     const MF_MISSION_LOGGER_SCHEMA_VERSION = 1;
-    const MF_MISSION_LOGGER_CLIENT_VERSION = '1.1.0';
+    const MF_MISSION_LOGGER_CLIENT_VERSION = '1.1.1';
     const MF_MISSION_LOGGER_MISSION_FINDER_VERSION =
         '10.7.0';
     const MF_MISSION_LOGGER_ENABLED_KEY =
@@ -14294,6 +14294,9 @@
     const MF_MISSION_LOGGER_CREDIT_AUTO_LOOKBACK_MS =
         30 * 60 * 1000;
     const MF_MISSION_LOGGER_CREDIT_MAX_PAGES = 3;
+    const MF_MISSION_LOGGER_CREDIT_PAGE_SIZE = 20;
+    const MF_MISSION_LOGGER_CREDIT_CATCHUP_VERSION = 1;
+    const MF_MISSION_LOGGER_CREDIT_CATCHUP_PAGES_PER_RUN = 25;
     const MF_MISSION_LOGGER_CREDIT_RETRY_DELAYS_MS =
         Object.freeze([2500, 15000, 45000]);
     const MF_MISSION_LOGGER_REQUEST_TIMEOUT_MS =
@@ -14322,6 +14325,7 @@
     const mfMissionLoggerCreditRetryTimers = new Set();
     let mfMissionLoggerMessageHandler = null;
     let mfMissionLoggerStorageHandler = null;
+    let mfMissionLoggerOnlineHandler = null;
     let mfMissionLoggerDispatchClickHandler = null;
     let mfMissionLoggerCompletionHook = null;
     let mfMissionLoggerLastDispatchFingerprint = '';
@@ -22504,7 +22508,7 @@ function isRoadRailUnitVehicleCheckbox(input) {
             <div id="mf-mission-logger-credit-status" class="mf2026-small" style="margin-top:2px;"></div>
             <div id="mf-mission-logger-error" class="mf2026-small mf2026-warn" style="margin-top:4px;" hidden></div>
             <div class="mf2026-small" style="margin-top:7px;">
-                Records mission identifiers/URLs, advertised and exact awarded value, requirements, current casualty counts, available generator information and selected vehicle IDs/types/names. Exact awards are matched locally against MissionChief's own Credits transactions; the rest of the account ledger is never uploaded. Uploads use a persistent five-minute batch queue. Passwords, cookies and personnel names are never collected.
+                Records mission identifiers/URLs, advertised and exact awarded value, requirements, current casualty counts, available generator information and selected vehicle IDs/types/names. Exact awards are matched locally against MissionChief's own Credits transactions; the rest of the account ledger is never uploaded. Missed completions are recovered from exact MissionChief credit transactions when this browser reconnects. Uploads use a persistent five-minute batch queue. Passwords, cookies and personnel names are never collected.
             </div>
             <div class="mf2026-small" style="margin-top:4px;">
                 Each paired browser has its own player identity. Disconnecting removes its credential and any unsent events from this browser.
@@ -26040,9 +26044,15 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
         writeMissionLoggerState({
             lastError: '',
             lastCreditCheckAt: 0,
+            lastCreditSuccessAt: 0,
             lastCreditMatchAt: 0,
             lastCreditError: '',
-            totalMatchedCreditEvents: 0
+            totalMatchedCreditEvents: 0,
+            totalOfflineRecoveredCreditEvents: 0,
+            offlineCreditRecoveryVersion: 0,
+            offlineCreditCatchupNextPage: 1,
+            offlineCreditCatchupFloorAt: 0,
+            offlineCreditCatchupDeferred: false
         });
         startMissionLoggerSyncTimer();
         recordMissionLoggerObservedEvent();
@@ -26122,12 +26132,18 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
         }
 
         await reconcileMissionLoggerCreditTransactions({
-            force: options.manual === true,
-            includeOlder: options.manual === true,
+            force:
+                options.manual === true ||
+                options.reconnected === true,
+            includeOlder:
+                options.manual === true ||
+                options.reconnected === true,
             maxPages:
-                options.manual === true
-                    ? MF_MISSION_LOGGER_CREDIT_MAX_PAGES
-                    : 1
+                options.manual === true ||
+                options.reconnected === true
+                    ? MF_MISSION_LOGGER_CREDIT_CATCHUP_PAGES_PER_RUN
+                    : undefined,
+            allowOfflineRecovery: true
         });
 
         if (isMissionPage()) {
@@ -26295,6 +26311,8 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
     function startMissionLoggerSyncTimer() {
         if (!MF_IS_TOP_WINDOW) return;
 
+        installMissionLoggerConnectivityListener();
+
         if (
             !mfMissionLoggerEnabled ||
             !mfMissionLoggerEndpoint ||
@@ -26393,6 +26411,31 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
         );
     }
 
+    function installMissionLoggerConnectivityListener() {
+        if (!MF_IS_TOP_WINDOW || mfMissionLoggerOnlineHandler) {
+            return;
+        }
+
+        mfMissionLoggerOnlineHandler = () => {
+            if (
+                !mfMissionLoggerEnabled ||
+                !mfMissionLoggerEndpoint ||
+                !readMissionLoggerIdentity()
+            ) {
+                return;
+            }
+
+            void syncMissionLoggerNow({
+                reconnected: true
+            });
+        };
+
+        window.addEventListener(
+            'online',
+            mfMissionLoggerOnlineHandler
+        );
+    }
+
     async function disconnectMissionLoggerBrowser() {
         const identity = readMissionLoggerIdentity();
 
@@ -26442,9 +26485,15 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
         stopMissionLoggerCreditReconciliation();
         writeMissionLoggerState({
             lastCreditCheckAt: 0,
+            lastCreditSuccessAt: 0,
             lastCreditMatchAt: 0,
             lastCreditError: '',
-            totalMatchedCreditEvents: 0
+            totalMatchedCreditEvents: 0,
+            totalOfflineRecoveredCreditEvents: 0,
+            offlineCreditRecoveryVersion: 0,
+            offlineCreditCatchupNextPage: 1,
+            offlineCreditCatchupFloorAt: 0,
+            offlineCreditCatchupDeferred: false
         });
         renderMissionLoggerStatus();
     }
@@ -27655,6 +27704,40 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
         );
     }
 
+    function getMissionLoggerOfflineCreditCandidates(
+        registry = readMissionLoggerMissionRegistry(),
+        identity = readMissionLoggerIdentity(),
+        maxAgeMs = Number.POSITIVE_INFINITY
+    ) {
+        if (!identity) return [];
+
+        return Object.entries(
+            registry && typeof registry === 'object'
+                ? registry
+                : {}
+        ).filter(([, record]) => {
+            const firstUnitSentAt = Date.parse(
+                String(record?.firstUnitSentAt || '')
+            );
+            const withinAge =
+                !Number.isFinite(maxAgeMs) ||
+                (
+                    Number.isFinite(firstUnitSentAt) &&
+                    Date.now() - firstUnitSentAt <= maxAgeMs
+                );
+
+            return !!(
+                record &&
+                String(record.playerId || '') ===
+                    String(identity.playerId || '') &&
+                Number.isFinite(firstUnitSentAt) &&
+                !record.completedAt &&
+                withinAge &&
+                !missionLoggerRecordHasActualCredits(record)
+            );
+        });
+    }
+
     function countPendingMissionLoggerCredits(
         registry = readMissionLoggerMissionRegistry(),
         identity = readMissionLoggerIdentity(),
@@ -27691,7 +27774,8 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
     function findMissionLoggerCreditMatch(
         transaction,
         registry = readMissionLoggerMissionRegistry(),
-        identity = readMissionLoggerIdentity()
+        identity = readMissionLoggerIdentity(),
+        options = {}
     ) {
         if (
             !transaction ||
@@ -27741,6 +27825,10 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
                 transaction.description
             );
 
+        const transactionTime = Date.parse(
+            String(transaction.transactionAt || '')
+        );
+
         const explicitMissionId = String(
             transaction.missionId || ''
         );
@@ -27766,11 +27854,57 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
                     distanceMs: 0
                 };
             }
+
+            if (
+                options.allowOfflineRecovery === true &&
+                Number.isFinite(transactionTime)
+            ) {
+                const offlineMatches =
+                    getMissionLoggerOfflineCreditCandidates(
+                        registry,
+                        identity
+                    ).filter(([, record]) => {
+                        const firstUnitSentAt = Date.parse(
+                            String(
+                                record.firstUnitSentAt || ''
+                            )
+                        );
+
+                        return (
+                            String(record.missionId || '') ===
+                                explicitMissionId &&
+                            description &&
+                            normaliseMissionLoggerCreditDescription(
+                                record.missionName
+                            ) === description &&
+                            Number.isFinite(firstUnitSentAt) &&
+                            transactionTime >=
+                                firstUnitSentAt -
+                                    MF_MISSION_LOGGER_CREDIT_MATCH_WINDOW_MS
+                        );
+                    });
+
+                if (offlineMatches.length === 1) {
+                    const firstUnitSentAt = Date.parse(
+                        String(
+                            offlineMatches[0][1]
+                                .firstUnitSentAt || ''
+                        )
+                    );
+
+                    return {
+                        key: offlineMatches[0][0],
+                        record: offlineMatches[0][1],
+                        strategy: 'offline-mission-id',
+                        distanceMs: Math.max(
+                            0,
+                            transactionTime - firstUnitSentAt
+                        )
+                    };
+                }
+            }
         }
 
-        const transactionTime = Date.parse(
-            String(transaction.transactionAt || '')
-        );
         if (!Number.isFinite(transactionTime) || !description) {
             return null;
         }
@@ -27825,6 +27959,14 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
 
         const amount = Number(transaction.amount);
         if (!Number.isFinite(amount) || amount <= 0) return false;
+
+        const recoveredOffline =
+            match.strategy === 'offline-mission-id' &&
+            !record.completedAt;
+        const completedAt =
+            record.completedAt ||
+            transaction.transactionAt ||
+            new Date().toISOString();
 
         const event = {
             schemaVersion:
@@ -27889,14 +28031,16 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
             metadata: {
                 source: 'missionchief-command-nexus',
                 completionSource:
-                    'native-mission-finish',
+                    recoveredOffline
+                        ? 'credit-ledger-offline-recovery'
+                        : 'native-mission-finish',
                 completionVerified: true,
                 firstObservedAt:
                     record.firstObservedAt || '',
                 firstUnitSentAt:
                     record.firstUnitSentAt || '',
                 completedAt:
-                    record.completedAt || '',
+                    completedAt,
                 dispatchCount: Math.max(
                     0,
                     Number(record.dispatchCount || 0)
@@ -27925,6 +28069,7 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
                     0,
                     Number(match.distanceMs || 0)
                 ),
+                offlineRecovered: recoveredOffline,
                 missionFinderVersion:
                     MF_MISSION_LOGGER_MISSION_FINDER_VERSION
             }
@@ -27981,19 +28126,87 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
             return 0;
         }
 
-        if (
+        const now = Date.now();
+        const identity = readMissionLoggerIdentity();
+        const registry = readMissionLoggerMissionRegistry();
+        const stateBefore = readMissionLoggerState();
+        const lastCreditSuccessAt = Math.max(
+            0,
+            Number(
+                stateBefore.lastCreditSuccessAt ||
+                (
+                    !stateBefore.lastCreditError
+                        ? stateBefore.lastCreditCheckAt
+                        : 0
+                ) ||
+                0
+            )
+        );
+        const storedCatchupPage = Math.max(
+            1,
+            parseInt(
+                stateBefore.offlineCreditCatchupNextPage,
+                10
+            ) || 1
+        );
+        const recoveryVersionCurrent =
+            Number(
+                stateBefore.offlineCreditRecoveryVersion || 0
+            ) >= MF_MISSION_LOGGER_CREDIT_CATCHUP_VERSION;
+        const recoveryStale =
+            !lastCreditSuccessAt ||
+            now - lastCreditSuccessAt >
+                MF_MISSION_LOGGER_CREDIT_RECONCILE_INTERVAL_MS * 2;
+        const allowOfflineRecovery =
+            options.allowOfflineRecovery !== false;
+        const recoveryRequired =
+            allowOfflineRecovery &&
+            (
+                options.includeOlder === true ||
+                !recoveryVersionCurrent ||
+                recoveryStale ||
+                storedCatchupPage > 1
+            );
+        const maxAgeMs = recoveryRequired
+            ? Number.POSITIVE_INFINITY
+            : MF_MISSION_LOGGER_CREDIT_AUTO_LOOKBACK_MS;
+        const pendingCreditCount =
             countPendingMissionLoggerCredits(
-                undefined,
-                undefined,
-                options.includeOlder === true
-                    ? Number.POSITIVE_INFINITY
-                    : MF_MISSION_LOGGER_CREDIT_AUTO_LOOKBACK_MS
-            ) <= 0
+                registry,
+                identity,
+                maxAgeMs
+            );
+        const offlineCandidates = allowOfflineRecovery
+            ? getMissionLoggerOfflineCreditCandidates(
+                registry,
+                identity,
+                maxAgeMs
+            )
+            : [];
+
+        if (
+            pendingCreditCount <= 0 &&
+            offlineCandidates.length <= 0
         ) {
+            if (
+                !recoveryVersionCurrent ||
+                storedCatchupPage > 1 ||
+                recoveryRequired
+            ) {
+                writeMissionLoggerState({
+                    lastCreditCheckAt: now,
+                    lastCreditSuccessAt: now,
+                    lastCreditError: '',
+                    offlineCreditRecoveryVersion:
+                        MF_MISSION_LOGGER_CREDIT_CATCHUP_VERSION,
+                    offlineCreditCatchupNextPage: 1,
+                    offlineCreditCatchupFloorAt: 0,
+                    offlineCreditCatchupDeferred: false
+                });
+            }
             return 0;
         }
 
-        const now = Date.now();
         if (
             options.force !== true &&
             now - mfMissionLoggerCreditLastFetchAt <
@@ -28005,23 +28218,93 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
         mfMissionLoggerCreditReconcileActive = true;
         mfMissionLoggerCreditLastFetchAt = now;
         let matched = 0;
+        let recoveredOffline = 0;
+        let nextPage = recoveryRequired
+            ? storedCatchupPage
+            : 1;
+        let recoveryFloorAt = Math.max(
+            0,
+            Number(
+                stateBefore.offlineCreditCatchupFloorAt || 0
+            )
+        );
+        let recoveryComplete = !recoveryRequired;
+        let scanDeferredForQueue = false;
 
         try {
+            if (recoveryRequired && recoveryFloorAt <= 0) {
+                const candidateTimes = Object.values(registry)
+                    .filter(record => {
+                        return !!(
+                            record &&
+                            String(record.playerId || '') ===
+                                String(identity.playerId || '') &&
+                            record.firstUnitSentAt &&
+                            !missionLoggerRecordHasActualCredits(
+                                record
+                            )
+                        );
+                    })
+                    .map(record => {
+                        return Date.parse(
+                            String(
+                                record.completedAt ||
+                                record.firstUnitSentAt ||
+                                ''
+                            )
+                        );
+                    })
+                    .filter(Number.isFinite);
+                const oldestCandidateAt = candidateTimes.length
+                    ? Math.min(...candidateTimes)
+                    : now;
+
+                recoveryFloorAt = Math.max(
+                    0,
+                    (
+                        recoveryVersionCurrent &&
+                        lastCreditSuccessAt
+                            ? lastCreditSuccessAt
+                            : oldestCandidateAt
+                    ) - MF_MISSION_LOGGER_CREDIT_MATCH_WINDOW_MS
+                );
+            }
+
             const requestedPages = parseInt(
                 options.maxPages,
                 10
             );
+            const pageLimit = recoveryRequired
+                ? MF_MISSION_LOGGER_CREDIT_CATCHUP_PAGES_PER_RUN
+                : MF_MISSION_LOGGER_CREDIT_MAX_PAGES;
             const maxPages = Math.min(
-                MF_MISSION_LOGGER_CREDIT_MAX_PAGES,
+                pageLimit,
                 Math.max(
                     1,
                     Number.isFinite(requestedPages)
                         ? requestedPages
-                        : 1
+                        : recoveryRequired
+                            ? pageLimit
+                            : 1
                 )
             );
 
-            for (let page = 1; page <= maxPages; page += 1) {
+            for (
+                let pageOffset = 0;
+                pageOffset < maxPages;
+                pageOffset += 1
+            ) {
+                const page = nextPage;
+                if (
+                    readMissionLoggerQueue().length >
+                        MF_MISSION_LOGGER_MAX_QUEUE_EVENTS -
+                            MF_MISSION_LOGGER_CREDIT_PAGE_SIZE
+                ) {
+                    scanDeferredForQueue = true;
+                    recoveryComplete = false;
+                    break;
+                }
+
                 const transactions =
                     await fetchMissionLoggerCreditLedgerPage(page);
                 const ordered = transactions.slice().sort(
@@ -28032,12 +28315,25 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
                 );
 
                 for (const transaction of ordered) {
+                    if (
+                        readMissionLoggerQueue().length >=
+                            MF_MISSION_LOGGER_MAX_QUEUE_EVENTS
+                    ) {
+                        scanDeferredForQueue = true;
+                        recoveryComplete = false;
+                        nextPage = page;
+                        break;
+                    }
+
                     const registry =
                         readMissionLoggerMissionRegistry();
                     const match = findMissionLoggerCreditMatch(
                         transaction,
                         registry,
-                        readMissionLoggerIdentity()
+                        readMissionLoggerIdentity(),
+                        {
+                            allowOfflineRecovery
+                        }
                     );
                     if (
                         match &&
@@ -28047,18 +28343,56 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
                         )
                     ) {
                         matched += 1;
+                        if (
+                            match.strategy ===
+                                'offline-mission-id'
+                        ) {
+                            recoveredOffline += 1;
+                        }
                     }
                 }
 
-                if (transactions.length < 20) break;
+                if (scanDeferredForQueue) break;
+
+                nextPage = page + 1;
+
+                const transactionTimes = transactions
+                    .map(transaction => {
+                        return Date.parse(
+                            String(
+                                transaction.transactionAt || ''
+                            )
+                        );
+                    })
+                    .filter(Number.isFinite);
+                const reachedRecoveryFloor =
+                    recoveryRequired &&
+                    recoveryFloorAt > 0 &&
+                    transactionTimes.length > 0 &&
+                    Math.min(...transactionTimes) <=
+                        recoveryFloorAt;
+
+                if (
+                    transactions.length <
+                        MF_MISSION_LOGGER_CREDIT_PAGE_SIZE ||
+                    reachedRecoveryFloor
+                ) {
+                    recoveryComplete = true;
+                    break;
+                }
             }
 
             const state = readMissionLoggerState();
+            const completedAt = Date.now();
             writeMissionLoggerState({
-                lastCreditCheckAt: Date.now(),
+                lastCreditCheckAt: completedAt,
+                lastCreditSuccessAt:
+                    recoveryComplete
+                        ? completedAt
+                        : state.lastCreditSuccessAt,
                 lastCreditMatchAt:
                     matched > 0
-                        ? Date.now()
+                        ? completedAt
                         : state.lastCreditMatchAt,
                 lastCreditError: '',
                 totalMatchedCreditEvents:
@@ -28067,12 +28401,39 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
                         Number(
                             state.totalMatchedCreditEvents || 0
                         )
-                    ) + matched
+                    ) + matched,
+                lastOfflineCreditRecoveryAt:
+                    recoveredOffline > 0
+                        ? completedAt
+                        : state.lastOfflineCreditRecoveryAt,
+                totalOfflineRecoveredCreditEvents:
+                    Math.max(
+                        0,
+                        Number(
+                            state.totalOfflineRecoveredCreditEvents ||
+                            0
+                        )
+                    ) + recoveredOffline,
+                offlineCreditRecoveryVersion:
+                    recoveryComplete
+                        ? MF_MISSION_LOGGER_CREDIT_CATCHUP_VERSION
+                        : state.offlineCreditRecoveryVersion,
+                offlineCreditCatchupNextPage:
+                    recoveryComplete ? 1 : nextPage,
+                offlineCreditCatchupFloorAt:
+                    recoveryComplete ? 0 : recoveryFloorAt,
+                offlineCreditCatchupDeferred:
+                    scanDeferredForQueue
             });
             return matched;
         } catch (error) {
             writeMissionLoggerState({
                 lastCreditCheckAt: Date.now(),
+                offlineCreditCatchupNextPage:
+                    recoveryRequired ? nextPage : 1,
+                offlineCreditCatchupFloorAt:
+                    recoveryRequired ? recoveryFloorAt : 0,
+                offlineCreditCatchupDeferred: false,
                 lastCreditError: String(
                     error?.message ||
                     'MissionChief Credits could not be checked.'
@@ -28141,7 +28502,7 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
         mfMissionLoggerCreditInitialTimer = setTimeout(() => {
             mfMissionLoggerCreditInitialTimer = null;
             void reconcileMissionLoggerCreditTransactions({
-                maxPages: 1
+                allowOfflineRecovery: true
             });
 
             if (
@@ -28153,7 +28514,7 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
 
             mfMissionLoggerCreditTimer = setInterval(() => {
                 void reconcileMissionLoggerCreditTransactions({
-                    maxPages: 1
+                    allowOfflineRecovery: true
                 });
             }, MF_MISSION_LOGGER_CREDIT_RECONCILE_INTERVAL_MS);
         }, 7000);
@@ -28892,6 +29253,14 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
             mfMissionLoggerStorageHandler = null;
         }
 
+        if (mfMissionLoggerOnlineHandler) {
+            window.removeEventListener(
+                'online',
+                mfMissionLoggerOnlineHandler
+            );
+            mfMissionLoggerOnlineHandler = null;
+        }
+
         if (mfMissionLoggerMessageHandler) {
             window.removeEventListener(
                 'message',
@@ -28980,6 +29349,21 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
         const queueCount = readMissionLoggerQueue().length;
         const pendingCreditCount =
             countPendingMissionLoggerCredits();
+        const catchupNextPage = Math.max(
+            1,
+            parseInt(
+                state.offlineCreditCatchupNextPage,
+                10
+            ) || 1
+        );
+        const offlineRecoveredCount = Math.max(
+            0,
+            Number(
+                state.totalOfflineRecoveredCreditEvents || 0
+            )
+        );
+        const catchupDeferredForQueue =
+            state.offlineCreditCatchupDeferred === true;
         const endpointReady =
             !!normaliseMissionLoggerEndpoint(
                 mfMissionLoggerEndpoint
@@ -29044,9 +29428,15 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
                 ? 'Actual credits: available after pairing.'
                 : state.lastCreditError
                     ? `Actual credits: transaction check delayed — ${state.lastCreditError}`
+                    : catchupDeferredForQueue
+                        ? 'Actual credits: offline catch-up is paused while queued events upload.'
+                    : catchupNextPage > 1
+                        ? `Actual credits: offline catch-up is continuing from Credits page ${catchupNextPage}.`
                     : pendingCreditCount > 0
                         ? `Actual credits: ${pendingCreditCount} completed mission${pendingCreditCount === 1 ? '' : 's'} awaiting an exact transaction match.`
-                        : 'Actual credits: exact transaction matching active.';
+                        : offlineRecoveredCount > 0
+                            ? `Actual credits: exact transaction matching active — ${offlineRecoveredCount} offline completion${offlineRecoveredCount === 1 ? '' : 's'} recovered.`
+                            : 'Actual credits: exact transaction matching active.';
             creditStatus.classList.toggle(
                 'mf2026-warn',
                 !!state.lastCreditError
