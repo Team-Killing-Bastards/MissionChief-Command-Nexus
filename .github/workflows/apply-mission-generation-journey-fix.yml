@@ -146,10 +146,27 @@ jobs:
       - name: Run all permanent regressions
         shell: bash
         run: |
+          set +e
+          mkdir -p tmp
+          : > tmp/mission-generation-regression-error.txt
+          status=0
           for test in scripts/check-*.mjs; do
-            echo "==> $test"
-            node "$test"
+            echo "==> $test" | tee -a tmp/mission-generation-regression-error.txt
+            node "$test" 2>&1 | tee -a tmp/mission-generation-regression-error.txt
+            status=${PIPESTATUS[0]}
+            if [ "$status" -ne 0 ]; then
+              break
+            fi
           done
+          if [ "$status" -ne 0 ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add tmp/mission-generation-regression-error.txt
+            git commit -m "Record mission logger regression failure" || true
+            git push origin HEAD:fix/mission-generation-and-journey-capture
+            exit "$status"
+          fi
+          rm -f tmp/mission-generation-regression-error.txt
 
       - name: Validate release and repository
         shell: bash
