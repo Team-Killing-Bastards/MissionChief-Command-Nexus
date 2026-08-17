@@ -10,7 +10,7 @@
 
 const MC_LOGGER = Object.freeze({
   schemaVersion: 1,
-  buildId: '1.1.2-journey-1',
+  buildId: '1.1.2-dashboard-guard-1',
   timezone: 'Europe/London',
   maxPayloadChars: 2800000,
   maxEventsPerBatch: 40,
@@ -361,6 +361,18 @@ function createMissionChiefPlayerPairing() {
     const spreadsheet = getLoggerSpreadsheet_();
     ensureLoggerWorkbook_(spreadsheet);
     const players = spreadsheet.getSheetByName(MC_LOGGER_SHEETS.players.name);
+
+    const existingDisplayName = findActivePlayerByDisplayName_(
+    players,
+    displayName
+  );
+  if (existingDisplayName) {
+    throw new Error(
+      'An active player already uses the display name "' + displayName +
+      '". Use Create another device pairing with player ID ' +
+      existingDisplayName.playerId + ' instead.'
+    );
+  }
 
     if (findRowByValue_(players, 1, playerId)) {
       throw new Error('That player ID already exists.');
@@ -2168,7 +2180,10 @@ function loggerUnitIdentity_(row) {
 
 function clearLoggerSheetData_(sheet) {
   const lastRow = sheet.getLastRow();
-  if (lastRow >= 2) sheet.deleteRows(2, lastRow - 1);
+  const lastColumn = sheet.getLastColumn();
+  if (lastRow >= 2 && lastColumn >= 1) {
+    sheet.getRange(2, 1, lastRow - 1, lastColumn).clearContent();
+  }
   ensureLoggerSheetRowCapacity_(sheet, MC_LOGGER.liveSheetRowBuffer);
   trimLoggerSheetRows_(sheet);
 }
@@ -3032,4 +3047,30 @@ function rowsForBackupDay_(sheet, dateHeader, dayKey, timezone) {
     });
     return object;
   });
+}
+
+function findActivePlayerByDisplayName_(sheet, displayName) {
+  if (!sheet || sheet.getLastRow() < 2) return null;
+  const target = cleanText_(displayName, 120).toLowerCase();
+  if (!target) return null;
+
+  const rows = sheet.getRange(
+    2,
+    1,
+    sheet.getLastRow() - 1,
+    3
+  ).getValues();
+
+  for (let index = 0; index < rows.length; index += 1) {
+    const row = rows[index];
+    if (String(row[2] || '').toUpperCase() !== 'ACTIVE') continue;
+    const candidate = cleanText_(row[1], 120).toLowerCase();
+    if (candidate === target) {
+      return {
+        rowNumber: index + 2,
+        playerId: String(row[0] || '')
+      };
+    }
+  }
+  return null;
 }
