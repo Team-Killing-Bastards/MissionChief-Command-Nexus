@@ -38,7 +38,25 @@ jobs:
           script_path = Path('/tmp/apply-mission-generation-journey.py')
           script_path.write_text('\n'.join(rebuilt) + '\n', encoding='utf-8')
           PY
-          python3 /tmp/apply-mission-generation-journey.py
+
+          set +e
+          python3 -m py_compile /tmp/apply-mission-generation-journey.py > /tmp/builder-output.txt 2>&1
+          status=$?
+          if [ "$status" -eq 0 ]; then
+            python3 /tmp/apply-mission-generation-journey.py >> /tmp/builder-output.txt 2>&1
+            status=$?
+          fi
+          cat /tmp/builder-output.txt
+          if [ "$status" -ne 0 ]; then
+            mkdir -p tmp
+            cp /tmp/builder-output.txt tmp/mission-generation-builder-error.txt
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add tmp/mission-generation-builder-error.txt
+            git commit -m "Record mission logger builder failure"
+            git push origin HEAD:fix/mission-generation-and-journey-capture
+            exit "$status"
+          fi
           rm -f tmp/mission-generation-journey-builder-source.txt
 
       - name: Validate JavaScript syntax
