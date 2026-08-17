@@ -1,0 +1,31 @@
+name: Export Code.gs for user
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/export-codegs-user.yml
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out trusted main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Stage current Code.gs
+        run: cp integrations/google-apps-script/Code.gs Code.gs
+
+      - name: Upload current Code.gs
+        uses: actions/upload-artifact@v4
+        with:
+          name: current-codegs
+          path: Code.gs
+          if-no-files-found: error
+          retention-days: 1
