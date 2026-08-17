@@ -23,11 +23,27 @@ jobs:
       - name: Extract and run staged builder
         shell: bash
         run: |
-          python3 <<'PY'
+          set +e
+          python3 <<'PY' > /tmp/builder-output.txt 2>&1
           from pathlib import Path
 
           source_path = Path('tmp/mission-generation-journey-builder-source.txt')
           raw = source_path.read_text(encoding='utf-8')
+
+          for label in [
+              'top-window logger startup',
+              'existing top-window mutation observer integration',
+          ]:
+              label_token = f"              '{label}',"
+              label_at = raw.index(label_token)
+              call_at = raw.rfind('          source = replace_once(', 0, label_at)
+              if call_at < 0:
+                  raise SystemExit(f'Could not locate raw staged call for {label}')
+              call_end = raw.index('\n          )', label_at) + len('\n          )')
+              if call_end < len(raw) and raw[call_end] == '\n':
+                  call_end += 1
+              raw = raw[:call_at] + raw[call_end:]
+
           marker = "          python3 <<'PY'\n"
           start = raw.index(marker) + len(marker)
           end = raw.index("\n          PY\n", start)
@@ -50,21 +66,6 @@ jobs:
               rebuilt.append(output)
           if triple is not None:
               raise SystemExit(f'Unclosed staged builder string: {triple}')
-
-          script = '\n'.join(rebuilt) + '\n'
-          for label in [
-              'top-window logger startup',
-              'existing top-window mutation observer integration',
-          ]:
-              label_at = script.index(repr(label))
-              call_at = script.rfind('source = replace_once(', 0, label_at)
-              if call_at < 0:
-                  raise SystemExit(f'Could not locate staged call for {label}')
-              line_start = script.rfind('\n', 0, call_at) + 1
-              call_end = script.index('\n)', label_at) + 2
-              if call_end < len(script) and script[call_end] == '\n':
-                  call_end += 1
-              script = script[:line_start] + script[call_end:]
 
           userscript_path = Path('src/missionchief-command-nexus.user.js')
           userscript = userscript_path.read_text(encoding='utf-8')
@@ -103,16 +104,19 @@ jobs:
           userscript_path.write_text(userscript, encoding='utf-8')
 
           script_path = Path('/tmp/apply-mission-generation-journey.py')
-          script_path.write_text(script, encoding='utf-8')
+          script_path.write_text('\n'.join(rebuilt) + '\n', encoding='utf-8')
           PY
-
-          set +e
-          python3 -m py_compile /tmp/apply-mission-generation-journey.py > /tmp/builder-output.txt 2>&1
           status=$?
+
+          if [ "$status" -eq 0 ]; then
+            python3 -m py_compile /tmp/apply-mission-generation-journey.py >> /tmp/builder-output.txt 2>&1
+            status=$?
+          fi
           if [ "$status" -eq 0 ]; then
             python3 /tmp/apply-mission-generation-journey.py >> /tmp/builder-output.txt 2>&1
             status=$?
           fi
+
           cat /tmp/builder-output.txt
           if [ "$status" -ne 0 ]; then
             mkdir -p tmp
