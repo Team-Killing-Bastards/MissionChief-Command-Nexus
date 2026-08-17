@@ -147,18 +147,20 @@ jobs:
 
           test_path = Path('scripts/check-mission-journey-metrics.mjs')
           test = test_path.read_text(encoding='utf-8')
-          anchor = """expect(visible.estimatedDistanceKm === 3.4, 'Explicit kilometre text must remain valid native journey evidence');
-expect(visible.estimatedEtaSeconds === 420, 'Explicit ETA minute text must convert to seconds');
-
-"""
-          addition = anchor + """const unrelatedNumber = node({}, [], '34');
-const unrelatedRow = node({ __row: true }, [unrelatedNumber]);
-const unrelatedCheckbox = node({ __closest: unrelatedRow });
-const unrelated = readMetrics(unrelatedCheckbox);
-expect(unrelated.estimatedDistanceKm === null, 'An unlabelled numeric vehicle cell must not become distance evidence');
-expect(unrelated.estimatedEtaSeconds === null, 'An unlabelled numeric vehicle cell must not become ETA evidence');
-
-"""
+          anchor = (
+              "expect(visible.estimatedDistanceKm === 3.4, 'Explicit kilometre text must remain valid native journey evidence');\n"
+              "expect(visible.estimatedEtaSeconds === 420, 'Explicit ETA minute text must convert to seconds');\n"
+              "\n"
+          )
+          addition = anchor + (
+              "const unrelatedNumber = node({}, [], '34');\n"
+              "const unrelatedRow = node({ __row: true }, [unrelatedNumber]);\n"
+              "const unrelatedCheckbox = node({ __closest: unrelatedRow });\n"
+              "const unrelated = readMetrics(unrelatedCheckbox);\n"
+              "expect(unrelated.estimatedDistanceKm === null, 'An unlabelled numeric vehicle cell must not become distance evidence');\n"
+              "expect(unrelated.estimatedEtaSeconds === null, 'An unlabelled numeric vehicle cell must not become ETA evidence');\n"
+              "\n"
+          )
           test = replace_once(
               test,
               anchor,
