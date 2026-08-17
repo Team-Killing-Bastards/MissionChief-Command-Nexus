@@ -141,6 +141,17 @@ jobs:
           )
           readme_path.write_text(readme, encoding="utf-8")
 
+          for test_path in Path("scripts").glob("check-*.mjs"):
+              test_text = test_path.read_text(encoding="utf-8")
+              if "1.1.2-journey-1" in test_text:
+                  test_path.write_text(
+                      test_text.replace(
+                          "1.1.2-journey-1",
+                          "1.1.2-dashboard-guard-1",
+                      ),
+                      encoding="utf-8",
+                  )
+
           changelog_path = Path("CHANGELOG.md")
           changelog = changelog_path.read_text(encoding="utf-8")
           old_unreleased = "No changes have been queued after `1.1.2`."
@@ -210,14 +221,26 @@ jobs:
           )
           PY
 
-      - name: Run targeted validation
+      - name: Validate Apps Script syntax
         shell: bash
         run: |
           node -e "new Function(require('fs').readFileSync('integrations/google-apps-script/Code.gs','utf8'))"
-          node scripts/check-logger-dashboard-rebuild-safety.mjs
-          node scripts/check-mission-user-logger.mjs
-          node scripts/check-mission-journey-metrics.mjs
-          node scripts/validate-userscript.mjs
+
+      - name: Validate dashboard rebuild safety
+        shell: bash
+        run: node scripts/check-logger-dashboard-rebuild-safety.mjs
+
+      - name: Validate mission logger
+        shell: bash
+        run: node scripts/check-mission-user-logger.mjs
+
+      - name: Validate journey metrics
+        shell: bash
+        run: node scripts/check-mission-journey-metrics.mjs
+
+      - name: Validate userscript
+        shell: bash
+        run: node scripts/validate-userscript.mjs
 
       - name: Commit repaired backend
         shell: bash
