@@ -1,0 +1,78 @@
+name: Apply mission generation and journey capture fix
+
+on:
+  push:
+    branches:
+      - fix/mission-generation-and-journey-capture
+    paths:
+      - .github/workflows/apply-mission-generation-journey-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out release branch
+        uses: actions/checkout@v6
+        with:
+          ref: fix/mission-generation-and-journey-capture
+          fetch-depth: 0
+
+      - name: Extract and run staged builder
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          source_path = Path('tmp/mission-generation-journey-builder-source.txt')
+          raw = source_path.read_text(encoding='utf-8')
+          marker = "          python3 <<'PY'\n"
+          start = raw.index(marker) + len(marker)
+          end = raw.index("\n          PY\n", start)
+          body = raw[start:end]
+          rebuilt = []
+          for line in body.splitlines():
+              rebuilt.append(line[10:] if line.startswith('          ') else line)
+          script_path = Path('/tmp/apply-mission-generation-journey.py')
+          script_path.write_text('\n'.join(rebuilt) + '\n', encoding='utf-8')
+          PY
+          python3 /tmp/apply-mission-generation-journey.py
+          rm -f tmp/mission-generation-journey-builder-source.txt
+
+      - name: Validate JavaScript syntax
+        shell: bash
+        run: node -e "new Function(require('fs').readFileSync('src/missionchief-command-nexus.user.js','utf8'))"
+
+      - name: Run targeted logger regressions
+        shell: bash
+        run: |
+          node scripts/check-mission-generation-logger.mjs
+          node scripts/check-mission-journey-metrics.mjs
+          node scripts/check-mission-user-logger.mjs
+          node scripts/check-logger-dashboard-rebuild-safety.mjs
+
+      - name: Run all permanent regressions
+        shell: bash
+        run: |
+          for test in scripts/check-*.mjs; do
+            echo "==> $test"
+            node "$test"
+          done
+
+      - name: Validate release and repository
+        shell: bash
+        run: |
+          node scripts/validate-userscript.mjs --base-ref origin/main
+          python3 scripts/check_repository.py
+          git diff --check
+
+      - name: Commit production change
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Release v1.1.3 mission generation and journey capture"
+          git push origin HEAD:fix/mission-generation-and-journey-capture
