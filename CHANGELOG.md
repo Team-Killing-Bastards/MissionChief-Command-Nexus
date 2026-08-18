@@ -6,7 +6,21 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
-No changes have been queued after `1.1.6`.
+No changes have been queued after `1.1.7`.
+
+## [1.1.7] - 2026-08-18
+
+### Added
+
+- Added an attached **Patient Transfers** drawer beside Mission Control for the default-off background patient transport worker. The collapsed tab exposes the live pending count and a warning when the current Auto Mode run has terminal failures; expanding it shows Pending, Completed this run and Failed this run counters, the current worker state, last completion time and the queued patient/vehicle requests.
+- Added a bounded ten-entry terminal failure history with exact worker reasons and the retained reason from each of the worker's maximum three attempts. The log persists after Auto Mode stops so live failures can be diagnosed, and includes an explicit Clear control.
+- Manual Auto Mode start resets only the run counters. The real queue remains authoritative for Pending, the existing lifetime sent counter remains intact, and terminal failures are counted only after the existing three-attempt safety limit is exhausted.
+
+### Compatibility
+
+- The patient transport engine itself is unchanged: exact same-origin patient routes, available-hospital selection, hidden worker rendering, prisoner/cell exclusion, 40-request queue limit, three-attempt retry bound, stop handling and Auto Mode continuation remain authoritative.
+- The new drawer reuses the attached Vehicle Load interaction pattern on desktop and keeps the established iPhone/iPad Safari mission surfaces isolated. Opening Patient Transfers collapses Vehicle Load and opening Vehicle Load collapses Patient Transfers.
+- Added `scripts/check-patient-transfer-drawer-v117.mjs`. Increased Command Nexus from `1.1.6` to `1.1.7` and Mission Finder from `V10.7.4` to `V10.7.5`; all other component versions remain unchanged.
 
 ## [1.1.6] - 2026-08-18
 

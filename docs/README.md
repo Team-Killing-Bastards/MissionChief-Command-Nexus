@@ -1,10 +1,10 @@
 # Command Nexus Documentation
 
-This directory separates current operating guidance from versioned historical records. The current production baseline is Command Nexus `1.1.6` with Mission Finder `V10.7.4`.
+This directory separates current operating guidance from versioned historical records. The current production baseline is Command Nexus `1.1.7` with Mission Finder `V10.7.5`.
 
 ## Current release focus
 
-Version `1.1.6` replaces device pairing with a private Apps Script URL plus selected-user logger profile, while retaining the default-off background patient transport worker and loss-resistant multi-batch drain. **Sync now** hands a manual drain request to the authoritative top-window logger owner, queues it behind an active upload when required and reports queued/per-batch progress instead of silently doing nothing.
+Version `1.1.7` adds a live attached Patient Transfers drawer for the default-off background patient transport worker, including pending/completed/failed run counters and bounded per-attempt failure diagnostics, while retaining the private Apps Script URL logger profile and loss-resistant multi-batch drain. **Sync now** hands a manual drain request to the authoritative top-window logger owner, queues it behind an active upload when required and reports queued/per-batch progress instead of silently doing nothing.
 
 ## Current operational documentation
 
