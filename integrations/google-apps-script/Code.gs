@@ -4,13 +4,14 @@
  * Bind this project to the native Google Sheet created for issue #334.
  * Run initialiseMissionChiefLogger() once, then deploy the project as a web
  * app that executes as the owner and is accessible to anyone. The public
- * deployment URL is not a credential; device upload tokens are generated at
- * pairing time and stored only as SHA-256 hashes in this workbook.
+ * The web-app deployment URL is the private logger credential. Command Nexus
+ * sends the selected active player name with each batch; per-device pairing and
+ * upload tokens are disabled. Keep the deployed /exec URL private.
  */
 
 const MC_LOGGER = Object.freeze({
   schemaVersion: 1,
-  buildId: '1.1.2-dashboard-guard-1',
+  buildId: '1.1.6-private-profile-1',
   timezone: 'Europe/London',
   maxPayloadChars: 2800000,
   maxEventsPerBatch: 40,
@@ -277,10 +278,6 @@ function onOpen() {
     .createMenu('Logger Admin')
     .addItem('Initialise / repair logger', 'initialiseMissionChiefLogger')
     .addSeparator()
-    .addItem('Create player + pairing', 'createMissionChiefPlayerPairing')
-    .addItem('Create another device pairing', 'createMissionChiefDevicePairing')
-    .addItem('Revoke a device', 'revokeMissionChiefLoggerDevice')
-    .addSeparator()
     .addItem('Install daily backup trigger', 'installMissionChiefDailyBackupTrigger')
     .addItem('Create yesterday backup now', 'createMissionChiefDailyBackup')
     .addSeparator()
@@ -326,7 +323,7 @@ function initialiseMissionChiefLogger() {
   spreadsheet.setSpreadsheetTimeZone(MC_LOGGER.timezone);
   SpreadsheetApp.flush();
   SpreadsheetApp.getUi().alert(
-    'MissionChief logger is initialised. Deploy this Apps Script project as a web app before pairing a browser.'
+    'MissionChief logger is initialised. Deploy this Apps Script project as a new private web app, then save that URL and a user name in Nexus.'
   );
 }
 
@@ -472,6 +469,7 @@ function doGet() {
         'native-completion',
         'credit-ledger-match',
         'dispatch-journey-metrics',
+        'private-url-profile',
         'weekly-archive',
         'batch-ledger'
       ],
@@ -514,12 +512,13 @@ function doPost(event) {
     }
 
     const action = String(payload.action || '').toLowerCase();
-    if (action === 'pair') {
-      response = handleLoggerPair_(payload);
-    } else if (action === 'upload') {
+    if (action === 'upload') {
       response = handleLoggerUpload_(payload);
-    } else if (action === 'revoke') {
-      response = handleLoggerRevoke_(payload);
+    } else if (action === 'pair' || action === 'revoke') {
+      throw loggerError_(
+        'PAIRING_DISABLED',
+        'This private logger deployment uses the saved URL and user name; pairing and device tokens are disabled.'
+      );
     } else {
       throw loggerError_('UNKNOWN_ACTION', 'Unknown logger action.');
     }
@@ -641,14 +640,23 @@ function handleLoggerPair_(payload) {
 
 function handleLoggerUpload_(payload) {
   const batchId = cleanIdentifier_(payload.batchId, 180);
-  const playerId = cleanIdentifier_(payload.playerId, 80);
+  const profileName = cleanText_(
+    payload.profileName || payload.playerName,
+    120
+  );
   const deviceId = cleanIdentifier_(payload.deviceId, 160);
-  const token = String(payload.token || '');
+  const deviceLabel = cleanText_(
+    payload.deviceLabel || 'MissionChief browser',
+    120
+  );
   const clientVersion = cleanText_(payload.clientVersion, 40);
   const events = Array.isArray(payload.events) ? payload.events : [];
 
-  if (!batchId || !playerId || !deviceId || token.length < 24) {
-    throw loggerError_('INVALID_UPLOAD', 'The upload identity or batch identifier is invalid.');
+  if (!batchId || !profileName || !deviceId) {
+    throw loggerError_(
+      'INVALID_UPLOAD',
+      'The private logger URL, user name or batch identifier is invalid.'
+    );
   }
   if (events.length < 1 || events.length > MC_LOGGER.maxEventsPerBatch) {
     throw loggerError_('INVALID_EVENT_COUNT', 'The logger batch contains an invalid number of events.');
@@ -660,11 +668,23 @@ function handleLoggerUpload_(payload) {
   try {
     const spreadsheet = getLoggerSpreadsheet_();
     ensureLoggerWorkbook_(spreadsheet);
-    const device = authenticateLoggerDevice_(spreadsheet, playerId, deviceId, token);
+    const profile = resolveActiveLoggerProfile_(
+      spreadsheet,
+      profileName
+    );
+    const playerId = profile.playerId;
+    const receivedAt = new Date();
+    const device = upsertLoggerProfileDevice_(
+      spreadsheet,
+      playerId,
+      deviceId,
+      deviceLabel,
+      clientVersion,
+      receivedAt
+    );
     const eventSheet = spreadsheet.getSheetByName(MC_LOGGER_SHEETS.events.name);
     const unitSheet = spreadsheet.getSheetByName(MC_LOGGER_SHEETS.units.name);
     const uploadSheet = spreadsheet.getSheetByName(MC_LOGGER_SHEETS.uploads.name);
-    const receivedAt = new Date();
     const preparedRaw = prepareLoggerBatchRows_(
       events,
       batchId,
@@ -711,6 +731,8 @@ function handleLoggerUpload_(payload) {
         return {
           ok: true,
           action: 'upload',
+          playerId: playerId,
+          playerName: profile.displayName,
           batchId: batchId,
           duplicate: true,
           archived: true,
@@ -745,7 +767,7 @@ function handleLoggerUpload_(payload) {
       ) {
         throw loggerError_(
           'BATCH_CONFLICT',
-          'This batch identifier already exists with different mission events or a different device identity.'
+          'This batch identifier already exists with different mission events or a different profile/device identity.'
         );
       }
 
@@ -821,6 +843,8 @@ function handleLoggerUpload_(payload) {
       return {
         ok: true,
         action: 'upload',
+        playerId: playerId,
+        playerName: profile.displayName,
         batchId: batchId,
         duplicate: true,
         repairedUnits: missingUnitRows.length,
@@ -884,6 +908,8 @@ function handleLoggerUpload_(payload) {
     return {
       ok: true,
       action: 'upload',
+      playerId: playerId,
+      playerName: profile.displayName,
       batchId: batchId,
       duplicate: false,
       acceptedEvents: prepared.eventRows.length,
@@ -1680,6 +1706,92 @@ function filterSemanticDuplicateDispatchRows_(eventSheet, prepared, batchId) {
   };
 }
 
+
+function resolveActiveLoggerProfile_(spreadsheet, suppliedName) {
+  const target = cleanText_(suppliedName, 120).toLowerCase();
+  if (!target) {
+    throw loggerError_(
+      'PROFILE_REQUIRED',
+      'Choose a valid logger user name.'
+    );
+  }
+
+  const players = spreadsheet.getSheetByName(
+    MC_LOGGER_SHEETS.players.name
+  );
+  const matches = getDataRows_(players)
+    .map(function(values, index) {
+      return {
+        row: index + 2,
+        playerId: cleanIdentifier_(values[0], 80),
+        displayName: cleanText_(values[1], 120),
+        status: String(values[2] || '').toUpperCase()
+      };
+    })
+    .filter(function(player) {
+      return player.status === 'ACTIVE' &&
+        player.playerId &&
+        (
+          player.playerId.toLowerCase() === target ||
+          player.displayName.toLowerCase() === target
+        );
+    });
+
+  if (matches.length === 0) {
+    throw loggerError_(
+      'PROFILE_NOT_FOUND',
+      'The selected logger user is not active in the private workbook Players tab.'
+    );
+  }
+  if (matches.length > 1) {
+    throw loggerError_(
+      'PROFILE_AMBIGUOUS',
+      'More than one active player has that logger user name.'
+    );
+  }
+  return matches[0];
+}
+
+function upsertLoggerProfileDevice_(
+  spreadsheet,
+  playerId,
+  deviceId,
+  deviceLabel,
+  clientVersion,
+  timestamp
+) {
+  const devices = spreadsheet.getSheetByName(
+    MC_LOGGER_SHEETS.devices.name
+  );
+  const row = findRowByValue_(devices, 1, deviceId);
+  const pairedAt = row
+    ? devices.getRange(row, 6).getValue() || timestamp
+    : timestamp;
+  const values = [
+    safeSheetText_(deviceId),
+    safeSheetText_(playerId),
+    safeSheetText_(deviceLabel || 'MissionChief browser'),
+    '',
+    'ACTIVE',
+    pairedAt,
+    timestamp,
+    timestamp,
+    safeSheetText_(clientVersion)
+  ];
+
+  if (row) {
+    devices.getRange(row, 1, 1, values.length)
+      .setValues([values]);
+    return { row: row, values: values };
+  }
+
+  devices.appendRow(values);
+  return {
+    row: devices.getLastRow(),
+    values: values
+  };
+}
+
 function authenticateLoggerDevice_(spreadsheet, playerId, deviceId, token) {
   const devices = spreadsheet.getSheetByName(MC_LOGGER_SHEETS.devices.name);
   const rows = getDataRows_(devices);
@@ -1914,7 +2026,7 @@ function seedLoggerConfiguration_(spreadsheet) {
   const seeds = [
     ['schema_version', MC_LOGGER.schemaVersion, 'Nexus logger payload schema accepted by this backend.'],
     ['backend_build', MC_LOGGER.buildId, 'Deployed Apps Script build expected by this workbook.'],
-    ['pairing_expiry_hours', MC_LOGGER.pairingLifetimeHours, 'Lifetime of a one-time player pairing code.'],
+    ['identity_mode', 'PRIVATE_URL_AND_PLAYER_NAME', 'The private deployment URL plus an active Players display name authorises uploads on any browser.'],
     ['max_events_per_batch', MC_LOGGER.maxEventsPerBatch, 'Maximum events accepted in one five-minute upload.'],
     ['deployment_url', '', 'Paste the deployed Apps Script /exec URL here for the admins reference.'],
     ['actual_credit_capture', 'LIVE_EXACT_TRANSACTION_MATCH', 'Exact mission awards are matched locally against MissionChief Credits transactions; ambiguous transactions remain pending.'],

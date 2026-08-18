@@ -12,8 +12,8 @@ This is the first document to read when resuming MissionChief Command Nexus deve
 | Repository | `Team-Killing-Bastards/MissionChief-Command-Nexus` |
 | Default branch | `main` |
 | Canonical userscript | `src/missionchief-command-nexus.user.js` |
-| Command Nexus version | `1.1.5` |
-| Mission Finder baseline | `V10.7.3` |
+| Command Nexus version | `1.1.6` |
+| Mission Finder baseline | `V10.7.4` |
 | Resource Administration module | `V4.2.8` |
 | Unit / Station / Personnel UI versions | `3.3.27` / `1.3.22` / `1.3.12` |
 | Userscript author metadata | `MartyBlyth` |
