@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.1.7
+// @version      1.1.8
 // @description  Unified MissionChief UK toolkit for mission dispatch, resource administration, trained-personnel assignment and opt-in mission analytics.
 // @author       MartyBlyth
 // @license      MIT
@@ -12454,7 +12454,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.7.5
+         * MODULE 2: MISSION FINDER V10.7.6
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -14305,9 +14305,9 @@
     const SESSION_STATS_KEY = 'mf_session_stats_v1';
     const SESSION_REFRESH_FLAG = 'mf_session_manual_refresh_checked';
     const MF_MISSION_LOGGER_SCHEMA_VERSION = 1;
-    const MF_MISSION_LOGGER_CLIENT_VERSION = '1.1.7';
+    const MF_MISSION_LOGGER_CLIENT_VERSION = '1.1.8';
     const MF_MISSION_LOGGER_MISSION_FINDER_VERSION =
-        '10.7.5';
+        '10.7.6';
     const MF_MISSION_LOGGER_ENABLED_KEY =
         'mf_mission_logger_enabled_v1';
     const MF_MISSION_LOGGER_ENDPOINT_KEY =
@@ -17481,7 +17481,8 @@ function isRoadRailUnitVehicleCheckbox(input) {
             .replace(/\s+/g, ' ')
             .trim();
 
-        return /^(?:Required\s+)?(?:\d+\s+)?(?:truck(?:s)?|hgv(?:s)?|lorr(?:y|ies))\s+(?:to\s+tow|to\s+be\s+towed)$/i.test(cleaned);
+        return /^(?:Required\s+)?(?:\d+\s+)?(?:truck(?:s)?|hgv(?:s)?|lorr(?:y|ies))\s+(?:to\s+tow|to\s+be\s+towed)$/i.test(cleaned) ||
+            /^(?:Required\s+)?(?:Maximum|Minimum)\s+amount\s+of\s+(?:truck(?:s)?|hgv(?:s)?|lorr(?:y|ies))\s+to\s+tow$/i.test(cleaned);
     }
 
     function isHgvRecoveryVehicleRequirement(
@@ -36524,7 +36525,9 @@ let sessionRuntimeTicker = null;
             );
         }
 
-        extractTowCarRequirementRows(doc).forEach(row => rows.push(row));
+        const supplementalTowRows =
+            extractTowCarRequirementRows(doc);
+        supplementalTowRows.forEach(row => rows.push(row));
 
         const mergedRows =
             mergeRequirementRows(rows);
@@ -36537,7 +36540,8 @@ let sessionRuntimeTicker = null;
                         value: Boolean(
                             table ||
                             supplementalPersonnelRows
-                                .missionDefinitionRequiredPersonnelFound
+                                .missionDefinitionRequiredPersonnelFound ||
+                            supplementalTowRows.length > 0
                         ),
                         enumerable: false
                     },
@@ -36571,6 +36575,12 @@ let sessionRuntimeTicker = null;
     function extractTowCarRequirementRows(doc) {
         const rows = [];
         let maximumCarsToTow = 0;
+        let maximumTrucksToTow = 0;
+        let minimumTrucksToTow = 0;
+
+        if (!doc?.querySelectorAll) {
+            return rows;
+        }
 
         doc.querySelectorAll('table.table, table').forEach(table => {
             table.querySelectorAll('tbody tr, tr').forEach(tr => {
@@ -36579,19 +36589,33 @@ let sessionRuntimeTicker = null;
 
                 const label = cleanRequirementName(cells[0]);
                 const valueText = cells[1].replace(/\s+/g, ' ').trim();
+                const amount = parseInt(valueText, 10);
+                if (!Number.isFinite(amount) || amount <= 0) return;
 
-                if (!/^Maximum amount of cars to tow$/i.test(label)) return;
+                if (/^Maximum amount of cars to tow$/i.test(label)) {
+                    if (amount > maximumCarsToTow) {
+                        maximumCarsToTow = amount;
+                    }
+                    return;
+                }
 
-                const cars = parseInt(valueText, 10);
-                if (Number.isFinite(cars) && cars > maximumCarsToTow) {
-                    maximumCarsToTow = cars;
+                if (/^Maximum amount of (?:truck(?:s)?|HGV(?:s)?|lorr(?:y|ies)) to tow$/i.test(label)) {
+                    if (amount > maximumTrucksToTow) {
+                        maximumTrucksToTow = amount;
+                    }
+                    return;
+                }
+
+                if (/^Minimum amount of (?:truck(?:s)?|HGV(?:s)?|lorr(?:y|ies)) to tow$/i.test(label)) {
+                    if (amount > minimumTrucksToTow) {
+                        minimumTrucksToTow = amount;
+                    }
                 }
             });
         });
 
         if (maximumCarsToTow > 0) {
-            // The user's fleet uses the larger flatbed recovery vehicle, which can tow 2 cars.
-            // 1-2 cars = 1 flatbed, 3-4 cars = 2 flatbeds, etc.
+            // Existing rule: the larger Flatbed Recovery vehicle can tow two cars.
             const flatbedsNeeded = Math.ceil(maximumCarsToTow / 2);
 
             rows.push({
@@ -36600,7 +36624,33 @@ let sessionRuntimeTicker = null;
             });
 
             if (mfDebugEnabled) {
-                debugLog('LIVE TOW', `Maximum cars to tow=${maximumCarsToTow} -> Flatbed Recovery Vehicle x${flatbedsNeeded}`);
+                debugLog(
+                    'LIVE TOW',
+                    'Maximum cars to tow=' + maximumCarsToTow +
+                        ' -> Flatbed Recovery Vehicle x' + flatbedsNeeded
+                );
+            }
+        }
+
+        const trucksToTow = maximumTrucksToTow > 0
+            ? maximumTrucksToTow
+            : minimumTrucksToTow;
+
+        if (trucksToTow > 0) {
+            rows.push({
+                unitName: 'Trucks to tow',
+                stillNeeded: trucksToTow
+            });
+
+            if (mfDebugEnabled) {
+                const sourceLabel = maximumTrucksToTow > 0
+                    ? 'Maximum'
+                    : 'Minimum fallback';
+                debugLog(
+                    'LIVE TOW',
+                    sourceLabel + ' trucks to tow=' + trucksToTow +
+                        ' -> HGV Recovery x' + trucksToTow
+                );
             }
         }
 

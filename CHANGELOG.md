@@ -8,6 +8,13 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 No changes have been queued after `1.1.7`.
 
+## [1.1.8] - 2026-08-18
+
+### Changed
+
+- Read Maximum amount of trucks to tow from mission-definition Other information and feed the value into the existing strict HGV Recovery type-106 path. Use Minimum amount of trucks to tow only as a fallback when Maximum is absent or invalid, never add both values together, and preserve the existing Flatbed Recovery car-towing rule. Add permanent regression coverage based on the supplied MissionChief mission HTML.
+- Increased the unified userscript version from `1.1.7` to `1.1.8`.
+
 ## [1.1.7] - 2026-08-18
 
 ### Added
