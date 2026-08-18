@@ -8,7 +8,7 @@ on:
       - scripts/apply-activity-recorder-v119.py
       - .github/workflows/apply-activity-recorder-v119.yml
   pull_request:
-    types: [opened]
+    types: [opened, synchronize]
     branches:
       - main
     paths:
@@ -21,6 +21,7 @@ permissions:
 
 jobs:
   patch-and-verify:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout feature branch
@@ -28,6 +29,19 @@ jobs:
         with:
           ref: feature/activity-recorder-v119
           fetch-depth: 0
+
+      - name: Fix patch carrier replacement escaping
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('scripts/apply-activity-recorder-v119.py')
+          text = p.read_text()
+          old = "updated, count = re.subn(pattern, replacement, text, count=1, flags=flags)"
+          new = "updated, count = re.subn(pattern, lambda _match: replacement, text, count=1, flags=flags)"
+          if text.count(old) != 1:
+              raise SystemExit('patch helper anchor mismatch')
+          p.write_text(text.replace(old, new, 1))
+          PY
 
       - name: Apply deterministic patch
         run: python3 scripts/apply-activity-recorder-v119.py
