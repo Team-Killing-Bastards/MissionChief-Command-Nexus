@@ -40,25 +40,43 @@ jobs:
       - name: Apply feature patch
         run: node scripts/temporary-hgv-tow-other-information-builder.mjs
 
-      - name: Update current developer handoff baseline
+      - name: Update current operational documentation baselines
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          path = Path('docs/DEVELOPER_HANDOFF.md')
-          text = path.read_text(encoding='utf-8')
-          old_version = '| Command Nexus version | `1.1.7` |'
-          new_version = '| Command Nexus version | `1.1.8` |'
-          old_mf = '| Mission Finder baseline | `V10.7.5` |'
-          new_mf = '| Mission Finder baseline | `V10.7.6` |'
-          if text.count(old_version) != 1:
-              raise SystemExit(f'Expected one current Command Nexus handoff row, found {text.count(old_version)}')
-          if text.count(old_mf) != 1:
-              raise SystemExit(f'Expected one current Mission Finder handoff row, found {text.count(old_mf)}')
-          path.write_text(
-              text.replace(old_version, new_version).replace(old_mf, new_mf),
-              encoding='utf-8'
-          )
+
+          replacements = {
+              'docs/DEVELOPER_HANDOFF.md': [
+                  ('| Command Nexus version | `1.1.7` |', '| Command Nexus version | `1.1.8` |'),
+                  ('| Mission Finder baseline | `V10.7.5` |', '| Mission Finder baseline | `V10.7.6` |'),
+              ],
+              'docs/ARCHITECTURE.md': [
+                  ('Command Nexus v1.1.7', 'Command Nexus v1.1.8'),
+                  ('Mission Finder `V10.7.5`', 'Mission Finder `V10.7.6`'),
+              ],
+              'docs/ROADMAP.md': [
+                  ('Current production baseline — v1.1.7', 'Current production baseline — v1.1.8'),
+                  ('Release Command Nexus `1.1.7` with Mission Finder `V10.7.5`.', 'Release Command Nexus `1.1.8` with Mission Finder `V10.7.6`.'),
+              ],
+              'docs/MIGRATION.md': [
+                  ('The current Command Nexus `1.1.7` source', 'The current Command Nexus `1.1.8` source'),
+              ],
+              'docs/README.md': [
+                  ('The current production baseline is Command Nexus `1.1.7` with Mission Finder `V10.7.5`.', 'The current production baseline is Command Nexus `1.1.8` with Mission Finder `V10.7.6`.'),
+                  ('Version `1.1.7` adds a live attached Patient Transfers drawer for the default-off background patient transport worker, including pending/completed/failed run counters and bounded per-attempt failure diagnostics, while retaining the private Apps Script URL logger profile and loss-resistant multi-batch drain. **Sync now** hands a manual drain request to the authoritative top-window logger owner, queues it behind an active upload when required and reports queued/per-batch progress instead of silently doing nothing.', 'Version `1.1.8` extends fresh mission-definition parsing so Other information Maximum amount of trucks to tow feeds the existing strict HGV Recovery type-106 path. Minimum amount of trucks to tow is fallback only when Maximum is absent or invalid, and the values are never summed. Existing Flatbed Recovery car towing, Patient Transfers visibility, the private Apps Script URL logger profile and loss-resistant multi-batch drain remain unchanged.'),
+              ],
+          }
+
+          for relative, pairs in replacements.items():
+              path = Path(relative)
+              text = path.read_text(encoding='utf-8')
+              for old, new in pairs:
+                  count = text.count(old)
+                  if count != 1:
+                      raise SystemExit(f'{relative}: expected one current marker {old!r}, found {count}')
+                  text = text.replace(old, new)
+              path.write_text(text, encoding='utf-8')
           PY
 
       - name: Prepare release version
