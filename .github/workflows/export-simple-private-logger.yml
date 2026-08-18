@@ -1,9 +1,9 @@
 name: Export simple private logger source
 
 on:
-  push:
+  pull_request:
     branches:
-      - feature/simple-private-url-logger
+      - main
     paths:
       - .github/workflows/export-simple-private-logger.yml
 
