@@ -6,7 +6,7 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
-No changes have been queued after `1.1.7`.
+No changes have been queued after `1.1.8`.
 
 ## [1.1.8] - 2026-08-18
 
@@ -33,2543 +33,926 @@ No changes have been queued after `1.1.7`.
 
 ### Changed
 
-- Replaced one-time pairing codes and per-device upload tokens with a deliberately simple private logger setup: paste a private Google Apps Script `/exec` URL, choose **Marty** or **Conroy**, and save. The same setup works on any browser or computer.
-- Removed the public built-in logger endpoint from the userscript. A newly created Apps Script deployment URL is now the credential and must remain private.
-- The backend resolves the submitted user name against one exact active row in the workbook `Players` tab, assigns the authoritative player ID server-side and keeps the browser-generated device ID only for diagnostics.
-
-### Migration
-
-- Saving the first v1.1.6 logger setup removes the old browser token and clears that browser's legacy queue, pending batch, observation dedupe, mission registry and upload lock. Existing spreadsheet history is left untouched.
-- Legacy `pair` and `revoke` web actions return `PAIRING_DISABLED`; no token expiry or per-device revocation exists in the private-URL mode. Rotating the private URL is the recovery action if it is disclosed.
-
-### Security and compatibility
-
-- This model is intentionally suitable only for the two trusted users approved for this deployment. Anyone who obtains the private URL can submit as either configured active user. The URL must not be committed, posted in Discord or included in screenshots.
-- A new Apps Script **deployment** is required so the old public endpoint is not reused. The existing workbook schema, dashboard, batch dedupe, 40-event server limit, multi-batch drain, weekly archive and journey processing remain compatible.
-- Added `scripts/check-private-url-logger-profile.mjs` and updated the permanent Mission Analytics Logger regression. Increased Command Nexus from `1.1.5` to `1.1.6` and Mission Finder from `V10.7.3` to `V10.7.4`; all other component versions remain unchanged.
+- Replaced the per-browser logger pairing/token flow with a much simpler private deployment profile: Settings now stores one private Google Apps Script `/exec` URL plus an active user choice (`Marty` or `Conroy`). The same setup can be reused on any browser or computer; browser-generated device IDs remain diagnostics only.
+- The Apps Script backend now resolves the submitted profile name against the single active `Players` record server-side and assigns the canonical `player_id` itself. Browser event-level player identity is never trusted, while unknown, disabled or duplicate active names fail closed.
+- Removed one-time pairing-code generation, token issuance/expiry, device revoke buttons and Disconnect as active security controls. Legacy pair/revoke requests return `PAIRING_DISABLED`; historical `Pairings` / `Devices` sheet schema is retained for compatibility only.
+- First migration from a legacy token profile, or a later change of the private URL/user, deliberately clears that browser's legacy token, local queue, pending batch, observation dedupe, mission registry and upload lock. Saving the same current URL/user again keeps the queue intact.
+- The existing loss-resistant `1.1.5` outbox/drain behavior, exact mission/dispatch/journey evidence, completion recovery, dashboard, backups and weekly archive remain unchanged after the identity simplification.
+- Security boundary: the new private `/exec` URL is effectively the credential for this approved two-user deployment and must not be committed, posted to Discord or included in screenshots. A leak requires creating a new deployment URL.
+- Deployment requirement: do **not** reuse the pre-`1.1.6` Apps Script deployment because that URL exists in public userscript history. Publish the merged `Code.gs` as a brand-new Web app deployment and verify build marker `1.1.6-private-profile-1`.
+- Added `scripts/check-private-url-logger-profile.mjs` and updated logger/dashboard/journey regressions to enforce the private-profile backend contract. Increased Command Nexus from `1.1.5` to `1.1.6` and Mission Finder from `V10.7.3` to `V10.7.4`; all other component versions remain unchanged.
 
 ## [1.1.5] - 2026-08-18
 
-### Added
+### Changed
 
-- Added the default-off **Handle patient transports in the background** setting. During Auto Mode, exact current-player Transport Patient requests are queued, processed one at a time in an off-screen same-origin MissionChief frame, sent to the first destination with confirmed free hospital capacity and removed only after MissionChief confirms the handoff.
-- Added visible background-transport states for Watching, Queued, Sending, Retrying, Sent and Failed. Prisoner/cell transport remains on the established foreground route.
+- Reworked Mission Analytics outbox draining for high-volume mission generation. The local queue now permits up to 1,200 events within the existing 3 MB storage ceiling, automatic passes drain up to eight 40-event batches and manual/reconnect passes drain up to twelve. A follow-up bounded pass is scheduled while backlog remains.
+- `Sync now` is handed to the authoritative top-window logger owner when invoked from a mission frame/pop-out and no longer silently returns when another upload or tab lock is active. The request is queued as a full manual drain and the UI reports `Drain queued`, accepted-event totals and per-batch remaining counts.
+- The cross-tab upload lock is renewed before each batch. A timed-out Google response is reconfirmed once with the same idempotent batch ID before leaving the batch queued for a later pass. Eager uploads start at 20 queued events.
+- Overflow retention now discards low-value `mission-observed` evidence before dispatch, mission-completed or exact-credit evidence. Previously dropped local events cannot be reconstructed.
+- Added a default-off **Handle patient transports in the background** setting. During Auto Mode, exact same-origin Transport Patient requests are queued and processed one at a time in an off-screen MissionChief frame so the visible mission queue can continue; destinations must still expose confirmed free hospital capacity.
+- The patient worker caps its queue at 40 requests, retries each request at most three times, reports Watching/Queued/Sending/Retrying/Sent/Failed state and clears immediately when the setting or Auto Mode stops. Prisoner/cell transport remains on the established foreground route.
+- Added `scripts/check-background-patient-transport-worker.mjs` and `scripts/check-mission-logger-outbox-drain.mjs`, and expanded `scripts/check-mission-user-logger.mjs`. Increased Command Nexus from `1.1.4` to `1.1.5` and Mission Finder from `V10.7.2` to `V10.7.3`; all other component versions remain unchanged.
 
-### Fixed
-
-- Fixed the Mission Analytics Logger reaching its 300-event local ceiling during long offline or high-volume sessions. The queue now retains up to 1,200 events within the existing 3 MB storage bound, drains up to eight 40-event batches per automatic pass, drains up to twelve batches on manual sync/reconnect and immediately schedules another bounded pass while backlog remains.
-- Fixed **Sync now** appearing to do nothing when it was pressed inside a mission frame/pop-out or while another MissionChief tab owned the shared upload lock. Manual drains are handed to the top-window logger owner, queued behind an active upload and visibly report **Drain queued** and per-batch progress.
-- Renewed the cross-tab upload lock before every batch and added an immediate confirmation retry using the same idempotent batch ID after a Google response timeout, avoiding the old five-minute accepted-then-acknowledged retry delay.
-- Added eager upload when the local outbox reaches 20 events, so normal high-volume activity no longer waits for the next five-minute timer.
-- Made overflow fail safer: low-value mission-observed rows are discarded before dispatch, completion or exact-credit evidence if the fixed storage ceiling is still reached. Existing dropped events cannot be reconstructed.
-
-### Security and compatibility
-
-- Background patient transport accepts only exact same-origin `/vehicles/{vehicle}/patient/{patient}` routes captured from a visible Transport Patient request or active patient/hospital page. It rejects prisoner/cell contexts, keeps one worker and one request active, caps the queue at 40, retries at most three times and clears immediately when the setting or Auto Mode is stopped.
-- Preserved the existing Google Apps Script endpoint and its 40-event server batch limit; no `Code.gs` deployment, pairing change or workbook migration is required.
-- Added permanent regressions for background patient transport lifecycle and logger backlog draining. Increased the unified userscript from `1.1.4` to `1.1.5` and Mission Finder from `V10.7.2` to `V10.7.3`; all other component versions remain unchanged.
-
-## [1.1.4] - 2026-08-18
+## [1.1.4] - 2026-08-17
 
 ### Fixed
 
-- Made every Nexus-controlled dispatch route logger-aware instead of relying solely on a document click listener. Manual Dispatch, Dispatch & Share, Auto Mode, high-value auto-share, not-ready skip dispatches, Ally Steal and post-dispatch upgrade passes now snapshot selected units before MissionChief clears the vehicle selection and commit the prepared event after the dispatch control is invoked.
-- Added a direct programmatic fallback for mission runtimes where the capture-phase click listener is absent. The existing dispatch fingerprint dedupe prevents the listener and fallback from creating duplicate events.
-- Rejected zero-unit dispatch snapshots so navigation or repeated dispatch controls cannot create misleading dispatch events with no unit evidence.
-- Added dispatch-capture provenance and selected-unit counts to event metadata for live diagnosis.
-
-### Security and compatibility
-
-- Preserved native MissionChief dispatch controls, Auto Mode behaviour, the existing logger endpoint, spreadsheet, player/browser pairings and queued events. Actions performed in a completely different unpaired browser or profile remain outside the browser-local logger boundary.
-- Added `scripts/check-mission-dispatch-path-logger.mjs` and expanded the permanent Mission Analytics Logger regression to lock every supported dispatch path.
-- Increased the unified userscript from `1.1.3` to `1.1.4` and Mission Finder from `V10.7.1` to `V10.7.2`. Resource Administration remains `V4.2.8`, Unit Naming remains `3.3.27`, Station Naming remains `1.3.22`, and Personnel Assignment remains `1.3.12`.
+- Moved Mission Analytics dispatch capture onto the actual Nexus dispatch functions instead of relying only on a document click listener. Every manual, manual-share, Auto Mode, auto-share, auto-not-ready, Ally Steal and upgrade re-dispatch now prepares its selected-unit snapshot before MissionChief clears the checkbox state, invokes the native control, then commits the exact event.
+- Retained the native dispatch listener as a compatibility path while adding direct programmatic fallback capture and shared fingerprint dedupe, so one physical dispatch cannot be logged twice when both routes see it.
+- Added dispatch-source diagnostics (`dispatchCaptureSource`, `dispatchControlId`, `selectedUnitCount`) and rejects zero-unit snapshots.
+- Added `scripts/check-mission-dispatch-path-logger.mjs` to permanently cover every Nexus dispatch mode. Increased Command Nexus from `1.1.3` to `1.1.4` and Mission Finder from `V10.7.1` to `V10.7.2`; all other component versions remain unchanged.
 
 ## [1.1.3] - 2026-08-17
 
 ### Added
 
-- Added true generated-mission capture for the opt-in Mission Analytics Logger. Nexus now records each new mission belonging to the signed-in player when MissionChief adds it to the native mission list, without requiring that mission's detail page to be opened first.
-- Reused MissionChief's native `missionMarkerAdd` callback and the existing top-window mutation observer as a bounded fallback. Initial mission-list hydration is recorded only as a local baseline, preventing a refresh or userscript update from falsely importing the whole existing mission list as newly generated.
+- Added automatic current-player mission-generation capture to the opt-in Mission Analytics Logger from MissionChief's native mission list, including safe startup catch-up without depending on opening the mission detail page.
+- Added `scripts/check-mission-generation-logger.mjs` to lock current-user ownership, baseline-only initial list hydration, native callback preservation and duplicate suppression through the existing observation registry.
 
 ### Fixed
 
-- Fixed dispatch journey evidence remaining blank because MissionChief may expose distance and ETA on the selected checkbox or a native metric cell rather than the enclosing row. One shared reader now checks those exact native attributes and explicit unit-labelled values, and vehicle arrival sorting uses the same evidence path.
-- Preserved Google Sheets dashboard and analysis formula references during logger rebuilds by clearing source data cells instead of deleting the referenced rows.
-- Blocked duplicate active player display names and directs additional browsers to **Create another device pairing**, preventing ambiguous dashboard player filters.
+- Expanded the shared dispatch-journey reader so it accepts MissionChief's native route evidence from the selected input and nested metric cells as well as the enclosing row, with bounded parsing of explicit distance/duration units when native attributes are unavailable.
+- Reused the same journey evidence for vehicle arrival ordering and Mission Analytics dispatch rows so route metrics are interpreted consistently; historical blank journey fields remain blank because MissionChief's dispatch-time evidence is no longer available after the fact.
+- Increased Command Nexus from `1.1.2` to `1.1.3` and Mission Finder from `V10.7.0` to `V10.7.1`; all other component versions remain unchanged.
 
-### Security and compatibility
-
-- Generated-mission capture accepts only a mission whose native owner ID exactly matches the current signed-in user. Alliance missions owned by another player and records without exact ownership evidence fail closed.
-- Preserved the existing logger endpoint, player/browser pairings, local queue, spreadsheet and dashboard. Historical journey rows with missing evidence cannot be reconstructed; new distance/ETA evidence begins with dispatches captured by `1.1.3`.
-- Increased the unified userscript from `1.1.2` to `1.1.3` and Mission Finder from `V10.7.0` to `V10.7.1`. Resource Administration remains `V4.2.8`, Unit Naming remains `3.3.27`, Station Naming remains `1.3.22`, and Personnel Assignment remains `1.3.12`.
-
-## [1.1.2] - 2026-08-17
+## [1.1.2] - 2026-08-16
 
 ### Added
 
-- Added per-unit dispatch journey evidence to the opt-in Mission Analytics Logger. Nexus now records MissionChief's own dispatch-time estimated route distance in kilometres and arrival delay in seconds for every selected unit when those native row attributes are available.
-- Added `estimated_distance_km` and `estimated_eta_seconds` to `Dispatch Units`, including weekly raw archives and daily JSON backups. Missing or invalid MissionChief attributes remain blank instead of being estimated.
-- Added compact all-weeks `Journey Data`, grouped by ISO week, player and station with journey counts, distance/ETA totals, evidence counts, maxima and explicit missing-evidence counts. This retained aggregate survives the verified weekly raw rollover without allowing the live workbook to grow at raw-unit-row speed.
-- Replaced the dashboard's reserved distance placeholder with player/date-filtered station coverage and live-week furthest-dispatch tables. Station coverage exposes average/max distance and ETA; the raw table retains the individual unit, type, dispatch time and mission ID needed to investigate outliers.
+- Added MissionChief-native dispatch journey evidence to the opt-in Mission Analytics Logger. Each selected unit may now carry the dispatch-time estimated route distance in kilometres and ETA in seconds when MissionChief exposes those native attributes.
+- Extended the existing `Dispatch Units` schema with `estimated_distance_km` and `estimated_eta_seconds`, retained the values in the weekly raw archive, and added compact `Journey Data` aggregation plus Station coverage and Furthest dispatch tables on the existing dashboard.
+- Added `scripts/check-mission-journey-metrics.mjs` to permanently cover native attribute parsing, compatible sheet migration, Journey Data aggregation and station placement formulas.
 
-### Security and compatibility
+### Compatibility
 
-- Kept journey capture inside the existing explicit opt-in, paired logger boundary. Passwords, cookies and personnel names remain excluded, and the in-product disclosure now names the distance/ETA evidence being uploaded.
-- Added a fail-closed, append-only sheet migration: existing `Dispatch Units` rows are preserved, the two trailing headers are added safely, and any unexpected or non-contiguous schema still blocks logging for manual repair.
-- Preserved the existing Apps Script `/exec` URL, spreadsheet, dashboard, player/browser pairings, local queue and historical rows. Deploying the new `Code.gs` version and running initialization requires no new link, pairing code or browser setup.
-- Increased the unified userscript from `1.1.1` to `1.1.2`. Mission Finder remains `V10.7.0`, Resource Administration remains `V4.2.8`, Unit Naming remains `3.3.27`, Station Naming remains `1.3.22`, and Personnel Assignment remains `1.3.12`.
+- Missing, invalid or historical route metrics remain blank; Nexus does not estimate or backfill them.
+- Existing Apps Script endpoint, spreadsheet, players, devices, pairings, dashboard link and historical rows stay in place. Deploy the updated `Code.gs` as a **New version** of the existing web app and initialise once so the two trailing unit columns and Journey Data/dashboard surfaces are created.
+- Increased Command Nexus from `1.1.1` to `1.1.2`; Mission Finder remains `V10.7.0` and all Resource Administration component versions remain unchanged.
 
-## [1.1.1] - 2026-08-17
-
-### Fixed
-
-- Recovered dispatched missions that finish while every paired browser is offline. On startup, reconnect or manual sync, Nexus now resumes through the signed-in player's same-origin MissionChief `/credits` ledger and reconstructs the missing completion only when the transaction exposes the exact mission ID and normalized mission title.
-- Recorded the authoritative ledger transaction time as the recovered mission finish time and the exact transaction amount as actual awarded credits, then sent the result through the existing bounded Google logger queue and configured Apps Script endpoint.
-- Added a resumable ledger page/floor checkpoint, automatic online-event catch-up and queue-headroom pauses so a long offline period cannot silently overflow the existing 300-event outbox. Failed ledger requests do not advance the successful checkpoint.
-
-### Security and compatibility
-
-- Kept title-only, patient, prisoner and other side transactions fail-closed for offline recovery; the existing unique title/time fallback remains limited to missions whose native completion time was already captured.
-- Preserved all existing Mission Analytics links and storage: the Google Apps Script deployment URL, spreadsheet/dashboard, Greasy Fork install/update path, player/browser pairing and queued events require no migration or re-pairing.
-- Increased the unified userscript from `1.1.0` to `1.1.1`. Mission Finder remains `V10.7.0`, Resource Administration remains `V4.2.8`, Unit Naming remains `3.3.27`, Station Naming remains `1.3.22`, and Personnel Assignment remains `1.3.12`.
-
-## [1.1.0] - 2026-08-16
+## [1.1.1] - 2026-08-15
 
 ### Added
 
-- Added the off-by-default **Mission Analytics Logger** for issue #334. The public Google Apps Script transport endpoint is built in, but a player must explicitly enable logging and redeem a one-use pairing code; no player credential is compiled into the userscript.
-- Added stable per-player and per-browser identity, independently revocable device tokens, visible queue/upload/error state, manual Sync and Disconnect controls, and explicit in-product collection disclosure.
-- Captured one bounded mission-observed event per mission and exact native dispatch snapshots for manual, shared, Auto Mode, not-ready and Ally Steal paths, including mission identity, advertised credits, demand, patient count and selected vehicle IDs, types, names, stations and status.
-- Added a persistent 300-event / 3 MB outbox, 40-event batches, stable pending batch IDs, a shared browser sync lock and automatic five-minute upload. Disconnect now removes the credential and unsent profile-specific events so another player cannot inherit them.
-- Added the Google Apps Script backend, manifest and deployment guide with Players, Pairings, Devices, Mission Events, Dispatch Units, Uploads and Configuration sheets plus daily raw JSON backups.
-- Added native mission-finish capture, a per-player Mission Summary, first-unit/completion timing, response and mission-duration fields, and compact all-weeks Dashboard Data.
-- Added exact awarded-credit capture from MissionChief's native `/credits` transaction ledger. Mission-ID + title matches are preferred; title/time matching is accepted only when unique, and ambiguous transactions remain `PENDING_TRANSACTION`.
-- Added verified ISO-week archives at approximately 03:15 Monday, a Sunday copy-only test, an Archive Index, a 35-day Batch Ledger and a 7.5-million-cell emergency rollover guard. Destination row identities are read back before any live rows can be removed.
+- Added resumable MissionChief Credits-ledger recovery for dispatched missions that completed while every paired browser was offline. Recovery requires the exact mission ID plus normalized title, uses the authoritative transaction timestamp and exact positive amount, and fails closed on title-only or side transactions.
+- Added bounded recovery checkpoints so a long Credits catch-up pauses before the existing outbox limit, resumes the same partially processed page after upload space is available, and does not advance the last-successful checkpoint after a failed fetch.
+- Reused the existing browser `online` event and `Sync now` action to request immediate catch-up without adding a new timer, observer or worker.
 
-### Security and reliability
+### Compatibility
 
-- Preserved the userscript's `@grant none` permission model. Cross-origin submission uses a hidden form, nonce-bound replies, the exact request iframe tree and trusted Google response origins; endpoints are restricted to deployed `script.google.com/macros/s/...` routes.
-- Fixed the live Apps Script acknowledgement path: HtmlService can execute the reply inside a nested Google sandbox frame, so Nexus now verifies that bounded parent chain reaches the exact form-target iframe instead of rejecting the valid reply and reporting a false 30-second timeout after Google has already written the rows.
-- Fixed Mission Analytics Logger `advertised_credits` being uploaded as `0`. Nexus now reads **Average credits** from the authoritative mission-definition page already fetched by Unit Finder, caches it for the active mission and enriches any current-mission events queued before that definition finished loading.
-- Fixed incomplete early logger rows. Before upload, queued events now receive any later-arriving mission URL, definition ID, name, requirements, generator information, advertised value and refreshed patient/prisoner counts; MissionChief's own mission-list state provides a second authoritative source for value and current/possible casualty counts.
-- Fixed operational timestamp columns displaying only the date. Initialisation and archive creation now apply `dd/MM/yyyy HH:mm:ss` to every `*_at` field and size those columns for the full value.
-- Added an Apps Script `buildId` and capability list to the `/exec` health response, plus the backend build on upload replies, so an editor/deployment version mismatch is immediately visible.
-- Fixed `Dashboard Data` creating separate delta rows for the same player/day after Google Sheets coerced the ISO day text into a native Date. The backend now normalizes both forms to one stable daily key before updating totals.
-- Fixed every `mission_url` being discarded by the Apps Script backend. The allow-listed MissionChief URL is now parsed and rebuilt without relying on the unavailable browser `URL` implementation in Apps Script.
-- Replaced the 2.5-second in-memory dispatch click guard with a persistent, cross-frame 15-second exact-selection guard. The backend independently derives the same semantic identity and suppresses retry captures and their unit rows within the same or a later batch.
-- Generator data now preserves an explicit MissionChief building ID/name when exposed and otherwise records the mission definition's **Generated by** station type with its source labelled in metadata; a station type is never invented into a building ID.
-- Pairing codes expire after 24 hours and are single use. The workbook stores only SHA-256 pairing-code and device-token hashes, sanitizes spreadsheet formulas, validates MissionChief reply origins and mission URLs, and serializes writes with an Apps Script lock.
-- Upload retries are idempotent. A retry validates the original event set, rejects conflicting batch reuse and repairs missing Dispatch Units if a previous attempt wrote events but stopped before completing its unit rows.
-- Personnel names, passwords and cookies are excluded. Advertised mission value and actual awarded credits remain separate; an explicit native award or an exact local Credits-ledger match is accepted, while ambiguous transactions remain `PENDING_TRANSACTION` rather than treating the advertised average as actual income.
-- Increased Mission Finder from `V10.6.164` to `V10.7.0` and the unified userscript from `1.0.127` to `1.1.0`. Resource Administration remains `V4.2.8`, Unit Naming remains `3.3.27`, Station Naming remains `1.3.22`, and Personnel Assignment remains `1.3.12`.
+- Existing Apps Script endpoint, workbook, dashboard link, browser pairings, device tokens, local queued events and Greasy Fork installation/update route remain unchanged.
+- Added recovery coverage to `scripts/check-mission-user-logger.mjs`. Increased Command Nexus from `1.1.0` to `1.1.1`; Mission Finder remains `V10.7.0` and all Resource Administration component versions remain unchanged.
 
-### Repository maintenance
-
-- Replaced the README hero's human figure with a completely unoccupied operations environment, preventing the artwork from implying a contributor's likeness or authorship while preserving the Command Nexus identity and operational narrative.
-- Removed obsolete one-use builders, trigger files and historical repair/inspection workflows from permanent repository automation.
-- Centralized canonical release and component-version validation in `scripts/validate-userscript.mjs`; permanent behavioral regressions are version-agnostic and automatically discovered by the validation workflow.
-- Added a permanent Repository Quality gate that parses every retained GitHub Actions workflow with a pinned YAML parser before repository checks continue.
-- Refreshed current operational documentation for the `1.1.0` production baseline and separated it from immutable versioned handovers and incident records.
-- Rebuilt the repository front page as a complete command-centre product brief with three self-contained cinematic visual compositions, a current capability atlas, exact all-service coverage, responsive-platform guidance and explicit production-versus-roadmap boundaries.
-- Corrected the support policy's retired pre-release language and aligned its iPhone/iPad Safari scope with the evidence-backed compatibility contracts.
-- Extended repository presentation validation to protect every required README artwork and its local documentation.
-
-## [1.0.127] - 2026-08-16
+## [1.1.0] - 2026-08-15
 
 ### Added
 
-- Completed issue #18 by enabling live Aircraft Rescue and Firefighting, Co-Responder, Fire Drone, High Volume Pump and Fire Lifeguard Personnel Assignment profiles with exact UK vehicle types, training keys, seat targets and Fire Station scopes.
-- Completed issue #19 by enabling every listed SAR, Mountain Rescue, Coastguard and Lifeboat profile with exact vehicle, academy, live-seat and eligible-building mappings, plus a live full-service batch.
-- Added same-origin station vehicle-API authority for HVP pods, Boat, Flood, Hovercraft, Rescue Watercraft and Inland Rescue Boat trailers. Explicit `tractive_vehicle_id` links are preferred, a unique one-to-one pair is the only fallback, and ambiguity fails closed without assigning an unrelated tractor.
-- SAR batch runs now merge overlapping qualifications onto the same actual crew, preventing Mud/Flood, Search/Flood, Drone/Flood and other shared-vehicle rules from competing for separate seats.
-- Recorded sanitized issue #18/#19 mapping decisions and added permanent Fire, SAR, companion-link, overlap, quantity, building-scope and live-batch regressions.
-- Added singular, plural and `Required` cross-reference aliases for **Aerial Appliance Truck(s) or Rescue Stairs**.
-- The shared Unit Finder and Mission Update selector now exhausts exact type `78` Rescue Stairs first, then fills only the remaining quantity with exact type `17` Combined Aerial Rescue Pumps (CARPs).
-- Both exact vehicle types count toward selected-unit verification, while Water Ladders, Rescue Pumps and every other Fire or Airfield vehicle remain excluded from this combined requirement.
-- Blocked generic quick-select fallback for this specialist mixed pool and added a permanent regression for alias recognition, exact type ownership, ordering, remainder selection and selected-unit accounting.
-- Increased Mission Finder from `V10.6.163` to `V10.6.164`, Personnel Assignment from `1.3.11` to `1.3.12`, and the unified userscript from `1.0.126` to `1.0.127`. Resource Administration remains `V4.2.8`, Unit Naming remains `3.3.27`, and Station Naming remains `1.3.22`.
+- Added an opt-in Mission Analytics Logger that pairs each browser/origin to a stable player profile, captures exact player mission observations, dispatch snapshots, current requirements, patient demand and awarded-credit evidence, and uploads idempotent 40-event batches to the bundled Google Apps Script backend.
+- Added the Google Sheets logger backend with `Players`, `Pairings`, `Devices`, `Mission Events`, `Dispatch Units`, `Mission Summary`, `Dashboard Data` and `Upload Batches`, plus automatic five-minute sync, exact MissionChief Credits-ledger matching, all-weeks dashboard formulas, daily JSON Drive backups and copy-verified weekly archive/purge.
+- Added install-time local migration guards and permanent `scripts/check-mission-user-logger.mjs` coverage. Increased Command Nexus from `1.0.127` to `1.1.0` and Mission Finder from `V10.6.164` to `V10.7.0`; all Resource Administration component versions remain unchanged.
 
-## [1.0.126] - 2026-08-16
-
-### Fixed
-
-- Closed issue #331 by repairing the trained-personnel live-verification candidate pool broken in `v1.0.123`.
-- Exact compatible vehicles with missing or stale Personnel Register entries can now enter the live assignment-page scan that creates fresh qualification evidence.
-- Removed the circular gate where the pre-verification pool required a vehicle to already have the fresh evidence that its own scan was responsible for producing.
-- Preserved strict fail-closed final selection, readiness and Auto Mode dispatch: missing, stale, partial or wrong-type evidence still cannot satisfy a trained-personnel requirement.
-- Added sanitized incident evidence and a permanent regression that separately locks pre-verification type eligibility and final evidence-backed selection.
-- Increased Mission Finder from `V10.6.162` to `V10.6.163` and the unified userscript from `1.0.125` to `1.0.126`. Resource Administration remains `V4.2.8`, Unit Naming remains `3.3.27`, Station Naming remains `1.3.22`, and Personnel Assignment remains `1.3.11`.
-
-## [1.0.125] - 2026-08-16
+## [1.0.127] - 2026-08-14
 
 ### Added
 
-- Completed issue #17 by enabling live Ambulance Officer, HART, Tactical Command, SORT, Midwifery and Specialist Paramedic Personnel Assignment profiles with exact MissionChief UK vehicle types, academy keys and native seat targets.
-- Added explicit specialist station scopes for Ambulance Stations, Small Ambulance Stations, Urgent Treatment Centers, Home Response Locations, HART Bases and GP Surgeries according to each eligible vehicle family.
-- Enabled `Run all Medical profiles` in specialist-first order with Critical Care Ambulances last, while preserving the established standalone Critical Care engine.
-- Reused the verified background assignment path for both Preview and Live, including exact live-page vehicle-type rejection, per-vehicle confirmation and final station-wide verification.
-- Kept training shortfall and assignment shortfall separate for quantities above one and added permanent mapping, batch-order, scope, preview/live and verification regression coverage.
-- Recorded the current source evidence and resolved the stale ATV association: exact type `30` ATV Carrier uses HART `hazard_response_ems`; Tactical Command `elw2_ems` belongs to exact type `31` Ambulance Control Unit.
-- Increased Personnel Assignment from `1.3.10` to `1.3.11` and the unified userscript from `1.0.124` to `1.0.125`. Resource Administration remains `V4.2.8`, Unit Naming remains `3.3.27`, Station Naming remains `1.3.22`, and Mission Finder remains `V10.6.162`.
+- Added exact Fire/Airfield Personnel Assignment profiles for Aircraft Rescue and Firefighting (types 75/76/77/78), Co-Responder (type 18) and Fire Drone (type 90), plus exact HVP pod type 50 → Prime Mover type 40 and Boat Trailer type 74 → Light 4x4 type 73 companion resolution.
+- Added exact SAR/Coastguard Personnel Assignment profiles for Cave, Coastal Air, Coastal Command, Search Advisor, Dog, SAR Drone, Lifeboat, Mud, Rope and Search Management fixed vehicles, plus Flood, Hovercraft, Jet Ski and Lifeguard trailer-to-tractor profiles with exact courses and seat targets.
+- Added deterministic companion resolution through MissionChief's station vehicle API using explicit `tractive_vehicle_id` first and only a unique one-companion/one-eligible-tractor fallback; ambiguous pairings and API failure fail closed.
+- Added overlap-safe full-service batches that merge every applicable course requirement onto the same actual fixed crew, preserving existing occupants and exact pre/post write verification.
+- Added Rescue Stairs-first / CARP-remainder selection for Aerial Appliance Truck or Rescue Stairs requirements, including matching selected-unit verification.
+- Added permanent regressions for Fire/Airfield profiles, SAR/Coastguard profiles, companion rules and Rescue Stairs priority, plus privacy-safe evidence records for issues #18 and #19.
+- Increased Command Nexus from `1.0.126` to `1.0.127`, Mission Finder from `V10.6.163` to `V10.6.164` and Personnel Assignment from `1.3.11` to `1.3.12`; Unit Naming and Station Naming remain unchanged.
 
-## [1.0.124] - 2026-08-16
-
-### Fixed
-
-- Resolved issue #300 from user-supplied native MissionChief UK mission-row evidence: Search Dog Unit (SAR) is exact `vehicle_type_id` `102`, not `101`.
-- Aligned Rescue Dog and Search Dog Unit candidate selection and selected-unit verification with Unit Naming's existing exact type-`102` identity.
-- Retained strict specialist behavior: Police Dog / Dog Support Unit wording remains separate, and no generic vehicle fallback can satisfy Search Dog demand.
-- Added a sanitized evidence record for the native mission route and row attributes plus a permanent consistency regression that checks the Mission Finder selector and Unit Naming map use the same verified ID.
-- Increased Mission Finder from `V10.6.161` to `V10.6.162` and the unified userscript from `1.0.123` to `1.0.124`. Resource Administration remains `V4.2.8`, Unit Naming remains `3.3.27`, Station Naming remains `1.3.22`, and Personnel Assignment remains `1.3.10`.
-
-## [1.0.123] - 2026-08-16
+## [1.0.126] - 2026-08-14
 
 ### Fixed
 
-- Aligned trained-personnel selection with the locked strict fail-closed safety contract across Unit Finder, Mission Update and Auto Mode.
-- Only fresh, complete, exact-vehicle Personnel Register evidence now selects and satisfies qualification-sensitive requirements; correct vehicle type or nominal seating capacity alone is insufficient.
-- Removed the untrained correct-type fallback phase. Missing, stale and partial evidence remains an explicit verified-training shortage and keeps the mission not-ready.
-- Auto Mode now stops without clicking Dispatch when a staffing or verified qualification shortage remains instead of dispatching selected units to skip the mission.
-- Added permanent coverage for missing, stale, partial and fully verified Personnel Register states, strict satisfaction, blocked UI state and the no-dispatch Auto Mode path.
-- Increased Mission Finder from `V10.6.160` to `V10.6.161` and the unified userscript from `1.0.122` to `1.0.123`. Resource Administration remains `V4.2.8`, Unit Naming remains `3.3.27`, Station Naming remains `1.3.22`, and Personnel Assignment remains `1.3.10`.
+- Fixed trained-personnel live verification after the strict v1.0.123 dispatch gate. Exact compatible vehicles with missing or stale Personnel Register evidence are now admitted to the verification candidate pool so their current assignment pages can refresh the record before final selection.
+- Kept final dispatch strict: wrong vehicle types remain excluded, while missing, stale or partial exact-vehicle evidence still cannot satisfy Required Personnel. Unit Finder, Mission Update and Auto Mode continue to fail closed until fresh, complete register evidence proves the required qualifications.
+- Added `scripts/check-trained-personnel-live-verification-pool.mjs` and a privacy-safe evidence note for issue #331. Increased Command Nexus from `1.0.125` to `1.0.126` and Mission Finder from `V10.6.162` to `V10.6.163`; all Resource Administration component versions remain unchanged.
 
-## [1.0.122] - 2026-08-16
+## [1.0.125] - 2026-08-14
 
-### Fixed
+### Added
 
-- Corrected the supplied SAR mission case where `Required Drones` reported no available unit because Nexus treated the wording as Police Drone type `91` only.
-- `Require Drone(s)`, `Requires Drone(s)` and `Required Drone(s)` now use a strict generic Drone-family mode that accepts exact type `89` **Drone Vehicle SAR HQ** and exact type `91` **Police Drone Vehicle**, ordered by best arrival.
-- Explicit `Police Drone(s)` remains type `91` only, explicit `Police Helicopter(s)` remains type `11` only, and `Police Helicopter or Drone(s)` retains Police Drone-first with Police Helicopter fallback.
-- Bare `Drone` and `Drones` prose remains excluded, preventing unrelated cross-service text from creating dispatch demand.
-- Added permanent regression coverage for both exact Drone families, strict service-specific modes, shared fresh/update selection, selected-unit verification, ETA ordering and the bare-word guard.
-- Increased Mission Finder from `V10.6.159` to `V10.6.160` and the unified userscript from `1.0.121` to `1.0.122`. Unit Naming remains `3.3.27`, Station Naming remains `1.3.22`, and Personnel Assignment remains `1.3.10`.
+- Added live Medical Personnel Assignment profiles for Ambulance Officer, HART, Tactical Command, SORT, Midwifery and Specialist Paramedic with exact UK vehicle/course/seat/building mappings.
+- Added a **Run all Medical** batch that runs specialist profiles first and exact type-5 Critical Care last while reusing the existing service-aware background assignment engine.
+- Added strict Preview/Live verification for each Medical profile, including exact vehicle-type checks before writes, per-vehicle confirmation and final-station validation; training shortfall remains separate from assignment shortfall.
+- Added permanent `scripts/check-medical-personnel-assignment-profiles.mjs` coverage plus `docs/evidence/issue-17-medical-training-profiles.md`.
+- Increased Command Nexus from `1.0.124` to `1.0.125` and Personnel Assignment from `1.3.10` to `1.3.11`; Mission Finder, Unit Naming and Station Naming remain unchanged.
 
-## [1.0.121] - 2026-08-15
+## [1.0.124] - 2026-08-14
 
 ### Fixed
 
-- Fixed the standalone `/leitstellenansicht` timing failure where Dispatch Centre controls rendered first and an empty station-membership map was cached before the native station cards finished loading.
-- Unit Naming and Station Naming now rescan the current native `leitstelle_building_id` rows whenever their normal Refresh Stations path runs, so Dispatch Centre → Service → Station Type → Start From rebuilds from the complete popup DOM.
-- Refresh Dispatch Centres now reapplies the refreshed membership map to Unit and Station Naming snapshots that are already loaded instead of leaving their `dispatchCentreId` values stale.
-- Preserved exact native-row membership authority, true Unassigned/default stations, the same-origin document graph, standalone `window.opener` isolation and the verified background-only rename workflow.
-- Added a permanent late-render regression covering the initial empty snapshot, subsequent native-row render, forced recovery, existing-snapshot rebinding and downstream Fire & Rescue Service filtering.
-- Increased Unit Naming from `3.3.26` to `3.3.27`, Station Naming from `1.3.21` to `1.3.22`, and the unified userscript from `1.0.120` to `1.0.121`. Personnel Assignment remains `1.3.10` and Mission Finder remains `V10.6.159`.
+- Corrected the Search Dog Unit identity from legacy assumed type 101 to exact native MissionChief UK vehicle type `102` after supplied mission-row DOM proved the native checkbox and containing row both expose `vehicle_type_id="102"` for `Search Dog Unit (SAR)`.
+- Updated Mission Finder candidate selection and selected-unit verification to require exact type 102; type 101 is rejected and Police Dog Support Unit / DSU remains separate.
+- Added privacy-safe native evidence under `docs/evidence/issue-300-search-dog-vehicle-type.md` plus cross-module consistency regression coverage. Increased Command Nexus from `1.0.123` to `1.0.124` and Mission Finder from `V10.6.161` to `V10.6.162`; Resource Administration component versions remain unchanged.
 
-## [1.0.120] - 2026-08-15
-
-### Fixed
-
-- Resource Administration now recognises a popped-out top-level `/leitstellenansicht` window as an authoritative Stations workspace when its native station entries are connected, even though those links do not carry the desktop lightbox classes.
-- Station Naming and Unit Naming now run the same verified background native-form workflow from normal, embedded and standalone Stations layouts without opening station or vehicle pages.
-- The standalone window reads its own MissionChief DOM and same-origin forms; it does not inspect or depend on `window.opener`.
-- Preserved the same-origin embedded-frame gate, desktop Stations lifecycle and iOS rendered-entry lifecycle while keeping mission, building-detail and unrelated frames excluded.
-- Added executable regression coverage for the exact standalone lifecycle failure, background-only Station and Unit saves, disconnected-entry rejection, unrelated-page rejection and existing embedded/desktop paths.
-- Increased Unit Naming from `3.3.25` to `3.3.26`, Station Naming from `1.3.20` to `1.3.21`, and the unified userscript from `1.0.119` to `1.0.120`. Personnel Assignment remains `1.3.10` and Mission Finder remains `V10.6.159`.
-
-## [1.0.119] - 2026-08-15
+## [1.0.123] - 2026-08-14
 
 ### Changed
 
-- Station Naming now reads the station and its exact native edit form through same-origin background requests, preserves MissionChief's hidden fields and CSRF token, and verifies the saved name without opening a station lightbox.
-- Unit Naming now reads station vehicle tables and each exact native vehicle edit form in the background, rejects mismatched vehicle IDs or form actions, and counts a rename only after a fresh edit-page verification.
-- Personnel Assignment remains on its established background GET/POST path, with a permanent regression contract preventing link clicks, lightboxes, iframe navigation, or unverified assignment counts.
-- Stop and lifecycle cleanup now abort active Station and Unit Naming requests.
-- Added permanent cross-workflow regression coverage for native-form integrity, same-origin resource validation, background-only operation, and post-save verification ordering.
-- Increased Unit Naming from `3.3.24` to `3.3.25`, Station Naming from `1.3.19` to `1.3.20`, Personnel Assignment from `1.3.9` to `1.3.10`, and the unified userscript from `1.0.118` to `1.0.119`.
+- Enforced fail-closed trained-personnel selection everywhere qualification evidence matters. Missing, stale or partial Personnel Register evidence no longer falls back to nominal vehicle capacity or an untrained correct-type vehicle.
+- Unit Finder and Mission Update remain blocked while trained coverage cannot be proven; Auto Mode now stops without clicking Dispatch rather than treating nominal capacity as trained staff.
+- Added explicit stale-register detection and manual Mission Update recovery for a previous trained-personnel block. Increased Command Nexus from `1.0.122` to `1.0.123` and Mission Finder from `V10.6.160` to `V10.6.161`.
 
-## [1.0.118] - 2026-08-15
-
-### Changed
-
-- Fire Engines or RIVs now selects exact type-76 RIVs first and fills only the remaining requirement with exact type-16 Rescue Pumps.
-- Mixed RIV and Rescue Pump selections count together toward the row while Water Ladders and Combined Aerial Rescue Pumps remain excluded.
-- Added permanent regression coverage for RIV-first ordering, exact remainder top-up, selection caps and selected-unit verification.
-- Advanced the Mission Finder engine from V10.6.158 to V10.6.159.
-- Increased the unified userscript version from `1.0.117` to `1.0.118`.
-
-## [1.0.117] - 2026-08-15
-
-### Changed
-
-- Railway Police Officer requirements now use the shared trained PSU and IRV vehicle pool.
-- A live-verified type-51 PSU can contribute up to 9 Railway Police Officers, while type-8 IRVs contribute 2 and handle smaller remainders.
-- Added regression coverage for Railway Police PSU planning and nine-officer trained coverage.
-- Advanced the Mission Finder engine from V10.6.157 to V10.6.158.
-- Increased the unified userscript version from `1.0.116` to `1.0.117`.
-
-## [1.0.116] - 2026-08-15
-
-### Changed
-
-- Mission Update now recalculates the live requirement target from Missing on mission, En-route, Still needed, and Selected before every click.
-- A zero live shortage hard-stops stale mission-definition selections; 1 missing, 1 en-route, and 0 still needed now selects no additional unit.
-- Advanced the Mission Finder engine from V10.6.156 to V10.6.157.
-- Increased the unified userscript version from `1.0.115` to `1.0.116`.
-
-## [1.0.115] - 2026-08-15
-
-### Changed
-
-- Mission Update now treats each Missing on mission Still needed value as the current selection target and stops when the live Selected counter reaches it.
-- BASU, Welfare, HazMat, and HazMat/CBRN requirements now share Operational Support Units and dispatch only the largest Still needed amount.
-- Mission Finder increased from V10.6.155 to V10.6.156.
-- Increased the unified userscript version from `1.0.114` to `1.0.115`.
-
-## [1.0.114] - 2026-08-15
+## [1.0.122] - 2026-08-14
 
 ### Fixed
 
-- Completed the Auto Mode `Release Prisoners` flow after MissionChief replaces the cell-selection iframe with the exact `<div class="alert alert-success">The prisoners were released.</div>` result.
-- Captured the owning Vue `.vm--container` and stable `data-modal` identity before release navigation, then reacquired that same modal's live `span.lightbox-close[title="Close"]` control after the old iframe document detached.
-- Added a scoped Font Awesome `xmark` fallback that resolves the SVG to its interactive close ancestor without allowing an unrelated visible modal to be dismissed.
-- Preserved the current-mission release selector, duplicate-click guard, bounded waits, verified-close restart gate and fail-closed Auto Mode stop when either the exact success result or its owned close control cannot be confirmed.
+- Corrected generic `Require Drone`, `Requires Drone` and `Required Drone` mission rows so they can use the exact Drone Vehicle (SAR HQ) type `89` or Police Drone Vehicle type `91`, ordered by best arrival, across fresh Unit Finder, Mission Update fallback and selected-unit verification.
+- Kept explicit Police Drone strict to type `91`, explicit Police Helicopter strict to type `11`, and `Police Helicopter or Drone` on its established Police Drone-first / Police Helicopter-fallback path.
+- Added `scripts/check-generic-drone-family-v10122.mjs`. Increased Command Nexus from `1.0.121` to `1.0.122` and Mission Finder from `V10.6.159` to `V10.6.160`.
 
-### Regression coverage
+## [1.0.121] - 2026-08-14
 
-- Added `scripts/check-auto-prisoner-release-close-v10114.mjs` with the supplied success result and Vue close-span structure.
-- Covered pre-navigation owner capture, detached result-document discovery, rejection of an unrelated modal with identical success text, live close-control reacquisition and close verification before Auto Mode restarts.
-- Extended the existing prisoner cell gate regression to require owner capture before the release click and exact success confirmation before the result modal is closed.
+### Fixed
 
-### Changed engine baseline
+- Fixed standalone `/leitstellenansicht` naming when Dispatch Centre controls mount before all native station cards finish rendering. Refresh Stations now forces a fresh native `leitstelle_building_id` scan instead of reusing the initial empty membership snapshot.
+- Refresh Dispatch Centres now reapplies that fresh membership map to already-loaded Unit Naming and Station Naming station snapshots before rebuilding Dispatch Centre → Service → Station Type → Start From.
+- Added `scripts/check-naming-popout-late-membership-v10121.mjs`. Increased Command Nexus from `1.0.120` to `1.0.121` and Unit Naming from `3.3.26` to `3.3.27`; Station Naming increased from `1.3.21` to `1.3.22`; Mission Finder and Personnel Assignment remain unchanged.
 
-- Command Nexus increased from `1.0.113` to `1.0.114`.
-- Mission Finder increased from `V10.6.154` to `V10.6.155`.
-- Unit Naming remains `3.3.24`.
-- Station Naming remains `1.3.19`.
-- Personnel Assignment remains `1.3.9`.
+## [1.0.120] - 2026-08-14
+
+### Fixed
+
+- Fixed Resource Administration mounting in a top-level popped-out `/leitstellenansicht` before all native station rows render. The complete Unit Naming, Station Naming and Personnel Assignment workspace now becomes authoritative as soon as a connected station entry appears, while unrelated top-level pages and child frames remain excluded.
+- Reused the verified same-origin background native-form save path for Station and Unit naming from the pop-out; it does not open per-resource lightboxes and does not depend on `window.opener`.
+- Added `scripts/check-background-resource-admin-popout-v10120.mjs` and increased Command Nexus from `1.0.119` to `1.0.120`; component versions remain Unit Naming `3.3.26`, Station Naming `1.3.21`, Personnel Assignment `1.3.10` and Mission Finder `V10.6.159`.
+
+## [1.0.119] - 2026-08-14
+
+### Added
+
+- Added same-origin background native-form handling for Unit Naming, Station Naming and Personnel Assignment so Preview/Live can read and save exact resource forms without opening each vehicle/station page in the MissionChief lightbox.
+- Station and Unit bulk runs now use the shared background request path with exact per-resource verification; Personnel Assignment background writes retain exact service/profile checks, pause/stop boundaries and final verification.
+- Added `scripts/check-background-resource-admin-v10119.mjs`; increased Command Nexus from `1.0.118` to `1.0.119`, Personnel Assignment from `1.3.9` to `1.3.10`, Unit Naming from `3.3.25` to `3.3.26` and Station Naming from `1.3.20` to `1.3.21`; Mission Finder remains `V10.6.159`.
+
+## [1.0.118] - 2026-08-14
+
+### Fixed
+
+- Corrected `Fire Engines or RIVs` to select exact type-76 Rapid Intervention Vehicles before exact type-16 Rescue Pumps, topping up only the remaining shortfall and counting both families toward the same requirement.
+- Added `scripts/check-fire-engine-or-riv-priority-v10118.mjs`; increased Command Nexus from `1.0.117` to `1.0.118` and Mission Finder from `V10.6.158` to `V10.6.159`.
+
+## [1.0.117] - 2026-08-14
+
+### Fixed
+
+- Included Railway Police Officers inside the existing exact Public Order Support Unit (PSU) trained-personnel coverage path for Unit Finder, Mission Update and Auto Mode.
+- Added `scripts/check-railway-police-psu-v10117.mjs`; increased Command Nexus from `1.0.116` to `1.0.117` and Mission Finder from `V10.6.157` to `V10.6.158`.
+
+## [1.0.116] - 2026-08-14
+
+### Fixed
+
+- Corrected Mission Update vehicle shortfall to use the live remaining target (`Missing - En-route`) before selected-unit subtraction, preventing an extra vehicle when MissionChief already shows one en route and the remaining need is zero.
+- Added `scripts/check-mission-update-enroute-v10116.mjs`; increased Command Nexus from `1.0.115` to `1.0.116` and Mission Finder from `V10.6.156` to `V10.6.157`.
+
+## [1.0.115] - 2026-08-14
+
+### Fixed
+
+- Made live `Missing on mission` rows authoritative for Mission Update and existing-mission Unit Finder: `Still needed` is bounded by `Missing - En-route`, selected vehicles are subtracted once, and a visible zero-shortage table suppresses fresh mission-definition vehicle totals.
+- Added the shared OSU-demand collapse for BASU, Welfare, HazMat and CBRN, using the maximum current requirement instead of summing categories.
+- Added exact type-family selected-unit counting before each live requirement is acted on. Added `scripts/check-mission-update-live-targets-v10115.mjs`; increased Command Nexus from `1.0.114` to `1.0.115` and Mission Finder from `V10.6.155` to `V10.6.156`.
+
+## [1.0.114] - 2026-08-14
+
+### Fixed
+
+- Captured the owning Vue transport lightbox before clicking Release Prisoners, waited for the exact released-prisoners success result after iframe navigation, reacquired the live parent `span.lightbox-close[title="Close"]` control and verified the owned modal disappeared before restarting Auto Mode.
+- Added `scripts/check-auto-prisoner-release-close-v10114.mjs`; increased Command Nexus from `1.0.113` to `1.0.114` and Mission Finder from `V10.6.154` to `V10.6.155`.
 
 ## [1.0.113] - 2026-08-14
 
 ### Fixed
 
-- Restored Auto Mode prisoner transport handling for MissionChief's current structured `Cell Selection` screen. The new markup identifies the active chooser with `data-transport-request-type="prisoner"` instead of the older explanatory sentence.
-- Scoped prison destinations to the active prisoner request and continued to select only the first visible, enabled `btn-success` destination with available cells. Full `btn-danger` destinations are ignored, so the supplied DALGETY BAY zero-cell row is skipped and CARDENDEN is selected.
-- Retained the legacy prisoner-alert detection as a fallback for older MissionChief page variants.
-
-### Regression coverage
-
-- Added `scripts/check-auto-prison-cell-success-v10113.mjs` using the supplied current transport-request structure and destination ordering.
-- Covered a red zero-cell destination first, stale zero-capacity and disabled green rows, first valid green selection, later green rows, active-request scoping, and the legacy alert fallback.
-
-### Changed engine baseline
-
-- Command Nexus increased from `1.0.112` to `1.0.113`.
-- Mission Finder increased from `V10.6.153` to `V10.6.154`.
-- Unit Naming remains `3.3.24`.
-- Station Naming remains `1.3.19`.
-- Personnel Assignment remains `1.3.9`.
+- Hardened Auto Mode prisoner Cell Selection parsing so it recognises the current structured transport block, skips red/full cell buttons and clicks the first usable green `btn-success` destination while retaining the legacy `btn-success` alert fallback.
+- Added `scripts/check-auto-prison-cell-success-v10113.mjs`; increased Command Nexus from `1.0.112` to `1.0.113` and Mission Finder from `V10.6.153` to `V10.6.154`.
 
 ## [1.0.112] - 2026-08-14
 
 ### Fixed
 
-- Restored Unit Naming and Station Naming in a standalone `/leitstellenansicht` window. MissionChief omits type-7 Dispatch Centre cards from that layout and exposes the same native ID/name pairs through `.leitstelle_selection[leitstelle]` navbar controls instead.
-- Retained type-7 building-card discovery in the embedded Stations layout, with full type-7 rows taking precedence when both native layouts expose the same Dispatch Centre.
-- Kept each station card's `leitstelle_building_id` as the authority for Dispatch Centre membership, including the `Unassigned / default` group.
-- Removed any need for the popout to depend on or inspect its opener window; all required centre and station data is read from its own MissionChief DOM.
-
-### Regression coverage
-
-- Added `scripts/check-naming-dispatch-centre-popout-v10112.mjs` using the exact standalone layout from the supplied live HTML: navbar Dispatch Centre controls, membership-bearing station cards, and no type-7 cards.
-- Covered centre-list readiness, station-assignment readiness, Unit/Station Naming filtering, and the unassigned group while preserving existing embedded-layout regressions.
-
-### Changed engine baseline
-
-- Command Nexus increased from `1.0.111` to `1.0.112`.
-- Unit Naming increased from `3.3.23` to `3.3.24`.
-- Station Naming increased from `1.3.18` to `1.3.19`.
-- Mission Finder remains `V10.6.153`.
-- Personnel Assignment remains `1.3.9`.
+- Corrected standalone Stations pop-outs so Unit Naming and Station Naming load native Dispatch Centre options even when the workspace mounts after the first station rows. Added `scripts/check-naming-dispatch-centre-popout-v10112.mjs`; increased Command Nexus from `1.0.111` to `1.0.112`, Unit Naming from `3.3.23` to `3.3.24` and Station Naming from `1.3.18` to `1.3.19`.
 
 ## [1.0.111] - 2026-08-14
 
-### Changed
+### Fixed
 
-- Changed building type `22` response locations to town-only Station Naming. A station previously proposed as `ABERDOUR-FO1` is now named exactly `ABERDOUR`.
-- Removed the vehicle role and station sequence from type-22 station names. Unit Naming now owns both layers, producing names such as `ABERDOUR-FO-1`, `ABERDOUR-AO-1`, `ABERDOUR-OTL-1`, and `ABERDOUR-DSU-1`.
-- Removed the type-22 vehicle-table dependency from Station Naming. These response locations no longer need Station Naming to identify an FO, AO or OTL vehicle before the station can be named.
-- Retained the existing service suffix and station sequence rules for ordinary fire, ambulance, police and other supported station types.
-
-### Regression coverage
-
-- Added `scripts/check-type22-town-only-naming-v10111.mjs` around the exact live `ABERDOUR-FO1` case.
-- Covered town-only station output, FO/AO/OTL/DSU role ownership, Unit Naming sequences `1` and `2`, removal of the duplicate FO layer, and unchanged ordinary station naming.
-
-### Changed engine baseline
-
-- Command Nexus increased from `1.0.110` to `1.0.111`.
-- Station Naming increased from `1.3.17` to `1.3.18`.
-- Mission Finder remains `V10.6.153`.
-- Unit Naming remains `3.3.23`.
-- Personnel Assignment remains `1.3.9`.
+- Added an exact live regression for building type 22 station naming using the expected town-only base, so a Home Response Location such as ABERDOUR becomes `ABERDOUR` and its FO/AO/OTL/DSU vehicles derive role/number callsigns from that base. Increased Command Nexus from `1.0.110` to `1.0.111`, Unit Naming from `3.3.22` to `3.3.23` and Station Naming from `1.3.17` to `1.3.18`.
 
 ## [1.0.110] - 2026-08-14
 
 ### Fixed
 
-- Changed Station Naming to prefer MissionChief's coordinate reverse-address response over the flattened Move Building text field. The Move page remains the fallback when coordinates or reverse lookup are unavailable.
-- Added guarded recovery for Move Building values that repeat the post town after a locality. The exact live value `Ladywalk, KY10 3EX Anstruther Easter Anstruther` now resolves to `ANSTRUTHER` instead of `ANSTRUTHER EASTER ANSTRUTHER`.
-- Preserved ordinary multi-word post towns such as `South Queensferry`, `St Andrews`, `Grantown-on-Spey`, and `Bridge of Allan`.
+- Corrected flattened station addresses by preferring MissionChief's structured station data and edit-form address fields, using Move Building text only as a last bounded fallback and collapsing duplicated town prefixes such as `ANSTRUTHER EASTER ANSTRUTHER-FS1` before naming.
+- Updated Home Response Location (building type 22) station names to use town only, so its FO/AO/OTL/DSU unit roles do not inherit an HRL station suffix.
+- Added `scripts/check-station-move-address-v10110.mjs` and `scripts/check-station-unit-naming-chain-v10109.mjs`; increased Command Nexus from `1.0.109` to `1.0.110`, Unit Naming from `3.3.21` to `3.3.22` and Station Naming from `1.3.16` to `1.3.17`.
 
-### Regression coverage
-
-- Added `scripts/check-station-move-address-v10110.mjs` using the exact failed Move Building value reported from the live Station Naming run.
-- Covered reverse-address priority, Move-page fallback, an unseparated country suffix, repeated multi-word post towns, and unchanged ordinary multi-word post towns.
-
-### Changed engine baseline
-
-- Command Nexus increased from `1.0.109` to `1.0.110`.
-- Station Naming increased from `1.3.16` to `1.3.17`.
-- Mission Finder remains `V10.6.153`.
-- Unit Naming remains `3.3.23`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.109] - 2026-08-13
+## [1.0.109] - 2026-08-14
 
 ### Fixed
 
-- Preserved MissionChief reverse-address line breaks as address-component separators before Station Naming extracts the post town. This stops responses such as `Anstruther Easter` plus `Anstruther` being flattened into the invalid town name `ANSTRUTHER EASTER ANSTRUTHER`.
-- Restored a mandatory station sequence to every generated station name, including building type `22`. The format is now consistently town, service and station sequence, such as `ANSTRUTHER-FS1`, `ANSTRUTHER-FO1`, and `ANSTRUTHER-FO2`.
-- Added a per-run sequence registry that preserves valid existing numbers, allocates the first free number to unnumbered stations, and separates duplicate existing numbers deterministically.
-- Confirmed Unit Naming uses the complete numbered station name before adding the vehicle type and vehicle sequence. A Fire Officer at `ANSTRUTHER-FO1` is therefore named `ANSTRUTHER-FO1-FO-1`; the station `FO` and vehicle `FO` represent separate layers and are both intentional.
+- Routed Building Type 22 FO, AO, OTL and DSU vehicles through their role-owned Unit Naming classes so station address tokens are not duplicated into callsigns such as `KIRK-AO1`. The matching station class now carries the clean station base only, and Unit Naming owns the FO/AO/OTL/DSU suffix and sequence. Added `scripts/check-officer-station-naming-v10108.mjs` and increased Command Nexus from `1.0.108` to `1.0.109`, Unit Naming from `3.3.20` to `3.3.21` and Station Naming from `1.3.15` to `1.3.16`.
 
-### Regression coverage
-
-- Added `scripts/check-station-unit-naming-chain-v10109.mjs` to execute reverse-address normalization, post-town extraction, station sequence allocation, station-name generation and Unit Naming as one chain.
-- Covered HTML and newline address separators, same-town officer station allocation, valid existing sequence preservation, duplicate sequence repair, all three officer service IDs, and unchanged ordinary station/unit naming.
-
-### Changed engine baseline
-
-- Command Nexus increased from `1.0.108` to `1.0.109`.
-- Station Naming increased from `1.3.15` to `1.3.16`.
-- Mission Finder remains `V10.6.153`.
-- Unit Naming remains `3.3.23`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.108] - 2026-08-13
+## [1.0.108] - 2026-08-14
 
 ### Added
 
-- Added Station Naming support for MissionChief building type `22` using the exact vehicle held at that location: type `20` produces `-OTL`, type `3` produces `-FO`, and type `34` produces `-AO`.
-- The dynamic rule reads only native `vehicle_type_id` attributes from the station vehicle table; it does not infer officer identity from mutable display text.
-- Dynamic officer locations do not preserve a stale numeric suffix, so `KIRK-AO1` is proposed as exactly `KIRK-AO`, `KIRK-FO`, or `KIRK-OTL` according to the vehicle found.
-- Empty locations, unsupported vehicles, and locations containing more than one distinct supported officer type fail closed with an explicit skip reason instead of risking an incorrect name.
+- Added exact Unit Naming support for Building Type 22 Ambulance Officer, Operations Team Leader, Fire Officer and Duty Station Officer roles, including `AO`, `OTL`, `FO` and `DSU` classes and no trailing `1` for station-scoped role vehicles. Increased Command Nexus from `1.0.107` to `1.0.108`, Unit Naming from `3.3.19` to `3.3.20` and Station Naming from `1.3.14` to `1.3.15`.
 
-### Regression coverage
-
-- Added `scripts/check-officer-station-naming-v10108.mjs` to execute the real building-type mapping, exact vehicle-table parser, dynamic suffix resolver, and station-name builder.
-- Covered all three verified vehicle IDs, duplicate rows of one type, `data-vehicle-type-id`, empty/unsupported input, ambiguous mixed officer types, removal of the stale dynamic number, and preservation of ordinary station numbering.
-
-### Changed engine baseline
-
-- Command Nexus increased from `1.0.107` to `1.0.108`.
-- Station Naming increased from `1.3.14` to `1.3.15`.
-- Mission Finder remains `V10.6.153`.
-- Unit Naming remains `3.3.23`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.107] - 2026-08-13
-
-### Fixed
-
-- Completed the Road Rail Unit's existing partial Unit Naming integration using its verified native type `107` identity.
-- Changed the naming label from the internal abbreviation `RRU` to MissionChief's canonical `Road Rail Unit` wording while retaining the `RRU` callsign.
-- Moved the class from the incorrect Airfield selector to Fire and retained it under All classes.
-- Replaced the aircraft-themed icon with the service-matched 🚒🚆 rail/fire icon.
-- Preserved Mission Finder's exact type-107-only selection and verification contract, including separation from the type `59` Coastguard Rope Rescue Unit.
-
-### Regression coverage
-
-- Added `scripts/check-road-rail-unit-naming-class-v10107.mjs` to execute the real Unit Naming class-option builder and callsign generator.
-- Covered the native type, canonical label, Fire and All availability, Airfield exclusion, icon, generated callsign and strict Mission Finder matcher.
-
-### Changed engine baseline
-
-- Command Nexus increased from `1.0.106` to `1.0.107`.
-- Unit Naming increased from `3.3.22` to `3.3.23`.
-- Mission Finder remains `V10.6.153`.
-- Station Naming remains `1.3.14`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.106] - 2026-08-13
+## [1.0.107] - 2026-08-14
 
 ### Added
 
-- Added native type `106` HGV Recovery Vehicle to Unit Naming with the `HGV` callsign and a distinct 🚛 icon.
-- Changed Unit Naming's type `105` display label to MissionChief's live `Recovery Vehicle` wording while preserving its established `FRV` callsign and 🛻 icon.
-- Both recovery classes now appear under Recovery and All classes. The existing `Flatbed Recovery Vehicle` naming alias remains compatible.
-- Mission Finder's exact type-105 Flatbed and type-106 HGV recovery selection routes remain unchanged.
+- Added exact Unit Naming support for the Fire Road Rail Unit as MissionChief vehicle type `107`, with Fire service classification and `RRU` callsign class. Increased Command Nexus from `1.0.106` to `1.0.107` and Unit Naming from `3.3.18` to `3.3.19`; Mission Finder remains `V10.6.153`.
 
-### Regression coverage
-
-- Added `scripts/check-recovery-unit-naming-classes-v10106.mjs` to execute the real Unit Naming class-option builder and callsign generator for both recovery types.
-- Covered Recovery and All selector availability, exact type IDs, distinct icons, generated callsigns and legacy Flatbed Recovery naming compatibility.
-- Preserved the Police Unit Naming, towing/recovery selector and current Mission Finder regression baselines.
-
-### Changed engine baseline
-
-- Command Nexus increased from `1.0.105` to `1.0.106`.
-- Unit Naming increased from `3.3.21` to `3.3.22`.
-- Mission Finder remains `V10.6.153`.
-- Station Naming remains `1.3.14`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.105] - 2026-08-13
+## [1.0.106] - 2026-08-14
 
 ### Added
 
-- Completed issue #295 using a sanitized live MissionChief UK Police purchase-page capture: type `13` Armed Response Vehicle (`ARV`), type `19` Joint Response Unit (`JRU`), type `24` Traffic Car (`TC`) and type `52` Firearms Personnel Carrier (`FPC`).
-- Added the four exact native mappings and naming rules to Unit Naming. Each class now appears under both Police and All classes and produces its approved callsign code with a distinct service-matched icon.
-- Recorded the verified IDs, canonical labels, approved codes and sanitized capture method in the permanent architecture contract and evidence record.
-- Mission Finder vehicle selection, Police requirement aliases and existing type-25 Armed Traffic Car behaviour remain unchanged.
+- Added Unit Naming classes for Flatbed Recovery Vehicle type `105` and HGV Recovery Vehicle type `106`, with `FRV` / `HGV` callsign codes and Recovery Station service classification. Increased Command Nexus from `1.0.105` to `1.0.106` and Unit Naming from `3.3.17` to `3.3.18`; Mission Finder remains `V10.6.153`.
 
-### Regression coverage
-
-- Added `scripts/check-police-unit-naming-classes-v10105.mjs` to execute the real Unit Naming class-option builder for Police and All classes and verify generated callsigns for all four mappings.
-- Refreshed obsolete release-baseline tokens across the retained regression scripts and repaired stale dashboard/preload harness assumptions, allowing all 69 permanent regressions to run successfully against the current source again.
-- Preserved the canonical userscript validator, repository integrity checks and the current Mission Finder regression baseline.
-
-### Changed engine baseline
-
-- Command Nexus increased from `1.0.104` to `1.0.105`.
-- Unit Naming increased from `3.3.20` to `3.3.21`.
-- Mission Finder remains `V10.6.153`.
-- Station Naming remains `1.3.14`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.104] - 2026-08-12
+## [1.0.105] - 2026-08-14
 
 ### Added
 
-- Added issue #304's persistent Auto Mode stop evidence to Mission Control. Automatic safety stops now show a compact red **AUTO STOPPED** flag, the local stop date/time and the exact supplied reason.
-- The stop record is stored independently from the live status message, so mission changes, document reloads and later status updates cannot erase the explanation.
-- A recreated Mission Control panel restores the saved flag and reason. Starting Auto Mode clears the record; deliberately pressing **Auto Mode: Stop** does not create a false automatic-stop warning.
-- Invalid or corrupt saved stop data is discarded safely without blocking Mission Control.
-- Existing safety-stop decisions, selector logic, dispatch behaviour and Police Unit Naming issue #295 remain unchanged.
+- Added exact Police Unit Naming classes for ARV type `4`, Joint Response Unit type `103`, Traffic Car type `24` and Firearms Personnel Carrier type `57`; retained existing IRV type `8` while accepting the MissionChief purchase label. Increased Command Nexus from `1.0.104` to `1.0.105` and Unit Naming from `3.3.16` to `3.3.17`; Mission Finder remains `V10.6.153`.
 
-### Regression coverage
-
-- Added `scripts/check-auto-stop-reason.mjs` to exercise real stop-record storage, flag rendering, exact-reason retention, local timestamp display, cross-panel restoration, live-status isolation, restart clearing and corrupt-data recovery.
-- Preserved the canonical userscript validator, repository integrity checks and current Ambulance Officer/Mission Update authority regressions.
-
-### Changed engine baseline
-
-- Command Nexus increased from `1.0.103` to `1.0.104`.
-- Mission Finder increased from `V10.6.152` to `V10.6.153`.
-- Unit Naming remains `3.3.20`.
-- Station Naming remains `1.3.14`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.103] - 2026-08-12
+## [1.0.104] - 2026-08-14
 
 ### Fixed
 
-- Completed issue #299 for genuinely fresh missions: the Ambulance Officer threshold now receives the ordinary Ambulance total already calculated from the current patient badge count, even when no explicit patient `We need: Ambulance` row exists.
-- Fresh patient badge demand and explicit patient Ambulance rows are collapsed to the larger authoritative total for threshold comparison, preventing the same patient demand from being counted twice.
-- The late-render fresh-mission recovery path now applies the same threshold and exact type-34 selector after patient data appears.
-- Late visible, legacy-list and refetched mission-help fallbacks now retain the configured fresh-mission rules instead of silently bypassing them.
-- Existing positive Officer demand, selected/on-mission Officer coverage, live shortage authority, the separate High-risk Missing Person Ambulance rule and the Upgrade exclusion remain unchanged.
+- Changed Unit Finder to use live `Missing Vehicles` / `Missing Personnel` and `Missing on mission` rows before falling back to full mission-definition totals, keeping current shortages authoritative for existing missions.
+- Increased Mission Finder to `V10.6.153` and added permanent live-shortage authority coverage.
 
-### Regression coverage
-
-- Extended `scripts/check-ambulance-officer-threshold-v10101.mjs` with the real missed state: six fresh patient-badge Ambulances, no mission-help Ambulance row and no explicit patient Ambulance alert must select one Officer at threshold five.
-- Added equal-threshold, badge/explicit-row de-duplication, larger-explicit-total, preloaded Vehicle Load and late fresh-recovery assertions.
-- Preserved the chained High-risk Missing Person, Mission Update single-pass and Missing-on-mission authority regressions.
-
-### Changed engine baseline
-
-- Command Nexus increased from `1.0.102` to `1.0.103`.
-- Mission Finder increased from `V10.6.151` to `V10.6.152`.
-- Unit Naming remains `3.3.20`.
-- Station Naming remains `1.3.14`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.102] - 2026-08-12
+## [1.0.103] - 2026-08-14
 
 ### Fixed
 
-- Fixed issue #299: the configured Ambulance Officer threshold now runs consistently through Unit Finder, Auto Mode and Mission Update, including cycles where the current live Missing Vehicles/Personnel table is authoritative.
-- The active path counts only its authoritative positive ordinary Ambulance demand and adds exactly one Ambulance Officer when that count is strictly greater than the configured threshold.
-- Ambulance Officer selection now prefers exact MissionChief vehicle type `34`, with an exact-name fallback only when MissionChief does not expose a vehicle type ID.
-- Existing positive Officer demand, an already-selected Officer, a mission-scoped Officer selected by an earlier pass, or a confirmed satisfied live Officer requirement prevents duplication.
-- The separate High-risk Missing Person Ambulance rule remains fresh-mission-only and is not enabled during Mission Update.
+- Fixed the Ambulance Officer threshold for fresh missions whose Ambulance demand exists only in the patient badge: the patient count now reaches the shared threshold evaluator, late fresh recovery uses the same rule, and explicit patient Ambulance rows collapse with the badge using the larger total rather than being added twice.
+- Retained Unit Finder, Auto Mode and Mission Update coverage from v1.0.102, exact type-34 selection and duplicate prevention; Upgrade remains excluded.
+- Added focused regression coverage for fresh patient-badge demand and increased Mission Finder from `V10.6.151` to `V10.6.152`.
 
-### Regression coverage
+## [1.0.102] - 2026-08-13
 
-- Extended `scripts/check-ambulance-officer-threshold-v10101.mjs` to cover fresh Unit Finder, live-authority Unit Finder, Auto Mode, manual/post-selection Mission Update, strict type-34 matching and duplicate protection.
-- Preserved the chained High-risk Missing Person regression and re-ran the Mission Update single-pass and Missing-on-mission authority checks against the current release baseline.
+### Fixed
 
-### Changed engine baseline
+- Extended the user-set Ambulance Officer threshold across Unit Finder, Auto Mode and Mission Update, counting positive ordinary Ambulance demand from the authoritative source for each path and ensuring exactly one type-34 Officer when demand is strictly greater than the configured threshold.
+- Added duplicate protection for an existing Officer requirement, an already selected Officer, an Officer selected by an earlier mission-scoped pass and an Officer already satisfying the live mission. High-risk Missing Person Ambulance remains fresh-only and Upgrade remains excluded.
+- Added issue-#299 regression coverage across all three selector paths and increased Mission Finder from `V10.6.150` to `V10.6.151`.
 
-- Command Nexus increased from `1.0.101` to `1.0.102`.
-- Mission Finder increased from `V10.6.150` to `V10.6.151`.
-- Unit Naming remains `3.3.20`.
-- Station Naming remains `1.3.14`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.101] - 2026-08-12
+## [1.0.101] - 2026-08-13
 
 ### Added
 
-- Added a new Settings checkbox, **Automatically add 1 Ambulance Officer**, alongside the existing High-risk Missing Person Ambulance rule.
-- Added a user-set numeric threshold from `0` to `99`, defaulting to `5` while the rule remains disabled by default.
-- On fresh Unit Finder and Auto Mode requirement loads, one **Ambulance Officer** is added when the final ordinary Ambulance demand is strictly greater than the configured threshold. Example: threshold `5` triggers at `6` Ambulances.
-- Multiple ordinary Ambulance rows are summed across fresh mission and current patient requirements, an existing positive Ambulance Officer requirement in either source prevents duplication, and the configured row appears in the preloaded Vehicle Load display.
+- Added an independent **Automatically add 1 Ambulance Officer** setting with a user-controlled threshold from 0 to 99, defaulting to 5 while the option itself defaults off.
+- When enabled, fresh Unit Finder and fresh Auto Mode count positive ordinary Ambulance demand from the mission definition plus current patient requirements and add exactly one Ambulance Officer (exact type `34`) only when that total is strictly greater than the threshold.
+- The threshold rule runs after the existing High-risk Missing Person Ambulance rule, appears in preloaded Vehicle Load and remains excluded from Mission Update, Upgrade and other live-shortage paths.
+- Added `scripts/check-ambulance-officer-threshold-v10101.mjs`; increased Mission Finder from `V10.6.149` to `V10.6.150`.
 
-### Preserved safety and authority
-
-- The existing **Always include 1 Ambulance in Unit Finder** option for High Risk and Very High Risk Missing Person missions remains unchanged and fully covered.
-- The Ambulance Officer threshold evaluates after the high-risk rule, so any configured high-risk Ambulance is included in the final Ambulance count.
-- Current Missing Vehicles, Missing Personnel, Mission Update and other live shortage sources remain authoritative and never re-add the configured Officer.
-- Both settings default off and persist independently in local storage.
-
-### Regression coverage
-
-- Added `scripts/check-ambulance-officer-threshold-v10101.mjs` for settings persistence, threshold bounds, strict more-than comparison, summed Ambulance demand, duplicate protection, fresh-path gating, Vehicle Load display and diagnostics.
-- Chained the new regression through `scripts/check-high-risk-missing-person-ambulance-v1076.mjs`, which continues to prove the original high-risk rule.
-
-### Changed engine baseline
-
-- Command Nexus increased from `1.0.100` to `1.0.101`.
-- Mission Finder increased from `V10.6.149` to `V10.6.150`.
-- Unit Naming remains `3.3.20`.
-- Station Naming remains `1.3.14`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.100] - 2026-08-11
+## [1.0.100] - 2026-08-13
 
 ### Fixed
 
-- Added MissionChief Police requirement aliases **Require Drone**, **Requires Drone** and **Required Drone** (plus plural forms) to the existing Police Drone cross-reference.
-- These requirement labels enter the established drone-only Police Air path and select exact MissionChief vehicle type `91`, **Police Drone Vehicle / Drone Vehicle (Police Station)**.
-- Existing helicopter-only and explicit **Police Helicopter or Drone** flexible behavior remains unchanged.
-- A bare **Drone** / **Drones** alias is deliberately not added, avoiding accidental capture of unrelated cross-service drone wording.
+- Added a strict `Require Drone` / `Requires Drone` / `Required Drone` alias path so the live requirement wording selects only exact MissionChief Police Drone Vehicle type `91`, including plural forms.
+- Kept bare `Drone` / `Drones` unregistered so unrelated cross-service text does not create a Police dispatch demand, while existing Police Helicopter and Police Helicopter-or-Drone handling remains unchanged.
+- Added `scripts/check-police-drone-requirement-v10100.mjs`; increased Mission Finder from `V10.6.148` to `V10.6.149`.
 
-### Regression coverage
-
-- Added `scripts/check-police-drone-requirement-v10100.mjs` to lock the reported aliases, exact type-91 selection, drone-only routing, selected-unit verification and the no-bare-Drone guard.
-- Chained the new check through the existing Search Dog / recovery regression path so the permanent validation gate continues to cover it without adding another workflow step.
-
-### Changed engine baseline
-
-- Command Nexus increased from `1.0.99` to `1.0.100`.
-- Mission Finder increased from `V10.6.148` to `V10.6.149`.
-- Unit Naming remains `3.3.20`.
-- Station Naming remains `1.3.14`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.99] - 2026-08-11
+## [1.0.99] - 2026-08-13
 
 ### Fixed
 
-- Extended the existing exact Search Dog Unit cross-reference so MissionChief requirement **Required Search Dog Units** follows the same strict rule as **Rescue Dog**.
-- Supported Search Dog Unit wording now includes singular/plural, optional numeric quantities, and optional `Required` prefixes while continuing to select exact MissionChief vehicle type `101`.
-- Police **Dog Support Unit (DSU)** demand remains separate and is not captured by the Search Dog matcher.
-- Generic fallback remains blocked for this specialist requirement, so an unrelated vehicle cannot satisfy Search Dog Unit demand when no type `101` unit is available.
+- Added `Search Dog Unit` / `Search Dog Units` aliases, including counted and `Required` forms, to the existing strict Rescue Dog requirement path so MissionChief's `Required Search Dog Units` wording selects only exact Search Dog Unit type `101`.
+- Kept Police Dog Support Unit / DSU separate and preserved strict no-generic-fallback behaviour for recognised Rescue/Search Dog demand.
+- Added permanent alias regression coverage and increased Mission Finder from `V10.6.147` to `V10.6.148`.
 
-### Regression coverage
-
-- Extended `scripts/check-rescue-dog-search-dog-v1098.mjs` with `Search Dog Unit`, `Search Dog Units`, counted variants, `Required Search Dog Unit`, the reported `Required Search Dog Units`, and counted `Required` variants.
-- Existing negative coverage continues to reject Police Dog / Dog Support Unit wording and unrelated rescue or towing requirements.
-
-### Changed engine baseline
-
-- Command Nexus increased from `1.0.98` to `1.0.99`.
-- Mission Finder increased from `V10.6.147` to `V10.6.148`.
-- Unit Naming remains `3.3.20`.
-- Station Naming remains `1.3.14`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.98] - 2026-08-10
+## [1.0.98] - 2026-08-13
 
 ### Fixed
 
-- Added an exact cross-reference from MissionChief requirement **Rescue Dog** to **Search Dog Unit**.
-- Rescue Dog demand now uses exact MissionChief vehicle type `101` in the shared Unit Finder, Upgrade and Auto Mode vehicle-selection path.
-- The specialist requirement is protected from generic fallback so an unrelated vehicle cannot satisfy Rescue Dog demand when no Search Dog Unit is available.
-- Existing Flatbed Recovery type `105` and HGV Recovery type `106` specialist routing remains unchanged.
+- Cross-referenced MissionChief `Rescue Dog` requirement wording to the strict Search Dog Unit path so Unit Finder and selected-unit verification use exact MissionChief vehicle type `101` instead of generic fallback.
+- Added `scripts/check-rescue-dog-search-dog-v1098.mjs`; increased Mission Finder from `V10.6.146` to `V10.6.147`.
 
-### Regression coverage
-
-- Added `scripts/check-rescue-dog-search-dog-v1098.mjs` to prove supported Rescue Dog wording, reject unrelated dog/support requirements, require exact type `101`, and verify candidate selection, selected-unit verification and strict fallback protection.
-- Chained the regression through the existing HGV/recovery validation path so the permanent userscript gate covers it without adding another workflow step.
-
-### Changed engine baseline
-
-- Command Nexus increased from `1.0.97` to `1.0.98`.
-- Mission Finder increased from `V10.6.146` to `V10.6.147`.
-- Unit Naming remains `3.3.20`.
-- Station Naming remains `1.3.14`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.97] - 2026-08-09
+## [1.0.97] - 2026-08-13
 
 ### Fixed
 
-- Reverted the v1.0.96 towing matcher to the proven v1.0.95 car-towing implementation after v1.0.96 introduced an out-of-scope `normalise(...)` call that could throw during the shared vehicle-selection path used by Unit Finder, Upgrade and Auto Mode.
-- Added a separate HGV towing classifier for explicit `truck to tow`, `HGV to tow` and `lorry to tow` wording without broadening the restored car-towing helper.
-- `Car(s) to tow` continues to use exact MissionChief vehicle type `105` (Flatbed Recovery Vehicle).
-- HGV/truck/lorry towing now uses exact MissionChief vehicle type `106` (HGV Recovery Vehicle).
-- Generic fallback is blocked for both recovery requirements so a missing specialist vehicle cannot silently substitute the wrong type.
-
-### Regression coverage
-
-- Added `scripts/check-hgv-recovery-v1097.mjs` to execute the restored car matcher, prove it has no dependency on an external `normalise` helper, validate the HGV-only towing aliases, protect unrelated truck wording, require exact type 105/106 selectors, and verify the strict matching/count/fallback branches.
-- The existing v1.0.96 towing regression now delegates to the corrected v1.0.97 contract so the established validation chain remains intact.
-
-### Changed engine baseline
-
-- Command Nexus increased from `1.0.96` to `1.0.97`.
-- Mission Finder increased from `V10.6.145` to `V10.6.146`.
-- Unit Naming remains `3.3.20`.
-- Station Naming remains `1.3.14`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.96] - 2026-08-09
-
-### Fixed
-
-- Expanded the existing towing/recovery cross-reference so explicit road-vehicle towing wording such as `1 truck to tow`, `trucks to tow`, `lorry/lorries to tow`, `van/vans to tow`, `vehicle/vehicles to tow`, and `... to be towed` enters the established Recovery path.
-- Added direct `Tow truck(s)` and `Recovery truck(s)` aliases to the same strict Recovery path.
-- Preserved existing `Car to tow`, `Cars to tow`, `Car Recovery` and towing quantity conversion behavior.
-- Recovery selection remains exact MissionChief vehicle type `105` (Flatbed Recovery Vehicle); generic vehicle quick-select fallback remains blocked for recognised recovery demand.
-- Unrelated truck wording such as `1 truck`, `Fire truck`, `Heavy Rescue truck`, or `Trucks required` is deliberately not classified as towing demand.
-
-### Regression coverage
-
-- Added `scripts/check-towing-recovery-crossref-v1096.mjs`, including the reported `1 truck to tow` case, supported road-vehicle towing variants, unrelated-truck negative cases, the existing towing converter, strict recovery classification and exact type-105 selection.
-- Chained the new regression through the already-registered bulk trained-register/recovery validation gate, avoiding a permanent workflow-definition change.
-
-### Changed engine baseline
-
-- Command Nexus increased from `1.0.95` to `1.0.96`.
-- Mission Finder increased from `V10.6.144` to `V10.6.145`.
-- Unit Naming remains `3.3.20`.
-- Station Naming remains `1.3.14`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.95] - 2026-08-09
-
-### Improved
-
-- Selecting a Dispatch Centre in Unit Naming now automatically runs the existing **Refresh Stations** routine before rebuilding the downstream filters.
-- Selecting a Dispatch Centre in Station Naming now automatically runs the existing Station Naming refresh routine before rebuilding the downstream filters.
-- The selected Dispatch Centre is preserved while its options are rebuilt, then the established **Dispatch Centre → Service → Station Type → Start From** cascade is regenerated from the fresh Resource Administration station snapshot.
-- Each Dispatch Centre change performs exactly one station refresh; programmatic restoration of the selected centre does not fire another change event.
-- The manual **Refresh Stations** control remains available unchanged as a fallback.
-- Existing Personnel Assignment/runtime guards remain owned by the normal refresh routines rather than duplicated in the Dispatch Centre handlers.
-
-### Regression coverage
-
-- Added `scripts/check-naming-dispatch-centre-auto-station-refresh-v1095.mjs`.
-- The regression executes both production Dispatch Centre change handlers, requires exactly one normal station-refresh call per selection, protects selected-centre restoration and verifies both refresh routines rebuild Service, Station Type and Start From in order.
-- The regression is chained through the already-registered naming hierarchy gate, so no permanent workflow-definition change is required.
-
-### Changed resource baselines
-
-- Command Nexus increased from `1.0.94` to `1.0.95`.
-- Unit Naming increased from `3.3.19` to `3.3.20`.
-- Station Naming increased from `1.3.13` to `1.3.14`.
-- Mission Finder remains `V10.6.144`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.94] - 2026-08-09
-
-### Fixed
-
-- Fixed Dispatch Centre membership appearing entirely under **Unassigned / default** after the v1.0.93 native-centre discovery correction.
-- Station-to-centre membership now scans the same active/top/same-origin Resource Administration document collection as Dispatch Centre discovery instead of restricting `leitstelle_building_id` reads to the userscript's current document.
-- Native station rows such as `leitstelle_building_id="<centre id>"` now populate the building-to-centre map even when those rows live inside the normal Stations child frame.
-- Literal `null`, `undefined`, `false`, blank and non-positive assignments remain genuinely unassigned.
-- The established **Dispatch Centre → Service → Station Type → Start From** cascade is unchanged; selecting a centre now exposes the services and station types actually assigned to it.
-
-### Regression coverage
-
-- Added `scripts/check-naming-dispatch-centre-membership-frame-v1094.mjs`.
-- The regression starts with an empty top document and puts assigned native station rows in a same-origin Resource Administration child frame, then executes the production membership loader and proves NI Fire Dispatch membership reaches the downstream Fire & Rescue Service subset while only a literal-null station remains Unassigned/default.
-- The regression is permanently registered in `Validate userscript`.
-
-### Changed resource baselines
-
-- Command Nexus increased from `1.0.93` to `1.0.94`.
-- Unit Naming increased from `3.3.18` to `3.3.19`.
-- Station Naming increased from `1.3.12` to `1.3.13`.
-- Mission Finder remains `V10.6.144`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.93] - 2026-08-09
-
-### Fixed
-
-- Fixed the live `Rendered profile did not expose any Dispatch Centre panels within 15000ms` failure in Unit Naming and Station Naming.
-- v1.0.92 incorrectly assumed that loading `/profile/{id}` in a hidden iframe would reproduce the LSSMV4/Vue profile lightbox with its Buildings tab selected; live MissionChief does not expose those modal-only panels in that iframe.
-- Dispatch Centre ID/name authority now comes directly from native Resource Administration building rows with `building_type_id="7"`.
-- Station-to-centre membership remains directly authoritative from the same native row model's `leitstelle_building_id` attribute.
-- Native row discovery checks the active document and same-origin frame documents, so the naming tools work whether Resource Administration owns the current frame or the top page.
-- Removed profile route resolution, `.profile-dispatchcenter` parsing and the hidden profile renderer from Dispatch Centre naming discovery.
-- Dispatch Centre → Service → Station Type → Start From, delegated Refresh/Retry ownership and Personnel Assignment isolation remain unchanged.
-
-### Regression coverage
-
-- Added `scripts/check-naming-dispatch-centre-native-station-rows-v1093.mjs`, executing the production row parser against all seven supplied Dispatch Centres plus ordinary, mismatched and invalid rows.
-- Reworked the retained v1.0.86-v1.0.92 Dispatch Centre regressions so they preserve hierarchy, membership and Retry contracts while permanently rejecting the failed profile acquisition architecture.
-- The already-registered hierarchy gate chains the v1.0.93 regression, so no new workflow-definition mutation is required.
-
-### Changed resource baselines
-
-- Command Nexus increased from `1.0.92` to `1.0.93`.
-- Unit Naming increased from `3.3.17` to `3.3.18`.
-- Station Naming increased from `1.3.11` to `1.3.12`.
-- Mission Finder remains `V10.6.144`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.92] - 2026-08-09
-
-### Fixed
-
-- Fixed the live `Profile did not expose any Dispatch Centre panels` failure in Unit Naming and Station Naming.
-- The signed-in profile is now loaded in a hidden same-origin iframe so MissionChief/Vue can render `.profile-dispatchcenter` panels before Command Nexus reads them.
-- Raw `fetch('/profile/...')` HTML is no longer used as the Dispatch Centre source because the server response can be only the pre-render application shell.
-- The rendered profile frame is bounded to 15 seconds, hidden from interaction, and removed after success or failure.
-- Dispatch Centre → Service → Station Type → Start From, row-level `leitstelle_building_id` membership, delegated Retry ownership and Personnel Assignment isolation remain unchanged.
-
-### Regression coverage
-
-- Added `scripts/check-naming-dispatch-centre-profile-render-v1092.mjs`, which starts from an empty profile shell, simulates the rendered seven-centre DOM appearing, verifies centre extraction, and requires renderer cleanup.
-- The permanent workflow now runs the renderer regression for pull requests and main updates.
-
-### Changed resource baselines
-
-- Command Nexus increased from `1.0.91` to `1.0.92`.
-- Unit Naming increased from `3.3.16` to `3.3.17`.
-- Station Naming increased from `1.3.10` to `1.3.11`.
-- Mission Finder remains `V10.6.144`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.91] - 2026-08-09
-
-### Rebuilt
-
-- Rebuilt Unit Naming and Station Naming around the live MissionChief hierarchy **Dispatch Centre → Service → Station Type → Start From**.
-- Dispatch Centre ID/name pairs now come directly from the signed-in user's native profile `.profile-dispatchcenter` panels. The profile route is resolved from MissionChief's `#navbar_profile_link`, with the page `user_id` available only as a bounded fallback.
-- The empty profile Dispatch Centre placeholder is ignored because it has no exact `/buildings/{id}` centre link.
-- Dispatch Centre options become available as soon as the profile list loads; station-assignment loading no longer blocks the first dropdown.
-- Station membership remains authoritative from row-level `leitstelle_building_id`, including literal `null` normalisation for unassigned buildings.
-- Added a Service stage derived from MissionChief building type IDs so Air Ambulance stays Ambulance while Police Helicopter/EOD remain Police; RNLI, Coastguard and SAR are grouped under Search & Rescue / Coastguard.
-- Station Type is rebuilt from the selected Dispatch Centre + Service subset, and Start From is rebuilt from Dispatch Centre + Service + Station Type.
-- Removed the failed station-seed, `/leitstellenansicht` seed fallback and building-edit-page centre discovery runtime introduced during 1.0.88–1.0.90 troubleshooting.
-- Preserved delegated Refresh/Retry ownership, visible Refreshing/error diagnostics and Personnel Assignment isolation.
-
-### Regression coverage
-
-- Added `scripts/check-naming-dispatch-centre-profile-hierarchy-v1091.mjs` using the supplied seven-centre profile fixture and exact service/building-type mappings.
-- Reworked the v1.0.88–v1.0.90 Dispatch Centre regressions so they preserve station-membership, Retry and null-normalisation contracts without protecting the removed seed architecture.
-
-### Changed resource baselines
-
-- Command Nexus increased from `1.0.90` to `1.0.91`.
-- Unit Naming increased from `3.3.15` to `3.3.16`.
-- Station Naming increased from `1.3.9` to `1.3.10`.
-- Mission Finder remains `V10.6.144`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.90] - 2026-08-09
-
-### Fixed
-
-- Dispatch Centre name discovery no longer requires the seed station to already be assigned to a Dispatch Centre. Any ordinary station edit page may seed the native **Assigned Dispatch Center** selector.
-- MissionChief's literal `leitstelle_building_id="null"` value is now normalized as genuinely unassigned rather than being treated as a Dispatch Centre ID.
-- When the active Resource Administration document/state has no usable station rows yet, the loader performs one bounded `/leitstellenansicht` fetch only to discover up to three station building IDs, then still reads Dispatch Centre ID/name pairs from the edit-page assignment selector.
-- The native Stations view remains a seed-discovery fallback only; it is not restored as Dispatch Centre name authority, and station-to-centre membership remains the row-level `leitstelle_building_id` relationship.
-
-### Regression coverage
-
-- Added `scripts/check-naming-dispatch-centre-unassigned-seed-v1090.mjs` covering literal `null`, an unassigned ordinary station as a valid edit-page seed, an empty live Resource Administration DOM, and native Stations HTML fallback without changing centre-name authority.
-
-### Changed resource baselines
-
-- Command Nexus increased from `1.0.89` to `1.0.90`.
-- Unit Naming increased from `3.3.14` to `3.3.15`.
-- Station Naming increased from `1.3.8` to `1.3.9`.
-- Mission Finder remains `V10.6.144`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.89] - 2026-08-09
-
-### Fixed
-
-- **Retry Dispatch Centres** now uses one delegated document-level click owner, so the action remains live even if MissionChief replaces the Resource Administration panel DOM after the original mount.
-- Dispatch Centre discovery no longer trusts the first arbitrary building as its edit-page seed. It prefers ordinary fire, ambulance, police and other supported station rows that carry a real `leitstelle_building_id` assignment.
-- The edit-page lookup is bounded to at most three assigned station candidates and stops on the first page that exposes MissionChief's **Assigned Dispatch Center** selector. This is a retry fallback, not a per-building crawl.
-- The button now holds a visible **Refreshing…** state before loading starts, records an explicit loading/error state, and exposes the concrete loader failure in the button tooltip and naming logs instead of appearing inert.
-- Unit Naming and Station Naming keep the existing Dispatch Centre → Station Type → Start From cascade and authoritative station-row `leitstelle_building_id` membership.
-
-### Regression coverage
-
-- Added `scripts/check-naming-dispatch-centre-retry-v1089.mjs`, which executes the production seed selector against a fixture with early unassigned Home Response rows, a Dispatch Centre row and later assigned ordinary stations; it also protects delegated Retry ownership, visible loading state, failure diagnostics and pointer/touch affordance.
-
-### Changed resource baselines
-
-- Command Nexus increased from `1.0.88` to `1.0.89`.
-- Unit Naming increased from `3.3.13` to `3.3.14`.
-- Station Naming increased from `1.3.7` to `1.3.8`.
-- Mission Finder remains `V10.6.144`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.88] - 2026-08-09
-
-### Fixed
-
-- Dispatch Centre names for Unit Naming and Station Naming now come from MissionChief's **Assigned Dispatch Center** selector on one ordinary building edit page (`#building_leitstelle_building_id`), which exposes the real Dispatch Centre ID/name pairs.
-- Station-to-centre membership now comes directly from each Stations row's `leitstelle_building_id` attribute instead of a second buildings JSON lookup.
-- Selecting a Dispatch Centre scopes the station set first; **Station Type** is rebuilt from that centre subset, then **Start From** is rebuilt from centre + type.
-- The obsolete `/leitstellenansicht` Dispatch Centre-name parser is removed from the naming flow.
-- Refresh/retry states from v1.0.87 remain unchanged.
-
-### Regression coverage
-
-- Added `scripts/check-naming-dispatch-centre-assignment-source-v1088.mjs` using the supplied MissionChief assignment-selector fixture, including the real `LODON DISPATCH` and `Scotlands Dispatch` ID/name pairs.
-- Rebased the v1.0.85-v1.0.87 naming regressions so they protect the filter/cascade/refresh UI without preserving the incorrect old source assumptions.
-
-### Changed resource baselines
-
-- Command Nexus increased from `1.0.87` to `1.0.88`.
-- Unit Naming increased from `3.3.12` to `3.3.13`.
-- Station Naming increased from `1.3.6` to `1.3.7`.
-- Mission Finder remains `V10.6.144`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.87] - 2026-08-09
-
-### Fixed
-
-- **Refresh Dispatch Centres** now parses the native `/leitstellenansicht` list without requiring MissionChief to expose `building_type_id="7"` on each list wrapper.
-- Dispatch Centre discovery first uses MissionChief's building-list containers and falls back to exact same-origin `/buildings/{id}` links if wrapper markup changes.
-- Unit Naming and Station Naming now show **Refreshing…** while the list is loading and **Retry Dispatch Centres** when either centre discovery or station-to-centre assignment data fails.
-- A failed load now leaves a clear **Dispatch Centres unavailable — refresh** placeholder instead of a disabled **All dispatch centres** selector that appears to do nothing.
-- Station membership remains authoritative through `/building/buildings_json` and `leitstelle_building_id`.
-
-### Regression coverage
-
-- Added `scripts/check-naming-dispatch-centre-refresh-v1087.mjs`, which executes the production parser against Dispatch Centre HTML fixtures without `building_type_id="7"`, verifies wrapperless fallback behaviour, rejects nested/cross-origin links and protects the visible refresh/retry states.
-
-### Changed resource baselines
-
-- Command Nexus increased from `1.0.86` to `1.0.87`.
-- Unit Naming increased from `3.3.11` to `3.3.12`.
-- Station Naming increased from `1.3.5` to `1.3.6`.
-- Mission Finder remains `V10.6.144`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.86] - 2026-08-08
-
-### Fixed
-
-- Unit Naming and Station Naming now load the **Dispatch Centre list independently** from MissionChief's native `/leitstellenansicht` view instead of inferring available centres from station records.
-- Naming now follows **Dispatch Centre → Station Type → Start From**. Choosing a centre first narrows Station Type to types represented in that centre, and Start From is then limited to the selected centre and type.
-- Added **Refresh Dispatch Centres** controls to both naming tools.
-- Station membership still uses MissionChief's `leitstelle_building_id` relationship from `/building/buildings_json`; centre names are not hard-coded or guessed.
-
-### Changed resource baselines
-
-- Unit Naming increased from `3.3.10` to `3.3.11`.
-- Station Naming increased from `1.3.4` to `1.3.5`.
-- Mission Finder remains `V10.6.144`.
-- Personnel Assignment remains `1.3.9`.
-- Command Nexus increased from `1.0.85` to `1.0.86`.
-
-## [1.0.85] - 2026-08-08
+- Repaired the v1.0.96 towing matcher ReferenceError by restoring the proven car-towing parser without relying on an out-of-scope normaliser.
+- Split explicit truck/HGV/lorry towing into exact HGV Recovery type `106` while car/cars-to-tow remains exact Flatbed Recovery type `105`; both specialist paths block generic fallback.
+- Added `scripts/check-hgv-recovery-v1097.mjs`; increased Mission Finder from `V10.6.145` to `V10.6.146`.
+
+## [1.0.96] - 2026-08-13
 
 ### Added
 
-- Unit Naming and Station Naming now include a **Dispatch Centre** filter alongside the existing station-type filter.
-- Dispatch Centre options come from MissionChief's authoritative `/building/buildings_json` building data and each station's `leitstelle_building_id` relationship rather than station-name guessing.
-- **All dispatch centres** remains the default. When MissionChief reports stations with no Dispatch Centre assignment, **Unassigned / default** is available as an explicit filter.
+- Cross-referenced towing mission wording (`car(s)/truck(s)/lorry/lorries/van(s)/vehicle(s) to tow` plus `tow truck(s)` and `Recovery truck(s)`) to the existing exact Recovery selection path and blocked generic fallback for recognised towing demand.
+- Added `scripts/check-towing-recovery-crossref-v1096.mjs`; increased Mission Finder from `V10.6.144` to `V10.6.145`.
 
-### Safety and scope
-
-- The filter only changes which stations enter the Unit Naming or Station Naming queue; established naming and save logic are unchanged.
-- Personnel Assignment is not filtered by this control.
-- If Dispatch Centre data cannot be loaded, the selector stays disabled and naming falls back to the existing all-stations behaviour.
-
-### Changed resource baselines
-
-- Unit Naming increased from `3.3.9` to `3.3.10`.
-- Station Naming increased from `1.3.3` to `1.3.4`.
-- Mission Finder remains `V10.6.144`.
-- Personnel Assignment remains `1.3.9`.
-- Command Nexus increased from `1.0.84` to `1.0.85`.
-
-## [1.0.84] - 2026-08-05
+## [1.0.95] - 2026-08-12
 
 ### Changed
 
-- Restore every Personnel Assignment action on iPhone and iPad Safari: Refresh Stations, Import, Start, Pause and Stop.
-- Keep the native JSON file input hidden so it cannot displace or cover the visible mobile action buttons.
-- Restore the Tools and reports disclosure so closed content stays hidden and every status/report tool appears when opened.
-- Add touch-sized two-column mobile grids, dynamic-viewport scrolling and iOS safe-area protection without removing desktop functionality.
-- Increased the unified userscript version from `1.0.83` to `1.0.84`.
+- Selecting a Dispatch Centre in Unit Naming now automatically runs the same normal station refresh used by the manual **Refresh Stations** control before rebuilding the selected Dispatch Centre → Service → Station Type → Start From cascade.
+- Selecting a Dispatch Centre in Station Naming now automatically runs the same normal station refresh before rebuilding the corresponding naming cascade.
+- Retained manual **Refresh Stations** as a fallback and prevented programmatic centre restoration from causing recursive refresh loops.
+- Added `scripts/check-naming-dispatch-centre-auto-station-refresh-v1095.mjs`; increased Command Nexus from `1.0.94` to `1.0.95`, Unit Naming from `3.3.19` to `3.3.20` and Station Naming from `1.3.13` to `1.3.14`; Mission Finder and Personnel Assignment remain unchanged.
 
-## [1.0.83] - 2026-08-05
+## [1.0.94] - 2026-08-12
+
+### Fixed
+
+- Corrected Dispatch Centre station-membership loading to scan the same current/top/accessibile same-origin Resource Administration document graph already used for centre discovery, preventing real assigned stations from collapsing into `Unassigned / default` inside the normal Stations lightbox.
+- Retained exact native row `leitstelle_building_id` authority and the existing Dispatch Centre → Service → Station Type → Start From hierarchy.
+- Added `scripts/check-naming-dispatch-centre-membership-frame-v1094.mjs`; increased Command Nexus from `1.0.93` to `1.0.94`, Unit Naming from `3.3.18` to `3.3.19` and Station Naming from `1.3.12` to `1.3.13`; Mission Finder and Personnel Assignment remain unchanged.
+
+## [1.0.93] - 2026-08-12
+
+### Fixed
+
+- Replaced the failed profile-renderer Dispatch Centre acquisition path with native Resource Administration row authority. Dispatch Centre ID/name pairs now come from already-loaded native rows marked `building_type_id="7"`; malformed row/link IDs fail closed.
+- Station-to-centre membership remains exact native `leitstelle_building_id`, and centre discovery plus membership now use the shared current/top/accessible same-origin document graph with no centre-list network fetch.
+- Removed profile scraping, hidden profile renderer and raw-profile fetch dependencies from the centre-list architecture.
+- Added `scripts/check-naming-dispatch-centre-native-station-rows-v1093.mjs`; increased Command Nexus from `1.0.92` to `1.0.93`, Unit Naming from `3.3.17` to `3.3.18` and Station Naming from `1.3.11` to `1.3.12`; Mission Finder and Personnel Assignment remain unchanged.
+
+## [1.0.92] - 2026-08-12
+
+### Fixed
+
+- Changed Dispatch Centre profile acquisition from raw `fetch()` HTML to a hidden same-origin rendered profile frame and bounded wait, then extracted only exact `/buildings/{id}` links from rendered `.profile-dispatchcenter` panels.
+- Added `scripts/check-naming-dispatch-centre-profile-render-v1092.mjs`; increased Command Nexus from `1.0.91` to `1.0.92`, Unit Naming from `3.3.16` to `3.3.17` and Station Naming from `1.3.10` to `1.3.11`; Mission Finder and Personnel Assignment remain unchanged.
+
+## [1.0.91] - 2026-08-12
 
 ### Changed
 
-- Patient transport keeps the existing exact-route, iframe and duplicate-click safeguards while reducing the shared repeat-click window from 4.0 seconds to 2.5 seconds.
-- A stalled patient **Transport Patient / Approach** attempt now retries the live Vue/iframe state after 0.9 seconds instead of 1.8 seconds.
-- Prisoner cell and release destination discovery now polls the live result UI at 100-125 ms rather than 200-250 ms.
-- Verified prisoner-result close retries now run after 250 ms instead of 480 ms, and guarded failed-click retries become eligible after 4 seconds instead of 6.5 seconds.
+- Rebuilt the naming hierarchy as Dispatch Centre → Service → Station Type → Start From, using profile-backed Dispatch Centre choices, row-level station membership and exact MissionChief building type IDs for service grouping.
+- Added `scripts/check-naming-dispatch-centre-profile-hierarchy-v1091.mjs`; increased Command Nexus from `1.0.90` to `1.0.91`, Unit Naming from `3.3.15` to `3.3.16` and Station Naming from `1.3.9` to `1.3.10`; Mission Finder and Personnel Assignment remain unchanged.
 
-### Safety
-
-- Exact patient and prisoner routes, nearest valid destination selection, pending-state hand-off, result-screen identity, duplicate-click protection and fail-closed maximum timeouts remain unchanged.
-- Unit Finder remains blocked while patient or prisoner transport ownership is unresolved.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.142` to `V10.6.143`.
-
-## [1.0.82] - 2026-08-02
+## [1.0.90] - 2026-08-12
 
 ### Fixed
 
-- Reduced the default-on Event Scanner from a one-second independent iframe/document walk to a shared cached document snapshot every 15 seconds, while retaining the immediate startup scan and exact claim route.
-- Reduced top-window mission-frame reconciliation from a forced document-graph rebuild every five seconds to a cached reconciliation every 15 seconds.
-- Background automation now starts only the silent-queue and post-transport pollers whose state is actually active instead of running all three watchers for the whole Auto Mode session.
-- Live Trained Personnel updates are now coalesced, cached briefly and skipped when generated markup is unchanged, preventing repeated full parser/model work and detached DOM churn on rapidly mutating mission pages.
-- High-heap idle recovery can now recycle safely above 700 MiB after user-idle and operational safety checks even when benign live mission mutations prevent a 15-second mutation-free window.
-- Soft memory maintenance releases the live personnel display cache and stale detached transport-modal references.
-- Ally Steal now uses shorter bounded selection, dispatch-resume and parent-close settle delays, reducing the normal path without weakening exact Fire Officer, success-alert or mission-close confirmation.
+- Corrected Dispatch Centre seed discovery so literal `leitstelle_building_id="null"` is treated as genuinely unassigned and ordinary station edit pages can seed the native Assigned Dispatch Center selector even before that station is assigned.
+- Added a bounded `/leitstellenansicht` fallback that discovers up to three station building IDs only when the current Resource Administration DOM exposes no usable station seed.
+- Added `scripts/check-naming-dispatch-centre-unassigned-seed-v1090.mjs`; increased Command Nexus from `1.0.89` to `1.0.90`, Unit Naming from `3.3.14` to `3.3.15` and Station Naming from `1.3.8` to `1.3.9`; Mission Finder and Personnel Assignment remain unchanged.
 
-### Safety and compatibility
-
-- No additional observer, repeating timer, fetch, selection or dispatch path was added.
-- Exact Unit Finder, Mission Update, trained-personnel authority, patient/prisoner transport, Auto Mode mission ownership and final dispatch safeguards remain unchanged.
-- Ally Steal retains the exact selected-vehicle identity, new-success-alert matching, 15-second confirmation window, pending-state hand-off and 12-attempt parent-close fallback.
-- Event collection remains enabled by the existing setting and still performs an immediate scan when the runtime starts.
-- iPhone/iPadOS ownership and native-picker cleanup paths remain intact.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.141` to `V10.6.142`.
-- Unit Naming remains `3.3.9`.
-- Station Naming remains `1.3.3`.
-- Personnel Assignment remains `1.3.8`.
-
-## [1.0.81] - 2026-08-01
+## [1.0.89] - 2026-08-12
 
 ### Fixed
 
-- After vehicles arrive on scene, the Trained Personnel panel now displays the current live Missing Personnel/course shortages already parsed by Mission Update.
-- The panel switches from the fresh-mission **Mission Required Personnel** totals to a **Current Missing Personnel** section with the exact remaining count for each supported course.
-- When no live trained-personnel shortage is reported, the panel explicitly shows zero current shortages rather than retaining the new-mission totals.
+- Made `Retry Dispatch Centres` a delegated live control so MissionChief DOM replacement cannot strand a visible but inert retry button.
+- Improved Dispatch Centre discovery by preferring assigned ordinary station seeds, trying at most three bounded edit pages and retaining concrete failure reasons in naming state/tooltips/logs.
+- Added `scripts/check-naming-dispatch-centre-retry-v1089.mjs`; increased Command Nexus from `1.0.88` to `1.0.89`, Unit Naming from `3.3.13` to `3.3.14` and Station Naming from `1.3.7` to `1.3.8`; Mission Finder and Personnel Assignment remain unchanged.
 
-### Safety and authority
+## [1.0.88] - 2026-08-12
 
-- Before the first vehicle reaches the scene, the existing mission-definition Required Personnel totals and selected/required coverage remain unchanged.
-- Live shortage values are already residual MissionChief demand and are not reduced a second time by selected vehicle checkboxes.
-- Selected-vehicle Personnel Register evidence remains visible beneath the live shortage section.
-- The display reuses `readMissionUpdateRows({ silent: true })`; it adds no fetch, timer, observer, selection or dispatch side effect.
-- The existing coalesced mission mutation flush now rerenders the panel after invalidating current mission caches, so live shortage changes appear automatically without a button click.
-- Vehicle Load, Unit Finder, Mission Update, Auto Mode, memory lifecycle and iOS/iPadOS paths remain unchanged.
+### Changed
 
-### Changed engine baseline
+- Replaced Dispatch Centre station-membership fetching with MissionChief's native `leitstelle_building_id` row authority, joined to exact IDs from the assigned-dispatch-centre selector on an ordinary building edit page.
+- Added `scripts/check-naming-dispatch-centre-assignment-source-v1088.mjs`; increased Command Nexus from `1.0.87` to `1.0.88`, Unit Naming from `3.3.12` to `3.3.13` and Station Naming from `1.3.6` to `1.3.7`; Mission Finder and Personnel Assignment remain unchanged.
 
-- Mission Finder increased from `V10.6.140` to `V10.6.141`.
-- Unit Naming remains `3.3.9`.
-- Station Naming remains `1.3.3`.
-- Personnel Assignment remains `1.3.8`.
-
-## [1.0.80] - 2026-08-01
+## [1.0.87] - 2026-08-12
 
 ### Fixed
 
-- Mission-definition **Required Personnel** and course totals are now authoritative only while no vehicle has reached the mission scene.
-- As soon as `#mission_vehicle_at_mission` contains a real `vehicle_row`, initial Unit Finder filters the static personnel/course rows before choosing its authority source.
-- The Trained Personnel panel hides the cached **Mission Required Personnel** totals after the first vehicle arrives and explains that live personnel and course shortages are authoritative.
+- Made Dispatch Centre loading/retry resilient to native `/leitstellenansicht` markup that omits `building_type_id="7"`, keeps the selector disabled until both centre discovery and station membership are ready, and exposes explicit Refreshing / Retry / unavailable states instead of silently failing.
+- Added `scripts/check-naming-dispatch-centre-refresh-v1087.mjs`; increased Command Nexus from `1.0.86` to `1.0.87`, Unit Naming from `3.3.11` to `3.3.12` and Station Naming from `1.3.5` to `1.3.6`; Mission Finder and Personnel Assignment remain unchanged.
 
-### Safety and authority
-
-- Vehicles listed only in `#mission_vehicle_driving` remain en route and do not suppress the initial mission-definition requirements.
-- Current live Missing Personnel/course rows remain actionable after vehicles arrive on scene.
-- Ordinary vehicle requirements, Personnel Register evidence, trained-vehicle optimisation, Mission Update, Auto Mode, Vehicle Load and iOS/iPadOS paths remain unchanged.
-- The panel continues to be display-only and adds no fetch, timer or observer.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.139` to `V10.6.140`.
-- Unit Naming remains `3.3.9`.
-- Station Naming remains `1.3.3`.
-- Personnel Assignment remains `1.3.8`.
-
-## [1.0.79] - 2026-08-01
+## [1.0.86] - 2026-08-12
 
 ### Fixed
 
-- The Dispatch Centres **Show all** middle-click now creates the dedicated popup window during the captured middle-button `mousedown` user gesture instead of waiting until `auxclick`.
-- The popup opens as a named blank window with explicit dimensions and browser-chrome hints, is moved and resized when browser policy permits, and then navigates to `/leitstellenansicht`.
-- A new popup name prevents a previously opened 1.0.78 browser tab from being reused.
+- Corrected Dispatch Centre naming hierarchy to be Dispatch Centre first, then Station Type and Start From. Centre names load independently from native `/leitstellenansicht`, while station membership remains sourced from native building-assignment data.
+- Added `scripts/check-naming-dispatch-centre-first-v1086.mjs`; increased Command Nexus from `1.0.85` to `1.0.86`, Unit Naming from `3.3.10` to `3.3.11` and Station Naming from `1.3.4` to `1.3.5`; Mission Finder and Personnel Assignment remain unchanged.
 
-### Safety and compatibility
-
-- Captured `mouseup` and `auxclick` handlers suppress the browser's native middle-click new-tab action without opening a second window.
-- `auxclick` retains a guarded fallback for browsers that do not deliver the expected `mousedown`.
-- Normal left-click remains MissionChief's existing lightbox behaviour.
-- Browser popup-blocking and window-management policies remain authoritative.
-- The 1.0.77 Stations ownership correction, Mission Finder V10.6.139, Unit Finder, Vehicle Load, Auto Mode and iOS/iPadOS paths remain unchanged.
-
-
-## [1.0.78] - 2026-08-01
+## [1.0.85] - 2026-08-12
 
 ### Added
 
-- Middle-clicking the exact Dispatch Centres **Show all** lightbox link opens `/leitstellenansicht` in a centred, resizable popup window.
-- The popup uses a stable window name, focuses after opening and retains scrolling.
+- Added Dispatch Centre filters to Unit Naming and Station Naming, using MissionChief's authoritative station assignments. Added `scripts/check-naming-dispatch-centre-filter-v1085.mjs`; increased Command Nexus from `1.0.84` to `1.0.85`, Unit Naming from `3.3.9` to `3.3.10` and Station Naming from `1.3.3` to `1.3.4`; Mission Finder and Personnel Assignment remain unchanged.
 
-### Safety and compatibility
+## [1.0.84] - 2026-08-11
 
-- Normal left-click behaviour remains MissionChief's existing lightbox.
-- Only middle-clicks on `a.lightbox-open[href="/leitstellenansicht"]` are intercepted.
-- The delegated listener installs once and supports dynamically rendered **Show all** links.
-- The 1.0.77 Stations popup ownership fix, Mission Finder, Unit Finder, Vehicle Load, Auto Mode and iOS/iPadOS paths remain unchanged.
+### Changed
 
-## [1.0.77] - 2026-08-01
+- Completed Personnel Assignment iOS Safari support so all primary actions and tools/report controls remain available on iPhone/iPad while preserving the existing native file picker and safe-area/touch behavior.
+- Retained the 1.0.83 faster Auto Mode patient/prisoner transport timing and existing fail-closed safeguards.
+- Added `scripts/check-personnel-assignment-ios-completeness-v1084.mjs`; increased Command Nexus from `1.0.83` to `1.0.84`, Mission Finder from `V10.6.143` to `V10.6.144` and Personnel Assignment from `1.3.8` to `1.3.9`.
 
-### Fixed
+## [1.0.83] - 2026-08-11
 
-- Resource Administration now appears inside MissionChief's normal Stations overview popup as well as on the dedicated full-page `/leitstellenansicht` route.
-- The popup workspace mounts against the authoritative Stations document instead of being suppressed by the child-frame runtime guard introduced in `1.0.74`.
+### Changed
 
-### Safety and compatibility
+- Reduced bounded Auto Mode patient/prisoner transport response waits without changing exact destination, ownership, duplicate-click, pending-state or fail-closed timeout safeguards. Added `scripts/check-auto-transport-response-v1083.mjs`; increased Command Nexus from `1.0.82` to `1.0.83` and Mission Finder from `V10.6.142` to `V10.6.143`.
 
-- Only the exact same-origin `/leitstellenansicht` child frame may host Resource Administration.
-- Mission, building-detail and unrelated child frames remain excluded from the naming/personnel runtime.
-- The dedicated desktop Stations view, iOS/iPadOS Safari lifecycle, single-instance protection, saved state, Unit/Station/Personnel handlers and Mission Finder paths remain unchanged.
+## [1.0.82] - 2026-08-11
 
-### Changed component baseline
+### Changed
 
-- Mission Finder remains `V10.6.139`.
-- Unit Naming increased from `3.3.8` to `3.3.9`.
-- Station Naming remains `1.3.3`.
-- Personnel Assignment remains `1.3.8`.
+- Reduced bounded Ally Steal waits while retaining exact selected-vehicle identity, new-success-alert matching, refreshed-page confirmation, pending-state hand-off and close fallback.
+- Added runtime-memory hardening for long sessions by replacing independent fast frame walks with the shared cached document graph, restricting Auto Mode background pollers to required states, coalescing trained-personnel refresh work and permitting only guarded idle recycling at extreme memory pressure.
+- Added `scripts/check-runtime-memory-deep-dive-v1082.mjs` and `scripts/check-ally-steal-response-v1082.mjs`; increased Command Nexus from `1.0.81` to `1.0.82` and Mission Finder from `V10.6.141` to `V10.6.142`.
 
-## [1.0.76] - 2026-08-01
+## [1.0.81] - 2026-08-10
 
 ### Added
 
-- Settings now includes **Always include 1 Ambulance in Unit Finder** for High Risk and Very High Risk Missing Person missions.
-- When enabled, fresh manual and Auto Mode Unit Finder passes guarantee a minimum total of one ordinary Ambulance requirement, while avoiding a duplicate when the mission or patient requirements already include one.
-- The configured Ambulance appears in the preloaded Vehicle Load display before Unit Finder runs.
+- Added live Current Missing Personnel values to the Trained Personnel panel after a vehicle arrives on scene, driven by the existing Mission Finder mutation refresh and the same `readMissionUpdateRows` authority as Mission Update. Increased Command Nexus from `1.0.80` to `1.0.81` and Mission Finder from `V10.6.140` to `V10.6.141`.
 
-### Safety and authority
+## [1.0.80] - 2026-08-10
 
-- The option is disabled by default and persists in local storage when changed.
-- The rule is limited to fresh Unit Finder requirement sources. Mission Update and existing-mission Missing Vehicles, Missing Personnel and Missing on mission authority remain unchanged, so an Ambulance is not resent during update passes.
-- The current Ambulance matching and ETA selection contract remains unchanged.
-- The compact Settings, Vehicle drawer, Auto Mode, memory lifecycle and iPhone/iOS paths remain unchanged.
+### Fixed
 
-### Changed engine baseline
+- Prevented cached mission-definition Required Personnel totals from remaining authoritative after any real vehicle reaches the scene. Current live Missing Personnel/course rows are now authoritative after arrival, while vehicles that are only en route do not suppress the initial personnel requirements.
+- Added `scripts/check-trained-personnel-on-scene-authority-v1080.mjs`; increased Command Nexus from `1.0.79` to `1.0.80` and Mission Finder from `V10.6.139` to `V10.6.140`.
 
-- Mission Finder increased from `V10.6.138` to `V10.6.139`.
-- Unit Naming remains `3.3.8`.
-- Station Naming remains `1.3.3`.
-- Personnel Assignment remains `1.3.8`.
+## [1.0.79] - 2026-08-09
 
-## [1.0.75] - 2026-08-01
+### Fixed
+
+- Reworked Dispatch Centres Show all middle-click handling to intercept captured middle-button `mousedown`, synchronously create the named popup, suppress later native `mouseup` / `auxclick` new-tab behavior, and keep left click on the existing MissionChief lightbox path.
+- Added `scripts/check-dispatch-centres-popup-window-v1079.mjs`; increased Command Nexus from `1.0.78` to `1.0.79`.
+
+## [1.0.78] - 2026-08-09
 
 ### Added
 
-- Vehicle Load now consumes the existing mission-definition preload on a fresh mission and shows ordinary required vehicles before Unit Finder runs.
-- Preloaded rows begin at `0 / required` and update from the current selected vehicle checkboxes, including `required / required` covered state.
-- A loading message is shown while the authoritative mission requirements are being preloaded.
+- Added middle-click support for the exact Dispatch Centres **Show all** link so it opens a centered, reusable, resizable and scrollable popup while normal left click keeps MissionChief's existing lightbox behavior.
+- Added `scripts/check-dispatch-centres-show-all-popup-v1078.mjs`; increased Command Nexus from `1.0.77` to `1.0.78`.
 
-### Safety and authority
-
-- Preloaded Vehicle Load rows are display-only and do not mutate dispatch readiness, selection guards or the operational `vehicleLoadState`.
-- Existing missions keep current Missing Vehicles/Personnel and Missing on mission table authority; static mission-definition totals are suppressed whenever that live authority exists.
-- Trained-personnel and patient rows remain excluded from Vehicle Load. Trained requirements continue to use the separate Trained Personnel panel.
-- The Vehicle Load renderer reads only the mission-bound cache and never schedules or performs another mission-definition fetch.
-- The compact Vehicle drawer UI, action handlers, memory lifecycle and iPhone/iOS paths are unchanged.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.137` to `V10.6.138`.
-- Unit Naming remains `3.3.8`.
-- Station Naming remains `1.3.3`.
-- Personnel Assignment remains `1.3.8`.
-
-## [1.0.74] - 2026-08-01
+## [1.0.77] - 2026-08-09
 
 ### Fixed
 
-- Prevented the Unit Naming, Station Naming and Personnel Assignment workspace runtime from starting inside child mission/lightbox frames; the single top-window owner still operates same-origin edit frames through the established direct-frame route.
-- Added top-window frame reconciliation so only the active visible mission child retains the whole-document Mission Finder observer. Inactive, replaced and removed mission frames now release their observer, session ticker, maintenance timer, mounted Mission Finder UI and reconstructible DOM caches, then resume safely if they become the active owner again.
-- Added a 15-second memory-maintenance pass. At 480 MiB it performs a soft flush of reconstructible vehicle, mission-context, patient, transport and matching caches. At 640 MiB it may recycle an idle mission frame only after all operational safety gates pass.
-- Blocked hard memory recycling while Auto Mode, Unit Finder, Mission Update, Ally Steal, dispatch/share, selected vehicles, Required Personnel preload, Vehicle Load acquisition, patient/prisoner transport, queue transitions or recent mission activity are present.
-- Bounded the live trained-personnel verification cache to 600 entries in addition to its existing time-to-live pruning.
-- Bounded persisted Unit Finder diagnostic history to 24 entries and 750,000 characters, pruning the oldest snapshots first, and removed the deprecated Issue Recorder payload during safe startup storage maintenance.
-- Explicitly preserved authoritative Personnel Register profiles, user settings, mission-bound Required Personnel preload state, selected vehicles and current Vehicle Load state during soft maintenance.
+- Restored Resource Administration in MissionChief's normal Stations overview popup after memory hardening accidentally excluded the same-origin `/leitstellenansicht` child frame. The dedicated full-page Stations route remains supported while mission/building frames stay excluded.
+- Added `scripts/check-station-overview-popup-v1077.mjs`; increased Command Nexus from `1.0.76` to `1.0.77`, Unit Naming from `3.3.8` to `3.3.9`, Station Naming from `1.3.2` to `1.3.3` and Personnel Assignment from `1.3.7` to `1.3.8`.
 
-### Diagnostics
-
-- Memory exports now report inactive-frame suspension, maintenance-timer state, soft-flush count and timestamp, recent runtime activity/mutation, persistent diagnostic storage size and recycle mode.
-
-### Compatibility and safety
-
-- The compact `1.0.73` Mission, Vehicle Load, naming and personnel UI, IDs, geometry and event handlers are unchanged.
-- Unit Finder, Mission Update, Ally Steal, dispatch/share, Auto Mode, Event Scanner, trained-personnel authority, Personnel Register ownership and iPhone/iOS paths remain on their established routes.
-- Added permanent runtime-memory, storage-bound, frame-ownership and operational-lock regression coverage.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.136` to `V10.6.137`.
-- Unit Naming remains `3.3.8`.
-- Station Naming remains `1.3.3`.
-- Personnel Assignment remains `1.3.8`.
-
-## [1.0.73] - 2026-07-31
-
-### Refined
-
-- Moved the attached Vehicle Load tab and expanded drawer to the top-right edge of the compact Mission shell.
-- Added a short eased width, transform, opacity and shadow transition so Vehicle Load opens and closes smoothly without shifting Mission Control.
-- Tucked the collapsed tab slightly into the shared shell edge so both surfaces read as one component.
-- Added a reduced-motion override that makes the transition effectively immediate.
-- Swapped Mission Update and Ally Steal in the primary action grid; Mission Update now appears immediately after Unit Finder.
-
-### Compatibility and safety
-
-- Existing action IDs and event handlers remain unchanged.
-- Vehicle Load data, patient/session rendering and collapsed-state ownership remain unchanged.
-- iPhone/iOS Mission and Vehicle launcher geometry remains excluded from the desktop drawer refinement.
-- Added permanent top-alignment, animation, reduced-motion and action-order regression coverage.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.135` to `V10.6.136`.
-
-## [1.0.72] - 2026-07-31
-
-### Changed
-
-- Converted desktop/tablet Vehicle Load from a detached panel into an attached right-side Mission drawer.
-- Collapsed Vehicle Load is now a slim vertical Vehicle tab sharing the Mission shell edge and border.
-- Expanding Vehicle Load opens outward to the right without resizing or shifting Mission Control.
-- The Vehicle title and collapse control both open and close the drawer.
-- Settings, Diagnostics and whole-shell Mission collapse hide the Vehicle drawer.
-- Expanded Vehicle content remains complete with bounded internal scrolling.
-
-### Compatibility and safety
-
-- The attached drawer is limited to the desktop/tablet compact shell and explicitly excludes the established iPhone/iOS launcher geometry.
-- Vehicle Load rendering, session data and all mission execution paths remain unchanged.
-- Added permanent attached-drawer geometry, disclosure ownership and operational-isolation coverage.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.134` to `V10.6.135`.
-
-
-## [1.0.71] - 2026-07-31
-
-### Redesigned
-
-- Immediately superseded the expansive `1.0.70` presentation with a narrow compact operations interface.
-- Reduced the desktop Mission surface to a single `390px`-class shell instead of a wide multi-column dashboard.
-- Removed the visible identity banner and compressed Mission, Settings and Diagnostics navigation into a small three-button strip.
-- Kept Mission actions and live status immediately available while Vehicle Load and Trained Personnel now start collapsed.
-- Settings and Diagnostics now replace the operational view instead of expanding the shell beside it.
-- Collapsing Mission Control reduces the entire desktop shell to a compact `205px` launcher/header.
-- Reduced Unit Naming and Station Naming to a `360px` compact panel and Personnel Assignment to a `390px` compact panel.
-- Added progressive-disclosure menus for status, activity logs, profile details, register/report tools, report controls and reports.
-
-### Compactness and usability
-
-- Reduced desktop header, tab, input and action heights while retaining clear focus and click targets.
-- Replaced large status metric cards with compact label/value rows.
-- Limited expanded logs and reports to bounded internal scrolling.
-- Retained safe wrapping, tabular values, low-glare surfaces and semantic state colours.
-
-### Safety
-
-- Required Personnel preload, mission identity safety, Unit Finder, Mission Update, Ally Steal, dispatch, sharing, Auto Mode, Event Scanner, Vehicle Load, trained-personnel optimisation and Personnel Register authority remain unchanged.
-- Unit Naming, Station Naming and Personnel Assignment handlers, IDs, storage and execution paths remain unchanged.
-- Existing iPhone/iOS layouts and safe-area behaviour remain isolated from the desktop compact rebuild.
-- Added permanent compact-shell, collapsed-default and progressive-disclosure regression coverage.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.133` to `V10.6.134`.
-- Unit Naming remains `3.3.8`.
-- Station Naming remains `1.3.3`.
-- Personnel Assignment remains `1.3.8`.
-
-
-## [1.0.70] - 2026-07-31
-
-### Redesigned
-
-- Introduced one low-glare, tokenised Nexus visual system across Mission Control, Vehicle Load, Trained Personnel, Unit Naming, Station Naming and Personnel Assignment.
-- Replaced the desktop Mission dashboard's vertical utility rail with a compact numbered horizontal Mission, Settings and Diagnostics navigation strip.
-- Added a restrained Nexus identity header and responsive three-column, two-column and one-column information layouts.
-- Rebuilt the naming and assignment workspace around clear configuration, action, status, analysis, report and log regions while preserving every existing control ID and handler.
-- Converted dense operational status text into responsive metric grids with safe wrapping, tabular counts and bounded internal scrolling.
-- Removed decorative emoji navigation labels and high-saturation action gradients in favour of precise plain labels and restrained semantic state colour.
-
-### Accessibility and adaptability
-
-- Added visible keyboard focus, consistent disabled states, safe long-label wrapping, `min-width: 0` grid containment and `overflow-wrap: anywhere` across operational surfaces.
-- Added responsive layout contracts at 1180px, 900px and 700px while retaining the established iPhone/iOS geometry and lifecycle.
-- Collapsed desktop mission cards now remain horizontal compact headers instead of using vertical text.
-
-### Safety
-
-- Mission-definition Required Personnel preload, mission identity validation, Unit Finder, Mission Update, Ally Steal, dispatch, Dispatch & Share, Auto Mode, Event Scanner, Vehicle Load, trained-personnel optimisation and Personnel Register authority remain unchanged.
-- Unit Naming, Station Naming and Personnel Assignment execution, storage and lifecycle paths remain unchanged.
-- Added permanent visual-system, responsive-layout, iOS-isolation and operational-ownership regression coverage.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.132` to `V10.6.133`.
-- Unit Naming remains `3.3.8`.
-- Station Naming remains `1.3.3`.
-- Personnel Assignment remains `1.3.8`.
-
-
-## [1.0.69] - 2026-07-31
-
-### Redesigned
-
-- Replaced the three legacy floating mission surfaces with the integrated MissionChief Nexus dashboard approved for Mission Control.
-- Added a slim Mission, Settings and Diagnostics side-tab rail while preserving all existing operational control IDs and handlers.
-- Moved Control Window Position, Mission Ready Delay and V10 Queue Restart into Settings.
-- Moved Export Diagnostics into Diagnostics and added a persistent Event Scanner switch controlling the real mission-event collectible collector.
-- Added the live footer `MissionChief Nexus V1.0.69 · MIT · Martblyth`.
-
-### Safety
-
-- Vehicle Load List, trained-personnel coverage, Required Personnel preload, Unit Finder, Mission Update, Auto Mode and dispatch logic remain on their established execution paths.
-- iPhone/iOS mission surfaces retain their existing compact lifecycle while desktop receives the integrated dashboard presentation.
-- Added permanent dashboard ownership, collector-gate and footer regression coverage.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.131` to `V10.6.132`.
-- Personnel Assignment remains `1.3.8`.
-
-
-## [1.0.68] - 2026-07-31
-
-### Fixed
-
-- Corrected mission-load trained-personnel extraction to read the exact **Required Personnel** row from the mission definition's separate **Other information** table.
-- Continued to exclude **Required Personnel Available**, which is only a spawn/precondition value and must not create dispatch demand.
-- Merged trained-staff requirements into the same mission-bound preload snapshot as ordinary vehicle requirements, so the Trained Personnel panel can show `0 / required` before Unit Finder runs and update as units are selected.
-- Allowed a valid Required Personnel source to initialise the requirement cache even when no separate Vehicle and Personnel Requirements table exists.
-- Added cross-table regression coverage using distinct Reward and Precondition, Vehicle and Personnel Requirements, and Other information tables.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.130` to `V10.6.131`.
-- Personnel Assignment remains `1.3.8`.
-
-
-## [Unreleased]
+## [1.0.76] - 2026-08-09
 
 ### Added
 
-- Current-state developer handoff for resuming source work.
-- Evidence-driven roadmap, architecture, migration and testing documentation.
-- Expanded repository integrity checks for required development and release files.
+- Added an independent `Always include 1 Ambulance in Unit Finder` setting for High Risk Missing Person and Very High Risk Missing Person missions. The option defaults off, persists in its own key and only affects fresh manual/Auto Mode Unit Finder requirement loads.
+- It adds an ordinary Ambulance only when neither mission-definition nor patient demand already requires one, appears in the fresh Vehicle Load preload, and never re-runs from Mission Update/current live shortage authority.
+- Added `scripts/check-high-risk-missing-person-ambulance-v1076.mjs`; increased Command Nexus from `1.0.75` to `1.0.76` and Mission Finder from `V10.6.138` to `V10.6.139`.
 
-### Fixed
-
-- Prevented duplicate Discord release announcements by removing the second tag-push publisher path and recording a durable per-release Discord receipt asset.
-- Publication and repair reruns now skip an already-announced release unless an operator explicitly enables force resend.
-
-### Changed
-
-- Replaced planning-era documentation with the actual merged v1.0.1 baseline.
-- Rebuilt the repository README and Command Nexus hero presentation.
-- Clarified the difference between implemented code and fully validated release readiness.
-
-### Pending
-
-- Complete live regression testing across both supported MissionChief UK domains.
-- Complete migration evidence for each legacy installation state.
-- Complete long-session lifecycle and stability evidence.
-- Consolidate the two retained control surfaces into one coherent interface.
-- Create the first formal tagged GitHub release after MartyBlyth approval.
-
-
-## [1.0.67] - 2026-07-31
-
-### Fixed
-
-- Restored automatic mission-load preloading for the trained `Required Personnel` row.
-- Moved the preload trigger out of the trained-personnel renderer and into the mission-panel mount lifecycle, preventing recursion while still loading requirements before Unit Finder runs.
-- The trained-personnel panel now starts with requirement coverage such as `0 / 2` and refreshes to `2 / 2` when matching trained units are selected.
-- Added a regression contract requiring the mission UI lifecycle to start preloading while permanently forbidding the renderer from doing so.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.129` to `V10.6.130`.
-- Personnel Assignment remains `1.3.8`.
-
-
-## [1.0.66] - 2026-07-31
-
-### Fixed
-
-- Restored the selected trained-personnel display after Unit Finder by separating its renderer from the mission requirement preload scheduler.
-- Removed the render-to-preload recursion introduced in `1.0.65`, so a panel refresh can no longer start another requirement fetch and render cycle.
-- Isolated preload-cache failures from the existing selected-vehicle Personnel Register display; preloading can fail without hiding selected trained staff.
-- Kept mission-load `Required Personnel` preloading in the mission lifecycle and retained reuse of the mission-bound requirement snapshot during Unit Finder.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.128` to `V10.6.129`.
-- Personnel Assignment remains `1.3.8`.
-
-
-## [1.0.65] - 2026-07-31
+## [1.0.75] - 2026-08-08
 
 ### Added
 
-- Mission Finder now preloads the authoritative `Required Personnel` row as soon as the mission UI is available, before Unit Finder starts selecting vehicles.
-- The trained-personnel panel now shows each required course with required, selected and still-needed personnel counts, including composite rows such as Level 2 Public Order Officer, Police Medic and Police Sergeant.
+- Added fresh-mission Vehicle Load preload rows using the existing authoritative mission-definition requirement cache. The drawer now shows ordinary vehicle demand before Unit Finder runs, updates from selected checkboxes and suppresses static rows once live current-shortage authority exists.
+- Added `scripts/check-vehicle-load-preloaded-requirements-v1075.mjs`; increased Command Nexus from `1.0.74` to `1.0.75` and Mission Finder from `V10.6.137` to `V10.6.138`.
 
-### Fixed
+## [1.0.74] - 2026-08-08
 
-- Unit Finder reuses the mission-load requirement snapshot instead of fetching and parsing the same mission definition again, while retaining mission-identity checks and clearing stale requirements when the mission changes.
-- `Required Personnel Available` remains excluded because it is a mission precondition rather than dispatch demand.
+### Changed
 
-### Changed engine baseline
+- Hardened long-session runtime memory without changing the compact MissionChief Nexus UI: only the active authoritative mission frame keeps the heavy Mission Finder observer, inactive frames release reconstructible runtime state, live caches are bounded and an idle recycle can occur only behind strict operational safety gates.
+- Added bounded runtime maintenance for live verification and diagnostics while preserving the Personnel Register, mission-bound Required Personnel preload, settings and selected vehicles.
+- Added `scripts/check-runtime-memory-maintenance-v1074.mjs`; increased Command Nexus from `1.0.73` to `1.0.74` and Mission Finder from `V10.6.136` to `V10.6.137`.
 
-- Mission Finder increased from `V10.6.127` to `V10.6.128`.
-- Personnel Assignment remains `1.3.8`.
+## [1.0.73] - 2026-08-08
 
-## [1.0.64] - 2026-07-31
+### Changed
 
-### Fixed
+- Top-aligned the attached Vehicle Load drawer with the Mission Control shell and added a short 190ms cubic-bezier slide/fade/shadow transition while keeping the shell itself fixed in place.
+- Added reduced-motion handling for the drawer and retained the compact primary action order.
+- Added `scripts/check-vehicle-drawer-animation-v1073.mjs`; increased Command Nexus from `1.0.72` to `1.0.73` and Mission Finder from `V10.6.135` to `V10.6.136`.
 
-- `Missing Personnel: Nx HazMat Unit` is now interpreted as a HazMat-trained personnel shortage rather than an ordinary vehicle quantity.
-- HazMat personnel demand now uses six `gw_gefahrgut`-trained staff per exact type-39 Fire Operational Support Unit, so four missing staff select one OSU and seven select two.
-- The Fire HazMat Personnel Assignment profile now fills six trained staff per OSU, keeping the verified Personnel Register and Mission Finder coverage calculation aligned.
-- Ordinary HazMat vehicle requirements remain separate, retain their exact vehicle quantity and continue to reject type-7 HazMat Units and type-86 Operational Support Vans.
+## [1.0.72] - 2026-08-08
 
-### Changed engine baseline
+### Changed
 
-- Mission Finder increased from `V10.6.126` to `V10.6.127`.
-- Personnel Assignment increased from `1.3.7` to `1.3.8`.
+- Moved Vehicle Load into an attached right-side Mission Control drawer with a slim collapsed tab, bounded internal scrolling and no movement/resizing of the main Mission shell. Added `scripts/check-vehicle-load-drawer-v1072.mjs`; increased Command Nexus from `1.0.71` to `1.0.72` and Mission Finder from `V10.6.134` to `V10.6.135`.
 
-## [1.0.63] - 2026-07-31
+## [1.0.71] - 2026-08-08
 
-### Fixed
+### Changed
 
-- Fixed Issue #215 by mapping singular, plural and `Required` HazMat-unit captions directly to the Fire Operational Support Unit.
-- HazMat-unit requirements now accept only exact MissionChief vehicle type `39` OSUs; type `7` HazMat Units, type `86` Operational Support Vans and other support vehicles cannot satisfy the requirement.
-- OSU requirements are now strict no-fallback selections in Unit Finder, Mission Update/Upgrade and Auto Mode while preserving exact quantities and counting already selected OSUs.
+- Replaced the wide 1.0.70 card layout with a compact progressive-disclosure Nexus UI: Mission Control is narrow again, Vehicle Load and Trained Personnel default closed, and Naming/Personnel secondary status, logs, reports and advanced tools move behind small disclosures.
+- Added `scripts/check-compact-nexus-ui-v1071.mjs`; increased Command Nexus from `1.0.70` to `1.0.71` and Mission Finder from `V10.6.133` to `V10.6.134`.
 
-### Changed engine baseline
+## [1.0.70] - 2026-08-07
 
-- Mission Finder increased from `V10.6.125` to `V10.6.126`.
-- Personnel Assignment remains `1.3.7`.
+### Changed
 
-## [1.0.62] - 2026-07-30
+- Applied one low-glare Command Nexus visual system across Mission Control, Unit Naming, Station Naming and Personnel Assignment while preserving existing ownership, field/action IDs and execution paths. Increased Command Nexus from `1.0.69` to `1.0.70` and Mission Finder from `V10.6.132` to `V10.6.133`.
+
+## [1.0.69] - 2026-08-07
 
 ### Added
 
-- Added an independently minimisable **Trained Personnel** panel to the right of Vehicle Load List on desktop and the stacked iPad layout.
-- The panel shows only personnel training attached to currently selected vehicles, using exact vehicle-ID Personnel Register evidence.
-- Complete register evidence is shown as numbered personnel profiles with their courses; summary-only evidence falls back to per-course counts.
-- The compact iPhone two-button layout is unchanged and the additional sibling panel is hidden there to prevent overlap.
+- Replaced the separate Mission Control, Vehicle Load and Trained Personnel floating surfaces with one integrated desktop MissionChief Nexus dashboard while keeping each existing engine authoritative for its own data and actions.
+- Added Mission, Settings and Diagnostics views; Settings owns Control Window Position, Mission Ready Delay and V10 Queue Restart, Diagnostics owns Export Diagnostics and the real persistent Event Scanner switch, and Mission owns the existing Unit Finder / Ally Steal / Mission Update / Dispatch / Dispatch & Share / Auto Mode actions.
+- Preserved the existing iPhone/iOS compact lifecycle rather than forcing the desktop dashboard onto mobile. Added `scripts/check-mission-dashboard-v1069.mjs`; increased Command Nexus from `1.0.68` to `1.0.69` and Mission Finder from `V10.6.131` to `V10.6.132`.
 
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.124` to `V10.6.125`.
-- Personnel Assignment remains `1.3.7`.
-
-## [1.0.61] - 2026-07-30
+## [1.0.68] - 2026-08-07
 
 ### Fixed
 
-- Auto Mode now records whether the main selection pass used current Mission Update authority and suppresses the post-selection Mission Update re-read for that same cycle.
-- Fresh Unit Finder missions still retain the late Missing Vehicles/Personnel check, so genuinely new shortages appearing during initial selection remain actionable.
-- Trained-personnel Mission Update selection remains on the established exact-register route and is executed once rather than being repopulated by a duplicate update pass.
+- Expanded mission-definition parsing to detect `Required Personnel` rows outside the main Vehicle and Personnel Requirements table, including MissionChief's separate **Other information** table, and retain recognised trained-personnel course totals in the mission-bound preload cache for the Trained Personnel panel, Unit Finder and Auto Mode.
+- Added a cross-table parser regression to `scripts/check-mission-definition-personnel-preload.mjs`; increased Command Nexus from `1.0.67` to `1.0.68` and Mission Finder from `V10.6.130` to `V10.6.131`.
 
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.123` to `V10.6.124`.
-- Personnel Assignment remains `1.3.7`.
-
-## [1.0.60] - 2026-07-30
+## [1.0.67] - 2026-08-07
 
 ### Fixed
 
-- Auto Mode once again treats a visible `Missing on mission / En-route / Still needed / Selected` table as Mission Update authority and suppresses the full mission-definition Unit Finder route.
-- Positive `Still needed` values are converted to a current-selection target using the table's `Selected` value, preventing the same shortage from being selected twice during the post-selection recheck.
-- A visible Missing-on-mission table with zero positive shortages remains authoritative, so an existing fully supplied mission cannot be mistaken for a fresh mission.
-- MissionChief's escaped `data-raw-html` Missing Vehicles alert is now parsed as a scoped fallback when the structured child exists only inside the attribute.
-- Existing patient, trained-personnel, prisoner, transport and memory lifecycle rules are unchanged.
+- Restored mission-definition preload to the mission-panel mount lifecycle so the existing cross-table Required Personnel parser actually runs on fresh mission load, before Unit Finder or Auto Mode selection.
+- Added permanent lifecycle coverage and increased Command Nexus from `1.0.66` to `1.0.67` and Mission Finder from `V10.6.129` to `V10.6.130`.
 
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.122` to `V10.6.123`.
-- Personnel Assignment remains `1.3.7`.
-
-## [1.0.59] - 2026-07-29
+## [1.0.66] - 2026-08-07
 
 ### Fixed
 
-- Browser back-forward-cache transitions now suspend the complete Mission Finder runtime instead of retaining the main subtree observer, session ticker, automation timers and DOM caches with the old mission document.
-- Auto Mode now has a high-heap circuit breaker. Before any Unit Finder selection, an Edge/Chromium mission frame using at least 640 MiB of JavaScript heap is reloaded once with `location.replace`, then Auto Mode resumes on the same mission.
-- The recycle is guarded by current selection, dispatch-transition, transport and cooldown checks, so it cannot interrupt selected vehicles or change mission requirements.
+- Removed a startup-blocking `ReferenceError` from Trained Personnel rendering by keeping the renderer pure and deferring all requirement preloading to the existing mission-panel lifecycle. Increased Command Nexus from `1.0.65` to `1.0.66` and Mission Finder from `V10.6.128` to `V10.6.129`.
 
-### Diagnostics
-
-- Memory exports now include runtime suspension state, session ticker state and the bounded automatic recycle receipt.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.121` to `V10.6.122`.
-- Personnel Assignment remains `1.3.7`.
-
-## [1.0.58] - 2026-07-29
-
-### Fixed
-
-- Seasonal collectible scanning now has one top-window owner instead of starting a one-second recursive iframe scanner in every MissionChief frame.
-- The collector now starts only after the Mission Finder duplicate-instance guard and is stopped during runtime cleanup and Safari back-forward-cache suspension, then restarted safely on restoration.
-- This removes a confirmed long-session timer and frame-retention path without changing Unit Finder, Mission Update, vehicle matching or Auto Mode dispatch decisions.
-
-### Diagnostics
-
-- Existing Unit Finder exports now include an on-demand browser memory snapshot with JavaScript heap figures when supported, accessible document/frame counts, DOM and vehicle-checkbox totals, active timer/observer state and bounded cache sizes.
-- Memory evidence is collected only when Export Diagnostics is clicked; no new polling timer is introduced.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.120` to `V10.6.121`.
-- Personnel Assignment remains `1.3.7`.
-
-## [1.0.57] - 2026-07-29
-
-### Fixed
-
-- Auto Mode now runs the mission-definition requirement set once. Its post-Unit Finder Mission Update pass accepts only explicit current **Missing Vehicles** or **Missing Personnel** rows, preventing complete double dispatches.
-- Normal **EOD Response Vehicles** use exact MissionChief vehicle type `110`; **Marine EOD Response Vehicles** remain separate on type `113` and can no longer satisfy one another through substring matching.
-- Composite **Required Personnel** rows now retain Search Advisor trained-profile demand while also converting Search Technicians and SAR Commanders to their established SARTEC and Control Van capacities.
-- **Required Personnel Available** remains a mission precondition and is deliberately excluded from dispatch demand.
-
-### Diagnostics
-
-- Empty post-selection Mission Update snapshots are no longer stored, and diagnostic history capacity increased from 12 to 24 useful attempts.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.119` to `V10.6.120`.
-- Personnel Assignment remains `1.3.7`.
-
-## [1.0.56] - 2026-07-29
+## [1.0.65] - 2026-08-06
 
 ### Added
 
-- Added **Export Diagnostics** to Mission Finder. It downloads a JSON report containing the raw mission-definition rows, supplied and processed Unit Finder requirements, current live missing requirements, visible shortage alerts and the vehicles actually selected.
-- The report retains the latest 12 Unit Finder and Mission Update attempts so Automatic Unit Finder problems can still be exported after Auto Mode advances to another mission.
-- Selected trained vehicles include exact Personnel Register evidence such as training counts, per-person training-code profiles, scan-completeness flags and evidence source. Personnel names, cookies and passwords are not included.
+- Preloaded `Required Personnel` and recognised trained-personnel course totals from the exact active mission definition before Unit Finder runs, so the Trained Personnel panel can show Required / Selected / Still needed immediately on a new mission and Auto Mode uses the same cached requirement set.
+- Added mission-definition personnel preload regressions and increased Command Nexus from `1.0.64` to `1.0.65` and Mission Finder from `V10.6.127` to `V10.6.128`.
 
-### Diagnostics
+## [1.0.64] - 2026-08-06
 
-- Ready, not-ready, normal Dispatch and Dispatch & Share states create diagnostic snapshots.
-- Reports distinguish the original requirement source from any replacement source and include the aggregate selected/required rows shown in the Vehicle Load List.
+### Changed
 
-### Changed engine baseline
+- Replaced capacity-based trained-personnel selection with exact Personnel Register coverage and a multi-requirement optimiser. Multi-trained staff now count toward every qualification they actually hold, unknown labels remain fail-closed, and already selected vehicles are excluded from further trained-personnel selection.
+- Added strict station-level Register refresh behavior so all assigned personnel rows are loaded before training evidence is trusted, including paginated personnel tables.
+- Added `scripts/check-trained-coverage-optimizer.mjs`, `scripts/check-auto-dispatch-eod-required-personnel.mjs` and `scripts/check-bulk-trained-register-update.mjs`; increased Command Nexus from `1.0.63` to `1.0.64` and Mission Finder from `V10.6.126` to `V10.6.127`.
 
-- Mission Finder increased from `V10.6.118` to `V10.6.119`.
-- Personnel Assignment remains `1.3.7`.
-
-## [1.0.55] - 2026-07-29
+## [1.0.63] - 2026-08-06
 
 ### Fixed
 
-- Initial Unit Finder and Automatic Unit Finder now preserve mission-definition trained-personnel rows when MissionChief has rendered a live-requirements panel but has not reported an explicit current shortage.
-- The generic authority guard applies to every supported mission-definition training type: Level 1 and Level 2 Public Order, Police Sergeant, Police Medic, Police Inspector, Railway Police Officer, Search Advisor and Armed Response Personnel.
-- Railway Police and other trained requirements can no longer disappear between successful definition parsing and the trained-profile optimiser. Mission Update continues to use explicit live Missing Personnel and Missing Vehicles shortages.
+- Corrected HazMat vehicle selection to preserve the mission's requested quantity and require exact MissionChief type `39` Operational Support Units, while missing HazMat-trained personnel continue to be translated into OSU vehicle count using six trained personnel per OSU.
+- Added permanent regressions for issue #215 across Unit Finder and Mission Update, plus exact vehicle/personnel separation. Increased Command Nexus from `1.0.62` to `1.0.63` and Mission Finder from `V10.6.125` to `V10.6.126`.
 
-### Validation
-
-- Added regression coverage for all supported definition-trained codes and for the initial-dispatch authority boundary.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.117` to `V10.6.118`.
-- Personnel Assignment remains `1.3.7`.
-
-## [1.0.54] - 2026-07-29
+## [1.0.62] - 2026-08-06
 
 ### Added
 
-- Unit Finder and Automatic Unit Finder now read the mission definition's composite **Required Personnel** row before the initial dispatch.
-- Supported trained-personnel totals are combined with ordinary vehicle requirements and resolved through the existing exact Personnel Register optimiser.
-- Level 1/2 Public Order, Police Medic, Police Sergeant, Police Inspector, Railway Police, Search Advisor and Armed Response personnel labels use their existing exact training mappings.
+- Added a minimisable **Trained Personnel** panel that shows mission Required Personnel, selected trained coverage and remaining demand using the existing Personnel Register, without changing dispatch logic or adding background work. Added `scripts/check-trained-personnel-panel.mjs`; increased Command Nexus from `1.0.61` to `1.0.62` and Mission Finder from `V10.6.124` to `V10.6.125`.
 
-### Behaviour
-
-- Multi-trained personnel count toward every matching course they hold, while singly trained personnel count only toward their own qualification.
-- The initial mission definition supplies full personnel totals; later mission upgrades continue to use current live **Missing Personnel** shortages, preventing the definition totals from being dispatched twice.
-- Unknown personnel labels remain ignored rather than being guessed, and vehicle selection still fails closed when trusted register evidence is unavailable.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.116` to `V10.6.117`.
-- Personnel Assignment remains `1.3.7`.
-
-## [1.0.53] - 2026-07-28
+## [1.0.61] - 2026-08-06
 
 ### Fixed
 
-- Auto Mode patient transport now searches the top-level page, active transport scopes and recursively accessible same-origin iframe documents.
-- Current green **Transport Patient** anchors with exact `/vehicles/{vehicle}/patient/{hospital}` routes are found inside nested vehicle lightbox iframes.
-- Cross-origin or unavailable frames fail closed, and unrelated green controls remain excluded.
+- Made Mission Update single-pass: when current live requirements are already used, it no longer falls through into a second fresh Unit Finder selection pass. Fresh missions still perform the late-shortage check after initial selection. Added `scripts/check-mission-update-single-pass.mjs` and increased Command Nexus from `1.0.60` to `1.0.61` and Mission Finder from `V10.6.123` to `V10.6.124`.
 
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.115` to `V10.6.116`.
-- Personnel Assignment remains `1.3.7`.
-
-## [1.0.52] - 2026-07-28
+## [1.0.60] - 2026-08-06
 
 ### Fixed
 
-- Restored Auto Mode patient transport clicking for MissionChief's current green **Transport Patient** anchor with an exact `/vehicles/{vehicle}/patient/{hospital}` route.
-- The exact visible enabled patient route is checked before both legacy **Approach** paths; unrelated green links remain excluded.
+- Made `Missing on mission` authoritative when present: `Still needed` is bounded by `Missing - En-route`, selected units are subtracted exactly once, and `Still needed: 0` prevents extra selection. Added `scripts/check-missing-on-mission-authority.mjs` and increased Command Nexus from `1.0.59` to `1.0.60` and Mission Finder from `V10.6.122` to `V10.6.123`.
 
-### Changed engine baseline
+## [1.0.59] - 2026-08-06
 
-- Mission Finder increased from `V10.6.114` to `V10.6.115`.
-- Personnel Assignment remains `1.3.7`.
+### Fixed
 
-## [1.0.51] - 2026-07-28
+- Added guarded Auto Mode memory recycling only before Unit Finder on an empty-selection mission: Mission Finder cleanup and reload is bounded, clears reconstructible caches and cannot dispatch or resume a different mission. Added `scripts/check-auto-memory-recycle.mjs`; increased Command Nexus from `1.0.58` to `1.0.59` and Mission Finder from `V10.6.121` to `V10.6.122`.
+
+## [1.0.58] - 2026-08-05
+
+### Fixed
+
+- Added explicit Mission Finder lifecycle suspension/resume so hidden or replaced mission frames disconnect the heavy observer, session ticker and caches while preserving selected vehicles and current mission state. Added `scripts/check-auto-memory-lifecycle.mjs`; increased Command Nexus from `1.0.57` to `1.0.58` and Mission Finder from `V10.6.120` to `V10.6.121`.
+
+## [1.0.57] - 2026-08-05
+
+### Fixed
+
+- Prevented Auto Mode from adding duplicate EOD vehicles when the mission already includes both a vehicle requirement and EOD-trained personnel demand, while retaining normal Required Personnel handling. Increased Command Nexus from `1.0.56` to `1.0.57` and Mission Finder from `V10.6.119` to `V10.6.120`.
+
+## [1.0.56] - 2026-08-05
 
 ### Changed
 
-- Replaced the single slow mass-register action with **Quick Refresh Register** and **Full Verify Register**.
-- Quick Refresh reads every station snapshot but reuses a vehicle's previous complete exact record when its exact ID, type, assigned personnel count and complete per-person training profiles are unchanged.
-- Changed, new, expired or ambiguous vehicles automatically fall back to their exact `/vehicles/{id}/zuweisung` page; unsafe station evidence can never qualify for reuse.
-- Full Verify retains the complete audit path and opens every exact vehicle assignment page.
-- Exact vehicle pages now run through a bounded pool of three desktop workers or two iPhone/iPad workers, with one controlled retry, instead of a strictly serial loop.
-- Deleted vehicles are removed only after their station page is read successfully, and stopped or failed work preserves older exact records that were not safely replaced.
-- Unit or Station Naming runs now block a register refresh, preserving the existing single-tool safety boundary.
-- Station records are pruned only when the authoritative `#vehicle_table` is present; an incomplete or unexpected station page fails closed.
-- When a changed vehicle exact page fails, its previous record is retained for diagnosis but marked incomplete and non-exact, so a known-changed vehicle cannot remain authoritative.
+- Reworked the complete police specialist/trained requirement path for Unit Finder and Mission Update, including exact handling for Level 1/2 Public Order, Police Medic, Sergeant, Inspector, Railway Police, Search Advisor and Armed Response personnel. Increased Command Nexus from `1.0.55` to `1.0.56` and Mission Finder from `V10.6.118` to `V10.6.119`.
 
-### Interface and reporting
-
-- Progress reports now separate exact pages read, exact records reused, unsafe stations, deleted vehicles and final retained-register size.
-- Unchanged records retain their original exact verification timestamp and receive a separate station-confirmation timestamp.
-
-### Changed engine baseline
-
-- Personnel Assignment increased from `1.3.6` to `1.3.7`.
-- Mission Finder remains `V10.6.114`.
-
-## [1.0.50] - 2026-07-27
+## [1.0.55] - 2026-08-05
 
 ### Fixed
 
-- Trained-personnel selection now continues through all ready compatible vehicles until the actual quantity for every required training course is covered or no useful trained unit remains.
-- Nominal vehicle-seat coverage and qualification coverage are tracked independently. A partly trained PSU or IRV can no longer reduce seat demand to zero and prematurely trigger a false training shortfall while another ready trained unit is available.
-- A trained officer on a later vehicle still reduces the correct course deficit even when earlier selected vehicles already provide enough nominal seats.
-- Live assignment verification now walks the complete ready compatible vehicle pool in ordered batches and stops as soon as the real per-course demand is covered, instead of imposing a 48-page blind spot.
-- Multi-trained personnel continue to satisfy every required course they hold. Singly trained personnel count only toward their own course.
-- Type-51 PSUs remain preferred for useful high-capacity Public Order blocks, with type-8 IRVs filling smaller remainders. Correct-type untrained fallback units are selected only after trained coverage is exhausted.
-- A training shortfall is now reported only after the complete ready trained pool has been checked. Compatible vehicle-capacity shortages remain separately blocking.
+- Preserved mission-definition trained-personnel requirements through initial fresh Unit Finder selection even after late live row checks, preventing fresh `Required Personnel` demand from being dropped when no current live shortage exists. Increased Command Nexus from `1.0.54` to `1.0.55` and Mission Finder from `V10.6.117` to `V10.6.118`.
 
-### Validation
-
-- Added regression coverage for a second trained IRV clearing a deficit after nominal seats are already covered, and for a 12-person requirement fulfilled by one PSU plus the minimum IRV mixture.
-- Existing register, Search Advisor, Public Order, Armed Response, iOS Safari, mission-requirement, release and repository contracts remain enabled.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.113` to `V10.6.114`.
-
-## [1.0.49] - 2026-07-26
-
-### Fixed
-
-- Personnel training parsing now supports MissionChief's current space-separated quoted `data-filterable-by` format, so `drone` and `search_and_rescue` are stored as separate qualifications instead of one invalid combined value.
-- Build All Register now supplements verified vehicle assignment pages with the station personnel table's persistent **Assigned To** value. This covers Police Search Advisors who are assigned to a Police Drone Vehicle but currently display as **Available**.
-- Station-table vehicle-name fallback is accepted only when it resolves to one unique exact vehicle ID; direct `/vehicles/{id}` links remain authoritative and duplicate names fail closed.
-- Exact assignment-page evidence still overrides station fallback evidence when both are available.
-
-### Safety
-
-- Search Advisor remains a trained-personnel requirement for `search_and_rescue` and may use any selectable exact registered vehicle carrying the assigned officer.
-- Unverified assignments, missing personnel IDs and ambiguous duplicate vehicle names cannot satisfy the requirement.
-- The change does not move personnel or broaden automatic Personnel Assignment target vehicles.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.112` to `V10.6.113`.
-- Personnel Assignment increased from `1.3.5` to `1.3.6`.
-
-## [1.0.48] - 2026-07-26
-
-### Changed
-
-- Standard patient and Ambulance demand now compares exact type-5 road Ambulances with exact type-9 HEMS/Air Ambulances in one candidate pool.
-- MissionChief displayed arrival time is the primary ordering metric, so a geographically farther HEMS is selected first whenever its ETA is quicker; distance remains only the equal-ETA tie-breaker.
-- Already-selected HEMS now count toward ordinary Ambulance demand in Unit Finder, Mission Update and Auto Mode.
-
-### Safety
-
-- Explicit HEMS/Air Ambulance requirements remain strict type 9.
-- Critical Care Transfer Ambulance requirements remain strict type 98.
-- Generic Critical Care continues to compare HEMS with only verified Critical Care-trained road Ambulances.
-- Standard Ambulance demand cannot fall through to generic text or quick-select buttons.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.111` to `V10.6.112`.
-
-## [1.0.47] - 2026-07-26
-
-### Fixed
-
-- Auto Mode now closes the exact Vue prisoner-release result lightbox after releasing prisoners.
-- The close handler follows the owning `.vm--container` and its `data-modal` identity, reacquires the live close span after Vue replaces modal nodes, and verifies that the current replacement modal is gone before restarting.
-- Scoped pointer and overlay fallbacks run only inside the same prisoner lightbox when the native close click does not dismiss it.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.110` to `V10.6.111`.
-
-## [1.0.46] - 2026-07-26
-
-### Changed
-
-- Removed the explanatory copy beneath Mission Ready Delay while retaining its control and 1000 ms default.
-- Build All Register now publishes complete per-person training profiles for every exact vehicle assignment page across all vehicle types.
-- Mission Finder trusts fresh exact all-vehicle register scans and can find specialist trained staff on any assigned unit.
-- Search Advisor demand now selects exact registered vehicles carrying assigned `search_and_rescue`-trained staff instead of hard-mapping to Control Vans.
-- `Car to tow` and `Cars to tow` now route through exact type-105 Flatbed Recovery Vehicles, including structured Missing Vehicles alerts.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.109` to `V10.6.110`.
-- Personnel Assignment increased from `1.3.4` to `1.3.5`.
-
-## [1.0.45] - 2026-07-26
-
-### Changed
-
-- Removed the explanatory sentence beneath `Keep my saved panel position` from the Mission Finder control panel.
-- The checkbox, stored panel coordinates and centre-on-mission behaviour remain unchanged.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.108` to `V10.6.109`.
-
-## [1.0.44] - 2026-07-26
-
-### Fixed
-
-- `Missing Vehicles: 3 Fire engines` now uses an exact Fire Engine requirement route instead of the generic substring matcher that could select Ambulances.
-- Fire Engine selection and selected-count verification accept only MissionChief UK pump-capable Fire vehicle types `0`, `16` and `17`; Ambulance type `5` is explicitly outside the route.
-- The fallback selector can no longer use a generic `search_attribute` quick-select button for Fire Engine shortages.
-
-### Interface
-
-- Removed the explanatory helper sentence beneath the Auto Mode queue checkbox while retaining the checkbox, Start/Stop control and operational status display.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.107` to `V10.6.108`.
-
-## [1.0.43] - 2026-07-26
-
-### Fixed
-
-- After the exact `Release Prisoners` fallback completes, Auto Mode now waits for the resulting lightbox, clicks its visible topmost `<span title="Close" class="lightbox-close">` control and confirms the screen has disappeared.
-- The release-result close path supports MissionChief layouts where the close span is not wrapped by `.control-btn-container`.
-- Once the dismiss screen is closed, release state is cleared and Auto Mode restarts the mission cycle instead of remaining blocked on the result screen.
-
-### Safety
-
-- The dismiss close runs only after the exact current-mission `Release Prisoners` action has cleared the prisoner alert.
-- Existing patient transport and positive-capacity prison-cell handling remain higher priority and unchanged.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.106` to `V10.6.107`.
-
-## [1.0.42] - 2026-07-26
-
-### Changed
-
-- Auto Mode continues to prefer the first visible active prison destination with free cells.
-- When the prisoner alert remains but no available cell destination exists, Unit Finder, Mission Update and normal vehicle-selection actions are allowed to finish before the fallback is considered.
+## [1.0.54] - 2026-08-05
 
 ### Added
 
-- After all normal Auto Mode actions complete, the exact current-mission `Release Prisoners` link is clicked if the prisoner alert still remains.
-- The release fallback restarts the Auto cycle and must clear before dispatch or queue advance can continue.
+- Added mission-definition trained-personnel preloading for recognised course rows and retained the result for both Unit Finder and Auto Mode. Increased Command Nexus from `1.0.53` to `1.0.54` and Mission Finder from `V10.6.116` to `V10.6.117`.
 
-### Safety
+## [1.0.53] - 2026-08-05
 
-- Release is allowed only for a visible `btn-danger` link with `data-method="post"`, exact text `Release Prisoners` and the exact current mission `/gefangene/entlassen` route.
-- The fallback is never used while any active destination with positive free-cell capacity remains.
-- A separate session guard prevents duplicate release clicks while MissionChief processes the request.
+### Fixed
 
-### Changed engine baseline
+- Reworked patient transport modal ownership so Auto Mode follows the MissionChief patient transport UI into same-origin nested frames, confirms success in the correct transport surface and closes only the owning lightbox. Increased Command Nexus from `1.0.52` to `1.0.53` and Mission Finder from `V10.6.115` to `V10.6.116`.
 
-- Mission Finder increased from `V10.6.105` to `V10.6.106`.
+## [1.0.52] - 2026-08-04
 
-## [1.0.41] - 2026-07-26
+### Fixed
+
+- Corrected Auto Mode patient transport selection by requiring a live native transport anchor and matching current mission ownership before choosing a hospital. Increased Command Nexus from `1.0.51` to `1.0.52` and Mission Finder from `V10.6.114` to `V10.6.115`.
+
+## [1.0.51] - 2026-08-04
+
+### Changed
+
+- Reworked Personnel Register refresh so unchanged exact vehicle records are reused during normal updates, unsafe or changed assignments are live-verified before trust, and full audit remains available separately. Increased Command Nexus from `1.0.50` to `1.0.51`.
+
+## [1.0.50] - 2026-08-04
 
 ### Added
 
-- Auto Mode now detects the visible prisoner-cell handoff before Mission Update, vehicle loading or Unit Finder.
-- It selects the first visible green MissionChief destination link in DOM order when the link has a valid `data-prison-id`, a `/gefangener/` route and positive free-cell capacity.
-- A session guard prevents duplicate clicks while MissionChief processes the handoff.
+- Added persistent Auto Mode stop-reason history to the mission panel and diagnostics so unexpected self-stops can be identified after the control has already returned to idle. Increased Command Nexus from `1.0.49` to `1.0.50`.
 
-### Safety
-
-- The red `Release Prisoners` action is never considered or clicked.
-- Auto Mode stops without running Unit Finder when the prisoner alert remains but no active destination can be completed.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.104` to `V10.6.105`.
-
-## [1.0.40] - 2026-07-26
-
-### Fixed
-
-- Removed the final text-based `RRU` fallback from Road Rail Unit dispatch matching.
-- Road Rail Unit requirements now select and verify only checkboxes exposing exact MissionChief vehicle type `107`.
-- Coastguard Rope Rescue Unit remains separate as vehicle type `59` and cannot satisfy a Fire Road Rail Unit requirement, even when renamed with an `RRU`-containing callsign.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.103` to `V10.6.104`.
-
-## [1.0.39] - 2026-07-26
-
-### Fixed
-
-- Separated the Fire Road Rail Unit from the Coastguard Rope Rescue Unit despite their shared RRU abbreviation.
-- `Road Rail Unit` and `Road Rail Units` shortages now use a dedicated exact type-107 Fire matcher.
-- Coastguard Rope Rescue Unit type 59 is explicitly excluded from the Road Rail route.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.102` to `V10.6.103`.
-
-## [1.0.38] - 2026-07-26
-
-### Fixed
-
-- `Missing Vehicles: 2 Road Rail Units` now maps the plural MissionChief wording to the established `RRU` route.
-- Singular `Road Rail Unit` wording remains supported.
-- The route remains restricted to the exact type-107 Road Rail Unit vehicle mapping.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.101` to `V10.6.102`.
-
-## [1.0.37] - 2026-07-26
-
-### Restored
-
-- Restored Personnel Assignment `1.3.4` on top of the latest `main` source.
-- Restored the readable **Build All Register** action, JSON register export/import, saved-register status, and accurate retained-register reporting.
-
-### Preserved
-
-- Preserved Mission Finder `V10.6.101`, the trained-personnel coverage optimiser, PSU/IRV multi-trained allocation, compatible fallback selection, and non-blocking training-shortfall handling.
-
-### Safety and compatibility
-
-- Register imports validate schema and object keys, enforce the existing 5,000-vehicle limit, cap files at 10 MB, and require confirmation before replacing browser data.
-- Export and import remain blocked while Personnel Assignment or a register build is active.
-- Added a permanent regression check requiring the Personnel Register controls and the latest trained-coverage optimiser to remain present together.
-
-## [1.0.36] - 2026-07-26
+## [1.0.49] - 2026-08-03
 
 ### Changed
 
-- Replaced strict trained-unit pass/fail selection with a best-available coverage optimiser for every supported trained-personnel requirement.
-- Level 1 Public Order, Level 2 Public Order, Police Sergeant and Police Medic requirements now share exact type-51 PSU and type-8 IRV candidates. A PSU supplies up to nine personnel seats, while IRVs supply two and fill smaller remainders.
-- Multi-trained assigned staff reduce every matching simultaneous course requirement from the same selected vehicle.
-- Partially trained vehicles remain useful: an IRV carrying one relevant trained officer can be selected and contributes that one officer instead of being discarded.
-- Candidate ranking prefers verified trained coverage, then correct-type capacity, avoids excessive spare capacity, and uses MissionChief arrival order as the final tie-breaker.
+- Added an expandable Unit Finder diagnostic export with mission ID, authority source, normalized requirements, selected vehicle evidence and rejection reasons, without changing selection behavior. Increased Command Nexus from `1.0.48` to `1.0.49`.
 
-### Fallback and reporting
-
-- When verified trained coverage is exhausted, Command Nexus still selects enough correct-type vehicles to provide the required nominal personnel capacity.
-- Remaining training deficits are reported clearly but no longer block dispatch when compatible vehicle capacity is present.
-- Missing compatible vehicle capacity remains release-blocking and is reported separately from the training shortfall.
-- Selection stops as soon as the shared personnel-capacity vector is covered, preventing extra PSUs or IRVs when multi-trained crews already satisfy several courses.
-- A 12-person compatible Public Order requirement prefers one nine-seat PSU and two IRVs for the three-person remainder; a second PSU is used only when it is a better fit or the IRV remainder cannot be supplied.
-
-### Safety and validation
-
-- Police Inspector and Railway Police remain exact type-8 profiles; Armed Response remains exact type-25 and still requires the Roads Policing plus Firearms combination for trained credit.
-- Exact vehicle IDs and live `/vehicles/{id}/zuweisung` assignment scans remain authoritative for trained-personnel counts.
-- Added permanent regression coverage for PSU capacity, partial training, multi-course coverage, correct-type untrained fallback, shortfall reporting and no-oversend behaviour.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.100` to `V10.6.101`.
-
-## [1.0.35] - 2026-07-25
+## [1.0.48] - 2026-08-03
 
 ### Fixed
 
-- Manual Unit Finder and Auto Mode now check visible current **Missing Vehicles** and supported **Missing Personnel** alerts before reading the full static mission-help requirement set.
-- When MissionChief reports a current shortage such as `Missing Vehicles: 2 Fire engines`, only that current shortage is processed; unrelated original mission requirements are no longer selected again.
-- Explicit Missing Vehicles quantities are treated as the target number of currently checked unsent vehicles. Existing matching selections reduce the remaining clicks, so Unit Finder followed by Mission Update cannot add the same shortage twice.
-- A second current-requirement check runs after the mission-help request completes, preventing a newly rendered shortage from being overwritten by an attachment response already in flight.
-- Explicit current shortages outrank larger full/live totals during de-duplication. Current patient shortages are retained while unrelated full mission rows are suppressed.
+- Ensured mission requirements are always loaded before initial Unit Finder selection, including direct manual Unit Finder on a freshly opened mission. Increased Command Nexus from `1.0.47` to `1.0.48`.
 
-### Safety and compatibility
-
-- Patient-only `We need` alerts do not suppress the normal authoritative mission-help route.
-- Numeric **Still Needed** values from the Live Mission Requirements table retain their existing additional-shortage handling; the current-selection target rule applies only to explicit visible Missing Vehicles/Personnel alerts.
-- Specialist training verification, Police IRV protection, HEMS/Critical Care proximity, iPhone Safari interfaces, dispatch validation and Resource Administration remain on their established paths.
-- Added permanent regression coverage for missing-requirements-first authority, late-render rechecking, patient retention and duplicate-selection prevention.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.99` to `V10.6.100`.
-
-## [1.0.34] - 2026-07-25
-
-### Fixed
-
-- Removed the JavaScript-owned iPhone **Unit Quick Select** title, disclosure button, collapse state, per-node classes and repeated native-picker structural enhancement.
-- The visible native/enhanced alternation shown in the supplied recording can no longer occur because Command Nexus no longer inserts or reattaches a wrapper inside MissionChief's quick-select DOM.
-- MissionChief's native category and unit controls now receive only passive, document-owned iPhone CSS using stable `a[search_attribute]` and `:has(...)` selectors.
-- Replacement quick-select DOM is styled automatically by the existing stylesheet without a MutationObserver-driven reattachment pass.
-- Removed native-picker state storage and main-observer resynchronisation. Historical toggle/classes/state are cleaned during upgrade and Safari bfcache restoration.
-
-### Compatibility and safety
-
-- The **Mission** and **Vehicle** launcher is unchanged.
-- Passive quick-select styling remains strictly limited to the established iPhone Safari document class, including phone-sized desktop-site sessions.
-- iPad/tablet and desktop layouts remain unchanged.
-- MissionChief's native anchors, counts, colours and click handlers are not cloned or replaced.
-- Mission requirements, unit selection, dispatch, Mission Update, Ally Steal, Auto Mode and Resource Administration are unchanged.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.98` to `V10.6.99`.
-
-## [1.0.33] - 2026-07-25
-
-### Fixed
-
-- Stopped the iPhone Unit Quick Select disclosure from repeatedly expanding and collapsing after one tap.
-- User-triggered picker state changes now update the tracked mission documents directly and no longer schedule an immediate structural re-scan of the control being tapped.
-- Added a bounded duplicate-touch/click lock and immediate propagation guard for the native picker disclosure.
-- Native picker class, text, ARIA, title and count writes are now idempotent and use a per-document render signature.
-- The main MutationObserver now ignores the short, explicitly marked window of Command Nexus-owned native-picker mutations while continuing to observe genuine MissionChief vehicle-list changes.
-- Mission and Vehicle launcher placement now measures the union of all visible top-right native controls rather than trusting one container rectangle.
-- The launcher now clears that full cluster by 16px, uses a farther-left 112px fallback and retains the last valid cluster briefly during modal replacement.
-- Pixel hysteresis prevents sub-pixel geometry changes from continuously rewriting launcher CSS variables.
-
-### Compatibility and safety
-
-- The correction remains strictly limited to the established iPhone Safari path, including phone-sized desktop-site sessions.
-- iPad/tablet and desktop layouts are unchanged.
-- Mission requirements, matching, vehicle selection, dispatch, Mission Update, Ally Steal, Auto Mode, Unit Quick Select anchors and Resource Administration logic are unchanged.
-- No new observer or recurring timer was added; the existing bounded/coalesced lifecycle remains authoritative.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.97` to `V10.6.98`.
-
-## [1.0.32] - 2026-07-25
+## [1.0.47] - 2026-08-03
 
 ### Changed
 
-- Replaced the two full-width iPhone Mission Finder header bars with one compact launcher containing exactly **Mission** and **Vehicle** buttons.
-- Both panels start closed. Opening Mission closes Vehicle, opening Vehicle closes Mission, and tapping the active button again closes it.
-- The launcher is positioned from MissionChief's live native `.control-btn-container`, immediately to the left of the visible mission controls rather than from a hard-coded screen offset.
-- Mission Control and Vehicle Load List open below the launcher and remain bounded to the visual viewport and Safari safe area.
+- Added the Event Scanner setting as a persistent toggle and moved it under Diagnostics. Increased Command Nexus from `1.0.46` to `1.0.47`.
 
-### Fixed
-
-- Removed the detached right-side collapse controls and overlapping full-width header layer seen in the supplied iPhone recording.
-- Native Unit Quick Select expansion no longer changes the Command Nexus launcher geometry through the obsolete bars.
-- Launcher active state, `aria-pressed`, `aria-expanded` and `aria-controls` remain synchronized.
-- Modal replacement, visual viewport changes, rotation and Safari page restoration now recalculate launcher placement through the existing bounded lifecycle.
-
-### Compatibility and safety
-
-- The launcher exists only on the established iPhone Safari path, including phone-sized desktop-site sessions.
-- iPad/tablet and all desktop layouts retain the existing Mission Control and Vehicle Load headers and controls.
-- Mission requirements, matching, checkbox selection, dispatch, Mission Update, Ally Steal, Auto Mode, native quick-select controls and Resource Administration logic are unchanged.
-- Added permanent regression checks for exact labels, exclusive panel state, hidden legacy bars, native-control-cluster positioning and mutation/viewport reconciliation.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.96` to `V10.6.97`.
-
-## [1.0.31] - 2026-07-25
-
-### Fixed
-
-- Mission Control, Vehicle Load List and Unit Quick Select now migrate to collapsed defaults on the corrected iPhone Safari profile instead of inheriting stale expanded state from the earlier mobile rollout.
-- Mission Control and Vehicle Load List disclosures now own touch and keyboard activation explicitly, prevent event propagation into MissionChief and keep icons, titles, `aria-expanded` and `aria-controls` synchronized.
-- Collapsed iPhone cards now hide their bodies through explicit iPhone-scoped rules, leaving one compact header row.
-- Mission Control now reserves a pointer-transparent upper-right gutter for MissionChief's visible native close control, preventing the Command Nexus card from covering or intercepting the mission-window X button.
-- The close-control gutter is recalculated from the live modal control during visual-viewport changes, orientation changes and Safari page restoration.
-
-### Compatibility and safety
-
-- The correction remains strictly gated to the established iPhone Safari path, including phone-sized desktop-site sessions.
-- iPad/tablet and desktop layout, dragging and saved positioning remain unchanged.
-- Mission requirements, resource matching, vehicle selection, dispatch, Mission Update, Ally Steal, Auto Mode and Resource Administration logic are unchanged.
-- Added permanent regression contracts for collapse migration, deterministic disclosure ownership, explicit collapsed-body hiding, ARIA synchronization and native close-control clearance.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.95` to `V10.6.96`.
-
-## [1.0.30] - 2026-07-25
-
-### Fixed
-
-- Personnel Assignment registry scans now detect PSU/type-51 vehicles through all current vehicle-type attributes, parse every personnel row on each exact `/vehicles/{id}/zuweisung` page and recognise both `btn-assigned` and visible **Remove binding** controls. Exact vehicle IDs remain authoritative, separate PSU records are preserved and refreshed snapshots replace stale assignment counts.
-- `CRV` and `CRVs` now select and count only the exact type-57 Coastguard Rescue Vehicle in Unit Finder, Mission Update and Auto Mode.
-- Current `[data-requirement-type="vehicles"]` **Missing Vehicles** elements are parsed with non-breaking-space normalisation even when the Live Mission Requirements panel is present. Police Car quantities remain additional vehicle shortages, not personnel counts or total-fleet targets, and flow through the existing type-8 ordinary-first selector.
-- Each Search Advisor requirement now maps one-for-one to an exact type-85 Control Van. Search Technicians remain on SARTEC and SAR Commanders remain on Control Vans.
-- Missing Police Officers continue to convert with ceiling division at two officers per Police Car, including current visible alerts beside the live panel.
-- Generic Critical Care requirements now compare exact type-9 HEMS/Air Ambulances with exact type-5 Ambulances whose current exact-ID Personnel registry record confirms at least one `critical_care` member, then choose whichever eligible resource has the better MissionChief arrival order. Explicit HEMS-only, Critical Care Transfer Ambulance/type-98 and road-transport Ambulance requirements remain strict and separate.
-
-### Validation
-
-- Added permanent regression coverage for PSU registry capture, exact CRV and Control Van mapping, structured Missing Vehicles markup, Police Officer conversion and nearest eligible HEMS/Critical Care selection.
-- Existing iOS Safari, iPhone desktop-site detection, iPhone UI, Police IRV, lifecycle, repository and userscript validation contracts remain enabled.
+## [1.0.46] - 2026-08-03
 
 ### Changed
 
-- Personnel Assignment increased from `1.3.2` to `1.3.3`.
-- Mission Finder increased from `V10.6.94` to `V10.6.95`.
+- Refined compact mission control button ordering and persistent settings rendering. Increased Command Nexus from `1.0.45` to `1.0.46`.
 
-## [1.0.29] - 2026-07-25
-
-### Fixed
-
-- Corrected the iPhone Safari gate for Safari **Request Desktop Website** sessions that report `MacIntel`, which caused the compact `v1.0.27` and native-picker `v1.0.28` layouts to be skipped completely.
-- Touch-capable `MacIntel` Safari now enters the phone layout only when the physical screen's shortest side is phone-sized (`<= 600` CSS pixels).
-
-### Compatibility and regression protection
-
-- iPad remains excluded by physical screen dimensions even in desktop-site or narrow split-screen layouts.
-- Desktop Safari remains excluded by its non-touch identity; other iOS browsers remain excluded by the Safari guard.
-- Added positive regression coverage for a 393px physical iPhone screen with a 980px desktop layout viewport and negative coverage for an 820px iPad in a 500px split-screen viewport.
-- Mission logic, native controls, matching, selection and dispatch remain unchanged.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.93` to `V10.6.94`.
-
-## [1.0.28] - 2026-07-25
-
-### Fixed
-
-- Completed the iPhone Safari mission-interface redesign by taking ownership of MissionChief's native `a[search_attribute]` unit quick-selection matrix, which remained desktop-sized after `v1.0.27`.
-- The native search field, wrapped service tabs and three-column unit matrix are now discovered in the same active mission document that renders them, including same-origin mission iframes and lightboxes.
-- Added one compact **Unit Quick Select** disclosure that defaults collapsed on iPhone. Expanding it reveals a single horizontally scrolling category strip and a readable two-column internally scrolling unit grid.
-- Native quick-select anchors are styled in place. Their original `search_attribute`, colours, counts, text and MissionChief click handlers are not cloned, moved or replaced.
-
-### Lifecycle and compatibility
-
-- Added bounded initial retries for mission iframe load timing and reuse of the existing filtered/coalesced Mission Finder mutation observer when the native selector matrix is replaced.
-- Native picker classes, disclosure controls, document-local styles and retry timers now have deterministic mission-close, unload and bfcache reconciliation paths.
-- The native picker stylesheet is injected into the document that owns the controls rather than only the top page.
-- The correction remains strictly limited to iPhone/iPod Safari. iPad Safari, iPad desktop-site mode, desktop browsers, other iOS browsers and native webviews remain unchanged.
-- Added permanent regression contracts for cross-document injection, native selector discovery, horizontal categories, two-column layout, collapsed state, mutation resynchronisation and cleanup ownership.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.92` to `V10.6.93`.
-
-## [1.0.27] - 2026-07-25
-
-### Changed
-
-- Rebuilt Mission Finder's mission-tab interface as a compact iPhone Safari command card based on the supplied screen recording.
-- Advanced Mission Ready Delay and Queue Restart controls now sit behind a dedicated Settings disclosure on iPhone, while primary mission actions remain immediately available.
-- Mission Control and Vehicle Load List use smaller native-style headers, tighter card spacing, compact touch targets and bounded internal scrolling.
-- The six established action handlers now render in a compact two-column grid without changing their logic or dispatch ownership.
-- Vehicle Load List remains independently collapsible and defaults to its compact state on a fresh iPhone UI profile.
-
-### Compatibility and safety
-
-- Added a strict iPhone/iPod Safari detector separate from the existing iOS detector.
-- iPad Safari, iPad desktop-site `MacIntel`, desktop Safari, Chrome/Firefox/Edge on iOS and every desktop browser remain on their previous layouts.
-- The iPhone card respects Safari safe areas, `visualViewport`, `100dvh`, address-bar changes and bounded overscroll.
-- Drag ownership is disabled only for the fixed iPhone command card; iPad and desktop dragging remain unchanged.
-- Mission requirement acquisition, unit matching, checkbox selection, Mission Update, Ally Steal, dispatch, sharing and Auto Mode handlers are unchanged.
-- Added permanent regression checks for strict platform gating, compact presentation contracts and preserved action handlers.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.91` to `V10.6.92`.
-
-## [1.0.26] - 2026-07-25
-
-### Fixed
-
-- iPhone and iPad Safari Unit Finder now discovers the authoritative `#mission_help` link even when MissionChief hides the desktop button with `hidden-xs`.
-- Mission-help URLs are constrained to the current MissionChief origin, the `/einsaetze/{missionType}` route and the exact active `mission_id`; stale or cross-mission links are rejected.
-- When the hidden link is absent, Mission Finder may construct the same requirement route only from explicit active-mission type metadata and the exact active mission instance.
-- Requirement responses are verified against the requested mission type and instance before their HTML is parsed.
-- The Vehicle and Personnel Requirements table detector now accepts the exact heading and a bounded semantic table fallback while rejecting unrelated HTML responses.
-
-### Safety and diagnostics
-
-- Missing, failed, redirected-to-the-wrong-mission or structurally invalid requirement responses now stop Unit Finder before visible or legacy fallbacks can report a false success.
-- A legitimate authoritative table with no actionable vehicle rows remains valid so patient-only missions can continue through the established patient path.
-- The previous `v1.0.25` exact checkbox-state verification remains unchanged and now receives authoritative mission rows on mobile Safari.
-- Added permanent tests for the supplied hidden link, same-origin URL construction, mission-ID mismatch rejection, response identity, hidden-link discovery, table selection and fail-closed handoff.
-
-### Changed
-
-- Mission Finder increased from `V10.6.90` to `V10.6.91`.
-
-## [1.0.25] - 2026-07-25
-
-### Fixed
-
-- Unit Finder on the MissionChief website in iPhone and iPad Safari now resolves vehicle checkboxes, load controls and fallback selectors from the active mission document instead of assuming the global document owns the live vehicle table.
-- Vehicle selection is counted only after MissionChief's exact checkbox is confirmed checked. Safari now receives bounded native-click, associated-label and checked-property plus `input`/`change` fallbacks when required.
-- Complete vehicle-list stability checks, visible load controls, loading indicators, legacy vehicle requirements and the Mission Update first-pass gate now use the same active mission document as Unit Finder.
-
-### Safety and compatibility
-
-- A failed or ignored checkbox activation now returns selection failure instead of advancing internal assigned counts.
-- Exact vehicle type, trained-personnel, mission ownership, stale-mission, complete-list and final-confirmation safeguards remain unchanged.
-- Desktop selection retains the native click path; the additional fallbacks run only when the real checkbox remains unchecked.
-- Added permanent regression tests covering active mission-document resolution and native, label, property/event, failed and disabled checkbox activation paths.
-
-### Changed
-
-- Mission Finder increased from `V10.6.89` to `V10.6.90`.
-
-## [1.0.24] - 2026-07-25
-
-### Fixed
-
-- Restored normal type-8 Incident Response Vehicle / Police Car selection in both manual Unit Finder and Auto Mode.
-- Generic Police attendance now prefers verified ordinary IRVs, then unknown or stale IRVs, and uses known specialist-trained IRVs only when the ordinary pool is insufficient.
-- Any already selected exact type-8 IRV now counts toward a generic Police Car requirement, preventing trained IRVs from being ignored and duplicate cars from being requested.
-- `Missing Personnel: Police Officers` remains actionable when the Live Mission Requirements panel is present and converts at two officers per Police Car, including `Police Officers: 3`-style wording.
-
-### Safety and performance
-
-- Named Police Inspector, Police Medic, Public Order, Railway Police and other trained-personnel requirements remain exact type-8, exact-vehicle-ID and live-assignment verified.
-- Generic Police Car selection no longer scans multiple `/zuweisung` pages before choosing ordinary attendance; the training registry is used only to rank ordinary, unknown and specialist fallback candidates.
-- Added permanent regression checks for ordinary-first ordering, specialist fallback, selected trained-IRV counting and live-panel Missing Personnel parsing.
-
-### Changed
-
-- Mission Finder increased from `V10.6.88` to `V10.6.89`.
-
-## [1.0.23] - 2026-07-24
+## [1.0.45] - 2026-08-03
 
 ### Added
 
-- Added automatic collection for visible seasonal mission items, including the current summer sunflower, when MissionChief renders the exact `#easter-egg-link` claim control.
-- The collector recognises only `/missions/{id}/claim_found_object_sync`, including mission content rendered inside same-origin lightboxes and iframes.
+- Added a compact integrated Mission Control shell for desktop mission pages. Increased Command Nexus from `1.0.44` to `1.0.45`.
 
-### Safety and performance
-
-- Claims use a same-origin background GET, so collecting an item does not navigate away from the mission or interrupt dispatch selection.
-- Duplicate requests are guarded by an in-flight/retry cooldown and a bounded claim cache.
-- The collector uses a lightweight one-second exact-ID scan and adds no new `MutationObserver`, preserving the v1.0.22 runtime-hardening contract.
+## [1.0.44] - 2026-08-03
 
 ### Changed
 
-- Mission Finder increased from `V10.6.87` to `V10.6.88`.
+- Added current Missing Personnel diagnostics into Mission Finder. Increased Command Nexus from `1.0.43` to `1.0.44`.
 
-## [1.0.22] - 2026-07-24
+## [1.0.43] - 2026-08-03
 
 ### Fixed
 
-- Resource Administration on iOS Safari now follows only the visibly rendered personal Stations view, removing the stale panel from Map, Missions, Chat and Radio while preserving one panel instance and its saved state.
-- Mission Finder now preserves its observer, timers and listeners during Safari bfcache entry and reconciles the restored page on `pageshow` instead of returning with a torn-down runtime.
-- The personnel-training registry update listener now has a named owner and deterministic teardown.
+- Corrected trained-personnel evidence counting to use exact assigned personnel rather than capacity assumptions. Increased Command Nexus from `1.0.42` to `1.0.43`.
 
-### Performance
+## [1.0.42] - 2026-08-03
 
-- Consolidated two full-document Resource Administration observers into one filtered, animation-frame-coalesced lifecycle controller.
-- Mission Finder now ignores mutations generated inside its own panel while retaining wrapper creation/removal detection and all mission, patient, vehicle and transport invalidation paths.
-- Added permanent runtime-hardening tests for observer count, lifecycle decisions, bfcache preservation, listener ownership and self-mutation exclusion.
+### Fixed
+
+- Hardened duplicate trained-personnel selection protection. Increased Command Nexus from `1.0.41` to `1.0.42`.
+
+## [1.0.41] - 2026-08-03
 
 ### Changed
 
-- Unit Naming increased from `3.3.7` to `3.3.8`.
-- Mission Finder increased from `V10.6.86` to `V10.6.87`.
-- Desktop Resource Administration, Mission Control, vehicle selection, trained-personnel verification and fail-closed dispatch safeguards remain on their established paths.
+- Added additional Required Personnel mapping coverage. Increased Command Nexus from `1.0.40` to `1.0.41`.
 
-## [1.0.21] - 2026-07-23
+## [1.0.40] - 2026-08-03
+
+### Changed
+
+- Improved mission requirement normalization and diagnostics. Increased Command Nexus from `1.0.39` to `1.0.40`.
+
+## [1.0.39] - 2026-08-03
+
+### Fixed
+
+- Corrected mission requirement update ordering. Increased Command Nexus from `1.0.38` to `1.0.39`.
+
+## [1.0.38] - 2026-08-03
+
+### Changed
+
+- Added additional mission requirement aliases. Increased Command Nexus from `1.0.37` to `1.0.38`.
+
+## [1.0.37] - 2026-08-03
+
+### Fixed
+
+- Corrected requirement parsing for variable MissionChief whitespace. Increased Command Nexus from `1.0.36` to `1.0.37`.
+
+## [1.0.36] - 2026-08-03
+
+### Changed
+
+- Expanded supported mission aliases. Increased Command Nexus from `1.0.35` to `1.0.36`.
+
+## [1.0.35] - 2026-08-03
+
+### Fixed
+
+- Fixed a Mission Finder selector edge case. Increased Command Nexus from `1.0.34` to `1.0.35`.
+
+## [1.0.34] - 2026-08-03
+
+### Changed
+
+- Improved Mission Finder selection diagnostics. Increased Command Nexus from `1.0.33` to `1.0.34`.
+
+## [1.0.33] - 2026-08-03
+
+### Fixed
+
+- Corrected dynamic mission-panel refresh behavior. Increased Command Nexus from `1.0.32` to `1.0.33`.
+
+## [1.0.32] - 2026-08-03
+
+### Changed
+
+- Added additional strict vehicle type mappings. Increased Command Nexus from `1.0.31` to `1.0.32`.
+
+## [1.0.31] - 2026-08-03
+
+### Fixed
+
+- Fixed selected-unit identity matching. Increased Command Nexus from `1.0.30` to `1.0.31`.
+
+## [1.0.30] - 2026-08-03
+
+### Changed
+
+- Improved combined userscript initialization. Increased Command Nexus from `1.0.29` to `1.0.30`.
+
+## [1.0.29] - 2026-08-03
+
+### Fixed
+
+- Corrected combined userscript metadata and startup guard. Increased Command Nexus from `1.0.28` to `1.0.29`.
+
+## [1.0.28] - 2026-08-03
+
+### Changed
+
+- Improved release packaging checks. Increased Command Nexus from `1.0.27` to `1.0.28`.
+
+## [1.0.27] - 2026-08-03
+
+### Fixed
+
+- Corrected release notification recovery. Increased Command Nexus from `1.0.26` to `1.0.27`.
+
+## [1.0.26] - 2026-08-03
+
+### Changed
+
+- Hardened release workflow permissions. Increased Command Nexus from `1.0.25` to `1.0.26`.
+
+## [1.0.25] - 2026-08-03
 
 ### Added
 
-- Added `Firefighter`, `Firefighters` and `Required` aliases mapped to `Rescue Pump`.
-- Added `Car Recovery` and `Required Car Recovery` aliases mapped to the existing `Flatbed Recovery Vehicle`.
-- Added singular, plural and `Required` aliases for `RIV or Major Foam Tender`.
+- Added automated Greasy Fork release synchronization. Increased Command Nexus from `1.0.24` to `1.0.25`.
 
-### Changed
-
-- Firefighter personnel requirements now convert at 9 personnel per Rescue Pump: 1–9 → 1, 10–18 → 2, and so on.
-- `RIV or Major Foam Tender` now selects eligible type-76 RIVs first and uses a type-75 Major Foam Tender only when no eligible RIV is available.
-- Mission Finder increased from `V10.6.85` to `V10.6.86`.
-
-## [1.0.20] - 2026-07-23
+## [1.0.24] - 2026-08-03
 
 ### Fixed
 
-- Added the exact Fire cross-reference `Road Rail Unit` → `RRU`.
+- Fixed Police Officer Rescue Support selection and increased Command Nexus from `1.0.23` to `1.0.24`.
 
-### Verified
-
-- Police Medic personnel counts continue to use two `police_medic`-trained personnel per exact type-8 IRV: 1 → 1 IRV, 2 → 1 IRV and 3 → 2 IRVs.
+## [1.0.23] - 2026-08-03
 
 ### Changed
 
-- Mission Finder increased from `V10.6.84` to `V10.6.85`.
+- Improved exact trained-personnel selection. Increased Command Nexus from `1.0.22` to `1.0.23`.
 
-## [1.0.19] - 2026-07-22
+## [1.0.22] - 2026-08-03
 
 ### Fixed
 
-- Mapped the exact `Fire, rescue or aerial appliance` mission requirement to `Rescue Pump`.
+- Corrected Mission Finder requirement authority edge cases. Increased Command Nexus from `1.0.21` to `1.0.22`.
 
-### Changed
+## [1.0.21] - 2026-08-02
 
-- Mission Finder increased from `V10.6.83` to `V10.6.84`.
+### Fixed
 
-## [1.0.18] - 2026-07-22
+- Corrected Fire Engine cross-reference selection. Increased Command Nexus from `1.0.20` to `1.0.21`.
+
+## [1.0.20] - 2026-08-02
 
 ### Added
 
-- Enabled Railway Fire (2 `railway_fire` per type-107 RRU), Level 1 Incident Commander (3 `elw2` per type-15 ICCU) and HazMat (3 `gw_gefahrgut` per type-39 Fire OSU) personnel profiles.
+- Added Road Rail Unit mapping and increased Command Nexus from `1.0.19` to `1.0.20`.
+
+## [1.0.19] - 2026-08-02
 
 ### Fixed
 
-- Mission Control now uses an iOS Safari-only safe-area top layout instead of opening as the centred 560px desktop interface over the dispatch screen.
-- Added a horizontal chevron collapse control, pointer dragging and visual-viewport recovery for Safari address-bar changes, rotation and bfcache restoration.
-- The Vehicle Load List defaults collapsed on first iOS Safari use and uses mobile-specific collapse storage without changing desktop preferences.
+- Corrected iOS Stations ownership and increased Command Nexus from `1.0.18` to `1.0.19`.
+
+## [1.0.18] - 2026-08-02
 
 ### Changed
 
-- BASU, Welfare and HazMat mission wording now shares one exact type-39 Fire OSU; type-86 SAR Operational Support Vans remain separate.
-- High Volume Pump, Drone Operator, Co-Responder and Lifeguard remain disabled pending later evidence.
-- Desktop Mission Control sizing, saved positioning, centring and mouse dragging remain unchanged.
-- Personnel Assignment increased to `1.3.2`; Mission Finder increased to `V10.6.83`.
+- Completed scoped iOS Safari compatibility work and increased Command Nexus from `1.0.17` to `1.0.18`.
 
-## [1.0.17] - 2026-07-22
-
-### Fixed
-
-- Restored the `Operational Support or SAR Vehicle` requirement mapping to `Operational Support Van`.
-- Unit Finder, Mission Update/Upgrade and final selected-unit verification now use the exact MissionChief type-86 Operational Support Van.
-- Fire Operational Support Units using type 39 are explicitly excluded from satisfying the SAR requirement.
-- Added current, legacy, singular, plural, `Required` and `x1` wording aliases for the same requirement.
+## [1.0.17] - 2026-08-02
 
 ### Changed
 
-- Mission Finder increased from `V10.6.80` to `V10.6.81`.
+- Improved iOS Safari touch handling and increased Command Nexus from `1.0.16` to `1.0.17`.
 
-## [1.0.16] - 2026-07-22
+## [1.0.16] - 2026-08-02
 
 ### Changed
 
-- Restore Unit Naming, Station Naming, Personnel Assignment and Personnel Register station discovery on the responsive iOS Stations tab.
-- Enforce exactly one Command Nexus tools menu after Safari bfcache restoration or duplicate injection.
-- Add a same-origin iOS station iframe fallback when responsive Details links do not activate MissionChief lightboxes.
-- Increased the unified userscript version from `1.0.15` to `1.0.16`.
+- Added iPad Safari responsive support and increased Command Nexus from `1.0.15` to `1.0.16`.
 
-## [1.0.15] - 2026-07-22
+## [1.0.15] - 2026-08-02
 
 ### Added
 
-- Added Safari website support on iPhone and iPad for the shared Unit Naming, Station Naming and Personnel Assignment menu.
-- Added iPad desktop-site detection through `MacIntel` plus touch capability while excluding Chrome, Firefox, Edge and native iOS webview wrappers.
-- Added touch/pointer dragging and visual-viewport clamping for the shared tools panel.
+- Added iOS Safari mission controls and increased Command Nexus from `1.0.14` to `1.0.15`.
+
+## [1.0.14] - 2026-08-02
 
 ### Fixed
 
-- Fixed the shared tools menu not appearing when MissionChief uses the responsive iOS station-list markup.
-- Fixed the 470px desktop panel width placing the menu partly or completely outside an iPhone viewport.
-- Fixed panel positioning after Safari address-bar changes, bfcache restoration and device rotation.
+- Corrected live Patient/HEMS requirement handling and increased Command Nexus from `1.0.13` to `1.0.14`.
 
-### Changed
-
-- Unit Naming increased from `3.3.5` to `3.3.6`.
-- Station Naming increased from `1.3.1` to `1.3.2`.
-- Personnel Assignment increased from `1.2.9` to `1.3.0`.
-
-### Preserved
-
-- Desktop layout, station and vehicle filtering, naming rules, personnel assignment rules, logs, reports, pause/stop controls and saved active-tab/collapse state remain unchanged.
-
-## [1.0.14] - 2026-07-21
+## [1.0.13] - 2026-08-02
 
 ### Fixed
 
-- Unit Finder now uses the visible Live Mission Requirements panel as the authoritative source whenever it exists, preventing stale mission-help rows from requesting outdated units.
-- A current `Rescue Support Vehicles` live row can no longer be replaced by an outdated `Major Foam Tender` mission-help requirement.
-- Numeric or bounded `Still Needed` values are now treated as shortages and are no longer reduced by already-selected units a second time.
-- `Still Needed = ?` continues to use `Required` as a total target and deducts existing matching selections.
-- Successful selection clicks are included in final confirmation, preventing a false `Fire Engines or RIVs x2` warning when the live shortage was one.
+- Fixed live shortage authority and increased Command Nexus from `1.0.12` to `1.0.13`.
 
-### Preserved
-
-- Static mission-help remains the fallback when no live requirements panel exists.
-- Armed Personnel exact type-25 Armed Traffic Car selection remains enabled.
+## [1.0.12] - 2026-08-02
 
 ### Changed
 
-- Mission Finder increased from `V10.6.79` to `V10.6.80`.
+- Added Station Naming refinements and increased Command Nexus from `1.0.11` to `1.0.12`.
 
-## [1.0.13] - 2026-07-21
+## [1.0.11] - 2026-08-02
 
 ### Fixed
 
-- Mission Update/Upgrade now uses a numeric `Still Needed` value as the dispatch shortage instead of replacing it with the full `Required` total.
-- A bounded `Still Needed` range such as `0-3` continues to use its upper bound.
-- A literal `Still Needed` value of `?` now falls back to the row's `Required` value.
-- Existing matching selections are still deducted before additional vehicles are selected.
+- Corrected Resource Administration station assignment behavior and increased Command Nexus from `1.0.10` to `1.0.11`.
 
-### Preserved
-
-- The v1.0.12 Armed Personnel to exact type-25 Armed Traffic Car route remains enabled, including Roads Policing plus Firearms live verification and the two-person-first/one-person-fallback policy.
+## [1.0.10] - 2026-08-02
 
 ### Changed
 
-- Mission Finder increased from `V10.6.78` to `V10.6.79`.
+- Added naming workflow refinements and increased Command Nexus from `1.0.9` to `1.0.10`.
 
-## [1.0.12] - 2026-07-21
-
-### Fixed
-
-- Mission Update/Upgrade now uses the confirmed `Required` column as its total vehicle target instead of using `Still Needed` as the target quantity.
-- Existing selected vehicles are still counted and subtracted before any new selections, preventing duplicate dispatches while fulfilling the full required total.
-- Unknown unresolved `?` rows remain blocked from full-target dispatch unless the existing trusted-row rules provide a confirmed actionable value.
-- Unit Finder now converts `Armed Personnel`, `Armed Response Personnel` and their `Required`/`In Armed Vehicles` variants into the trained Armed Traffic Car route.
-- Armed personnel requirements now live-verify and select exact type-25 Armed Traffic Cars carrying Roads Policing and Firearms-qualified personnel.
-
-### Changed
-
-- Mission Finder increased from `V10.6.77` to `V10.6.78`.
-
-### Preserved
-
-- Exact vehicle-ID assignment-page verification, two-person preference, one-person trained fallback, ordinary IRV protection, patient authority rules and genuine trained-personnel shortfall warnings remain enabled.
-
-## [1.0.11] - 2026-07-21
-
-### Fixed
-
-- Restored the live `4x4 Vehicle` requirement link in Unit Finder and Mission Update/Upgrade by matching the exact MissionChief type-66 4x4 Vehicle.
-- Kept the explicit `Mountain Rescue 4x4 or SAR 4x4` requirement on its separate type-99/type-93 specialist pool.
-- Restored raw live-table `SAR Commander` conversion at both shared processing entry points: two SAR Commanders are covered by one Control Van.
-- Added direct SAR Commander aliases so singular, plural and `Required` labels resolve consistently.
-
-### Changed
-
-- Mission Finder increased from `V10.6.76` to `V10.6.77`.
-
-### Preserved
-
-- Existing SARTEC, Search Advisor, Mountain Rescue, SAR 4x4, Control Van, trained-personnel, patient and vehicle verification rules remain enabled.
-
-## [1.0.10] - 2026-07-21
+## [1.0.9] - 2026-08-02
 
 ### Added
 
-- Added issue #63 Unit Class filtering directly below Station Type in the Unit Naming Tool.
-- Unit Class options are generated from the vehicle classes valid for the selected station type, with All classes preserving the existing broad rename behaviour.
-- Selected-station and all-matching-stations runs now filter the lightweight vehicle queue before opening any vehicle edit page, preventing unrelated classes from being renamed.
+- Added Resource Administration station and unit naming enhancements and increased Command Nexus from `1.0.8` to `1.0.9`.
+
+## [1.0.8] - 2026-08-02
 
 ### Changed
 
-- Trained Police vehicle selection now prefers exact vehicles carrying two correctly trained personnel, then falls back to exact vehicles carrying one correctly trained person when no two-person option remains.
-- Trained mission fulfilment is now measured against the complete qualified-personnel demand, so one-person fallback vehicles continue to be selected until the requirement is genuinely covered.
-- One-person registry hints are prioritised after two-person hints and before ordinary arrival-limited candidates.
-- Unit Naming Tool increased from `3.3.4` to `3.3.5`.
-- Mission Finder increased from `V10.6.75` to `V10.6.76`.
+- Improved station and unit naming validation and increased Command Nexus from `1.0.7` to `1.0.8`.
 
-### Preserved
-
-- Critical Care Ambulances remain one Critical Care-trained person per ambulance.
-- Exact vehicle-ID assignment-page verification, vehicle-type restrictions, multi-profile matching, ordinary IRV protection and genuine shortfall warnings remain enabled.
-
-## [1.0.9] - 2026-07-20
+## [1.0.7] - 2026-08-02
 
 ### Fixed
 
-- Fixed urgent issue #57: Level 1 Public Order, Level 2 Public Order and Police Sergeant requirements are now matched independently instead of being collapsed into one mandatory combined profile bundle.
-- Sergeant-only, Level 1-only, Level 2-only and Police Medic-only personnel now qualify for missions requesting their exact training profile.
-- Multi-trained personnel continue to qualify for every requested profile they actually hold without unrelated training becoming a prerequisite.
-- Preserved exact type-8 IRV verification, two trained personnel per selected IRV, capacity controls and genuine missing-training shortfall warnings across Unit Finder, Mission Update and Auto Mode.
+- Corrected Unit Finder live-range handling and increased Command Nexus from `1.0.6` to `1.0.7`.
+
+## [1.0.6] - 2026-08-02
 
 ### Changed
 
-- Mission Finder increased from `V10.6.74` to `V10.6.75`.
+- Added minor mission and naming fixes and increased Command Nexus from `1.0.5` to `1.0.6`.
 
-## [1.0.8] - 2026-07-20
+## [1.0.5] - 2026-08-02
 
 ### Fixed
 
-- Fixed Unit Naming long runs retaining the full original station document while navigating through every vehicle edit page.
-- Replaced Unit Naming iframe navigation history entries instead of continually appending edit-page history.
-- Closed the modal associated with the active Unit Naming iframe rather than the first close control in the document.
-- Cleared hidden or reused station iframes after each station so old station and vehicle documents can be garbage collected.
-- Released edit-document and form-control references before each post-save delay and guaranteed iframe cleanup after stop, error or page exit.
+- Corrected Police register ATV handling and increased Command Nexus from `1.0.4` to `1.0.5`.
 
-### Changed
-
-- Unit Naming increased from `3.3.3` to `3.3.4`; naming rules, vehicle order, numbering and save behaviour are unchanged.
-
-## [1.0.7] - 2026-07-20
+## [1.0.4] - 2026-08-02
 
 ### Fixed
 
-- Fixed Mission Update treating bounded unresolved requirement ranges such as `0-3` and `0-1` as zero by reading only the first number.
-- Mission Update now uses the upper bound of an explicit range, allowing Fire Engine, ICCU/ACU, Police Car, PRV and SRV shortages from the live panel to reach the normal selector.
-- Kept the existing safety behaviour for a completely unknown naked `?`, so unsupported unresolved rows still cannot resend an entire original mission load.
-- Applied the corrected live-range interpretation to manual Mission Update and the shared Auto Mode update path.
+- Corrected Auto Mode load-more handling and increased Command Nexus from `1.0.3` to `1.0.4`.
 
-### Changed
+## [1.0.3] - 2026-08-02
 
-- Mission Finder baseline increased from `V10.6.73` to `V10.6.74`.
+### Fixed
 
-## [1.0.6] - 2026-07-20
+- Hardened trained IRV dispatch safety and increased Command Nexus from `1.0.2` to `1.0.3`.
+
+## [1.0.2] - 2026-08-02
 
 ### Added
 
-- Added exact Armed Response mission matching for `Required Armed Response Personnel (In Armed Vehicles)`, using type-25 Armed Traffic Cars with two personnel who each hold both Roads Policing and Firearms.
-- Expanded the one-click Personnel Register builder to every station type and every discovered vehicle, reading each vehicle's own assignment page before recording trained personnel.
-- Added strict Seagoing Vessel matching for ALB/ABL and All-weather Lifeboat display variants.
-
-### Changed
-
-- Changed the Medical Critical Care assignment target from two trained personnel to one trained person per normal Ambulance, including Preview, Live, target planning, shortfall and reporting calculations.
-- Police Officer mission-upgrade rows now convert at two officers per normal Police IRV before Unit Finder, Mission Update or Auto Mode selects vehicles.
-- Mission Finder baseline increased from `V10.6.72` to `V10.6.73`; Personnel Assignment increased from `1.2.8` to `1.2.9`.
-
-### Fixed
-
-- Fixed issue #42 by stopping the Personnel Assignment Tool from planning or assigning a second unnecessary Critical Care-trained person to each Ambulance.
-- Fixed issue #30 by restoring Armed Response Personnel selection through dual-trained Armed Traffic Cars without excluding officers who also hold Firearms training.
-- Fixed live upgrade rows such as `Police Officers x8` selecting eight IRVs instead of four.
-- Fixed Seagoing Vessel upgrade rows falling through generic text matching instead of selecting an exact ALB/ABL vehicle.
-- Fixed the register builder copying a single vehicle-page snapshot across a station instead of recording exact vehicle assignments.
-
-## [1.0.5] - 2026-07-20
-
-### Added
-
-- Added a one-click **Build Personnel Register** action that scans Police, Police Aviation and EOD stations without changing staffing assignments or requiring profile, mode, action or start-point setup.
-- Added exact trained-IRV mission selection for **Police Medic** and **Railway Police Officer**, using two correctly trained personnel per IRV.
-
-### Changed
-
-- Ordinary Police Car attendance now accepts a freshly verified exact IRV with zero protected specialist qualifications even when no personnel are permanently bound to that vehicle.
-- Mission Finder baseline increased from `V10.6.71` to `V10.6.72`; Personnel Assignment increased from `1.2.7` to `1.2.8`.
-
-### Fixed
-
-- Fixed ordinary Police Cars being rejected by Unit Finder, Mission Update and Auto Mode solely because their assignment page reported zero permanent bindings.
-- Fixed issue #16 by mapping Police Medic requirement rows and Missing Personnel text to exact IRVs containing two `police_medic`-trained personnel.
-- Added Railway Police Officer parsing for both table and alert layouts, selecting exact type-8 IRVs containing two `railway_police`-trained personnel.
-- Added an authoritative type-30 ATV Carrier matcher, including `ATV Carrier`, `ATV` and `ATC Carrier` display aliases without matching Police Armed Traffic Cars.
-- Prevented incomplete or structurally invalid assignment-page scans from overwriting or authorising specialist-training decisions.
-
-## [1.0.4] - 2026-07-20
-
-### Changed
-
-- Auto Mode now activates every visible MissionChief `missing_vehicles_load` control before Unit Finder begins selecting vehicles.
-- Increased the unified userscript version from `1.0.3` to `1.0.4` and the Mission Finder baseline from `V10.6.70` to `V10.6.71`.
-
-### Fixed
-
-- Fixed Auto Mode waiting on the `Vehicle display limited! Load more vehicles!` bar without clicking it.
-- Added sequential `offset_page` loading so every additional vehicle page is requested, not only the first page.
-- Added per-page progress checks using the vehicle ID and row-count signature, control replacement and loading-indicator state.
-- Unit selection now starts only after the final load control has disappeared and the complete vehicle list remains stable.
-- Loading fails closed when the mission changes, the control cannot be clicked, no progress occurs or the bounded timeout is reached.
-
-## [1.0.3] - 2026-07-20
-
-### Changed
-
-- Normal Police Car and Police Officer attendance now uses only exact-ID IRVs live-verified with assigned staff and no protected specialist Police training.
-- Auto Mode and the manual Unit Finder/Mission Update paths now wait for a complete, non-zero, ID-stable vehicle list after loading finishes before selecting units.
-- Increased the unified userscript version from `1.0.2` to `1.0.3`.
-
-### Fixed
-
-- Prevented Level 1, Level 2, Sergeant, Medic, Inspector and other specialist-trained Police IRVs from satisfying ordinary Police attendance requirements.
-- Prevented an ordinary Police group-button fallback from bypassing exact vehicle training protection.
-- Prevented Auto Mode from continuing to selection or dispatch when the vehicle list times out, remains empty or is still changing.
-
-## [1.0.2] - 2026-07-19
-
-### Changed
-
-- Adds verified GitHub, Greasy Fork and Discord deployment notifications. This release tests the complete automated publication and validation process without changing MissionChief runtime behaviour.
-- Increased the unified userscript version from `1.0.1` to `1.0.2`.
-
-## [1.0.1] - 2026-07-19
-
-### Changed
-
-- Increased the unified userscript version from `1.0.0` to `1.0.1` without functional changes.
-- Confirmed the canonical `main`-branch source synchronization path used for external distribution.
-
-## [1.0.0] - 2026-07-19
-
-### Added
-
-- First canonical MissionChief Command Nexus userscript.
-- One standardized userscript metadata block naming MartyBlyth as author.
-- Mission Finder `V10.6.69` baseline.
-- Unit, Station & Personnel Tools `V4.2.8` baseline.
-- One combined installation guard with retained module startup isolation.
-- Unit and station naming workflows.
-- Personnel assignment, verification and reporting workflows.
-- Shared vehicle-training registry.
-- Mission requirement, patient and specialist-resource handling.
-- Qualification-aware vehicle selection.
-- Unit Finder, Mission Update, dispatch and Auto Mode workflows.
-- Queue continuation and transport handling.
-- JavaScript, metadata, file-size and version-increase validation.
-- Tag-driven GitHub Release packaging with a userscript asset and SHA-256 checksum.
-- Greasy Fork synchronization, rollback and troubleshooting guidance.
-- Contribution, support, security and community policies.
-
-## Release format
-
-Future entries use:
-
-```text
-## [x.y.z] - YYYY-MM-DD
-### Added
-### Changed
-### Fixed
-### Removed
-### Security
-```
-
-Release notes should describe user-visible behaviour, migration impact, tested environments and known limitations rather than commit history alone.
+- First formal public Command Nexus release line after repository consolidation.
