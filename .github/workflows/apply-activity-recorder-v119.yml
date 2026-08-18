@@ -55,6 +55,12 @@ jobs:
               raise SystemExit('stable profile patch anchor mismatch')
           text = text.replace(old_profile_anchor, new_profile_anchor, 1)
 
+          old_init = """source = replace_once(\n    source,\n    \"        installMissionLoggerStorageListener();\\n        installMissionLoggerDispatchCapture();\\n        recordMissionLoggerObservedEvent();\",\n    \"        installMissionLoggerStorageListener();\\n        installMissionLoggerDispatchCapture();\\n        installMissionActivityRecorder();\\n        recordMissionLoggerObservedEvent();\",\n    'activity recorder initialisation',\n)"""
+          new_init = """activity_init_old = \"        installMissionLoggerStorageListener();\\n        installMissionLoggerDispatchCapture();\\n        recordMissionLoggerObservedEvent();\"\nactivity_init_new = \"        installMissionLoggerStorageListener();\\n        installMissionLoggerDispatchCapture();\\n        installMissionActivityRecorder();\\n        recordMissionLoggerObservedEvent();\"\nactivity_init_count = source.count(activity_init_old)\nif activity_init_count < 1:\n    die('activity recorder initialisation: no startup anchors found')\nsource = source.replace(activity_init_old, activity_init_new)"""
+          if text.count(old_init) != 1:
+              raise SystemExit('activity initialisation patch block mismatch')
+          text = text.replace(old_init, new_init, 1)
+
           p.write_text(text)
           PY
 
