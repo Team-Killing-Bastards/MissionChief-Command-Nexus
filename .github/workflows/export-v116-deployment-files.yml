@@ -1,0 +1,31 @@
+name: Export v1.1.6 deployment files
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/export-v116-deployment-files.yml
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+      - name: Stage deployment files
+        shell: bash
+        run: |
+          mkdir -p deployment
+          cp integrations/google-apps-script/Code.gs deployment/Code.gs
+          cp integrations/google-apps-script/appsscript.json deployment/appsscript.json
+          cp integrations/google-apps-script/README.md deployment/DEPLOYMENT-README.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MissionChief-Logger-v1.1.6-Deployment
+          path: deployment
+          retention-days: 1
