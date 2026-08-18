@@ -1,6 +1,6 @@
 # Architecture
 
-This document describes the architecture in the current MissionChief Command Nexus v1.1.4 production source and the direction for future consolidation.
+This document describes the architecture in the current MissionChief Command Nexus v1.1.5 production source and the direction for future consolidation.
 
 > Source-code direction and final technical decisions remain with **MartyBlyth**, the project developer. Conroy1988 provides repository and documentation support only.
 
@@ -12,7 +12,7 @@ The canonical distributable is a single userscript:
 src/missionchief-command-nexus.user.js
 ```
 
-The canonical module baseline is Resource Administration `V4.2.8` and Mission Finder `V10.7.2`. The Resource Administration interfaces report Unit Naming `3.3.27`, Station Naming `1.3.22` and Personnel Assignment `1.3.12`. Exact release and component-version validation belongs to `scripts/validate-userscript.mjs`; behavioral regressions do not pin these numbers.
+The canonical module baseline is Resource Administration `V4.2.8` and Mission Finder `V10.7.3`. The Resource Administration interfaces report Unit Naming `3.3.27`, Station Naming `1.3.22` and Personnel Assignment `1.3.12`. Exact release and component-version validation belongs to `scripts/validate-userscript.mjs`; behavioral regressions do not pin these numbers.
 
 It contains one userscript metadata block, one outer installation guard and two retained runtime engines:
 
@@ -70,7 +70,7 @@ Shared operational concerns also include:
 
 Mission analytics is an optional external integration, not part of dispatch readiness. It is disabled by default and cannot queue an event until the browser has redeemed a one-use pairing code. Each origin/browser receives its own device ID and upload token, while the backend assigns all accepted rows to the authenticated player/device rather than trusting identity fields inside individual events.
 
-The client keeps a bounded local outbox and one persistent pending batch ID. A stable top-window timer attempts upload every five minutes, and a shared local-storage lock reduces competing uploads across same-origin MissionChief windows. Exact dispatch identities are also retained for 15 seconds across mission frames. The Apps Script backend provides the authoritative idempotency boundary under a script lock: repeated batches are acknowledged, conflicting reuse is rejected, missing unit rows from a partial prior write are repaired, and semantic dispatch retries are suppressed with their unit rows.
+The client keeps a bounded, priority-aware local outbox and one persistent pending batch ID. The five-minute top-window timer remains a fallback, but a queue of 20 events starts an eager bounded drain and each pass can send several idempotent 40-event batches. **Sync now** requests made inside a mission frame or pop-out are handed through shared storage to the top-window owner, queued behind an active cross-tab upload and shown as progress rather than silently returning. The shared lock is renewed before every batch, and one response timeout immediately reconfirms the same batch ID instead of waiting five minutes for the normal retry. Exact dispatch identities are also retained for 15 seconds across mission frames. The Apps Script backend provides the authoritative idempotency boundary under a script lock: repeated batches are acknowledged, conflicting reuse is rejected, missing unit rows from a partial prior write are repaired, and semantic dispatch retries are suppressed with their unit rows.
 
 The transport keeps `@grant none`. It posts through a hidden iframe/form to a restricted `script.google.com` deployment and accepts a reply only when its nonce and trusted Google origin match and the bounded response-window parent chain reaches the exact form-target iframe. This permits Apps Script's nested HtmlService sandbox without accepting unrelated Google frames. The workbook stores hashes rather than raw pairing codes or upload tokens, sanitizes formula-leading text and supports per-device revocation.
 
