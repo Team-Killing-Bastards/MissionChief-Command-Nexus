@@ -1,6 +1,6 @@
 # Architecture
 
-This document describes the architecture in the current MissionChief Command Nexus v1.1.7 production source and the direction for future consolidation.
+This document describes the architecture in the current MissionChief Command Nexus v1.1.8 production source and the direction for future consolidation.
 
 > Source-code direction and final technical decisions remain with **MartyBlyth**, the project developer. Conroy1988 provides repository and documentation support only.
 
@@ -12,7 +12,7 @@ The canonical distributable is a single userscript:
 src/missionchief-command-nexus.user.js
 ```
 
-The canonical module baseline is Resource Administration `V4.2.8` and Mission Finder `V10.7.5`. The Resource Administration interfaces report Unit Naming `3.3.27`, Station Naming `1.3.22` and Personnel Assignment `1.3.12`. Exact release and component-version validation belongs to `scripts/validate-userscript.mjs`; behavioral regressions do not pin these numbers.
+The canonical module baseline is Resource Administration `V4.2.8` and Mission Finder `V10.7.6`. The Resource Administration interfaces report Unit Naming `3.3.27`, Station Naming `1.3.22` and Personnel Assignment `1.3.12`. Exact release and component-version validation belongs to `scripts/validate-userscript.mjs`; behavioral regressions do not pin these numbers.
 
 It contains one userscript metadata block, one outer installation guard and two retained runtime engines:
 
