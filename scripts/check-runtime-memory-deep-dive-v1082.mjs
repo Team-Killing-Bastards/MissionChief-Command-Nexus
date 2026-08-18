@@ -81,7 +81,16 @@ const softFlush = extractFunction('flushMissionFinderEphemeralMemory');
 expect(softFlush.includes('invalidateLiveTrainedPersonnelDisplayCache()'), 'Soft flush must release live panel cache');
 expect(softFlush.includes('!mfTransportOwnerModal.isConnected'), 'Soft flush must release detached transport modal references');
 
+const activityRecorder = extractFunction('installMissionActivityRecorder');
+expect(
+  activityRecorder.includes('new MutationObserver(') &&
+  activityRecorder.includes('installMissionActivityFrame'),
+  'The third observer must remain scoped to discovering same-origin activity iframe workers'
+);
 const observerCount = (source.match(/new\s+MutationObserver\s*\(/g) || []).length;
-expect(observerCount === 2, `Expected exactly two permanent observers; found ${observerCount}`);
+expect(
+  observerCount === 3,
+  `Expected exactly three permanent observers including activity iframe tracking; found ${observerCount}`
+);
 
 console.log('Runtime memory deep-dive contracts passed.');

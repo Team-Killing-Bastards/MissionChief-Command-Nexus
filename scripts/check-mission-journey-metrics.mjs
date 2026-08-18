@@ -181,7 +181,7 @@ for (const token of [
 }
 
 for (const token of [
-  "buildId: '1.1.6-private-profile-1'",
+  "buildId: '1.1.9-activity-recorder-2'",
   "'dispatch-journey-metrics'",
   "'estimated_distance_km'",
   "'estimated_eta_seconds'",
@@ -193,6 +193,10 @@ for (const token of [
 ]) {
   expect(backend.includes(token), `Backend journey contract missing ${token}`);
 }
+expect(
+  backend.includes('activitySchemaVersion: 2'),
+  'Journey logger backend must retain the current activity schema capability'
+);
 
 const preparedRows = extractFunction(backend, 'prepareLoggerBatchRows_');
 expect(

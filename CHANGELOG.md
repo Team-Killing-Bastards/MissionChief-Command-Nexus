@@ -6,7 +6,20 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
-No changes have been queued after `1.1.7`.
+No changes queued after `1.1.9`.
+
+## [1.1.9] - 2026-08-18
+
+### Added
+
+- Added a comprehensive, privacy-bounded MissionChief activity recorder. Once the upgraded private Apps Script backend acknowledges activity schema v2, Nexus records trusted user interactions, synthetic/Nexus actions, same-origin fetch/XHR lifecycle, navigation, same-origin iframe activity, lifecycle state and runtime errors into a dedicated raw Activity Log. Entered values, passwords, cookies, auth tokens, clipboard data and request bodies are never captured.
+- Added Sessions and Action Summary datasets and extended daily backups plus weekly verified archives to include Activity Log, Sessions and Action Summary before live rows are purged.
+
+### Changed
+
+- Logger identity now comes from `#navbar_profile_link`: the numeric `/profile/{id}` value is the stable player ID and the visible MissionChief username is the current display name. Username changes therefore stay attached to the same player history. Legacy selected names are retained only as an old-backend compatibility alias during rollout.
+- Rebuilt the logger workbook contract around raw action evidence while preserving the locked Monday archive -> verify -> purge lifecycle and the emergency cell-limit archive guard.
+- Increased Command Nexus from `1.1.8` to `1.1.9` and Mission Finder from `V10.7.6` to `V10.7.7`.
 
 ## [1.1.8] - 2026-08-18
 

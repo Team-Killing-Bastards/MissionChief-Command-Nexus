@@ -12,8 +12,8 @@ This is the first document to read when resuming MissionChief Command Nexus deve
 | Repository | `Team-Killing-Bastards/MissionChief-Command-Nexus` |
 | Default branch | `main` |
 | Canonical userscript | `src/missionchief-command-nexus.user.js` |
-| Command Nexus version | `1.1.8` |
-| Mission Finder baseline | `V10.7.6` |
+| Command Nexus version | `1.1.9` |
+| Mission Finder baseline | `V10.7.7` |
 | Resource Administration module | `V4.2.8` |
 | Unit / Station / Personnel UI versions | `3.3.27` / `1.3.22` / `1.3.12` |
 | Userscript author metadata | `MartyBlyth` |
@@ -39,7 +39,7 @@ MissionChief Command Nexus
     ├── Qualification-aware selection
     ├── Auto Mode and dispatch
     ├── Queue and transport continuation
-    └── Opt-in mission analytics client
+    └── Opt-in private activity recorder
 
 Google integration
 └── Separately deployed Apps Script logger backend and native Sheet
@@ -58,10 +58,12 @@ The single-file shape is deliberate. Logical consolidation may continue, but est
 - The default-off background patient transport worker queues exact same-origin Transport Patient requests, keeps Auto Mode moving, uses only available hospital destinations and retains the established 40-request / three-attempt safety bounds. Desktop Mission Control exposes the worker through an attached Patient Transfers drawer with the real pending queue, current-run completed/failed counters, worker state, last completion time and a bounded ten-entry terminal failure log retaining each failed attempt reason. Vehicle Load and Patient Transfers open exclusively; established iPhone/iPad Safari mission surfaces remain isolated.
 - Qualification-sensitive selection fails closed: exact compatible vehicles with missing or stale evidence first enter live assignment-page verification, but only fresh, complete Personnel Register evidence satisfies trained-personnel demand and Auto Mode stops without dispatch when verified coverage remains short.
 - Search Dog Unit (SAR) uses exact native MissionChief UK type `102` across Mission Finder selection, selected-unit verification and Unit Naming.
-- The Mission Analytics Logger is off by default and uses one private Apps Script deployment URL plus an approved active player profile. The backend assigns the canonical player ID; browser-generated device IDs are diagnostic only. It enriches early observations from the live mission list and definition cache, captures exact current-player mission generation plus dispatch selections and MissionChief's available dispatch-time route distance/ETA in a bounded local outbox, and uploads idempotent batches to the configured Google Apps Script backend. A persistent client guard and independent backend semantic guard suppress exact dispatch retries. On reconnect, an exact mission-ID + title ledger match can recover the finish time and awarded credits for a dispatched mission completed while every logger browser was offline.
-- The repository contains the Apps Script backend, manifest, deployment guide and permanent logger contract regressions. It records native completion timing, matches exact awarded credits from MissionChief's same-origin Credits ledger, maintains Mission Summary, all-weeks Dashboard Data and compact weekly station Journey Data, and performs copy-verified weekly raw archives. Mission-ID + title matches are preferred; a title/time match must be unique or the row remains pending.
+- The private activity recorder is off by default. Identity is detected automatically from `#navbar_profile_link`: the numeric `/profile/{id}` value is the stable player ID and the visible MissionChief username is the current display name. Existing mission observation, generated-mission, dispatch, route distance/ETA and offline-completion recovery remain intact.
+- Once the private Apps Script backend advertises activity schema v2, Nexus records privacy-bounded user interactions, Nexus synthetic actions, MissionChief same-origin fetch/XHR lifecycle, navigation, same-origin iframe activity, lifecycle changes and runtime errors. It does not collect entered values, passwords, cookies, auth tokens, clipboard data or request bodies. The local outbox remains bounded and batch uploads remain idempotent.
+- The repository contains the Apps Script backend, manifest, deployment guide and permanent logger contract regressions. The backend stores raw v2 action evidence in Activity Log, maintains Sessions and Action Summary alongside Mission Summary, Dashboard Data and Journey Data, and includes the new activity datasets in daily backups and copy-verified weekly raw archives. Mission-ID + title matches remain preferred for credit recovery; a title/time match must be unique or the row remains pending.
+- Weekly retention remains a hard archive → verify → purge contract: live rows are never removed until the archive copy has passed verification, with the Monday 03:15 Europe/London rollover and emergency cell-limit guard retained.
 - Mission and Resource Administration behavior is protected by permanent `scripts/check-*.mjs` regressions.
-- Canonical release and component versions are validated only by `scripts/validate-userscript.mjs`; behavioral checks are version-agnostic.
+- Canonical release and component versions are validated only by `scripts/validate-userscript.mjs`; behavioral checks are version-agnostic except where an external backend contract marker is intentionally asserted.
 - Trusted main events reconcile GitHub Release assets and external delivery without republishing an already-complete version.
 
 ## What is not yet proven complete
@@ -79,7 +81,7 @@ These remain evidence questions rather than claims of missing implementation:
 1. Fetch and verify current `main`, then create a focused branch.
 2. Preserve unrelated work and change the smallest justified surface.
 3. If `src/missionchief-command-nexus.user.js` changes, increase `@version`, update the relevant component version and add a changelog release entry.
-4. Add or update a permanent behavioral regression without pinning release numbers.
+4. Add or update a permanent behavioral regression without pinning release numbers unless the asserted value is itself part of an external compatibility contract.
 5. Run the complete local gate:
 
    ```bash
@@ -103,16 +105,17 @@ These remain evidence questions rather than claims of missing implementation:
 - Trained-personnel matching and shared registry data.
 - Bulk naming, personnel assignment and native-form verification.
 - Queue continuation and transport handling.
-- Storage, migration and rollback behavior.
+- Activity capture, privacy boundaries, logger identity and backend rollout compatibility.
+- Storage, archive verification, migration and rollback behavior.
 - Observers, intervals, timeouts, cross-window ownership and cleanup.
 
 ## Current engineering priorities
 
-1. Expand live evidence and reproducible fixtures around high-risk mission selection.
+1. Expand live evidence and reproducible fixtures around high-risk mission selection and the new activity recorder.
 2. Complete migration, compatibility and long-session evidence.
 3. Keep regressions behavior-focused and the repository free of one-use builders or trigger artifacts.
 4. Consolidate shared lifecycle, storage and UI responsibilities only behind protected behavior.
-5. Keep the release path idempotent, auditable and recoverable.
+5. Keep the release and logger retention paths idempotent, auditable and recoverable.
 
 The authoritative active queue is the repository's [open issue list](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues). Versioned handovers and incident reports are historical records, not current operating instructions.
 

@@ -37,7 +37,11 @@ assert.match(helperBody, /ACTIVE/);
 
 assert.match(
   backend,
-  /buildId: '1\.1\.6-private-profile-1'/
+  /buildId: '1\.1\.9-activity-recorder-2'/
+);
+assert.match(
+  backend,
+  /activitySchemaVersion: 2/
 );
 
 console.log(

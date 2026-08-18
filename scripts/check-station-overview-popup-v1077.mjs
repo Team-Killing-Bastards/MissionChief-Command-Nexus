@@ -83,7 +83,6 @@ function extractFunction(name) {
   fail(`Unable to extract ${name}`);
 }
 
-
 const moduleStart = source.indexOf("if (window.__MC_NAMING_TOOLS_V428__) return;");
 const moduleEnd = source.indexOf("const UNIT_VERSION = '", moduleStart);
 expect(moduleStart >= 0 && moduleEnd > moduleStart, 'Unable to isolate Resource Administration startup');
@@ -112,7 +111,13 @@ expect(overview.includes('entry.link?.isConnected'), 'Popup must require a conne
 expect(overview.includes('desktopStationSelector'), 'Dedicated desktop Stations detection must remain');
 expect(overview.includes('isRenderedStationOverviewEntry(entry)'), 'iOS rendered Stations lifecycle must remain');
 
+const activityRecorder = extractFunction('installMissionActivityRecorder');
+expect(
+  activityRecorder.includes('new MutationObserver(') &&
+  activityRecorder.includes('installMissionActivityFrame'),
+  'The added observer must remain scoped to same-origin activity iframe discovery'
+);
 const observerCount = (source.match(/new\s+MutationObserver\s*\(/g) || []).length;
-expect(observerCount === 2, `Permanent MutationObserver count changed: ${observerCount}`);
+expect(observerCount === 3, `Permanent MutationObserver count changed: ${observerCount}`);
 
 console.log('Normal Stations overview popup ownership and lifecycle checks passed.');
