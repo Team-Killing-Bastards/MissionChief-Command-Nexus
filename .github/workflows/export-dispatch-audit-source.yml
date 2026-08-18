@@ -17,18 +17,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: main
-      - name: Stage audit source
+      - name: Stage complete trusted main
         shell: bash
         run: |
           mkdir -p audit-source
-          cp src/missionchief-command-nexus.user.js audit-source/
-          cp integrations/google-apps-script/Code.gs audit-source/
-          cp CHANGELOG.md audit-source/
-          cp scripts/check-mission-user-logger.mjs audit-source/
-          cp scripts/check-mission-generation-logger.mjs audit-source/
-          cp scripts/check-mission-journey-metrics.mjs audit-source/
+          tar --exclude=.git --exclude=audit-source -cf - . | tar -xf - -C audit-source
       - uses: actions/upload-artifact@v4
         with:
-          name: dispatch-audit-source
+          name: dispatch-audit-full-repo
           path: audit-source
           retention-days: 1
