@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.1.8
+// @version      1.1.9
 // @description  Unified MissionChief UK toolkit for mission dispatch, resource administration, trained-personnel assignment and opt-in mission analytics.
 // @author       MartyBlyth
 // @license      MIT
@@ -12454,7 +12454,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.7.6
+         * MODULE 2: MISSION FINDER V10.7.7
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -14305,9 +14305,14 @@
     const SESSION_STATS_KEY = 'mf_session_stats_v1';
     const SESSION_REFRESH_FLAG = 'mf_session_manual_refresh_checked';
     const MF_MISSION_LOGGER_SCHEMA_VERSION = 1;
-    const MF_MISSION_LOGGER_CLIENT_VERSION = '1.1.8';
+    const MF_MISSION_LOGGER_CLIENT_VERSION = '1.1.9';
     const MF_MISSION_LOGGER_MISSION_FINDER_VERSION =
-        '10.7.6';
+        '10.7.7';
+    const MF_MISSION_ACTIVITY_BACKEND_V2_KEY =
+        'mf_mission_activity_backend_v2';
+    const MF_MISSION_ACTIVITY_SESSION_KEY =
+        'mf_mission_activity_session_v2';
+    const MF_MISSION_ACTIVITY_SCHEMA_VERSION = 2;
     const MF_MISSION_LOGGER_ENABLED_KEY =
         'mf_mission_logger_enabled_v1';
     const MF_MISSION_LOGGER_ENDPOINT_KEY =
@@ -22843,7 +22848,7 @@ function isRoadRailUnitVehicleCheckbox(input) {
                 <input id="mf-mission-logger-toggle"
                        type="checkbox"
                        ${mfMissionLoggerEnabled ? 'checked' : ''}>
-                <span>Send my mission analytics automatically</span>
+                <span>Record my MissionChief activity automatically</span>
             </label>
             <label class="mf2026-small" style="display:block;margin-top:8px;">
                 Private Google logger URL
@@ -22857,14 +22862,12 @@ function isRoadRailUnitVehicleCheckbox(input) {
                        style="width:100%;box-sizing:border-box;margin-top:4px;">
             </label>
             <label class="mf2026-small" style="display:block;margin-top:8px;">
-                User
-                <select id="mf-mission-logger-player"
-                        style="width:100%;box-sizing:border-box;margin-top:4px;color:black;padding:4px;border-radius:4px;border:none;">
-                    <option value="">Choose user</option>
-                    ${MF_MISSION_LOGGER_PROFILE_NAMES.map(name => `
-                        <option value="${escapeHtml(name)}">${escapeHtml(name)}</option>
-                    `).join('')}
-                </select>
+                MissionChief user (detected automatically)
+                <input id="mf-mission-logger-player"
+                       type="text"
+                       readonly
+                       aria-readonly="true"
+                       style="width:100%;box-sizing:border-box;margin-top:4px;color:black;padding:4px;border-radius:4px;border:none;background:#e9ecef;">
             </label>
             <button id="mf-mission-logger-save"
                     type="button"
@@ -22893,7 +22896,7 @@ function isRoadRailUnitVehicleCheckbox(input) {
             <div id="mf-mission-logger-credit-status" class="mf2026-small" style="margin-top:2px;"></div>
             <div id="mf-mission-logger-error" class="mf2026-small mf2026-warn" style="margin-top:4px;" hidden></div>
             <div class="mf2026-small" style="margin-top:7px;">
-                Records each new mission generated for the selected user from MissionChief's native mission list, plus mission identifiers/URLs, advertised and exact awarded value, requirements, current casualty counts, available generator information, selected vehicle IDs/types/names and MissionChief's dispatch-time estimated route distance/ETA for each selected unit. Exact awards are matched locally against MissionChief's own Credits transactions; the rest of the account ledger is never uploaded. Missed completions are recovered from exact MissionChief credit transactions when this browser reconnects. Uploads use a persistent five-minute batch queue. Passwords, cookies and personnel names are never collected.
+                Records each new mission generated for the selected user from MissionChief's native mission list, plus mission identifiers/URLs, advertised and exact awarded value, requirements, current casualty counts, available generator information, selected vehicle IDs/types/names and MissionChief's dispatch-time estimated route distance/ETA for each selected unit. Exact awards are matched locally against MissionChief's own Credits transactions; the rest of the account ledger is never uploaded. Missed completions are recovered from exact MissionChief credit transactions when this browser reconnects. Uploads use a persistent five-minute batch queue. Passwords, cookies and personnel names are never collected. Auth tokens, entered text, clipboard contents and request bodies are also never collected.
             </div>
             <div class="mf2026-small" style="margin-top:4px;">
                 The private URL and selected user are the complete logger setup. There is no pairing code or expiring device token. The same setup works on any browser or computer. Saving a different URL or user clears this browser's old queued logger data so it cannot be attributed to the wrong person.
@@ -26072,15 +26075,17 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
     );
 
     function normaliseMissionLoggerProfileName(value) {
-        const target = String(value || '')
+        return String(value || '')
             .replace(/\u00a0/g, ' ')
+            .replace(/[\u0000-\u001f\u007f]/g, ' ')
             .replace(/\s+/g, ' ')
             .trim()
-            .toLowerCase();
+            .slice(0, 120);
+    }
 
-        return MF_MISSION_LOGGER_PROFILE_NAMES.find(name => {
-            return name.toLowerCase() === target;
-        }) || '';
+    function normaliseMissionLoggerProfileId(value) {
+        const candidate = String(value || '').trim();
+        return /^\d{1,20}$/.test(candidate) ? candidate : '';
     }
 
     function readLegacyMissionLoggerIdentity() {
@@ -26109,39 +26114,40 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
                     MF_MISSION_LOGGER_PROFILE_KEY
                 ) || 'null'
             );
-            const playerName =
-                normaliseMissionLoggerProfileName(
-                    parsed?.playerName
-                );
-            const deviceId = String(
-                parsed?.deviceId || ''
-            );
-            const playerId = String(
-                parsed?.playerId ||
-                playerName.toLowerCase()
-            );
-
-            if (
-                !parsed ||
-                typeof parsed !== 'object' ||
-                !playerName ||
-                !/^[A-Za-z0-9_-]{3,80}$/.test(playerId) ||
-                !/^[A-Za-z0-9_-]{8,160}$/.test(deviceId)
-            ) {
+            if (!parsed || typeof parsed !== 'object') {
                 return null;
             }
 
+            const deviceId = String(parsed.deviceId || '')
+                .replace(/[^A-Za-z0-9_-]/g, '')
+                .slice(0, 160);
+            if (!deviceId) return null;
+
+            const detected = resolveMissionChiefNavbarIdentity();
+            const storedName = normaliseMissionLoggerProfileName(
+                parsed.playerName || parsed.legacyPlayerName
+            );
+            const playerName = normaliseMissionLoggerProfileName(
+                detected?.playerName || storedName
+            );
+            const playerId = normaliseMissionLoggerProfileId(
+                detected?.playerId || parsed.playerId || parsed.profileId
+            );
+            if (!playerName) return null;
+
             return {
                 playerId,
+                profileId: playerId,
                 playerName,
+                legacyPlayerName:
+                    normaliseMissionLoggerProfileName(
+                        parsed.legacyPlayerName || storedName || playerName
+                    ) || playerName,
                 deviceId,
                 deviceLabel: String(
-                    parsed.deviceLabel ||
-                    'MissionChief browser'
+                    parsed.deviceLabel || 'MissionChief browser'
                 ).slice(0, 120),
-                configuredAt: String(
-                    parsed.configuredAt || ''
-                )
+                configuredAt: String(parsed.configuredAt || '')
             };
         } catch (_error) {
             return null;
@@ -26159,6 +26165,7 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
         [
             MF_MISSION_LOGGER_PENDING_BATCH_KEY,
             MF_MISSION_LOGGER_QUEUE_KEY,
+            MF_MISSION_ACTIVITY_BACKEND_V2_KEY,
             MF_MISSION_LOGGER_OBSERVED_KEY,
             MF_MISSION_LOGGER_LAST_DISPATCH_KEY,
             MF_MISSION_LOGGER_MISSION_REGISTRY_KEY,
@@ -26193,13 +26200,16 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
         const endpoint = normaliseMissionLoggerEndpoint(
             options.endpoint
         );
-        const playerName =
-            normaliseMissionLoggerProfileName(
-                options.playerName
-            );
-        if (!endpoint || !playerName) {
+        const detectedProfile = resolveMissionChiefNavbarIdentity();
+        const playerName = normaliseMissionLoggerProfileName(
+            detectedProfile?.playerName || options.playerName
+        );
+        const playerId = normaliseMissionLoggerProfileId(
+            detectedProfile?.playerId
+        );
+        if (!endpoint || !playerName || !playerId) {
             throw new Error(
-                'A private Google logger URL and valid user are required.'
+                'A private Google logger URL and a detected MissionChief profile are required.'
             );
         }
 
@@ -26222,8 +26232,13 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
         }
 
         const profile = {
-            playerId: playerName.toLowerCase(),
+            playerId,
+            profileId: playerId,
             playerName,
+            legacyPlayerName:
+                existing?.legacyPlayerName ||
+                existing?.playerName ||
+                playerName,
             deviceId:
                 existing?.deviceId ||
                 legacy?.deviceId ||
@@ -26620,6 +26635,482 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
             delay
         );
         return true;
+    }
+
+
+    let mfMissionActivityRecorderInstalled = false;
+    let mfMissionActivityHeartbeatTimer = null;
+    const mfMissionActivityDocuments = new WeakSet();
+    const mfMissionActivityWindows = new WeakSet();
+    const mfMissionActivityFrames = new WeakSet();
+
+    function resolveMissionChiefNavbarIdentity() {
+        try {
+            const rootDocument = window.top?.document || document;
+            const link = rootDocument.querySelector('#navbar_profile_link');
+            if (!link) return null;
+            const url = new URL(
+                link.getAttribute('href') || link.href || '',
+                window.location.origin
+            );
+            if (url.origin !== window.location.origin) return null;
+            const match = url.pathname.match(/^\/profile\/(\d+)\/?$/);
+            const playerId = normaliseMissionLoggerProfileId(match?.[1]);
+            const playerName = normaliseMissionLoggerProfileName(
+                link.textContent || ''
+            );
+            return playerId && playerName
+                ? { playerId, playerName }
+                : null;
+        } catch (_error) {
+            return null;
+        }
+    }
+
+    function isMissionActivityBackendReady() {
+        return localStorage.getItem(
+            MF_MISSION_ACTIVITY_BACKEND_V2_KEY
+        ) === 'true';
+    }
+
+    function updateMissionActivityBackendCapability(response) {
+        if (!response || typeof response !== 'object') return false;
+        const supported =
+            Number(response.activitySchemaVersion || 0) >=
+                MF_MISSION_ACTIVITY_SCHEMA_VERSION ||
+            /activity-recorder/i.test(String(response.backendBuild || ''));
+        if (!supported) return false;
+        const wasReady = isMissionActivityBackendReady();
+        localStorage.setItem(MF_MISSION_ACTIVITY_BACKEND_V2_KEY, 'true');
+        if (!wasReady) {
+            recordMissionActivity('SYSTEM', 'LIFECYCLE', 'BACKEND_READY', {
+                outcome: 'OK',
+                payload: {
+                    activitySchemaVersion:
+                        MF_MISSION_ACTIVITY_SCHEMA_VERSION
+                }
+            });
+            recordMissionActivity('SYSTEM', 'LIFECYCLE', 'SESSION_START', {
+                outcome: 'OK',
+                payload: getMissionActivitySessionTelemetry()
+            });
+        }
+        return true;
+    }
+
+    function getMissionActivitySession() {
+        let session = null;
+        try {
+            session = JSON.parse(
+                sessionStorage.getItem(MF_MISSION_ACTIVITY_SESSION_KEY) ||
+                    'null'
+            );
+        } catch (_error) {}
+        if (
+            session &&
+            typeof session === 'object' &&
+            /^[A-Za-z0-9_-]{8,180}$/.test(String(session.sessionId || ''))
+        ) {
+            return session;
+        }
+        session = {
+            sessionId: createMissionLoggerId('session'),
+            startedAt: new Date().toISOString()
+        };
+        try {
+            sessionStorage.setItem(
+                MF_MISSION_ACTIVITY_SESSION_KEY,
+                JSON.stringify(session)
+            );
+        } catch (_error) {}
+        return session;
+    }
+
+    function getMissionActivitySessionTelemetry(frameWindow = window) {
+        const session = getMissionActivitySession();
+        let viewport = '';
+        let timezone = '';
+        try {
+            viewport =
+                String(frameWindow.innerWidth || 0) + 'x' +
+                String(frameWindow.innerHeight || 0);
+            timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+        } catch (_error) {}
+        return {
+            startedAt: session.startedAt,
+            userAgent: String(navigator.userAgent || '').slice(0, 300),
+            viewport: viewport.slice(0, 40),
+            timezone: String(timezone).slice(0, 80)
+        };
+    }
+
+    function sanitiseMissionActivityPath(value, frameWindow = window) {
+        try {
+            const url = new URL(String(value || ''), frameWindow.location.href);
+            if (url.origin !== frameWindow.location.origin) return '';
+            return String(url.pathname || '/').slice(0, 500);
+        } catch (_error) {
+            return '';
+        }
+    }
+
+    function sanitiseMissionActivityPayload(payload) {
+        if (!payload || typeof payload !== 'object') return {};
+        const result = {};
+        const forbidden = /password|passwd|token|cookie|authorization|secret|clipboard|requestbody|body|value|enteredtext/i;
+        Object.entries(payload).slice(0, 16).forEach(([key, value]) => {
+            const safeKey = String(key || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 60);
+            if (!safeKey || forbidden.test(safeKey)) return;
+            if (typeof value === 'number' && Number.isFinite(value)) {
+                result[safeKey] = value;
+            } else if (typeof value === 'boolean') {
+                result[safeKey] = value;
+            } else if (value !== null && value !== undefined) {
+                result[safeKey] = String(value).replace(/[\u0000-\u001f\u007f]/g, ' ').slice(0, 300);
+            }
+        });
+        return result;
+    }
+
+    function getMissionActivityTarget(target, frameWindow = window) {
+        const element = target?.nodeType === 1
+            ? target
+            : target?.parentElement || null;
+        if (!element) return {};
+        const tag = String(element.tagName || '').toLowerCase().slice(0, 30);
+        const inputType = String(element.type || '').toLowerCase().slice(0, 40);
+        const sensitive =
+            tag === 'textarea' ||
+            tag === 'select' ||
+            element.isContentEditable ||
+            tag === 'input';
+        let label = '';
+        if (!sensitive) {
+            label = cleanText(
+                element.getAttribute?.('aria-label') ||
+                element.textContent ||
+                element.getAttribute?.('title') ||
+                ''
+            ).slice(0, 160);
+        }
+        const href = sanitiseMissionActivityPath(
+            element.closest?.('a[href]')?.getAttribute('href') || '',
+            frameWindow
+        );
+        return {
+            tag,
+            id: String(element.id || '').slice(0, 120),
+            label,
+            href,
+            inputType,
+            inputName: sensitive
+                ? String(element.getAttribute?.('name') || '').slice(0, 120)
+                : '',
+            surface:
+                element.closest?.(
+                    '#mission-finder-wrapper,#vehicle-load-list-box,#patient-transfer-list-box,[id^="mc-namer-"]'
+                )
+                    ? 'NEXUS'
+                    : 'MISSIONCHIEF'
+        };
+    }
+
+    function getMissionActivityRouteContext(frameWindow, target) {
+        const route = sanitiseMissionActivityPath(
+            frameWindow?.location?.href || window.location.href,
+            frameWindow || window
+        );
+        const href = String(target?.href || '');
+        const source = href || route;
+        const idFor = pattern => String(source.match(pattern)?.[1] || '').slice(0, 80);
+        return {
+            route,
+            missionId: idFor(/\/missions\/(\d+)/),
+            vehicleId: idFor(/\/vehicles\/(\d+)/),
+            patientId: idFor(/\/patient\/(\d+)/),
+            stationId: idFor(/\/buildings\/(\d+)/)
+        };
+    }
+
+    function recordMissionActivity(source, category, action, details = {}) {
+        if (
+            !MF_IS_TOP_WINDOW ||
+            !mfMissionLoggerEnabled ||
+            !mfMissionLoggerEndpoint ||
+            !isMissionActivityBackendReady()
+        ) return false;
+        const identity = readMissionLoggerIdentity();
+        if (!identity?.playerName || !identity?.deviceId) return false;
+        const frameWindow = details.frameWindow || window;
+        const target = details.target || {};
+        const context = getMissionActivityRouteContext(frameWindow, target);
+        const session = getMissionActivitySession();
+        return queueMissionLoggerEvent({
+            eventId: createMissionLoggerId('activity'),
+            eventType: 'activity',
+            capturedAt: new Date().toISOString(),
+            missionId: details.missionId || context.missionId || '',
+            metadata: {
+                activity: {
+                    sessionId: session.sessionId,
+                    source: String(source || 'SYSTEM').slice(0, 40),
+                    category: String(category || 'GENERAL').slice(0, 60),
+                    action: String(action || 'UNKNOWN').slice(0, 100),
+                    phase: String(details.phase || '').slice(0, 40),
+                    outcome: String(details.outcome || 'OBSERVED').slice(0, 40),
+                    route: details.route || context.route,
+                    missionId: details.missionId || context.missionId || '',
+                    vehicleId: details.vehicleId || context.vehicleId || '',
+                    patientId: details.patientId || context.patientId || '',
+                    stationId: details.stationId || context.stationId || '',
+                    dispatchCentreId: String(details.dispatchCentreId || '').slice(0, 80),
+                    targetTag: target.tag || '',
+                    targetId: target.id || '',
+                    targetLabel: target.label || '',
+                    targetHref: target.href || '',
+                    inputType: target.inputType || '',
+                    correlationId: String(details.correlationId || '').slice(0, 180),
+                    durationMs:
+                        Number.isFinite(Number(details.durationMs))
+                            ? Math.max(0, Math.round(Number(details.durationMs)))
+                            : '',
+                    attempt:
+                        Number.isFinite(Number(details.attempt))
+                            ? Math.max(0, Math.round(Number(details.attempt)))
+                            : '',
+                    message: String(details.message || '').replace(/[\u0000-\u001f\u007f]/g, ' ').slice(0, 300),
+                    payload: sanitiseMissionActivityPayload(details.payload),
+                    schemaVersion: MF_MISSION_ACTIVITY_SCHEMA_VERSION,
+                    privacyClass: details.privacyClass || 'SAFE_METADATA'
+                }
+            }
+        });
+    }
+
+    function missionActivitySourceForEvent(event, target) {
+        if (event?.isTrusted) return 'USER';
+        return target?.surface === 'NEXUS' ? 'NEXUS' : 'MISSIONCHIEF';
+    }
+
+    function recordMissionActivityDomEvent(event, frameWindow) {
+        const target = getMissionActivityTarget(event?.target, frameWindow);
+        const type = String(event?.type || '').toUpperCase();
+        if (!type) return;
+        if (type === 'KEYDOWN') {
+            const key = String(event.key || '');
+            const safeKeys = new Set([
+                'Enter','Escape','Tab','Backspace','Delete','ArrowUp','ArrowDown',
+                'ArrowLeft','ArrowRight','PageUp','PageDown','Home','End',' '
+            ]);
+            if (!safeKeys.has(key) && !event.ctrlKey && !event.metaKey && !event.altKey) {
+                return;
+            }
+            recordMissionActivity('USER', 'INTERACTION', 'KEYDOWN', {
+                frameWindow,
+                target,
+                payload: {
+                    key: safeKeys.has(key) ? key : 'MODIFIER_SHORTCUT',
+                    ctrl: !!event.ctrlKey,
+                    meta: !!event.metaKey,
+                    alt: !!event.altKey,
+                    shift: !!event.shiftKey
+                }
+            });
+            return;
+        }
+        recordMissionActivity(
+            missionActivitySourceForEvent(event, target),
+            'INTERACTION',
+            type,
+            { frameWindow, target }
+        );
+    }
+
+    function patchMissionActivityWindow(frameWindow) {
+        if (!frameWindow || mfMissionActivityWindows.has(frameWindow)) return;
+        let sameOrigin = false;
+        try {
+            sameOrigin = frameWindow.location.origin === window.location.origin;
+        } catch (_error) {}
+        if (!sameOrigin) return;
+        mfMissionActivityWindows.add(frameWindow);
+
+        try {
+            const originalFetch = frameWindow.fetch;
+            if (typeof originalFetch === 'function') {
+                frameWindow.fetch = function(input, init) {
+                    const rawUrl = input?.url || input;
+                    const route = sanitiseMissionActivityPath(rawUrl, frameWindow);
+                    if (!route) return originalFetch.apply(this, arguments);
+                    const method = String(
+                        init?.method || input?.method || 'GET'
+                    ).toUpperCase().slice(0, 12);
+                    const correlationId = createMissionLoggerId('net');
+                    const started = Date.now();
+                    recordMissionActivity('MISSIONCHIEF', 'NETWORK', 'FETCH', {
+                        frameWindow, route, phase: 'START', outcome: 'STARTED',
+                        correlationId, payload: { method }
+                    });
+                    return originalFetch.apply(this, arguments).then(response => {
+                        recordMissionActivity('MISSIONCHIEF', 'NETWORK', 'FETCH', {
+                            frameWindow, route, phase: 'END',
+                            outcome: response.ok ? 'OK' : 'FAILED',
+                            correlationId, durationMs: Date.now() - started,
+                            payload: { method, status: Number(response.status || 0) }
+                        });
+                        return response;
+                    }).catch(error => {
+                        recordMissionActivity('MISSIONCHIEF', 'NETWORK', 'FETCH', {
+                            frameWindow, route, phase: 'END', outcome: 'ERROR',
+                            correlationId, durationMs: Date.now() - started,
+                            message: error?.message || 'Fetch failed', payload: { method }
+                        });
+                        throw error;
+                    });
+                };
+            }
+        } catch (_error) {}
+
+        try {
+            const XHR = frameWindow.XMLHttpRequest;
+            if (XHR?.prototype) {
+                const originalOpen = XHR.prototype.open;
+                const originalSend = XHR.prototype.send;
+                XHR.prototype.open = function(method, url) {
+                    this.__mfActivityRequest = {
+                        method: String(method || 'GET').toUpperCase().slice(0, 12),
+                        route: sanitiseMissionActivityPath(url, frameWindow)
+                    };
+                    return originalOpen.apply(this, arguments);
+                };
+                XHR.prototype.send = function() {
+                    const request = this.__mfActivityRequest;
+                    if (!request?.route) return originalSend.apply(this, arguments);
+                    const correlationId = createMissionLoggerId('xhr');
+                    const started = Date.now();
+                    recordMissionActivity('MISSIONCHIEF', 'NETWORK', 'XHR', {
+                        frameWindow, route: request.route, phase: 'START',
+                        outcome: 'STARTED', correlationId,
+                        payload: { method: request.method }
+                    });
+                    this.addEventListener('loadend', () => {
+                        const status = Number(this.status || 0);
+                        recordMissionActivity('MISSIONCHIEF', 'NETWORK', 'XHR', {
+                            frameWindow, route: request.route, phase: 'END',
+                            outcome: status >= 200 && status < 400 ? 'OK' : 'FAILED',
+                            correlationId, durationMs: Date.now() - started,
+                            payload: { method: request.method, status }
+                        });
+                    }, { once: true });
+                    return originalSend.apply(this, arguments);
+                };
+            }
+        } catch (_error) {}
+
+        try {
+            ['pushState', 'replaceState'].forEach(method => {
+                const original = frameWindow.history?.[method];
+                if (typeof original !== 'function') return;
+                frameWindow.history[method] = function() {
+                    const result = original.apply(this, arguments);
+                    recordMissionActivity('MISSIONCHIEF', 'NAVIGATION', method.toUpperCase(), {
+                        frameWindow,
+                        route: sanitiseMissionActivityPath(frameWindow.location.href, frameWindow)
+                    });
+                    return result;
+                };
+            });
+        } catch (_error) {}
+
+        frameWindow.addEventListener?.('popstate', () => {
+            recordMissionActivity('USER', 'NAVIGATION', 'POPSTATE', { frameWindow });
+        });
+        frameWindow.addEventListener?.('hashchange', () => {
+            recordMissionActivity('USER', 'NAVIGATION', 'HASHCHANGE', { frameWindow });
+        });
+        frameWindow.addEventListener?.('error', event => {
+            recordMissionActivity('SYSTEM', 'ERROR', 'WINDOW_ERROR', {
+                frameWindow,
+                outcome: 'ERROR',
+                message: event?.message || 'Window error'
+            });
+        });
+        frameWindow.addEventListener?.('unhandledrejection', event => {
+            recordMissionActivity('SYSTEM', 'ERROR', 'UNHANDLED_REJECTION', {
+                frameWindow,
+                outcome: 'ERROR',
+                message: event?.reason?.message || String(event?.reason || 'Unhandled rejection')
+            });
+        });
+    }
+
+    function attachMissionActivityDocument(frameDocument, frameWindow) {
+        if (!frameDocument || mfMissionActivityDocuments.has(frameDocument)) return;
+        mfMissionActivityDocuments.add(frameDocument);
+        patchMissionActivityWindow(frameWindow);
+        ['click','dblclick','contextmenu','change','submit','focusin','focusout','dragstart','drop','keydown']
+            .forEach(type => {
+                frameDocument.addEventListener(
+                    type,
+                    event => recordMissionActivityDomEvent(event, frameWindow),
+                    true
+                );
+            });
+        frameDocument.addEventListener('visibilitychange', () => {
+            recordMissionActivity('SYSTEM', 'LIFECYCLE', 'VISIBILITY_' +
+                String(frameDocument.visibilityState || 'unknown').toUpperCase(), {
+                frameWindow,
+                payload: { state: frameDocument.visibilityState || 'unknown' }
+            });
+        });
+    }
+
+    function installMissionActivityFrame(frame) {
+        if (!frame || mfMissionActivityFrames.has(frame)) return;
+        mfMissionActivityFrames.add(frame);
+        const attach = () => {
+            try {
+                if (frame.contentWindow?.location?.origin !== window.location.origin) return;
+                attachMissionActivityDocument(
+                    frame.contentDocument,
+                    frame.contentWindow
+                );
+            } catch (_error) {}
+        };
+        frame.addEventListener('load', attach, true);
+        attach();
+    }
+
+    function installMissionActivityRecorder() {
+        if (!MF_IS_TOP_WINDOW || mfMissionActivityRecorderInstalled) return;
+        mfMissionActivityRecorderInstalled = true;
+        attachMissionActivityDocument(document, window);
+        document.querySelectorAll('iframe').forEach(installMissionActivityFrame);
+        new MutationObserver(records => {
+            records.forEach(record => {
+                Array.from(record.addedNodes || []).forEach(node => {
+                    if (node?.nodeType !== 1) return;
+                    if (node.tagName === 'IFRAME') installMissionActivityFrame(node);
+                    node.querySelectorAll?.('iframe').forEach(installMissionActivityFrame);
+                });
+            });
+        }).observe(document.documentElement, { childList: true, subtree: true });
+        if (isMissionActivityBackendReady()) {
+            recordMissionActivity('SYSTEM', 'LIFECYCLE', 'PAGE_LOAD', {
+                outcome: 'OK',
+                payload: getMissionActivitySessionTelemetry()
+            });
+        }
+        window.addEventListener('pagehide', () => {
+            recordMissionActivity('SYSTEM', 'LIFECYCLE', 'PAGEHIDE', {
+                outcome: 'OK'
+            });
+        });
+        mfMissionActivityHeartbeatTimer = setInterval(() => {
+            recordMissionActivity('SYSTEM', 'LIFECYCLE', 'HEARTBEAT', {
+                outcome: 'OK'
+            });
+        }, 60 * 1000);
     }
 
     function queueMissionLoggerEvent(event) {
@@ -27038,7 +27529,11 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
                 return await submitMissionLoggerRequest(
                     'upload',
                     {
-                        profileName: identity.playerName,
+                        profileName:
+                            identity.legacyPlayerName ||
+                            identity.playerName,
+                        profileId: identity.playerId,
+                        username: identity.playerName,
                         deviceId: identity.deviceId,
                         deviceLabel: identity.deviceLabel,
                         batchId: pending.batchId,
@@ -27271,6 +27766,8 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
                         batchEvents,
                         lockOwner
                     );
+
+                updateMissionActivityBackendCapability(response);
 
                 if (
                     response.batchId &&
@@ -58393,6 +58890,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
         synchroniseMissionInstanceState('initialize');
         installMissionLoggerStorageListener();
         installMissionLoggerDispatchCapture();
+        installMissionActivityRecorder();
         recordMissionLoggerObservedEvent();
         cleanupDuplicatePanels();
         scheduleMissionFinderIphoneNativePickerSync(
@@ -59663,6 +60161,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
 
         installMissionLoggerStorageListener();
         installMissionLoggerDispatchCapture();
+        installMissionActivityRecorder();
         recordMissionLoggerObservedEvent();
 
         if (

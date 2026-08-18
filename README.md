@@ -19,7 +19,7 @@
 </tr>
 </table>
 
-**Current version:** `1.1.8` · **Mission Finder engine:** `V10.7.6` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
+**Current version:** `1.1.9` · **Mission Finder engine:** `V10.7.7` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)
@@ -59,7 +59,7 @@ Command Nexus joins two established MartyBlyth systems into one maintained insta
 - Unit Finder, Mission Update and controlled Auto Mode
 - Mission upgrades, sharing, queues, transports and recovery
 - Stale-mission, zero-selection and repeated-dispatch protection
-- Opt-in paired mission analytics with exact dispatch and credit evidence
+- Opt-in private activity recorder with stable MissionChief profile identity, exact dispatch/credit evidence and verified weekly archive rollover
 
 </td>
 </tr>

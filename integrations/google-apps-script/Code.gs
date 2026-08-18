@@ -11,7 +11,8 @@
 
 const MC_LOGGER = Object.freeze({
   schemaVersion: 1,
-  buildId: '1.1.6-private-profile-1',
+  buildId: '1.1.9-activity-recorder-2',
+  activitySchemaVersion: 2,
   timezone: 'Europe/London',
   maxPayloadChars: 2800000,
   maxEventsPerBatch: 40,
@@ -73,6 +74,33 @@ const MC_LOGGER_SHEETS = Object.freeze({
       'last_seen_at',
       'last_upload_at',
       'client_version'
+    ])
+  }),
+  sessions: Object.freeze({
+    name: 'Sessions',
+    headers: Object.freeze([
+      'session_id','player_id','username','device_id','client_version',
+      'started_at','last_seen_at','ended_at','start_route','last_route',
+      'user_agent','viewport','timezone','auto_mode_runs','user_actions',
+      'nexus_actions','missionchief_actions','system_events','event_count','status'
+    ])
+  }),
+  activity: Object.freeze({
+    name: 'Activity Log',
+    headers: Object.freeze([
+      'activity_id','event_time','received_at','player_id','username','device_id',
+      'session_id','source','category','action','phase','outcome','route','mission_id',
+      'vehicle_id','patient_id','station_id','dispatch_centre_id','target_tag','target_id',
+      'target_label','target_href','input_type','correlation_id','duration_ms','attempt',
+      'message','payload_json','client_version','schema_version','privacy_class','batch_id'
+    ])
+  }),
+  actionSummary: Object.freeze({
+    name: 'Action Summary',
+    headers: Object.freeze([
+      'period_date','player_id','username','source','category','action','outcome',
+      'event_count','first_event_at','last_event_at','total_duration_ms',
+      'avg_duration_ms','failed_count','session_count','last_rebuilt_at'
     ])
   }),
   events: Object.freeze({
@@ -230,7 +258,10 @@ const MC_LOGGER_SHEETS = Object.freeze({
       'verified_at',
       'purged_at',
       'cell_count',
-      'notes'
+      'notes',
+      'activity_rows',
+      'session_rows',
+      'action_summary_rows'
     ])
   }),
   batchLedger: Object.freeze({
@@ -287,6 +318,7 @@ function onOpen() {
     .addItem('Run due weekly rollover now', 'runMissionChiefWeeklyArchiveNow')
     .addSeparator()
     .addItem('Rebuild mission summary + dashboard', 'rebuildMissionChiefMissionSummary')
+    .addItem('Rebuild activity summary', 'rebuildMissionChiefActivitySummary')
     .addToUi();
 }
 
@@ -323,7 +355,7 @@ function initialiseMissionChiefLogger() {
   spreadsheet.setSpreadsheetTimeZone(MC_LOGGER.timezone);
   SpreadsheetApp.flush();
   SpreadsheetApp.getUi().alert(
-    'MissionChief logger is initialised. Deploy this Apps Script project as a new private web app, then save that URL and a user name in Nexus.'
+    'MissionChief logger is initialised. Deploy this Apps Script project as a new private web app, then save that URL in Nexus. The logged-in MissionChief profile is detected automatically.'
   );
 }
 
@@ -471,8 +503,11 @@ function doGet() {
         'dispatch-journey-metrics',
         'private-url-profile',
         'weekly-archive',
-        'batch-ledger'
+        'batch-ledger',
+        'activity-recorder',
+        'navbar-profile-id'
       ],
+      activitySchemaVersion: MC_LOGGER.activitySchemaVersion,
       time: new Date().toISOString()
     }))
     .setMimeType(ContentService.MimeType.JSON);
@@ -533,6 +568,7 @@ function doPost(event) {
   response.source = MC_LOGGER.responseSource;
   response.requestId = requestId;
   response.backendBuild = MC_LOGGER.buildId;
+  response.activitySchemaVersion = MC_LOGGER.activitySchemaVersion;
   return createLoggerPostMessageResponse_(response, replyOrigin);
 }
 
@@ -640,9 +676,16 @@ function handleLoggerPair_(payload) {
 
 function handleLoggerUpload_(payload) {
   const batchId = cleanIdentifier_(payload.batchId, 180);
-  const profileName = cleanText_(
+  const legacyProfileName = cleanText_(
     payload.profileName || payload.playerName,
     120
+  );
+  const profileName = cleanText_(
+    payload.username || payload.playerName || legacyProfileName,
+    120
+  );
+  const profileId = cleanMissionChiefProfileId_(
+    payload.profileId || payload.playerId
   );
   const deviceId = cleanIdentifier_(payload.deviceId, 160);
   const deviceLabel = cleanText_(
@@ -652,10 +695,10 @@ function handleLoggerUpload_(payload) {
   const clientVersion = cleanText_(payload.clientVersion, 40);
   const events = Array.isArray(payload.events) ? payload.events : [];
 
-  if (!batchId || !profileName || !deviceId) {
+  if (!batchId || !deviceId || (!profileId && !legacyProfileName && !profileName)) {
     throw loggerError_(
       'INVALID_UPLOAD',
-      'The private logger URL, user name or batch identifier is invalid.'
+      'The private logger URL, MissionChief profile or batch identifier is invalid.'
     );
   }
   if (events.length < 1 || events.length > MC_LOGGER.maxEventsPerBatch) {
@@ -668,12 +711,15 @@ function handleLoggerUpload_(payload) {
   try {
     const spreadsheet = getLoggerSpreadsheet_();
     ensureLoggerWorkbook_(spreadsheet);
-    const profile = resolveActiveLoggerProfile_(
-      spreadsheet,
-      profileName
-    );
-    const playerId = profile.playerId;
     const receivedAt = new Date();
+    const profile = profileId
+      ? resolveOrCreateMissionChiefNavbarProfile_(
+          spreadsheet, profileId, profileName, receivedAt
+        )
+      : resolveActiveLoggerProfile_(
+          spreadsheet, legacyProfileName || profileName
+        );
+    const playerId = profile.playerId;
     const device = upsertLoggerProfileDevice_(
       spreadsheet,
       playerId,
@@ -685,12 +731,23 @@ function handleLoggerUpload_(payload) {
     const eventSheet = spreadsheet.getSheetByName(MC_LOGGER_SHEETS.events.name);
     const unitSheet = spreadsheet.getSheetByName(MC_LOGGER_SHEETS.units.name);
     const uploadSheet = spreadsheet.getSheetByName(MC_LOGGER_SHEETS.uploads.name);
+    const activitySheet = spreadsheet.getSheetByName(MC_LOGGER_SHEETS.activity.name);
+    const activityEvents = events.filter(function(rawEvent) {
+      return String(rawEvent && rawEvent.eventType || '').toLowerCase() === 'activity';
+    });
+    const missionEvents = events.filter(function(rawEvent) {
+      return String(rawEvent && rawEvent.eventType || '').toLowerCase() !== 'activity';
+    });
     const preparedRaw = prepareLoggerBatchRows_(
-      events,
+      missionEvents,
       batchId,
       playerId,
       deviceId,
       receivedAt
+    );
+    preparedRaw.activityRows = prepareLoggerActivityRows_(
+      activityEvents, batchId, playerId, profile.displayName,
+      deviceId, clientVersion, receivedAt
     );
     const batchChecksum = createLoggerBatchChecksum_(
       playerId,
@@ -698,6 +755,7 @@ function handleLoggerUpload_(payload) {
       preparedRaw
     );
     const duplicateRows = findAllRowsByValue_(eventSheet, 2, batchId);
+    const activityBatchRows = findAllRowsByValue_(activitySheet, 32, batchId);
     const ledgerRecord = findLoggerBatchLedgerRecord_(
       spreadsheet,
       batchId
@@ -711,13 +769,13 @@ function handleLoggerUpload_(payload) {
         batchChecksum
       );
 
-      if (duplicateRows.length === 0) {
+      if (duplicateRows.length === 0 && activityBatchRows.length === 0) {
         appendUploadAudit_(uploadSheet, {
           batchId: batchId,
           playerId: playerId,
           deviceId: deviceId,
           receivedAt: receivedAt,
-          eventCount: preparedRaw.eventRows.length,
+          eventCount: preparedRaw.eventRows.length + (preparedRaw.activityRows || []).length,
           unitCount: preparedRaw.unitRows.length,
           clientVersion: clientVersion,
           duplicate: true,
@@ -736,7 +794,7 @@ function handleLoggerUpload_(payload) {
           batchId: batchId,
           duplicate: true,
           archived: true,
-          acceptedEvents: preparedRaw.eventRows.length,
+          acceptedEvents: preparedRaw.eventRows.length + (preparedRaw.activityRows || []).length,
           acceptedUnits: preparedRaw.unitRows.length,
           receivedAt: receivedAt.toISOString()
         };
@@ -748,6 +806,7 @@ function handleLoggerUpload_(payload) {
       preparedRaw,
       batchId
     );
+    prepared.activityRows = preparedRaw.activityRows || [];
 
     if (duplicateRows.length > 0) {
       const existingEventRows = getRowsByColumnValue_(eventSheet, 2, batchId);
@@ -796,12 +855,17 @@ function handleLoggerUpload_(payload) {
         return retainedUnitCounts[identity] > (existingUnitCounts[identity] || 0);
       });
       appendRows_(unitSheet, missingUnitRows);
+      const appendedActivityRows = appendLoggerActivityRows_(
+        activitySheet, prepared.activityRows
+      );
+      upsertLoggerSessions_(spreadsheet, appendedActivityRows);
+      maybeRebuildLoggerActionSummary_(spreadsheet, receivedAt);
       appendUploadAudit_(uploadSheet, {
         batchId: batchId,
         playerId: playerId,
         deviceId: deviceId,
         receivedAt: receivedAt,
-        eventCount: prepared.eventRows.length,
+        eventCount: prepared.eventRows.length + (prepared.activityRows || []).length,
         unitCount: prepared.unitRows.length,
         clientVersion: clientVersion,
         duplicate: true,
@@ -829,7 +893,7 @@ function handleLoggerUpload_(payload) {
         playerId: playerId,
         deviceId: deviceId,
         receivedAt: receivedAt,
-        eventCount: prepared.eventRows.length,
+        eventCount: prepared.eventRows.length + (prepared.activityRows || []).length,
         unitCount: prepared.unitRows.length,
         clientVersion: clientVersion,
         batchChecksum: batchChecksum,
@@ -848,13 +912,18 @@ function handleLoggerUpload_(payload) {
         batchId: batchId,
         duplicate: true,
         repairedUnits: missingUnitRows.length,
-        acceptedEvents: prepared.eventRows.length,
+        acceptedEvents: prepared.eventRows.length + (prepared.activityRows || []).length,
         acceptedUnits: prepared.unitRows.length,
         suppressedDuplicateEvents: prepared.suppressedDuplicateEvents,
         receivedAt: receivedAt.toISOString()
       };
     }
 
+    const appendedActivityRows = appendLoggerActivityRows_(
+      activitySheet, prepared.activityRows
+    );
+    upsertLoggerSessions_(spreadsheet, appendedActivityRows);
+    maybeRebuildLoggerActionSummary_(spreadsheet, receivedAt);
     appendRows_(eventSheet, prepared.eventRows);
     appendRows_(unitSheet, prepared.unitRows);
     appendUploadAudit_(uploadSheet, {
@@ -862,7 +931,7 @@ function handleLoggerUpload_(payload) {
       playerId: playerId,
       deviceId: deviceId,
       receivedAt: receivedAt,
-      eventCount: prepared.eventRows.length,
+      eventCount: prepared.eventRows.length + (prepared.activityRows || []).length,
       unitCount: prepared.unitRows.length,
       clientVersion: clientVersion,
       duplicate: false,
@@ -892,7 +961,7 @@ function handleLoggerUpload_(payload) {
       playerId: playerId,
       deviceId: deviceId,
       receivedAt: receivedAt,
-      eventCount: prepared.eventRows.length,
+      eventCount: prepared.eventRows.length + (prepared.activityRows || []).length,
       unitCount: prepared.unitRows.length,
       clientVersion: clientVersion,
       batchChecksum: batchChecksum,
@@ -912,7 +981,7 @@ function handleLoggerUpload_(payload) {
       playerName: profile.displayName,
       batchId: batchId,
       duplicate: false,
-      acceptedEvents: prepared.eventRows.length,
+      acceptedEvents: prepared.eventRows.length + (prepared.activityRows || []).length,
       acceptedUnits: prepared.unitRows.length,
       suppressedDuplicateEvents: prepared.suppressedDuplicateEvents,
       receivedAt: receivedAt.toISOString()
@@ -943,6 +1012,216 @@ function handleLoggerRevoke_(payload) {
       playerId: playerId,
       deviceId: deviceId
     };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+
+function prepareLoggerActivityRows_(events, batchId, playerId, username, deviceId, clientVersion, receivedAt) {
+  const rows = [];
+  const seen = {};
+  (Array.isArray(events) ? events : []).forEach(function(rawEvent) {
+    if (!rawEvent || typeof rawEvent !== 'object') {
+      throw loggerError_('INVALID_ACTIVITY', 'An activity event is not an object.');
+    }
+    const activityId = cleanIdentifier_(rawEvent.eventId, 180);
+    if (!activityId || seen[activityId]) {
+      throw loggerError_('INVALID_ACTIVITY_ID', 'An activity identifier is missing or duplicated in the batch.');
+    }
+    seen[activityId] = true;
+    const eventTime = parseLoggerDate_(rawEvent.capturedAt);
+    const metadata = rawEvent.metadata && typeof rawEvent.metadata === 'object' ? rawEvent.metadata : {};
+    const activity = metadata.activity && typeof metadata.activity === 'object' ? metadata.activity : {};
+    const payload = activity.payload && typeof activity.payload === 'object' ? activity.payload : {};
+    rows.push([
+      safeSheetText_(activityId), eventTime, receivedAt,
+      safeSheetText_(playerId), safeSheetText_(username), safeSheetText_(deviceId),
+      safeSheetText_(cleanIdentifier_(activity.sessionId, 180)),
+      safeSheetText_(cleanText_(activity.source, 40)),
+      safeSheetText_(cleanText_(activity.category, 60)),
+      safeSheetText_(cleanText_(activity.action, 100)),
+      safeSheetText_(cleanText_(activity.phase, 40)),
+      safeSheetText_(cleanText_(activity.outcome, 40)),
+      safeSheetText_(cleanText_(activity.route, 500)),
+      safeSheetText_(cleanIdentifier_(activity.missionId || rawEvent.missionId, 80)),
+      safeSheetText_(cleanIdentifier_(activity.vehicleId, 80)),
+      safeSheetText_(cleanIdentifier_(activity.patientId, 80)),
+      safeSheetText_(cleanIdentifier_(activity.stationId, 80)),
+      safeSheetText_(cleanIdentifier_(activity.dispatchCentreId, 80)),
+      safeSheetText_(cleanText_(activity.targetTag, 30)),
+      safeSheetText_(cleanText_(activity.targetId, 120)),
+      safeSheetText_(cleanText_(activity.targetLabel, 160)),
+      safeSheetText_(cleanText_(activity.targetHref, 500)),
+      safeSheetText_(cleanText_(activity.inputType, 40)),
+      safeSheetText_(cleanIdentifier_(activity.correlationId, 180)),
+      cleanNumberOrBlank_(activity.durationMs, 0, 86400000),
+      cleanNumberOrBlank_(activity.attempt, 0, 1000),
+      safeSheetText_(cleanText_(activity.message, 300)),
+      safeSheetText_(safeJson_(payload)),
+      safeSheetText_(clientVersion),
+      cleanNumberOrBlank_(activity.schemaVersion, 1, 100),
+      safeSheetText_(cleanText_(activity.privacyClass, 80) || 'SAFE_METADATA'),
+      safeSheetText_(batchId)
+    ]);
+  });
+  return rows;
+}
+
+function appendLoggerActivityRows_(sheet, rows) {
+  if (!Array.isArray(rows) || rows.length === 0) return [];
+  const existing = {};
+  const lastRow = sheet.getLastRow();
+  if (lastRow >= 2) {
+    const start = Math.max(2, lastRow - 4999);
+    sheet.getRange(start, 1, lastRow - start + 1, 1).getDisplayValues()
+      .forEach(function(values) { existing[String(values[0] || '')] = true; });
+  }
+  const fresh = rows.filter(function(row) {
+    const id = String(row[0] || '');
+    if (!id || existing[id]) return false;
+    existing[id] = true;
+    return true;
+  });
+  appendRows_(sheet, fresh);
+  return fresh;
+}
+
+function readLoggerActivityPayload_(row) {
+  try {
+    const parsed = JSON.parse(String(row && row[27] || '{}'));
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch (error) {
+    return {};
+  }
+}
+
+function upsertLoggerSessions_(spreadsheet, activityRows) {
+  if (!Array.isArray(activityRows) || activityRows.length === 0) return 0;
+  const sheet = spreadsheet.getSheetByName(MC_LOGGER_SHEETS.sessions.name);
+  const width = MC_LOGGER_SHEETS.sessions.headers.length;
+  const existingRows = sheet.getLastRow() >= 2
+    ? sheet.getRange(2, 1, sheet.getLastRow() - 1, width).getValues()
+    : [];
+  const rowsById = {};
+  existingRows.forEach(function(row, index) {
+    rowsById[String(row[0] || '')] = { rowNumber: index + 2, values: row };
+  });
+  const touched = {};
+  activityRows.forEach(function(activity) {
+    const sessionId = cleanIdentifier_(activity[6], 180);
+    if (!sessionId) return;
+    if (!touched[sessionId]) {
+      const existing = rowsById[sessionId];
+      touched[sessionId] = {
+        rowNumber: existing ? existing.rowNumber : 0,
+        values: existing ? existing.values.slice() : new Array(width).fill('')
+      };
+    }
+    const row = touched[sessionId].values;
+    const eventTime = loggerDateOrNull_(activity[1]) || new Date();
+    const payload = readLoggerActivityPayload_(activity);
+    row[0] = sessionId;
+    row[1] = activity[3];
+    row[2] = activity[4];
+    row[3] = activity[5];
+    row[4] = activity[28];
+    row[5] = loggerEarlierDate_(row[5], payload.startedAt || eventTime) || eventTime;
+    row[6] = loggerLaterDate_(row[6], eventTime) || eventTime;
+    if (!row[8]) row[8] = activity[12];
+    row[9] = activity[12];
+    row[10] = payload.userAgent || row[10] || '';
+    row[11] = payload.viewport || row[11] || '';
+    row[12] = payload.timezone || row[12] || '';
+    const source = String(activity[7] || '').toUpperCase();
+    if (source === 'USER') row[14] = loggerNumber_(row[14], 0) + 1;
+    else if (source === 'NEXUS') row[15] = loggerNumber_(row[15], 0) + 1;
+    else if (source === 'MISSIONCHIEF') row[16] = loggerNumber_(row[16], 0) + 1;
+    else row[17] = loggerNumber_(row[17], 0) + 1;
+    if (String(activity[9] || '').toUpperCase() === 'AUTO_MODE_START') {
+      row[13] = loggerNumber_(row[13], 0) + 1;
+    }
+    row[18] = loggerNumber_(row[18], 0) + 1;
+    const action = String(activity[9] || '').toUpperCase();
+    row[19] = action === 'PAGEHIDE' || action === 'VISIBILITY_HIDDEN'
+      ? 'IDLE'
+      : 'ACTIVE';
+  });
+  const newRows = [];
+  Object.keys(touched).forEach(function(sessionId) {
+    const entry = touched[sessionId];
+    if (entry.rowNumber) sheet.getRange(entry.rowNumber, 1, 1, width).setValues([entry.values]);
+    else newRows.push(entry.values);
+  });
+  appendRows_(sheet, newRows);
+  return Object.keys(touched).length;
+}
+
+function rebuildLoggerActionSummary_(spreadsheet, rebuiltAt) {
+  const source = spreadsheet.getSheetByName(MC_LOGGER_SHEETS.activity.name);
+  const target = spreadsheet.getSheetByName(MC_LOGGER_SHEETS.actionSummary.name);
+  const rows = source.getLastRow() >= 2
+    ? source.getRange(2, 1, source.getLastRow() - 1, MC_LOGGER_SHEETS.activity.headers.length).getValues()
+    : [];
+  const groups = {};
+  rows.forEach(function(row) {
+    const eventTime = loggerDateOrNull_(row[1]);
+    if (!eventTime) return;
+    const day = Utilities.formatDate(eventTime, MC_LOGGER.timezone, 'yyyy-MM-dd');
+    const key = [day, row[3], row[7], row[8], row[9], row[11]].map(String).join('|');
+    if (!groups[key]) {
+      groups[key] = {
+        day: day, playerId: row[3], username: row[4], source: row[7], category: row[8],
+        action: row[9], outcome: row[11], count: 0, first: eventTime, last: eventTime,
+        durationTotal: 0, durationCount: 0, failed: 0, sessions: {}
+      };
+    }
+    const group = groups[key];
+    group.count += 1;
+    if (eventTime.getTime() < group.first.getTime()) group.first = eventTime;
+    if (eventTime.getTime() > group.last.getTime()) group.last = eventTime;
+    if (row[24] !== '' && Number.isFinite(Number(row[24]))) {
+      group.durationTotal += Number(row[24]);
+      group.durationCount += 1;
+    }
+    if (/FAILED|ERROR|REJECTED|TIMEOUT/i.test(String(row[11] || ''))) group.failed += 1;
+    if (row[6]) group.sessions[String(row[6])] = true;
+  });
+  clearLoggerSheetData_(target);
+  const output = Object.keys(groups).sort().map(function(key) {
+    const group = groups[key];
+    return [
+      group.day, group.playerId, group.username, group.source, group.category,
+      group.action, group.outcome, group.count, group.first, group.last,
+      Math.round(group.durationTotal),
+      group.durationCount ? Math.round(group.durationTotal / group.durationCount) : '',
+      group.failed, Object.keys(group.sessions).length, rebuiltAt || new Date()
+    ];
+  });
+  appendRows_(target, output);
+  return output.length;
+}
+
+function maybeRebuildLoggerActionSummary_(spreadsheet, now) {
+  const timestamp = now || new Date();
+  const properties = PropertiesService.getScriptProperties();
+  const key = 'MISSIONCHIEF_ACTIVITY_SUMMARY_REBUILT_AT';
+  const previous = loggerDateOrNull_(properties.getProperty(key));
+  if (previous && timestamp.getTime() - previous.getTime() < 15 * 60 * 1000) return false;
+  rebuildLoggerActionSummary_(spreadsheet, timestamp);
+  properties.setProperty(key, timestamp.toISOString());
+  return true;
+}
+
+function rebuildMissionChiefActivitySummary() {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+  try {
+    const spreadsheet = getLoggerSpreadsheet_();
+    ensureLoggerWorkbook_(spreadsheet);
+    const count = rebuildLoggerActionSummary_(spreadsheet, new Date());
+    SpreadsheetApp.flush();
+    SpreadsheetApp.getUi().alert('Activity summary rebuilt', count + ' grouped action rows are available.', SpreadsheetApp.getUi().ButtonSet.OK);
   } finally {
     lock.releaseLock();
   }
@@ -1515,11 +1794,15 @@ function createLoggerBatchChecksum_(playerId, deviceId, prepared) {
   const unitIdentities = (prepared.unitRows || [])
     .map(loggerUnitIdentity_)
     .sort();
+  const activityIdentities = (prepared.activityRows || []).map(function(row) {
+    return [row[0], row[1] instanceof Date ? row[1].toISOString() : row[1], row[6], row[9], row[11]];
+  }).sort();
   return sha256_(JSON.stringify([
     String(playerId || ''),
     String(deviceId || ''),
     eventIdentities,
-    unitIdentities
+    unitIdentities,
+    activityIdentities
   ]));
 }
 
@@ -2026,7 +2309,9 @@ function seedLoggerConfiguration_(spreadsheet) {
   const seeds = [
     ['schema_version', MC_LOGGER.schemaVersion, 'Nexus logger payload schema accepted by this backend.'],
     ['backend_build', MC_LOGGER.buildId, 'Deployed Apps Script build expected by this workbook.'],
-    ['identity_mode', 'PRIVATE_URL_AND_PLAYER_NAME', 'The private deployment URL plus an active Players display name authorises uploads on any browser.'],
+    ['identity_mode', 'NAVBAR_PROFILE_ID_AND_USERNAME', 'The private deployment URL plus the numeric MissionChief #navbar_profile_link profile ID identifies the user; the visible username is retained as the current display name.'],
+    ['activity_schema_version', MC_LOGGER.activitySchemaVersion, 'Safe activity metadata schema emitted by Command Nexus after backend capability acknowledgement.'],
+    ['activity_capture', 'SAFE_ACTIVITY_METADATA_V2', 'Captures user, Nexus, MissionChief network/navigation and system lifecycle/error actions without entered values, credentials, cookies, request bodies or clipboard data.'],
     ['max_events_per_batch', MC_LOGGER.maxEventsPerBatch, 'Maximum events accepted in one five-minute upload.'],
     ['deployment_url', '', 'Paste the deployed Apps Script /exec URL here for the admins reference.'],
     ['actual_credit_capture', 'LIVE_EXACT_TRANSACTION_MATCH', 'Exact mission awards are matched locally against MissionChief Credits transactions; ambiguous transactions remain pending.'],
@@ -2076,6 +2361,43 @@ function getActivePlayer_(spreadsheet, playerId) {
   }
 
   throw loggerError_('PLAYER_NOT_FOUND', 'The logger player profile was not found.');
+}
+
+
+function resolveOrCreateMissionChiefNavbarProfile_(spreadsheet, profileId, username, timestamp) {
+  const stableId = cleanMissionChiefProfileId_(profileId);
+  const displayName = cleanText_(username, 120);
+  if (!stableId || !displayName) {
+    throw loggerError_('INVALID_PROFILE', 'A numeric MissionChief profile ID and username are required.');
+  }
+  const players = spreadsheet.getSheetByName(MC_LOGGER_SHEETS.players.name);
+  const rowNumber = findRowByValue_(players, 1, stableId);
+  if (rowNumber) {
+    const values = players.getRange(rowNumber, 1, 1, MC_LOGGER_SHEETS.players.headers.length).getValues()[0];
+    if (String(values[2] || '').toUpperCase() !== 'ACTIVE') {
+      throw loggerError_('PLAYER_DISABLED', 'The MissionChief logger player profile is disabled.');
+    }
+    if (String(values[1] || '') !== displayName) {
+      players.getRange(rowNumber, 2).setValue(safeSheetText_(displayName));
+    }
+    if (timestamp) players.getRange(rowNumber, 5).setValue(timestamp);
+    return { row: rowNumber, playerId: stableId, displayName: displayName };
+  }
+
+  players.appendRow([
+    safeSheetText_(stableId),
+    safeSheetText_(displayName),
+    'ACTIVE',
+    timestamp || new Date(),
+    timestamp || new Date(),
+    0,
+    'Auto-created from #navbar_profile_link'
+  ]);
+  return {
+    row: players.getLastRow(),
+    playerId: stableId,
+    displayName: displayName
+  };
 }
 
 function createPairingForPlayer_(spreadsheet, playerId) {
@@ -2165,6 +2487,11 @@ function sha256_(value) {
   return digest.map(function(byte) {
     return (byte & 255).toString(16).padStart(2, '0');
   }).join('');
+}
+
+function cleanMissionChiefProfileId_(value) {
+  const candidate = String(value || '').trim();
+  return /^\d{1,20}$/.test(candidate) ? candidate : '';
 }
 
 function cleanIdentifier_(value, maxLength) {
@@ -2457,6 +2784,9 @@ function configureLoggerArchiveSpreadsheet_(archive) {
     MC_LOGGER_SHEETS.events,
     MC_LOGGER_SHEETS.units,
     MC_LOGGER_SHEETS.uploads,
+    MC_LOGGER_SHEETS.activity,
+    MC_LOGGER_SHEETS.sessions,
+    MC_LOGGER_SHEETS.actionSummary,
     MC_LOGGER_ARCHIVE_MANIFEST
   ];
   const existingSheets = archive.getSheets();
@@ -2539,6 +2869,11 @@ function loggerArchiveRowIdentity_(definitionKey, row) {
   if (definitionKey === 'summaries') return String(row[0] || '');
   if (definitionKey === 'events') return String(row[0] || '');
   if (definitionKey === 'units') return loggerUnitIdentity_(row);
+  if (definitionKey === 'activity') return String(row[0] || '');
+  if (definitionKey === 'sessions') return String(row[0] || '');
+  if (definitionKey === 'actionSummary') {
+    return [row[0], row[1], row[3], row[4], row[5], row[6]].map(String).join('|');
+  }
   if (definitionKey === 'uploads') {
     const receivedAt = loggerDateOrNull_(row[3]);
     return [
@@ -2633,6 +2968,9 @@ function loggerArchiveDateForRow_(definitionKey, row) {
     return loggerDateOrNull_(row[5]);
   }
   if (definitionKey === 'uploads') return loggerDateOrNull_(row[3]);
+  if (definitionKey === 'activity') return loggerDateOrNull_(row[1]);
+  if (definitionKey === 'sessions') return loggerDateOrNull_(row[7]) || loggerDateOrNull_(row[6]) || loggerDateOrNull_(row[5]);
+  if (definitionKey === 'actionSummary') return loggerDateOrNull_(row[0]);
   return null;
 }
 
@@ -2707,7 +3045,10 @@ function verifyLoggerArchiveContext_(context) {
     summaries: MC_LOGGER_SHEETS.summaries,
     events: MC_LOGGER_SHEETS.events,
     units: MC_LOGGER_SHEETS.units,
-    uploads: MC_LOGGER_SHEETS.uploads
+    uploads: MC_LOGGER_SHEETS.uploads,
+    activity: MC_LOGGER_SHEETS.activity,
+    sessions: MC_LOGGER_SHEETS.sessions,
+    actionSummary: MC_LOGGER_SHEETS.actionSummary
   };
 
   Object.keys(context.expected).forEach(function(definitionKey) {
@@ -2765,7 +3106,10 @@ function updateLoggerArchiveIndex_(liveSpreadsheet, context, status, timestamp, 
     summaries: Math.max(0, archive.getSheetByName(MC_LOGGER_SHEETS.summaries.name).getLastRow() - 1),
     events: Math.max(0, archive.getSheetByName(MC_LOGGER_SHEETS.events.name).getLastRow() - 1),
     units: Math.max(0, archive.getSheetByName(MC_LOGGER_SHEETS.units.name).getLastRow() - 1),
-    uploads: Math.max(0, archive.getSheetByName(MC_LOGGER_SHEETS.uploads.name).getLastRow() - 1)
+    uploads: Math.max(0, archive.getSheetByName(MC_LOGGER_SHEETS.uploads.name).getLastRow() - 1),
+    activity: Math.max(0, archive.getSheetByName(MC_LOGGER_SHEETS.activity.name).getLastRow() - 1),
+    sessions: Math.max(0, archive.getSheetByName(MC_LOGGER_SHEETS.sessions.name).getLastRow() - 1),
+    actionSummary: Math.max(0, archive.getSheetByName(MC_LOGGER_SHEETS.actionSummary.name).getLastRow() - 1)
   };
   const row = [
     context.weekInfo.weekKey,
@@ -2782,7 +3126,10 @@ function updateLoggerArchiveIndex_(liveSpreadsheet, context, status, timestamp, 
     timestamp,
     purged ? timestamp : (existing ? existing.values[12] : ''),
     countLoggerSpreadsheetCells_(archive),
-    safeSheetText_(notes || '')
+    safeSheetText_(notes || ''),
+    counts.activity,
+    counts.sessions,
+    counts.actionSummary
   ];
 
   if (existing) {
@@ -2842,13 +3189,17 @@ function archiveMissionChiefLoggerBefore_(cutoff, options) {
     const liveSpreadsheet = getLoggerSpreadsheet_();
     ensureLoggerWorkbook_(liveSpreadsheet);
     rebuildMissionSummaryFromRawIfNeeded_(liveSpreadsheet);
+    rebuildLoggerActionSummary_(liveSpreadsheet, new Date());
     const contexts = {};
     const deletions = {};
     const definitions = [
       ['summaries', MC_LOGGER_SHEETS.summaries],
       ['events', MC_LOGGER_SHEETS.events],
       ['units', MC_LOGGER_SHEETS.units],
-      ['uploads', MC_LOGGER_SHEETS.uploads]
+      ['uploads', MC_LOGGER_SHEETS.uploads],
+      ['activity', MC_LOGGER_SHEETS.activity],
+      ['sessions', MC_LOGGER_SHEETS.sessions],
+      ['actionSummary', MC_LOGGER_SHEETS.actionSummary]
     ];
 
     definitions.forEach(function(entry) {
@@ -2881,7 +3232,7 @@ function archiveMissionChiefLoggerBefore_(cutoff, options) {
 
     let deletedRows = 0;
     if (purge) {
-      ['units', 'events', 'uploads', 'summaries'].forEach(function(definitionKey) {
+      ['actionSummary', 'activity', 'sessions', 'units', 'events', 'uploads', 'summaries'].forEach(function(definitionKey) {
         const definition = MC_LOGGER_SHEETS[definitionKey];
         const sheet = liveSpreadsheet.getSheetByName(definition.name);
         deletedRows += deleteLoggerRowsByNumber_(sheet, deletions[definitionKey]);
@@ -2921,7 +3272,10 @@ function previewLoggerArchiveCounts_(spreadsheet, cutoff) {
     ['summaries', MC_LOGGER_SHEETS.summaries],
     ['events', MC_LOGGER_SHEETS.events],
     ['units', MC_LOGGER_SHEETS.units],
-    ['uploads', MC_LOGGER_SHEETS.uploads]
+    ['uploads', MC_LOGGER_SHEETS.uploads],
+    ['activity', MC_LOGGER_SHEETS.activity],
+    ['sessions', MC_LOGGER_SHEETS.sessions],
+    ['actionSummary', MC_LOGGER_SHEETS.actionSummary]
   ];
   const counts = {};
   definitions.forEach(function(entry) {
@@ -2945,7 +3299,10 @@ function previewLoggerArchiveCounts_(spreadsheet, cutoff) {
     counts.summaries * MC_LOGGER_SHEETS.summaries.headers.length +
     counts.events * MC_LOGGER_SHEETS.events.headers.length +
     counts.units * MC_LOGGER_SHEETS.units.headers.length +
-    counts.uploads * MC_LOGGER_SHEETS.uploads.headers.length;
+    counts.uploads * MC_LOGGER_SHEETS.uploads.headers.length +
+    counts.activity * MC_LOGGER_SHEETS.activity.headers.length +
+    counts.sessions * MC_LOGGER_SHEETS.sessions.headers.length +
+    counts.actionSummary * MC_LOGGER_SHEETS.actionSummary.headers.length;
   return counts;
 }
 
@@ -2984,6 +3341,9 @@ function previewMissionChiefWeeklyArchive() {
       'Mission Events: ' + counts.events,
       'Dispatch Units: ' + counts.units,
       'Uploads: ' + counts.uploads,
+      'Activity Log: ' + counts.activity,
+      'Sessions: ' + counts.sessions,
+      'Action Summary: ' + counts.actionSummary,
       'Estimated populated archive cells: ' + counts.estimatedCells,
       'Live workbook allocated cells: ' + countLoggerSpreadsheetCells_(spreadsheet)
     ].join('\n'),
@@ -3104,6 +3464,14 @@ function createMissionChiefDailyBackup() {
       dayKey,
       timezone
     ),
+    activityLog: rowsForBackupDay_(
+      spreadsheet.getSheetByName(MC_LOGGER_SHEETS.activity.name),
+      'received_at',
+      dayKey,
+      timezone
+    ),
+    sessions: getDataRows_(spreadsheet.getSheetByName(MC_LOGGER_SHEETS.sessions.name)),
+    actionSummary: getDataRows_(spreadsheet.getSheetByName(MC_LOGGER_SHEETS.actionSummary.name)),
     uploads: rowsForBackupDay_(
       spreadsheet.getSheetByName(MC_LOGGER_SHEETS.uploads.name),
       'received_at',

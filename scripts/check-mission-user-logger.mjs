@@ -215,7 +215,9 @@ for (const token of [
 ]) {
   expect(uploadBatch.includes(token), `Retry-safe uploader missing ${token}`);
 }
-expect(uploadBatch.includes('profileName: identity.playerName'), 'Upload must identify the selected private logger user');
+expect(uploadBatch.includes('profileId: identity.playerId'), 'Upload must send the stable MissionChief profile ID');
+expect(uploadBatch.includes('username: identity.playerName'), 'Upload must send the current navbar username');
+expect(uploadBatch.includes('identity.legacyPlayerName ||'), 'Upload must keep the legacy profile alias only for rollout compatibility');
 expect(uploadBatch.includes('deviceLabel: identity.deviceLabel'), 'Upload must retain browser diagnostics');
 expect(!uploadBatch.includes('token: identity.token'), 'Upload must not depend on a device token');
 
@@ -899,11 +901,11 @@ expect(
 );
 
 for (const token of [
-  "buildId: '1.1.6-private-profile-1'",
+  "buildId: '1.1.9-activity-recorder-2'",
   "'private-url-profile'",
   'resolveActiveLoggerProfile_',
   'upsertLoggerProfileDevice_',
-  "['identity_mode', 'PRIVATE_URL_AND_PLAYER_NAME'",
+  "['identity_mode', 'NAVBAR_PROFILE_ID_AND_USERNAME'",
   'LockService.getScriptLock()',
   'findAllRowsByValue_(eventSheet, 2, batchId)',
   'getRowsByColumnValue_(unitSheet, 2, batchId)',
