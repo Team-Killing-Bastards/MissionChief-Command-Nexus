@@ -19,6 +19,8 @@ The web-app URL is the credential. Anyone who has it can submit as either active
 
 The first saved v1.1.6 setup clears the old local token, queued events, pending batch, observation dedupe, mission registry and upload lock. Existing workbook history remains. This clean reset is deliberate; legacy queued data is not migrated between identities.
 
+Saving the same private URL and the same user again does not clear a current v1.1.6 queue. Changing the URL or selected user is treated as an intentional identity reset and clears local pending data before the new profile starts.
+
 The browser-generated device ID remains in `Devices` for diagnostics only. It does not authenticate uploads and may move between Marty and Conroy when the saved user changes. The legacy `token_hash` column remains blank for private-profile uploads so the existing workbook schema does not need a destructive migration.
 
 ## Workbook authority
