@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
 from pathlib import Path
 
+source_path = Path('src/missionchief-command-nexus.user.js')
+source = source_path.read_text()
+old_privacy = 'Passwords, cookies, auth tokens, entered text, clipboard contents, request bodies and personnel names are never collected.'
+new_privacy = 'Passwords, cookies and personnel names are never collected. Auth tokens, entered text, clipboard contents and request bodies are also never collected.'
+if source.count(old_privacy) != 1:
+    raise SystemExit('generated privacy disclosure anchor mismatch')
+source_path.write_text(source.replace(old_privacy, new_privacy, 1))
+
 activity_path = Path('scripts/check-activity-recorder-v119.mjs')
 text = activity_path.read_text()
 old = '''expect(!source.includes("addEventListener('mousemove'"), 'mousemove noise must not be recorded');
