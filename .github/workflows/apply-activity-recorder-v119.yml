@@ -30,17 +30,24 @@ jobs:
           ref: feature/activity-recorder-v119
           fetch-depth: 0
 
-      - name: Fix patch carrier replacement escaping
+      - name: Fix patch carrier anchors
         run: |
           python3 - <<'PY'
           from pathlib import Path
           p = Path('scripts/apply-activity-recorder-v119.py')
           text = p.read_text()
+
           old = "updated, count = re.subn(pattern, replacement, text, count=1, flags=flags)"
           new = "updated, count = re.subn(pattern, lambda _match: replacement, text, count=1, flags=flags)"
           if text.count(old) != 1:
               raise SystemExit('patch helper anchor mismatch')
-          p.write_text(text.replace(old, new, 1))
+          text = text.replace(old, new, 1)
+
+          old_block = """source = replace_once(\n    source,\n    '            MF_MISSION_LOGGER_QUEUE_KEY,\\n',\n    '            MF_MISSION_LOGGER_QUEUE_KEY,\\n            MF_MISSION_ACTIVITY_BACKEND_V2_KEY,\\n',\n    'profile scoped activity capability reset',\n)"""
+          new_block = """clear_start, clear_end, clear_fn = function_slice(source, 'clearMissionLoggerProfileScopedData')\nclear_fn = replace_once(\n    clear_fn,\n    '            MF_MISSION_LOGGER_QUEUE_KEY,\\n',\n    '            MF_MISSION_LOGGER_QUEUE_KEY,\\n            MF_MISSION_ACTIVITY_BACKEND_V2_KEY,\\n',\n    'profile scoped activity capability reset',\n)\nsource = source[:clear_start] + clear_fn + source[clear_end:]"""
+          if text.count(old_block) != 1:
+              raise SystemExit('profile-scoped activity block anchor mismatch')
+          p.write_text(text.replace(old_block, new_block, 1))
           PY
 
       - name: Apply deterministic patch
