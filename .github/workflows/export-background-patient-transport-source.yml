@@ -1,0 +1,29 @@
+name: Export background patient transport source
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/export-background-patient-transport-source.yml
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Stage trusted main
+        shell: bash
+        run: |
+          mkdir -p source
+          tar --exclude=.git --exclude=source -cf - . | tar -xf - -C source
+      - uses: actions/upload-artifact@v4
+        with:
+          name: background-patient-transport-source
+          path: source
+          retention-days: 1
