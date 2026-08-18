@@ -41,3 +41,10 @@ expect(!uploadHandler.includes('payload.token'), 'Private upload handler must no
 if private.count(old_token) != 1:
     raise SystemExit('private upload token regression anchor mismatch')
 private_path.write_text(private.replace(old_token, new_token, 1))
+
+logger_path = Path('scripts/check-mission-user-logger.mjs')
+logger = logger_path.read_text()
+if logger.count("1.1.6-private-profile-1") != 1:
+    raise SystemExit('mission logger backend build regression anchor mismatch')
+logger = logger.replace("1.1.6-private-profile-1", "1.1.9-activity-recorder-2", 1)
+logger_path.write_text(logger)
