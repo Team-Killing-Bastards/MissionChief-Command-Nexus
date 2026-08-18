@@ -161,8 +161,7 @@ source = replaceFunction(
         });
 
         if (maximumCarsToTow > 0) {
-            // The user's fleet uses the larger flatbed recovery vehicle, which can tow 2 cars.
-            // 1-2 cars = 1 flatbed, 3-4 cars = 2 flatbeds, etc.
+            // Existing rule: the larger Flatbed Recovery vehicle can tow two cars.
             const flatbedsNeeded = Math.ceil(maximumCarsToTow / 2);
 
             rows.push({
@@ -171,7 +170,11 @@ source = replaceFunction(
             });
 
             if (mfDebugEnabled) {
-                debugLog('LIVE TOW', \`Maximum cars to tow=\${maximumCarsToTow} -> Flatbed Recovery Vehicle x\${flatbedsNeeded}\`);
+                debugLog(
+                    'LIVE TOW',
+                    'Maximum cars to tow=' + maximumCarsToTow +
+                        ' -> Flatbed Recovery Vehicle x' + flatbedsNeeded
+                );
             }
         }
 
@@ -189,7 +192,11 @@ source = replaceFunction(
                 const sourceLabel = maximumTrucksToTow > 0
                     ? 'Maximum'
                     : 'Minimum fallback';
-                debugLog('LIVE TOW', \`\${sourceLabel} trucks to tow=\${trucksToTow} -> HGV Recovery x\${trucksToTow}\`);
+                debugLog(
+                    'LIVE TOW',
+                    sourceLabel + ' trucks to tow=' + trucksToTow +
+                        ' -> HGV Recovery x' + trucksToTow
+                );
             }
         }
 
@@ -232,35 +239,55 @@ source = replaceExactlyOnce(
 
 await writeFile(sourcePath, source, 'utf8');
 
-const regression = `#!/usr/bin/env node
+const regression = String.raw`#!/usr/bin/env node
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 
 const source = await readFile('src/missionchief-command-nexus.user.js', 'utf8');
-const fail = message => { console.error(\`ERROR: \${message}\`); process.exit(1); };
+const fail = message => { console.error('ERROR: ' + message); process.exit(1); };
 const expect = (condition, message) => { if (!condition) fail(message); };
 
 function extractFunction(name) {
-  const marker = \`function \${name}(\`;
+  const marker = 'function ' + name + '(';
   const start = source.indexOf(marker);
-  if (start < 0) fail(\`Unable to find \${name}\`);
-  const lineStart = source.lastIndexOf('\\n', start) + 1;
+  if (start < 0) fail('Unable to find ' + name);
+  const lineStart = source.lastIndexOf('\n', start) + 1;
   const brace = source.indexOf('{', start);
-  let depth = 0, quote = '', escaped = false, lineComment = false, blockComment = false, regex = false, regexClass = false;
+  let depth = 0;
+  let quote = '';
+  let escaped = false;
+  let lineComment = false;
+  let blockComment = false;
+  let regex = false;
+  let regexClass = false;
+
   for (let i = brace; i < source.length; i += 1) {
-    const c = source[i], n = source[i + 1] || '';
-    if (lineComment) { if (c === '\\n') lineComment = false; continue; }
+    const c = source[i];
+    const n = source[i + 1] || '';
+    if (lineComment) { if (c === '\n') lineComment = false; continue; }
     if (blockComment) { if (c === '*' && n === '/') { blockComment = false; i += 1; } continue; }
-    if (quote) { if (escaped) escaped = false; else if (c === '\\\\') escaped = true; else if (c === quote) quote = ''; continue; }
-    if (regex) { if (escaped) escaped = false; else if (c === '\\\\') escaped = true; else if (c === '[') regexClass = true; else if (c === ']') regexClass = false; else if (c === '/' && !regexClass) regex = false; continue; }
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (c === '\\') escaped = true;
+      else if (c === quote) quote = '';
+      continue;
+    }
+    if (regex) {
+      if (escaped) escaped = false;
+      else if (c === '\\') escaped = true;
+      else if (c === '[') regexClass = true;
+      else if (c === ']') regexClass = false;
+      else if (c === '/' && !regexClass) regex = false;
+      continue;
+    }
     if (c === '/' && n === '/') { lineComment = true; i += 1; continue; }
     if (c === '/' && n === '*') { blockComment = true; i += 1; continue; }
-    if (c === "'" || c === '"' || c === '\\`') { quote = c; continue; }
-    if (c === '/' && /[=(,:;!&|?{}\\[\\]\\n]/.test(source[i - 1] || '\\n')) { regex = true; continue; }
+    if (c === "'" || c === '"') { quote = c; continue; }
+    if (c === '/' && /[=(,:;!&|?{}\[\]\n]/.test(source[i - 1] || '\n')) { regex = true; continue; }
     if (c === '{') depth += 1;
     if (c === '}' && --depth === 0) return source.slice(lineStart, i + 1);
   }
-  fail(\`Unterminated \${name}\`);
+  fail('Unterminated ' + name);
 }
 
 function makeDocument(entries) {
@@ -301,29 +328,29 @@ const supplied = makeDocument([
   ['Maximum amount of trucks to tow', '1'],
 ]);
 context.result = context.extractTowCarRequirementRows(supplied);
-expect(context.result.length === 1, \`Supplied min/max fixture should yield one tow row, got \${JSON.stringify(context.result)}\`);
+expect(context.result.length === 1, 'Supplied min/max fixture should yield one tow row: ' + JSON.stringify(context.result));
 expect(context.result[0].unitName === 'Trucks to tow', 'Supplied fixture did not normalize to Trucks to tow');
-expect(Number(context.result[0].stillNeeded) === 1, \`Supplied fixture should require one HGV Recovery, got \${JSON.stringify(context.result)}\`);
+expect(Number(context.result[0].stillNeeded) === 1, 'Supplied fixture should require one HGV Recovery: ' + JSON.stringify(context.result));
 
 const maximumWins = makeDocument([
   ['Minimum amount of trucks to tow', '2'],
   ['Maximum amount of trucks to tow', '3'],
 ]);
 context.result = context.extractTowCarRequirementRows(maximumWins);
-expect(context.result.length === 1 && Number(context.result[0].stillNeeded) === 3, \`Maximum trucks must win without min+max summing: \${JSON.stringify(context.result)}\`);
+expect(context.result.length === 1 && Number(context.result[0].stillNeeded) === 3, 'Maximum trucks must win without min+max summing: ' + JSON.stringify(context.result));
 
 const minimumFallback = makeDocument([
   ['Minimum amount of trucks to tow', '2'],
 ]);
 context.result = context.extractTowCarRequirementRows(minimumFallback);
-expect(context.result.length === 1 && Number(context.result[0].stillNeeded) === 2, \`Minimum trucks should be fallback only when maximum is absent: \${JSON.stringify(context.result)}\`);
+expect(context.result.length === 1 && Number(context.result[0].stillNeeded) === 2, 'Minimum trucks should be fallback only when maximum is absent: ' + JSON.stringify(context.result));
 
 const carControl = makeDocument([
   ['Maximum amount of cars to tow', '3'],
 ]);
 context.result = context.extractTowCarRequirementRows(carControl);
-expect(context.result.length === 1, \`Car towing control lost its single requirement: \${JSON.stringify(context.result)}\`);
-expect(context.result[0].unitName === 'Cars to tow' && Number(context.result[0].stillNeeded) === 2, \`Existing flatbed 2-cars-per-vehicle rule changed: \${JSON.stringify(context.result)}\`);
+expect(context.result.length === 1, 'Car towing control lost its single requirement: ' + JSON.stringify(context.result));
+expect(context.result[0].unitName === 'Cars to tow' && Number(context.result[0].stillNeeded) === 2, 'Existing flatbed 2-cars-per-vehicle rule changed: ' + JSON.stringify(context.result));
 
 for (const value of [
   'Trucks to tow',
@@ -332,7 +359,7 @@ for (const value of [
   'Minimum amount of trucks to tow',
   'Required Maximum amount of HGVs to tow',
 ]) {
-  expect(context.isHgvTowRequirementName(value), \`HGV tow classifier rejected \${value}\`);
+  expect(context.isHgvTowRequirementName(value), 'HGV tow classifier rejected ' + value);
 }
 
 expect(source.includes(".includes('106')"), 'Exact type-106 HGV Recovery selector is missing');
