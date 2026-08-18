@@ -40,6 +40,27 @@ jobs:
       - name: Apply feature patch
         run: node scripts/temporary-hgv-tow-other-information-builder.mjs
 
+      - name: Update current developer handoff baseline
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('docs/DEVELOPER_HANDOFF.md')
+          text = path.read_text(encoding='utf-8')
+          old_version = '| Command Nexus version | `1.1.7` |'
+          new_version = '| Command Nexus version | `1.1.8` |'
+          old_mf = '| Mission Finder baseline | `V10.7.5` |'
+          new_mf = '| Mission Finder baseline | `V10.7.6` |'
+          if text.count(old_version) != 1:
+              raise SystemExit(f'Expected one current Command Nexus handoff row, found {text.count(old_version)}')
+          if text.count(old_mf) != 1:
+              raise SystemExit(f'Expected one current Mission Finder handoff row, found {text.count(old_mf)}')
+          path.write_text(
+              text.replace(old_version, new_version).replace(old_mf, new_mf),
+              encoding='utf-8'
+          )
+          PY
+
       - name: Prepare release version
         run: |
           node scripts/prepare-release.mjs \
