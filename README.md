@@ -19,7 +19,7 @@
 </tr>
 </table>
 
-**Current version:** `1.1.6` · **Mission Finder engine:** `V10.7.4` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
+**Current version:** `1.1.7` · **Mission Finder engine:** `V10.7.5` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)
@@ -208,7 +208,7 @@ Deployment and administration are documented in the [Google Apps Script logger g
 
 | Environment | Status | Command experience |
 |---|---|---|
-| **Desktop browser** | Primary | Complete Resource Administration and Mission Operations experience, compact shell and attached Vehicle Load drawer |
+| **Desktop browser** | Primary | Complete Resource Administration and Mission Operations experience, compact shell, attached Vehicle Load drawer and live Patient Transfers worker drawer |
 | **iPhone Safari website** | Supported | Dedicated Mission / Vehicle launcher, two-column touch actions, native Unit Quick Select disclosure, safe-area and dynamic-viewport ownership |
 | **iPad Safari website** | Supported | Touch-capable desktop-site detection, responsive Resource Administration and active-mission Unit Finder selection |
 | **Chrome / Firefox / Edge on iOS** | Separate | Safari-specific paths do not activate merely because the device runs iOS |
