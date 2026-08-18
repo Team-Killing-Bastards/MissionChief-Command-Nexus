@@ -37,7 +37,7 @@ assert.match(helperBody, /ACTIVE/);
 
 assert.match(
   backend,
-  /buildId: '1\.1\.2-dashboard-guard-1'/
+  /buildId: '1\.1\.6-private-profile-1'/
 );
 
 console.log(

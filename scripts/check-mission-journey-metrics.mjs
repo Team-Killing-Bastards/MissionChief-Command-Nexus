@@ -181,7 +181,7 @@ for (const token of [
 }
 
 for (const token of [
-  "buildId: '1.1.2-dashboard-guard-1'",
+  "buildId: '1.1.6-private-profile-1'",
   "'dispatch-journey-metrics'",
   "'estimated_distance_km'",
   "'estimated_eta_seconds'",

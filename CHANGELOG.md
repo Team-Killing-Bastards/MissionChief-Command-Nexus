@@ -6,7 +6,26 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
-No changes have been queued after `1.1.5`.
+No changes have been queued after `1.1.6`.
+
+## [1.1.6] - 2026-08-18
+
+### Changed
+
+- Replaced one-time pairing codes and per-device upload tokens with a deliberately simple private logger setup: paste a private Google Apps Script `/exec` URL, choose **Marty** or **Conroy**, and save. The same setup works on any browser or computer.
+- Removed the public built-in logger endpoint from the userscript. A newly created Apps Script deployment URL is now the credential and must remain private.
+- The backend resolves the submitted user name against one exact active row in the workbook `Players` tab, assigns the authoritative player ID server-side and keeps the browser-generated device ID only for diagnostics.
+
+### Migration
+
+- Saving the first v1.1.6 logger setup removes the old browser token and clears that browser's legacy queue, pending batch, observation dedupe, mission registry and upload lock. Existing spreadsheet history is left untouched.
+- Legacy `pair` and `revoke` web actions return `PAIRING_DISABLED`; no token expiry or per-device revocation exists in the private-URL mode. Rotating the private URL is the recovery action if it is disclosed.
+
+### Security and compatibility
+
+- This model is intentionally suitable only for the two trusted users approved for this deployment. Anyone who obtains the private URL can submit as either configured active user. The URL must not be committed, posted in Discord or included in screenshots.
+- A new Apps Script **deployment** is required so the old public endpoint is not reused. The existing workbook schema, dashboard, batch dedupe, 40-event server limit, multi-batch drain, weekly archive and journey processing remain compatible.
+- Added `scripts/check-private-url-logger-profile.mjs` and updated the permanent Mission Analytics Logger regression. Increased Command Nexus from `1.1.5` to `1.1.6` and Mission Finder from `V10.7.3` to `V10.7.4`; all other component versions remain unchanged.
 
 ## [1.1.5] - 2026-08-18
 

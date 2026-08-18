@@ -124,13 +124,13 @@ requireText(source, 'MF_MISSION_LOGGER_MAX_QUEUE_CHARS = 3000000', 'hard byte bo
 requireText(source, 'MF_MISSION_LOGGER_BATCH_SIZE = 40', 'bounded batch size');
 requireText(source, 'MF_MISSION_LOGGER_DISPATCH_DEDUPE_MS =\n        15000', '15-second dispatch retry guard');
 requireText(source, "'mf_mission_logger_last_dispatch_v1'", 'persistent dispatch retry guard');
-requireText(
-  source,
-  "const MF_MISSION_LOGGER_DEFAULT_ENDPOINT =\n        'https://script.google.com/macros/s/",
-  'built-in deployed Apps Script endpoint'
+requireText(source, "'mf_mission_logger_profile_v2'", 'private URL profile storage');
+expect(
+  !source.includes('MF_MISSION_LOGGER_DEFAULT_ENDPOINT'),
+  'The private deployment URL must not be embedded in the public userscript'
 );
 requireText(source, 'Mission Analytics Logger', 'settings surface');
-requireText(source, 'Pair this browser', 'one-time pairing control');
+requireText(source, 'Save logger setup', 'private URL and user setup control');
 requireText(source, 'Queued events:', 'visible outbox status');
 requireText(source, 'Last upload:', 'visible upload status');
 requireText(source, 'exact transaction matching active', 'visible exact-credit status');
@@ -164,10 +164,10 @@ for (const token of [
 }
 
 const messageHandler = extractFunction(source, 'installMissionLoggerMessageHandler');
-expect(messageHandler.includes('isTrustedMissionLoggerResponseOrigin('), 'Pair/upload responses must enforce trusted Google origins');
-expect(messageHandler.includes('data.requestId'), 'Pair/upload responses must be nonce-bound');
-expect(messageHandler.includes('MF_MISSION_LOGGER_MESSAGE_SOURCE'), 'Pair/upload responses must carry the logger source marker');
-expect(messageHandler.includes('isMissionLoggerResponseWindow('), 'Pair/upload responses must come from the request iframe tree');
+expect(messageHandler.includes('isTrustedMissionLoggerResponseOrigin('), 'Logger responses must enforce trusted Google origins');
+expect(messageHandler.includes('data.requestId'), 'Logger responses must be nonce-bound');
+expect(messageHandler.includes('MF_MISSION_LOGGER_MESSAGE_SOURCE'), 'Logger responses must carry the logger source marker');
+expect(messageHandler.includes('isMissionLoggerResponseWindow('), 'Logger responses must come from the request iframe tree');
 
 const responseWindow = extractFunction(source, 'isMissionLoggerResponseWindow');
 expect(responseWindow.includes('frame?.contentWindow'), 'Response-window validation must anchor on the exact request iframe');
@@ -175,17 +175,19 @@ expect(responseWindow.includes('currentWindow.parent'), 'Response-window validat
 expect(responseWindow.includes('currentWindow === expectedWindow'), 'Response-window validation must reach the exact request iframe');
 expect(responseWindow.includes('depth < 6'), 'Response-window validation must keep parent traversal bounded');
 
-const pair = extractFunction(source, 'pairMissionLoggerBrowser');
+const setup = extractFunction(source, 'saveMissionLoggerSetup');
 for (const token of [
-  "submitMissionLoggerRequest(\n            'pair'",
-  'writeMissionLoggerIdentity({',
-  'playerId:',
-  'deviceId,',
-  'token:',
+  'normaliseMissionLoggerEndpoint(',
+  'normaliseMissionLoggerProfileName(',
+  'clearMissionLoggerProfileScopedData()',
+  'writeMissionLoggerIdentity(profile)',
+  'MF_MISSION_LOGGER_LEGACY_IDENTITY_KEY',
   'recordMissionLoggerObservedEvent()',
 ]) {
-  expect(pair.includes(token), `Pairing flow missing ${token}`);
+  expect(setup.includes(token), `Private logger setup flow missing ${token}`);
 }
+expect(!source.includes('Pair this browser'), 'Pairing UI must be removed');
+expect(!source.includes('One-time pairing code'), 'Pairing-code input must be removed');
 
 const sync = extractFunction(source, 'syncMissionLoggerNow');
 for (const token of [
@@ -213,6 +215,9 @@ for (const token of [
 ]) {
   expect(uploadBatch.includes(token), `Retry-safe uploader missing ${token}`);
 }
+expect(uploadBatch.includes('profileName: identity.playerName'), 'Upload must identify the selected private logger user');
+expect(uploadBatch.includes('deviceLabel: identity.deviceLabel'), 'Upload must retain browser diagnostics');
+expect(!uploadBatch.includes('token: identity.token'), 'Upload must not depend on a device token');
 
 const syncTimer = extractFunction(source, 'startMissionLoggerSyncTimer');
 expect(
@@ -881,10 +886,10 @@ expect(cleanup.includes("removeEventListener(\n                'storage'"), 'Log
 expect(cleanup.includes("removeEventListener(\n                'online'"), 'Logger cleanup must remove its connectivity listener');
 expect(cleanup.includes("removeEventListener(\n                'message'"), 'Logger cleanup must remove its response listener');
 
-const disconnect = extractFunction(source, 'disconnectMissionLoggerBrowser');
-expect(disconnect.includes('MF_MISSION_LOGGER_QUEUE_KEY'), 'Disconnect must remove unsent events so profiles cannot inherit another player queue');
-expect(disconnect.includes('MF_MISSION_LOGGER_OBSERVED_KEY'), 'Disconnect must reset player-specific mission observation state');
-expect(disconnect.includes('MF_MISSION_LOGGER_MISSION_REGISTRY_KEY'), 'Disconnect must reset player-specific completion state');
+const forget = extractFunction(source, 'forgetMissionLoggerSetup');
+expect(forget.includes('clearMissionLoggerProfileScopedData()'), 'Forgetting setup must clear the old user queue');
+expect(forget.includes('MF_MISSION_LOGGER_PROFILE_KEY'), 'Forgetting setup must remove the saved user');
+expect(forget.includes('MF_MISSION_LOGGER_ENDPOINT_KEY'), 'Forgetting setup must remove the private URL');
 
 const observed = extractFunction(source, 'recordMissionLoggerObservedEvent');
 expect(
@@ -894,11 +899,11 @@ expect(
 );
 
 for (const token of [
-  "pairingLifetimeHours: 24",
-  "'token_hash'",
-  "'code_hash'",
-  'sha256_(token)',
-  'sha256_(pairingCode)',
+  "buildId: '1.1.6-private-profile-1'",
+  "'private-url-profile'",
+  'resolveActiveLoggerProfile_',
+  'upsertLoggerProfileDevice_',
+  "['identity_mode', 'PRIVATE_URL_AND_PLAYER_NAME'",
   'LockService.getScriptLock()',
   'findAllRowsByValue_(eventSheet, 2, batchId)',
   'getRowsByColumnValue_(unitSheet, 2, batchId)',
@@ -941,6 +946,13 @@ for (const token of [
 
 expect(!backend.includes("'token',\n      'status'"), 'Raw upload tokens must never be workbook columns');
 expect(!backend.includes("'pairing_code'"), 'Raw pairing codes must never be workbook columns');
+
+const backendUpload = extractFunction(backend, 'handleLoggerUpload_');
+expect(backendUpload.includes('payload.profileName || payload.playerName'), 'Backend must accept the selected private logger user');
+expect(backendUpload.includes('resolveActiveLoggerProfile_('), 'Backend must resolve the user from the active Players tab');
+expect(backendUpload.includes('upsertLoggerProfileDevice_('), 'Backend must retain browser diagnostics without authentication');
+expect(!backendUpload.includes('payload.token'), 'Backend upload must not require a device token');
+expect(!backendUpload.includes('authenticateLoggerDevice_('), 'Backend upload must not authenticate by device token');
 
 const preparedRows = extractFunction(backend, 'prepareLoggerBatchRows_');
 expect(preparedRows.includes('rawEvent.advertisedCredits'), 'Backend must store advertised credits');
@@ -1169,4 +1181,4 @@ expect(scopes.includes('https://www.googleapis.com/auth/spreadsheets'), 'Manifes
 expect(scopes.includes('https://www.googleapis.com/auth/drive'), 'Manifest needs Drive backup access');
 expect(scopes.includes('https://www.googleapis.com/auth/script.scriptapp'), 'Manifest needs trigger administration access');
 
-console.log('Mission user logger pairing, queue, dispatch capture, Google sync and backend checks passed.');
+console.log('Mission user logger private-profile setup, queue, dispatch capture, Google sync and backend checks passed.');

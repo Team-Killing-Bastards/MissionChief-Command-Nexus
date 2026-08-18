@@ -19,7 +19,7 @@
 </tr>
 </table>
 
-**Current version:** `1.1.5` · **Mission Finder engine:** `V10.7.3` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
+**Current version:** `1.1.6` · **Mission Finder engine:** `V10.7.4` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)
@@ -191,14 +191,14 @@ Unit Finder prepares. Mission Update reconciles. Auto Mode checks readiness and 
 
 ## Opt-in mission analytics
 
-- **Mission Analytics Logger** is disabled by default. A player must enable it and redeem a one-use pairing code before any event can enter the local outbox.
+- **Mission Analytics Logger** is disabled by default. A user pastes the new private Apps Script `/exec` URL, chooses Marty or Conroy and saves the setup before any event can enter the local outbox.
 - Pairing assigns one stable player profile and a separate revocable identity to every browser/origin, so multiple players and multiple devices remain distinct in the same backend workbook.
 - The logger records mission identity, advertised value, live demand, patient/prisoner counts, available generator information and the exact selected vehicle IDs, types, names, stations and status for native manual, shared, Auto Mode and Ally Steal dispatch controls. When MissionChief exposes them, each selected row also contributes its dispatch-time estimated route distance and ETA; missing values stay blank.
 - A persistent bounded queue sends batches every five minutes. Stable batch IDs and independent backend deduplication make retries safe, including repair when an earlier write stopped before all dispatched-unit rows were stored.
 - MissionChief's native finish callback records completion for missions dispatched by the paired browser. Mission Summary exposes first observed, first unit sent, completion, response time and mission duration even after the mission closes.
 - After completion, Nexus reads the signed-in player's native Credits list locally and records an award only for the same mission ID and title, or a unique title/time match. Ambiguous transactions remain `PENDING_TRANSACTION`.
 - Raw Mission Events, Dispatch Units and Uploads move into verified ISO-week archive spreadsheets. Compact Dashboard Data and weekly player/station Journey Data remain live across all weeks, preserving placement analytics without retaining every raw unit row in the master workbook.
-- Passwords, cookies, personnel names and the full Credits ledger are never uploaded. The backend stores hashes rather than raw pairing codes or device tokens and supports individual-device revocation.
+- Passwords, cookies, personnel names and the full Credits ledger are never uploaded. The private URL is the credential; device IDs are retained only for diagnostics and there is no token expiry or per-device revocation.
 
 Deployment and administration are documented in the [Google Apps Script logger guide](integrations/google-apps-script/README.md).
 
@@ -328,7 +328,7 @@ Validation covers JavaScript syntax, metadata, component versions, the entire pe
 
 ## On the command horizon
 
-Version `1.1.5` extends [issue #334's opt-in Mission Analytics Logger](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/334) with opt-in background patient transports, fast loss-resistant logger backlog draining, true current-player mission-generation capture, logger-aware manual and automatic dispatch routes, per-unit dispatch-time route distance/ETA evidence, and dashboard views for mission demand and station placement. Secure pairing, bounded Google sync, exact dispatch snapshots, mission timing, weekly archives, evidence-backed awarded credits and offline completion recovery remain in place.
+Version `1.1.6` extends [issue #334's opt-in Mission Analytics Logger](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/334) with a private-URL plus selected-user logger profile that works across devices, opt-in background patient transports, fast loss-resistant backlog draining, true current-player mission-generation capture, logger-aware manual and automatic dispatch routes, per-unit dispatch-time route distance/ETA evidence, and dashboard views for mission demand and station placement. Bounded Google sync, exact dispatch snapshots, mission timing, weekly archives, evidence-backed awarded credits and offline completion recovery remain in place.
 
 The [issue tracker](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues) remains the authoritative queue. The [roadmap](docs/ROADMAP.md) records longer-lived engineering priorities.
 

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.1.5
+// @version      1.1.6
 // @description  Unified MissionChief UK toolkit for mission dispatch, resource administration, trained-personnel assignment and opt-in mission analytics.
 // @author       MartyBlyth
 // @license      MIT
@@ -12454,7 +12454,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.7.3
+         * MODULE 2: MISSION FINDER V10.7.4
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -14296,15 +14296,19 @@
     const SESSION_STATS_KEY = 'mf_session_stats_v1';
     const SESSION_REFRESH_FLAG = 'mf_session_manual_refresh_checked';
     const MF_MISSION_LOGGER_SCHEMA_VERSION = 1;
-    const MF_MISSION_LOGGER_CLIENT_VERSION = '1.1.5';
+    const MF_MISSION_LOGGER_CLIENT_VERSION = '1.1.6';
     const MF_MISSION_LOGGER_MISSION_FINDER_VERSION =
-        '10.7.3';
+        '10.7.4';
     const MF_MISSION_LOGGER_ENABLED_KEY =
         'mf_mission_logger_enabled_v1';
     const MF_MISSION_LOGGER_ENDPOINT_KEY =
         'mf_mission_logger_endpoint_v1';
-    const MF_MISSION_LOGGER_IDENTITY_KEY =
+    const MF_MISSION_LOGGER_PROFILE_KEY =
+        'mf_mission_logger_profile_v2';
+    const MF_MISSION_LOGGER_LEGACY_IDENTITY_KEY =
         'mf_mission_logger_identity_v1';
+    const MF_MISSION_LOGGER_PROFILE_NAMES =
+        Object.freeze(['Marty', 'Conroy']);
     const MF_MISSION_LOGGER_QUEUE_KEY =
         'mf_mission_logger_queue_v1';
     const MF_MISSION_LOGGER_PENDING_BATCH_KEY =
@@ -14360,8 +14364,6 @@
         7 * 24 * 60 * 60 * 1000;
     const MF_MISSION_LOGGER_OBSERVED_MAX_ENTRIES = 5000;
     const MF_MISSION_LOGGER_GENERATION_ARM_DELAY_MS = 1500;
-    const MF_MISSION_LOGGER_DEFAULT_ENDPOINT =
-        'https://script.google.com/macros/s/AKfycbxYE6DOCm8rNk1BAO7hL9hN93vpQmrWm4zfkh-DhXf7mmaBdeCHSxSeyOlMahwaUiT-/exec';
     const MF_MISSION_LOGGER_MESSAGE_SOURCE =
         'missionchief-nexus-logger';
     let mfMissionLoggerEnabled =
@@ -22590,7 +22592,7 @@ function isRoadRailUnitVehicleCheckbox(input) {
                 <span>Send my mission analytics automatically</span>
             </label>
             <label class="mf2026-small" style="display:block;margin-top:8px;">
-                Google logger endpoint
+                Private Google logger URL
                 <input id="mf-mission-logger-endpoint"
                        type="url"
                        inputmode="url"
@@ -22600,26 +22602,24 @@ function isRoadRailUnitVehicleCheckbox(input) {
                        value="${escapeHtml(mfMissionLoggerEndpoint)}"
                        style="width:100%;box-sizing:border-box;margin-top:4px;">
             </label>
-            <div id="mf-mission-logger-profile" class="mf2026-small" style="margin-top:8px;"></div>
-            <div id="mf-mission-logger-state" class="mf2026-small" style="margin-top:3px;"></div>
             <label class="mf2026-small" style="display:block;margin-top:8px;">
-                One-time pairing code
-                <input id="mf-mission-logger-code"
-                       type="text"
-                       inputmode="text"
-                       autocomplete="one-time-code"
-                       autocapitalize="characters"
-                       spellcheck="false"
-                       maxlength="48"
-                       placeholder="XXXX-XXXX-XXXX"
-                       style="width:100%;box-sizing:border-box;margin-top:4px;text-transform:uppercase;">
+                User
+                <select id="mf-mission-logger-player"
+                        style="width:100%;box-sizing:border-box;margin-top:4px;color:black;padding:4px;border-radius:4px;border:none;">
+                    <option value="">Choose user</option>
+                    ${MF_MISSION_LOGGER_PROFILE_NAMES.map(name => `
+                        <option value="${escapeHtml(name)}">${escapeHtml(name)}</option>
+                    `).join('')}
+                </select>
             </label>
-            <button id="mf-mission-logger-pair"
+            <button id="mf-mission-logger-save"
                     type="button"
                     class="mf2026-button"
                     style="width:100%;margin-top:7px;background:#0d6efd;color:white;">
-                Pair this browser
+                Save logger setup
             </button>
+            <div id="mf-mission-logger-profile" class="mf2026-small" style="margin-top:8px;"></div>
+            <div id="mf-mission-logger-state" class="mf2026-small" style="margin-top:3px;"></div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">
                 <button id="mf-mission-logger-sync"
                         type="button"
@@ -22627,11 +22627,11 @@ function isRoadRailUnitVehicleCheckbox(input) {
                         style="background:#198754;color:white;">
                     Sync now
                 </button>
-                <button id="mf-mission-logger-disconnect"
+                <button id="mf-mission-logger-forget"
                         type="button"
                         class="mf2026-button"
                         style="background:#6c757d;color:white;">
-                    Disconnect
+                    Forget setup
                 </button>
             </div>
             <div id="mf-mission-logger-queue" class="mf2026-small" style="margin-top:7px;"></div>
@@ -22639,10 +22639,10 @@ function isRoadRailUnitVehicleCheckbox(input) {
             <div id="mf-mission-logger-credit-status" class="mf2026-small" style="margin-top:2px;"></div>
             <div id="mf-mission-logger-error" class="mf2026-small mf2026-warn" style="margin-top:4px;" hidden></div>
             <div class="mf2026-small" style="margin-top:7px;">
-                Records each new mission generated for this player from MissionChief's native mission list, plus mission identifiers/URLs, advertised and exact awarded value, requirements, current casualty counts, available generator information, selected vehicle IDs/types/names and MissionChief's dispatch-time estimated route distance/ETA for each selected unit. Exact awards are matched locally against MissionChief's own Credits transactions; the rest of the account ledger is never uploaded. Missed completions are recovered from exact MissionChief credit transactions when this browser reconnects. Uploads use a persistent five-minute batch queue. Passwords, cookies and personnel names are never collected.
+                Records each new mission generated for the selected user from MissionChief's native mission list, plus mission identifiers/URLs, advertised and exact awarded value, requirements, current casualty counts, available generator information, selected vehicle IDs/types/names and MissionChief's dispatch-time estimated route distance/ETA for each selected unit. Exact awards are matched locally against MissionChief's own Credits transactions; the rest of the account ledger is never uploaded. Missed completions are recovered from exact MissionChief credit transactions when this browser reconnects. Uploads use a persistent five-minute batch queue. Passwords, cookies and personnel names are never collected.
             </div>
             <div class="mf2026-small" style="margin-top:4px;">
-                Each paired browser has its own player identity. Disconnecting removes its credential and any unsent events from this browser.
+                The private URL and selected user are the complete logger setup. There is no pairing code or expiring device token. The same setup works on any browser or computer. Saving a different URL or user clears this browser's old queued logger data so it cannot be attributed to the wrong person.
             </div>
         `;
         advancedBody.appendChild(missionLoggerBox);
@@ -22655,21 +22655,21 @@ function isRoadRailUnitVehicleCheckbox(input) {
             missionLoggerBox.querySelector(
                 '#mf-mission-logger-endpoint'
             );
-        const missionLoggerCodeInput =
+        const missionLoggerPlayerSelect =
             missionLoggerBox.querySelector(
-                '#mf-mission-logger-code'
+                '#mf-mission-logger-player'
             );
-        const missionLoggerPairButton =
+        const missionLoggerSaveButton =
             missionLoggerBox.querySelector(
-                '#mf-mission-logger-pair'
+                '#mf-mission-logger-save'
             );
         const missionLoggerSyncButton =
             missionLoggerBox.querySelector(
                 '#mf-mission-logger-sync'
             );
-        const missionLoggerDisconnectButton =
+        const missionLoggerForgetButton =
             missionLoggerBox.querySelector(
-                '#mf-mission-logger-disconnect'
+                '#mf-mission-logger-forget'
             );
 
         missionLoggerToggle?.addEventListener(
@@ -22697,71 +22697,42 @@ function isRoadRailUnitVehicleCheckbox(input) {
             }
         );
 
-        function saveMissionLoggerEndpointInput() {
-            const raw = String(
-                missionLoggerEndpointInput?.value || ''
-            ).trim();
-            const endpoint =
-                normaliseMissionLoggerEndpoint(raw);
-
-            if (raw && !endpoint) {
-                writeMissionLoggerState({
-                    lastError:
-                        'Use the deployed Google Apps Script /exec endpoint.'
-                });
-                return false;
-            }
-
-            mfMissionLoggerEndpoint = endpoint;
-            localStorage.setItem(
-                MF_MISSION_LOGGER_ENDPOINT_KEY,
-                endpoint
-            );
-            writeMissionLoggerState({
-                lastError: ''
-            });
-            startMissionLoggerSyncTimer();
-            return true;
-        }
-
-        missionLoggerEndpointInput?.addEventListener(
-            'change',
-            saveMissionLoggerEndpointInput
-        );
-
-        missionLoggerPairButton?.addEventListener(
+        missionLoggerSaveButton?.addEventListener(
             'click',
-            async function() {
-                if (!saveMissionLoggerEndpointInput()) {
+            function() {
+                const endpoint = normaliseMissionLoggerEndpoint(
+                    missionLoggerEndpointInput?.value
+                );
+                const playerName =
+                    normaliseMissionLoggerProfileName(
+                        missionLoggerPlayerSelect?.value
+                    );
+
+                if (!endpoint) {
+                    writeMissionLoggerState({
+                        lastError:
+                            'Enter the private deployed Google Apps Script /exec URL.'
+                    });
+                    renderMissionLoggerStatus();
+                    return;
+                }
+                if (!playerName) {
+                    writeMissionLoggerState({
+                        lastError:
+                            'Choose Marty or Conroy before saving the logger setup.'
+                    });
+                    renderMissionLoggerStatus();
                     return;
                 }
 
-                const originalText = this.textContent;
-                this.disabled = true;
-                this.textContent = 'Pairing...';
-
-                try {
-                    const response =
-                        await pairMissionLoggerBrowser(
-                            missionLoggerCodeInput?.value
-                        );
-                    if (missionLoggerCodeInput) {
-                        missionLoggerCodeInput.value = '';
-                    }
-                    updateStatusBox(
-                        `Mission logger paired to ${response.playerName || response.playerId}.`
-                    );
-                } catch (error) {
-                    writeMissionLoggerState({
-                        lastError: String(
-                            error?.message ||
-                            'Mission logger pairing failed.'
-                        ).slice(0, 500)
-                    });
-                } finally {
-                    this.textContent = originalText;
-                    renderMissionLoggerStatus();
-                }
+                const profile = saveMissionLoggerSetup({
+                    endpoint,
+                    playerName
+                });
+                updateStatusBox(
+                    `Mission logger setup saved for ${profile.playerName}.`
+                );
+                renderMissionLoggerStatus();
             }
         );
 
@@ -22791,16 +22762,16 @@ function isRoadRailUnitVehicleCheckbox(input) {
             }
         );
 
-        missionLoggerDisconnectButton?.addEventListener(
+        missionLoggerForgetButton?.addEventListener(
             'click',
             async function() {
                 const originalText = this.textContent;
                 this.disabled = true;
-                this.textContent = 'Disconnecting...';
-                await disconnectMissionLoggerBrowser();
+                this.textContent = 'Forgetting...';
+                await forgetMissionLoggerSetup();
                 this.textContent = originalText;
                 updateStatusBox(
-                    'Mission logger disconnected from this browser.'
+                    'Mission logger setup removed from this browser.'
                 );
                 renderMissionLoggerStatus();
             }
@@ -25641,42 +25612,80 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
     mfMissionLoggerEndpoint = normaliseMissionLoggerEndpoint(
         localStorage.getItem(
             MF_MISSION_LOGGER_ENDPOINT_KEY
-        ) || MF_MISSION_LOGGER_DEFAULT_ENDPOINT
+        ) || ''
     );
+
+    function normaliseMissionLoggerProfileName(value) {
+        const target = String(value || '')
+            .replace(/\u00a0/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .toLowerCase();
+
+        return MF_MISSION_LOGGER_PROFILE_NAMES.find(name => {
+            return name.toLowerCase() === target;
+        }) || '';
+    }
+
+    function readLegacyMissionLoggerIdentity() {
+        try {
+            const parsed = JSON.parse(
+                localStorage.getItem(
+                    MF_MISSION_LOGGER_LEGACY_IDENTITY_KEY
+                ) || 'null'
+            );
+            if (!parsed || typeof parsed !== 'object') {
+                return null;
+            }
+            const deviceId = String(parsed.deviceId || '');
+            return /^[A-Za-z0-9_-]{8,160}$/.test(deviceId)
+                ? { deviceId }
+                : null;
+        } catch (_error) {
+            return null;
+        }
+    }
 
     function readMissionLoggerIdentity() {
         try {
             const parsed = JSON.parse(
                 localStorage.getItem(
-                    MF_MISSION_LOGGER_IDENTITY_KEY
+                    MF_MISSION_LOGGER_PROFILE_KEY
                 ) || 'null'
+            );
+            const playerName =
+                normaliseMissionLoggerProfileName(
+                    parsed?.playerName
+                );
+            const deviceId = String(
+                parsed?.deviceId || ''
+            );
+            const playerId = String(
+                parsed?.playerId ||
+                playerName.toLowerCase()
             );
 
             if (
                 !parsed ||
                 typeof parsed !== 'object' ||
-                !/^[A-Za-z0-9_-]{3,80}$/.test(
-                    String(parsed.playerId || '')
-                ) ||
-                !/^[A-Za-z0-9_-]{8,160}$/.test(
-                    String(parsed.deviceId || '')
-                ) ||
-                String(parsed.token || '').length < 24
+                !playerName ||
+                !/^[A-Za-z0-9_-]{3,80}$/.test(playerId) ||
+                !/^[A-Za-z0-9_-]{8,160}$/.test(deviceId)
             ) {
                 return null;
             }
 
             return {
-                playerId: String(parsed.playerId),
-                playerName: String(
-                    parsed.playerName || parsed.playerId
-                ).slice(0, 120),
-                deviceId: String(parsed.deviceId),
+                playerId,
+                playerName,
+                deviceId,
                 deviceLabel: String(
-                    parsed.deviceLabel || 'MissionChief browser'
+                    parsed.deviceLabel ||
+                    'MissionChief browser'
                 ).slice(0, 120),
-                token: String(parsed.token),
-                pairedAt: String(parsed.pairedAt || '')
+                configuredAt: String(
+                    parsed.configuredAt || ''
+                )
             };
         } catch (_error) {
             return null;
@@ -25685,9 +25694,108 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
 
     function writeMissionLoggerIdentity(identity) {
         localStorage.setItem(
-            MF_MISSION_LOGGER_IDENTITY_KEY,
+            MF_MISSION_LOGGER_PROFILE_KEY,
             JSON.stringify(identity)
         );
+    }
+
+    function clearMissionLoggerProfileScopedData() {
+        [
+            MF_MISSION_LOGGER_PENDING_BATCH_KEY,
+            MF_MISSION_LOGGER_QUEUE_KEY,
+            MF_MISSION_LOGGER_OBSERVED_KEY,
+            MF_MISSION_LOGGER_LAST_DISPATCH_KEY,
+            MF_MISSION_LOGGER_MISSION_REGISTRY_KEY,
+            MF_MISSION_LOGGER_SYNC_LOCK_KEY,
+            MF_MISSION_LOGGER_DRAIN_REQUEST_KEY
+        ].forEach(key => localStorage.removeItem(key));
+
+        writeMissionLoggerState({
+            lastAttemptAt: 0,
+            lastSuccessAt: 0,
+            lastError: '',
+            lastCreditCheckAt: 0,
+            lastCreditSuccessAt: 0,
+            lastCreditMatchAt: 0,
+            lastCreditError: '',
+            totalMatchedCreditEvents: 0,
+            totalOfflineRecoveredCreditEvents: 0,
+            totalUploadedEvents: 0,
+            droppedEvents: 0,
+            droppedObservationEvents: 0,
+            droppedPriorityEvents: 0,
+            offlineCreditRecoveryVersion: 0,
+            offlineCreditCatchupNextPage: 1,
+            offlineCreditCatchupFloorAt: 0,
+            offlineCreditCatchupDeferred: false,
+            drainRequestedAt: 0,
+            drainMessage: ''
+        });
+    }
+
+    function saveMissionLoggerSetup(options = {}) {
+        const endpoint = normaliseMissionLoggerEndpoint(
+            options.endpoint
+        );
+        const playerName =
+            normaliseMissionLoggerProfileName(
+                options.playerName
+            );
+        if (!endpoint || !playerName) {
+            throw new Error(
+                'A private Google logger URL and valid user are required.'
+            );
+        }
+
+        const existing = readMissionLoggerIdentity();
+        const previousEndpoint =
+            normaliseMissionLoggerEndpoint(
+                localStorage.getItem(
+                    MF_MISSION_LOGGER_ENDPOINT_KEY
+                ) || ''
+            );
+        const legacy = readLegacyMissionLoggerIdentity();
+        const changed =
+            !existing ||
+            existing.playerName !== playerName ||
+            previousEndpoint !== endpoint ||
+            !!legacy;
+
+        if (changed) {
+            clearMissionLoggerProfileScopedData();
+        }
+
+        const profile = {
+            playerId: playerName.toLowerCase(),
+            playerName,
+            deviceId:
+                existing?.deviceId ||
+                legacy?.deviceId ||
+                createMissionLoggerId('device'),
+            deviceLabel: getMissionLoggerDeviceLabel(),
+            configuredAt: new Date().toISOString()
+        };
+
+        writeMissionLoggerIdentity(profile);
+        localStorage.removeItem(
+            MF_MISSION_LOGGER_LEGACY_IDENTITY_KEY
+        );
+        mfMissionLoggerEndpoint = endpoint;
+        localStorage.setItem(
+            MF_MISSION_LOGGER_ENDPOINT_KEY,
+            endpoint
+        );
+        mfMissionLoggerEnabled = true;
+        localStorage.setItem(
+            MF_MISSION_LOGGER_ENABLED_KEY,
+            'true'
+        );
+        writeMissionLoggerState({
+            lastError: ''
+        });
+        startMissionLoggerSyncTimer();
+        recordMissionLoggerObservedEvent();
+        return profile;
     }
 
     function createDefaultMissionLoggerState() {
@@ -26367,79 +26475,6 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
             'MissionChief browser';
     }
 
-    async function pairMissionLoggerBrowser(pairingCode) {
-        const code = String(pairingCode || '')
-            .toUpperCase()
-            .replace(/[^A-Z0-9]/g, '');
-
-        if (code.length < 8 || code.length > 40) {
-            throw new Error(
-                'Enter the one-time pairing code created in the Google logger.'
-            );
-        }
-
-        const existingIdentity =
-            readMissionLoggerIdentity();
-        const deviceId =
-            existingIdentity?.deviceId ||
-            createMissionLoggerId('device');
-        const deviceLabel = getMissionLoggerDeviceLabel();
-        const response = await submitMissionLoggerRequest(
-            'pair',
-            {
-                pairingCode: code,
-                deviceId,
-                deviceLabel
-            }
-        );
-
-        if (
-            !response.token ||
-            !response.playerId ||
-            String(response.token).length < 24
-        ) {
-            throw new Error(
-                'The logger returned an invalid pairing response.'
-            );
-        }
-
-        writeMissionLoggerIdentity({
-            playerId: String(response.playerId),
-            playerName: String(
-                response.playerName || response.playerId
-            ).slice(0, 120),
-            deviceId,
-            deviceLabel,
-            token: String(response.token),
-            pairedAt: String(
-                response.pairedAt || new Date().toISOString()
-            )
-        });
-
-        mfMissionLoggerEnabled = true;
-        localStorage.setItem(
-            MF_MISSION_LOGGER_ENABLED_KEY,
-            'true'
-        );
-        writeMissionLoggerState({
-            lastError: '',
-            lastCreditCheckAt: 0,
-            lastCreditSuccessAt: 0,
-            lastCreditMatchAt: 0,
-            lastCreditError: '',
-            totalMatchedCreditEvents: 0,
-            totalOfflineRecoveredCreditEvents: 0,
-            offlineCreditRecoveryVersion: 0,
-            offlineCreditCatchupNextPage: 1,
-            offlineCreditCatchupFloorAt: 0,
-            offlineCreditCatchupDeferred: false
-        });
-        startMissionLoggerSyncTimer();
-        recordMissionLoggerObservedEvent();
-        renderMissionLoggerStatus();
-        return response;
-    }
-
     function acquireMissionLoggerSyncLock() {
         const now = Date.now();
         const owner = `${MF_INSTANCE_TOKEN}:${createMissionLoggerId('sync')}`;
@@ -26547,9 +26582,9 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
                 return await submitMissionLoggerRequest(
                     'upload',
                     {
-                        token: identity.token,
-                        playerId: identity.playerId,
+                        profileName: identity.playerName,
                         deviceId: identity.deviceId,
+                        deviceLabel: identity.deviceLabel,
                         batchId: pending.batchId,
                         events: batchEvents
                     }
@@ -26952,7 +26987,8 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
                 ![
                     MF_MISSION_LOGGER_ENABLED_KEY,
                     MF_MISSION_LOGGER_ENDPOINT_KEY,
-                    MF_MISSION_LOGGER_IDENTITY_KEY,
+                    MF_MISSION_LOGGER_PROFILE_KEY,
+                    MF_MISSION_LOGGER_LEGACY_IDENTITY_KEY,
                     MF_MISSION_LOGGER_QUEUE_KEY,
                     MF_MISSION_LOGGER_STATE_KEY,
                     MF_MISSION_LOGGER_DRAIN_REQUEST_KEY
@@ -26970,7 +27006,7 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
                     localStorage.getItem(
                         MF_MISSION_LOGGER_ENDPOINT_KEY
                     ) ||
-                    MF_MISSION_LOGGER_DEFAULT_ENDPOINT
+                    ''
                 );
 
             if (MF_IS_TOP_WINDOW) {
@@ -27038,46 +27074,18 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
         );
     }
 
-    async function disconnectMissionLoggerBrowser() {
-        const identity = readMissionLoggerIdentity();
-
-        if (identity && mfMissionLoggerEndpoint) {
-            try {
-                await submitMissionLoggerRequest(
-                    'revoke',
-                    {
-                        token: identity.token,
-                        playerId: identity.playerId,
-                        deviceId: identity.deviceId
-                    }
-                );
-            } catch (_error) {
-                // Local disconnection still removes the credential. The
-                // Google admin sheet can revoke a stranded device explicitly.
-            }
-        }
-
+    async function forgetMissionLoggerSetup() {
+        clearMissionLoggerProfileScopedData();
         localStorage.removeItem(
-            MF_MISSION_LOGGER_IDENTITY_KEY
+            MF_MISSION_LOGGER_PROFILE_KEY
         );
         localStorage.removeItem(
-            MF_MISSION_LOGGER_PENDING_BATCH_KEY
+            MF_MISSION_LOGGER_LEGACY_IDENTITY_KEY
         );
         localStorage.removeItem(
-            MF_MISSION_LOGGER_QUEUE_KEY
+            MF_MISSION_LOGGER_ENDPOINT_KEY
         );
-        localStorage.removeItem(
-            MF_MISSION_LOGGER_OBSERVED_KEY
-        );
-        localStorage.removeItem(
-            MF_MISSION_LOGGER_LAST_DISPATCH_KEY
-        );
-        localStorage.removeItem(
-            MF_MISSION_LOGGER_MISSION_REGISTRY_KEY
-        );
-        localStorage.removeItem(
-            MF_MISSION_LOGGER_SYNC_LOCK_KEY
-        );
+        mfMissionLoggerEndpoint = '';
         mfMissionLoggerEnabled = false;
         localStorage.setItem(
             MF_MISSION_LOGGER_ENABLED_KEY,
@@ -27085,18 +27093,6 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
         );
         stopMissionLoggerSyncTimer();
         stopMissionLoggerCreditReconciliation();
-        writeMissionLoggerState({
-            lastCreditCheckAt: 0,
-            lastCreditSuccessAt: 0,
-            lastCreditMatchAt: 0,
-            lastCreditError: '',
-            totalMatchedCreditEvents: 0,
-            totalOfflineRecoveredCreditEvents: 0,
-            offlineCreditRecoveryVersion: 0,
-            offlineCreditCatchupNextPage: 1,
-            offlineCreditCatchupFloorAt: 0,
-            offlineCreditCatchupDeferred: false
-        });
         renderMissionLoggerStatus();
     }
 
@@ -30868,14 +30864,17 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
         const error = document.getElementById(
             'mf-mission-logger-error'
         );
-        const pairButton = document.getElementById(
-            'mf-mission-logger-pair'
+        const playerSelect = document.getElementById(
+            'mf-mission-logger-player'
+        );
+        const saveButton = document.getElementById(
+            'mf-mission-logger-save'
         );
         const syncButton = document.getElementById(
             'mf-mission-logger-sync'
         );
-        const disconnectButton = document.getElementById(
-            'mf-mission-logger-disconnect'
+        const forgetButton = document.getElementById(
+            'mf-mission-logger-forget'
         );
 
         if (
@@ -30920,12 +30919,21 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
                 mfMissionLoggerEndpoint;
         }
         if (endpointInput) {
-            endpointInput.disabled = !!identity;
+            endpointInput.disabled = mfMissionLoggerSyncActive;
+        }
+        if (
+            playerSelect &&
+            document.activeElement !== playerSelect
+        ) {
+            playerSelect.value = identity?.playerName || '';
+        }
+        if (playerSelect) {
+            playerSelect.disabled = mfMissionLoggerSyncActive;
         }
         if (profile) {
             profile.textContent = identity
-                ? `Paired profile: ${identity.playerName}`
-                : 'Profile: not paired';
+                ? `Logger user: ${identity.playerName}`
+                : 'Logger user: not configured';
         }
         if (status) {
             status.textContent = !mfMissionLoggerEnabled
@@ -30933,7 +30941,7 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
                 : !endpointReady
                     ? 'Setup required: enter the Google logger endpoint.'
                     : !identity
-                        ? 'Setup required: enter a one-time pairing code.'
+                        ? 'Setup required: choose a user and save the logger setup.'
                         : mfMissionLoggerSyncActive
                             ? 'Draining queued logger events...'
                             : queueCount > 0 &&
@@ -30993,7 +31001,7 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
             creditStatus.textContent = !mfMissionLoggerEnabled
                 ? 'Actual credits: logger is off.'
                 : !identity
-                ? 'Actual credits: available after pairing.'
+                ? 'Actual credits: available after logger setup.'
                 : state.lastCreditError
                     ? `Actual credits: transaction check delayed — ${state.lastCreditError}`
                     : catchupDeferredForQueue
@@ -31022,11 +31030,8 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
                 : '';
             error.hidden = !state.lastError;
         }
-        if (pairButton) {
-            pairButton.disabled =
-                !mfMissionLoggerEnabled ||
-                !endpointReady ||
-                !!identity;
+        if (saveButton) {
+            saveButton.disabled = mfMissionLoggerSyncActive;
         }
         if (syncButton) {
             syncButton.disabled =
@@ -31034,8 +31039,9 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
                 !endpointReady ||
                 !identity;
         }
-        if (disconnectButton) {
-            disconnectButton.disabled = !identity;
+        if (forgetButton) {
+            forgetButton.disabled =
+                !identity && !endpointReady;
         }
     }
 
