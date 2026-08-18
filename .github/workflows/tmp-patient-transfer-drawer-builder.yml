@@ -31,11 +31,14 @@ jobs:
           package-manager-cache: false
 
       - name: Build Patient Transfers release candidate
-        run: python3 tmp/build_patient_transfer_drawer.py
+        run: |
+          python3 tmp/build_patient_transfer_drawer.py
+          python3 tmp/fix_patient_transfer_version_markers.py
 
       - name: Remove one-use builder controls
         run: |
           rm -f tmp/build_patient_transfer_drawer.py
+          rm -f tmp/fix_patient_transfer_version_markers.py
           rm -f .github/workflows/tmp-patient-transfer-drawer-builder.yml
 
       - name: Validate exact candidate
