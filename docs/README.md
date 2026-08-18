@@ -1,10 +1,10 @@
 # Command Nexus Documentation
 
-This directory separates current operating guidance from versioned historical records. The current production baseline is Command Nexus `1.1.8` with Mission Finder `V10.7.6`.
+This directory separates current operating guidance from versioned historical records. The current production baseline is Command Nexus `1.1.9` with Mission Finder `V10.7.7`.
 
 ## Current release focus
 
-Version `1.1.8` extends fresh mission-definition parsing so Other information Maximum amount of trucks to tow feeds the existing strict HGV Recovery type-106 path. Minimum amount of trucks to tow is fallback only when Maximum is absent or invalid, and the values are never summed. Existing Flatbed Recovery car towing, Patient Transfers visibility, the private Apps Script URL logger profile and loss-resistant multi-batch drain remain unchanged.
+Version `1.1.9` extends fresh mission-definition parsing so Other information Maximum amount of trucks to tow feeds the existing strict HGV Recovery type-106 path. Minimum amount of trucks to tow is fallback only when Maximum is absent or invalid, and the values are never summed. Existing Flatbed Recovery car towing, Patient Transfers visibility, the private Apps Script URL logger profile and loss-resistant multi-batch drain remain unchanged.
 
 ## Current operational documentation
 
