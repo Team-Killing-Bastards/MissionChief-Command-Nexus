@@ -11,11 +11,12 @@
 
 const MC_LOGGER = Object.freeze({
   schemaVersion: 1,
-  buildId: '1.1.9-activity-recorder-2',
+  buildId: '1.1.10-upload-lock-hotfix-1',
   activitySchemaVersion: 2,
   timezone: 'Europe/London',
   maxPayloadChars: 2800000,
   maxEventsPerBatch: 40,
+  uploadLockWaitMs: 2000,
   maxUnitsPerEvent: 500,
   dispatchDuplicateWindowMs: 15000,
   duplicateScanEventRows: 1000,
@@ -505,7 +506,8 @@ function doGet() {
         'weekly-archive',
         'batch-ledger',
         'activity-recorder',
-        'navbar-profile-id'
+        'navbar-profile-id',
+        'retryable-upload-lock'
       ],
       activitySchemaVersion: MC_LOGGER.activitySchemaVersion,
       time: new Date().toISOString()
@@ -558,10 +560,15 @@ function doPost(event) {
       throw loggerError_('UNKNOWN_ACTION', 'Unknown logger action.');
     }
   } catch (error) {
+    const errorCode = cleanText_(
+      error && error.code ? error.code : 'LOGGER_ERROR',
+      80
+    );
     response = {
       ok: false,
-      code: cleanText_(error && error.code ? error.code : 'LOGGER_ERROR', 80),
-      error: cleanText_(error && error.message ? error.message : String(error), 500)
+      code: errorCode,
+      error: cleanText_(error && error.message ? error.message : String(error), 500),
+      retryable: errorCode === 'LOGGER_BUSY'
     };
   }
 
@@ -706,7 +713,12 @@ function handleLoggerUpload_(payload) {
   }
 
   const lock = LockService.getScriptLock();
-  lock.waitLock(30000);
+  if (!lock.tryLock(MC_LOGGER.uploadLockWaitMs)) {
+    throw loggerError_(
+      'LOGGER_BUSY',
+      'The logger is busy processing another batch. Retry the same batch shortly.'
+    );
+  }
 
   try {
     const spreadsheet = getLoggerSpreadsheet_();

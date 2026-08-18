@@ -28,5 +28,5 @@ const uploadEnd = backend.indexOf('\nfunction ', uploadStart + 'function handleL
 const uploadHandler = backend.slice(uploadStart, uploadEnd);
 expect(uploadStart >= 0 && uploadEnd > uploadStart, 'Private upload handler must be isolatable');
 expect(!uploadHandler.includes('payload.token'), 'Private upload handler must not require upload tokens');
-expect(backend.includes("buildId: '1.1.9-activity-recorder-2'"), 'Activity backend build marker must be current');
+expect(backend.includes("buildId: '1.1.10-upload-lock-hotfix-1'"), 'Activity backend build marker must be current');
 console.log('Private URL + automatic MissionChief profile regression passed.');

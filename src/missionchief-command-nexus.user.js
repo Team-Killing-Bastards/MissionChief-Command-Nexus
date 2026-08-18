@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.1.9
+// @version      1.1.10
 // @description  Unified MissionChief UK toolkit for mission dispatch, resource administration, trained-personnel assignment and opt-in mission analytics.
 // @author       MartyBlyth
 // @license      MIT
@@ -14305,7 +14305,7 @@
     const SESSION_STATS_KEY = 'mf_session_stats_v1';
     const SESSION_REFRESH_FLAG = 'mf_session_manual_refresh_checked';
     const MF_MISSION_LOGGER_SCHEMA_VERSION = 1;
-    const MF_MISSION_LOGGER_CLIENT_VERSION = '1.1.9';
+    const MF_MISSION_LOGGER_CLIENT_VERSION = '1.1.10';
     const MF_MISSION_LOGGER_MISSION_FINDER_VERSION =
         '10.7.7';
     const MF_MISSION_ACTIVITY_BACKEND_V2_KEY =
@@ -14356,7 +14356,7 @@
     const MF_MISSION_LOGGER_CREDIT_RETRY_DELAYS_MS =
         Object.freeze([2500, 15000, 45000]);
     const MF_MISSION_LOGGER_REQUEST_TIMEOUT_MS =
-        30000;
+        120000;
     const MF_MISSION_LOGGER_DISPATCH_DEDUPE_MS =
         15000;
     const MF_MISSION_LOGGER_MAX_QUEUE_EVENTS = 1200;
@@ -14372,8 +14372,10 @@
     const MF_MISSION_LOGGER_DRAIN_REQUEST_KEY =
         'mf_mission_logger_drain_request_v1';
     const MF_MISSION_LOGGER_SYNC_LOCK_LEASE_MS =
-        MF_MISSION_LOGGER_REQUEST_TIMEOUT_MS + 20000;
+        MF_MISSION_LOGGER_REQUEST_TIMEOUT_MS + 30000;
     const MF_MISSION_LOGGER_BATCH_CONFIRM_RETRY_DELAY_MS = 1000;
+    const MF_MISSION_LOGGER_BUSY_RETRY_DELAYS_MS =
+        Object.freeze([2000, 5000, 15000]);
     const MF_MISSION_LOGGER_OBSERVED_RETENTION_MS =
         7 * 24 * 60 * 60 * 1000;
     const MF_MISSION_LOGGER_OBSERVED_MAX_ENTRIES = 5000;
@@ -27516,47 +27518,81 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
     ) {
         let lastError = null;
 
-        for (let attempt = 0; attempt < 2; attempt += 1) {
-            if (!refreshMissionLoggerSyncLock(lockOwner)) {
-                const error = new Error(
-                    'The shared logger upload lock was lost before the batch could be confirmed.'
-                );
-                error.code = 'LOGGER_LOCK_LOST';
-                throw error;
-            }
-
+        for (
+            let busyAttempt = 0;
+            busyAttempt <=
+                MF_MISSION_LOGGER_BUSY_RETRY_DELAYS_MS.length;
+            busyAttempt += 1
+        ) {
             try {
-                return await submitMissionLoggerRequest(
-                    'upload',
-                    {
-                        profileName:
-                            identity.legacyPlayerName ||
-                            identity.playerName,
-                        profileId: identity.playerId,
-                        username: identity.playerName,
-                        deviceId: identity.deviceId,
-                        deviceLabel: identity.deviceLabel,
-                        batchId: pending.batchId,
-                        events: batchEvents
+                for (
+                    let attempt = 0;
+                    attempt < 2;
+                    attempt += 1
+                ) {
+                    if (!refreshMissionLoggerSyncLock(lockOwner)) {
+                        const error = new Error(
+                            'The shared logger upload lock was lost before the batch could be confirmed.'
+                        );
+                        error.code = 'LOGGER_LOCK_LOST';
+                        throw error;
                     }
-                );
+
+                    try {
+                        return await submitMissionLoggerRequest(
+                            'upload',
+                            {
+                                profileName:
+                                    identity.legacyPlayerName ||
+                                    identity.playerName,
+                                profileId: identity.playerId,
+                                username: identity.playerName,
+                                deviceId: identity.deviceId,
+                                deviceLabel: identity.deviceLabel,
+                                batchId: pending.batchId,
+                                events: batchEvents
+                            }
+                        );
+                    } catch (error) {
+                        lastError = error;
+                        if (
+                            String(error?.code || '') !==
+                                'LOGGER_TIMEOUT' ||
+                            attempt > 0
+                        ) {
+                            throw error;
+                        }
+
+                        writeMissionLoggerState({
+                            drainMessage:
+                                'Google is still processing the batch; confirming the same batch ID once more.'
+                        });
+                        await wait(
+                            MF_MISSION_LOGGER_BATCH_CONFIRM_RETRY_DELAY_MS
+                        );
+                    }
+                }
             } catch (error) {
                 lastError = error;
                 if (
                     String(error?.code || '') !==
-                        'LOGGER_TIMEOUT' ||
-                    attempt > 0
+                        'LOGGER_BUSY' ||
+                    busyAttempt >=
+                        MF_MISSION_LOGGER_BUSY_RETRY_DELAYS_MS.length
                 ) {
                     throw error;
                 }
 
+                const retryDelay =
+                    MF_MISSION_LOGGER_BUSY_RETRY_DELAYS_MS[
+                        busyAttempt
+                    ];
                 writeMissionLoggerState({
+                    lastError: '',
                     drainMessage:
-                        'Google is still processing the batch; confirming the same batch ID once more.'
+                        `Google logger is busy; retrying the same batch ID in ${Math.ceil(retryDelay / 1000)}s.`
                 });
-                await wait(
-                    MF_MISSION_LOGGER_BATCH_CONFIRM_RETRY_DELAY_MS
-                );
+                await wait(retryDelay);
             }
         }
 
@@ -58882,6 +58918,10 @@ async function handleAutoPrisonerReleaseAfterActions() {
     function initialize() {
         if (!isMissionPage()) return;
 
+        // The top window owns the single activity recorder even when the
+        // active mission frame owns the heavy Mission Finder runtime.
+        installMissionActivityRecorder();
+
         if (!claimCurrentMissionExecutionOwnership('initialize')) {
             document.getElementById('mission-finder-wrapper')?.remove();
             return;
@@ -58890,7 +58930,6 @@ async function handleAutoPrisonerReleaseAfterActions() {
         synchroniseMissionInstanceState('initialize');
         installMissionLoggerStorageListener();
         installMissionLoggerDispatchCapture();
-        installMissionActivityRecorder();
         recordMissionLoggerObservedEvent();
         cleanupDuplicatePanels();
         scheduleMissionFinderIphoneNativePickerSync(

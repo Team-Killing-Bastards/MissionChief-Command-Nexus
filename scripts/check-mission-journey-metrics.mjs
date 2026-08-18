@@ -181,7 +181,7 @@ for (const token of [
 }
 
 for (const token of [
-  "buildId: '1.1.9-activity-recorder-2'",
+  "buildId: '1.1.10-upload-lock-hotfix-1'",
   "'dispatch-journey-metrics'",
   "'estimated_distance_km'",
   "'estimated_eta_seconds'",

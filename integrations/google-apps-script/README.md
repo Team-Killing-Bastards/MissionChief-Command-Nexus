@@ -15,6 +15,12 @@ This Apps Script project is bound to the private MissionChief analytics workbook
 
 The web-app URL is the credential. Anyone who has it can submit as either active user, which is accepted for this two-person private deployment. Rotate to another new deployment URL if it is disclosed.
 
+## v1.1.10 upload-lock hotfix
+
+For an existing private logger, replace `Code.gs`, then open **Deploy → Manage deployments**, edit the current web-app deployment, select **New version**, and deploy. Editing the existing deployment preserves the saved `/exec` URL. Re-running workbook initialisation is not required for this lock-only backend change.
+
+Build `1.1.10-upload-lock-hotfix-1` waits at most two seconds for the shared upload lock. A busy backend returns retryable `LOGGER_BUSY`; Command Nexus keeps the pending batch intact and retries the same batch ID using bounded backoff. The longer 120-second browser acknowledgement window is compatible before and after this backend deployment.
+
 ## Browser migration
 
 The first saved v1.1.6 setup clears the old local token, queued events, pending batch, observation dedupe, mission registry and upload lock. Existing workbook history remains. This clean reset is deliberate; legacy queued data is not migrated between identities.
@@ -44,5 +50,5 @@ The existing workbook can remain in place. Deploy this backend as a **new deploy
 Current backend build marker:
 
 ```text
-1.1.6-private-profile-1
+1.1.10-upload-lock-hotfix-1
 ```

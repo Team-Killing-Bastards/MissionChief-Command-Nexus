@@ -901,7 +901,7 @@ expect(
 );
 
 for (const token of [
-  "buildId: '1.1.9-activity-recorder-2'",
+  "buildId: '1.1.10-upload-lock-hotfix-1'",
   "'private-url-profile'",
   'resolveActiveLoggerProfile_',
   'upsertLoggerProfileDevice_',

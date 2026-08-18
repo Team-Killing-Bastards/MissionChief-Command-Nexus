@@ -5,7 +5,7 @@ MissionChief Command Nexus is an actively released userscript. This roadmap reco
 **Developer and technical owner:** MartyBlyth  
 **Repository and documentation support:** Conroy1988
 
-## Current production baseline — v1.1.9
+## Current production baseline — v1.1.10
 
 - [x] Publish one canonical userscript on trusted `main`.
 - [x] Release Command Nexus `1.1.9` with Mission Finder `V10.7.7`.
