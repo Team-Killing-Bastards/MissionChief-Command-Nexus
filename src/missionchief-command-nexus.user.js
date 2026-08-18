@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.1.4
+// @version      1.1.5
 // @description  Unified MissionChief UK toolkit for mission dispatch, resource administration, trained-personnel assignment and opt-in mission analytics.
 // @author       MartyBlyth
 // @license      MIT
@@ -12454,7 +12454,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.7.2
+         * MODULE 2: MISSION FINDER V10.7.3
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -12728,6 +12728,18 @@
         }
     })();
 
+    const MF_IS_BACKGROUND_PATIENT_TRANSPORT_FRAME = (() => {
+        try {
+            return window.frameElement?.getAttribute?.(
+                'data-mf-background-patient-transport-worker'
+            ) === 'true';
+        } catch (_error) {
+            return false;
+        }
+    })();
+
+    if (MF_IS_BACKGROUND_PATIENT_TRANSPORT_FRAME) return;
+
     function isMissionPage() {
         return !!document.querySelector('#mission_general_info');
     }
@@ -12756,6 +12768,32 @@
     let mfQueueRestartWaiting = false;
     let mfSilentQueueWatcherTimer = null;
     let mfSilentQueueOpening = false;
+    const MF_BACKGROUND_PATIENT_TRANSPORT_ENABLED_KEY =
+        'mf_background_patient_transport_enabled_v1';
+    const MF_BACKGROUND_PATIENT_TRANSPORT_QUEUE_KEY =
+        'mf_background_patient_transport_queue_v1';
+    const MF_BACKGROUND_PATIENT_TRANSPORT_STATE_KEY =
+        'mf_background_patient_transport_state_v1';
+    const MF_BACKGROUND_PATIENT_TRANSPORT_RECENT_KEY =
+        'mf_background_patient_transport_recent_v1';
+    const MF_BACKGROUND_PATIENT_TRANSPORT_WAKE_SOURCE =
+        'missionchief-nexus-background-patient-transport';
+    const MF_BACKGROUND_PATIENT_TRANSPORT_MAX_QUEUE = 40;
+    const MF_BACKGROUND_PATIENT_TRANSPORT_MAX_ATTEMPTS = 3;
+    const MF_BACKGROUND_PATIENT_TRANSPORT_LOAD_TIMEOUT_MS = 20000;
+    const MF_BACKGROUND_PATIENT_TRANSPORT_CONFIRM_TIMEOUT_MS = 15000;
+    const MF_BACKGROUND_PATIENT_TRANSPORT_RECENT_TTL_MS =
+        30 * 60 * 1000;
+    const MF_BACKGROUND_PATIENT_TRANSPORT_RETRY_DELAYS_MS =
+        Object.freeze([5000, 15000, 45000]);
+    let mfBackgroundPatientTransportEnabled =
+        localStorage.getItem(
+            MF_BACKGROUND_PATIENT_TRANSPORT_ENABLED_KEY
+        ) === 'true';
+    let mfBackgroundPatientTransportWorkerTimer = null;
+    let mfBackgroundPatientTransportWorkerActive = false;
+    let mfBackgroundPatientTransportFrame = null;
+    let mfBackgroundPatientTransportMessageHandler = null;
     let mfGlobalTransportWatcherTimer = null;
     let mfGlobalTransportClicking = false;
     let mfLastTransportFingerprint = '';
@@ -14258,9 +14296,9 @@
     const SESSION_STATS_KEY = 'mf_session_stats_v1';
     const SESSION_REFRESH_FLAG = 'mf_session_manual_refresh_checked';
     const MF_MISSION_LOGGER_SCHEMA_VERSION = 1;
-    const MF_MISSION_LOGGER_CLIENT_VERSION = '1.1.4';
+    const MF_MISSION_LOGGER_CLIENT_VERSION = '1.1.5';
     const MF_MISSION_LOGGER_MISSION_FINDER_VERSION =
-        '10.7.2';
+        '10.7.3';
     const MF_MISSION_LOGGER_ENABLED_KEY =
         'mf_mission_logger_enabled_v1';
     const MF_MISSION_LOGGER_ENDPOINT_KEY =
@@ -14303,9 +14341,16 @@
         30000;
     const MF_MISSION_LOGGER_DISPATCH_DEDUPE_MS =
         15000;
-    const MF_MISSION_LOGGER_MAX_QUEUE_EVENTS = 300;
+    const MF_MISSION_LOGGER_MAX_QUEUE_EVENTS = 1200;
     const MF_MISSION_LOGGER_MAX_QUEUE_CHARS = 3000000;
     const MF_MISSION_LOGGER_BATCH_SIZE = 40;
+    const MF_MISSION_LOGGER_AUTO_DRAIN_MAX_BATCHES = 8;
+    const MF_MISSION_LOGGER_MANUAL_DRAIN_MAX_BATCHES = 12;
+    const MF_MISSION_LOGGER_DRAIN_MAX_MS = 90000;
+    const MF_MISSION_LOGGER_DRAIN_GAP_MS = 250;
+    const MF_MISSION_LOGGER_EAGER_SYNC_THRESHOLD = 20;
+    const MF_MISSION_LOGGER_EAGER_SYNC_DELAY_MS = 1500;
+    const MF_MISSION_LOGGER_DEFERRED_DRAIN_DELAY_MS = 1000;
     const MF_MISSION_LOGGER_OBSERVED_RETENTION_MS =
         7 * 24 * 60 * 60 * 1000;
     const MF_MISSION_LOGGER_OBSERVED_MAX_ENTRIES = 5000;
@@ -14321,6 +14366,9 @@
     let mfMissionLoggerEndpoint = '';
     let mfMissionLoggerSyncTimer = null;
     let mfMissionLoggerInitialSyncTimer = null;
+    let mfMissionLoggerEagerSyncTimer = null;
+    let mfMissionLoggerDeferredDrainTimer = null;
+    let mfMissionLoggerManualDrainRequested = false;
     let mfMissionLoggerSyncActive = false;
     let mfMissionLoggerCreditTimer = null;
     let mfMissionLoggerCreditInitialTimer = null;
@@ -22452,6 +22500,79 @@ function isRoadRailUnitVehicleCheckbox(input) {
             }
         );
 
+        const backgroundPatientTransportBox =
+            document.createElement('div');
+        backgroundPatientTransportBox.id =
+            'mf-background-patient-transport-box';
+        backgroundPatientTransportBox.className =
+            'mf2026-box';
+        backgroundPatientTransportBox.innerHTML = `
+            <div class="mf2026-section-title">Patient Transport</div>
+            <label class="mf2026-checkbox-row mf-dashboard-toggle-row">
+                <input id="mf-background-patient-transport-toggle"
+                       type="checkbox"
+                       ${mfBackgroundPatientTransportEnabled ? 'checked' : ''}>
+                <span>Handle patient transports in the background</span>
+            </label>
+            <div class="mf2026-small" style="margin-top:5px;">
+                While Auto Mode is running, Nexus queues exact Transport Patient requests, sends the patient to the first available hospital in a hidden same-origin worker, and continues the visible mission queue. Prisoner transports remain foreground and unchanged.
+            </div>
+            <div id="mf-background-patient-transport-status"
+                 class="mf2026-small"
+                 style="margin-top:7px;">
+            </div>
+        `;
+        advancedBody.appendChild(
+            backgroundPatientTransportBox
+        );
+
+        const backgroundPatientTransportToggle =
+            backgroundPatientTransportBox.querySelector(
+                '#mf-background-patient-transport-toggle'
+            );
+
+        backgroundPatientTransportToggle?.addEventListener(
+            'change',
+            function() {
+                mfBackgroundPatientTransportEnabled =
+                    this.checked === true;
+                localStorage.setItem(
+                    MF_BACKGROUND_PATIENT_TRANSPORT_ENABLED_KEY,
+                    String(
+                        mfBackgroundPatientTransportEnabled
+                    )
+                );
+
+                if (mfBackgroundPatientTransportEnabled) {
+                    writeBackgroundPatientTransportState({
+                        status: 'waiting',
+                        lastError: ''
+                    });
+                    captureBackgroundPatientTransportRequests(
+                        'setting enabled'
+                    );
+                    wakeBackgroundPatientTransportWorker(
+                        'setting enabled'
+                    );
+                    updateStatusBox(
+                        'Background patient transports enabled.'
+                    );
+                } else {
+                    stopBackgroundPatientTransportWorker({
+                        clearQueue: true,
+                        reason: 'setting disabled'
+                    });
+                    updateStatusBox(
+                        'Background patient transports disabled.'
+                    );
+                }
+
+                renderBackgroundPatientTransportStatus();
+            }
+        );
+
+        renderBackgroundPatientTransportStatus();
+
         const missionLoggerBox = document.createElement('div');
         missionLoggerBox.id = 'mf-mission-logger-box';
         missionLoggerBox.className = 'mf2026-box';
@@ -22645,8 +22766,22 @@ function isRoadRailUnitVehicleCheckbox(input) {
                 const originalText = this.textContent;
                 this.disabled = true;
                 this.textContent = 'Syncing...';
-                await syncMissionLoggerNow({ manual: true });
+                const accepted = await syncMissionLoggerNow({
+                    manual: true,
+                    reason: 'Sync now button'
+                });
+                const state = readMissionLoggerState();
+                const deferred =
+                    readMissionLoggerQueue().length > 0 &&
+                    Number(state.drainRequestedAt || 0) > 0;
+                this.textContent = deferred
+                    ? 'Drain queued'
+                    : accepted
+                        ? 'Synced'
+                        : 'Sync failed';
+                await wait(650);
                 this.textContent = originalText;
+                this.disabled = false;
                 renderMissionLoggerStatus();
             }
         );
@@ -25560,7 +25695,11 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
             lastCreditError: '',
             totalMatchedCreditEvents: 0,
             totalUploadedEvents: 0,
-            droppedEvents: 0
+            droppedEvents: 0,
+            droppedObservationEvents: 0,
+            droppedPriorityEvents: 0,
+            drainRequestedAt: 0,
+            drainMessage: ''
         };
     }
 
@@ -25621,28 +25760,102 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
         }
     }
 
-    function boundMissionLoggerQueue(events) {
-        let queue = Array.isArray(events)
-            ? events.slice(-MF_MISSION_LOGGER_MAX_QUEUE_EVENTS)
-            : [];
-        let dropped = Math.max(
-            0,
-            (Array.isArray(events) ? events.length : 0) -
-                queue.length
-        );
-        let encoded = JSON.stringify(queue);
+    function getMissionLoggerQueueEventPriority(event) {
+        switch (String(event?.eventType || '')) {
+            case 'dispatch':
+                return 4;
+            case 'mission-credit':
+                return 3;
+            case 'mission-completed':
+                return 2;
+            case 'mission-observed':
+                return 0;
+            default:
+                return 1;
+        }
+    }
 
+    function findMissionLoggerQueueDropIndex(queue) {
+        if (!Array.isArray(queue) || queue.length === 0) {
+            return -1;
+        }
+
+        let selectedIndex = 0;
+        let selectedPriority =
+            getMissionLoggerQueueEventPriority(queue[0]);
+
+        for (let index = 1; index < queue.length; index += 1) {
+            const priority =
+                getMissionLoggerQueueEventPriority(queue[index]);
+            if (priority < selectedPriority) {
+                selectedIndex = index;
+                selectedPriority = priority;
+            }
+        }
+
+        return selectedIndex;
+    }
+
+    function boundMissionLoggerQueue(
+        events,
+        limits = {}
+    ) {
+        const maxEvents = Math.max(
+            1,
+            Math.trunc(
+                Number(limits.maxEvents) ||
+                MF_MISSION_LOGGER_MAX_QUEUE_EVENTS
+            )
+        );
+        const maxChars = Math.max(
+            1000,
+            Math.trunc(
+                Number(limits.maxChars) ||
+                MF_MISSION_LOGGER_MAX_QUEUE_CHARS
+            )
+        );
+        const queue = Array.isArray(events)
+            ? events.slice()
+            : [];
+        const droppedTypes = {};
+        let dropped = 0;
+
+        const dropOne = () => {
+            const index =
+                findMissionLoggerQueueDropIndex(queue);
+            if (index < 0) return false;
+            const [removed] = queue.splice(index, 1);
+            const eventType = String(
+                removed?.eventType || 'unknown'
+            );
+            droppedTypes[eventType] =
+                Math.max(
+                    0,
+                    Number(droppedTypes[eventType] || 0)
+                ) + 1;
+            dropped += 1;
+            return true;
+        };
+
+        while (queue.length > maxEvents) {
+            if (!dropOne()) break;
+        }
+
+        let encoded = JSON.stringify(queue);
         while (
-            encoded.length >
-                MF_MISSION_LOGGER_MAX_QUEUE_CHARS &&
+            encoded.length > maxChars &&
             queue.length > 1
         ) {
-            queue.shift();
-            dropped += 1;
+            if (!dropOne()) break;
             encoded = JSON.stringify(queue);
         }
 
-        return { queue, encoded, dropped };
+        return {
+            queue,
+            encoded,
+            dropped,
+            droppedTypes
+        };
     }
 
     function writeMissionLoggerQueue(events) {
@@ -25655,7 +25868,11 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
             );
         } catch (_error) {
             const fallback = boundMissionLoggerQueue(
-                bounded.queue.slice(-80)
+                bounded.queue,
+                {
+                    maxEvents: 80,
+                    maxChars: 750000
+                }
             );
             localStorage.setItem(
                 MF_MISSION_LOGGER_QUEUE_KEY,
@@ -25676,14 +25893,146 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
                         0,
                         Number(state.droppedEvents || 0)
                     ) + bounded.dropped,
+                droppedObservationEvents:
+                    Math.max(
+                        0,
+                        Number(
+                            state.droppedObservationEvents || 0
+                        )
+                    ) + Math.max(
+                        0,
+                        Number(
+                            bounded.droppedTypes?.[
+                                'mission-observed'
+                            ] || 0
+                        )
+                    ),
+                droppedPriorityEvents:
+                    Math.max(
+                        0,
+                        Number(
+                            state.droppedPriorityEvents || 0
+                        )
+                    ) + Math.max(
+                        0,
+                        bounded.dropped -
+                            Number(
+                                bounded.droppedTypes?.[
+                                    'mission-observed'
+                                ] || 0
+                            )
+                    ),
                 lastError:
-                    `${bounded.dropped} oldest logger event${bounded.dropped === 1 ? '' : 's'} dropped because the local outbox reached its safety limit.`
+                    `${bounded.dropped} logger event${bounded.dropped === 1 ? '' : 's'} dropped after the local outbox reached its storage safety limit. Mission observations are discarded before dispatch, completion or credit evidence.`
             });
         } else {
             renderMissionLoggerStatus();
         }
 
         return bounded.queue;
+    }
+
+    function scheduleMissionLoggerEagerSync(
+        reason = 'queue threshold',
+        force = false
+    ) {
+        if (!MF_IS_TOP_WINDOW) return false;
+        if (
+            mfMissionLoggerEagerSyncTimer ||
+            mfMissionLoggerSyncActive ||
+            !mfMissionLoggerEnabled ||
+            !mfMissionLoggerEndpoint ||
+            !readMissionLoggerIdentity() ||
+            navigator.onLine === false
+        ) {
+            return false;
+        }
+
+        const queueCount =
+            readMissionLoggerQueue().length;
+        if (
+            queueCount === 0 ||
+            (
+                !force &&
+                queueCount <
+                    MF_MISSION_LOGGER_EAGER_SYNC_THRESHOLD
+            )
+        ) {
+            return false;
+        }
+
+        mfMissionLoggerEagerSyncTimer = setTimeout(
+            () => {
+                mfMissionLoggerEagerSyncTimer = null;
+                void syncMissionLoggerNow({
+                    backlog: true,
+                    skipCreditReconcile: true,
+                    reason
+                });
+            },
+            force
+                ? 500
+                : MF_MISSION_LOGGER_EAGER_SYNC_DELAY_MS
+        );
+        return true;
+    }
+
+    function scheduleMissionLoggerDeferredDrain(
+        reason = 'logger backlog',
+        options = {}
+    ) {
+        if (!MF_IS_TOP_WINDOW) return false;
+
+        const manual = options.manual === true;
+        if (manual) {
+            mfMissionLoggerManualDrainRequested = true;
+        }
+
+        const queueCount = readMissionLoggerQueue().length;
+        if (
+            queueCount === 0 ||
+            !mfMissionLoggerEnabled ||
+            !mfMissionLoggerEndpoint ||
+            !readMissionLoggerIdentity()
+        ) {
+            return false;
+        }
+
+        writeMissionLoggerState({
+            drainRequestedAt: Date.now(),
+            drainMessage: manual
+                ? 'Manual full drain queued; waiting for the active upload or another MissionChief tab to release the logger lock.'
+                : 'Logger backlog drain queued.'
+        });
+
+        if (mfMissionLoggerDeferredDrainTimer) {
+            return true;
+        }
+
+        const delay = Math.max(
+            100,
+            Math.trunc(
+                Number(options.delayMs) ||
+                MF_MISSION_LOGGER_DEFERRED_DRAIN_DELAY_MS
+            )
+        );
+
+        mfMissionLoggerDeferredDrainTimer = setTimeout(
+            () => {
+                mfMissionLoggerDeferredDrainTimer = null;
+                const runManual =
+                    mfMissionLoggerManualDrainRequested;
+                mfMissionLoggerManualDrainRequested = false;
+                void syncMissionLoggerNow({
+                    manual: runManual,
+                    backlog: true,
+                    skipCreditReconcile: true,
+                    reason
+                });
+            },
+            delay
+        );
+        return true;
     }
 
     function queueMissionLoggerEvent(event) {
@@ -25709,6 +26058,9 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
         queue.push(event);
         writeMissionLoggerQueue(queue);
         rememberMissionLoggerEvent(event);
+        scheduleMissionLoggerEagerSync(
+            `queued ${String(event.eventType || 'event')}`
+        );
         return true;
     }
 
@@ -26127,7 +26479,25 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
     }
 
     async function syncMissionLoggerNow(options = {}) {
-        if (mfMissionLoggerSyncActive) return false;
+        if (mfMissionLoggerSyncActive) {
+            if (
+                options.manual === true ||
+                options.reconnected === true ||
+                options.backlog === true
+            ) {
+                scheduleMissionLoggerDeferredDrain(
+                    options.reason ||
+                    'sync requested during active upload',
+                    {
+                        manual:
+                            options.manual === true ||
+                            mfMissionLoggerManualDrainRequested
+                    }
+                );
+                return true;
+            }
+            return false;
+        }
         if (!mfMissionLoggerEnabled) return false;
 
         const identity = readMissionLoggerIdentity();
@@ -26136,20 +26506,22 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
             return false;
         }
 
-        await reconcileMissionLoggerCreditTransactions({
-            force:
-                options.manual === true ||
-                options.reconnected === true,
-            includeOlder:
-                options.manual === true ||
-                options.reconnected === true,
-            maxPages:
-                options.manual === true ||
-                options.reconnected === true
-                    ? MF_MISSION_LOGGER_CREDIT_CATCHUP_PAGES_PER_RUN
-                    : undefined,
-            allowOfflineRecovery: true
-        });
+        if (options.skipCreditReconcile !== true) {
+            await reconcileMissionLoggerCreditTransactions({
+                force:
+                    options.manual === true ||
+                    options.reconnected === true,
+                includeOlder:
+                    options.manual === true ||
+                    options.reconnected === true,
+                maxPages:
+                    options.manual === true ||
+                    options.reconnected === true
+                        ? MF_MISSION_LOGGER_CREDIT_CATCHUP_PAGES_PER_RUN
+                        : undefined,
+                allowOfflineRecovery: true
+            });
+        }
 
         if (isMissionPage()) {
             try {
@@ -26182,11 +26554,12 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
             enrichMissionLoggerQueuedEventsFromCurrentMission();
         }
 
-        const queue = readMissionLoggerQueue();
-        if (queue.length === 0) {
+        if (readMissionLoggerQueue().length === 0) {
             if (options.manual === true) {
                 writeMissionLoggerState({
-                    lastError: ''
+                    lastError: '',
+                    drainRequestedAt: 0,
+                    drainMessage: ''
                 });
             }
             renderMissionLoggerStatus();
@@ -26194,99 +26567,168 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
         }
 
         const lockOwner = acquireMissionLoggerSyncLock();
-        if (!lockOwner) return false;
-
-        let pending = readMissionLoggerPendingBatch();
-        const queueById = new Map(
-            queue.map(event => [event.eventId, event])
-        );
-
-        if (pending) {
-            pending.eventIds = pending.eventIds.filter(
-                eventId => queueById.has(eventId)
-            );
-
-            if (pending.eventIds.length === 0) {
-                pending = null;
-                writeMissionLoggerPendingBatch(null);
-            } else {
-                writeMissionLoggerPendingBatch(pending);
+        if (!lockOwner) {
+            if (
+                options.manual === true ||
+                options.reconnected === true ||
+                options.backlog === true
+            ) {
+                scheduleMissionLoggerDeferredDrain(
+                    options.reason ||
+                    'waiting for another MissionChief tab',
+                    {
+                        manual:
+                            options.manual === true ||
+                            mfMissionLoggerManualDrainRequested
+                    }
+                );
+                return true;
             }
-        }
-
-        if (!pending) {
-            const events = queue.slice(
-                0,
-                MF_MISSION_LOGGER_BATCH_SIZE
-            );
-            pending = {
-                batchId: createMissionLoggerId('batch'),
-                eventIds: events.map(event => event.eventId),
-                createdAt: new Date().toISOString()
-            };
-            writeMissionLoggerPendingBatch(pending);
-        }
-
-        const batchEvents = pending.eventIds
-            .map(eventId => queueById.get(eventId))
-            .filter(Boolean);
-
-        if (batchEvents.length === 0) {
-            writeMissionLoggerPendingBatch(null);
-            releaseMissionLoggerSyncLock(lockOwner);
             return false;
         }
+
+        const manualDrain =
+            options.manual === true ||
+            options.reconnected === true ||
+            mfMissionLoggerManualDrainRequested;
+        mfMissionLoggerManualDrainRequested = false;
+        const maxBatches = manualDrain
+            ? MF_MISSION_LOGGER_MANUAL_DRAIN_MAX_BATCHES
+            : MF_MISSION_LOGGER_AUTO_DRAIN_MAX_BATCHES;
+        const drainStartedAt = Date.now();
+        let uploadedAny = false;
+        let needsFollowupDrain = false;
 
         mfMissionLoggerSyncActive = true;
         writeMissionLoggerState({
             lastAttemptAt: Date.now(),
-            lastError: ''
+            lastError: '',
+            drainRequestedAt: 0,
+            drainMessage: ''
         });
 
         try {
-            const response = await submitMissionLoggerRequest(
-                'upload',
-                {
-                    token: identity.token,
-                    playerId: identity.playerId,
-                    deviceId: identity.deviceId,
-                    batchId: pending.batchId,
-                    events: batchEvents
-                }
-            );
-
-            if (
-                response.batchId &&
-                String(response.batchId) !==
-                    String(pending.batchId)
+            for (
+                let batchNumber = 0;
+                batchNumber < maxBatches;
+                batchNumber += 1
             ) {
-                throw new Error(
-                    'Google logger acknowledged a different batch.'
+                if (
+                    Date.now() - drainStartedAt >=
+                    MF_MISSION_LOGGER_DRAIN_MAX_MS
+                ) {
+                    needsFollowupDrain =
+                        readMissionLoggerQueue().length > 0;
+                    break;
+                }
+
+                const queue = readMissionLoggerQueue();
+                if (queue.length === 0) break;
+
+                let pending = readMissionLoggerPendingBatch();
+                const queueById = new Map(
+                    queue.map(event => [event.eventId, event])
+                );
+
+                if (pending) {
+                    pending.eventIds = pending.eventIds.filter(
+                        eventId => queueById.has(eventId)
+                    );
+
+                    if (pending.eventIds.length === 0) {
+                        pending = null;
+                        writeMissionLoggerPendingBatch(null);
+                    } else {
+                        writeMissionLoggerPendingBatch(pending);
+                    }
+                }
+
+                if (!pending) {
+                    const events = queue.slice(
+                        0,
+                        MF_MISSION_LOGGER_BATCH_SIZE
+                    );
+                    pending = {
+                        batchId: createMissionLoggerId('batch'),
+                        eventIds: events.map(
+                            event => event.eventId
+                        ),
+                        createdAt: new Date().toISOString()
+                    };
+                    writeMissionLoggerPendingBatch(pending);
+                }
+
+                const batchEvents = pending.eventIds
+                    .map(eventId => queueById.get(eventId))
+                    .filter(Boolean);
+
+                if (batchEvents.length === 0) {
+                    writeMissionLoggerPendingBatch(null);
+                    continue;
+                }
+
+                writeMissionLoggerState({
+                    lastAttemptAt: Date.now(),
+                    lastError: ''
+                });
+
+                const response = await submitMissionLoggerRequest(
+                    'upload',
+                    {
+                        token: identity.token,
+                        playerId: identity.playerId,
+                        deviceId: identity.deviceId,
+                        batchId: pending.batchId,
+                        events: batchEvents
+                    }
+                );
+
+                if (
+                    response.batchId &&
+                    String(response.batchId) !==
+                        String(pending.batchId)
+                ) {
+                    throw new Error(
+                        'Google logger acknowledged a different batch.'
+                    );
+                }
+
+                const acknowledged = new Set(
+                    pending.eventIds
+                );
+                const remaining = readMissionLoggerQueue()
+                    .filter(event => {
+                        return !acknowledged.has(event.eventId);
+                    });
+
+                writeMissionLoggerQueue(remaining);
+                writeMissionLoggerPendingBatch(null);
+
+                const state = readMissionLoggerState();
+                writeMissionLoggerState({
+                    lastSuccessAt: Date.now(),
+                    lastError: '',
+                    totalUploadedEvents:
+                        Math.max(
+                            0,
+                            Number(
+                                state.totalUploadedEvents || 0
+                            )
+                        ) + batchEvents.length
+                });
+                uploadedAny = true;
+
+                if (remaining.length === 0) break;
+
+                needsFollowupDrain = true;
+                await wait(
+                    MF_MISSION_LOGGER_DRAIN_GAP_MS
                 );
             }
 
-            const acknowledged = new Set(
-                pending.eventIds
-            );
-            const remaining = readMissionLoggerQueue()
-                .filter(event => {
-                    return !acknowledged.has(event.eventId);
-                });
-
-            writeMissionLoggerQueue(remaining);
-            writeMissionLoggerPendingBatch(null);
-
-            const state = readMissionLoggerState();
-            writeMissionLoggerState({
-                lastSuccessAt: Date.now(),
-                lastError: '',
-                totalUploadedEvents:
-                    Math.max(
-                        0,
-                        Number(state.totalUploadedEvents || 0)
-                    ) + batchEvents.length
-            });
-            return true;
+            needsFollowupDrain =
+                readMissionLoggerQueue().length > 0;
+            return uploadedAny;
         } catch (error) {
             writeMissionLoggerState({
                 lastError: String(
@@ -26294,15 +26736,41 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
                     'Google logger upload failed.'
                 ).slice(0, 500)
             });
+            needsFollowupDrain = false;
             return false;
         } finally {
             mfMissionLoggerSyncActive = false;
             releaseMissionLoggerSyncLock(lockOwner);
             renderMissionLoggerStatus();
+
+            if (mfMissionLoggerManualDrainRequested) {
+                scheduleMissionLoggerDeferredDrain(
+                    'manual sync requested during active drain',
+                    {
+                        manual: true,
+                        delayMs:
+                            MF_MISSION_LOGGER_DRAIN_GAP_MS
+                    }
+                );
+            } else if (needsFollowupDrain) {
+                scheduleMissionLoggerEagerSync(
+                    'backlog remains after bounded drain',
+                    true
+                );
+            }
         }
     }
 
     function stopMissionLoggerSyncTimer() {
+        if (mfMissionLoggerDeferredDrainTimer) {
+            clearTimeout(mfMissionLoggerDeferredDrainTimer);
+            mfMissionLoggerDeferredDrainTimer = null;
+        }
+        mfMissionLoggerManualDrainRequested = false;
+        if (mfMissionLoggerEagerSyncTimer) {
+            clearTimeout(mfMissionLoggerEagerSyncTimer);
+            mfMissionLoggerEagerSyncTimer = null;
+        }
         if (mfMissionLoggerInitialSyncTimer) {
             clearTimeout(mfMissionLoggerInitialSyncTimer);
             mfMissionLoggerInitialSyncTimer = null;
@@ -26406,6 +26874,14 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
 
             if (MF_IS_TOP_WINDOW) {
                 startMissionLoggerSyncTimer();
+                if (
+                    event.key ===
+                    MF_MISSION_LOGGER_QUEUE_KEY
+                ) {
+                    scheduleMissionLoggerEagerSync(
+                        'cross-window queue update'
+                    );
+                }
             }
             renderMissionLoggerStatus();
         };
@@ -30338,8 +30814,14 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
                     : !identity
                         ? 'Setup required: enter a one-time pairing code.'
                         : mfMissionLoggerSyncActive
-                            ? 'Uploading a logger batch...'
-                            : 'Automatic logging is active.';
+                            ? 'Draining queued logger events...'
+                            : queueCount > 0 &&
+                                Number(state.drainRequestedAt || 0) > 0
+                                ? String(
+                                    state.drainMessage ||
+                                    'Full queue drain queued.'
+                                )
+                                : 'Automatic logging is active.';
             status.classList.toggle(
                 'mf2026-good',
                 !!(
@@ -30357,8 +30839,26 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
             );
         }
         if (queue) {
+            const queuePercent = Math.round(
+                queueCount /
+                MF_MISSION_LOGGER_MAX_QUEUE_EVENTS * 100
+            );
             queue.textContent =
-                `Queued events: ${queueCount}`;
+                `Queued events: ${queueCount}` +
+                (
+                    queueCount > 0
+                        ? ` · ${queuePercent}% of local limit` +
+                            (
+                                mfMissionLoggerSyncActive
+                                    ? ' · draining now'
+                                    : ''
+                            )
+                        : ''
+                );
+            queue.classList.toggle(
+                'mf2026-warn',
+                queuePercent >= 75
+            );
         }
         if (lastSync) {
             lastSync.textContent =
@@ -30407,8 +30907,7 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
             syncButton.disabled =
                 !mfMissionLoggerEnabled ||
                 !endpointReady ||
-                !identity ||
-                mfMissionLoggerSyncActive;
+                !identity;
         }
         if (disconnectButton) {
             disconnectButton.disabled = !identity;
@@ -49410,6 +49909,12 @@ let sessionRuntimeTicker = null;
         mfBruteApproachClicking = false;
         mfTransportApproachClicking = false;
         mfSilentQueueOpening = false;
+        stopBackgroundPatientTransportWorker({
+            clearQueue: /manual|stopped/i.test(
+                String(reason || '')
+            ),
+            reason: reason || 'stop timers'
+        });
         releaseMainMissionOpenLock(reason || 'stop timers');
         releaseTransportRehookLock(reason || 'stop timers');
 
@@ -52367,11 +52872,24 @@ async function handleAutoPrisonerReleaseAfterActions() {
         // Do not close the vehicle transport screen while an Approach button is visible.
         // The transport watcher must click Approach first; MissionChief will auto-close after the last Approach.
         if (typeof mfIsApproachTransportVisible === 'function' && mfIsApproachTransportVisible()) {
-            if (mfDebugEnabled) {
-                debugLog('TRANSPORT SEQUENCE', 'Close blocked because visible Approach button is present.');
-            }
+            const backgroundCapture =
+                mfBackgroundPatientTransportEnabled &&
+                isTransportAutomationAllowed() &&
+                !mfIsPoliceOrPrisonerTransportActive()
+                    ? captureBackgroundPatientTransportRequests(
+                        'close mission after background patient queue'
+                    )
+                    : {
+                        covered: 0
+                    };
 
-            return false;
+            if (backgroundCapture.covered === 0) {
+                if (mfDebugEnabled) {
+                    debugLog('TRANSPORT SEQUENCE', 'Close blocked because visible Approach button is present.');
+                }
+
+                return false;
+            }
         }
 
         let clicked = false;
@@ -52479,6 +52997,20 @@ async function handleAutoPrisonerReleaseAfterActions() {
     }
 
     function isTransportScreenBlockingQueueRestart() {
+        if (
+            mfBackgroundPatientTransportEnabled &&
+            isTransportAutomationAllowed() &&
+            !mfIsPoliceOrPrisonerTransportActive()
+        ) {
+            const backgroundCapture =
+                captureBackgroundPatientTransportRequests(
+                    'queue restart transport gate'
+                );
+            if (backgroundCapture.covered > 0) {
+                return false;
+            }
+        }
+
         if (mfFindAnyVisibleApproachButtonDeep()) return true;
 
         const scopes = mfGetTransportActiveScopes();
@@ -52547,6 +53079,981 @@ async function handleAutoPrisonerReleaseAfterActions() {
     }
 
 
+    function createDefaultBackgroundPatientTransportState() {
+        return {
+            status: mfBackgroundPatientTransportEnabled
+                ? 'waiting'
+                : 'off',
+            lastMessage: '',
+            lastError: '',
+            lastAttemptAt: 0,
+            lastSuccessAt: 0,
+            totalSent: 0
+        };
+    }
+
+    function readBackgroundPatientTransportState() {
+        try {
+            const parsed = JSON.parse(
+                localStorage.getItem(
+                    MF_BACKGROUND_PATIENT_TRANSPORT_STATE_KEY
+                ) || 'null'
+            );
+            return Object.assign(
+                createDefaultBackgroundPatientTransportState(),
+                parsed && typeof parsed === 'object'
+                    ? parsed
+                    : {}
+            );
+        } catch (_error) {
+            return createDefaultBackgroundPatientTransportState();
+        }
+    }
+
+    function writeBackgroundPatientTransportState(update) {
+        const state = Object.assign(
+            readBackgroundPatientTransportState(),
+            update && typeof update === 'object'
+                ? update
+                : {}
+        );
+        localStorage.setItem(
+            MF_BACKGROUND_PATIENT_TRANSPORT_STATE_KEY,
+            JSON.stringify(state)
+        );
+        renderBackgroundPatientTransportStatus();
+        return state;
+    }
+
+    function readBackgroundPatientTransportQueue() {
+        try {
+            const parsed = JSON.parse(
+                localStorage.getItem(
+                    MF_BACKGROUND_PATIENT_TRANSPORT_QUEUE_KEY
+                ) || '[]'
+            );
+            return Array.isArray(parsed)
+                ? parsed.filter(entry => {
+                    return !!(
+                        entry &&
+                        typeof entry === 'object' &&
+                        entry.requestId &&
+                        entry.href
+                    );
+                }).slice(
+                    0,
+                    MF_BACKGROUND_PATIENT_TRANSPORT_MAX_QUEUE
+                )
+                : [];
+        } catch (_error) {
+            return [];
+        }
+    }
+
+    function writeBackgroundPatientTransportQueue(queue) {
+        const seen = new Set();
+        const bounded = [];
+        for (const entry of Array.isArray(queue) ? queue : []) {
+            const key = String(entry?.routeKey || entry?.href || '');
+            if (!key || seen.has(key)) continue;
+            seen.add(key);
+            bounded.push(entry);
+            if (
+                bounded.length >=
+                MF_BACKGROUND_PATIENT_TRANSPORT_MAX_QUEUE
+            ) {
+                break;
+            }
+        }
+        localStorage.setItem(
+            MF_BACKGROUND_PATIENT_TRANSPORT_QUEUE_KEY,
+            JSON.stringify(bounded)
+        );
+        renderBackgroundPatientTransportStatus();
+        return bounded;
+    }
+
+    function readBackgroundPatientTransportRecent() {
+        const now = Date.now();
+        try {
+            const parsed = JSON.parse(
+                localStorage.getItem(
+                    MF_BACKGROUND_PATIENT_TRANSPORT_RECENT_KEY
+                ) || '{}'
+            );
+            const recent = {};
+            if (parsed && typeof parsed === 'object') {
+                Object.entries(parsed).forEach(([key, value]) => {
+                    const timestamp = Number(value?.timestamp || value || 0);
+                    if (
+                        timestamp > 0 &&
+                        now - timestamp <=
+                            MF_BACKGROUND_PATIENT_TRANSPORT_RECENT_TTL_MS
+                    ) {
+                        recent[key] =
+                            typeof value === 'object'
+                                ? value
+                                : { timestamp };
+                    }
+                });
+            }
+            return recent;
+        } catch (_error) {
+            return {};
+        }
+    }
+
+    function writeBackgroundPatientTransportRecent(recent) {
+        localStorage.setItem(
+            MF_BACKGROUND_PATIENT_TRANSPORT_RECENT_KEY,
+            JSON.stringify(recent || {})
+        );
+    }
+
+    function normaliseBackgroundPatientTransportRequest(
+        href,
+        baseHref = window.location.href
+    ) {
+        try {
+            const url = new URL(String(href || ''), baseHref);
+            if (url.origin !== window.location.origin) return null;
+            const match = url.pathname.match(
+                /^\/vehicles\/(\d+)\/patient\/(\d+)\/?$/
+            );
+            if (!match) return null;
+            url.hash = '';
+            return {
+                href: `${url.pathname}${url.search}`,
+                routeKey: url.pathname.replace(/\/$/, ''),
+                vehicleId: match[1],
+                patientId: match[2]
+            };
+        } catch (_error) {
+            return null;
+        }
+    }
+
+    function isBackgroundPatientTransportWorkerDocument(
+        candidateDocument
+    ) {
+        try {
+            return candidateDocument?.defaultView?.frameElement
+                ?.getAttribute?.(
+                    'data-mf-background-patient-transport-worker'
+                ) === 'true';
+        } catch (_error) {
+            return false;
+        }
+    }
+
+    function mfIsBackgroundPatientTransportRequestAnchor(
+        element
+    ) {
+        if (!mfIsExactPatientTransportAnchor(element)) return false;
+        const text = getButtonTextForTransport(element);
+        if (/\bapproach\b/i.test(text)) return false;
+        return !!(
+            /\btransport\s+(?:the\s+)?patient\b/i.test(text) ||
+            /\bpatient\s+transport\b/i.test(text)
+        );
+    }
+
+    function getBackgroundPatientTransportRequestRecords() {
+        const records = [];
+        const seen = new Set();
+        const addRecord = (request, sourceDocument, source) => {
+            if (!request || seen.has(request.routeKey)) return;
+            seen.add(request.routeKey);
+            records.push({
+                ...request,
+                source
+            });
+        };
+
+        for (const root of mfGetExactPatientTransportRoots()) {
+            const sourceDocument = root?.nodeType === 9
+                ? root
+                : root?.ownerDocument;
+            if (
+                !sourceDocument ||
+                isBackgroundPatientTransportWorkerDocument(
+                    sourceDocument
+                )
+            ) {
+                continue;
+            }
+
+            const candidates = Array.from(
+                sourceDocument.querySelectorAll?.(
+                    'a.btn-success[href*="/patient/"]'
+                ) || []
+            );
+            for (const anchor of candidates) {
+                if (
+                    !mfIsBackgroundPatientTransportRequestAnchor(
+                        anchor
+                    )
+                ) {
+                    continue;
+                }
+                try {
+                    if (!mfIsVisibleInOwnDocument(anchor)) continue;
+                } catch (_error) {
+                    continue;
+                }
+                addRecord(
+                    normaliseBackgroundPatientTransportRequest(
+                        anchor.getAttribute('href') || anchor.href,
+                        sourceDocument.location?.href ||
+                            window.location.href
+                    ),
+                    sourceDocument,
+                    'transport-patient-anchor'
+                );
+            }
+
+            try {
+                const currentRequest =
+                    normaliseBackgroundPatientTransportRequest(
+                        sourceDocument.location?.href || ''
+                    );
+                const bodyText = String(
+                    sourceDocument.body?.innerText ||
+                    sourceDocument.body?.textContent || ''
+                )
+                    .replace(/\s+/g, ' ')
+                    .trim()
+                    .toLowerCase();
+                const patientContext = !!(
+                    bodyText.includes('hospitals:') ||
+                    bodyText.includes('free beds') ||
+                    bodyText.includes('hospital distance') ||
+                    bodyText.includes('discharge patient') ||
+                    bodyText.includes('transport patient')
+                );
+                const prisonerOnlyContext = !!(
+                    !patientContext &&
+                    (
+                        bodyText.includes('free cells') ||
+                        bodyText.includes('release prisoners') ||
+                        bodyText.includes('police cell')
+                    )
+                );
+                if (
+                    currentRequest &&
+                    patientContext &&
+                    !prisonerOnlyContext
+                ) {
+                    addRecord(
+                        currentRequest,
+                        sourceDocument,
+                        'active-patient-transport-page'
+                    );
+                }
+            } catch (_error) {}
+        }
+
+        return records;
+    }
+
+    function enqueueBackgroundPatientTransportRequest(
+        record,
+        reason = ''
+    ) {
+        if (!record?.routeKey || !record?.href) {
+            return 'invalid';
+        }
+
+        const queue = readBackgroundPatientTransportQueue();
+        if (
+            queue.some(entry => {
+                return entry.routeKey === record.routeKey;
+            })
+        ) {
+            return 'existing';
+        }
+
+        const recent = readBackgroundPatientTransportRecent();
+        if (recent[record.routeKey]) return 'recent';
+
+        if (
+            queue.length >=
+            MF_BACKGROUND_PATIENT_TRANSPORT_MAX_QUEUE
+        ) {
+            writeBackgroundPatientTransportState({
+                status: 'failed',
+                lastError:
+                    'Background patient transport queue reached its 40-request safety limit.'
+            });
+            return 'full';
+        }
+
+        queue.push({
+            requestId:
+                `patient-${Date.now()}-${Math.random()
+                    .toString(36)
+                    .slice(2, 10)}`,
+            href: record.href,
+            routeKey: record.routeKey,
+            vehicleId: record.vehicleId,
+            patientId: record.patientId,
+            source: record.source || '',
+            reason: String(reason || '').slice(0, 160),
+            createdAt: Date.now(),
+            attempts: 0,
+            nextAttemptAt: Date.now()
+        });
+        writeBackgroundPatientTransportQueue(queue);
+        writeBackgroundPatientTransportState({
+            status: 'queued',
+            lastMessage:
+                `Queued patient transport ${record.vehicleId}/${record.patientId}.`,
+            lastError: ''
+        });
+        return 'queued';
+    }
+
+    function captureBackgroundPatientTransportRequests(
+        reason = 'Auto Mode transport scan'
+    ) {
+        if (
+            !mfBackgroundPatientTransportEnabled ||
+            !isTransportAutomationAllowed()
+        ) {
+            return {
+                found: 0,
+                queued: 0,
+                covered: 0
+            };
+        }
+
+        const records =
+            getBackgroundPatientTransportRequestRecords();
+        let queued = 0;
+        let covered = 0;
+        records.forEach(record => {
+            const result =
+                enqueueBackgroundPatientTransportRequest(
+                    record,
+                    reason
+                );
+            if (result === 'queued') queued += 1;
+            if (
+                result === 'queued' ||
+                result === 'existing' ||
+                result === 'recent'
+            ) {
+                covered += 1;
+            }
+        });
+
+        if (covered > 0) {
+            wakeBackgroundPatientTransportWorker(reason);
+        }
+
+        return {
+            found: records.length,
+            queued,
+            covered
+        };
+    }
+
+    function cleanupBackgroundPatientTransportFrame() {
+        const frame = mfBackgroundPatientTransportFrame;
+        mfBackgroundPatientTransportFrame = null;
+        if (!frame) return;
+        try {
+            frame.src = 'about:blank';
+        } catch (_error) {}
+        try {
+            frame.remove();
+        } catch (_error) {}
+    }
+
+    function stopBackgroundPatientTransportWorker(
+        options = {}
+    ) {
+        if (mfBackgroundPatientTransportWorkerTimer) {
+            clearTimeout(
+                mfBackgroundPatientTransportWorkerTimer
+            );
+            mfBackgroundPatientTransportWorkerTimer = null;
+        }
+        mfBackgroundPatientTransportWorkerActive = false;
+        cleanupBackgroundPatientTransportFrame();
+
+        if (options.clearQueue === true) {
+            localStorage.removeItem(
+                MF_BACKGROUND_PATIENT_TRANSPORT_QUEUE_KEY
+            );
+        }
+
+        writeBackgroundPatientTransportState({
+            status: mfBackgroundPatientTransportEnabled
+                ? 'waiting'
+                : 'off',
+            lastMessage: String(options.reason || '').slice(0, 200),
+            lastError: ''
+        });
+    }
+
+    function renderBackgroundPatientTransportStatus() {
+        const statusElement = document.getElementById(
+            'mf-background-patient-transport-status'
+        );
+        const toggle = document.getElementById(
+            'mf-background-patient-transport-toggle'
+        );
+        if (toggle) {
+            toggle.checked =
+                mfBackgroundPatientTransportEnabled;
+        }
+        if (!statusElement) return;
+
+        const queueCount =
+            readBackgroundPatientTransportQueue().length;
+        const state = readBackgroundPatientTransportState();
+        const label = !mfBackgroundPatientTransportEnabled
+            ? 'Off'
+            : mfBackgroundPatientTransportWorkerActive
+                ? 'Sending'
+                : state.status === 'failed'
+                    ? 'Failed'
+                    : state.status === 'retrying'
+                        ? 'Retrying'
+                        : queueCount > 0
+                            ? 'Queued'
+                            : state.status === 'sent'
+                                ? 'Sent'
+                                : 'Watching';
+        const detail = state.lastError ||
+            state.lastMessage ||
+            (
+                mfBackgroundPatientTransportEnabled
+                    ? 'Waiting for a Transport Patient request.'
+                    : 'Enable this to keep Auto Mode moving while patient handoffs run in the background.'
+            );
+        statusElement.textContent =
+            `${label}${queueCount > 0 ? ` · ${queueCount} waiting` : ''} · ${detail}`;
+        statusElement.classList.toggle(
+            'mf2026-good',
+            label === 'Sent' || label === 'Watching'
+        );
+        statusElement.classList.toggle(
+            'mf2026-warn',
+            label === 'Failed' || label === 'Retrying'
+        );
+    }
+
+    function createBackgroundPatientTransportFrame(entry) {
+        cleanupBackgroundPatientTransportFrame();
+        const frame = document.createElement('iframe');
+        frame.setAttribute(
+            'data-mf-background-patient-transport-worker',
+            'true'
+        );
+        frame.setAttribute('aria-hidden', 'true');
+        frame.tabIndex = -1;
+        frame.name =
+            `mf-background-patient-${String(entry.requestId || '')}`;
+        Object.assign(frame.style, {
+            position: 'fixed',
+            left: '-20000px',
+            top: '0',
+            width: '1280px',
+            height: '900px',
+            opacity: '0.001',
+            pointerEvents: 'none',
+            border: '0',
+            zIndex: '-2147483648'
+        });
+        frame.src = new URL(
+            entry.href,
+            window.location.origin
+        ).href;
+        (document.body || document.documentElement)
+            .appendChild(frame);
+        mfBackgroundPatientTransportFrame = frame;
+        return frame;
+    }
+
+    async function waitForBackgroundPatientTransportFrame(
+        frame,
+        timeoutMs
+    ) {
+        const started = Date.now();
+        while (Date.now() - started < timeoutMs) {
+            if (
+                !mfBackgroundPatientTransportEnabled ||
+                isManualAutoStopActive() ||
+                frame !== mfBackgroundPatientTransportFrame ||
+                frame.isConnected === false
+            ) {
+                return null;
+            }
+            try {
+                const candidateDocument = frame.contentDocument;
+                if (
+                    candidateDocument &&
+                    candidateDocument.readyState !== 'loading' &&
+                    candidateDocument.body
+                ) {
+                    return candidateDocument;
+                }
+            } catch (_error) {
+                return null;
+            }
+            await wait(200);
+        }
+        return null;
+    }
+
+    function getBackgroundPatientTransportSuccessText(
+        candidateDocument
+    ) {
+        return Array.from(
+            candidateDocument?.querySelectorAll?.(
+                '.alert.alert-success, .alert-success, .notice-success'
+            ) || []
+        ).map(element => {
+            return String(
+                element.innerText || element.textContent || ''
+            )
+                .replace(/\s+/g, ' ')
+                .trim()
+                .toLowerCase();
+        }).find(text => {
+            return !!(
+                text.includes('patient') &&
+                (
+                    text.includes('transport') ||
+                    text.includes('hospital') ||
+                    text.includes('approach')
+                )
+            );
+        }) || '';
+    }
+
+    async function processBackgroundPatientTransportEntry(
+        entry
+    ) {
+        const frame =
+            createBackgroundPatientTransportFrame(entry);
+        const initialRoute = String(entry.routeKey || '');
+        let candidateDocument =
+            await waitForBackgroundPatientTransportFrame(
+                frame,
+                MF_BACKGROUND_PATIENT_TRANSPORT_LOAD_TIMEOUT_MS
+            );
+        if (!candidateDocument) {
+            return {
+                ok: false,
+                reason:
+                    'Patient transport page did not load in the background worker.'
+            };
+        }
+
+        const destinationStarted = Date.now();
+        let destination = null;
+        while (
+            Date.now() - destinationStarted <
+            MF_BACKGROUND_PATIENT_TRANSPORT_LOAD_TIMEOUT_MS
+        ) {
+            try {
+                const currentPath = String(
+                    frame.contentWindow?.location?.pathname || ''
+                ).replace(/\/$/, '');
+                if (
+                    currentPath &&
+                    currentPath !== initialRoute
+                ) {
+                    return {
+                        ok: true,
+                        reason:
+                            'Patient transport was already cleared.'
+                    };
+                }
+                candidateDocument = frame.contentDocument;
+                destination =
+                    mfChoosePreferredApproachButton(
+                        candidateDocument?.body
+                    );
+            } catch (_error) {
+                destination = null;
+            }
+            if (destination) break;
+            await wait(250);
+        }
+
+        if (!destination) {
+            return {
+                ok: false,
+                reason:
+                    'No available hospital destination was exposed for the patient transport.'
+            };
+        }
+
+        const rowText = String(
+            destination.closest?.('tr')?.innerText ||
+            destination.closest?.('tr')?.textContent || ''
+        )
+            .replace(/\s+/g, ' ')
+            .trim()
+            .toLowerCase();
+        if (
+            rowText.includes('free cells') ||
+            rowText.includes('police cell') ||
+            rowText.includes('custody')
+        ) {
+            return {
+                ok: false,
+                reason:
+                    'A prisoner destination was rejected by the patient transport worker.'
+            };
+        }
+
+        try {
+            destination.click();
+        } catch (error) {
+            return {
+                ok: false,
+                reason: String(
+                    error?.message ||
+                    'The hospital Approach control could not be clicked.'
+                ).slice(0, 300)
+            };
+        }
+
+        const clickedAt = Date.now();
+        while (
+            Date.now() - clickedAt <
+            MF_BACKGROUND_PATIENT_TRANSPORT_CONFIRM_TIMEOUT_MS
+        ) {
+            if (
+                !mfBackgroundPatientTransportEnabled ||
+                isManualAutoStopActive()
+            ) {
+                return {
+                    ok: false,
+                    reason:
+                        'Background patient transport stopped before confirmation.'
+                };
+            }
+            try {
+                const currentPath = String(
+                    frame.contentWindow?.location?.pathname || ''
+                ).replace(/\/$/, '');
+                const currentDocument = frame.contentDocument;
+                if (
+                    currentPath &&
+                    currentPath !== initialRoute
+                ) {
+                    return {
+                        ok: true,
+                        reason:
+                            'Patient sent to the first available hospital.'
+                    };
+                }
+                if (
+                    getBackgroundPatientTransportSuccessText(
+                        currentDocument
+                    )
+                ) {
+                    return {
+                        ok: true,
+                        reason:
+                            'Patient transport confirmed by MissionChief.'
+                    };
+                }
+                if (
+                    destination.isConnected === false &&
+                    mfGetExactVisibleApproachButtons(
+                        currentDocument?.body
+                    ).length === 0 &&
+                    Date.now() - clickedAt >= 1200
+                ) {
+                    return {
+                        ok: true,
+                        reason:
+                            'Patient transport destination accepted.'
+                    };
+                }
+            } catch (_error) {}
+            await wait(250);
+        }
+
+        return {
+            ok: false,
+            reason:
+                'MissionChief did not confirm the patient transport before the safety timeout.'
+        };
+    }
+
+    function scheduleBackgroundPatientTransportWorker(
+        delayMs = 0,
+        reason = ''
+    ) {
+        if (!MF_IS_TOP_WINDOW) {
+            try {
+                window.top.postMessage(
+                    {
+                        source:
+                            MF_BACKGROUND_PATIENT_TRANSPORT_WAKE_SOURCE,
+                        reason
+                    },
+                    window.location.origin
+                );
+            } catch (_error) {}
+            return false;
+        }
+        if (
+            mfBackgroundPatientTransportWorkerTimer ||
+            mfBackgroundPatientTransportWorkerActive ||
+            !mfBackgroundPatientTransportEnabled ||
+            isManualAutoStopActive()
+        ) {
+            return false;
+        }
+        if (!isTransportAutomationAllowed()) {
+            writeBackgroundPatientTransportState({
+                status: 'waiting',
+                lastMessage:
+                    'Queued patient transports are waiting for Auto Mode.'
+            });
+            return false;
+        }
+        if (readBackgroundPatientTransportQueue().length === 0) {
+            writeBackgroundPatientTransportState({
+                status: 'waiting',
+                lastMessage:
+                    'Waiting for a Transport Patient request.'
+            });
+            return false;
+        }
+        mfBackgroundPatientTransportWorkerTimer = setTimeout(
+            () => {
+                mfBackgroundPatientTransportWorkerTimer = null;
+                void runBackgroundPatientTransportWorker();
+            },
+            Math.max(0, Number(delayMs) || 0)
+        );
+        return true;
+    }
+
+    function wakeBackgroundPatientTransportWorker(
+        reason = ''
+    ) {
+        return scheduleBackgroundPatientTransportWorker(
+            0,
+            reason
+        );
+    }
+
+    async function runBackgroundPatientTransportWorker() {
+        if (
+            !MF_IS_TOP_WINDOW ||
+            mfBackgroundPatientTransportWorkerActive ||
+            !mfBackgroundPatientTransportEnabled ||
+            isManualAutoStopActive() ||
+            !isTransportAutomationAllowed()
+        ) {
+            return false;
+        }
+
+        const queue = readBackgroundPatientTransportQueue();
+        if (queue.length === 0) {
+            writeBackgroundPatientTransportState({
+                status: 'waiting',
+                lastMessage:
+                    'Waiting for a Transport Patient request.'
+            });
+            return true;
+        }
+
+        const now = Date.now();
+        const entry = queue.find(item => {
+            return Number(item.nextAttemptAt || 0) <= now;
+        });
+        if (!entry) {
+            const nextAt = Math.min(
+                ...queue.map(item => {
+                    return Math.max(
+                        now,
+                        Number(item.nextAttemptAt || now)
+                    );
+                })
+            );
+            scheduleBackgroundPatientTransportWorker(
+                Math.max(250, nextAt - now),
+                'retry due'
+            );
+            return false;
+        }
+
+        mfBackgroundPatientTransportWorkerActive = true;
+        writeBackgroundPatientTransportState({
+            status:
+                Number(entry.attempts || 0) > 0
+                    ? 'retrying'
+                    : 'sending',
+            lastAttemptAt: now,
+            lastMessage:
+                `Sending patient transport ${entry.vehicleId}/${entry.patientId} in the background.`,
+            lastError: ''
+        });
+
+        let result;
+        try {
+            result =
+                await processBackgroundPatientTransportEntry(
+                    entry
+                );
+        } catch (error) {
+            result = {
+                ok: false,
+                reason: String(
+                    error?.message ||
+                    'Background patient transport failed.'
+                ).slice(0, 300)
+            };
+        } finally {
+            cleanupBackgroundPatientTransportFrame();
+            mfBackgroundPatientTransportWorkerActive = false;
+        }
+
+        const latestQueue =
+            readBackgroundPatientTransportQueue();
+        const index = latestQueue.findIndex(item => {
+            return item.requestId === entry.requestId;
+        });
+        if (index < 0) {
+            scheduleBackgroundPatientTransportWorker(
+                250,
+                'queue changed during send'
+            );
+            return false;
+        }
+
+        if (result?.ok) {
+            latestQueue.splice(index, 1);
+            writeBackgroundPatientTransportQueue(
+                latestQueue
+            );
+            const recent =
+                readBackgroundPatientTransportRecent();
+            recent[entry.routeKey] = {
+                timestamp: Date.now(),
+                status: 'sent'
+            };
+            writeBackgroundPatientTransportRecent(recent);
+            const state =
+                readBackgroundPatientTransportState();
+            writeBackgroundPatientTransportState({
+                status: 'sent',
+                lastSuccessAt: Date.now(),
+                totalSent:
+                    Math.max(
+                        0,
+                        Number(state.totalSent || 0)
+                    ) + 1,
+                lastMessage:
+                    result.reason ||
+                    'Patient transport sent.',
+                lastError: ''
+            });
+            scheduleBackgroundPatientTransportWorker(
+                300,
+                'next patient transport'
+            );
+            return true;
+        }
+
+        const attempts =
+            Math.max(
+                0,
+                Number(entry.attempts || 0)
+            ) + 1;
+        if (
+            attempts >=
+            MF_BACKGROUND_PATIENT_TRANSPORT_MAX_ATTEMPTS
+        ) {
+            latestQueue.splice(index, 1);
+            writeBackgroundPatientTransportQueue(
+                latestQueue
+            );
+            const recent =
+                readBackgroundPatientTransportRecent();
+            recent[entry.routeKey] = {
+                timestamp: Date.now(),
+                status: 'failed'
+            };
+            writeBackgroundPatientTransportRecent(recent);
+            writeBackgroundPatientTransportState({
+                status: 'failed',
+                lastError:
+                    result?.reason ||
+                    'Patient transport failed after three attempts.'
+            });
+            scheduleBackgroundPatientTransportWorker(
+                500,
+                'continue after failed patient transport'
+            );
+            return false;
+        }
+
+        const retryDelay =
+            MF_BACKGROUND_PATIENT_TRANSPORT_RETRY_DELAYS_MS[
+                Math.min(
+                    attempts - 1,
+                    MF_BACKGROUND_PATIENT_TRANSPORT_RETRY_DELAYS_MS.length - 1
+                )
+            ];
+        latestQueue[index] = {
+            ...entry,
+            attempts,
+            nextAttemptAt: Date.now() + retryDelay
+        };
+        writeBackgroundPatientTransportQueue(latestQueue);
+        writeBackgroundPatientTransportState({
+            status: 'retrying',
+            lastError: result?.reason ||
+                'Patient transport will be retried.',
+            lastMessage:
+                `Retry ${attempts + 1}/${MF_BACKGROUND_PATIENT_TRANSPORT_MAX_ATTEMPTS} scheduled.`
+        });
+        scheduleBackgroundPatientTransportWorker(
+            retryDelay,
+            'patient transport retry'
+        );
+        return false;
+    }
+
+    function installBackgroundPatientTransportWakeHandler() {
+        if (
+            !MF_IS_TOP_WINDOW ||
+            mfBackgroundPatientTransportMessageHandler
+        ) {
+            return;
+        }
+        mfBackgroundPatientTransportMessageHandler = event => {
+            if (
+                event.origin !== window.location.origin ||
+                event.data?.source !==
+                    MF_BACKGROUND_PATIENT_TRANSPORT_WAKE_SOURCE
+            ) {
+                return;
+            }
+            scheduleBackgroundPatientTransportWorker(
+                0,
+                String(event.data?.reason || '')
+            );
+        };
+        window.addEventListener(
+            'message',
+            mfBackgroundPatientTransportMessageHandler
+        );
+    }
+
     function mfIsExactPatientTransportAnchor(element) {
         if (!element || String(element.tagName || '').toLowerCase() !== 'a') return false;
         const href = String(element.getAttribute?.('href') || '').trim();
@@ -52611,7 +54118,18 @@ async function handleAutoPrisonerReleaseAfterActions() {
     function findExactFirstApproachTransportButton() {
         const exactPatientAnchor = mfFindExactPatientTransportAnchorDeep();
 
-        if (exactPatientAnchor) return exactPatientAnchor;
+        if (exactPatientAnchor) {
+            if (
+                mfBackgroundPatientTransportEnabled &&
+                isTransportAutomationAllowed() &&
+                captureBackgroundPatientTransportRequests(
+                    'foreground exact-patient deferral'
+                ).covered > 0
+            ) {
+                return null;
+            }
+            return exactPatientAnchor;
+        }
 
         const deepButton = mfFindAnyVisibleApproachButtonDeep();
 
@@ -53319,7 +54837,18 @@ async function handleAutoPrisonerReleaseAfterActions() {
     function mfBruteFindFirstApproachButton() {
         const exactPatientAnchor = mfFindExactPatientTransportAnchorDeep();
 
-        if (exactPatientAnchor) return exactPatientAnchor;
+        if (exactPatientAnchor) {
+            if (
+                mfBackgroundPatientTransportEnabled &&
+                isTransportAutomationAllowed() &&
+                captureBackgroundPatientTransportRequests(
+                    'brute watcher patient deferral'
+                ).covered > 0
+            ) {
+                return null;
+            }
+            return exactPatientAnchor;
+        }
 
         // This helper already performs the deep transport-scope lookup, so do
         // not run the same deep scan once before calling it.
@@ -53514,6 +55043,16 @@ async function handleAutoPrisonerReleaseAfterActions() {
             // Auto guard: this must not run when Auto Mode is off,
             // unless a valid post-transport rehook is pending from an Auto Mode run.
             if (!isTransportAutomationAllowed()) return;
+
+            if (mfBackgroundPatientTransportEnabled) {
+                const backgroundCapture =
+                    captureBackgroundPatientTransportRequests(
+                        'global transport watcher'
+                    );
+                if (backgroundCapture.covered > 0) {
+                    return;
+                }
+            }
 
             // Most Auto Mode ticks are normal missions, not transport screens.
             // A cheap preflight avoids full modal/body scans until a vehicle
@@ -54119,6 +55658,25 @@ async function handleAutoPrisonerReleaseAfterActions() {
                     ? 'Auto Mode: dispatch refresh complete. Moving to the next mission...'
                     : 'Dispatch refresh complete. Moving to the next mission...'
             );
+
+            if (
+                mode === 'auto' &&
+                mfBackgroundPatientTransportEnabled &&
+                !mfIsPoliceOrPrisonerTransportActive()
+            ) {
+                const backgroundCapture =
+                    captureBackgroundPatientTransportRequests(
+                        `advance-resume-${source}`
+                    );
+                if (backgroundCapture.covered > 0) {
+                    updateStatusBox(
+                        `Auto Mode: ${backgroundCapture.covered} patient transport request${backgroundCapture.covered === 1 ? '' : 's'} queued in the background. Moving to the next mission...`
+                    );
+                    return await clickExactNextMissionAfterDispatch(
+                        state
+                    );
+                }
+            }
 
             // Only enter the transport workflow when a transport screen is
             // already present. Ordinary missions go straight to the exact
@@ -54764,6 +56322,24 @@ async function handleAutoPrisonerReleaseAfterActions() {
         await wait(800);
 
         if (!autoModeRunning) return false;
+
+        if (
+            mfBackgroundPatientTransportEnabled &&
+            !mfIsPoliceOrPrisonerTransportActive()
+        ) {
+            const backgroundCapture =
+                captureBackgroundPatientTransportRequests(
+                    'after-final-dispatch'
+                );
+            if (backgroundCapture.covered > 0) {
+                updateStatusBox(
+                    `Final mission patient transport queued in the background. Continuing to the silent queue watcher...`
+                );
+                return await waitForQueueRestartAndOpenMission(
+                    'after-final-dispatch-background-patient'
+                );
+            }
+        }
 
         // If the transport screen appears, do not close the modal.
         // The independent Approach watcher sends it every 4 seconds, then auto-close continuation handles the next mission.
@@ -56685,6 +58261,10 @@ async function handleAutoPrisonerReleaseAfterActions() {
 
         stopBruteApproachTransportWatcher();
         stopPostTransportRehookWatcher();
+        stopBackgroundPatientTransportWorker({
+            clearQueue: false,
+            reason: 'runtime watcher suspension'
+        });
     }
 
 
@@ -56719,6 +58299,10 @@ async function handleAutoPrisonerReleaseAfterActions() {
             localStorage.getItem(
                 'mf_next_queue_restart_enabled_v10'
             ) !== 'false';
+        mfBackgroundPatientTransportEnabled =
+            localStorage.getItem(
+                MF_BACKGROUND_PATIENT_TRANSPORT_ENABLED_KEY
+            ) === 'true';
 
         const silentQueueRequired = Boolean(
             sessionStorage.getItem(
@@ -56752,10 +58336,35 @@ async function handleAutoPrisonerReleaseAfterActions() {
         } else {
             stopPostTransportRehookWatcher();
         }
+
+        if (
+            mfBackgroundPatientTransportEnabled &&
+            isTransportAutomationAllowed() &&
+            readBackgroundPatientTransportQueue().length > 0
+        ) {
+            scheduleBackgroundPatientTransportWorker(
+                0,
+                'background supervisor'
+            );
+        } else if (
+            !mfBackgroundPatientTransportEnabled ||
+            isManualAutoStopActive()
+        ) {
+            stopBackgroundPatientTransportWorker({
+                clearQueue: !mfBackgroundPatientTransportEnabled,
+                reason: !mfBackgroundPatientTransportEnabled
+                    ? 'setting off'
+                    : 'Auto Mode stopped'
+            });
+        }
+
+        renderBackgroundPatientTransportStatus();
     }
 
     function installBackgroundWatcherSupervisor() {
         if (!MF_IS_TOP_WINDOW) return;
+
+        installBackgroundPatientTransportWakeHandler();
 
         if (!mfBackgroundStorageHandler) {
             mfBackgroundStorageHandler = function(event) {

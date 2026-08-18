@@ -119,7 +119,7 @@ expect(loggerMissionFinderVersion === missionFinderVersion, 'Logged Mission Find
 requireText(source, '// @grant        none', 'existing no-grant permission model');
 requireText(source, "'mf_mission_logger_enabled_v1'", 'opt-in setting');
 requireText(source, '5 * 60 * 1000', 'five-minute upload interval');
-requireText(source, 'MF_MISSION_LOGGER_MAX_QUEUE_EVENTS = 300', 'hard event bound');
+requireText(source, 'MF_MISSION_LOGGER_MAX_QUEUE_EVENTS = 1200', 'hard event bound');
 requireText(source, 'MF_MISSION_LOGGER_MAX_QUEUE_CHARS = 3000000', 'hard byte bound');
 requireText(source, 'MF_MISSION_LOGGER_BATCH_SIZE = 40', 'bounded batch size');
 requireText(source, 'MF_MISSION_LOGGER_DISPATCH_DEDUPE_MS =\n        15000', '15-second dispatch retry guard');
@@ -146,7 +146,10 @@ expect(!endpoint.includes('http:'), 'Insecure logger endpoints must remain block
 const queueBound = extractFunction(source, 'boundMissionLoggerQueue');
 expect(queueBound.includes('MF_MISSION_LOGGER_MAX_QUEUE_EVENTS'), 'Queue must enforce the entry bound');
 expect(queueBound.includes('MF_MISSION_LOGGER_MAX_QUEUE_CHARS'), 'Queue must enforce the storage-size bound');
-expect(queueBound.includes('queue.shift()'), 'Queue overflow must drop oldest events first');
+expect(queueBound.includes('findMissionLoggerQueueDropIndex(queue)'), 'Queue overflow must use priority-aware retention');
+const queuePriority = extractFunction(source, 'getMissionLoggerQueueEventPriority');
+expect(queuePriority.includes("case 'dispatch':"), 'Dispatch evidence must have the highest queue retention priority');
+expect(queuePriority.includes("case 'mission-observed':"), 'Mission observations must remain the first safe overflow candidate');
 
 const transport = extractFunction(source, 'submitMissionLoggerRequest');
 for (const token of [
@@ -190,7 +193,8 @@ for (const token of [
   'acquireMissionLoggerSyncLock()',
   'readMissionLoggerPendingBatch()',
   'writeMissionLoggerPendingBatch(pending)',
-  "submitMissionLoggerRequest(\n                'upload'",
+  'submitMissionLoggerRequest(',
+  "'upload',",
   'writeMissionLoggerPendingBatch(null)',
   'releaseMissionLoggerSyncLock(lockOwner)',
 ]) {
@@ -311,6 +315,11 @@ expect(queueEnrichment.includes('writeMissionLoggerQueue(enriched)'), 'Credit en
 
 expect(sync.includes('await preloadMissionRequiredPersonnel()'), 'Sync must await the existing mission-definition preload when credits are missing');
 expect(sync.includes('enrichMissionLoggerQueuedEventsFromCurrentMission()'), 'Sync must enrich queued events before creating its batch');
+expect(sync.includes('MF_MISSION_LOGGER_AUTO_DRAIN_MAX_BATCHES'), 'Automatic sync must drain multiple batches when a backlog exists');
+expect(sync.includes('MF_MISSION_LOGGER_MANUAL_DRAIN_MAX_BATCHES'), 'Manual/reconnect sync must use the larger bounded drain');
+expect(sync.includes('scheduleMissionLoggerEagerSync('), 'A remaining backlog must schedule another immediate bounded drain');
+const enqueue = extractFunction(source, 'queueMissionLoggerEvent');
+expect(enqueue.includes('scheduleMissionLoggerEagerSync('), 'Queue growth must trigger eager sync before the five-minute timer');
 
 const missionSnapshot = extractFunction(source, 'getMissionLoggerMissionSnapshot');
 expect(missionSnapshot.includes('candidate.missions_data'), 'Mission snapshot must use MissionChief mission records when available');

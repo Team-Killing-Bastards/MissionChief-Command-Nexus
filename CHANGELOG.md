@@ -6,7 +6,26 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
-No changes have been queued after `1.1.4`.
+No changes have been queued after `1.1.5`.
+
+## [1.1.5] - 2026-08-18
+
+### Added
+
+- Added the default-off **Handle patient transports in the background** setting. During Auto Mode, exact current-player Transport Patient requests are queued, processed one at a time in an off-screen same-origin MissionChief frame, sent to the first destination with confirmed free hospital capacity and removed only after MissionChief confirms the handoff.
+- Added visible background-transport states for Watching, Queued, Sending, Retrying, Sent and Failed. Prisoner/cell transport remains on the established foreground route.
+
+### Fixed
+
+- Fixed the Mission Analytics Logger reaching its 300-event local ceiling during long offline or high-volume sessions. The queue now retains up to 1,200 events within the existing 3 MB storage bound, drains up to eight 40-event batches per automatic pass, drains up to twelve batches on manual sync/reconnect and immediately schedules another bounded pass while backlog remains.
+- Added eager upload when the local outbox reaches 20 events, so normal high-volume activity no longer waits for the next five-minute timer.
+- Made overflow fail safer: low-value mission-observed rows are discarded before dispatch, completion or exact-credit evidence if the fixed storage ceiling is still reached. Existing dropped events cannot be reconstructed.
+
+### Security and compatibility
+
+- Background patient transport accepts only exact same-origin `/vehicles/{vehicle}/patient/{patient}` routes captured from a visible Transport Patient request or active patient/hospital page. It rejects prisoner/cell contexts, keeps one worker and one request active, caps the queue at 40, retries at most three times and clears immediately when the setting or Auto Mode is stopped.
+- Preserved the existing Google Apps Script endpoint and its 40-event server batch limit; no `Code.gs` deployment, pairing change or workbook migration is required.
+- Added permanent regressions for background patient transport lifecycle and logger backlog draining. Increased the unified userscript from `1.1.4` to `1.1.5` and Mission Finder from `V10.7.2` to `V10.7.3`; all other component versions remain unchanged.
 
 ## [1.1.4] - 2026-08-18
 
