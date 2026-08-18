@@ -32,7 +32,9 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/apply-mission-analytics-hotfix-v1110.py
+          python3 scripts/apply-mission-analytics-hotfix-v1110-followup.py
           rm -f scripts/apply-mission-analytics-hotfix-v1110.py
+          rm -f scripts/apply-mission-analytics-hotfix-v1110-followup.py
           rm -f .github/workflows/hotfix-mission-analytics-v1110.yml
           rm -f .github/workflows/hotfix-mission-analytics-v1110-pr-runner.yml
 
