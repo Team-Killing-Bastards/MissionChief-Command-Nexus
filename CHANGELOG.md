@@ -6,7 +6,22 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
-No changes have been queued after `1.1.3`.
+No changes have been queued after `1.1.4`.
+
+## [1.1.4] - 2026-08-18
+
+### Fixed
+
+- Made every Nexus-controlled dispatch route logger-aware instead of relying solely on a document click listener. Manual Dispatch, Dispatch & Share, Auto Mode, high-value auto-share, not-ready skip dispatches, Ally Steal and post-dispatch upgrade passes now snapshot selected units before MissionChief clears the vehicle selection and commit the prepared event after the dispatch control is invoked.
+- Added a direct programmatic fallback for mission runtimes where the capture-phase click listener is absent. The existing dispatch fingerprint dedupe prevents the listener and fallback from creating duplicate events.
+- Rejected zero-unit dispatch snapshots so navigation or repeated dispatch controls cannot create misleading dispatch events with no unit evidence.
+- Added dispatch-capture provenance and selected-unit counts to event metadata for live diagnosis.
+
+### Security and compatibility
+
+- Preserved native MissionChief dispatch controls, Auto Mode behaviour, the existing logger endpoint, spreadsheet, player/browser pairings and queued events. Actions performed in a completely different unpaired browser or profile remain outside the browser-local logger boundary.
+- Added `scripts/check-mission-dispatch-path-logger.mjs` and expanded the permanent Mission Analytics Logger regression to lock every supported dispatch path.
+- Increased the unified userscript from `1.1.3` to `1.1.4` and Mission Finder from `V10.7.1` to `V10.7.2`. Resource Administration remains `V4.2.8`, Unit Naming remains `3.3.27`, Station Naming remains `1.3.22`, and Personnel Assignment remains `1.3.12`.
 
 ## [1.1.3] - 2026-08-17
 

@@ -318,7 +318,14 @@ expect(missionSnapshot.includes("data-sortable-by"), 'Mission snapshot must fall
 expect(missionSnapshot.includes('possible_patients_count'), 'Mission snapshot must preserve possible-patient context');
 expect(missionSnapshot.includes('prisoners_count'), 'Mission snapshot must preserve current prisoner count');
 
-const dispatchCapture = extractFunction(source, 'installMissionLoggerDispatchCapture');
+const dispatchCapture = [
+  'resolveMissionLoggerDispatchOptions',
+  'prepareMissionLoggerDispatchSnapshot',
+  'recordPreparedMissionLoggerDispatch',
+  'recordMissionLoggerDispatchFromControl',
+  'clickMissionLoggerDispatchControl',
+  'installMissionLoggerDispatchCapture',
+].map(name => extractFunction(source, name)).join('\n');
 for (const token of [
   "document.addEventListener(\n            'click'",
   'getMissionLoggerDispatchControl(event.target)',

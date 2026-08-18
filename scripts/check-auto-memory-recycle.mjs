@@ -149,9 +149,9 @@ for (const token of [
 }
 
 const dispatchOnly = extractFunction('clickDispatchOnly');
-expect(dispatchOnly.includes("document.querySelectorAll(\n                    'a.alert_next'"), 'Normal Dispatch & Next selector changed unexpectedly');
+expect(dispatchOnly.includes("'a.alert_next'"), 'Normal Dispatch & Next selector changed unexpectedly');
 const dispatchByValue = extractFunction('clickMissionDispatchByValue');
-expect(dispatchByValue.includes('clickDispatchAndShareOnly()'), 'High-value Dispatch & Share path changed unexpectedly');
-expect(dispatchByValue.includes('clickDispatchOnly()'), 'Normal dispatch path changed unexpectedly');
+expect(dispatchByValue.includes('clickDispatchAndShareOnly({'), 'High-value Dispatch & Share path changed unexpectedly');
+expect(dispatchByValue.includes('clickDispatchOnly({'), 'Normal dispatch path changed unexpectedly');
 
 console.log('Auto Mode memory recycle and lifecycle suspension checks passed.');

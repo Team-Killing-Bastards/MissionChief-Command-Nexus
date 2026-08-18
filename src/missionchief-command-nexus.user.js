@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.1.3
+// @version      1.1.4
 // @description  Unified MissionChief UK toolkit for mission dispatch, resource administration, trained-personnel assignment and opt-in mission analytics.
 // @author       MartyBlyth
 // @license      MIT
@@ -12454,7 +12454,7 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.7.1
+         * MODULE 2: MISSION FINDER V10.7.2
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
@@ -14258,9 +14258,9 @@
     const SESSION_STATS_KEY = 'mf_session_stats_v1';
     const SESSION_REFRESH_FLAG = 'mf_session_manual_refresh_checked';
     const MF_MISSION_LOGGER_SCHEMA_VERSION = 1;
-    const MF_MISSION_LOGGER_CLIENT_VERSION = '1.1.3';
+    const MF_MISSION_LOGGER_CLIENT_VERSION = '1.1.4';
     const MF_MISSION_LOGGER_MISSION_FINDER_VERSION =
-        '10.7.1';
+        '10.7.2';
     const MF_MISSION_LOGGER_ENABLED_KEY =
         'mf_mission_logger_enabled_v1';
     const MF_MISSION_LOGGER_ENDPOINT_KEY =
@@ -14331,6 +14331,7 @@
     let mfMissionLoggerStorageHandler = null;
     let mfMissionLoggerOnlineHandler = null;
     let mfMissionLoggerDispatchClickHandler = null;
+    let mfMissionLoggerPendingProgrammaticDispatch = null;
     let mfMissionLoggerCompletionHook = null;
     let mfMissionLoggerMissionMarkerWrapper = null;
     let mfMissionLoggerGenerationArmTimer = null;
@@ -29906,6 +29907,225 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
         return duplicate;
     }
 
+    function resolveMissionLoggerDispatchOptions(
+        control,
+        options = {}
+    ) {
+        const shared = options.shared === undefined
+            ? (
+                control.classList.contains(
+                    'alert_next_alliance'
+                ) ||
+                /share/i.test(
+                    `${control.textContent || ''} ${control.getAttribute('title') || ''}`
+                )
+            )
+            : options.shared === true;
+        const allySteal = options.allySteal === true ||
+            (
+                !options.dispatchMode &&
+                !!readAllyStealPendingState()
+            );
+        const autoMode = options.autoMode === undefined
+            ? (
+                autoModeRunning === true ||
+                sessionStorage.getItem(
+                    'mf_auto_mode_running'
+                ) === 'true'
+            )
+            : options.autoMode === true;
+        const ready = options.ready === undefined
+            ? vehicleLoadState.ready === true
+            : options.ready === true;
+        const dispatchMode = trimMissionLoggerText(
+            options.dispatchMode || (
+                allySteal
+                    ? 'ally-steal'
+                    : autoMode
+                        ? ready
+                            ? (shared ? 'auto-share' : 'auto')
+                            : 'auto-not-ready'
+                        : (shared ? 'manual-share' : 'manual')
+            ),
+            80
+        );
+
+        return {
+            shared,
+            autoMode,
+            ready,
+            dispatchMode,
+            reason: trimMissionLoggerText(
+                options.reason ||
+                'Native MissionChief dispatch control clicked',
+                300
+            ),
+            metadata:
+                options.metadata &&
+                typeof options.metadata === 'object'
+                    ? { ...options.metadata }
+                    : {}
+        };
+    }
+
+    function prepareMissionLoggerDispatchSnapshot(
+        control,
+        options = {}
+    ) {
+        const validControl =
+            getMissionLoggerDispatchControl(control);
+        if (
+            !validControl ||
+            !mfMissionLoggerEnabled ||
+            !readMissionLoggerIdentity()
+        ) {
+            return null;
+        }
+
+        const selectedUnits =
+            getMissionLoggerSelectedUnits();
+        if (selectedUnits.length === 0) {
+            return null;
+        }
+
+        const missionId =
+            getCurrentMissionIdForQueueRestart();
+        if (!missionId) return null;
+
+        const resolved =
+            resolveMissionLoggerDispatchOptions(
+                validControl,
+                options
+            );
+        const fingerprint =
+            createMissionLoggerDispatchFingerprint(
+                missionId,
+                resolved.dispatchMode,
+                selectedUnits
+            );
+        const snapshot = createMissionLoggerEvent(
+            'dispatch',
+            {
+                dispatchMode:
+                    resolved.dispatchMode,
+                shared: resolved.shared,
+                units: selectedUnits,
+                ready: resolved.ready,
+                autoMode: resolved.autoMode,
+                dispatchFingerprint:
+                    fingerprint,
+                reason: resolved.reason,
+                metadata: {
+                    ...resolved.metadata,
+                    dispatchCaptureSource:
+                        resolved.metadata
+                            .dispatchCaptureSource ||
+                        'native-control-click',
+                    dispatchControlId:
+                        trimMissionLoggerText(
+                            validControl.id || '',
+                            120
+                        ),
+                    selectedUnitCount:
+                        selectedUnits.length
+                }
+            }
+        );
+
+        if (!snapshot) return null;
+        return {
+            fingerprint,
+            snapshot,
+            timestamp: Date.now()
+        };
+    }
+
+    function recordPreparedMissionLoggerDispatch(
+        prepared
+    ) {
+        if (!prepared?.snapshot) return false;
+        if (
+            isDuplicateMissionLoggerDispatch(
+                prepared.fingerprint,
+                prepared.timestamp
+            )
+        ) {
+            return false;
+        }
+        return recordMissionLoggerDispatchEvent(
+            prepared.snapshot
+        );
+    }
+
+    function recordMissionLoggerDispatchFromControl(
+        control,
+        options = {}
+    ) {
+        return recordPreparedMissionLoggerDispatch(
+            prepareMissionLoggerDispatchSnapshot(
+                control,
+                options
+            )
+        );
+    }
+
+    function clickMissionLoggerDispatchControl(
+        control,
+        options = {},
+        fallbackClick = null
+    ) {
+        const programmaticOptions = {
+            ...options,
+            metadata: {
+                ...(
+                    options.metadata &&
+                    typeof options.metadata === 'object'
+                        ? options.metadata
+                        : {}
+                ),
+                dispatchCaptureSource:
+                    'nexus-programmatic-dispatch'
+            }
+        };
+        const prepared =
+            prepareMissionLoggerDispatchSnapshot(
+                control,
+                programmaticOptions
+            );
+        const previousPending =
+            mfMissionLoggerPendingProgrammaticDispatch;
+        mfMissionLoggerPendingProgrammaticDispatch = {
+            control,
+            options: programmaticOptions
+        };
+
+        let clicked = false;
+        try {
+            control.click();
+            clicked = true;
+        } catch (_error) {
+            if (typeof fallbackClick === 'function') {
+                try {
+                    clicked = fallbackClick() === true;
+                } catch (_fallbackError) {
+                    clicked = false;
+                }
+            }
+        } finally {
+            mfMissionLoggerPendingProgrammaticDispatch =
+                previousPending;
+        }
+
+        if (!clicked) return false;
+
+        // The capture-phase listener normally records synchronously. This
+        // direct fallback covers programmatic dispatches occurring in a
+        // mission runtime where that listener was not installed. Shared
+        // fingerprint dedupe makes the second attempt harmless.
+        recordPreparedMissionLoggerDispatch(prepared);
+        return true;
+    }
+
     function installMissionLoggerDispatchCapture() {
         if (mfMissionLoggerDispatchClickHandler) return;
 
@@ -29921,61 +30141,23 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
                 getMissionLoggerDispatchControl(event.target);
             if (!control) return;
 
-            const shared =
-                control.classList.contains(
-                    'alert_next_alliance'
-                ) ||
-                /share/i.test(
-                    `${control.textContent || ''} ${control.getAttribute('title') || ''}`
-                );
-            const allySteal = !!readAllyStealPendingState();
-            const isAuto =
-                autoModeRunning === true ||
-                sessionStorage.getItem(
-                    'mf_auto_mode_running'
-                ) === 'true';
-            const dispatchMode = allySteal
-                ? 'ally-steal'
-                : isAuto
-                    ? vehicleLoadState.ready
-                        ? (shared ? 'auto-share' : 'auto')
-                        : 'auto-not-ready'
-                    : (shared ? 'manual-share' : 'manual');
-            const selectedUnits =
-                getMissionLoggerSelectedUnits();
-            const fingerprint =
-                createMissionLoggerDispatchFingerprint(
-                getCurrentMissionIdForQueueRestart(),
-                dispatchMode,
-                selectedUnits
-            );
-            const now = Date.now();
+            const pending =
+                mfMissionLoggerPendingProgrammaticDispatch;
+            const pendingOptions =
+                pending?.control === control
+                    ? pending.options
+                    : null;
 
-            if (
-                isDuplicateMissionLoggerDispatch(
-                    fingerprint,
-                    now
-                )
-            ) {
-                return;
-            }
-
-            recordMissionLoggerDispatchEvent(
-                createMissionLoggerEvent(
-                    'dispatch',
-                    {
-                        dispatchMode,
-                        shared,
-                        units: selectedUnits,
-                        ready:
-                            vehicleLoadState.ready === true,
-                        autoMode: isAuto,
-                        dispatchFingerprint:
-                            fingerprint,
-                        reason:
-                            'Native MissionChief dispatch control clicked'
+            recordMissionLoggerDispatchFromControl(
+                control,
+                pendingOptions || {
+                    metadata: {
+                        dispatchCaptureSource:
+                            event.isTrusted
+                                ? 'trusted-native-control-click'
+                                : 'synthetic-native-control-click'
                     }
-                )
+                }
             );
         };
 
@@ -43014,7 +43196,22 @@ let sessionRuntimeTicker = null;
         );
 
         try {
-            dispatchButton.click();
+            if (
+                !clickMissionLoggerDispatchControl(
+                    dispatchButton,
+                    {
+                        dispatchMode: 'ally-steal',
+                        allySteal: true,
+                        autoMode: false,
+                        ready: true,
+                        reason: 'Nexus Ally Steal dispatch'
+                    }
+                )
+            ) {
+                throw new Error(
+                    'Ally Steal dispatch click failed'
+                );
+            }
 
             allyStealDebugLog(
                 'DISPATCH CLICK CALLED',
@@ -44000,7 +44197,10 @@ let sessionRuntimeTicker = null;
     }
 
 
-    function clickDispatchOnly() {
+    function clickDispatchOnly(
+        loggerOptions
+    ) {
+        loggerOptions = loggerOptions || {};
         // Proven fast MissionChief workflow:
         // dispatch selected vehicles and open the next mission in one
         // native action. Do not separately click Next Mission afterwards.
@@ -44045,16 +44245,15 @@ let sessionRuntimeTicker = null;
                     block: 'center',
                     inline: 'center'
                 });
-            } catch (error) {}
+            } catch (_error) {}
 
-            try {
-                dispatchNextButton.click();
-                return true;
-            } catch (error) {
-                return realClickForQueueRestart(
+            return clickMissionLoggerDispatchControl(
+                dispatchNextButton,
+                loggerOptions,
+                () => realClickForQueueRestart(
                     dispatchNextButton
-                );
-            }
+                )
+            );
         }
 
         // Next Mission (0) has no combined next destination.
@@ -44141,20 +44340,22 @@ let sessionRuntimeTicker = null;
                 block: 'center',
                 inline: 'center'
             });
-        } catch (error) {}
+        } catch (_error) {}
 
-        try {
-            finalDispatchButton.click();
-            return true;
-        } catch (error) {
-            return realClickForQueueRestart(
+        return clickMissionLoggerDispatchControl(
+            finalDispatchButton,
+            loggerOptions,
+            () => realClickForQueueRestart(
                 finalDispatchButton
-            );
-        }
+            )
+        );
     }
 
 
-    function clickDispatchAndShareOnly() {
+    function clickDispatchAndShareOnly(
+        loggerOptions
+    ) {
+        loggerOptions = loggerOptions || {};
         const dispatchShareButton =
             document.querySelector('a.alert_next_alliance') ||
             Array.from(document.querySelectorAll('a, button')).find(
@@ -44180,8 +44381,13 @@ let sessionRuntimeTicker = null;
 
         if (!dispatchShareButton) return false;
 
-        dispatchShareButton.click();
-        return true;
+        return clickMissionLoggerDispatchControl(
+            dispatchShareButton,
+            {
+                ...loggerOptions,
+                shared: true
+            }
+        );
     }
 
     function clickMissionDispatchByValue(
@@ -44209,7 +44415,16 @@ let sessionRuntimeTicker = null;
                 );
             }
 
-            if (clickDispatchAndShareOnly()) {
+            if (
+                clickDispatchAndShareOnly({
+                    dispatchMode: 'auto-share',
+                    autoMode: true,
+                    ready: vehicleLoadState.ready === true,
+                    reason:
+                        reason ||
+                        'Nexus Auto Mode Dispatch & Share'
+                })
+            ) {
                 updateStatusBox(
                     `High-value mission (${credits.toLocaleString('en-GB')} credits): Dispatch & Share clicked. Moving to the next mission...`
                 );
@@ -44243,7 +44458,17 @@ let sessionRuntimeTicker = null;
             'normal Auto Mode Dispatch & Next'
         );
 
-        const clicked = clickDispatchOnly();
+        const clicked = clickDispatchOnly({
+            dispatchMode:
+                vehicleLoadState.ready === true
+                    ? 'auto'
+                    : 'auto-not-ready',
+            autoMode: true,
+            ready: vehicleLoadState.ready === true,
+            reason:
+                reason ||
+                'Nexus Auto Mode Dispatch & Next'
+        });
 
         return {
             clicked,
@@ -44262,7 +44487,13 @@ let sessionRuntimeTicker = null;
             'manual normal Dispatch uses native Dispatch-and-next'
         );
 
-        if (clickDispatchOnly()) {
+        if (
+            clickDispatchOnly({
+                dispatchMode: 'manual',
+                autoMode: false,
+                reason: 'Nexus manual Dispatch & Next button'
+            })
+        ) {
             updateStatusBox(
                 'Dispatch & Next clicked. MissionChief is opening the next mission...'
             );
@@ -44293,7 +44524,13 @@ let sessionRuntimeTicker = null;
             advanceState
         );
 
-        if (clickDispatchAndShareOnly()) {
+        if (
+            clickDispatchAndShareOnly({
+                dispatchMode: 'manual-share',
+                autoMode: false,
+                reason: 'Nexus manual Dispatch & Share button'
+            })
+        ) {
             updateStatusBox(
                 advanceState
                     ? 'Dispatch & Share clicked. Waiting for refresh, then opening Next Mission...'
@@ -54217,7 +54454,15 @@ async function handleAutoPrisonerReleaseAfterActions() {
             !isUpgradePass &&
             credits > MF_SHARE_CREDIT_THRESHOLD
         ) {
-            if (clickDispatchAndShareOnly()) {
+            if (
+                clickDispatchAndShareOnly({
+                    dispatchMode: 'auto-share',
+                    autoMode: true,
+                    ready: true,
+                    reason:
+                        'Nexus Auto Mode initial upgrade-check Dispatch & Share'
+                })
+            ) {
                 return {
                     clicked: true,
                     shared: true
@@ -54247,19 +54492,23 @@ async function handleAutoPrisonerReleaseAfterActions() {
             });
         } catch (error) {}
 
-        try {
-            dispatchButton.click();
+        const clicked =
+            clickMissionLoggerDispatchControl(
+                dispatchButton,
+                {
+                    dispatchMode: 'auto',
+                    autoMode: true,
+                    ready: true,
+                    reason: isUpgradePass
+                        ? 'Nexus Auto Mode upgrade re-dispatch'
+                        : 'Nexus Auto Mode initial dispatch'
+                }
+            );
 
-            return {
-                clicked: true,
-                shared: false
-            };
-        } catch (error) {
-            return {
-                clicked: false,
-                shared: false
-            };
-        }
+        return {
+            clicked,
+            shared: false
+        };
     }
 
     async function waitForAutoPostDispatchUpgradeRows(
@@ -55411,7 +55660,14 @@ async function handleAutoPrisonerReleaseAfterActions() {
                     break;
                 }
 
-                if (!clickDispatchOnly()) {
+                if (
+                    !clickDispatchOnly({
+                        dispatchMode: 'auto-not-ready',
+                        autoMode: true,
+                        ready: false,
+                        reason: 'Nexus Auto Mode skip dispatch'
+                    })
+                ) {
                     sessionStorage.removeItem(
                         MF_FINAL_QUEUE_DISPATCH_FLAG
                     );
