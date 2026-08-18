@@ -26,7 +26,7 @@ private_path = Path('scripts/check-private-url-logger-profile.mjs')
 private = private_path.read_text()
 old_token = "expect(!backend.includes('payload.token'), 'Private backend must not require upload tokens');"
 new_token = '''const uploadStart = backend.indexOf('function handleLoggerUpload_(payload)');
-const uploadEnd = backend.indexOf('function prepareLoggerActivityRows_', uploadStart);
+const uploadEnd = backend.indexOf('\\nfunction ', uploadStart + 'function handleLoggerUpload_(payload)'.length);
 const uploadHandler = backend.slice(uploadStart, uploadEnd);
 expect(uploadStart >= 0 && uploadEnd > uploadStart, 'Private upload handler must be isolatable');
 expect(!uploadHandler.includes('payload.token'), 'Private upload handler must not require upload tokens');'''
