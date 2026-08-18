@@ -1,10 +1,10 @@
 name: Apply v1.1.5 manual Sync Now repair
-# Trigger the validated final delta after the workflow has been registered on the branch.
+# One-use trusted branch builder. Removed by its own successful commit.
 
 on:
-  push:
+  pull_request:
     branches:
-      - agent/background-patient-transports
+      - main
     paths:
       - .github/workflows/apply-v115-manual-sync-delta.yml
 
