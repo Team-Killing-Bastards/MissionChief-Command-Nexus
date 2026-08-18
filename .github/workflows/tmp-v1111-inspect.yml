@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - release/v1.1.11-sharing-sync
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: read
