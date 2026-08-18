@@ -2,6 +2,10 @@
 
 This directory separates current operating guidance from versioned historical records. The current production baseline is Command Nexus `1.1.5` with Mission Finder `V10.7.3`.
 
+## Current release focus
+
+Version `1.1.5` adds the default-off background patient transport worker and a loss-resistant multi-batch Mission Analytics Logger drain. **Sync now** hands a manual drain request to the authoritative top-window logger owner, queues it behind an active upload when required and reports queued/per-batch progress instead of silently doing nothing.
+
 ## Current operational documentation
 
 - [Developer Handoff](DEVELOPER_HANDOFF.md) — verified baseline, implementation shape, risks and safe resume workflow.
