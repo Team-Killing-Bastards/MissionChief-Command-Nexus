@@ -6,6 +6,7 @@ on:
       - feature/activity-recorder-v119
     paths:
       - scripts/apply-activity-recorder-v119.py
+      - scripts/fix-activity-recorder-v119-test.py
       - .github/workflows/apply-activity-recorder-v119.yml
   pull_request:
     types: [opened, synchronize]
@@ -13,6 +14,7 @@ on:
       - main
     paths:
       - scripts/apply-activity-recorder-v119.py
+      - scripts/fix-activity-recorder-v119-test.py
       - .github/workflows/apply-activity-recorder-v119.yml
   workflow_dispatch:
 
@@ -66,6 +68,9 @@ jobs:
 
       - name: Apply deterministic patch
         run: python3 scripts/apply-activity-recorder-v119.py
+
+      - name: Scope generated recorder regression
+        run: python3 scripts/fix-activity-recorder-v119-test.py
 
       - name: Validate activity recorder
         run: |
