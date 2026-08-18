@@ -37,7 +37,7 @@ assert.match(helperBody, /ACTIVE/);
 
 assert.match(
   backend,
-  /buildId: '1\.1\.9-activity-recorder-2'/
+  /buildId: '1\.1\.10-upload-lock-hotfix-1'/
 );
 assert.match(
   backend,

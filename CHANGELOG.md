@@ -6,7 +6,21 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
-No changes queued after `1.1.9`.
+No changes queued after `1.1.10`.
+
+## [1.1.10] - 2026-08-18
+
+### Fixed
+
+- Installed the single Mission Analytics activity recorder in the top window before Mission Finder can hand heavy execution ownership to the active mission frame. Activity Log, Sessions and Action Summary can now receive top-window and same-origin mission-frame events without creating a second heavy Mission Finder runtime.
+- Increased the Google logger acknowledgement window from 30 seconds to 120 seconds and extended the shared cross-tab lease beyond that request window, preventing the browser from abandoning a batch while Apps Script is still waiting or writing.
+- Replaced the upload endpoint's 30-second script-lock wait with a two-second bounded lock attempt. Contention now returns explicit retryable `LOGGER_BUSY`, and Nexus retries the same persistent batch ID after 2, 5 and 15 seconds. Existing timeout confirmation remains a single same-ID retry.
+
+### Compatibility and recovery
+
+- Existing private logger URL, selected user, device diagnostics, queued events and pending batch IDs are retained. **Forget setup** is not a recovery action because it clears profile-scoped queued data.
+- The 120-second client remains compatible with the currently deployed private backend. Updating the existing Apps Script web-app deployment to backend build `1.1.10-upload-lock-hotfix-1` activates the fast `LOGGER_BUSY` response without changing the saved `/exec` URL.
+- Added `scripts/check-mission-logger-hotfix-v1110.mjs`. Increased Command Nexus from `1.1.9` to `1.1.10`; Mission Finder remains `V10.7.7` and all Resource Administration component versions remain unchanged.
 
 ## [1.1.9] - 2026-08-18
 

@@ -10,7 +10,7 @@ src/missionchief-command-nexus.user.js
 
 | Item | Value |
 |---|---|
-| Command Nexus version | `1.1.9` |
+| Command Nexus version | `1.1.10` |
 | Mission Finder baseline | `V10.7.7` |
 | Unit, Station & Personnel baseline | `V4.2.8` |
 | Unit / Station / Personnel interfaces | `3.3.27` / `1.3.22` / `1.3.12` |

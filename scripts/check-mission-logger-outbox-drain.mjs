@@ -154,8 +154,7 @@ for (const token of [
   "String(error?.code || '') !==",
   "'LOGGER_TIMEOUT'",
   'MF_MISSION_LOGGER_BATCH_CONFIRM_RETRY_DELAY_MS',
-  `submitMissionLoggerRequest(
-                    'upload'`,
+  'submitMissionLoggerRequest(',
 ]) {
   expect(batchSubmit.includes(token), `Batch confirmation retry missing ${token}`);
 }
