@@ -1,0 +1,72 @@
+name: Temporary v1.1.11 source inspection
+
+on:
+  push:
+    branches:
+      - release/v1.1.11-sharing-sync
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extract relevant source contexts
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          source_path = Path('src/missionchief-command-nexus.user.js')
+          lines = source_path.read_text(encoding='utf-8').splitlines()
+          needles = [
+              r'^//\s*@version\b',
+              r'\b(?:const|let|var)\s+VERSION\b',
+              r'Sharing\s*&\s*Sync',
+              r'logClientError',
+              r'client\s*error',
+              r'error\s*report',
+              r'crash\s*report',
+              r'report\s*crash',
+              r'ERROR_REPORT',
+              r'errorReport',
+              r'error_report',
+              r'endpoint',
+          ]
+          patterns = [re.compile(value, re.I) for value in needles]
+          hit_lines = []
+          for index, line in enumerate(lines):
+              if any(pattern.search(line) for pattern in patterns):
+                  hit_lines.append(index)
+
+          ranges = []
+          for index in hit_lines:
+              start = max(0, index - 18)
+              end = min(len(lines), index + 19)
+              if ranges and start <= ranges[-1][1] + 1:
+                  ranges[-1] = (ranges[-1][0], max(ranges[-1][1], end))
+              else:
+                  ranges.append((start, end))
+
+          output = [
+              f'Source: {source_path}',
+              f'Total lines: {len(lines)}',
+              f'Matches: {len(hit_lines)}',
+              '',
+          ]
+          for start, end in ranges:
+              output.append(f'===== lines {start + 1}-{end} =====')
+              for line_no in range(start, end):
+                  output.append(f'{line_no + 1:07d}: {lines[line_no]}')
+              output.append('')
+
+          Path('tmp-v1111-inspection.txt').write_text('\n'.join(output) + '\n', encoding='utf-8')
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: v1111-source-inspection
+          path: tmp-v1111-inspection.txt
+          retention-days: 1
