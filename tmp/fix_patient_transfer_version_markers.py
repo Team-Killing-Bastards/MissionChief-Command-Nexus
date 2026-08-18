@@ -14,6 +14,11 @@ replacements = [
         "const MF_MISSION_LOGGER_MISSION_FINDER_VERSION =\n        '10.7.5';",
         'logger Mission Finder version',
     ),
+    (
+        "        wrapper.appendChild(panel);\n        wrapper.appendChild(loadPanel);\n        wrapper.appendChild(patientPanel);\n        wrapper.appendChild(trainedPanel);",
+        "        wrapper.appendChild(panel);\n        wrapper.appendChild(loadPanel);\n        wrapper.appendChild(trainedPanel);\n        wrapper.appendChild(patientPanel);",
+        'preserve Vehicle Load / Trained Personnel DOM adjacency',
+    ),
 ]
 
 for old, new, label in replacements:
@@ -25,4 +30,4 @@ for old, new, label in replacements:
     source = source.replace(old, new, 1)
 
 path.write_text(source, encoding='utf-8')
-print('Logger client version markers aligned to v1.1.7 / V10.7.5.')
+print('v1.1.7 compatibility markers and panel order aligned.')
