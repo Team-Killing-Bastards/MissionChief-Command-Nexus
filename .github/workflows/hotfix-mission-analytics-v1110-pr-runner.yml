@@ -27,32 +27,13 @@ jobs:
           node-version: '24'
           package-manager-cache: false
 
-      - name: Execute embedded hotfix builder
+      - name: Apply permanent hotfix
         shell: bash
         run: |
           set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-
-          workflow = Path('.github/workflows/hotfix-mission-analytics-v1110.yml').read_text(encoding='utf-8')
-          start_marker = "      - name: Build permanent hotfix\n        shell: bash\n        run: |\n"
-          end_marker = "\n      - name: Install workflow YAML parser"
-          start = workflow.find(start_marker)
-          end = workflow.find(end_marker, start + len(start_marker))
-          if start < 0 or end < 0:
-              raise SystemExit('Unable to isolate the embedded hotfix build step')
-          block = workflow[start + len(start_marker):end]
-          lines = []
-          for line in block.splitlines():
-              if line and not line.startswith('          '):
-                  raise SystemExit(f'Unexpected builder indentation: {line!r}')
-              lines.append(line[10:] if line else '')
-          Path('/tmp/mission-analytics-v1110-build.sh').write_text(
-              '\n'.join(lines) + '\n',
-              encoding='utf-8'
-          )
-          PY
-          bash /tmp/mission-analytics-v1110-build.sh
+          python3 scripts/apply-mission-analytics-hotfix-v1110.py
+          rm -f scripts/apply-mission-analytics-hotfix-v1110.py
+          rm -f .github/workflows/hotfix-mission-analytics-v1110.yml
           rm -f .github/workflows/hotfix-mission-analytics-v1110-pr-runner.yml
 
       - name: Install workflow YAML parser
