@@ -30,17 +30,6 @@ jobs:
           ref: feature/activity-recorder-v119
           fetch-depth: 0
 
-      - name: Show current logger setup function
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          text = Path('src/missionchief-command-nexus.user.js').read_text()
-          marker = '    function saveMissionLoggerSetup('
-          start = text.find(marker)
-          end = text.find('\n    function ', start + len(marker))
-          print(text[start:end])
-          PY
-
       - name: Fix patch carrier anchors
         run: |
           python3 - <<'PY'
@@ -58,7 +47,15 @@ jobs:
           new_block = """clear_start, clear_end, clear_fn = function_slice(source, 'clearMissionLoggerProfileScopedData')\nclear_fn = replace_once(\n    clear_fn,\n    '            MF_MISSION_LOGGER_QUEUE_KEY,\\n',\n    '            MF_MISSION_LOGGER_QUEUE_KEY,\\n            MF_MISSION_ACTIVITY_BACKEND_V2_KEY,\\n',\n    'profile scoped activity capability reset',\n)\nsource = source[:clear_start] + clear_fn + source[clear_end:]"""
           if text.count(old_block) != 1:
               raise SystemExit('profile-scoped activity block anchor mismatch')
-          p.write_text(text.replace(old_block, new_block, 1))
+          text = text.replace(old_block, new_block, 1)
+
+          old_profile_anchor = r'r"            profileId:\s*playerName\.toLowerCase\(\),\s*\n            playerName,"'
+          new_profile_anchor = r'r"            playerId:\s*playerName\.toLowerCase\(\),\s*\n            playerName,"'
+          if text.count(old_profile_anchor) != 1:
+              raise SystemExit('stable profile patch anchor mismatch')
+          text = text.replace(old_profile_anchor, new_profile_anchor, 1)
+
+          p.write_text(text)
           PY
 
       - name: Apply deterministic patch
