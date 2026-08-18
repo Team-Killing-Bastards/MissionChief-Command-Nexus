@@ -7,6 +7,13 @@ on:
     paths:
       - scripts/apply-activity-recorder-v119.py
       - .github/workflows/apply-activity-recorder-v119.yml
+  pull_request:
+    types: [opened]
+    branches:
+      - main
+    paths:
+      - scripts/apply-activity-recorder-v119.py
+      - .github/workflows/apply-activity-recorder-v119.yml
   workflow_dispatch:
 
 permissions:
@@ -51,5 +58,3 @@ jobs:
           fi
           git commit -m "Implement v1.1.9 comprehensive activity recorder"
           git push origin HEAD:feature/activity-recorder-v119
-
-# Trigger marker: activity-recorder-v119-20260818
