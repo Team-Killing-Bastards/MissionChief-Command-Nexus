@@ -1,0 +1,71 @@
+name: Temporary HGV tow mission-definition build
+
+on:
+  push:
+    branches:
+      - agent/hgv-tow-other-information
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Check out feature branch
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: agent/hgv-tow-other-information
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Check temporary builder syntax
+        run: node --check scripts/temporary-hgv-tow-other-information-builder.mjs
+
+      - name: Apply feature patch
+        run: node scripts/temporary-hgv-tow-other-information-builder.mjs
+
+      - name: Prepare release version
+        run: |
+          node scripts/prepare-release.mjs \
+            --version 1.1.8 \
+            --notes "Read Maximum amount of trucks to tow from mission-definition Other information and feed the value into the existing strict HGV Recovery type-106 path. Use Minimum amount of trucks to tow only as a fallback when Maximum is absent or invalid, never add both values together, and preserve the existing Flatbed Recovery car-towing rule. Add permanent regression coverage based on the supplied MissionChief mission HTML."
+
+      - name: Remove temporary build controls
+        run: |
+          rm -f scripts/temporary-hgv-tow-other-information-builder.mjs
+          rm -f .github/workflows/temporary-hgv-tow-other-information.yml
+
+      - name: Validate exact candidate
+        run: |
+          set -euo pipefail
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/check-hgv-tow-other-information-v118.mjs
+          node scripts/check-hgv-recovery-v1097.mjs
+          node scripts/validate-userscript.mjs --base-ref origin/main
+          for check in scripts/check-*.mjs; do
+            echo "==> ${check}"
+            node "${check}"
+          done
+          python3 scripts/check_repository.py
+          if [[ -f scripts/check_workflow_yaml.py ]]; then
+            python3 scripts/check_workflow_yaml.py
+          fi
+          git diff --check
+
+      - name: Commit clean candidate
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Release v1.1.8 HGV tow mission details"
+          git push origin HEAD:agent/hgv-tow-other-information
