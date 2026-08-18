@@ -1,0 +1,95 @@
+name: Apply v1.1.5 manual Sync Now repair
+
+on:
+  push:
+    branches:
+      - agent/background-patient-transports
+    paths:
+      - .github/workflows/apply-v115-manual-sync-delta.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out release branch
+        uses: actions/checkout@v6
+        with:
+          ref: agent/background-patient-transports
+          fetch-depth: 0
+
+      - name: Apply final manual-sync delta
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat tmp/v115-manual-sync-delta-part-*.txt > /tmp/v115-manual-sync.patch.zlib.b64
+          python3 <<'PY'
+          from pathlib import Path
+          import base64
+          import hashlib
+          import zlib
+
+          encoded = Path('/tmp/v115-manual-sync.patch.zlib.b64').read_text(encoding='utf-8')
+          patch = zlib.decompress(base64.b64decode(encoded))
+          digest = hashlib.sha256(patch).hexdigest()
+          expected = 'c8e236371cfcd1313be17d0775061b47e424fa5ae1370f85e4d39599166e6aeb'
+          if digest != expected:
+              raise SystemExit(f'Patch SHA mismatch: {digest}')
+          Path('/tmp/v115-manual-sync.patch').write_bytes(patch)
+          PY
+          git apply --check /tmp/v115-manual-sync.patch
+          git apply /tmp/v115-manual-sync.patch
+          rm -f tmp/v115-manual-sync-delta-part-*.txt
+          rmdir tmp 2>/dev/null || true
+          rm -f .github/workflows/apply-v115-manual-sync-delta.yml
+
+      - name: Validate JavaScript syntax
+        run: node --check src/missionchief-command-nexus.user.js
+
+      - name: Run targeted logger and transport regressions
+        shell: bash
+        run: |
+          node scripts/check-mission-logger-outbox-drain.mjs
+          node scripts/check-mission-user-logger.mjs
+          node scripts/check-mission-dispatch-path-logger.mjs
+          node scripts/check-mission-generation-logger.mjs
+          node scripts/check-mission-journey-metrics.mjs
+          node scripts/check-background-patient-transport-worker.mjs
+          node scripts/check-auto-patient-transport-anchor.mjs
+          node scripts/check-auto-patient-transport-iframe.mjs
+          node scripts/check-auto-transport-response-v1083.mjs
+          node scripts/check-auto-stop-reason.mjs
+          node scripts/check-auto-memory-recycle.mjs
+
+      - name: Run every permanent regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          for test in scripts/check-*.mjs; do
+            echo "==> ${test}"
+            node "${test}"
+          done
+
+      - name: Validate release and repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check --no-cache-dir 'PyYAML==6.0.2'
+          python3 scripts/check_workflow_yaml.py
+          node scripts/validate-userscript.mjs --base-ref origin/main
+          python3 scripts/check_repository.py
+          git diff --check
+
+      - name: Commit clean final candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Harden v1.1.5 manual logger drain"
+          git push origin HEAD:agent/background-patient-transports
