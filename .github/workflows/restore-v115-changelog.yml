@@ -1,0 +1,64 @@
+name: Restore full v1.1.5 changelog
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/restore-v115-changelog.yml
+
+permissions:
+  contents: write
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out release branch
+        uses: actions/checkout@v6
+        with:
+          ref: agent/background-patient-transports
+          fetch-depth: 0
+
+      - name: Restore full changelog and retain clarification
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout 756417aeb93a81f0538511cde25457ad02e5e4a1 -- CHANGELOG.md
+          python3 <<'PY'
+          from pathlib import Path
+
+          path = Path('CHANGELOG.md')
+          text = path.read_text(encoding='utf-8')
+          old = '- Renewed the cross-tab upload lock before every batch and immediately reconfirms the same idempotent batch ID once after a Google response timeout, avoiding the old five-minute accepted-then-acknowledged retry delay.'
+          new = '- Renewed the cross-tab upload lock before every batch and added an immediate confirmation retry using the same idempotent batch ID after a Google response timeout, avoiding the old five-minute accepted-then-acknowledged retry delay.'
+          if text.count(old) != 1:
+              raise SystemExit(f'Expected one changelog sentence, found {text.count(old)}')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+          rm -f .github/workflows/restore-v115-changelog.yml
+
+      - name: Validate full release candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check src/missionchief-command-nexus.user.js
+          for test in scripts/check-*.mjs; do node "$test" >/dev/null; done
+          python3 -m pip install --disable-pip-version-check --no-cache-dir 'PyYAML==6.0.2'
+          python3 scripts/check_workflow_yaml.py
+          node scripts/validate-userscript.mjs --base-ref origin/main
+          python3 scripts/check_repository.py
+          git diff --check
+          test "$(wc -l < CHANGELOG.md)" -gt 2500
+
+      - name: Commit restored production candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Restore full v1.1.5 changelog"
+          git push origin HEAD:agent/background-patient-transports
