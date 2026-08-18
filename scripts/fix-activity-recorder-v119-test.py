@@ -47,4 +47,9 @@ logger = logger_path.read_text()
 if logger.count("1.1.6-private-profile-1") != 1:
     raise SystemExit('mission logger backend build regression anchor mismatch')
 logger = logger.replace("1.1.6-private-profile-1", "1.1.9-activity-recorder-2", 1)
+old_identity_mode = "['identity_mode', 'PRIVATE_URL_AND_PLAYER_NAME'"
+new_identity_mode = "['identity_mode', 'NAVBAR_PROFILE_ID_AND_USERNAME'"
+if logger.count(old_identity_mode) != 1:
+    raise SystemExit('mission logger identity mode regression anchor mismatch')
+logger = logger.replace(old_identity_mode, new_identity_mode, 1)
 logger_path.write_text(logger)
