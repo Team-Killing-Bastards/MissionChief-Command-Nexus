@@ -101,6 +101,9 @@ for (const token of [
   'MF_MISSION_LOGGER_MANUAL_DRAIN_MAX_BATCHES = 12',
   'MF_MISSION_LOGGER_EAGER_SYNC_THRESHOLD = 20',
   'MF_MISSION_LOGGER_DEFERRED_DRAIN_DELAY_MS = 1000',
+  'MF_MISSION_LOGGER_DRAIN_REQUEST_KEY =',
+  'MF_MISSION_LOGGER_SYNC_LOCK_LEASE_MS =',
+  'MF_MISSION_LOGGER_BATCH_CONFIRM_RETRY_DELAY_MS = 1000',
 ]) {
   expect(source.includes(token), `Missing outbox contract ${token}`);
 }
@@ -133,15 +136,37 @@ const sync = extractFunction('syncMissionLoggerNow');
 for (const token of [
   'batchNumber < maxBatches',
   'MF_MISSION_LOGGER_DRAIN_MAX_MS',
-  "submitMissionLoggerRequest(\n                    'upload'",
+  'submitMissionLoggerUploadBatch(',
   'await wait(\n                    MF_MISSION_LOGGER_DRAIN_GAP_MS',
   "'backlog remains after bounded drain'",
 ]) {
   expect(sync.includes(token), `Backlog drain missing ${token}`);
 }
 expect(
-  (sync.match(/submitMissionLoggerRequest\(/g) || []).length === 1,
-  'One server request site must be reused inside the bounded batch loop'
+  (sync.match(/submitMissionLoggerUploadBatch\(/g) || []).length === 1,
+  'One retry-safe batch helper must be reused inside the bounded batch loop'
+);
+
+const batchSubmit = extractFunction('submitMissionLoggerUploadBatch');
+for (const token of [
+  'attempt < 2',
+  'refreshMissionLoggerSyncLock(lockOwner)',
+  "String(error?.code || '') !==",
+  "'LOGGER_TIMEOUT'",
+  'MF_MISSION_LOGGER_BATCH_CONFIRM_RETRY_DELAY_MS',
+  `submitMissionLoggerRequest(
+                    'upload'`,
+]) {
+  expect(batchSubmit.includes(token), `Batch confirmation retry missing ${token}`);
+}
+const refreshLock = extractFunction('refreshMissionLoggerSyncLock');
+expect(
+  refreshLock.includes('MF_MISSION_LOGGER_SYNC_LOCK_LEASE_MS'),
+  'Each batch must renew the shared cross-tab lock before submission'
+);
+expect(
+  source.includes("error.code = 'LOGGER_TIMEOUT'"),
+  'Request timeout must expose a stable retry code'
 );
 for (const token of [
   'if (mfMissionLoggerSyncActive)',
@@ -158,6 +183,9 @@ for (const token of [
   'MF_MISSION_LOGGER_DEFERRED_DRAIN_DELAY_MS',
   'skipCreditReconcile: true',
   'backlog: true',
+  'if (!MF_IS_TOP_WINDOW)',
+  'MF_MISSION_LOGGER_DRAIN_REQUEST_KEY',
+  'localStorage.setItem(',
 ]) {
   expect(deferred.includes(token), `Deferred drain missing ${token}`);
 }
@@ -171,10 +199,19 @@ expect(
   'Sync Now must remain available while another automatic batch is active'
 );
 
+expect(
+  source.includes('event.key ===\n                    MF_MISSION_LOGGER_DRAIN_REQUEST_KEY'),
+  'The top-window storage listener must receive manual drain requests from mission frames and pop-outs'
+);
+expect(
+  source.includes('Uploaded ${batchEvents.length} event'),
+  'The logger UI must expose accepted-batch progress instead of leaving the queue count unexplained'
+);
+
 const eager = extractFunction('scheduleMissionLoggerEagerSync');
 expect(eager.includes('MF_MISSION_LOGGER_EAGER_SYNC_THRESHOLD'), 'Eager sync must keep the queue threshold');
 expect(eager.includes('skipCreditReconcile: true'), 'Backlog-only follow-up must not repeat expensive credit reconciliation');
 const enqueue = extractFunction('queueMissionLoggerEvent');
 expect(enqueue.includes('scheduleMissionLoggerEagerSync('), 'Every successful enqueue must consider eager upload');
 
-console.log('Mission logger outbox regression passed: 1,200-event/3 MB safety bound, priority retention, eager upload, bounded multi-batch drain and non-silent manual drain queuing are locked.');
+console.log('Mission logger outbox regression passed: 1,200-event/3 MB safety bound, priority retention, eager upload, bounded multi-batch drain, cross-frame manual hand-off, lock renewal and timeout confirmation retry are locked.');

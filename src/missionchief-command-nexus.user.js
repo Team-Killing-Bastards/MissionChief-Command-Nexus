@@ -14351,6 +14351,11 @@
     const MF_MISSION_LOGGER_EAGER_SYNC_THRESHOLD = 20;
     const MF_MISSION_LOGGER_EAGER_SYNC_DELAY_MS = 1500;
     const MF_MISSION_LOGGER_DEFERRED_DRAIN_DELAY_MS = 1000;
+    const MF_MISSION_LOGGER_DRAIN_REQUEST_KEY =
+        'mf_mission_logger_drain_request_v1';
+    const MF_MISSION_LOGGER_SYNC_LOCK_LEASE_MS =
+        MF_MISSION_LOGGER_REQUEST_TIMEOUT_MS + 20000;
+    const MF_MISSION_LOGGER_BATCH_CONFIRM_RETRY_DELAY_MS = 1000;
     const MF_MISSION_LOGGER_OBSERVED_RETENTION_MS =
         7 * 24 * 60 * 60 * 1000;
     const MF_MISSION_LOGGER_OBSERVED_MAX_ENTRIES = 5000;
@@ -25981,13 +25986,7 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
         reason = 'logger backlog',
         options = {}
     ) {
-        if (!MF_IS_TOP_WINDOW) return false;
-
         const manual = options.manual === true;
-        if (manual) {
-            mfMissionLoggerManualDrainRequested = true;
-        }
-
         const queueCount = readMissionLoggerQueue().length;
         if (
             queueCount === 0 ||
@@ -25998,12 +25997,36 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
             return false;
         }
 
+        const requestedAt = Date.now();
+        const drainMessage = manual
+            ? 'Manual full drain queued; waiting for the active upload or another MissionChief tab to release the logger lock.'
+            : 'Logger backlog drain queued.';
         writeMissionLoggerState({
-            drainRequestedAt: Date.now(),
-            drainMessage: manual
-                ? 'Manual full drain queued; waiting for the active upload or another MissionChief tab to release the logger lock.'
-                : 'Logger backlog drain queued.'
+            drainRequestedAt: requestedAt,
+            drainMessage
         });
+
+        if (!MF_IS_TOP_WINDOW) {
+            try {
+                localStorage.setItem(
+                    MF_MISSION_LOGGER_DRAIN_REQUEST_KEY,
+                    JSON.stringify({
+                        requestId:
+                            `${requestedAt}-${Math.random()
+                                .toString(36)
+                                .slice(2, 10)}`,
+                        requestedAt,
+                        manual,
+                        reason: String(reason || '').slice(0, 180)
+                    })
+                );
+            } catch (_error) {}
+            return true;
+        }
+
+        if (manual) {
+            mfMissionLoggerManualDrainRequested = true;
+        }
 
         if (mfMissionLoggerDeferredDrainTimer) {
             return true;
@@ -26294,11 +26317,11 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
         return new Promise((resolve, reject) => {
             const timeoutId = setTimeout(() => {
                 cleanupMissionLoggerRequest(requestId);
-                reject(
-                    new Error(
-                        'Google logger request timed out. The batch remains queued.'
-                    )
+                const error = new Error(
+                    'Google logger request timed out. The batch remains queued.'
                 );
+                error.code = 'LOGGER_TIMEOUT';
+                reject(error);
             }, MF_MISSION_LOGGER_REQUEST_TIMEOUT_MS);
 
             mfMissionLoggerPendingRequests.set(
@@ -26441,8 +26464,7 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
                     owner,
                     expiresAt:
                         now +
-                        MF_MISSION_LOGGER_REQUEST_TIMEOUT_MS +
-                        15000
+                        MF_MISSION_LOGGER_SYNC_LOCK_LEASE_MS
                 })
             );
 
@@ -26476,6 +26498,85 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
                 );
             }
         } catch (_error) {}
+    }
+
+    function refreshMissionLoggerSyncLock(owner) {
+        if (!owner) return false;
+
+        try {
+            const existing = JSON.parse(
+                localStorage.getItem(
+                    MF_MISSION_LOGGER_SYNC_LOCK_KEY
+                ) || 'null'
+            );
+            if (existing?.owner !== owner) return false;
+
+            localStorage.setItem(
+                MF_MISSION_LOGGER_SYNC_LOCK_KEY,
+                JSON.stringify({
+                    owner,
+                    expiresAt:
+                        Date.now() +
+                        MF_MISSION_LOGGER_SYNC_LOCK_LEASE_MS
+                })
+            );
+            return true;
+        } catch (_error) {
+            return false;
+        }
+    }
+
+    async function submitMissionLoggerUploadBatch(
+        identity,
+        pending,
+        batchEvents,
+        lockOwner
+    ) {
+        let lastError = null;
+
+        for (let attempt = 0; attempt < 2; attempt += 1) {
+            if (!refreshMissionLoggerSyncLock(lockOwner)) {
+                const error = new Error(
+                    'The shared logger upload lock was lost before the batch could be confirmed.'
+                );
+                error.code = 'LOGGER_LOCK_LOST';
+                throw error;
+            }
+
+            try {
+                return await submitMissionLoggerRequest(
+                    'upload',
+                    {
+                        token: identity.token,
+                        playerId: identity.playerId,
+                        deviceId: identity.deviceId,
+                        batchId: pending.batchId,
+                        events: batchEvents
+                    }
+                );
+            } catch (error) {
+                lastError = error;
+                if (
+                    String(error?.code || '') !==
+                        'LOGGER_TIMEOUT' ||
+                    attempt > 0
+                ) {
+                    throw error;
+                }
+
+                writeMissionLoggerState({
+                    drainMessage:
+                        'Google is still processing the batch; confirming the same batch ID once more.'
+                });
+                await wait(
+                    MF_MISSION_LOGGER_BATCH_CONFIRM_RETRY_DELAY_MS
+                );
+            }
+        }
+
+        throw lastError || new Error(
+            'Google logger upload could not be confirmed.'
+        );
     }
 
     async function syncMissionLoggerNow(options = {}) {
@@ -26672,16 +26773,13 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
                     lastError: ''
                 });
 
-                const response = await submitMissionLoggerRequest(
-                    'upload',
-                    {
-                        token: identity.token,
-                        playerId: identity.playerId,
-                        deviceId: identity.deviceId,
-                        batchId: pending.batchId,
-                        events: batchEvents
-                    }
-                );
+                const response =
+                    await submitMissionLoggerUploadBatch(
+                        identity,
+                        pending,
+                        batchEvents,
+                        lockOwner
+                    );
 
                 if (
                     response.batchId &&
@@ -26708,6 +26806,8 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
                 writeMissionLoggerState({
                     lastSuccessAt: Date.now(),
                     lastError: '',
+                    drainMessage:
+                        `Uploaded ${batchEvents.length} event${batchEvents.length === 1 ? '' : 's'}; ${remaining.length} queued.`,
                     totalUploadedEvents:
                         Math.max(
                             0,
@@ -26854,7 +26954,8 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
                     MF_MISSION_LOGGER_ENDPOINT_KEY,
                     MF_MISSION_LOGGER_IDENTITY_KEY,
                     MF_MISSION_LOGGER_QUEUE_KEY,
-                    MF_MISSION_LOGGER_STATE_KEY
+                    MF_MISSION_LOGGER_STATE_KEY,
+                    MF_MISSION_LOGGER_DRAIN_REQUEST_KEY
                 ].includes(event.key)
             ) {
                 return;
@@ -26880,6 +26981,26 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
                 ) {
                     scheduleMissionLoggerEagerSync(
                         'cross-window queue update'
+                    );
+                }
+                if (
+                    event.key ===
+                    MF_MISSION_LOGGER_DRAIN_REQUEST_KEY
+                ) {
+                    let request = null;
+                    try {
+                        request = JSON.parse(
+                            String(event.newValue || 'null')
+                        );
+                    } catch (_error) {}
+                    scheduleMissionLoggerDeferredDrain(
+                        request?.reason ||
+                            'cross-window manual drain request',
+                        {
+                            manual:
+                                request?.manual === true,
+                            delayMs: 100
+                        }
                     );
                 }
             }
@@ -30861,8 +30982,12 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
             );
         }
         if (lastSync) {
+            const progress = String(
+                state.drainMessage || ''
+            ).trim();
             lastSync.textContent =
-                `Last upload: ${formatMissionLoggerTimestamp(state.lastSuccessAt)}`;
+                `Last upload: ${formatMissionLoggerTimestamp(state.lastSuccessAt)}` +
+                (progress ? ` · ${progress}` : '');
         }
         if (creditStatus) {
             creditStatus.textContent = !mfMissionLoggerEnabled

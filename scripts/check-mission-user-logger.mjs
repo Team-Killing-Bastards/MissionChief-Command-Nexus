@@ -193,12 +193,25 @@ for (const token of [
   'acquireMissionLoggerSyncLock()',
   'readMissionLoggerPendingBatch()',
   'writeMissionLoggerPendingBatch(pending)',
-  'submitMissionLoggerRequest(',
-  "'upload',",
+  'submitMissionLoggerUploadBatch(',
   'writeMissionLoggerPendingBatch(null)',
   'releaseMissionLoggerSyncLock(lockOwner)',
 ]) {
   expect(sync.includes(token), `Idempotent uploader missing ${token}`);
+}
+
+const uploadBatch = extractFunction(
+  source,
+  'submitMissionLoggerUploadBatch'
+);
+for (const token of [
+  'submitMissionLoggerRequest(',
+  "'upload',",
+  'pending.batchId',
+  'events: batchEvents',
+  "'LOGGER_TIMEOUT'",
+]) {
+  expect(uploadBatch.includes(token), `Retry-safe uploader missing ${token}`);
 }
 
 const syncTimer = extractFunction(source, 'startMissionLoggerSyncTimer');

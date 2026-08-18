@@ -18,6 +18,8 @@ No changes have been queued after `1.1.5`.
 ### Fixed
 
 - Fixed the Mission Analytics Logger reaching its 300-event local ceiling during long offline or high-volume sessions. The queue now retains up to 1,200 events within the existing 3 MB storage bound, drains up to eight 40-event batches per automatic pass, drains up to twelve batches on manual sync/reconnect and immediately schedules another bounded pass while backlog remains.
+- Fixed **Sync now** appearing to do nothing when it was pressed inside a mission frame/pop-out or while another MissionChief tab owned the shared upload lock. Manual drains are handed to the top-window logger owner, queued behind an active upload and visibly report **Drain queued** and per-batch progress.
+- Renewed the cross-tab upload lock before every batch and immediately reconfirms the same idempotent batch ID once after a Google response timeout, avoiding the old five-minute accepted-then-acknowledged retry delay.
 - Added eager upload when the local outbox reaches 20 events, so normal high-volume activity no longer waits for the next five-minute timer.
 - Made overflow fail safer: low-value mission-observed rows are discarded before dispatch, completion or exact-credit evidence if the fixed storage ceiling is still reached. Existing dropped events cannot be reconstructed.
 
