@@ -1,0 +1,291 @@
+name: Export reconstructed v1.1.12 Code.gs
+
+on:
+  push:
+    branches:
+      - tmp/export-codegs-v1112-user
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+
+      - name: Reconstruct v1.1.12 Apps Script backend
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('integrations/google-apps-script/Code.gs')
+          text = path.read_text(encoding='utf-8')
+
+          def replace_once(old: str, new: str, label: str) -> None:
+              global text
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected exactly one match, found {count}')
+              text = text.replace(old, new, 1)
+
+          replace_once(
+              "buildId: '1.1.10-upload-lock-hotfix-1'",
+              "buildId: '1.1.12-multi-device-performance-1'",
+              'backend build marker',
+          )
+          replace_once(
+              """  uploadLockWaitMs: 2000,
+            maxUnitsPerEvent: 500,
+            dispatchDuplicateWindowMs: 15000,""",
+              """  uploadLockWaitMs: 2000,
+            observerLeaseLockWaitMs: 500,
+            observerLeaseMs: 90000,
+            maxUnitsPerEvent: 500,
+            dispatchDuplicateWindowMs: 15000,""",
+              'observer lease constants',
+          )
+          replace_once(
+              """        'navbar-profile-id',
+                    'retryable-upload-lock'""",
+              """        'navbar-profile-id',
+                    'retryable-upload-lock',
+                    'multi-device-observer-lease',
+                    'cross-device-semantic-dedupe'""",
+              'capability list',
+          )
+          replace_once(
+              """    if (action === 'upload') {
+                  response = handleLoggerUpload_(payload);
+                } else if (action === 'pair' || action === 'revoke') {""",
+              """    if (action === 'upload') {
+                  response = handleLoggerUpload_(payload);
+                } else if (action === 'observer-lease') {
+                  response = handleLoggerObserverLease_(payload);
+                } else if (action === 'pair' || action === 'revoke') {""",
+              'observer lease route',
+          )
+
+          observer_handler = r'''function handleLoggerObserverLease_(payload) {
+            const profileId = cleanMissionChiefProfileId_(
+              payload.profileId || payload.playerId
+            );
+            const deviceId = cleanIdentifier_(payload.deviceId, 160);
+            const requestedLeaseMs = Math.max(
+              30000,
+              Math.min(
+                180000,
+                Number(payload.leaseMs || 0) || MC_LOGGER.observerLeaseMs
+              )
+            );
+            if (!profileId || !deviceId || deviceId.length < 8) {
+              throw loggerError_(
+                'INVALID_OBSERVER_LEASE',
+                'A MissionChief profile ID and browser device ID are required for observer ownership.'
+              );
+            }
+
+            const lock = LockService.getScriptLock();
+            if (!lock.tryLock(MC_LOGGER.observerLeaseLockWaitMs)) {
+              throw loggerError_(
+                'LOGGER_BUSY',
+                'The logger is busy; retry the observer lease shortly.'
+              );
+            }
+
+            try {
+              const now = Date.now();
+              const propertyKey = 'MC_LOGGER_OBSERVER_LEASE_' + profileId;
+              const properties = PropertiesService.getScriptProperties();
+              let existing = null;
+              try {
+                existing = JSON.parse(properties.getProperty(propertyKey) || 'null');
+              } catch (error) {
+                existing = null;
+              }
+
+              const existingDeviceId = cleanIdentifier_(
+                existing && existing.deviceId,
+                160
+              );
+              const existingExpiresAt = Number(
+                existing && existing.expiresAt || 0
+              );
+              const granted =
+                !existingDeviceId ||
+                existingExpiresAt <= now ||
+                existingDeviceId === deviceId;
+              const ownerDeviceId = granted ? deviceId : existingDeviceId;
+              const expiresAt = granted
+                ? now + requestedLeaseMs
+                : existingExpiresAt;
+
+              if (granted) {
+                properties.setProperty(
+                  propertyKey,
+                  JSON.stringify({
+                    profileId: profileId,
+                    deviceId: deviceId,
+                    expiresAt: expiresAt,
+                    updatedAt: now
+                  })
+                );
+              }
+
+              return {
+                ok: true,
+                action: 'observer-lease',
+                playerId: profileId,
+                deviceId: deviceId,
+                granted: granted,
+                ownerDeviceId: ownerDeviceId,
+                expiresAt: new Date(expiresAt).toISOString(),
+                leaseMs: requestedLeaseMs,
+                retryAfterMs: granted
+                  ? Math.max(5000, Math.floor(requestedLeaseMs / 2))
+                  : Math.max(
+                      1000,
+                      Math.min(15000, expiresAt - now)
+                    )
+              };
+            } finally {
+              lock.releaseLock();
+            }
+          }
+
+          '''
+          replace_once(
+              'function handleLoggerPair_(payload) {',
+              observer_handler + 'function handleLoggerPair_(payload) {',
+              'observer lease handler',
+          )
+
+          passive_dedupe = r'''function filterCrossDevicePassiveObservationRows_(
+            eventSheet,
+            prepared,
+            batchId,
+            playerId,
+            deviceId
+          ) {
+            const output = Object.assign({}, prepared, {
+              eventRows: Array.isArray(prepared && prepared.eventRows)
+                ? prepared.eventRows.slice()
+                : [],
+              unitRows: Array.isArray(prepared && prepared.unitRows)
+                ? prepared.unitRows.slice()
+                : [],
+              suppressedDuplicateEvents: Math.max(
+                0,
+                Number(prepared && prepared.suppressedDuplicateEvents || 0)
+              )
+            });
+            const candidateMissionIds = {};
+            output.eventRows.forEach(function(row) {
+              if (String(row[4] || '').toLowerCase() !== 'mission-observed') return;
+              const missionId = cleanIdentifier_(row[6], 80);
+              if (missionId) candidateMissionIds[missionId] = true;
+            });
+            if (Object.keys(candidateMissionIds).length === 0) return output;
+
+            const lastRow = eventSheet.getLastRow();
+            const recentRows = lastRow >= 2
+              ? eventSheet.getRange(
+                  Math.max(2, lastRow - MC_LOGGER.duplicateScanEventRows + 1),
+                  1,
+                  Math.min(MC_LOGGER.duplicateScanEventRows, lastRow - 1),
+                  MC_LOGGER_SHEETS.events.headers.length
+                ).getValues()
+              : [];
+            const observedElsewhere = {};
+            recentRows.forEach(function(row) {
+              if (String(row[1] || '') === batchId) return;
+              if (String(row[2] || '') !== playerId) return;
+              if (String(row[3] || '') === deviceId) return;
+              if (String(row[4] || '').toLowerCase() !== 'mission-observed') return;
+              const missionId = cleanIdentifier_(row[6], 80);
+              if (candidateMissionIds[missionId]) observedElsewhere[missionId] = true;
+            });
+
+            const suppressedEventIds = {};
+            output.eventRows = output.eventRows.filter(function(row) {
+              if (String(row[4] || '').toLowerCase() !== 'mission-observed') {
+                return true;
+              }
+              const missionId = cleanIdentifier_(row[6], 80);
+              if (!missionId || !observedElsewhere[missionId]) return true;
+              suppressedEventIds[String(row[0] || '')] = true;
+              output.suppressedDuplicateEvents += 1;
+              return false;
+            });
+            if (Object.keys(suppressedEventIds).length > 0) {
+              output.unitRows = output.unitRows.filter(function(row) {
+                return !suppressedEventIds[String(row[0] || '')];
+              });
+            }
+            return output;
+          }
+
+          '''
+          replace_once(
+              'function filterSemanticDuplicateDispatchRows_(',
+              passive_dedupe + 'function filterSemanticDuplicateDispatchRows_(',
+              'cross-device passive dedupe helper',
+          )
+          replace_once(
+              """    const prepared = filterSemanticDuplicateDispatchRows_(
+                  eventSheet,
+                  preparedRaw,
+                  batchId
+                );
+                prepared.activityRows = preparedRaw.activityRows || [];""",
+              """    const passiveDeduped =
+                  filterCrossDevicePassiveObservationRows_(
+                    eventSheet,
+                    preparedRaw,
+                    batchId,
+                    playerId,
+                    deviceId
+                  );
+                const prepared = filterSemanticDuplicateDispatchRows_(
+                  eventSheet,
+                  passiveDeduped,
+                  batchId
+                );
+                prepared.activityRows = preparedRaw.activityRows || [];""",
+              'cross-device dedupe call chain',
+          )
+          replace_once(
+              """    ['batch_ledger_retention_days', MC_LOGGER.batchLedgerRetentionDays, 'Retains compact accepted-batch identities across weekly rollovers.']""",
+              """    ['batch_ledger_retention_days', MC_LOGGER.batchLedgerRetentionDays, 'Retains compact accepted-batch identities across weekly rollovers.'],
+            ['observer_lease_ms', MC_LOGGER.observerLeaseMs, 'One browser per MissionChief player owns passive mission observation; every browser still uploads its own dispatch and completion evidence.']""",
+              'configuration lease seed',
+          )
+
+          path.write_text(text, encoding='utf-8')
+          PY
+
+      - name: Validate reconstructed backend
+        shell: bash
+        run: |
+          cp integrations/google-apps-script/Code.gs /tmp/Code.js
+          node --check /tmp/Code.js
+          grep -Fq "buildId: '1.1.12-multi-device-performance-1'" integrations/google-apps-script/Code.gs
+          grep -Fq "function handleLoggerObserverLease_" integrations/google-apps-script/Code.gs
+          grep -Fq "function filterCrossDevicePassiveObservationRows_" integrations/google-apps-script/Code.gs
+
+      - name: Prepare download file
+        shell: bash
+        run: |
+          cp integrations/google-apps-script/Code.gs Code.gs
+          sha256sum Code.gs > Code.gs.sha256
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MissionChief-Code-gs-v1.1.12
+          path: |
+            Code.gs
+            Code.gs.sha256
+          retention-days: 1
