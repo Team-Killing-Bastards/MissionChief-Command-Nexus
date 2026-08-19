@@ -1,0 +1,47 @@
+name: Temporary v1.1.12 patch and validation
+
+on:
+  push:
+    branches:
+      - release/v1.1.12-multi-device-performance
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: release/v1.1.12-multi-device-performance
+          fetch-depth: 0
+      - name: Apply v1.1.12 patch
+        run: |
+          python3 -m py_compile scripts/tmp-apply-v1112.py
+          python3 scripts/tmp-apply-v1112.py
+      - name: Remove temporary patch carrier
+        run: |
+          rm -f scripts/tmp-apply-v1112.py
+          rm -f .github/workflows/tmp-v1112-apply.yml
+      - name: Validate userscript and permanent regressions
+        run: |
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          for check in scripts/check-*.mjs; do
+            echo "Running ${check}"
+            node "${check}"
+          done
+      - name: Validate repository
+        run: |
+          python3 scripts/check_repository.py
+          git diff --check
+      - name: Commit permanent v1.1.12 changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && exit 1
+          git commit -m "Release v1.1.12 multi-device logger and performance improvements"
+          git push origin HEAD:release/v1.1.12-multi-device-performance
