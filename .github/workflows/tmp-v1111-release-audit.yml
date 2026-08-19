@@ -6,17 +6,18 @@ on:
       - release/v1.1.11-sharing-sync
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   audit:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Check out production main
+      - name: Check out release audit branch
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: release/v1.1.11-sharing-sync
           fetch-depth: 0
 
       - name: Audit GitHub Release, assets, Greasy Fork and Discord receipt
@@ -118,16 +119,19 @@ jobs:
               'discord_posted_at': receipt.get('posted_at'),
               'release_sha': receipt.get('release_sha'),
           }
-          Path('release-audit/v1111-release-audit.json').write_text(
+          Path('tmp-v1111-release-audit-result.json').write_text(
               json.dumps(report, indent=2) + '\n',
               encoding='utf-8',
           )
           print(json.dumps(report, indent=2))
           PY
 
-      - name: Upload release audit
-        uses: actions/upload-artifact@v4
-        with:
-          name: v1111-release-audit
-          path: release-audit/v1111-release-audit.json
-          retention-days: 1
+      - name: Commit audit result to temporary branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tmp-v1111-release-audit-result.json
+          git commit -m "Record temporary v1.1.11 release audit"
+          git push origin HEAD:release/v1.1.11-sharing-sync
