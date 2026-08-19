@@ -10,3 +10,5 @@ MissionChief Command Nexus treats a release as complete only when all of the fol
 A merged pull request is the primary trusted publication hinge because its `pull_request_target` close event runs against the reviewed workflow on `main` with release secrets available. Normal owner-authored `main` pushes and manual dispatch remain recovery paths.
 
 Incomplete publication is retried through the canonical `publish-release` workflow, while the receipt guard prevents duplicate Discord announcements. Workflow-generated pushes do not recursively start another GitHub Actions run, so release-control maintenance must finish with a trusted repository event when fresh reconciliation is required.
+
+V2 recovery note: release `v2.0.0` uses the proven Greasy Fork synchronization trigger followed by this trusted merged-PR reconciliation path so exact source parity is established before the canonical Discord LIVE announcement is posted.
