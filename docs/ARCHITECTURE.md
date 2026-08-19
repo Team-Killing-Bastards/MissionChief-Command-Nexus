@@ -1,6 +1,6 @@
 # Architecture
 
-This document describes the architecture in the current MissionChief Command Nexus v1.1.11 production source and the direction for future consolidation.
+This document describes the architecture in the current MissionChief Command Nexus v1.1.12 production source and the direction for future consolidation.
 
 > Source-code direction and final technical decisions remain with **MartyBlyth**, the project developer. Conroy1988 provides repository and documentation support only.
 

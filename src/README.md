@@ -10,7 +10,7 @@ src/missionchief-command-nexus.user.js
 
 | Item | Value |
 |---|---|
-| Command Nexus version | `1.1.11` |
+| Command Nexus version | `1.1.12` |
 | Mission Finder baseline | `V10.7.7` |
 | Unit, Station & Personnel baseline | `V4.2.8` |
 | Unit / Station / Personnel interfaces | `3.3.27` / `1.3.22` / `1.3.12` |
@@ -34,7 +34,7 @@ The source is merged and installable. Resource Administration uses one filtered 
 
 The v1.1.9 recorder uses the numeric `/profile/{id}` value from `#navbar_profile_link` as the stable player ID and the visible username as the current display name. Once the private Apps Script backend advertises activity schema v2, the recorder captures safe interaction, navigation, same-origin network lifecycle, iframe worker, lifecycle and error metadata. It deliberately excludes entered values, passwords, cookies, auth tokens, clipboard data and request bodies. The Google backend stores raw actions in Activity Log, rolls them into Sessions and Action Summary, and includes those datasets in the existing weekly archive → verify → purge lifecycle before live rows are removed.
 
-Version 1.1.11 makes **Sharing & Sync** the only visible logger control. Enabling it restores the fixed private endpoint, resolves the current MissionChief profile automatically and starts a bounded automatic drain of any existing queue. Disabling it stops recording and scheduled uploads without deleting queued events, pending batch IDs or deduplication state. Manual endpoint, player, Save, Sync and Forget controls are no longer exposed.
+Version 1.1.12 keeps **Sharing & Sync** as the only visible logger control while coordinating passive observation across multiple computers, preserving direct action capture on each device, staggering uploads and buffering low-priority activity. Enabling it restores the fixed private endpoint, resolves the current MissionChief profile automatically and starts a bounded automatic drain of any existing queue. Disabling it stops recording and scheduled uploads without deleting queued events, pending batch IDs or deduplication state. Manual endpoint, player, Save, Sync and Forget controls are not exposed.
 
 ## Distribution rule
 

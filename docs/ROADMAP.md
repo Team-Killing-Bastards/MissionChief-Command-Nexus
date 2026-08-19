@@ -5,10 +5,10 @@ MissionChief Command Nexus is an actively released userscript. This roadmap reco
 **Developer and technical owner:** MartyBlyth  
 **Repository and documentation support:** Conroy1988
 
-## Current production baseline — v1.1.11
+## Current production baseline — v1.1.12
 
 - [x] Publish one canonical userscript on trusted `main`.
-- [x] Release Command Nexus `1.1.11` with Mission Finder `V10.7.7`.
+- [x] Release Command Nexus `1.1.12` with Mission Finder `V10.7.7`.
 - [x] Retain Resource Administration `V4.2.8`, with Unit Naming `3.3.27`, Station Naming `1.3.22` and Personnel Assignment `1.3.12`.
 - [x] Protect duplicate initialization and independent engine startup.
 - [x] Provide Unit Naming, Station Naming and Personnel Assignment through background native-form workflows.
@@ -75,6 +75,7 @@ MissionChief Command Nexus is an actively released userscript. This roadmap reco
 - [x] Recover exact mission completion time and awarded credits after every paired browser was offline, using resumable mission-ID + title ledger reconciliation without changing the existing Google deployment or pairing.
 - [x] Capture MissionChief's available dispatch-time route distance/ETA per selected unit and retain compact weekly station journey aggregates for placement analysis.
 - [x] Capture each newly generated current-player mission from the native mission list without opening its detail page.
+- [x] Coordinate passive mission observation across multiple computers while preserving each device's direct dispatch and completion evidence.
 - [ ] Continue monitoring multi-browser live batches, MissionChief transaction variants and weekly rollover evidence after release.
 
 ## Phase 7 — Formal release (completed)

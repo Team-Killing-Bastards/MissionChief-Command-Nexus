@@ -181,7 +181,7 @@ for (const token of [
 }
 
 for (const token of [
-  "buildId: '1.1.10-upload-lock-hotfix-1'",
+  "buildId: '1.1.12-multi-device-performance-1'",
   "'dispatch-journey-metrics'",
   "'estimated_distance_km'",
   "'estimated_eta_seconds'",

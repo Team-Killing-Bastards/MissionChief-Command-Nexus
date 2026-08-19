@@ -922,7 +922,7 @@ expect(
 );
 
 for (const token of [
-  "buildId: '1.1.10-upload-lock-hotfix-1'",
+  "buildId: '1.1.12-multi-device-performance-1'",
   "'private-url-profile'",
   'resolveActiveLoggerProfile_',
   'upsertLoggerProfileDevice_',

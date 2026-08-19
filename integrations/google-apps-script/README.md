@@ -19,7 +19,7 @@ The web-app URL is the credential. Anyone who has it can submit as either active
 
 For an existing private logger, replace `Code.gs`, then open **Deploy → Manage deployments**, edit the current web-app deployment, select **New version**, and deploy. Editing the existing deployment preserves the saved `/exec` URL. Re-running workbook initialisation is not required for this lock-only backend change.
 
-Build `1.1.10-upload-lock-hotfix-1` waits at most two seconds for the shared upload lock. A busy backend returns retryable `LOGGER_BUSY`; Command Nexus keeps the pending batch intact and retries the same batch ID using bounded backoff. The longer 120-second browser acknowledgement window is compatible before and after this backend deployment.
+Build `1.1.12-multi-device-performance-1` waits at most two seconds for the shared upload lock. A busy backend returns retryable `LOGGER_BUSY`; Command Nexus keeps the pending batch intact and retries the same batch ID using bounded backoff. The longer 120-second browser acknowledgement window is compatible before and after this backend deployment.
 
 ## Browser migration
 
@@ -50,5 +50,11 @@ The existing workbook can remain in place. The current approved `/exec` deployme
 Current backend build marker:
 
 ```text
-1.1.10-upload-lock-hotfix-1
+1.1.12-multi-device-performance-1
 ```
+
+## v1.1.12 multi-device deployment
+
+Deploy the merged `Code.gs` as a **new version of the existing web-app deployment**. Do not create a separate deployment: editing the existing deployment preserves the hardcoded `/exec` URL used by Command Nexus.
+
+The v1.1.12 backend grants one short renewable passive-observer lease per MissionChief player and suppresses duplicate cross-device `mission-observed` rows. Each browser keeps its own device identity and continues to upload its own dispatches, selected units, completion and credit evidence.

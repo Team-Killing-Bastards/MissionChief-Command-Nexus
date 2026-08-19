@@ -215,7 +215,7 @@ const events = [{ eventId: 'event-1' }];
   expect(JSON.stringify(waits) === JSON.stringify([2000, 5000, 15000]), 'All configured busy delays must be used once');
 }
 
-expect(backend.includes("buildId: '1.1.10-upload-lock-hotfix-1'"), 'Backend build marker must identify the hotfix');
+expect(backend.includes("buildId: '1.1.12-multi-device-performance-1'"), 'Backend build marker must identify the hotfix');
 expect(backend.includes('uploadLockWaitMs: 2000'), 'Backend lock acquisition must be bounded to two seconds');
 const backendUpload = extractFunction(backend, 'handleLoggerUpload_');
 expect(backendUpload.includes('lock.tryLock(MC_LOGGER.uploadLockWaitMs)'), 'Upload endpoint must use bounded tryLock');

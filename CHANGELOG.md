@@ -6,7 +6,24 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
-No changes queued after `1.1.11`.
+No changes queued after `1.1.12`.
+
+## [1.1.12] - 2026-08-19
+
+### Fixed
+
+- Added a short server-backed passive-observer lease per MissionChief player. Multiple computers can stay open, but only one records account-wide mission-list observations; every computer still records the dispatches, units, completions, credits and direct activity it performs.
+- Added deterministic per-device upload staggering and retry jitter so two computers no longer repeatedly hit the private Apps Script lock on the same schedule.
+- Added backend semantic suppression for duplicate cross-device `mission-observed` rows while preserving all dispatch evidence and stable same-batch retry checksums.
+
+### Performance
+
+- Buffered low-priority activity records in memory and writes them to the bounded local outbox in batches instead of parsing and rewriting the full localStorage queue for every click or network callback.
+- Removed duplicate network request START activity rows. Successful routine network telemetry is recorded by the passive observer; failures remain recorded on every acting computer.
+
+### Deployment
+
+- Apps Script backend build `1.1.12-multi-device-performance-1` must be deployed as a **new version of the existing web-app deployment**. The existing `/exec` URL remains unchanged.
 
 ## [1.1.11] - 2026-08-19
 

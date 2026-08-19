@@ -1,10 +1,10 @@
 # Command Nexus Documentation
 
-This directory separates current operating guidance from versioned historical records. The current production baseline is Command Nexus `1.1.11` with Mission Finder `V10.7.7`.
+This directory separates current operating guidance from versioned historical records. The current production baseline is Command Nexus `1.1.12` with Mission Finder `V10.7.7`.
 
 ## Current release focus
 
-Version `1.1.11` compiles the approved private Apps Script endpoint into the trusted two-user build and reduces logger settings to a single Sharing & Sync checkbox. MissionChief navbar identity, queued events, persistent pending batch IDs, bounded multi-batch drain and the v1.1.10 upload-lock recovery remain authoritative.
+Version `1.1.12` coordinates passive mission observation across multiple computers, preserves direct action evidence on every device, staggers uploads and reduces logger main-thread work. The single Sharing & Sync control, fixed private endpoint, MissionChief navbar identity, queued events, persistent pending batch IDs and bounded multi-batch drain remain authoritative.
 
 ## Current operational documentation
 

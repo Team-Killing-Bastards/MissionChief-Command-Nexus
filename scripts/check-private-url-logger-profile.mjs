@@ -132,5 +132,5 @@ const uploadEnd = backend.indexOf('\nfunction ', uploadStart + 'function handleL
 const uploadHandler = backend.slice(uploadStart, uploadEnd);
 expect(uploadStart >= 0 && uploadEnd > uploadStart, 'Private upload handler must be isolatable');
 expect(!uploadHandler.includes('payload.token'), 'Private upload handler must not require upload tokens');
-expect(backend.includes("buildId: '1.1.10-upload-lock-hotfix-1'"), 'Activity backend build marker must remain compatible');
+expect(backend.includes("buildId: '1.1.12-multi-device-performance-1'"), 'Activity backend build marker must remain compatible');
 console.log('Fixed private endpoint + automatic MissionChief profile regression passed.');

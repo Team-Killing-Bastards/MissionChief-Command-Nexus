@@ -11,12 +11,14 @@
 
 const MC_LOGGER = Object.freeze({
   schemaVersion: 1,
-  buildId: '1.1.10-upload-lock-hotfix-1',
+  buildId: '1.1.12-multi-device-performance-1',
   activitySchemaVersion: 2,
   timezone: 'Europe/London',
   maxPayloadChars: 2800000,
   maxEventsPerBatch: 40,
   uploadLockWaitMs: 2000,
+  observerLeaseLockWaitMs: 500,
+  observerLeaseMs: 90000,
   maxUnitsPerEvent: 500,
   dispatchDuplicateWindowMs: 15000,
   duplicateScanEventRows: 1000,
@@ -507,7 +509,9 @@ function doGet() {
         'batch-ledger',
         'activity-recorder',
         'navbar-profile-id',
-        'retryable-upload-lock'
+        'retryable-upload-lock',
+        'multi-device-observer-lease',
+        'cross-device-semantic-dedupe'
       ],
       activitySchemaVersion: MC_LOGGER.activitySchemaVersion,
       time: new Date().toISOString()
@@ -551,6 +555,8 @@ function doPost(event) {
     const action = String(payload.action || '').toLowerCase();
     if (action === 'upload') {
       response = handleLoggerUpload_(payload);
+    } else if (action === 'observer-lease') {
+      response = handleLoggerObserverLease_(payload);
     } else if (action === 'pair' || action === 'revoke') {
       throw loggerError_(
         'PAIRING_DISABLED',
@@ -577,6 +583,93 @@ function doPost(event) {
   response.backendBuild = MC_LOGGER.buildId;
   response.activitySchemaVersion = MC_LOGGER.activitySchemaVersion;
   return createLoggerPostMessageResponse_(response, replyOrigin);
+}
+
+function handleLoggerObserverLease_(payload) {
+  const profileId = cleanMissionChiefProfileId_(
+    payload.profileId || payload.playerId
+  );
+  const deviceId = cleanIdentifier_(payload.deviceId, 160);
+  const requestedLeaseMs = Math.max(
+    30000,
+    Math.min(
+      180000,
+      Number(payload.leaseMs || 0) || MC_LOGGER.observerLeaseMs
+    )
+  );
+  if (!profileId || !deviceId || deviceId.length < 8) {
+    throw loggerError_(
+      'INVALID_OBSERVER_LEASE',
+      'A MissionChief profile ID and browser device ID are required for observer ownership.'
+    );
+  }
+
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(MC_LOGGER.observerLeaseLockWaitMs)) {
+    throw loggerError_(
+      'LOGGER_BUSY',
+      'The logger is busy; retry the observer lease shortly.'
+    );
+  }
+
+  try {
+    const now = Date.now();
+    const propertyKey = 'MC_LOGGER_OBSERVER_LEASE_' + profileId;
+    const properties = PropertiesService.getScriptProperties();
+    let existing = null;
+    try {
+      existing = JSON.parse(properties.getProperty(propertyKey) || 'null');
+    } catch (error) {
+      existing = null;
+    }
+
+    const existingDeviceId = cleanIdentifier_(
+      existing && existing.deviceId,
+      160
+    );
+    const existingExpiresAt = Number(
+      existing && existing.expiresAt || 0
+    );
+    const granted =
+      !existingDeviceId ||
+      existingExpiresAt <= now ||
+      existingDeviceId === deviceId;
+    const ownerDeviceId = granted ? deviceId : existingDeviceId;
+    const expiresAt = granted
+      ? now + requestedLeaseMs
+      : existingExpiresAt;
+
+    if (granted) {
+      properties.setProperty(
+        propertyKey,
+        JSON.stringify({
+          profileId: profileId,
+          deviceId: deviceId,
+          expiresAt: expiresAt,
+          updatedAt: now
+        })
+      );
+    }
+
+    return {
+      ok: true,
+      action: 'observer-lease',
+      playerId: profileId,
+      deviceId: deviceId,
+      granted: granted,
+      ownerDeviceId: ownerDeviceId,
+      expiresAt: new Date(expiresAt).toISOString(),
+      leaseMs: requestedLeaseMs,
+      retryAfterMs: granted
+        ? Math.max(5000, Math.floor(requestedLeaseMs / 2))
+        : Math.max(
+            1000,
+            Math.min(15000, expiresAt - now)
+          )
+    };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 function handleLoggerPair_(payload) {
@@ -813,9 +906,17 @@ function handleLoggerUpload_(payload) {
       }
     }
 
+    const passiveDeduped =
+      filterCrossDevicePassiveObservationRows_(
+        eventSheet,
+        preparedRaw,
+        batchId,
+        playerId,
+        deviceId
+      );
     const prepared = filterSemanticDuplicateDispatchRows_(
       eventSheet,
-      preparedRaw,
+      passiveDeduped,
       batchId
     );
     prepared.activityRows = preparedRaw.activityRows || [];
@@ -1905,6 +2006,71 @@ function readLoggerEventMetadata_(value) {
   } catch (error) {
     return {};
   }
+}
+
+function filterCrossDevicePassiveObservationRows_(
+  eventSheet,
+  prepared,
+  batchId,
+  playerId,
+  deviceId
+) {
+  const output = Object.assign({}, prepared, {
+    eventRows: Array.isArray(prepared && prepared.eventRows)
+      ? prepared.eventRows.slice()
+      : [],
+    unitRows: Array.isArray(prepared && prepared.unitRows)
+      ? prepared.unitRows.slice()
+      : [],
+    suppressedDuplicateEvents: Math.max(
+      0,
+      Number(prepared && prepared.suppressedDuplicateEvents || 0)
+    )
+  });
+  const candidateMissionIds = {};
+  output.eventRows.forEach(function(row) {
+    if (String(row[4] || '').toLowerCase() !== 'mission-observed') return;
+    const missionId = cleanIdentifier_(row[6], 80);
+    if (missionId) candidateMissionIds[missionId] = true;
+  });
+  if (Object.keys(candidateMissionIds).length === 0) return output;
+
+  const lastRow = eventSheet.getLastRow();
+  const recentRows = lastRow >= 2
+    ? eventSheet.getRange(
+        Math.max(2, lastRow - MC_LOGGER.duplicateScanEventRows + 1),
+        1,
+        Math.min(MC_LOGGER.duplicateScanEventRows, lastRow - 1),
+        MC_LOGGER_SHEETS.events.headers.length
+      ).getValues()
+    : [];
+  const observedElsewhere = {};
+  recentRows.forEach(function(row) {
+    if (String(row[1] || '') === batchId) return;
+    if (String(row[2] || '') !== playerId) return;
+    if (String(row[3] || '') === deviceId) return;
+    if (String(row[4] || '').toLowerCase() !== 'mission-observed') return;
+    const missionId = cleanIdentifier_(row[6], 80);
+    if (candidateMissionIds[missionId]) observedElsewhere[missionId] = true;
+  });
+
+  const suppressedEventIds = {};
+  output.eventRows = output.eventRows.filter(function(row) {
+    if (String(row[4] || '').toLowerCase() !== 'mission-observed') {
+      return true;
+    }
+    const missionId = cleanIdentifier_(row[6], 80);
+    if (!missionId || !observedElsewhere[missionId]) return true;
+    suppressedEventIds[String(row[0] || '')] = true;
+    output.suppressedDuplicateEvents += 1;
+    return false;
+  });
+  if (Object.keys(suppressedEventIds).length > 0) {
+    output.unitRows = output.unitRows.filter(function(row) {
+      return !suppressedEventIds[String(row[0] || '')];
+    });
+  }
+  return output;
 }
 
 function filterSemanticDuplicateDispatchRows_(eventSheet, prepared, batchId) {
