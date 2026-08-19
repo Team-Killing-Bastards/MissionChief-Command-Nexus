@@ -1,5 +1,4 @@
-name: Temporary v1.1.12 logger inspection
-# Trigger the trusted v1.1.12 builder after both temporary workflows exist.
+name: Temporary v1.1.12 cross-branch builder
 
 on:
   push:
@@ -10,52 +9,106 @@ on:
       - main
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  inspect:
+  build:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
+    timeout-minutes: 18
     steps:
       - uses: actions/checkout@v4
-      - name: Print exact logger helper contexts
+        with:
+          ref: release/v1.1.12-multi-device-performance
+          fetch-depth: 0
+
+      - name: Apply permanent v1.1.12 patch
         shell: bash
         run: |
+          set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
-
-          targets = {
-              'src/missionchief-command-nexus.user.js': [
-                  'function filterSemanticDuplicateDispatchRows_',
-                  'function startMissionLoggerCreditReconciliation',
-                  'function stopMissionLoggerCreditReconciliation',
-                  'function scheduleMissionLoggerCreditReconciliation',
-                  'function readMissionLoggerQueue',
-                  'function writeMissionLoggerQueue',
-                  'function acquireMissionLoggerSyncLock',
-                  'function recordPreparedMissionLoggerDispatch',
-                  'function recordMissionLoggerNativeCompletion',
-                  'function installMissionActivityRecorder',
-              ],
-              'integrations/google-apps-script/Code.gs': [
-                  'function filterSemanticDuplicateDispatchRows_',
-                  'function createLoggerBatchChecksum_',
-                  'function upsertLoggerProfileDevice_',
-                  'function seedLoggerConfiguration_',
-                  'function doPost',
-              ],
-          }
-
-          for filename, needles in targets.items():
-              path = Path(filename)
-              lines = path.read_text(encoding='utf-8').splitlines()
-              print(f'######## {filename} ({len(lines)} lines) ########')
-              for needle in needles:
-                  matches = [i for i, line in enumerate(lines) if needle in line]
-                  print(f'---- {needle}: {matches} ----')
-                  for i in matches:
-                      start = max(0, i - 20)
-                      end = min(len(lines), i + 180)
-                      for j in range(start, end):
-                          print(f'{j+1:06d}: {lines[j]}')
-                      print()
+          path = Path('scripts/tmp-apply-v1112.py')
+          text = path.read_text(encoding='utf-8')
+          old = '''        "Command Nexus `1.1.11`",\n        "Command Nexus `1.1.12`",\n        "source README version",'''
+          new = '''        "| Command Nexus version | `1.1.11` |",\n        "| Command Nexus version | `1.1.12` |",\n        "source README version",'''
+          if old not in text:
+              raise SystemExit('temporary source README patch target missing')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
           PY
+          python3 -m py_compile scripts/tmp-apply-v1112.py
+          python3 scripts/tmp-apply-v1112.py
+          python3 - <<'PY'
+          from pathlib import Path
+          replacements = (
+              ('1.1.10-upload-lock-hotfix-1', '1.1.12-multi-device-performance-1'),
+              (r'1\.1\.10-upload-lock-hotfix-1', r'1\.1\.12-multi-device-performance-1'),
+          )
+          updated = []
+          for path in Path('scripts').glob('check-*.mjs'):
+              text = path.read_text(encoding='utf-8')
+              revised = text
+              for old, new in replacements:
+                  revised = revised.replace(old, new)
+              if revised == text:
+                  continue
+              path.write_text(revised, encoding='utf-8')
+              updated.append(str(path))
+          if not updated:
+              raise SystemExit('No permanent backend build regressions were updated')
+          print('Updated backend build expectations in:')
+          for path in updated:
+              print(f'  - {path}')
+          PY
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('scripts/check-mission-logger-hotfix-v1110.mjs')
+          text = path.read_text(encoding='utf-8')
+          old = '''     const MF_MISSION_LOGGER_BUSY_RETRY_DELAYS_MS = Object.freeze([2000, 5000, 15000]);
+     const MF_MISSION_LOGGER_BATCH_CONFIRM_RETRY_DELAY_MS = 1000;
+     ${uploadBatch}'''
+          new = '''     const MF_MISSION_LOGGER_BUSY_RETRY_DELAYS_MS = Object.freeze([2000, 5000, 15000]);
+     const MF_MISSION_LOGGER_BATCH_CONFIRM_RETRY_DELAY_MS = 1000;
+     const Math = Object.create(globalThis.Math);
+     Math.random = () => 0;
+     function getMissionLoggerDeviceStagger() { return 0; }
+     ${uploadBatch}'''
+          if old not in text:
+              raise SystemExit('v1.1.10 upload regression harness target missing')
+          text = text.replace(old, new, 1)
+          token = "  'await wait(retryDelay)',"
+          if token not in text:
+              raise SystemExit('v1.1.10 upload regression token list target missing')
+          text = text.replace(token, token + "\n  'getMissionLoggerDeviceStagger',", 1)
+          path.write_text(text, encoding='utf-8')
+          PY
+          rm -f scripts/tmp-apply-v1112.py
+          rm -f .github/workflows/tmp-v1112-apply.yml
+          rm -f .github/workflows/tmp-v1112-force-runner.yml
+
+      - name: Validate exact candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          for check in scripts/check-*.mjs; do
+            echo "Running ${check}"
+            node "${check}"
+          done
+          python3 -m pip install --disable-pip-version-check --no-cache-dir 'PyYAML==6.0.2'
+          python3 scripts/check_workflow_yaml.py
+          python3 -m py_compile scripts/check_repository.py
+          python3 scripts/check_repository.py
+          git diff --check
+
+      - name: Commit clean candidate to PR 368
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && { echo 'No permanent changes produced'; exit 1; }
+          git commit -m "Release v1.1.12 multi-device logger and performance improvements"
+          git push origin HEAD:release/v1.1.12-multi-device-performance
