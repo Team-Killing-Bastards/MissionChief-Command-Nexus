@@ -22,6 +22,7 @@ jobs:
           path: |
             src/missionchief-command-nexus.user.js
             scripts
+            integrations
             README.md
             CHANGELOG.md
             docs
