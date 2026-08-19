@@ -1,4 +1,4 @@
-name: Temporary guarded PR 368 landing plan
+name: Temporary guarded PR 368 landing
 
 on:
   push:
@@ -14,7 +14,7 @@ permissions:
   statuses: read
 
 jobs:
-  plan:
+  land:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -25,7 +25,7 @@ jobs:
           ref: hotfix/v1.1.12-multi-device-lag
           fetch-depth: 0
 
-      - name: Produce exact-head guarded landing plan
+      - name: Request exact-head guarded squash landing
         shell: bash
         run: |
           set -uo pipefail
@@ -36,13 +36,15 @@ jobs:
             --head 9bd266f7dbad4d7f3ed531ee30c434af045b305f \
             --mode auto \
             --method squash \
+            --policy-digest 7691ab6501095b993156211c102a3520b590d3d54cb446f2df572c8e7c3f5219 \
+            --confirm \
             --pretty \
-            > scripts/tmp-pr-completion/plan.json
+            > scripts/tmp-pr-completion/landing.json
           status=$?
-          printf '%s\n' "${status}" > scripts/tmp-pr-completion/plan.exit-code
+          printf '%s\n' "${status}" > scripts/tmp-pr-completion/landing.exit-code
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add scripts/tmp-pr-completion/plan.json scripts/tmp-pr-completion/plan.exit-code
-          git commit -m "Record guarded PR 368 landing plan"
+          git add scripts/tmp-pr-completion/landing.json scripts/tmp-pr-completion/landing.exit-code
+          git commit -m "Record guarded PR 368 landing result"
           git push origin HEAD:hotfix/v1.1.12-multi-device-lag
           exit "${status}"
