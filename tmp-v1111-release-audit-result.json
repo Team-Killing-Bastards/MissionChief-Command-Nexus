@@ -1,0 +1,23 @@
+{
+  "release_tag": "v1.1.11",
+  "release_name": "MissionChief Command Nexus 1.1.11",
+  "release_url": "https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/tag/v1.1.11",
+  "published_at": "2026-08-19T05:35:48Z",
+  "target_commitish": "8f4fbb53f54a97f10c9b6d64d4c1ae32ef4d9d22",
+  "draft": false,
+  "prerelease": false,
+  "asset_names": [
+    "Command-Nexus-Discord-Receipt-v1.1.11-1539508105476448279.json",
+    "MissionChief-Command-Nexus-1.1.11.user.js",
+    "MissionChief-Command-Nexus-1.1.11.user.js.sha256"
+  ],
+  "source_sha256": "9bdbd1b63f421a18b298d1cc7bf1f138930240666eac2950eb142ce8edf25a48",
+  "source_size_bytes": 2076782,
+  "greasy_fork_version": "1.1.11",
+  "greasy_fork_exact_source_match": true,
+  "discord_receipt_asset": "Command-Nexus-Discord-Receipt-v1.1.11-1539508105476448279.json",
+  "discord_channel_id": "1264992613845565440",
+  "discord_message_id": "1539508105476448279",
+  "discord_posted_at": "2026-08-19T05:35:35.461Z",
+  "release_sha": "8f4fbb53f54a97f10c9b6d64d4c1ae32ef4d9d22"
+}
