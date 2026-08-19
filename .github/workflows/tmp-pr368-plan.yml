@@ -1,4 +1,4 @@
-name: Temporary guarded PR 368 landing
+name: Temporary guarded PR 368 merge watcher
 
 on:
   push:
@@ -9,14 +9,14 @@ on:
 
 permissions:
   contents: write
-  pull-requests: write
+  pull-requests: read
   checks: read
   statuses: read
 
 jobs:
-  land:
+  watch:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
@@ -25,26 +25,30 @@ jobs:
           ref: hotfix/v1.1.12-multi-device-lag
           fetch-depth: 0
 
-      - name: Request exact-head guarded squash landing
+      - name: Observe exact-head landing to completion
         shell: bash
         run: |
           set -uo pipefail
-          python3 scripts/tmp-pr-completion/pr_land.py \
-            --repo . \
-            --pr https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/pull/368 \
+          python3 scripts/tmp-pr-completion/pr_watch.py \
+            --target .=https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/pull/368 \
             --no-config \
-            --head 9bd266f7dbad4d7f3ed531ee30c434af045b305f \
-            --mode auto \
-            --method squash \
-            --policy-digest 7691ab6501095b993156211c102a3520b590d3d54cb446f2df572c8e7c3f5219 \
-            --confirm \
+            --mode until-actionable \
+            --interval 5 \
+            --max-interval 20 \
+            --timeout 600 \
+            --jitter 0 \
+            --cursor scripts/tmp-pr-completion/merge-watch.cursor.json \
+            --observations-file scripts/tmp-pr-completion/merge-watch.observations.ndjson \
+            --await-merge 9bd266f7dbad4d7f3ed531ee30c434af045b305f \
+            --await-merge-mode auto \
+            --await-merge-since 2026-08-19T21:18:48.851097Z \
             --pretty \
-            > scripts/tmp-pr-completion/landing.json
+            > scripts/tmp-pr-completion/merge-watch.json
           status=$?
-          printf '%s\n' "${status}" > scripts/tmp-pr-completion/landing.exit-code
+          printf '%s\n' "${status}" > scripts/tmp-pr-completion/merge-watch.exit-code
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add scripts/tmp-pr-completion/landing.json scripts/tmp-pr-completion/landing.exit-code
-          git commit -m "Record guarded PR 368 landing result"
+          git add -A scripts/tmp-pr-completion
+          git commit -m "Record guarded PR 368 merge observation"
           git push origin HEAD:hotfix/v1.1.12-multi-device-lag
           exit "${status}"
