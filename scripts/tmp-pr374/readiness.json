@@ -1,0 +1,66 @@
+{
+  "actions": [],
+  "errors": [],
+  "observedAt": "2026-08-19T22:58:35.165090Z",
+  "policy": {
+    "checkPolicy": "all",
+    "configPath": null,
+    "requiredReviewers": [],
+    "source": "no-config",
+    "strictChangesRequested": false
+  },
+  "schemaVersion": 1,
+  "state": "ready",
+  "targets": [
+    {
+      "actions": [],
+      "checks": {
+        "fail": [],
+        "malformed": [],
+        "pass": [
+          "Repository integrity",
+          "Userscript validation"
+        ],
+        "pending": [],
+        "skipping": [
+          "Detect unpublished canonical version",
+          "Publish, verify and announce canonical release"
+        ],
+        "total": 4,
+        "unknown": []
+      },
+      "kind": "explicit",
+      "landingAuthorization": null,
+      "path": "/home/runner/work/MissionChief-Command-Nexus/MissionChief-Command-Nexus",
+      "pending": [],
+      "pr": {
+        "autoMerge": null,
+        "autoMergeEnabled": false,
+        "baseRefName": "main",
+        "baseSha": "db07ef8da70939f852ffebfe33cb961620452d48",
+        "headRefName": "fix/v2.0.1-release-recovery",
+        "headSha": "1144ab8ce8a03170af0ff0ca456d3c298115e2c6",
+        "isMergeQueueEnabled": false,
+        "mergeQueueEntry": null,
+        "mergeStateStatus": "CLEAN",
+        "mergeable": "MERGEABLE",
+        "number": 374,
+        "reviewDecision": null,
+        "state": "OPEN",
+        "url": "https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/pull/374"
+      },
+      "repository": "Team-Killing-Bastards/MissionChief-Command-Nexus",
+      "repositoryPolicy": {
+        "mergeCommitAllowed": true,
+        "rebaseMergeAllowed": true,
+        "squashMergeAllowed": true
+      },
+      "reviews": {
+        "missingRequiredReviewers": [],
+        "requiredReviewers": [],
+        "unresolvedThreadCount": 0
+      },
+      "state": "ready"
+    }
+  ]
+}
