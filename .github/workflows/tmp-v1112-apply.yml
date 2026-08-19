@@ -34,6 +34,23 @@ jobs:
           PY
           python3 -m py_compile scripts/tmp-apply-v1112.py
           python3 scripts/tmp-apply-v1112.py
+          python3 - <<'PY'
+          from pathlib import Path
+          old = '1.1.10-upload-lock-hotfix-1'
+          new = '1.1.12-multi-device-performance-1'
+          updated = []
+          for path in Path('scripts').glob('check-*.mjs'):
+              text = path.read_text(encoding='utf-8')
+              if old not in text:
+                  continue
+              path.write_text(text.replace(old, new), encoding='utf-8')
+              updated.append(str(path))
+          if not updated:
+              raise SystemExit('No permanent backend build regressions were updated')
+          print('Updated backend build expectations in:')
+          for path in updated:
+              print(f'  - {path}')
+          PY
       - name: Remove temporary patch carrier
         run: |
           rm -f scripts/tmp-apply-v1112.py
