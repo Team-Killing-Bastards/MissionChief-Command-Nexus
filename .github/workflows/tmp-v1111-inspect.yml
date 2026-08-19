@@ -1,31 +1,63 @@
-name: Temporary v1.1.11 working-tree export
+name: Temporary apply v1.1.11 release patch
 
 on:
   push:
     branches:
       - release/v1.1.11-sharing-sync
-  pull_request:
-    branches:
-      - main
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  export:
+  apply:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/upload-artifact@v4
+      - name: Check out release branch
+        uses: actions/checkout@v4
         with:
-          name: v1111-working-tree-export
-          path: |
-            .github
-            src/missionchief-command-nexus.user.js
-            scripts
-            integrations
-            README.md
-            CHANGELOG.md
-            docs
-          include-hidden-files: true
-          retention-days: 1
+          ref: release/v1.1.11-sharing-sync
+          fetch-depth: 0
+
+      - name: Reconstruct and verify release patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat tmp-v1111-patch.part00 tmp-v1111-patch.part01 tmp-v1111-patch.part02 tmp-v1111-patch.part03 > /tmp/v1111.patch.gz.b64
+          echo "351f498e8b03cc341d63f00a1589720d379c3fe8dcbbf799cc78c5a71096bed5  /tmp/v1111.patch.gz.b64" | sha256sum --check --strict
+          base64 --decode /tmp/v1111.patch.gz.b64 | gzip --decompress > /tmp/v1111.patch
+          echo "2d5541ea8e7b4773fc77364558f082b0f86da72610061ce94244e5973bb3d2a1  /tmp/v1111.patch" | sha256sum --check --strict
+          grep -q '^// @version      1.1.10$' src/missionchief-command-nexus.user.js
+          git apply --check /tmp/v1111.patch
+
+      - name: Apply and validate v1.1.11
+        shell: bash
+        run: |
+          set -euo pipefail
+          git apply /tmp/v1111.patch
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          node scripts/check-hardcoded-sharing-sync-v1111.mjs
+          node scripts/check-private-url-logger-profile.mjs
+          node scripts/check-mission-user-logger.mjs
+          node scripts/check-mission-logger-outbox-drain.mjs
+
+      - name: Remove temporary carriers and commit clean release candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f \
+            tmp-v1111-patch.part00 \
+            tmp-v1111-patch.part01 \
+            tmp-v1111-patch.part02 \
+            tmp-v1111-patch.part03 \
+            tmp-v1111-trigger.txt \
+            tmp-v1111-trigger-2.txt \
+            .github/workflows/tmp-v1111-inspect.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "Release v1.1.11 hardcoded Sharing and Sync endpoint"
+          git push origin HEAD:release/v1.1.11-sharing-sync
