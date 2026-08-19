@@ -114,6 +114,7 @@ for (const token of [
   'MF_MISSION_LOGGER_BUSY_RETRY_DELAYS_MS.length',
   "'LOGGER_BUSY'",
   'await wait(retryDelay)',
+  'getMissionLoggerDeviceStagger',
   'batchId: pending.batchId',
   'attempt < 2',
   "'LOGGER_TIMEOUT'",
@@ -130,6 +131,9 @@ function makeRunner(submit, waits, states) {
     `"use strict";
      const MF_MISSION_LOGGER_BUSY_RETRY_DELAYS_MS = Object.freeze([2000, 5000, 15000]);
      const MF_MISSION_LOGGER_BATCH_CONFIRM_RETRY_DELAY_MS = 1000;
+     const Math = Object.create(globalThis.Math);
+     Math.random = () => 0;
+     function getMissionLoggerDeviceStagger() { return 0; }
      ${uploadBatch}
      return submitMissionLoggerUploadBatch;`
   )(
