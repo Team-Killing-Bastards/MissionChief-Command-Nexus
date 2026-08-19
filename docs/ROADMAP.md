@@ -5,10 +5,10 @@ MissionChief Command Nexus is an actively released userscript. This roadmap reco
 **Developer and technical owner:** MartyBlyth  
 **Repository and documentation support:** Conroy1988
 
-## Current production baseline — v1.0.127
+## Current production baseline — v1.1.12
 
 - [x] Publish one canonical userscript on trusted `main`.
-- [x] Release Command Nexus `1.0.127` with Mission Finder `V10.6.164`.
+- [x] Release Command Nexus `1.1.12` with Mission Finder `V10.7.7`.
 - [x] Retain Resource Administration `V4.2.8`, with Unit Naming `3.3.27`, Station Naming `1.3.22` and Personnel Assignment `1.3.12`.
 - [x] Protect duplicate initialization and independent engine startup.
 - [x] Provide Unit Naming, Station Naming and Personnel Assignment through background native-form workflows.
@@ -21,6 +21,7 @@ MissionChief Command Nexus is an actively released userscript. This roadmap reco
 - [x] Complete issue #18 Fire/Airfield Personnel Assignment profiles with exact mappings and fail-closed pod/trailer authority.
 - [x] Complete issue #19 SAR/Coastguard Personnel Assignment profiles with exact mappings, live seat overrides and overlap-safe batching.
 - [x] Route Aerial Appliance Truck(s) or Rescue Stairs through exact Rescue Stairs-first, CARP-remainder selection.
+- [x] Add opt-in Sharing & Sync with a compiled private endpoint, automatic MissionChief navbar identity, bounded five-minute uploads, exact dispatched-unit rows and a separately deployed Google Apps Script / Sheets backend.
 - [x] Run canonical version validation and the complete permanent behavioral regression suite.
 - [x] Reconcile GitHub Release assets, Greasy Fork synchronization and one Discord delivery receipt for each userscript release.
 
@@ -62,6 +63,20 @@ MissionChief Command Nexus is an actively released userscript. This roadmap reco
 - [ ] Keep trusted-main publication idempotent and retain a documented recovery path.
 - [ ] Keep temporary build mechanisms out of tracked permanent automation.
 - [ ] Record each production or operating-contract change in GitHub and the connected project operating records.
+- [x] Implement fail-closed MissionChief transaction-to-mission matching: prefer a ledger mission ID + normalized title, otherwise require one unique normalized title inside the bounded completion window; retain ambiguous rows as pending for live verification.
+
+### 6. Opt-in mission analytics — delivered and monitored
+
+- [x] Complete [issue #334](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/issues/334) with proven pairing, local-credential, bounded-outbox, idempotent-upload and privacy contracts.
+- [x] Keep logging disabled by default and expose one Sharing & Sync checkbox while retaining queue, synchronization and failure detail internally for diagnostics.
+- [x] Route manual Dispatch, Dispatch & Share, Auto Mode and Ally Steal paths through one evidence-backed event schema.
+- [x] Verify live cross-origin transport, server-side credential hashing and separation of advertised versus awarded credits.
+- [x] Add mission completion timing, exact native Credits-ledger matching, weekly archives and compact all-weeks Dashboard Data.
+- [x] Recover exact mission completion time and awarded credits after every paired browser was offline, using resumable mission-ID + title ledger reconciliation without changing the existing Google deployment or pairing.
+- [x] Capture MissionChief's available dispatch-time route distance/ETA per selected unit and retain compact weekly station journey aggregates for placement analysis.
+- [x] Capture each newly generated current-player mission from the native mission list without opening its detail page.
+- [x] Coordinate passive mission observation across multiple computers while preserving each device's direct dispatch and completion evidence.
+- [ ] Continue monitoring multi-browser live batches, MissionChief transaction variants and weekly rollover evidence after release.
 
 ## Phase 7 — Formal release (completed)
 

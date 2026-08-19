@@ -68,6 +68,10 @@ requireText(
   "window.removeEventListener(\n                'mc-personnel-training-registry-updated'",
   'personnel registry listener teardown'
 );
+requireText(
+  'function installMissionActivityFrame(',
+  'activity recorder same-origin iframe tracker'
+);
 requirePattern(
   /function initWhenReady\(\)[\s\S]{0,600}installSingleNamingToolsPanelGuard\(\);[\s\S]{0,600}if \(isIosSafariWebsite\(\)\)/,
   'single iOS guard replacing the readiness observer'
@@ -84,6 +88,10 @@ requirePattern(
   /function installMissionFinderRuntimeCleanup\(\)[\s\S]{0,5000}pagehide[\s\S]{0,5000}pageshow/,
   'owned pagehide and pageshow listeners'
 );
+requirePattern(
+  /function installMissionActivityRecorder\(\)[\s\S]{0,5000}new MutationObserver\([\s\S]{0,5000}installMissionActivityFrame/,
+  'single activity recorder observer limited to discovering same-origin iframe workers'
+);
 
 if (source.includes('installSingleNamingToolsPanelGuard(panel)')) {
   fail('Per-panel global lifecycle guard must not remain');
@@ -91,8 +99,11 @@ if (source.includes('installSingleNamingToolsPanelGuard(panel)')) {
 
 const observerCount =
   (source.match(/new\s+MutationObserver\s*\(/g) || []).length;
-if (observerCount !== 2) {
-  fail(`Expected two permanent MutationObservers; found ${observerCount}`);
+if (observerCount !== 3) {
+  fail(
+    `Expected three permanent MutationObservers (Resource Administration, ` +
+    `Mission Finder and activity iframe tracking); found ${observerCount}`
+  );
 }
 
 const decideNamingToolsPanelLifecycle =

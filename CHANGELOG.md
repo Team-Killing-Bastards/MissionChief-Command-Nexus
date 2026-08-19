@@ -6,13 +6,232 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
+No changes queued after `1.1.12`.
+
+## [1.1.12] - 2026-08-19
+
+### Fixed
+
+- Added a short server-backed passive-observer lease per MissionChief player. Multiple computers can stay open, but only one records account-wide mission-list observations; every computer still records the dispatches, units, completions, credits and direct activity it performs.
+- Added deterministic per-device upload staggering and retry jitter so two computers no longer repeatedly hit the private Apps Script lock on the same schedule.
+- Added backend semantic suppression for duplicate cross-device `mission-observed` rows while preserving all dispatch evidence and stable same-batch retry checksums.
+
+### Performance
+
+- Buffered low-priority activity records in memory and writes them to the bounded local outbox in batches instead of parsing and rewriting the full localStorage queue for every click or network callback.
+- Removed duplicate network request START activity rows. Successful routine network telemetry is recorded by the passive observer; failures remain recorded on every acting computer.
+
+### Deployment
+
+- Apps Script backend build `1.1.12-multi-device-performance-1` must be deployed as a **new version of the existing web-app deployment**. The existing `/exec` URL remains unchanged.
+
+## [1.1.11] - 2026-08-19
+
 ### Changed
 
+- Compiled the approved private Google Apps Script `/exec` endpoint into the trusted two-user Command Nexus build. The existing compatibility storage key is populated automatically; Marty and Conroy no longer paste or save the endpoint in each browser.
+- Reduced the logger settings surface to one **Sharing & Sync** checkbox. The private URL field, detected-user field, Save, Sync, Forget, queue/status text and explanatory copy are no longer rendered.
+- MissionChief identity is provisioned automatically from `#navbar_profile_link`. The numeric profile ID remains authoritative, the current username is retained, and the existing diagnostic device ID is reused.
+- Enabling Sharing & Sync starts recording and requests an immediate bounded drain of any existing backlog. Disabling it stops recording and upload timers without deleting queued events, the persistent pending batch or logger history.
+
+### Compatibility and recovery
+
+- The endpoint and automatic identity migration never call the destructive profile-scoped cleanup path. Existing queued events and pending batch IDs therefore survive the v1.1.11 update, including Conroy's pre-existing offline backlog.
+- The Apps Script backend remains build `1.1.10-upload-lock-hotfix-1`; no new backend deployment is required for this userscript-only release.
+- Added `scripts/check-hardcoded-sharing-sync-v1111.mjs` and updated the permanent private-profile, outbox-drain and Mission Analytics logger regressions. Mission Finder remains `V10.7.7`; Resource Administration component versions remain unchanged.
+
+## [1.1.10] - 2026-08-18
+
+### Fixed
+
+- Installed the single Mission Analytics activity recorder in the top window before Mission Finder can hand heavy execution ownership to the active mission frame. Activity Log, Sessions and Action Summary can now receive top-window and same-origin mission-frame events without creating a second heavy Mission Finder runtime.
+- Increased the Google logger acknowledgement window from 30 seconds to 120 seconds and extended the shared cross-tab lease beyond that request window, preventing the browser from abandoning a batch while Apps Script is still waiting or writing.
+- Replaced the upload endpoint's 30-second script-lock wait with a two-second bounded lock attempt. Contention now returns explicit retryable `LOGGER_BUSY`, and Nexus retries the same persistent batch ID after 2, 5 and 15 seconds. Existing timeout confirmation remains a single same-ID retry.
+
+### Compatibility and recovery
+
+- Existing private logger URL, selected user, device diagnostics, queued events and pending batch IDs are retained. **Forget setup** is not a recovery action because it clears profile-scoped queued data.
+- The 120-second client remains compatible with the currently deployed private backend. Updating the existing Apps Script web-app deployment to backend build `1.1.10-upload-lock-hotfix-1` activates the fast `LOGGER_BUSY` response without changing the saved `/exec` URL.
+- Added `scripts/check-mission-logger-hotfix-v1110.mjs`. Increased Command Nexus from `1.1.9` to `1.1.10`; Mission Finder remains `V10.7.7` and all Resource Administration component versions remain unchanged.
+
+## [1.1.9] - 2026-08-18
+
+### Added
+
+- Added a comprehensive, privacy-bounded MissionChief activity recorder. Once the upgraded private Apps Script backend acknowledges activity schema v2, Nexus records trusted user interactions, synthetic/Nexus actions, same-origin fetch/XHR lifecycle, navigation, same-origin iframe activity, lifecycle state and runtime errors into a dedicated raw Activity Log. Entered values, passwords, cookies, auth tokens, clipboard data and request bodies are never captured.
+- Added Sessions and Action Summary datasets and extended daily backups plus weekly verified archives to include Activity Log, Sessions and Action Summary before live rows are purged.
+
+### Changed
+
+- Logger identity now comes from `#navbar_profile_link`: the numeric `/profile/{id}` value is the stable player ID and the visible MissionChief username is the current display name. Username changes therefore stay attached to the same player history. Legacy selected names are retained only as an old-backend compatibility alias during rollout.
+- Rebuilt the logger workbook contract around raw action evidence while preserving the locked Monday archive -> verify -> purge lifecycle and the emergency cell-limit archive guard.
+- Increased Command Nexus from `1.1.8` to `1.1.9` and Mission Finder from `V10.7.6` to `V10.7.7`.
+
+## [1.1.8] - 2026-08-18
+
+### Changed
+
+- Read Maximum amount of trucks to tow from mission-definition Other information and feed the value into the existing strict HGV Recovery type-106 path. Use Minimum amount of trucks to tow only as a fallback when Maximum is absent or invalid, never add both values together, and preserve the existing Flatbed Recovery car-towing rule. Add permanent regression coverage based on the supplied MissionChief mission HTML.
+- Increased the unified userscript version from `1.1.7` to `1.1.8`.
+
+## [1.1.7] - 2026-08-18
+
+### Added
+
+- Added an attached **Patient Transfers** drawer beside Mission Control for the default-off background patient transport worker. The collapsed tab exposes the live pending count and a warning when the current Auto Mode run has terminal failures; expanding it shows Pending, Completed this run and Failed this run counters, the current worker state, last completion time and the queued patient/vehicle requests.
+- Added a bounded ten-entry terminal failure history with exact worker reasons and the retained reason from each of the worker's maximum three attempts. The log persists after Auto Mode stops so live failures can be diagnosed, and includes an explicit Clear control.
+- Manual Auto Mode start resets only the run counters. The real queue remains authoritative for Pending, the existing lifetime sent counter remains intact, and terminal failures are counted only after the existing three-attempt safety limit is exhausted.
+
+### Compatibility
+
+- The patient transport engine itself is unchanged: exact same-origin patient routes, available-hospital selection, hidden worker rendering, prisoner/cell exclusion, 40-request queue limit, three-attempt retry bound, stop handling and Auto Mode continuation remain authoritative.
+- The new drawer reuses the attached Vehicle Load interaction pattern on desktop and keeps the established iPhone/iPad Safari mission surfaces isolated. Opening Patient Transfers collapses Vehicle Load and opening Vehicle Load collapses Patient Transfers.
+- Added `scripts/check-patient-transfer-drawer-v117.mjs`. Increased Command Nexus from `1.1.6` to `1.1.7` and Mission Finder from `V10.7.4` to `V10.7.5`; all other component versions remain unchanged.
+
+## [1.1.6] - 2026-08-18
+
+### Changed
+
+- Replaced one-time pairing codes and per-device upload tokens with a deliberately simple private logger setup: paste a private Google Apps Script `/exec` URL, choose **Marty** or **Conroy**, and save. The same setup works on any browser or computer.
+- Removed the public built-in logger endpoint from the userscript. A newly created Apps Script deployment URL is now the credential and must remain private.
+- The backend resolves the submitted user name against one exact active row in the workbook `Players` tab, assigns the authoritative player ID server-side and keeps the browser-generated device ID only for diagnostics.
+
+### Migration
+
+- Saving the first v1.1.6 logger setup removes the old browser token and clears that browser's legacy queue, pending batch, observation dedupe, mission registry and upload lock. Existing spreadsheet history is left untouched.
+- Legacy `pair` and `revoke` web actions return `PAIRING_DISABLED`; no token expiry or per-device revocation exists in the private-URL mode. Rotating the private URL is the recovery action if it is disclosed.
+
+### Security and compatibility
+
+- This model is intentionally suitable only for the two trusted users approved for this deployment. Anyone who obtains the private URL can submit as either configured active user. The URL must not be committed, posted in Discord or included in screenshots.
+- A new Apps Script **deployment** is required so the old public endpoint is not reused. The existing workbook schema, dashboard, batch dedupe, 40-event server limit, multi-batch drain, weekly archive and journey processing remain compatible.
+- Added `scripts/check-private-url-logger-profile.mjs` and updated the permanent Mission Analytics Logger regression. Increased Command Nexus from `1.1.5` to `1.1.6` and Mission Finder from `V10.7.3` to `V10.7.4`; all other component versions remain unchanged.
+
+## [1.1.5] - 2026-08-18
+
+### Added
+
+- Added the default-off **Handle patient transports in the background** setting. During Auto Mode, exact current-player Transport Patient requests are queued, processed one at a time in an off-screen same-origin MissionChief frame, sent to the first destination with confirmed free hospital capacity and removed only after MissionChief confirms the handoff.
+- Added visible background-transport states for Watching, Queued, Sending, Retrying, Sent and Failed. Prisoner/cell transport remains on the established foreground route.
+
+### Fixed
+
+- Fixed the Mission Analytics Logger reaching its 300-event local ceiling during long offline or high-volume sessions. The queue now retains up to 1,200 events within the existing 3 MB storage bound, drains up to eight 40-event batches per automatic pass, drains up to twelve batches on manual sync/reconnect and immediately schedules another bounded pass while backlog remains.
+- Fixed **Sync now** appearing to do nothing when it was pressed inside a mission frame/pop-out or while another MissionChief tab owned the shared upload lock. Manual drains are handed to the top-window logger owner, queued behind an active upload and visibly report **Drain queued** and per-batch progress.
+- Renewed the cross-tab upload lock before every batch and added an immediate confirmation retry using the same idempotent batch ID after a Google response timeout, avoiding the old five-minute accepted-then-acknowledged retry delay.
+- Added eager upload when the local outbox reaches 20 events, so normal high-volume activity no longer waits for the next five-minute timer.
+- Made overflow fail safer: low-value mission-observed rows are discarded before dispatch, completion or exact-credit evidence if the fixed storage ceiling is still reached. Existing dropped events cannot be reconstructed.
+
+### Security and compatibility
+
+- Background patient transport accepts only exact same-origin `/vehicles/{vehicle}/patient/{patient}` routes captured from a visible Transport Patient request or active patient/hospital page. It rejects prisoner/cell contexts, keeps one worker and one request active, caps the queue at 40, retries at most three times and clears immediately when the setting or Auto Mode is stopped.
+- Preserved the existing Google Apps Script endpoint and its 40-event server batch limit; no `Code.gs` deployment, pairing change or workbook migration is required.
+- Added permanent regressions for background patient transport lifecycle and logger backlog draining. Increased the unified userscript from `1.1.4` to `1.1.5` and Mission Finder from `V10.7.2` to `V10.7.3`; all other component versions remain unchanged.
+
+## [1.1.4] - 2026-08-18
+
+### Fixed
+
+- Made every Nexus-controlled dispatch route logger-aware instead of relying solely on a document click listener. Manual Dispatch, Dispatch & Share, Auto Mode, high-value auto-share, not-ready skip dispatches, Ally Steal and post-dispatch upgrade passes now snapshot selected units before MissionChief clears the vehicle selection and commit the prepared event after the dispatch control is invoked.
+- Added a direct programmatic fallback for mission runtimes where the capture-phase click listener is absent. The existing dispatch fingerprint dedupe prevents the listener and fallback from creating duplicate events.
+- Rejected zero-unit dispatch snapshots so navigation or repeated dispatch controls cannot create misleading dispatch events with no unit evidence.
+- Added dispatch-capture provenance and selected-unit counts to event metadata for live diagnosis.
+
+### Security and compatibility
+
+- Preserved native MissionChief dispatch controls, Auto Mode behaviour, the existing logger endpoint, spreadsheet, player/browser pairings and queued events. Actions performed in a completely different unpaired browser or profile remain outside the browser-local logger boundary.
+- Added `scripts/check-mission-dispatch-path-logger.mjs` and expanded the permanent Mission Analytics Logger regression to lock every supported dispatch path.
+- Increased the unified userscript from `1.1.3` to `1.1.4` and Mission Finder from `V10.7.1` to `V10.7.2`. Resource Administration remains `V4.2.8`, Unit Naming remains `3.3.27`, Station Naming remains `1.3.22`, and Personnel Assignment remains `1.3.12`.
+
+## [1.1.3] - 2026-08-17
+
+### Added
+
+- Added true generated-mission capture for the opt-in Mission Analytics Logger. Nexus now records each new mission belonging to the signed-in player when MissionChief adds it to the native mission list, without requiring that mission's detail page to be opened first.
+- Reused MissionChief's native `missionMarkerAdd` callback and the existing top-window mutation observer as a bounded fallback. Initial mission-list hydration is recorded only as a local baseline, preventing a refresh or userscript update from falsely importing the whole existing mission list as newly generated.
+
+### Fixed
+
+- Fixed dispatch journey evidence remaining blank because MissionChief may expose distance and ETA on the selected checkbox or a native metric cell rather than the enclosing row. One shared reader now checks those exact native attributes and explicit unit-labelled values, and vehicle arrival sorting uses the same evidence path.
+- Preserved Google Sheets dashboard and analysis formula references during logger rebuilds by clearing source data cells instead of deleting the referenced rows.
+- Blocked duplicate active player display names and directs additional browsers to **Create another device pairing**, preventing ambiguous dashboard player filters.
+
+### Security and compatibility
+
+- Generated-mission capture accepts only a mission whose native owner ID exactly matches the current signed-in user. Alliance missions owned by another player and records without exact ownership evidence fail closed.
+- Preserved the existing logger endpoint, player/browser pairings, local queue, spreadsheet and dashboard. Historical journey rows with missing evidence cannot be reconstructed; new distance/ETA evidence begins with dispatches captured by `1.1.3`.
+- Increased the unified userscript from `1.1.2` to `1.1.3` and Mission Finder from `V10.7.0` to `V10.7.1`. Resource Administration remains `V4.2.8`, Unit Naming remains `3.3.27`, Station Naming remains `1.3.22`, and Personnel Assignment remains `1.3.12`.
+
+## [1.1.2] - 2026-08-17
+
+### Added
+
+- Added per-unit dispatch journey evidence to the opt-in Mission Analytics Logger. Nexus now records MissionChief's own dispatch-time estimated route distance in kilometres and arrival delay in seconds for every selected unit when those native row attributes are available.
+- Added `estimated_distance_km` and `estimated_eta_seconds` to `Dispatch Units`, including weekly raw archives and daily JSON backups. Missing or invalid MissionChief attributes remain blank instead of being estimated.
+- Added compact all-weeks `Journey Data`, grouped by ISO week, player and station with journey counts, distance/ETA totals, evidence counts, maxima and explicit missing-evidence counts. This retained aggregate survives the verified weekly raw rollover without allowing the live workbook to grow at raw-unit-row speed.
+- Replaced the dashboard's reserved distance placeholder with player/date-filtered station coverage and live-week furthest-dispatch tables. Station coverage exposes average/max distance and ETA; the raw table retains the individual unit, type, dispatch time and mission ID needed to investigate outliers.
+
+### Security and compatibility
+
+- Kept journey capture inside the existing explicit opt-in, paired logger boundary. Passwords, cookies and personnel names remain excluded, and the in-product disclosure now names the distance/ETA evidence being uploaded.
+- Added a fail-closed, append-only sheet migration: existing `Dispatch Units` rows are preserved, the two trailing headers are added safely, and any unexpected or non-contiguous schema still blocks logging for manual repair.
+- Preserved the existing Apps Script `/exec` URL, spreadsheet, dashboard, player/browser pairings, local queue and historical rows. Deploying the new `Code.gs` version and running initialization requires no new link, pairing code or browser setup.
+- Increased the unified userscript from `1.1.1` to `1.1.2`. Mission Finder remains `V10.7.0`, Resource Administration remains `V4.2.8`, Unit Naming remains `3.3.27`, Station Naming remains `1.3.22`, and Personnel Assignment remains `1.3.12`.
+
+## [1.1.1] - 2026-08-17
+
+### Fixed
+
+- Recovered dispatched missions that finish while every paired browser is offline. On startup, reconnect or manual sync, Nexus now resumes through the signed-in player's same-origin MissionChief `/credits` ledger and reconstructs the missing completion only when the transaction exposes the exact mission ID and normalized mission title.
+- Recorded the authoritative ledger transaction time as the recovered mission finish time and the exact transaction amount as actual awarded credits, then sent the result through the existing bounded Google logger queue and configured Apps Script endpoint.
+- Added a resumable ledger page/floor checkpoint, automatic online-event catch-up and queue-headroom pauses so a long offline period cannot silently overflow the existing 300-event outbox. Failed ledger requests do not advance the successful checkpoint.
+
+### Security and compatibility
+
+- Kept title-only, patient, prisoner and other side transactions fail-closed for offline recovery; the existing unique title/time fallback remains limited to missions whose native completion time was already captured.
+- Preserved all existing Mission Analytics links and storage: the Google Apps Script deployment URL, spreadsheet/dashboard, Greasy Fork install/update path, player/browser pairing and queued events require no migration or re-pairing.
+- Increased the unified userscript from `1.1.0` to `1.1.1`. Mission Finder remains `V10.7.0`, Resource Administration remains `V4.2.8`, Unit Naming remains `3.3.27`, Station Naming remains `1.3.22`, and Personnel Assignment remains `1.3.12`.
+
+## [1.1.0] - 2026-08-16
+
+### Added
+
+- Added the off-by-default **Mission Analytics Logger** for issue #334. The public Google Apps Script transport endpoint is built in, but a player must explicitly enable logging and redeem a one-use pairing code; no player credential is compiled into the userscript.
+- Added stable per-player and per-browser identity, independently revocable device tokens, visible queue/upload/error state, manual Sync and Disconnect controls, and explicit in-product collection disclosure.
+- Captured one bounded mission-observed event per mission and exact native dispatch snapshots for manual, shared, Auto Mode, not-ready and Ally Steal paths, including mission identity, advertised credits, demand, patient count and selected vehicle IDs, types, names, stations and status.
+- Added a persistent 300-event / 3 MB outbox, 40-event batches, stable pending batch IDs, a shared browser sync lock and automatic five-minute upload. Disconnect now removes the credential and unsent profile-specific events so another player cannot inherit them.
+- Added the Google Apps Script backend, manifest and deployment guide with Players, Pairings, Devices, Mission Events, Dispatch Units, Uploads and Configuration sheets plus daily raw JSON backups.
+- Added native mission-finish capture, a per-player Mission Summary, first-unit/completion timing, response and mission-duration fields, and compact all-weeks Dashboard Data.
+- Added exact awarded-credit capture from MissionChief's native `/credits` transaction ledger. Mission-ID + title matches are preferred; title/time matching is accepted only when unique, and ambiguous transactions remain `PENDING_TRANSACTION`.
+- Added verified ISO-week archives at approximately 03:15 Monday, a Sunday copy-only test, an Archive Index, a 35-day Batch Ledger and a 7.5-million-cell emergency rollover guard. Destination row identities are read back before any live rows can be removed.
+
+### Security and reliability
+
+- Preserved the userscript's `@grant none` permission model. Cross-origin submission uses a hidden form, nonce-bound replies, the exact request iframe tree and trusted Google response origins; endpoints are restricted to deployed `script.google.com/macros/s/...` routes.
+- Fixed the live Apps Script acknowledgement path: HtmlService can execute the reply inside a nested Google sandbox frame, so Nexus now verifies that bounded parent chain reaches the exact form-target iframe instead of rejecting the valid reply and reporting a false 30-second timeout after Google has already written the rows.
+- Fixed Mission Analytics Logger `advertised_credits` being uploaded as `0`. Nexus now reads **Average credits** from the authoritative mission-definition page already fetched by Unit Finder, caches it for the active mission and enriches any current-mission events queued before that definition finished loading.
+- Fixed incomplete early logger rows. Before upload, queued events now receive any later-arriving mission URL, definition ID, name, requirements, generator information, advertised value and refreshed patient/prisoner counts; MissionChief's own mission-list state provides a second authoritative source for value and current/possible casualty counts.
+- Fixed operational timestamp columns displaying only the date. Initialisation and archive creation now apply `dd/MM/yyyy HH:mm:ss` to every `*_at` field and size those columns for the full value.
+- Added an Apps Script `buildId` and capability list to the `/exec` health response, plus the backend build on upload replies, so an editor/deployment version mismatch is immediately visible.
+- Fixed `Dashboard Data` creating separate delta rows for the same player/day after Google Sheets coerced the ISO day text into a native Date. The backend now normalizes both forms to one stable daily key before updating totals.
+- Fixed every `mission_url` being discarded by the Apps Script backend. The allow-listed MissionChief URL is now parsed and rebuilt without relying on the unavailable browser `URL` implementation in Apps Script.
+- Replaced the 2.5-second in-memory dispatch click guard with a persistent, cross-frame 15-second exact-selection guard. The backend independently derives the same semantic identity and suppresses retry captures and their unit rows within the same or a later batch.
+- Generator data now preserves an explicit MissionChief building ID/name when exposed and otherwise records the mission definition's **Generated by** station type with its source labelled in metadata; a station type is never invented into a building ID.
+- Pairing codes expire after 24 hours and are single use. The workbook stores only SHA-256 pairing-code and device-token hashes, sanitizes spreadsheet formulas, validates MissionChief reply origins and mission URLs, and serializes writes with an Apps Script lock.
+- Upload retries are idempotent. A retry validates the original event set, rejects conflicting batch reuse and repairs missing Dispatch Units if a previous attempt wrote events but stopped before completing its unit rows.
+- Personnel names, passwords and cookies are excluded. Advertised mission value and actual awarded credits remain separate; an explicit native award or an exact local Credits-ledger match is accepted, while ambiguous transactions remain `PENDING_TRANSACTION` rather than treating the advertised average as actual income.
+- Increased Mission Finder from `V10.6.164` to `V10.7.0` and the unified userscript from `1.0.127` to `1.1.0`. Resource Administration remains `V4.2.8`, Unit Naming remains `3.3.27`, Station Naming remains `1.3.22`, and Personnel Assignment remains `1.3.12`.
+
+### Repository maintenance
+
+- Replaced the README hero's human figure with a completely unoccupied operations environment, preventing the artwork from implying a contributor's likeness or authorship while preserving the Command Nexus identity and operational narrative.
 - Removed obsolete one-use builders, trigger files and historical repair/inspection workflows from permanent repository automation.
-- Centralized canonical release and component-version validation in `scripts/validate-userscript.mjs`; permanent behavioral regressions are now version-agnostic and automatically discovered by the validation workflow.
+- Centralized canonical release and component-version validation in `scripts/validate-userscript.mjs`; permanent behavioral regressions are version-agnostic and automatically discovered by the validation workflow.
 - Added a permanent Repository Quality gate that parses every retained GitHub Actions workflow with a pinned YAML parser before repository checks continue.
-- Refreshed current operational documentation for the `1.0.122` production baseline and separated it from immutable versioned handovers and incident records.
-- Kept the canonical userscript unchanged, so this repository-maintenance set does not create a new userscript release.
+- Refreshed current operational documentation for the `1.1.0` production baseline and separated it from immutable versioned handovers and incident records.
+- Rebuilt the repository front page as a complete command-centre product brief with three self-contained cinematic visual compositions, a current capability atlas, exact all-service coverage, responsive-platform guidance and explicit production-versus-roadmap boundaries.
+- Corrected the support policy's retired pre-release language and aligned its iPhone/iPad Safari scope with the evidence-backed compatibility contracts.
+- Extended repository presentation validation to protect every required README artwork and its local documentation.
 
 ## [1.0.127] - 2026-08-16
 

@@ -102,13 +102,14 @@ for (const token of [
   'await wait(MF_ALLY_PRE_DISPATCH_SETTLE_MS);',
   'await getAllyStealNormalDispatchButton();',
   'writeAllyStealPendingState(',
-  'dispatchButton.click();',
+  'clickMissionLoggerDispatchControl(',
+  "dispatchMode: 'ally-steal'",
   'MF_ALLY_SAME_DOCUMENT_FALLBACK_MS'
 ]) {
   expect(handle.includes(token), `Ally Steal dispatch path missing ${token}`);
 }
 expect(
-  handle.indexOf('writeAllyStealPendingState(') < handle.indexOf('dispatchButton.click();'),
+  handle.indexOf('writeAllyStealPendingState(') < handle.indexOf('clickMissionLoggerDispatchControl('),
   'Pending state must be written before dispatch is clicked'
 );
 
