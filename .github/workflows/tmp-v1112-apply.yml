@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - release/v1.1.12-multi-device-performance
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: write
