@@ -1,0 +1,68 @@
+name: Temporary v1.1.12 trusted runner
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  run:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: hotfix/v1.1.12-multi-device-lag
+          fetch-depth: 0
+
+      - name: Execute trusted builder scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check --no-cache-dir 'PyYAML==6.0.2'
+          python3 - <<'PY'
+          from pathlib import Path
+          import subprocess
+          import yaml
+
+          workflow_path = Path('.github/workflows/tmp-v1112-build.yml')
+          workflow = yaml.safe_load(workflow_path.read_text(encoding='utf-8'))
+          steps = workflow['jobs']['build']['steps']
+          scripts = {
+              step.get('name'): step.get('run')
+              for step in steps
+              if step.get('name') and step.get('run')
+          }
+          required = [
+              'Apply v1.1.12 production patch',
+              'Validate exact candidate',
+              'Commit clean candidate',
+          ]
+          for name in required:
+              if not scripts.get(name):
+                  raise SystemExit(f'Missing trusted builder step: {name}')
+
+          subprocess.run(
+              scripts['Apply v1.1.12 production patch'],
+              shell=True,
+              executable='/bin/bash',
+              check=True,
+          )
+          Path('.github/workflows/tmp-v1112-runner.yml').unlink(missing_ok=True)
+          subprocess.run(
+              scripts['Validate exact candidate'],
+              shell=True,
+              executable='/bin/bash',
+              check=True,
+          )
+          subprocess.run(
+              scripts['Commit clean candidate'],
+              shell=True,
+              executable='/bin/bash',
+              check=True,
+          )
+          PY
