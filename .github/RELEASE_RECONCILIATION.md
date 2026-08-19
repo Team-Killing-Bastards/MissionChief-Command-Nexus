@@ -12,3 +12,5 @@ A merged pull request is the primary trusted publication hinge because its `pull
 Incomplete publication is retried through the canonical `publish-release` workflow, while the receipt guard prevents duplicate Discord announcements. Workflow-generated pushes do not recursively start another GitHub Actions run, so release-control maintenance must finish with a trusted repository event when fresh reconciliation is required.
 
 V2 recovery note: release `v2.0.0` uses the proven Greasy Fork synchronization trigger followed by this trusted merged-PR reconciliation path so exact source parity is established before the canonical Discord LIVE announcement is posted.
+
+V2 delivery retry: 2026-08-19 23:21 BST — re-arm the trusted release-delivery repair path after Greasy Fork propagation.
