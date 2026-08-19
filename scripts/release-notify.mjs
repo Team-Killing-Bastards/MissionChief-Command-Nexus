@@ -784,7 +784,7 @@ function buildDiscordPayload({
       },
       {
         color: COLOURS.mission,
-        title: version === '2.0.0' ? '🧭 Long live V2' : '🧭 Mission Brief',
+        title: version.startsWith('2.') ? '🧭 Long live V2' : '🧭 Mission Brief',
         description: missionBrief,
       },
       {
