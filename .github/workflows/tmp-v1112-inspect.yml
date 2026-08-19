@@ -1,4 +1,5 @@
 name: Temporary v1.1.12 logger inspection
+# Trigger the trusted v1.1.12 builder after both temporary workflows exist.
 
 on:
   push:
