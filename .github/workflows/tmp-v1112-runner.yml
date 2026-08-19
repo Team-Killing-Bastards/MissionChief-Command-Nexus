@@ -16,53 +16,100 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: hotfix/v1.1.12-multi-device-lag
+          ref: release/v1.1.12-multi-device-performance
           fetch-depth: 0
 
-      - name: Execute trusted builder scripts
+      - name: Apply permanent v1.1.12 patch from PR 368
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m pip install --disable-pip-version-check --no-cache-dir 'PyYAML==6.0.2'
           python3 - <<'PY'
           from pathlib import Path
-          import subprocess
-          import yaml
-
-          workflow_path = Path('.github/workflows/tmp-v1112-build.yml')
-          workflow = yaml.safe_load(workflow_path.read_text(encoding='utf-8'))
-          steps = workflow['jobs']['build']['steps']
-          scripts = {
-              step.get('name'): step.get('run')
-              for step in steps
-              if step.get('name') and step.get('run')
-          }
-          required = [
-              'Apply v1.1.12 production patch',
-              'Validate exact candidate',
-              'Commit clean candidate',
-          ]
-          for name in required:
-              if not scripts.get(name):
-                  raise SystemExit(f'Missing trusted builder step: {name}')
-
-          subprocess.run(
-              scripts['Apply v1.1.12 production patch'],
-              shell=True,
-              executable='/bin/bash',
-              check=True,
-          )
-          Path('.github/workflows/tmp-v1112-runner.yml').unlink(missing_ok=True)
-          subprocess.run(
-              scripts['Validate exact candidate'],
-              shell=True,
-              executable='/bin/bash',
-              check=True,
-          )
-          subprocess.run(
-              scripts['Commit clean candidate'],
-              shell=True,
-              executable='/bin/bash',
-              check=True,
-          )
+          path = Path('scripts/tmp-apply-v1112.py')
+          text = path.read_text(encoding='utf-8')
+          old = '''        "Command Nexus `1.1.11`",\n        "Command Nexus `1.1.12`",\n        "source README version",'''
+          new = '''        "| Command Nexus version | `1.1.11` |",\n        "| Command Nexus version | `1.1.12` |",\n        "source README version",'''
+          if old not in text:
+              raise SystemExit('temporary source README patch target missing')
+          path.write_text(text.replace(old, new, 1), encoding='utf-8')
           PY
+          python3 -m py_compile scripts/tmp-apply-v1112.py
+          python3 scripts/tmp-apply-v1112.py
+          python3 - <<'PY'
+          from pathlib import Path
+          replacements = (
+              ('1.1.10-upload-lock-hotfix-1', '1.1.12-multi-device-performance-1'),
+              (r'1\.1\.10-upload-lock-hotfix-1', r'1\.1\.12-multi-device-performance-1'),
+          )
+          updated = []
+          for path in Path('scripts').glob('check-*.mjs'):
+              text = path.read_text(encoding='utf-8')
+              revised = text
+              for old, new in replacements:
+                  revised = revised.replace(old, new)
+              if revised == text:
+                  continue
+              path.write_text(revised, encoding='utf-8')
+              updated.append(str(path))
+          if not updated:
+              raise SystemExit('No permanent backend build regressions were updated')
+          print('Updated backend build expectations in:')
+          for path in updated:
+              print(f'  - {path}')
+          PY
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('scripts/check-mission-logger-hotfix-v1110.mjs')
+          text = path.read_text(encoding='utf-8')
+          old = '''     const MF_MISSION_LOGGER_BUSY_RETRY_DELAYS_MS = Object.freeze([2000, 5000, 15000]);
+     const MF_MISSION_LOGGER_BATCH_CONFIRM_RETRY_DELAY_MS = 1000;
+     ${uploadBatch}'''
+          new = '''     const MF_MISSION_LOGGER_BUSY_RETRY_DELAYS_MS = Object.freeze([2000, 5000, 15000]);
+     const MF_MISSION_LOGGER_BATCH_CONFIRM_RETRY_DELAY_MS = 1000;
+     const Math = Object.create(globalThis.Math);
+     Math.random = () => 0;
+     function getMissionLoggerDeviceStagger() { return 0; }
+     ${uploadBatch}'''
+          if old not in text:
+              raise SystemExit('v1.1.10 upload regression harness target missing')
+          text = text.replace(old, new, 1)
+          token = "  'await wait(retryDelay)',"
+          if token not in text:
+              raise SystemExit('v1.1.10 upload regression token list target missing')
+          text = text.replace(
+              token,
+              token + "\n  'getMissionLoggerDeviceStagger',",
+              1,
+          )
+          path.write_text(text, encoding='utf-8')
+          PY
+          rm -f scripts/tmp-apply-v1112.py
+          rm -f .github/workflows/tmp-v1112-apply.yml
+          rm -f .github/workflows/tmp-v1112-force-runner.yml
+
+      - name: Validate exact v1.1.12 candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs
+          for check in scripts/check-*.mjs; do
+            echo "Running ${check}"
+            node "${check}"
+          done
+          python3 -m pip install --disable-pip-version-check --no-cache-dir 'PyYAML==6.0.2'
+          python3 scripts/check_workflow_yaml.py
+          python3 -m py_compile scripts/check_repository.py
+          python3 scripts/check_repository.py
+          git diff --check
+
+      - name: Commit clean candidate to PR 368 branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet && { echo 'No permanent changes produced'; exit 1; }
+          git commit -m "Release v1.1.12 multi-device logger and performance improvements"
+          git push origin HEAD:release/v1.1.12-multi-device-performance
