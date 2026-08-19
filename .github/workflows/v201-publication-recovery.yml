@@ -1,0 +1,114 @@
+name: Prepare V2.0.1 publication recovery
+
+on:
+  push:
+    branches:
+      - agent/v201-publication-recovery
+    paths:
+      - .github/workflows/v201-publication-recovery.yml
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out clean production main
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Prepare v2.0.1 from clean V2 runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --tags --force
+          node scripts/prepare-release.mjs \
+            --version 2.0.1 \
+            --notes $'Publication recovery release for the clean V2 baseline; no MissionChief runtime behaviour changes.\nCreates a normal canonical userscript version change so Greasy Fork can synchronize the V2 production line.'
+
+          node --input-type=module <<'NODE'
+          import { readFile, writeFile } from 'node:fs/promises';
+
+          const replacements = [
+            {
+              path: 'scripts/release-notify.mjs',
+              from: "title: version === '2.0.0' ? '🧭 Long live V2' : '🧭 Mission Brief'",
+              to: "title: version.startsWith('2.') ? '🧭 Long live V2' : '🧭 Mission Brief'",
+            },
+            {
+              path: 'scripts/check-release-notification-single-delivery.mjs',
+              from: "title: version === '2.0.0' ? '🧭 Long live V2' : '🧭 Mission Brief'",
+              to: "title: version.startsWith('2.') ? '🧭 Long live V2' : '🧭 Mission Brief'",
+            },
+          ];
+
+          for (const { path, from, to } of replacements) {
+            const source = await readFile(path, 'utf8');
+            const count = source.split(from).length - 1;
+            if (count !== 1) {
+              throw new Error(`${path}: expected exactly one V2 title contract, found ${count}`);
+            }
+            await writeFile(path, source.replace(from, to), 'utf8');
+          }
+          NODE
+
+      - name: Prove V2 runtime is unchanged apart from version metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          git show v2.0.0:src/missionchief-command-nexus.user.js > /tmp/v200.user.js
+          node --input-type=module <<'NODE'
+          import { readFile } from 'node:fs/promises';
+          const oldSource = await readFile('/tmp/v200.user.js', 'utf8');
+          const newSource = await readFile('src/missionchief-command-nexus.user.js', 'utf8');
+          const versionPattern = /^(\/\/\s*@version\s+)\S+(\s*)$/m;
+          const oldVersion = oldSource.match(versionPattern)?.[0] || '';
+          const newVersion = newSource.match(versionPattern)?.[0] || '';
+          if (!oldVersion.includes('2.0.0')) throw new Error('v2.0.0 source version was not found');
+          if (!newVersion.includes('2.0.1')) throw new Error('prepared source is not v2.0.1');
+          const scrub = (text) => text.replace(versionPattern, '$1<VERSION>$2');
+          if (scrub(oldSource) !== scrub(newSource)) {
+            throw new Error('Canonical userscript runtime changed beyond @version metadata');
+          }
+          console.log('V2 runtime parity passed: only @version differs from v2.0.0.');
+          NODE
+
+      - name: Validate release candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check src/missionchief-command-nexus.user.js
+          node --check scripts/release-notify.mjs
+          node scripts/validate-userscript.mjs
+          for check in scripts/check-*.mjs; do
+            node "$check"
+          done
+          python3 scripts/check_repository.py
+          git diff --check
+
+      - name: Push normal release branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B release/v2.0.1
+          git add \
+            src/missionchief-command-nexus.user.js \
+            README.md \
+            src/README.md \
+            CHANGELOG.md \
+            scripts/release-notify.mjs \
+            scripts/check-release-notification-single-delivery.mjs
+          git commit -m "Prepare v2.0.1 publication recovery"
+          git push --force origin HEAD:refs/heads/release/v2.0.1
