@@ -1,4 +1,4 @@
-name: Temporary guarded PR 374 readiness plan
+name: Temporary guarded PR 374 landing
 
 on:
   push:
@@ -9,12 +9,12 @@ on:
 
 permissions:
   contents: write
-  pull-requests: read
+  pull-requests: write
   checks: read
   statuses: read
 
 jobs:
-  plan:
+  land:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     env:
@@ -25,45 +25,27 @@ jobs:
           ref: ops/pr374-guarded-landing
           fetch-depth: 0
 
-      - name: Observe exact-head readiness and produce guarded landing plan
+      - name: Request guarded landing for approved exact head
         shell: bash
         run: |
           set -uo pipefail
-          python3 scripts/tmp-pr374/pr_watch.py \
-            --target .=https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/pull/374 \
+          python3 scripts/tmp-pr374/pr_land.py \
+            --repo . \
+            --pr https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/pull/374 \
             --no-config \
-            --mode until-actionable \
-            --interval 5 \
-            --max-interval 20 \
-            --timeout 600 \
-            --jitter 0 \
-            --cursor scripts/tmp-pr374/readiness.cursor.json \
-            --observations-file scripts/tmp-pr374/readiness.observations.ndjson \
+            --head 1144ab8ce8a03170af0ff0ca456d3c298115e2c6 \
+            --mode auto \
+            --method squash \
+            --policy-digest 7691ab6501095b993156211c102a3520b590d3d54cb446f2df572c8e7c3f5219 \
+            --confirm \
             --pretty \
-            > scripts/tmp-pr374/readiness.json
-          watch_status=$?
-          printf '%s\n' "${watch_status}" > scripts/tmp-pr374/readiness.exit-code
-
-          if [[ "${watch_status}" -eq 0 ]]; then
-            python3 scripts/tmp-pr374/pr_land.py \
-              --repo . \
-              --pr https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/pull/374 \
-              --no-config \
-              --head 1144ab8ce8a03170af0ff0ca456d3c298115e2c6 \
-              --mode auto \
-              --method squash \
-              --pretty \
-              > scripts/tmp-pr374/plan.json
-            plan_status=$?
-          else
-            printf '%s\n' '{"state":"watcher_not_ready"}' > scripts/tmp-pr374/plan.json
-            plan_status="${watch_status}"
-          fi
-          printf '%s\n' "${plan_status}" > scripts/tmp-pr374/plan.exit-code
+            > scripts/tmp-pr374/landing.json
+          landing_status=$?
+          printf '%s\n' "${landing_status}" > scripts/tmp-pr374/landing.exit-code
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A scripts/tmp-pr374
-          git commit -m "Record guarded PR 374 readiness plan"
+          git commit -m "Record guarded PR 374 landing request"
           git push origin HEAD:ops/pr374-guarded-landing
-          exit "${plan_status}"
+          exit "${landing_status}"
