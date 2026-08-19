@@ -1,0 +1,62 @@
+name: Temporary v1.1.12 logger inspection
+
+on:
+  push:
+    branches:
+      - hotfix/v1.1.12-multi-device-lag
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Print logger source contexts
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path('src/missionchief-command-nexus.user.js')
+          lines = path.read_text(encoding='utf-8').splitlines()
+          needles = [
+              'function recordMissionLoggerObservedEvent',
+              'function queueMissionLoggerEvent',
+              'function startMissionLoggerSyncTimer',
+              'function stopMissionLoggerSyncTimer',
+              'function scheduleMissionLoggerDeferredDrain',
+              'async function syncMissionLoggerNow',
+              'async function submitMissionLoggerRequest',
+              'function installMissionLogger',
+              'function recordMissionLoggerGenerated',
+              'mission-list-generated',
+              'MF_MISSION_LOGGER_SYNC_INTERVAL_MS',
+              'MF_MISSION_LOGGER_EAGER',
+              'function resolveMissionChiefNavbarIdentity',
+              'function readMissionLoggerIdentity',
+              'function initialize()',
+          ]
+          hits = []
+          for i, line in enumerate(lines):
+              if any(n in line for n in needles):
+                  hits.append(i)
+          ranges = []
+          for i in hits:
+              start = max(0, i - 45)
+              end = min(len(lines), i + 140)
+              if ranges and start <= ranges[-1][1] + 5:
+                  ranges[-1] = (ranges[-1][0], max(ranges[-1][1], end))
+              else:
+                  ranges.append((start, end))
+          print(f'TOTAL_LINES={len(lines)} HITS={len(hits)} RANGES={len(ranges)}')
+          for start, end in ranges:
+              print(f'===== {start+1}-{end} =====')
+              for j in range(start, end):
+                  print(f'{j+1:06d}: {lines[j]}')
+          PY
