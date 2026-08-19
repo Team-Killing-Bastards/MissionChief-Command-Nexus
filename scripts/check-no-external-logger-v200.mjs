@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+// V2 policy: external logger transport remains deliberately unsupported.
 const root = process.cwd();
 const scriptPath = path.join(root, 'src', 'missionchief-command-nexus.user.js');
 const code = fs.readFileSync(scriptPath, 'utf8');
