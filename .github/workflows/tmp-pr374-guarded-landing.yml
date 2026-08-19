@@ -1,4 +1,4 @@
-name: Temporary guarded PR 374 merge verification
+name: Temporary official v2.0.1 release dispatch
 
 on:
   push:
@@ -8,48 +8,85 @@ on:
       - '.github/workflows/tmp-pr374-guarded-landing.yml'
 
 permissions:
+  actions: write
   contents: write
-  pull-requests: read
-  checks: read
-  statuses: read
 
 jobs:
-  verify:
+  dispatch:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 8
     env:
       GH_TOKEN: ${{ github.token }}
+      REPOSITORY: Team-Killing-Bastards/MissionChief-Command-Nexus
+      EXPECTED_MAIN_SHA: 626ec79787aeedb5a0da147d84cf2f634d601c24
     steps:
       - uses: actions/checkout@v6
         with:
           ref: ops/pr374-guarded-landing
           fetch-depth: 0
 
-      - name: Verify exact approved head merged
+      - name: Dispatch permanent Repository Quality workflow on exact main
         shell: bash
         run: |
           set -uo pipefail
-          python3 scripts/tmp-pr374/pr_watch.py \
-            --target .=https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/pull/374 \
-            --no-config \
-            --mode until-actionable \
-            --interval 5 \
-            --max-interval 20 \
-            --timeout 600 \
-            --jitter 0 \
-            --cursor scripts/tmp-pr374/merge-watch.cursor.json \
-            --observations-file scripts/tmp-pr374/merge-watch.observations.ndjson \
-            --await-merge 1144ab8ce8a03170af0ff0ca456d3c298115e2c6 \
-            --await-merge-mode auto \
-            --await-merge-since 2026-08-19T23:02:24.232759Z \
-            --pretty \
-            > scripts/tmp-pr374/merge-watch.json
-          watch_status=$?
-          printf '%s\n' "${watch_status}" > scripts/tmp-pr374/merge-watch.exit-code
+          requested_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          current_main="$(gh api "repos/${REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
+          dispatch_status=0
 
+          if [[ "${current_main}" != "${EXPECTED_MAIN_SHA}" ]]; then
+            printf '{"state":"blocked","reason":"main_sha_changed","expected":"%s","actual":"%s","requestedAt":"%s"}\n' \
+              "${EXPECTED_MAIN_SHA}" "${current_main}" "${requested_at}" \
+              > scripts/tmp-pr374/release-dispatch.json
+            dispatch_status=20
+          else
+            gh workflow run repository-quality.yml --repo "${REPOSITORY}" --ref main
+            dispatch_status=$?
+
+            if [[ "${dispatch_status}" -eq 0 ]]; then
+              matched_run=""
+              for attempt in $(seq 1 30); do
+                runs="$(gh run list \
+                  --repo "${REPOSITORY}" \
+                  --workflow repository-quality.yml \
+                  --branch main \
+                  --event workflow_dispatch \
+                  --limit 20 \
+                  --json databaseId,url,status,conclusion,headSha,createdAt,name,displayTitle)"
+                matched_run="$(jq -c \
+                  --arg sha "${EXPECTED_MAIN_SHA}" \
+                  --arg since "${requested_at}" \
+                  '[.[] | select(.headSha == $sha and .createdAt >= $since)] | sort_by(.createdAt) | last // empty' \
+                  <<< "${runs}")"
+                if [[ -n "${matched_run}" ]]; then
+                  break
+                fi
+                sleep 2
+              done
+
+              if [[ -n "${matched_run}" ]]; then
+                jq -n \
+                  --arg state "dispatched" \
+                  --arg requestedAt "${requested_at}" \
+                  --argjson run "${matched_run}" \
+                  '{state:$state, requestedAt:$requestedAt, run:$run}' \
+                  > scripts/tmp-pr374/release-dispatch.json
+              else
+                printf '{"state":"blocked","reason":"dispatched_run_not_observed","headSha":"%s","requestedAt":"%s"}\n' \
+                  "${EXPECTED_MAIN_SHA}" "${requested_at}" \
+                  > scripts/tmp-pr374/release-dispatch.json
+                dispatch_status=30
+              fi
+            else
+              printf '{"state":"blocked","reason":"workflow_dispatch_failed","headSha":"%s","requestedAt":"%s","exitCode":%s}\n' \
+                "${EXPECTED_MAIN_SHA}" "${requested_at}" "${dispatch_status}" \
+                > scripts/tmp-pr374/release-dispatch.json
+            fi
+          fi
+
+          printf '%s\n' "${dispatch_status}" > scripts/tmp-pr374/release-dispatch.exit-code
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A scripts/tmp-pr374
-          git commit -m "Record exact-head merge verification for PR 374"
+          git commit -m "Record official v2.0.1 release dispatch"
           git push origin HEAD:ops/pr374-guarded-landing
-          exit "${watch_status}"
+          exit "${dispatch_status}"
