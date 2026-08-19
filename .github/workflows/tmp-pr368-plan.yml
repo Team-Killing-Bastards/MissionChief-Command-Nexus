@@ -1,4 +1,4 @@
-name: Temporary v1.1.12 release monitor
+name: Temporary v1.1.12 release recovery
 
 on:
   push:
@@ -8,12 +8,12 @@ on:
       - '.github/workflows/tmp-pr368-plan.yml'
 
 permissions:
-  actions: read
+  actions: write
   contents: write
   pull-requests: read
 
 jobs:
-  inspect:
+  dispatch:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -24,29 +24,31 @@ jobs:
           ref: hotfix/v1.1.12-multi-device-lag
           fetch-depth: 0
 
-      - name: Capture v1.1.12 release state
+      - name: Dispatch official repository-quality recovery path
         shell: bash
         run: |
           set -uo pipefail
+          date -u +%Y-%m-%dT%H:%M:%SZ > scripts/tmp-pr-completion/recovery-requested-at.txt
+          gh workflow run repository-quality.yml --ref main \
+            > scripts/tmp-pr-completion/recovery-dispatch.stdout \
+            2> scripts/tmp-pr-completion/recovery-dispatch.stderr
+          status=$?
+          printf '%s\n' "${status}" > scripts/tmp-pr-completion/recovery-dispatch.exit-code
+          sleep 5
           gh run list \
-            --commit 6aeac5cce756af23c1d213ef4c1fdaf7f9620df3 \
-            --limit 30 \
+            --workflow repository-quality.yml \
+            --event workflow_dispatch \
+            --limit 10 \
             --json databaseId,workflowName,displayTitle,event,status,conclusion,url,createdAt,updatedAt,headSha,number \
-            > scripts/tmp-pr-completion/release-runs.json
-          run_status=$?
-          if gh release view v1.1.12 \
-            --json tagName,name,url,isDraft,isPrerelease,publishedAt,targetCommitish,assets \
-            > scripts/tmp-pr-completion/release-state.json 2>scripts/tmp-pr-completion/release-state.error; then
-            release_status=0
-          else
-            release_status=$?
-            printf '%s\n' '{"state":"not-published"}' > scripts/tmp-pr-completion/release-state.json
-          fi
-          printf '%s\n' "${run_status}" > scripts/tmp-pr-completion/release-runs.exit-code
-          printf '%s\n' "${release_status}" > scripts/tmp-pr-completion/release-state.exit-code
+            > scripts/tmp-pr-completion/recovery-runs.json
+          list_status=$?
+          printf '%s\n' "${list_status}" > scripts/tmp-pr-completion/recovery-runs.exit-code
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A scripts/tmp-pr-completion
-          git commit -m "Record v1.1.12 release pipeline state"
+          git commit -m "Dispatch official v1.1.12 release recovery"
           git push origin HEAD:hotfix/v1.1.12-multi-device-lag
-          exit "${run_status}"
+          if [[ "${status}" -ne 0 ]]; then
+            exit "${status}"
+          fi
+          exit "${list_status}"
