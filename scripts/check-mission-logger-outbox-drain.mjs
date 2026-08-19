@@ -188,14 +188,18 @@ for (const token of [
 ]) {
   expect(deferred.includes(token), `Deferred drain missing ${token}`);
 }
+const sharingUiStart = source.indexOf("const missionLoggerBox = document.createElement('div');");
+const sharingUiEnd = source.indexOf("const queueRestartBox = document.createElement('div');", sharingUiStart);
+expect(sharingUiStart >= 0 && sharingUiEnd > sharingUiStart, 'Sharing & Sync UI must be isolatable');
+const sharingUi = source.slice(sharingUiStart, sharingUiEnd);
 expect(
-  source.includes("? 'Drain queued'"),
-  'Sync Now must visibly confirm when a full drain is queued behind an active upload'
+  sharingUi.includes('scheduleMissionLoggerDeferredDrain(') &&
+    sharingUi.includes('manual: true'),
+  'Enabling the sole Sharing & Sync checkbox must request a full backlog drain'
 );
 expect(
-  !source.includes(`!identity ||
-                mfMissionLoggerSyncActive;`),
-  'Sync Now must remain available while another automatic batch is active'
+  !sharingUi.includes('mf-mission-logger-sync'),
+  'The removed manual Sync button must not return'
 );
 
 expect(
@@ -204,7 +208,7 @@ expect(
 );
 expect(
   source.includes('Uploaded ${batchEvents.length} event'),
-  'The logger UI must expose accepted-batch progress instead of leaving the queue count unexplained'
+  'Accepted-batch progress must remain in internal logger state for diagnostics'
 );
 
 const eager = extractFunction('scheduleMissionLoggerEagerSync');
@@ -213,4 +217,4 @@ expect(eager.includes('skipCreditReconcile: true'), 'Backlog-only follow-up must
 const enqueue = extractFunction('queueMissionLoggerEvent');
 expect(enqueue.includes('scheduleMissionLoggerEagerSync('), 'Every successful enqueue must consider eager upload');
 
-console.log('Mission logger outbox regression passed: 1,200-event/3 MB safety bound, priority retention, eager upload, bounded multi-batch drain, cross-frame manual hand-off, lock renewal and timeout confirmation retry are locked.');
+console.log('Mission logger outbox regression passed: 1,200-event/3 MB safety bound, priority retention, eager upload, bounded multi-batch drain, checkbox-triggered cross-frame hand-off, lock renewal and timeout confirmation retry are locked.');

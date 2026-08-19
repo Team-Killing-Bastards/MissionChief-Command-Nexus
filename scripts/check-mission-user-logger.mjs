@@ -125,18 +125,34 @@ requireText(source, 'MF_MISSION_LOGGER_BATCH_SIZE = 40', 'bounded batch size');
 requireText(source, 'MF_MISSION_LOGGER_DISPATCH_DEDUPE_MS =\n        15000', '15-second dispatch retry guard');
 requireText(source, "'mf_mission_logger_last_dispatch_v1'", 'persistent dispatch retry guard');
 requireText(source, "'mf_mission_logger_profile_v2'", 'private URL profile storage');
+requireText(source, 'MF_MISSION_LOGGER_FIXED_ENDPOINT', 'compiled private endpoint');
 expect(
-  !source.includes('MF_MISSION_LOGGER_DEFAULT_ENDPOINT'),
-  'The private deployment URL must not be embedded in the public userscript'
+  /https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec/.test(source),
+  'The trusted two-user userscript must embed the live Apps Script endpoint'
 );
-requireText(source, 'Mission Analytics Logger', 'settings surface');
-requireText(source, 'Save logger setup', 'private URL and user setup control');
-requireText(source, 'Queued events:', 'visible outbox status');
-requireText(source, 'Last upload:', 'visible upload status');
-requireText(source, 'exact transaction matching active', 'visible exact-credit status');
-requireText(source, 'offline completion', 'visible offline-recovery status');
+const loggerUiStart = source.indexOf("const missionLoggerBox = document.createElement('div');");
+const loggerUiEnd = source.indexOf("const queueRestartBox = document.createElement('div');", loggerUiStart);
+expect(loggerUiStart >= 0 && loggerUiEnd > loggerUiStart, 'Sharing & Sync settings block must be isolatable');
+const loggerUi = source.slice(loggerUiStart, loggerUiEnd);
+requireText(loggerUi, 'Sharing &amp; Sync', 'settings surface');
+requireText(loggerUi, 'Share and sync my MissionChief activity automatically', 'single opt-in checkbox');
+expect((loggerUi.match(/type=\"checkbox\"/g) || []).length === 1, 'Sharing & Sync must expose exactly one checkbox');
+for (const removed of [
+  'mf-mission-logger-endpoint',
+  'mf-mission-logger-player',
+  'mf-mission-logger-save',
+  'mf-mission-logger-sync',
+  'mf-mission-logger-forget',
+  'mf-mission-logger-profile',
+  'mf-mission-logger-state',
+  'mf-mission-logger-queue',
+  'mf-mission-logger-last-sync',
+  'mf-mission-logger-credit-status',
+  'mf-mission-logger-error',
+]) {
+  expect(!loggerUi.includes(removed), `Sharing & Sync must not expose ${removed}`);
+}
 requireText(source, "'/credits'", 'same-origin MissionChief Credits ledger');
-requireText(source, 'Passwords, cookies and personnel names are never collected.', 'privacy disclosure');
 
 const endpoint = extractFunction(source, 'normaliseMissionLoggerEndpoint');
 expect(endpoint.includes("url.hostname === 'script.google.com'"), 'Endpoint must be restricted to Google Apps Script');
@@ -177,15 +193,23 @@ expect(responseWindow.includes('depth < 6'), 'Response-window validation must ke
 
 const setup = extractFunction(source, 'saveMissionLoggerSetup');
 for (const token of [
-  'normaliseMissionLoggerEndpoint(',
-  'normaliseMissionLoggerProfileName(',
-  'clearMissionLoggerProfileScopedData()',
-  'writeMissionLoggerIdentity(profile)',
-  'MF_MISSION_LOGGER_LEGACY_IDENTITY_KEY',
+  'MF_MISSION_LOGGER_FIXED_ENDPOINT',
+  'readMissionLoggerIdentity()',
   'recordMissionLoggerObservedEvent()',
+  'scheduleMissionLoggerDeferredDrain(',
 ]) {
-  expect(setup.includes(token), `Private logger setup flow missing ${token}`);
+  expect(setup.includes(token), `Fixed private logger setup flow missing ${token}`);
 }
+expect(!setup.includes('clearMissionLoggerProfileScopedData()'), 'Fixed endpoint provisioning must preserve the existing queue and pending batch');
+const automaticIdentity = extractFunction(source, 'readMissionLoggerIdentity');
+for (const token of [
+  'resolveMissionChiefNavbarIdentity()',
+  "createMissionLoggerId('device')",
+  'writeMissionLoggerIdentity(profile)',
+]) {
+  expect(automaticIdentity.includes(token), `Automatic identity provisioning missing ${token}`);
+}
+expect(!automaticIdentity.includes('clearMissionLoggerProfileScopedData()'), 'Automatic identity provisioning must not clear queued data');
 expect(!source.includes('Pair this browser'), 'Pairing UI must be removed');
 expect(!source.includes('One-time pairing code'), 'Pairing-code input must be removed');
 
@@ -888,10 +912,7 @@ expect(cleanup.includes("removeEventListener(\n                'storage'"), 'Log
 expect(cleanup.includes("removeEventListener(\n                'online'"), 'Logger cleanup must remove its connectivity listener');
 expect(cleanup.includes("removeEventListener(\n                'message'"), 'Logger cleanup must remove its response listener');
 
-const forget = extractFunction(source, 'forgetMissionLoggerSetup');
-expect(forget.includes('clearMissionLoggerProfileScopedData()'), 'Forgetting setup must clear the old user queue');
-expect(forget.includes('MF_MISSION_LOGGER_PROFILE_KEY'), 'Forgetting setup must remove the saved user');
-expect(forget.includes('MF_MISSION_LOGGER_ENDPOINT_KEY'), 'Forgetting setup must remove the private URL');
+expect(!loggerUi.includes('Forget setup'), 'Destructive logger reset must not appear in Sharing & Sync');
 
 const observed = extractFunction(source, 'recordMissionLoggerObservedEvent');
 expect(

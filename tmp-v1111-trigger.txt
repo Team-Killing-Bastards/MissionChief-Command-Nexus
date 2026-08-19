@@ -1,1 +1,0 @@
-Temporary source-export trigger for v1.1.11. This file must be removed before merge.
