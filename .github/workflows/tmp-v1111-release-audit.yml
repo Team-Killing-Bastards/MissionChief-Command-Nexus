@@ -1,0 +1,133 @@
+name: Temporary v1.1.11 release audit
+
+on:
+  push:
+    branches:
+      - release/v1.1.11-sharing-sync
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out production main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Audit GitHub Release, assets, Greasy Fork and Discord receipt
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GREASYFORK_INSTALL_URL: ${{ vars.GREASYFORK_INSTALL_URL }}
+        run: |
+          set -euo pipefail
+          TAG=v1.1.11
+          VERSION=1.1.11
+          ASSET="MissionChief-Command-Nexus-${VERSION}.user.js"
+          mkdir -p release-audit/download
+
+          gh release view "${TAG}" \
+            --json tagName,name,url,isDraft,isPrerelease,publishedAt,targetCommitish,assets \
+            > release-audit/release.json
+
+          jq -e '.tagName == "v1.1.11"' release-audit/release.json >/dev/null
+          jq -e '.isDraft == false and .isPrerelease == false' release-audit/release.json >/dev/null
+          jq -e '[.assets[].name] | index("MissionChief-Command-Nexus-1.1.11.user.js") != null' release-audit/release.json >/dev/null
+          jq -e '[.assets[].name] | index("MissionChief-Command-Nexus-1.1.11.user.js.sha256") != null' release-audit/release.json >/dev/null
+          jq -e '[.assets[].name | select(startswith("Command-Nexus-Discord-Receipt-v1.1.11-"))] | length == 1' release-audit/release.json >/dev/null
+
+          gh release download "${TAG}" \
+            --pattern "${ASSET}" \
+            --pattern "${ASSET}.sha256" \
+            --pattern "Command-Nexus-Discord-Receipt-v1.1.11-*.json" \
+            --dir release-audit/download \
+            --clobber
+
+          cmp --silent src/missionchief-command-nexus.user.js "release-audit/download/${ASSET}"
+          (
+            cd release-audit/download
+            sha256sum -c "${ASSET}.sha256"
+          )
+
+          if [[ -z "${GREASYFORK_INSTALL_URL}" ]]; then
+            echo "GREASYFORK_INSTALL_URL repository variable is missing."
+            exit 1
+          fi
+          curl --fail --location --silent --show-error \
+            --header 'Accept: text/plain, application/javascript, */*' \
+            --header 'User-Agent: MissionChief-Command-Nexus-Release-Audit/1.0' \
+            "${GREASYFORK_INSTALL_URL}?release_audit=$(date +%s)" \
+            --output release-audit/greasyfork.user.js
+
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import re
+          from pathlib import Path
+
+          def normalise(text):
+              text = text.lstrip('\ufeff').replace('\r\n', '\n').replace('\r', '\n')
+              text = re.sub(
+                  r'^\s*//\s*@(downloadURL|updateURL|installURL)\s+.*\n?',
+                  '',
+                  text,
+                  flags=re.I | re.M,
+              )
+              text = re.sub(r'[ \t]+$', '', text, flags=re.M)
+              return text.rstrip() + '\n'
+
+          source = Path('src/missionchief-command-nexus.user.js').read_text(encoding='utf-8')
+          greasy = Path('release-audit/greasyfork.user.js').read_text(encoding='utf-8')
+          version_match = re.search(r'^\s*//\s*@version\s+([^\s]+)\s*$', greasy, flags=re.M)
+          if not version_match or version_match.group(1) != '1.1.11':
+              raise SystemExit(f"Greasy Fork version mismatch: {version_match.group(1) if version_match else 'missing'}")
+          if normalise(source) != normalise(greasy):
+              raise SystemExit('Greasy Fork source does not match canonical v1.1.11 source')
+
+          release = json.loads(Path('release-audit/release.json').read_text(encoding='utf-8'))
+          receipt_files = list(Path('release-audit/download').glob('Command-Nexus-Discord-Receipt-v1.1.11-*.json'))
+          if len(receipt_files) != 1:
+              raise SystemExit(f'Expected exactly one Discord receipt, found {len(receipt_files)}')
+          receipt = json.loads(receipt_files[0].read_text(encoding='utf-8'))
+          if receipt.get('release_tag') != 'v1.1.11':
+              raise SystemExit('Discord receipt release tag mismatch')
+          if receipt.get('release_sha') != '8f4fbb53f54a97f10c9b6d64d4c1ae32ef4d9d22':
+              raise SystemExit('Discord receipt release SHA mismatch')
+
+          report = {
+              'release_tag': release['tagName'],
+              'release_name': release['name'],
+              'release_url': release['url'],
+              'published_at': release['publishedAt'],
+              'target_commitish': release['targetCommitish'],
+              'draft': release['isDraft'],
+              'prerelease': release['isPrerelease'],
+              'asset_names': [asset['name'] for asset in release.get('assets', [])],
+              'source_sha256': hashlib.sha256(source.encode('utf-8')).hexdigest(),
+              'source_size_bytes': len(source.encode('utf-8')),
+              'greasy_fork_version': version_match.group(1),
+              'greasy_fork_exact_source_match': True,
+              'discord_receipt_asset': receipt_files[0].name,
+              'discord_channel_id': receipt.get('channel_id'),
+              'discord_message_id': receipt.get('message_id'),
+              'discord_posted_at': receipt.get('posted_at'),
+              'release_sha': receipt.get('release_sha'),
+          }
+          Path('release-audit/v1111-release-audit.json').write_text(
+              json.dumps(report, indent=2) + '\n',
+              encoding='utf-8',
+          )
+          print(json.dumps(report, indent=2))
+          PY
+
+      - name: Upload release audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: v1111-release-audit
+          path: release-audit/v1111-release-audit.json
+          retention-days: 1
