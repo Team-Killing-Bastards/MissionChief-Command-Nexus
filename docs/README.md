@@ -4,7 +4,7 @@ This directory separates current operating guidance from versioned historical re
 
 ## Current release focus
 
-Version `1.1.11` compiles the approved private Apps Script endpoint into the trusted two-user build and reduces logger settings to one Sharing & Sync checkbox. MissionChief navbar identity, queued events, persistent pending batch IDs, bounded multi-batch drain and the v1.1.10 upload-lock recovery remain authoritative.
+Version `1.1.11` compiles the approved private Apps Script endpoint into the trusted two-user build and reduces logger settings to a single Sharing & Sync checkbox. MissionChief navbar identity, queued events, persistent pending batch IDs, bounded multi-batch drain and the v1.1.10 upload-lock recovery remain authoritative.
 
 ## Current operational documentation
 
