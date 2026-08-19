@@ -20,10 +20,12 @@ jobs:
         with:
           name: v1111-working-tree-export
           path: |
+            .github
             src/missionchief-command-nexus.user.js
             scripts
             integrations
             README.md
             CHANGELOG.md
             docs
+          include-hidden-files: true
           retention-days: 1
