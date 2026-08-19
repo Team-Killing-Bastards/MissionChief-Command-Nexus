@@ -1,0 +1,163 @@
+name: Temporary v1.1.12 release gate
+
+on:
+  push:
+    branches:
+      - hotfix/v1.1.12-multi-device-lag
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+
+jobs:
+  release:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PR_NUMBER: '368'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: hotfix/v1.1.12-multi-device-lag
+          fetch-depth: 0
+
+      - name: Verify final candidate
+        shell: bash
+        run: |
+          grep -Fq '// @version      1.1.12' src/missionchief-command-nexus.user.js
+          grep -Fq "buildId: '1.1.12-multi-device-observer-1'" integrations/google-apps-script/Code.gs
+          node --check src/missionchief-command-nexus.user.js
+          for test in scripts/check-*.mjs; do
+            node "$test"
+          done
+          if [ -f scripts/check_repository.py ]; then
+            python3 scripts/check_repository.py
+          fi
+          if [ -f scripts/check_workflow_yaml.py ]; then
+            python3 scripts/check_workflow_yaml.py
+          fi
+          git diff --check
+
+      - name: Remove temporary release machinery
+        shell: bash
+        run: |
+          rm -f .github/workflows/tmp-v1112-release.yml
+          rm -f .github/workflows/tmp-v1112-build.yml
+          rm -f .github/workflows/tmp-v1112-export.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "Finalise v1.1.12 release candidate"
+            git push origin HEAD:hotfix/v1.1.12-multi-device-lag
+          fi
+          echo "HEAD_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Wait for normal validation workflows
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import subprocess
+          import sys
+          import time
+
+          sha = os.environ['HEAD_SHA']
+          required = {
+              'validate userscript': False,
+              'repository quality': False,
+          }
+
+          for _ in range(90):
+              result = subprocess.run(
+                  [
+                      'gh', 'run', 'list',
+                      '--repo', os.environ['GITHUB_REPOSITORY'],
+                      '--commit', sha,
+                      '--limit', '30',
+                      '--json', 'workflowName,status,conclusion,databaseId,url'
+                  ],
+                  check=True,
+                  text=True,
+                  capture_output=True,
+              )
+              runs = json.loads(result.stdout or '[]')
+              state = dict(required)
+              failed = []
+              for run in runs:
+                  name = str(run.get('workflowName') or '').strip().lower()
+                  key = None
+                  if 'validate userscript' in name:
+                      key = 'validate userscript'
+                  elif 'repository quality' in name:
+                      key = 'repository quality'
+                  if not key:
+                      continue
+                  status = str(run.get('status') or '').lower()
+                  conclusion = str(run.get('conclusion') or '').lower()
+                  if status == 'completed' and conclusion == 'success':
+                      state[key] = True
+                  elif status == 'completed' and conclusion not in ('', 'success', 'skipped'):
+                      failed.append((key, conclusion, run.get('url')))
+
+              if failed:
+                  for key, conclusion, url in failed:
+                      print(f'{key} failed: {conclusion} {url or ""}')
+                  sys.exit(1)
+              if all(state.values()):
+                  print('Both normal validation workflows passed.')
+                  sys.exit(0)
+              print(f'Waiting for validation on {sha}: {state}')
+              time.sleep(10)
+
+          print('Timed out waiting for normal validation workflows.')
+          sys.exit(1)
+          PY
+
+      - name: Merge PR and tag v1.1.12
+        id: merge
+        shell: bash
+        run: |
+          gh api --method PATCH \
+            "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" \
+            -f draft=false >/dev/null
+
+          MERGE_RESPONSE=$(gh api --method PUT \
+            "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/merge" \
+            -f merge_method=squash \
+            -f commit_title='Release v1.1.12 multi-device logger coordination' \
+            -f commit_message='Coordinate one passive observer per player, retain local action capture on every device, stagger uploads and reduce logger main-thread work.')
+
+          MERGED=$(printf '%s' "$MERGE_RESPONSE" | python3 -c 'import json,sys; print(str(json.load(sys.stdin).get("merged", False)).lower())')
+          MERGE_SHA=$(printf '%s' "$MERGE_RESPONSE" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("sha", ""))')
+          test "$MERGED" = "true"
+          test -n "$MERGE_SHA"
+
+          git fetch origin main --tags
+          git tag -a v1.1.12 "$MERGE_SHA" -m "Command Nexus v1.1.12"
+          git push origin v1.1.12
+          echo "merge_sha=$MERGE_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Ensure GitHub release exists
+        shell: bash
+        env:
+          MERGE_SHA: ${{ steps.merge.outputs.merge_sha }}
+        run: |
+          for _ in $(seq 1 18); do
+            if gh release view v1.1.12 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 10
+          done
+
+          cp src/missionchief-command-nexus.user.js \
+            MissionChief-Command-Nexus-v1.1.12.user.js
+          gh release create v1.1.12 \
+            MissionChief-Command-Nexus-v1.1.12.user.js \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$MERGE_SHA" \
+            --title "MissionChief Command Nexus v1.1.12" \
+            --notes "Multi-device Sharing & Sync hotfix. One computer per player owns passive mission observation; every computer continues to record its own dispatches and completions. Upload staggering, retry jitter and idle scheduling reduce logger contention and browser lag. Deploy Apps Script build 1.1.12-multi-device-observer-1 as a new version of the existing private web app."
