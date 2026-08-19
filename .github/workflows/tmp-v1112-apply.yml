@@ -1,4 +1,5 @@
 name: Temporary v1.1.12 patch and validation
+# Trigger the trusted patcher now that the workflow already exists on the branch.
 
 on:
   push:
