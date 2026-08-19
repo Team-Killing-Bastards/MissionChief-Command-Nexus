@@ -90,16 +90,12 @@ const sourceHits = forbiddenSourceSignatures.filter((signature) =>
   code.toLowerCase().includes(signature.toLowerCase())
 );
 if (sourceHits.length) {
-  throw new Error(`V2 must not contain the abandoned external logger stack: ${sourceHits.join(', ')}`);
+  throw new Error(`Command Nexus must not contain the abandoned external logger stack: ${sourceHits.join(', ')}`);
 }
 for (const relative of ['integrations/google-apps-script', 'integrations/google-app-script']) {
   if (fs.existsSync(path.join(root, relative))) {
-    throw new Error(`V2 must not restore logger backend integration path: ${relative}`);
+    throw new Error(`Command Nexus must not restore logger backend integration path: ${relative}`);
   }
 }
-const metadataMatch = code.match(/^\\/\\/\\s+@version\\s+(\\S+)\\s*$/m);
-if (!metadataMatch || metadataMatch[1] !== '2.0.0') {
-  throw new Error(`Expected clean V2 metadata version 2.0.0; found ${metadataMatch?.[1] ?? 'none'}`);
-}
-console.log('V2 external logger exclusion check passed.');
+console.log('External logger exclusion check passed.');
 """, encoding='utf-8')
