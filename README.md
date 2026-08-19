@@ -19,7 +19,7 @@
 </tr>
 </table>
 
-**Current version:** `1.1.10` · **Mission Finder engine:** `V10.7.7` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
+**Current version:** `1.1.11` · **Mission Finder engine:** `V10.7.7` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)
@@ -191,14 +191,14 @@ Unit Finder prepares. Mission Update reconciles. Auto Mode checks readiness and 
 
 ## Opt-in mission analytics
 
-- **Mission Analytics Logger** is disabled by default. A user pastes the new private Apps Script `/exec` URL, chooses Marty or Conroy and saves the setup before any event can enter the local outbox.
-- Pairing assigns one stable player profile and a separate revocable identity to every browser/origin, so multiple players and multiple devices remain distinct in the same backend workbook.
+- **Sharing & Sync** is disabled by default and is controlled by one checkbox. The approved private Apps Script `/exec` endpoint is compiled into this trusted two-user build, so there is no URL field, user selector, Save, Sync or Forget control.
+- Identity is detected automatically from MissionChief's native `#navbar_profile_link`: the numeric profile ID is stable, the visible username remains current and the browser device ID is diagnostic only. Enabling the checkbox starts automatic recording and drains any retained backlog without deleting its queue or pending batch.
 - The logger records mission identity, advertised value, live demand, patient/prisoner counts, available generator information and the exact selected vehicle IDs, types, names, stations and status for native manual, shared, Auto Mode and Ally Steal dispatch controls. When MissionChief exposes them, each selected row also contributes its dispatch-time estimated route distance and ETA; missing values stay blank.
 - A persistent bounded queue sends batches every five minutes. Stable batch IDs and independent backend deduplication make retries safe, including repair when an earlier write stopped before all dispatched-unit rows were stored.
 - MissionChief's native finish callback records completion for missions dispatched by the paired browser. Mission Summary exposes first observed, first unit sent, completion, response time and mission duration even after the mission closes.
 - After completion, Nexus reads the signed-in player's native Credits list locally and records an award only for the same mission ID and title, or a unique title/time match. Ambiguous transactions remain `PENDING_TRANSACTION`.
 - Raw Mission Events, Dispatch Units and Uploads move into verified ISO-week archive spreadsheets. Compact Dashboard Data and weekly player/station Journey Data remain live across all weeks, preserving placement analytics without retaining every raw unit row in the master workbook.
-- Passwords, cookies, personnel names and the full Credits ledger are never uploaded. The private URL is the credential; device IDs are retained only for diagnostics and there is no token expiry or per-device revocation.
+- Passwords, cookies, personnel names and the full Credits ledger are never uploaded. The compiled private URL remains the credential for this trusted two-user deployment; device IDs are retained only for diagnostics and there is no token expiry or per-device revocation.
 
 Deployment and administration are documented in the [Google Apps Script logger guide](integrations/google-apps-script/README.md).
 

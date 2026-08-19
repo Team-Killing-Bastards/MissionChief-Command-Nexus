@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      1.1.10
+// @version      1.1.11
 // @description  Unified MissionChief UK toolkit for mission dispatch, resource administration, trained-personnel assignment and opt-in mission analytics.
 // @author       MartyBlyth
 // @license      MIT
@@ -14305,7 +14305,7 @@
     const SESSION_STATS_KEY = 'mf_session_stats_v1';
     const SESSION_REFRESH_FLAG = 'mf_session_manual_refresh_checked';
     const MF_MISSION_LOGGER_SCHEMA_VERSION = 1;
-    const MF_MISSION_LOGGER_CLIENT_VERSION = '1.1.10';
+    const MF_MISSION_LOGGER_CLIENT_VERSION = '1.1.11';
     const MF_MISSION_LOGGER_MISSION_FINDER_VERSION =
         '10.7.7';
     const MF_MISSION_ACTIVITY_BACKEND_V2_KEY =
@@ -14317,6 +14317,8 @@
         'mf_mission_logger_enabled_v1';
     const MF_MISSION_LOGGER_ENDPOINT_KEY =
         'mf_mission_logger_endpoint_v1';
+    const MF_MISSION_LOGGER_FIXED_ENDPOINT =
+        'https://script.google.com/macros/s/AKfycbzhh9WWARJoNLfGZ5AReE03B4jM2ZtkehxRPnpFjMciatsVhPqCXxTx8_mLXTkblXtw/exec';
     const MF_MISSION_LOGGER_PROFILE_KEY =
         'mf_mission_logger_profile_v2';
     const MF_MISSION_LOGGER_LEGACY_IDENTITY_KEY =
@@ -14389,6 +14391,7 @@
     let mfMissionLoggerEndpoint = '';
     let mfMissionLoggerSyncTimer = null;
     let mfMissionLoggerInitialSyncTimer = null;
+    let mfMissionLoggerStartupDrainChecked = false;
     let mfMissionLoggerEagerSyncTimer = null;
     let mfMissionLoggerDeferredDrainTimer = null;
     let mfMissionLoggerManualDrainRequested = false;
@@ -22845,90 +22848,19 @@ function isRoadRailUnitVehicleCheckbox(input) {
         missionLoggerBox.id = 'mf-mission-logger-box';
         missionLoggerBox.className = 'mf2026-box';
         missionLoggerBox.innerHTML = `
-            <div class="mf2026-section-title">Mission Analytics Logger</div>
+            <div class="mf2026-section-title">Sharing &amp; Sync</div>
             <label class="mf2026-checkbox-row mf-dashboard-toggle-row">
                 <input id="mf-mission-logger-toggle"
                        type="checkbox"
                        ${mfMissionLoggerEnabled ? 'checked' : ''}>
-                <span>Record my MissionChief activity automatically</span>
+                <span>Share and sync my MissionChief activity automatically</span>
             </label>
-            <label class="mf2026-small" style="display:block;margin-top:8px;">
-                Private Google logger URL
-                <input id="mf-mission-logger-endpoint"
-                       type="url"
-                       inputmode="url"
-                       autocomplete="off"
-                       spellcheck="false"
-                       placeholder="https://script.google.com/macros/s/.../exec"
-                       value="${escapeHtml(mfMissionLoggerEndpoint)}"
-                       style="width:100%;box-sizing:border-box;margin-top:4px;">
-            </label>
-            <label class="mf2026-small" style="display:block;margin-top:8px;">
-                MissionChief user (detected automatically)
-                <input id="mf-mission-logger-player"
-                       type="text"
-                       readonly
-                       aria-readonly="true"
-                       style="width:100%;box-sizing:border-box;margin-top:4px;color:black;padding:4px;border-radius:4px;border:none;background:#e9ecef;">
-            </label>
-            <button id="mf-mission-logger-save"
-                    type="button"
-                    class="mf2026-button"
-                    style="width:100%;margin-top:7px;background:#0d6efd;color:white;">
-                Save logger setup
-            </button>
-            <div id="mf-mission-logger-profile" class="mf2026-small" style="margin-top:8px;"></div>
-            <div id="mf-mission-logger-state" class="mf2026-small" style="margin-top:3px;"></div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">
-                <button id="mf-mission-logger-sync"
-                        type="button"
-                        class="mf2026-button"
-                        style="background:#198754;color:white;">
-                    Sync now
-                </button>
-                <button id="mf-mission-logger-forget"
-                        type="button"
-                        class="mf2026-button"
-                        style="background:#6c757d;color:white;">
-                    Forget setup
-                </button>
-            </div>
-            <div id="mf-mission-logger-queue" class="mf2026-small" style="margin-top:7px;"></div>
-            <div id="mf-mission-logger-last-sync" class="mf2026-small" style="margin-top:2px;"></div>
-            <div id="mf-mission-logger-credit-status" class="mf2026-small" style="margin-top:2px;"></div>
-            <div id="mf-mission-logger-error" class="mf2026-small mf2026-warn" style="margin-top:4px;" hidden></div>
-            <div class="mf2026-small" style="margin-top:7px;">
-                Records each new mission generated for the selected user from MissionChief's native mission list, plus mission identifiers/URLs, advertised and exact awarded value, requirements, current casualty counts, available generator information, selected vehicle IDs/types/names and MissionChief's dispatch-time estimated route distance/ETA for each selected unit. Exact awards are matched locally against MissionChief's own Credits transactions; the rest of the account ledger is never uploaded. Missed completions are recovered from exact MissionChief credit transactions when this browser reconnects. Uploads use a persistent five-minute batch queue. Passwords, cookies and personnel names are never collected. Auth tokens, entered text, clipboard contents and request bodies are also never collected.
-            </div>
-            <div class="mf2026-small" style="margin-top:4px;">
-                The private URL and selected user are the complete logger setup. There is no pairing code or expiring device token. The same setup works on any browser or computer. Saving a different URL or user clears this browser's old queued logger data so it cannot be attributed to the wrong person.
-            </div>
         `;
         advancedBody.appendChild(missionLoggerBox);
 
         const missionLoggerToggle =
             missionLoggerBox.querySelector(
                 '#mf-mission-logger-toggle'
-            );
-        const missionLoggerEndpointInput =
-            missionLoggerBox.querySelector(
-                '#mf-mission-logger-endpoint'
-            );
-        const missionLoggerPlayerSelect =
-            missionLoggerBox.querySelector(
-                '#mf-mission-logger-player'
-            );
-        const missionLoggerSaveButton =
-            missionLoggerBox.querySelector(
-                '#mf-mission-logger-save'
-            );
-        const missionLoggerSyncButton =
-            missionLoggerBox.querySelector(
-                '#mf-mission-logger-sync'
-            );
-        const missionLoggerForgetButton =
-            missionLoggerBox.querySelector(
-                '#mf-mission-logger-forget'
             );
 
         missionLoggerToggle?.addEventListener(
@@ -22942,96 +22874,31 @@ function isRoadRailUnitVehicleCheckbox(input) {
                 );
 
                 if (mfMissionLoggerEnabled) {
+                    mfMissionLoggerEndpoint =
+                        normaliseMissionLoggerEndpoint(
+                            MF_MISSION_LOGGER_FIXED_ENDPOINT
+                        );
+                    if (mfMissionLoggerEndpoint) {
+                        localStorage.setItem(
+                            MF_MISSION_LOGGER_ENDPOINT_KEY,
+                            mfMissionLoggerEndpoint
+                        );
+                    }
+                    readMissionLoggerIdentity();
                     recordMissionLoggerObservedEvent();
                     startMissionLoggerSyncTimer();
+                    scheduleMissionLoggerDeferredDrain(
+                        'sharing and sync enabled',
+                        {
+                            manual: true,
+                            delayMs: 100
+                        }
+                    );
                 } else {
                     stopMissionLoggerSyncTimer();
                     stopMissionLoggerCreditReconciliation();
                 }
 
-                renderMissionLoggerStatus();
-                updateStatusBox(
-                    `Mission Analytics Logger ${mfMissionLoggerEnabled ? 'enabled' : 'disabled'}.`
-                );
-            }
-        );
-
-        missionLoggerSaveButton?.addEventListener(
-            'click',
-            function() {
-                const endpoint = normaliseMissionLoggerEndpoint(
-                    missionLoggerEndpointInput?.value
-                );
-                const playerName =
-                    normaliseMissionLoggerProfileName(
-                        missionLoggerPlayerSelect?.value
-                    );
-
-                if (!endpoint) {
-                    writeMissionLoggerState({
-                        lastError:
-                            'Enter the private deployed Google Apps Script /exec URL.'
-                    });
-                    renderMissionLoggerStatus();
-                    return;
-                }
-                if (!playerName) {
-                    writeMissionLoggerState({
-                        lastError:
-                            'Choose Marty or Conroy before saving the logger setup.'
-                    });
-                    renderMissionLoggerStatus();
-                    return;
-                }
-
-                const profile = saveMissionLoggerSetup({
-                    endpoint,
-                    playerName
-                });
-                updateStatusBox(
-                    `Mission logger setup saved for ${profile.playerName}.`
-                );
-                renderMissionLoggerStatus();
-            }
-        );
-
-        missionLoggerSyncButton?.addEventListener(
-            'click',
-            async function() {
-                const originalText = this.textContent;
-                this.disabled = true;
-                this.textContent = 'Syncing...';
-                const accepted = await syncMissionLoggerNow({
-                    manual: true,
-                    reason: 'Sync now button'
-                });
-                const state = readMissionLoggerState();
-                const deferred =
-                    readMissionLoggerQueue().length > 0 &&
-                    Number(state.drainRequestedAt || 0) > 0;
-                this.textContent = deferred
-                    ? 'Drain queued'
-                    : accepted
-                        ? 'Synced'
-                        : 'Sync failed';
-                await wait(650);
-                this.textContent = originalText;
-                this.disabled = false;
-                renderMissionLoggerStatus();
-            }
-        );
-
-        missionLoggerForgetButton?.addEventListener(
-            'click',
-            async function() {
-                const originalText = this.textContent;
-                this.disabled = true;
-                this.textContent = 'Forgetting...';
-                await forgetMissionLoggerSetup();
-                this.textContent = originalText;
-                updateStatusBox(
-                    'Mission logger setup removed from this browser.'
-                );
                 renderMissionLoggerStatus();
             }
         );
@@ -26071,10 +25938,14 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
     }
 
     mfMissionLoggerEndpoint = normaliseMissionLoggerEndpoint(
-        localStorage.getItem(
-            MF_MISSION_LOGGER_ENDPOINT_KEY
-        ) || ''
+        MF_MISSION_LOGGER_FIXED_ENDPOINT
     );
+    if (mfMissionLoggerEndpoint) {
+        localStorage.setItem(
+            MF_MISSION_LOGGER_ENDPOINT_KEY,
+            mfMissionLoggerEndpoint
+        );
+    }
 
     function normaliseMissionLoggerProfileName(value) {
         return String(value || '')
@@ -26110,50 +25981,75 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
     }
 
     function readMissionLoggerIdentity() {
+        let parsed = null;
         try {
-            const parsed = JSON.parse(
+            const candidate = JSON.parse(
                 localStorage.getItem(
                     MF_MISSION_LOGGER_PROFILE_KEY
                 ) || 'null'
             );
-            if (!parsed || typeof parsed !== 'object') {
-                return null;
+            if (candidate && typeof candidate === 'object') {
+                parsed = candidate;
             }
+        } catch (_error) {}
 
-            const deviceId = String(parsed.deviceId || '')
-                .replace(/[^A-Za-z0-9_-]/g, '')
-                .slice(0, 160);
-            if (!deviceId) return null;
+        const legacy = readLegacyMissionLoggerIdentity();
+        const detected = resolveMissionChiefNavbarIdentity();
+        const storedName = normaliseMissionLoggerProfileName(
+            parsed?.playerName || parsed?.legacyPlayerName
+        );
+        const playerName = normaliseMissionLoggerProfileName(
+            detected?.playerName || storedName
+        );
+        const playerId = normaliseMissionLoggerProfileId(
+            detected?.playerId || parsed?.playerId || parsed?.profileId
+        );
+        if (!playerName || !playerId) return null;
 
-            const detected = resolveMissionChiefNavbarIdentity();
-            const storedName = normaliseMissionLoggerProfileName(
-                parsed.playerName || parsed.legacyPlayerName
-            );
-            const playerName = normaliseMissionLoggerProfileName(
-                detected?.playerName || storedName
-            );
-            const playerId = normaliseMissionLoggerProfileId(
-                detected?.playerId || parsed.playerId || parsed.profileId
-            );
-            if (!playerName) return null;
+        const storedDeviceId = String(parsed?.deviceId || '')
+            .replace(/[^A-Za-z0-9_-]/g, '')
+            .slice(0, 160);
+        const deviceId =
+            storedDeviceId ||
+            legacy?.deviceId ||
+            createMissionLoggerId('device');
+        const profile = {
+            playerId,
+            profileId: playerId,
+            playerName,
+            legacyPlayerName:
+                normaliseMissionLoggerProfileName(
+                    parsed?.legacyPlayerName || storedName || playerName
+                ) || playerName,
+            deviceId,
+            deviceLabel: String(
+                parsed?.deviceLabel || getMissionLoggerDeviceLabel()
+            ).slice(0, 120),
+            configuredAt: String(
+                parsed?.configuredAt || new Date().toISOString()
+            )
+        };
 
-            return {
-                playerId,
-                profileId: playerId,
-                playerName,
-                legacyPlayerName:
-                    normaliseMissionLoggerProfileName(
-                        parsed.legacyPlayerName || storedName || playerName
-                    ) || playerName,
-                deviceId,
-                deviceLabel: String(
-                    parsed.deviceLabel || 'MissionChief browser'
-                ).slice(0, 120),
-                configuredAt: String(parsed.configuredAt || '')
-            };
-        } catch (_error) {
-            return null;
+        const profileChanged =
+            !parsed ||
+            String(parsed.playerId || parsed.profileId || '') !==
+                profile.playerId ||
+            String(parsed.playerName || '') !== profile.playerName ||
+            String(parsed.legacyPlayerName || '') !==
+                profile.legacyPlayerName ||
+            String(parsed.deviceId || '') !== profile.deviceId ||
+            String(parsed.deviceLabel || '') !== profile.deviceLabel;
+
+        if (profileChanged) {
+            writeMissionLoggerIdentity(profile);
         }
+        if (legacy) {
+            localStorage.removeItem(
+                MF_MISSION_LOGGER_LEGACY_IDENTITY_KEY
+            );
+        }
+
+        return profile;
     }
 
     function writeMissionLoggerIdentity(identity) {
@@ -26198,61 +26094,17 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
         });
     }
 
-    function saveMissionLoggerSetup(options = {}) {
+    function saveMissionLoggerSetup() {
         const endpoint = normaliseMissionLoggerEndpoint(
-            options.endpoint
+            MF_MISSION_LOGGER_FIXED_ENDPOINT
         );
-        const detectedProfile = resolveMissionChiefNavbarIdentity();
-        const playerName = normaliseMissionLoggerProfileName(
-            detectedProfile?.playerName || options.playerName
-        );
-        const playerId = normaliseMissionLoggerProfileId(
-            detectedProfile?.playerId
-        );
-        if (!endpoint || !playerName || !playerId) {
+        const profile = readMissionLoggerIdentity();
+        if (!endpoint || !profile) {
             throw new Error(
-                'A private Google logger URL and a detected MissionChief profile are required.'
+                'The fixed Google logger URL and detected MissionChief profile are required.'
             );
         }
 
-        const existing = readMissionLoggerIdentity();
-        const previousEndpoint =
-            normaliseMissionLoggerEndpoint(
-                localStorage.getItem(
-                    MF_MISSION_LOGGER_ENDPOINT_KEY
-                ) || ''
-            );
-        const legacy = readLegacyMissionLoggerIdentity();
-        const changed =
-            !existing ||
-            existing.playerName !== playerName ||
-            previousEndpoint !== endpoint ||
-            !!legacy;
-
-        if (changed) {
-            clearMissionLoggerProfileScopedData();
-        }
-
-        const profile = {
-            playerId,
-            profileId: playerId,
-            playerName,
-            legacyPlayerName:
-                existing?.legacyPlayerName ||
-                existing?.playerName ||
-                playerName,
-            deviceId:
-                existing?.deviceId ||
-                legacy?.deviceId ||
-                createMissionLoggerId('device'),
-            deviceLabel: getMissionLoggerDeviceLabel(),
-            configuredAt: new Date().toISOString()
-        };
-
-        writeMissionLoggerIdentity(profile);
-        localStorage.removeItem(
-            MF_MISSION_LOGGER_LEGACY_IDENTITY_KEY
-        );
         mfMissionLoggerEndpoint = endpoint;
         localStorage.setItem(
             MF_MISSION_LOGGER_ENDPOINT_KEY,
@@ -26268,6 +26120,13 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
         });
         startMissionLoggerSyncTimer();
         recordMissionLoggerObservedEvent();
+        scheduleMissionLoggerDeferredDrain(
+            'fixed sharing and sync setup',
+            {
+                manual: true,
+                delayMs: 100
+            }
+        );
         return profile;
     }
 
@@ -27922,6 +27781,19 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
 
         startMissionLoggerCreditReconciliation();
 
+        if (!mfMissionLoggerStartupDrainChecked) {
+            mfMissionLoggerStartupDrainChecked = true;
+            if (readMissionLoggerQueue().length > 0) {
+                scheduleMissionLoggerDeferredDrain(
+                    'existing sharing and sync backlog',
+                    {
+                        manual: true,
+                        delayMs: 500
+                    }
+                );
+            }
+        }
+
         if (
             mfMissionLoggerInitialSyncTimer ||
             mfMissionLoggerSyncTimer
@@ -27992,11 +27864,19 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
                 ) === 'true';
             mfMissionLoggerEndpoint =
                 normaliseMissionLoggerEndpoint(
-                    localStorage.getItem(
-                        MF_MISSION_LOGGER_ENDPOINT_KEY
-                    ) ||
-                    ''
+                    MF_MISSION_LOGGER_FIXED_ENDPOINT
                 );
+            if (
+                mfMissionLoggerEndpoint &&
+                localStorage.getItem(
+                    MF_MISSION_LOGGER_ENDPOINT_KEY
+                ) !== mfMissionLoggerEndpoint
+            ) {
+                localStorage.setItem(
+                    MF_MISSION_LOGGER_ENDPOINT_KEY,
+                    mfMissionLoggerEndpoint
+                );
+            }
 
             if (MF_IS_TOP_WINDOW) {
                 startMissionLoggerSyncTimer();

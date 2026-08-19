@@ -6,7 +6,22 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
-No changes queued after `1.1.10`.
+No changes queued after `1.1.11`.
+
+## [1.1.11] - 2026-08-19
+
+### Changed
+
+- Compiled the approved private Google Apps Script `/exec` endpoint into the trusted two-user Command Nexus build. The existing compatibility storage key is populated automatically; Marty and Conroy no longer paste or save the endpoint in each browser.
+- Reduced the logger settings surface to one **Sharing & Sync** checkbox. The private URL field, detected-user field, Save, Sync, Forget, queue/status text and explanatory copy are no longer rendered.
+- MissionChief identity is provisioned automatically from `#navbar_profile_link`. The numeric profile ID remains authoritative, the current username is retained, and the existing diagnostic device ID is reused.
+- Enabling Sharing & Sync starts recording and requests an immediate bounded drain of any existing backlog. Disabling it stops recording and upload timers without deleting queued events, the persistent pending batch or logger history.
+
+### Compatibility and recovery
+
+- The endpoint and automatic identity migration never call the destructive profile-scoped cleanup path. Existing queued events and pending batch IDs therefore survive the v1.1.11 update, including Conroy's pre-existing offline backlog.
+- The Apps Script backend remains build `1.1.10-upload-lock-hotfix-1`; no new backend deployment is required for this userscript-only release.
+- Added `scripts/check-hardcoded-sharing-sync-v1111.mjs` and updated the permanent private-profile, outbox-drain and Mission Analytics logger regressions. Mission Finder remains `V10.7.7`; Resource Administration component versions remain unchanged.
 
 ## [1.1.10] - 2026-08-18
 
