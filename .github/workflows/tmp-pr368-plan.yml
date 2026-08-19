@@ -1,0 +1,48 @@
+name: Temporary guarded PR 368 landing plan
+
+on:
+  push:
+    branches:
+      - hotfix/v1.1.12-multi-device-lag
+    paths:
+      - '.github/workflows/tmp-pr368-plan.yml'
+
+permissions:
+  contents: write
+  pull-requests: write
+  checks: read
+  statuses: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: hotfix/v1.1.12-multi-device-lag
+          fetch-depth: 0
+
+      - name: Produce exact-head guarded landing plan
+        shell: bash
+        run: |
+          set -uo pipefail
+          python3 scripts/tmp-pr-completion/pr_land.py \
+            --repo . \
+            --pr https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/pull/368 \
+            --no-config \
+            --head 9bd266f7dbad4d7f3ed531ee30c434af045b305f \
+            --mode auto \
+            --method squash \
+            --pretty \
+            > scripts/tmp-pr-completion/plan.json
+          status=$?
+          printf '%s\n' "${status}" > scripts/tmp-pr-completion/plan.exit-code
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/tmp-pr-completion/plan.json scripts/tmp-pr-completion/plan.exit-code
+          git commit -m "Record guarded PR 368 landing plan"
+          git push origin HEAD:hotfix/v1.1.12-multi-device-lag
+          exit "${status}"
