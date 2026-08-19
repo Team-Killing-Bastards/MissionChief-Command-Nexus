@@ -1,0 +1,22 @@
+{
+  "headSha": "9bd266f7dbad4d7f3ed531ee30c434af045b305f",
+  "method": "squash",
+  "mode": "auto",
+  "pr": {
+    "number": 368,
+    "url": "https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/pull/368"
+  },
+  "readinessPolicy": {
+    "checkPolicy": "all",
+    "configPath": null,
+    "requiredReviewers": [],
+    "source": "no-config",
+    "strictChangesRequested": false
+  },
+  "readinessPolicyDigest": "7691ab6501095b993156211c102a3520b590d3d54cb446f2df572c8e7c3f5219",
+  "repository": "Team-Killing-Bastards/MissionChief-Command-Nexus",
+  "requiresConfirmation": true,
+  "schemaVersion": 1,
+  "state": "confirmation_required",
+  "warning": "This landing request may merge the pull request immediately."
+}
