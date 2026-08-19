@@ -1,4 +1,4 @@
-name: Temporary official v2.0.1 release dispatch
+name: Temporary v2.0.1 release audit
 
 on:
   push:
@@ -8,85 +8,105 @@ on:
       - '.github/workflows/tmp-pr374-guarded-landing.yml'
 
 permissions:
-  actions: write
   contents: write
 
 jobs:
-  dispatch:
+  audit:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     env:
       GH_TOKEN: ${{ github.token }}
       REPOSITORY: Team-Killing-Bastards/MissionChief-Command-Nexus
-      EXPECTED_MAIN_SHA: 626ec79787aeedb5a0da147d84cf2f634d601c24
+      RELEASE_TAG: v2.0.1
+      EXPECTED_SHA: 626ec79787aeedb5a0da147d84cf2f634d601c24
+      PACKAGE: MissionChief-Command-Nexus-2.0.1.user.js
+      CHECKSUM: MissionChief-Command-Nexus-2.0.1.user.js.sha256
     steps:
       - uses: actions/checkout@v6
         with:
           ref: ops/pr374-guarded-landing
           fetch-depth: 0
 
-      - name: Dispatch permanent Repository Quality workflow on exact main
+      - name: Independently audit immutable release artifacts and receipt
         shell: bash
         run: |
           set -uo pipefail
-          requested_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          current_main="$(gh api "repos/${REPOSITORY}/git/ref/heads/main" --jq '.object.sha')"
-          dispatch_status=0
+          audit_status=0
+          audit_dir="$(mktemp -d)"
+          release_json="$(gh release view "${RELEASE_TAG}" \
+            --repo "${REPOSITORY}" \
+            --json tagName,targetCommitish,isDraft,isPrerelease,url,publishedAt,assets)"
 
-          if [[ "${current_main}" != "${EXPECTED_MAIN_SHA}" ]]; then
-            printf '{"state":"blocked","reason":"main_sha_changed","expected":"%s","actual":"%s","requestedAt":"%s"}\n' \
-              "${EXPECTED_MAIN_SHA}" "${current_main}" "${requested_at}" \
-              > scripts/tmp-pr374/release-dispatch.json
-            dispatch_status=20
-          else
-            gh workflow run repository-quality.yml --repo "${REPOSITORY}" --ref main
-            dispatch_status=$?
+          tag_commit="$(git rev-list -n 1 "${RELEASE_TAG}")"
+          package_count="$(jq --arg name "${PACKAGE}" '[.assets[] | select(.name == $name)] | length' <<< "${release_json}")"
+          checksum_count="$(jq --arg name "${CHECKSUM}" '[.assets[] | select(.name == $name)] | length' <<< "${release_json}")"
+          receipt_count="$(jq '[.assets[] | select(.name | test("^Command-Nexus-Discord-Receipt-v2\\.0\\.1-[0-9]+\\.json$"))] | length' <<< "${release_json}")"
+          asset_count="$(jq '.assets | length' <<< "${release_json}")"
+          draft="$(jq -r '.isDraft' <<< "${release_json}")"
+          prerelease="$(jq -r '.isPrerelease' <<< "${release_json}")"
 
-            if [[ "${dispatch_status}" -eq 0 ]]; then
-              matched_run=""
-              for attempt in $(seq 1 30); do
-                runs="$(gh run list \
-                  --repo "${REPOSITORY}" \
-                  --workflow repository-quality.yml \
-                  --branch main \
-                  --event workflow_dispatch \
-                  --limit 20 \
-                  --json databaseId,url,status,conclusion,headSha,createdAt,name,displayTitle)"
-                matched_run="$(jq -c \
-                  --arg sha "${EXPECTED_MAIN_SHA}" \
-                  --arg since "${requested_at}" \
-                  '[.[] | select(.headSha == $sha and .createdAt >= $since)] | sort_by(.createdAt) | last // empty' \
-                  <<< "${runs}")"
-                if [[ -n "${matched_run}" ]]; then
-                  break
-                fi
-                sleep 2
-              done
-
-              if [[ -n "${matched_run}" ]]; then
-                jq -n \
-                  --arg state "dispatched" \
-                  --arg requestedAt "${requested_at}" \
-                  --argjson run "${matched_run}" \
-                  '{state:$state, requestedAt:$requestedAt, run:$run}' \
-                  > scripts/tmp-pr374/release-dispatch.json
-              else
-                printf '{"state":"blocked","reason":"dispatched_run_not_observed","headSha":"%s","requestedAt":"%s"}\n' \
-                  "${EXPECTED_MAIN_SHA}" "${requested_at}" \
-                  > scripts/tmp-pr374/release-dispatch.json
-                dispatch_status=30
-              fi
-            else
-              printf '{"state":"blocked","reason":"workflow_dispatch_failed","headSha":"%s","requestedAt":"%s","exitCode":%s}\n' \
-                "${EXPECTED_MAIN_SHA}" "${requested_at}" "${dispatch_status}" \
-                > scripts/tmp-pr374/release-dispatch.json
-            fi
+          if [[ "${tag_commit}" != "${EXPECTED_SHA}" ||
+                "${package_count}" -ne 1 ||
+                "${checksum_count}" -ne 1 ||
+                "${receipt_count}" -ne 1 ||
+                "${asset_count}" -ne 3 ||
+                "${draft}" != "false" ||
+                "${prerelease}" != "false" ]]; then
+            audit_status=20
           fi
 
-          printf '%s\n' "${dispatch_status}" > scripts/tmp-pr374/release-dispatch.exit-code
+          if [[ "${audit_status}" -eq 0 ]]; then
+            gh release download "${RELEASE_TAG}" \
+              --repo "${REPOSITORY}" \
+              --pattern "${PACKAGE}" \
+              --pattern "${CHECKSUM}" \
+              --pattern "Command-Nexus-Discord-Receipt-v2.0.1-*.json" \
+              --dir "${audit_dir}"
+            audit_status=$?
+          fi
+
+          if [[ "${audit_status}" -eq 0 ]]; then
+            (
+              cd "${audit_dir}"
+              sha256sum -c "${CHECKSUM}"
+            )
+            audit_status=$?
+          fi
+
+          if [[ "${audit_status}" -eq 0 ]]; then
+            git show "${RELEASE_TAG}:src/missionchief-command-nexus.user.js" > "${audit_dir}/tagged-source.user.js"
+            cmp --silent "${audit_dir}/${PACKAGE}" "${audit_dir}/tagged-source.user.js"
+            audit_status=$?
+          fi
+
+          if [[ "${audit_status}" -eq 0 ]]; then
+            receipt_file="$(find "${audit_dir}" -maxdepth 1 -type f -name 'Command-Nexus-Discord-Receipt-v2.0.1-*.json' -print -quit)"
+            jq empty "${receipt_file}"
+            audit_status=$?
+          fi
+
+          state="verified"
+          if [[ "${audit_status}" -ne 0 ]]; then
+            state="blocked"
+          fi
+
+          jq -n \
+            --arg state "${state}" \
+            --arg tag "${RELEASE_TAG}" \
+            --arg tagCommit "${tag_commit}" \
+            --arg expectedCommit "${EXPECTED_SHA}" \
+            --argjson release "${release_json}" \
+            --argjson packageCount "${package_count}" \
+            --argjson checksumCount "${checksum_count}" \
+            --argjson receiptCount "${receipt_count}" \
+            --argjson assetCount "${asset_count}" \
+            '{state:$state, tag:$tag, tagCommit:$tagCommit, expectedCommit:$expectedCommit, release:$release, counts:{package:$packageCount,checksum:$checksumCount,receipt:$receiptCount,total:$assetCount}}' \
+            > scripts/tmp-pr374/release-audit.json
+
+          printf '%s\n' "${audit_status}" > scripts/tmp-pr374/release-audit.exit-code
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A scripts/tmp-pr374
-          git commit -m "Record official v2.0.1 release dispatch"
+          git commit -m "Record independent v2.0.1 release audit"
           git push origin HEAD:ops/pr374-guarded-landing
-          exit "${dispatch_status}"
+          exit "${audit_status}"
