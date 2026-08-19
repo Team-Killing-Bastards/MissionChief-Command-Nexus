@@ -1,0 +1,56 @@
+name: Temporary V2 PR builder
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out V2 head branch
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+
+      - name: Build V2 candidate
+        run: python3 scripts/temp_build_v2.py
+
+      - name: Validate V2 candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check src/missionchief-command-nexus.user.js
+          node scripts/validate-userscript.mjs --base-ref 298e08bf003d6c7ddd489ec45fd488a0d381245e
+          for check in scripts/check-*.mjs; do
+            echo "Running ${check}"
+            node "${check}"
+          done
+          python3 scripts/check_repository.py
+          python3 scripts/check_workflow_yaml.py
+          git diff --check
+
+      - name: Commit validated V2 candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/missionchief-command-nexus.user.js README.md src/README.md CHANGELOG.md \
+            docs/DEVELOPER_HANDOFF.md docs/ARCHITECTURE.md docs/ROADMAP.md docs/MIGRATION.md docs/README.md \
+            scripts/check-no-external-logger-v200.mjs
+          git commit -m 'Release v2.0.0 clean pre-logger baseline'
+          git push origin HEAD:${{ github.head_ref }}
