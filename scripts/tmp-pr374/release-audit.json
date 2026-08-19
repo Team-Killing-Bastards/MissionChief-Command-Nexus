@@ -1,0 +1,64 @@
+{
+  "state": "verified",
+  "tag": "v2.0.1",
+  "tagCommit": "626ec79787aeedb5a0da147d84cf2f634d601c24",
+  "expectedCommit": "626ec79787aeedb5a0da147d84cf2f634d601c24",
+  "release": {
+    "assets": [
+      {
+        "apiUrl": "https://api.github.com/repos/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/assets/521450523",
+        "contentType": "application/json; charset=utf-8",
+        "createdAt": "2026-08-19T23:05:26Z",
+        "digest": "sha256:80a8a36bb5a9ec25cb4bdead59fcd18186a2bbff3d6bd7f5f409fd64f749a9fa",
+        "downloadCount": 0,
+        "id": "RA_kwDOTdJKBc4fFLQb",
+        "label": "",
+        "name": "Command-Nexus-Discord-Receipt-v2.0.1-1539772305805156458.json",
+        "size": 345,
+        "state": "uploaded",
+        "updatedAt": "2026-08-19T23:05:26Z",
+        "url": "https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/download/v2.0.1/Command-Nexus-Discord-Receipt-v2.0.1-1539772305805156458.json"
+      },
+      {
+        "apiUrl": "https://api.github.com/repos/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/assets/521450378",
+        "contentType": "application/javascript; charset=utf-8",
+        "createdAt": "2026-08-19T23:05:12Z",
+        "digest": "sha256:dc983f569f6c4874a36fbbfd49816064d48246a8d2e75058f676c05761455672",
+        "downloadCount": 0,
+        "id": "RA_kwDOTdJKBc4fFLOK",
+        "label": "",
+        "name": "MissionChief-Command-Nexus-2.0.1.user.js",
+        "size": 1781842,
+        "state": "uploaded",
+        "updatedAt": "2026-08-19T23:05:12Z",
+        "url": "https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/download/v2.0.1/MissionChief-Command-Nexus-2.0.1.user.js"
+      },
+      {
+        "apiUrl": "https://api.github.com/repos/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/assets/521450393",
+        "contentType": "text/plain; charset=utf-8",
+        "createdAt": "2026-08-19T23:05:14Z",
+        "digest": "sha256:e284dd9e5ba5d4252db85cef0c7a0137fb1edfa886a81fb5d5db760f21dd2132",
+        "downloadCount": 0,
+        "id": "RA_kwDOTdJKBc4fFLOZ",
+        "label": "",
+        "name": "MissionChief-Command-Nexus-2.0.1.user.js.sha256",
+        "size": 107,
+        "state": "uploaded",
+        "updatedAt": "2026-08-19T23:05:14Z",
+        "url": "https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/download/v2.0.1/MissionChief-Command-Nexus-2.0.1.user.js.sha256"
+      }
+    ],
+    "isDraft": false,
+    "isPrerelease": false,
+    "publishedAt": "2026-08-19T23:05:17Z",
+    "tagName": "v2.0.1",
+    "targetCommitish": "626ec79787aeedb5a0da147d84cf2f634d601c24",
+    "url": "https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/releases/tag/v2.0.1"
+  },
+  "counts": {
+    "package": 1,
+    "checksum": 1,
+    "receipt": 1,
+    "total": 3
+  }
+}
