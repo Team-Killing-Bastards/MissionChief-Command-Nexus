@@ -14,6 +14,13 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Refreshed current operational documentation for the `1.0.122` production baseline and separated it from immutable versioned handovers and incident records.
 - Kept the canonical userscript unchanged, so this repository-maintenance set does not create a new userscript release.
 
+## [2.0.1] - 2026-08-19
+
+### Changed
+
+- Publication recovery for the clean V2 baseline. No MissionChief runtime behaviour changes; this creates a normal canonical userscript version update so Greasy Fork can synchronize V2.
+- Increased the unified userscript version from `2.0.0` to `2.0.1`.
+
 ## [2.0.0] - 2026-08-19
 
 ### Changed

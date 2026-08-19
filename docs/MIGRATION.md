@@ -41,7 +41,7 @@ Command Nexus now contains both systems in one `.user.js` file. The supported op
 
 ## Current storage position
 
-The current Command Nexus `2.0.0` source retains versioned keys from both established engines. This preserves existing behaviour, but a complete formal migration matrix has not yet been proven for every combination of stored data.
+The current Command Nexus `2.0.1` source retains versioned keys from both established engines. This preserves existing behaviour, but a complete formal migration matrix has not yet been proven for every combination of stored data.
 
 Development must therefore distinguish between:
 
