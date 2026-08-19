@@ -112,3 +112,5 @@ jobs:
             scripts/check-release-notification-single-delivery.mjs
           git commit -m "Prepare v2.0.1 publication recovery"
           git push --force origin HEAD:refs/heads/release/v2.0.1
+
+# Kick workflow after initial registration
