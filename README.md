@@ -17,7 +17,10 @@
 </tr>
 </table>
 
-**Current version:** `1.0.127` · **Mission Finder engine:** `V10.6.164` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
+**Current version:** `2.0.0` · **Mission Finder engine:** `V10.6.164` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
+
+> **V2 clean baseline:** `2.0.0` deliberately resets production to the proven `1.0.127` operational code. Mission Analytics, Sharing & Sync, Google Apps Script uploading, external telemetry and the later `1.1.x` logger line are not part of V2.
+
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
 [![Repository quality](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/repository-quality.yml)

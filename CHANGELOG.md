@@ -14,6 +14,19 @@ The project uses Semantic Versioning for the unified userscript release line.
 - Refreshed current operational documentation for the `1.0.122` production baseline and separated it from immutable versioned handovers and incident records.
 - Kept the canonical userscript unchanged, so this repository-maintenance set does not create a new userscript release.
 
+## [2.0.0] - 2026-08-19
+
+### Changed
+
+- Reset the production line to the exact proven Command Nexus `1.0.127` operational baseline and promoted that code to the new major `2.0.0` release line.
+- Deliberately abandoned the Mission Analytics / Sharing & Sync / Google Apps Script logger work introduced after `1.0.127`. V2 contains no external analytics uploader, logger outbox, activity recorder, hard-coded Apps Script endpoint or logger backend integration.
+- Preserved Mission Finder `V10.6.164`, Resource Administration `V4.2.8`, Unit Naming `3.3.27`, Station Naming `1.3.22` and Personnel Assignment `1.3.12` from the proven rollback baseline.
+
+### Safety
+
+- Added a permanent `check-no-external-logger-v200.mjs` regression so the abandoned logger stack cannot silently return to the canonical userscript or repository integration paths.
+- Historical `1.1.x` commits, tags and releases remain historical records only; they are not part of the V2 production source.
+
 ## [1.0.127] - 2026-08-16
 
 ### Added
