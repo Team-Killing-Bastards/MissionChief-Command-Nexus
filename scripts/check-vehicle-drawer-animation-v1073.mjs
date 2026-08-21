@@ -60,10 +60,6 @@ function extractFunction(name) {
 }
 
 expect(
-  source.includes('/* Vehicle drawer top alignment and motion V1.0.73. */'),
-  'Vehicle drawer motion marker missing'
-);
-expect(
   /#vehicle-load-list-box\s*\{[\s\S]{0,120}top:\s*0;/.test(source),
   'Vehicle drawer is not top-aligned'
 );
@@ -118,10 +114,6 @@ expect(
   'Required Personnel preload mount lifecycle missing'
 );
 
-expect(
-  source.includes('/* Attached Vehicle Load drawer V1.0.72. */'),
-  'Attached Vehicle drawer base contract missing'
-);
 expect(
   source.includes('#mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)'),
   'Desktop-only drawer selector isolation missing'

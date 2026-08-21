@@ -6,13 +6,52 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-08-21
+
+### Added
+
+- Promoted the tested single-install V3 master to the canonical production source. Its ownership controller starts at `document-start`, then starts the complete embedded Command Nexus runtime at its established DOM-ready boundary.
+- Added one active dispatcher (Worker A) with two isolated dormant warm preloads (Workers B/C). Promotion requires the activation token, expected mission, active-frame identity and sole operational-storage ownership before Mission Finder can start.
+- Added a transport-aware post-dispatch watchdog: an 8-second soft queue reconcile preserves the final-dispatch duplicate guard, a 16-second hard recovery prefers a verified warm next mission, and a repeated same-mission hard recovery inside two minutes fails closed.
+- Added exact Airfield Operations Supervisor type `80` routing and separate maximum-truck towing ingestion selecting one exact HGV Recovery type `106` per truck. The existing maximum-car capacity rule remains one exact Flatbed Recovery type `105` per two cars.
+
+### Safety
+
+- Increased Mission Finder to `V10.6.167`; exact selection, selected-unit verification and generic-fallback protection share the same Airfield and towing classifiers.
+- Increased B/C target-rotation retention and freeze rotation during transport, promotion and post-dispatch recovery so warm workers are not repeatedly destroyed by transient queue churn.
+- Added V3 merge, watchdog, Airfield and HGV regressions while preserving transport clearing, Rescue/Search Dog type `102`, Mission Upgrade Ambulance type `5`, the universal 20-advance shortage cooldown and sole-dispatch-owner rules.
+- Preserved computer-sleep recovery: stale B/C preloads are discarded and Worker A is recovered without allowing V3 itself to click Dispatch or guess a transport destination.
+
 ### Changed
 
 - Removed obsolete one-use builders, trigger files and historical repair/inspection workflows from permanent repository automation.
 - Centralized canonical release and component-version validation in `scripts/validate-userscript.mjs`; permanent behavioral regressions are now version-agnostic and automatically discovered by the validation workflow.
 - Added a permanent Repository Quality gate that parses every retained GitHub Actions workflow with a pinned YAML parser before repository checks continue.
-- Refreshed current operational documentation for the `1.0.122` production baseline and separated it from immutable versioned handovers and incident records.
-- Kept the canonical userscript unchanged, so this repository-maintenance set does not create a new userscript release.
+- Increased the unified userscript from `2.0.3` to `3.0.0` and made V3 the production installation path.
+
+## [2.0.3] - 2026-08-21
+
+### Fixed
+
+- Mission Update now converts the exact `Any vehicle` requirement family into one normal Ambulance and selects/verifies only native vehicle type `5`; HEMS type `9`, Ambulance Officers and every other vehicle type remain excluded.
+- Added explicit Rescue Dog and Search Dog Unit cross-reference aliases while preserving the established fail-closed native Search Dog Unit type `102` selector.
+
+### Safety
+
+- Added permanent regressions for the exact upgrade conversion, one-vehicle cap, type-5 ownership, selected-unit verification, cross-reference aliases and exclusion of unrelated vehicles.
+- Increased Mission Finder from `V10.6.165` to `V10.6.166` and the unified userscript from `2.0.2` to `2.0.3`. Resource Administration remains `V4.2.8`, Unit Naming remains `3.3.27`, Station Naming remains `1.3.22`, and Personnel Assignment remains `1.3.12`.
+
+## [2.0.2] - 2026-08-21
+
+### Added
+
+- Added a V2-owned dormant-preload lifecycle for explicitly named Nexus V3 B/C frames. Dormant frames may load MissionChief's native mission page and vehicle pagination, but Mission Finder does not mount its UI, observers, alert override or operational Auto Mode state until a validated sole-owner promotion.
+- Added a synchronous, fail-closed promotion bridge that verifies the activation token, expected mission ID, active-frame name and V3 storage ownership before starting Mission Finder in the warm document.
+
+### Safety
+
+- Normal top-level pages, direct mission pages and ordinary child frames retain the established V2 behaviour. The dormant path applies only to the explicit `mcn-v3-pipeline-preload-` frame contract.
+- Increased Mission Finder from `V10.6.164` to `V10.6.165` and the unified userscript from `2.0.1` to `2.0.2`. Resource Administration remains `V4.2.8`, Unit Naming remains `3.3.27`, Station Naming remains `1.3.22`, and Personnel Assignment remains `1.3.12`.
 
 ## [2.0.1] - 2026-08-19
 

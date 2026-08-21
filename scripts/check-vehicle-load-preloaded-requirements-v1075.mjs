@@ -233,7 +233,4 @@ const blockedModel = new Function(
 );
 expect(blockedModel().length === 0, 'Established mission authority must suppress static preloaded totals');
 
-expect(source.includes('/* Attached Vehicle Load drawer V1.0.72. */'), 'Vehicle drawer UI contract changed');
-expect(source.includes('/* Vehicle drawer top alignment and motion V1.0.73. */'), 'Vehicle drawer motion contract changed');
-
 console.log('Fresh-mission preloaded Vehicle Load requirements checks passed.');

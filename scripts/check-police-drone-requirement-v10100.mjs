@@ -69,6 +69,9 @@ expect(checkbox.includes('drone vehicle (police station)'), 'Police Drone checkb
 
 expect(/policeAirMode\s*===\s*'drone'[\s\S]{0,700}eligible\.filter\([\s\S]{0,160}isPoliceDroneCheckbox/.test(source), 'Drone-only candidate selection must filter to Police Drone Vehicle checkboxes');
 expect(source.includes('matches = isPoliceDroneCheckbox(input);'), 'Selected-unit verification must keep the exact Police Drone matcher');
-expect(source.includes('// Flexible wording only: Drone first, Police Helicopter fallback.'), 'Flexible helicopter-or-drone fallback contract missing');
+expect(
+  /return\s*\(\s*eligible\.find\(\s*isPoliceDroneCheckbox\s*\)\s*\|\|\s*eligible\.find\(\s*isPoliceHelicopterCheckbox\s*\)/.test(source),
+  'Flexible helicopter-or-drone selection must prefer a Police Drone before falling back to a Police Helicopter'
+);
 
 console.log('PASS: Explicit Police Drone wording remains exact type 91 and separate from generic Require/Required/Requires Drone aliases, without creating a broad bare-Drone alias.');

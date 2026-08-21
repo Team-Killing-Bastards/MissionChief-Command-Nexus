@@ -13,10 +13,10 @@ function fail(message) {
 function expect(value, message) {
   if (!value) fail(message);
 }
-function extractFunction(name) {
-  const match = new RegExp(`(?:async\\s+)?function\\s+${name}\\s*\\(`).exec(source);
+function extractFunction(name, fromIndex = 0) {
+  const match = new RegExp(`(?:async\\s+)?function\\s+${name}\\s*\\(`).exec(source.slice(fromIndex));
   if (!match) fail(`Unable to find ${name}`);
-  const start = match.index;
+  const start = fromIndex + match.index;
   const bodyStart = source.indexOf('{', start);
   let depth = 0;
   let quote = '';
@@ -56,7 +56,9 @@ function extractFunction(name) {
 
 
 const control = extractFunction('createControlPanel');
-const styles = extractFunction('injectStyles');
+const missionFinderStart = source.indexOf('MODULE 2: MISSION FINDER V');
+expect(missionFinderStart >= 0, 'Mission Finder module boundary missing');
+const styles = extractFunction('injectStyles', missionFinderStart);
 
 for (const token of [
   "'mf-vehicle-drawer-open'",

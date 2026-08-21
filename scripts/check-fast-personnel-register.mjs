@@ -50,6 +50,6 @@ if (!builder.includes('fullVerify')) fail('Builder does not expose quick/full mo
 if (!builder.includes('vehiclesToVerify')) fail('Builder does not classify changed vehicles');
 if (!builder.includes('reusedVehicles += 1')) fail('Builder does not retain unchanged exact records');
 if (!builder.includes('delete registry.vehicles[vehicleId]')) fail('Builder does not remove deleted station vehicles');
-if (!builder.includes('parseStationPersonnelAssignmentEvidence(')) fail('Builder lost Search Advisor station-fallback integration contract');
+if (!builder.includes('getPersonnelStationAssignmentSnapshot(')) fail('Builder lost Search Advisor station-fallback integration contract');
 
 console.log('Fast personnel register contracts passed: routine refresh reuses unchanged exact records, unsafe or changed vehicles are verified, full audit remains available and exact page requests are bounded.');

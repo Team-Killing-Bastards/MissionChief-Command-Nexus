@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      2.0.1
-// @description  Unified MissionChief UK toolkit for mission dispatch, unit naming, station naming and trained-personnel assignment.
+// @version      3.0.0
+// @description  MissionChief automation with one active dispatcher, two safe warm preloads, bounded stall recovery, exact vehicle rules and transport clearing.
 // @author       MartyBlyth
 // @license      MIT
 // @homepageURL  https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
@@ -10,9 +10,6686 @@
 // @match        https://www.missionchief.co.uk/*
 // @match        https://police.missionchief.co.uk/*
 // @grant        none
-// @run-at       document-end
+// @run-at       document-start
 // ==/UserScript==
 
+/* V3 controller: executes first so A/B/C storage ownership exists at document-start. */
+(() => {
+'use strict';
+const ACTIVE_WORKER_NAME_PREFIX = 'mcn-v3-active-worker-';
+const PIPELINE_PRELOAD_NAME_PREFIX = 'mcn-v3-pipeline-preload-';
+const isOperationalV2StorageKey = rawKey => {
+const key = String(rawKey || '');
+return key === 'mf_auto_mode_running' ||
+/^mf_(?:queue_|final_queue_|main_mission_|transport_|post_transport_|auto_advance|auto_upgrade_pending|auto_stop_record|manual_auto_stop|brute_transport|global_transport|patient_transport|prison)/i.test(key);
+};
+function installOwnershipBridgeInWindow(targetWindow, initialActive, source = 'document-start') {
+if (!targetWindow) return null;
+try {
+const existing = targetWindow.__MCN_V3_FRAME_OWNERSHIP_BRIDGE__ ||
+targetWindow.__MCN_V3_PIPELINE_PRELOAD_BRIDGE__ ||
+null;
+if (existing) {
+if (initialActive) existing.activate?.();
+else existing.deactivate?.();
+return existing;
+}
+const StorageCtor = targetWindow.Storage ||
+(targetWindow === window && typeof Storage !== 'undefined' ? Storage : null);
+if (!StorageCtor?.prototype) return null;
+let activeOwner = Boolean(initialActive);
+const originalGetItem = StorageCtor.prototype.getItem;
+const originalSetItem = StorageCtor.prototype.setItem;
+const originalRemoveItem = StorageCtor.prototype.removeItem;
+if (
+typeof originalGetItem !== 'function' ||
+typeof originalSetItem !== 'function' ||
+typeof originalRemoveItem !== 'function'
+) return null;
+StorageCtor.prototype.getItem = function(key) {
+if (!activeOwner && isOperationalV2StorageKey(key)) return null;
+return originalGetItem.call(this, key);
+};
+StorageCtor.prototype.setItem = function(key, value) {
+if (!activeOwner && isOperationalV2StorageKey(key)) return undefined;
+return originalSetItem.call(this, key, value);
+};
+StorageCtor.prototype.removeItem = function(key) {
+if (!activeOwner && isOperationalV2StorageKey(key)) return undefined;
+return originalRemoveItem.call(this, key);
+};
+const bridge = Object.freeze({
+activate() { activeOwner = true; return true; },
+deactivate() { activeOwner = false; return true; },
+promote() { activeOwner = true; return true; },
+demote() { activeOwner = false; return true; },
+isActive() { return activeOwner; },
+isPreload() { return !activeOwner; },
+isPromoted() { return activeOwner; },
+role() { return activeOwner ? 'ACTIVE' : 'INACTIVE'; },
+source() { return source; },
+});
+targetWindow.__MCN_V3_FRAME_OWNERSHIP_BRIDGE__ = bridge;
+targetWindow.__MCN_V3_PIPELINE_PRELOAD_BRIDGE__ = bridge;
+return bridge;
+} catch {
+return null;
+}
+}
+const managedFrameRole = (() => {
+try {
+if (window.top === window.self) return '';
+const name = String(window.name || '');
+if (name.startsWith(ACTIVE_WORKER_NAME_PREFIX)) return 'ACTIVE';
+if (name.startsWith(PIPELINE_PRELOAD_NAME_PREFIX)) return 'PRELOAD';
+return '';
+} catch {
+return '';
+}
+})();
+if (managedFrameRole) {
+installOwnershipBridgeInWindow(window, managedFrameRole === 'ACTIVE', 'document-start');
+return;
+}
+if (window.top !== window.self) return;
+if (window.__MCN_V3_CONTROLLER__) return;
+window.__MCN_V3_CONTROLLER__ = true;
+const VERSION = '3.0.0';
+const MASTER_VERSION = '3.0.0';
+const MISSION_FINDER_VERSION = '10.6.167';
+const WORKER_ID = 'mcn-v3-background-mission-worker';
+const ROOT_ID = 'mcn-v3-map-controller';
+const STYLE_ID = 'mcn-v3-map-controller-style';
+const STORAGE_COLLAPSED = 'mcn_v3_collapsed_v1';
+const SESSION_BACKGROUND_WANTED = 'mcn_v3_background_wanted_v1';
+const SESSION_RESUME_MISSION = 'mcn_v3_resume_mission_v1';
+const SESSION_RUN_STARTED_AT = 'mcn_v3_run_started_at_v1';
+const SESSION_TOP_PAGE_RESUMES = 'mcn_v3_top_page_resumes_v1';
+const SESSION_CONTINUITY = 'mcn_v3_continuity_v1';
+const SESSION_PIPELINE_TARGETS = 'mcn_v3_pipeline_targets_v1';
+const WORKER_WIDTH = 1180;
+const WORKER_HEIGHT = 900;
+const NEXUS_DISCOVERY_TIMEOUT_MS = 22000;
+const WORKER_LOAD_TIMEOUT_MS = 30000;
+const WATCH_INTERVAL_MS = 160;
+const MISSION_RESCAN_MS = 500;
+const TRANSPORT_STALL_WARN_MS = 20000;
+const AUTO_STOP_DEBOUNCE_MS = 3000;
+const AUTO_START_CONFIRM_TIMEOUT_MS = 2500;
+const AUTO_START_MAX_ATTEMPTS = 2;
+const PROMOTED_WORK_ACTIVITY_TIMEOUT_MS = 6000;
+const PROMOTION_RECOVERY_HISTORY_LIMIT = 30;
+const TOP_PRIORITY_STABLE_MS = 180;
+const TOP_PRIORITY_NAV_WINDOW_MS = 5000;
+const PRIORITY_REDIRECT_COOLDOWN_MS = 350;
+const PRIORITY_REDIRECT_IN_FLIGHT_MS = 6000;
+const NON_MISSION_REDIRECT_RECOVERY_MS = 10000;
+const NON_MISSION_REDIRECT_RECOVERY_HISTORY_LIMIT = 40;
+const RECENT_NATIVE_ADVANCE_TTL_MS = 12000;
+const RADIO_REQUEST_STALL_WARN_MS = 25000;
+const TRANSPORT_EVENT_LIMIT = 30;
+const STATUS_HISTORY_LIMIT = 40;
+const RULE_CHANGE_HISTORY_LIMIT = 40;
+const RADIO_HISTORY_LIMIT = 40;
+const AFFINITY_HISTORY_LIMIT = 50;
+const POST_TRANSPORT_REHOOK_DELAY_MS = 300;
+const PRISONER_ASSIST_DELAY_MS = 1400;
+const PRISONER_ASSIST_CLICK_COOLDOWN_MS = 8000;
+const PATIENT_ASSIST_DELAY_MS = 850;
+const PATIENT_ASSIST_CLICK_COOLDOWN_MS = 5000;
+const TRANSPORT_SERVICE_SETTLE_MS = 180;
+const TRANSPORT_SERVICE_MAX_MS = 18000;
+const TRANSPORT_SERVICE_RETRY_COOLDOWN_MS = 30000;
+const TRANSPORT_SERVICE_HISTORY_LIMIT = 60;
+const RECOVERABLE_SHORTAGE_SKIP_ADVANCES = 20;
+const ZERO_SELECTION_SKIP_ADVANCES = RECOVERABLE_SHORTAGE_SKIP_ADVANCES;
+const GENERIC_RECOVERABLE_STOP_SKIP_ADVANCES = RECOVERABLE_SHORTAGE_SKIP_ADVANCES;
+const AUTO_RECOVERY_WATCHDOG_MS = 12000;
+const AUTO_RECOVERY_TERMINAL_WATCHDOG_MS = 3000;
+const AUTO_RECOVERY_HISTORY_LIMIT = 80;
+const QUEUE_FAST_RELEASE_STABLE_MS = 650;
+const QUEUE_FAST_RELEASE_TRANSITION_WINDOW_MS = 10000;
+const QUEUE_FAST_RELEASE_HISTORY_LIMIT = 60;
+const POST_DISPATCH_SOFT_RECOVERY_MS = 8000;
+const POST_DISPATCH_HARD_RECOVERY_MS = 16000;
+const POST_DISPATCH_RECOVERY_WINDOW_MS = 120000;
+const POST_DISPATCH_RECOVERY_HISTORY_LIMIT = 50;
+const PIPELINE_PRELOAD_COUNT = 2;
+const PIPELINE_SYNC_MS = 650;
+const PIPELINE_PUMP_MS = 450;
+const PIPELINE_READY_AUDIT_MS = 1800;
+const PIPELINE_SIGNATURE_EDGE_IDS = 12;
+const PIPELINE_READY_STABLE_MS = 750;
+const PIPELINE_LOAD_CLICK_COOLDOWN_MS = 900;
+const PIPELINE_LOAD_PROGRESS_TIMEOUT_MS = 6500;
+const PIPELINE_PROGRESS_SETTLE_MS = 450;
+const PIPELINE_BRIDGE_TIMEOUT_MS = 3500;
+const PIPELINE_PROMOTION_MAX_AGE_MS = 60000;
+const PIPELINE_MAX_LOAD_CLICKS = 6;
+const PIPELINE_HISTORY_LIMIT = 100;
+const PIPELINE_TARGET_ROTATION_GRACE_MS = 6000;
+const PIPELINE_READY_HANDOFF_GRACE_MS = 15000;
+const ACTIVE_BOOTSTRAP_RESCUE_AFTER_MS = 6500;
+const ACTIVE_BOOTSTRAP_RESCUE_LIMIT = 1;
+const ACTIVE_CONTROL_DROPOUT_RESCUE_MS = 12000;
+const ACTIVE_CONTROL_PROGRESS_GRACE_MS = 20000;
+const ACTIVE_CONTROL_DROPOUT_WINDOW_MS = 120000;
+const ACTIVE_CONTROL_DROPOUT_CIRCUIT_BREAKER_COUNT = 2;
+const ACTIVE_CONTROL_DROPOUT_HISTORY_LIMIT = 40;
+const AUTO_STATE_DROPOUT_WINDOW_MS = 120000;
+const AUTO_STATE_DROPOUT_CIRCUIT_BREAKER_COUNT = 2;
+const AUTO_STATE_DROPOUT_HISTORY_LIMIT = 50;
+const AUTO_STATE_DROPOUT_RELOAD_LIMIT_AFTER_ACTIVE_ONLY = 1;
+const OWNERSHIP_BOOTSTRAP_HISTORY_LIMIT = 50;
+const SLEEP_GAP_RECOVERY_THRESHOLD_MS = 20000;
+const SLEEP_GAP_HISTORY_LIMIT = 30;
+const V2_QUEUE_WAIT_ACTIVE_FLAG = 'mf_queue_wait_active_v10';
+const V2_FINAL_QUEUE_DISPATCH_FLAG = 'mf_final_queue_dispatch_clicked_v10';
+const V2_QUEUE_OPENING_MISSION_FLAG = 'mf_queue_opening_mission_v10';
+const V2_MAIN_MISSION_OPEN_LOCK_KEY = 'mf_main_mission_open_lock_until_v10_3_9v';
+const V2_MAIN_MISSION_OPEN_REASON_KEY = 'mf_main_mission_open_reason_v10_3_9v';
+const V2_MAIN_MISSION_PENDING_UNTIL_KEY = 'mf_main_mission_pending_until_v10_3_9zc';
+const V2_MAIN_MISSION_PENDING_TARGET_KEY = 'mf_main_mission_pending_target_v10_3_9zc';
+const V2_MAIN_MISSION_PENDING_REASON_KEY = 'mf_main_mission_pending_reason_v10_3_9zc';
+const V2_AUTO_MODE_RUNNING_KEY = 'mf_auto_mode_running';
+const V2_AUTO_STOP_RECORD_KEY = 'mf_auto_stop_record_v10_6_153';
+const V2_FRAME_RUNTIME_RECONCILE_EVENT = 'missionchief-nexus-frame-runtime-reconcile-v1074';
+const V2_DORMANT_PRELOAD_BRIDGE_KEY = '__MCN_V2_DORMANT_PRELOAD_BRIDGE__';
+const MISSION_SKIP_HISTORY_LIMIT = 80;
+const AIRFIELD_SUPERVISOR_REQUIRED_TEXT = 'Airfield Operations Supervisors';
+const AIRFIELD_SUPERVISOR_VEHICLE_TEXT = 'Airfield Operations Supervisor';
+const AIRFIELD_ALIAS_HISTORY_LIMIT = 30;
+const AIRFIELD_SUPERVISOR_TYPE_ID = '80';
+const AIRFIELD_SUPERVISOR_ASSIST_DELAY_MS = 900;
+const SEARCH_DOG_UNIT_TYPE_ID = '102';
+const RESCUE_DOG_ASSIST_DELAY_MS = 900;
+const RESCUE_DOG_ASSIST_HISTORY_LIMIT = 40;
+const MASS_CASUALTY_EQUIPMENT_TYPE_ID = '33';
+const NORMAL_AMBULANCE_TYPE_ID = '5';
+const MASS_CASUALTY_AMBULANCE_THRESHOLD = 20;
+const VEHICLE_RULE_HISTORY_LIMIT = 40;
+const PRISONER_RELEASE_SUCCESS_REHOOK_DELAY_MS = 650;
+const PRISONER_RELEASE_HISTORY_LIMIT = 30;
+const ZERO_SELECTION_HISTORY_LIMIT = 40;
+const MISSION_TIMING_HISTORY_LIMIT = 100;
+const LOG_LIMIT = 360;
+const state = {
+wanted: false,
+running: false,
+stopping: false,
+phase: 'IDLE',
+status: 'Ready',
+detail: 'Auto Mode is stopped.',
+worker: null,
+workerGeneration: 0,
+workerLoadTimer: null,
+nexusDiscoveryTimer: null,
+watcherTimer: null,
+missionRescanTimer: null,
+bootstrapMissionUrl: '',
+currentMissionUrl: '',
+currentMissionId: '',
+currentMissionName: '',
+missionNames: new Map(),
+autoStartIssued: false,
+workerDocument: null,
+workerDocumentSerial: 0,
+autoStartDocumentSerial: 0,
+autoRunningConfirmedDocumentSerial: 0,
+autoRunningConfirmedAt: 0,
+autoStartAttemptAt: 0,
+autoStartAttempts: 0,
+promotedDocumentSerial: 0,
+promotedWorkStartedAt: 0,
+promotedWorkEvidenceAt: 0,
+promotedWorkEvidenceText: '',
+promotionWorkStallRecoveries: 0,
+promotionRecoveryHistory: [],
+promotionRecoveryPendingMissionId: '',
+autoControlText: '',
+transportKind: '',
+transportSince: 0,
+transportWarned: false,
+foreignMissionUiWarned: false,
+lastWorkerHref: '',
+lastWorkerNavigationAt: 0,
+lastError: '',
+autoStoppedSince: 0,
+autoStopWarned: false,
+autoRecoveryCandidateKey: '',
+autoRecoveryCandidateSince: 0,
+autoRecoveryCandidateMissionId: '',
+autoRecoveryCandidateReason: '',
+autoRecoveryCandidateCategory: '',
+autoRecoveryCandidateEvidence: '',
+autoRecoveryCandidateWaitMs: 0,
+autoRecoveryCountdownSecond: -1,
+autoRecoverySkips: 0,
+autoRecoveryHistory: [],
+zeroSelectionRecoveries: 0,
+zeroSelectionHistory: [],
+topPageResumes: 0,
+resumedFromTopNavigation: false,
+lastStatusText: '',
+lastStatusChangedAt: 0,
+lastWorkerSnapshot: null,
+topMission: null,
+topMissionStableKey: '',
+topMissionStableSince: 0,
+missionRowSignatures: new Map(),
+ruleChangeHistory: [],
+radioTransportRequests: [],
+radioRequestKeys: new Set(),
+radioRequestHistory: [],
+radioRequestSince: 0,
+radioRequestWarned: false,
+runRadioTransportRequests: 0,
+allianceRadioIgnoredKeys: new Set(),
+allianceRadioIgnoredHistory: [],
+runAllianceRadioIgnored: 0,
+prisonerAssistKey: '',
+prisonerAssistSince: 0,
+prisonerAssistLastClickKey: '',
+prisonerAssistLastClickAt: 0,
+prisonerAssistAttempts: 0,
+prisonerAssistHistory: [],
+patientAssistKey: '',
+patientAssistSince: 0,
+patientAssistLastClickKey: '',
+patientAssistLastClickAt: 0,
+patientAssistAttempts: 0,
+patientAssistHistory: [],
+transportServiceEligible: false,
+transportServiceActive: false,
+transportServiceKey: '',
+transportServiceVehicleId: '',
+transportServiceMissionId: '',
+transportServiceStartedAt: 0,
+transportServiceAttempts: 0,
+transportServiceCleared: 0,
+transportServiceHistory: [],
+transportServiceDeferredUntil: new Map(),
+nativeMissionAdvances: 0,
+missionSkipRecords: new Map(),
+missionSkipHistory: [],
+recoverableMissionSkips: 0,
+visualTopMission: null,
+airfieldAliasRewrites: 0,
+airfieldAliasHistory: [],
+airfieldObservedDocuments: new WeakSet(),
+airfieldSupervisorAssistKey: '',
+airfieldSupervisorAssistSince: 0,
+airfieldSupervisorAssistAttempts: 0,
+airfieldSupervisorAssistHistory: [],
+rescueDogAssistKey: '',
+rescueDogAssistSince: 0,
+rescueDogAssistAttempts: 0,
+rescueDogAssistHistory: [],
+massCasualtyThresholdAttempts: 0,
+massCasualtyThresholdHistory: [],
+massCasualtyThresholdLastMissionId: '',
+massCasualtyThresholdLastAmbulanceCount: 0,
+prisonerReleaseSuccessKey: '',
+prisonerReleaseSuccessSince: 0,
+prisonerReleaseSuccessRehooks: 0,
+prisonerReleaseSuccessHistory: [],
+prisonerReleaseHandledKeys: new Set(),
+transportAffinityCorrections: 0,
+transportAffinityHistory: [],
+topSyntheticMissionRehooksBlocked: 0,
+postTransportRehooks: 0,
+nonMissionRedirectRecoveries: 0,
+nonMissionRedirectRecoveryHistory: [],
+nonMissionRedirectRecoveryInFlight: false,
+priorityPendingKey: '',
+priorityPendingSince: 0,
+priorityRedirects: 0,
+lastPriorityRedirectAt: 0,
+lastMissionTransitionFromId: '',
+lastMissionTransitionToId: '',
+lastMissionTransitionAt: 0,
+queueFastReleaseCandidateMissionId: '',
+queueFastReleaseCandidateSince: 0,
+queueFastReleases: 0,
+queueFastReleaseHistory: [],
+postDispatchWatchdog: null,
+postDispatchSoftRecoveries: 0,
+postDispatchHardRecoveries: 0,
+postDispatchCircuitBreakers: 0,
+postDispatchRecoveryHistory: [],
+pipelineSlots: [],
+pipelineSyncTimer: null,
+pipelinePumpTimer: null,
+pipelineLastSyncAt: 0,
+pipelinePreloadCreates: 0,
+pipelinePreloadsReady: 0,
+pipelineVehicleLoadClicks: 0,
+pipelinePromotions: 0,
+pipelineReadyPromotions: 0,
+pipelineIsolationFailures: 0,
+pipelinePromotionFallbacks: 0,
+pipelineV2DormantReady: 0,
+pipelineV2DormantPromotionFailures: 0,
+pipelineDuplicateClicksSuppressed: 0,
+pipelineHandoffRetentions: 0,
+activeBootstrapRescues: 0,
+activeControlMissingSince: 0,
+activeControlDropoutRescues: 0,
+activeControlSoftRecoveries: 0,
+activeControlDropoutCircuitBreakers: 0,
+activeControlDropoutTimes: [],
+activeControlDropoutHistory: [],
+pipelineActiveOnly: false,
+pipelineActiveOnlyReason: '',
+pipelineActiveOnlySince: 0,
+pipelineOwnershipDemotions: 0,
+activeOwnershipBootstrapInstalls: 0,
+activeOwnershipBootstrapFailures: 0,
+activeOwnershipBootstrapHistory: [],
+lastWatchHeartbeatAt: 0,
+wakeRecoveryActive: false,
+sleepGapRecoveries: 0,
+sleepGapHistory: [],
+autoStateDropoutRecoveries: 0,
+autoStateDropoutReloads: 0,
+autoStateDropoutHistory: [],
+autoStateDropoutTimes: [],
+autoStateRecoveryDocumentSerial: 0,
+autoStateRecoveryAttempts: 0,
+autoStateActiveOnlyFailures: 0,
+skippedMissionPrestartRedirects: 0,
+pipelineHistory: [],
+redirectFromMissionId: '',
+redirectTargetMissionId: '',
+recentlyNativeAdvanced: new Map(),
+runStartedAt: '',
+runStoppedAt: '',
+runMissionIds: [],
+runWorkerLoads: 0,
+runNavigations: 0,
+runRetries: 0,
+runPatientTransports: 0,
+runPrisonerTransports: 0,
+runTransportEvents: [],
+activeTransportEvent: null,
+statusHistory: [],
+missionTimingHistory: [],
+activeMissionTiming: null,
+log: [],
+ui: null,
+dragging: false,
+dragOffsetX: 0,
+dragOffsetY: 0,
+};
+function nowIso() {
+return new Date().toISOString();
+}
+function sessionGet(key) {
+try { return sessionStorage.getItem(key) || ''; } catch { return ''; }
+}
+function sessionSet(key, value) {
+try {
+if (value === null || value === undefined || value === '') sessionStorage.removeItem(key);
+else sessionStorage.setItem(key, String(value));
+} catch {}
+}
+function persistedBackgroundWanted() {
+return sessionGet(SESSION_BACKGROUND_WANTED) === '1';
+}
+function setPersistedBackgroundWanted(wanted) {
+sessionSet(SESSION_BACKGROUND_WANTED, wanted ? '1' : '');
+}
+function persistResumeMission(value) {
+const url = sameOriginUrl(value);
+if (url && isMissionUrl(url.href)) sessionSet(SESSION_RESUME_MISSION, url.href);
+}
+function storedResumeMissionUrl() {
+const value = sessionGet(SESSION_RESUME_MISSION);
+const url = sameOriginUrl(value);
+return url && isMissionUrl(url.href) ? url.href : '';
+}
+function persistRunStart(value = state.runStartedAt || nowIso()) {
+if (value) sessionSet(SESSION_RUN_STARTED_AT, value);
+}
+function clearPersistedRunIntent() {
+setPersistedBackgroundWanted(false);
+sessionSet(SESSION_RESUME_MISSION, '');
+sessionSet(SESSION_RUN_STARTED_AT, '');
+sessionSet(SESSION_TOP_PAGE_RESUMES, '');
+sessionSet(SESSION_CONTINUITY, '');
+sessionSet(SESSION_PIPELINE_TARGETS, '');
+}
+function saveRunContinuity() {
+try {
+const payload = {
+runStartedAt: state.runStartedAt,
+runMissionIds: state.runMissionIds.slice(-80),
+runWorkerLoads: state.runWorkerLoads,
+runNavigations: state.runNavigations,
+runRetries: state.runRetries,
+runPatientTransports: state.runPatientTransports,
+runPrisonerTransports: state.runPrisonerTransports,
+runRadioTransportRequests: state.runRadioTransportRequests,
+runAllianceRadioIgnored: state.runAllianceRadioIgnored,
+nativeMissionAdvances: state.nativeMissionAdvances,
+recoverableMissionSkips: state.recoverableMissionSkips,
+autoRecoverySkips: state.autoRecoverySkips,
+autoRecoveryHistory: state.autoRecoveryHistory.slice(-AUTO_RECOVERY_HISTORY_LIMIT),
+missionSkipRecords: Array.from(state.missionSkipRecords.entries()),
+missionSkipHistory: state.missionSkipHistory.slice(-MISSION_SKIP_HISTORY_LIMIT),
+recentlyNativeAdvanced: Array.from(state.recentlyNativeAdvanced.entries()),
+patientAssistAttempts: state.patientAssistAttempts,
+patientAssistHistory: state.patientAssistHistory.slice(-40),
+prisonerAssistAttempts: state.prisonerAssistAttempts,
+prisonerAssistHistory: state.prisonerAssistHistory.slice(-40),
+transportServiceAttempts: state.transportServiceAttempts,
+transportServiceCleared: state.transportServiceCleared,
+transportServiceHistory: state.transportServiceHistory.slice(-TRANSPORT_SERVICE_HISTORY_LIMIT),
+transportServiceDeferredUntil: Array.from(state.transportServiceDeferredUntil.entries()),
+airfieldAliasRewrites: state.airfieldAliasRewrites,
+airfieldAliasHistory: state.airfieldAliasHistory.slice(-AIRFIELD_ALIAS_HISTORY_LIMIT),
+airfieldSupervisorAssistAttempts: state.airfieldSupervisorAssistAttempts,
+airfieldSupervisorAssistHistory: state.airfieldSupervisorAssistHistory.slice(-VEHICLE_RULE_HISTORY_LIMIT),
+rescueDogAssistAttempts: state.rescueDogAssistAttempts,
+rescueDogAssistHistory: state.rescueDogAssistHistory.slice(-RESCUE_DOG_ASSIST_HISTORY_LIMIT),
+massCasualtyThresholdAttempts: state.massCasualtyThresholdAttempts,
+massCasualtyThresholdHistory: state.massCasualtyThresholdHistory.slice(-VEHICLE_RULE_HISTORY_LIMIT),
+prisonerReleaseSuccessRehooks: state.prisonerReleaseSuccessRehooks,
+prisonerReleaseSuccessHistory: state.prisonerReleaseSuccessHistory.slice(-PRISONER_RELEASE_HISTORY_LIMIT),
+zeroSelectionRecoveries: state.zeroSelectionRecoveries,
+zeroSelectionHistory: state.zeroSelectionHistory.slice(-ZERO_SELECTION_HISTORY_LIMIT),
+postTransportRehooks: state.postTransportRehooks,
+nonMissionRedirectRecoveries: state.nonMissionRedirectRecoveries,
+nonMissionRedirectRecoveryHistory: state.nonMissionRedirectRecoveryHistory.slice(-NON_MISSION_REDIRECT_RECOVERY_HISTORY_LIMIT),
+priorityRedirects: state.priorityRedirects,
+queueFastReleases: state.queueFastReleases,
+queueFastReleaseHistory: state.queueFastReleaseHistory.slice(-QUEUE_FAST_RELEASE_HISTORY_LIMIT),
+postDispatchSoftRecoveries: state.postDispatchSoftRecoveries,
+postDispatchHardRecoveries: state.postDispatchHardRecoveries,
+postDispatchCircuitBreakers: state.postDispatchCircuitBreakers,
+postDispatchRecoveryHistory: state.postDispatchRecoveryHistory.slice(-POST_DISPATCH_RECOVERY_HISTORY_LIMIT),
+pipelinePreloadCreates: state.pipelinePreloadCreates,
+pipelinePreloadsReady: state.pipelinePreloadsReady,
+pipelineVehicleLoadClicks: state.pipelineVehicleLoadClicks,
+pipelinePromotions: state.pipelinePromotions,
+pipelineReadyPromotions: state.pipelineReadyPromotions,
+pipelineIsolationFailures: state.pipelineIsolationFailures,
+pipelinePromotionFallbacks: state.pipelinePromotionFallbacks,
+pipelineV2DormantReady: state.pipelineV2DormantReady,
+pipelineV2DormantPromotionFailures: state.pipelineV2DormantPromotionFailures,
+pipelineDuplicateClicksSuppressed: state.pipelineDuplicateClicksSuppressed,
+pipelineHandoffRetentions: state.pipelineHandoffRetentions,
+activeControlDropoutRescues: state.activeControlDropoutRescues,
+activeControlSoftRecoveries: state.activeControlSoftRecoveries,
+activeControlDropoutCircuitBreakers: state.activeControlDropoutCircuitBreakers,
+activeControlDropoutTimes: state.activeControlDropoutTimes.slice(-ACTIVE_CONTROL_DROPOUT_CIRCUIT_BREAKER_COUNT),
+activeControlDropoutHistory: state.activeControlDropoutHistory.slice(-ACTIVE_CONTROL_DROPOUT_HISTORY_LIMIT),
+pipelineActiveOnly: state.pipelineActiveOnly,
+pipelineActiveOnlyReason: state.pipelineActiveOnlyReason,
+pipelineActiveOnlySince: state.pipelineActiveOnlySince,
+pipelineOwnershipDemotions: state.pipelineOwnershipDemotions,
+activeOwnershipBootstrapInstalls: state.activeOwnershipBootstrapInstalls,
+activeOwnershipBootstrapFailures: state.activeOwnershipBootstrapFailures,
+activeOwnershipBootstrapHistory: state.activeOwnershipBootstrapHistory.slice(-OWNERSHIP_BOOTSTRAP_HISTORY_LIMIT),
+sleepGapRecoveries: state.sleepGapRecoveries,
+sleepGapHistory: state.sleepGapHistory.slice(-SLEEP_GAP_HISTORY_LIMIT),
+autoStateDropoutRecoveries: state.autoStateDropoutRecoveries,
+autoStateDropoutReloads: state.autoStateDropoutReloads,
+autoStateDropoutHistory: state.autoStateDropoutHistory.slice(-AUTO_STATE_DROPOUT_HISTORY_LIMIT),
+autoStateDropoutTimes: state.autoStateDropoutTimes.slice(-AUTO_STATE_DROPOUT_CIRCUIT_BREAKER_COUNT),
+autoStateActiveOnlyFailures: state.autoStateActiveOnlyFailures,
+skippedMissionPrestartRedirects: state.skippedMissionPrestartRedirects,
+promotionWorkStallRecoveries: state.promotionWorkStallRecoveries,
+promotionRecoveryHistory: state.promotionRecoveryHistory.slice(-PROMOTION_RECOVERY_HISTORY_LIMIT),
+pipelineHistory: state.pipelineHistory.slice(-PIPELINE_HISTORY_LIMIT),
+topSyntheticMissionRehooksBlocked: state.topSyntheticMissionRehooksBlocked,
+missionTimingHistory: state.missionTimingHistory.slice(-MISSION_TIMING_HISTORY_LIMIT),
+statusHistory: state.statusHistory.slice(-STATUS_HISTORY_LIMIT),
+ruleChangeHistory: state.ruleChangeHistory.slice(-RULE_CHANGE_HISTORY_LIMIT),
+radioRequestHistory: state.radioRequestHistory.slice(-RADIO_HISTORY_LIMIT),
+topPageResumes: state.topPageResumes,
+};
+sessionSet(SESSION_CONTINUITY, JSON.stringify(payload));
+} catch {}
+}
+function restoreRunContinuity() {
+const raw = sessionGet(SESSION_CONTINUITY);
+if (!raw) return false;
+try {
+const payload = JSON.parse(raw);
+if (payload.runStartedAt) state.runStartedAt = payload.runStartedAt;
+if (Array.isArray(payload.runMissionIds)) state.runMissionIds = payload.runMissionIds.slice(-80);
+for (const key of [
+'runWorkerLoads', 'runNavigations', 'runRetries', 'runPatientTransports',
+'runPrisonerTransports', 'runRadioTransportRequests', 'runAllianceRadioIgnored',
+'nativeMissionAdvances', 'recoverableMissionSkips', 'patientAssistAttempts',
+'prisonerAssistAttempts', 'transportServiceAttempts', 'transportServiceCleared',
+'airfieldAliasRewrites', 'airfieldSupervisorAssistAttempts', 'rescueDogAssistAttempts',
+'massCasualtyThresholdAttempts', 'prisonerReleaseSuccessRehooks',
+'autoRecoverySkips', 'zeroSelectionRecoveries', 'postTransportRehooks',
+'nonMissionRedirectRecoveries', 'priorityRedirects',
+'queueFastReleases', 'postDispatchSoftRecoveries',
+'postDispatchHardRecoveries', 'postDispatchCircuitBreakers',
+'pipelinePreloadCreates', 'pipelinePreloadsReady',
+'pipelineVehicleLoadClicks', 'pipelinePromotions', 'pipelineReadyPromotions',
+'pipelineIsolationFailures', 'pipelinePromotionFallbacks',
+'pipelineV2DormantReady', 'pipelineV2DormantPromotionFailures',
+'pipelineDuplicateClicksSuppressed', 'pipelineHandoffRetentions',
+'activeControlDropoutRescues', 'activeControlSoftRecoveries',
+'activeControlDropoutCircuitBreakers',
+'promotionWorkStallRecoveries', 'pipelineOwnershipDemotions',
+'activeOwnershipBootstrapInstalls', 'activeOwnershipBootstrapFailures',
+'sleepGapRecoveries',
+'autoStateDropoutRecoveries', 'autoStateDropoutReloads',
+'autoStateActiveOnlyFailures', 'skippedMissionPrestartRedirects',
+'topSyntheticMissionRehooksBlocked', 'topPageResumes'
+]) {
+if (Number.isFinite(Number(payload[key]))) state[key] = Number(payload[key]);
+}
+if (Array.isArray(payload.missionSkipRecords)) state.missionSkipRecords = new Map(payload.missionSkipRecords);
+if (Array.isArray(payload.recentlyNativeAdvanced)) state.recentlyNativeAdvanced = new Map(payload.recentlyNativeAdvanced);
+if (Array.isArray(payload.transportServiceDeferredUntil)) state.transportServiceDeferredUntil = new Map(payload.transportServiceDeferredUntil);
+state.pipelineActiveOnly = payload.pipelineActiveOnly === true;
+state.pipelineActiveOnlyReason = normaliseText(payload.pipelineActiveOnlyReason || '');
+state.pipelineActiveOnlySince = Math.max(0, Number(payload.pipelineActiveOnlySince || 0));
+if (Array.isArray(payload.autoStateDropoutTimes)) {
+state.autoStateDropoutTimes = payload.autoStateDropoutTimes
+.map(value => Number(value))
+.filter(Number.isFinite)
+.slice(-AUTO_STATE_DROPOUT_CIRCUIT_BREAKER_COUNT);
+}
+if (Array.isArray(payload.activeControlDropoutTimes)) {
+state.activeControlDropoutTimes = payload.activeControlDropoutTimes
+.map(value => Number(value))
+.filter(Number.isFinite)
+.slice(-ACTIVE_CONTROL_DROPOUT_CIRCUIT_BREAKER_COUNT);
+}
+const arrays = [
+['missionSkipHistory', MISSION_SKIP_HISTORY_LIMIT],
+['patientAssistHistory', 40],
+['prisonerAssistHistory', 40],
+['transportServiceHistory', TRANSPORT_SERVICE_HISTORY_LIMIT],
+['airfieldAliasHistory', AIRFIELD_ALIAS_HISTORY_LIMIT],
+['airfieldSupervisorAssistHistory', VEHICLE_RULE_HISTORY_LIMIT],
+['rescueDogAssistHistory', RESCUE_DOG_ASSIST_HISTORY_LIMIT],
+['massCasualtyThresholdHistory', VEHICLE_RULE_HISTORY_LIMIT],
+['prisonerReleaseSuccessHistory', PRISONER_RELEASE_HISTORY_LIMIT],
+['zeroSelectionHistory', ZERO_SELECTION_HISTORY_LIMIT],
+['autoRecoveryHistory', AUTO_RECOVERY_HISTORY_LIMIT],
+['queueFastReleaseHistory', QUEUE_FAST_RELEASE_HISTORY_LIMIT],
+['postDispatchRecoveryHistory', POST_DISPATCH_RECOVERY_HISTORY_LIMIT],
+['nonMissionRedirectRecoveryHistory', NON_MISSION_REDIRECT_RECOVERY_HISTORY_LIMIT],
+['promotionRecoveryHistory', PROMOTION_RECOVERY_HISTORY_LIMIT],
+['autoStateDropoutHistory', AUTO_STATE_DROPOUT_HISTORY_LIMIT],
+['activeControlDropoutHistory', ACTIVE_CONTROL_DROPOUT_HISTORY_LIMIT],
+['activeOwnershipBootstrapHistory', OWNERSHIP_BOOTSTRAP_HISTORY_LIMIT],
+['sleepGapHistory', SLEEP_GAP_HISTORY_LIMIT],
+['pipelineHistory', PIPELINE_HISTORY_LIMIT],
+['missionTimingHistory', MISSION_TIMING_HISTORY_LIMIT],
+['statusHistory', STATUS_HISTORY_LIMIT],
+['ruleChangeHistory', RULE_CHANGE_HISTORY_LIMIT],
+['radioRequestHistory', RADIO_HISTORY_LIMIT],
+];
+for (const [key, limit] of arrays) {
+if (Array.isArray(payload[key])) state[key] = payload[key].slice(-limit);
+}
+return true;
+} catch {
+sessionSet(SESSION_CONTINUITY, '');
+return false;
+}
+}
+function normaliseText(value) {
+return String(value || '')
+.replace(/\s+/g, ' ')
+.trim();
+}
+function sameOriginUrl(value) {
+try {
+const url = new URL(value, location.href);
+return url.origin === location.origin ? url : null;
+} catch {
+return null;
+}
+}
+function missionIdFromUrl(value) {
+const url = sameOriginUrl(value);
+if (!url) return '';
+const match = url.pathname.match(/^\/missions\/(\d+)(?:\/|$)/i);
+return match ? match[1] : '';
+}
+function vehicleIdFromUrl(value) {
+const url = sameOriginUrl(value);
+if (!url) return '';
+const match = url.pathname.match(/^\/vehicles\/(\d+)(?:\/|$)/i);
+return match ? match[1] : '';
+}
+function isMissionUrl(value) {
+return Boolean(missionIdFromUrl(value));
+}
+function pathFromUrl(value) {
+try {
+const url = sameOriginUrl(value);
+return url ? `${url.pathname}${url.search || ''}` : '';
+} catch {
+return '';
+}
+}
+function resetRunStats() {
+state.runStartedAt = nowIso();
+state.runStoppedAt = '';
+state.runMissionIds = [];
+state.runWorkerLoads = 0;
+state.runNavigations = 0;
+state.runRetries = 0;
+state.runPatientTransports = 0;
+state.runPrisonerTransports = 0;
+state.runRadioTransportRequests = 0;
+state.allianceRadioIgnoredKeys = new Set();
+state.allianceRadioIgnoredHistory = [];
+state.runAllianceRadioIgnored = 0;
+state.prisonerAssistKey = '';
+state.prisonerAssistSince = 0;
+state.prisonerAssistLastClickKey = '';
+state.prisonerAssistLastClickAt = 0;
+state.prisonerAssistAttempts = 0;
+state.prisonerAssistHistory = [];
+state.patientAssistKey = '';
+state.patientAssistSince = 0;
+state.patientAssistLastClickKey = '';
+state.patientAssistLastClickAt = 0;
+state.patientAssistAttempts = 0;
+state.patientAssistHistory = [];
+state.transportServiceEligible = false;
+state.transportServiceActive = false;
+state.transportServiceKey = '';
+state.transportServiceVehicleId = '';
+state.transportServiceMissionId = '';
+state.transportServiceStartedAt = 0;
+state.transportServiceAttempts = 0;
+state.transportServiceCleared = 0;
+state.transportServiceHistory = [];
+state.transportServiceDeferredUntil = new Map();
+state.nativeMissionAdvances = 0;
+state.missionSkipRecords = new Map();
+state.missionSkipHistory = [];
+state.recoverableMissionSkips = 0;
+state.visualTopMission = null;
+state.airfieldAliasRewrites = 0;
+state.airfieldAliasHistory = [];
+state.airfieldObservedDocuments = new WeakSet();
+state.airfieldSupervisorAssistKey = '';
+state.airfieldSupervisorAssistSince = 0;
+state.airfieldSupervisorAssistAttempts = 0;
+state.airfieldSupervisorAssistHistory = [];
+state.rescueDogAssistKey = '';
+state.rescueDogAssistSince = 0;
+state.rescueDogAssistAttempts = 0;
+state.rescueDogAssistHistory = [];
+state.massCasualtyThresholdAttempts = 0;
+state.massCasualtyThresholdHistory = [];
+state.massCasualtyThresholdLastMissionId = '';
+state.massCasualtyThresholdLastAmbulanceCount = 0;
+state.prisonerReleaseSuccessKey = '';
+state.prisonerReleaseSuccessSince = 0;
+state.prisonerReleaseSuccessRehooks = 0;
+state.prisonerReleaseSuccessHistory = [];
+state.prisonerReleaseHandledKeys = new Set();
+state.transportAffinityCorrections = 0;
+state.transportAffinityHistory = [];
+state.topSyntheticMissionRehooksBlocked = 0;
+state.postTransportRehooks = 0;
+state.nonMissionRedirectRecoveries = 0;
+state.nonMissionRedirectRecoveryHistory = [];
+state.nonMissionRedirectRecoveryInFlight = false;
+state.runTransportEvents = [];
+state.activeTransportEvent = null;
+state.statusHistory = [];
+state.ruleChangeHistory = [];
+state.radioRequestHistory = [];
+state.radioTransportRequests = [];
+state.radioRequestKeys = new Set();
+state.radioRequestSince = 0;
+state.radioRequestWarned = false;
+state.priorityPendingKey = '';
+state.priorityPendingSince = 0;
+state.priorityRedirects = 0;
+state.lastPriorityRedirectAt = 0;
+state.lastMissionTransitionFromId = '';
+state.lastMissionTransitionToId = '';
+state.lastMissionTransitionAt = 0;
+state.queueFastReleaseCandidateMissionId = '';
+state.queueFastReleaseCandidateSince = 0;
+state.queueFastReleases = 0;
+state.queueFastReleaseHistory = [];
+state.postDispatchWatchdog = null;
+state.postDispatchSoftRecoveries = 0;
+state.postDispatchHardRecoveries = 0;
+state.postDispatchCircuitBreakers = 0;
+state.postDispatchRecoveryHistory = [];
+state.pipelineSlots = [];
+state.pipelineLastSyncAt = 0;
+state.pipelinePreloadCreates = 0;
+state.pipelinePreloadsReady = 0;
+state.pipelineVehicleLoadClicks = 0;
+state.pipelinePromotions = 0;
+state.pipelineReadyPromotions = 0;
+state.pipelineIsolationFailures = 0;
+state.pipelinePromotionFallbacks = 0;
+state.pipelineV2DormantReady = 0;
+state.pipelineV2DormantPromotionFailures = 0;
+state.pipelineDuplicateClicksSuppressed = 0;
+state.pipelineHandoffRetentions = 0;
+state.promotionWorkStallRecoveries = 0;
+state.promotionRecoveryHistory = [];
+state.promotionRecoveryPendingMissionId = '';
+state.activeBootstrapRescues = 0;
+state.activeControlMissingSince = 0;
+state.activeControlDropoutRescues = 0;
+state.activeControlSoftRecoveries = 0;
+state.activeControlDropoutCircuitBreakers = 0;
+state.activeControlDropoutTimes = [];
+state.activeControlDropoutHistory = [];
+state.pipelineActiveOnly = false;
+state.pipelineActiveOnlyReason = '';
+state.pipelineActiveOnlySince = 0;
+state.pipelineOwnershipDemotions = 0;
+state.activeOwnershipBootstrapInstalls = 0;
+state.activeOwnershipBootstrapFailures = 0;
+state.activeOwnershipBootstrapHistory = [];
+state.lastWatchHeartbeatAt = 0;
+state.wakeRecoveryActive = false;
+state.sleepGapRecoveries = 0;
+state.sleepGapHistory = [];
+state.autoStateDropoutRecoveries = 0;
+state.autoStateDropoutReloads = 0;
+state.autoStateDropoutHistory = [];
+state.autoStateDropoutTimes = [];
+state.autoStateRecoveryDocumentSerial = 0;
+state.autoStateRecoveryAttempts = 0;
+state.autoStateActiveOnlyFailures = 0;
+state.skippedMissionPrestartRedirects = 0;
+state.pipelineHistory = [];
+state.redirectFromMissionId = '';
+state.redirectTargetMissionId = '';
+state.recentlyNativeAdvanced = new Map();
+state.topMission = null;
+state.currentMissionName = '';
+state.missionNames = new Map();
+state.topMissionStableKey = '';
+state.topMissionStableSince = 0;
+state.missionRowSignatures = new Map();
+state.lastStatusText = '';
+state.lastStatusChangedAt = 0;
+state.autoStartIssued = false;
+state.workerDocument = null;
+state.workerDocumentSerial = 0;
+state.autoStartDocumentSerial = 0;
+state.autoRunningConfirmedDocumentSerial = 0;
+state.autoRunningConfirmedAt = 0;
+state.autoStartAttemptAt = 0;
+state.autoStartAttempts = 0;
+state.promotedDocumentSerial = 0;
+state.promotedWorkStartedAt = 0;
+state.promotedWorkEvidenceAt = 0;
+state.promotedWorkEvidenceText = '';
+state.autoStoppedSince = 0;
+state.autoStopWarned = false;
+state.autoRecoveryCandidateKey = '';
+state.autoRecoveryCandidateSince = 0;
+state.autoRecoveryCandidateMissionId = '';
+state.autoRecoveryCandidateReason = '';
+state.autoRecoveryCandidateCategory = '';
+state.autoRecoveryCandidateEvidence = '';
+state.autoRecoveryCountdownSecond = -1;
+state.autoRecoverySkips = 0;
+state.autoRecoveryHistory = [];
+state.zeroSelectionRecoveries = 0;
+state.zeroSelectionHistory = [];
+state.topPageResumes = 0;
+state.resumedFromTopNavigation = false;
+state.missionTimingHistory = [];
+state.activeMissionTiming = null;
+state.lastWorkerSnapshot = null;
+}
+function markRunStopped() {
+if (state.runStartedAt && !state.runStoppedAt) state.runStoppedAt = nowIso();
+}
+function cleanMissionCaption(value) {
+return normaliseText(value).replace(/[\s,]+$/g, '').trim();
+}
+function cacheMissionName(missionId, caption) {
+const id = String(missionId || '');
+const name = cleanMissionCaption(caption);
+if (id && name) state.missionNames.set(id, name);
+return name;
+}
+function missionNameForId(missionId, doc = null) {
+const id = String(missionId || '');
+if (!id) return '';
+const cached = cleanMissionCaption(state.missionNames.get(id) || '');
+if (cached) return cached;
+let mapName = '';
+try {
+const entry = document.querySelector(`#mission_${CSS.escape(id)}[mission_id="${CSS.escape(id)}"], [mission_id="${CSS.escape(id)}"]`);
+const sortable = parseSortableData(entry);
+mapName = cleanMissionCaption(sortable?.caption || '');
+if (!mapName) {
+const caption = entry?.querySelector?.(`#mission_caption_${CSS.escape(id)}, [id^="mission_caption_"]`);
+const raw = caption?.childNodes?.length ? caption.childNodes[0]?.textContent : caption?.textContent;
+mapName = cleanMissionCaption(raw || '');
+}
+} catch {}
+if (mapName) return cacheMissionName(id, mapName);
+if (doc) {
+const workerName = cleanMissionCaption(
+doc.querySelector?.('#mission_general_info')?.getAttribute?.('data-mission-title') ||
+doc.querySelector?.('#missionH1')?.textContent ||
+''
+);
+if (workerName) return cacheMissionName(id, workerName);
+}
+return '';
+}
+function missionDisplay(missionId, missionName, prefix = 'M') {
+const id = String(missionId || '');
+const name = cleanMissionCaption(missionName || missionNameForId(id));
+if (name && id) return `${name} [${prefix}${id}]`;
+if (id) return `${prefix}${id}`;
+return '-';
+}
+function updateCurrentMissionName(doc = null) {
+const name = missionNameForId(state.currentMissionId, doc);
+if (name) state.currentMissionName = name;
+return state.currentMissionName;
+}
+function recordMissionVisit(href, reason = 'observed') {
+const missionId = missionIdFromUrl(href);
+if (!missionId) return;
+if (!state.runMissionIds.includes(missionId)) state.runMissionIds.push(missionId);
+if (state.runMissionIds.length > 80) state.runMissionIds.splice(0, state.runMissionIds.length - 80);
+state.currentMissionId = missionId;
+state.currentMissionUrl = href;
+updateCurrentMissionName(getWorkerDocument());
+render();
+}
+function finaliseActiveMissionTiming(reason = 'mission-transition', endedAtMs = Date.now()) {
+const record = state.activeMissionTiming;
+if (!record) return;
+if (!record.endedAt) {
+record.endedAt = new Date(endedAtMs).toISOString();
+record.endReason = reason;
+record.totalMs = Math.max(0, endedAtMs - record.loadedAtMs);
+const milestoneElapsed = {};
+for (const [key, value] of Object.entries(record.milestones || {})) {
+if (value?.atMs) milestoneElapsed[key] = Math.max(0, value.atMs - record.loadedAtMs);
+}
+record.milestoneElapsedMs = milestoneElapsed;
+if (record.milestones?.vehiclePageLoadStart?.atMs && record.milestones?.vehiclePageLoadEnd?.atMs) {
+record.vehiclePageLoadMs = Math.max(
+0,
+record.milestones.vehiclePageLoadEnd.atMs - record.milestones.vehiclePageLoadStart.atMs
+);
+}
+if (record.milestones?.dispatchNext?.atMs) {
+record.dispatchToEndMs = Math.max(0, endedAtMs - record.milestones.dispatchNext.atMs);
+}
+state.missionTimingHistory.push(record);
+if (state.missionTimingHistory.length > MISSION_TIMING_HISTORY_LIMIT) {
+state.missionTimingHistory.splice(0, state.missionTimingHistory.length - MISSION_TIMING_HISTORY_LIMIT);
+}
+}
+state.activeMissionTiming = null;
+}
+function startMissionTiming(missionId, missionName = '', source = 'worker-load') {
+const id = String(missionId || '');
+if (!id) return;
+if (state.activeMissionTiming?.missionId === id) return;
+if (state.activeMissionTiming) finaliseActiveMissionTiming('next-mission-loaded');
+const now = Date.now();
+state.activeMissionTiming = {
+missionId: id,
+missionName: cleanMissionCaption(missionName) || missionNameForId(id),
+source,
+loadedAt: new Date(now).toISOString(),
+loadedAtMs: now,
+milestones: {},
+};
+}
+function noteMissionTimingStatus(value, source = 'worker') {
+const text = normaliseText(value);
+if (!text || !state.currentMissionId) return;
+if (!state.activeMissionTiming || state.activeMissionTiming.missionId !== state.currentMissionId) {
+startMissionTiming(state.currentMissionId, state.currentMissionName, 'status-observed');
+}
+const record = state.activeMissionTiming;
+if (!record) return;
+const now = Date.now();
+const add = (key) => {
+if (!record.milestones[key]) {
+record.milestones[key] = { at: new Date(now).toISOString(), atMs: now, source, text: text.slice(0, 280) };
+}
+};
+if (/waiting for mission update data before unit finder/i.test(text)) add('waitingMissionUpdate');
+if (/vehicle display limited\.\s*loading additional vehicle page/i.test(text)) add('vehiclePageLoadStart');
+if (/all additional vehicle pages loaded and stable/i.test(text)) add('vehiclePageLoadEnd');
+if (/units ready for dispatch/i.test(text)) add('unitsReady');
+if (/dispatch\s*&\s*next clicked/i.test(text)) {
+const firstDispatchNext = !record.milestones.dispatchNext;
+add('dispatchNext');
+if (firstDispatchNext) armPostDispatchWatchdog(record, source, text, now);
+}
+if (/queue restart is opening the next mission/i.test(text)) add('queueRestart');
+if (/selected 0 vehicles\.\s*waiting for the vehicle list and retrying once/i.test(text)) add('zeroSelectionRetry');
+if (/selected 0 vehicles after a full-list retry/i.test(text)) add('zeroSelectionStop');
+}
+function armPostDispatchWatchdog(record, source = 'worker', statusText = '', startedAt = Date.now()) {
+const missionId = String(record?.missionId || state.currentMissionId || '');
+if (!missionId || !state.wanted || state.stopping) return false;
+if (state.postDispatchWatchdog?.missionId === missionId) return false;
+state.postDispatchWatchdog = {
+missionId,
+missionName: cleanMissionCaption(record?.missionName || state.currentMissionName || missionNameForId(missionId)),
+documentSerial: state.workerDocumentSerial,
+startedAt,
+pausedAt: 0,
+pausedMs: 0,
+pauseReason: '',
+softRecovered: false,
+hardRecoveryIssued: false,
+source,
+statusText: normaliseText(statusText).slice(0, 280),
+};
+if (record?.milestones && !record.milestones.postDispatchWatchdogArmed) {
+record.milestones.postDispatchWatchdogArmed = {
+at: new Date(startedAt).toISOString(),
+atMs: startedAt,
+source: 'v3-post-dispatch-watchdog',
+text: 'Transport-aware post-dispatch watchdog armed',
+};
+}
+log('Armed the transport-aware post-dispatch watchdog.', {
+missionId,
+missionName: state.postDispatchWatchdog.missionName,
+softAfterMs: POST_DISPATCH_SOFT_RECOVERY_MS,
+hardAfterMs: POST_DISPATCH_HARD_RECOVERY_MS,
+});
+return true;
+}
+function clearPostDispatchWatchdog(reason = '') {
+const watchdog = state.postDispatchWatchdog;
+if (!watchdog) return false;
+state.postDispatchWatchdog = null;
+if (
+reason &&
+state.activeMissionTiming?.missionId === watchdog.missionId &&
+!state.activeMissionTiming.milestones?.postDispatchWatchdogCleared
+) {
+state.activeMissionTiming.milestones.postDispatchWatchdogCleared = {
+at: nowIso(),
+atMs: Date.now(),
+source: 'v3-post-dispatch-watchdog',
+text: normaliseText(reason),
+};
+}
+return true;
+}
+function postDispatchPauseReason(href, context = {}) {
+if (state.transportServiceActive) return 'balanced-personal-transport-service';
+if (context?.kind) return `${String(context.kind).toLowerCase()}-transport-context`;
+if (state.transportKind) return `${String(state.transportKind).toLowerCase()}-transport-state`;
+if (vehicleIdFromUrl(href)) return 'vehicle-transport-page';
+return '';
+}
+function postDispatchEffectiveElapsed(watchdog, now = Date.now()) {
+if (!watchdog) return 0;
+const activePauseMs = watchdog.pausedAt ? Math.max(0, now - watchdog.pausedAt) : 0;
+return Math.max(0, now - watchdog.startedAt - watchdog.pausedMs - activePauseMs);
+}
+function recordPostDispatchRecovery(level, watchdog, data = {}) {
+const event = {
+at: nowIso(),
+atMs: Date.now(),
+level,
+missionId: String(watchdog?.missionId || state.currentMissionId || ''),
+missionName: cleanMissionCaption(watchdog?.missionName || state.currentMissionName || missionNameForId(watchdog?.missionId)),
+documentSerial: Number(watchdog?.documentSerial || state.workerDocumentSerial || 0),
+effectiveElapsedMs: postDispatchEffectiveElapsed(watchdog),
+pausedMs: Number(watchdog?.pausedMs || 0),
+...data,
+};
+state.postDispatchRecoveryHistory.push(event);
+if (state.postDispatchRecoveryHistory.length > POST_DISPATCH_RECOVERY_HISTORY_LIMIT) {
+state.postDispatchRecoveryHistory.splice(
+0,
+state.postDispatchRecoveryHistory.length - POST_DISPATCH_RECOVERY_HISTORY_LIMIT
+);
+}
+return event;
+}
+function choosePostDispatchRecoveryTarget(currentMissionId) {
+const currentId = String(currentMissionId || '');
+const candidates = pipelineActionableCandidates().filter(candidate =>
+candidate?.missionId && candidate.missionId !== currentId
+);
+if (!candidates.length) return null;
+const readyMissionIds = new Set(
+state.pipelineSlots
+.filter(slot => slot?.ready && slot.frame?.isConnected)
+.sort((a, b) => a.index - b.index)
+.map(slot => String(slot.missionId || ''))
+);
+const mission = candidates.find(candidate => readyMissionIds.has(candidate.missionId)) || candidates[0];
+return {
+source: readyMissionIds.has(mission.missionId)
+? 'POST_DISPATCH_READY_PRELOAD'
+: 'POST_DISPATCH_NEXT_MISSION',
+missionId: mission.missionId,
+url: mission.url,
+mission,
+};
+}
+function maybeRunPostDispatchWatchdog(doc, href, context = {}) {
+const watchdog = state.postDispatchWatchdog;
+if (!watchdog || !state.wanted || state.stopping || watchdog.hardRecoveryIssued) return false;
+const routedMissionId = missionIdFromUrl(href);
+if (routedMissionId && routedMissionId !== watchdog.missionId) {
+clearPostDispatchWatchdog('mission-transition-confirmed');
+return false;
+}
+const now = Date.now();
+const pauseReason = postDispatchPauseReason(href, context);
+if (pauseReason) {
+if (!watchdog.pausedAt) watchdog.pausedAt = now;
+watchdog.pauseReason = pauseReason;
+return false;
+}
+if (watchdog.pausedAt) {
+watchdog.pausedMs += Math.max(0, now - watchdog.pausedAt);
+watchdog.pausedAt = 0;
+watchdog.pauseReason = '';
+}
+const elapsedMs = postDispatchEffectiveElapsed(watchdog, now);
+if (!watchdog.softRecovered && elapsedMs >= POST_DISPATCH_SOFT_RECOVERY_MS) {
+watchdog.softRecovered = true;
+state.postDispatchSoftRecoveries += 1;
+const guardReleased = clearSharedV2QueueGuard(
+'post-dispatch-watchdog-soft-release',
+watchdog.missionId,
+{ preserveFinalDispatch: true }
+);
+requestV2FrameRuntimeReconcile(
+state.worker,
+state.workerGeneration,
+'post-dispatch-watchdog-soft-recovery'
+);
+const event = recordPostDispatchRecovery('soft', watchdog, {
+guardReleased,
+preservedFinalDispatch: true,
+action: 'release-opening-locks-and-request-runtime-reconcile',
+});
+if (state.activeMissionTiming?.missionId === watchdog.missionId) {
+state.activeMissionTiming.milestones.postDispatchSoftRecovery = {
+at: event.at,
+atMs: event.atMs,
+source: 'v3-post-dispatch-watchdog',
+text: event.action,
+};
+}
+setPhase(
+'POST_DISPATCH_RECOVERY',
+'Recovering stalled mission advance',
+`${missionDisplay(watchdog.missionId, watchdog.missionName)} did not advance after Dispatch & Next. V3 released only stale opening locks and asked the embedded Mission Finder to reconcile; Dispatch was not clicked again.`
+);
+log('Post-dispatch watchdog issued a soft queue recovery.', event);
+return true;
+}
+if (elapsedMs < POST_DISPATCH_HARD_RECOVERY_MS) return false;
+watchdog.hardRecoveryIssued = true;
+const recentHardRecoveries = state.postDispatchRecoveryHistory.filter(event =>
+event?.level === 'hard' &&
+String(event.missionId || '') === watchdog.missionId &&
+now - Number(event.atMs || Date.parse(event.at || '') || 0) <= POST_DISPATCH_RECOVERY_WINDOW_MS
+);
+if (recentHardRecoveries.length) {
+state.postDispatchCircuitBreakers += 1;
+const event = recordPostDispatchRecovery('circuit-breaker', watchdog, {
+previousHardRecoveries: recentHardRecoveries.length,
+windowMs: POST_DISPATCH_RECOVERY_WINDOW_MS,
+action: 'fail-closed-leave-worker-for-diagnostics',
+});
+clearPostDispatchWatchdog('repeated-hard-recovery-circuit-breaker');
+state.wanted = false;
+state.running = false;
+setPersistedBackgroundWanted(false);
+clearTimer('watcherTimer', window.clearInterval);
+clearTimer('missionRescanTimer', window.clearInterval);
+markRunStopped();
+setError(
+'Repeated post-dispatch stall stopped V3 safely',
+`${missionDisplay(event.missionId, event.missionName)} reached the hard recovery twice inside two minutes. The worker was left in place for diagnostics; V3 did not click Dispatch or guess a transport decision.`
+);
+return true;
+}
+state.postDispatchHardRecoveries += 1;
+const target = choosePostDispatchRecoveryTarget(watchdog.missionId);
+const currentStillActionable = pipelineActionableCandidates().some(candidate =>
+candidate?.missionId === watchdog.missionId
+);
+const event = recordPostDispatchRecovery('hard', watchdog, {
+nextMissionId: target?.missionId || '',
+nextMissionName: cleanMissionCaption(target?.mission?.caption || ''),
+readyPreload: target?.source === 'POST_DISPATCH_READY_PRELOAD',
+currentStillActionable,
+action: target
+? 'handoff-or-reload-exact-next-mission'
+: (currentStillActionable ? 'reload-current-mission' : 'wait-for-next-mission'),
+});
+clearSharedV2QueueGuard('post-dispatch-watchdog-hard-recovery', watchdog.missionId);
+clearPostDispatchWatchdog('hard-recovery-issued');
+log('Post-dispatch watchdog reached bounded hard recovery.', event);
+if (target && redirectWorkerToPriority(target, watchdog.missionId)) return true;
+pausePipelineController('post-dispatch-hard-recovery', true);
+resetAutoStartTracking();
+clearPromotedWorkTracking();
+clearSharedV2AutoRunning('post-dispatch-hard-recovery');
+state.running = false;
+if (!target && !currentStillActionable) {
+removeWorker(false);
+setPhase(
+'WAITING_MISSION',
+'Dispatch completed; waiting for another mission',
+`${missionDisplay(watchdog.missionId, watchdog.missionName)} left the actionable queue without opening a next mission. V3 will resume automatically when one appears.`
+);
+beginMissionRescan();
+return true;
+}
+const recoveryUrl = sameOriginUrl(
+target?.url ||
+state.currentMissionUrl ||
+new URL(`/missions/${watchdog.missionId}`, location.origin).href
+);
+if (!recoveryUrl || !isMissionUrl(recoveryUrl.href)) {
+setError(
+'Post-dispatch recovery could not resolve an exact mission',
+'The watchdog found no verified same-origin mission URL. The worker was left fail-closed and Dispatch was not clicked.'
+);
+return true;
+}
+setPhase(
+'POST_DISPATCH_RECOVERY',
+target ? 'Reloading the next mission safely' : 'Reloading the stalled mission safely',
+`${missionDisplay(missionIdFromUrl(recoveryUrl.href), target?.mission?.caption || watchdog.missionName)} will restart in Worker A; B/C will rebuild after A is healthy.`
+);
+window.setTimeout(() => {
+if (!state.wanted || state.stopping) return;
+createWorker(recoveryUrl.href);
+}, 120);
+return true;
+}
+function recordStatusSnapshot(text, source = 'worker') {
+const value = normaliseText(text);
+if (!value || value === state.lastStatusText) return;
+state.lastStatusText = value;
+state.lastStatusChangedAt = Date.now();
+noteMissionTimingStatus(value, source);
+state.statusHistory.push({
+at: nowIso(),
+missionId: state.currentMissionId || '',
+missionName: state.currentMissionName || missionNameForId(state.currentMissionId),
+source,
+text: value,
+});
+if (state.statusHistory.length > STATUS_HISTORY_LIMIT) {
+state.statusHistory.splice(0, state.statusHistory.length - STATUS_HISTORY_LIMIT);
+}
+}
+function getAccessibleTransportDocuments(rootDoc) {
+if (!rootDoc) return [];
+const documents = [];
+const queue = [rootDoc];
+const seen = new Set();
+while (queue.length && documents.length < 20) {
+const doc = queue.shift();
+if (!doc || seen.has(doc)) continue;
+seen.add(doc);
+documents.push(doc);
+let frames = [];
+try { frames = Array.from(doc.querySelectorAll('iframe')); } catch {}
+for (const frame of frames) {
+try {
+const child = frame.contentDocument || frame.contentWindow?.document || null;
+if (!child) continue;
+const childOrigin = frame.contentWindow?.location?.origin || '';
+if (childOrigin && childOrigin !== location.origin) continue;
+queue.push(child);
+} catch {}
+}
+}
+return documents;
+}
+function exactPatientPath(value) {
+const path = pathFromUrl(value);
+return /^\/vehicles\/\d+\/patient\/\d+\/?(?:[?#].*)?$/i.test(path) ? path : '';
+}
+function exactPrisonerPath(value) {
+const path = pathFromUrl(value);
+return /^\/vehicles\/\d+\/gefangener\/\d+\/?(?:[?#].*)?$/i.test(path) ? path : '';
+}
+function transportContextDetails(doc, href) {
+const documents = getAccessibleTransportDocuments(doc);
+const evidence = [];
+let patientPath = exactPatientPath(href);
+let prisonerPath = exactPrisonerPath(href);
+let patientAnchorCount = 0;
+let structuredPrisonerRequests = 0;
+let greenPrisonDestinations = 0;
+let releaseLinks = 0;
+let releaseSuccessAlerts = 0;
+let cellSelectionAlerts = 0;
+for (const scope of documents) {
+let links = [];
+try { links = Array.from(scope.querySelectorAll('a[href]')); } catch {}
+for (const link of links) {
+const rawHref = link.getAttribute('href') || link.href || '';
+const patient = exactPatientPath(rawHref);
+if (patient) {
+const looksExactV2Anchor = link.matches?.('a.btn-success[href*="/patient/"]') || link.classList?.contains('btn-success');
+if (looksExactV2Anchor) patientAnchorCount += 1;
+patientPath = patientPath || patient;
+}
+const prisoner = exactPrisonerPath(rawHref);
+if (prisoner) prisonerPath = prisonerPath || prisoner;
+}
+try {
+structuredPrisonerRequests += scope.querySelectorAll('[data-transport-request="true"][data-transport-request-type="prisoner"]').length;
+greenPrisonDestinations += scope.querySelectorAll('a.btn.btn-success[data-prison-id][href*="/gefangener/"]').length;
+releaseLinks += scope.querySelectorAll('a.btn.btn-danger[data-method="post"][href*="/gefangene/entlassen"]').length;
+} catch {}
+let infoAlerts = [];
+let successAlerts = [];
+try { infoAlerts = Array.from(scope.querySelectorAll('.alert.alert-info')); } catch {}
+try { successAlerts = Array.from(scope.querySelectorAll('.alert.alert-success')); } catch {}
+for (const alert of infoAlerts) {
+const text = normaliseText(alert.textContent || alert.innerText).toLowerCase();
+if (text.includes('cell selection') || text.includes('the prisoners should be placed in a cell')) cellSelectionAlerts += 1;
+}
+for (const alert of successAlerts) {
+const text = normaliseText(alert.textContent || alert.innerText).toLowerCase();
+if (text.includes('the prisoners were released')) releaseSuccessAlerts += 1;
+}
+}
+if (patientPath) evidence.push(`patient-route:${patientPath}`);
+if (patientAnchorCount) evidence.push(`exact-patient-anchors:${patientAnchorCount}`);
+if (structuredPrisonerRequests) evidence.push(`structured-prisoner-requests:${structuredPrisonerRequests}`);
+if (cellSelectionAlerts) evidence.push(`cell-selection-alerts:${cellSelectionAlerts}`);
+if (greenPrisonDestinations) evidence.push(`green-cell-destinations:${greenPrisonDestinations}`);
+if (prisonerPath) evidence.push(`prisoner-route:${prisonerPath}`);
+if (releaseLinks) evidence.push(`release-links:${releaseLinks}`);
+if (releaseSuccessAlerts) evidence.push(`release-success-alerts:${releaseSuccessAlerts}`);
+let kind = '';
+if (patientPath || patientAnchorCount) kind = 'PATIENT';
+if (structuredPrisonerRequests || cellSelectionAlerts || greenPrisonDestinations || prisonerPath || releaseLinks || releaseSuccessAlerts) {
+kind = 'PRISONER';
+}
+return {
+kind,
+evidence,
+documentsScanned: documents.length,
+patientPath,
+patientAnchorCount,
+structuredPrisonerRequests,
+greenPrisonDestinations,
+prisonerPath,
+releaseLinks,
+releaseSuccessAlerts,
+cellSelectionAlerts,
+};
+}
+function beginTransportEvent(context, href) {
+if (!context?.kind) return;
+if (state.activeTransportEvent?.kind === context.kind) return;
+if (state.activeTransportEvent) endTransportEvent('context-switched');
+const event = {
+kind: context.kind,
+startedAt: nowIso(),
+endedAt: '',
+durationMs: 0,
+missionId: state.currentMissionId || missionIdFromUrl(href),
+startPath: pathFromUrl(href),
+endPath: '',
+outcome: 'active',
+evidenceAtStart: context.evidence.slice(0, 12),
+documentsScannedAtStart: context.documentsScanned,
+evidenceAtEnd: [],
+};
+state.activeTransportEvent = event;
+state.runTransportEvents.push(event);
+if (state.runTransportEvents.length > TRANSPORT_EVENT_LIMIT) {
+state.runTransportEvents.splice(0, state.runTransportEvents.length - TRANSPORT_EVENT_LIMIT);
+}
+if (context.kind === 'PATIENT') state.runPatientTransports += 1;
+if (context.kind === 'PRISONER') state.runPrisonerTransports += 1;
+log(`${context.kind === 'PATIENT' ? 'Patient' : 'Prisoner'} transport observation started.`, {
+missionId: event.missionId,
+evidence: event.evidenceAtStart,
+});
+render();
+}
+function endTransportEvent(outcome = 'context-ended', context = null, href = '') {
+const event = state.activeTransportEvent;
+if (!event) return;
+event.endedAt = nowIso();
+event.durationMs = Math.max(0, Date.now() - Date.parse(event.startedAt));
+event.endPath = pathFromUrl(href || getWorkerHref());
+event.outcome = outcome;
+if (context?.evidence) event.evidenceAtEnd = context.evidence.slice(0, 12);
+log(`${event.kind === 'PATIENT' ? 'Patient' : 'Prisoner'} transport observation ended.`, {
+missionId: event.missionId,
+durationMs: event.durationMs,
+outcome,
+evidenceAtEnd: event.evidenceAtEnd,
+});
+state.activeTransportEvent = null;
+render();
+}
+function captureWorkerSnapshot() {
+const href = getWorkerHref();
+const doc = getWorkerDocument();
+if (!href && !doc) return state.lastWorkerSnapshot;
+const context = transportContextDetails(doc, href);
+const control = findAutoModeControl(doc);
+const snapshot = {
+capturedAt: nowIso(),
+href: href || '',
+path: pathFromUrl(href),
+missionId: missionIdFromUrl(href) || state.currentMissionId || '',
+missionName: state.currentMissionName || missionNameForId(state.currentMissionId, doc),
+sameOriginReadable: Boolean(doc),
+readyState: doc?.readyState || '',
+title: normaliseText(doc?.title || ''),
+nexusWrapperPresent: Boolean(doc?.querySelector?.('#mission-finder-wrapper')),
+controlPanelPresent: Boolean(doc?.querySelector?.('#control-panel')),
+autoControlFound: Boolean(control),
+autoControlText: control ? elementLabel(control) : state.autoControlText,
+autoLooksRunning: Boolean(control && autoControlLooksRunning(control)),
+workerDocumentSerial: state.workerDocumentSerial,
+autoStartDocumentSerial: state.autoStartDocumentSerial,
+autoRunningConfirmedDocumentSerial: state.autoRunningConfirmedDocumentSerial,
+v2AutoStopRecord: readV2AutoStopRecord(),
+usefulStatus: findUsefulNexusStatus(doc),
+transport: context,
+visibleMissionFrameOutsideWorker: Boolean(findVisibleForeignMissionFrame()),
+};
+state.lastWorkerSnapshot = snapshot;
+return snapshot;
+}
+function log(message, data) {
+const entry = {
+at: nowIso(),
+phase: state.phase,
+message: normaliseText(message),
+};
+if (data !== undefined) {
+try {
+entry.data = JSON.parse(JSON.stringify(data));
+} catch {
+entry.data = String(data);
+}
+}
+state.log.push(entry);
+if (state.log.length > LOG_LIMIT) state.log.splice(0, state.log.length - LOG_LIMIT);
+render();
+}
+function setPhase(phase, status, detail = '') {
+state.phase = phase;
+state.status = status;
+state.detail = detail;
+render();
+}
+function setError(message, detail = '') {
+state.lastError = normaliseText(message);
+state.running = false;
+pausePipelineController('controller-error', true);
+setPhase('ERROR', state.lastError || 'Background Auto Mode error', detail);
+log(state.lastError || 'Unknown error', detail ? { detail } : undefined);
+}
+function clearTimer(name, clearFn = window.clearTimeout) {
+if (state[name] != null) {
+clearFn(state[name]);
+state[name] = null;
+}
+}
+function clearAllControllerTimers() {
+clearTimer('workerLoadTimer');
+clearTimer('nexusDiscoveryTimer');
+clearTimer('watcherTimer', window.clearInterval);
+clearTimer('missionRescanTimer', window.clearInterval);
+clearTimer('pipelineSyncTimer', window.clearInterval);
+clearTimer('pipelinePumpTimer', window.clearInterval);
+}
+function findMissionListRoot() {
+return document.querySelector('#mission_list') ||
+document.querySelector('[id*="mission_list"]') ||
+null;
+}
+function numberOr(value, fallback = 0) {
+const number = Number.parseFloat(String(value ?? '').trim());
+return Number.isFinite(number) ? number : fallback;
+}
+function isRenderedMissionEntry(entry) {
+if (!entry || !entry.isConnected || entry.hidden) return false;
+const style = getComputedStyle(entry);
+if (style.display === 'none' || style.visibility === 'hidden') return false;
+return true;
+}
+function missionEntryFromAnchor(anchor) {
+return anchor?.closest?.(
+'.missionSideBarEntry[mission_id], [mission_id].mission_visibility, [mission_id][id^="mission_"]'
+) || null;
+}
+function missionCandidateScore(anchor) {
+let score = 0;
+if (anchor.closest('#mission_list')) score += 50;
+if (missionEntryFromAnchor(anchor)) score += 30;
+if (anchor.classList.contains('mission-alarm-button')) score += 20;
+if (anchor.matches('[mission_id], [data-mission-id]')) score += 5;
+const row = missionEntryFromAnchor(anchor) ||
+anchor.closest('[mission_id], [data-mission-id], .missionSideBarEntry, li, .panel, .mission');
+const rowText = normaliseText(row?.textContent || anchor.textContent);
+if (/alliance|shared/i.test(rowText)) score -= 30;
+return score;
+}
+function isProbablyAllianceMission(anchor) {
+if (!anchor) return true;
+if (anchor.closest(
+'#mission_list_alliance, #mission_list_alliance_event, #mission_list_alliance_event_missions, ' +
+'.mission-alliance, .alliance-mission, [data-alliance-mission="true"], [data-shared-mission="true"]'
+)) return true;
+const row = missionEntryFromAnchor(anchor) ||
+anchor.closest('[mission_id], [data-mission-id], .missionSideBarEntry, li, .panel, .mission');
+const classes = `${row?.className || ''} ${anchor.className || ''}`;
+const text = normaliseText(`${row?.textContent || ''} ${anchor.textContent || ''}`);
+return /alliance|shared/i.test(classes) || /\[alliance\]|\bview mission\s+alliance\b/i.test(text);
+}
+function readMissionEntry(entry, domIndex = 0) {
+if (!entry) return null;
+const missionId = normaliseText(entry.getAttribute('mission_id') || entry.dataset?.missionId || '');
+if (!missionId) return null;
+const anchor =
+entry.querySelector(`a#alarm_button_${CSS.escape(missionId)}[href*="/missions/"]`) ||
+entry.querySelector('a.mission-alarm-button[href*="/missions/"]') ||
+entry.querySelector('a[href*="/missions/"]');
+const url = sameOriginUrl(anchor?.getAttribute('href') || anchor?.href || `/missions/${missionId}`);
+if (!url || !isMissionUrl(url.href)) return null;
+const inlineOrder = numberOr(entry.style?.order, Number.NaN);
+const computedOrder = numberOr(getComputedStyle(entry).order, 0);
+const visualOrder = Number.isFinite(inlineOrder) ? inlineOrder : computedOrder;
+const stateFilter = normaliseText(entry.getAttribute('data-mission-state-filter')).toLowerCase();
+const participation = normaliseText(entry.getAttribute('data-mission-participation-filter')).toLowerCase();
+const missionTypeId = normaliseText(entry.getAttribute('mission_type_id'));
+const caption = normaliseText(
+entry.querySelector(`#mission_caption_${CSS.escape(missionId)}`)?.childNodes?.[0]?.textContent ||
+entry.querySelector(`#mission_caption_${CSS.escape(missionId)}`)?.textContent ||
+''
+);
+const missingText = normaliseText([
+entry.querySelector(`#mission_missing_${CSS.escape(missionId)}`)?.textContent,
+entry.querySelector(`#mission_missing_short_${CSS.escape(missionId)}`)?.textContent,
+].filter(Boolean).join(' '));
+let sortable = {};
+try {
+const raw = entry.getAttribute('data-sortable-by');
+if (raw) sortable = JSON.parse(raw);
+} catch {}
+const panel = entry.querySelector(`#mission_panel_${CSS.escape(missionId)}, .panel`);
+const looksNew =
+stateFilter === 'unattended' ||
+participation === 'new' ||
+panel?.classList?.contains('mission_panel_red');
+const looksUpgrade = Boolean(missingText);
+const actionKind = looksUpgrade ? 'UPGRADE' : (looksNew ? 'NEW' : 'OTHER');
+const ruleSignature = JSON.stringify({
+missionTypeId,
+stateFilter,
+participation,
+missingText,
+patients: sortable?.patients_count || null,
+prisoners: sortable?.prisoners_count || null,
+caption,
+});
+return {
+anchor,
+entry,
+url: url.href,
+missionId,
+score: missionCandidateScore(anchor),
+allianceLike: isProbablyAllianceMission(anchor),
+rendered: isRenderedMissionEntry(entry),
+visualOrder,
+domIndex,
+stateFilter,
+participation,
+missionTypeId,
+caption,
+missingText,
+actionKind,
+ruleSignature,
+patients: sortable?.patients_count || null,
+prisoners: sortable?.prisoners_count || null,
+};
+}
+function pruneRecentlyNativeAdvanced() {
+const now = Date.now();
+for (const [missionId, at] of state.recentlyNativeAdvanced.entries()) {
+if (now - at > RECENT_NATIVE_ADVANCE_TTL_MS) state.recentlyNativeAdvanced.delete(missionId);
+}
+}
+function collectMissionCandidates() {
+const root = findMissionListRoot();
+if (!root) return [];
+const entries = Array.from(root.querySelectorAll(
+'.missionSideBarEntry[mission_id], [mission_id].mission_visibility, [mission_id][id^="mission_"]'
+));
+const seen = new Set();
+const candidates = [];
+entries.forEach((entry, domIndex) => {
+const candidate = readMissionEntry(entry, domIndex);
+if (!candidate || seen.has(candidate.missionId)) return;
+seen.add(candidate.missionId);
+if (candidate.caption) cacheMissionName(candidate.missionId, candidate.caption);
+candidates.push(candidate);
+});
+if (!candidates.length) {
+const anchors = Array.from(root.querySelectorAll('a[href*="/missions/"]'));
+anchors.forEach((anchor, domIndex) => {
+const url = sameOriginUrl(anchor.getAttribute('href') || anchor.href);
+if (!url || !isMissionUrl(url.href)) return;
+const missionId = missionIdFromUrl(url.href);
+if (!missionId || seen.has(missionId)) return;
+seen.add(missionId);
+cacheMissionName(missionId, normaliseText(anchor.textContent));
+candidates.push({
+anchor,
+entry: missionEntryFromAnchor(anchor),
+url: url.href,
+missionId,
+score: missionCandidateScore(anchor),
+allianceLike: isProbablyAllianceMission(anchor),
+rendered: true,
+visualOrder: domIndex,
+domIndex,
+stateFilter: '',
+participation: '',
+missionTypeId: '',
+caption: normaliseText(anchor.textContent),
+missingText: '',
+actionKind: 'NEW',
+ruleSignature: '',
+patients: null,
+prisoners: null,
+});
+});
+}
+candidates.sort((a, b) => {
+if (a.allianceLike !== b.allianceLike) return a.allianceLike ? 1 : -1;
+if (a.rendered !== b.rendered) return a.rendered ? -1 : 1;
+if (a.visualOrder !== b.visualOrder) return a.visualOrder - b.visualOrder;
+if (a.domIndex !== b.domIndex) return a.domIndex - b.domIndex;
+return b.score - a.score;
+});
+return candidates;
+}
+function compactMissionCandidate(candidate) {
+if (!candidate) return null;
+return {
+missionId: candidate.missionId,
+url: candidate.url,
+visualOrder: candidate.visualOrder,
+stateFilter: candidate.stateFilter,
+participation: candidate.participation,
+missionTypeId: candidate.missionTypeId,
+caption: candidate.caption,
+missingText: candidate.missingText,
+actionKind: candidate.actionKind,
+patients: candidate.patients,
+prisoners: candidate.prisoners,
+};
+}
+function recordMissionRuleSignature(candidate) {
+if (!candidate?.missionId || !candidate.ruleSignature) return;
+const previous = state.missionRowSignatures.get(candidate.missionId);
+if (previous && previous !== candidate.ruleSignature) {
+const event = {
+at: nowIso(),
+missionId: candidate.missionId,
+actionKind: candidate.actionKind,
+visualOrder: candidate.visualOrder,
+stateFilter: candidate.stateFilter,
+participation: candidate.participation,
+missingText: candidate.missingText,
+};
+state.ruleChangeHistory.push(event);
+if (state.ruleChangeHistory.length > RULE_CHANGE_HISTORY_LIMIT) {
+state.ruleChangeHistory.splice(0, state.ruleChangeHistory.length - RULE_CHANGE_HISTORY_LIMIT);
+}
+state.missionRowSignatures.set(candidate.missionId, candidate.ruleSignature);
+log('Map mission rule/state changed; treating the live row as fresh authority.', event);
+return;
+}
+state.missionRowSignatures.set(candidate.missionId, candidate.ruleSignature);
+}
+function missionSkipRemaining(missionId) {
+const record = state.missionSkipRecords.get(String(missionId || ''));
+if (!record) return 0;
+return Math.max(0, Number(record.retryAfterAdvance || 0) - state.nativeMissionAdvances);
+}
+function isMissionTemporarilySkipped(missionId) {
+return missionSkipRemaining(missionId) > 0;
+}
+function activeMissionSkipRecords() {
+return Array.from(state.missionSkipRecords.values())
+.map(record => ({
+...record,
+remaining: Math.max(0, Number(record.retryAfterAdvance || 0) - state.nativeMissionAdvances),
+}))
+.filter(record => record.remaining > 0)
+.sort((a, b) => a.retryAfterAdvance - b.retryAfterAdvance);
+}
+function recordMissionSkipEvent(event) {
+state.missionSkipHistory.push({ at: nowIso(), ...event });
+if (state.missionSkipHistory.length > MISSION_SKIP_HISTORY_LIMIT) {
+state.missionSkipHistory.splice(0, state.missionSkipHistory.length - MISSION_SKIP_HISTORY_LIMIT);
+}
+}
+function registerRecoverableMissionSkip(
+missionId,
+missionName,
+reason,
+evidence = '',
+skipAdvances = RECOVERABLE_SHORTAGE_SKIP_ADVANCES
+) {
+const id = String(missionId || '');
+if (!id) return null;
+const advances = Math.max(1, Number(skipAdvances || RECOVERABLE_SHORTAGE_SKIP_ADVANCES));
+const previous = state.missionSkipRecords.get(id) || null;
+const record = {
+missionId: id,
+missionName: cleanMissionCaption(missionName) || missionNameForId(id),
+reason: String(reason || 'Recoverable resource shortage'),
+evidence: normaliseText(evidence).slice(0, 420),
+skipCount: Number(previous?.skipCount || 0) + 1,
+skipAdvances: advances,
+skippedAtAdvance: state.nativeMissionAdvances,
+retryAfterAdvance: state.nativeMissionAdvances + advances,
+lastSkippedAt: nowIso(),
+};
+state.missionSkipRecords.set(id, record);
+state.recoverableMissionSkips += 1;
+recordMissionSkipEvent({ event: 'skipped', ...record, remaining: advances });
+return record;
+}
+function collectAutoStopEvidence(doc, status = '') {
+const values = [normaliseText(status)];
+if (doc) {
+const selectors = [
+'#mission-finder-wrapper .alert',
+'#mission-finder-wrapper [id*="status"]',
+'#mission-finder-wrapper [class*="status"]',
+'#control-panel .alert',
+'#control-panel [id*="status"]',
+'#control-panel [class*="status"]',
+'.alert.alert-danger',
+'.alert.alert-warning',
+];
+for (const selector of selectors) {
+for (const node of doc.querySelectorAll(selector)) {
+const text = normaliseText(node.textContent);
+if (!text || text.length > 500) continue;
+values.push(text);
+if (values.length >= 16) break;
+}
+if (values.length >= 16) break;
+}
+}
+return [...new Set(values.filter(Boolean))].join(' | ').slice(0, 1800);
+}
+function hasCoastguardHelicopterShortageEvidence(doc, status = '') {
+const evidence = collectAutoStopEvidence(doc, status);
+if (!evidence) return { matched: false, evidence: '' };
+const coastguardHelicopter = /(?:coastguard.{0,80}(?:helicopter|heli)|(?:helicopter|heli).{0,80}coastguard)/i.test(evidence);
+const shortage = /(?:it\s+lacks?|lacks?|missing|still\s+needed|shortfall|not\s+enough|not\s+found|unavailable|no\s+(?:suitable\s+|available\s+)?(?:vehicle|unit|coastguard|helicopter)|selected\s+0|could\s+not\s+find|cannot\s+find|can['\u2019]?t\s+find|unable\s+to\s+find)/i.test(evidence);
+return { matched: coastguardHelicopter && shortage, evidence };
+}
+function hasExactZeroSelectionFullListStop(doc, status = '') {
+const evidence = collectAutoStopEvidence(doc, status);
+if (!evidence) return { matched: false, evidence: '' };
+const matched = /auto stopped:\s*unit finder selected 0 vehicles after a full-list retry\.\s*the mission was not dispatched/i.test(evidence);
+return { matched, evidence };
+}
+function recordAutoRecoveryEvent(event) {
+state.autoRecoveryHistory.push({ at: nowIso(), ...event });
+if (state.autoRecoveryHistory.length > AUTO_RECOVERY_HISTORY_LIMIT) {
+state.autoRecoveryHistory.splice(0, state.autoRecoveryHistory.length - AUTO_RECOVERY_HISTORY_LIMIT);
+}
+}
+function clearAutoRecoveryWatchdog(cancelReason = '') {
+const hadCandidate = Boolean(state.autoRecoveryCandidateKey);
+const elapsedMs = state.autoRecoveryCandidateSince ? Math.max(0, Date.now() - state.autoRecoveryCandidateSince) : 0;
+if (hadCandidate && cancelReason && elapsedMs >= 500) {
+recordAutoRecoveryEvent({
+event: 'watchdog-cancelled',
+missionId: state.autoRecoveryCandidateMissionId,
+missionName: missionNameForId(state.autoRecoveryCandidateMissionId),
+category: state.autoRecoveryCandidateCategory,
+reason: state.autoRecoveryCandidateReason,
+elapsedMs,
+cancelReason,
+});
+}
+state.autoRecoveryCandidateKey = '';
+state.autoRecoveryCandidateSince = 0;
+state.autoRecoveryCandidateMissionId = '';
+state.autoRecoveryCandidateReason = '';
+state.autoRecoveryCandidateCategory = '';
+state.autoRecoveryCandidateEvidence = '';
+state.autoRecoveryCandidateWaitMs = 0;
+state.autoRecoveryCountdownSecond = -1;
+}
+function classifyGenericRecoverableAutoStop(doc, status = '') {
+const primary = normaliseText(status);
+const evidence = collectAutoStopEvidence(doc, status);
+if (!evidence) return { matched: false, category: '', reason: '', evidence: '', terminal: false };
+const terminal =
+/\bauto stopped:\s*/i.test(evidence) &&
+/\bdispatch was not clicked\b/i.test(evidence) &&
+/\bstart auto mode again\b/i.test(evidence);
+const personnelNoun = '(?:personnel|personal|persons?|people|crew|staff)';
+const personnelShortage =
+new RegExp(`\\b(?:has|have|with)\\s+(?:not\\s+enough|insufficient)\\s+(?:trained\\s+|qualified\\s+)?${personnelNoun}\\b`, 'i').test(evidence) ||
+new RegExp(`\\b(?:does(?:n['\\u2019]?t| not)|do(?:n['\\u2019]?t| not))\\s+have\\s+enough\\s+(?:trained\\s+|qualified\\s+)?${personnelNoun}\\b`, 'i').test(evidence) ||
+new RegExp(`\\b(?:not\\s+enough|insufficient|too\\s+few)\\s+(?:trained\\s+|qualified\\s+)?${personnelNoun}\\b`, 'i').test(evidence) ||
+new RegExp(`\\b(?:personnel|personal|crew|staff)\\s+(?:shortage|shortfall)\\b`, 'i').test(evidence) ||
+new RegExp(`\\b(?:trained|qualified)\\s+${personnelNoun}\\s+(?:shortage|shortfall|unavailable|not\\s+available)\\b`, 'i').test(evidence) ||
+/\bgiven\s+personal\b.{0,100}\bright\s+qualification\b/i.test(evidence);
+if (personnelShortage) {
+return {
+matched: true,
+category: 'PERSONNEL_SHORTAGE',
+reason: 'Vehicle/personnel requirement could not be staffed',
+evidence,
+primary,
+terminal,
+};
+}
+const explicitLack = /\b(?:auto-?ok\s+alert:\s*)?it\s+lacks?:\s*\d+\s+[^|]{1,180}/i.test(evidence);
+const missingRequirement = /\bmissing(?:\s+(?:vehicles?|personnel))?\s*:\s*[^|]{1,220}/i.test(evidence);
+const unavailableResource =
+/\b(?:no|not\s+enough)\s+(?:suitable\s+|available\s+)?(?:vehicle|vehicles|unit|units|ambulance|ambulances|officer|officers|helicopter|helicopters|appliance|appliances|engine|engines|truck|trucks|boat|boats|drone|drones|car|cars|crew|crews)\b/i.test(evidence) ||
+/\b(?:could\s+not|cannot|can['\u2019]?t|unable\s+to)\s+find\b/i.test(evidence) ||
+/\b(?:resource|vehicle|unit|appliance|ambulance|helicopter|officer)\b.{0,90}\b(?:unavailable|not\s+available|shortfall)\b/i.test(evidence);
+if (explicitLack || missingRequirement || unavailableResource) {
+return {
+matched: true,
+category: 'RESOURCE_SHORTAGE',
+reason: 'Required mission resource is unavailable',
+evidence,
+primary,
+terminal,
+};
+}
+return { matched: false, category: '', reason: '', evidence, primary, terminal: false };
+}
+function accessibleWorkerDocuments(rootDoc) {
+const result = [];
+const seen = new Set();
+const visit = doc => {
+if (!doc || seen.has(doc) || result.length >= 20) return;
+seen.add(doc);
+result.push(doc);
+for (const frame of Array.from(doc.querySelectorAll('iframe'))) {
+try {
+const child = frame.contentDocument || frame.contentWindow?.document || null;
+if (child) visit(child);
+} catch {}
+}
+};
+visit(rootDoc);
+return result;
+}
+function applyAirfieldOperationsSupervisorCrossRef(rootDoc) {
+let rewrites = 0;
+for (const doc of accessibleWorkerDocuments(rootDoc)) {
+const root = doc.body || doc.documentElement;
+if (!root) continue;
+let walker;
+try {
+walker = doc.createTreeWalker(root, 4 /* NodeFilter.SHOW_TEXT */);
+} catch {
+continue;
+}
+const nodes = [];
+let node;
+while ((node = walker.nextNode())) {
+if (!node.nodeValue || !node.nodeValue.includes(AIRFIELD_SUPERVISOR_REQUIRED_TEXT)) continue;
+const tag = String(node.parentElement?.tagName || '').toLowerCase();
+if (['script', 'style', 'textarea', 'option'].includes(tag)) continue;
+nodes.push(node);
+if (nodes.length >= 24) break;
+}
+for (const textNode of nodes) {
+const before = String(textNode.nodeValue || '');
+const after = before.split(AIRFIELD_SUPERVISOR_REQUIRED_TEXT).join(AIRFIELD_SUPERVISOR_VEHICLE_TEXT);
+if (after === before) continue;
+textNode.nodeValue = after;
+rewrites += 1;
+}
+}
+if (rewrites) {
+state.airfieldAliasRewrites += rewrites;
+state.airfieldAliasHistory.push({
+at: nowIso(),
+missionId: state.currentMissionId,
+missionName: state.currentMissionName,
+rewrites,
+from: AIRFIELD_SUPERVISOR_REQUIRED_TEXT,
+to: AIRFIELD_SUPERVISOR_VEHICLE_TEXT,
+});
+if (state.airfieldAliasHistory.length > AIRFIELD_ALIAS_HISTORY_LIMIT) {
+state.airfieldAliasHistory.splice(0, state.airfieldAliasHistory.length - AIRFIELD_ALIAS_HISTORY_LIMIT);
+}
+if (state.airfieldAliasRewrites <= 4 || state.airfieldAliasRewrites % 10 === 0) {
+log('Applied Airfield Operations Supervisor requirement cross-reference in the hidden worker.', {
+missionId: state.currentMissionId,
+rewrites,
+totalRewrites: state.airfieldAliasRewrites,
+});
+}
+}
+return rewrites;
+}
+function installAirfieldOperationsSupervisorObservers(rootDoc) {
+for (const doc of accessibleWorkerDocuments(rootDoc)) {
+if (!doc?.body || state.airfieldObservedDocuments.has(doc)) continue;
+state.airfieldObservedDocuments.add(doc);
+try {
+const observer = new MutationObserver(() => {
+if (!state.wanted) return;
+applyAirfieldOperationsSupervisorCrossRef(doc);
+});
+observer.observe(doc.body, { childList: true, subtree: true, characterData: true });
+} catch {}
+}
+}
+function getVehicleCheckboxTypeIds(input) {
+if (!input) return [];
+const row = input.closest?.('tr') || null;
+const typeCell = row?.querySelector?.('[vehicle_type_id], [data-vehicle-type-id]') || null;
+return [
+input.getAttribute?.('vehicle_type_id'),
+input.getAttribute?.('data-vehicle-type-id'),
+input.getAttribute?.('vehicle_type'),
+input.getAttribute?.('data-vehicle-type'),
+row?.getAttribute?.('vehicle_type_id'),
+row?.getAttribute?.('data-vehicle-type-id'),
+row?.getAttribute?.('vehicle_type'),
+row?.getAttribute?.('data-vehicle-type'),
+typeCell?.getAttribute?.('vehicle_type_id'),
+typeCell?.getAttribute?.('data-vehicle-type-id'),
+]
+.filter(value => value !== null && value !== undefined && String(value).trim() !== '')
+.map(value => String(value).trim());
+}
+function exactVehicleTypeCheckbox(input, typeId) {
+return getVehicleCheckboxTypeIds(input).includes(String(typeId));
+}
+function vehicleSelectionDocument(rootDoc) {
+let best = null;
+let bestCount = -1;
+for (const doc of accessibleWorkerDocuments(rootDoc)) {
+let count = 0;
+try { count = doc.querySelectorAll('input.vehicle_checkbox').length; } catch {}
+if (count > bestCount) {
+best = doc;
+bestCount = count;
+}
+}
+return bestCount > 0 ? best : null;
+}
+function vehicleCheckboxesForRules(rootDoc) {
+const selectionDoc = vehicleSelectionDocument(rootDoc);
+if (!selectionDoc) return [];
+try { return Array.from(selectionDoc.querySelectorAll('input.vehicle_checkbox')); } catch { return []; }
+}
+function isUsableRuleVehicleCheckbox(input) {
+if (!input || !input.isConnected || input.checked || input.disabled) return false;
+const row = input.closest?.('tr');
+if (row?.classList?.contains('disabled')) return false;
+if (row?.getAttribute?.('aria-disabled') === 'true') return false;
+return true;
+}
+function mapMissionCandidate(missionId) {
+const id = String(missionId || '');
+if (!id) return null;
+return collectMissionCandidates().find(candidate => candidate.missionId === id && !candidate.allianceLike) || null;
+}
+function maybeAssistAirfieldOperationsSupervisor(rootDoc, href, context) {
+if (!state.wanted || state.stopping || context?.kind || !isMissionUrl(href)) return false;
+const missionId = missionIdFromUrl(href);
+const candidate = mapMissionCandidate(missionId);
+const missingText = normaliseText(candidate?.missingText || '');
+const match = missingText.match(/(?:^|[,;:]|\b)(\d+)\s+Airfield Operations Supervisors?\b/i);
+const liveMissing = Math.max(0, Number(match?.[1] || 0));
+if (!missionId || liveMissing <= 0) {
+state.airfieldSupervisorAssistKey = '';
+state.airfieldSupervisorAssistSince = 0;
+return false;
+}
+const key = `${missionId}:${liveMissing}`;
+if (state.airfieldSupervisorAssistKey !== key) {
+state.airfieldSupervisorAssistKey = key;
+state.airfieldSupervisorAssistSince = Date.now();
+return false;
+}
+if (Date.now() - state.airfieldSupervisorAssistSince < AIRFIELD_SUPERVISOR_ASSIST_DELAY_MS) return false;
+const boxes = vehicleCheckboxesForRules(rootDoc);
+if (!boxes.length) return false;
+const selected = boxes.filter(input => input.checked && exactVehicleTypeCheckbox(input, AIRFIELD_SUPERVISOR_TYPE_ID)).length;
+if (selected >= liveMissing) return false;
+const target = boxes.find(input => exactVehicleTypeCheckbox(input, AIRFIELD_SUPERVISOR_TYPE_ID) && isUsableRuleVehicleCheckbox(input));
+if (!target) return false;
+const event = {
+at: nowIso(),
+missionId,
+missionName: state.currentMissionName || missionNameForId(missionId),
+liveMissing,
+selectedBefore: selected,
+vehicleTypeId: AIRFIELD_SUPERVISOR_TYPE_ID,
+reason: 'Live Missing Vehicles row still required Airfield Operations Supervisor after V2 first chance',
+};
+try {
+target.click();
+} catch (error) {
+log('Airfield Operations Supervisor exact-type assist click failed.', { ...event, error: String(error?.message || error) });
+return false;
+}
+state.airfieldSupervisorAssistAttempts += 1;
+state.airfieldSupervisorAssistHistory.push(event);
+if (state.airfieldSupervisorAssistHistory.length > VEHICLE_RULE_HISTORY_LIMIT) {
+state.airfieldSupervisorAssistHistory.splice(0, state.airfieldSupervisorAssistHistory.length - VEHICLE_RULE_HISTORY_LIMIT);
+}
+setPhase(
+'AIRFIELD_SUPERVISOR_ASSIST',
+'Adding Airfield Operations Supervisor',
+`${missionDisplay(missionId, event.missionName)} | exact type 80 | ${selected + 1}/${liveMissing} selected for the live shortage.`
+);
+log('Airfield Operations Supervisor assist selected one exact type-80 vehicle after V2 first chance.', event);
+return true;
+}
+function isStrictRescueDogRequirementName(value) {
+const text = normaliseText(value)
+.replace(/^missing\s+vehicles?\s*:\s*/i, '')
+.replace(/^required\s+/i, '')
+.replace(/^\d+\s+/, '');
+return /^(?:Rescue Dogs?|Search Dog Units?)$/i.test(text);
+}
+function rescueDogMissingCount(value) {
+const text = normaliseText(value);
+if (!text) return 0;
+let missing = 0;
+const pattern = /\b(?:Required\s+)?(\d+)\s+(?:Rescue Dogs?|Search Dog Units?)\b/gi;
+let match;
+while ((match = pattern.exec(text))) {
+missing = Math.max(missing, Math.max(0, Number(match[1] || 0)));
+}
+if (!missing && isStrictRescueDogRequirementName(text)) missing = 1;
+return missing;
+}
+function maybeAssistRescueDogSearchDog(rootDoc, href, context) {
+if (!state.wanted || state.stopping || context?.kind || !isMissionUrl(href)) return false;
+const missionId = missionIdFromUrl(href);
+const candidate = mapMissionCandidate(missionId);
+const missingText = normaliseText(candidate?.missingText || '');
+const liveMissing = rescueDogMissingCount(missingText);
+if (!missionId || liveMissing <= 0) {
+state.rescueDogAssistKey = '';
+state.rescueDogAssistSince = 0;
+return false;
+}
+const key = `${missionId}:${liveMissing}`;
+if (state.rescueDogAssistKey !== key) {
+state.rescueDogAssistKey = key;
+state.rescueDogAssistSince = Date.now();
+return false;
+}
+if (Date.now() - state.rescueDogAssistSince < RESCUE_DOG_ASSIST_DELAY_MS) return false;
+const boxes = vehicleCheckboxesForRules(rootDoc);
+if (!boxes.length) return false;
+const selected = boxes.filter(
+input => input.checked && exactVehicleTypeCheckbox(input, SEARCH_DOG_UNIT_TYPE_ID)
+).length;
+if (selected >= liveMissing) return false;
+const target = boxes.find(
+input => exactVehicleTypeCheckbox(input, SEARCH_DOG_UNIT_TYPE_ID) && isUsableRuleVehicleCheckbox(input)
+);
+if (!target) return false;
+const event = {
+at: nowIso(),
+missionId,
+missionName: state.currentMissionName || missionNameForId(missionId),
+liveMissing,
+selectedBefore: selected,
+vehicleTypeId: SEARCH_DOG_UNIT_TYPE_ID,
+requirementText: missingText,
+crossReference: 'Rescue Dog -> Search Dog Unit (SAR)',
+reason: 'Strict live Rescue Dog/Search Dog Unit shortage remained after V2 first chance',
+};
+try {
+target.click();
+} catch (error) {
+log('Rescue Dog exact Search Dog Unit assist click failed.', {
+...event,
+error: String(error?.message || error),
+});
+return false;
+}
+state.rescueDogAssistAttempts += 1;
+state.rescueDogAssistHistory.push(event);
+if (state.rescueDogAssistHistory.length > RESCUE_DOG_ASSIST_HISTORY_LIMIT) {
+state.rescueDogAssistHistory.splice(
+0,
+state.rescueDogAssistHistory.length - RESCUE_DOG_ASSIST_HISTORY_LIMIT
+);
+}
+setPhase(
+'RESCUE_DOG_ASSIST',
+'Adding Search Dog Unit (SAR)',
+`${missionDisplay(missionId, event.missionName)} | Rescue Dog cross-reference | exact type 102 | ${selected + 1}/${liveMissing} selected.`
+);
+log('Rescue Dog cross-reference selected one exact type-102 Search Dog Unit after V2 first chance.', event);
+return true;
+}
+function maybeApplyMassCasualtyEquipmentThreshold(rootDoc, href, context) {
+if (!state.wanted || state.stopping || context?.kind || !isMissionUrl(href)) return false;
+const missionId = missionIdFromUrl(href);
+const candidate = mapMissionCandidate(missionId);
+if (!missionId || !candidate || candidate.actionKind !== 'NEW' || normaliseText(candidate.missingText)) {
+return false;
+}
+const boxes = vehicleCheckboxesForRules(rootDoc);
+if (!boxes.length) return false;
+const selectedAmbulances = boxes.filter(
+input => input.checked && exactVehicleTypeCheckbox(input, NORMAL_AMBULANCE_TYPE_ID)
+).length;
+const selectedMce = boxes.filter(
+input => input.checked && exactVehicleTypeCheckbox(input, MASS_CASUALTY_EQUIPMENT_TYPE_ID)
+).length;
+state.massCasualtyThresholdLastMissionId = missionId;
+state.massCasualtyThresholdLastAmbulanceCount = selectedAmbulances;
+if (selectedAmbulances <= MASS_CASUALTY_AMBULANCE_THRESHOLD || selectedMce > 0) return false;
+const target = boxes.find(
+input => exactVehicleTypeCheckbox(input, MASS_CASUALTY_EQUIPMENT_TYPE_ID) && isUsableRuleVehicleCheckbox(input)
+);
+if (!target) return false;
+const event = {
+at: nowIso(),
+missionId,
+missionName: state.currentMissionName || missionNameForId(missionId),
+selectedAmbulances,
+threshold: MASS_CASUALTY_AMBULANCE_THRESHOLD,
+vehicleTypeId: MASS_CASUALTY_EQUIPMENT_TYPE_ID,
+reason: 'More than 20 exact normal Ambulances were selected and no Mass Casualty Equipment was already selected',
+};
+try {
+target.click();
+} catch (error) {
+log('Mass Casualty Equipment threshold assist click failed.', { ...event, error: String(error?.message || error) });
+return false;
+}
+state.massCasualtyThresholdAttempts += 1;
+state.massCasualtyThresholdHistory.push(event);
+if (state.massCasualtyThresholdHistory.length > VEHICLE_RULE_HISTORY_LIMIT) {
+state.massCasualtyThresholdHistory.splice(0, state.massCasualtyThresholdHistory.length - VEHICLE_RULE_HISTORY_LIMIT);
+}
+setPhase(
+'MASS_CASUALTY_ASSIST',
+'Adding Mass Casualty Equipment',
+`${missionDisplay(missionId, event.missionName)} | ${selectedAmbulances} Ambulances selected (>20), adding exactly one type-33 Mass Casualty Equipment.`
+);
+log('Mass Casualty Equipment threshold selected one exact type-33 vehicle after V2 selected more than 20 normal Ambulances.', event);
+return true;
+}
+function prisonerReleaseSuccessKey(href, context) {
+const path = pathFromUrl(href);
+const missionId = missionIdFromUrl(href) || state.currentMissionId;
+if (!missionId || !context?.releaseSuccessAlerts) return '';
+if (!/^\/missions\/\d+\/gefangene\/entlassen\/?(?:[?#].*)?$/i.test(path)) return '';
+return `${missionId}:${path}`;
+}
+function resetPrisonerReleaseSuccessTracking() {
+state.prisonerReleaseSuccessKey = '';
+state.prisonerReleaseSuccessSince = 0;
+}
+function maybeHandleConfirmedPrisonerReleaseSuccess(rootDoc, href, context) {
+if (!state.wanted || state.stopping) return false;
+const key = prisonerReleaseSuccessKey(href, context);
+if (!key) {
+resetPrisonerReleaseSuccessTracking();
+return false;
+}
+if (state.prisonerReleaseHandledKeys.has(key)) return false;
+if (state.prisonerReleaseSuccessKey !== key) {
+state.prisonerReleaseSuccessKey = key;
+state.prisonerReleaseSuccessSince = Date.now();
+return false;
+}
+if (Date.now() - state.prisonerReleaseSuccessSince < PRISONER_RELEASE_SUCCESS_REHOOK_DELAY_MS) return false;
+const fresh = transportContextDetails(rootDoc, href);
+if (!fresh.releaseSuccessAlerts) return false;
+const releasedMissionId = missionIdFromUrl(href) || state.currentMissionId;
+const releasedMissionName = state.currentMissionName || missionNameForId(releasedMissionId);
+const mission = chooseTopMission({ actionableOnly: true });
+if (!mission?.missionId || !mission.url) {
+setPhase(
+'WAITING_MISSION',
+'Prisoners released; waiting for mission',
+`${missionDisplay(releasedMissionId, releasedMissionName)} release is confirmed, but no actionable personal mission is currently available.`
+);
+return false;
+}
+state.lastPriorityRedirectAt = 0;
+const redirected = redirectWorkerToPriority(
+{ source: 'PRISONER_RELEASE_SUCCESS', missionId: mission.missionId, url: mission.url, mission },
+releasedMissionId
+);
+if (!redirected) return false;
+state.prisonerReleaseHandledKeys.add(key);
+state.prisonerReleaseSuccessRehooks += 1;
+const event = {
+at: nowIso(),
+releasedMissionId,
+releasedMissionName,
+releasePath: pathFromUrl(href),
+toMissionId: mission.missionId,
+toMissionName: cleanMissionCaption(mission.caption),
+evidence: fresh.evidence.slice(0, 8),
+};
+state.prisonerReleaseSuccessHistory.push(event);
+if (state.prisonerReleaseSuccessHistory.length > PRISONER_RELEASE_HISTORY_LIMIT) {
+state.prisonerReleaseSuccessHistory.splice(0, state.prisonerReleaseSuccessHistory.length - PRISONER_RELEASE_HISTORY_LIMIT);
+}
+if (state.activeTransportEvent) endTransportEvent('release-success-confirmed', fresh, href);
+state.transportKind = '';
+state.transportSince = 0;
+state.transportWarned = false;
+clearTransportServiceState();
+resetPrisonerReleaseSuccessTracking();
+log('Confirmed prisoner release success; re-hooked the hidden worker to the current top personal mission.', event);
+return true;
+}
+function redirectAfterRecoverableSkip(target, record) {
+if (!target?.missionId || !target.url || !state.worker?.isConnected) return false;
+const fromMissionId = state.currentMissionId;
+clearAutoRecoveryWatchdog();
+resetAutoStartTracking();
+state.autoStopWarned = false;
+state.autoStoppedSince = 0;
+state.running = false;
+state.transportServiceEligible = false;
+state.transportServiceActive = false;
+resetPriorityPending();
+state.lastPriorityRedirectAt = 0;
+state.redirectFromMissionId = fromMissionId || '';
+state.redirectTargetMissionId = target.missionId;
+state.currentMissionId = target.missionId;
+state.currentMissionName = cleanMissionCaption(target.mission?.caption) || missionNameForId(target.missionId);
+state.currentMissionUrl = target.url;
+const remainingAdvances = Math.max(1, Number(record.skipAdvances || RECOVERABLE_SHORTAGE_SKIP_ADVANCES));
+setPhase(
+'MISSION_SKIPPED',
+'Mission temporarily rotated',
+`${missionDisplay(record.missionId, record.missionName)} was paused after a recoverable Auto Mode stop (${record.reason}). ` +
+`Retry after ${remainingAdvances} other mission advances; moving to ${missionDisplay(target.missionId, state.currentMissionName)}.`
+);
+log('Recoverable Auto Mode stop: temporarily rotated mission and moved down the personal queue.', {
+skippedMissionId: record.missionId,
+skippedMissionName: record.missionName,
+reason: record.reason,
+retryAfterAdvance: record.retryAfterAdvance,
+currentAdvance: state.nativeMissionAdvances,
+nextMissionId: target.missionId,
+nextMissionName: state.currentMissionName,
+skipCount: record.skipCount,
+});
+try {
+state.worker.contentWindow.location.replace(target.url);
+return true;
+} catch {
+try {
+state.worker.src = target.url;
+return true;
+} catch (error) {
+log('Recoverable mission-skip redirect failed.', { error: String(error?.message || error) });
+return false;
+}
+}
+}
+function maybeHandleRecoverableAutoStop(doc, stopStatus) {
+if (!state.wanted || state.stopping || state.transportServiceActive || state.transportKind) {
+clearAutoRecoveryWatchdog('transport-or-stop-state');
+return false;
+}
+if (!state.currentMissionId || !isMissionUrl(state.currentMissionUrl || getWorkerHref())) {
+clearAutoRecoveryWatchdog('not-on-mission');
+return false;
+}
+let reason = '';
+let evidence = '';
+let skipAdvances = RECOVERABLE_SHORTAGE_SKIP_ADVANCES;
+let zeroSelection = false;
+let category = '';
+let watchdogRequired = false;
+let watchdogWaitMs = AUTO_RECOVERY_WATCHDOG_MS;
+const shortage = hasCoastguardHelicopterShortageEvidence(doc, stopStatus);
+if (shortage.matched) {
+reason = 'Coastguard helicopter unavailable';
+evidence = shortage.evidence;
+skipAdvances = RECOVERABLE_SHORTAGE_SKIP_ADVANCES;
+category = 'COASTGUARD_SHORTAGE';
+} else {
+const zeroStop = hasExactZeroSelectionFullListStop(doc, stopStatus);
+if (zeroStop.matched) {
+reason = 'Unit Finder selected 0 vehicles after a full-list retry';
+evidence = zeroStop.evidence;
+skipAdvances = ZERO_SELECTION_SKIP_ADVANCES;
+zeroSelection = true;
+category = 'ZERO_SELECTION';
+} else {
+const generic = classifyGenericRecoverableAutoStop(doc, stopStatus);
+const armedSameMission = Boolean(
+state.autoRecoveryCandidateKey &&
+state.autoRecoveryCandidateMissionId === state.currentMissionId
+);
+if (!generic.matched && !armedSameMission) {
+clearAutoRecoveryWatchdog('stop-reason-no-longer-recoverable');
+return false;
+}
+reason = generic.matched ? generic.reason : state.autoRecoveryCandidateReason;
+evidence = generic.matched ? generic.evidence : state.autoRecoveryCandidateEvidence;
+category = generic.matched ? generic.category : state.autoRecoveryCandidateCategory;
+skipAdvances = GENERIC_RECOVERABLE_STOP_SKIP_ADVANCES;
+watchdogWaitMs = generic.matched
+? (generic.terminal ? AUTO_RECOVERY_TERMINAL_WATCHDOG_MS : AUTO_RECOVERY_WATCHDOG_MS)
+: (state.autoRecoveryCandidateWaitMs || AUTO_RECOVERY_WATCHDOG_MS);
+watchdogRequired = true;
+}
+}
+if (watchdogRequired) {
+const key = `${state.currentMissionId}:GENERIC_RECOVERABLE_STOP`;
+if (state.autoRecoveryCandidateKey !== key) {
+clearAutoRecoveryWatchdog('recoverable-reason-changed');
+state.autoRecoveryCandidateKey = key;
+state.autoRecoveryCandidateSince = Date.now();
+state.autoRecoveryCandidateMissionId = state.currentMissionId;
+state.autoRecoveryCandidateReason = reason;
+state.autoRecoveryCandidateCategory = category;
+state.autoRecoveryCandidateEvidence = normaliseText(evidence).slice(0, 1200);
+state.autoRecoveryCandidateWaitMs = watchdogWaitMs;
+state.autoRecoveryCountdownSecond = Math.ceil(watchdogWaitMs / 1000);
+const event = {
+event: 'watchdog-started',
+missionId: state.currentMissionId,
+missionName: state.currentMissionName || missionNameForId(state.currentMissionId),
+category,
+reason,
+waitMs: watchdogWaitMs,
+skipAdvances,
+evidence: state.autoRecoveryCandidateEvidence,
+};
+recordAutoRecoveryEvent(event);
+setPhase(
+'AUTO_RECOVERY_WAIT',
+'Recoverable Auto stop detected',
+`${missionDisplay(state.currentMissionId, event.missionName)} | ${reason}. ` +
+`If the same stop remains for ${Math.round(watchdogWaitMs / 1000)}s, Nexus will log the failure, rotate it for ${skipAdvances} advances and continue.`
+);
+log('Recoverable Auto Mode stop detected; watchdog started before queue skip.', event);
+return true;
+}
+const elapsedMs = Math.max(0, Date.now() - state.autoRecoveryCandidateSince);
+const activeWatchdogWaitMs = state.autoRecoveryCandidateWaitMs || watchdogWaitMs || AUTO_RECOVERY_WATCHDOG_MS;
+const remainingMs = Math.max(0, activeWatchdogWaitMs - elapsedMs);
+if (remainingMs > 0) {
+const remainingSecond = Math.max(1, Math.ceil(remainingMs / 1000));
+if (remainingSecond !== state.autoRecoveryCountdownSecond) {
+state.autoRecoveryCountdownSecond = remainingSecond;
+state.status = 'Recoverable Auto stop detected';
+state.detail = `${missionDisplay(state.currentMissionId, state.currentMissionName)} | ${reason}. ` +
+`Auto-continuing in ${remainingSecond}s if this exact stopped mission/reason is still present.`;
+render();
+}
+return true;
+}
+if (state.autoRecoveryCandidateMissionId !== state.currentMissionId) {
+clearAutoRecoveryWatchdog('mission-changed-before-expiry');
+return false;
+}
+const fresh = classifyGenericRecoverableAutoStop(doc, stopStatus);
+if (fresh.matched) {
+evidence = fresh.evidence;
+reason = fresh.reason;
+category = fresh.category;
+} else {
+evidence = state.autoRecoveryCandidateEvidence;
+reason = state.autoRecoveryCandidateReason;
+category = state.autoRecoveryCandidateCategory;
+}
+} else {
+clearAutoRecoveryWatchdog();
+}
+const record = registerRecoverableMissionSkip(
+state.currentMissionId,
+state.currentMissionName,
+reason,
+evidence,
+skipAdvances
+);
+if (!record) return false;
+if (zeroSelection) {
+state.zeroSelectionRecoveries += 1;
+const event = {
+at: nowIso(),
+missionId: record.missionId,
+missionName: record.missionName,
+skipAdvances,
+evidence: record.evidence,
+};
+state.zeroSelectionHistory.push(event);
+if (state.zeroSelectionHistory.length > ZERO_SELECTION_HISTORY_LIMIT) {
+state.zeroSelectionHistory.splice(0, state.zeroSelectionHistory.length - ZERO_SELECTION_HISTORY_LIMIT);
+}
+log('Exact zero-vehicle full-list stop will be rotated instead of freezing the whole background queue.', event);
+}
+if (watchdogRequired) {
+const activeWatchdogWaitMs = state.autoRecoveryCandidateWaitMs || watchdogWaitMs || AUTO_RECOVERY_WATCHDOG_MS;
+const waitedMs = state.autoRecoveryCandidateSince
+? Math.max(activeWatchdogWaitMs, Date.now() - state.autoRecoveryCandidateSince)
+: activeWatchdogWaitMs;
+state.autoRecoverySkips += 1;
+const event = {
+event: 'failure-logged-and-skipped',
+missionId: record.missionId,
+missionName: record.missionName,
+category,
+reason,
+waitedMs,
+skipAdvances,
+retryAfterAdvance: record.retryAfterAdvance,
+evidence: record.evidence,
+};
+recordAutoRecoveryEvent(event);
+log('Recoverable Auto Mode failure persisted through watchdog; logged failure and continuing the queue.', event);
+clearAutoRecoveryWatchdog();
+}
+const target = choosePriorityTarget();
+if (!target?.missionId || target.missionId === record.missionId) {
+setPhase(
+'MISSION_SKIPPED',
+'Mission temporarily rotated',
+`${missionDisplay(record.missionId, record.missionName)} is paused for ${skipAdvances} mission advances, but no other actionable personal mission is currently available.`
+);
+return true;
+}
+return redirectAfterRecoverableSkip(target, record);
+}
+function chooseTopMission({ actionableOnly = false } = {}) {
+pruneRecentlyNativeAdvanced();
+const candidates = collectMissionCandidates();
+for (const candidate of candidates) {
+if (candidate.allianceLike || !candidate.rendered) continue;
+recordMissionRuleSignature(candidate);
+}
+const actionableBeforeSkips = candidates.filter(candidate =>
+!candidate.allianceLike &&
+candidate.rendered &&
+candidate.actionKind !== 'OTHER' &&
+!(
+candidate.actionKind === 'NEW' &&
+state.recentlyNativeAdvanced.has(candidate.missionId)
+)
+);
+state.visualTopMission = compactMissionCandidate(actionableBeforeSkips[0] || null);
+const actionable = actionableBeforeSkips.filter(candidate =>
+!isMissionTemporarilySkipped(candidate.missionId)
+);
+const top = actionable[0] ||
+(actionableOnly
+? null
+: candidates.find(candidate =>
+!candidate.allianceLike &&
+candidate.rendered &&
+!isMissionTemporarilySkipped(candidate.missionId)
+) || null);
+state.topMission = compactMissionCandidate(top);
+return top;
+}
+function pipelineRecord(event, data = {}) {
+const record = { at: nowIso(), event, ...data };
+state.pipelineHistory.push(record);
+if (state.pipelineHistory.length > PIPELINE_HISTORY_LIMIT) {
+state.pipelineHistory.splice(0, state.pipelineHistory.length - PIPELINE_HISTORY_LIMIT);
+}
+return record;
+}
+function persistedPipelineTargets() {
+const raw = sessionGet(SESSION_PIPELINE_TARGETS);
+if (!raw) return [];
+try {
+const values = JSON.parse(raw);
+if (!Array.isArray(values)) return [];
+return values.map(value => {
+const url = sameOriginUrl(value?.url || value);
+const missionId = String(value?.missionId || missionIdFromUrl(url?.href || ''));
+if (!url || !missionId || !isMissionUrl(url.href)) return null;
+return {
+missionId,
+url: url.href,
+caption: cleanMissionCaption(value?.caption || missionNameForId(missionId)),
+actionKind: value?.actionKind || 'NEW',
+};
+}).filter(Boolean).slice(0, PIPELINE_PRELOAD_COUNT);
+} catch {
+return [];
+}
+}
+function persistPipelineTargets(targets = state.pipelineSlots) {
+const values = [];
+for (const item of targets || []) {
+const missionId = String(item?.missionId || '');
+const url = sameOriginUrl(item?.url || '');
+if (!missionId || !url || !isMissionUrl(url.href)) continue;
+values.push({
+missionId,
+url: url.href,
+caption: cleanMissionCaption(item?.caption || item?.missionName || missionNameForId(missionId)),
+actionKind: item?.actionKind || 'NEW',
+});
+if (values.length >= PIPELINE_PRELOAD_COUNT) break;
+}
+sessionSet(SESSION_PIPELINE_TARGETS, values.length ? JSON.stringify(values) : '');
+}
+function pipelineActionableCandidates() {
+pruneRecentlyNativeAdvanced();
+const candidates = collectMissionCandidates();
+return candidates.filter(candidate =>
+!candidate.allianceLike &&
+candidate.rendered &&
+candidate.actionKind !== 'OTHER' &&
+!isMissionTemporarilySkipped(candidate.missionId) &&
+!(candidate.actionKind === 'NEW' && state.recentlyNativeAdvanced.has(candidate.missionId))
+);
+}
+function desiredPipelineTargets() {
+const activeMissionId = missionIdFromUrl(getWorkerHref()) || state.currentMissionId;
+const candidates = pipelineActionableCandidates();
+let source = candidates;
+if (!source.length) source = persistedPipelineTargets();
+const seen = new Set([String(activeMissionId || ''), String(state.transportServiceMissionId || '')]);
+const result = [];
+for (const candidate of source) {
+const missionId = String(candidate?.missionId || '');
+if (!missionId || seen.has(missionId) || isMissionTemporarilySkipped(missionId)) continue;
+seen.add(missionId);
+result.push({
+missionId,
+url: candidate.url,
+caption: cleanMissionCaption(candidate.caption || missionNameForId(missionId)),
+actionKind: candidate.actionKind || 'NEW',
+});
+if (result.length >= PIPELINE_PRELOAD_COUNT) break;
+}
+return result;
+}
+function pipelineSlotForFrame(frame) {
+return state.pipelineSlots.find(slot => slot?.frame === frame) || null;
+}
+function pipelineSlotForMission(missionId) {
+const id = String(missionId || '');
+return state.pipelineSlots.find(slot => slot?.missionId === id && slot.frame?.isConnected) || null;
+}
+function compactPipelineSlot(slot) {
+if (!slot) return null;
+return {
+index: slot.index,
+missionId: slot.missionId,
+missionName: slot.missionName,
+url: slot.url,
+status: slot.status,
+loaded: Boolean(slot.loaded),
+ready: Boolean(slot.ready),
+vehicleCount: slot.vehicleCount || 0,
+vehicleRows: slot.vehicleRows || 0,
+loadClicks: slot.loadClicks || 0,
+bridgeReady: Boolean(slot.bridgeReady),
+v2DormantBridgeReady: Boolean(slot.v2DormantBridgeReady),
+v2DormantBridgeVersion: slot.v2DormantBridgeVersion || '',
+nexusMounted: Boolean(slot.nexusMounted),
+autoControlPresent: Boolean(slot.autoControlPresent),
+autoControlText: slot.autoControlText || '',
+undesiredSince: slot.undesiredSince ? new Date(slot.undesiredSince).toISOString() : '',
+lastClickedControlToken: slot.lastClickedControlToken || '',
+signatureAtLastClick: slot.signatureAtLastClick || '',
+createdAt: slot.createdAt ? new Date(slot.createdAt).toISOString() : '',
+loadedAt: slot.loadedAt ? new Date(slot.loadedAt).toISOString() : '',
+readyAt: slot.readyAt ? new Date(slot.readyAt).toISOString() : '',
+lastAuditAt: slot.lastAuditAt ? new Date(slot.lastAuditAt).toISOString() : '',
+};
+}
+function removePipelineSlot(slot, reason = 'removed', removeFrame = true) {
+if (!slot) return;
+state.pipelineSlots = state.pipelineSlots.filter(item => item !== slot);
+if (removeFrame && slot.frame?.isConnected) {
+setFrameOwnership(slot.frame, false, `preload-remove:${reason}`);
+try { slot.frame.src = 'about:blank'; } catch {}
+try { slot.frame.remove(); } catch {}
+}
+pipelineRecord('preload-removed', {
+missionId: slot.missionId,
+missionName: slot.missionName,
+status: slot.status,
+reason,
+});
+}
+function removeAllPipelinePreloads(reason = 'pipeline-stop') {
+for (const slot of state.pipelineSlots.slice()) removePipelineSlot(slot, reason, true);
+state.pipelineSlots = [];
+}
+function pausePipelineController(reason = 'pipeline-paused', removePreloads = true) {
+clearTimer('pipelineSyncTimer', window.clearInterval);
+clearTimer('pipelinePumpTimer', window.clearInterval);
+state.pipelineLastSyncAt = 0;
+if (removePreloads) removeAllPipelinePreloads(reason);
+}
+function enterActiveOnlyMode(reason = 'pipeline-circuit-breaker', data = {}) {
+const firstEntry = !state.pipelineActiveOnly;
+state.pipelineActiveOnly = true;
+state.pipelineActiveOnlyReason = normaliseText(reason || 'pipeline-circuit-breaker');
+if (!state.pipelineActiveOnlySince) state.pipelineActiveOnlySince = Date.now();
+pausePipelineController(state.pipelineActiveOnlyReason, true);
+if (firstEntry) {
+pipelineRecord('pipeline-active-only-circuit-breaker', {
+reason: state.pipelineActiveOnlyReason,
+...data,
+});
+log('Three-worker pipeline circuit breaker opened; continuing with reliable Worker A only.', {
+reason: state.pipelineActiveOnlyReason,
+...data,
+});
+}
+return firstEntry;
+}
+function createPipelinePreload(target, index) {
+if (state.pipelineActiveOnly || !state.wanted || state.stopping || !document.body || !target?.missionId || !target?.url) return null;
+if (pipelineSlotForMission(target.missionId)) return pipelineSlotForMission(target.missionId);
+if (state.pipelineSlots.filter(slot => slot.frame?.isConnected).length >= PIPELINE_PRELOAD_COUNT) return null;
+const frame = document.createElement('iframe');
+const token = `${index + 1}-${target.missionId}-${Date.now()}`;
+frame.id = `mcn-v3-pipeline-preload-${token}`;
+frame.name = `${PIPELINE_PRELOAD_NAME_PREFIX}${token}`;
+frame.src = target.url;
+frame.setAttribute('aria-hidden', 'true');
+frame.setAttribute('tabindex', '-1');
+frame.setAttribute('data-mcn-v3-pipeline-preload', 'true');
+frame.style.cssText = [
+'position:fixed', 'left:-10000px', 'top:-10000px', `width:${WORKER_WIDTH}px`, `height:${WORKER_HEIGHT}px`,
+'display:block', 'visibility:hidden', 'opacity:0', 'pointer-events:none', 'border:0',
+'margin:0', 'padding:0', 'z-index:-2147483646', 'background:#0b1220'
+].join(';');
+const now = Date.now();
+const slot = {
+index,
+missionId: String(target.missionId),
+missionName: cleanMissionCaption(target.caption || missionNameForId(target.missionId)),
+caption: cleanMissionCaption(target.caption || ''),
+actionKind: target.actionKind || 'NEW',
+url: target.url,
+frame,
+createdAt: now,
+loadedAt: 0,
+readyAt: 0,
+loaded: false,
+ready: false,
+bridgeReady: false,
+v2DormantBridgeReady: false,
+v2DormantBridgeVersion: '',
+nexusMounted: false,
+autoControlPresent: false,
+autoControlText: '',
+status: 'OPENING',
+vehicleCount: 0,
+vehicleRows: 0,
+signature: '',
+stableSince: now,
+loadClicks: 0,
+loadClickPending: false,
+lastLoadClickAt: 0,
+lastProgressAt: now,
+lastAuditAt: 0,
+lastClickedControlToken: '',
+signatureAtLastClick: '',
+countAtLastClick: 0,
+rowsAtLastClick: 0,
+lastDuplicateSuppressionKey: '',
+undesiredSince: 0,
+handoffRetentionLogged: false,
+};
+state.pipelineSlots.push(slot);
+state.pipelinePreloadCreates += 1;
+frame.addEventListener('load', () => onPipelinePreloadLoad(frame));
+document.body.appendChild(frame);
+pipelineRecord('preload-created', {
+index,
+missionId: slot.missionId,
+missionName: slot.missionName,
+});
+return slot;
+}
+function frameHref(frame) {
+if (!frame?.isConnected) return '';
+try { return frame.contentWindow.location.href || ''; } catch { return ''; }
+}
+function synchroniseManagedFrameName(frame, requestedName) {
+const name = normaliseText(requestedName);
+const result = {
+requestedName: name,
+elementName: '',
+browsingContextName: '',
+elementUpdated: false,
+browsingContextUpdated: false,
+matched: false,
+};
+if (!frame || !name) return result;
+try {
+frame.name = name;
+frame.setAttribute?.('name', name);
+result.elementName = normaliseText(frame.name || frame.getAttribute?.('name') || '');
+result.elementUpdated = result.elementName === name;
+} catch {}
+try {
+if (frame.contentWindow?.location?.origin === location.origin) {
+frame.contentWindow.name = name;
+}
+result.browsingContextName = normaliseText(frame.contentWindow?.name || '');
+result.browsingContextUpdated = result.browsingContextName === name;
+} catch {}
+result.matched = result.elementUpdated && result.browsingContextUpdated;
+return result;
+}
+function pipelineAccessibleDocuments(frame) {
+if (!frame?.isConnected) return [];
+let root = null;
+try { root = frame.contentDocument || frame.contentWindow?.document || null; } catch {}
+if (!root) return [];
+const docs = [];
+const queue = [root];
+const seen = new Set();
+while (queue.length && docs.length < 10) {
+const doc = queue.shift();
+if (!doc || seen.has(doc)) continue;
+seen.add(doc);
+docs.push(doc);
+let frames = [];
+try { frames = Array.from(doc.querySelectorAll('iframe')); } catch {}
+for (const childFrame of frames) {
+try {
+if (childFrame.contentWindow?.location?.origin !== location.origin) continue;
+const childDoc = childFrame.contentDocument || childFrame.contentWindow?.document || null;
+if (childDoc) queue.push(childDoc);
+} catch {}
+}
+}
+return docs;
+}
+function pipelineVehicleSnapshot(slot) {
+const docs = pipelineAccessibleDocuments(slot?.frame);
+let best = { count: 0, rows: 0, signature: '0|0|', control: null, autoControl: null, doc: null };
+for (const doc of docs) {
+let boxes = [];
+let rows = 0;
+try { boxes = Array.from(doc.querySelectorAll('input.vehicle_checkbox')); } catch {}
+try { rows = doc.querySelectorAll('tr.vehicle_select_table_tr, #vehicle_table tr[vehicle_id], #vehicle_table tr[data-vehicle-id]').length; } catch {}
+const signatureBoxes = boxes.length <= PIPELINE_SIGNATURE_EDGE_IDS * 2
+? boxes
+: boxes.slice(0, PIPELINE_SIGNATURE_EDGE_IDS).concat(boxes.slice(-PIPELINE_SIGNATURE_EDGE_IDS));
+const ids = signatureBoxes
+.map(box => String(box.getAttribute('vehicle_id') || box.dataset?.vehicleId || box.value || ''))
+.filter(Boolean);
+const signature = `${boxes.length}|${rows}|${ids.join(',')}`;
+let control = null;
+try {
+control = Array.from(doc.querySelectorAll('a.btn-warning.missing_vehicles_load, a.missing_vehicles_load')).find(link => {
+if (!link.isConnected || link.classList.contains('disabled') || link.getAttribute('aria-disabled') === 'true') return false;
+const style = doc.defaultView?.getComputedStyle?.(link);
+return !style || (style.display !== 'none' && style.visibility !== 'hidden');
+}) || null;
+} catch {}
+const autoControl = findAutoModeControl(doc);
+if (boxes.length > best.count || rows > best.rows || (!best.doc && (control || autoControl))) {
+best = { count: boxes.length, rows, signature, control, autoControl, doc };
+}
+}
+return best;
+}
+function pipelineLoadControlToken(control) {
+if (!control) return '';
+return [
+control.getAttribute?.('href') || '',
+control.getAttribute?.('data-url') || '',
+control.getAttribute?.('data-page') || '',
+control.id || '',
+elementLabel(control),
+].map(normaliseText).join('|');
+}
+function frameOwnershipBridge(frame) {
+try {
+return frame?.contentWindow?.__MCN_V3_FRAME_OWNERSHIP_BRIDGE__ ||
+frame?.contentWindow?.__MCN_V3_PIPELINE_PRELOAD_BRIDGE__ ||
+null;
+} catch {
+return null;
+}
+}
+function frameOwnsOperationalState(frame) {
+const bridge = frameOwnershipBridge(frame);
+if (!bridge) return false;
+try {
+if (typeof bridge.isActive === 'function') return bridge.isActive() === true;
+if (typeof bridge.isPromoted === 'function') return bridge.isPromoted() === true;
+} catch {}
+return false;
+}
+function ensureActiveWorkerOwnership(frame, source = 'active-worker') {
+if (!frame?.isConnected) return false;
+if (frameOwnsOperationalState(frame)) return true;
+const bridgeBefore = frameOwnershipBridge(frame);
+let installedBridge = null;
+try {
+installedBridge = installOwnershipBridgeInWindow(
+frame.contentWindow,
+true,
+`parent-${source}`
+);
+} catch {}
+const active = Boolean(installedBridge && frameOwnsOperationalState(frame));
+const event = {
+at: nowIso(),
+source,
+missionId: missionIdFromUrl(frameHref(frame)) || state.currentMissionId,
+frameName: String(frame.name || ''),
+bridgePresentBefore: Boolean(bridgeBefore),
+bridgeSource: (() => {
+try { return normaliseText(installedBridge?.source?.() || ''); } catch { return ''; }
+})(),
+active,
+};
+state.activeOwnershipBootstrapHistory.push(event);
+if (state.activeOwnershipBootstrapHistory.length > OWNERSHIP_BOOTSTRAP_HISTORY_LIMIT) {
+state.activeOwnershipBootstrapHistory.splice(
+0,
+state.activeOwnershipBootstrapHistory.length - OWNERSHIP_BOOTSTRAP_HISTORY_LIMIT
+);
+}
+if (active) {
+state.activeOwnershipBootstrapInstalls += 1;
+pipelineRecord('active-owner-synchronous-bootstrap', event);
+if (
+state.activeOwnershipBootstrapInstalls <= 4 ||
+state.activeOwnershipBootstrapInstalls % 10 === 0
+) {
+log('Synchronously established Worker A storage ownership before Auto Mode start.', event);
+}
+return true;
+}
+state.activeOwnershipBootstrapFailures += 1;
+pipelineRecord('active-owner-synchronous-bootstrap-failed', event);
+return false;
+}
+function setFrameOwnership(frame, active, reason = 'ownership-change') {
+const bridge = frameOwnershipBridge(frame);
+if (!bridge) return false;
+let wasActive = false;
+try { wasActive = frameOwnsOperationalState(frame); } catch {}
+let changed = false;
+try {
+changed = active
+? (bridge.activate?.() === true || bridge.promote?.() === true)
+: (bridge.deactivate?.() === true || bridge.demote?.() === true);
+} catch {
+changed = false;
+}
+if (changed && !active && wasActive) {
+pipelineRecord('frame-storage-owner-demoted', {
+missionId: missionIdFromUrl(frameHref(frame)),
+reason,
+});
+}
+return changed;
+}
+function pipelineBridge(slot) {
+return frameOwnershipBridge(slot?.frame);
+}
+function v2DormantPreloadBridge(frameOrSlot) {
+const frame = frameOrSlot?.frame || frameOrSlot;
+try {
+return frame?.contentWindow?.[V2_DORMANT_PRELOAD_BRIDGE_KEY] || null;
+} catch {
+return null;
+}
+}
+function readV2DormantPreloadStatus(frameOrSlot) {
+const bridge = v2DormantPreloadBridge(frameOrSlot);
+if (!bridge) return null;
+try {
+const protocolVersion = Number(bridge.protocolVersion?.() || 0);
+const missionFinderVersion = normaliseText(bridge.missionFinderVersion?.() || '');
+const missionId = normaliseText(bridge.missionId?.() || '');
+const detailedStatus = bridge.status?.() || null;
+return {
+bridge,
+protocolVersion,
+missionFinderVersion,
+missionId,
+dormant: bridge.isDormant?.() === true,
+promoted: bridge.isPromoted?.() === true,
+frameName: normaliseText(detailedStatus?.frameName || ''),
+ownsOperationalState: detailedStatus?.ownsOperationalState === true,
+observerStarted: detailedStatus?.observerStarted === true,
+};
+} catch {
+return null;
+}
+}
+function onPipelinePreloadLoad(frame) {
+const slot = pipelineSlotForFrame(frame);
+if (!slot || !state.wanted || state.stopping) return;
+const href = frameHref(frame);
+const missionId = missionIdFromUrl(href);
+if (!missionId || missionId !== slot.missionId) {
+slot.status = 'ERROR';
+pipelineRecord('preload-navigation-mismatch', {
+expectedMissionId: slot.missionId,
+observedMissionId: missionId,
+href,
+});
+removePipelineSlot(slot, 'navigation-mismatch', true);
+return;
+}
+slot.loaded = true;
+slot.loadedAt = Date.now();
+slot.status = 'WARMING';
+slot.lastProgressAt = Date.now();
+try {
+installOwnershipBridgeInWindow(frame.contentWindow, false, 'parent-preload-load');
+const name = missionNameForId(missionId, frame.contentDocument || null);
+if (name) slot.missionName = name;
+} catch {}
+pipelineRecord('preload-page-loaded', {
+index: slot.index,
+missionId: slot.missionId,
+missionName: slot.missionName,
+});
+}
+function failPipelineIsolation(slot, reason, data = {}) {
+if (!slot) return;
+state.pipelineIsolationFailures += 1;
+slot.status = 'ISOLATION_FAIL';
+pipelineRecord('preload-isolation-failed', {
+missionId: slot.missionId,
+missionName: slot.missionName,
+reason,
+...data,
+});
+log('Pipeline preload isolation failed; preload removed before it could become a second dispatcher.', {
+missionId: slot.missionId,
+missionName: slot.missionName,
+reason,
+});
+removePipelineSlot(slot, `isolation-${reason}`, true);
+}
+function pumpPipelinePreloads() {
+if (state.pipelineActiveOnly || !state.wanted || state.stopping) return;
+const ordered = state.pipelineSlots.slice().sort((a, b) => a.index - b.index);
+const now = Date.now();
+const snapshots = new Map();
+for (const slot of ordered) {
+if (!slot.frame?.isConnected || !slot.loaded) continue;
+const bridge = pipelineBridge(slot);
+if (bridge?.isPreload?.()) slot.bridgeReady = true;
+const dormantStatus = readV2DormantPreloadStatus(slot);
+if (
+dormantStatus?.protocolVersion >= 1 &&
+dormantStatus.dormant &&
+!dormantStatus.promoted &&
+dormantStatus.missionId === slot.missionId
+) {
+if (!slot.v2DormantBridgeReady) {
+state.pipelineV2DormantReady += 1;
+pipelineRecord('preload-v2-native-dormant-ready', {
+missionId: slot.missionId,
+missionName: slot.missionName,
+protocolVersion: dormantStatus.protocolVersion,
+missionFinderVersion: dormantStatus.missionFinderVersion,
+});
+}
+slot.v2DormantBridgeReady = true;
+slot.v2DormantBridgeVersion = dormantStatus.missionFinderVersion;
+}
+if (
+(!slot.bridgeReady || !slot.v2DormantBridgeReady) &&
+now - slot.loadedAt > PIPELINE_BRIDGE_TIMEOUT_MS
+) {
+const missing = !slot.bridgeReady
+? 'storage-ownership-bridge-missing'
+: 'v2-native-dormant-bridge-missing';
+failPipelineIsolation(slot, missing);
+enterActiveOnlyMode(missing, {
+missionId: slot.missionId,
+pairedV2Required: false,
+embeddedMissionFinderRequired: true,
+});
+continue;
+}
+if (slot.ready && now - Number(slot.lastAuditAt || 0) < PIPELINE_READY_AUDIT_MS) continue;
+const snapshot = pipelineVehicleSnapshot(slot);
+snapshots.set(slot, snapshot);
+slot.lastAuditAt = now;
+slot.nexusMounted = Boolean(snapshot.doc?.querySelector?.('#mission-finder-wrapper, #control-panel'));
+slot.autoControlPresent = Boolean(snapshot.autoControl);
+slot.autoControlText = snapshot.autoControl ? elementLabel(snapshot.autoControl) : '';
+if (slot.nexusMounted || snapshot.autoControl) {
+failPipelineIsolation(slot, 'v2-runtime-mounted-in-dormant-preload', {
+nexusMounted: slot.nexusMounted,
+label: elementLabel(snapshot.autoControl),
+});
+enterActiveOnlyMode('v2-runtime-mounted-in-dormant-preload', {
+missionId: slot.missionId,
+});
+}
+}
+const slot = state.pipelineSlots
+.slice()
+.sort((a, b) => a.index - b.index)
+.find(item => item.loaded && !item.ready && item.frame?.isConnected);
+if (!slot) return;
+const bridge = pipelineBridge(slot);
+const dormantStatus = readV2DormantPreloadStatus(slot);
+if (
+!bridge?.isPreload?.() ||
+!slot.v2DormantBridgeReady ||
+!dormantStatus?.dormant ||
+dormantStatus.promoted
+) return;
+const snapshot = snapshots.get(slot) || pipelineVehicleSnapshot(slot);
+slot.nexusMounted = Boolean(snapshot.doc?.querySelector?.('#mission-finder-wrapper, #control-panel'));
+slot.autoControlPresent = Boolean(snapshot.autoControl);
+slot.autoControlText = snapshot.autoControl ? elementLabel(snapshot.autoControl) : '';
+const controlToken = pipelineLoadControlToken(snapshot.control);
+const signatureChanged = snapshot.signature !== slot.signature;
+slot.vehicleCount = snapshot.count;
+slot.vehicleRows = snapshot.rows;
+if (signatureChanged) {
+slot.signature = snapshot.signature;
+slot.stableSince = now;
+slot.lastProgressAt = now;
+}
+if (slot.loadClickPending) {
+const clickAge = now - slot.lastLoadClickAt;
+const progressObserved =
+snapshot.count > slot.countAtLastClick ||
+snapshot.rows > slot.rowsAtLastClick ||
+snapshot.signature !== slot.signatureAtLastClick ||
+(controlToken && slot.lastClickedControlToken && controlToken !== slot.lastClickedControlToken) ||
+(!snapshot.control && clickAge >= PIPELINE_PROGRESS_SETTLE_MS);
+if (progressObserved && clickAge >= PIPELINE_PROGRESS_SETTLE_MS) {
+slot.loadClickPending = false;
+slot.lastDuplicateSuppressionKey = '';
+slot.lastProgressAt = now;
+slot.stableSince = now;
+pipelineRecord('preload-load-progress-confirmed', {
+missionId: slot.missionId,
+click: slot.loadClicks,
+vehiclesAfter: snapshot.count,
+rowsAfter: snapshot.rows,
+});
+} else if (clickAge > PIPELINE_LOAD_PROGRESS_TIMEOUT_MS) {
+slot.loadClickPending = false;
+slot.lastClickedControlToken = '';
+slot.signatureAtLastClick = '';
+slot.lastDuplicateSuppressionKey = '';
+pipelineRecord('preload-load-progress-timeout', {
+missionId: slot.missionId,
+loadClicks: slot.loadClicks,
+signature: slot.signature,
+});
+}
+}
+if (slot.nexusMounted || snapshot.autoControl) {
+failPipelineIsolation(slot, 'v2-runtime-mounted-during-dormant-pump', {
+nexusMounted: slot.nexusMounted,
+label: elementLabel(snapshot.autoControl),
+});
+enterActiveOnlyMode('v2-runtime-mounted-during-dormant-pump', {
+missionId: slot.missionId,
+});
+return;
+}
+if (snapshot.control) {
+slot.status = 'VEHICLES';
+const duplicateSnapshot = Boolean(
+controlToken &&
+controlToken === slot.lastClickedControlToken &&
+snapshot.signature === slot.signatureAtLastClick
+);
+if (!slot.loadClickPending && duplicateSnapshot) {
+const suppressionKey = `${controlToken}|${snapshot.signature}`;
+if (slot.lastDuplicateSuppressionKey !== suppressionKey) {
+slot.lastDuplicateSuppressionKey = suppressionKey;
+state.pipelineDuplicateClicksSuppressed += 1;
+pipelineRecord('preload-duplicate-load-click-suppressed', {
+missionId: slot.missionId,
+loadClicks: slot.loadClicks,
+vehicles: snapshot.count,
+});
+}
+return;
+}
+if (
+!slot.loadClickPending &&
+slot.loadClicks < PIPELINE_MAX_LOAD_CLICKS &&
+now - slot.lastLoadClickAt >= PIPELINE_LOAD_CLICK_COOLDOWN_MS &&
+now - slot.lastProgressAt >= PIPELINE_PROGRESS_SETTLE_MS
+) {
+try {
+snapshot.control.click();
+slot.loadClicks += 1;
+slot.loadClickPending = true;
+slot.lastLoadClickAt = now;
+slot.lastClickedControlToken = controlToken;
+slot.signatureAtLastClick = snapshot.signature;
+slot.countAtLastClick = snapshot.count;
+slot.rowsAtLastClick = snapshot.rows;
+slot.lastDuplicateSuppressionKey = '';
+state.pipelineVehicleLoadClicks += 1;
+pipelineRecord('preload-vehicle-page-click', {
+index: slot.index,
+missionId: slot.missionId,
+missionName: slot.missionName,
+click: slot.loadClicks,
+vehiclesBefore: slot.vehicleCount,
+});
+} catch (error) {
+slot.status = 'LOAD_ERROR';
+pipelineRecord('preload-vehicle-page-click-failed', {
+missionId: slot.missionId,
+error: String(error?.message || error),
+});
+}
+}
+return;
+}
+const pageReady = (() => {
+try {
+const doc = slot.frame.contentDocument;
+return doc?.readyState === 'complete' && (
+snapshot.count > 0 || snapshot.rows > 0 || now - slot.loadedAt > 4000
+);
+} catch { return false; }
+})();
+if (pageReady && now - slot.stableSince >= PIPELINE_READY_STABLE_MS) {
+slot.ready = true;
+slot.readyAt = now;
+slot.status = 'READY';
+state.pipelinePreloadsReady += 1;
+pipelineRecord('preload-ready', {
+index: slot.index,
+missionId: slot.missionId,
+missionName: slot.missionName,
+vehicleCount: slot.vehicleCount,
+vehicleRows: slot.vehicleRows,
+loadClicks: slot.loadClicks,
+warmMs: Math.max(0, now - slot.createdAt),
+});
+} else {
+slot.status = snapshot.count || snapshot.rows ? 'STABILISING' : 'WARMING';
+}
+}
+function pipelineTargetRotationFrozen() {
+return Boolean(
+state.transportServiceActive ||
+state.transportKind ||
+state.postDispatchWatchdog ||
+state.nonMissionRedirectRecoveryInFlight ||
+state.wakeRecoveryActive ||
+/(?:RECOVERY|TRANSPORT|PROMOTION_VERIFY|PIPELINE_PROMOTE)/.test(String(state.phase || ''))
+);
+}
+function syncPipelinePreloads(force = false) {
+if (state.pipelineActiveOnly || !state.wanted || state.stopping || !document.body) return;
+const now = Date.now();
+if (!force && now - state.pipelineLastSyncAt < PIPELINE_SYNC_MS) return;
+state.pipelineLastSyncAt = now;
+const desired = desiredPipelineTargets();
+const desiredIds = new Set(desired.map(item => item.missionId));
+const rotationFrozen = pipelineTargetRotationFrozen();
+for (const slot of state.pipelineSlots.slice()) {
+if (desiredIds.has(slot.missionId)) {
+slot.undesiredSince = 0;
+slot.handoffRetentionLogged = false;
+continue;
+}
+if (rotationFrozen) {
+slot.undesiredSince = 0;
+continue;
+}
+if (!slot.undesiredSince) {
+slot.undesiredSince = now;
+state.pipelineHandoffRetentions += 1;
+}
+const graceMs = slot.ready ? PIPELINE_READY_HANDOFF_GRACE_MS : PIPELINE_TARGET_ROTATION_GRACE_MS;
+if (!slot.handoffRetentionLogged) {
+slot.handoffRetentionLogged = true;
+pipelineRecord('preload-retained-for-handoff', {
+missionId: slot.missionId,
+ready: Boolean(slot.ready),
+graceMs,
+});
+}
+if (now - slot.undesiredSince >= graceMs) removePipelineSlot(slot, 'target-rotated-after-grace', true);
+}
+desired.forEach((target, index) => {
+const existing = pipelineSlotForMission(target.missionId);
+if (existing) {
+existing.index = index;
+existing.actionKind = target.actionKind || existing.actionKind;
+existing.undesiredSince = 0;
+existing.handoffRetentionLogged = false;
+return;
+}
+if (state.pipelineSlots.filter(slot => slot.frame?.isConnected).length >= PIPELINE_PRELOAD_COUNT) return;
+createPipelinePreload(target, index);
+});
+state.pipelineSlots.sort((a, b) => a.index - b.index);
+persistPipelineTargets(desired);
+}
+function startPipelineController() {
+if (state.pipelineActiveOnly || !state.wanted || state.stopping) return;
+if (!state.pipelineSyncTimer) {
+state.pipelineSyncTimer = window.setInterval(() => syncPipelinePreloads(false), PIPELINE_SYNC_MS);
+}
+if (!state.pipelinePumpTimer) {
+state.pipelinePumpTimer = window.setInterval(pumpPipelinePreloads, PIPELINE_PUMP_MS);
+}
+syncPipelinePreloads(true);
+pumpPipelinePreloads();
+}
+function promotePipelineMission(missionId, reason = 'mission-transition', metadata = {}) {
+const id = String(missionId || '');
+if (
+state.pipelineActiveOnly ||
+!id ||
+isMissionTemporarilySkipped(id) ||
+!state.wanted ||
+state.stopping ||
+state.transportServiceActive
+) return false;
+const slot = pipelineSlotForMission(id);
+if (!slot?.loaded || !slot.ready || !slot.frame?.isConnected) return false;
+const href = frameHref(slot.frame);
+if (missionIdFromUrl(href) !== id) return false;
+const preloadAgeMs = Date.now() - Number(slot.loadedAt || slot.createdAt || 0);
+if (preloadAgeMs > PIPELINE_PROMOTION_MAX_AGE_MS) {
+state.pipelinePromotionFallbacks += 1;
+pipelineRecord('preload-promotion-fallback', {
+missionId: id,
+missionName: slot.missionName,
+reason,
+preloadAgeMs,
+fallbackReason: 'preload-too-old',
+fallback: 'active-worker-navigation',
+});
+removePipelineSlot(slot, 'promotion-preload-too-old', true);
+return false;
+}
+const bridge = pipelineBridge(slot);
+if (!bridge?.isPreload?.()) return false;
+const dormantStatus = readV2DormantPreloadStatus(slot);
+if (
+!slot.v2DormantBridgeReady ||
+dormantStatus?.protocolVersion < 1 ||
+!dormantStatus?.dormant ||
+dormantStatus.promoted ||
+dormantStatus.missionId !== id
+) {
+failPipelineIsolation(slot, 'v2-native-dormant-promotion-gate-failed', {
+dormantStatus: dormantStatus ? {
+protocolVersion: dormantStatus.protocolVersion,
+missionFinderVersion: dormantStatus.missionFinderVersion,
+missionId: dormantStatus.missionId,
+dormant: dormantStatus.dormant,
+promoted: dormantStatus.promoted,
+} : null,
+});
+enterActiveOnlyMode('v2-native-dormant-promotion-gate-failed', {
+missionId: id,
+});
+return false;
+}
+const snapshot = pipelineVehicleSnapshot(slot);
+slot.nexusMounted = Boolean(snapshot.doc?.querySelector?.('#mission-finder-wrapper, #control-panel'));
+slot.autoControlPresent = Boolean(snapshot.autoControl);
+slot.autoControlText = snapshot.autoControl ? elementLabel(snapshot.autoControl) : '';
+if (slot.nexusMounted || snapshot.autoControl || snapshot.control) {
+failPipelineIsolation(slot, 'promotion-preload-not-stable-and-dormant', {
+nexusMounted: slot.nexusMounted,
+autoControl: elementLabel(snapshot.autoControl),
+vehicleLoadControl: pipelineLoadControlToken(snapshot.control),
+});
+return false;
+}
+const oldFrame = state.worker;
+const oldBridge = frameOwnershipBridge(oldFrame);
+if (oldFrame?.isConnected && (!oldBridge || !frameOwnsOperationalState(oldFrame))) {
+state.pipelinePromotionFallbacks += 1;
+enterActiveOnlyMode('active-owner-bridge-missing', {
+missionId: state.currentMissionId,
+promotionTargetMissionId: id,
+});
+return false;
+}
+const oldFrameStyle = oldFrame?.style?.cssText || '';
+const oldFrameName = String(oldFrame?.name || '');
+const oldBrowsingContextName = (() => {
+try { return String(oldFrame?.contentWindow?.name || ''); } catch { return ''; }
+})();
+const oldDemoted = !oldFrame?.isConnected || setFrameOwnership(oldFrame, false, `handoff-to-${id}`);
+if (!oldDemoted) {
+state.pipelinePromotionFallbacks += 1;
+enterActiveOnlyMode('outgoing-owner-demotion-failed', {
+missionId: state.currentMissionId,
+promotionTargetMissionId: id,
+});
+return false;
+}
+if (oldFrame?.isConnected) state.pipelineOwnershipDemotions += 1;
+if (oldFrame?.isConnected) {
+try {
+oldFrame.style.visibility = 'hidden';
+oldFrame.style.left = '-10000px';
+oldFrame.style.pointerEvents = 'none';
+} catch {}
+}
+const bridgePromoted = setFrameOwnership(slot.frame, true, `promotion-${reason}`);
+if (!bridgePromoted) {
+if (oldFrame?.isConnected) {
+setFrameOwnership(oldFrame, true, 'promotion-rollback');
+try {
+synchroniseManagedFrameName(oldFrame, oldBrowsingContextName || oldFrameName);
+oldFrame.style.cssText = oldFrameStyle;
+} catch {}
+}
+state.pipelinePromotionFallbacks += 1;
+pipelineRecord('preload-promotion-fallback', {
+missionId: id,
+missionName: slot.missionName,
+reason,
+ready: Boolean(slot.ready),
+bridgeReady: Boolean(slot.bridgeReady),
+fallbackReason: 'preload-bridge-rejected-promotion',
+fallback: 'active-worker-navigation',
+});
+log('Pipeline preload bridge rejected promotion; keeping the existing ACTIVE worker.', {
+missionId: id,
+missionName: slot.missionName,
+ready: Boolean(slot.ready),
+reason,
+});
+removePipelineSlot(slot, 'promotion-bridge-rejected', true);
+return false;
+}
+const nextGeneration = state.workerGeneration + 1;
+const activationToken = `v3-${nextGeneration}-${id}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+const activeFrameName = `${ACTIVE_WORKER_NAME_PREFIX}${nextGeneration}-${id}`;
+const frameNameHandoff = synchroniseManagedFrameName(slot.frame, activeFrameName);
+try {
+applyActiveWorkerFrameStyle(slot.frame);
+} catch {}
+const activationStatus = readV2DormantPreloadStatus(slot);
+if (
+!frameNameHandoff.matched ||
+activationStatus?.frameName !== activeFrameName ||
+!activationStatus?.ownsOperationalState
+) {
+setFrameOwnership(slot.frame, false, 'frame-name-handoff-rollback');
+if (oldFrame?.isConnected) {
+setFrameOwnership(oldFrame, true, 'frame-name-handoff-rollback');
+try {
+synchroniseManagedFrameName(oldFrame, oldBrowsingContextName || oldFrameName);
+oldFrame.style.cssText = oldFrameStyle;
+} catch {}
+}
+state.pipelineV2DormantPromotionFailures += 1;
+state.pipelinePromotionFallbacks += 1;
+pipelineRecord('preload-frame-name-handoff-failed', {
+missionId: id,
+missionName: slot.missionName,
+reason,
+frameNameHandoff,
+v2FrameName: activationStatus?.frameName || '',
+v2OwnsOperationalState: activationStatus?.ownsOperationalState === true,
+fallback: 'restore-outgoing-active-worker',
+});
+removePipelineSlot(slot, 'frame-name-handoff-failed', true);
+enterActiveOnlyMode('frame-name-handoff-failed', {
+missionId: id,
+});
+return false;
+}
+let v2Promoted = false;
+try {
+v2Promoted = activationStatus.bridge.promote({
+activationToken,
+expectedMissionId: id,
+source: `v3-${VERSION}:${reason}`,
+}) === true;
+} catch {
+v2Promoted = false;
+}
+if (!v2Promoted) {
+setFrameOwnership(slot.frame, false, 'v2-native-promotion-rollback');
+if (oldFrame?.isConnected) {
+setFrameOwnership(oldFrame, true, 'v2-native-promotion-rollback');
+try {
+synchroniseManagedFrameName(oldFrame, oldBrowsingContextName || oldFrameName);
+oldFrame.style.cssText = oldFrameStyle;
+} catch {}
+}
+state.pipelineV2DormantPromotionFailures += 1;
+state.pipelinePromotionFallbacks += 1;
+pipelineRecord('preload-v2-native-promotion-rejected', {
+missionId: id,
+missionName: slot.missionName,
+reason,
+protocolVersion: dormantStatus.protocolVersion,
+missionFinderVersion: dormantStatus.missionFinderVersion,
+frameNameHandoff,
+v2Status: activationStatus ? {
+frameName: activationStatus.frameName,
+ownsOperationalState: activationStatus.ownsOperationalState,
+dormant: activationStatus.dormant,
+promoted: activationStatus.promoted,
+observerStarted: activationStatus.observerStarted,
+} : null,
+fallback: 'restore-outgoing-active-worker',
+});
+removePipelineSlot(slot, 'v2-native-promotion-rejected', true);
+enterActiveOnlyMode('v2-native-promotion-rejected', {
+missionId: id,
+});
+return false;
+}
+const wasReady = Boolean(slot.ready);
+state.pipelineSlots = state.pipelineSlots.filter(item => item !== slot);
+clearTimer('workerLoadTimer');
+clearTimer('nexusDiscoveryTimer');
+clearTimer('watcherTimer', window.clearInterval);
+captureWorkerSnapshot();
+state.workerGeneration += 1;
+const generation = state.workerGeneration;
+state.worker = slot.frame;
+state.worker.id = WORKER_ID;
+state.worker.name = `${ACTIVE_WORKER_NAME_PREFIX}${generation}-${id}`;
+state.worker.setAttribute('data-mcn-v3-worker', 'true');
+state.worker.removeAttribute('data-mcn-v3-pipeline-preload');
+applyActiveWorkerFrameStyle(state.worker);
+state.worker.addEventListener('load', () => {
+if (generation !== state.workerGeneration || state.worker !== slot.frame) return;
+onWorkerLoad(slot.frame, generation);
+});
+state.bootstrapMissionUrl = href;
+state.currentMissionUrl = href;
+state.currentMissionId = id;
+state.currentMissionName = slot.missionName || missionNameForId(id, slot.frame.contentDocument || null);
+forgetWorkerDocument();
+state.autoControlText = '';
+state.lastWorkerHref = href;
+state.lastWorkerNavigationAt = Date.now();
+state.autoStoppedSince = 0;
+state.autoStopWarned = false;
+clearAutoRecoveryWatchdog('pipeline-promotion');
+clearPostDispatchWatchdog('pipeline-promotion');
+resetPriorityPending();
+state.redirectFromMissionId = '';
+state.redirectTargetMissionId = '';
+state.transportKind = '';
+state.transportSince = 0;
+state.transportWarned = false;
+state.foreignMissionUiWarned = false;
+state.pipelinePromotions += 1;
+if (wasReady) state.pipelineReadyPromotions += 1;
+recordMissionVisit(href, 'pipeline-promotion');
+startMissionTiming(id, state.currentMissionName, wasReady ? 'pipeline-ready-promotion' : 'pipeline-warm-promotion');
+clearSharedV2QueueGuard(`pipeline-${reason}`, id);
+pipelineRecord('preload-promoted', {
+missionId: id,
+missionName: state.currentMissionName,
+reason,
+ready: wasReady,
+vehicleCount: slot.vehicleCount,
+vehicleRows: slot.vehicleRows,
+loadClicks: slot.loadClicks,
+v2ControlBeforePromotion: Boolean(snapshot.autoControl),
+fromMissionId: metadata.fromMissionId || '',
+});
+log('Three-mission pipeline promoted a preloaded mission into the single ACTIVE V2 dispatcher.', {
+missionId: id,
+missionName: state.currentMissionName,
+ready: wasReady,
+vehicleCount: slot.vehicleCount,
+loadClicks: slot.loadClicks,
+v2ControlBeforePromotion: Boolean(snapshot.autoControl),
+reason,
+});
+if (oldFrame && oldFrame !== state.worker && oldFrame.isConnected) {
+try { oldFrame.name = `mcn-v3-retired-worker-${generation}-${metadata.fromMissionId || ''}`; } catch {}
+try { oldFrame.src = 'about:blank'; } catch {}
+try { oldFrame.remove(); } catch {}
+}
+clearSharedV2AutoRunning(`pipeline-${reason}`);
+adoptWorkerDocument(getWorkerDocument(state.worker), href, 'pipeline-promotion');
+armPromotedWorkTracking('pipeline-promotion');
+requestV2FrameRuntimeReconcile(state.worker, generation, reason);
+setPhase(
+'PIPELINE_PROMOTE',
+wasReady ? 'Handing over to prepared mission' : 'Handing over to warmed mission',
+`${missionDisplay(id, state.currentMissionName)} is becoming the single active V2 worker.`
+);
+waitForNexusAndStart(state.worker, generation);
+startWatcher();
+window.setTimeout(() => syncPipelinePreloads(true), 80);
+return true;
+}
+function readSharedV2QueueGuardState() {
+const read = key => {
+try { return sessionStorage.getItem(key) || ''; } catch { return ''; }
+};
+const now = Date.now();
+const openLockUntil = parseInt(read(V2_MAIN_MISSION_OPEN_LOCK_KEY) || '0', 10);
+const pendingUntil = parseInt(read(V2_MAIN_MISSION_PENDING_UNTIL_KEY) || '0', 10);
+return {
+queueWait: read(V2_QUEUE_WAIT_ACTIVE_FLAG),
+finalDispatch: read(V2_FINAL_QUEUE_DISPATCH_FLAG),
+openingMission: read(V2_QUEUE_OPENING_MISSION_FLAG),
+openLockUntil,
+openLockRemainingMs: Math.max(0, openLockUntil - now),
+openReason: read(V2_MAIN_MISSION_OPEN_REASON_KEY),
+pendingUntil,
+pendingRemainingMs: Math.max(0, pendingUntil - now),
+pendingTarget: read(V2_MAIN_MISSION_PENDING_TARGET_KEY),
+pendingReason: read(V2_MAIN_MISSION_PENDING_REASON_KEY),
+};
+}
+function sharedV2QueueGuardIsActive(snapshot = readSharedV2QueueGuardState()) {
+return Boolean(
+snapshot.queueWait === 'true' ||
+snapshot.finalDispatch === 'true' ||
+snapshot.openingMission === 'true' ||
+snapshot.openLockRemainingMs > 0 ||
+snapshot.pendingRemainingMs > 0
+);
+}
+function resetQueueFastReleaseCandidate() {
+state.queueFastReleaseCandidateMissionId = '';
+state.queueFastReleaseCandidateSince = 0;
+}
+function clearSharedV2QueueGuard(reason, missionId = '', options = {}) {
+const before = readSharedV2QueueGuardState();
+if (!sharedV2QueueGuardIsActive(before)) return false;
+const preserveFinalDispatch = options?.preserveFinalDispatch === true;
+for (const key of [
+V2_QUEUE_WAIT_ACTIVE_FLAG,
+V2_QUEUE_OPENING_MISSION_FLAG,
+V2_MAIN_MISSION_OPEN_LOCK_KEY,
+V2_MAIN_MISSION_OPEN_REASON_KEY,
+V2_MAIN_MISSION_PENDING_UNTIL_KEY,
+V2_MAIN_MISSION_PENDING_TARGET_KEY,
+V2_MAIN_MISSION_PENDING_REASON_KEY,
+]) {
+try { sessionStorage.removeItem(key); } catch {}
+}
+if (!preserveFinalDispatch) {
+try { sessionStorage.removeItem(V2_FINAL_QUEUE_DISPATCH_FLAG); } catch {}
+}
+const event = {
+at: nowIso(),
+missionId: String(missionId || state.currentMissionId || ''),
+missionName: missionNameForId(missionId || state.currentMissionId),
+reason: String(reason || 'background queue handoff confirmed'),
+preservedFinalDispatch: preserveFinalDispatch,
+before,
+};
+state.queueFastReleases += 1;
+if (
+state.activeMissionTiming?.missionId === event.missionId &&
+!state.activeMissionTiming.milestones?.queueFastRelease
+) {
+state.activeMissionTiming.milestones.queueFastRelease = {
+at: event.at,
+atMs: Date.now(),
+source: 'queue-fastpath',
+text: event.reason,
+};
+}
+state.queueFastReleaseHistory.push(event);
+if (state.queueFastReleaseHistory.length > QUEUE_FAST_RELEASE_HISTORY_LIMIT) {
+state.queueFastReleaseHistory.splice(
+0,
+state.queueFastReleaseHistory.length - QUEUE_FAST_RELEASE_HISTORY_LIMIT
+);
+}
+resetQueueFastReleaseCandidate();
+log(
+preserveFinalDispatch
+? 'Released stale V2 queue-opening locks while preserving the final-dispatch duplicate guard.'
+: 'Released stale shared V2 queue/opening guard after background handoff was confirmed.',
+event
+);
+return true;
+}
+function maybeFastReleaseQueueGuardAfterHiddenTransition(doc, href, context, statusText = '') {
+const activeControl = findAutoModeControl(doc);
+if (
+!state.wanted ||
+state.stopping ||
+!currentWorkerAutoConfirmed() ||
+!activeControl ||
+!autoControlLooksRunning(activeControl) ||
+context?.kind ||
+state.transportServiceActive
+) {
+resetQueueFastReleaseCandidate();
+return false;
+}
+const missionId = missionIdFromUrl(href);
+if (!missionId || doc?.readyState !== 'complete') {
+resetQueueFastReleaseCandidate();
+return false;
+}
+if (state.lastMissionTransitionToId !== missionId) {
+resetQueueFastReleaseCandidate();
+return false;
+}
+const transitionAge = Date.now() - state.lastMissionTransitionAt;
+if (transitionAge < 0 || transitionAge > QUEUE_FAST_RELEASE_TRANSITION_WINDOW_MS) {
+resetQueueFastReleaseCandidate();
+return false;
+}
+const status = normaliseText(statusText || findUsefulNexusStatus(doc));
+if (/\bauto stopped:\s*/i.test(status) || /transport|patient|prison/i.test(status)) {
+resetQueueFastReleaseCandidate();
+return false;
+}
+const guard = readSharedV2QueueGuardState();
+const queueRestartStatus = /queue restart is opening the next mission/i.test(status);
+if (!queueRestartStatus && !sharedV2QueueGuardIsActive(guard)) {
+resetQueueFastReleaseCandidate();
+return false;
+}
+if (!doc.querySelector('#mission-finder-wrapper, #control-panel')) return false;
+if (state.queueFastReleaseCandidateMissionId !== missionId) {
+state.queueFastReleaseCandidateMissionId = missionId;
+state.queueFastReleaseCandidateSince = Date.now();
+return false;
+}
+if (Date.now() - state.queueFastReleaseCandidateSince < QUEUE_FAST_RELEASE_STABLE_MS) return false;
+return clearSharedV2QueueGuard(
+queueRestartStatus
+? 'hidden mission loaded while V2 still reported queue restart'
+: 'hidden mission transition loaded while shared V2 queue guard remained active',
+missionId
+);
+}
+function findSyntheticTopMissionAnchor(target) {
+const element = target && target.nodeType === 1 ? target : target?.parentElement;
+const anchor = element?.closest?.('a[href*="/missions/"]');
+if (!anchor || anchor.ownerDocument !== document) return null;
+const href = anchor.href || anchor.getAttribute('href') || '';
+return missionIdFromUrl(href) ? anchor : null;
+}
+function blockSyntheticTopMissionRehook(event) {
+if (!(state.wanted || state.stopping || persistedBackgroundWanted()) || event.isTrusted) return;
+const anchor = findSyntheticTopMissionAnchor(event.target);
+if (!anchor) return;
+event.preventDefault();
+event.stopImmediatePropagation();
+state.topSyntheticMissionRehooksBlocked += 1;
+const missionId = missionIdFromUrl(anchor.href || anchor.getAttribute('href') || '');
+const hiddenDoc = getWorkerDocument();
+if (
+missionId &&
+hiddenDoc?.readyState === 'complete' &&
+state.currentMissionId === missionId &&
+missionIdFromUrl(getWorkerHref()) === missionId
+) {
+clearSharedV2QueueGuard('blocked top-window synthetic mission open; exact mission already owned by hidden worker', missionId);
+}
+if (state.topSyntheticMissionRehooksBlocked <= 3 || state.topSyntheticMissionRehooksBlocked % 10 === 0) {
+log('Blocked synthetic top-window mission navigation so the visible page stays under player control.', {
+missionId,
+pathname: location.pathname,
+blockedCount: state.topSyntheticMissionRehooksBlocked,
+});
+}
+}
+document.addEventListener('click', blockSyntheticTopMissionRehook, true);
+function chooseBootstrapMission() {
+return chooseTopMission({ actionableOnly: true });
+}
+function collectRadioTransportRequests() {
+const rows = Array.from(document.querySelectorAll(
+'#radio_messages_important li, #radio_messages li'
+));
+const requests = [];
+const seen = new Set();
+for (const row of rows) {
+const status5 = row.querySelector(
+'.building_list_fms_5[title="Transport Request"], .building_list_fms[title="Transport Request"]'
+);
+const rowText = normaliseText(row.textContent);
+if (!status5 && !/\bTransport Request\b/i.test(rowText)) continue;
+const classMatch = String(row.className || '').match(/\bradio_message_vehicle_(\d+)\b/);
+const vehicleId = classMatch?.[1] ||
+normaliseText(row.querySelector('[vehicle_id]')?.getAttribute('vehicle_id')) ||
+'';
+const missionAnchor = row.querySelector('a.mission-radio-button[href*="/missions/"], a[href*="/missions/"]');
+const missionUrl = sameOriginUrl(missionAnchor?.getAttribute('href') || missionAnchor?.href || '');
+const missionId = missionIdFromUrl(missionUrl?.href || '');
+if (!vehicleId || !missionId || !missionUrl) continue;
+const missionAnchorText = normaliseText(missionAnchor?.textContent || '');
+const allianceLike = /\[alliance\]/i.test(rowText) || /\[alliance\]/i.test(missionAnchorText);
+const key = `${vehicleId}:${missionId}`;
+if (allianceLike) {
+if (!state.allianceRadioIgnoredKeys.has(key)) {
+state.allianceRadioIgnoredKeys.add(key);
+state.runAllianceRadioIgnored += 1;
+const ignored = {
+at: nowIso(),
+key,
+vehicleId,
+missionId,
+vehicleLabel: normaliseText(row.querySelector(`a[href^="/vehicles/${CSS.escape(vehicleId)}"]`)?.textContent),
+rowText,
+};
+state.allianceRadioIgnoredHistory.push(ignored);
+if (state.allianceRadioIgnoredHistory.length > RADIO_HISTORY_LIMIT) {
+state.allianceRadioIgnoredHistory.splice(0, state.allianceRadioIgnoredHistory.length - RADIO_HISTORY_LIMIT);
+}
+log('Ignored Alliance Radio Transport Request; it cannot enter the personal V3 work queue.', ignored);
+}
+continue;
+}
+if (seen.has(key)) continue;
+seen.add(key);
+requests.push({
+key,
+vehicleId,
+missionId,
+missionUrl: missionUrl.href,
+vehicleLabel: normaliseText(row.querySelector(`a[href^="/vehicles/${CSS.escape(vehicleId)}"]`)?.textContent),
+rowText,
+});
+}
+return requests;
+}
+function refreshRadioTransportRequests() {
+const requests = collectRadioTransportRequests();
+const nextKeys = new Set(requests.map(request => request.key));
+for (const request of requests) {
+if (state.radioRequestKeys.has(request.key)) continue;
+state.runRadioTransportRequests += 1;
+const event = {
+at: nowIso(),
+event: 'appeared',
+key: request.key,
+vehicleId: request.vehicleId,
+missionId: request.missionId,
+vehicleLabel: request.vehicleLabel,
+};
+state.radioRequestHistory.push(event);
+log('Radio Transport Request appeared.', event);
+}
+for (const oldKey of state.radioRequestKeys) {
+if (nextKeys.has(oldKey)) continue;
+const event = { at: nowIso(), event: 'cleared', key: oldKey };
+state.radioRequestHistory.push(event);
+log('Radio Transport Request cleared.', event);
+schedulePostTransportRehook(oldKey);
+}
+if (state.radioRequestHistory.length > RADIO_HISTORY_LIMIT) {
+state.radioRequestHistory.splice(0, state.radioRequestHistory.length - RADIO_HISTORY_LIMIT);
+}
+const previousFirstKey = state.radioTransportRequests[0]?.key || '';
+const nextFirstKey = requests[0]?.key || '';
+if (nextFirstKey !== previousFirstKey) {
+state.radioRequestSince = nextFirstKey ? Date.now() : 0;
+state.radioRequestWarned = false;
+}
+state.radioTransportRequests = requests;
+state.radioRequestKeys = nextKeys;
+return requests;
+}
+function radioRequestForVehicle(vehicleId, requests = state.radioTransportRequests) {
+const id = String(vehicleId || '');
+if (!id) return null;
+return (requests || []).find(request => String(request.vehicleId) === id) || null;
+}
+function resetPrisonerAssistTracking() {
+state.prisonerAssistKey = '';
+state.prisonerAssistSince = 0;
+}
+function findPersonalStructuredPrisonerContext(doc, href, requests) {
+if (!doc) return null;
+const routeVehicleId = vehicleIdFromUrl(href);
+for (const scope of getAccessibleTransportDocuments(doc)) {
+let roots = [];
+try {
+roots = Array.from(scope.querySelectorAll(
+'[data-transport-request="true"][data-transport-request-type="prisoner"]'
+));
+} catch {}
+for (const root of roots) {
+const selector = root.querySelector?.('.prison-select[data-vehicle-id]');
+const vehicleId = normaliseText(selector?.getAttribute?.('data-vehicle-id') || routeVehicleId || '');
+if (!vehicleId) continue;
+if (routeVehicleId && routeVehicleId !== vehicleId) continue;
+const request = radioRequestForVehicle(vehicleId, requests);
+if (!request) continue;
+return { document: scope, root, selector, vehicleId, request };
+}
+}
+return null;
+}
+function firstUsableGreenPrisonCell(prisonerContext) {
+if (!prisonerContext?.root || !prisonerContext.vehicleId) return null;
+let links = [];
+try {
+links = Array.from(prisonerContext.root.querySelectorAll(
+'a.btn.btn-success[data-prison-id][href*="/gefangener/"]'
+));
+} catch {}
+for (const link of links) {
+if (!link?.isConnected || link.hidden) continue;
+if (link.classList?.contains('disabled') || link.classList?.contains('btn-danger')) continue;
+if (String(link.getAttribute?.('aria-disabled') || '').toLowerCase() === 'true') continue;
+const url = sameOriginUrl(link.getAttribute?.('href') || link.href || '');
+if (!url) continue;
+const route = url.pathname.match(/^\/vehicles\/(\d+)\/gefangener\/(\d+)\/?$/i);
+if (!route || route[1] !== prisonerContext.vehicleId) continue;
+const label = normaliseText(link.textContent || link.innerText || '');
+const freeMatch = label.match(/Free cells:\s*(\d+)/i);
+const freeCells = freeMatch ? Number.parseInt(freeMatch[1], 10) : null;
+if (Number.isFinite(freeCells) && freeCells <= 0) continue;
+return {
+link,
+prisonId: route[2],
+label,
+freeCells,
+href: url.href,
+};
+}
+return null;
+}
+function maybeAssistPrisonerTransport(doc, href, context, requests) {
+if (!state.wanted || state.stopping || context?.kind !== 'PRISONER') {
+resetPrisonerAssistTracking();
+return false;
+}
+if (exactPrisonerPath(href)) {
+resetPrisonerAssistTracking();
+return false;
+}
+const prisoner = findPersonalStructuredPrisonerContext(doc, href, requests);
+if (!prisoner) {
+resetPrisonerAssistTracking();
+return false;
+}
+const assistKey = `${prisoner.request.key}:${pathFromUrl(href)}`;
+if (state.prisonerAssistKey !== assistKey) {
+state.prisonerAssistKey = assistKey;
+state.prisonerAssistSince = Date.now();
+return false;
+}
+if (Date.now() - state.prisonerAssistSince < PRISONER_ASSIST_DELAY_MS) return false;
+const destination = firstUsableGreenPrisonCell(prisoner);
+if (!destination) {
+return false;
+}
+const clickKey = `${prisoner.request.key}:${destination.prisonId}`;
+if (
+state.prisonerAssistLastClickKey === clickKey &&
+Date.now() - state.prisonerAssistLastClickAt < PRISONER_ASSIST_CLICK_COOLDOWN_MS
+) return false;
+const liveRequests = collectRadioTransportRequests();
+const liveRequest = radioRequestForVehicle(prisoner.vehicleId, liveRequests);
+if (!liveRequest || liveRequest.missionId !== prisoner.request.missionId) {
+resetPrisonerAssistTracking();
+return false;
+}
+state.prisonerAssistLastClickKey = clickKey;
+state.prisonerAssistLastClickAt = Date.now();
+state.prisonerAssistAttempts += 1;
+const event = {
+at: nowIso(),
+vehicleId: prisoner.vehicleId,
+missionId: prisoner.request.missionId,
+prisonId: destination.prisonId,
+freeCells: destination.freeCells,
+label: destination.label,
+path: pathFromUrl(href),
+reason: 'V2 prisoner Cell Selection remained unchanged after fallback delay',
+};
+state.prisonerAssistHistory.push(event);
+if (state.prisonerAssistHistory.length > AFFINITY_HISTORY_LIMIT) {
+state.prisonerAssistHistory.splice(0, state.prisonerAssistHistory.length - AFFINITY_HISTORY_LIMIT);
+}
+setPhase(
+'PRISONER_ASSIST',
+'Completing prisoner transport',
+`V2 did not advance the personal prisoner Cell Selection. Using the first exact usable green cell for vehicle ${prisoner.vehicleId} on mission ${prisoner.request.missionId}.`
+);
+log('Prisoner assist clicked the first exact usable green cell after V2 had first chance.', event);
+try {
+destination.link.click();
+return true;
+} catch (error) {
+log('Prisoner assist click failed.', { ...event, error: String(error?.message || error) });
+return false;
+}
+}
+function resetPatientAssistTracking() {
+state.patientAssistKey = '';
+state.patientAssistSince = 0;
+}
+function findExactPersonalPatientAnchor(doc, href, requests) {
+if (!doc) return null;
+const routeVehicleId = vehicleIdFromUrl(href);
+if (!routeVehicleId) return null;
+const request = radioRequestForVehicle(routeVehicleId, requests);
+if (!request) return null;
+for (const scope of getAccessibleTransportDocuments(doc)) {
+let anchors = [];
+try {
+anchors = Array.from(scope.querySelectorAll('a.btn-success[href*="/patient/"]'));
+} catch {}
+for (const anchor of anchors) {
+if (!anchor?.isConnected || anchor.hidden) continue;
+if (anchor.classList?.contains('disabled') || anchor.classList?.contains('btn-danger')) continue;
+if (String(anchor.getAttribute?.('aria-disabled') || '').toLowerCase() === 'true') continue;
+const url = sameOriginUrl(anchor.getAttribute?.('href') || anchor.href || '');
+if (!url) continue;
+const route = url.pathname.match(/^\/vehicles\/(\d+)\/patient\/(\d+)\/?$/i);
+if (!route || route[1] !== routeVehicleId) continue;
+return {
+anchor,
+vehicleId: routeVehicleId,
+patientId: route[2],
+request,
+href: url.href,
+};
+}
+}
+return null;
+}
+function maybeAssistPatientTransport(doc, href, context, requests) {
+if (!state.wanted || state.stopping || context?.kind !== 'PATIENT') {
+resetPatientAssistTracking();
+return false;
+}
+if (exactPatientPath(href)) {
+resetPatientAssistTracking();
+return false;
+}
+const patient = findExactPersonalPatientAnchor(doc, href, requests);
+if (!patient) {
+resetPatientAssistTracking();
+return false;
+}
+const assistKey = `${patient.request.key}:${patient.patientId}:${pathFromUrl(href)}`;
+if (state.patientAssistKey !== assistKey) {
+state.patientAssistKey = assistKey;
+state.patientAssistSince = Date.now();
+return false;
+}
+if (Date.now() - state.patientAssistSince < PATIENT_ASSIST_DELAY_MS) return false;
+const clickKey = `${patient.request.key}:${patient.patientId}`;
+if (
+state.patientAssistLastClickKey === clickKey &&
+Date.now() - state.patientAssistLastClickAt < PATIENT_ASSIST_CLICK_COOLDOWN_MS
+) return false;
+const liveRequests = collectRadioTransportRequests();
+const liveRequest = radioRequestForVehicle(patient.vehicleId, liveRequests);
+if (!liveRequest || liveRequest.missionId !== patient.request.missionId) {
+resetPatientAssistTracking();
+return false;
+}
+state.patientAssistLastClickKey = clickKey;
+state.patientAssistLastClickAt = Date.now();
+state.patientAssistAttempts += 1;
+const event = {
+at: nowIso(),
+vehicleId: patient.vehicleId,
+missionId: patient.request.missionId,
+patientId: patient.patientId,
+path: pathFromUrl(href),
+reason: 'V2 patient transport approach remained unchanged after fallback delay',
+};
+state.patientAssistHistory.push(event);
+if (state.patientAssistHistory.length > TRANSPORT_SERVICE_HISTORY_LIMIT) {
+state.patientAssistHistory.splice(0, state.patientAssistHistory.length - TRANSPORT_SERVICE_HISTORY_LIMIT);
+}
+setPhase(
+'PATIENT_ASSIST',
+'Opening patient transport',
+`${missionDisplay(patient.request.missionId, missionNameForId(patient.request.missionId))} | vehicle ${patient.vehicleId}.`
+);
+log('Patient assist clicked the exact personal patient transport route after V2 had first chance.', event);
+try {
+patient.anchor.click();
+return true;
+} catch (error) {
+log('Patient assist click failed.', { ...event, error: String(error?.message || error) });
+return false;
+}
+}
+function transportServiceRequest(requests = state.radioTransportRequests) {
+const now = Date.now();
+for (const request of requests || []) {
+const deferredUntil = Number(state.transportServiceDeferredUntil.get(request.key) || 0);
+if (deferredUntil > now) continue;
+return request;
+}
+return null;
+}
+function recordTransportService(event) {
+state.transportServiceHistory.push({ at: nowIso(), ...event });
+if (state.transportServiceHistory.length > TRANSPORT_SERVICE_HISTORY_LIMIT) {
+state.transportServiceHistory.splice(0, state.transportServiceHistory.length - TRANSPORT_SERVICE_HISTORY_LIMIT);
+}
+}
+function clearTransportServiceState() {
+state.transportServiceActive = false;
+state.transportServiceKey = '';
+state.transportServiceVehicleId = '';
+state.transportServiceMissionId = '';
+state.transportServiceStartedAt = 0;
+resetPatientAssistTracking();
+resetPrisonerAssistTracking();
+}
+function redirectWorkerToTransportService(request, currentMissionId) {
+if (!request?.vehicleId || !request?.missionId || !state.worker?.isConnected) return false;
+if (state.transportServiceActive) return false;
+const url = sameOriginUrl(`/vehicles/${request.vehicleId}`);
+if (!url) return false;
+state.transportServiceEligible = false;
+state.transportServiceActive = true;
+state.transportServiceKey = request.key;
+state.transportServiceVehicleId = request.vehicleId;
+state.transportServiceMissionId = request.missionId;
+state.transportServiceStartedAt = Date.now();
+state.transportServiceAttempts += 1;
+state.currentMissionId = request.missionId;
+state.currentMissionName = missionNameForId(request.missionId) || state.currentMissionName;
+state.currentMissionUrl = request.missionUrl || state.currentMissionUrl;
+resetPriorityPending();
+const event = {
+event: 'service-start',
+key: request.key,
+vehicleId: request.vehicleId,
+missionId: request.missionId,
+missionName: missionNameForId(request.missionId),
+fromMissionId: currentMissionId || '',
+url: url.href,
+};
+recordTransportService(event);
+setPhase(
+'TRANSPORT_SERVICE',
+'Clearing personal transport',
+`${missionDisplay(request.missionId, event.missionName)} | ${request.vehicleLabel || `vehicle ${request.vehicleId}`}. Missions resume immediately after this one transport clears.`
+);
+log('Balanced queue opened one personal Radio transport between mission passes.', event);
+try {
+state.worker.contentWindow.location.replace(url.href);
+return true;
+} catch {
+try {
+state.worker.src = url.href;
+return true;
+} catch (error) {
+recordTransportService({
+event: 'service-open-failed',
+key: request.key,
+vehicleId: request.vehicleId,
+missionId: request.missionId,
+error: String(error?.message || error),
+});
+clearTransportServiceState();
+return false;
+}
+}
+}
+function returnToTopMissionAfterTransport(reason, request = null) {
+if (!state.wanted || state.stopping || !state.worker?.isConnected) return false;
+const mission = chooseTopMission({ actionableOnly: true });
+if (!mission?.missionId || !mission.url) {
+clearTransportServiceState();
+setPhase('WAITING_MISSION', 'Transport cleared; waiting for mission', 'No actionable personal mission is currently available.');
+return false;
+}
+state.postTransportRehooks += 1;
+const serviceKey = state.transportServiceKey;
+const serviceVehicleId = state.transportServiceVehicleId;
+const serviceMissionId = state.transportServiceMissionId;
+clearTransportServiceState();
+state.lastPriorityRedirectAt = 0;
+recordTransportService({
+event: 'return-to-top',
+reason,
+key: serviceKey || request?.key || '',
+vehicleId: serviceVehicleId || request?.vehicleId || '',
+missionId: serviceMissionId || request?.missionId || '',
+toMissionId: mission.missionId,
+toMissionName: cleanMissionCaption(mission.caption),
+});
+log('Transport side pass finished; returning the hidden worker to the current top personal mission.', {
+reason,
+toMissionId: mission.missionId,
+toMissionName: cleanMissionCaption(mission.caption),
+});
+return redirectWorkerToPriority(
+{ source: 'TOP_MISSION', missionId: mission.missionId, url: mission.url, mission },
+serviceMissionId || state.currentMissionId
+);
+}
+function maybeHandleTransportServiceTimeout(requests) {
+if (!state.transportServiceActive || !state.transportServiceStartedAt) return false;
+const elapsed = Date.now() - state.transportServiceStartedAt;
+if (elapsed < TRANSPORT_SERVICE_MAX_MS) return false;
+const key = state.transportServiceKey;
+const request = (requests || []).find(item => item.key === key) || null;
+if (request) {
+state.transportServiceDeferredUntil.set(
+key,
+Date.now() + TRANSPORT_SERVICE_RETRY_COOLDOWN_MS
+);
+}
+recordTransportService({
+event: 'service-timeout',
+key,
+vehicleId: state.transportServiceVehicleId,
+missionId: state.transportServiceMissionId,
+elapsedMs: elapsed,
+stillRequested: Boolean(request),
+});
+log('Transport side pass reached its bounded wait; missions will resume and this request can be retried later.', {
+key,
+elapsedMs: elapsed,
+stillRequested: Boolean(request),
+});
+returnToTopMissionAfterTransport('bounded-timeout', request);
+return true;
+}
+function recordTransportAffinity(event) {
+state.transportAffinityHistory.push({ at: nowIso(), ...event });
+if (state.transportAffinityHistory.length > AFFINITY_HISTORY_LIMIT) {
+state.transportAffinityHistory.splice(0, state.transportAffinityHistory.length - AFFINITY_HISTORY_LIMIT);
+}
+}
+function correlateTransportMissionFromRadio(href, requests) {
+const vehicleId = vehicleIdFromUrl(href);
+if (!vehicleId) return null;
+const request = radioRequestForVehicle(vehicleId, requests);
+if (!request) return null;
+if (state.currentMissionId !== request.missionId) {
+const event = {
+event: 'radio-correlation',
+vehicleId,
+fromMissionId: state.currentMissionId || '',
+toMissionId: request.missionId,
+path: pathFromUrl(href),
+};
+state.currentMissionId = request.missionId;
+recordTransportAffinity(event);
+log('Correlated transport vehicle to its personal Radio mission without navigating the worker.', event);
+}
+return request;
+}
+function schedulePostTransportRehook(clearedKey) {
+const [vehicleId, missionId] = String(clearedKey || '').split(':');
+if (!vehicleId || !missionId) return;
+const wasBalancedService =
+state.transportServiceActive &&
+state.transportServiceKey === clearedKey;
+if (wasBalancedService) {
+state.transportServiceCleared += 1;
+recordTransportService({
+event: 'service-cleared',
+key: clearedKey,
+vehicleId,
+missionId,
+elapsedMs: state.transportServiceStartedAt
+? Date.now() - state.transportServiceStartedAt
+: 0,
+});
+}
+window.setTimeout(() => {
+if (!state.wanted || state.stopping || !state.worker?.isConnected) return;
+const requests = refreshRadioTransportRequests();
+if (radioRequestForVehicle(vehicleId, requests)) return;
+if (wasBalancedService) {
+returnToTopMissionAfterTransport('radio-cleared', {
+key: clearedKey,
+vehicleId,
+missionId,
+});
+return;
+}
+const href = getWorkerHref();
+if (!href || vehicleIdFromUrl(href) !== vehicleId) return;
+const mission = chooseTopMission({ actionableOnly: true });
+if (!mission?.missionId || !mission.url) return;
+state.postTransportRehooks += 1;
+recordTransportAffinity({
+event: 'post-transport-rehook',
+clearedVehicleId: vehicleId,
+clearedMissionId: missionId,
+toMissionId: mission.missionId,
+source: 'TOP_MISSION',
+});
+log('Companion re-hooking hidden worker to the current top personal mission after transport cleared.', {
+clearedVehicleId: vehicleId,
+clearedMissionId: missionId,
+toMissionId: mission.missionId,
+toMissionName: cleanMissionCaption(mission.caption),
+});
+state.lastPriorityRedirectAt = 0;
+redirectWorkerToPriority(
+{ source: 'TOP_MISSION', missionId: mission.missionId, url: mission.url, mission },
+state.currentMissionId || missionId
+);
+}, POST_TRANSPORT_REHOOK_DELAY_MS);
+}
+function choosePriorityTarget() {
+const topMission = chooseTopMission({ actionableOnly: true });
+if (!topMission) return null;
+return {
+source: 'TOP_MISSION',
+missionId: topMission.missionId,
+url: topMission.url,
+mission: topMission,
+};
+}
+function maybeRedirectSkippedMissionBeforeAuto(href, source = 'pre-auto-gate') {
+const missionId = missionIdFromUrl(href);
+const remaining = missionSkipRemaining(missionId);
+if (!missionId || remaining <= 0 || state.transportServiceActive) return false;
+const target = choosePriorityTarget();
+if (!target?.missionId || target.missionId === missionId) return false;
+state.skippedMissionPrestartRedirects += 1;
+log('Prevented V2 from restarting a mission still inside its 20-advance shortage cooldown.', {
+source,
+skippedMissionId: missionId,
+skippedMissionName: missionNameForId(missionId),
+remainingAdvances: remaining,
+toMissionId: target.missionId,
+toMissionName: cleanMissionCaption(target.mission?.caption),
+});
+resetAutoStartTracking();
+state.running = false;
+return redirectWorkerToPriority(target, missionId);
+}
+function resetPriorityPending() {
+state.priorityPendingKey = '';
+state.priorityPendingSince = 0;
+}
+function redirectWorkerToPriority(target, currentMissionId) {
+if (!target?.missionId || !target.url || !state.worker?.isConnected) return false;
+const now = Date.now();
+if (
+state.redirectTargetMissionId === target.missionId &&
+now - state.lastPriorityRedirectAt < PRIORITY_REDIRECT_IN_FLIGHT_MS
+) {
+return false;
+}
+if (now - state.lastPriorityRedirectAt < PRIORITY_REDIRECT_COOLDOWN_MS) return false;
+state.lastPriorityRedirectAt = now;
+state.priorityRedirects += 1;
+if (promotePipelineMission(target.missionId, 'priority-redirect', {
+fromMissionId: currentMissionId || '',
+source: target.source || 'TOP_MISSION',
+})) {
+resetPriorityPending();
+return true;
+}
+state.redirectFromMissionId = currentMissionId || '';
+state.redirectTargetMissionId = target.missionId;
+state.currentMissionId = target.missionId;
+state.currentMissionName = cleanMissionCaption(target.mission?.caption) || missionNameForId(target.missionId);
+state.currentMissionUrl = target.url;
+resetPriorityPending();
+const sourceLabel = `top ${target.mission?.actionKind === 'UPGRADE' ? 'mission upgrade' : 'mission'}`;
+setPhase(
+'PRIORITY_REDIRECT',
+`Switching to ${sourceLabel}`,
+`${missionDisplay(target.missionId, state.currentMissionName)} is now the background target.`
+);
+log('Priority controller redirected the background worker.', {
+source: target.source,
+fromMissionId: currentMissionId || '',
+toMissionId: target.missionId,
+toMissionName: state.currentMissionName,
+actionKind: target.mission?.actionKind || '',
+radioVehicleId: target.request?.vehicleId || '',
+});
+try {
+state.worker.contentWindow.location.replace(target.url);
+return true;
+} catch {
+try {
+state.worker.src = target.url;
+return true;
+} catch (error) {
+log('Priority redirect failed.', { error: String(error?.message || error) });
+return false;
+}
+}
+}
+function maybeEnforcePriority(doc, href, context, radioRequests = state.radioTransportRequests) {
+const activeControl = findAutoModeControl(doc);
+if (
+!state.wanted ||
+!currentWorkerAutoConfirmed() ||
+!activeControl ||
+!autoControlLooksRunning(activeControl) ||
+state.stopping ||
+!state.worker?.isConnected
+) return;
+if (state.autoStopWarned && state.phase === 'AUTO_STOPPED') {
+resetPriorityPending();
+return;
+}
+if (state.transportServiceActive) {
+resetPriorityPending();
+return;
+}
+if (context?.kind) {
+resetPriorityPending();
+return;
+}
+const currentMissionId = missionIdFromUrl(href);
+if (!currentMissionId) {
+resetPriorityPending();
+return;
+}
+const navAge = Date.now() - state.lastWorkerNavigationAt;
+if (navAge > TOP_PRIORITY_NAV_WINDOW_MS) {
+state.transportServiceEligible = false;
+resetPriorityPending();
+return;
+}
+if (state.transportServiceEligible) {
+const request = transportServiceRequest(radioRequests);
+if (request) {
+const pendingKey = `TRANSPORT_SERVICE:${request.key}`;
+if (state.priorityPendingKey !== pendingKey) {
+state.priorityPendingKey = pendingKey;
+state.priorityPendingSince = Date.now();
+return;
+}
+if (Date.now() - state.priorityPendingSince < TRANSPORT_SERVICE_SETTLE_MS) return;
+if (redirectWorkerToTransportService(request, currentMissionId)) return;
+}
+resetPriorityPending();
+}
+const target = choosePriorityTarget();
+if (!target?.missionId || target.missionId === currentMissionId) {
+resetPriorityPending();
+return;
+}
+const pendingKey = `TOP_MISSION:${target.missionId}`;
+if (state.priorityPendingKey !== pendingKey) {
+state.priorityPendingKey = pendingKey;
+state.priorityPendingSince = Date.now();
+return;
+}
+if (Date.now() - state.priorityPendingSince < TOP_PRIORITY_STABLE_MS) return;
+redirectWorkerToPriority(target, currentMissionId);
+}
+function createWorker(url) {
+clearPostDispatchWatchdog('worker-recreated');
+removeWorker(false);
+state.nonMissionRedirectRecoveryInFlight = false;
+state.workerGeneration += 1;
+const generation = state.workerGeneration;
+const frame = document.createElement('iframe');
+frame.id = WORKER_ID;
+frame.name = `${ACTIVE_WORKER_NAME_PREFIX}${generation}-${missionIdFromUrl(url) || 'mission'}`;
+frame.src = url;
+frame.setAttribute('aria-hidden', 'true');
+frame.setAttribute('tabindex', '-1');
+frame.setAttribute('data-mcn-v3-worker', 'true');
+applyActiveWorkerFrameStyle(frame);
+frame.addEventListener('load', () => {
+if (generation !== state.workerGeneration || state.worker !== frame) return;
+onWorkerLoad(frame, generation);
+});
+document.body.appendChild(frame);
+state.worker = frame;
+state.lastWatchHeartbeatAt = Date.now();
+state.wakeRecoveryActive = false;
+state.bootstrapMissionUrl = url;
+state.currentMissionUrl = url;
+state.currentMissionId = missionIdFromUrl(url);
+state.currentMissionName = missionNameForId(state.currentMissionId);
+forgetWorkerDocument();
+state.lastWorkerHref = '';
+state.lastWorkerNavigationAt = Date.now();
+state.autoStoppedSince = 0;
+state.autoStopWarned = false;
+clearAutoRecoveryWatchdog();
+state.priorityPendingKey = '';
+state.priorityPendingSince = 0;
+state.redirectFromMissionId = '';
+state.redirectTargetMissionId = '';
+state.transportKind = '';
+state.transportSince = 0;
+state.transportWarned = false;
+state.foreignMissionUiWarned = false;
+recordMissionVisit(url, 'worker-created');
+clearTimer('workerLoadTimer');
+state.workerLoadTimer = window.setTimeout(() => {
+if (generation !== state.workerGeneration || !state.wanted) return;
+setError(
+'Background mission worker did not finish loading.',
+'The off-screen MissionChief mission frame exceeded the 30 second load window.'
+);
+}, WORKER_LOAD_TIMEOUT_MS);
+setPhase(
+'LOADING',
+'Opening background mission',
+`${missionDisplay(state.currentMissionId, state.currentMissionName)} is loading off-screen.`
+);
+log('Created off-screen MissionChief mission worker.', {
+missionId: state.currentMissionId,
+missionName: state.currentMissionName,
+pathname: new URL(url).pathname,
+});
+}
+function getWorkerDocument(frame = state.worker) {
+if (!frame || !frame.isConnected) return null;
+try {
+if (frame.contentWindow.location.origin !== location.origin) return null;
+return frame.contentDocument || frame.contentWindow.document || null;
+} catch {
+return null;
+}
+}
+function getWorkerHref(frame = state.worker) {
+if (!frame || !frame.isConnected) return '';
+try {
+return frame.contentWindow.location.href || '';
+} catch {
+return '';
+}
+}
+function applyActiveWorkerFrameStyle(frame) {
+if (!frame) return;
+frame.style.cssText = [
+'position:fixed',
+'left:0',
+'top:0',
+`width:${WORKER_WIDTH}px`,
+`height:${WORKER_HEIGHT}px`,
+'display:block',
+'visibility:visible',
+'opacity:0.001',
+'pointer-events:none',
+'border:0',
+'margin:0',
+'padding:0',
+'z-index:-2147483647',
+'background:#0b1220',
+].join(';');
+}
+function resetAutoStartTracking() {
+state.autoStartIssued = false;
+state.autoStartDocumentSerial = 0;
+state.autoRunningConfirmedDocumentSerial = 0;
+state.autoRunningConfirmedAt = 0;
+state.autoStartAttemptAt = 0;
+state.autoStartAttempts = 0;
+}
+function clearPromotedWorkTracking() {
+state.promotedDocumentSerial = 0;
+state.promotedWorkStartedAt = 0;
+state.promotedWorkEvidenceAt = 0;
+state.promotedWorkEvidenceText = '';
+}
+function armPromotedWorkTracking(reason = 'pipeline-promotion') {
+state.promotedDocumentSerial = state.workerDocumentSerial;
+state.promotedWorkStartedAt = Date.now();
+state.promotedWorkEvidenceAt = 0;
+state.promotedWorkEvidenceText = '';
+pipelineRecord('promoted-work-watchdog-armed', {
+missionId: state.currentMissionId,
+documentSerial: state.workerDocumentSerial,
+timeoutMs: PROMOTED_WORK_ACTIVITY_TIMEOUT_MS,
+reason,
+});
+}
+function promotedWorkAwaitingEvidence() {
+return Boolean(
+state.promotedDocumentSerial &&
+state.promotedDocumentSerial === state.workerDocumentSerial &&
+state.promotedWorkStartedAt &&
+!state.promotedWorkEvidenceAt
+);
+}
+function notePromotedWorkEvidence(value, source = 'status') {
+if (!promotedWorkAwaitingEvidence() || !currentWorkerAutoConfirmed()) return false;
+const text = normaliseText(value);
+if (!text || !/(?:waiting for mission update|mission requirements preloaded|vehicle (?:display|list)|unit finder|units ready|dispatch\s*&\s*next|selected\s+\d+\s+vehicles|auto mode restored after mission load)/i.test(text)) {
+return false;
+}
+state.promotedWorkEvidenceAt = Date.now();
+state.promotedWorkEvidenceText = text.slice(0, 280);
+const event = {
+missionId: state.currentMissionId,
+documentSerial: state.workerDocumentSerial,
+source,
+elapsedMs: Math.max(0, state.promotedWorkEvidenceAt - state.promotedWorkStartedAt),
+text: state.promotedWorkEvidenceText,
+};
+pipelineRecord('promoted-work-loop-confirmed', event);
+setPhase('ACTIVE', 'Background Auto Mode running', state.promotedWorkEvidenceText);
+startPipelineController();
+log('Confirmed real V2 work-loop activity after pipeline promotion.', event);
+return true;
+}
+function clearSharedV2AutoRunning(reason = 'promotion-handoff') {
+try { localStorage.removeItem(V2_AUTO_MODE_RUNNING_KEY); } catch {}
+pipelineRecord('v2-shared-auto-running-cleared', {
+missionId: state.currentMissionId,
+reason,
+});
+}
+function maybeRecoverStalledPromotedWorker(doc, href, control, statusText = '') {
+if (
+!state.wanted ||
+state.stopping ||
+state.transportServiceActive ||
+!isMissionUrl(href) ||
+!promotedWorkAwaitingEvidence()
+) return false;
+const elapsed = Date.now() - state.promotedWorkStartedAt;
+if (elapsed < PROMOTED_WORK_ACTIVITY_TIMEOUT_MS) return false;
+const event = {
+at: nowIso(),
+missionId: state.currentMissionId,
+missionName: state.currentMissionName,
+documentSerial: state.workerDocumentSerial,
+elapsedMs: elapsed,
+controlFound: Boolean(control),
+controlText: control ? elementLabel(control) : '',
+controlLooksRunning: Boolean(control && autoControlLooksRunning(control)),
+status: normaliseText(statusText),
+action: 'reload-active-worker-alone',
+};
+state.promotionWorkStallRecoveries += 1;
+state.promotionRecoveryHistory.push(event);
+if (state.promotionRecoveryHistory.length > PROMOTION_RECOVERY_HISTORY_LIMIT) {
+state.promotionRecoveryHistory.splice(0, state.promotionRecoveryHistory.length - PROMOTION_RECOVERY_HISTORY_LIMIT);
+}
+clearPromotedWorkTracking();
+resetAutoStartTracking();
+state.running = false;
+clearSharedV2AutoRunning('promotion-work-stall-recovery');
+pausePipelineController('promotion-work-stall-recovery', true);
+setPhase(
+'PROMOTION_RECOVERY',
+'Handoff stalled; restarting safely',
+`${missionDisplay(state.currentMissionId, state.currentMissionName)} showed no V2 work activity for ${Math.round(elapsed / 1000)} seconds. Reloading the single active worker.`
+);
+log('Promoted worker mounted but did not start real V2 work; reloading it alone.', event);
+const rescueUrl = href || state.currentMissionUrl || state.bootstrapMissionUrl;
+state.promotionRecoveryPendingMissionId = state.currentMissionId || missionIdFromUrl(rescueUrl);
+window.setTimeout(() => {
+if (!state.wanted || state.stopping) return;
+createWorker(rescueUrl);
+}, 120);
+return true;
+}
+function forgetWorkerDocument() {
+state.workerDocument = null;
+resetAutoStartTracking();
+clearPromotedWorkTracking();
+}
+function adoptWorkerDocument(doc, href = '', source = 'worker') {
+if (!doc || state.workerDocument === doc) return false;
+const incomingMissionId = missionIdFromUrl(href);
+const carryPromotionWatchdog = Boolean(
+promotedWorkAwaitingEvidence() &&
+incomingMissionId &&
+incomingMissionId === state.currentMissionId
+);
+const armRecoveryWatchdog = Boolean(
+state.promotionRecoveryPendingMissionId &&
+incomingMissionId === state.promotionRecoveryPendingMissionId
+);
+clearPromotedWorkTracking();
+state.workerDocument = doc;
+state.workerDocumentSerial += 1;
+state.autoStateRecoveryDocumentSerial = state.workerDocumentSerial;
+state.autoStateRecoveryAttempts = 0;
+resetAutoStartTracking();
+state.running = false;
+state.autoStoppedSince = 0;
+state.autoStopWarned = false;
+state.activeControlMissingSince = 0;
+if (armRecoveryWatchdog) state.promotionRecoveryPendingMissionId = '';
+if (carryPromotionWatchdog || armRecoveryWatchdog) {
+armPromotedWorkTracking(
+armRecoveryWatchdog ? 'promotion-recovery-reload' : 'same-mission-document-reload'
+);
+}
+log('Adopted a new background worker document; Auto Mode must be confirmed on this document.', {
+documentSerial: state.workerDocumentSerial,
+source,
+path: pathFromUrl(href || getWorkerHref()),
+promotedWorkWatchdogRearmed: carryPromotionWatchdog || armRecoveryWatchdog,
+});
+return true;
+}
+function confirmCurrentDocumentAutoMode(control, source = 'watcher') {
+if (!control || !autoControlLooksRunning(control) || !state.workerDocumentSerial) return false;
+const firstConfirmation = state.autoRunningConfirmedDocumentSerial !== state.workerDocumentSerial;
+state.autoStartIssued = true;
+state.autoStartDocumentSerial = state.workerDocumentSerial;
+state.autoRunningConfirmedDocumentSerial = state.workerDocumentSerial;
+state.autoRunningConfirmedAt = Date.now();
+state.running = true;
+state.autoStoppedSince = 0;
+state.autoStopWarned = false;
+if (promotedWorkAwaitingEvidence()) {
+setPhase(
+'PROMOTION_VERIFY',
+'V2 mounted; checking mission activity',
+`${missionDisplay(state.currentMissionId, state.currentMissionName)} is waiting for the first real V2 work status.`
+);
+}
+if (firstConfirmation) {
+log('Confirmed V2 Auto Mode running on the current worker document.', {
+documentSerial: state.workerDocumentSerial,
+source,
+label: elementLabel(control),
+});
+}
+return true;
+}
+function currentWorkerAutoConfirmed() {
+return Boolean(
+state.workerDocumentSerial &&
+state.autoRunningConfirmedDocumentSerial === state.workerDocumentSerial
+);
+}
+function readV2AutoStopRecord() {
+try {
+const raw = localStorage.getItem(V2_AUTO_STOP_RECORD_KEY);
+if (!raw) return null;
+const value = JSON.parse(raw);
+const stoppedAtValue = value?.stoppedAt ?? value?.at ?? '';
+const stoppedAtMs = Number.isFinite(Number(stoppedAtValue))
+? Number(stoppedAtValue)
+: Date.parse(String(stoppedAtValue || ''));
+return {
+reason: normaliseText(value?.reason || value?.message || ''),
+stoppedAt: stoppedAtValue || '',
+stoppedAtMs: Number.isFinite(stoppedAtMs) ? stoppedAtMs : 0,
+ageMs: Number.isFinite(stoppedAtMs) ? Math.max(0, Date.now() - stoppedAtMs) : null,
+afterCurrentConfirmation: Boolean(
+Number.isFinite(stoppedAtMs) &&
+state.autoRunningConfirmedAt &&
+stoppedAtMs >= state.autoRunningConfirmedAt - 250
+),
+};
+} catch {
+return null;
+}
+}
+function requestV2FrameRuntimeReconcile(frame, generation, reason = 'pipeline-promotion') {
+pipelineRecord('v2-frame-runtime-reconcile-scheduled', {
+missionId: missionIdFromUrl(frameHref(frame)),
+reason,
+});
+for (const delay of [0, 75, 200, 500, 900]) {
+window.setTimeout(() => {
+if (!state.wanted || generation !== state.workerGeneration || state.worker !== frame || !frame?.isConnected) return;
+try {
+const doc = frame.contentDocument || frame.contentWindow?.document || null;
+if (!doc) return;
+const RuntimeEvent = doc.defaultView?.Event || Event;
+doc.dispatchEvent(new RuntimeEvent(V2_FRAME_RUNTIME_RECONCILE_EVENT));
+} catch {}
+}, delay);
+}
+}
+function isInteractive(element) {
+if (!element || !element.isConnected) return false;
+if (element.disabled) return false;
+const style = element.ownerDocument?.defaultView?.getComputedStyle?.(element);
+if (style && (style.display === 'none' || style.visibility === 'hidden')) return false;
+return true;
+}
+function elementLabel(element) {
+if (!element) return '';
+if (element.matches('input')) return normaliseText(element.value || element.getAttribute('aria-label'));
+return normaliseText(
+element.getAttribute('aria-label') ||
+element.getAttribute('title') ||
+element.textContent
+);
+}
+function findAutoModeControl(doc) {
+if (!doc) return null;
+const scopes = [
+doc.querySelector('#mission-finder-wrapper'),
+doc.querySelector('#control-panel'),
+doc,
+].filter(Boolean);
+for (const scope of scopes) {
+const controls = Array.from(scope.querySelectorAll(
+'button, a.btn, input[type="button"], input[type="submit"], [role="button"]'
+));
+let fallback = null;
+for (const control of controls) {
+if (!isInteractive(control)) continue;
+const label = elementLabel(control);
+if (!label) continue;
+if (/^auto mode$/i.test(label)) return control;
+if (/^(?:start|stop) auto mode$/i.test(label)) return control;
+if (/^auto mode\s*[:\-\u2013\u2014]?\s*(?:start|stop|on|off|running|stopped|active|inactive)$/i.test(label)) {
+fallback = fallback || control;
+}
+}
+if (fallback) return fallback;
+}
+return null;
+}
+function autoControlLooksRunning(control) {
+if (!control) return false;
+const label = elementLabel(control).toLowerCase();
+if (/\bstop\b|\brunning\b|\bactive\b|\bon\b/.test(label)) return true;
+if (/\bstart\b|\bstopped\b|\binactive\b|\boff\b/.test(label)) return false;
+if (control.getAttribute('aria-pressed') === 'true') return true;
+if (control.dataset?.running === 'true' || control.dataset?.active === 'true') return true;
+return false;
+}
+function findUsefulNexusStatus(doc) {
+if (!doc) return '';
+const primary = doc.querySelector('#status-box-message');
+const primaryText = normaliseText(primary?.textContent);
+if (primaryText && primaryText.length <= 280) return primaryText;
+const selectors = [
+'#mission-finder-wrapper [id*="status"]',
+'#mission-finder-wrapper [class*="status"]',
+'#control-panel [id*="status"]',
+'#control-panel [class*="status"]',
+];
+const values = [];
+for (const selector of selectors) {
+for (const node of doc.querySelectorAll(selector)) {
+if (node === primary || node.closest?.('#mf-auto-stop-flag')) continue;
+if (node.hidden || node.getAttribute?.('aria-hidden') === 'true') continue;
+try {
+const style = doc.defaultView?.getComputedStyle?.(node);
+if (style && (style.display === 'none' || style.visibility === 'hidden')) continue;
+} catch {}
+const text = normaliseText(node.textContent);
+if (!text || text.length > 240) continue;
+if (/auto|dispatch|patient|prison|transport|stopp|ready|mission|waiting|select/i.test(text)) {
+values.push(text);
+}
+if (values.length >= 4) break;
+}
+if (values.length >= 4) break;
+}
+return [...new Set(values)].slice(0, 3).join(' | ');
+}
+function isExplicitTerminalAutoStopStatus(value) {
+const text = normaliseText(value);
+if (!/\bauto stopped:\s*/i.test(text)) return false;
+return /\bdispatch was not clicked\b/i.test(text) ||
+/\bthe mission was not dispatched\b/i.test(text) ||
+/\bstart auto mode again\b/i.test(text);
+}
+function statusLooksLikeBenignV2Progress(value) {
+const text = normaliseText(value);
+if (!text || /\bauto stopped\b|\bdispatch was not clicked\b|\bmission was not dispatched\b/i.test(text)) {
+return false;
+}
+return /(?:all additional vehicle pages loaded and stable|loading additional vehicle page|vehicle display limited|waiting for mission update|mission requirements preloaded|unit finder|units ready|selected\s+\d+\s+vehicles|vehicle list|full vehicle list|dispatch\s*&\s*next)/i.test(text);
+}
+function recordActiveControlDropout(event) {
+state.activeControlDropoutHistory.push({ at: nowIso(), ...event });
+if (state.activeControlDropoutHistory.length > ACTIVE_CONTROL_DROPOUT_HISTORY_LIMIT) {
+state.activeControlDropoutHistory.splice(
+0,
+state.activeControlDropoutHistory.length - ACTIVE_CONTROL_DROPOUT_HISTORY_LIMIT
+);
+}
+}
+function maybeRecoverMissingActiveControl(doc, href, kind, control, statusText = '') {
+if (
+control ||
+!state.autoStartIssued ||
+kind ||
+!isMissionUrl(href) ||
+doc?.readyState !== 'complete'
+) {
+state.activeControlMissingSince = 0;
+return false;
+}
+const now = Date.now();
+const status = normaliseText(statusText);
+if (status && status !== state.lastStatusText) {
+recordStatusSnapshot(status, 'active-control-missing');
+}
+const benignProgress = statusLooksLikeBenignV2Progress(status);
+const progressAgeMs = state.lastStatusChangedAt
+? Math.max(0, now - state.lastStatusChangedAt)
+: Number.POSITIVE_INFINITY;
+const freshProgress =
+benignProgress &&
+progressAgeMs <= ACTIVE_CONTROL_PROGRESS_GRACE_MS;
+if (freshProgress) {
+state.activeControlMissingSince = 0;
+return false;
+}
+if (!state.activeControlMissingSince) {
+state.activeControlMissingSince = now;
+return false;
+}
+const missingForMs = Math.max(0, now - state.activeControlMissingSince);
+const missionStableForMs = Math.max(0, now - state.lastWorkerNavigationAt);
+if (
+missingForMs < ACTIVE_CONTROL_DROPOUT_RESCUE_MS ||
+missionStableForMs < ACTIVE_CONTROL_DROPOUT_RESCUE_MS
+) return false;
+state.activeControlDropoutTimes = state.activeControlDropoutTimes
+.map(value => Number(value))
+.filter(value => Number.isFinite(value) && now - value <= ACTIVE_CONTROL_DROPOUT_WINDOW_MS);
+state.activeControlDropoutTimes.push(now);
+if (state.activeControlDropoutTimes.length > ACTIVE_CONTROL_DROPOUT_CIRCUIT_BREAKER_COUNT) {
+state.activeControlDropoutTimes.splice(
+0,
+state.activeControlDropoutTimes.length - ACTIVE_CONTROL_DROPOUT_CIRCUIT_BREAKER_COUNT
+);
+}
+const recentDropouts = state.activeControlDropoutTimes.length;
+const circuitBreaker =
+recentDropouts >= ACTIVE_CONTROL_DROPOUT_CIRCUIT_BREAKER_COUNT;
+const event = {
+missionId: state.currentMissionId || missionIdFromUrl(href),
+missionName: state.currentMissionName,
+documentSerial: state.workerDocumentSerial,
+missingForMs,
+missionStableForMs,
+status,
+benignProgress,
+progressAgeMs: Number.isFinite(progressAgeMs) ? progressAgeMs : null,
+recentDropouts,
+dropoutWindowMs: ACTIVE_CONTROL_DROPOUT_WINDOW_MS,
+action: circuitBreaker
+? 'open-safe-a-only-after-repeated-dropout'
+: 'reload-a-then-rebuild-b-c',
+};
+state.activeControlMissingSince = 0;
+state.activeControlDropoutRescues += 1;
+state.running = false;
+recordActiveControlDropout(event);
+if (circuitBreaker) {
+state.activeControlDropoutCircuitBreakers += 1;
+enterActiveOnlyMode('repeated-active-control-dropout', event);
+} else {
+state.activeControlSoftRecoveries += 1;
+pausePipelineController('active-control-dropout-soft-recovery', true);
+pipelineRecord('active-control-dropout-soft-recovery', event);
+}
+setPhase(
+circuitBreaker ? 'AUTO_STATE_RECOVERY' : 'CONTROL_RECOVERY',
+circuitBreaker
+? 'Repeated Worker A control loss; using safe A only'
+: 'Worker A control lost; restarting safely',
+circuitBreaker
+? `${missionDisplay(event.missionId, event.missionName)} lost its V2 control ${recentDropouts} times inside two minutes. B/C are disabled for this run.`
+: `${missionDisplay(event.missionId, event.missionName)} lost its V2 control without fresh progress. Reloading A once; B/C will rebuild after A is healthy.`
+);
+log(
+circuitBreaker
+? 'Worker A repeatedly lost its mounted V2 control; the B/C circuit breaker opened.'
+: 'Worker A lost its mounted V2 control; reloading A without permanently disabling B/C.',
+event
+);
+const rescueUrl = href;
+window.setTimeout(() => {
+if (!state.wanted || state.stopping) return;
+createWorker(rescueUrl);
+}, 120);
+return true;
+}
+function recordAutoStateDropout(event) {
+state.autoStateDropoutHistory.push({ at: nowIso(), ...event });
+if (state.autoStateDropoutHistory.length > AUTO_STATE_DROPOUT_HISTORY_LIMIT) {
+state.autoStateDropoutHistory.splice(
+0,
+state.autoStateDropoutHistory.length - AUTO_STATE_DROPOUT_HISTORY_LIMIT
+);
+}
+}
+function recoverUnexpectedAutoStateDropout(control, doc, href, statusText = '') {
+if (!control || !state.wanted || state.stopping || !isMissionUrl(href)) return false;
+const now = Date.now();
+if (state.autoStateRecoveryDocumentSerial !== state.workerDocumentSerial) {
+state.autoStateRecoveryDocumentSerial = state.workerDocumentSerial;
+state.autoStateRecoveryAttempts = 0;
+}
+state.autoStateRecoveryAttempts += 1;
+state.autoStateDropoutRecoveries += 1;
+state.autoStateDropoutTimes = state.autoStateDropoutTimes
+.filter(at => now - Number(at || 0) <= AUTO_STATE_DROPOUT_WINDOW_MS);
+state.autoStateDropoutTimes.push(now);
+const recentDropouts = state.autoStateDropoutTimes.length;
+const benignProgress = statusLooksLikeBenignV2Progress(statusText);
+const visibleTerminalText = isExplicitTerminalAutoStopStatus(statusText);
+const wasActiveOnly = state.pipelineActiveOnly;
+const circuitBreaker = recentDropouts >= AUTO_STATE_DROPOUT_CIRCUIT_BREAKER_COUNT;
+const event = {
+missionId: state.currentMissionId || missionIdFromUrl(href),
+missionName: state.currentMissionName,
+documentSerial: state.workerDocumentSerial,
+attemptOnDocument: state.autoStateRecoveryAttempts,
+recentDropouts,
+windowMs: AUTO_STATE_DROPOUT_WINDOW_MS,
+controlText: elementLabel(control),
+status: normaliseText(statusText),
+benignProgress,
+visibleTerminalText,
+currentV2StopRecord: false,
+pipelineWasActiveOnly: wasActiveOnly,
+action: '',
+};
+pausePipelineController('unrecorded-auto-state-dropout', true);
+if (circuitBreaker || !benignProgress) {
+enterActiveOnlyMode(
+circuitBreaker ? 'repeated-auto-state-dropout' : 'unknown-unrecorded-auto-state-dropout',
+{ recentDropouts, missionId: event.missionId }
+);
+}
+if (!state.pipelineActiveOnly && benignProgress && state.autoStateRecoveryAttempts === 1) {
+event.action = 'restart-current-worker-a';
+recordAutoStateDropout(event);
+state.running = false;
+state.autoStoppedSince = 0;
+state.autoStopWarned = false;
+clearAutoRecoveryWatchdog('unrecorded-auto-state-dropout');
+clearSharedV2AutoRunning('unrecorded-auto-state-dropout-restart');
+resetAutoStartTracking();
+log('V2 running state disappeared without a current stop record; restarting Worker A instead of hard-stopping.', event);
+startExistingAutoMode(control, state.worker, state.workerGeneration);
+return true;
+}
+if (wasActiveOnly) state.autoStateActiveOnlyFailures += 1;
+if (state.autoStateActiveOnlyFailures > AUTO_STATE_DROPOUT_RELOAD_LIMIT_AFTER_ACTIVE_ONLY) {
+event.action = 'fail-closed-after-active-only-reload-limit';
+recordAutoStateDropout(event);
+state.wanted = false;
+setPersistedBackgroundWanted(false);
+clearTimer('watcherTimer', window.clearInterval);
+clearTimer('missionRescanTimer', window.clearInterval);
+setError(
+'Worker A repeatedly lost V2 Auto state',
+'No current V2 stop record explained the loss, and the bounded A-only reload was already used. The worker was left in place for diagnostics; no mission was skipped or dispatched by V3.'
+);
+return true;
+}
+state.autoStateDropoutReloads += 1;
+event.action = 'reload-worker-a-only';
+recordAutoStateDropout(event);
+state.running = false;
+state.autoStoppedSince = 0;
+state.autoStopWarned = false;
+clearAutoRecoveryWatchdog('unrecorded-auto-state-dropout-reload');
+clearSharedV2AutoRunning('unrecorded-auto-state-dropout-reload');
+resetAutoStartTracking();
+setPhase(
+'AUTO_STATE_RECOVERY',
+'Recovering Worker A state',
+`${missionDisplay(event.missionId, event.missionName)} lost the shared V2 running bit without a current stop record. Reloading A${state.pipelineActiveOnly ? ' in reliable A-only mode' : ''}.`
+);
+log('Reloading Worker A after an unexplained V2 running-state dropout.', event);
+const rescueUrl = href || state.currentMissionUrl || state.bootstrapMissionUrl;
+window.setTimeout(() => {
+if (!state.wanted || state.stopping) return;
+createWorker(rescueUrl);
+}, 120);
+return true;
+}
+function detectTransportContext(doc, href) {
+return transportContextDetails(doc, href);
+}
+function findVisibleForeignMissionFrame() {
+const frames = Array.from(document.querySelectorAll('iframe'));
+for (const frame of frames) {
+if (frame === state.worker || !frame.isConnected) continue;
+let href = frame.getAttribute('src') || '';
+try {
+if (frame.contentWindow?.location?.origin === location.origin) {
+href = frame.contentWindow.location.href || href;
+}
+} catch {}
+if (!href || !isMissionUrl(href)) continue;
+const style = getComputedStyle(frame);
+if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity || 1) === 0) continue;
+const rect = frame.getBoundingClientRect();
+const intersectsViewport = rect.width > 20 && rect.height > 20 && rect.right > 0 && rect.bottom > 0 && rect.left < innerWidth && rect.top < innerHeight;
+if (intersectsViewport) return frame;
+}
+return null;
+}
+function onWorkerLoad(frame, generation) {
+if (generation !== state.workerGeneration || !state.wanted) return;
+clearTimer('workerLoadTimer');
+const href = getWorkerHref(frame);
+const doc = getWorkerDocument(frame);
+if (!href || !doc) {
+setError('Background worker became inaccessible.', 'MissionChief worker is no longer same-origin or readable.');
+return;
+}
+if (!ensureActiveWorkerOwnership(frame, 'worker-load')) {
+setError(
+'Worker A did not acquire V2 storage ownership',
+'The parent could not install the synchronous ownership bridge in the same-origin worker. V3 refused to start Auto Mode. No dispatch was attempted.'
+);
+return;
+}
+const documentChanged = adoptWorkerDocument(doc, href, 'load-event');
+state.currentMissionUrl = href;
+state.currentMissionId = missionIdFromUrl(href) || state.transportServiceMissionId || state.currentMissionId;
+updateCurrentMissionName(doc);
+if (missionIdFromUrl(href)) {
+persistResumeMission(href);
+startMissionTiming(state.currentMissionId, state.currentMissionName, 'worker-load');
+if (state.redirectTargetMissionId === state.currentMissionId) {
+state.redirectFromMissionId = '';
+state.redirectTargetMissionId = '';
+}
+}
+state.lastWorkerHref = href;
+state.lastWorkerNavigationAt = Date.now();
+if (state.autoRecoveryCandidateKey && state.autoRecoveryCandidateMissionId !== state.currentMissionId) {
+clearAutoRecoveryWatchdog('worker-load-mission-changed');
+}
+state.runWorkerLoads += 1;
+recordMissionVisit(href, 'worker-load');
+log('Background worker document loaded.', {
+missionId: state.currentMissionId,
+missionName: state.currentMissionName,
+pathname: new URL(href).pathname,
+balancedTransportService: state.transportServiceActive,
+});
+refreshRadioTransportRequests();
+applyAirfieldOperationsSupervisorCrossRef(doc);
+installAirfieldOperationsSupervisorObservers(doc);
+if (!isMissionUrl(href)) {
+if (state.transportServiceActive) {
+setPhase(
+'TRANSPORT_SERVICE',
+'Clearing personal transport',
+`${missionDisplay(state.transportServiceMissionId, missionNameForId(state.transportServiceMissionId))} | vehicle ${state.transportServiceVehicleId}.`
+);
+} else {
+setPhase(
+'NAVIGATING',
+'Background worker navigating',
+`V2 is handling ${pathFromUrl(href) || 'a non-mission page'} in the off-screen worker.`
+);
+}
+startWatcher();
+return;
+}
+if (maybeRedirectSkippedMissionBeforeAuto(href, 'worker-load')) {
+startWatcher();
+return;
+}
+const existingControl = findAutoModeControl(doc);
+if (existingControl && autoControlLooksRunning(existingControl)) {
+state.autoControlText = elementLabel(existingControl);
+confirmCurrentDocumentAutoMode(existingControl, documentChanged ? 'load-event' : 'load-event-repeat');
+const status = findUsefulNexusStatus(doc);
+const workConfirmed = notePromotedWorkEvidence(status, 'load-event');
+const verifyingPromotion = promotedWorkAwaitingEvidence() && !workConfirmed;
+if (!verifyingPromotion) startPipelineController();
+setPhase(
+verifyingPromotion ? 'PROMOTION_VERIFY' : 'ACTIVE',
+verifyingPromotion ? 'V2 mounted; checking mission activity' : 'Background Auto Mode running',
+status || `${missionDisplay(state.currentMissionId, state.currentMissionName)} is active.`
+);
+startWatcher();
+return;
+}
+setPhase('WAITING_NEXUS', 'Waiting for embedded Mission Finder', 'Looking for the merged Auto Mode control inside the off-screen mission worker.');
+waitForNexusAndStart(frame, generation);
+}
+function waitForNexusAndStart(frame, generation) {
+clearTimer('nexusDiscoveryTimer');
+const startedAt = Date.now();
+const attempt = () => {
+if (!state.wanted || generation !== state.workerGeneration || state.worker !== frame) return;
+if (!ensureActiveWorkerOwnership(frame, 'nexus-discovery')) {
+setError(
+'Worker A did not acquire V2 storage ownership',
+'The synchronous ownership bootstrap failed during V2 discovery. No Auto Mode click or dispatch was attempted.'
+);
+return;
+}
+const doc = getWorkerDocument(frame);
+const href = getWorkerHref(frame);
+if (doc) adoptWorkerDocument(doc, href, 'nexus-discovery');
+applyAirfieldOperationsSupervisorCrossRef(doc);
+installAirfieldOperationsSupervisorObservers(doc);
+if (maybeRedirectSkippedMissionBeforeAuto(href, 'nexus-discovery')) {
+startWatcher();
+return;
+}
+const control = findAutoModeControl(doc);
+if (control) {
+state.autoControlText = elementLabel(control);
+startExistingAutoMode(control, frame, generation);
+return;
+}
+const elapsed = Date.now() - startedAt;
+if (
+elapsed >= ACTIVE_BOOTSTRAP_RESCUE_AFTER_MS &&
+state.activeBootstrapRescues < ACTIVE_BOOTSTRAP_RESCUE_LIMIT
+) {
+state.activeBootstrapRescues += 1;
+const rescueUrl = getWorkerHref(frame) || state.currentMissionUrl || state.bootstrapMissionUrl;
+log('Active Worker A did not mount V2 quickly enough; removing all preload contexts and reloading A once by itself.', {
+missionId: missionIdFromUrl(rescueUrl),
+missionName: state.currentMissionName,
+elapsedMs: elapsed,
+rescue: state.activeBootstrapRescues,
+});
+pausePipelineController('active-bootstrap-rescue', true);
+clearTimer('nexusDiscoveryTimer');
+window.setTimeout(() => {
+if (!state.wanted || generation !== state.workerGeneration || state.worker !== frame) return;
+createWorker(rescueUrl);
+}, 120);
+return;
+}
+if (elapsed >= NEXUS_DISCOVERY_TIMEOUT_MS) {
+setError(
+'Command Nexus Auto Mode was not found in the background worker.',
+`Embedded Mission Finder ${MISSION_FINDER_VERSION} still did not mount its active Mission Operations UI after the staged Worker-A rescue. No dispatch was attempted.`
+);
+return;
+}
+state.nexusDiscoveryTimer = window.setTimeout(attempt, 150);
+};
+attempt();
+}
+function startExistingAutoMode(control, frame, generation) {
+if (!state.wanted || generation !== state.workerGeneration || state.worker !== frame) return;
+if (!ensureActiveWorkerOwnership(frame, 'auto-start')) {
+setError(
+'Worker A did not acquire V2 storage ownership',
+'The synchronous ownership bootstrap was not active at the final Auto Mode start gate. No click was issued.'
+);
+return;
+}
+const doc = getWorkerDocument(frame);
+adoptWorkerDocument(doc, getWorkerHref(frame), 'start-control');
+if (
+state.autoStartIssued &&
+state.autoStartDocumentSerial === state.workerDocumentSerial
+) {
+if (autoControlLooksRunning(control)) {
+confirmCurrentDocumentAutoMode(control, 'discovery-already-issued');
+}
+startWatcher();
+return;
+}
+const alreadyRunning = autoControlLooksRunning(control);
+state.autoStartIssued = true;
+state.autoStartDocumentSerial = state.workerDocumentSerial;
+state.autoStartAttempts = alreadyRunning ? 0 : 1;
+state.autoStartAttemptAt = Date.now();
+state.running = alreadyRunning;
+setPhase('STARTING', 'Starting V2 Auto Mode', `Found existing control: "${elementLabel(control)}".`);
+log('Found Command Nexus Auto Mode control in the off-screen worker.', {
+label: elementLabel(control),
+documentSerial: state.workerDocumentSerial,
+runningHintBeforeClick: alreadyRunning,
+});
+try {
+if (!alreadyRunning) {
+control.click();
+log('Issued a V2 Auto Mode start click for the current worker document.', {
+documentSerial: state.workerDocumentSerial,
+attempt: state.autoStartAttempts,
+});
+} else {
+confirmCurrentDocumentAutoMode(control, 'start-control-already-running');
+log('Existing Auto Mode control already looked active; start click was not duplicated.');
+}
+} catch (error) {
+setError('Could not activate the existing V2 Auto Mode control.', String(error?.message || error));
+return;
+}
+window.setTimeout(() => {
+if (!state.wanted || generation !== state.workerGeneration || state.worker !== frame) return;
+if (!promotedWorkAwaitingEvidence()) startPipelineController();
+}, 350);
+window.setTimeout(() => {
+if (!state.wanted || generation !== state.workerGeneration) return;
+const doc = getWorkerDocument(frame);
+updateCurrentMissionName(doc);
+const currentControl = findAutoModeControl(doc);
+if (currentControl && autoControlLooksRunning(currentControl)) {
+confirmCurrentDocumentAutoMode(currentControl, 'post-start-check');
+}
+const status = findUsefulNexusStatus(doc);
+const workConfirmed = notePromotedWorkEvidence(status, 'post-start-check');
+if (!workConfirmed) {
+const verifyingPromotion = promotedWorkAwaitingEvidence() && state.running;
+setPhase(
+verifyingPromotion ? 'PROMOTION_VERIFY' : (state.running ? 'ACTIVE' : 'STARTING'),
+verifyingPromotion
+? 'V2 mounted; checking mission activity'
+: (state.running ? 'Background Auto Mode running' : 'Waiting for V2 start confirmation'),
+status || `${missionDisplay(state.currentMissionId, state.currentMissionName)} is running in the off-screen worker.`
+);
+}
+startWatcher();
+}, 350);
+}
+function handleUnconfirmedAutoStart(control) {
+if (
+!control ||
+!state.autoStartIssued ||
+state.autoStartDocumentSerial !== state.workerDocumentSerial ||
+state.autoRunningConfirmedDocumentSerial === state.workerDocumentSerial
+) return false;
+if (autoControlLooksRunning(control)) {
+confirmCurrentDocumentAutoMode(control, 'watcher-confirmation');
+return false;
+}
+const elapsed = Date.now() - state.autoStartAttemptAt;
+if (elapsed < AUTO_START_CONFIRM_TIMEOUT_MS) return true;
+if (state.autoStartAttempts < AUTO_START_MAX_ATTEMPTS) {
+try {
+control.click();
+state.autoStartAttempts += 1;
+state.autoStartAttemptAt = Date.now();
+setPhase(
+'STARTING',
+'Retrying V2 Auto Mode start',
+`The current worker document did not confirm the first start; bounded retry ${state.autoStartAttempts}/${AUTO_START_MAX_ATTEMPTS}.`
+);
+log('Retried the unconfirmed V2 Auto Mode start on the same worker document.', {
+documentSerial: state.workerDocumentSerial,
+attempt: state.autoStartAttempts,
+});
+} catch (error) {
+setError('Could not retry the existing V2 Auto Mode control.', String(error?.message || error));
+}
+return true;
+}
+setError(
+'V2 Auto Mode did not confirm that it started.',
+`The control remained "${elementLabel(control) || 'Start Auto Mode'}" after ${state.autoStartAttempts} bounded start attempts on worker document ${state.workerDocumentSerial}. No hard-stop classification was guessed.`
+);
+return true;
+}
+function startWatcher() {
+clearTimer('watcherTimer', window.clearInterval);
+state.lastWatchHeartbeatAt = Date.now();
+state.wakeRecoveryActive = false;
+state.watcherTimer = window.setInterval(watchWorker, WATCH_INTERVAL_MS);
+watchWorker();
+}
+function sleepRecoveryMissionUrl(observedHref = '') {
+const candidates = [
+observedHref,
+state.currentMissionUrl,
+state.transportServiceMissionId
+? new URL(`/missions/${state.transportServiceMissionId}`, location.origin).href
+: '',
+storedResumeMissionUrl(),
+state.bootstrapMissionUrl,
+];
+for (const candidate of candidates) {
+const url = sameOriginUrl(candidate);
+if (url && isMissionUrl(url.href)) return url.href;
+}
+const mission = choosePriorityTarget() || chooseBootstrapMission();
+return mission?.url || '';
+}
+function pendingRedirectRecoveryMissionUrl() {
+const targetMissionId = String(state.redirectTargetMissionId || '');
+if (!targetMissionId) return '';
+const listedMission = collectMissionCandidates().find(candidate =>
+candidate?.missionId === targetMissionId && candidate?.url
+);
+const candidates = [
+state.currentMissionUrl,
+storedResumeMissionUrl(),
+state.bootstrapMissionUrl,
+state.topMission?.missionId === targetMissionId ? state.topMission.url : '',
+state.visualTopMission?.missionId === targetMissionId ? state.visualTopMission.url : '',
+listedMission?.url || '',
+new URL(`/missions/${targetMissionId}`, location.origin).href,
+];
+for (const candidate of candidates) {
+const url = sameOriginUrl(candidate);
+if (url && missionIdFromUrl(url.href) === targetMissionId) return url.href;
+}
+return '';
+}
+function maybeRecoverStalledNonMissionRedirect(doc, href, context = {}) {
+if (
+!state.wanted ||
+state.stopping ||
+state.transportServiceActive ||
+state.nonMissionRedirectRecoveryInFlight ||
+!state.redirectTargetMissionId ||
+!state.lastPriorityRedirectAt ||
+isMissionUrl(href) ||
+vehicleIdFromUrl(href) ||
+context?.kind
+) return false;
+const elapsedMs = Math.max(0, Date.now() - state.lastPriorityRedirectAt);
+if (elapsedMs < NON_MISSION_REDIRECT_RECOVERY_MS) return false;
+const recoveryUrl = pendingRedirectRecoveryMissionUrl();
+const targetMissionId = state.redirectTargetMissionId;
+if (!recoveryUrl || missionIdFromUrl(recoveryUrl) !== targetMissionId) {
+setError(
+'Background mission redirect could not be recovered',
+`Worker A remained on ${pathFromUrl(href) || 'a non-mission page'}, but the exact pending mission URL for ${targetMissionId} could not be reconstructed. No mission was skipped or dispatched by V3.`
+);
+return true;
+}
+const event = {
+at: nowIso(),
+targetMissionId,
+targetMissionName: missionNameForId(targetMissionId),
+observedPath: pathFromUrl(href) || '',
+elapsedMs,
+documentReadyState: String(doc?.readyState || ''),
+workerDocumentSerial: state.workerDocumentSerial,
+phaseBeforeRecovery: state.phase,
+queueGuardBeforeRecovery: readSharedV2QueueGuardState(),
+pendingPersonalTransports: state.radioTransportRequests.length,
+action: 'discard-preloads-and-reload-exact-pending-mission',
+};
+state.nonMissionRedirectRecoveries += 1;
+state.nonMissionRedirectRecoveryHistory.push(event);
+if (state.nonMissionRedirectRecoveryHistory.length > NON_MISSION_REDIRECT_RECOVERY_HISTORY_LIMIT) {
+state.nonMissionRedirectRecoveryHistory.splice(
+0,
+state.nonMissionRedirectRecoveryHistory.length - NON_MISSION_REDIRECT_RECOVERY_HISTORY_LIMIT
+);
+}
+state.nonMissionRedirectRecoveryInFlight = true;
+state.running = false;
+resetAutoStartTracking();
+clearPromotedWorkTracking();
+clearAutoRecoveryWatchdog('non-mission-redirect-recovery');
+clearSharedV2AutoRunning('non-mission-redirect-recovery');
+clearSharedV2QueueGuard('non-mission-redirect-recovery', targetMissionId);
+clearTransportServiceState();
+resetPriorityPending();
+pausePipelineController('non-mission-redirect-recovery', true);
+persistResumeMission(recoveryUrl);
+pipelineRecord('non-mission-redirect-recovery', event);
+setPhase(
+'NAVIGATION_RECOVERY',
+'Worker navigation stalled; restarting safely',
+`${missionDisplay(targetMissionId, event.targetMissionName)} did not load within ${Math.round(elapsedMs / 1000)} seconds. Rebuilding the single active worker without skipping the mission.`
+);
+log('Worker A missed a controller-owned mission redirect and was recovered automatically.', event);
+const recoveryGeneration = state.workerGeneration;
+window.setTimeout(() => {
+if (
+!state.wanted ||
+state.stopping ||
+state.workerGeneration !== recoveryGeneration
+) return;
+state.nonMissionRedirectRecoveryInFlight = false;
+createWorker(recoveryUrl);
+}, 120);
+return true;
+}
+function recoverFromSuspendedTimerGap(elapsedMs, source = 'watcher') {
+if (
+!state.wanted ||
+state.stopping ||
+state.wakeRecoveryActive ||
+elapsedMs < SLEEP_GAP_RECOVERY_THRESHOLD_MS
+) return false;
+const observedHref = getWorkerHref();
+const recoveryUrl = sleepRecoveryMissionUrl(observedHref);
+if (!recoveryUrl) return false;
+state.wakeRecoveryActive = true;
+state.sleepGapRecoveries += 1;
+const event = {
+at: nowIso(),
+source,
+elapsedMs,
+observedPath: pathFromUrl(observedHref),
+recoveryMissionId: missionIdFromUrl(recoveryUrl),
+recoveryPath: pathFromUrl(recoveryUrl),
+discardedPreloads: state.pipelineSlots.filter(slot => slot.frame?.isConnected).length,
+transportServiceWasActive: state.transportServiceActive,
+action: 'discard-preloads-and-reload-active-mission',
+};
+state.sleepGapHistory.push(event);
+if (state.sleepGapHistory.length > SLEEP_GAP_HISTORY_LIMIT) {
+state.sleepGapHistory.splice(0, state.sleepGapHistory.length - SLEEP_GAP_HISTORY_LIMIT);
+}
+clearTimer('watcherTimer', window.clearInterval);
+clearTimer('nexusDiscoveryTimer');
+clearPostDispatchWatchdog('suspended-timer-gap-recovery');
+pausePipelineController('suspended-timer-gap-recovery', true);
+resetAutoStartTracking();
+clearPromotedWorkTracking();
+clearSharedV2AutoRunning('suspended-timer-gap-recovery');
+state.running = false;
+state.transportServiceActive = false;
+state.transportServiceEligible = true;
+setPhase(
+'WAKE_RECOVERY',
+'Computer resumed; restarting safely',
+`A ${Math.round(elapsedMs / 1000)} second timer gap was detected. B/C were discarded and ${missionDisplay(missionIdFromUrl(recoveryUrl), missionNameForId(missionIdFromUrl(recoveryUrl)))} will reload without creating a skip.`
+);
+log('Detected a suspended browser/computer gap and protected V2 from stale wake-up timers.', event);
+window.setTimeout(() => {
+if (!state.wanted || state.stopping) return;
+createWorker(recoveryUrl);
+}, 80);
+return true;
+}
+function checkForSuspendedTimerGap(source = 'watcher', now = Date.now()) {
+const previous = Number(state.lastWatchHeartbeatAt || 0);
+state.lastWatchHeartbeatAt = now;
+if (!previous || state.wakeRecoveryActive) return state.wakeRecoveryActive;
+return recoverFromSuspendedTimerGap(Math.max(0, now - previous), source);
+}
+function watchWorker() {
+if (checkForSuspendedTimerGap('watcher')) return;
+if (!state.wanted || !state.worker || !state.worker.isConnected) return;
+const href = getWorkerHref();
+const doc = getWorkerDocument();
+if (!href || !doc) {
+setError('Background mission worker is no longer readable.', 'The worker disappeared or moved outside the same MissionChief origin.');
+return;
+}
+if (!ensureActiveWorkerOwnership(state.worker, 'watcher')) {
+setError(
+'Worker A did not acquire V2 storage ownership',
+'The synchronous ownership bootstrap failed in the active watcher. The worker was left in place and no V3 dispatch action was attempted.'
+);
+return;
+}
+const documentChanged = adoptWorkerDocument(doc, href, 'watcher');
+if (href !== state.lastWorkerHref) {
+const previousHref = state.lastWorkerHref;
+const previousMissionId = missionIdFromUrl(previousHref);
+const nextMissionId = missionIdFromUrl(href);
+const wasControllerRedirect =
+nextMissionId &&
+nextMissionId === state.redirectTargetMissionId &&
+(
+!state.redirectFromMissionId ||
+!previousMissionId ||
+previousMissionId === state.redirectFromMissionId
+);
+if (previousMissionId && nextMissionId && previousMissionId !== nextMissionId) {
+clearPostDispatchWatchdog('worker-navigation-mission-changed');
+state.lastMissionTransitionFromId = previousMissionId;
+state.lastMissionTransitionToId = nextMissionId;
+state.lastMissionTransitionAt = Date.now();
+resetQueueFastReleaseCandidate();
+if (!wasControllerRedirect) {
+state.recentlyNativeAdvanced.set(previousMissionId, Date.now());
+state.nativeMissionAdvances += 1;
+state.transportServiceEligible = true;
+}
+if (promotePipelineMission(nextMissionId, wasControllerRedirect ? 'redirect-transition' : 'native-transition', {
+fromMissionId: previousMissionId,
+observedHref: href,
+})) {
+return;
+}
+}
+if (wasControllerRedirect) {
+state.redirectFromMissionId = '';
+state.redirectTargetMissionId = '';
+}
+state.lastWorkerHref = href;
+state.lastWorkerNavigationAt = Date.now();
+if (state.autoRecoveryCandidateKey) {
+const candidateMissionId = state.autoRecoveryCandidateMissionId;
+if (!nextMissionId || (candidateMissionId && nextMissionId !== candidateMissionId)) {
+clearAutoRecoveryWatchdog('worker-navigation-mission-changed');
+}
+}
+state.runNavigations += 1;
+recordMissionVisit(href, 'navigation');
+updateCurrentMissionName(doc);
+log('Worker navigation detected.', {
+missionId: state.currentMissionId,
+missionName: state.currentMissionName,
+pathname: new URL(href).pathname,
+previousMissionId: previousMissionId || '',
+controllerPriorityRedirect: Boolean(wasControllerRedirect),
+balancedTransportEligible: state.transportServiceEligible,
+});
+}
+if (documentChanged && isMissionUrl(href)) {
+if (maybeRedirectSkippedMissionBeforeAuto(href, 'watcher-document-change')) {
+captureWorkerSnapshot();
+return;
+}
+setPhase(
+'WAITING_NEXUS',
+'Confirming V2 on the new mission page',
+`${missionDisplay(state.currentMissionId, state.currentMissionName)} loaded as worker document ${state.workerDocumentSerial}.`
+);
+waitForNexusAndStart(state.worker, state.workerGeneration);
+captureWorkerSnapshot();
+return;
+}
+applyAirfieldOperationsSupervisorCrossRef(doc);
+installAirfieldOperationsSupervisorObservers(doc);
+const radioRequests = refreshRadioTransportRequests();
+correlateTransportMissionFromRadio(href, radioRequests);
+const context = detectTransportContext(doc, href);
+if (maybeRecoverStalledNonMissionRedirect(doc, href, context)) {
+captureWorkerSnapshot();
+return;
+}
+const speedStatus = findUsefulNexusStatus(doc);
+notePromotedWorkEvidence(speedStatus, 'watcher-status');
+maybeFastReleaseQueueGuardAfterHiddenTransition(doc, href, context, speedStatus);
+if (maybeHandleConfirmedPrisonerReleaseSuccess(doc, href, context)) {
+captureWorkerSnapshot();
+return;
+}
+const kind = context.kind;
+if (kind !== state.transportKind) {
+if (state.transportKind && state.activeTransportEvent) {
+endTransportEvent(kind ? 'context-switched' : 'context-ended', context, href);
+}
+state.transportKind = kind;
+state.transportSince = kind ? Date.now() : 0;
+state.transportWarned = false;
+if (kind) {
+beginTransportEvent(context, href);
+setPhase(
+'TRANSPORT',
+`${kind === 'PATIENT' ? 'Patient' : 'Prisoner'} transport active`,
+`V2 owns this handoff. Evidence: ${context.evidence.join(' | ') || 'transport context detected'}`
+);
+} else if (state.wanted) {
+const status = findUsefulNexusStatus(doc);
+recordStatusSnapshot(status, 'active');
+setPhase('ACTIVE', 'Background Auto Mode running', status || `Mission ${state.currentMissionId || 'worker'} active.`);
+}
+} else if (kind && state.transportSince) {
+const elapsed = Date.now() - state.transportSince;
+if (state.activeTransportEvent && context.evidence.length) {
+state.activeTransportEvent.evidenceAtEnd = context.evidence.slice(0, 12);
+}
+if (elapsed >= TRANSPORT_STALL_WARN_MS && !state.transportWarned) {
+state.transportWarned = true;
+setPhase(
+'TRANSPORT_WARN',
+`${kind === 'PATIENT' ? 'Patient' : 'Prisoner'} transport may be stalled`,
+`The worker has remained in this transport context for ${Math.round(elapsed / 1000)} seconds. Evidence: ${context.evidence.join(' | ') || 'none'}. Exact personal patient/prisoner fallbacks remain bounded and fail closed.`
+);
+log('Transport stall warning raised.', { kind, elapsedMs: elapsed, evidence: context.evidence });
+}
+}
+maybeAssistPatientTransport(doc, href, context, radioRequests);
+maybeAssistPrisonerTransport(doc, href, context, radioRequests);
+maybeAssistRescueDogSearchDog(doc, href, context);
+maybeAssistAirfieldOperationsSupervisor(doc, href, context);
+maybeApplyMassCasualtyEquipmentThreshold(doc, href, context);
+maybeHandleTransportServiceTimeout(radioRequests);
+if (maybeRunPostDispatchWatchdog(doc, href, context)) {
+captureWorkerSnapshot();
+return;
+}
+if (radioRequests.length && state.radioRequestSince) {
+const radioElapsed = Date.now() - state.radioRequestSince;
+if (radioElapsed >= RADIO_REQUEST_STALL_WARN_MS && !state.radioRequestWarned) {
+state.radioRequestWarned = true;
+log('Radio Transport Request has remained uncleared.', {
+elapsedMs: radioElapsed,
+request: radioRequests[0],
+});
+if (!kind && !state.autoRecoveryCandidateKey && !state.autoStopWarned) {
+setPhase(
+'TRANSPORT_WARN',
+'Personal Radio transport request may be stalled',
+`Vehicle ${radioRequests[0].vehicleId} still requests transport for mission ${radioRequests[0].missionId} after ${Math.round(radioElapsed / 1000)} seconds.`
+);
+}
+}
+}
+const control = findAutoModeControl(doc);
+if (maybeRecoverStalledPromotedWorker(doc, href, control, speedStatus)) {
+captureWorkerSnapshot();
+return;
+}
+if (maybeRecoverMissingActiveControl(doc, href, kind, control, speedStatus)) {
+captureWorkerSnapshot();
+return;
+}
+maybeEnforcePriority(doc, href, context, radioRequests);
+const foreignMissionFrame = findVisibleForeignMissionFrame();
+if (foreignMissionFrame && !state.foreignMissionUiWarned) {
+state.foreignMissionUiWarned = true;
+log('V2 opened or retained a visible native mission frame outside the background worker.');
+if (!kind) {
+setPhase(
+'BACKGROUND_ESCAPE_WARN',
+'Auto Mode escaped to a visible mission frame',
+'The background-worker concept is not fully isolated on this live layout yet. Stop and export diagnostics; do not treat this as a finished V3 behaviour.'
+);
+}
+}
+if (control) {
+state.autoControlText = elementLabel(control);
+if (handleUnconfirmedAutoStart(control)) {
+captureWorkerSnapshot();
+return;
+}
+const controlRunning = autoControlLooksRunning(control);
+const currentDocumentConfirmed = currentWorkerAutoConfirmed();
+if (!controlRunning && !state.autoStartIssued && isMissionUrl(href)) {
+startExistingAutoMode(control, state.worker, state.workerGeneration);
+captureWorkerSnapshot();
+return;
+}
+if (controlRunning) {
+confirmCurrentDocumentAutoMode(control, 'watcher-running');
+state.autoStoppedSince = 0;
+state.autoStopWarned = false;
+state.activeControlMissingSince = 0;
+clearAutoRecoveryWatchdog('auto-mode-running-again');
+if (!kind && !promotedWorkAwaitingEvidence() && (
+state.phase === 'STARTING' ||
+state.phase === 'WAITING_NEXUS' ||
+state.phase === 'PIPELINE_PROMOTE' ||
+state.phase === 'PROMOTION_VERIFY'
+)) {
+setPhase(
+'ACTIVE',
+'Background Auto Mode running',
+findUsefulNexusStatus(doc) || `${missionDisplay(state.currentMissionId, state.currentMissionName)} is active.`
+);
+}
+} else if (currentDocumentConfirmed && !promotedWorkAwaitingEvidence()) {
+const stableFor = Date.now() - state.lastWorkerNavigationAt;
+const stopRecord = readV2AutoStopRecord();
+const recordedStop = Boolean(stopRecord?.afterCurrentConfirmation && stopRecord.reason);
+const visibleStopStatus = findUsefulNexusStatus(doc);
+const stopStatus = recordedStop
+? `AUTO STOPPED: ${stopRecord.reason}`
+: visibleStopStatus;
+if (recordedStop || stableFor >= AUTO_STOP_DEBOUNCE_MS) {
+if (!state.autoStoppedSince) state.autoStoppedSince = Date.now();
+const ambiguousStopStable =
+Date.now() - state.autoStoppedSince >= AUTO_STOP_DEBOUNCE_MS;
+if (recordedStop || ambiguousStopStable) {
+if (!recordedStop) {
+recordStatusSnapshot(stopStatus || state.autoControlText, 'auto-state-dropout');
+if (recoverUnexpectedAutoStateDropout(control, doc, href, stopStatus)) {
+captureWorkerSnapshot();
+return;
+}
+}
+state.running = false;
+recordStatusSnapshot(stopStatus || state.autoControlText, 'auto-stopped');
+if (maybeHandleRecoverableAutoStop(doc, stopStatus)) {
+state.autoStopWarned = false;
+captureWorkerSnapshot();
+return;
+}
+if (!state.autoStopWarned) {
+state.autoStopWarned = true;
+pausePipelineController('confirmed-auto-stop', true);
+setPhase(
+'AUTO_STOPPED',
+'V2 Auto Mode stopped itself',
+stopStatus || `The background V2 control now reads "${state.autoControlText || 'Auto Mode: Start'}". The worker has been left in place for diagnostics.`
+);
+log('Existing V2 Auto Mode appears to have stopped itself.', {
+label: state.autoControlText,
+status: stopStatus,
+stopRecord,
+documentSerial: state.workerDocumentSerial,
+missionId: state.currentMissionId,
+missionName: state.currentMissionName,
+});
+}
+}
+}
+} else {
+state.autoStoppedSince = 0;
+state.autoStopWarned = false;
+state.activeControlMissingSince = 0;
+}
+}
+const status = findUsefulNexusStatus(doc);
+recordStatusSnapshot(status, 'watcher');
+if (!kind && status && state.phase === 'ACTIVE') {
+state.detail = status;
+render();
+}
+captureWorkerSnapshot();
+}
+function removeWorker(logRemoval = true) {
+clearTimer('workerLoadTimer');
+clearTimer('nexusDiscoveryTimer');
+clearTimer('watcherTimer', window.clearInterval);
+captureWorkerSnapshot();
+if (state.activeTransportEvent) endTransportEvent('worker-removed');
+clearPostDispatchWatchdog('worker-removed');
+const frame = state.worker;
+state.worker = null;
+forgetWorkerDocument();
+state.workerGeneration += 1;
+if (frame?.isConnected) {
+setFrameOwnership(frame, false, logRemoval ? 'active-worker-remove' : 'active-worker-replace');
+try { frame.name = `mcn-v3-retired-worker-${state.workerGeneration}`; } catch {}
+try { frame.src = 'about:blank'; } catch {}
+try { frame.remove(); } catch {}
+if (logRemoval) log('Removed background mission worker.');
+}
+}
+function gracefulStop() {
+if (state.stopping) return;
+clearPersistedRunIntent();
+state.wanted = false;
+state.stopping = true;
+clearPostDispatchWatchdog('manual-stop');
+clearTimer('missionRescanTimer', window.clearInterval);
+pausePipelineController('manual-stop', true);
+setPhase('STOPPING', 'Stopping background Auto Mode', 'Asking the existing V2 control to stop before the worker is released.');
+const doc = getWorkerDocument();
+const control = findAutoModeControl(doc);
+if (state.autoStartIssued && control && autoControlLooksRunning(control)) {
+try {
+control.click();
+log('Issued one stop click to the existing V2 Auto Mode control.');
+} catch (error) {
+log('V2 stop click failed; worker teardown will still trigger normal pagehide cleanup.', {
+error: String(error?.message || error),
+});
+}
+} else {
+log('No active V2 stop control was confidently detected; relying on worker pagehide cleanup.');
+}
+window.setTimeout(() => {
+captureWorkerSnapshot();
+finaliseActiveMissionTiming('manual-stop');
+removeWorker();
+markRunStopped();
+state.running = false;
+state.stopping = false;
+state.lastWatchHeartbeatAt = 0;
+state.wakeRecoveryActive = false;
+resetAutoStartTracking();
+state.transportKind = '';
+state.transportSince = 0;
+chooseTopMission();
+refreshRadioTransportRequests();
+setPhase('IDLE', 'Ready', 'Auto Mode is stopped. The visible MissionChief map was not navigated.');
+}, 600);
+}
+function beginMissionRescan() {
+clearTimer('missionRescanTimer', window.clearInterval);
+state.missionRescanTimer = window.setInterval(() => {
+if (!state.wanted || state.worker) return;
+const mission = choosePriorityTarget() || chooseBootstrapMission();
+if (mission) {
+clearTimer('missionRescanTimer', window.clearInterval);
+createWorker(mission.url);
+}
+}, MISSION_RESCAN_MS);
+}
+function startController() {
+if (state.wanted || state.stopping) return;
+pausePipelineController('new-run-active-bootstrap', true);
+resetRunStats();
+sessionSet(SESSION_CONTINUITY, '');
+state.wanted = true;
+state.running = false;
+state.lastError = '';
+resetAutoStartTracking();
+setPersistedBackgroundWanted(true);
+persistRunStart(state.runStartedAt);
+sessionSet(SESSION_TOP_PAGE_RESUMES, '0');
+clearSharedV2AutoRunning('new-run-bootstrap');
+const mission = choosePriorityTarget() || chooseBootstrapMission();
+if (!mission) {
+setPhase('WAITING_MISSION', 'Waiting for a mission', 'No actionable personal mission is currently available on the map. The controller will start when one appears.');
+log('No personal bootstrap mission was available; waiting for the mission list.');
+beginMissionRescan();
+return;
+}
+createWorker(mission.url);
+}
+function retryCurrent() {
+if (state.stopping) return;
+if (!state.runStartedAt) resetRunStats();
+state.runRetries += 1;
+clearPostDispatchWatchdog('manual-retry');
+const candidate = sameOriginUrl(state.currentMissionUrl || state.bootstrapMissionUrl);
+const mission = candidate && isMissionUrl(candidate.href)
+? { url: candidate.href }
+: (choosePriorityTarget() || chooseBootstrapMission());
+state.wanted = true;
+state.running = false;
+state.lastError = '';
+resetAutoStartTracking();
+setPersistedBackgroundWanted(true);
+persistRunStart(state.runStartedAt || nowIso());
+clearSharedV2AutoRunning('manual-retry-bootstrap');
+if (!mission?.url) {
+setPhase('WAITING_MISSION', 'Waiting for a mission', 'No mission is currently available to retry.');
+beginMissionRescan();
+return;
+}
+log('Manual retry requested.');
+pausePipelineController('manual-retry-active-bootstrap', true);
+createWorker(mission.url);
+}
+function diagnosticsSnapshot() {
+const href = getWorkerHref();
+const doc = getWorkerDocument();
+const autoControl = findAutoModeControl(doc);
+const candidates = collectMissionCandidates();
+const liveWorkerSnapshot = captureWorkerSnapshot();
+const workerSnapshot = liveWorkerSnapshot || state.lastWorkerSnapshot || {};
+const v2AutoStopRecord = readV2AutoStopRecord();
+const runEndMs = state.runStoppedAt ? Date.parse(state.runStoppedAt) : Date.now();
+const runStartMs = state.runStartedAt ? Date.parse(state.runStartedAt) : 0;
+return {
+generatedAt: nowIso(),
+controllerVersion: VERSION,
+masterVersion: MASTER_VERSION,
+missionFinderVersion: MISSION_FINDER_VERSION,
+mergedRuntime: true,
+pairedV2Required: false,
+page: {
+origin: location.origin,
+pathname: location.pathname,
+missionListPresent: Boolean(findMissionListRoot()),
+missionCandidateCount: candidates.length,
+nonAllianceLikeCandidateCount: candidates.filter(item => !item.allianceLike).length,
+topMission: compactMissionCandidate(chooseTopMission()),
+visualTopMission: state.visualTopMission ? { ...state.visualTopMission } : null,
+activeMissionSkips: activeMissionSkipRecords(),
+radioTransportRequests: refreshRadioTransportRequests().map(request => ({ ...request })),
+allianceRadioRequestsIgnored: state.runAllianceRadioIgnored,
+},
+run: {
+startedAt: state.runStartedAt || '',
+stoppedAt: state.runStoppedAt || '',
+elapsedSeconds: runStartMs ? Math.max(0, Math.round((runEndMs - runStartMs) / 1000)) : 0,
+uniqueMissionCount: state.runMissionIds.length,
+missionIds: state.runMissionIds.slice(),
+workerLoads: state.runWorkerLoads,
+navigationChanges: state.runNavigations,
+retries: state.runRetries,
+patientTransportContexts: state.runPatientTransports,
+prisonerTransportContexts: state.runPrisonerTransports,
+radioTransportRequestsSeen: state.runRadioTransportRequests,
+allianceRadioRequestsIgnored: state.runAllianceRadioIgnored,
+patientAssistAttempts: state.patientAssistAttempts,
+prisonerAssistAttempts: state.prisonerAssistAttempts,
+nativeMissionAdvances: state.nativeMissionAdvances,
+topPageResumes: state.topPageResumes,
+zeroSelectionRecoveries: state.zeroSelectionRecoveries,
+zeroSelectionHistory: state.zeroSelectionHistory.slice(),
+autoRecoverySkips: state.autoRecoverySkips,
+autoRecoveryHistory: state.autoRecoveryHistory.slice(),
+autoRecoveryWatchdog: state.autoRecoveryCandidateKey ? {
+missionId: state.autoRecoveryCandidateMissionId,
+missionName: missionNameForId(state.autoRecoveryCandidateMissionId),
+category: state.autoRecoveryCandidateCategory,
+reason: state.autoRecoveryCandidateReason,
+elapsedMs: Math.max(0, Date.now() - state.autoRecoveryCandidateSince),
+waitMs: state.autoRecoveryCandidateWaitMs || AUTO_RECOVERY_WATCHDOG_MS,
+evidence: state.autoRecoveryCandidateEvidence,
+} : null,
+recoverableMissionSkips: state.recoverableMissionSkips,
+activeMissionSkips: activeMissionSkipRecords(),
+missionSkipHistory: state.missionSkipHistory.slice(),
+airfieldAliasRewrites: state.airfieldAliasRewrites,
+airfieldAliasHistory: state.airfieldAliasHistory.slice(),
+airfieldSupervisorAssistAttempts: state.airfieldSupervisorAssistAttempts,
+airfieldSupervisorAssistHistory: state.airfieldSupervisorAssistHistory.slice(),
+rescueDogAssistAttempts: state.rescueDogAssistAttempts,
+rescueDogAssistHistory: state.rescueDogAssistHistory.slice(),
+massCasualtyThresholdAttempts: state.massCasualtyThresholdAttempts,
+massCasualtyThresholdHistory: state.massCasualtyThresholdHistory.slice(),
+prisonerReleaseSuccessRehooks: state.prisonerReleaseSuccessRehooks,
+prisonerReleaseSuccessHistory: state.prisonerReleaseSuccessHistory.slice(),
+transportServiceAttempts: state.transportServiceAttempts,
+transportServiceCleared: state.transportServiceCleared,
+transportServiceActive: state.transportServiceActive,
+priorityRedirects: state.priorityRedirects,
+queueFastReleases: state.queueFastReleases,
+queueFastReleaseHistory: state.queueFastReleaseHistory.slice(),
+postDispatchSoftRecoveries: state.postDispatchSoftRecoveries,
+postDispatchHardRecoveries: state.postDispatchHardRecoveries,
+postDispatchCircuitBreakers: state.postDispatchCircuitBreakers,
+postDispatchRecoveryHistory: state.postDispatchRecoveryHistory.slice(),
+postDispatchWatchdog: state.postDispatchWatchdog ? {
+...state.postDispatchWatchdog,
+effectiveElapsedMs: postDispatchEffectiveElapsed(state.postDispatchWatchdog),
+} : null,
+pipelinePreloadCreates: state.pipelinePreloadCreates,
+pipelinePreloadsReady: state.pipelinePreloadsReady,
+pipelineVehicleLoadClicks: state.pipelineVehicleLoadClicks,
+pipelinePromotions: state.pipelinePromotions,
+pipelineReadyPromotions: state.pipelineReadyPromotions,
+pipelineIsolationFailures: state.pipelineIsolationFailures,
+pipelinePromotionFallbacks: state.pipelinePromotionFallbacks,
+pipelineV2DormantReady: state.pipelineV2DormantReady,
+pipelineV2DormantPromotionFailures: state.pipelineV2DormantPromotionFailures,
+pipelineDuplicateClicksSuppressed: state.pipelineDuplicateClicksSuppressed,
+pipelineHandoffRetentions: state.pipelineHandoffRetentions,
+promotionWorkStallRecoveries: state.promotionWorkStallRecoveries,
+promotionRecoveryHistory: state.promotionRecoveryHistory.slice(),
+activeBootstrapRescues: state.activeBootstrapRescues,
+activeControlDropoutRescues: state.activeControlDropoutRescues,
+activeControlSoftRecoveries: state.activeControlSoftRecoveries,
+activeControlDropoutCircuitBreakers: state.activeControlDropoutCircuitBreakers,
+activeControlDropoutHistory: state.activeControlDropoutHistory.slice(),
+pipelineActiveOnly: state.pipelineActiveOnly,
+pipelineActiveOnlyReason: state.pipelineActiveOnlyReason,
+pipelineActiveOnlySince: state.pipelineActiveOnlySince
+? new Date(state.pipelineActiveOnlySince).toISOString()
+: '',
+pipelineOwnershipDemotions: state.pipelineOwnershipDemotions,
+activeOwnershipBootstrapInstalls: state.activeOwnershipBootstrapInstalls,
+activeOwnershipBootstrapFailures: state.activeOwnershipBootstrapFailures,
+activeOwnershipBootstrapHistory: state.activeOwnershipBootstrapHistory.slice(),
+sleepGapRecoveries: state.sleepGapRecoveries,
+sleepGapHistory: state.sleepGapHistory.slice(),
+autoStateDropoutRecoveries: state.autoStateDropoutRecoveries,
+autoStateDropoutReloads: state.autoStateDropoutReloads,
+autoStateActiveOnlyFailures: state.autoStateActiveOnlyFailures,
+autoStateDropoutHistory: state.autoStateDropoutHistory.slice(),
+skippedMissionPrestartRedirects: state.skippedMissionPrestartRedirects,
+pipelineSlots: state.pipelineSlots.map(compactPipelineSlot),
+pipelineHistory: state.pipelineHistory.slice(),
+transportAffinityCorrections: 0,
+postTransportRehooks: state.postTransportRehooks,
+nonMissionRedirectRecoveries: state.nonMissionRedirectRecoveries,
+nonMissionRedirectRecoveryHistory: state.nonMissionRedirectRecoveryHistory.slice(),
+topSyntheticMissionRehooksBlocked: state.topSyntheticMissionRehooksBlocked,
+transportEvents: state.runTransportEvents.map(event => ({ ...event })),
+ruleChangeHistory: state.ruleChangeHistory.slice(),
+radioRequestHistory: state.radioRequestHistory.slice(),
+allianceRadioIgnoredHistory: state.allianceRadioIgnoredHistory.slice(),
+patientAssistHistory: state.patientAssistHistory.slice(),
+prisonerAssistHistory: state.prisonerAssistHistory.slice(),
+transportServiceHistory: state.transportServiceHistory.slice(),
+transportAffinityHistory: state.transportAffinityHistory.slice(),
+statusHistory: state.statusHistory.slice(),
+missionTimingHistory: state.missionTimingHistory.slice(),
+activeMissionTiming: state.activeMissionTiming ? JSON.parse(JSON.stringify(state.activeMissionTiming)) : null,
+},
+controller: {
+wanted: state.wanted,
+running: state.running,
+stopping: state.stopping,
+phase: state.phase,
+status: state.status,
+detail: state.detail,
+currentMissionId: state.currentMissionId,
+currentMissionName: state.currentMissionName || workerSnapshot.missionName || '',
+currentMissionDisplay: missionDisplay(
+state.currentMissionId,
+state.currentMissionName || workerSnapshot.missionName || ''
+),
+currentIsTopMission: Boolean(
+state.topMission?.missionId &&
+state.currentMissionId === state.topMission.missionId &&
+!state.transportServiceActive
+),
+currentMissionPath: href ? new URL(href).pathname : (workerSnapshot.path || ''),
+autoStartIssued: state.autoStartIssued,
+watcherActive: Boolean(state.watcherTimer),
+workerDocumentSerial: state.workerDocumentSerial,
+autoStartDocumentSerial: state.autoStartDocumentSerial,
+autoRunningConfirmedDocumentSerial: state.autoRunningConfirmedDocumentSerial,
+autoRunningConfirmedAt: state.autoRunningConfirmedAt
+? new Date(state.autoRunningConfirmedAt).toISOString()
+: '',
+autoStartAttempts: state.autoStartAttempts,
+promotedDocumentSerial: state.promotedDocumentSerial,
+promotedWorkStartedAt: state.promotedWorkStartedAt
+? new Date(state.promotedWorkStartedAt).toISOString()
+: '',
+promotedWorkEvidenceAt: state.promotedWorkEvidenceAt
+? new Date(state.promotedWorkEvidenceAt).toISOString()
+: '',
+promotedWorkEvidenceText: state.promotedWorkEvidenceText,
+promotedWorkAwaitingEvidence: promotedWorkAwaitingEvidence(),
+promotionWorkStallRecoveries: state.promotionWorkStallRecoveries,
+promotionRecoveryPendingMissionId: state.promotionRecoveryPendingMissionId,
+v2AutoStopRecord,
+autoControlFound: Boolean(autoControl) || Boolean(workerSnapshot.autoControlFound),
+autoControlText: autoControl ? elementLabel(autoControl) : (workerSnapshot.autoControlText || state.autoControlText),
+autoLooksRunning: autoControl ? autoControlLooksRunning(autoControl) : Boolean(workerSnapshot.autoLooksRunning),
+autoStopWarned: state.autoStopWarned,
+autoRecoverySkips: state.autoRecoverySkips,
+autoRecoveryWatchdog: state.autoRecoveryCandidateKey ? {
+missionId: state.autoRecoveryCandidateMissionId,
+category: state.autoRecoveryCandidateCategory,
+reason: state.autoRecoveryCandidateReason,
+elapsedMs: Math.max(0, Date.now() - state.autoRecoveryCandidateSince),
+waitMs: state.autoRecoveryCandidateWaitMs || AUTO_RECOVERY_WATCHDOG_MS,
+} : null,
+zeroSelectionRecoveries: state.zeroSelectionRecoveries,
+topPageResumes: state.topPageResumes,
+resumedFromTopNavigation: state.resumedFromTopNavigation,
+persistedBackgroundWanted: persistedBackgroundWanted(),
+storedResumeMissionUrl: storedResumeMissionUrl(),
+transportKind: state.transportKind,
+transportSeconds: state.transportSince ? Math.round((Date.now() - state.transportSince) / 1000) : 0,
+lastError: state.lastError,
+topMission: state.topMission ? { ...state.topMission } : null,
+visualTopMission: state.visualTopMission ? { ...state.visualTopMission } : null,
+activeMissionSkips: activeMissionSkipRecords(),
+recoverableMissionSkips: state.recoverableMissionSkips,
+airfieldAliasRewrites: state.airfieldAliasRewrites,
+airfieldSupervisorAssistAttempts: state.airfieldSupervisorAssistAttempts,
+rescueDogAssistAttempts: state.rescueDogAssistAttempts,
+massCasualtyThresholdAttempts: state.massCasualtyThresholdAttempts,
+massCasualtyThresholdLastMissionId: state.massCasualtyThresholdLastMissionId,
+massCasualtyThresholdLastAmbulanceCount: state.massCasualtyThresholdLastAmbulanceCount,
+prisonerReleaseSuccessRehooks: state.prisonerReleaseSuccessRehooks,
+queueFastReleases: state.queueFastReleases,
+postDispatchSoftRecoveries: state.postDispatchSoftRecoveries,
+postDispatchHardRecoveries: state.postDispatchHardRecoveries,
+postDispatchCircuitBreakers: state.postDispatchCircuitBreakers,
+postDispatchWatchdog: state.postDispatchWatchdog ? {
+missionId: state.postDispatchWatchdog.missionId,
+missionName: state.postDispatchWatchdog.missionName,
+effectiveElapsedMs: postDispatchEffectiveElapsed(state.postDispatchWatchdog),
+paused: Boolean(state.postDispatchWatchdog.pausedAt),
+pauseReason: state.postDispatchWatchdog.pauseReason,
+softRecovered: state.postDispatchWatchdog.softRecovered,
+} : null,
+pipelinePromotions: state.pipelinePromotions,
+pipelineReadyPromotions: state.pipelineReadyPromotions,
+pipelineVehicleLoadClicks: state.pipelineVehicleLoadClicks,
+pipelineIsolationFailures: state.pipelineIsolationFailures,
+pipelinePromotionFallbacks: state.pipelinePromotionFallbacks,
+pipelineV2DormantReady: state.pipelineV2DormantReady,
+pipelineV2DormantPromotionFailures: state.pipelineV2DormantPromotionFailures,
+pipelineDuplicateClicksSuppressed: state.pipelineDuplicateClicksSuppressed,
+pipelineHandoffRetentions: state.pipelineHandoffRetentions,
+activeBootstrapRescues: state.activeBootstrapRescues,
+activeControlDropoutRescues: state.activeControlDropoutRescues,
+activeControlSoftRecoveries: state.activeControlSoftRecoveries,
+activeControlDropoutCircuitBreakers: state.activeControlDropoutCircuitBreakers,
+activeControlRecentDropouts: state.activeControlDropoutTimes
+.filter(at => Date.now() - Number(at || 0) <= ACTIVE_CONTROL_DROPOUT_WINDOW_MS)
+.length,
+activeControlMissingSeconds: state.activeControlMissingSince
+? Math.round((Date.now() - state.activeControlMissingSince) / 1000)
+: 0,
+pipelineActiveOnly: state.pipelineActiveOnly,
+pipelineActiveOnlyReason: state.pipelineActiveOnlyReason,
+pipelineOwnershipDemotions: state.pipelineOwnershipDemotions,
+activeOwnershipBootstrapInstalls: state.activeOwnershipBootstrapInstalls,
+activeOwnershipBootstrapFailures: state.activeOwnershipBootstrapFailures,
+sleepGapRecoveries: state.sleepGapRecoveries,
+sleepGapHistory: state.sleepGapHistory.slice(),
+autoStateDropoutRecoveries: state.autoStateDropoutRecoveries,
+autoStateDropoutReloads: state.autoStateDropoutReloads,
+autoStateActiveOnlyFailures: state.autoStateActiveOnlyFailures,
+skippedMissionPrestartRedirects: state.skippedMissionPrestartRedirects,
+nonMissionRedirectRecoveries: state.nonMissionRedirectRecoveries,
+nonMissionRedirectRecoveryInFlight: state.nonMissionRedirectRecoveryInFlight,
+pendingRedirectMissionId: state.redirectTargetMissionId,
+pendingRedirectSeconds: state.redirectTargetMissionId && state.lastPriorityRedirectAt
+? Math.round((Date.now() - state.lastPriorityRedirectAt) / 1000)
+: 0,
+pipelineSlots: state.pipelineSlots.map(compactPipelineSlot),
+queueGuardState: readSharedV2QueueGuardState(),
+priorityPendingKey: state.priorityPendingKey,
+currentTransportVehicleId: vehicleIdFromUrl(href || workerSnapshot.href || ''),
+transportRequestMissionId: radioRequestForVehicle(
+vehicleIdFromUrl(href || workerSnapshot.href || ''),
+state.radioTransportRequests
+)?.missionId || '',
+transportAffinityCorrections: 0,
+patientAssistAttempts: state.patientAssistAttempts,
+prisonerAssistAttempts: state.prisonerAssistAttempts,
+transportServiceEligible: state.transportServiceEligible,
+transportServiceActive: state.transportServiceActive,
+transportServiceKey: state.transportServiceKey,
+transportServiceVehicleId: state.transportServiceVehicleId,
+transportServiceMissionId: state.transportServiceMissionId,
+transportServiceAttempts: state.transportServiceAttempts,
+transportServiceCleared: state.transportServiceCleared,
+nativeMissionAdvances: state.nativeMissionAdvances,
+topSyntheticMissionRehooksBlocked: state.topSyntheticMissionRehooksBlocked,
+radioTransportRequests: state.radioTransportRequests.map(request => ({ ...request })),
+},
+worker: {
+present: Boolean(state.worker?.isConnected),
+storageOwnershipActive: frameOwnsOperationalState(state.worker),
+storageOwnershipSource: (() => {
+try { return normaliseText(frameOwnershipBridge(state.worker)?.source?.() || ''); } catch { return ''; }
+})(),
+frameName: String(state.worker?.name || ''),
+sameOriginReadable: Boolean(doc) || Boolean(workerSnapshot.sameOriginReadable),
+readyState: doc?.readyState || workerSnapshot.readyState || '',
+title: normaliseText(doc?.title || workerSnapshot.title || ''),
+lastCapturedAt: workerSnapshot.capturedAt || '',
+lastPath: workerSnapshot.path || '',
+lastMissionId: workerSnapshot.missionId || '',
+lastMissionName: workerSnapshot.missionName || '',
+nexusWrapperPresent: Boolean(doc?.querySelector('#mission-finder-wrapper')) || Boolean(workerSnapshot.nexusWrapperPresent),
+controlPanelPresent: Boolean(doc?.querySelector('#control-panel')) || Boolean(workerSnapshot.controlPanelPresent),
+patientTransportAnchorPresent: Boolean(workerSnapshot.transport?.patientAnchorCount),
+prisonerControlPresent: Boolean(
+workerSnapshot.transport?.structuredPrisonerRequests ||
+workerSnapshot.transport?.greenPrisonDestinations ||
+workerSnapshot.transport?.releaseLinks
+),
+transportEvidence: workerSnapshot.transport?.evidence || [],
+visibleMissionFrameOutsideWorker: Boolean(findVisibleForeignMissionFrame()) || Boolean(workerSnapshot.visibleMissionFrameOutsideWorker),
+},
+userAgent: navigator.userAgent,
+log: state.log.slice(-120),
+};
+}
+function exportDiagnostics() {
+const snapshot = diagnosticsSnapshot();
+const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' });
+const url = URL.createObjectURL(blob);
+const anchor = document.createElement('a');
+anchor.href = url;
+anchor.download = `missionchief-command-nexus-v3-${Date.now()}.json`;
+document.body.appendChild(anchor);
+anchor.click();
+anchor.remove();
+window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+log('Exported Command Nexus V3 diagnostics.');
+}
+function injectStyles() {
+if (document.getElementById(STYLE_ID)) return;
+const style = document.createElement('style');
+style.id = STYLE_ID;
+style.textContent = `
+#${ROOT_ID} {
+--mcn-bg: rgba(8, 16, 30, 0.97);
+--mcn-bg2: rgba(13, 29, 50, 0.98);
+--mcn-border: rgba(104, 168, 255, 0.30);
+--mcn-text: #edf6ff;
+--mcn-muted: #9cb1c8;
+--mcn-accent: #66b7ff;
+--mcn-ok: #74dfaa;
+--mcn-warn: #ffd479;
+--mcn-bad: #ff8989;
+position: relative;
+float: left;
+height: 50px;
+display: flex;
+align-items: center;
+margin-left: 5px;
+z-index: 2147483000;
+font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+color: var(--mcn-text);
+user-select: none;
+}
+#${ROOT_ID} * { box-sizing: border-box; }
+#${ROOT_ID} .mcn-launcher {
+width: 36px;
+height: 36px;
+border-radius: 50%;
+border: 1px solid rgba(109, 185, 255, 0.58);
+background:
+radial-gradient(circle at 34% 28%, rgba(94,190,255,.35), transparent 28%),
+linear-gradient(145deg, #102b4a, #081425 65%);
+box-shadow: 0 10px 30px rgba(0,0,0,.38), inset 0 0 0 1px rgba(255,255,255,.04);
+color: #f2f8ff;
+display: grid;
+place-items: center;
+cursor: pointer;
+position: relative;
+font-weight: 800;
+letter-spacing: -0.06em;
+font-size: 18px;
+outline: none;
+}
+#${ROOT_ID} .mcn-launcher::before {
+content: "";
+position: absolute;
+width: 26px;
+height: 26px;
+border-radius: 50%;
+border: 1px dashed rgba(146,203,255,.52);
+}
+#${ROOT_ID} .mcn-core-n {
+width: 20px;
+height: 23px;
+display: grid;
+place-items: center;
+position: relative;
+z-index: 1;
+background: linear-gradient(145deg, rgba(8,216,255,.95), rgba(139,92,246,.92) 55%, rgba(255,49,88,.90));
+clip-path: polygon(50% 0, 94% 25%, 94% 75%, 50% 100%, 6% 75%, 6% 25%);
+color: #07111f;
+font-size: 10px;
+font-weight: 950;
+letter-spacing: 0;
+text-shadow: 0 1px 0 rgba(255,255,255,.45);
+}
+#${ROOT_ID} .mcn-dot {
+position: absolute;
+width: 10px;
+height: 10px;
+right: 1px;
+bottom: 4px;
+border-radius: 50%;
+background: #91a2b7;
+border: 2px solid #0b1728;
+box-shadow: 0 0 0 1px rgba(255,255,255,.1);
+}
+#${ROOT_ID}[data-phase="ACTIVE"] .mcn-dot,
+#${ROOT_ID}[data-phase="TRANSPORT"] .mcn-dot { background: var(--mcn-ok); box-shadow: 0 0 12px rgba(116,223,170,.65); }
+#${ROOT_ID}[data-phase="LOADING"] .mcn-dot,
+#${ROOT_ID}[data-phase="PIPELINE_PROMOTE"] .mcn-dot,
+#${ROOT_ID}[data-phase="PROMOTION_VERIFY"] .mcn-dot,
+#${ROOT_ID}[data-phase="PRIORITY_REDIRECT"] .mcn-dot,
+#${ROOT_ID}[data-phase="TRANSPORT_AFFINITY"] .mcn-dot,
+#${ROOT_ID}[data-phase="TRANSPORT_SERVICE"] .mcn-dot,
+#${ROOT_ID}[data-phase="WAITING_NEXUS"] .mcn-dot,
+#${ROOT_ID}[data-phase="STARTING"] .mcn-dot,
+#${ROOT_ID}[data-phase="WAITING_MISSION"] .mcn-dot,
+#${ROOT_ID}[data-phase="RESUMING"] .mcn-dot { background: var(--mcn-accent); }
+#${ROOT_ID}[data-phase="TRANSPORT_WARN"] .mcn-dot,
+#${ROOT_ID}[data-phase="PROMOTION_RECOVERY"] .mcn-dot,
+#${ROOT_ID}[data-phase="CONTROL_RECOVERY"] .mcn-dot,
+#${ROOT_ID}[data-phase="NAVIGATION_RECOVERY"] .mcn-dot,
+#${ROOT_ID}[data-phase="AUTO_RECOVERY_WAIT"] .mcn-dot,
+#${ROOT_ID}[data-phase="AUTO_STOPPED"] .mcn-dot,
+#${ROOT_ID}[data-phase="MISSION_SKIPPED"] .mcn-dot,
+#${ROOT_ID}[data-phase="BACKGROUND_ESCAPE_WARN"] .mcn-dot { background: var(--mcn-warn); }
+#${ROOT_ID}[data-phase="ERROR"] .mcn-dot { background: var(--mcn-bad); }
+#${ROOT_ID} .mcn-panel {
+position: fixed;
+top: 58px;
+left: 150px;
+width: min(320px, calc(100vw - 24px));
+margin: 0;
+border: 1px solid var(--mcn-border);
+border-radius: 14px;
+background: linear-gradient(160deg, var(--mcn-bg2), var(--mcn-bg));
+box-shadow: 0 18px 54px rgba(0,0,0,.46);
+overflow: hidden;
+transform-origin: top left;
+z-index: 2147483001;
+}
+#${ROOT_ID}[data-collapsed="true"] .mcn-panel { display: none; }
+#${ROOT_ID} .mcn-head {
+padding: 11px 12px 9px;
+display: flex;
+align-items: center;
+justify-content: space-between;
+gap: 10px;
+border-bottom: 1px solid rgba(255,255,255,.07);
+}
+#${ROOT_ID} .mcn-title { font-size: 13px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+#${ROOT_ID} .mcn-version { font-size: 10px; color: var(--mcn-muted); font-weight: 600; }
+#${ROOT_ID} .mcn-body { padding: 12px; }
+#${ROOT_ID} .mcn-status {
+padding: 10px;
+border-radius: 10px;
+background: rgba(255,255,255,.045);
+border: 1px solid rgba(255,255,255,.06);
+}
+#${ROOT_ID} .mcn-status-main { font-size: 13px; font-weight: 760; line-height: 1.25; }
+#${ROOT_ID} .mcn-status-detail { margin-top: 5px; color: var(--mcn-muted); font-size: 11px; line-height: 1.35; overflow-wrap: anywhere; }
+#${ROOT_ID} .mcn-meta { margin-top: 9px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+#${ROOT_ID} .mcn-meta-card { padding: 7px 8px; border-radius: 8px; background: rgba(255,255,255,.035); }
+#${ROOT_ID} .mcn-meta-card.wide { grid-column: 1 / -1; }
+#${ROOT_ID} .mcn-meta-label { font-size: 9px; color: var(--mcn-muted); text-transform: uppercase; letter-spacing: .07em; }
+#${ROOT_ID} .mcn-meta-value { margin-top: 2px; font-size: 11px; font-weight: 700; overflow-wrap: anywhere; }
+#${ROOT_ID} .mcn-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 10px; }
+#${ROOT_ID} button.mcn-action {
+min-height: 34px;
+padding: 7px 8px;
+border-radius: 9px;
+border: 1px solid rgba(122,181,234,.25);
+background: rgba(67,130,189,.13);
+color: var(--mcn-text);
+font: inherit;
+font-size: 11px;
+font-weight: 720;
+cursor: pointer;
+}
+#${ROOT_ID} button.mcn-action:hover { background: rgba(82,151,214,.22); }
+#${ROOT_ID} button.mcn-action.primary { background: rgba(63,150,217,.28); border-color: rgba(100,185,250,.45); }
+#${ROOT_ID} button.mcn-action.stop { background: rgba(190,72,82,.18); border-color: rgba(255,118,126,.32); }
+#${ROOT_ID} button.mcn-action:disabled { opacity: .45; cursor: default; }
+#${ROOT_ID} .mcn-note { margin-top: 9px; color: var(--mcn-muted); font-size: 10px; line-height: 1.35; }
+#${ROOT_ID} .mcn-note strong { color: #d8e9f8; }
+@media (max-width: 767px) {
+#${ROOT_ID} { display: none !important; }
+}
+@media (min-width: 768px) and (max-width: 900px) {
+#${ROOT_ID} .mcn-panel { left: 12px; width: min(310px, calc(100vw - 24px)); }
+}
+@media (prefers-reduced-motion: reduce) {
+#${ROOT_ID} *, #${ROOT_ID} *::before, #${ROOT_ID} *::after { transition-duration: 1ms !important; animation-duration: 1ms !important; }
+}
+`;
+document.head.appendChild(style);
+}
+function buildUi() {
+if (document.getElementById(ROOT_ID)) return;
+injectStyles();
+const root = document.createElement('section');
+root.id = ROOT_ID;
+root.dataset.phase = state.phase;
+root.dataset.collapsed = localStorage.getItem(STORAGE_COLLAPSED) === 'false' ? 'false' : 'true';
+root.innerHTML = `
+<div class="mcn-panel" role="region" aria-label="Command Nexus V3 controls">
+<div class="mcn-head">
+<div>
+<div class="mcn-title">Command Nexus V3</div>
+<div class="mcn-version">Master ${MASTER_VERSION} | Mission Finder ${MISSION_FINDER_VERSION}</div>
+</div>
+<div aria-hidden="true" style="font-size:18px;color:#7fa6c8;">+</div>
+</div>
+<div class="mcn-body">
+<div class="mcn-status">
+<div class="mcn-status-main"></div>
+<div class="mcn-status-detail"></div>
+</div>
+<div class="mcn-meta">
+<div class="mcn-meta-card">
+<div class="mcn-meta-label">Phase</div>
+<div class="mcn-meta-value" data-mcn-phase></div>
+</div>
+<div class="mcn-meta-card">
+<div class="mcn-meta-label">Working mission</div>
+<div class="mcn-meta-value" data-mcn-mission>-</div>
+</div>
+<div class="mcn-meta-card">
+<div class="mcn-meta-label">Missions this run</div>
+<div class="mcn-meta-value" data-mcn-mission-count>0</div>
+</div>
+<div class="mcn-meta-card">
+<div class="mcn-meta-label">Transport seen</div>
+<div class="mcn-meta-value" data-mcn-transport-count>P0 | R0 | cleared 0</div>
+</div>
+<div class="mcn-meta-card">
+<div class="mcn-meta-label">Top queue</div>
+<div class="mcn-meta-value" data-mcn-top-mission>-</div>
+</div>
+<div class="mcn-meta-card wide">
+<div class="mcn-meta-label">Workers: A active, B/C prepare</div>
+<div class="mcn-meta-value" data-mcn-pipeline>A: waiting | B: waiting | C: waiting</div>
+</div>
+<div class="mcn-meta-card">
+<div class="mcn-meta-label">Radio transport</div>
+<div class="mcn-meta-value" data-mcn-radio>0</div>
+</div>
+<div class="mcn-meta-card">
+<div class="mcn-meta-label">Temporary skips</div>
+<div class="mcn-meta-value" data-mcn-skips>0</div>
+</div>
+<div class="mcn-meta-card wide">
+<div class="mcn-meta-label">Live health</div>
+<div class="mcn-meta-value" data-mcn-rule-assists>Pipeline 0/0 ready | handoff restarts 0 | transport 0/0</div>
+</div>
+</div>
+<div class="mcn-actions">
+<button type="button" class="mcn-action primary" data-mcn-start>Start Auto Mode</button>
+<button type="button" class="mcn-action stop" data-mcn-stop>Stop</button>
+<button type="button" class="mcn-action" data-mcn-retry>Retry current</button>
+<button type="button" class="mcn-action" data-mcn-export>Export diagnostics</button>
+</div>
+<div class="mcn-note"><strong>Command Nexus V3.</strong> Only A can dispatch. B and C warm the next mission pages and vehicle lists, while the embedded Mission Finder stays dormant inside them until a verified ownership handoff. A transport-aware 8/16-second watchdog recovers a silent post-dispatch advance stall without clicking Dispatch again; a repeated hard stall fails closed. After computer sleep, B/C are discarded and A reloads safely. Personal transport clearing remains enabled; Alliance requests stay ignored. Exact banked rules include Rescue/Search Dog type 102, Airfield Operations Supervisor type 80, Any vehicle to Ambulance type 5, Flatbed type 105 for cars and HGV Recovery type 106 for trucks. The embedded Mission Finder still owns dispatch, personnel, hospital and transport decisions.</div>
+</div>
+</div>
+<button type="button" class="mcn-launcher" aria-label="Open Command Nexus V3" title="Command Nexus V3">
+<span class="mcn-core-n" aria-hidden="true">N</span>
+<span class="mcn-dot" aria-hidden="true"></span>
+</button>
+`;
+const navbarHeader = document.querySelector('.navbar-header');
+const navbarBrand = navbarHeader?.querySelector('a.navbar-brand.hidden-xs, a.navbar-brand');
+if (!navbarHeader || !navbarBrand) {
+log('Navbar brand not available yet; Nexus launcher mount deferred.');
+return;
+}
+navbarBrand.insertAdjacentElement('afterend', root);
+const launcher = root.querySelector('.mcn-launcher');
+const startButton = root.querySelector('[data-mcn-start]');
+const stopButton = root.querySelector('[data-mcn-stop]');
+const retryButton = root.querySelector('[data-mcn-retry]');
+const exportButton = root.querySelector('[data-mcn-export]');
+launcher.addEventListener('click', () => {
+const collapsed = root.dataset.collapsed !== 'false';
+root.dataset.collapsed = collapsed ? 'false' : 'true';
+localStorage.setItem(STORAGE_COLLAPSED, root.dataset.collapsed);
+launcher.setAttribute('aria-label', collapsed ? 'Close Command Nexus V3' : 'Open Command Nexus V3');
+});
+startButton.addEventListener('click', startController);
+stopButton.addEventListener('click', gracefulStop);
+retryButton.addEventListener('click', retryCurrent);
+exportButton.addEventListener('click', exportDiagnostics);
+chooseTopMission();
+refreshRadioTransportRequests();
+state.ui = {
+root,
+statusMain: root.querySelector('.mcn-status-main'),
+statusDetail: root.querySelector('.mcn-status-detail'),
+phase: root.querySelector('[data-mcn-phase]'),
+mission: root.querySelector('[data-mcn-mission]'),
+missionCount: root.querySelector('[data-mcn-mission-count]'),
+transportCount: root.querySelector('[data-mcn-transport-count]'),
+topMission: root.querySelector('[data-mcn-top-mission]'),
+pipeline: root.querySelector('[data-mcn-pipeline]'),
+radio: root.querySelector('[data-mcn-radio]'),
+skips: root.querySelector('[data-mcn-skips]'),
+ruleAssists: root.querySelector('[data-mcn-rule-assists]'),
+startButton,
+stopButton,
+retryButton,
+};
+render();
+}
+function readablePhaseLabel(phase) {
+const labels = {
+ACTIVE: 'RUNNING',
+PIPELINE_PROMOTE: 'HANDING OVER',
+PROMOTION_VERIFY: 'CHECKING HANDOFF',
+PROMOTION_RECOVERY: 'RESTARTING HANDOFF',
+CONTROL_RECOVERY: 'RESTARTING WORKER A',
+NAVIGATION_RECOVERY: 'RECOVERING NAVIGATION',
+POST_DISPATCH_RECOVERY: 'RECOVERING MISSION ADVANCE',
+WAKE_RECOVERY: 'RECOVERING AFTER SLEEP',
+TRANSPORT: 'TRANSPORT ACTIVE',
+TRANSPORT_SERVICE: 'CLEARING TRANSPORT',
+TRANSPORT_WARN: 'TRANSPORT WARNING',
+WAITING_NEXUS: 'STARTING V2',
+STARTING: 'STARTING V2',
+PRIORITY_REDIRECT: 'CHANGING MISSION',
+AUTO_RECOVERY_WAIT: 'CHECKING AUTO STOP',
+MISSION_SKIPPED: 'MISSION ROTATED',
+};
+return labels[phase] || String(phase || 'IDLE').replace(/_/g, ' ');
+}
+function compactMissionIdLabel(missionId) {
+return missionId ? `M${missionId}` : '-';
+}
+function readablePipelineSlotStatus(slot) {
+if (!slot) return 'waiting';
+if (!slot.v2DormantBridgeReady) return 'checking V2';
+if (slot.ready) return 'ready';
+if (slot.status === 'VEHICLES') return 'loading vehicles';
+if (slot.status === 'STABILISING') return 'checking vehicles';
+if (slot.status === 'ERROR' || slot.status === 'ISOLATION_FAIL') return 'failed';
+return 'loading page';
+}
+function render() {
+if (!state.ui) return;
+state.ui.root.dataset.phase = state.phase;
+state.ui.statusMain.textContent = state.status;
+state.ui.statusDetail.textContent = state.detail || '';
+state.ui.phase.textContent = readablePhaseLabel(state.phase);
+updateCurrentMissionName(getWorkerDocument());
+const top = state.topMission || compactMissionCandidate(chooseTopMission());
+const workingTopMatch = Boolean(
+top?.missionId &&
+state.currentMissionId &&
+top.missionId === state.currentMissionId &&
+!state.transportServiceActive
+);
+state.ui.mission.textContent = state.transportServiceActive
+? `TRANSPORT | ${missionDisplay(state.transportServiceMissionId, missionNameForId(state.transportServiceMissionId))}`
+: `${missionDisplay(state.currentMissionId, state.currentMissionName)}${workingTopMatch ? ' | TOP' : ''}`;
+state.ui.missionCount.textContent =
+`${state.runMissionIds.length} | ${state.nativeMissionAdvances} advances | ${state.topPageResumes} page handoffs`;
+state.ui.transportCount.textContent =
+`P${state.runPatientTransports} | R${state.runPrisonerTransports} | cleared ${state.transportServiceCleared}`;
+const visualTop = state.visualTopMission;
+const visualTopSkipRemaining = visualTop?.missionId ? missionSkipRemaining(visualTop.missionId) : 0;
+state.ui.topMission.textContent = visualTopSkipRemaining > 0
+? `${missionDisplay(visualTop.missionId, visualTop.caption)} | SKIP ${visualTopSkipRemaining} -> ${top ? missionDisplay(top.missionId, top.caption) : 'waiting'}`
+: (top
+? `${missionDisplay(top.missionId, top.caption)}${top.actionKind && top.actionKind !== 'OTHER' ? ` | ${top.actionKind}` : ''}`
+: '-');
+if (state.ui.pipeline) {
+const slots = state.pipelineSlots.slice().sort((a, b) => a.index - b.index);
+const activeLabel = state.transportServiceActive
+? 'A: clearing transport'
+: `A: ${state.running ? 'active' : 'starting'} ${compactMissionIdLabel(state.currentMissionId)}`;
+const labels = [activeLabel];
+if (state.pipelineActiveOnly) {
+labels.push('B/C: off (safe A-only)');
+} else {
+for (let i = 0; i < PIPELINE_PRELOAD_COUNT; i += 1) {
+const slot = slots.find(item => item.index === i) || null;
+const letter = i === 0 ? 'B' : 'C';
+labels.push(slot
+? `${letter}: ${readablePipelineSlotStatus(slot)} ${compactMissionIdLabel(slot.missionId)}`
+: `${letter}: waiting`);
+}
+}
+state.ui.pipeline.textContent = labels.join(' | ');
+}
+const nextRadio = state.radioTransportRequests[0] || null;
+state.ui.radio.textContent = nextRadio
+? `${state.radioTransportRequests.length} pending | next ${compactMissionIdLabel(nextRadio.missionId)}`
+: (state.runAllianceRadioIgnored ? `0 personal | ${state.runAllianceRadioIgnored} alliance ignored` : '0');
+const skips = activeMissionSkipRecords();
+state.ui.skips.textContent = skips.length
+? skips.map(record => `${missionDisplay(record.missionId, record.missionName)} | retry in ${record.remaining}`).join(' | ')
+: '0';
+if (state.ui.ruleAssists) {
+state.ui.ruleAssists.textContent =
+`3-slot handoffs ${state.pipelineReadyPromotions}/${state.pipelinePromotions} | dormant B/C ${state.pipelineV2DormantReady} | advance recovery ${state.postDispatchSoftRecoveries}/${state.postDispatchHardRecoveries} | A recoveries ${state.activeControlSoftRecoveries} | nav ${state.nonMissionRedirectRecoveries} | wake ${state.sleepGapRecoveries} | transport ${state.transportServiceCleared}/${state.transportServiceAttempts}`;
+}
+state.ui.startButton.disabled = state.wanted || state.stopping;
+state.ui.stopButton.disabled = (!state.wanted && !state.worker) || state.stopping;
+state.ui.retryButton.disabled = state.stopping || (!state.currentMissionUrl && !collectMissionCandidates().length);
+}
+function resumePersistedBackground() {
+if (!persistedBackgroundWanted() || state.stopping || state.worker?.isConnected) return false;
+restoreRunContinuity();
+state.wanted = true;
+state.running = false;
+state.lastError = '';
+resetAutoStartTracking();
+clearSharedV2AutoRunning('visible-page-resume-bootstrap');
+state.resumedFromTopNavigation = true;
+const persistedStart = sessionGet(SESSION_RUN_STARTED_AT);
+state.runStartedAt = persistedStart || state.runStartedAt || nowIso();
+persistRunStart(state.runStartedAt);
+const previousResumes = Math.max(0, Number(sessionGet(SESSION_TOP_PAGE_RESUMES) || 0));
+state.topPageResumes = previousResumes + 1;
+sessionSet(SESSION_TOP_PAGE_RESUMES, String(state.topPageResumes));
+const resume = () => {
+if (!state.wanted || !persistedBackgroundWanted() || state.worker?.isConnected) return;
+if (!document.body) {
+window.setTimeout(resume, 80);
+return;
+}
+const topTarget = choosePriorityTarget();
+const storedUrl = storedResumeMissionUrl();
+const mission = topTarget || (storedUrl ? { url: storedUrl } : null) || chooseBootstrapMission();
+if (mission?.url) {
+persistResumeMission(mission.url);
+setPhase(
+'RESUMING',
+'Restoring background Auto Mode',
+`Visible page ${location.pathname} remains under player control while the hidden worker is re-created.`
+);
+log('Visible-page navigation handoff restored the hidden Auto Mode worker.', {
+pathname: location.pathname,
+resumeCount: state.topPageResumes,
+missionId: missionIdFromUrl(mission.url),
+});
+pausePipelineController('visible-page-resume-active-bootstrap', true);
+createWorker(mission.url);
+return;
+}
+setPhase(
+'WAITING_MISSION',
+'Background Auto Mode waiting',
+`The visible page remains available. Nexus will re-create the hidden worker when an actionable personal mission becomes available.`
+);
+beginMissionRescan();
+};
+if (document.readyState === 'loading') {
+document.addEventListener('DOMContentLoaded', resume, { once: true });
+window.setTimeout(resume, 1200);
+} else {
+resume();
+}
+return true;
+}
+function mountWhenMapReady() {
+const looksReady = () => Boolean(
+document.body &&
+document.querySelector('.navbar-header a.navbar-brand.hidden-xs, .navbar-header a.navbar-brand')
+);
+if (looksReady()) {
+buildUi();
+return;
+}
+const startObserver = () => {
+if (looksReady()) {
+buildUi();
+return;
+}
+const root = document.documentElement;
+if (!root) {
+window.setTimeout(startObserver, 50);
+return;
+}
+const observer = new MutationObserver(() => {
+if (!looksReady()) return;
+observer.disconnect();
+buildUi();
+});
+observer.observe(root, { childList: true, subtree: true });
+window.setTimeout(() => {
+observer.disconnect();
+}, 60000);
+};
+startObserver();
+}
+window.addEventListener('pagehide', () => {
+const handoffWanted =
+state.wanted &&
+!state.stopping &&
+persistedBackgroundWanted();
+if (handoffWanted) {
+const top = state.topMission?.url || state.visualTopMission?.url || '';
+persistResumeMission(top || state.currentMissionUrl || state.bootstrapMissionUrl);
+captureWorkerSnapshot();
+finaliseActiveMissionTiming('visible-page-handoff');
+persistPipelineTargets(state.pipelineSlots);
+saveRunContinuity();
+clearAllControllerTimers();
+removeWorker(false);
+removeAllPipelinePreloads('visible-page-handoff');
+return;
+}
+state.wanted = false;
+markRunStopped();
+finaliseActiveMissionTiming('pagehide-stop');
+clearAllControllerTimers();
+removeWorker(false);
+removeAllPipelinePreloads('pagehide-stop');
+}, { capture: true });
+window.addEventListener('pageshow', event => {
+if (event.persisted && persistedBackgroundWanted() && !state.worker?.isConnected) {
+resumePersistedBackground();
+return;
+}
+if (state.wanted && state.worker?.isConnected) {
+checkForSuspendedTimerGap('pageshow');
+}
+});
+document.addEventListener('visibilitychange', () => {
+if (
+document.visibilityState === 'visible' &&
+state.wanted &&
+state.worker?.isConnected
+) {
+checkForSuspendedTimerGap('visibilitychange');
+}
+});
+window.addEventListener('focus', () => {
+if (state.wanted && state.worker?.isConnected) {
+checkForSuspendedTimerGap('window-focus');
+}
+});
+if (persistedBackgroundWanted()) {
+state.wanted = true;
+state.runStartedAt = sessionGet(SESSION_RUN_STARTED_AT) || nowIso();
+}
+mountWhenMapReady();
+resumePersistedBackground();
+})();
+
+/* Complete embedded Command Nexus starts at the former document-end boundary. */
+(() => {
+  'use strict';
+  let started = false;
+  const startEmbeddedCommandNexus = () => {
+    if (started) return;
+    started = true;
 (function () {
     'use strict';
 
@@ -1560,7 +8237,6 @@
             } catch (_error) {}
             PERSONNEL_STATE.activeController = null;
         }
-
         for (const controller of STATION_STATE.activeControllers) {
             try {
                 controller.abort();
@@ -4605,7 +11281,6 @@
                     grid-template-columns: minmax(0, 1fr);
                     grid-template-areas: none;
                 }
-
                 #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-tool-grid > *,
                 #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-personnel-grid > * {
                     grid-column: 1 !important;
@@ -4613,7 +11288,6 @@
                     grid-area: auto !important;
                 }
             }
-
             @media (max-width: 700px) {
                 #mc-namer-panel:not(.mc-ios-safari),
                 #mc-namer-panel:not(.mc-ios-safari)[data-active-tool="personnel"] {
@@ -4633,7 +11307,6 @@
                     grid-template-columns: minmax(0, 1fr);
                     grid-template-areas: none;
                 }
-
                 #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-tool-grid > *,
                 #mc-namer-panel:not(.mc-ios-safari) .mc-nexus-personnel-grid > * {
                     grid-column: 1 !important;
@@ -5276,7 +11949,6 @@
                 '#mc-personnel-mode'
             )?.value ||
             'all';
-
         PERSONNEL_STATE.unitsRequired =
             0;
 
@@ -9231,7 +15903,6 @@
                     : leftState.seatsAvailable > 0
                         ? 1
                         : 2;
-
             const rightRank =
                 rightState.covered
                     ? 0
@@ -10233,7 +16904,6 @@
                     : leftState.seatsAvailable > 0
                         ? 1
                         : 2;
-
             const rightRank =
                 rightState.covered
                     ? 0
@@ -12454,11 +19124,32 @@
 
     try {
         /* ==================================================================
-         * MODULE 2: MISSION FINDER V10.6.164
+         * MODULE 2: MISSION FINDER V10.6.167
          * Original source retained below, excluding only its metadata block.
          * ================================================================== */
 (function() {
     'use strict';
+    const MF_V3_PRELOAD_NAME_PREFIX =
+        'mcn-v3-pipeline-preload-';
+    const MF_V3_ACTIVE_NAME_PREFIX =
+        'mcn-v3-active-worker-';
+    const MF_V3_DORMANT_PRELOAD_BRIDGE_KEY =
+        '__MCN_V2_DORMANT_PRELOAD_BRIDGE__';
+    let mfV3DormantPreload = (() => {
+        try {
+            return (
+                window.top !== window.self &&
+                String(window.name || '').startsWith(
+                    MF_V3_PRELOAD_NAME_PREFIX
+                )
+            );
+        } catch (_error) {
+            return false;
+        }
+    })();
+    let mfV3DormantPreloadPromoted = false;
+    let mfV3DormantPreloadPromotedAt = 0;
+    let mfV3DormantPreloadPromotionSource = '';
 
     // V10.6.89: normal Police Car requirements prefer verified ordinary
     // type-8 IRVs, then unknown/stale IRVs, and use specialist-trained IRVs
@@ -12737,11 +19428,16 @@
     window.missionFinder2026Initialized = true;
     window.missionFinderInitialized = true;
 
-    startMissionEventCollectibleCollector();
+    if (!mfV3DormantPreload) {
+        startMissionEventCollectibleCollector();
+    }
 
     let autoModeRunning =
-        sessionStorage.getItem('mf_auto_mode_running') === 'true' ||
-        localStorage.getItem('mf_auto_mode_running') === 'true';
+        !mfV3DormantPreload &&
+        (
+            sessionStorage.getItem('mf_auto_mode_running') === 'true' ||
+            localStorage.getItem('mf_auto_mode_running') === 'true'
+        );
     let autoModeLoopActive = false;
 
     // V10.1.1 Queue Restart:
@@ -12888,29 +19584,30 @@
     let mfAutoUpgradeCheckEnabled = false;
     let mfAutoUpgradeResumeActive = false;
 
-    try {
-        localStorage.removeItem(
-            MF_AUTO_UPGRADE_ENABLED_KEY
-        );
-        sessionStorage.removeItem(
-            MF_AUTO_UPGRADE_PENDING_KEY
-        );
-        localStorage.removeItem(
-            MF_AUTO_UPGRADE_PENDING_KEY
-        );
-    } catch (error) {}
-
-    // Remove stale ownership left by earlier post-dispatch and
-    // separate Next Mission workflows.
-    try {
-        [
-            'mf_auto_upgrade_pending_v10_6_0',
-            'mf_advance_after_dispatch_v10_6_22'
-        ].forEach(key => {
-            sessionStorage.removeItem(key);
-            localStorage.removeItem(key);
-        });
-    } catch (error) {}
+    if (!mfV3DormantPreload) {
+        try {
+            localStorage.removeItem(
+                MF_AUTO_UPGRADE_ENABLED_KEY
+            );
+            sessionStorage.removeItem(
+                MF_AUTO_UPGRADE_PENDING_KEY
+            );
+            localStorage.removeItem(
+                MF_AUTO_UPGRADE_PENDING_KEY
+            );
+        } catch (error) {}
+    }
+    if (!mfV3DormantPreload) {
+        try {
+            [
+                'mf_auto_upgrade_pending_v10_6_0',
+                'mf_advance_after_dispatch_v10_6_22'
+            ].forEach(key => {
+                sessionStorage.removeItem(key);
+                localStorage.removeItem(key);
+            });
+        } catch (error) {}
+    }
 
     if (!Number.isFinite(mfQueueRestartThreshold) || mfQueueRestartThreshold < 1) {
         mfQueueRestartThreshold = 20;
@@ -12921,7 +19618,7 @@
     // Do NOT clear them during Auto Mode reloads, because the final-dispatch flag
     // is what stops the last mission being processed/sent twice after MissionChief
     // leaves the same mission screen open.
-    if (!autoModeRunning) {
+    if (!mfV3DormantPreload && !autoModeRunning) {
         sessionStorage.removeItem(MF_QUEUE_WAIT_ACTIVE_FLAG);
         sessionStorage.removeItem(MF_FINAL_QUEUE_DISPATCH_FLAG);
         sessionStorage.removeItem(MF_QUEUE_OPENING_MISSION_FLAG);
@@ -13012,13 +19709,15 @@
     let mfDebugEnabled = false;
     let mfHighDebugEnabled = false;
 
-    try {
-        localStorage.removeItem('mf_debug_enabled_v9');
-        localStorage.removeItem('mf_high_debug_enabled_v9');
-        localStorage.removeItem('mf_debug_collapsed_v9');
-        localStorage.removeItem('mf_issue_recorder_v1');
-        localStorage.removeItem('mf_issue_recorder_enabled_v1');
-    } catch (_error) {}
+    if (!mfV3DormantPreload) {
+        try {
+            localStorage.removeItem('mf_debug_enabled_v9');
+            localStorage.removeItem('mf_high_debug_enabled_v9');
+            localStorage.removeItem('mf_debug_collapsed_v9');
+            localStorage.removeItem('mf_issue_recorder_v1');
+            localStorage.removeItem('mf_issue_recorder_enabled_v1');
+        } catch (_error) {}
+    }
 
     function isMissionFinderIosSafariWebsite() {
         const userAgent = String(navigator.userAgent || '');
@@ -13161,7 +19860,9 @@
         } catch (_error) {}
     }
 
-    migrateMissionFinderIphoneCollapseDefaults();
+    if (!mfV3DormantPreload) {
+        migrateMissionFinderIphoneCollapseDefaults();
+    }
 
     function migrateMissionFinderIphoneTwoButtonLauncherDefaults() {
         if (!isMissionFinderIphoneSafariWebsite()) return;
@@ -13224,7 +19925,9 @@
         };
     }
 
-    migrateMissionFinderIphoneTwoButtonLauncherDefaults();
+    if (!mfV3DormantPreload) {
+        migrateMissionFinderIphoneTwoButtonLauncherDefaults();
+    }
 
     const savedVehicleLoadCollapsed =
         localStorage.getItem(
@@ -13501,10 +20204,12 @@
         );
     }
 
-    try {
-        installPersonnelRegistryUpdateHandler();
-    } catch (_error) {
-        mfPersonnelRegistryUpdatedHandler = null;
+    if (!mfV3DormantPreload) {
+        try {
+            installPersonnelRegistryUpdateHandler();
+        } catch (_error) {
+            mfPersonnelRegistryUpdatedHandler = null;
+        }
     }
 
     const MF_TRAINED_PERSONNEL_ROW_NAME =
@@ -14245,7 +20950,9 @@
     const MF_RECORDER_MAX_ENTRIES = 40;
     const MF_RECORDER_MAX_BYTES = 1500000;
     let mfIssueRecorderEnabled = false;
-    localStorage.setItem(MF_RECORDER_ENABLED_KEY, 'false');
+    if (!mfV3DormantPreload) {
+        localStorage.setItem(MF_RECORDER_ENABLED_KEY, 'false');
+    }
     let mfIssueRecorderLastDangerFingerprint = '';
     let mfIssueRecorderLastDangerAt = 0;
     let mfIssueRecorderLastClickAt = 0;
@@ -14257,6 +20964,7 @@
         'mf_ready_delay_10_6_58_migrated';
 
     if (
+        !mfV3DormantPreload &&
         localStorage.getItem(
             MF_READY_DELAY_10_6_58_MIGRATION_KEY
         ) !== 'true'
@@ -14303,23 +21011,24 @@
     }
 
     // Clear the session dashboard on a real browser refresh, but keep it through MissionChief's internal mission reloads.
-    try {
-        const navEntry = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
-        const isBrowserReload = navEntry && navEntry.type === 'reload';
-
-        if (isBrowserReload && sessionStorage.getItem(SESSION_REFRESH_FLAG) !== 'true') {
-            sessionStorage.removeItem(SESSION_STATS_KEY);
-            sessionStorage.setItem(SESSION_REFRESH_FLAG, 'true');
+    if (!mfV3DormantPreload) {
+        try {
+            const navEntry = performance.getEntriesByType && performance.getEntriesByType('navigation')[0];
+            const isBrowserReload = navEntry && navEntry.type === 'reload';
+            if (isBrowserReload && sessionStorage.getItem(SESSION_REFRESH_FLAG) !== 'true') {
+                sessionStorage.removeItem(SESSION_STATS_KEY);
+                sessionStorage.setItem(SESSION_REFRESH_FLAG, 'true');
+            }
+            if (!isBrowserReload) {
+                sessionStorage.removeItem(SESSION_REFRESH_FLAG);
+            }
+        } catch (error) {
+            console.warn('Mission Control session refresh check failed:', error);
         }
-
-        if (!isBrowserReload) {
-            sessionStorage.removeItem(SESSION_REFRESH_FLAG);
-        }
-    } catch (error) {
-        console.warn('Mission Control session refresh check failed:', error);
     }
 
     const originalAlert = window.alert;
+    let mfMissionFinderAlertOverrideInstalled = false;
 
     function shouldAutoOkMissionFinderAlert(message) {
         const text = String(message || '').replace(/\s+/g, ' ').trim().toLowerCase();
@@ -14336,33 +21045,35 @@
             text.includes('not enough vehicles');
     }
 
-    window.alert = function(message) {
-        try {
-            recordIssueEvent('BROWSER ALERT', {
-                message: String(message || ''),
-                autoModeRunning,
-                autoOk: shouldAutoOkMissionFinderAlert(message)
-            });
-        } catch (error) {}
-
-        if (shouldAutoOkMissionFinderAlert(message)) {
+    function installMissionFinderAlertOverride() {
+        if (mfMissionFinderAlertOverrideInstalled) return;
+        mfMissionFinderAlertOverrideInstalled = true;
+        window.alert = function(message) {
             try {
-                updateStatusBox(`Auto-OK alert: ${String(message || '').replace(/\s+/g, ' ').trim()}`);
+                recordIssueEvent('BROWSER ALERT', {
+                    message: String(message || ''),
+                    autoModeRunning,
+                    autoOk: shouldAutoOkMissionFinderAlert(message)
+                });
             } catch (error) {}
-
-            if (mfDebugEnabled) {
-                debugLog('AUTO OK POPUP', String(message || '').replace(/\s+/g, ' ').trim());
+            if (shouldAutoOkMissionFinderAlert(message)) {
+                try {
+                    updateStatusBox(`Auto-OK alert: ${String(message || '').replace(/\s+/g, ' ').trim()}`);
+                } catch (error) {}
+                if (mfDebugEnabled) {
+                    debugLog('AUTO OK POPUP', String(message || '').replace(/\s+/g, ' ').trim());
+                }
+                return true;
             }
-
-            return true;
-        }
-
-        if (autoModeRunning) {
-            updateStatusBox(`Auto Mode warning: ${message}`);
-        }
-
-        originalAlert.call(window, message);
-    };
+            if (autoModeRunning) {
+                updateStatusBox(`Auto Mode warning: ${message}`);
+            }
+            originalAlert.call(window, message);
+        };
+    }
+    if (!mfV3DormantPreload) {
+        installMissionFinderAlertOverride();
+    }
 
     function wait(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
@@ -14688,6 +21399,10 @@
          *************************************************/
         "Ambulance": "Ambulance",
         "Ambulances": "Ambulance",
+        "Any vehicle": "Ambulance",
+        "Any vehicles": "Ambulance",
+        "Required Any vehicle": "Ambulance",
+        "Required Any vehicles": "Ambulance",
         "Ambulance Officer": "Ambulance Officer",
         "Ambulance Officers": "Ambulance Officer",
         "Required Ambulance Officer": "Ambulance Officer",
@@ -14805,8 +21520,10 @@
         "Required RIVs or Major Foam Tenders": "RIV",
         "Fire Engines, RIVs or Major Foam Tenders": "Major Foam Tender",
         "Fire Engines or Major Foam Tenders": "Major Foam Tender",
-        "Airfield Operations Supervisor": "Airfield Operations Supervisors",
-        "Airfield Operations Supervisors": "Airfield Operations Supervisors",
+        "Airfield Operations Supervisor": "Airfield Operations Supervisor",
+        "Airfield Operations Supervisors": "Airfield Operations Supervisor",
+        "Required Airfield Operations Supervisor": "Airfield Operations Supervisor",
+        "Required Airfield Operations Supervisors": "Airfield Operations Supervisor",
         "Airfield Firefighting Command Vehicle": "Airfield FF Command Vehicle",
         "ICCU or Ambulance Control Units or Airfield Firefighting Command Vehicles": "Airfield FF Command Vehicle",
         "Fire Officers or Airfield Firefighting Command Vehicles": "Fire Officer",
@@ -14819,6 +21536,14 @@
         "4x4 Vehicles": "4x4 Units",
         "Mountain Rescue 4x4 or SAR 4x4": "4x4 Units",
         "Mountain Rescue 4x4s or SAR 4x4s": "4x4 Units",
+        "Rescue Dog": "Search Dog Unit",
+        "Rescue Dogs": "Search Dog Unit",
+        "Required Rescue Dog": "Search Dog Unit",
+        "Required Rescue Dogs": "Search Dog Unit",
+        "Search Dog Unit": "Search Dog Unit",
+        "Search Dog Units": "Search Dog Unit",
+        "Required Search Dog Unit": "Search Dog Unit",
+        "Required Search Dog Units": "Search Dog Unit",
 
         // Special Search Technician vehicle selector.
         // Matching is handled by the dedicated displayed-name-prefix rule.
@@ -14834,6 +21559,12 @@
         "Tow Trucks Large": "Flatbed Recovery Vehicle",
         "Flatbed Recovery Vehicle": "Flatbed Recovery Vehicle",
         "Flatbed Recovery Vehicles": "Flatbed Recovery Vehicle",
+        "Truck to tow": "HGV Recovery Vehicle",
+        "Trucks to tow": "HGV Recovery Vehicle",
+        "Maximum amount of trucks to tow": "HGV Recovery Vehicle",
+        "Minimum amount of trucks to tow": "HGV Recovery Vehicle",
+        "HGV Recovery Vehicle": "HGV Recovery Vehicle",
+        "HGV Recovery Vehicles": "HGV Recovery Vehicle",
         "modules.missionHelper.vehicles.captions.bomb_disposal_crew": "Bomb Disposal crew x1",
         "Support Units": "Support Unit",
         "Breathing Apparatus Support Unit": "OSU",
@@ -16247,14 +22978,12 @@
                 if (input.disabled) {
                     return false;
                 }
-
                 if (
                     !includeChecked &&
                     input.checked
                 ) {
                     return false;
                 }
-
                 return (
                     isRescueStairsVehicleCheckbox(
                         input
@@ -16450,14 +23179,12 @@
                 if (input.disabled) {
                     return false;
                 }
-
                 if (
                     !includeChecked &&
                     input.checked
                 ) {
                     return false;
                 }
-
                 return (
                     isRivVehicleCheckbox(
                         input
@@ -16918,6 +23645,44 @@ function isRoadRailUnitVehicleCheckbox(input) {
             );
         });
     }
+    const MF_NORMAL_AMBULANCE_TYPE_ID = '5';
+    function isAnyVehicleRequirementName(value) {
+        const cleaned = String(value || '')
+            .replace(/\s+/g, ' ')
+            .trim();
+        return /^(?:Required\s+)?Any\s+Vehicles?$/i.test(cleaned);
+    }
+    function normaliseMissionUpgradeAnyVehicleRequirement(
+        unitName,
+        stillNeeded
+    ) {
+        if (!isAnyVehicleRequirementName(unitName)) return null;
+        const reportedStillNeeded = Math.max(
+            0,
+            parseInt(stillNeeded, 10) || 0
+        );
+        if (reportedStillNeeded <= 0) return null;
+        return {
+            unitName: 'Any vehicle',
+            mappedName: 'Ambulance',
+            stillNeeded: 1,
+            reportedStillNeeded
+        };
+    }
+    function isAnyVehicleAmbulanceRequirement(
+        originalName,
+        mappedName
+    ) {
+        return (
+            isAnyVehicleRequirementName(originalName) &&
+            normaliseVehicleText(mappedName) === 'ambulance'
+        );
+    }
+    function isNormalAmbulanceVehicleCheckbox(input) {
+        if (!input) return false;
+        return getVehicleTypeIdentifiers(input)
+            .includes(MF_NORMAL_AMBULANCE_TYPE_ID);
+    }
 
 
     function isStandardAmbulanceEtaVehicleCheckbox(input) {
@@ -17329,7 +24094,8 @@ function isRoadRailUnitVehicleCheckbox(input) {
             .replace(/\s+/g, ' ')
             .trim();
 
-        return /^(?:Required\s+)?(?:\d+\s+)?(?:truck(?:s)?|hgv(?:s)?|lorr(?:y|ies))\s+(?:to\s+tow|to\s+be\s+towed)$/i.test(cleaned);
+        return /^(?:Required\s+)?(?:\d+\s+)?(?:truck(?:s)?|hgv(?:s)?|lorr(?:y|ies))\s+(?:to\s+tow|to\s+be\s+towed)$/i.test(cleaned) ||
+            /^(?:Required\s+)?(?:Maximum|Minimum)\s+amount\s+of\s+(?:trucks?|hgvs?|lorries)\s+to\s+tow$/i.test(cleaned);
     }
 
     function isHgvRecoveryVehicleRequirement(
@@ -17353,6 +24119,26 @@ function isRoadRailUnitVehicleCheckbox(input) {
         if (!input) return false;
         return getVehicleTypeIdentifiers(input)
             .includes('106');
+    }
+    const MF_AIRFIELD_OPERATIONS_SUPERVISOR_TYPE_ID = '80';
+    function isAirfieldOperationsSupervisorRequirementName(value) {
+        const cleaned = String(value || '')
+            .replace(/\s+/g, ' ')
+            .trim();
+        return /^(?:Required\s+)?(?:\d+\s+)?Airfield Operations Supervisors?$/i.test(cleaned);
+    }
+    function isAirfieldOperationsSupervisorRequirement(
+        originalName,
+        mappedName
+    ) {
+        return [originalName, mappedName].some(value =>
+            isAirfieldOperationsSupervisorRequirementName(value)
+        );
+    }
+    function isAirfieldOperationsSupervisorVehicleCheckbox(input) {
+        if (!input) return false;
+        return getVehicleTypeIdentifiers(input)
+            .includes(MF_AIRFIELD_OPERATIONS_SUPERVISOR_TYPE_ID);
     }
 
     const MF_SEARCH_DOG_UNIT_TYPE_ID = '102';
@@ -17673,18 +24459,15 @@ function isRoadRailUnitVehicleCheckbox(input) {
         ) {
             return false;
         }
-
         try {
             const ownerWindow =
                 element.ownerDocument
                     ?.defaultView ||
                 window;
-
             const style =
                 ownerWindow.getComputedStyle(
                     element
                 );
-
             if (
                 style.display === 'none' ||
                 style.visibility === 'hidden'
@@ -18248,6 +25031,15 @@ function isRoadRailUnitVehicleCheckbox(input) {
             );
         }
 
+        if (isAnyVehicleAmbulanceRequirement(originalName, mappedName)) {
+            return sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) return false;
+                    if (!includeChecked && input.checked) return false;
+                    return isNormalAmbulanceVehicleCheckbox(input);
+                })
+            );
+        }
         const eodResponseMode =
             getEodResponseRequirementMode(
                 originalName,
@@ -18336,6 +25128,11 @@ function isRoadRailUnitVehicleCheckbox(input) {
                 originalName,
                 mappedName
             );
+        const airfieldSupervisorOnly =
+            isAirfieldOperationsSupervisorRequirement(
+                originalName,
+                mappedName
+            );
 
         const searchDogUnitOnly =
             isSearchDogUnitRequirement(
@@ -18402,7 +25199,6 @@ function isRoadRailUnitVehicleCheckbox(input) {
                 originalName,
                 mappedName
             );
-
         const mountainRescue4x4Preferred =
             isMountainRescueOrSar4x4Requirement(
                 originalName,
@@ -18478,6 +25274,15 @@ function isRoadRailUnitVehicleCheckbox(input) {
                     if (input.disabled) return false;
                     if (!includeChecked && input.checked) return false;
                     return isHgvRecoveryVehicleCheckbox(input);
+                })
+            );
+        }
+        if (airfieldSupervisorOnly) {
+            return sortVehicleCheckboxesByBestArrival(
+                getVehicleCheckboxSnapshot().filter(input => {
+                    if (input.disabled) return false;
+                    if (!includeChecked && input.checked) return false;
+                    return isAirfieldOperationsSupervisorVehicleCheckbox(input);
                 })
             );
         }
@@ -19019,6 +25824,12 @@ function isRoadRailUnitVehicleCheckbox(input) {
             )).length;
         }
 
+        if (isAnyVehicleAmbulanceRequirement(originalName, mappedName)) {
+            return getVehicleCheckboxSnapshot().filter(input => (
+                input.checked &&
+                isNormalAmbulanceVehicleCheckbox(input)
+            )).length;
+        }
         const eodResponseMode =
             getEodResponseRequirementMode(
                 originalName,
@@ -19066,6 +25877,8 @@ function isRoadRailUnitVehicleCheckbox(input) {
             isFlatbedRecoveryVehicleRequirement(originalName, mappedName);
         const hgvRecoveryOnly =
             isHgvRecoveryVehicleRequirement(originalName, mappedName);
+        const airfieldSupervisorOnly =
+            isAirfieldOperationsSupervisorRequirement(originalName, mappedName);
         const searchDogUnitOnly =
             isSearchDogUnitRequirement(originalName, mappedName);
         const crvOnly = isCrvRequirement(originalName, mappedName);
@@ -19088,7 +25901,6 @@ function isRoadRailUnitVehicleCheckbox(input) {
                 originalName,
                 mappedName
             );
-
         const mountainRescue4x4Preferred =
             isMountainRescueOrSar4x4Requirement(
                 originalName,
@@ -19185,6 +25997,8 @@ function isRoadRailUnitVehicleCheckbox(input) {
                 matches = isSearchDogUnitVehicleCheckbox(input);
             } else if (hgvRecoveryOnly) {
                 matches = isHgvRecoveryVehicleCheckbox(input);
+            } else if (airfieldSupervisorOnly) {
+                matches = isAirfieldOperationsSupervisorVehicleCheckbox(input);
             } else if (crvOnly) {
                 matches = isCrvVehicleCheckbox(input);
             } else if (controlVanOnly) {
@@ -24623,7 +31437,6 @@ function isRoadRailUnitVehicleCheckbox(input) {
                 const mappedName =
                     row.unitName ||
                     resolveUnitName(originalName);
-
                 if (
                     !isAmbulanceTransportRequest(
                         originalName,
@@ -24783,7 +31596,6 @@ function addConfiguredHighRiskMissingPersonAmbulanceRequirement(
                 const mappedName =
                     row.unitName ||
                     resolveUnitName(originalName);
-
                 if (
                     !isAmbulanceTransportRequest(
                         originalName,
@@ -27112,7 +33924,6 @@ let sessionRuntimeTicker = null;
         ) {
             return false;
         }
-
         try {
             const ownerWindow =
                 element.ownerDocument
@@ -27122,7 +33933,6 @@ let sessionRuntimeTicker = null;
                 ownerWindow.getComputedStyle(
                     element
                 );
-
             if (
                 style.display === 'none' ||
                 style.visibility === 'hidden'
@@ -29466,7 +36276,7 @@ let sessionRuntimeTicker = null;
                 if (cells.length < 2) return;
 
                 if (
-                    /^(?:Required\s+|Maximum amount of cars to tow|Cars to tow)/i
+                    /^(?:Required\s+|Maximum amount of (?:cars|trucks) to tow|(?:Cars|Trucks) to tow)/i
                         .test(cells[0]) &&
                     /\d/.test(cells[1])
                 ) {
@@ -29973,6 +36783,7 @@ let sessionRuntimeTicker = null;
         }
 
         extractTowCarRequirementRows(doc).forEach(row => rows.push(row));
+        extractTowHgvRequirementRows(doc).forEach(row => rows.push(row));
 
         const mergedRows =
             mergeRequirementRows(rows);
@@ -30035,6 +36846,38 @@ let sessionRuntimeTicker = null;
                 debugLog('LIVE TOW', `Maximum cars to tow=${maximumCarsToTow} -> Flatbed Recovery Vehicle x${flatbedsNeeded}`);
             }
         }
+        return rows;
+    }
+    function extractTowHgvRequirementRows(doc) {
+        const rows = [];
+        let maximumTrucksToTow = 0;
+        doc.querySelectorAll('table.table, table').forEach(table => {
+            table.querySelectorAll('tbody tr, tr').forEach(tr => {
+                const cells = Array.from(tr.querySelectorAll('td')).map(td =>
+                    td.textContent.replace(/\s+/g, ' ').trim()
+                );
+                if (cells.length < 2) return;
+                const label = cleanRequirementName(cells[0]);
+                const valueText = cells[1].replace(/\s+/g, ' ').trim();
+                if (!/^Maximum amount of trucks to tow$/i.test(label)) return;
+                const trucks = parseInt(valueText, 10);
+                if (Number.isFinite(trucks) && trucks > maximumTrucksToTow) {
+                    maximumTrucksToTow = trucks;
+                }
+            });
+        });
+        if (maximumTrucksToTow > 0) {
+            rows.push({
+                unitName: 'Trucks to tow',
+                stillNeeded: maximumTrucksToTow
+            });
+            if (mfDebugEnabled) {
+                debugLog(
+                    'LIVE HGV TOW',
+                    `Maximum trucks to tow=${maximumTrucksToTow} -> HGV Recovery Vehicle x${maximumTrucksToTow}`
+                );
+            }
+        }
 
         return rows;
     }
@@ -30077,6 +36920,30 @@ let sessionRuntimeTicker = null;
             stillNeeded: Math.ceil(cars / 2)
         };
     }
+    function getHgvTowVehicleRequirement(unitName, trucksRequired) {
+        if (!isHgvTowRequirementName(unitName)) {
+            return null;
+        }
+        const embeddedCount = String(unitName || '')
+            .replace(/,/g, '')
+            .match(/^(?:Required\s+)?(\d+)\s+(?:truck(?:s)?|hgv(?:s)?|lorr(?:y|ies))\s+(?:to\s+tow|to\s+be\s+towed)$/i);
+        const amountMatch = String(
+            embeddedCount ? embeddedCount[1] : (trucksRequired ?? '')
+        )
+            .replace(/,/g, '')
+            .match(/\d+/);
+        const trucks = amountMatch
+            ? Math.max(0, parseInt(amountMatch[0], 10) || 0)
+            : 0;
+        if (trucks <= 0) {
+            return null;
+        }
+        return {
+            unitName: 'Trucks to tow',
+            trucksRequired: trucks,
+            stillNeeded: trucks
+        };
+    }
 
 
     function normaliseVehicleRequirementCount(
@@ -30092,7 +36959,6 @@ let sessionRuntimeTicker = null;
                     10
                 ) || 0
             );
-
         const raw =
             String(
                 originalName || ''
@@ -35330,6 +42196,7 @@ let sessionRuntimeTicker = null;
             isFlatbedRecoveryVehicleRequirement(originalName, mappedName) ||
             isSearchDogUnitRequirement(originalName, mappedName) ||
             isHgvRecoveryVehicleRequirement(originalName, mappedName) ||
+            isAirfieldOperationsSupervisorRequirement(originalName, mappedName) ||
             isFireOperationalSupportRequirement(originalName, mappedName)
         );
 
@@ -36718,14 +43585,16 @@ let sessionRuntimeTicker = null;
     let mfAllyResumeActive = false;
 
     // Remove temporary diagnostic data from the test builds.
-    try {
-        localStorage.removeItem(
-            'mf_ally_steal_targeted_debug_v10_5_7'
-        );
-        localStorage.removeItem(
-            'mf_ally_steal_targeted_debug_v10_5_8'
-        );
-    } catch (error) {}
+    if (!mfV3DormantPreload) {
+        try {
+            localStorage.removeItem(
+                'mf_ally_steal_targeted_debug_v10_5_7'
+            );
+            localStorage.removeItem(
+                'mf_ally_steal_targeted_debug_v10_5_8'
+            );
+        } catch (error) {}
+    }
 
     function safeAllyDebugText(
         value,
@@ -36960,13 +43829,11 @@ let sessionRuntimeTicker = null;
         ) {
             return false;
         }
-
         try {
             const ownerWindow =
                 element.ownerDocument
                     ?.defaultView ||
                 window;
-
             const style =
                 ownerWindow.getComputedStyle(
                     element
@@ -38701,7 +45568,6 @@ let sessionRuntimeTicker = null;
                 ) {
                     return false;
                 }
-
                 const disabled =
                     button.hasAttribute(
                         'disabled'
@@ -40449,6 +47315,34 @@ let sessionRuntimeTicker = null;
                 if (shouldIgnoreRequiredMinimumRequirement(cleanedName)) {
                     return;
                 }
+                const anyVehicleUpgrade =
+                    normaliseMissionUpgradeAnyVehicleRequirement(
+                        cleanedName,
+                        needed
+                    );
+                if (anyVehicleUpgrade) {
+                    cleanedName =
+                        anyVehicleUpgrade.unitName;
+                    needed =
+                        anyVehicleUpgrade.stillNeeded;
+                    details = {
+                        ...(
+                            details ||
+                            {}
+                        ),
+                        missionUpgradeAnyVehicleAmbulance: true,
+                        reportedAnyVehicleStillNeeded:
+                            anyVehicleUpgrade.reportedStillNeeded,
+                        exactVehicleTypeId:
+                            MF_NORMAL_AMBULANCE_TYPE_ID
+                    };
+                    if (mfDebugEnabled && !silent) {
+                        debugLog(
+                            'UPDATE ANY VEHICLE',
+                            `Any vehicle x${anyVehicleUpgrade.reportedStillNeeded} -> exact normal Ambulance type ${MF_NORMAL_AMBULANCE_TYPE_ID} x1 | source=${source}`
+                        );
+                    }
+                }
 
                 const towRequirement =
                     getCarsToTowVehicleRequirement(
@@ -40479,6 +47373,33 @@ let sessionRuntimeTicker = null;
                             {}
                         ),
                         towRequirement
+                    };
+                }
+                const hgvTowRequirement =
+                    getHgvTowVehicleRequirement(
+                        cleanedName,
+                        needed
+                    );
+                if (hgvTowRequirement) {
+                    if (
+                        mfDebugEnabled &&
+                        !silent
+                    ) {
+                        debugLog(
+                            'UPDATE HGV TOW CONVERSION',
+                            `${hgvTowRequirement.trucksRequired} truck(s) to tow -> HGV Recovery Vehicle x${hgvTowRequirement.stillNeeded} | source=${source}`
+                        );
+                    }
+                    cleanedName =
+                        hgvTowRequirement.unitName;
+                    needed =
+                        hgvTowRequirement.stillNeeded;
+                    details = {
+                        ...(
+                            details ||
+                            {}
+                        ),
+                        hgvTowRequirement
                     };
                 }
 
@@ -45359,7 +52280,6 @@ function getFirstAvailablePrisonCellDestination(context) {
         } catch (_error) {
             continue;
         }
-
         if (
             link.hidden ||
             link.classList.contains('disabled') ||
@@ -46181,7 +53101,6 @@ function getExactAutoReleasePrisonersLink(context) {
         } catch (_error) {
             continue;
         }
-
         if (
             link.hidden ||
             link.classList.contains('disabled') ||
@@ -51017,7 +57936,6 @@ async function handleAutoPrisonerReleaseAfterActions() {
             clearTimeout(mfDebugRenderFrame);
             mfDebugRenderFrame = null;
         }
-
         if (mfVehicleLoadRenderFrame !== null) {
             try {
                 cancelAnimationFrame(mfVehicleLoadRenderFrame);
@@ -51323,7 +58241,6 @@ async function handleAutoPrisonerReleaseAfterActions() {
             clearTimeout(mfAutoLoopResumeTimer);
             mfAutoLoopResumeTimer = null;
         }
-
         if (mfDebugRenderFrame !== null) {
             try {
                 cancelAnimationFrame(mfDebugRenderFrame);
@@ -51331,7 +58248,6 @@ async function handleAutoPrisonerReleaseAfterActions() {
             clearTimeout(mfDebugRenderFrame);
             mfDebugRenderFrame = null;
         }
-
         if (mfVehicleLoadRenderFrame !== null) {
             try {
                 cancelAnimationFrame(mfVehicleLoadRenderFrame);
@@ -51524,22 +58440,18 @@ async function handleAutoPrisonerReleaseAfterActions() {
             mfIssueRecorderObserver.disconnect();
             mfIssueRecorderObserver = null;
         }
-
         if (mfMainMutationFlushTimer) {
             clearTimeout(mfMainMutationFlushTimer);
             mfMainMutationFlushTimer = null;
         }
-
         if (mfAutoLoopResumeTimer) {
             clearTimeout(mfAutoLoopResumeTimer);
             mfAutoLoopResumeTimer = null;
         }
-
         if (mfIssueRecorderMutationTimer) {
             clearTimeout(mfIssueRecorderMutationTimer);
             mfIssueRecorderMutationTimer = null;
         }
-
         if (mfDebugRenderFrame !== null) {
             try {
                 cancelAnimationFrame(mfDebugRenderFrame);
@@ -51547,7 +58459,6 @@ async function handleAutoPrisonerReleaseAfterActions() {
             clearTimeout(mfDebugRenderFrame);
             mfDebugRenderFrame = null;
         }
-
         if (mfVehicleLoadRenderFrame !== null) {
             try {
                 cancelAnimationFrame(mfVehicleLoadRenderFrame);
@@ -51598,22 +58509,18 @@ async function handleAutoPrisonerReleaseAfterActions() {
             mfIssueRecorderObserver.disconnect();
             mfIssueRecorderObserver = null;
         }
-
         if (mfMainMutationFlushTimer) {
             clearTimeout(mfMainMutationFlushTimer);
             mfMainMutationFlushTimer = null;
         }
-
         if (mfAutoLoopResumeTimer) {
             clearTimeout(mfAutoLoopResumeTimer);
             mfAutoLoopResumeTimer = null;
         }
-
         if (mfIssueRecorderMutationTimer) {
             clearTimeout(mfIssueRecorderMutationTimer);
             mfIssueRecorderMutationTimer = null;
         }
-
         if (mfDebugRenderFrame !== null) {
             try {
                 cancelAnimationFrame(mfDebugRenderFrame);
@@ -51621,7 +58528,6 @@ async function handleAutoPrisonerReleaseAfterActions() {
             clearTimeout(mfDebugRenderFrame);
             mfDebugRenderFrame = null;
         }
-
         if (mfVehicleLoadRenderFrame !== null) {
             try {
                 cancelAnimationFrame(mfVehicleLoadRenderFrame);
@@ -51819,6 +58725,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
     }
 
     function startMissionFinderObserver() {
+        if (mfV3DormantPreload) return;
         if (mfMainMutationObserver) return;
 
         installMissionFinderRuntimeCleanup();
@@ -51876,7 +58783,155 @@ async function handleAutoPrisonerReleaseAfterActions() {
         scheduleAutoMemoryRecycleResume();
     }
 
-    if (document.body) {
+    function getMfV3DormantPreloadMissionId() {
+        try {
+            const match = String(
+                window.location.pathname || ''
+            ).match(/^\/missions\/(\d+)(?:\/|$)/i);
+            return match ? match[1] : '';
+        } catch (_error) {
+            return '';
+        }
+    }
+    function getMfV3OperationalOwnershipBridge() {
+        try {
+            return (
+                window.__MCN_V3_FRAME_OWNERSHIP_BRIDGE__ ||
+                window.__MCN_V3_PIPELINE_PRELOAD_BRIDGE__ ||
+                null
+            );
+        } catch (_error) {
+            return null;
+        }
+    }
+    function installMfV3DormantPreloadBridge() {
+        if (!mfV3DormantPreload) return null;
+        try {
+            const existing =
+                window[MF_V3_DORMANT_PRELOAD_BRIDGE_KEY];
+            if (existing) return existing;
+            const bridge = Object.freeze({
+                protocolVersion() {
+                    return 1;
+                },
+                missionFinderVersion() {
+                    return '10.6.167';
+                },
+                isDormant() {
+                    return mfV3DormantPreload;
+                },
+                isPromoted() {
+                    return mfV3DormantPreloadPromoted;
+                },
+                missionId() {
+                    return getMfV3DormantPreloadMissionId();
+                },
+                status() {
+                    const ownershipBridge =
+                        getMfV3OperationalOwnershipBridge();
+                    let ownsOperationalState = false;
+                    try {
+                        ownsOperationalState =
+                            ownershipBridge?.isActive?.() === true;
+                    } catch (_error) {}
+                    return {
+                        protocolVersion: 1,
+                        missionFinderVersion: '10.6.167',
+                        dormant: mfV3DormantPreload,
+                        promoted: mfV3DormantPreloadPromoted,
+                        promotedAt: mfV3DormantPreloadPromotedAt,
+                        promotionSource:
+                            mfV3DormantPreloadPromotionSource,
+                        missionId:
+                            getMfV3DormantPreloadMissionId(),
+                        frameName: String(window.name || ''),
+                        ownsOperationalState,
+                        observerStarted:
+                            Boolean(mfMainMutationObserver)
+                    };
+                },
+                promote(payload = {}) {
+                    const expectedMissionId = String(
+                        payload.expectedMissionId || ''
+                    ).trim();
+                    const activationToken = String(
+                        payload.activationToken || ''
+                    ).trim();
+                    const currentMissionId =
+                        getMfV3DormantPreloadMissionId();
+                    const frameName = String(window.name || '');
+                    const ownershipBridge =
+                        getMfV3OperationalOwnershipBridge();
+                    let ownsOperationalState = false;
+                    try {
+                        ownsOperationalState =
+                            ownershipBridge?.isActive?.() === true;
+                    } catch (_error) {}
+                    if (mfV3DormantPreloadPromoted) {
+                        return Boolean(
+                            !mfV3DormantPreload &&
+                            currentMissionId &&
+                            (!expectedMissionId ||
+                                expectedMissionId === currentMissionId)
+                        );
+                    }
+                    if (
+                        !mfV3DormantPreload ||
+                        !activationToken ||
+                        !currentMissionId ||
+                        expectedMissionId !== currentMissionId ||
+                        !frameName.startsWith(
+                            MF_V3_ACTIVE_NAME_PREFIX
+                        ) ||
+                        !ownsOperationalState
+                    ) {
+                        return false;
+                    }
+                    mfV3DormantPreload = false;
+                    mfV3DormantPreloadPromoted = true;
+                    mfV3DormantPreloadPromotedAt = Date.now();
+                    mfV3DormantPreloadPromotionSource = String(
+                        payload.source || 'v3-promotion'
+                    ).slice(0, 120);
+                    autoModeRunning = false;
+                    try {
+                        installMissionFinderAlertOverride();
+                        if (document.body) {
+                            startMissionFinderObserver();
+                        } else {
+                            document.addEventListener(
+                                'DOMContentLoaded',
+                                startMissionFinderObserver,
+                                { once: true }
+                            );
+                        }
+                        return true;
+                    } catch (error) {
+                        try {
+                            cleanupMissionFinderRuntime();
+                        } catch (_cleanupError) {}
+                        try {
+                            document.getElementById(
+                                'mission-finder-wrapper'
+                            )?.remove();
+                        } catch (_cleanupError) {}
+                        mfV3DormantPreload = true;
+                        mfV3DormantPreloadPromoted = false;
+                        mfV3DormantPreloadPromotedAt = 0;
+                        mfV3DormantPreloadPromotionSource = '';
+                        return false;
+                    }
+                }
+            });
+            window[MF_V3_DORMANT_PRELOAD_BRIDGE_KEY] = bridge;
+            return bridge;
+        } catch (_error) {
+            return null;
+        }
+    }
+    if (mfV3DormantPreload) {
+        installMfV3DormantPreloadBridge();
+    } else if (document.body) {
         startMissionFinderObserver();
     } else {
         document.addEventListener(
@@ -52060,4 +59115,11 @@ async function handleAutoPrisonerReleaseAfterActions() {
     }
 
     installDispatchCentresShowAllMiddleClick();
+})();
+  };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startEmbeddedCommandNexus, { once: true });
+  } else {
+    startEmbeddedCommandNexus();
+  }
 })();

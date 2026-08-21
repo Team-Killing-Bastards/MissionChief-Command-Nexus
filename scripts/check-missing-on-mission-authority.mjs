@@ -325,6 +325,7 @@ const selectVehicleUnitsWithLiveStop = Function(
     isFlatbedRecoveryVehicleRequirement,
     isSearchDogUnitRequirement,
     isHgvRecoveryVehicleRequirement,
+    isAirfieldOperationsSupervisorRequirement,
     isFireOperationalSupportRequirement,
     countSelectedMatchingVehicles,
   } = dependencies;
@@ -355,6 +356,7 @@ const selectVehicleUnitsWithLiveStop = Function(
     isFlatbedRecoveryVehicleRequirement: () => false,
     isSearchDogUnitRequirement: () => false,
     isHgvRecoveryVehicleRequirement: () => false,
+    isAirfieldOperationsSupervisorRequirement: () => false,
     isFireOperationalSupportRequirement: () => false,
     countSelectedMatchingVehicles: () => simulatedClicks,
   }

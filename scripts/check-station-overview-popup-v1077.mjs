@@ -112,7 +112,11 @@ expect(overview.includes('entry.link?.isConnected'), 'Popup must require a conne
 expect(overview.includes('desktopStationSelector'), 'Dedicated desktop Stations detection must remain');
 expect(overview.includes('isRenderedStationOverviewEntry(entry)'), 'iOS rendered Stations lifecycle must remain');
 
-const observerCount = (source.match(/new\s+MutationObserver\s*\(/g) || []).length;
-expect(observerCount === 2, `Permanent MutationObserver count changed: ${observerCount}`);
+const embeddedStart = source.indexOf(
+  '/* Complete embedded Command Nexus starts at the former document-end boundary. */'
+);
+expect(embeddedStart >= 0, 'Embedded Command Nexus boundary missing');
+const observerCount = (source.slice(embeddedStart).match(/new\s+MutationObserver\s*\(/g) || []).length;
+expect(observerCount === 2, `Retained-engine permanent MutationObserver count changed: ${observerCount}`);
 
 console.log('Normal Stations overview popup ownership and lifecycle checks passed.');

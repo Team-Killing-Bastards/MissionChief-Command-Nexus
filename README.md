@@ -17,9 +17,9 @@
 </tr>
 </table>
 
-**Current version:** `2.0.1` · **Mission Finder engine:** `V10.6.164` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
+**Current version:** `3.0.0` · **Mission Finder engine:** `V10.6.167` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
 
-> **V2 clean baseline:** `2.0.0` deliberately resets production to the proven `1.0.127` operational code. Mission Analytics, Sharing & Sync, Google Apps Script uploading, external telemetry and the later `1.1.x` logger line are not part of V2.
+> **V3 production:** one active Mission Finder dispatcher owns operational state while two dormant workers safely warm the next missions. V3 retains the proven V2 dispatch, personnel, hospital and transport decision engine, including personal transport clearing.
 
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
@@ -265,6 +265,8 @@ Auto Mode validates readiness and final selected-unit state before dispatch. Cro
 - Unit Naming recognises the live UK Police purchase classes type `13` Armed Response Vehicle (`ARV`), type `19` Joint Response Unit (`JRU`), type `24` Traffic Car (`TC`) and type `52` Firearms Personnel Carrier (`FPC`).
 - Unit Naming recognises Recovery station type `105` as the live `Recovery Vehicle` label while preserving its existing `FRV` callsign, and adds type `106` HGV Recovery Vehicle (`HGV`) as a separate class with a distinct icon.
 - Native MissionChief UK mission-row evidence identifies Search Dog Unit (SAR) as exact type `102`. Rescue Dog and Search Dog Unit requirements use that same strict ID as Unit Naming; Police Dog / Dog Support Unit type `12` remains separate.
+- On Mission Update, exact `Any vehicle` wording sends one normal Ambulance (native type `5`) and cannot substitute HEMS or another vehicle family.
+- Airfield Operations Supervisor singular/plural requirements select and verify only native type `80`; maximum cars to tow remain exact Flatbed Recovery type `105` at one per two cars, while maximum trucks to tow use one exact HGV Recovery type `106` per truck.
 - Generic type-66 `4x4 Vehicle` matching is restored.
 - Search Advisor demand selects any exact registered vehicle carrying assigned `search_and_rescue`-trained staff; Police station personnel rows also preserve the persistent **Assigned To** binding when MissionChief marks the officer Available, while ambiguous vehicle names fail closed.
 - Trained-personnel selection exhausts every ready, fresh-register-verified compatible unit that can reduce a real course deficit before reporting and blocking on the remaining shortfall. Nominal seats cannot satisfy qualification demand.
