@@ -89,10 +89,19 @@ if (source.includes('installSingleNamingToolsPanelGuard(panel)')) {
   fail('Per-panel global lifecycle guard must not remain');
 }
 
-const observerCount =
-  (source.match(/new\s+MutationObserver\s*\(/g) || []).length;
-if (observerCount !== 2) {
-  fail(`Expected two permanent MutationObservers; found ${observerCount}`);
+const embeddedStart = source.indexOf(
+  '/* Complete embedded Command Nexus starts at the former document-end boundary. */'
+);
+if (embeddedStart < 0) fail('Embedded Command Nexus boundary missing');
+const v3ObserverCount =
+  (source.slice(0, embeddedStart).match(/new\s+MutationObserver\s*\(/g) || []).length;
+const embeddedObserverCount =
+  (source.slice(embeddedStart).match(/new\s+MutationObserver\s*\(/g) || []).length;
+if (v3ObserverCount !== 2 || embeddedObserverCount !== 2) {
+  fail(
+    `Expected two bounded V3 observers and two retained engine observers; ` +
+    `found V3=${v3ObserverCount}, embedded=${embeddedObserverCount}`
+  );
 }
 
 const decideNamingToolsPanelLifecycle =

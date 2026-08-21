@@ -5,10 +5,11 @@ MissionChief Command Nexus is an actively released userscript. This roadmap reco
 **Developer and technical owner:** MartyBlyth  
 **Repository and documentation support:** Conroy1988
 
-## Current production baseline — v2.0.1
+## Current production baseline — v3.0.0
 
 - [x] Publish one canonical userscript on trusted `main`.
-- [x] Release Command Nexus `2.0.0` with Mission Finder `V10.6.164`.
+- [x] Release Command Nexus `3.0.0` with Mission Finder `V10.6.167` as the single-install V3 production baseline.
+- [x] Keep one sole dispatcher active while two dormant workers warm the next missions and fail closed on uncertain ownership or handoff.
 - [x] Retain Resource Administration `V4.2.8`, with Unit Naming `3.3.27`, Station Naming `1.3.22` and Personnel Assignment `1.3.12`.
 - [x] Protect duplicate initialization and independent engine startup.
 - [x] Provide Unit Naming, Station Naming and Personnel Assignment through background native-form workflows.
@@ -17,6 +18,8 @@ MissionChief Command Nexus is an actively released userscript. This roadmap reco
 - [x] Fail closed when fresh, complete Personnel Register evidence does not verify the full trained-personnel requirement.
 - [x] Admit missing and stale exact-type vehicles to live verification before enforcing the final evidence-backed selection gate.
 - [x] Align Search Dog Unit selection, verification and naming to evidence-backed native type `102`.
+- [x] Convert Mission Update `Any vehicle` demand to one exact normal Ambulance type `5` without widening the eligible pool.
+- [x] Route Airfield Operations Supervisor wording to exact type `80` and keep car/truck towing isolated on exact types `105`/`106`.
 - [x] Complete all Medical Personnel Assignment profiles with exact UK vehicle, academy, seat and eligible-building mappings.
 - [x] Complete issue #18 Fire/Airfield Personnel Assignment profiles with exact mappings and fail-closed pod/trailer authority.
 - [x] Complete issue #19 SAR/Coastguard Personnel Assignment profiles with exact mappings, live seat overrides and overlap-safe batching.

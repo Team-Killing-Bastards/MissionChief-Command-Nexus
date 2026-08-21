@@ -16,7 +16,8 @@ function requireText(token, label) {
 
 for (const [token, label] of [
   ['const DEFAULT_MISSION_READY_DELAY = 1000;', '1000 ms default retained'],
-  ['personnel-register-exact-all-vehicle-scan-v2', 'exact all-vehicle register source'],
+  ['buildPersonnelTrainingRegisterOneClick({ fullVerify: true });', 'full exact-vehicle register entry point'],
+  ["'personnel-register-exact-incremental-scan-v1'", 'authoritative exact-vehicle register source'],
   ['assignedTrainingProfiles,', 'per-person assigned profiles'],
   ['trainingProfilesComplete: exactVehicleProfileScan', 'complete profile marker'],
   ['MF_EXACT_REGISTER_TRAINING_SOURCE_PREFIX', 'Mission Finder exact register trust'],

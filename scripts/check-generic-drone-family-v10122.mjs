@@ -151,6 +151,9 @@ expect(/policeAirMode === 'generic-drone'[\s\S]{0,100}isGenericDroneCheckbox/.te
 const fallbackSelector = extractFunction('findUnitButton');
 expect(/policeAirMode === 'generic-drone'[\s\S]{0,220}isGenericDroneCheckbox/.test(fallbackSelector), 'Legacy/fallback selector must use either exact Drone family');
 
-expect(source.includes('// Flexible wording only: Drone first, Police Helicopter fallback.'), 'Police Helicopter-or-Drone ordering changed unexpectedly');
+expect(
+  /return\s*\(\s*eligible\.find\(\s*isPoliceDroneCheckbox\s*\)\s*\|\|\s*eligible\.find\(\s*isPoliceHelicopterCheckbox\s*\)/.test(fallbackSelector),
+  'Police Helicopter-or-Drone fallback must continue to prefer a Police Drone'
+);
 
 console.log('PASS: Required Drone(s) accepts exact type 89 SAR or type 91 Police Drone Vehicles across shared selection and verification, while explicit Police/Helicopter modes and the bare-Drone guard remain strict.');

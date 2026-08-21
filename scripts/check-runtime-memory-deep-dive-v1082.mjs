@@ -81,7 +81,15 @@ const softFlush = extractFunction('flushMissionFinderEphemeralMemory');
 expect(softFlush.includes('invalidateLiveTrainedPersonnelDisplayCache()'), 'Soft flush must release live panel cache');
 expect(softFlush.includes('!mfTransportOwnerModal.isConnected'), 'Soft flush must release detached transport modal references');
 
-const observerCount = (source.match(/new\s+MutationObserver\s*\(/g) || []).length;
-expect(observerCount === 2, `Expected exactly two permanent observers; found ${observerCount}`);
+const embeddedStart = source.indexOf(
+  '/* Complete embedded Command Nexus starts at the former document-end boundary. */'
+);
+expect(embeddedStart >= 0, 'Embedded Command Nexus boundary missing');
+const v3ObserverCount = (source.slice(0, embeddedStart).match(/new\s+MutationObserver\s*\(/g) || []).length;
+const embeddedObserverCount = (source.slice(embeddedStart).match(/new\s+MutationObserver\s*\(/g) || []).length;
+expect(
+  v3ObserverCount === 2 && embeddedObserverCount === 2,
+  `Expected two bounded V3 observers and two retained engine observers; found V3=${v3ObserverCount}, embedded=${embeddedObserverCount}`
+);
 
 console.log('Runtime memory deep-dive contracts passed.');

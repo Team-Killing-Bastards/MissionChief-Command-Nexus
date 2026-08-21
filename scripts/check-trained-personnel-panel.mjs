@@ -96,7 +96,7 @@ expect(
 
 const registryHandler = sliceBetween(
   '    function installPersonnelRegistryUpdateHandler() {',
-  '\n\n    try {\n        installPersonnelRegistryUpdateHandler();',
+  '\n\n    if (!mfV3DormantPreload) {',
   'Personnel Register update handler'
 );
 expect(

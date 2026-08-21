@@ -15,13 +15,13 @@ function expect(value, message) {
   if (!value) fail(message);
 }
 
-function extractFunction(name) {
+function extractFunction(name, fromIndex = 0) {
   const match = new RegExp(
     `(?:async\\s+)?function\\s+${name}\\s*\\(`
-  ).exec(source);
+  ).exec(source.slice(fromIndex));
   if (!match) fail(`Unable to find ${name}`);
 
-  const start = match.index;
+  const start = fromIndex + match.index;
   const bodyStart = source.indexOf('{', start);
   let depth = 0;
   let quote = '';
@@ -70,7 +70,9 @@ function extractFunction(name) {
 const addPanel = extractFunction('addPanel');
 const switchToolTab = extractFunction('switchToolTab');
 const createControlPanel = extractFunction('createControlPanel');
-const injectStyles = extractFunction('injectStyles');
+const missionFinderStart = source.indexOf('MODULE 2: MISSION FINDER V');
+expect(missionFinderStart >= 0, 'Mission Finder module boundary missing');
+const injectStyles = extractFunction('injectStyles', missionFinderStart);
 
 for (const token of [
   '--nx-bg: #080d14',

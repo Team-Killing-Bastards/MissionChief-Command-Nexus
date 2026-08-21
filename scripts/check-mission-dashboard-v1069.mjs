@@ -5,10 +5,10 @@ const source = await readFile('src/missionchief-command-nexus.user.js', 'utf8');
 const fail = message => { console.error(`ERROR: ${message}`); process.exit(1); };
 const expect = (value, message) => { if (!value) fail(message); };
 
-function extractFunction(name) {
-  const match = new RegExp(`(?:async\\s+)?function\\s+${name}\\s*\\(`).exec(source);
+function extractFunction(name, fromIndex = 0) {
+  const match = new RegExp(`(?:async\\s+)?function\\s+${name}\\s*\\(`).exec(source.slice(fromIndex));
   if (!match) fail(`Unable to find ${name}`);
-  const start = match.index;
+  const start = fromIndex + match.index;
   const bodyStart = source.indexOf('{', start);
   let depth = 0;
   let quote = '';
@@ -33,7 +33,9 @@ function extractFunction(name) {
 
 const panel = extractFunction('createControlPanel');
 const startScanner = extractFunction('startMissionEventCollectibleCollector');
-const styles = extractFunction('injectStyles');
+const missionFinderStart = source.indexOf('MODULE 2: MISSION FINDER V');
+expect(missionFinderStart >= 0, 'Mission Finder module boundary missing');
+const styles = extractFunction('injectStyles', missionFinderStart);
 
 for (const token of [
   "dashboardRail.id = 'mf-dashboard-rail'",

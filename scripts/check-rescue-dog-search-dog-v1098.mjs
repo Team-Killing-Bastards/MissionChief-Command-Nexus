@@ -54,6 +54,22 @@ vm.runInNewContext(
 expect(context.result.yes.every(Boolean), `Rescue Dog alias rejected: ${JSON.stringify(context.result.yes)}`);
 expect(context.result.no.every(value => value === false), `Unrelated requirement captured as Rescue Dog: ${JSON.stringify(context.result.no)}`);
 
+for (const alias of [
+  'Rescue Dog',
+  'Rescue Dogs',
+  'Required Rescue Dog',
+  'Required Rescue Dogs',
+  'Search Dog Unit',
+  'Search Dog Units',
+  'Required Search Dog Unit',
+  'Required Search Dog Units',
+]) {
+  expect(
+    source.includes(`"${alias}": "Search Dog Unit"`),
+    `Explicit Rescue/Search Dog cross-reference alias missing: ${alias}`
+  );
+}
+
 const classifier = extractFunction('isSearchDogUnitRequirement');
 expect(classifier.includes('isRescueDogRequirementName(value)'), 'Search Dog classifier must consume the strict Rescue/Search Dog requirement-name matcher');
 const checkbox = extractFunction('isSearchDogUnitVehicleCheckbox');

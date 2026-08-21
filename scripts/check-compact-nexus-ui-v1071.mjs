@@ -15,12 +15,12 @@ function expect(value, message) {
   if (!value) fail(message);
 }
 
-function extractFunction(name) {
+function extractFunction(name, fromIndex = 0) {
   const match = new RegExp(
     `(?:async\\s+)?function\\s+${name}\\s*\\(`
-  ).exec(source);
+  ).exec(source.slice(fromIndex));
   if (!match) fail(`Unable to find ${name}`);
-  const start = match.index;
+  const start = fromIndex + match.index;
   const bodyStart = source.indexOf('{', start);
   let depth = 0;
   let quote = '';
@@ -62,7 +62,9 @@ function extractFunction(name) {
 
 const addPanel = extractFunction('addPanel');
 const createControlPanel = extractFunction('createControlPanel');
-const injectStyles = extractFunction('injectStyles');
+const missionFinderStart = source.indexOf('MODULE 2: MISSION FINDER V');
+expect(missionFinderStart >= 0, 'Mission Finder module boundary missing');
+const injectStyles = extractFunction('injectStyles', missionFinderStart);
 
 for (const token of [
   "'mf_control_collapsed_v10'",
@@ -92,7 +94,6 @@ for (const token of [
 }
 
 for (const token of [
-  '/* Command Nexus compact operations panel V1.0.71. */',
   'width: min(360px, calc(100vw - 20px))',
   'width: min(390px, calc(100vw - 20px))',
   'grid-template-columns: repeat(4, minmax(0, 1fr))',
@@ -104,7 +105,6 @@ for (const token of [
 }
 
 for (const token of [
-  '/* Command Nexus compact mission shell V1.0.71. */',
   'width: min(390px, calc(100vw - 20px))',
   'grid-template-columns: repeat(3, minmax(0, 1fr))',
   '.mf-dashboard-utility-open:not(.mf2026-ios-safari)',

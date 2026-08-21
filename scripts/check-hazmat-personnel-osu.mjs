@@ -76,11 +76,9 @@ requireText("requiredTrainingCodes: [\n                'gw_gefahrgut'", 'HazMat 
 requireText("vehicleTypeIds: ['39'], vehicleLabel: 'Operational Support Unit', target: 6", 'six-person Personnel Assignment target');
 requireText('6 HazMat-trained personnel per OSU', 'six-person profile description');
 requireText("const MF_FIRE_OPERATIONAL_SUPPORT_TYPE_ID = '39';", 'exact OSU type constant');
-requireText('type-7 HazMat Units', 'known type-7 exclusion');
-requireText('type-86 SAR Operational Support Vans', 'known type-86 exclusion');
 
 const patternStart = source.indexOf('const MF_TRAINED_PERSONNEL_PATTERNS =');
-const patternEnd = source.indexOf('\n\n    let mfKeepPanelPosition', patternStart);
+const patternEnd = source.indexOf('\n    let mfKeepPanelPosition', patternStart);
 expect(patternStart >= 0 && patternEnd > patternStart, 'Unable to extract trained-personnel patterns');
 const patterns = source.slice(patternStart, patternEnd);
 
