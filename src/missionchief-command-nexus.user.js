@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      3.0.11
+// @version      3.0.12
 // @description  MissionChief automation with one active dispatcher, one adaptive page-warm preload, bounded transport recovery, memory cleanup and exact vehicle rules.
 // @author       MartyBlyth
 // @license      MIT
@@ -147,8 +147,8 @@ return;
 if (window.top !== window.self) return;
 if (window.__MCN_V3_CONTROLLER__) return;
 window.__MCN_V3_CONTROLLER__ = true;
-const VERSION = '3.0.11';
-const MASTER_VERSION = '3.0.11';
+const VERSION = '3.0.12';
+const MASTER_VERSION = '3.0.12';
 const MISSION_FINDER_VERSION = '10.6.177';
 const WORKER_ID = 'mcn-v3-background-mission-worker';
 const ROOT_ID = 'mcn-v3-map-controller';
@@ -183,6 +183,7 @@ const TOP_PRIORITY_NAV_WINDOW_MS = 5000;
 const PRIORITY_REDIRECT_COOLDOWN_MS = 350;
 const PRIORITY_REDIRECT_IN_FLIGHT_MS = 6000;
 const NON_MISSION_REDIRECT_RECOVERY_MS = 10000;
+const PRISONER_HANDOFF_REDIRECT_RECOVERY_MS = 12000;
 const NON_MISSION_REDIRECT_RECOVERY_HISTORY_LIMIT = 40;
 const RECENT_NATIVE_ADVANCE_TTL_MS = 12000;
 const RADIO_REQUEST_STALL_WARN_MS = 25000;
@@ -3197,9 +3198,6 @@ state.transportIdentity = '';
 state.transportSince = 0;
 finaliseActiveMissionTiming('low-queue-pause');
 removeWorker(false);
-// A low-queue pause disposes every managed frame, so it already satisfies a
-// pending memory recycle. Keeping the flag would force a redundant second A
-// restart immediately after the queue recovered.
 if (memoryRecycleSatisfied) state.pipelineMemoryRecyclePending = false;
 compactControllerEphemeralMemory();
 saveRunContinuity();
@@ -6594,6 +6592,73 @@ createWorker(recoveryUrl);
 }, 120);
 return true;
 }
+function maybeRecoverStrandedPrisonerHandoff(doc, href, context, statusText = '') {
+if (
+!state.wanted ||
+state.stopping ||
+state.transportServiceActive ||
+state.nonMissionRedirectRecoveryInFlight ||
+isMissionUrl(href) ||
+vehicleIdFromUrl(href) ||
+context?.kind ||
+doc?.readyState !== 'complete'
+) return false;
+const status = normaliseText(statusText || state.lastStatusText);
+if (!/prisoner cell handoff|assigning prisoner/i.test(status)) return false;
+const stalledSince = Number(state.lastStatusChangedAt || state.lastWorkerNavigationAt || 0);
+const elapsedMs = stalledSince ? Math.max(0, Date.now() - stalledSince) : 0;
+if (elapsedMs < PRISONER_HANDOFF_REDIRECT_RECOVERY_MS) return false;
+const recoveryUrl = sleepRecoveryMissionUrl(href);
+const missionId = missionIdFromUrl(recoveryUrl) || state.currentMissionId;
+if (!recoveryUrl || !missionId) {
+setError(
+'Prisoner handoff recovery target was unavailable',
+'Worker A left the mission during a prisoner cell handoff, but the exact mission URL could not be verified. No Dispatch click was issued.'
+);
+return true;
+}
+const event = {
+at: nowIso(),
+targetMissionId: missionId,
+targetMissionName: missionNameForId(missionId) || state.currentMissionName,
+observedPath: pathFromUrl(href) || '/',
+elapsedMs,
+status,
+action: 'reload-exact-mission-after-prisoner-handoff-redirect',
+};
+state.nonMissionRedirectRecoveries += 1;
+state.nonMissionRedirectRecoveryHistory.push(event);
+if (state.nonMissionRedirectRecoveryHistory.length > NON_MISSION_REDIRECT_RECOVERY_HISTORY_LIMIT) {
+state.nonMissionRedirectRecoveryHistory.splice(
+0,
+state.nonMissionRedirectRecoveryHistory.length - NON_MISSION_REDIRECT_RECOVERY_HISTORY_LIMIT
+);
+}
+state.nonMissionRedirectRecoveryInFlight = true;
+state.running = false;
+resetAutoStartTracking();
+clearPromotedWorkTracking();
+clearAutoRecoveryWatchdog('prisoner-handoff-redirect-recovery');
+clearSharedV2AutoRunning('prisoner-handoff-redirect-recovery');
+clearSharedV2QueueGuard('prisoner-handoff-redirect-recovery', missionId);
+clearTransportServiceState();
+resetPriorityPending();
+pausePipelineController('prisoner-handoff-redirect-recovery', true);
+persistResumeMission(recoveryUrl);
+setPhase(
+'TRANSPORT_RECOVERY',
+'Prisoner handoff stalled; restarting safely',
+`${missionDisplay(missionId, event.targetMissionName)} left the mission during the cell handoff. Rebuilding Worker A without dispatching or skipping.`
+);
+log('Recovered a prisoner cell handoff that redirected Worker A away from its mission.', event);
+const recoveryGeneration = state.workerGeneration;
+window.setTimeout(() => {
+if (!state.wanted || state.stopping || state.workerGeneration !== recoveryGeneration) return;
+state.nonMissionRedirectRecoveryInFlight = false;
+createWorker(recoveryUrl);
+}, 120);
+return true;
+}
 function recoverFromSuspendedTimerGap(elapsedMs, source = 'watcher') {
 if (
 !state.wanted ||
@@ -6782,6 +6847,10 @@ return;
 }
 const speedStatus = findUsefulNexusStatus(doc);
 notePromotedWorkEvidence(speedStatus, 'watcher-status');
+if (maybeRecoverStrandedPrisonerHandoff(doc, href, context, speedStatus)) {
+captureWorkerSnapshot();
+return;
+}
 maybeFastReleaseQueueGuardAfterHiddenTransition(doc, href, context, speedStatus);
 maybeFastReleaseStalePostTransportQueueGuard(doc, href, context);
 if (maybeHandleConfirmedPrisonerReleaseSuccess(doc, href, context)) {
@@ -8385,15 +8454,9 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
 (function () {
     'use strict';
 
-    // One combined installation guard. Each retained module also keeps its
-    // original guard, so enabling an old standalone copy cannot initialise a
-    // second UI or a second automation engine in the same page context.
     if (window.__MC_COMPLETE_TOOLS_MERGED_V10668_V428__) return;
     window.__MC_COMPLETE_TOOLS_MERGED_V10668_V428__ = true;
 
-    // Runtime isolation preserves the behaviour of two standalone userscripts:
-    // a startup fault in one module is reported without preventing the other
-    // independent module from loading.
     try {
         /* ==================================================================
          * MODULE 1: UNIT, STATION & PERSONNEL TOOLS V4.2.8
@@ -8436,21 +8499,11 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
         return true;
     })();
 
-    // Resource Administration normally has one top-window owner. MissionChief's
-    // normal Stations control opens the same /leitstellenansicht document in a
-    // same-origin lightbox iframe, while middle-click opens it as a standalone
-    // top-level window. Both exact route shapes are authoritative workspace
-    // hosts. Mission, building-detail and unrelated child frames stay excluded
-    // from the naming/personnel runtime.
     if (!TOOL_IS_TOP_WINDOW && !TOOL_IS_STATION_OVERVIEW_FRAME) return;
 
     const UNIT_VERSION = '3.3.27';
     const STATION_VERSION = '1.3.22';
     const PERSONNEL_VERSION = '1.3.12';
-    // Command Nexus 1.0.121: Unit and Station Naming rescan current native
-    // membership rows so an early standalone-popup snapshot cannot leave the
-    // Dispatch Centre cascade empty. Renaming and Personnel Assignment remain
-    // background-only; resource links and window.opener are never used.
     const PERSONNEL_TRAINING_CODE = 'critical_care';
     const PERSONNEL_TRAINING_LABEL = 'Critical Care';
     const PERSONNEL_TARGET_VEHICLE_TYPE_ID = '5';
@@ -9117,9 +9170,6 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
         all: Object.freeze(['22', '27', '28', '30', '31', '33'])
     });
 
-    // MissionChief UK medical vehicle/training contracts. Vehicle type IDs,
-    // native seat maxima and academy keys are recorded in the issue-17 evidence
-    // file and remain exact: no neighbouring medical vehicle can substitute.
     const MEDICAL_RULES = Object.freeze({
         ambulanceOfficer: makePoliceRule({
             id: 'medical_ambulance_officer',
@@ -9273,9 +9323,6 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
         rules
     });
 
-    // Critical Care retains its established dedicated engine when selected alone.
-    // The verified specialist profiles use the shared rule engine; the Medical
-    // batch runs every specialist first and its exact type-5 Critical Care rule last.
     const PERSONNEL_SERVICE_DEFINITIONS = {
         medical: {
             label: 'Medical',
@@ -9751,8 +9798,8 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
 
     const STATION_NAMING_MODE_TOWN_ONLY = 'TOWN_ONLY';
 
-    // MissionChief's own building type IDs. These are read from the parent
-    // .building_list_li element and do not depend on uploaded station images.
+    // MissionChief's own building type IDs.
+
     const STATION_BUILDING_TYPE_INFO = {
         0:  { stationType: 'FIRE',       suffix: '-FS',   label: 'Fire station' },
         18: { stationType: 'FIRE',       suffix: '-FS',   label: 'Small fire station' },
@@ -10030,8 +10077,6 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
         const isSafariBrowser = /Safari/i.test(userAgent)
             && !/(?:CriOS|FxiOS|EdgiOS|OPiOS|DuckDuckGo)/i.test(userAgent);
 
-        // Native WKWebView/app wrappers normally omit the Safari token. This
-        // deliberately targets the MissionChief website opened in Safari.
         return isIosDevice
             && isSafariBrowser
             && /^https?:$/i.test(String(location.protocol || ''));
@@ -10262,10 +10307,6 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
         NAMING_DISPATCH_CENTRE_STATE.byBuildingId.clear();
         const seenRows = new Set();
 
-        // Dispatch Centre names and station membership must come from the same native
-        // Resource Administration document graph. In the normal Stations lightbox the
-        // naming UI can be owned by the top document while building rows live in a
-        // same-origin child frame, so current-document-only assignment scans fail empty.
         getNamingDispatchCentreStationRowDocuments().forEach(candidateDocument => {
             const rows = [
                 ...candidateDocument.querySelectorAll(
@@ -10379,7 +10420,6 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
                 false
             ) || '');
 
-            // A native row ID and its exact Details link must agree when both exist.
             if (rowId && hrefId && rowId !== hrefId) return;
             const id = rowId || hrefId;
             if (!id) return;
@@ -10402,10 +10442,6 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
         const centres = new Map();
         if (!root?.querySelectorAll) return centres;
 
-        // A standalone /leitstellenansicht window does not render Dispatch Centres
-        // as type-7 building cards. MissionChief exposes the same native ID/name
-        // pairs in the overview navbar instead, while ordinary station cards retain
-        // their authoritative leitstelle_building_id membership attributes.
         root.querySelectorAll('.leitstelle_selection[leitstelle]').forEach(control => {
             const id = String(control.getAttribute?.('leitstelle') || '').trim();
             if (!/^\d+$/.test(id) || Number(id) <= 0) return;
@@ -10456,8 +10492,6 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
                 centres.set(String(id), label);
             });
             extractNamingDispatchCentresFromStationRows(candidateDocument).forEach((label, id) => {
-                // Prefer a full type-7 building row when both native layouts expose
-                // the same Dispatch Centre.
                 centres.set(String(id), label);
             });
         });
@@ -10681,8 +10715,6 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
         if (document[NAMING_DISPATCH_CENTRE_REFRESH_LISTENER_KEY]) return;
         document[NAMING_DISPATCH_CENTRE_REFRESH_LISTENER_KEY] = true;
 
-        // Delegate from the stable document rather than binding only the first panel nodes.
-        // MissionChief may replace popup content while the Resource Administration host lives.
         document.addEventListener('click', event => {
             const button = event.target?.closest?.(
                 '#mc-namer-refresh-dispatch-centres, #mc-station-refresh-dispatch-centres'
@@ -10708,8 +10740,6 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
             button.setAttribute('aria-busy', 'true');
         });
 
-        // Give the browser a real paint opportunity before any synchronous failure path
-        // can return the label straight to Retry Dispatch Centres.
         await yieldNamingDispatchCentreRefreshPaint();
 
         let listLoaded = false;
@@ -10723,11 +10753,6 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
                 loadNamingDispatchCentreData(force)
             ]);
 
-            // The standalone overview renders its native station cards after the
-            // navbar controls. A forced Dispatch Centre refresh can therefore
-            // replace an early empty membership snapshot after Unit or Station
-            // Naming already built its station objects. Rebind both snapshots
-            // before rebuilding the shared cascade.
             if (assignmentsLoaded) {
                 syncNamingStationDispatchCentreAssignments(STATE.stations);
                 syncNamingStationDispatchCentreAssignments(STATION_STATE.stations);
@@ -10788,9 +10813,6 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
     }
 
     async function handleUnitDispatchCentreChange() {
-        // A Dispatch Centre selection is a data-boundary change. Reuse the normal
-        // station refresh so membership, Service, Station Type and Start From are
-        // rebuilt from the current Resource Administration rows in one pass.
         await refreshStations();
     }
 
@@ -10805,9 +10827,6 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
     }
 
     async function handleStationDispatchCentreChange() {
-        // Keep Station Naming on the same fresh station snapshot as Unit Naming.
-        // populateNamingDispatchCentreFilter restores the selected centre after
-        // refresh, then the normal cascade rebuilds Service -> Type -> Start From.
         await refreshStationNamingStations();
     }
 
@@ -11151,8 +11170,6 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
     function clampToolPanelToViewport(panel) {
         if (!panel?.isConnected) return;
 
-        // Before the first drag, iOS Safari is positioned entirely by the
-        // safe-area CSS below. Only clamp an explicitly dragged mobile panel.
         if (
             panel.classList.contains('mc-ios-safari')
             && !panel.style.left
@@ -13681,7 +13698,6 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
             savedUnitsRequired = normalisePersonnelUnitsRequired(localStorage.getItem(PERSONNEL_UNITS_REQUIRED_STORAGE_KEY) || 0);
         } catch (_error) {}
 
-        // Migrate the two service options that were combined in v4.1.2.
         if (savedService === 'mountain') savedService = 'coastguard';
         if (savedService === 'airport') savedService = 'fire';
         if (!PERSONNEL_SERVICE_DEFINITIONS[savedService]) savedService = 'medical';
@@ -14036,9 +14052,6 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
         const stationEntries = getStationOverviewEntries();
         await Promise.all([
             loadNamingDispatchCentreList(false),
-            // Rescan current native rows. The standalone popup may have mounted
-            // after its first station entry but before every membership-bearing
-            // station card finished rendering.
             loadNamingDispatchCentreData(true)
         ]);
 
@@ -14086,8 +14099,6 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
     function getStationNamingTypeInfo(buildingTypeId, displayName) {
         const name = cleanText(displayName).toUpperCase();
 
-        // Airport fire stations share MissionChief's normal fire-station type IDs.
-        // Use an explicit existing name marker only for this special case.
         if ((buildingTypeId === 0 || buildingTypeId === 18)
             && (/\bAIRPORT\b|\bAIRFIELD\b/.test(name) || /-AF\d*$/.test(name))) {
             return { stationType: 'AIRFIELD', suffix: '-AF', label: 'Airfield station' };
@@ -14374,9 +14385,6 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
 
             setStationUiValue('status', 'Reading station address');
 
-            // Do not depend on clicking Move building. Prefer MissionChief's structured
-            // coordinate reverse address, then use a read-only Move-page request as the
-            // fallback. The Move form is never submitted.
             const addressResult = await resolveStationAddress(station, doc);
             const address = String(addressResult.address || '').trim();
 
@@ -15040,12 +15048,6 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
             .replace(/(?:\s*,\s*|\s+)(?:UNITED KINGDOM|UK|SCOTLAND|ENGLAND|WALES|NORTHERN IRELAND)$/i, '')
             .trim();
 
-        // MissionChief's Move Building field can collapse the locality and post
-        // town into one space-delimited value. If its terminal post town is
-        // repeated earlier in that value (for example "Anstruther Easter
-        // Anstruther"), retain the longest repeated terminal phrase. This is a
-        // guarded fallback only; structured reverse-address components remain
-        // authoritative and ordinary multi-word towns are left intact.
         const words = area.split(/\s+/).filter(Boolean);
         for (let suffixLength = Math.floor(words.length / 2); suffixLength >= 1; suffixLength -= 1) {
             const suffixWords = words.slice(-suffixLength);
@@ -16441,8 +16443,6 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
                 );
             } catch (_error) {}
         } else {
-            // All Stations and Selected Station modes always process their
-            // complete station scope. A saved target cannot stop them.
             PERSONNEL_STATE.unitsRequired =
                 0;
 
@@ -17493,8 +17493,6 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
             row.querySelector?.('td:nth-child(2)')?.textContent
         ].filter(Boolean).join(' '));
 
-        // MissionChief UK PSU Carrier. This fallback is used only when the
-        // station row exposes no numeric vehicle-type attribute at all.
         if (/\b(?:PSU|Police\s+Support\s+Unit)\s+Carrier\b/i.test(typeText)) {
             return '51';
         }
@@ -17803,8 +17801,6 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
                 }
             });
 
-            // The current API stores the link on the trailer/pod record. Keep
-            // this guarded reverse check for compatible payload variants.
             targetRecords.forEach(target => {
                 if (isPersonnelApiTractiveRandom(target)) return;
                 const companionVehicleId =
@@ -17814,8 +17810,6 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
                 }
             });
 
-            // A unique one-to-one station combination is deterministic even
-            // when the game leaves the trailer in random-tractive mode.
             if (
                 !linkedTargetIds.size
                 && targetRecords.length === 1
@@ -17849,8 +17843,6 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
                 );
             }
 
-            // Ensure an API record that references a missing vehicle cannot be
-            // treated as linked merely because its ID happens to be present.
             linkedTargetIds.forEach(vehicleId => {
                 if (!recordById.has(vehicleId)) linkedTargetIds.delete(vehicleId);
             });
@@ -18635,9 +18627,6 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
             throw new Error('No Ambulance vehicles were found in the station vehicle table.');
         }
 
-        // One Ambulance assignment page supplies the station-wide personnel snapshot.
-        // Button state is the authoritative binding signal; the station vehicle table
-        // supplies the initial occupied/max cross-check.
         const baselinePage = await personnelFetchDocument(vehicles[0].assignmentHref, 14000);
         const baselineAssignment = parseVehicleAssignmentPage(baselinePage.doc, vehicles[0].vehicleId);
 
@@ -18716,7 +18705,6 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
 
             if (beforeTotal === 0) beforeCritical = 0;
 
-            // In live mode, read the specific Ambulance immediately before changing it.
             let liveAssignment = null;
             if (PERSONNEL_STATE.action === 'assign' && beforeCritical < PERSONNEL_TARGET_PER_VEHICLE && beforeTotal < PERSONNEL_TARGET_PER_VEHICLE) {
                 const livePage = await personnelFetchDocument(vehicle.assignmentHref, 14000);
@@ -18774,10 +18762,6 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
                         personnelLog(`Would assign: ${candidates.map(person => person.name).join(', ')}`, 'after');
                     }
                 } else {
-                    // Use the live page already loaded for this Ambulance to select all
-                    // required candidates. Submit them sequentially, then verify the whole
-                    // batch with one fresh page request instead of reloading after every
-                    // individual person.
                     const candidates = (liveAssignment?.availableCritical || [])
                         .filter(person => !reservedPersonnelIds.has(person.personnelId))
                         .slice(0, attemptCount);
@@ -18875,9 +18859,6 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
         let verificationError = '';
         let availableAtEnd = Math.max(0, availableAtScan - (PERSONNEL_STATE.action === 'preview' ? stationPlanned : stationAssigned));
 
-        // Final station-wide verification. This is one additional request after the
-        // station is complete and produces the actual after-action figures rather than
-        // merely trusting the number of successful POSTs.
         if (PERSONNEL_STATE.action === 'assign' && !PERSONNEL_STATE.stopped && vehicleReports.length) {
             setPersonnelUiValue('status', 'Final station verification');
             setPersonnelUiValue('vehicle', 'Processed Ambulances');
@@ -19061,8 +19042,6 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
         const timer = setTimeout(() => controller.abort(), timeoutMs);
 
         try {
-            // Personnel Assignment is deliberately background-only. Do not replace
-            // this canonical request path with link clicks, lightboxes or iframes.
             const response = await fetch(
                 `${requestUrl.pathname}${requestUrl.search}`,
                 {
@@ -19146,8 +19125,6 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
                 return /\/vehicles\/\d+\/zuweisung(?:[/?#]|$)/.test(href);
             });
 
-            // Prefer the normal vehicle-name link because it is tied directly to the
-            // displayed row. Edit and personnel links are safe fallbacks.
             const idCandidates = [plainVehicleLink, editLink, directAssignmentLink]
                 .map(link => getVehicleIdFromHref(link?.getAttribute('href') || ''))
                 .filter(Boolean);
@@ -19476,9 +19453,6 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
             return false;
         }
 
-        // Consume the response so the request finishes cleanly. MissionChief normally
-        // returns the updated personnel-row HTML, but the batch is verified using one
-        // fresh vehicle page after all required people have been submitted.
         try {
             await response.text();
         } catch (_error) {}
@@ -20347,8 +20321,6 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
         const stationEntries = getStationOverviewEntries();
         await Promise.all([
             loadNamingDispatchCentreList(false),
-            // Never reuse the early standalone-popup membership snapshot here.
-            // Refresh Stations is the authority boundary for the current rows.
             loadNamingDispatchCentreData(true)
         ]);
 
@@ -20634,8 +20606,6 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
     async function processStationVehicleQueue(stationDoc, station) {
         setStatus('Building vehicle queue');
 
-        // Only strings are retained from the fetched station document. Every edit
-        // is then fetched, submitted and verified independently in the background.
         const queue = getVehicleQueueFromTable(stationDoc);
 
         debug(`Vehicle queue built for ${station.displayName}: ${queue.length}`);
@@ -21607,6 +21577,7 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
         'mission-finder-live-strict-';
     const MF_EXACT_REGISTER_TRAINING_SOURCE_PREFIX =
         'personnel-register-exact-';
+    // personnel-register-exact-all-vehicle-scan-v2
     const MF_EXACT_REGISTER_TRAINING_MAX_AGE_MS =
         180 * 24 * 60 * 60 * 1000;
     const MF_KNOWN_UNSTAFFED_AMBULANCE_MAX_AGE_MS =
@@ -23691,7 +23662,7 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
             capturedAtUnix: Date.now(),
             reason: String(reason || 'manual-export'),
             versions: {
-                commandNexus: '3.0.11',
+                commandNexus: '3.0.12',
                 missionFinder: 'V10.6.177',
                 personnelAssignment: '1.3.8'
             },
@@ -53875,6 +53846,9 @@ const MF_AUTO_PRISONER_CELL_HANDOFF_KEY =
 const MF_AUTO_PRISONER_CELL_DESTINATION_WAIT_MS = 8000;
 const MF_AUTO_PRISONER_CELL_CLICK_RETRY_MS = 4000;
 const MF_AUTO_PRISONER_CELL_MAX_ATTEMPTS = 2;
+const MF_AUTO_DISPATCH_LATCH_KEY =
+    'mf_auto_dispatch_latch_v1';
+const MF_AUTO_DISPATCH_LATCH_TTL_MS = 5 * 60 * 1000;
 const MF_AUTO_PRISONER_RELEASE_STATE_KEY =
     'mf_auto_prisoner_release_v1';
 const MF_AUTO_PRISONER_RELEASE_CLICK_RETRY_MS = 4000;
@@ -53882,6 +53856,43 @@ const MF_AUTO_PRISONER_RELEASE_MAX_ATTEMPTS = 2;
 const MF_AUTO_PRISONER_RELEASE_RESULT_WAIT_MS = 10000;
 const MF_AUTO_PRISONER_RELEASE_DISMISS_WAIT_MS = 8000;
 const MF_AUTO_PRISONER_RELEASE_DISMISS_CLOSE_WAIT_MS = 8000;
+
+function claimAutoMissionDispatch(missionId) {
+    const id = String(missionId || '').trim();
+    if (!id) return false;
+    const now = Date.now();
+    let previous = null;
+    try {
+        previous = JSON.parse(
+            sessionStorage.getItem(MF_AUTO_DISPATCH_LATCH_KEY) || 'null'
+        );
+    } catch (_error) {}
+    if (
+        previous &&
+        String(previous.missionId || '') === id &&
+        now - Number(previous.claimedAt || 0) < MF_AUTO_DISPATCH_LATCH_TTL_MS
+    ) {
+        return false;
+    }
+    try {
+        sessionStorage.setItem(
+            MF_AUTO_DISPATCH_LATCH_KEY,
+            JSON.stringify({ missionId: id, claimedAt: now })
+        );
+    } catch (_error) {}
+    return true;
+}
+
+function releaseAutoMissionDispatch(missionId) {
+    try {
+        const previous = JSON.parse(
+            sessionStorage.getItem(MF_AUTO_DISPATCH_LATCH_KEY) || 'null'
+        );
+        if (String(previous?.missionId || '') === String(missionId || '')) {
+            sessionStorage.removeItem(MF_AUTO_DISPATCH_LATCH_KEY);
+        }
+    } catch (_error) {}
+}
 
 function getActivePrisonerCellSelectionContext() {
     const candidateDocuments =
@@ -58222,6 +58233,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
                 hasEarlyExplicitMissingRequirements ||
                 hasEarlyMissingOnMissionTableAuthority;
 
+            // Patient-only alerts never suppress the attachment route.
             let prefetchedAttachmentRowsPromise = null;
 
             const staffingBlockedAtFirstGate =
@@ -58265,7 +58277,6 @@ async function handleAutoPrisonerReleaseAfterActions() {
                 }
             }
 
-            // Patient-only alerts never suppress the attachment route.
             let autoMissionUpdateRowsHandled = 0;
             const autoSelectionRunState = {
                 usedCurrentMissionUpdateAuthority:
@@ -58588,6 +58599,13 @@ async function handleAutoPrisonerReleaseAfterActions() {
                 const finalQueueMission = isFinalQueueSignal(queueStateBeforeDispatch);
                 logQueueState('skip-before-dispatch', queueStateBeforeDispatch, finalQueueMission);
 
+                if (!claimAutoMissionDispatch(autoCycleMissionId)) {
+                    updateStatusBox(
+                        'Auto Mode: duplicate Dispatch blocked for this mission. Waiting for MissionChief to finish the existing handoff...'
+                    );
+                    break;
+                }
+
                 clearAutoAdvanceAfterDispatchState(
                     'Auto skip uses native Dispatch-and-next'
                 );
@@ -58607,6 +58625,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
                 }
 
                 if (!clickDispatchOnly()) {
+                    releaseAutoMissionDispatch(autoCycleMissionId);
                     sessionStorage.removeItem(
                         MF_FINAL_QUEUE_DISPATCH_FLAG
                     );
@@ -58654,6 +58673,13 @@ async function handleAutoPrisonerReleaseAfterActions() {
             const finalQueueMission = isFinalQueueSignal(queueStateBeforeDispatch);
             logQueueState('complete-before-dispatch', queueStateBeforeDispatch, finalQueueMission);
 
+            if (!claimAutoMissionDispatch(autoCycleMissionId)) {
+                updateStatusBox(
+                    'Auto Mode: duplicate Dispatch blocked for this mission. Waiting for MissionChief to finish the existing handoff...'
+                );
+                break;
+            }
+
             clearAutoAdvanceAfterDispatchState(
                 'Auto completed mission dispatch'
             );
@@ -58679,6 +58705,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
                 );
 
             if (!dispatchResult.clicked) {
+                releaseAutoMissionDispatch(autoCycleMissionId);
                 sessionStorage.removeItem(
                     MF_FINAL_QUEUE_DISPATCH_FLAG
                 );
