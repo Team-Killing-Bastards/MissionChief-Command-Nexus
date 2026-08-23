@@ -5,10 +5,10 @@ MissionChief Command Nexus is an actively released userscript. This roadmap reco
 **Developer and technical owner:** MartyBlyth  
 **Repository and documentation support:** Conroy1988
 
-## Current production baseline — v3.0.13
+## Current production baseline — v3.0.14
 
 - [x] Publish one canonical userscript on trusted `main`.
-- [x] Prepare Command Nexus `3.0.13` with Mission Finder `V10.6.177`, true stopped-map idle loading, stopped-mission on-demand vehicle expansion, transport-route discovery cancellation, exact per-mission bootstrap recovery, a lightweight page-only B preload, reversible sustained-pressure A-only protection, exact bounded transport recovery, prisoner-handoff redirect recovery, an atomic per-mission Dispatch latch, bounded 12-hour telemetry and station-aware staffing evidence.
+- [x] Prepare Command Nexus `3.0.14` with Mission Finder `V10.6.177`, true stopped-map idle loading, stopped-mission on-demand vehicle expansion, transport-route discovery cancellation, cleared-vehicle exact-mission recovery, exact per-mission bootstrap recovery, a lightweight page-only B preload, reversible sustained-pressure A-only protection, exact bounded transport recovery, prisoner-handoff redirect recovery, an atomic per-mission Dispatch latch, bounded 12-hour telemetry and station-aware staffing evidence.
 - [x] Keep one sole dispatcher active while one dormant worker page-warms the immediate next mission without expanding its vehicle table, and fail closed on uncertain ownership or handoff.
 - [x] Retain Resource Administration `V4.2.8`, with Unit Naming `3.3.27`, Station Naming `1.3.22` and Personnel Assignment `1.3.12`.
 - [x] Protect duplicate initialization and independent engine startup.
