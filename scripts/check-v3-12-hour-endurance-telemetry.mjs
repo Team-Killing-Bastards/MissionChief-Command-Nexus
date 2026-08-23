@@ -57,7 +57,7 @@ function extractFunction(name) {
 }
 
 for (const token of [
-  "const VERSION = '3.0.11';",
+  "const VERSION = '3.0.12';",
   "const MISSION_FINDER_VERSION = '10.6.177';",
   'const RUN_MISSION_ID_HISTORY_LIMIT = 5000;',
   'const MISSION_TIMING_SAMPLE_LIMIT = 5000;',

@@ -6,6 +6,19 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
+## [3.0.12] - 2026-08-23
+
+### Fixed
+
+- Recover Worker A after a prisoner cell assignment redirects it to the map and leaves the embedded engine waiting without a mission control. The controller reloads the exact persisted mission after 12 seconds, without clicking Dispatch or skipping.
+- Added an atomic session-level Dispatch latch keyed by mission ID. A MissionChief redraw or same-document queue handoff can no longer click Dispatch twice or add a second successful-completion record for the same mission transition.
+- Kept prisoner recovery independent of a still-visible Radio Transport Request, closing the deadlock exposed after the request row had already cleared.
+
+### Safety
+
+- Preserved the single active dispatcher, oldest-first personal transport handling, trained-personnel rules, memory lifecycle and all exact vehicle cross-references.
+- Recovery remains fail-closed when an exact persisted mission URL cannot be verified.
+
 ## [3.0.11] - 2026-08-23
 
 ### Fixed
