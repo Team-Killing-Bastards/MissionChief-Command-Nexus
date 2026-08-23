@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      3.0.13
+// @version      3.0.14
 // @description  MissionChief automation with one active dispatcher, one adaptive page-warm preload, bounded transport recovery, memory cleanup and exact vehicle rules.
 // @author       MartyBlyth
 // @license      MIT
@@ -147,8 +147,8 @@ return;
 if (window.top !== window.self) return;
 if (window.__MCN_V3_CONTROLLER__) return;
 window.__MCN_V3_CONTROLLER__ = true;
-const VERSION = '3.0.13';
-const MASTER_VERSION = '3.0.13';
+const VERSION = '3.0.14';
+const MASTER_VERSION = '3.0.14';
 const MISSION_FINDER_VERSION = '10.6.177';
 const WORKER_ID = 'mcn-v3-background-mission-worker';
 const ROOT_ID = 'mcn-v3-map-controller';
@@ -6555,6 +6555,10 @@ if (url && missionIdFromUrl(url.href) === targetMissionId) return url.href;
 return '';
 }
 function maybeRecoverStalledNonMissionRedirect(doc, href, context = {}) {
+const routeVehicleId = vehicleIdFromUrl(href);
+const liveRouteRequest = routeVehicleId
+? radioRequestForVehicle(routeVehicleId, state.radioTransportRequests)
+: null;
 if (
 !state.wanted ||
 state.stopping ||
@@ -6563,8 +6567,8 @@ state.nonMissionRedirectRecoveryInFlight ||
 !state.redirectTargetMissionId ||
 !state.lastPriorityRedirectAt ||
 isMissionUrl(href) ||
-vehicleIdFromUrl(href) ||
-context?.kind
+context?.kind ||
+liveRouteRequest
 ) return false;
 const elapsedMs = Math.max(0, Date.now() - state.lastPriorityRedirectAt);
 if (elapsedMs < NON_MISSION_REDIRECT_RECOVERY_MS) return false;
@@ -6582,13 +6586,17 @@ at: nowIso(),
 targetMissionId,
 targetMissionName: missionNameForId(targetMissionId),
 observedPath: pathFromUrl(href) || '',
+observedVehicleId: routeVehicleId || '',
+routeRequestCleared: Boolean(routeVehicleId && !liveRouteRequest),
 elapsedMs,
 documentReadyState: String(doc?.readyState || ''),
 workerDocumentSerial: state.workerDocumentSerial,
 phaseBeforeRecovery: state.phase,
 queueGuardBeforeRecovery: readSharedV2QueueGuardState(),
 pendingPersonalTransports: state.radioTransportRequests.length,
-action: 'discard-preloads-and-reload-exact-pending-mission',
+action: routeVehicleId
+? 'leave-cleared-transport-vehicle-page-and-reload-exact-pending-mission'
+: 'discard-preloads-and-reload-exact-pending-mission',
 };
 state.nonMissionRedirectRecoveries += 1;
 state.nonMissionRedirectRecoveryHistory.push(event);
@@ -23702,7 +23710,7 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
             capturedAtUnix: Date.now(),
             reason: String(reason || 'manual-export'),
             versions: {
-                commandNexus: '3.0.13',
+                commandNexus: '3.0.14',
                 missionFinder: 'V10.6.177',
                 personnelAssignment: '1.3.8'
             },

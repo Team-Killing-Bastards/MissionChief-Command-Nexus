@@ -6,6 +6,19 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
+## [3.0.14] - 2026-08-23
+
+### Fixed
+
+- Worker A no longer remains indefinitely on an Ambulance vehicle page after a patient destination has been assigned and the exact personal Radio Transport Request has cleared. The ambulance continues its server-side transport while the hidden dispatcher resumes mission work.
+- Extended the existing exact pending-mission redirect recovery to cleared `/vehicles/{id}` routes. After the bounded 10-second redirect window, V3 rebuilds Worker A on only the verified pending mission instead of waiting for the transporting Ambulance to arrive.
+- Preserved live transport ownership: recovery remains blocked while the exact vehicle still has a personal Radio request, patient/prisoner destination evidence remains active, or the balanced transport service owns the worker.
+
+### Safety
+
+- Added an executable regression for the exported cleared-patient sequence, including the stale vehicle route, exact pending mission rebuild, live-request guard, active patient-context guard and no-click contract.
+- No Dispatch click, transport destination click, mission skip, vehicle selection, staffing rule, storage key or durable register changed.
+
 ## [3.0.13] - 2026-08-23
 
 ### Fixed
