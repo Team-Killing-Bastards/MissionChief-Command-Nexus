@@ -110,6 +110,34 @@ assert.equal(
   'PRISONER:7007:333'
 );
 
+const releaseFallbackFunction = extractFunction('isPrisonerReleaseFallbackContext');
+const releaseFallbackContext = vm.createContext({ Number, Boolean });
+vm.runInContext(
+  `${releaseFallbackFunction}\nthis.isReleaseFallback = isPrisonerReleaseFallbackContext;`,
+  releaseFallbackContext
+);
+const noCellReleaseEvidence = {
+  kind: 'PRISONER',
+  cellSelectionAlerts: 1,
+  releaseLinks: 1,
+  prisonerPath: '',
+  greenPrisonDestinations: 0,
+};
+assert.equal(
+  releaseFallbackContext.isReleaseFallback(noCellReleaseEvidence),
+  true,
+  'the diagnostic no-cell/release-only screen must be owned by Release Prisoners'
+);
+assert.equal(
+  releaseFallbackContext.isReleaseFallback({
+    ...noCellReleaseEvidence,
+    prisonerPath: '/vehicles/7007/gefangener/333',
+    greenPrisonDestinations: 24,
+  }),
+  false,
+  'an exact usable prisoner destination must remain on the normal transport path'
+);
+
 const watcher = extractFunction('watchWorker');
 for (const token of [
   'contextIdentity !== state.transportIdentity',
@@ -125,9 +153,39 @@ for (const token of [
   "'rebuild-worker-a-at-exact-mission'",
   "'fail-closed-after-bounded-recovery'",
   "startTransportOnlyWorker(exactRequest, 'transport-stall-recovery')",
+  'if (isPrisonerReleaseFallbackContext(context)) return false;',
 ]) assert.ok(recovery.includes(token), `transport recovery lost ${token}`);
+assert.ok(
+  recovery.indexOf('if (isPrisonerReleaseFallbackContext(context)) return false;') <
+    recovery.indexOf('TRANSPORT_HARD_RECOVERY_MS'),
+  'the exact prisoner release flow must be exempt before the generic transport watchdog fires'
+);
 assert.doesNotMatch(recovery, /\.click\s*\(|clickDispatch\s*\(/, 'hard recovery must never click Dispatch or another page action');
 assert.doesNotMatch(recovery, /skip(?:Current)?Mission\s*\(/i, 'hard recovery must never skip the mission');
+
+const releaseWatchdogContext = vm.createContext({
+  Number,
+  Boolean,
+  state: {
+    wanted: true,
+    stopping: false,
+    transportServiceActive: false,
+    transportSince: Date.now() - 60_000,
+  },
+});
+vm.runInContext(
+  `${releaseFallbackFunction}\n${recovery}\nthis.recover = maybeRecoverStalledTransportContext;`,
+  releaseWatchdogContext
+);
+assert.equal(
+  releaseWatchdogContext.recover(
+    noCellReleaseEvidence,
+    'https://www.missionchief.co.uk/missions/258908831',
+    []
+  ),
+  false,
+  'V3 must not rebuild Worker A while the exact Release Prisoners fallback owns the no-cell screen'
+);
 
 const wakeRecovery = extractFunction('recoverFromSuspendedTimerGap');
 for (const token of [
@@ -180,5 +238,5 @@ for (const token of [
 ]) assert.ok(source.includes(token), `preserved cross-reference missing: ${token}`);
 
 console.log(
-  'PASS: exact transport identity, one bounded no-dispatch rebuild, sleep recovery, staffing quarantine, credit parsing, and banked vehicle cross-references are preserved.'
+  'PASS: exact transport identity, immediate no-cell prisoner release ownership, one bounded no-dispatch rebuild, sleep recovery, staffing quarantine, credit parsing, and banked vehicle cross-references are preserved.'
 );

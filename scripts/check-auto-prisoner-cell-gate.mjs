@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-// Guards the three-stage contract: prefer live cells first, allow only the
-// exact current-mission Release Prisoners fallback after normal Auto actions,
-// then close its direct lightbox result span before the mission cycle restarts.
+// Guards the prisoner contract: prefer a live usable cell, immediately run the
+// exact current-mission Release Prisoners fallback when no usable cell remains,
+// retain the final pre-dispatch recheck, then close the owned result lightbox.
 
 import { readFile } from 'node:fs/promises';
 
@@ -23,7 +23,7 @@ for (const [token, label] of [
   ['function handleAutoPrisonerReleaseAfterActions(', 'final prisoner release gate'],
   ['await handleAutoPrisonerCellBeforeUnitFinder();', 'early gate invocation'],
   ['await handleAutoPrisonerReleaseAfterActions();', 'final gate invocation'],
-  ["return 'defer-release';", 'deferred final fallback outcome'],
+  ['Running the exact Release Prisoners fallback before Unit Finder.', 'immediate no-cell release handoff'],
   ['realClickForQueueRestart(releaseLink);', 'single native release click'],
   ['MF_AUTO_PRISONER_RELEASE_STATE_KEY', 'release duplicate-click guard'],
   ['MF_AUTO_PRISONER_RELEASE_RESULT_WAIT_MS', 'release result wait guard'],
@@ -60,8 +60,22 @@ if (!(earlyGateCall < updateWait && earlyGateCall < vehicleLoad && earlyGateCall
   fail('Cell destination handling must remain before Mission Update wait, vehicle loading and Unit Finder');
 }
 
+const earlyStart = source.indexOf('async function handleAutoPrisonerCellBeforeUnitFinder(');
+const earlyEnd = source.indexOf('function getAutoPrisonerReleaseOwnerContainer(', earlyStart);
+const earlyBody = source.slice(earlyStart, earlyEnd);
+const earlyNoDestination = earlyBody.indexOf('if (!destination) {');
+const earlyReleaseCall = earlyBody.indexOf('await handleAutoPrisonerReleaseAfterActions();', earlyNoDestination);
+
+if (!(earlyNoDestination >= 0 && earlyReleaseCall > earlyNoDestination)) {
+  fail('No-cell prisoner handling must invoke the exact release fallback before Unit Finder');
+}
+
+if (earlyBody.includes("return 'defer-release';") || source.includes("prisonerCellGate === 'defer-release'")) {
+  fail('No-cell prisoner handling must not defer release until after Unit Finder');
+}
+
 if (!(finalGateCall > unitFinder && finalGateCall > missionUpdate && finalGateCall < problemAlert)) {
-  fail('Release Prisoners fallback must run after Unit Finder and Mission Update but before dispatch validation');
+  fail('The final Release Prisoners recheck must remain after Unit Finder and Mission Update but before dispatch validation');
 }
 
 const selectorStart = source.indexOf('function getFirstAvailablePrisonCellDestination(');
