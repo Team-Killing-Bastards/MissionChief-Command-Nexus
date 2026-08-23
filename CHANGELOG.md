@@ -6,6 +6,187 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
+## [3.0.11] - 2026-08-23
+
+### Fixed
+
+- Replaced transport-kind-only watching with exact patient/prisoner identity tracking using the vehicle and subject IDs. A handoff from one patient or prisoner to another now resets the stall clock instead of inheriting a stale context.
+- Added one bounded Worker-A rebuild after 20 seconds in the same exact personal transport context. The recovery reopens only the matching personal request or verified mission, never clicks Dispatch, never skips, and fails closed if that exact context stalls again within two minutes.
+- Rebuilt post-sleep recovery to discard stale workers and timers, then service the oldest outstanding personal transport before mission work resumes. Alliance requests remain ignored.
+- Made adaptive RAM protection reversible: after the heap remains below the safe release threshold for 60 seconds, the A-only latch clears and lightweight preload B may return. Worker C remains parked.
+- Added a run-scoped exact-vehicle staffing quarantine. A uniquely identified vehicle that raises a confirmed staffing alert is excluded and Unit Finder retries the same mission; ambiguous generic alerts still stop safely.
+- Expanded mission-value discovery across the active mission document and readable nested frames, with capture-source and miss telemetry for exports.
+- Increased Command Nexus from `3.0.10` to `3.0.11` and Mission Finder from `V10.6.176` to `V10.6.177`.
+
+### Safety
+
+- Preserved the single active dispatcher, personal oldest-first transport clearing, two-mission pause, trained-personnel fail-closed rules and durable station/unit/personnel registers.
+- Preserved exact cross-references: Rescue Dog to Search Dog Unit type `102`, Airfield Operations Supervisor type `80`, Mission Upgrade Any vehicle to Ambulance type `5`, car towing to Flatbed Recovery type `105`, and truck towing to HGV Recovery type `106`.
+- Added permanent regression coverage for exact transport identity, bounded no-dispatch recovery, wake recovery, reversible RAM protection, staffing quarantine, value parsing and all banked vehicle mappings.
+
+## [3.0.10] - 2026-08-23
+
+### Fixed
+
+- Replaced the controller's rolling 80-ID display count with a true run counter and a bounded 5,000-ID continuity ledger, so a 12-hour endurance export does not stop counting at 80 missions.
+- Added exact successful-dispatch totals from Mission Finder plus estimated mission value, value per hour, dispatches per hour and bounded dispatch/full-cycle percentile telemetry. Estimated value is explicitly distinguished from settled bank income.
+- Added station-aware staffing diagnostics. A staffing stop now records the selected Ambulance/HEMS candidates, vehicle IDs, station names and Personnel Register evidence in the main V3 export.
+- Excluded an Ambulance or HEMS before selection only when an exact Personnel Register match has a complete scan, zero assigned personnel and evidence no older than 24 hours. Missing, incomplete, stale and staffed evidence remains eligible.
+- Added aggregate low-queue pause duration/count telemetry that survives visible-page continuity without retaining an unbounded event history.
+- Increased Command Nexus from `3.0.9` to `3.0.10` and Mission Finder from `V10.6.175` to `V10.6.176`.
+
+### Safety
+
+- The sole active Worker A, lightweight B preload, two-mission pause, transport clearing, trained-personnel fail-closed behavior and all exact vehicle cross-references remain in place.
+- Rescue Dog/Search Dog Unit remains pinned to exact native type `102`; Mission Update Any vehicle remains one exact type-`5` Ambulance.
+- Added permanent endurance telemetry and recent-complete-zero-personnel regression coverage.
+
+## [3.0.9] - 2026-08-22
+
+### Fixed
+
+- Fixed the final Dispatch-only handoff that could leave hidden Worker A inside Mission Finder's standalone silent queue path waiting for 15 unattended missions. A parent-owned active frame now remains identifiable across MissionChief's brief same-document ownership-bridge refresh.
+- Forced every verified final-dispatch route to signal the V3 two-mission controller before standalone queue-watcher state can start. Worker A is released, the zero-worker pause remains transport-aware, and the controller resumes from a fresh A after two actionable missions remain stable.
+- Added final Dispatch, Dispatch & Share and final-queue status evidence to the existing duplicate-safe 8/16-second post-dispatch watchdog, providing a bounded fallback if the primary low-queue signal is ever lost.
+- Cleared stale `TRANSPORT_WARN` UI state when the exact warned personal Radio Transport Request disappears, without changing transport selection or clicking another destination.
+- Counted a full low-queue A/B teardown as satisfying any pending memory-pressure recycle, preventing an unnecessary second Worker A restart immediately after mission supply returns.
+- Increased the unified userscript from `3.0.8` to `3.0.9` and Mission Finder from `V10.6.174` to `V10.6.175`.
+
+### Safety
+
+- Vehicle selection, Mission Upgrade, trained-personnel, hospital, prisoner, Rescue/Search Dog type `102`, Airfield Operations Supervisor type `80`, Ambulance type `5`, Flatbed Recovery type `105`, HGV Recovery type `106`, shortage cooldown and personal-only transport rules are unchanged.
+- Added permanent regression coverage for the observed final-dispatch/15-mission deadlock, bridge-refresh identity, bounded fallback recovery, stale transport-warning restoration and memory-recycle handoff.
+
+## [3.0.8] - 2026-08-22
+
+### Fixed
+
+- Constrained the V3 control panel to the available viewport and added an internal scroll region, preventing long Temporary Skips lists from extending the popup below the screen.
+- Kept Start, Stop, Retry and Export in a fixed control footer outside the scrolling status content so they remain reachable at every list length.
+- Capped Temporary Skips itself at 96 px with independent overflow and removed the obsolete initial Worker C placeholder.
+- Increased the unified userscript from `3.0.7` to `3.0.8` and Mission Finder from `V10.6.173` to `V10.6.174`.
+
+## [3.0.7] - 2026-08-22
+
+### Memory and performance
+
+- Rebuilt dormant Worker B as a lightweight page/network preload. B no longer allocates the complete Mission Finder engine, observers, requirement maps or automation state while waiting.
+- B still loads and stabilises the immediate next MissionChief mission page. On verified promotion and sole-owner handoff, it mounts the complete Mission Finder engine exactly once before Worker A automation starts.
+- This retains the useful DOM/network warm-up while removing the wasteful second full automation runtime during normal A+B operation.
+
+### Safety
+
+- Lightweight B keeps the native dormant protocol, storage-ownership validation, interaction blocker, exact mission-ID check and activation-token gate. A failed promotion still falls back through the existing safe ownership circuit breaker.
+- Increased the unified userscript from `3.0.6` to `3.0.7` and Mission Finder from `V10.6.172` to `V10.6.173`.
+
+## [3.0.6] - 2026-08-22
+
+### Fixed
+
+- Made the stopped main-map state genuinely idle. The large Resource Administration and Mission Finder engines now initialise only for an actual mission, managed A/B worker, patient/prisoner transport page or Stations workspace; the lightweight V3 controller and Dispatch Centres popup support remain available on the map.
+- Prevented an old session `background wanted` flag from silently creating Worker A/B when Nexus is re-enabled. Automatic continuation now requires a fresh 15-second page-navigation handoff or a browser-confirmed discarded-tab restoration.
+- Kept normal sleep recovery for the still-open page and browser-discarded tabs while refusing stale intent left behind by disabling the userscript.
+- Added idle-runtime and resume-lease regression coverage plus an exported `heavyRuntimeLoaded` diagnostic.
+
+### Changed
+
+- Increased the unified userscript from `3.0.5` to `3.0.6` and Mission Finder from `V10.6.171` to `V10.6.172`.
+
+## [3.0.5] - 2026-08-22
+
+### Fixed
+
+- Replaced the absolute 512 MiB RAM trigger, which could disable warm Worker B within seconds on a naturally heavy MissionChief page, with an adaptive pressure guard.
+- The guard now learns the normal A+B high-water baseline for the first 60 seconds, permits 192 MiB of subsequent growth, requires 15 seconds of continuous pressure and retains a firm 768 MiB ceiling.
+- Added diagnostic evidence for baseline, peak, candidate duration, trigger reason and both pressure limits so future exports distinguish normal startup footprint from sustained growth.
+
+### Performance and safety
+
+- Normal A+B page warming now remains active through an expected high starting heap. The existing A-only fallback, clean boundary restart, transport clearing, sole-dispatch ownership and durable-register protections remain unchanged.
+- Increased the unified userscript from `3.0.4` to `3.0.5` and Mission Finder from `V10.6.170` to `V10.6.171`.
+
+## [3.0.4] - 2026-08-22
+
+### Fixed
+
+- Replaced the untracked Airfield cross-reference MutationObservers with an owned observer map. Every observer is now disconnected when Worker A changes document, reloads, is promoted, recycled or removed, preventing old mission DOM from being retained by the top controller.
+- Managed frame teardown now removes its load handler, stops outstanding frame work, asks the embedded runtime to release observers/timers/large transient selection state, then blanks and detaches the frame.
+- Embedded cleanup now drops requirement-preload rows, Unit Finder diagnostic working rows, selected-vehicle state, patient ledgers, stale modal references and iPhone document references before a mission frame is discarded.
+
+### Memory and performance
+
+- Reduced the normal pipeline from A/B/C to A plus one dormant B. B still warms the immediate next mission—the preload that produced the measured handoff benefit—while C no longer holds a third full MissionChief document and userscript runtime.
+- Added adaptive RAM protection at 512 MiB reported JavaScript heap. It releases B immediately, switches the current run to A-only and schedules one clean A restart at the next verified mission boundary.
+- Normal boundary recycling remains 12 advances or 8 minutes. Once RAM protection is active, A-only recycling tightens to 8 advances or 4 minutes with a 900 ms worker-free gap to give the browser a genuine reclamation window.
+- Added controller diagnostics for heap size, preload limit, memory-pressure state/activation count and live Airfield observer count.
+
+### Safety
+
+- Memory actions only stop and recreate disposable mission frames. They do not clear MissionChief data or Command Nexus station, unit, personnel, training, naming, assignment or durable settings registers.
+- Worker A remains the only dispatcher. Personal transport clearing, Alliance exclusion, hospital choice, shortage rotation and every exact vehicle/personnel rule are unchanged.
+
+### Changed
+
+- Increased the unified userscript from `3.0.3` to `3.0.4` and Mission Finder from `V10.6.169` to `V10.6.170`.
+
+## [3.0.3] - 2026-08-22
+
+### Performance
+
+- Replaced repeated 1,500-row vehicle-ID signature construction during list loading with a bounded edge-and-midpoint structural signature. Vehicle counts, row counts, pagination-control transitions, progress evidence and loading indicators remain mandatory before selection can begin.
+- Reduced only state-confirmed Mission Update and final vehicle-list stability windows, while retaining the established bounded timeouts and fail-closed zero-list behavior.
+- Recycle A/B/C at a verified mission boundary after 12 native advances or 8 minutes, reducing long-session frame and detached-DOM accumulation without clearing any durable station, unit, personnel, training or settings register.
+- Release a stale post-transport V2 queue guard immediately only when Worker A is complete, Auto Mode is confirmed running and its exact mission is still the authoritative top actionable personal mission.
+
+### Fixed
+
+- Personal Radio Transport Requests are now ordered by first-seen time, so a newer DOM row cannot continuously hide or reset the age of an older pending request. Cleared requests also release their retry bookkeeping.
+- Dormant B/C pages now capture-block clicks, form submissions and `window.open` until transactional promotion grants sole storage ownership. Any dormant transport navigation or missing/inactive interaction guard opens the existing A-only circuit breaker.
+- Added diagnostics for request age, blocked dormant interactions, post-transport fast releases and the active recycle thresholds.
+
+### Safety
+
+- Kept Worker A as the only operational dispatcher. B/C still perform zero vehicle-pagination clicks and cannot run Mission Finder before verified promotion.
+- Did not change vehicle choice, shortage, dispatch, hospital, personnel, training or Mission Upgrade decisions. Rescue/Search Dog type `102`, Airfield Operations Supervisor type `80`, Mission Upgrade Ambulance type `5`, Mass Casualty Equipment type `33`, Flatbed Recovery type `105`, HGV Recovery type `106`, the universal 20-advance shortage cooldown and personal-only transport rules remain protected by the complete regression suite.
+- Added a permanent speed/transport/isolation regression covering bounded vehicle polling, oldest-first transport fairness, verified stale-guard release and dormant interaction blocking.
+
+### Changed
+
+- Increased the unified userscript from `3.0.2` to `3.0.3` and Mission Finder from `V10.6.168` to `V10.6.169`.
+
+## [3.0.2] - 2026-08-22
+
+### Fixed
+
+- Quarantined a mission after the 16-second post-dispatch hard recovery so the priority controller cannot route Worker A back to the same stale `NEW` row. The normal 20-advance safety window applies, but an authoritative mission-state or requirement change releases this specific quarantine early.
+- Personal Radio transports present at run start, page resume, mission wait or hard recovery now receive the exact transport-only Worker A before another mission is opened; Alliance requests remain excluded.
+- Fatal controller errors now snapshot diagnostics, clear only operational V2 queue/running state and explicitly release A/B/C. Worker A can no longer continue processing after V3 reports `ERROR`.
+- B/C remain dormant page-warm mission preloads but no longer expand the complete vehicle table. Only promoted Worker A loads the full list, cutting the multi-frame heap pressure seen with 1,927-row vehicle lists.
+- Added a permanent regression for stalled-dispatch quarantine and release, transport-first startup, fatal all-worker teardown, priority locking and page-only B/C warming.
+
+### Changed
+
+- Increased the unified userscript from `3.0.1` to `3.0.2`; Mission Finder remains `V10.6.168`.
+
+## [3.0.1] - 2026-08-22
+
+### Added
+
+- Added a V3 low-supply lifecycle: when the active worker sees fewer than two next personal missions, it uses MissionChief's exact Dispatch-only action, leaves one mission in reserve, completes any patient/prisoner transport and requests a zero-worker pause.
+- Added automatic resume after at least two actionable personal missions remain stable for 1.5 seconds. Resume always creates a fresh Worker A; B/C return only as dormant preloads.
+- Added scheduled A/B/C lifecycle recycling at a verified mission boundary after 20 native mission advances or 15 minutes, plus explicit embedded-runtime teardown before every managed frame is blanked and removed.
+
+### Safety
+
+- Preserved standalone Mission Finder queue behavior: outside a sole-owner V3 Worker A, only `Next Mission (0)` is the final-queue signal.
+- Kept low-supply teardown transport-aware and prevented both native Dispatch & Next and saved Dispatch & Share continuation from opening the reserved mission. A personal radio request that arrives during the pause receives one temporary transport-only Worker A, which releases itself after clearing or a bounded retry timeout.
+- Bounded controller mission-identity and handled-event caches. Runtime cleanup does not clear MissionChief data or Command Nexus station, unit, personnel, training and durable setting registers.
+- Added a permanent regression for the two-mission watermark, stable resume, transport gates, boundary recycling, explicit frame teardown and durable-register preservation.
+
+### Changed
+
+- Increased the unified userscript from `3.0.0` to `3.0.1` and Mission Finder from `V10.6.167` to `V10.6.168`.
+
 ## [3.0.0] - 2026-08-21
 
 ### Added

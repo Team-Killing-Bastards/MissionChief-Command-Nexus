@@ -1,6 +1,6 @@
 # Architecture
 
-This document describes the architecture in the current MissionChief Command Nexus v3.0.0 production source and the direction for future consolidation.
+This document describes the architecture in the current MissionChief Command Nexus v3.0.11 production source and the direction for future consolidation.
 
 > Source-code direction and final technical decisions remain with **MartyBlyth**, the project developer. Conroy1988 provides repository and documentation support only.
 
@@ -12,7 +12,7 @@ The canonical distributable is a single userscript:
 src/missionchief-command-nexus.user.js
 ```
 
-The canonical module baseline is Resource Administration `V4.2.8` and Mission Finder `V10.6.167`. The Resource Administration interfaces report Unit Naming `3.3.27`, Station Naming `1.3.22` and Personnel Assignment `1.3.12`. Exact release and component-version validation belongs to `scripts/validate-userscript.mjs`; behavioral regressions do not pin these numbers.
+The canonical module baseline is Resource Administration `V4.2.8` and Mission Finder `V10.6.177`. The Resource Administration interfaces report Unit Naming `3.3.27`, Station Naming `1.3.22` and Personnel Assignment `1.3.12`. Exact release and component-version validation belongs to `scripts/validate-userscript.mjs`; behavioral regressions do not pin these numbers.
 
 It contains one userscript metadata block, a V3 ownership/pipeline controller and two retained runtime engines:
 
@@ -21,9 +21,12 @@ MissionChief Command Nexus
 │
 ├── Metadata and V3 ownership/pipeline controller
 │   ├── Worker A sole-dispatch ownership
-│   ├── Dormant Worker B/C warm preloads
+│   ├── Adaptive dormant Worker B page-warm preload
 │   ├── Verified promotion and handoff
 │   ├── Transport-aware 8/16-second recovery
+│   ├── Two-mission low-supply pause/resume
+│   ├── Controller-owned final Dispatch-only handoff
+│   ├── Boundary-only worker lifecycle recycling
 │   └── Computer-sleep continuity recovery
 │
 ├── Resource Administration Engine
@@ -95,6 +98,8 @@ Every new or modified subsystem should follow these rules:
 6. Debounce or cache high-frequency DOM work.
 7. Bound diagnostic output and persistent registries.
 8. Avoid full-page polling where an event or scoped observer can provide the same signal.
+
+V3 low-supply and memory lifecycle cleanup applies only to managed mission frames. Worker A dispatches the current mission without opening the reserved final mission, transport processing remains authoritative, and teardown waits until no personal handoff is active. Dormant B warms the immediate next mission but never expands its vehicle table. RAM protection learns the normal A+B startup baseline and only releases B after 15 seconds above either baseline plus 192 MiB or the 768 MiB hard ceiling. A is then restarted at the next verified boundary after its observers, timers, DOM caches and load handlers are detached. These cleanups must not clear Resource Administration or MissionChief station, unit, personnel, training or durable preference data.
 
 ## Storage and migration
 

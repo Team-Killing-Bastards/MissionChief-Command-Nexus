@@ -92,4 +92,4 @@ const freezeFunction = extractFunction('pipelineTargetRotationFrozen');
 expect(freezeFunction.includes('state.postDispatchWatchdog'), 'B/C target rotation must freeze during post-dispatch recovery');
 expect(freezeFunction.includes('state.transportServiceActive'), 'B/C target rotation must freeze during personal transport service');
 
-console.log('PASS: V3 post-dispatch recovery is bounded, transport-aware, duplicate-dispatch-safe, and keeps B/C warm through transient queue churn.');
+console.log('PASS: V3 post-dispatch recovery is bounded, transport-aware, duplicate-dispatch-safe, and keeps B/C page-warm through transient queue churn.');
