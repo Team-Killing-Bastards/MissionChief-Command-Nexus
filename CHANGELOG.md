@@ -6,6 +6,21 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
+## [3.0.13] - 2026-08-23
+
+### Fixed
+
+- Opening a visible mission while Auto Mode is stopped no longer expands every available vehicle page automatically. The complete vehicle list stays collapsed until Unit Finder, Mission Update or Ally Steal explicitly needs it, removing the severe stopped-mission lag on large fleets.
+- Active Auto Mode still performs its mission-update-first precheck and loads the complete stable vehicle list before selection. Manual mission controls remain mounted and unchanged.
+- A confirmed Auto Mode now cancels its pending Mission Finder discovery timer. If navigation has already moved Worker A onto a patient or prisoner vehicle route, stale discovery exits to the route watcher without spending a mission-bootstrap rescue or raising a false missing-Auto-Mode error.
+- Replaced the one-per-run bootstrap rescue cap with one bounded reload per exact mission-bootstrap incident. A genuine later mission can therefore recover even when an earlier mission already needed a reload; the cumulative count remains diagnostic only.
+
+### Safety
+
+- Added a permanent stopped-mission idle regression that executes both stopped and active initialization paths and verifies on-demand vehicle loading remains present for Unit Finder, Mission Update and Ally Steal.
+- Added an executable bootstrap-recovery regression covering the exported failure sequence: stale discovery on a transport route, exact-mission reload isolation, single-reload bounding, later-mission recovery and fail-closed no-click behavior.
+- No storage keys, selection rules, trained-personnel checks, dispatch behavior, transport destination rules or V3 worker ownership changed.
+
 ## [3.0.12] - 2026-08-23
 
 ### Fixed

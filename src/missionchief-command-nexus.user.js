@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      3.0.12
+// @version      3.0.13
 // @description  MissionChief automation with one active dispatcher, one adaptive page-warm preload, bounded transport recovery, memory cleanup and exact vehicle rules.
 // @author       MartyBlyth
 // @license      MIT
@@ -147,8 +147,8 @@ return;
 if (window.top !== window.self) return;
 if (window.__MCN_V3_CONTROLLER__) return;
 window.__MCN_V3_CONTROLLER__ = true;
-const VERSION = '3.0.12';
-const MASTER_VERSION = '3.0.12';
+const VERSION = '3.0.13';
+const MASTER_VERSION = '3.0.13';
 const MISSION_FINDER_VERSION = '10.6.177';
 const WORKER_ID = 'mcn-v3-background-mission-worker';
 const ROOT_ID = 'mcn-v3-map-controller';
@@ -231,7 +231,7 @@ const PIPELINE_HISTORY_LIMIT = 100;
 const PIPELINE_TARGET_ROTATION_GRACE_MS = 6000;
 const PIPELINE_READY_HANDOFF_GRACE_MS = 15000;
 const ACTIVE_BOOTSTRAP_RESCUE_AFTER_MS = 6500;
-const ACTIVE_BOOTSTRAP_RESCUE_LIMIT = 1;
+const ACTIVE_BOOTSTRAP_RESCUE_LIMIT_PER_MISSION = 1;
 const ACTIVE_CONTROL_DROPOUT_RESCUE_MS = 12000;
 const ACTIVE_CONTROL_PROGRESS_GRACE_MS = 20000;
 const ACTIVE_CONTROL_DROPOUT_WINDOW_MS = 120000;
@@ -480,6 +480,8 @@ pipelineMemoryPressureBelowSince: 0,
 pipelineMemoryPressureReleases: 0,
 pipelineMemoryLastSampleAt: 0,
 activeBootstrapRescues: 0,
+activeBootstrapRescueMissionId: '',
+activeBootstrapRescueAttempts: 0,
 activeControlMissingSince: 0,
 activeControlDropoutRescues: 0,
 activeControlSoftRecoveries: 0,
@@ -1015,6 +1017,8 @@ state.promotionWorkStallRecoveries = 0;
 state.promotionRecoveryHistory = [];
 state.promotionRecoveryPendingMissionId = '';
 state.activeBootstrapRescues = 0;
+state.activeBootstrapRescueMissionId = '';
+state.activeBootstrapRescueAttempts = 0;
 state.activeControlMissingSince = 0;
 state.activeControlDropoutRescues = 0;
 state.activeControlSoftRecoveries = 0;
@@ -5823,6 +5827,9 @@ return true;
 }
 function confirmCurrentDocumentAutoMode(control, source = 'watcher') {
 if (!control || !autoControlLooksRunning(control) || !state.workerDocumentSerial) return false;
+clearTimer('nexusDiscoveryTimer');
+state.activeBootstrapRescueMissionId = '';
+state.activeBootstrapRescueAttempts = 0;
 const firstConfirmation = state.autoRunningConfirmedDocumentSerial !== state.workerDocumentSerial;
 state.autoStartIssued = true;
 state.autoStartDocumentSerial = state.workerDocumentSerial;
@@ -6306,6 +6313,22 @@ clearTimer('nexusDiscoveryTimer');
 const startedAt = Date.now();
 const attempt = () => {
 if (!state.wanted || generation !== state.workerGeneration || state.worker !== frame) return;
+const href = getWorkerHref(frame);
+const missionId = missionIdFromUrl(href);
+if (!missionId) {
+state.activeBootstrapRescueMissionId = '';
+state.activeBootstrapRescueAttempts = 0;
+clearTimer('nexusDiscoveryTimer');
+startWatcher();
+return;
+}
+if (
+state.activeBootstrapRescueMissionId &&
+state.activeBootstrapRescueMissionId !== missionId
+) {
+state.activeBootstrapRescueMissionId = '';
+state.activeBootstrapRescueAttempts = 0;
+}
 if (!ensureActiveWorkerOwnership(frame, 'nexus-discovery')) {
 setError(
 'Worker A did not acquire V2 storage ownership',
@@ -6314,7 +6337,6 @@ setError(
 return;
 }
 const doc = getWorkerDocument(frame);
-const href = getWorkerHref(frame);
 if (doc) adoptWorkerDocument(doc, href, 'nexus-discovery');
 applyAirfieldOperationsSupervisorCrossRef(doc);
 installAirfieldOperationsSupervisorObservers(doc);
@@ -6331,20 +6353,34 @@ return;
 const elapsed = Date.now() - startedAt;
 if (
 elapsed >= ACTIVE_BOOTSTRAP_RESCUE_AFTER_MS &&
-state.activeBootstrapRescues < ACTIVE_BOOTSTRAP_RESCUE_LIMIT
+(
+state.activeBootstrapRescueMissionId !== missionId ||
+state.activeBootstrapRescueAttempts < ACTIVE_BOOTSTRAP_RESCUE_LIMIT_PER_MISSION
+)
 ) {
+state.activeBootstrapRescueMissionId = missionId;
+state.activeBootstrapRescueAttempts += 1;
 state.activeBootstrapRescues += 1;
-const rescueUrl = getWorkerHref(frame) || state.currentMissionUrl || state.bootstrapMissionUrl;
+const rescueUrl = href;
 log('Active Worker A did not mount V2 quickly enough; removing all preload contexts and reloading A once by itself.', {
-missionId: missionIdFromUrl(rescueUrl),
+missionId,
 missionName: state.currentMissionName,
 elapsedMs: elapsed,
-rescue: state.activeBootstrapRescues,
+rescueAttempt: state.activeBootstrapRescueAttempts,
+totalRescues: state.activeBootstrapRescues,
 });
 pausePipelineController('active-bootstrap-rescue', true);
 clearTimer('nexusDiscoveryTimer');
 window.setTimeout(() => {
 if (!state.wanted || generation !== state.workerGeneration || state.worker !== frame) return;
+if (missionIdFromUrl(getWorkerHref(frame)) !== missionId) {
+if (state.activeBootstrapRescueMissionId === missionId) {
+state.activeBootstrapRescueMissionId = '';
+state.activeBootstrapRescueAttempts = 0;
+}
+startWatcher();
+return;
+}
 createWorker(rescueUrl);
 }, 120);
 return;
@@ -6352,7 +6388,7 @@ return;
 if (elapsed >= NEXUS_DISCOVERY_TIMEOUT_MS) {
 setError(
 'Command Nexus Auto Mode was not found in the background worker.',
-`Embedded Mission Finder ${MISSION_FINDER_VERSION} still did not mount its active Mission Operations UI after the staged Worker-A rescue. No dispatch was attempted.`
+`Embedded Mission Finder ${MISSION_FINDER_VERSION} still did not mount its active Mission Operations UI after ${state.activeBootstrapRescueAttempts} bounded reload attempt${state.activeBootstrapRescueAttempts === 1 ? '' : 's'} for mission ${missionId}. No dispatch was attempted.`
 );
 return;
 }
@@ -7560,6 +7596,8 @@ pipelineDormantInteractionsBlocked: state.pipelineDormantInteractionsBlocked,
 promotionWorkStallRecoveries: state.promotionWorkStallRecoveries,
 promotionRecoveryHistory: state.promotionRecoveryHistory.slice(),
 activeBootstrapRescues: state.activeBootstrapRescues,
+activeBootstrapRescueMissionId: state.activeBootstrapRescueMissionId,
+activeBootstrapRescueAttempts: state.activeBootstrapRescueAttempts,
 activeControlDropoutRescues: state.activeControlDropoutRescues,
 activeControlSoftRecoveries: state.activeControlSoftRecoveries,
 activeControlDropoutCircuitBreakers: state.activeControlDropoutCircuitBreakers,
@@ -7758,6 +7796,8 @@ pipelineDuplicateClicksSuppressed: state.pipelineDuplicateClicksSuppressed,
 pipelineHandoffRetentions: state.pipelineHandoffRetentions,
 pipelineDormantInteractionsBlocked: state.pipelineDormantInteractionsBlocked,
 activeBootstrapRescues: state.activeBootstrapRescues,
+activeBootstrapRescueMissionId: state.activeBootstrapRescueMissionId,
+activeBootstrapRescueAttempts: state.activeBootstrapRescueAttempts,
 activeControlDropoutRescues: state.activeControlDropoutRescues,
 activeControlSoftRecoveries: state.activeControlSoftRecoveries,
 activeControlDropoutCircuitBreakers: state.activeControlDropoutCircuitBreakers,
@@ -23662,7 +23702,7 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
             capturedAtUnix: Date.now(),
             reason: String(reason || 'manual-export'),
             versions: {
-                commandNexus: '3.0.12',
+                commandNexus: '3.0.13',
                 missionFinder: 'V10.6.177',
                 personnelAssignment: '1.3.8'
             },
@@ -58842,19 +58882,26 @@ async function handleAutoPrisonerReleaseAfterActions() {
             return;
         }
 
-        if (autoModeRunning) {
-            requireMissionUpdateFirstPass(
-                'mission panel initialized'
-            );
-
+        if (!autoModeRunning) {
             if (mfDebugEnabled) {
                 debugLog(
-                    'UPDATE FIRST GATE',
-                    'Deferred automatic full vehicle-list loading until the mission update precheck completes.'
+                    'STOPPED MISSION IDLE',
+                    'The complete vehicle list remains collapsed until a manual mission tool requests it.'
                 );
             }
-        } else {
-            clickVehicleDisplayBarImmediately();
+
+            return;
+        }
+
+        requireMissionUpdateFirstPass(
+            'mission panel initialized'
+        );
+
+        if (mfDebugEnabled) {
+            debugLog(
+                'UPDATE FIRST GATE',
+                'Deferred automatic full vehicle-list loading until the mission update precheck completes.'
+            );
         }
     }
 
@@ -59328,10 +59375,6 @@ async function handleAutoPrisonerReleaseAfterActions() {
             loadClicked,
             clickedPages
         };
-    }
-
-    async function clickVehicleDisplayBarImmediately() {
-        await ensureVehicleListLoaded();
     }
 
     function shouldRunBackgroundAutomationWatchers() {
