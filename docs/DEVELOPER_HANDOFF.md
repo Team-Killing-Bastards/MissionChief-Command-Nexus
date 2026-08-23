@@ -12,8 +12,8 @@ This is the first document to read when resuming MissionChief Command Nexus deve
 | Repository | `Team-Killing-Bastards/MissionChief-Command-Nexus` |
 | Default branch | `main` |
 | Canonical userscript | `src/missionchief-command-nexus.user.js` |
-| Command Nexus version | `3.0.0` |
-| Mission Finder baseline | `V10.6.167` |
+| Command Nexus version | `3.0.11` |
+| Mission Finder baseline | `V10.6.177` |
 | Resource Administration module | `V4.2.8` |
 | Unit / Station / Personnel UI versions | `3.3.27` / `1.3.22` / `1.3.12` |
 | Userscript author metadata | `MartyBlyth` |
@@ -51,7 +51,9 @@ The single-file shape is deliberate. Logical consolidation may continue, but est
 - Medical Personnel Assignment provides live exact Ambulance Officer, HART, Tactical Command, SORT, Midwifery and Specialist Paramedic profiles plus a specialist-first batch; the established standalone Critical Care engine remains unchanged.
 - Fire/Airfield and SAR/Coastguard Personnel Assignment profiles are live with exact UK mappings. Trailer and pod profiles resolve the actual tractor through the station vehicle API, ambiguous relationships fail closed, and full-service batches merge overlapping qualifications onto one crew.
 - Mission requirements, selected and en-route reconciliation, trained-personnel capability, dispatch, Auto Mode and transport continuation are implemented.
-- V3 owns the top-level three-mission pipeline: Worker A is the sole dispatcher, Workers B/C are dormant warm preloads, and promotion is fail-closed unless the next mission and storage owner are verified.
+- V3 owns an adaptive two-mission pipeline: Worker A is the sole dispatcher and dormant Worker B warms only the immediate next page without expanding the full vehicle table. Promotion is fail-closed unless the next mission and storage owner are verified.
+- V3 pauses with zero mission frames below two actionable personal missions, including the exact final Dispatch-only path, waits for two missions to remain stable, then creates a fresh A. A managed worker never enters Mission Finder's standalone 15-mission queue watcher. It recycles A/B after 12 advances or 8 minutes. RAM protection first learns the normal 60-second A+B baseline, then requires either 192 MiB sustained growth or the 768 MiB ceiling for 15 seconds before B is released and A uses an 8-advance/4-minute boundary recycle. No durable register is cleared.
+- V3 exports a true 12-hour run count, successful dispatch count, estimated mission value/rate, bounded timing percentiles and aggregate low-queue time. Staffing stops and recent confirmed-empty Ambulance exclusions include vehicle and station evidence but never personnel names.
 - Qualification-sensitive selection fails closed: exact compatible vehicles with missing or stale evidence first enter live assignment-page verification, but only fresh, complete Personnel Register evidence satisfies trained-personnel demand and Auto Mode stops without dispatch when verified coverage remains short.
 - Search Dog Unit (SAR) uses exact native MissionChief UK type `102` across Mission Finder selection, selected-unit verification and Unit Naming.
 - Mission Update converts exact `Any vehicle` wording to one normal Ambulance and pins both selection and verification to native type `5`.
