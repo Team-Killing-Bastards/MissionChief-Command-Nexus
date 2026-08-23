@@ -6,6 +6,19 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
+## [3.0.15] - 2026-08-23
+
+### Fixed
+
+- A prisoner handoff with no usable green cell now runs the exact current-mission `Release Prisoners` fallback before Mission Update, vehicle-page expansion or Unit Finder. It no longer spends the transport watchdog window loading vehicle pages after the final cell route disappears.
+- A verified no-cell prisoner screen containing the cell-selection alert and exact release control is owned by the release flow rather than the generic 20-second V3 transport watchdog. This prevents the false `PRISONER:unknown:{missionId}` rebuild and second-attempt circuit-breaker stop seen on mission `258908831` (`Fans fight at basketball game`).
+- The final pre-dispatch prisoner release recheck remains in place for a handoff that changes after the early gate.
+
+### Safety
+
+- A usable visible green cell remains higher priority. Release is still limited to the visible exact-text `Release Prisoners` POST link for the current mission, with duplicate-click protection, confirmed success, owned-lightbox close verification and fail-closed handling.
+- Added regression coverage proving the no-cell release executes before Unit Finder and that V3 cannot rebuild Worker A underneath the release flow.
+
 ## [3.0.14] - 2026-08-23
 
 ### Fixed

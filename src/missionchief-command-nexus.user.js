@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      3.0.14
+// @version      3.0.15
 // @description  MissionChief automation with one active dispatcher, one adaptive page-warm preload, bounded transport recovery, memory cleanup and exact vehicle rules.
 // @author       MartyBlyth
 // @license      MIT
@@ -147,8 +147,8 @@ return;
 if (window.top !== window.self) return;
 if (window.__MCN_V3_CONTROLLER__) return;
 window.__MCN_V3_CONTROLLER__ = true;
-const VERSION = '3.0.14';
-const MASTER_VERSION = '3.0.14';
+const VERSION = '3.0.15';
+const MASTER_VERSION = '3.0.15';
 const MISSION_FINDER_VERSION = '10.6.177';
 const WORKER_ID = 'mcn-v3-background-mission-worker';
 const ROOT_ID = 'mcn-v3-map-controller';
@@ -1707,6 +1707,15 @@ if (match) return `${kind}:${match[1]}:${match[2]}`;
 const vehicleId = vehicleIdFromUrl(href) || state.transportServiceVehicleId || '';
 const missionId = state.transportServiceMissionId || state.currentMissionId || '';
 return `${kind}:${vehicleId || 'unknown'}:${missionId || 'unknown'}`;
+}
+function isPrisonerReleaseFallbackContext(context) {
+return Boolean(
+context?.kind === 'PRISONER' &&
+Number(context.cellSelectionAlerts || 0) > 0 &&
+Number(context.releaseLinks || 0) > 0 &&
+!context.prisonerPath &&
+Number(context.greenPrisonDestinations || 0) === 0
+);
 }
 function beginTransportEvent(context, href) {
 if (!context?.kind) return;
@@ -5252,6 +5261,11 @@ state.transportServiceActive ||
 !context?.kind ||
 !state.transportSince
 ) return false;
+// A no-cell prisoner screen is owned by the exact Release Prisoners fallback.
+// It can legitimately outlive the generic 20-second transport watchdog while
+// MissionChief replaces and closes the prisoner lightbox, so never rebuild the
+// worker underneath that verified release flow.
+if (isPrisonerReleaseFallbackContext(context)) return false;
 const elapsedMs = Math.max(0, Date.now() - state.transportSince);
 if (elapsedMs < TRANSPORT_HARD_RECOVERY_MS) return false;
 const identity = transportContextIdentity(context, href);
@@ -23710,7 +23724,7 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
             capturedAtUnix: Date.now(),
             reason: String(reason || 'manual-export'),
             versions: {
-                commandNexus: '3.0.14',
+                commandNexus: '3.0.15',
                 missionFinder: 'V10.6.177',
                 personnelAssignment: '1.3.8'
             },
@@ -54192,11 +54206,20 @@ async function handleAutoPrisonerCellBeforeUnitFinder() {
         if (mfDebugEnabled) {
             debugLog(
                 'AUTO PRISONER CELL',
-                'No active cell destination is available. Deferring the exact Release Prisoners fallback until normal Auto Mode actions are complete.'
+                'No active cell destination is available. Running the exact Release Prisoners fallback before Unit Finder.'
             );
         }
 
-        return 'defer-release';
+        updateStatusBox(
+            'Auto Mode: no available prisoner cell remains. Releasing prisoners before Unit Finder...'
+        );
+
+        const releaseResult =
+            await handleAutoPrisonerReleaseAfterActions();
+
+        return releaseResult === 'none'
+            ? 'handled'
+            : releaseResult;
     }
 
     const href = String(
@@ -55037,7 +55060,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
     });
 
     updateStatusBox(
-        'Auto Mode: all other actions are complete. Releasing the remaining prisoners before dispatch...'
+        'Auto Mode: no usable cell remains. Releasing the remaining prisoners before continuing...'
     );
 
     if (mfDebugEnabled) {
@@ -58209,18 +58232,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
             const prisonerCellGate =
                 await handleAutoPrisonerCellBeforeUnitFinder();
 
-            if (prisonerCellGate === 'defer-release') {
-                updateStatusBox(
-                    'Auto Mode: no available cell destination. Finishing normal mission actions before the Release Prisoners fallback...'
-                );
-
-                if (mfDebugEnabled) {
-                    debugLog(
-                        'AUTO PRISONER CELL',
-                        'Cell handoff deferred; Unit Finder and Mission Update may proceed before the final release fallback.'
-                    );
-                }
-            } else if (prisonerCellGate !== 'none') {
+            if (prisonerCellGate !== 'none') {
                 clearAutoSelectionMissionGuard(
                     'prisoner cell handoff before Unit Finder'
                 );
@@ -58229,7 +58241,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
 
                 if (prisonerCellGate === 'stuck') {
                     stopAutoMode(
-                        'Auto stopped: the prisoner cell handoff could not be completed. Unit Finder was not started.'
+                        'Auto stopped: no prisoner cell could be selected and the exact Release Prisoners fallback could not be completed. Unit Finder was not started.'
                     );
                     break;
                 }
