@@ -17,9 +17,9 @@
 </tr>
 </table>
 
-**Current version:** `3.0.12` · **Mission Finder engine:** `V10.6.177` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
+**Current version:** `3.0.13` · **Mission Finder engine:** `V10.6.177` · **Platform:** [MissionChief UK](https://www.missionchief.co.uk/) · **Licence:** [MIT](LICENSE)
 
-> **V3 production:** the stopped main map keeps only the lightweight controller. When started, one active Mission Finder dispatcher owns operational state while a lightweight, interaction-blocked B warms only the immediate next page; B mounts Mission Finder only after verified promotion to A. Final Dispatch-only completion returns to the V3 two-mission controller instead of entering Mission Finder's standalone queue watcher. A sustained adaptive heap guard—not the normal startup footprint—drops it to A-only and releases after a verified safe minute. Version 3.0.12 adds safe recovery when a prisoner cell handoff redirects Worker A away from its mission and an atomic per-mission Dispatch latch that blocks repeat clicks and duplicate completion counters.
+> **V3 production:** the stopped main map keeps only the lightweight controller. A visible mission with Auto Mode stopped mounts the manual controls but leaves MissionChief's complete vehicle list collapsed until Unit Finder, Mission Update or Ally Steal explicitly requests it. When started, one active Mission Finder dispatcher owns operational state while a lightweight, interaction-blocked B warms only the immediate next page; B mounts Mission Finder only after verified promotion to A. Final Dispatch-only completion returns to the V3 two-mission controller instead of entering Mission Finder's standalone queue watcher. A sustained adaptive heap guard—not the normal startup footprint—drops it to A-only and releases after a verified safe minute. Version 3.0.13 also cancels stale Mission Finder discovery on transport routes and bounds bootstrap recovery to one exact-mission reload, without changing selection, dispatch or transport destination rules.
 
 
 [![Userscript validation](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml/badge.svg)](https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus/actions/workflows/validate-userscript.yml)
