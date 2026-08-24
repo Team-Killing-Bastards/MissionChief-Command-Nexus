@@ -6,6 +6,19 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
+## [3.0.16] - 2026-08-24
+
+### Fixed
+
+- A successful prisoner cell assignment that leaves Worker A on an exact `/vehicles/{vehicle}/gefangener/{prisoner}` result route no longer falls into the generic 20-second transport rebuild. Once the exact personal Radio request has cleared and no prisoner controls remain, the existing Worker A returns to the verified same mission after a bounded six-second settle window.
+- This closes the recurring failure seen on mission `259030749` (`Demonstration against the construction of a motorway project`), where the fourth Noble Jail assignment completed but the later full iframe rebuild failed to mount Mission Finder.
+
+### Safety
+
+- The completed-route return is blocked while the exact Radio request is live or when any structured request, cell-selection alert, usable green cell, release link or release-success alert remains.
+- The route reuses the current Worker A and performs no Dispatch, destination, release, mission-skip or vehicle-selection click. A missing or mismatched exact mission URL stops fail closed.
+- Added a permanent executable regression reproducing vehicle `7505698`, prisoner `2591924` and mission `259030749`, including settle-time, live-request, active-cell, release-flow and wrong-mission guards.
+
 ## [3.0.15] - 2026-08-23
 
 ### Fixed
