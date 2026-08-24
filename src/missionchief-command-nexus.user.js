@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      3.0.15
+// @version      3.0.16
 // @description  MissionChief automation with one active dispatcher, one adaptive page-warm preload, bounded transport recovery, memory cleanup and exact vehicle rules.
 // @author       MartyBlyth
 // @license      MIT
@@ -147,8 +147,8 @@ return;
 if (window.top !== window.self) return;
 if (window.__MCN_V3_CONTROLLER__) return;
 window.__MCN_V3_CONTROLLER__ = true;
-const VERSION = '3.0.15';
-const MASTER_VERSION = '3.0.15';
+const VERSION = '3.0.16';
+const MASTER_VERSION = '3.0.16';
 const MISSION_FINDER_VERSION = '10.6.177';
 const WORKER_ID = 'mcn-v3-background-mission-worker';
 const ROOT_ID = 'mcn-v3-map-controller';
@@ -184,6 +184,7 @@ const PRIORITY_REDIRECT_COOLDOWN_MS = 350;
 const PRIORITY_REDIRECT_IN_FLIGHT_MS = 6000;
 const NON_MISSION_REDIRECT_RECOVERY_MS = 10000;
 const PRISONER_HANDOFF_REDIRECT_RECOVERY_MS = 12000;
+const COMPLETED_PRISONER_DESTINATION_RETURN_MS = 6000;
 const NON_MISSION_REDIRECT_RECOVERY_HISTORY_LIMIT = 40;
 const RECENT_NATIVE_ADVANCE_TTL_MS = 12000;
 const RADIO_REQUEST_STALL_WARN_MS = 25000;
@@ -1715,6 +1716,19 @@ Number(context.cellSelectionAlerts || 0) > 0 &&
 Number(context.releaseLinks || 0) > 0 &&
 !context.prisonerPath &&
 Number(context.greenPrisonDestinations || 0) === 0
+);
+}
+function isCompletedPrisonerDestinationContext(context, href = '') {
+const route = exactPrisonerPath(href);
+return Boolean(
+context?.kind === 'PRISONER' &&
+route &&
+exactPrisonerPath(context.prisonerPath || '') === route &&
+!Number(context.structuredPrisonerRequests || 0) &&
+!Number(context.cellSelectionAlerts || 0) &&
+!Number(context.greenPrisonDestinations || 0) &&
+!Number(context.releaseLinks || 0) &&
+!Number(context.releaseSuccessAlerts || 0)
 );
 }
 function beginTransportEvent(context, href) {
@@ -5253,6 +5267,96 @@ state.transportRecoveryHistory.length - TRANSPORT_RECOVERY_HISTORY_LIMIT
 );
 }
 }
+function maybeReturnFromCompletedPrisonerDestination(context, href, requests) {
+if (
+!state.wanted ||
+state.stopping ||
+state.transportServiceActive ||
+!state.worker?.isConnected ||
+!state.transportSince ||
+!isCompletedPrisonerDestinationContext(context, href)
+) return false;
+const vehicleId = vehicleIdFromUrl(href);
+if (!vehicleId || radioRequestForVehicle(vehicleId, requests)) return false;
+const elapsedMs = Math.max(0, Date.now() - state.transportSince);
+if (elapsedMs < COMPLETED_PRISONER_DESTINATION_RETURN_MS) return false;
+const recoveryUrl = sleepRecoveryMissionUrl(href);
+const missionId = missionIdFromUrl(recoveryUrl);
+if (
+!recoveryUrl ||
+!missionId ||
+(state.currentMissionId && missionId !== state.currentMissionId)
+) {
+setError(
+'Completed prisoner destination return target was unavailable',
+`Vehicle ${vehicleId} cleared, but the same mission URL could not be verified. No page action was clicked.`
+);
+return true;
+}
+const identity = transportContextIdentity(context, href);
+const event = {
+kind: 'PRISONER',
+identity,
+vehicleId,
+subjectId: identity.split(':')[2] || '',
+missionId,
+missionName: missionNameForId(missionId) || state.currentMissionName,
+elapsedMs,
+evidence: (context.evidence || []).slice(0, 12),
+observedPath: pathFromUrl(href),
+recoveryPath: pathFromUrl(recoveryUrl),
+action: 'return-existing-worker-after-completed-prisoner-destination',
+};
+recordTransportRecovery(event);
+state.nonMissionRedirectRecoveries += 1;
+state.nonMissionRedirectRecoveryHistory.push({ at: nowIso(), ...event });
+if (state.nonMissionRedirectRecoveryHistory.length > NON_MISSION_REDIRECT_RECOVERY_HISTORY_LIMIT) {
+state.nonMissionRedirectRecoveryHistory.splice(
+0,
+state.nonMissionRedirectRecoveryHistory.length - NON_MISSION_REDIRECT_RECOVERY_HISTORY_LIMIT
+);
+}
+if (state.activeTransportEvent) {
+endTransportEvent('completed-prisoner-destination-return', context, href);
+}
+clearPostDispatchWatchdog('completed-prisoner-destination-return');
+clearAutoRecoveryWatchdog('completed-prisoner-destination-return');
+clearSharedV2QueueGuard('completed-prisoner-destination-return', missionId);
+clearSharedV2AutoRunning('completed-prisoner-destination-return');
+resetAutoStartTracking();
+clearPromotedWorkTracking();
+state.running = false;
+state.transportKind = '';
+state.transportIdentity = '';
+state.transportSince = 0;
+state.transportWarned = false;
+state.redirectFromMissionId = missionId;
+state.redirectTargetMissionId = missionId;
+state.lastPriorityRedirectAt = Date.now();
+state.currentMissionUrl = recoveryUrl;
+persistResumeMission(recoveryUrl);
+setPhase(
+'TRANSPORT_RETURN',
+'Prisoner placed; returning to mission',
+`${missionDisplay(missionId, event.missionName)} will resume in the existing Worker A.`
+);
+log('Returned the existing Worker A from a completed prisoner destination route.', event);
+try {
+state.worker.contentWindow.location.replace(recoveryUrl);
+return true;
+} catch {
+try {
+state.worker.src = recoveryUrl;
+return true;
+} catch (error) {
+setError(
+'Completed prisoner destination return failed',
+`Worker A could not return to ${missionDisplay(missionId, event.missionName)}. ${String(error?.message || error)}`
+);
+return true;
+}
+}
+}
 function maybeRecoverStalledTransportContext(context, href, requests) {
 if (
 !state.wanted ||
@@ -5266,6 +5370,10 @@ state.transportServiceActive ||
 // MissionChief replaces and closes the prisoner lightbox, so never rebuild the
 // worker underneath that verified release flow.
 if (isPrisonerReleaseFallbackContext(context)) return false;
+if (
+isCompletedPrisonerDestinationContext(context, href) &&
+!radioRequestForVehicle(vehicleIdFromUrl(href), requests)
+) return false;
 const elapsedMs = Math.max(0, Date.now() - state.transportSince);
 if (elapsedMs < TRANSPORT_HARD_RECOVERY_MS) return false;
 const identity = transportContextIdentity(context, href);
@@ -6971,6 +7079,10 @@ maybeAssistRescueDogSearchDog(doc, href, context);
 maybeAssistAirfieldOperationsSupervisor(doc, href, context);
 maybeApplyMassCasualtyEquipmentThreshold(doc, href, context);
 if (maybeHandleTransportServiceTimeout(radioRequests)) {
+captureWorkerSnapshot();
+return;
+}
+if (maybeReturnFromCompletedPrisonerDestination(context, href, radioRequests)) {
 captureWorkerSnapshot();
 return;
 }
@@ -23724,7 +23836,7 @@ window.__MCN_HEAVY_RUNTIME_LOADED__ = true;
             capturedAtUnix: Date.now(),
             reason: String(reason || 'manual-export'),
             versions: {
-                commandNexus: '3.0.15',
+                commandNexus: '3.0.16',
                 missionFinder: 'V10.6.177',
                 personnelAssignment: '1.3.8'
             },
