@@ -201,7 +201,7 @@ assert.equal(
 );
 assert.equal(completed.storage.get('resume'), 'https://www.missionchief.co.uk/missions/259127837');
 assert.equal(completed.timers.length, 1);
-assert.equal(completed.timers[0].delay, 120);
+assert.equal(completed.timers[0].delay, 80);
 completed.timers[0].callback();
 assert.deepEqual(completed.calls.created, ['https://www.missionchief.co.uk/missions/259127837']);
 assert.equal(completed.calls.rescans, 0);

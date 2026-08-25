@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      3.0.19
+// @version      3.0.20
 // @description  MissionChief automation with one active dispatcher, one adaptive page-warm preload, bounded transport recovery, memory cleanup and exact vehicle rules.
 // @author       MartyBlyth
 // @license      MIT
@@ -146,8 +146,8 @@ return;
 if (window.top !== window.self) return;
 if (window.__MCN_V3_CONTROLLER__) return;
 window.__MCN_V3_CONTROLLER__ = true;
-const VERSION = '3.0.19';
-const MASTER_VERSION = '3.0.19';
+const VERSION = '3.0.20';
+const MASTER_VERSION = '3.0.20';
 const MISSION_FINDER_VERSION = '10.6.177';
 const WORKER_ID = 'mcn-v3-background-mission-worker';
 const ROOT_ID = 'mcn-v3-map-controller';
@@ -5881,7 +5881,7 @@ state.workerGeneration !== workerFreeGeneration
 ) return;
 if (recoveryTarget?.url) createWorker(recoveryTarget.url);
 else beginMissionRescan();
-}, 120);
+}, 80);
 return true;
 }
 function applyActiveWorkerFrameStyle(frame) {
@@ -22223,7 +22223,7 @@ bootMark('heavy-runtime-start');
             capturedAtUnix: Date.now(),
             reason: String(reason || 'manual-export'),
             versions: {
-                commandNexus: '3.0.19',
+                commandNexus: '3.0.20',
                 missionFinder: 'V10.6.177',
                 personnelAssignment: '1.3.8'
             },
