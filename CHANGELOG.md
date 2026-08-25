@@ -6,6 +6,19 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
+## [3.0.17] - 2026-08-25
+
+### Fixed
+
+- A missing Mission Finder mount now receives one genuinely clean A-only retry: V3 removes Worker A and every preload, compacts bounded controller caches, leaves a 900 ms worker-free reclamation gap, then recreates only the exact mission. The previous recovery replaced the iframe almost immediately and could reproduce the same failed startup under heavy browser pressure.
+- A verified transport-only upgrade containing `Transport is needed!` or `Prisoners must be transported`, with no explicit missing-resource wording, is no longer reported as a zero-selection vehicle shortage. It remains temporarily rotated so transport clearing can continue without buying or dispatching unrelated units.
+
+### Diagnostics and safety
+
+- Every embedded startup now keeps a bounded trace covering userscript entry, heavy-runtime admission, Mission Finder module entry, observer ownership, mission initialization and control mounting, plus bounded `error` and `unhandledrejection` details. V3 snapshots this evidence before both the retry and any final fail-closed stop.
+- The clean retry remains limited to once per exact mission incident and performs no Dispatch, mission skip or transport action. If it still fails, the export now distinguishes absent userscript injection, rejected heavy-runtime admission, inactive ownership, initialization failure and control-mount failure.
+- Added regression coverage for the clean worker-free retry, retained bootstrap trace and the exported Cruise Liner transport-only zero-selection sequence.
+
 ## [3.0.16] - 2026-08-24
 
 ### Fixed

@@ -12,7 +12,7 @@ This is the first document to read when resuming MissionChief Command Nexus deve
 | Repository | `Team-Killing-Bastards/MissionChief-Command-Nexus` |
 | Default branch | `main` |
 | Canonical userscript | `src/missionchief-command-nexus.user.js` |
-| Command Nexus version | `3.0.16` |
+| Command Nexus version | `3.0.17` |
 | Mission Finder baseline | `V10.6.177` |
 | Resource Administration module | `V4.2.8` |
 | Unit / Station / Personnel UI versions | `3.3.27` / `1.3.22` / `1.3.12` |
@@ -52,7 +52,8 @@ The single-file shape is deliberate. Logical consolidation may continue, but est
 - Fire/Airfield and SAR/Coastguard Personnel Assignment profiles are live with exact UK mappings. Trailer and pod profiles resolve the actual tractor through the station vehicle API, ambiguous relationships fail closed, and full-service batches merge overlapping qualifications onto one crew.
 - Mission requirements, selected and en-route reconciliation, trained-personnel capability, dispatch, Auto Mode and transport continuation are implemented.
 - A visible mission opened with Auto Mode stopped mounts the manual controls without expanding MissionChief's complete vehicle list. Unit Finder, Mission Update and Ally Steal retain explicit on-demand loading before they inspect or select vehicles.
-- Confirmed Auto Mode cancels pending discovery. A stale discovery callback on a patient/prisoner vehicle route exits to the watcher, and bootstrap recovery is limited to one reload per exact mission incident rather than one reload across the whole run.
+- Confirmed Auto Mode cancels pending discovery. A stale discovery callback on a patient/prisoner vehicle route exits to the watcher. A missing mount gets one clean A-only retry after a 900 ms worker-free gap, and bounded startup milestones/errors are retained before teardown so a repeated failure identifies the stopped bootstrap stage.
+- A transport-only upgrade with no explicit missing-resource wording is rotated for transport continuation without being classified as a zero-selection fleet shortage.
 - A patient transport is operationally complete for the dispatcher as soon as its exact personal Radio request clears. If an in-flight navigation leaves Worker A on that Ambulance vehicle page, V3 protects any still-active destination selection, then rebuilds only the verified pending mission after the bounded redirect window instead of waiting for the Ambulance to arrive.
 - Prisoner handoffs prefer the first exact visible green destination with positive capacity. If no usable cell remains or the cell route disappears, Auto Mode runs the exact current-mission `Release Prisoners` fallback before Mission Update, vehicle expansion or Unit Finder; the generic V3 transport watchdog cannot rebuild Worker A underneath that release flow.
 - V3 owns an adaptive two-mission pipeline: Worker A is the sole dispatcher and dormant Worker B warms only the immediate next page without expanding the full vehicle table. Promotion is fail-closed unless the next mission and storage owner are verified.
