@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      3.0.18
+// @version      3.0.19
 // @description  MissionChief automation with one active dispatcher, one adaptive page-warm preload, bounded transport recovery, memory cleanup and exact vehicle rules.
 // @author       MartyBlyth
 // @license      MIT
@@ -146,8 +146,8 @@ return;
 if (window.top !== window.self) return;
 if (window.__MCN_V3_CONTROLLER__) return;
 window.__MCN_V3_CONTROLLER__ = true;
-const VERSION = '3.0.18';
-const MASTER_VERSION = '3.0.18';
+const VERSION = '3.0.19';
+const MASTER_VERSION = '3.0.19';
 const MISSION_FINDER_VERSION = '10.6.177';
 const WORKER_ID = 'mcn-v3-background-mission-worker';
 const ROOT_ID = 'mcn-v3-map-controller';
@@ -599,12 +599,18 @@ return handoffAt > 0 && ageMs >= 0 && ageMs <= CONTROLLER_RESUME_HANDOFF_MAX_AGE
 }
 function persistResumeMission(value) {
 const url = sameOriginUrl(value);
-if (url && isMissionUrl(url.href)) sessionSet(SESSION_RESUME_MISSION, url.href);
+if (
+url &&
+isMissionUrl(url.href) &&
+!missionAlarmSubmissionId(url.href)
+) sessionSet(SESSION_RESUME_MISSION, url.href);
 }
 function storedResumeMissionUrl() {
 const value = sessionGet(SESSION_RESUME_MISSION);
 const url = sameOriginUrl(value);
-return url && isMissionUrl(url.href) ? url.href : '';
+return url && isMissionUrl(url.href) && !missionAlarmSubmissionId(url.href)
+? url.href
+: '';
 }
 function persistRunStart(value = state.runStartedAt || nowIso()) {
 if (value) sessionSet(SESSION_RUN_STARTED_AT, value);
@@ -877,6 +883,12 @@ return match ? match[1] : '';
 }
 function isMissionUrl(value) {
 return Boolean(missionIdFromUrl(value));
+}
+function missionAlarmSubmissionId(value) {
+const url = sameOriginUrl(value);
+if (!url) return '';
+const match = url.pathname.match(/^\/missions\/(\d+)\/alarm\/?$/i);
+return match ? match[1] : '';
 }
 function pathFromUrl(value) {
 try {
@@ -5805,6 +5817,73 @@ return frame.contentWindow.location.href || '';
 return '';
 }
 }
+function maybeRecoverMissionAlarmWorker(href) {
+const missionId = missionAlarmSubmissionId(href);
+if (!missionId) return false;
+const dispatchProtected =
+state.postDispatchWatchdog?.missionId === missionId ||
+readSharedV2QueueGuardState().finalDispatch === 'true';
+const nextTarget = dispatchProtected ? choosePostDispatchRecoveryTarget(missionId) : null;
+const recoveryTarget = nextTarget || (
+dispatchProtected
+? null
+: {
+source: 'ALARM_ROUTE_VERIFICATION',
+missionId,
+url: new URL(`/missions/${missionId}`, location.origin).href,
+}
+);
+const event = {
+at: nowIso(),
+missionId,
+dispatchProtected,
+action: recoveryTarget
+? (recoveryTarget.missionId === missionId
+? 'verify-canonical-mission'
+: 'start-fresh-mission')
+: 'rescan-map',
+nextMissionId: recoveryTarget?.missionId || '',
+};
+state.postDispatchRecoveryHistory.push(event);
+if (state.postDispatchRecoveryHistory.length > POST_DISPATCH_RECOVERY_HISTORY_LIMIT) state.postDispatchRecoveryHistory.shift();
+if (dispatchProtected) state.recentlyNativeAdvanced.set(missionId, Date.now());
+const recoveryReason = 'post-dispatch-alarm-worker';
+clearSharedV2QueueGuard(
+recoveryReason,
+missionId,
+{ preserveFinalDispatch: dispatchProtected }
+);
+clearSharedV2AutoRunning(recoveryReason);
+clearAutoRecoveryWatchdog(recoveryReason);
+state.running = false;
+pausePipelineController(recoveryReason, true);
+finaliseActiveMissionTiming(recoveryReason);
+removeWorker(false);
+compactControllerEphemeralMemory();
+if (recoveryTarget?.url) persistResumeMission(recoveryTarget.url);
+else sessionSet(SESSION_RESUME_MISSION, '');
+saveRunContinuity();
+setPhase(
+'POST_DISPATCH_RECOVERY',
+'Discarding one-use mission page',
+recoveryTarget?.missionId
+? `Mission ${missionId} opened /alarm. Starting mission ${recoveryTarget.missionId} in a fresh Worker A without repeating Dispatch.`
+: `Mission ${missionId} opened /alarm. Waiting for a fresh mission without repeating Dispatch.`
+);
+log('Discarded the one-use /alarm worker and protected Dispatch.', event);
+const workerFreeGeneration = state.workerGeneration;
+window.setTimeout(() => {
+if (
+!state.wanted ||
+state.stopping ||
+state.worker?.isConnected ||
+state.workerGeneration !== workerFreeGeneration
+) return;
+if (recoveryTarget?.url) createWorker(recoveryTarget.url);
+else beginMissionRescan();
+}, 120);
+return true;
+}
 function applyActiveWorkerFrameStyle(frame) {
 if (!frame) return;
 frame.style.cssText = [
@@ -6383,6 +6462,7 @@ if (!href || !doc) {
 setError('Background worker became inaccessible.', 'MissionChief worker is no longer same-origin or readable.');
 return;
 }
+if (maybeRecoverMissionAlarmWorker(href)) return;
 if (!ensureActiveWorkerOwnership(frame, 'worker-load')) {
 setError(
 'Worker A did not acquire V2 storage ownership',
@@ -6971,6 +7051,7 @@ if (!href || !doc) {
 setError('Background mission worker is no longer readable.', 'The worker disappeared or moved outside the same MissionChief origin.');
 return;
 }
+if (maybeRecoverMissionAlarmWorker(href)) return;
 if (!ensureActiveWorkerOwnership(state.worker, 'watcher')) {
 setError(
 'Worker A did not acquire V2 storage ownership',
@@ -22142,7 +22223,7 @@ bootMark('heavy-runtime-start');
             capturedAtUnix: Date.now(),
             reason: String(reason || 'manual-export'),
             versions: {
-                commandNexus: '3.0.18',
+                commandNexus: '3.0.19',
                 missionFinder: 'V10.6.177',
                 personnelAssignment: '1.3.8'
             },

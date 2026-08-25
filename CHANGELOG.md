@@ -6,6 +6,15 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
+## [3.0.19] - 2026-08-25
+
+### Fixed
+
+- A completed mission that leaves Worker A on the one-use `/missions/{id}/alarm` 404 route is now discarded immediately. Nexus preserves the final-dispatch latch, excludes the completed mission, removes A and all preloads, and resumes from a fresh canonical mission without repeating Dispatch. An unconfirmed `/alarm` route reopens only the normal mission page for verification.
+- Transient `/alarm` routes can no longer be stored or restored as resume-mission URLs.
+- Added permanent regression coverage for the supplied `Internal flooding (Risk to life)` failure sequence, no-target map rescan and unconfirmed-dispatch verification path.
+- Increased the unified userscript version from `3.0.18` to `3.0.19`.
+
 ## [3.0.18] - 2026-08-25
 
 ### Fixed
