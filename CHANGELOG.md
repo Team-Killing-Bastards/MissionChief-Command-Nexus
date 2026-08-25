@@ -6,6 +6,13 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
+## [3.0.20] - 2026-08-26
+
+### Changed
+
+- Reduced the disposable post-dispatch `/alarm` worker handoff from 120 ms to 80 ms so the next canonical mission starts sooner while preserving the worker-generation, duplicate-dispatch and exact-mission verification guards.
+- Increased the unified userscript version from `3.0.19` to `3.0.20`.
+
 ## [3.0.19] - 2026-08-25
 
 ### Fixed
