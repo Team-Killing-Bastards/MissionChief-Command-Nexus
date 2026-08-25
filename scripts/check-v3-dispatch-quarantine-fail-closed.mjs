@@ -106,7 +106,7 @@ const watchdogState = {
 const recoveryContext = vm.createContext({
   state: watchdogState,
   Date: { now: () => 16001, parse: value => Number(value) || 0 },
-  POST_DISPATCH_SOFT_RECOVERY_MS: 8000,
+  POST_DISPATCH_SOFT_RECOVERY_MS: 5000,
   POST_DISPATCH_HARD_RECOVERY_MS: 16000,
   POST_DISPATCH_RECOVERY_WINDOW_MS: 120000,
   missionIdFromUrl: () => '101',

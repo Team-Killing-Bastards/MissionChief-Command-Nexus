@@ -40,7 +40,7 @@ for (const [needle, label] of [
   ["const MF_NORMAL_AMBULANCE_TYPE_ID = '5';", 'Mission Upgrade Any vehicle ambulance type 5'],
   ['Maximum amount of cars to tow', 'maximum car towing rule'],
   ['Maximum amount of trucks to tow', 'maximum truck towing rule'],
-  ['POST_DISPATCH_SOFT_RECOVERY_MS = 8000', '8-second post-dispatch soft recovery'],
+  ['POST_DISPATCH_SOFT_RECOVERY_MS = 5000', '5-second post-dispatch soft recovery'],
   ['POST_DISPATCH_HARD_RECOVERY_MS = 16000', '16-second post-dispatch hard recovery'],
   ['preserveFinalDispatch: true', 'duplicate-dispatch guard preservation'],
   ['postDispatchPauseReason', 'transport-aware watchdog pause'],

@@ -46,7 +46,7 @@ expect(metadataVersion, 'Userscript metadata version missing');
 expect(source.includes(`const VERSION = '${metadataVersion}';`), 'Merged controller version must match userscript metadata');
 expect(source.includes(`const MASTER_VERSION = '${metadataVersion}';`), 'Master version must match userscript metadata');
 expect(/const MISSION_FINDER_VERSION = '\d+\.\d+\.\d+';/.test(source), 'Embedded Mission Finder version contract missing');
-expect(source.includes('const POST_DISPATCH_SOFT_RECOVERY_MS = 8000;'), '8-second soft recovery threshold missing');
+expect(source.includes('const POST_DISPATCH_SOFT_RECOVERY_MS = 5000;'), '5-second evidence-backed soft recovery threshold missing');
 expect(source.includes('const POST_DISPATCH_HARD_RECOVERY_MS = 16000;'), '16-second hard recovery threshold missing');
 expect(source.includes('const POST_DISPATCH_RECOVERY_WINDOW_MS = 120000;'), 'Two-minute repeated-stall circuit window missing');
 

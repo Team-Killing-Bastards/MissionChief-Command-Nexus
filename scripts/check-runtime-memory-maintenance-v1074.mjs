@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
+import vm from 'node:vm';
 
 const source = fs.readFileSync('src/missionchief-command-nexus.user.js', 'utf8');
 
@@ -107,7 +108,23 @@ expect(!namingModuleStart.includes('if (!TOOL_IS_TOP_WINDOW) return;'), 'Blanket
 
 const frameOwner = extractFunction('shouldKeepMissionFinderObserverForCurrentFrame');
 expect(frameOwner.includes('if (MF_IS_TOP_WINDOW) return true'), 'Top MissionChief document must retain its observer');
+expect(frameOwner.includes('if (isMfV3ManagedActiveWorker()) return true'), 'Verified managed Worker A must outrank stale or competing mission documents');
 expect(frameOwner.includes('getPrimaryMissionRequirementDocument() === document'), 'Child observer ownership must follow the visible primary mission document');
+expect(frameOwner.indexOf('isMfV3ManagedActiveWorker()') < frameOwner.indexOf('getPrimaryMissionRequirementDocument()'), 'Managed Worker A authority must be checked before generic cross-frame visibility ranking');
+const ownerDocument = { body: {} };
+const ownerContext = vm.createContext({
+  MF_IS_TOP_WINDOW: false,
+  document: ownerDocument,
+  isMissionPage: () => true,
+  isMfV3ManagedActiveWorker: () => true,
+  getPrimaryMissionRequirementDocument: () => ({ stale: true }),
+  result: null,
+});
+vm.runInContext(`${frameOwner}\nresult = shouldKeepMissionFinderObserverForCurrentFrame();`, ownerContext);
+expect(ownerContext.result === true, 'Verified managed Worker A must remain active when a stale visible mission document wins generic ranking');
+ownerContext.isMfV3ManagedActiveWorker = () => false;
+vm.runInContext('result = shouldKeepMissionFinderObserverForCurrentFrame();', ownerContext);
+expect(ownerContext.result === false, 'An unowned child frame must still yield to the primary visible mission document');
 
 const inactiveSuspend = extractFunction('suspendMissionFinderRuntimeForInactiveFrame');
 for (const token of [

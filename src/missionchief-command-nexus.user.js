@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      3.0.17
+// @version      3.0.18
 // @description  MissionChief automation with one active dispatcher, one adaptive page-warm preload, bounded transport recovery, memory cleanup and exact vehicle rules.
 // @author       MartyBlyth
 // @license      MIT
@@ -146,8 +146,8 @@ return;
 if (window.top !== window.self) return;
 if (window.__MCN_V3_CONTROLLER__) return;
 window.__MCN_V3_CONTROLLER__ = true;
-const VERSION = '3.0.17';
-const MASTER_VERSION = '3.0.17';
+const VERSION = '3.0.18';
+const MASTER_VERSION = '3.0.18';
 const MISSION_FINDER_VERSION = '10.6.177';
 const WORKER_ID = 'mcn-v3-background-mission-worker';
 const ROOT_ID = 'mcn-v3-map-controller';
@@ -211,7 +211,7 @@ const AUTO_RECOVERY_HISTORY_LIMIT = 80;
 const QUEUE_FAST_RELEASE_STABLE_MS = 650;
 const QUEUE_FAST_RELEASE_TRANSITION_WINDOW_MS = 10000;
 const QUEUE_FAST_RELEASE_HISTORY_LIMIT = 60;
-const POST_DISPATCH_SOFT_RECOVERY_MS = 8000;
+const POST_DISPATCH_SOFT_RECOVERY_MS = 5000;
 const POST_DISPATCH_HARD_RECOVERY_MS = 16000;
 const POST_DISPATCH_RECOVERY_WINDOW_MS = 120000;
 const POST_DISPATCH_RECOVERY_HISTORY_LIMIT = 50;
@@ -298,6 +298,8 @@ const CONTROLLER_RECYCLE_RESTART_DELAY_MS = 900;
 const CONTROLLER_RUNTIME_RECYCLE_HISTORY_LIMIT = 40;
 const CONTROLLER_IDENTITY_CACHE_LIMIT = 400;
 const CONTROLLER_EVENT_KEY_CACHE_LIMIT = 120;
+const ALLIANCE_RADIO_IGNORED_KEY_CACHE_LIMIT = 4000;
+const RADIO_SCAN_INTERVAL_MS = 1000;
 const LOG_LIMIT = 360;
 const state = {
 wanted: false,
@@ -376,6 +378,7 @@ radioRequestHistory: [],
 radioRequestSince: 0,
 radioRequestWarned: false,
 radioRequestWarningKey: '',
+radioScanAt: 0,
 runRadioTransportRequests: 0,
 allianceRadioIgnoredKeys: new Set(),
 allianceRadioIgnoredHistory: [],
@@ -895,6 +898,7 @@ state.runRetries = 0;
 state.runPatientTransports = 0;
 state.runPrisonerTransports = 0;
 state.runRadioTransportRequests = 0;
+state.radioScanAt = 0;
 state.allianceRadioIgnoredKeys = new Set();
 state.allianceRadioIgnoredHistory = [];
 state.runAllianceRadioIgnored = 0;
@@ -3077,7 +3081,7 @@ trimOldestMapEntries(state.missionNames, CONTROLLER_IDENTITY_CACHE_LIMIT);
 trimOldestMapEntries(state.missionRowSignatures, CONTROLLER_IDENTITY_CACHE_LIMIT);
 trimOldestMapEntries(state.missionSkipRecords, MISSION_SKIP_HISTORY_LIMIT);
 trimOldestMapEntries(state.transportRecoveryAttempts, TRANSPORT_RECOVERY_HISTORY_LIMIT);
-trimOldestSetEntries(state.allianceRadioIgnoredKeys, CONTROLLER_EVENT_KEY_CACHE_LIMIT);
+trimOldestSetEntries(state.allianceRadioIgnoredKeys, ALLIANCE_RADIO_IGNORED_KEY_CACHE_LIMIT);
 trimOldestSetEntries(state.prisonerReleaseHandledKeys, CONTROLLER_EVENT_KEY_CACHE_LIMIT);
 pruneRecentlyNativeAdvanced();
 }
@@ -4690,7 +4694,7 @@ const key = `${vehicleId}:${missionId}`;
 if (allianceLike) {
 if (!state.allianceRadioIgnoredKeys.has(key)) {
 state.allianceRadioIgnoredKeys.add(key);
-trimOldestSetEntries(state.allianceRadioIgnoredKeys, CONTROLLER_EVENT_KEY_CACHE_LIMIT);
+trimOldestSetEntries(state.allianceRadioIgnoredKeys, ALLIANCE_RADIO_IGNORED_KEY_CACHE_LIMIT);
 state.runAllianceRadioIgnored += 1;
 const ignored = {
 at: nowIso(),
@@ -4700,11 +4704,13 @@ missionId,
 vehicleLabel: normaliseText(row.querySelector(`a[href^="/vehicles/${CSS.escape(vehicleId)}"]`)?.textContent),
 rowText,
 };
+if (state.runAllianceRadioIgnored <= 5 || state.runAllianceRadioIgnored % 250 === 0) {
 state.allianceRadioIgnoredHistory.push(ignored);
 if (state.allianceRadioIgnoredHistory.length > RADIO_HISTORY_LIMIT) {
 state.allianceRadioIgnoredHistory.splice(0, state.allianceRadioIgnoredHistory.length - RADIO_HISTORY_LIMIT);
 }
-log('Ignored Alliance Radio Transport Request; it cannot enter the personal V3 work queue.', ignored);
+log('Ignored sampled Alliance Radio Transport Request; it cannot enter the personal V3 work queue.', ignored);
+}
 }
 continue;
 }
@@ -4767,6 +4773,13 @@ return true;
 }
 function refreshRadioTransportRequests() {
 const observedAt = Date.now();
+if (state.radioScanAt && observedAt - state.radioScanAt < RADIO_SCAN_INTERVAL_MS) {
+return state.radioTransportRequests.map(request => ({
+...request,
+pendingMs: Math.max(0, observedAt - Number(request.firstSeenAt || observedAt)),
+}));
+}
+state.radioScanAt = observedAt;
 const observedRequests = collectRadioTransportRequests();
 const nextKeys = new Set(observedRequests.map(request => request.key));
 for (const request of observedRequests) {
@@ -22129,7 +22142,7 @@ bootMark('heavy-runtime-start');
             capturedAtUnix: Date.now(),
             reason: String(reason || 'manual-export'),
             versions: {
-                commandNexus: '3.0.17',
+                commandNexus: '3.0.18',
                 missionFinder: 'V10.6.177',
                 personnelAssignment: '1.3.8'
             },
@@ -53256,6 +53269,7 @@ async function handleAutoPrisonerReleaseAfterActions() {
     function shouldKeepMissionFinderObserverForCurrentFrame() {
         if (MF_IS_TOP_WINDOW) return true;
         if (!document.body || !isMissionPage()) return false;
+        if (isMfV3ManagedActiveWorker()) return true;
         try {
             return getPrimaryMissionRequirementDocument() === document;
         } catch (_error) {
@@ -53704,6 +53718,9 @@ async function handleAutoPrisonerReleaseAfterActions() {
     function startMissionFinderObserver() {
         if (mfV3DormantPreload) return;
         globalThis.__MCN_BOOT_MARK__?.('mission-observer-entered', document.readyState);
+        if (isMfV3ManagedActiveWorker()) {
+            globalThis.__MCN_BOOT_MARK__?.('mission-observer-managed-active-owner');
+        }
         if (mfMainMutationObserver) return;
         installMissionFinderRuntimeCleanup();
         installMissionFinderFrameRuntimeReconciliation();
