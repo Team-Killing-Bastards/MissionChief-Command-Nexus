@@ -120,6 +120,21 @@ assert.doesNotMatch(
   /\.click\s*\(/,
   'bootstrap recovery must never issue a dispatch or UI click'
 );
+for (const token of [
+  'window.__MCN_BOOT_TRACE__',
+  "window.addEventListener('error'",
+  "window.addEventListener('unhandledrejection'",
+  "globalThis.__MCN_BOOT_MARK__?.('heavy-runtime-admitted')",
+  "globalThis.__MCN_BOOT_MARK__?.('mission-control-mounted')",
+  'state.activeBootstrapHistory.push(event)',
+  'compactControllerEphemeralMemory()',
+  'CONTROLLER_RECYCLE_RESTART_DELAY_MS',
+]) assert.ok(source.includes(token), `bootstrap evidence/recovery contract lost: ${token}`);
+assert.ok(
+  waitForNexusAndStart.indexOf('removeWorker(false)') <
+    waitForNexusAndStart.indexOf('createWorker(rescueUrl)'),
+  'the retry must release Worker A before creating its clean replacement'
+);
 
 function createHarness({
   href,
@@ -128,7 +143,7 @@ function createHarness({
   totalRescues = 0,
   now = 0
 }) {
-  const frame = { href };
+  const frame = { href, isConnected: true, contentWindow: { __MCN_BOOT_TRACE__: { events: [{ stage: 'embedded-start' }] } } };
   const timers = [];
   const calls = {
     createWorker: [],
@@ -144,6 +159,8 @@ function createHarness({
     activeBootstrapRescueMissionId: rescueMissionId,
     activeBootstrapRescueAttempts: rescueAttempts,
     activeBootstrapRescues: totalRescues,
+    activeBootstrapHistory: [],
+    stopping: false,
     currentMissionUrl: href,
     bootstrapMissionUrl: href,
     currentMissionName: 'Regression mission'
@@ -157,6 +174,8 @@ function createHarness({
     ACTIVE_BOOTSTRAP_RESCUE_AFTER_MS: 6500,
     ACTIVE_BOOTSTRAP_RESCUE_LIMIT_PER_MISSION: 1,
     NEXUS_DISCOVERY_TIMEOUT_MS: 22000,
+    CONTROLLER_RECYCLE_RESTART_DELAY_MS: 900,
+    PROMOTION_RECOVERY_HISTORY_LIMIT: 30,
     MISSION_FINDER_VERSION: '10.6.177',
     window: {
       setTimeout(callback, delay) {
@@ -175,7 +194,8 @@ function createHarness({
       calls.ownership += 1;
       return true;
     },
-    getWorkerDocument: () => ({}),
+    getWorkerDocument: () => ({ readyState: 'complete' }),
+    nowIso: () => '2026-08-25T00:00:00.000Z',
     adoptWorkerDocument: () => {},
     applyAirfieldOperationsSupervisorCrossRef: () => {},
     installAirfieldOperationsSupervisorObservers: () => {},
@@ -191,6 +211,12 @@ function createHarness({
     },
     log: () => {},
     pausePipelineController: () => {},
+    compactControllerEphemeralMemory: () => {},
+    removeWorker() {
+      frame.isConnected = false;
+      state.worker = null;
+      state.workerGeneration += 1;
+    },
     createWorker(url) {
       calls.createWorker.push(url);
     }
@@ -278,7 +304,11 @@ assert.equal(
   5,
   'lifetime rescue telemetry must remain cumulative without acting as a cap'
 );
+assert.equal(firstMission.state.activeBootstrapHistory.length, 1);
+assert.equal(firstMission.state.activeBootstrapHistory[0].trace.events[0].stage, 'embedded-start');
 firstMission.runTimer(120);
+assert.deepEqual(firstMission.calls.createWorker, [], 'clean recovery must leave a worker-free reclamation gap');
+firstMission.runTimer(900);
 assert.deepEqual(
   firstMission.calls.createWorker,
   ['https://www.missionchief.co.uk/missions/258882842'],
