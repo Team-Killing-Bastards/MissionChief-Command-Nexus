@@ -6,6 +6,22 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
+## [3.0.18] - 2026-08-25
+
+### Fixed
+
+- A same-origin managed Worker A with a verified active ownership bridge is now authoritative before Mission Finder compares visible mission documents. This prevents a stale or competing mission frame after sleep/transport recovery from making the real active worker suspend itself as `mission-observer-inactive-owner`.
+- Alliance Radio transport requests now retain a larger bounded distinct-key set and sample diagnostic history/log entries, preventing evicted rows from being counted and logged again on every controller pass.
+
+### Performance
+
+- Full Radio Transport DOM scans are capped at once per second instead of running on every 160 ms controller heartbeat. Cached requests retain live pending durations, so mission processing avoids millions of repeated Alliance-row operations while new personal transport requests remain bounded to a one-second discovery delay.
+- The duplicate-dispatch-safe soft queue-lock recovery now runs after five seconds instead of eight. The long-run evidence showed 62 affected missions and a 10.8-second median dispatch-to-next-mission interval; this earlier step only releases stale opening locks and requests runtime reconciliation, while the 16-second hard recovery and repeated-stall circuit breaker remain unchanged.
+
+### Diagnostics and safety
+
+- Embedded bootstrap traces now identify `mission-observer-managed-active-owner` when verified Worker A bypasses generic cross-frame visibility ranking. Dormant and unowned frames remain excluded, and no dispatch timing or duplicate-dispatch guard was weakened.
+
 ## [3.0.17] - 2026-08-25
 
 ### Fixed

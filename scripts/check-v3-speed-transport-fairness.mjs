@@ -142,6 +142,7 @@ let clock = 1000;
 let observedRequests = [];
 const rehooks = [];
 const radioState = {
+  radioScanAt: 0,
   radioRequestFirstSeenAt: new Map(),
   radioRequestKeys: new Set(),
   radioRequestHistory: [],
@@ -161,6 +162,7 @@ const radioContext = vm.createContext({
   log() {},
   schedulePostTransportRehook: key => rehooks.push(key),
   RADIO_HISTORY_LIMIT: 40,
+  RADIO_SCAN_INTERVAL_MS: 1000,
   result: null,
 });
 vm.runInContext(`${refresh}\nthis.__refresh = refreshRadioTransportRequests;`, radioContext);
@@ -173,7 +175,7 @@ assert.equal(radioState.radioTransportRequests[0].key, requestA.key);
 assert.equal(radioState.radioTransportRequests[0].pendingMs, 1000);
 assert.equal(radioState.radioRequestSince, 1000);
 radioState.transportServiceDeferredUntil.set(requestA.key, 9000);
-clock = 2500;
+clock = 3000;
 observedRequests = [requestB];
 radioContext.__refresh();
 assert.equal(radioState.radioTransportRequests[0].key, requestB.key);
