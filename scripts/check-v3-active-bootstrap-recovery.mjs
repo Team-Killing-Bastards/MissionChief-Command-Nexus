@@ -197,6 +197,7 @@ function createHarness({
     getWorkerDocument: () => ({ readyState: 'complete' }),
     nowIso: () => '2026-08-25T00:00:00.000Z',
     adoptWorkerDocument: () => {},
+    maybeRecoverStaleCanonicalMissionWorker: () => false,
     applyAirfieldOperationsSupervisorCrossRef: () => {},
     installAirfieldOperationsSupervisorObservers: () => {},
     maybeRedirectSkippedMissionBeforeAuto: () => false,
