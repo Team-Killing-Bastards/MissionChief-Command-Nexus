@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      3.0.20
-// @description  MissionChief automation with one active dispatcher, one adaptive page-warm preload, bounded transport recovery, memory cleanup and exact vehicle rules.
+// @version      3.0.21
+// @description  MissionChief safe background automation.
 // @author       MartyBlyth
 // @license      MIT
 // @homepageURL  https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
@@ -12,7 +12,6 @@
 // @grant        none
 // @run-at       document-start
 // ==/UserScript==
-/* V3 controller: executes first so A/B storage ownership exists at document-start. */
 (() => {
 'use strict';
 const ACTIVE_WORKER_NAME_PREFIX = 'mcn-v3-active-worker-';
@@ -146,8 +145,8 @@ return;
 if (window.top !== window.self) return;
 if (window.__MCN_V3_CONTROLLER__) return;
 window.__MCN_V3_CONTROLLER__ = true;
-const VERSION = '3.0.20';
-const MASTER_VERSION = '3.0.20';
+const VERSION = '3.0.21';
+const MASTER_VERSION = '3.0.21';
 const MISSION_FINDER_VERSION = '10.6.177';
 const WORKER_ID = 'mcn-v3-background-mission-worker';
 const ROOT_ID = 'mcn-v3-map-controller';
@@ -232,6 +231,7 @@ const PIPELINE_TARGET_ROTATION_GRACE_MS = 6000;
 const PIPELINE_READY_HANDOFF_GRACE_MS = 15000;
 const ACTIVE_BOOTSTRAP_RESCUE_AFTER_MS = 6500;
 const ACTIVE_BOOTSTRAP_RESCUE_LIMIT_PER_MISSION = 1;
+const STALE_CANONICAL_MISSION_SETTLE_MS = 1200;
 const ACTIVE_CONTROL_DROPOUT_RESCUE_MS = 12000;
 const ACTIVE_CONTROL_PROGRESS_GRACE_MS = 20000;
 const ACTIVE_CONTROL_DROPOUT_WINDOW_MS = 120000;
@@ -314,6 +314,8 @@ workerLoadTimer: null,
 nexusDiscoveryTimer: null,
 watcherTimer: null,
 missionRescanTimer: null,
+staleCanonicalMissionCandidateKey: '',
+staleCanonicalMissionCandidateSince: 0,
 bootstrapMissionUrl: '',
 currentMissionUrl: '',
 currentMissionId: '',
@@ -888,6 +890,12 @@ function missionAlarmSubmissionId(value) {
 const url = sameOriginUrl(value);
 if (!url) return '';
 const match = url.pathname.match(/^\/missions\/(\d+)\/alarm\/?$/i);
+return match ? match[1] : '';
+}
+function canonicalMissionPageId(value) {
+const url = sameOriginUrl(value);
+if (!url) return '';
+const match = url.pathname.match(/^\/missions\/(\d+)\/?$/i);
 return match ? match[1] : '';
 }
 function pathFromUrl(value) {
@@ -5405,10 +5413,6 @@ state.transportServiceActive ||
 !context?.kind ||
 !state.transportSince
 ) return false;
-// A no-cell prisoner screen is owned by the exact Release Prisoners fallback.
-// It can legitimately outlive the generic 20-second transport watchdog while
-// MissionChief replaces and closes the prisoner lightbox, so never rebuild the
-// worker underneath that verified release flow.
 if (isPrisonerReleaseFallbackContext(context)) return false;
 if (
 isCompletedPrisonerDestinationContext(context, href) &&
@@ -5817,72 +5821,80 @@ return frame.contentWindow.location.href || '';
 return '';
 }
 }
-function maybeRecoverMissionAlarmWorker(href) {
-const missionId = missionAlarmSubmissionId(href);
-if (!missionId) return false;
-const dispatchProtected =
-state.postDispatchWatchdog?.missionId === missionId ||
+function resetStaleCanonicalMissionCandidate() {
+state.staleCanonicalMissionCandidateKey = '';
+state.staleCanonicalMissionCandidateSince = 0;
+}
+function maybeRecoverDisposedMissionWorker(href, doc, source = 'watcher') {
+const alarm = Boolean(missionAlarmSubmissionId(href));
+const missionId = alarm ? missionAlarmSubmissionId(href) : canonicalMissionPageId(href);
+let elapsedMs = 0;
+let missionCandidates = [];
+if (!alarm) {
+const root = findMissionListRoot();
+missionCandidates = root ? collectMissionCandidates() : [];
+const stale = missionId && doc?.readyState === 'complete' &&
+!doc.querySelector?.('#mission_general_info') && !detectTransportContext(doc, href)?.kind &&
+root && !missionCandidates.some(item => String(item?.missionId || '') === missionId);
+if (!stale) { resetStaleCanonicalMissionCandidate(); return false; }
+const key = `${state.workerGeneration}:${state.workerDocumentSerial}:${missionId}`;
+if (state.staleCanonicalMissionCandidateKey !== key) {
+state.staleCanonicalMissionCandidateKey = key;
+state.staleCanonicalMissionCandidateSince = Date.now();
+log('Stale mission settle.', { missionId, source });
+return false;
+}
+elapsedMs = Date.now() - state.staleCanonicalMissionCandidateSince;
+if (elapsedMs < STALE_CANONICAL_MISSION_SETTLE_MS) return false;
+}
+const dispatchProtected = state.postDispatchWatchdog?.missionId === missionId ||
 readSharedV2QueueGuardState().finalDispatch === 'true';
-const nextTarget = dispatchProtected ? choosePostDispatchRecoveryTarget(missionId) : null;
-const recoveryTarget = nextTarget || (
-dispatchProtected
-? null
-: {
-source: 'ALARM_ROUTE_VERIFICATION',
+if (!alarm || dispatchProtected) state.recentlyNativeAdvanced.set(missionId, Date.now());
+const recoveryTarget = alarm && !dispatchProtected ? {
 missionId,
 url: new URL(`/missions/${missionId}`, location.origin).href,
-}
-);
+} : choosePostDispatchRecoveryTarget(missionId);
+const recoveryReason = alarm ? 'post-dispatch-alarm-worker' : 'stale-canonical-mission-worker';
 const event = {
-at: nowIso(),
-missionId,
-dispatchProtected,
-action: recoveryTarget
-? (recoveryTarget.missionId === missionId
-? 'verify-canonical-mission'
-: 'start-fresh-mission')
-: 'rescan-map',
+at: nowIso(), missionId, source, elapsedMs, dispatchProtected, recoveryReason,
+action: recoveryTarget?.missionId === missionId ? 'verify-canonical-mission' :
+(recoveryTarget?.url ? 'start-fresh-mission' : 'rescan-map'),
 nextMissionId: recoveryTarget?.missionId || '',
 };
 state.postDispatchRecoveryHistory.push(event);
 if (state.postDispatchRecoveryHistory.length > POST_DISPATCH_RECOVERY_HISTORY_LIMIT) state.postDispatchRecoveryHistory.shift();
-if (dispatchProtected) state.recentlyNativeAdvanced.set(missionId, Date.now());
-const recoveryReason = 'post-dispatch-alarm-worker';
-clearSharedV2QueueGuard(
-recoveryReason,
-missionId,
-{ preserveFinalDispatch: dispatchProtected }
-);
+clearSharedV2QueueGuard(recoveryReason, missionId, { preserveFinalDispatch: dispatchProtected });
 clearSharedV2AutoRunning(recoveryReason);
 clearAutoRecoveryWatchdog(recoveryReason);
 state.running = false;
 pausePipelineController(recoveryReason, true);
 finaliseActiveMissionTiming(recoveryReason);
 removeWorker(false);
+resetStaleCanonicalMissionCandidate();
 compactControllerEphemeralMemory();
 if (recoveryTarget?.url) persistResumeMission(recoveryTarget.url);
 else sessionSet(SESSION_RESUME_MISSION, '');
 saveRunContinuity();
 setPhase(
-'POST_DISPATCH_RECOVERY',
-'Discarding one-use mission page',
-recoveryTarget?.missionId
-? `Mission ${missionId} opened /alarm. Starting mission ${recoveryTarget.missionId} in a fresh Worker A without repeating Dispatch.`
-: `Mission ${missionId} opened /alarm. Waiting for a fresh mission without repeating Dispatch.`
+alarm ? 'POST_DISPATCH_RECOVERY' : 'STALE_MISSION_RECOVERY',
+'Restarting mission worker'
 );
-log('Discarded the one-use /alarm worker and protected Dispatch.', event);
+log('Mission worker recovered.', event);
 const workerFreeGeneration = state.workerGeneration;
 window.setTimeout(() => {
-if (
-!state.wanted ||
-state.stopping ||
-state.worker?.isConnected ||
-state.workerGeneration !== workerFreeGeneration
-) return;
+if (!state.wanted || state.stopping || state.worker?.isConnected ||
+state.workerGeneration !== workerFreeGeneration) return;
 if (recoveryTarget?.url) createWorker(recoveryTarget.url);
 else beginMissionRescan();
 }, 80);
 return true;
+}
+function maybeRecoverMissionAlarmWorker(href) {
+return missionAlarmSubmissionId(href) ?
+maybeRecoverDisposedMissionWorker(href, getWorkerDocument(), 'alarm-route') : false;
+}
+function maybeRecoverStaleCanonicalMissionWorker(href, doc, source) {
+return maybeRecoverDisposedMissionWorker(href, doc, source);
 }
 function applyActiveWorkerFrameStyle(frame) {
 if (!frame) return;
@@ -6484,6 +6496,7 @@ state.redirectTargetMissionId = '';
 }
 state.lastWorkerHref = href;
 state.lastWorkerNavigationAt = Date.now();
+if (maybeRecoverStaleCanonicalMissionWorker(href, doc, 'worker-load')) return;
 if (state.autoRecoveryCandidateKey && state.autoRecoveryCandidateMissionId !== state.currentMissionId) {
 clearAutoRecoveryWatchdog('worker-load-mission-changed');
 }
@@ -6579,6 +6592,7 @@ return;
 }
 const doc = getWorkerDocument(frame);
 if (doc) adoptWorkerDocument(doc, href, 'nexus-discovery');
+if (maybeRecoverStaleCanonicalMissionWorker(href, doc, 'nexus-discovery')) return;
 applyAirfieldOperationsSupervisorCrossRef(doc);
 installAirfieldOperationsSupervisorObservers(doc);
 if (maybeRedirectSkippedMissionBeforeAuto(href, 'nexus-discovery')) {
@@ -7060,6 +7074,7 @@ setError(
 return;
 }
 const documentChanged = adoptWorkerDocument(doc, href, 'watcher');
+if (maybeRecoverStaleCanonicalMissionWorker(href, doc, 'watcher')) return;
 if (href !== state.lastWorkerHref) {
 const previousHref = state.lastWorkerHref;
 const previousMissionId = missionIdFromUrl(previousHref);
@@ -7362,6 +7377,7 @@ function removeWorker(logRemoval = true) {
 clearTimer('workerLoadTimer');
 clearTimer('nexusDiscoveryTimer');
 clearTimer('watcherTimer', window.clearInterval);
+resetStaleCanonicalMissionCandidate();
 captureWorkerSnapshot();
 if (state.activeTransportEvent) endTransportEvent('worker-removed');
 clearPostDispatchWatchdog('worker-removed');
@@ -12416,7 +12432,6 @@ bootMark('heavy-runtime-start');
                 margin: 0 8px 8px;
             }
             /* End iOS Safari Personnel Assignment completeness contract. */
-            /* Command Nexus visual system V1.0.70 — desktop naming workspace. */
             #mc-namer-panel:not(.mc-ios-safari) {
                 --nx-bg: #080d14;
                 --nx-surface: #0d141e;
@@ -12904,7 +12919,6 @@ bootMark('heavy-runtime-start');
                     grid-area: auto !important;
                 }
             }
-            /* Command Nexus compact operations panel V1.0.71. */
             #mc-namer-panel:not(.mc-ios-safari) {
                 top: 54px;
                 right: 10px;
@@ -21417,9 +21431,6 @@ bootMark('heavy-runtime-start');
         });
     }
     const crossReference = {
-        /*************************************************
-         * FIRE
-         *************************************************/
         "Pumps": "Fire Engine R/PUMP x 1",
         "Pump": "Fire Engine R/PUMP x 1",
         "Fire engine": "Fire Engine R/PUMP x 1",
@@ -21457,9 +21468,6 @@ bootMark('heavy-runtime-start');
         "Water Carrier": "Water Carrier",
         "Water Carriers": "Water Carrier",
         "Welfare Vehicles x1": "Welfare Vehicle",
-        /*************************************************
-         * POLICE
-         *************************************************/
         "Police Car": "Police Car",
         "Police Cars": "Police Car",
         "Police car": "Police Car",
@@ -21501,9 +21509,6 @@ bootMark('heavy-runtime-start');
         "modules.missionHelper.vehicles.captions.railway_police": "railway police",
         "modules.missionHelper.prerequisites.railway_police": "EIU",
         "modules.missionHelper.prerequisites.railway_police_command": "EIU",
-        /*************************************************
-         * AMBULANCE
-         *************************************************/
         "Ambulance": "Ambulance",
         "Ambulances": "Ambulance",
         "Any vehicle": "Ambulance",
@@ -21549,9 +21554,6 @@ bootMark('heavy-runtime-start');
         "Required RRVs or Specialist Paramedic RRVs": "RRV",
         "Community Midwife": "Community Midwife",
         "Community Midwifes": "Community Midwife",
-        /*************************************************
-         * COASTGUARD / LIFEBOAT
-         *************************************************/
         "CRV": "CRV",
         "CRVs": "CRV",
         "Inland Rescue Boat (Trailer)": "Inland Rescue Boat (Trailer)",
@@ -21603,9 +21605,6 @@ bootMark('heavy-runtime-start');
         "Mud Decontamination Units": "Mud Decontamination Unit",
         "Coastguard Commander": "CG Commander",
         "Flood Rescue Units":"Flood Rescue",
-        /*************************************************
-         * AIRFIELD OPS
-         *************************************************/
         "Airfield Operations Vehicle": "Airfield Operations Vehicle",
         "Airfield Operations Vehicles": "Airfield Operations Vehicle",
         "Aerial Appliance Truck or Rescue Stairs": "Rescue Stairs",
@@ -21632,9 +21631,6 @@ bootMark('heavy-runtime-start');
         "Airfield Firefighting Command Vehicle": "Airfield FF Command Vehicle",
         "ICCU or Ambulance Control Units or Airfield Firefighting Command Vehicles": "Airfield FF Command Vehicle",
         "Fire Officers or Airfield Firefighting Command Vehicles": "Fire Officer",
-        /*************************************************
-         * SEARCH & RESCUE / FLOOD / RECOVERY / BOMB
-         *************************************************/
         "Flood Rescue Unit": "Flood Rescue Unit (Trailer)",
         "4x4 Vehicle": "4x4 Units",
         "4x4 Vehicles": "4x4 Units",
@@ -22223,7 +22219,7 @@ bootMark('heavy-runtime-start');
             capturedAtUnix: Date.now(),
             reason: String(reason || 'manual-export'),
             versions: {
-                commandNexus: '3.0.20',
+                commandNexus: '3.0.21',
                 missionFinder: 'V10.6.177',
                 personnelAssignment: '1.3.8'
             },
@@ -26809,7 +26805,6 @@ function isRoadRailUnitVehicleCheckbox(input) {
                 justify-content: flex-start;
                 text-align: left;
             }
-            /* iPhone Safari only. iPad remains on the established iOS layout. */
             #mission-finder-wrapper.mf2026-iphone-safari {
                 --mf-iphone-close-gutter: 48px;
                 --mf-iphone-launcher-top: 0px;
@@ -27056,7 +27051,6 @@ function isRoadRailUnitVehicleCheckbox(input) {
                 max-height: 12vh;
                 padding-right: 0;
             }
-            /* MissionChief Nexus integrated mission dashboard (V10.6.132). */
             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) {
                 display: grid;
                 grid-template-columns: 66px repeat(3, minmax(235px, 1fr));
@@ -27341,7 +27335,6 @@ function isRoadRailUnitVehicleCheckbox(input) {
                     max-height: 310px;
                 }
             }
-            /* Command Nexus visual system V1.0.70 — desktop mission surface. */
             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) {
                 --nx-bg: #080d14;
                 --nx-surface: #0d141e;
@@ -27899,7 +27892,6 @@ function isRoadRailUnitVehicleCheckbox(input) {
                     padding-inline: 5px;
                 }
             }
-            /* Command Nexus compact mission shell V1.0.71. */
             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) {
                 grid-template-columns: minmax(0, 1fr);
                 grid-template-areas:
@@ -28123,7 +28115,6 @@ function isRoadRailUnitVehicleCheckbox(input) {
                     padding: 4px;
                 }
             }
-            /* Attached Vehicle Load drawer V1.0.72. */
             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) {
                 position: fixed;
                 overflow: visible;
@@ -28133,6 +28124,7 @@ function isRoadRailUnitVehicleCheckbox(input) {
                 position: relative;
                 z-index: 3;
             }
+            /* Attached Vehicle Load drawer V1.0.72. */
             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
             #control-panel:not(.mf2026-control-collapsed)
             .mf-control-body {

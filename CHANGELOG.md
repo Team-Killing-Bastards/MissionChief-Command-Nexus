@@ -6,6 +6,16 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
+## [3.0.21] - 2026-08-26
+
+### Fixed
+
+- A completed generated mission that returns from transport recovery on a normal `/missions/{id}` URL without `#mission_general_info` no longer enters the Mission Finder bootstrap retry and fatal stop path. After a 1.2-second settle, the controller requires the mission to be absent from the authoritative live map, discards Worker A and resumes from the next actionable canonical mission.
+- Stale canonical-page recovery preserves any final-dispatch latch, excludes the dead mission from immediate reselection and returns to map scanning when no fresh mission exists. It never clicks Dispatch.
+- Live mission shells, missions still listed on the map, active patient/prisoner transport contexts and pages without an authoritative mission list remain fail-closed and untouched.
+- Added permanent regression coverage for both supplied `Smoke Inhalation` failure sequences, the no-target rescan path and every recovery exclusion gate.
+- Increased the unified userscript version from `3.0.20` to `3.0.21`.
+
 ## [3.0.20] - 2026-08-26
 
 ### Changed

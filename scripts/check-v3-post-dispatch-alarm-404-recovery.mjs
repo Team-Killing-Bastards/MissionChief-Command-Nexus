@@ -69,15 +69,17 @@ function extractFunction(name) {
 }
 
 const missionAlarmSubmissionId = extractFunction('missionAlarmSubmissionId');
+const resetStaleCandidate = extractFunction('resetStaleCanonicalMissionCandidate');
+const disposedRecovery = extractFunction('maybeRecoverDisposedMissionWorker');
 const recover = extractFunction('maybeRecoverMissionAlarmWorker');
 const persistResumeMission = extractFunction('persistResumeMission');
 const storedResumeMissionUrl = extractFunction('storedResumeMissionUrl');
 
-assert.doesNotMatch(recover, /\.click\s*\(/, '404/alarm recovery must never click Dispatch');
-assert.match(recover, /preserveFinalDispatch:\s*dispatchProtected/, 'the final-dispatch latch must be preserved');
-assert.match(recover, /removeWorker\(false\)/, 'the broken Worker A must be removed');
-assert.match(recover, /choosePostDispatchRecoveryTarget\(missionId\)/, 'recovery must select a fresh mission excluding the completed mission');
-assert.match(recover, /beginMissionRescan\(\)/, 'recovery must wait on the map when no fresh mission exists');
+assert.doesNotMatch(disposedRecovery, /\.click\s*\(/, '404/alarm recovery must never click Dispatch');
+assert.match(disposedRecovery, /preserveFinalDispatch:\s*dispatchProtected/, 'the final-dispatch latch must be preserved');
+assert.match(disposedRecovery, /removeWorker\(false\)/, 'the broken Worker A must be removed');
+assert.match(disposedRecovery, /choosePostDispatchRecoveryTarget\(missionId\)/, 'recovery must select a fresh mission excluding the completed mission');
+assert.match(disposedRecovery, /beginMissionRescan\(\)/, 'recovery must wait on the map when no fresh mission exists');
 
 function createHarness({
   href = 'https://www.missionchief.co.uk/missions/259126557/alarm',
@@ -148,6 +150,7 @@ function createHarness({
       }
     },
     missionIdFromUrl: value => String(value).match(/\/missions\/(\d+)/)?.[1] || '',
+    getWorkerDocument: () => doc,
     isMissionUrl: value => /\/missions\/\d+/.test(String(value)),
     readSharedV2QueueGuardState: () => ({ finalDispatch: dispatchProtected ? 'true' : '' }),
     choosePostDispatchRecoveryTarget: () => nextTarget,
@@ -183,7 +186,7 @@ function createHarness({
   });
 
   vm.runInContext(
-    `${missionAlarmSubmissionId}\n${persistResumeMission}\n${storedResumeMissionUrl}\n${recover}\nresult = maybeRecoverMissionAlarmWorker(href);`,
+    `${missionAlarmSubmissionId}\n${resetStaleCandidate}\n${disposedRecovery}\n${persistResumeMission}\n${storedResumeMissionUrl}\n${recover}\nresult = maybeRecoverMissionAlarmWorker(href);`,
     context
   );
 
