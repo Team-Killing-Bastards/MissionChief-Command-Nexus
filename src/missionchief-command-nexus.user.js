@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      3.0.21
+// @version      3.0.22
 // @description  MissionChief safe background automation.
 // @author       MartyBlyth
 // @license      MIT
@@ -145,8 +145,8 @@ return;
 if (window.top !== window.self) return;
 if (window.__MCN_V3_CONTROLLER__) return;
 window.__MCN_V3_CONTROLLER__ = true;
-const VERSION = '3.0.21';
-const MASTER_VERSION = '3.0.21';
+const VERSION = '3.0.22';
+const MASTER_VERSION = '3.0.22';
 const MISSION_FINDER_VERSION = '10.6.177';
 const WORKER_ID = 'mcn-v3-background-mission-worker';
 const ROOT_ID = 'mcn-v3-map-controller';
@@ -20336,55 +20336,27 @@ bootMark('heavy-runtime-start');
     const MF_LIVE_TRAINING_VERIFY_CACHE_MS = 10 * 60 * 1000;
     const MF_LIVE_TRAINING_VERIFY_BATCH_SIZE = 6;
     const MF_LIVE_TRAINING_VERIFY_CACHE_LIMIT = 600;
-    const MF_STRICT_TRAINING_SOURCE_PREFIX =
-        'mission-finder-live-strict-';
-    const MF_EXACT_REGISTER_TRAINING_SOURCE_PREFIX =
-        'personnel-register-exact-';
-    // personnel-register-exact-all-vehicle-scan-v2
+    const MF_STRICT_TRAINING_SOURCE_PREFIX = 'mission-finder-live-strict-';
+    const MF_EXACT_REGISTER_TRAINING_SOURCE_PREFIX = 'personnel-register-exact-';
     const MF_EXACT_REGISTER_TRAINING_MAX_AGE_MS =
         180 * 24 * 60 * 60 * 1000;
     const MF_KNOWN_UNSTAFFED_AMBULANCE_MAX_AGE_MS =
         24 * 60 * 60 * 1000;
-    const MF_PROTECTED_ORDINARY_IRV_TRAINING_CODES =
-        Object.freeze([
-            'level_1_public_order',
-            'level_2_public_order',
-            'police_sergeant',
-            'police_medic',
-            'police_inspector',
-            'traffic_police',
-            'swat',
-            'police_horse',
-            'k9',
-            'drone',
-            'search_and_rescue',
-            'polizeihubschrauber',
-            'railway_police_command',
-            'railway_police',
-            'bomb_disposal_command',
-            'bomb_disposal',
-            'bomb_disposal_diver'
-        ]);
-    const MF_PSU_COMPATIBLE_TRAINING_CODES =
-        Object.freeze([
-            'level_1_public_order',
-            'level_2_public_order',
-            'police_sergeant',
-            'police_medic',
+    const MF_PROTECTED_ORDINARY_IRV_TRAINING_CODES = Object.freeze([
+        'level_1_public_order','level_2_public_order','police_sergeant','police_medic','police_inspector','traffic_police','swat','police_horse','k9','drone','search_and_rescue','polizeihubschrauber','railway_police_command','railway_police','bomb_disposal_command','bomb_disposal','bomb_disposal_diver'
+    ]);
+    const MF_PSU_COMPATIBLE_TRAINING_CODES = Object.freeze([
+        'level_1_public_order','level_2_public_order','police_sergeant','police_medic',
             'railway_police'
-        ]);
-    const MF_TRAINED_VEHICLE_CAPACITY_BY_TYPE =
-        Object.freeze({
-            '51': 9,
-            '8': 2,
-            '25': 2
-        });
+    ]);
+    const MF_TRAINED_VEHICLE_CAPACITY_BY_TYPE = Object.freeze({'51': 9,'8': 2,'25':2});
     const MF_ORDINARY_IRV_VERIFY_MAX_PAGES = 64;
     const MF_ORDINARY_IRV_VERIFY_BATCH_SIZE = 6;
     const MF_AUTO_VEHICLE_LIST_STABLE_TIMEOUT_MS = 9000;
     const MF_AUTO_VEHICLE_LIST_STABLE_FOR_MS = 650;
     const MF_AUTO_VEHICLE_LIST_MIN_SETTLE_MS = 450;
     const MF_AUTO_VEHICLE_LIST_LOAD_TIMEOUT_MS = 20000;
+    const MF_VEHICLE_NEXT_PAGE_SETTLE_MS = 1200;
     const mfLiveTrainingVerifyCache = new Map();
     let mfPersonnelRegistryUpdatedHandler = null;
     function pruneLiveTrainingVerifyCache(
@@ -21431,285 +21403,285 @@ bootMark('heavy-runtime-start');
         });
     }
     const crossReference = {
-        "Pumps": "Fire Engine R/PUMP x 1",
-        "Pump": "Fire Engine R/PUMP x 1",
-        "Fire engine": "Fire Engine R/PUMP x 1",
-        "Fire engines": "Fire Engine R/PUMP x 1",
-        "Fire Engine": "Fire Engine R/PUMP x 1",
-        "Fire Engines": "Fire Engine R/PUMP x 1",
-        "Aerial Appliance": "CARP",
-        "Aerial Appliances": "CARP",
-        "Aerial Appliance Truck": "CARP",
-        "Aerial Appliance Trucks": "CARP",
-        "Fire, rescue or aerial appliance": "Rescue Pump",
-        "Road Rail Unit": "Road Rail Unit",
-        "Road Rail Units": "Road Rail Unit",
-        "Firefighter": "Rescue Pump",
-        "Firefighters": "Rescue Pump",
-        "Required Firefighter": "Rescue Pump",
-        "Required Firefighters": "Rescue Pump",
-        "Car Recovery": "Flatbed Recovery Vehicle",
-        "Required Car Recovery": "Flatbed Recovery Vehicle",
-        "ICCU or Ambulance Control Unit": "ICCU/ACU",
-        "ICCU or Ambulance Control Units": "ICCU/ACU",
-        "ICCUs or Ambulance Control Units": "ICCU/ACU",
-        "Fire Officer": "Fire Officer",
-        "Fire Officers": "Fire Officer",
-        "Rescue Support Unit": "Fire Engine R/PUMP x 1",
-        "Rescue Support Units": "Fire Engine R/PUMP x 1",
-        "Rescue Support Vehicle": "Fire Engine R/PUMP x 1",
-        "Rescue Support Vehicles": "Fire Engine R/PUMP x 1",
-        "Rescue Support Unit or Rescue Pump": "Fire Engine R/PUMP x 1",
-        "Rescue Support Units or Rescue Pumps": "Fire Engine R/PUMP x 1",
-        "Fire Engines or Rescue Support Vehicles": "Fire Engine R/PUMP x 1",
-        "Fire Engines, Rescue Support Vehicles or Aerial Appliance Trucks": "Fire Engine R/PUMP x 1",
-        "Foam Unit": "RP CAFS",
-        "Foam Units": "RP CAFS",
-        "Water Carrier": "Water Carrier",
-        "Water Carriers": "Water Carrier",
-        "Welfare Vehicles x1": "Welfare Vehicle",
-        "Police Car": "Police Car",
-        "Police Cars": "Police Car",
-        "Police car": "Police Car",
-        "Police cars": "Police Car",
-        "Police Officer": "Police Car",
-        "Police Officers": "Police Car",
-        "Traffic Car": "Police ATC",
-        "Traffic Cars": "Police ATC",
-        "Police Cars or Armed Response Vehicles (ARVs)": "Police ATC",
-        "Armed Response Personnel (In Armed Vehicles)": "Police ATC",
-        "Dog Support Unit (DSU)": "Police DSU",
-        "Dog Support Units (DSU)": "Police DSU",
-        "Dog Support Units (DSUs)": "Police DSU",
-        "Mounted Unit": "Mounted Unit",
-        "Mounted Units": "Mounted Unit",
-        "Police Inspector": "Police Inspector",
-        "Police Sergeant": "Police Sergeant",
-        "Cell Van": "Cell Van",
-        "Police Helicopter": "Police Helicopter",
-        "Police Helicopters": "Police Helicopter",
-        "Police Helicopter or Drone": "Police Helicopter",
-        "Police Helicopter or Drones": "Police Helicopter",
-        "Police Helicopters or Drone": "Police Helicopter",
-        "Police Helicopters or Drones": "Police Helicopter",
-        "Required Police Helicopter or Drone": "Police Helicopter",
-        "Required Police Helicopter or Drones": "Police Helicopter",
-        "Required Police Helicopters or Drone": "Police Helicopter",
-        "Required Police Helicopters or Drones": "Police Helicopter",
-        "Require Drone": "Drone",
-        "Require Drones": "Drone",
-        "Required Drone": "Drone",
-        "Required Drones": "Drone",
-        "Requires Drone": "Drone",
-        "Requires Drones": "Drone",
-        "Police Drone": "Police Helicopter",
-        "Police Drones": "Police Helicopter",
-        "Policehelicopter": "Police Helicopter",
-        "Policehelicopters": "Police Helicopter",
-        "modules.missionHelper.vehicles.captions.railway_police": "railway police",
-        "modules.missionHelper.prerequisites.railway_police": "EIU",
-        "modules.missionHelper.prerequisites.railway_police_command": "EIU",
-        "Ambulance": "Ambulance",
-        "Ambulances": "Ambulance",
-        "Any vehicle": "Ambulance",
-        "Any vehicles": "Ambulance",
-        "Required Any vehicle": "Ambulance",
-        "Required Any vehicles": "Ambulance",
-        "Ambulance Officer": "Ambulance Officer",
-        "Ambulance Officers": "Ambulance Officer",
-        "Required Ambulance Officer": "Ambulance Officer",
-        "Required Ambulance Officers": "Ambulance Officer",
-        "Primary Response Vehicle": "PRV",
-        "Primary Response Vehicles": "PRV",
-        "PRVs": "PRV",
-        "Secondary Response Vehicle": "SRV",
-        "Secondary Response Vehicles": "SRV",
-        "SRVs": "SRV",
-        "Operational Team Leader": "OTL",
-        "Operational Team Leaders": "OTL",
-        "Mass Casualty Equipment": "Mass Casualty Equipment",
-        "Mass Casualty Equipment Unit": "Mass Casualty Equipment",
-        "Mass Casualty Equipment Units": "Mass Casualty Equipment",
-        "Critical Care": "Critical Care",
-        "Critical Care Team": "Critical Care",
-        "Critical Care Teams": "Critical Care",
-        "Required Critical Care": "Critical Care",
-        "Required Critical Care Team": "Critical Care",
-        "Required Critical Care Teams": "Critical Care",
-        "ATV Carrier": "ATV Carrier",
-        "ATV Carriers": "ATV Carrier",
-        "ATC Carrier": "ATV Carrier",
-        "ATC Carriers": "ATV Carrier",
-        "RRV": "RRV",
-        "RRVs": "RRV",
-        "Required RRV": "RRV",
-        "Required RRVs": "RRV",
-        "Specialist Paramedic RRV": "RRV",
-        "Specialist Paramedic RRVs": "RRV",
-        "Required Specialist Paramedic RRV": "RRV",
-        "Required Specialist Paramedic RRVs": "RRV",
-        "RRV or Specialist Paramedic RRV": "RRV",
-        "RRVs or Specialist Paramedic RRVs": "RRV",
-        "Required RRV or Specialist Paramedic RRV": "RRV",
-        "Required RRVs or Specialist Paramedic RRVs": "RRV",
-        "Community Midwife": "Community Midwife",
-        "Community Midwifes": "Community Midwife",
-        "CRV": "CRV",
-        "CRVs": "CRV",
-        "Inland Rescue Boat (Trailer)": "Inland Rescue Boat (Trailer)",
-        "Boat Trailer or Inland Rescue Boat": "Boat Trailer",
-        "Seagoing Vessel": "ALB",
-        "Seagoing Vessels": "ALB",
-        "Coastguard Rescue Helicopter": "CG Rescue Helicopter (Large)",
-        "Coastguard Rescue Helicopters": "CG Rescue Helicopter (Large)",
-        "Coastguard Rescue Helicopter (20%)": "CG Rescue Helicopter (Large)",
-        "ILBs or ALBs": "ALB",
-        "ALBs": "ALB",
-        "ALB": "ALB",
-        "ILBs": "ILB",
-        "ILB": "ILB",
-        "Control Van": "Control Van",
-        "Control Vans": "Control Van",
-        "SAR Commander": "Control Van",
-        "SAR Commanders": "Control Van",
-        "Required SAR Commander": "Control Van",
-        "Required SAR Commanders": "Control Van",
-        "HEMS": "Air Ambulance",
-        "HEMS Helicopter": "Air Ambulance",
-        "HEMS Helicopters": "Air Ambulance",
-        "Operational Support Van": "Operational Support Van",
-        "Operational Support Vans": "Operational Support Van",
-        "Operational Support or SAR Vehicle": "Operational Support Van",
-        "Operational Support or SAR Vehicles": "Operational Support Van",
-        "Operational Support or SAR Vehicle x1": "Operational Support Van",
-        "Operational Support Van or SAR Vehicle": "Operational Support Van",
-        "Operational Support Vans or SAR Vehicles": "Operational Support Van",
-        "Operational Support Vehicle or SAR Vehicle": "Operational Support Van",
-        "Operational Support Vehicles or SAR Vehicles": "Operational Support Van",
-        "Operational Support or Personal SAR Vehicle": "Operational Support Van",
-        "Operational Support or Personal SAR Vehicles": "Operational Support Van",
-        "Required Operational Support or SAR Vehicle": "Operational Support Van",
-        "Required Operational Support or SAR Vehicles": "Operational Support Van",
-        "Operational Support Van, Trailer or Personal SAR Vehicle": "Operational Support Van",
-        "Operational Support Vans, Trailers or Personal SAR Vehicles": "Operational Support Van",
-        "Operational Support Van Trailer or Personal SAR Vehicle": "Operational Support Van",
-        "Operational Support Vans Trailers or Personal SAR Vehicles": "Operational Support Van",
-        "Operational Support Van or Personal SAR Vehicle": "Operational Support Van",
-        "Operational Support Vans or Personal SAR Vehicles": "Operational Support Van",
-        "OSV": "Operational Support Van",
-        "OSVs": "Operational Support Van",
-        "Hovercraft (trailer)": "Hovercraft (trailer)",
-        "Coastguard Mud Rescue Unit": "Coastguard Mud Rescue Unit",
-        "Coastguard Mud Rescue Units": "Coastguard Mud Rescue Unit",
-        "Mud Decontamination Unit": "Mud Decontamination Unit",
-        "Mud Decontamination Units": "Mud Decontamination Unit",
-        "Coastguard Commander": "CG Commander",
-        "Flood Rescue Units":"Flood Rescue",
-        "Airfield Operations Vehicle": "Airfield Operations Vehicle",
-        "Airfield Operations Vehicles": "Airfield Operations Vehicle",
-        "Aerial Appliance Truck or Rescue Stairs": "Rescue Stairs",
-        "Aerial Appliance Trucks or Rescue Stairs": "Rescue Stairs",
-        "Required Aerial Appliance Truck or Rescue Stairs": "Rescue Stairs",
-        "Required Aerial Appliance Trucks or Rescue Stairs": "Rescue Stairs",
-        "Fire Engines or RIVs": "RIV",
-        "RIV": "RIV",
-        "RIVs": "RIV",
-        "Rapid Intervention Vehicle": "RIV",
-        "Rapid Intervention Vehicles": "RIV",
-        "Major Foam Tender": "Major Foam Tender",
-        "Major Foam Tenders": "Major Foam Tender",
-        "RIVs or Major Foam Tenders": "RIV",
-        "RIV or Major Foam Tender": "RIV",
-        "Required RIV or Major Foam Tender": "RIV",
-        "Required RIVs or Major Foam Tenders": "RIV",
-        "Fire Engines, RIVs or Major Foam Tenders": "Major Foam Tender",
-        "Fire Engines or Major Foam Tenders": "Major Foam Tender",
-        "Airfield Operations Supervisor": "Airfield Operations Supervisor",
-        "Airfield Operations Supervisors": "Airfield Operations Supervisor",
-        "Required Airfield Operations Supervisor": "Airfield Operations Supervisor",
-        "Required Airfield Operations Supervisors": "Airfield Operations Supervisor",
-        "Airfield Firefighting Command Vehicle": "Airfield FF Command Vehicle",
-        "ICCU or Ambulance Control Units or Airfield Firefighting Command Vehicles": "Airfield FF Command Vehicle",
-        "Fire Officers or Airfield Firefighting Command Vehicles": "Fire Officer",
-        "Flood Rescue Unit": "Flood Rescue Unit (Trailer)",
-        "4x4 Vehicle": "4x4 Units",
-        "4x4 Vehicles": "4x4 Units",
-        "Mountain Rescue 4x4 or SAR 4x4": "4x4 Units",
-        "Mountain Rescue 4x4s or SAR 4x4s": "4x4 Units",
-        "Rescue Dog": "Search Dog Unit",
-        "Rescue Dogs": "Search Dog Unit",
-        "Required Rescue Dog": "Search Dog Unit",
-        "Required Rescue Dogs": "Search Dog Unit",
-        "Search Dog Unit": "Search Dog Unit",
-        "Search Dog Units": "Search Dog Unit",
-        "Required Search Dog Unit": "Search Dog Unit",
-        "Required Search Dog Units": "Search Dog Unit",
-        "SARTEC": "SARTEC",
-        "modules.missionHelper.prerequisites.tow_trucks_large": "Flatbed Recovery Vehicle",
-        "modules.missionHelper.prerequisites.tow_trucks": "Flatbed Recovery Vehicle",
-        "1 car to tow": "Flatbed Recovery Vehicle",
-        "Cars to tow": "Flatbed Recovery Vehicle",
-        "Car to tow": "Flatbed Recovery Vehicle",
-        "Maximum amount of cars to tow": "Flatbed Recovery Vehicle",
-        "Minimum amount of cars to tow": "Flatbed Recovery Vehicle",
-        "Tow Trucks Large": "Flatbed Recovery Vehicle",
-        "Flatbed Recovery Vehicle": "Flatbed Recovery Vehicle",
-        "Flatbed Recovery Vehicles": "Flatbed Recovery Vehicle",
-        "Truck to tow": "HGV Recovery Vehicle",
-        "Trucks to tow": "HGV Recovery Vehicle",
-        "Maximum amount of trucks to tow": "HGV Recovery Vehicle",
-        "Minimum amount of trucks to tow": "HGV Recovery Vehicle",
-        "HGV Recovery Vehicle": "HGV Recovery Vehicle",
-        "HGV Recovery Vehicles": "HGV Recovery Vehicle",
-        "modules.missionHelper.vehicles.captions.bomb_disposal_crew": "Bomb Disposal crew x1",
-        "Support Units": "Support Unit",
-        "Breathing Apparatus Support Unit": "OSU",
-        "Breathing Apparatus Support Units": "OSU",
-        "Breathing Apparatus Support Vehicle": "OSU",
-        "Breathing Apparatus Support Vehicles": "OSU",
-        "BASU": "OSU",
-        "BASUs": "OSU",
-        "Welfare": "OSU",
-        "Welfare Unit": "OSU",
-        "Welfare Units": "OSU",
-        "Welfare Vehicle": "OSU",
-        "Welfare Vehicles": "OSU",
-        "HazMat": "OSU",
-        "Hazmat": "OSU",
-        "HazMat Unit": "OSU",
-        "HazMat Units": "OSU",
-        "Hazmat Unit": "OSU",
-        "Hazmat Units": "OSU",
-        "Required HazMat": "OSU",
-        "Required Hazmat": "OSU",
-        "Required HazMat Unit": "OSU",
-        "Required HazMat Units": "OSU",
-        "Required Hazmat Unit": "OSU",
-        "Required Hazmat Units": "OSU",
-        "Required HazMat Unit x1": "OSU",
-        "Required HazMat Units x1": "OSU",
-        "Required Hazmat Unit x1": "OSU",
-        "Required Hazmat Units x1": "OSU",
-        "HazMat Unit or CBRN Vehicle": "OSU",
-        "HazMat Units or CBRN Vehicles": "OSU",
-        "Hazmat Unit or CBRN Vehicle": "OSU",
-        "Hazmat Units or CBRN Vehicles": "OSU",
-        "CBRN Vehicle": "OSU",
-        "CBRN Vehicles": "OSU",
-        "Operational Support Unit": "OSU",
-        "Operational Support Units": "OSU",
-        "Fire Operational Support Unit": "OSU",
-        "Fire Operational Support Units": "OSU",
-        "Breathing Apparatus Support Unit x1": "OSU",
-        "Breathing Apparatus Support Units x1": "OSU",
-        "BASU x1": "OSU",
-        "BASUs x1": "OSU",
-        "Welfare Vehicle x1": "OSU",
-        "Welfare Vehicles x1": "OSU",
-        "HazMat Unit or CBRN Vehicle x1": "OSU",
-        "HazMat Units or CBRN Vehicles x1": "OSU",
-        "Operational Support Unit x1": "OSU",
-        "Operational Support Units x1": "OSU",
+"Pumps": "Fire Engine R/PUMP x 1",
+"Pump": "Fire Engine R/PUMP x 1",
+"Fire engine": "Fire Engine R/PUMP x 1",
+"Fire engines": "Fire Engine R/PUMP x 1",
+"Fire Engine": "Fire Engine R/PUMP x 1",
+"Fire Engines": "Fire Engine R/PUMP x 1",
+"Aerial Appliance": "CARP",
+"Aerial Appliances": "CARP",
+"Aerial Appliance Truck": "CARP",
+"Aerial Appliance Trucks": "CARP",
+"Fire, rescue or aerial appliance": "Rescue Pump",
+"Road Rail Unit": "Road Rail Unit",
+"Road Rail Units": "Road Rail Unit",
+"Firefighter": "Rescue Pump",
+"Firefighters": "Rescue Pump",
+"Required Firefighter": "Rescue Pump",
+"Required Firefighters": "Rescue Pump",
+"Car Recovery": "Flatbed Recovery Vehicle",
+"Required Car Recovery": "Flatbed Recovery Vehicle",
+"ICCU or Ambulance Control Unit": "ICCU/ACU",
+"ICCU or Ambulance Control Units": "ICCU/ACU",
+"ICCUs or Ambulance Control Units": "ICCU/ACU",
+"Fire Officer": "Fire Officer",
+"Fire Officers": "Fire Officer",
+"Rescue Support Unit": "Fire Engine R/PUMP x 1",
+"Rescue Support Units": "Fire Engine R/PUMP x 1",
+"Rescue Support Vehicle": "Fire Engine R/PUMP x 1",
+"Rescue Support Vehicles": "Fire Engine R/PUMP x 1",
+"Rescue Support Unit or Rescue Pump": "Fire Engine R/PUMP x 1",
+"Rescue Support Units or Rescue Pumps": "Fire Engine R/PUMP x 1",
+"Fire Engines or Rescue Support Vehicles": "Fire Engine R/PUMP x 1",
+"Fire Engines, Rescue Support Vehicles or Aerial Appliance Trucks": "Fire Engine R/PUMP x 1",
+"Foam Unit": "RP CAFS",
+"Foam Units": "RP CAFS",
+"Water Carrier": "Water Carrier",
+"Water Carriers": "Water Carrier",
+"Welfare Vehicles x1": "Welfare Vehicle",
+"Police Car": "Police Car",
+"Police Cars": "Police Car",
+"Police car": "Police Car",
+"Police cars": "Police Car",
+"Police Officer": "Police Car",
+"Police Officers": "Police Car",
+"Traffic Car": "Police ATC",
+"Traffic Cars": "Police ATC",
+"Police Cars or Armed Response Vehicles (ARVs)": "Police ATC",
+"Armed Response Personnel (In Armed Vehicles)": "Police ATC",
+"Dog Support Unit (DSU)": "Police DSU",
+"Dog Support Units (DSU)": "Police DSU",
+"Dog Support Units (DSUs)": "Police DSU",
+"Mounted Unit": "Mounted Unit",
+"Mounted Units": "Mounted Unit",
+"Police Inspector": "Police Inspector",
+"Police Sergeant": "Police Sergeant",
+"Cell Van": "Cell Van",
+"Police Helicopter": "Police Helicopter",
+"Police Helicopters": "Police Helicopter",
+"Police Helicopter or Drone": "Police Helicopter",
+"Police Helicopter or Drones": "Police Helicopter",
+"Police Helicopters or Drone": "Police Helicopter",
+"Police Helicopters or Drones": "Police Helicopter",
+"Required Police Helicopter or Drone": "Police Helicopter",
+"Required Police Helicopter or Drones": "Police Helicopter",
+"Required Police Helicopters or Drone": "Police Helicopter",
+"Required Police Helicopters or Drones": "Police Helicopter",
+"Require Drone": "Drone",
+"Require Drones": "Drone",
+"Required Drone": "Drone",
+"Required Drones": "Drone",
+"Requires Drone": "Drone",
+"Requires Drones": "Drone",
+"Police Drone": "Police Helicopter",
+"Police Drones": "Police Helicopter",
+"Policehelicopter": "Police Helicopter",
+"Policehelicopters": "Police Helicopter",
+"modules.missionHelper.vehicles.captions.railway_police": "railway police",
+"modules.missionHelper.prerequisites.railway_police": "EIU",
+"modules.missionHelper.prerequisites.railway_police_command": "EIU",
+"Ambulance": "Ambulance",
+"Ambulances": "Ambulance",
+"Any vehicle": "Ambulance",
+"Any vehicles": "Ambulance",
+"Required Any vehicle": "Ambulance",
+"Required Any vehicles": "Ambulance",
+"Ambulance Officer": "Ambulance Officer",
+"Ambulance Officers": "Ambulance Officer",
+"Required Ambulance Officer": "Ambulance Officer",
+"Required Ambulance Officers": "Ambulance Officer",
+"Primary Response Vehicle": "PRV",
+"Primary Response Vehicles": "PRV",
+"PRVs": "PRV",
+"Secondary Response Vehicle": "SRV",
+"Secondary Response Vehicles": "SRV",
+"SRVs": "SRV",
+"Operational Team Leader": "OTL",
+"Operational Team Leaders": "OTL",
+"Mass Casualty Equipment": "Mass Casualty Equipment",
+"Mass Casualty Equipment Unit": "Mass Casualty Equipment",
+"Mass Casualty Equipment Units": "Mass Casualty Equipment",
+"Critical Care": "Critical Care",
+"Critical Care Team": "Critical Care",
+"Critical Care Teams": "Critical Care",
+"Required Critical Care": "Critical Care",
+"Required Critical Care Team": "Critical Care",
+"Required Critical Care Teams": "Critical Care",
+"ATV Carrier": "ATV Carrier",
+"ATV Carriers": "ATV Carrier",
+"ATC Carrier": "ATV Carrier",
+"ATC Carriers": "ATV Carrier",
+"RRV": "RRV",
+"RRVs": "RRV",
+"Required RRV": "RRV",
+"Required RRVs": "RRV",
+"Specialist Paramedic RRV": "RRV",
+"Specialist Paramedic RRVs": "RRV",
+"Required Specialist Paramedic RRV": "RRV",
+"Required Specialist Paramedic RRVs": "RRV",
+"RRV or Specialist Paramedic RRV": "RRV",
+"RRVs or Specialist Paramedic RRVs": "RRV",
+"Required RRV or Specialist Paramedic RRV": "RRV",
+"Required RRVs or Specialist Paramedic RRVs": "RRV",
+"Community Midwife": "Community Midwife",
+"Community Midwifes": "Community Midwife",
+"CRV": "CRV",
+"CRVs": "CRV",
+"Inland Rescue Boat (Trailer)": "Inland Rescue Boat (Trailer)",
+"Boat Trailer or Inland Rescue Boat": "Boat Trailer",
+"Seagoing Vessel": "ALB",
+"Seagoing Vessels": "ALB",
+"Coastguard Rescue Helicopter": "CG Rescue Helicopter",
+"Coastguard Rescue Helicopters": "CG Rescue Helicopter",
+"Coastguard Rescue Helicopter (20%)": "CG Rescue Helicopter",
+"ILBs or ALBs": "ALB",
+"ALBs": "ALB",
+"ALB": "ALB",
+"ILBs": "ILB",
+"ILB": "ILB",
+"Control Van": "Control Van",
+"Control Vans": "Control Van",
+"SAR Commander": "Control Van",
+"SAR Commanders": "Control Van",
+"Required SAR Commander": "Control Van",
+"Required SAR Commanders": "Control Van",
+"HEMS": "Air Ambulance",
+"HEMS Helicopter": "Air Ambulance",
+"HEMS Helicopters": "Air Ambulance",
+"Operational Support Van": "Operational Support Van",
+"Operational Support Vans": "Operational Support Van",
+"Operational Support or SAR Vehicle": "Operational Support Van",
+"Operational Support or SAR Vehicles": "Operational Support Van",
+"Operational Support or SAR Vehicle x1": "Operational Support Van",
+"Operational Support Van or SAR Vehicle": "Operational Support Van",
+"Operational Support Vans or SAR Vehicles": "Operational Support Van",
+"Operational Support Vehicle or SAR Vehicle": "Operational Support Van",
+"Operational Support Vehicles or SAR Vehicles": "Operational Support Van",
+"Operational Support or Personal SAR Vehicle": "Operational Support Van",
+"Operational Support or Personal SAR Vehicles": "Operational Support Van",
+"Required Operational Support or SAR Vehicle": "Operational Support Van",
+"Required Operational Support or SAR Vehicles": "Operational Support Van",
+"Operational Support Van, Trailer or Personal SAR Vehicle": "Operational Support Van",
+"Operational Support Vans, Trailers or Personal SAR Vehicles": "Operational Support Van",
+"Operational Support Van Trailer or Personal SAR Vehicle": "Operational Support Van",
+"Operational Support Vans Trailers or Personal SAR Vehicles": "Operational Support Van",
+"Operational Support Van or Personal SAR Vehicle": "Operational Support Van",
+"Operational Support Vans or Personal SAR Vehicles": "Operational Support Van",
+"OSV": "Operational Support Van",
+"OSVs": "Operational Support Van",
+"Hovercraft (trailer)": "Hovercraft (trailer)",
+"Coastguard Mud Rescue Unit": "Coastguard Mud Rescue Unit",
+"Coastguard Mud Rescue Units": "Coastguard Mud Rescue Unit",
+"Mud Decontamination Unit": "Mud Decontamination Unit",
+"Mud Decontamination Units": "Mud Decontamination Unit",
+"Coastguard Commander": "CG Commander",
+"Flood Rescue Units":"Flood Rescue",
+"Airfield Operations Vehicle": "Airfield Operations Vehicle",
+"Airfield Operations Vehicles": "Airfield Operations Vehicle",
+"Aerial Appliance Truck or Rescue Stairs": "Rescue Stairs",
+"Aerial Appliance Trucks or Rescue Stairs": "Rescue Stairs",
+"Required Aerial Appliance Truck or Rescue Stairs": "Rescue Stairs",
+"Required Aerial Appliance Trucks or Rescue Stairs": "Rescue Stairs",
+"Fire Engines or RIVs": "RIV",
+"RIV": "RIV",
+"RIVs": "RIV",
+"Rapid Intervention Vehicle": "RIV",
+"Rapid Intervention Vehicles": "RIV",
+"Major Foam Tender": "Major Foam Tender",
+"Major Foam Tenders": "Major Foam Tender",
+"RIVs or Major Foam Tenders": "RIV",
+"RIV or Major Foam Tender": "RIV",
+"Required RIV or Major Foam Tender": "RIV",
+"Required RIVs or Major Foam Tenders": "RIV",
+"Fire Engines, RIVs or Major Foam Tenders": "Major Foam Tender",
+"Fire Engines or Major Foam Tenders": "Major Foam Tender",
+"Airfield Operations Supervisor": "Airfield Operations Supervisor",
+"Airfield Operations Supervisors": "Airfield Operations Supervisor",
+"Required Airfield Operations Supervisor": "Airfield Operations Supervisor",
+"Required Airfield Operations Supervisors": "Airfield Operations Supervisor",
+"Airfield Firefighting Command Vehicle": "Airfield FF Command Vehicle",
+"ICCU or Ambulance Control Units or Airfield Firefighting Command Vehicles": "Airfield FF Command Vehicle",
+"Fire Officers or Airfield Firefighting Command Vehicles": "Fire Officer",
+"Flood Rescue Unit": "Flood Rescue Unit (Trailer)",
+"4x4 Vehicle": "4x4 Units",
+"4x4 Vehicles": "4x4 Units",
+"Mountain Rescue 4x4 or SAR 4x4": "4x4 Units",
+"Mountain Rescue 4x4s or SAR 4x4s": "4x4 Units",
+"Rescue Dog": "Search Dog Unit",
+"Rescue Dogs": "Search Dog Unit",
+"Required Rescue Dog": "Search Dog Unit",
+"Required Rescue Dogs": "Search Dog Unit",
+"Search Dog Unit": "Search Dog Unit",
+"Search Dog Units": "Search Dog Unit",
+"Required Search Dog Unit": "Search Dog Unit",
+"Required Search Dog Units": "Search Dog Unit",
+"SARTEC": "SARTEC",
+"modules.missionHelper.prerequisites.tow_trucks_large": "Flatbed Recovery Vehicle",
+"modules.missionHelper.prerequisites.tow_trucks": "Flatbed Recovery Vehicle",
+"1 car to tow": "Flatbed Recovery Vehicle",
+"Cars to tow": "Flatbed Recovery Vehicle",
+"Car to tow": "Flatbed Recovery Vehicle",
+"Maximum amount of cars to tow": "Flatbed Recovery Vehicle",
+"Minimum amount of cars to tow": "Flatbed Recovery Vehicle",
+"Tow Trucks Large": "Flatbed Recovery Vehicle",
+"Flatbed Recovery Vehicle": "Flatbed Recovery Vehicle",
+"Flatbed Recovery Vehicles": "Flatbed Recovery Vehicle",
+"Truck to tow": "HGV Recovery Vehicle",
+"Trucks to tow": "HGV Recovery Vehicle",
+"Maximum amount of trucks to tow": "HGV Recovery Vehicle",
+"Minimum amount of trucks to tow": "HGV Recovery Vehicle",
+"HGV Recovery Vehicle": "HGV Recovery Vehicle",
+"HGV Recovery Vehicles": "HGV Recovery Vehicle",
+"modules.missionHelper.vehicles.captions.bomb_disposal_crew": "Bomb Disposal crew x1",
+"Support Units": "Support Unit",
+"Breathing Apparatus Support Unit": "OSU",
+"Breathing Apparatus Support Units": "OSU",
+"Breathing Apparatus Support Vehicle": "OSU",
+"Breathing Apparatus Support Vehicles": "OSU",
+"BASU": "OSU",
+"BASUs": "OSU",
+"Welfare": "OSU",
+"Welfare Unit": "OSU",
+"Welfare Units": "OSU",
+"Welfare Vehicle": "OSU",
+"Welfare Vehicles": "OSU",
+"HazMat": "OSU",
+"Hazmat": "OSU",
+"HazMat Unit": "OSU",
+"HazMat Units": "OSU",
+"Hazmat Unit": "OSU",
+"Hazmat Units": "OSU",
+"Required HazMat": "OSU",
+"Required Hazmat": "OSU",
+"Required HazMat Unit": "OSU",
+"Required HazMat Units": "OSU",
+"Required Hazmat Unit": "OSU",
+"Required Hazmat Units": "OSU",
+"Required HazMat Unit x1": "OSU",
+"Required HazMat Units x1": "OSU",
+"Required Hazmat Unit x1": "OSU",
+"Required Hazmat Units x1": "OSU",
+"HazMat Unit or CBRN Vehicle": "OSU",
+"HazMat Units or CBRN Vehicles": "OSU",
+"Hazmat Unit or CBRN Vehicle": "OSU",
+"Hazmat Units or CBRN Vehicles": "OSU",
+"CBRN Vehicle": "OSU",
+"CBRN Vehicles": "OSU",
+"Operational Support Unit": "OSU",
+"Operational Support Units": "OSU",
+"Fire Operational Support Unit": "OSU",
+"Fire Operational Support Units": "OSU",
+"Breathing Apparatus Support Unit x1": "OSU",
+"Breathing Apparatus Support Units x1": "OSU",
+"BASU x1": "OSU",
+"BASUs x1": "OSU",
+"Welfare Vehicle x1": "OSU",
+"Welfare Vehicles x1": "OSU",
+"HazMat Unit or CBRN Vehicle x1": "OSU",
+"HazMat Units or CBRN Vehicles x1": "OSU",
+"Operational Support Unit x1": "OSU",
+"Operational Support Units x1": "OSU",
     };
     const crossReferenceNormalisedLookup = new Map(
         Object.entries(crossReference).map(([key, value]) => [
@@ -22212,6 +22184,7 @@ bootMark('heavy-runtime-start');
         } catch (_error) {}
         const selectedVehicles =
             mfGetDiagnosticSelectedVehicles();
+        const diagnosticBoxes = getVehicleCheckboxSnapshot(true);
         return {
             schema: 'missionchief-unit-finder-diagnostics',
             schemaVersion: 1,
@@ -22219,7 +22192,7 @@ bootMark('heavy-runtime-start');
             capturedAtUnix: Date.now(),
             reason: String(reason || 'manual-export'),
             versions: {
-                commandNexus: '3.0.21',
+                commandNexus: '3.0.22',
                 missionFinder: 'V10.6.177',
                 personnelAssignment: '1.3.8'
             },
@@ -22268,6 +22241,7 @@ bootMark('heavy-runtime-start');
                     mfGetDiagnosticVisibleAlerts()
             },
             selectionSummary: {
+                vehicleInventory: {total: diagnosticBoxes.length,searchDogType102: diagnosticBoxes.filter(isSearchDogUnitVehicleCheckbox).length,availableSearchDogType102: diagnosticBoxes.filter(input => !input.disabled && !input.checked && isSearchDogUnitVehicleCheckbox(input)).length,loadControlVisible: isVehicleListLoadControlVisible(),loadingIndicatorVisible: isVehicleListLoadingIndicatorVisible()},
                 vehicleLoadState: {
                     rows: vehicleLoadState.rows.map(row => ({
                         originalName: String(row.originalName || ''),
@@ -23092,6 +23066,10 @@ bootMark('heavy-runtime-start');
             );
         });
     }
+    function isHomeResponseSar4x4Checkbox(input) {
+        return getVehicleTypeIdentifiers(input).includes('93') &&
+            getSartecDisplayedVehicleValues(input).some(value => /-SAR4x4-\d+$/i.test(value));
+    }
     function isRrvRequirement(
         originalName,
         mappedName
@@ -23729,6 +23707,32 @@ function isRoadRailUnitVehicleCheckbox(input) {
                 cleaned === 'coastguard rescue vehicle' ||
                 cleaned === 'coastguard rescue vehicles'
             );
+        });
+    }
+    function getCoastguardRescueHelicopterTypeId(originalName, mappedName) {
+        const value = [originalName, mappedName].map(normaliseVehicleText).find(name => /^(?:required )?(?:\d+ )?(?:cg|coastguard) rescue helicopters?(?: \(20%\)| \(large\)| large)?$/.test(name));
+        return value ? (value.includes('large') ? '65' : '64') : '';
+    }
+    function isCoastguardRescueHelicopterVehicleCheckbox(input, typeId) { return ['64', '65'].includes(typeId) && getVehicleTypeIdentifiers(input).includes(typeId); }
+    function getPrvSrvRequirementTypeId(originalName, mappedName) {
+        const names = [originalName, mappedName].map(value =>
+            normaliseVehicleText(value).replace(/^(?:required\s+)?(?:\d+\s+)?/, '')
+        );
+        if (names.some(name => /^(?:prvs?|primary response vehicles?)$/.test(name))) return '27';
+        if (names.some(name => /^(?:srvs?|secondary response vehicles?)$/.test(name))) return '28';
+        return '';
+    }
+    function isPrvSrvVehicleCheckbox(input, typeId) {
+        return ['27', '28'].includes(typeId) && getVehicleTypeIdentifiers(input).includes(typeId);
+    }
+    function getUniquePrvSrvVehicleCheckboxes(typeId, predicate) {
+        const seenVehicleIds = new Set();
+        return getVehicleCheckboxSnapshot(true).filter(input => {
+            if (!input || input.isConnected === false || !isPrvSrvVehicleCheckbox(input, typeId)) return false;
+            const vehicleId = getMissionVehicleId(input);
+            if (!vehicleId || seenVehicleIds.has(vehicleId) || !predicate(input)) return false;
+            seenVehicleIds.add(vehicleId);
+            return true;
         });
     }
     function isControlVanRequirement(originalName, mappedName) {
@@ -25086,6 +25090,26 @@ function isRoadRailUnitVehicleCheckbox(input) {
                 })
             );
         }
+        const coastguardHelicopterTypeId = getCoastguardRescueHelicopterTypeId(originalName, mappedName);
+        if (coastguardHelicopterTypeId) {
+            return sortVehicleCheckboxesByBestArrival(getVehicleCheckboxSnapshot().filter(input =>
+                !input.disabled && (includeChecked || !input.checked) && isCoastguardRescueHelicopterVehicleCheckbox(input, coastguardHelicopterTypeId)));
+        }
+        const prvSrvTypeId = getPrvSrvRequirementTypeId(
+            originalName,
+            mappedName
+        );
+        if (prvSrvTypeId) {
+            return sortVehicleCheckboxesByBestArrival(
+                getUniquePrvSrvVehicleCheckboxes(
+                    prvSrvTypeId,
+                    input => (
+                        !input.disabled &&
+                        (includeChecked || !input.checked)
+                    )
+                )
+            );
+        }
         const candidates = getVehicleMatchCandidates(originalName, mappedName);
         const strictExactOnly = isAmbulanceTransportRequest(originalName, mappedName);
         const standardAmbulanceEtaPreferred = strictExactOnly;
@@ -25098,6 +25122,12 @@ function isRoadRailUnitVehicleCheckbox(input) {
             originalName,
             mappedName
         );
+        if (sartecPrefixOnly) {
+            const available = getVehicleCheckboxSnapshot().filter(input =>
+                !input.disabled && (includeChecked || !input.checked));
+            const preferred = available.filter(isHomeResponseSar4x4Checkbox);
+            return sortVehicleCheckboxesByBestArrival(preferred.length ? preferred : available.filter(isSartecVehicleCheckbox));
+        }
         const rrvTypeOnly =
             isRrvRequirement(
                 originalName,
@@ -25764,6 +25794,20 @@ function isRoadRailUnitVehicleCheckbox(input) {
                     : isEodResponseVehicleCheckbox(input);
             }).length;
         }
+        const coastguardHelicopterTypeId = getCoastguardRescueHelicopterTypeId(originalName, mappedName);
+        if (coastguardHelicopterTypeId) {
+            return getVehicleCheckboxSnapshot().filter(input => input.checked && isCoastguardRescueHelicopterVehicleCheckbox(input, coastguardHelicopterTypeId)).length;
+        }
+        const prvSrvTypeId = getPrvSrvRequirementTypeId(
+            originalName,
+            mappedName
+        );
+        if (prvSrvTypeId) {
+            return getUniquePrvSrvVehicleCheckboxes(
+                prvSrvTypeId,
+                input => input.checked === true && input.disabled !== true
+            ).length;
+        }
         const candidates = getVehicleMatchCandidates(originalName, mappedName);
         const strictExactOnly = isAmbulanceTransportRequest(originalName, mappedName);
         const standardAmbulanceEtaPreferred = strictExactOnly;
@@ -25945,7 +25989,7 @@ function isRoadRailUnitVehicleCheckbox(input) {
                     isPoliceHelicopterCheckbox(input) ||
                     isPoliceDroneCheckbox(input);
             } else if (sartecPrefixOnly) {
-                matches = isSartecVehicleCheckbox(input);
+                matches = isHomeResponseSar4x4Checkbox(input) || isSartecVehicleCheckbox(input);
             } else if (rrvTypeOnly) {
                 matches = isRrvVehicleCheckbox(input);
             } else if (rivTypeOnly) {
@@ -25970,6 +26014,51 @@ function isRoadRailUnitVehicleCheckbox(input) {
             row.selected = Math.min(selected, required);
         });
     }
+    let mfPrvSrvFinalSelectionAttempt = 0;
+    let mfPrvSrvSelectionBlockText = '';
+    async function confirmPrvSrvSelectionBeforeDispatch(reason) {
+        const rows = vehicleLoadState.rows.filter(row =>
+            getPrvSrvRequirementTypeId(row.originalName, row.mappedName));
+        if (!rows.length) return true;
+        const missionId = getCurrentMissionIdForQueueRestart();
+        await wait(80);
+        if (missionId && getCurrentMissionIdForQueueRestart() !== missionId) {
+            mfPrvSrvSelectionBlockText = 'The mission changed during final PRV/SRV verification.';
+            changeDispatchBoxColor(false);
+            return false;
+        }
+        const inspect = () => rows.map(row => {
+            const required = Math.max(0, parseInt(row.required, 10) || 0);
+            const selected = Math.min(required,
+                countSelectedMatchingVehicles(row.originalName, row.mappedName));
+            row.selected = selected;
+            row.status = selected >= required ? 'assigned' : selected ? 'retrying' : 'missing';
+            return { row, missing: required - selected };
+        }).filter(item => item.missing > 0);
+        let shortfalls = inspect();
+        for (const { row, missing } of shortfalls) {
+            selectVehicleUnits(row.originalName, row.mappedName, missing,
+                `PRVSRV FINAL ${++mfPrvSrvFinalSelectionAttempt}`);
+        }
+        if (shortfalls.length) await wait(180);
+        invalidateVehicleCheckboxCache();
+        shortfalls = inspect();
+        renderVehicleLoadList();
+        if (shortfalls.length) {
+            mfPrvSrvSelectionBlockText = `Confirmed PRV/SRV units still missing: ${shortfalls.map(({ row, missing }) => `${row.mappedName || row.originalName} x${missing}`).join(', ')}.`;
+            changeDispatchBoxColor(false);
+            updateStatusBox(`${mfPrvSrvSelectionBlockText} Dispatch blocked.`);
+            try { mfPersistUnitFinderDiagnostic('prv-srv-final-verification-block'); } catch (_error) {}
+            if (mfDebugEnabled) debugLog('PRV/SRV FINAL BLOCK', `${reason || 'dispatch'} | ${mfPrvSrvSelectionBlockText}`);
+            return false;
+        }
+        mfPrvSrvSelectionBlockText = '';
+        if (vehicleLoadState.rows.every(row => Number(row.selected || 0) >= Number(row.required || 0)) &&
+            !mfStaffingBlockActive && vehicleLoadState.trainedPersonnelBlocked !== true) {
+            changeDispatchBoxColor(true);
+        }
+        return true;
+    }
     function findUnitButton(mappedName, originalName) {
         if (isFireOperationalSupportRequirement(originalName, mappedName)) {
             return sortVehicleCheckboxesByBestArrival(getVehicleCheckboxSnapshot().filter(input =>
@@ -25992,6 +26081,8 @@ function isRoadRailUnitVehicleCheckbox(input) {
                 requestedName,
                 mappedName
             ) ||
+            getCoastguardRescueHelicopterTypeId(requestedName, mappedName) ||
+            getPrvSrvRequirementTypeId(requestedName, mappedName) ||
             isCrvRequirement(
                 requestedName,
                 mappedName
@@ -26183,15 +26274,8 @@ function isRoadRailUnitVehicleCheckbox(input) {
                 mappedName
             )
         ) {
-            return getVehicleCheckboxSnapshot().find(input => {
-                return (
-                    !input.disabled &&
-                    !input.checked &&
-                    isSartecVehicleCheckbox(
-                        input
-                    )
-                );
-            }) || null;
+            const available = getVehicleCheckboxSnapshot().filter(input => !input.disabled && !input.checked);
+            return available.find(isHomeResponseSar4x4Checkbox) || available.find(isSartecVehicleCheckbox) || null;
         }
         if (
             isRrvRequirement(
@@ -26296,2004 +26380,2004 @@ function isRoadRailUnitVehicleCheckbox(input) {
         const style = document.createElement('style');
         style.id = 'mission-finder-2026-styles';
         style.textContent = `
-            #mission-finder-wrapper {
-                position: fixed;
-                z-index: 999999;
-                display: flex;
-                gap: 8px;
-                align-items: flex-start;
-                font-family: Arial, Helvetica, sans-serif;
-            }
-            .mf2026-panel {
-                width: 270px;
-                min-height: 0;
-                padding: 8px;
-                background: rgba(0, 0, 0, 0.88);
-                color: white;
-                font-size: 13px;
-                border: 2px solid white;
-                border-radius: 8px;
-                box-sizing: border-box;
-                display: flex;
-                flex-direction: column;
-                gap: 7px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.35);
-            }
-            .mf2026-header {
-                font-size: 15px;
-                font-weight: bold;
-                text-align: center;
-                background: #555;
-                padding: 6px;
-                border-radius: 4px;
-            }
-            .mf2026-drag {
-                cursor: move;
-            }
-            .mf2026-box {
-                background: #444;
-                padding: 7px;
-                border-radius: 5px;
-            }
-            #status-box {
-                min-height: 44px;
-                line-height: 1.35;
-                overflow-wrap: break-word;
-            }
-            #mf-auto-stop-flag {
-                margin-bottom: 7px;
-                padding-bottom: 7px;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.14);
-            }
-            #mf-auto-stop-flag[hidden] {
-                display: none !important;
-            }
-            .mf-auto-stop-heading {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                gap: 7px;
-                margin-bottom: 5px;
-            }
-            .mf-auto-stop-badge {
-                display: inline-flex;
-                align-items: center;
-                min-height: 18px;
-                padding: 2px 6px;
-                border: 1px solid rgba(255, 255, 255, 0.24);
-                border-radius: 999px;
-                background: #b4232f;
-                color: #fff;
-                font-size: 9px;
-                font-weight: 800;
-                letter-spacing: 0.06em;
-                line-height: 1;
-                white-space: nowrap;
-            }
-            #mf-auto-stop-time {
-                color: rgba(255, 255, 255, 0.72);
-                font-size: 9px;
-                text-align: right;
-            }
-            #mf-auto-stop-reason {
-                color: #ffd8dc;
-                font-weight: 700;
-                line-height: 1.35;
-            }
-            #status-box.mf-auto-stopped {
-                border-color: rgba(255, 95, 109, 0.46) !important;
-                background: rgba(86, 15, 25, 0.76) !important;
-            }
-            #status-box.mf-auto-stopped #status-box-message {
-                color: rgba(255, 255, 255, 0.78);
-            }
-            .mf2026-button {
-                padding: 7px;
-                border: none;
-                border-radius: 5px;
-                cursor: pointer;
-                font-weight: bold;
-            }
-            .mf2026-section-title {
-                font-size: 13px;
-                font-weight: bold;
-                margin-bottom: 5px;
-                color: #ddd;
-            }
-            .mf2026-row {
-                display: flex;
-                justify-content: space-between;
-                gap: 8px;
-                padding: 4px 0;
-                border-bottom: 1px solid rgba(255,255,255,0.08);
-            }
-            .mf2026-row:last-child {
-                border-bottom: none;
-            }
-            .mf2026-name {
-                flex: 1;
-            }
-            .mf2026-count {
-                white-space: nowrap;
-                font-weight: bold;
-            }
-            .mf2026-good {
-                color: #42ff75;
-            }
-            .mf2026-bad {
-                color: #ff6666;
-            }
-            .mf2026-warn {
-                color: #ffd166;
-            }
-            .mf2026-small {
-                font-size: 12px;
-                color: #ccc;
-            }
-            .mf2026-progress-wrap {
-                background: #222;
-                border-radius: 6px;
-                overflow: hidden;
-                height: 10px;
-            }
-            .mf2026-progress-bar {
-                height: 10px;
-                width: 0%;
-                background: #42ff75;
-                transition: width 0.25s ease;
-            }
-            #vehicle-load-list-content {
-                max-height: 210px;
-                overflow-y: auto;
-                padding-right: 4px;
-            }
-            #trained-personnel-content {
-                max-height: 280px;
-                overflow-y: auto;
-                padding-right: 4px;
-            }
-            .mf2026-training-vehicle {
-                padding: 7px 0;
-                border-bottom: 1px solid rgba(255,255,255,0.1);
-            }
-            .mf2026-training-vehicle:last-child {
-                border-bottom: none;
-            }
-            .mf2026-training-vehicle-name {
-                margin-bottom: 5px;
-                color: #fff;
-                font-weight: bold;
-            }
-            .mf2026-training-person {
-                display: grid;
-                grid-template-columns: auto minmax(0, 1fr);
-                gap: 8px;
-                align-items: start;
-                padding: 3px 0;
-            }
-            .mf2026-training-person-label {
-                color: #42ff75;
-                font-weight: bold;
-                white-space: nowrap;
-            }
-            .mf2026-training-course-list {
-                color: #ddd;
-                text-align: right;
-                overflow-wrap: anywhere;
-            }
-            #mf-mission-ready-delay-input {
-                width: 100%;
-                color: black;
-                padding: 4px;
-                border-radius: 4px;
-                border: none;
-                box-sizing: border-box;
-            }
-            .mf2026-checkbox-row {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                cursor: pointer;
-                user-select: none;
-            }
-            .mf2026-checkbox-row input {
-                width: 17px;
-                height: 17px;
-                margin: 0;
-                flex: 0 0 auto;
-            }
-            #session-panel-content {
-                max-height: 180px;
-                overflow-y: auto;
-                padding-right: 4px;
-            }
-            .mf2026-stat-grid {
-                display: grid;
-                grid-template-columns: 1fr auto;
-                gap: 4px 8px;
-                font-size: 12px;
-                color: #ccc;
-            }
-            .mf2026-stat-grid strong {
-                color: white;
-            }
-            .mf2026-log-row {
-                display: grid;
-                grid-template-columns: 1fr auto;
-                gap: 8px;
-                padding: 4px 0;
-                border-bottom: 1px solid rgba(255,255,255,0.08);
-                font-size: 12px;
-            }
-            .mf2026-log-row:last-child {
-                border-bottom: none;
-            }
-            .mf2026-log-main {
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-            }
-            .mf2026-log-value {
-                white-space: nowrap;
-                font-weight: bold;
-            }
-            #control-panel {
-                width: 260px;
-            }
-            #vehicle-load-list-box {
-                width: 300px;
-            }
-            #trained-personnel-box {
-                width: 300px;
-            }
-            #control-panel.mf2026-control-collapsed {
-                width: 44px;
-                min-height: 0;
-                padding: 6px;
-                overflow: hidden;
-            }
-            #control-panel.mf2026-control-collapsed .mf-control-body {
-                display: none;
-            }
-            #control-panel.mf2026-control-collapsed .mf2026-header {
-                writing-mode: vertical-rl;
-                text-orientation: mixed;
-                min-height: 120px;
-                padding: 8px 4px;
-                cursor: pointer;
-            }
-            .mf2026-control-header-row {
-                display: flex;
-                gap: 6px;
-                align-items: center;
-            }
-            .mf2026-control-header-row .mf2026-header {
-                flex: 1;
-            }
-            #mf-control-centre,
-            #mf-control-minimize {
-                width: 34px;
-                padding: 6px 0;
-                background: #6c757d;
-                color: white;
-                flex: 0 0 34px;
-            }
-            #mf-control-centre {
-                background: #0d6efd;
-            }
-            #vehicle-load-list-box.mf2026-load-collapsed {
-                width: 44px;
-                min-height: 0;
-                padding: 6px;
-                overflow: hidden;
-            }
-            #vehicle-load-list-box.mf2026-load-collapsed .mf-load-body {
-                display: none;
-            }
-            #vehicle-load-list-box.mf2026-load-collapsed .mf2026-header {
-                writing-mode: vertical-rl;
-                text-orientation: mixed;
-                min-height: 130px;
-                padding: 8px 4px;
-                cursor: pointer;
-            }
-            .mf2026-load-header-row {
-                display: flex;
-                gap: 6px;
-                align-items: center;
-            }
-            .mf2026-load-header-row .mf2026-header {
-                flex: 1;
-            }
-            #mf-load-minimize {
-                width: 34px;
-                padding: 6px 0;
-                background: #6c757d;
-                color: white;
-            }
-            #trained-personnel-box.mf2026-trained-collapsed {
-                width: 44px;
-                min-height: 0;
-                padding: 6px;
-                overflow: hidden;
-            }
-            #trained-personnel-box.mf2026-trained-collapsed .mf-trained-body {
-                display: none;
-            }
-            #trained-personnel-box.mf2026-trained-collapsed .mf2026-header {
-                writing-mode: vertical-rl;
-                text-orientation: mixed;
-                min-height: 145px;
-                padding: 8px 4px;
-                cursor: pointer;
-            }
-            .mf2026-trained-header-row {
-                display: flex;
-                gap: 6px;
-                align-items: center;
-            }
-            .mf2026-trained-header-row .mf2026-header {
-                flex: 1;
-            }
-            #mf-trained-minimize {
-                width: 34px;
-                padding: 6px 0;
-                background: #6c757d;
-                color: white;
-            }
-            .mf2026-button-row {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 6px;
-            }
-            .mf2026-primary-actions {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 6px;
-            }
-            .mf2026-primary-actions #dispatch-share-box,
-            .mf2026-primary-actions #auto-mode-box {
-                grid-column: 1 / -1;
-            }
-            .mf-control-advanced {
-                display: flex;
-                flex-direction: column;
-                gap: 7px;
-            }
-            #mf-iphone-advanced-toggle {
-                display: none;
-            }
+        #mission-finder-wrapper {
+            position: fixed;
+            z-index: 999999;
+            display: flex;
+            gap: 8px;
+            align-items: flex-start;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+        .mf2026-panel {
+            width: 270px;
+            min-height: 0;
+            padding: 8px;
+            background: rgba(0, 0, 0, 0.88);
+            color: white;
+            font-size: 13px;
+            border: 2px solid white;
+            border-radius: 8px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+        }
+        .mf2026-header {
+            font-size: 15px;
+            font-weight: bold;
+            text-align: center;
+            background: #555;
+            padding: 6px;
+            border-radius: 4px;
+        }
+        .mf2026-drag {
+            cursor: move;
+        }
+        .mf2026-box {
+            background: #444;
+            padding: 7px;
+            border-radius: 5px;
+        }
+        #status-box {
+            min-height: 44px;
+            line-height: 1.35;
+            overflow-wrap: break-word;
+        }
+        #mf-auto-stop-flag {
+            margin-bottom: 7px;
+            padding-bottom: 7px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+        }
+        #mf-auto-stop-flag[hidden] {
+            display: none !important;
+        }
+        .mf-auto-stop-heading {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 7px;
+            margin-bottom: 5px;
+        }
+        .mf-auto-stop-badge {
+            display: inline-flex;
+            align-items: center;
+            min-height: 18px;
+            padding: 2px 6px;
+            border: 1px solid rgba(255, 255, 255, 0.24);
+            border-radius: 999px;
+            background: #b4232f;
+            color: #fff;
+            font-size: 9px;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            line-height: 1;
+            white-space: nowrap;
+        }
+        #mf-auto-stop-time {
+            color: rgba(255, 255, 255, 0.72);
+            font-size: 9px;
+            text-align: right;
+        }
+        #mf-auto-stop-reason {
+            color: #ffd8dc;
+            font-weight: 700;
+            line-height: 1.35;
+        }
+        #status-box.mf-auto-stopped {
+            border-color: rgba(255, 95, 109, 0.46) !important;
+            background: rgba(86, 15, 25, 0.76) !important;
+        }
+        #status-box.mf-auto-stopped #status-box-message {
+            color: rgba(255, 255, 255, 0.78);
+        }
+        .mf2026-button {
+            padding: 7px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .mf2026-section-title {
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #ddd;
+        }
+        .mf2026-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        .mf2026-row:last-child {
+            border-bottom: none;
+        }
+        .mf2026-name {
+            flex: 1;
+        }
+        .mf2026-count {
+            white-space: nowrap;
+            font-weight: bold;
+        }
+        .mf2026-good {
+            color: #42ff75;
+        }
+        .mf2026-bad {
+            color: #ff6666;
+        }
+        .mf2026-warn {
+            color: #ffd166;
+        }
+        .mf2026-small {
+            font-size: 12px;
+            color: #ccc;
+        }
+        .mf2026-progress-wrap {
+            background: #222;
+            border-radius: 6px;
+            overflow: hidden;
+            height: 10px;
+        }
+        .mf2026-progress-bar {
+            height: 10px;
+            width: 0%;
+            background: #42ff75;
+            transition: width 0.25s ease;
+        }
+        #vehicle-load-list-content {
+            max-height: 210px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+        #trained-personnel-content {
+            max-height: 280px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+        .mf2026-training-vehicle {
+            padding: 7px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .mf2026-training-vehicle:last-child {
+            border-bottom: none;
+        }
+        .mf2026-training-vehicle-name {
+            margin-bottom: 5px;
+            color: #fff;
+            font-weight: bold;
+        }
+        .mf2026-training-person {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr);
+            gap: 8px;
+            align-items: start;
+            padding: 3px 0;
+        }
+        .mf2026-training-person-label {
+            color: #42ff75;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        .mf2026-training-course-list {
+            color: #ddd;
+            text-align: right;
+            overflow-wrap: anywhere;
+        }
+        #mf-mission-ready-delay-input {
+            width: 100%;
+            color: black;
+            padding: 4px;
+            border-radius: 4px;
+            border: none;
+            box-sizing: border-box;
+        }
+        .mf2026-checkbox-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .mf2026-checkbox-row input {
+            width: 17px;
+            height: 17px;
+            margin: 0;
+            flex: 0 0 auto;
+        }
+        #session-panel-content {
+            max-height: 180px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+        .mf2026-stat-grid {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 4px 8px;
+            font-size: 12px;
+            color: #ccc;
+        }
+        .mf2026-stat-grid strong {
+            color: white;
+        }
+        .mf2026-log-row {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 8px;
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            font-size: 12px;
+        }
+        .mf2026-log-row:last-child {
+            border-bottom: none;
+        }
+        .mf2026-log-main {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .mf2026-log-value {
+            white-space: nowrap;
+            font-weight: bold;
+        }
+        #control-panel {
+            width: 260px;
+        }
+        #vehicle-load-list-box {
+            width: 300px;
+        }
+        #trained-personnel-box {
+            width: 300px;
+        }
+        #control-panel.mf2026-control-collapsed {
+            width: 44px;
+            min-height: 0;
+            padding: 6px;
+            overflow: hidden;
+        }
+        #control-panel.mf2026-control-collapsed .mf-control-body {
+            display: none;
+        }
+        #control-panel.mf2026-control-collapsed .mf2026-header {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            min-height: 120px;
+            padding: 8px 4px;
+            cursor: pointer;
+        }
+        .mf2026-control-header-row {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+        .mf2026-control-header-row .mf2026-header {
+            flex: 1;
+        }
+        #mf-control-centre,
+        #mf-control-minimize {
+            width: 34px;
+            padding: 6px 0;
+            background: #6c757d;
+            color: white;
+            flex: 0 0 34px;
+        }
+        #mf-control-centre {
+            background: #0d6efd;
+        }
+        #vehicle-load-list-box.mf2026-load-collapsed {
+            width: 44px;
+            min-height: 0;
+            padding: 6px;
+            overflow: hidden;
+        }
+        #vehicle-load-list-box.mf2026-load-collapsed .mf-load-body {
+            display: none;
+        }
+        #vehicle-load-list-box.mf2026-load-collapsed .mf2026-header {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            min-height: 130px;
+            padding: 8px 4px;
+            cursor: pointer;
+        }
+        .mf2026-load-header-row {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+        .mf2026-load-header-row .mf2026-header {
+            flex: 1;
+        }
+        #mf-load-minimize {
+            width: 34px;
+            padding: 6px 0;
+            background: #6c757d;
+            color: white;
+        }
+        #trained-personnel-box.mf2026-trained-collapsed {
+            width: 44px;
+            min-height: 0;
+            padding: 6px;
+            overflow: hidden;
+        }
+        #trained-personnel-box.mf2026-trained-collapsed .mf-trained-body {
+            display: none;
+        }
+        #trained-personnel-box.mf2026-trained-collapsed .mf2026-header {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            min-height: 145px;
+            padding: 8px 4px;
+            cursor: pointer;
+        }
+        .mf2026-trained-header-row {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+        .mf2026-trained-header-row .mf2026-header {
+            flex: 1;
+        }
+        #mf-trained-minimize {
+            width: 34px;
+            padding: 6px 0;
+            background: #6c757d;
+            color: white;
+        }
+        .mf2026-button-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+        .mf2026-primary-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+        .mf2026-primary-actions #dispatch-share-box,
+        .mf2026-primary-actions #auto-mode-box {
+            grid-column: 1 / -1;
+        }
+        .mf-control-advanced {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+        }
+        #mf-iphone-advanced-toggle {
+            display: none;
+        }
+        #mission-finder-wrapper.mf2026-ios-safari {
+            top: calc(8px + env(safe-area-inset-top, 0px));
+            right: calc(8px + env(safe-area-inset-right, 0px));
+            left: calc(8px + env(safe-area-inset-left, 0px));
+            width: auto;
+            max-width: none;
+            max-height: calc(
+                100vh
+                - 16px
+                - env(safe-area-inset-top, 0px)
+                - env(safe-area-inset-bottom, 0px)
+            );
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 6px;
+            overflow-x: hidden;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
+            -webkit-transform: translateZ(0);
+            box-sizing: border-box;
+        }
+        @supports (height: 100dvh) {
             #mission-finder-wrapper.mf2026-ios-safari {
-                top: calc(8px + env(safe-area-inset-top, 0px));
-                right: calc(8px + env(safe-area-inset-right, 0px));
-                left: calc(8px + env(safe-area-inset-left, 0px));
-                width: auto;
-                max-width: none;
                 max-height: calc(
-                    100vh
+                    100dvh
                     - 16px
                     - env(safe-area-inset-top, 0px)
                     - env(safe-area-inset-bottom, 0px)
                 );
-                display: flex;
-                flex-direction: column;
-                align-items: stretch;
-                gap: 6px;
-                overflow-x: hidden;
-                overflow-y: auto;
-                overscroll-behavior: contain;
-                -webkit-overflow-scrolling: touch;
-                -webkit-transform: translateZ(0);
-                box-sizing: border-box;
             }
-            @supports (height: 100dvh) {
-                #mission-finder-wrapper.mf2026-ios-safari {
-                    max-height: calc(
-                        100dvh
-                        - 16px
-                        - env(safe-area-inset-top, 0px)
-                        - env(safe-area-inset-bottom, 0px)
-                    );
-                }
-            }
-            #mission-finder-wrapper.mf2026-ios-safari .mf2026-panel,
-            #mission-finder-wrapper.mf2026-ios-safari #control-panel,
-            #mission-finder-wrapper.mf2026-ios-safari #vehicle-load-list-box,
-            #mission-finder-wrapper.mf2026-ios-safari #trained-personnel-box {
-                width: 100%;
-                max-width: none;
-                flex: 0 0 auto;
-            }
-            #mission-finder-wrapper.mf2026-ios-safari .mf2026-header {
-                min-height: 42px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                box-sizing: border-box;
-            }
-            #mission-finder-wrapper.mf2026-ios-safari .mf2026-drag {
-                cursor: grab;
-                touch-action: none;
-                -webkit-user-select: none;
-                user-select: none;
-            }
-            #mission-finder-wrapper.mf2026-ios-safari .mf2026-drag:active {
-                cursor: grabbing;
-            }
-            #mission-finder-wrapper.mf2026-ios-safari .mf-control-body,
-            #mission-finder-wrapper.mf2026-ios-safari .mf-load-body,
-            #mission-finder-wrapper.mf2026-ios-safari .mf-trained-body,
-            #mission-finder-wrapper.mf2026-ios-safari #vehicle-load-list-content,
-            #mission-finder-wrapper.mf2026-ios-safari #trained-personnel-content,
-            #mission-finder-wrapper.mf2026-ios-safari #session-panel-content {
-                -webkit-overflow-scrolling: touch;
-            }
-            #mission-finder-wrapper.mf2026-ios-safari .mf2026-button {
-                min-height: 42px;
-                font-size: 14px;
-                touch-action: manipulation;
-            }
-            #mission-finder-wrapper.mf2026-ios-safari input,
-            #mission-finder-wrapper.mf2026-ios-safari select {
-                min-height: 38px;
-                font-size: 16px;
-            }
-            #mission-finder-wrapper.mf2026-ios-safari #mf-control-position-box,
-            #mission-finder-wrapper.mf2026-ios-safari #mf-control-centre {
-                display: none;
-            }
-            #mission-finder-wrapper.mf2026-ios-safari #mf-control-minimize {
-                width: 44px;
-                flex: 0 0 44px;
-                padding: 6px 0;
-                font-size: 20px;
-                line-height: 1;
-            }
-            #mission-finder-wrapper.mf2026-ios-safari
-            #control-panel.mf2026-control-collapsed {
-                width: 100%;
-                min-height: 0;
-                padding: 6px;
-                overflow: hidden;
-            }
-            #mission-finder-wrapper.mf2026-ios-safari
-            #control-panel.mf2026-control-collapsed
-            .mf2026-control-header-row {
-                width: 100%;
-            }
-            #mission-finder-wrapper.mf2026-ios-safari
-            #control-panel.mf2026-control-collapsed
-            .mf2026-header {
-                writing-mode: horizontal-tb;
-                text-orientation: mixed;
-                min-height: 42px;
-                padding: 8px 10px;
-                justify-content: flex-start;
-                text-align: left;
-            }
-            #mission-finder-wrapper.mf2026-ios-safari
-            #vehicle-load-list-box.mf2026-load-collapsed {
-                width: 100%;
-                min-height: 0;
-                padding: 6px;
-                overflow: hidden;
-            }
-            #mission-finder-wrapper.mf2026-ios-safari
-            #vehicle-load-list-box.mf2026-load-collapsed
-            .mf2026-header {
-                writing-mode: horizontal-tb;
-                text-orientation: mixed;
-                min-height: 42px;
-                padding: 8px 10px;
-                justify-content: flex-start;
-                text-align: left;
-            }
-            #mission-finder-wrapper.mf2026-ios-safari
-            #trained-personnel-box.mf2026-trained-collapsed {
-                width: 100%;
-                min-height: 0;
-                padding: 6px;
-                overflow: hidden;
-            }
-            #mission-finder-wrapper.mf2026-ios-safari
-            #trained-personnel-box.mf2026-trained-collapsed
-            .mf2026-header {
-                writing-mode: horizontal-tb;
-                text-orientation: mixed;
-                min-height: 42px;
-                padding: 8px 10px;
-                justify-content: flex-start;
-                text-align: left;
-            }
+        }
+        #mission-finder-wrapper.mf2026-ios-safari .mf2026-panel,
+        #mission-finder-wrapper.mf2026-ios-safari #control-panel,
+        #mission-finder-wrapper.mf2026-ios-safari #vehicle-load-list-box,
+        #mission-finder-wrapper.mf2026-ios-safari #trained-personnel-box {
+            width: 100%;
+            max-width: none;
+            flex: 0 0 auto;
+        }
+        #mission-finder-wrapper.mf2026-ios-safari .mf2026-header {
+            min-height: 42px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+        }
+        #mission-finder-wrapper.mf2026-ios-safari .mf2026-drag {
+            cursor: grab;
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        #mission-finder-wrapper.mf2026-ios-safari .mf2026-drag:active {
+            cursor: grabbing;
+        }
+        #mission-finder-wrapper.mf2026-ios-safari .mf-control-body,
+        #mission-finder-wrapper.mf2026-ios-safari .mf-load-body,
+        #mission-finder-wrapper.mf2026-ios-safari .mf-trained-body,
+        #mission-finder-wrapper.mf2026-ios-safari #vehicle-load-list-content,
+        #mission-finder-wrapper.mf2026-ios-safari #trained-personnel-content,
+        #mission-finder-wrapper.mf2026-ios-safari #session-panel-content {
+            -webkit-overflow-scrolling: touch;
+        }
+        #mission-finder-wrapper.mf2026-ios-safari .mf2026-button {
+            min-height: 42px;
+            font-size: 14px;
+            touch-action: manipulation;
+        }
+        #mission-finder-wrapper.mf2026-ios-safari input,
+        #mission-finder-wrapper.mf2026-ios-safari select {
+            min-height: 38px;
+            font-size: 16px;
+        }
+        #mission-finder-wrapper.mf2026-ios-safari #mf-control-position-box,
+        #mission-finder-wrapper.mf2026-ios-safari #mf-control-centre {
+            display: none;
+        }
+        #mission-finder-wrapper.mf2026-ios-safari #mf-control-minimize {
+            width: 44px;
+            flex: 0 0 44px;
+            padding: 6px 0;
+            font-size: 20px;
+            line-height: 1;
+        }
+        #mission-finder-wrapper.mf2026-ios-safari
+        #control-panel.mf2026-control-collapsed {
+            width: 100%;
+            min-height: 0;
+            padding: 6px;
+            overflow: hidden;
+        }
+        #mission-finder-wrapper.mf2026-ios-safari
+        #control-panel.mf2026-control-collapsed
+        .mf2026-control-header-row {
+            width: 100%;
+        }
+        #mission-finder-wrapper.mf2026-ios-safari
+        #control-panel.mf2026-control-collapsed
+        .mf2026-header {
+            writing-mode: horizontal-tb;
+            text-orientation: mixed;
+            min-height: 42px;
+            padding: 8px 10px;
+            justify-content: flex-start;
+            text-align: left;
+        }
+        #mission-finder-wrapper.mf2026-ios-safari
+        #vehicle-load-list-box.mf2026-load-collapsed {
+            width: 100%;
+            min-height: 0;
+            padding: 6px;
+            overflow: hidden;
+        }
+        #mission-finder-wrapper.mf2026-ios-safari
+        #vehicle-load-list-box.mf2026-load-collapsed
+        .mf2026-header {
+            writing-mode: horizontal-tb;
+            text-orientation: mixed;
+            min-height: 42px;
+            padding: 8px 10px;
+            justify-content: flex-start;
+            text-align: left;
+        }
+        #mission-finder-wrapper.mf2026-ios-safari
+        #trained-personnel-box.mf2026-trained-collapsed {
+            width: 100%;
+            min-height: 0;
+            padding: 6px;
+            overflow: hidden;
+        }
+        #mission-finder-wrapper.mf2026-ios-safari
+        #trained-personnel-box.mf2026-trained-collapsed
+        .mf2026-header {
+            writing-mode: horizontal-tb;
+            text-orientation: mixed;
+            min-height: 42px;
+            padding: 8px 10px;
+            justify-content: flex-start;
+            text-align: left;
+        }
+        #mission-finder-wrapper.mf2026-iphone-safari {
+            --mf-iphone-close-gutter: 48px;
+            --mf-iphone-launcher-top: 0px;
+            --mf-iphone-launcher-right: 112px;
+            --mf-iphone-launcher-max-width: calc(100% - 120px);
+            --mf-iphone-panel-top: 42px;
+            top: calc(4px + env(safe-area-inset-top, 0px));
+            right: calc(4px + env(safe-area-inset-right, 0px));
+            left: calc(4px + env(safe-area-inset-left, 0px));
+            display: block;
+            gap: 0;
+            pointer-events: none;
+            max-height: calc(
+                100vh
+                - 8px
+                - env(safe-area-inset-top, 0px)
+                - env(safe-area-inset-bottom, 0px)
+            );
+            overflow: visible;
+            scrollbar-width: none;
+        }
+        #mission-finder-wrapper.mf2026-iphone-safari::-webkit-scrollbar,
+        #mission-finder-wrapper.mf2026-iphone-safari *::-webkit-scrollbar {
+            display: none;
+        }
+        @supports (height: 100dvh) {
             #mission-finder-wrapper.mf2026-iphone-safari {
-                --mf-iphone-close-gutter: 48px;
-                --mf-iphone-launcher-top: 0px;
-                --mf-iphone-launcher-right: 112px;
-                --mf-iphone-launcher-max-width: calc(100% - 120px);
-                --mf-iphone-panel-top: 42px;
-                top: calc(4px + env(safe-area-inset-top, 0px));
-                right: calc(4px + env(safe-area-inset-right, 0px));
-                left: calc(4px + env(safe-area-inset-left, 0px));
-                display: block;
-                gap: 0;
-                pointer-events: none;
                 max-height: calc(
-                    100vh
+                    100dvh
                     - 8px
                     - env(safe-area-inset-top, 0px)
                     - env(safe-area-inset-bottom, 0px)
                 );
-                overflow: visible;
-                scrollbar-width: none;
             }
-            #mission-finder-wrapper.mf2026-iphone-safari::-webkit-scrollbar,
-            #mission-finder-wrapper.mf2026-iphone-safari *::-webkit-scrollbar {
-                display: none;
-            }
-            @supports (height: 100dvh) {
-                #mission-finder-wrapper.mf2026-iphone-safari {
-                    max-height: calc(
-                        100dvh
-                        - 8px
-                        - env(safe-area-inset-top, 0px)
-                        - env(safe-area-inset-bottom, 0px)
-                    );
-                }
-            }
-            #mission-finder-wrapper.mf2026-iphone-safari
-            #mf-iphone-panel-launcher {
-                position: absolute;
-                top: var(--mf-iphone-launcher-top, 0px);
-                right: var(--mf-iphone-launcher-right, 52px);
-                z-index: 4;
-                display: flex;
-                align-items: center;
-                justify-content: flex-end;
-                gap: 4px;
-                max-width: var(
-                    --mf-iphone-launcher-max-width,
-                    calc(100% - 60px)
-                );
-                pointer-events: auto;
-                padding: 3px;
-                border: 1px solid rgba(255, 255, 255, 0.22);
-                border-radius: 11px;
-                background: rgba(28, 28, 30, 0.96);
-                box-shadow: 0 5px 16px rgba(0, 0, 0, 0.32);
-                -webkit-backdrop-filter: blur(16px) saturate(135%);
-                backdrop-filter: blur(16px) saturate(135%);
-            }
-            #mission-finder-wrapper.mf2026-iphone-safari
-            .mf-iphone-launcher-button {
-                min-width: 66px;
-                min-height: 34px;
-                padding: 6px 10px;
-                border: 0;
-                border-radius: 8px;
-                background: rgba(118, 118, 128, 0.28);
-                color: #f2f2f7;
-                font-size: 12px;
-                font-weight: 750;
-                line-height: 1;
-                white-space: nowrap;
-                touch-action: manipulation;
-                -webkit-tap-highlight-color: transparent;
-            }
-            #mission-finder-wrapper.mf2026-iphone-safari
-            .mf-iphone-launcher-button.mf2026-active,
-            #mission-finder-wrapper.mf2026-iphone-safari
-            .mf-iphone-launcher-button[aria-pressed="true"] {
-                background: #0a84ff;
-                color: #fff;
-                box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
-            }
+        }
+        #mission-finder-wrapper.mf2026-iphone-safari
+        #mf-iphone-panel-launcher {
+            position: absolute;
+            top: var(--mf-iphone-launcher-top, 0px);
+            right: var(--mf-iphone-launcher-right, 52px);
+            z-index: 4;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 4px;
+            max-width: var(
+                --mf-iphone-launcher-max-width,
+                calc(100% - 60px)
+            );
+            pointer-events: auto;
+            padding: 3px;
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            border-radius: 11px;
+            background: rgba(28, 28, 30, 0.96);
+            box-shadow: 0 5px 16px rgba(0, 0, 0, 0.32);
+            -webkit-backdrop-filter: blur(16px) saturate(135%);
+            backdrop-filter: blur(16px) saturate(135%);
+        }
+        #mission-finder-wrapper.mf2026-iphone-safari
+        .mf-iphone-launcher-button {
+            min-width: 66px;
+            min-height: 34px;
+            padding: 6px 10px;
+            border: 0;
+            border-radius: 8px;
+            background: rgba(118, 118, 128, 0.28);
+            color: #f2f2f7;
+            font-size: 12px;
+            font-weight: 750;
+            line-height: 1;
+            white-space: nowrap;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        #mission-finder-wrapper.mf2026-iphone-safari
+        .mf-iphone-launcher-button.mf2026-active,
+        #mission-finder-wrapper.mf2026-iphone-safari
+        .mf-iphone-launcher-button[aria-pressed="true"] {
+            background: #0a84ff;
+            color: #fff;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22);
+        }
+        #mission-finder-wrapper.mf2026-iphone-safari > .mf2026-panel {
+            position: absolute;
+            top: var(--mf-iphone-panel-top, 42px);
+            right: 0;
+            left: 0;
+            width: 100%;
+            max-width: 100%;
+            max-height: calc(
+                100vh
+                - var(--mf-iphone-panel-top, 42px)
+                - 8px
+                - env(safe-area-inset-bottom, 0px)
+            );
+            pointer-events: auto;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
+        }
+        @supports (height: 100dvh) {
             #mission-finder-wrapper.mf2026-iphone-safari > .mf2026-panel {
-                position: absolute;
-                top: var(--mf-iphone-panel-top, 42px);
-                right: 0;
-                left: 0;
-                width: 100%;
-                max-width: 100%;
                 max-height: calc(
-                    100vh
+                    100dvh
                     - var(--mf-iphone-panel-top, 42px)
                     - 8px
                     - env(safe-area-inset-bottom, 0px)
                 );
-                pointer-events: auto;
-                overflow-y: auto;
-                overscroll-behavior: contain;
-                -webkit-overflow-scrolling: touch;
             }
-            @supports (height: 100dvh) {
-                #mission-finder-wrapper.mf2026-iphone-safari > .mf2026-panel {
-                    max-height: calc(
-                        100dvh
-                        - var(--mf-iphone-panel-top, 42px)
-                        - 8px
-                        - env(safe-area-inset-bottom, 0px)
-                    );
-                }
-            }
-            #mission-finder-wrapper.mf2026-iphone-safari
-            #trained-personnel-box {
-                display: none !important;
-            }
-            #mission-finder-wrapper.mf2026-iphone-safari
-            #control-panel.mf2026-control-collapsed,
-            #mission-finder-wrapper.mf2026-iphone-safari
-            #vehicle-load-list-box.mf2026-load-collapsed {
-                display: none !important;
-            }
-            #mission-finder-wrapper.mf2026-iphone-safari
-            .mf2026-control-header-row,
-            #mission-finder-wrapper.mf2026-iphone-safari
-            .mf2026-load-header-row {
-                display: none !important;
-            }
-            #mission-finder-wrapper.mf2026-iphone-safari .mf2026-panel {
-                padding: 5px;
-                gap: 4px;
-                border: 1px solid rgba(255, 255, 255, 0.24);
-                border-radius: 14px;
-                background: rgba(28, 28, 30, 0.96);
-                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.36);
-                -webkit-backdrop-filter: blur(16px) saturate(135%);
-                backdrop-filter: blur(16px) saturate(135%);
-            }
-            #mission-finder-wrapper.mf2026-iphone-safari .mf-control-body {
-                display: flex;
-                flex-direction: column;
-                gap: 5px;
-            }
-            #mission-finder-wrapper.mf2026-iphone-safari #status-box {
-                min-height: 0;
-                max-height: 54px;
-                overflow-y: auto;
-                padding: 7px 9px;
-                border-radius: 10px;
-                font-size: 12px;
-                line-height: 1.25;
-                background: rgba(118, 118, 128, 0.20);
-            }
-            #mission-finder-wrapper.mf2026-iphone-safari
-            #mf-iphone-advanced-toggle {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                width: 100%;
-                min-height: 34px;
-                padding: 6px 10px;
-                border: 0;
-                border-radius: 10px;
-                background: rgba(118, 118, 128, 0.24);
-                color: #f2f2f7;
-                font-size: 12px;
-                font-weight: 700;
-                touch-action: manipulation;
-            }
-            #mission-finder-wrapper.mf2026-iphone-safari
-            .mf-control-advanced {
-                display: none;
-                gap: 5px;
-            }
-            #mission-finder-wrapper.mf2026-iphone-safari
-            .mf-control-advanced.mf2026-expanded {
-                display: flex;
-            }
-            #mission-finder-wrapper.mf2026-iphone-safari
-            .mf-control-advanced .mf2026-box {
-                padding: 7px;
-                border-radius: 10px;
-            }
-            #mission-finder-wrapper.mf2026-iphone-safari
-            .mf2026-section-title {
-                margin-bottom: 3px;
-                font-size: 12px;
-            }
-            #mission-finder-wrapper.mf2026-iphone-safari .mf2026-small {
-                font-size: 11px;
-                line-height: 1.25;
-            }
-            #mission-finder-wrapper.mf2026-iphone-safari input,
-            #mission-finder-wrapper.mf2026-iphone-safari select {
-                min-height: 34px;
-                font-size: 16px;
-            }
-            #mission-finder-wrapper.mf2026-iphone-safari
-            .mf2026-primary-actions {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-                gap: 5px;
-            }
-            #mission-finder-wrapper.mf2026-iphone-safari
-            .mf2026-primary-actions #dispatch-share-box,
-            #mission-finder-wrapper.mf2026-iphone-safari
-            .mf2026-primary-actions #auto-mode-box {
-                grid-column: auto;
-            }
-            #mission-finder-wrapper.mf2026-iphone-safari
-            .mf2026-primary-actions .mf2026-button {
-                min-width: 0;
-                min-height: 38px;
-                padding: 6px 7px;
-                border-radius: 10px;
-                font-size: 12.5px;
-                line-height: 1.15;
-                white-space: normal;
-                touch-action: manipulation;
-            }
+        }
+        #mission-finder-wrapper.mf2026-iphone-safari
+        #trained-personnel-box {
+            display: none !important;
+        }
+        #mission-finder-wrapper.mf2026-iphone-safari
+        #control-panel.mf2026-control-collapsed,
+        #mission-finder-wrapper.mf2026-iphone-safari
+        #vehicle-load-list-box.mf2026-load-collapsed {
+            display: none !important;
+        }
+        #mission-finder-wrapper.mf2026-iphone-safari
+        .mf2026-control-header-row,
+        #mission-finder-wrapper.mf2026-iphone-safari
+        .mf2026-load-header-row {
+            display: none !important;
+        }
+        #mission-finder-wrapper.mf2026-iphone-safari .mf2026-panel {
+            padding: 5px;
+            gap: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.24);
+            border-radius: 14px;
+            background: rgba(28, 28, 30, 0.96);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.36);
+            -webkit-backdrop-filter: blur(16px) saturate(135%);
+            backdrop-filter: blur(16px) saturate(135%);
+        }
+        #mission-finder-wrapper.mf2026-iphone-safari .mf-control-body {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        #mission-finder-wrapper.mf2026-iphone-safari #status-box {
+            min-height: 0;
+            max-height: 54px;
+            overflow-y: auto;
+            padding: 7px 9px;
+            border-radius: 10px;
+            font-size: 12px;
+            line-height: 1.25;
+            background: rgba(118, 118, 128, 0.20);
+        }
+        #mission-finder-wrapper.mf2026-iphone-safari
+        #mf-iphone-advanced-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            min-height: 34px;
+            padding: 6px 10px;
+            border: 0;
+            border-radius: 10px;
+            background: rgba(118, 118, 128, 0.24);
+            color: #f2f2f7;
+            font-size: 12px;
+            font-weight: 700;
+            touch-action: manipulation;
+        }
+        #mission-finder-wrapper.mf2026-iphone-safari
+        .mf-control-advanced {
+            display: none;
+            gap: 5px;
+        }
+        #mission-finder-wrapper.mf2026-iphone-safari
+        .mf-control-advanced.mf2026-expanded {
+            display: flex;
+        }
+        #mission-finder-wrapper.mf2026-iphone-safari
+        .mf-control-advanced .mf2026-box {
+            padding: 7px;
+            border-radius: 10px;
+        }
+        #mission-finder-wrapper.mf2026-iphone-safari
+        .mf2026-section-title {
+            margin-bottom: 3px;
+            font-size: 12px;
+        }
+        #mission-finder-wrapper.mf2026-iphone-safari .mf2026-small {
+            font-size: 11px;
+            line-height: 1.25;
+        }
+        #mission-finder-wrapper.mf2026-iphone-safari input,
+        #mission-finder-wrapper.mf2026-iphone-safari select {
+            min-height: 34px;
+            font-size: 16px;
+        }
+        #mission-finder-wrapper.mf2026-iphone-safari
+        .mf2026-primary-actions {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 5px;
+        }
+        #mission-finder-wrapper.mf2026-iphone-safari
+        .mf2026-primary-actions #dispatch-share-box,
+        #mission-finder-wrapper.mf2026-iphone-safari
+        .mf2026-primary-actions #auto-mode-box {
+            grid-column: auto;
+        }
+        #mission-finder-wrapper.mf2026-iphone-safari
+        .mf2026-primary-actions .mf2026-button {
+            min-width: 0;
+            min-height: 38px;
+            padding: 6px 7px;
+            border-radius: 10px;
+            font-size: 12.5px;
+            line-height: 1.15;
+            white-space: normal;
+            touch-action: manipulation;
+        }
+        #mission-finder-wrapper.mf2026-iphone-safari .mf-load-body {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            max-height: 42vh;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
+        }
+        @supports (height: 100dvh) {
             #mission-finder-wrapper.mf2026-iphone-safari .mf-load-body {
-                display: flex;
-                flex-direction: column;
-                gap: 4px;
-                max-height: 42vh;
-                overflow-y: auto;
-                overscroll-behavior: contain;
-                -webkit-overflow-scrolling: touch;
+                max-height: 42dvh;
             }
-            @supports (height: 100dvh) {
-                #mission-finder-wrapper.mf2026-iphone-safari .mf-load-body {
-                    max-height: 42dvh;
-                }
-            }
-            #mission-finder-wrapper.mf2026-iphone-safari
-            .mf-load-body .mf2026-box {
-                padding: 6px;
-                border-radius: 10px;
-            }
-            #mission-finder-wrapper.mf2026-iphone-safari
-            #vehicle-load-list-content {
-                max-height: 22vh;
-                padding-right: 0;
-            }
-            #mission-finder-wrapper.mf2026-iphone-safari
-            #session-panel-content {
-                max-height: 12vh;
-                padding-right: 0;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) {
-                display: grid;
-                grid-template-columns: 66px repeat(3, minmax(235px, 1fr));
-                grid-template-areas:
-                    "rail control load trained"
-                    "footer footer footer footer";
-                align-items: stretch;
-                gap: 10px;
-                width: min(1360px, calc(100vw - 32px));
-                max-width: calc(100vw - 32px);
-                max-height: calc(100vh - 32px);
-                padding: 10px;
-                overflow: auto;
-                box-sizing: border-box;
-                border: 1px solid rgba(82, 155, 255, 0.24);
-                border-radius: 14px;
-                background:
-                    radial-gradient(circle at 8% 0%, rgba(20, 92, 170, 0.18), transparent 34%),
-                    linear-gradient(145deg, rgba(5, 16, 29, 0.98), rgba(4, 21, 38, 0.98));
-                box-shadow: 0 18px 55px rgba(0, 0, 0, 0.55);
-                color: #eaf2ff;
-            }
+        }
+        #mission-finder-wrapper.mf2026-iphone-safari
+        .mf-load-body .mf2026-box {
+            padding: 6px;
+            border-radius: 10px;
+        }
+        #mission-finder-wrapper.mf2026-iphone-safari
+        #vehicle-load-list-content {
+            max-height: 22vh;
+            padding-right: 0;
+        }
+        #mission-finder-wrapper.mf2026-iphone-safari
+        #session-panel-content {
+            max-height: 12vh;
+            padding-right: 0;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) {
+            display: grid;
+            grid-template-columns: 66px repeat(3, minmax(235px, 1fr));
+            grid-template-areas:
+                "rail control load trained"
+                "footer footer footer footer";
+            align-items: stretch;
+            gap: 10px;
+            width: min(1360px, calc(100vw - 32px));
+            max-width: calc(100vw - 32px);
+            max-height: calc(100vh - 32px);
+            padding: 10px;
+            overflow: auto;
+            box-sizing: border-box;
+            border: 1px solid rgba(82, 155, 255, 0.24);
+            border-radius: 14px;
+            background:
+                radial-gradient(circle at 8% 0%, rgba(20, 92, 170, 0.18), transparent 34%),
+                linear-gradient(145deg, rgba(5, 16, 29, 0.98), rgba(4, 21, 38, 0.98));
+            box-shadow: 0 18px 55px rgba(0, 0, 0, 0.55);
+            color: #eaf2ff;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari) {
+            grid-template-columns: 66px minmax(250px, 285px) repeat(3, minmax(225px, 1fr));
+            grid-template-areas:
+                "rail utility control load trained"
+                "footer footer footer footer footer";
+            width: min(1580px, calc(100vw - 32px));
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-panel {
+            width: auto;
+            min-width: 0;
+            max-height: calc(100vh - 96px);
+            padding: 0;
+            gap: 0;
+            overflow: hidden;
+            border: 1px solid rgba(126, 167, 218, 0.18);
+            border-radius: 12px;
+            background: linear-gradient(155deg, rgba(18, 32, 48, 0.97), rgba(7, 23, 39, 0.97));
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035), 0 10px 30px rgba(0, 0, 0, 0.24);
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #control-panel { grid-area: control; }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #vehicle-load-list-box { grid-area: load; }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #trained-personnel-box { grid-area: trained; }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-control-header-row,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-load-header-row,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-trained-header-row {
+            min-height: 48px;
+            padding: 8px 10px;
+            border-bottom: 1px solid rgba(126, 167, 218, 0.14);
+            background: rgba(9, 23, 38, 0.72);
+            box-sizing: border-box;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0;
+            text-align: left;
+            text-transform: uppercase;
+            letter-spacing: 0.035em;
+            background: transparent;
+            color: #f4f8ff;
+            font-size: 13px;
+            font-weight: 800;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mf-control-title::before {
+            content: "◎";
+            display: grid;
+            place-items: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            background: linear-gradient(145deg, #0d6efd, #063f91);
+            color: white;
+            box-shadow: 0 0 16px rgba(13, 110, 253, 0.36);
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mf-load-title::before {
+            content: "▣";
+            color: #49a4ff;
+            font-size: 21px;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mf-trained-title::before {
+            content: "♙";
+            color: #c86cff;
+            font-size: 22px;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf-control-body,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf-load-body,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf-trained-body {
+            display: flex;
+            flex-direction: column;
+            gap: 9px;
+            padding: 10px;
+            overflow-y: auto;
+            min-height: 0;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-box {
+            padding: 10px;
+            border: 1px solid rgba(126, 167, 218, 0.13);
+            border-radius: 9px;
+            background: rgba(255, 255, 255, 0.025);
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #status-box {
+            min-height: 52px;
+            background: rgba(6, 20, 34, 0.72);
+            color: #dce8f7;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-section-title {
+            color: #eff6ff;
+            font-size: 12px;
+            letter-spacing: 0.01em;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-small {
+            color: #aebdd0;
+            line-height: 1.4;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-primary-actions {
+            gap: 8px;
+            margin-top: auto;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-primary-actions .mf2026-button,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mf-export-unit-finder-diagnostics {
+            min-height: 42px;
+            border: 1px solid rgba(255, 255, 255, 0.11);
+            border-radius: 8px;
+            color: #fff !important;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10), 0 5px 14px rgba(0, 0, 0, 0.22);
+            transition: transform 120ms ease, filter 120ms ease, box-shadow 120ms ease;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-button:hover {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #unit-finder-box {
+            background: linear-gradient(145deg, #f2a900, #b96d00) !important;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mf-ally-steal {
+            background: linear-gradient(145deg, #d42b86, #861653) !important;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mission-update-box {
+            background: linear-gradient(145deg, #1268da, #08418e) !important;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #dispatch-box {
+            background: linear-gradient(145deg, #526273, #303b47) !important;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #dispatch-share-box {
+            background: linear-gradient(145deg, #13864e, #07582f) !important;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #auto-mode-box {
+            background: linear-gradient(145deg, #743bc0, #452178) !important;
+        }
+        #mf-dashboard-rail {
+            grid-area: rail;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 6px;
+            border: 1px solid rgba(126, 167, 218, 0.16);
+            border-radius: 11px;
+            background: rgba(6, 19, 33, 0.88);
+        }
+        .mf-dashboard-tab {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            min-height: 72px;
+            padding: 7px 4px;
+            border: 1px solid transparent;
+            border-radius: 9px;
+            background: transparent;
+            color: #9fb1c8;
+            font-size: 10px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .mf-dashboard-tab:hover,
+        .mf-dashboard-tab.mf-dashboard-tab-active {
+            border-color: rgba(34, 137, 255, 0.58);
+            background: linear-gradient(145deg, rgba(21, 104, 204, 0.58), rgba(7, 48, 96, 0.66));
+            color: #fff;
+            box-shadow: 0 0 18px rgba(13, 110, 253, 0.20);
+        }
+        .mf-dashboard-tab-icon {
+            font-size: 22px;
+            line-height: 1;
+            color: #55a9ff;
+        }
+        #mf-dashboard-utility {
+            grid-area: utility;
+            min-width: 0;
+            max-height: calc(100vh - 96px);
+            overflow: hidden;
+            border: 1px solid rgba(126, 167, 218, 0.18);
+            border-radius: 12px;
+            background: linear-gradient(155deg, rgba(18, 32, 48, 0.97), rgba(7, 23, 39, 0.97));
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.24);
+        }
+        #mf-dashboard-utility[hidden],
+        .mf-dashboard-utility-pane[hidden] {
+            display: none !important;
+        }
+        .mf-dashboard-utility-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            min-height: 48px;
+            padding: 8px 11px;
+            border-bottom: 1px solid rgba(126, 167, 218, 0.14);
+            color: #f4f8ff;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            font-size: 13px;
+            font-weight: 800;
+            box-sizing: border-box;
+        }
+        #mf-dashboard-utility-close {
+            width: 30px;
+            height: 30px;
+            border: 0;
+            border-radius: 7px;
+            background: rgba(255, 255, 255, 0.08);
+            color: #dce8f7;
+            cursor: pointer;
+        }
+        .mf-dashboard-utility-pane {
+            display: flex;
+            flex-direction: column;
+            gap: 9px;
+            padding: 10px;
+            overflow-y: auto;
+            max-height: calc(100vh - 154px);
+            box-sizing: border-box;
+        }
+        #mf-dashboard-settings-pane .mf-control-advanced {
+            display: flex;
+            gap: 9px;
+        }
+        #mf-dashboard-settings-pane input,
+        #mf-dashboard-diagnostics-pane input {
+            color: #f4f8ff !important;
+            background: rgba(2, 13, 25, 0.78) !important;
+            border: 1px solid rgba(126, 167, 218, 0.20) !important;
+            border-radius: 7px !important;
+            min-height: 38px;
+            padding: 7px 9px !important;
+            box-sizing: border-box;
+        }
+        .mf-dashboard-toggle-row {
+            align-items: flex-start;
+        }
+        #mf-event-scanner-state {
+            margin-top: 7px;
+        }
+        #mf-dashboard-diagnostics-pane #mf-export-unit-finder-diagnostics {
+            width: 100%;
+            background: linear-gradient(145deg, #27394d, #172638) !important;
+        }
+        #mf-dashboard-footer {
+            grid-area: footer;
+            padding: 4px 10px 0;
+            text-align: center;
+            color: #7f91a8;
+            font-size: 11px;
+            letter-spacing: 0.02em;
+        }
+        @media (max-width: 1180px) and (min-width: 701px) {
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari),
             #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari) {
-                grid-template-columns: 66px minmax(250px, 285px) repeat(3, minmax(225px, 1fr));
+                grid-template-columns: 62px repeat(2, minmax(250px, 1fr));
                 grid-template-areas:
-                    "rail utility control load trained"
-                    "footer footer footer footer footer";
-                width: min(1580px, calc(100vw - 32px));
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-panel {
-                width: auto;
-                min-width: 0;
-                max-height: calc(100vh - 96px);
-                padding: 0;
-                gap: 0;
-                overflow: hidden;
-                border: 1px solid rgba(126, 167, 218, 0.18);
-                border-radius: 12px;
-                background: linear-gradient(155deg, rgba(18, 32, 48, 0.97), rgba(7, 23, 39, 0.97));
-                box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035), 0 10px 30px rgba(0, 0, 0, 0.24);
-                font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #control-panel { grid-area: control; }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #vehicle-load-list-box { grid-area: load; }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #trained-personnel-box { grid-area: trained; }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-control-header-row,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-load-header-row,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-trained-header-row {
-                min-height: 48px;
-                padding: 8px 10px;
-                border-bottom: 1px solid rgba(126, 167, 218, 0.14);
-                background: rgba(9, 23, 38, 0.72);
-                box-sizing: border-box;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-header {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                padding: 0;
-                text-align: left;
-                text-transform: uppercase;
-                letter-spacing: 0.035em;
-                background: transparent;
-                color: #f4f8ff;
-                font-size: 13px;
-                font-weight: 800;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mf-control-title::before {
-                content: "◎";
-                display: grid;
-                place-items: center;
-                width: 28px;
-                height: 28px;
-                border-radius: 8px;
-                background: linear-gradient(145deg, #0d6efd, #063f91);
-                color: white;
-                box-shadow: 0 0 16px rgba(13, 110, 253, 0.36);
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mf-load-title::before {
-                content: "▣";
-                color: #49a4ff;
-                font-size: 21px;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mf-trained-title::before {
-                content: "♙";
-                color: #c86cff;
-                font-size: 22px;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf-control-body,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf-load-body,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf-trained-body {
-                display: flex;
-                flex-direction: column;
-                gap: 9px;
-                padding: 10px;
-                overflow-y: auto;
-                min-height: 0;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-box {
-                padding: 10px;
-                border: 1px solid rgba(126, 167, 218, 0.13);
-                border-radius: 9px;
-                background: rgba(255, 255, 255, 0.025);
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #status-box {
-                min-height: 52px;
-                background: rgba(6, 20, 34, 0.72);
-                color: #dce8f7;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-section-title {
-                color: #eff6ff;
-                font-size: 12px;
-                letter-spacing: 0.01em;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-small {
-                color: #aebdd0;
-                line-height: 1.4;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-primary-actions {
-                gap: 8px;
-                margin-top: auto;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-primary-actions .mf2026-button,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mf-export-unit-finder-diagnostics {
-                min-height: 42px;
-                border: 1px solid rgba(255, 255, 255, 0.11);
-                border-radius: 8px;
-                color: #fff !important;
-                box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10), 0 5px 14px rgba(0, 0, 0, 0.22);
-                transition: transform 120ms ease, filter 120ms ease, box-shadow 120ms ease;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) .mf2026-button:hover {
-                filter: brightness(1.1);
-                transform: translateY(-1px);
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #unit-finder-box {
-                background: linear-gradient(145deg, #f2a900, #b96d00) !important;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mf-ally-steal {
-                background: linear-gradient(145deg, #d42b86, #861653) !important;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #mission-update-box {
-                background: linear-gradient(145deg, #1268da, #08418e) !important;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #dispatch-box {
-                background: linear-gradient(145deg, #526273, #303b47) !important;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #dispatch-share-box {
-                background: linear-gradient(145deg, #13864e, #07582f) !important;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) #auto-mode-box {
-                background: linear-gradient(145deg, #743bc0, #452178) !important;
-            }
-            #mf-dashboard-rail {
-                grid-area: rail;
-                display: flex;
-                flex-direction: column;
-                gap: 8px;
-                padding: 6px;
-                border: 1px solid rgba(126, 167, 218, 0.16);
-                border-radius: 11px;
-                background: rgba(6, 19, 33, 0.88);
-            }
-            .mf-dashboard-tab {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                gap: 4px;
-                min-height: 72px;
-                padding: 7px 4px;
-                border: 1px solid transparent;
-                border-radius: 9px;
-                background: transparent;
-                color: #9fb1c8;
-                font-size: 10px;
-                font-weight: 700;
-                cursor: pointer;
-            }
-            .mf-dashboard-tab:hover,
-            .mf-dashboard-tab.mf-dashboard-tab-active {
-                border-color: rgba(34, 137, 255, 0.58);
-                background: linear-gradient(145deg, rgba(21, 104, 204, 0.58), rgba(7, 48, 96, 0.66));
-                color: #fff;
-                box-shadow: 0 0 18px rgba(13, 110, 253, 0.20);
-            }
-            .mf-dashboard-tab-icon {
-                font-size: 22px;
-                line-height: 1;
-                color: #55a9ff;
+                    "rail control load"
+                    "rail trained trained"
+                    "utility utility utility"
+                    "footer footer footer";
+                width: min(920px, calc(100vw - 24px));
             }
             #mf-dashboard-utility {
-                grid-area: utility;
-                min-width: 0;
-                max-height: calc(100vh - 96px);
-                overflow: hidden;
-                border: 1px solid rgba(126, 167, 218, 0.18);
-                border-radius: 12px;
-                background: linear-gradient(155deg, rgba(18, 32, 48, 0.97), rgba(7, 23, 39, 0.97));
-                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.24);
+                max-height: 310px;
             }
-            #mf-dashboard-utility[hidden],
-            .mf-dashboard-utility-pane[hidden] {
-                display: none !important;
-            }
-            .mf-dashboard-utility-header {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                min-height: 48px;
-                padding: 8px 11px;
-                border-bottom: 1px solid rgba(126, 167, 218, 0.14);
-                color: #f4f8ff;
-                text-transform: uppercase;
-                letter-spacing: 0.04em;
-                font-size: 13px;
-                font-weight: 800;
-                box-sizing: border-box;
-            }
-            #mf-dashboard-utility-close {
-                width: 30px;
-                height: 30px;
-                border: 0;
-                border-radius: 7px;
-                background: rgba(255, 255, 255, 0.08);
-                color: #dce8f7;
-                cursor: pointer;
-            }
-            .mf-dashboard-utility-pane {
-                display: flex;
-                flex-direction: column;
-                gap: 9px;
-                padding: 10px;
-                overflow-y: auto;
-                max-height: calc(100vh - 154px);
-                box-sizing: border-box;
-            }
-            #mf-dashboard-settings-pane .mf-control-advanced {
-                display: flex;
-                gap: 9px;
-            }
-            #mf-dashboard-settings-pane input,
-            #mf-dashboard-diagnostics-pane input {
-                color: #f4f8ff !important;
-                background: rgba(2, 13, 25, 0.78) !important;
-                border: 1px solid rgba(126, 167, 218, 0.20) !important;
-                border-radius: 7px !important;
-                min-height: 38px;
-                padding: 7px 9px !important;
-                box-sizing: border-box;
-            }
-            .mf-dashboard-toggle-row {
-                align-items: flex-start;
-            }
-            #mf-event-scanner-state {
-                margin-top: 7px;
-            }
-            #mf-dashboard-diagnostics-pane #mf-export-unit-finder-diagnostics {
-                width: 100%;
-                background: linear-gradient(145deg, #27394d, #172638) !important;
-            }
-            #mf-dashboard-footer {
-                grid-area: footer;
-                padding: 4px 10px 0;
-                text-align: center;
-                color: #7f91a8;
-                font-size: 11px;
-                letter-spacing: 0.02em;
-            }
-            @media (max-width: 1180px) and (min-width: 701px) {
-                #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari),
-                #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari) {
-                    grid-template-columns: 62px repeat(2, minmax(250px, 1fr));
-                    grid-template-areas:
-                        "rail control load"
-                        "rail trained trained"
-                        "utility utility utility"
-                        "footer footer footer";
-                    width: min(920px, calc(100vw - 24px));
-                }
-                #mf-dashboard-utility {
-                    max-height: 310px;
-                }
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) {
-                --nx-bg: #080d14;
-                --nx-surface: #0d141e;
-                --nx-surface-2: #121b27;
-                --nx-surface-3: #172230;
-                --nx-border: rgba(151, 171, 195, 0.18);
-                --nx-border-strong: rgba(95, 195, 228, 0.36);
-                --nx-text: #e7edf4;
-                --nx-text-2: #b1bfce;
-                --nx-muted: #7f8d9c;
-                --nx-accent: #5fc3e4;
-                --nx-accent-soft: rgba(95, 195, 228, 0.12);
-                --nx-success: #62c99a;
-                --nx-warning: #d7ad62;
-                --nx-danger: #db7d83;
-                display: grid;
-                grid-template-columns: repeat(3, minmax(0, 1fr));
-                grid-template-areas:
-                    "brand brand brand"
-                    "rail rail rail"
-                    "control load trained"
-                    "utility utility utility"
-                    "footer footer footer";
-                align-items: start;
-                gap: 8px;
-                width: min(1120px, calc(100vw - 32px));
-                max-width: calc(100vw - 32px);
-                max-height: calc(100vh - 32px);
-                padding: 9px;
-                overflow: auto;
-                border: 1px solid var(--nx-border-strong);
-                border-radius: 14px;
-                background: var(--nx-bg);
-                box-shadow: 0 22px 60px rgba(0, 0, 0, 0.52);
-                color: var(--nx-text);
-                font-family: Inter, ui-sans-serif, system-ui, -apple-system,
-                    BlinkMacSystemFont, "Segoe UI", sans-serif;
-                scrollbar-color: rgba(127, 141, 156, 0.48) transparent;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari) {
-                grid-template-columns: repeat(3, minmax(0, 1fr));
-                grid-template-areas:
-                    "brand brand brand"
-                    "rail rail rail"
-                    "control load trained"
-                    "utility utility utility"
-                    "footer footer footer";
-                width: min(1120px, calc(100vw - 32px));
-            }
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) {
+            --nx-bg: #080d14;
+            --nx-surface: #0d141e;
+            --nx-surface-2: #121b27;
+            --nx-surface-3: #172230;
+            --nx-border: rgba(151, 171, 195, 0.18);
+            --nx-border-strong: rgba(95, 195, 228, 0.36);
+            --nx-text: #e7edf4;
+            --nx-text-2: #b1bfce;
+            --nx-muted: #7f8d9c;
+            --nx-accent: #5fc3e4;
+            --nx-accent-soft: rgba(95, 195, 228, 0.12);
+            --nx-success: #62c99a;
+            --nx-warning: #d7ad62;
+            --nx-danger: #db7d83;
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-areas:
+                "brand brand brand"
+                "rail rail rail"
+                "control load trained"
+                "utility utility utility"
+                "footer footer footer";
+            align-items: start;
+            gap: 8px;
+            width: min(1120px, calc(100vw - 32px));
+            max-width: calc(100vw - 32px);
+            max-height: calc(100vh - 32px);
+            padding: 9px;
+            overflow: auto;
+            border: 1px solid var(--nx-border-strong);
+            border-radius: 14px;
+            background: var(--nx-bg);
+            box-shadow: 0 22px 60px rgba(0, 0, 0, 0.52);
+            color: var(--nx-text);
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system,
+                BlinkMacSystemFont, "Segoe UI", sans-serif;
+            scrollbar-color: rgba(127, 141, 156, 0.48) transparent;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari) {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-areas:
+                "brand brand brand"
+                "rail rail rail"
+                "control load trained"
+                "utility utility utility"
+                "footer footer footer";
+            width: min(1120px, calc(100vw - 32px));
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari),
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) * {
+            box-sizing: border-box;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #mf-dashboard-brand {
+            grid-area: brand;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            min-width: 0;
+            min-height: 48px;
+            padding: 7px 9px;
+            border: 1px solid var(--nx-border);
+            border-radius: 10px;
+            background: var(--nx-surface);
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf-dashboard-brand-copy,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf-dashboard-brand-text {
+            display: flex;
+            min-width: 0;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf-dashboard-brand-copy {
+            align-items: center;
+            gap: 9px;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf-dashboard-brand-text {
+            flex-direction: column;
+            gap: 2px;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf-dashboard-brand-mark {
+            display: grid;
+            place-items: center;
+            width: 34px;
+            height: 34px;
+            flex: 0 0 34px;
+            border: 1px solid var(--nx-border-strong);
+            border-radius: 9px;
+            background: var(--nx-accent-soft);
+            color: var(--nx-accent);
+            font: 800 12px/1 ui-monospace, SFMono-Regular, Menlo, Consolas,
+                monospace;
+            letter-spacing: 0.08em;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf-dashboard-brand-eyebrow {
+            color: var(--nx-muted);
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.13em;
+            line-height: 1.1;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf-dashboard-brand-title {
+            color: var(--nx-text);
+            font-size: 14px;
+            font-weight: 700;
+            line-height: 1.2;
+            overflow-wrap: anywhere;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf-dashboard-brand-state {
+            flex: 0 0 auto;
+            padding: 5px 8px;
+            border: 1px solid rgba(98, 201, 154, 0.34);
+            border-radius: 999px;
+            background: rgba(98, 201, 154, 0.08);
+            color: #b9ead4;
+            font: 700 9px/1 ui-monospace, SFMono-Regular, Menlo, Consolas,
+                monospace;
+            letter-spacing: 0.08em;
+            white-space: nowrap;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #mf-dashboard-rail {
+            grid-area: rail;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 4px;
+            padding: 4px;
+            border: 1px solid var(--nx-border);
+            border-radius: 9px;
+            background: var(--nx-surface);
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf-dashboard-tab {
+            display: flex;
+            flex: 0 1 160px;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            min-width: 0;
+            min-height: 34px;
+            padding: 6px 10px;
+            border: 1px solid transparent;
+            border-radius: 7px;
+            background: transparent;
+            color: var(--nx-text-2);
+            font-size: 11px;
+            font-weight: 650;
+            line-height: 1.2;
+            overflow-wrap: anywhere;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf-dashboard-tab-icon {
+            color: var(--nx-muted);
+            font: 700 9px/1 ui-monospace, SFMono-Regular, Menlo, Consolas,
+                monospace;
+            letter-spacing: 0.08em;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf-dashboard-tab:hover,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf-dashboard-tab:focus-visible {
+            border-color: var(--nx-border);
+            background: var(--nx-surface-2);
+            color: var(--nx-text);
+            outline: none;
+            box-shadow: none;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf-dashboard-tab.mf-dashboard-tab-active {
+            border-color: var(--nx-border-strong);
+            background: var(--nx-accent-soft);
+            color: var(--nx-text);
+            box-shadow: none;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf-dashboard-tab.mf-dashboard-tab-active .mf-dashboard-tab-icon {
+            color: var(--nx-accent);
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf2026-panel,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #mf-dashboard-utility {
+            min-width: 0;
+            width: auto;
+            max-height: calc(100vh - 156px);
+            border: 1px solid var(--nx-border);
+            border-radius: 10px;
+            background: var(--nx-surface);
+            box-shadow: none;
+            overflow: hidden;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #control-panel {
+            grid-area: control;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #vehicle-load-list-box {
+            grid-area: load;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #trained-personnel-box {
+            grid-area: trained;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #mf-dashboard-utility {
+            grid-area: utility;
+            max-height: min(360px, calc(100vh - 180px));
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf2026-control-header-row,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf2026-load-header-row,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf2026-trained-header-row,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf-dashboard-utility-header {
+            min-height: 42px;
+            padding: 6px 8px;
+            border-bottom: 1px solid var(--nx-border);
+            background: var(--nx-surface-2);
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf2026-header,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #mf-dashboard-utility-title {
+            min-width: 0;
+            padding: 0;
+            background: transparent;
+            color: var(--nx-text);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-align: left;
+            text-transform: uppercase;
+            overflow-wrap: anywhere;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #mf-control-title::before,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #mf-load-title::before,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #mf-trained-title::before {
+            content: "";
+            width: 5px;
+            height: 5px;
+            flex: 0 0 5px;
+            border-radius: 50%;
+            background: var(--nx-accent);
+            box-shadow: none;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #mf-trained-title::before {
+            background: #b49add;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf-control-body,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf-load-body,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf-trained-body,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf-dashboard-utility-pane {
+            min-width: 0;
+            min-height: 0;
+            padding: 8px;
+            gap: 7px;
+            overflow-y: auto;
+            scrollbar-color: rgba(127, 141, 156, 0.48) transparent;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf2026-box {
+            min-width: 0;
+            padding: 8px;
+            border: 1px solid rgba(151, 171, 195, 0.12);
+            border-radius: 8px;
+            background: var(--nx-surface-2);
+            overflow-wrap: anywhere;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #status-box {
+            min-height: 48px;
+            background: rgba(95, 195, 228, 0.055);
+            color: var(--nx-text-2);
+            line-height: 1.42;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf2026-section-title {
+            margin-bottom: 5px;
+            color: var(--nx-text);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            overflow-wrap: anywhere;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf2026-small,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf2026-name,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf2026-training-course-list {
+            min-width: 0;
+            color: var(--nx-text-2);
+            line-height: 1.42;
+            overflow-wrap: anywhere;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf2026-count,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf2026-log-value,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf2026-stat-grid strong {
+            font-variant-numeric: tabular-nums;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf2026-row,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf2026-log-row {
+            min-width: 0;
+            border-bottom-color: rgba(151, 171, 195, 0.10);
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf2026-primary-actions {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 6px;
+            margin-top: auto;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf2026-primary-actions .mf2026-button,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #mf-export-unit-finder-diagnostics,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #mf-control-centre,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #mf-control-minimize,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #mf-load-minimize,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #mf-trained-minimize,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #mf-dashboard-utility-close {
+            min-width: 0;
+            min-height: 36px;
+            padding: 7px 8px;
+            border: 1px solid var(--nx-border) !important;
+            border-radius: 8px;
+            background: var(--nx-surface-2) !important;
+            color: var(--nx-text-2) !important;
+            font-size: 10.5px;
+            font-weight: 650;
+            line-height: 1.2;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            box-shadow: none;
+            transition: border-color 120ms ease, background 120ms ease,
+                color 120ms ease, transform 120ms ease;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf2026-button:hover,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf2026-button:focus-visible,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #mf-dashboard-utility-close:hover,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #mf-dashboard-utility-close:focus-visible {
+            border-color: var(--nx-border-strong) !important;
+            background: var(--nx-surface-3) !important;
+            color: var(--nx-text) !important;
+            filter: none;
+            outline: none;
+            transform: translateY(-1px);
+            box-shadow: none;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        :is(#unit-finder-box, #mission-update-box) {
+            border-color: var(--nx-border-strong) !important;
+            background: var(--nx-accent-soft) !important;
+            color: #c4eaf5 !important;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #mf-ally-steal {
+            border-color: rgba(180, 154, 221, 0.36) !important;
+            background: rgba(180, 154, 221, 0.09) !important;
+            color: #d9c9ef !important;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #dispatch-share-box {
+            border-color: rgba(98, 201, 154, 0.42) !important;
+            background: rgba(98, 201, 154, 0.10) !important;
+            color: #b9ead4 !important;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #auto-mode-box {
+            border-color: rgba(180, 154, 221, 0.38) !important;
+            background: rgba(180, 154, 221, 0.09) !important;
+            color: #d9c9ef !important;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf2026-good {
+            color: var(--nx-success);
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf2026-warn {
+            color: var(--nx-warning);
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf2026-bad {
+            color: var(--nx-danger);
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf2026-progress-wrap {
+            height: 7px;
+            border-radius: 999px;
+            background: #070b11;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf2026-progress-bar {
+            height: 7px;
+            border-radius: 999px;
+            background: var(--nx-success);
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        input,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        select {
+            min-width: 0;
+            min-height: 36px;
+            padding: 7px 9px !important;
+            border: 1px solid var(--nx-border) !important;
+            border-radius: 8px !important;
+            background: var(--nx-surface-2) !important;
+            color: var(--nx-text) !important;
+            font-size: 12px;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        :is(button, input, select):focus-visible {
+            outline: 2px solid rgba(95, 195, 228, 0.58);
+            outline-offset: 1px;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #control-panel.mf2026-control-collapsed,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #vehicle-load-list-box.mf2026-load-collapsed,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #trained-personnel-box.mf2026-trained-collapsed {
+            width: auto;
+            min-height: 42px;
+            padding: 0;
+            overflow: hidden;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        :is(#control-panel.mf2026-control-collapsed,
+            #vehicle-load-list-box.mf2026-load-collapsed,
+            #trained-personnel-box.mf2026-trained-collapsed)
+        .mf2026-header {
+            min-height: 0;
+            padding: 0;
+            writing-mode: horizontal-tb;
+            text-orientation: mixed;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #mf-dashboard-footer {
+            grid-area: footer;
+            padding: 2px 4px 0;
+            color: var(--nx-muted);
+            font: 600 9px/1.3 ui-monospace, SFMono-Regular, Menlo, Consolas,
+                monospace;
+            letter-spacing: 0.04em;
+            text-align: right;
+            overflow-wrap: anywhere;
+        }
+        @media (max-width: 1180px) and (min-width: 901px) {
             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari),
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) * {
-                box-sizing: border-box;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #mf-dashboard-brand {
-                grid-area: brand;
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                gap: 12px;
-                min-width: 0;
-                min-height: 48px;
-                padding: 7px 9px;
-                border: 1px solid var(--nx-border);
-                border-radius: 10px;
-                background: var(--nx-surface);
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf-dashboard-brand-copy,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf-dashboard-brand-text {
-                display: flex;
-                min-width: 0;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf-dashboard-brand-copy {
-                align-items: center;
-                gap: 9px;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf-dashboard-brand-text {
-                flex-direction: column;
-                gap: 2px;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf-dashboard-brand-mark {
-                display: grid;
-                place-items: center;
-                width: 34px;
-                height: 34px;
-                flex: 0 0 34px;
-                border: 1px solid var(--nx-border-strong);
-                border-radius: 9px;
-                background: var(--nx-accent-soft);
-                color: var(--nx-accent);
-                font: 800 12px/1 ui-monospace, SFMono-Regular, Menlo, Consolas,
-                    monospace;
-                letter-spacing: 0.08em;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf-dashboard-brand-eyebrow {
-                color: var(--nx-muted);
-                font-size: 9px;
-                font-weight: 700;
-                letter-spacing: 0.13em;
-                line-height: 1.1;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf-dashboard-brand-title {
-                color: var(--nx-text);
-                font-size: 14px;
-                font-weight: 700;
-                line-height: 1.2;
-                overflow-wrap: anywhere;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf-dashboard-brand-state {
-                flex: 0 0 auto;
-                padding: 5px 8px;
-                border: 1px solid rgba(98, 201, 154, 0.34);
-                border-radius: 999px;
-                background: rgba(98, 201, 154, 0.08);
-                color: #b9ead4;
-                font: 700 9px/1 ui-monospace, SFMono-Regular, Menlo, Consolas,
-                    monospace;
-                letter-spacing: 0.08em;
-                white-space: nowrap;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #mf-dashboard-rail {
-                grid-area: rail;
-                display: flex;
-                flex-direction: row;
-                align-items: center;
-                gap: 4px;
-                padding: 4px;
-                border: 1px solid var(--nx-border);
-                border-radius: 9px;
-                background: var(--nx-surface);
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf-dashboard-tab {
-                display: flex;
-                flex: 0 1 160px;
-                flex-direction: row;
-                align-items: center;
-                justify-content: center;
-                gap: 7px;
-                min-width: 0;
-                min-height: 34px;
-                padding: 6px 10px;
-                border: 1px solid transparent;
-                border-radius: 7px;
-                background: transparent;
-                color: var(--nx-text-2);
-                font-size: 11px;
-                font-weight: 650;
-                line-height: 1.2;
-                overflow-wrap: anywhere;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf-dashboard-tab-icon {
-                color: var(--nx-muted);
-                font: 700 9px/1 ui-monospace, SFMono-Regular, Menlo, Consolas,
-                    monospace;
-                letter-spacing: 0.08em;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf-dashboard-tab:hover,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf-dashboard-tab:focus-visible {
-                border-color: var(--nx-border);
-                background: var(--nx-surface-2);
-                color: var(--nx-text);
-                outline: none;
-                box-shadow: none;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf-dashboard-tab.mf-dashboard-tab-active {
-                border-color: var(--nx-border-strong);
-                background: var(--nx-accent-soft);
-                color: var(--nx-text);
-                box-shadow: none;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf-dashboard-tab.mf-dashboard-tab-active .mf-dashboard-tab-icon {
-                color: var(--nx-accent);
+            #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari) {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                grid-template-areas:
+                    "brand brand"
+                    "rail rail"
+                    "control load"
+                    "trained trained"
+                    "utility utility"
+                    "footer footer";
+                width: min(820px, calc(100vw - 24px));
+                max-width: calc(100vw - 24px);
             }
             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
             .mf2026-panel,
             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
             #mf-dashboard-utility {
-                min-width: 0;
-                width: auto;
-                max-height: calc(100vh - 156px);
-                border: 1px solid var(--nx-border);
-                border-radius: 10px;
-                background: var(--nx-surface);
-                box-shadow: none;
-                overflow: hidden;
+                max-height: min(420px, calc(100vh - 170px));
             }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #control-panel {
-                grid-area: control;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #vehicle-load-list-box {
-                grid-area: load;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #trained-personnel-box {
-                grid-area: trained;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #mf-dashboard-utility {
-                grid-area: utility;
-                max-height: min(360px, calc(100vh - 180px));
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf2026-control-header-row,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf2026-load-header-row,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf2026-trained-header-row,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf-dashboard-utility-header {
-                min-height: 42px;
-                padding: 6px 8px;
-                border-bottom: 1px solid var(--nx-border);
-                background: var(--nx-surface-2);
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf2026-header,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #mf-dashboard-utility-title {
-                min-width: 0;
-                padding: 0;
-                background: transparent;
-                color: var(--nx-text);
-                font-size: 11px;
-                font-weight: 700;
-                letter-spacing: 0.06em;
-                text-align: left;
-                text-transform: uppercase;
-                overflow-wrap: anywhere;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #mf-control-title::before,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #mf-load-title::before,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #mf-trained-title::before {
-                content: "";
-                width: 5px;
-                height: 5px;
-                flex: 0 0 5px;
-                border-radius: 50%;
-                background: var(--nx-accent);
-                box-shadow: none;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #mf-trained-title::before {
-                background: #b49add;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf-control-body,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf-load-body,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf-trained-body,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf-dashboard-utility-pane {
-                min-width: 0;
-                min-height: 0;
-                padding: 8px;
-                gap: 7px;
-                overflow-y: auto;
-                scrollbar-color: rgba(127, 141, 156, 0.48) transparent;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf2026-box {
-                min-width: 0;
-                padding: 8px;
-                border: 1px solid rgba(151, 171, 195, 0.12);
-                border-radius: 8px;
-                background: var(--nx-surface-2);
-                overflow-wrap: anywhere;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #status-box {
-                min-height: 48px;
-                background: rgba(95, 195, 228, 0.055);
-                color: var(--nx-text-2);
-                line-height: 1.42;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf2026-section-title {
-                margin-bottom: 5px;
-                color: var(--nx-text);
-                font-size: 10px;
-                font-weight: 700;
-                letter-spacing: 0.06em;
-                text-transform: uppercase;
-                overflow-wrap: anywhere;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf2026-small,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf2026-name,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf2026-training-course-list {
-                min-width: 0;
-                color: var(--nx-text-2);
-                line-height: 1.42;
-                overflow-wrap: anywhere;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf2026-count,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf2026-log-value,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf2026-stat-grid strong {
-                font-variant-numeric: tabular-nums;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf2026-row,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf2026-log-row {
-                min-width: 0;
-                border-bottom-color: rgba(151, 171, 195, 0.10);
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf2026-primary-actions {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-                gap: 6px;
-                margin-top: auto;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf2026-primary-actions .mf2026-button,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #mf-export-unit-finder-diagnostics,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #mf-control-centre,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #mf-control-minimize,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #mf-load-minimize,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #mf-trained-minimize,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #mf-dashboard-utility-close {
-                min-width: 0;
-                min-height: 36px;
-                padding: 7px 8px;
-                border: 1px solid var(--nx-border) !important;
-                border-radius: 8px;
-                background: var(--nx-surface-2) !important;
-                color: var(--nx-text-2) !important;
-                font-size: 10.5px;
-                font-weight: 650;
-                line-height: 1.2;
-                white-space: normal;
-                overflow-wrap: anywhere;
-                box-shadow: none;
-                transition: border-color 120ms ease, background 120ms ease,
-                    color 120ms ease, transform 120ms ease;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf2026-button:hover,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf2026-button:focus-visible,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #mf-dashboard-utility-close:hover,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #mf-dashboard-utility-close:focus-visible {
-                border-color: var(--nx-border-strong) !important;
-                background: var(--nx-surface-3) !important;
-                color: var(--nx-text) !important;
-                filter: none;
-                outline: none;
-                transform: translateY(-1px);
-                box-shadow: none;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            :is(#unit-finder-box, #mission-update-box) {
-                border-color: var(--nx-border-strong) !important;
-                background: var(--nx-accent-soft) !important;
-                color: #c4eaf5 !important;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #mf-ally-steal {
-                border-color: rgba(180, 154, 221, 0.36) !important;
-                background: rgba(180, 154, 221, 0.09) !important;
-                color: #d9c9ef !important;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #dispatch-share-box {
-                border-color: rgba(98, 201, 154, 0.42) !important;
-                background: rgba(98, 201, 154, 0.10) !important;
-                color: #b9ead4 !important;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #auto-mode-box {
-                border-color: rgba(180, 154, 221, 0.38) !important;
-                background: rgba(180, 154, 221, 0.09) !important;
-                color: #d9c9ef !important;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf2026-good {
-                color: var(--nx-success);
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf2026-warn {
-                color: var(--nx-warning);
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf2026-bad {
-                color: var(--nx-danger);
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf2026-progress-wrap {
-                height: 7px;
-                border-radius: 999px;
-                background: #070b11;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf2026-progress-bar {
-                height: 7px;
-                border-radius: 999px;
-                background: var(--nx-success);
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            input,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            select {
-                min-width: 0;
-                min-height: 36px;
-                padding: 7px 9px !important;
-                border: 1px solid var(--nx-border) !important;
-                border-radius: 8px !important;
-                background: var(--nx-surface-2) !important;
-                color: var(--nx-text) !important;
-                font-size: 12px;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            :is(button, input, select):focus-visible {
-                outline: 2px solid rgba(95, 195, 228, 0.58);
-                outline-offset: 1px;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #control-panel.mf2026-control-collapsed,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #vehicle-load-list-box.mf2026-load-collapsed,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #trained-personnel-box.mf2026-trained-collapsed {
-                width: auto;
-                min-height: 42px;
-                padding: 0;
-                overflow: hidden;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            :is(#control-panel.mf2026-control-collapsed,
-                #vehicle-load-list-box.mf2026-load-collapsed,
-                #trained-personnel-box.mf2026-trained-collapsed)
-            .mf2026-header {
-                min-height: 0;
-                padding: 0;
-                writing-mode: horizontal-tb;
-                text-orientation: mixed;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #mf-dashboard-footer {
-                grid-area: footer;
-                padding: 2px 4px 0;
-                color: var(--nx-muted);
-                font: 600 9px/1.3 ui-monospace, SFMono-Regular, Menlo, Consolas,
-                    monospace;
-                letter-spacing: 0.04em;
-                text-align: right;
-                overflow-wrap: anywhere;
-            }
-            @media (max-width: 1180px) and (min-width: 901px) {
-                #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari),
-                #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari) {
-                    grid-template-columns: repeat(2, minmax(0, 1fr));
-                    grid-template-areas:
-                        "brand brand"
-                        "rail rail"
-                        "control load"
-                        "trained trained"
-                        "utility utility"
-                        "footer footer";
-                    width: min(820px, calc(100vw - 24px));
-                    max-width: calc(100vw - 24px);
-                }
-                #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-                .mf2026-panel,
-                #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-                #mf-dashboard-utility {
-                    max-height: min(420px, calc(100vh - 170px));
-                }
-            }
-            @media (max-width: 900px) and (min-width: 701px) {
-                #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari),
-                #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari) {
-                    grid-template-columns: minmax(0, 1fr);
-                    grid-template-areas:
-                        "brand"
-                        "rail"
-                        "control"
-                        "load"
-                        "trained"
-                        "utility"
-                        "footer";
-                    width: min(620px, calc(100vw - 24px));
-                    max-width: calc(100vw - 24px);
-                    max-height: calc(100vh - 24px);
-                }
-                #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-                .mf2026-panel,
-                #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-                #mf-dashboard-utility {
-                    max-height: none;
-                }
-            }
-            @media (max-width: 700px) {
-                #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari),
-                #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari) {
-                    grid-template-columns: minmax(0, 1fr);
-                    grid-template-areas:
-                        "brand"
-                        "rail"
-                        "control"
-                        "load"
-                        "trained"
-                        "utility"
-                        "footer";
-                    width: calc(100vw - 16px);
-                    max-width: calc(100vw - 16px);
-                    max-height: calc(100vh - 16px);
-                    padding: 7px;
-                }
-                #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-                #mf-dashboard-brand {
-                    align-items: flex-start;
-                    flex-direction: column;
-                }
-                #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-                #mf-dashboard-rail {
-                    display: grid;
-                    grid-template-columns: repeat(3, minmax(0, 1fr));
-                }
-                #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-                .mf-dashboard-tab {
-                    padding-inline: 5px;
-                }
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) {
+        }
+        @media (max-width: 900px) and (min-width: 701px) {
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari),
+            #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari) {
                 grid-template-columns: minmax(0, 1fr);
                 grid-template-areas:
+                    "brand"
                     "rail"
                     "control"
                     "load"
                     "trained"
                     "utility"
                     "footer";
-                gap: 4px;
-                width: min(390px, calc(100vw - 20px));
-                max-width: calc(100vw - 20px);
-                max-height: calc(100vh - 20px);
-                padding: 5px;
-                border-radius: 9px;
-                box-shadow: 0 12px 34px rgba(0, 0, 0, 0.44);
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari) {
-                grid-template-columns: minmax(0, 1fr);
-                grid-template-areas:
-                    "rail"
-                    "utility"
-                    "footer";
-                width: min(390px, calc(100vw - 20px));
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #mf-dashboard-brand {
-                display: none !important;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #mf-dashboard-rail {
-                display: grid;
-                grid-template-columns: repeat(3, minmax(0, 1fr));
-                gap: 2px;
-                padding: 3px;
-                border-radius: 6px;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf-dashboard-tab {
-                min-height: 27px;
-                padding: 4px 5px;
-                border-radius: 5px;
-                font-size: 9.5px;
-                line-height: 1.1;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf-dashboard-tab-icon {
-                display: none;
+                width: min(620px, calc(100vw - 24px));
+                max-width: calc(100vw - 24px);
+                max-height: calc(100vh - 24px);
             }
             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
             .mf2026-panel,
             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
             #mf-dashboard-utility {
                 max-height: none;
-                border-radius: 7px;
             }
-            #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari)
-            :is(#control-panel, #vehicle-load-list-box, #trained-personnel-box) {
-                display: none !important;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf2026-control-header-row,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf2026-load-header-row,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf2026-trained-header-row,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf-dashboard-utility-header {
-                min-height: 32px;
-                padding: 3px 5px;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf2026-header,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #mf-dashboard-utility-title {
-                font-size: 9.5px;
-                letter-spacing: 0.04em;
+        }
+        @media (max-width: 700px) {
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari),
+            #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari) {
+                grid-template-columns: minmax(0, 1fr);
+                grid-template-areas:
+                    "brand"
+                    "rail"
+                    "control"
+                    "load"
+                    "trained"
+                    "utility"
+                    "footer";
+                width: calc(100vw - 16px);
+                max-width: calc(100vw - 16px);
+                max-height: calc(100vh - 16px);
+                padding: 7px;
             }
             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf-control-body,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf-load-body,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf-trained-body,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf-dashboard-utility-pane {
-                gap: 4px;
-                padding: 5px;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf-load-body,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf-trained-body {
-                max-height: min(280px, calc(100vh - 150px));
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf2026-box {
-                padding: 5px;
-                border-radius: 5px;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #status-box {
-                min-height: 34px;
-                font-size: 10px;
-                line-height: 1.3;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf2026-section-title {
-                margin-bottom: 3px;
-                font-size: 8.5px;
-                letter-spacing: 0.04em;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf2026-small,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf2026-name,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf2026-training-course-list {
-                font-size: 9.5px;
-                line-height: 1.3;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf2026-primary-actions {
-                grid-template-columns: repeat(3, minmax(0, 1fr));
-                gap: 3px;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf2026-primary-actions #dispatch-share-box,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf2026-primary-actions #auto-mode-box {
-                grid-column: auto;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            .mf2026-primary-actions .mf2026-button,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #mf-export-unit-finder-diagnostics,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #mf-control-centre,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #mf-control-minimize,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #mf-load-minimize,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #mf-trained-minimize,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #mf-dashboard-utility-close {
-                min-height: 28px;
-                padding: 4px 5px;
-                border-radius: 5px;
-                font-size: 9px;
-                line-height: 1.1;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #mf-control-centre,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #mf-control-minimize,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #mf-load-minimize,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #mf-trained-minimize,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #mf-dashboard-utility-close {
-                width: 26px;
-                min-width: 26px;
-                flex-basis: 26px;
-                padding: 0;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            input,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            select {
-                min-height: 28px;
-                padding: 4px 6px !important;
-                border-radius: 5px !important;
-                font-size: 10px;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #control-panel.mf2026-control-collapsed,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #vehicle-load-list-box.mf2026-load-collapsed,
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #trained-personnel-box.mf2026-trained-collapsed {
-                min-height: 32px;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #mf-dashboard-footer {
-                padding: 0 2px;
-                font-size: 7.5px;
-                line-height: 1.2;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard.mf-compact-shell-collapsed:not(.mf2026-ios-safari) {
-                width: min(205px, calc(100vw - 20px));
-                max-height: 34px;
-                padding: 0;
-                gap: 0;
-                overflow: hidden;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard.mf-compact-shell-collapsed:not(.mf2026-ios-safari)
-            :is(#mf-dashboard-brand, #mf-dashboard-rail, #vehicle-load-list-box,
-                #trained-personnel-box, #mf-dashboard-utility, #mf-dashboard-footer) {
-                display: none !important;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard.mf-compact-shell-collapsed:not(.mf2026-ios-safari)
-            #control-panel {
-                display: block !important;
-                width: 100%;
-                min-height: 32px;
-                border: 0;
-                border-radius: 7px;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard.mf-compact-shell-collapsed:not(.mf2026-ios-safari)
-            .mf2026-control-header-row {
-                border-bottom: 0;
-            }
-            @media (max-width: 700px) {
-                #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari),
-                #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari) {
-                    width: calc(100vw - 16px);
-                    max-width: calc(100vw - 16px);
-                    max-height: calc(100vh - 16px);
-                    padding: 4px;
-                }
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) {
-                position: fixed;
-                overflow: visible;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #control-panel {
-                position: relative;
-                z-index: 3;
-            }
-            /* Attached Vehicle Load drawer V1.0.72. */
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #control-panel:not(.mf2026-control-collapsed)
-            .mf-control-body {
-                max-height: calc(100vh - 92px);
-                overflow-y: auto;
-                overscroll-behavior: contain;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #vehicle-load-list-box {
-                position: absolute;
-                top: 38px;
-                left: calc(100% - 1px);
-                right: auto;
-                z-index: 7;
-                margin: 0;
-                border-left: 0;
-                border-radius: 0 7px 7px 0;
-                box-shadow: 10px 10px 26px rgba(0, 0, 0, 0.34);
-                transform-origin: left top;
-                transition: width 150ms ease, max-height 150ms ease,
-                    box-shadow 150ms ease;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #vehicle-load-list-box.mf2026-load-collapsed {
-                display: block !important;
-                width: 29px;
-                min-width: 29px;
-                max-width: 29px;
-                height: 96px;
-                min-height: 96px;
-                max-height: 96px;
-                padding: 0;
-                overflow: hidden;
-                border-left: 0;
-                border-radius: 0 7px 7px 0;
-                box-shadow: 7px 7px 18px rgba(0, 0, 0, 0.26);
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #vehicle-load-list-box.mf2026-load-collapsed
-            .mf2026-load-header-row {
-                display: flex !important;
+            #mf-dashboard-brand {
+                align-items: flex-start;
                 flex-direction: column;
-                align-items: center;
-                justify-content: space-between;
-                width: 29px;
-                height: 96px;
-                min-height: 96px;
-                padding: 5px 2px 3px;
-                border-bottom: 0;
-                border-radius: 0 7px 7px 0;
-                cursor: pointer;
             }
             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #vehicle-load-list-box.mf2026-load-collapsed
-            #mf-load-title {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                flex: 1 1 auto;
-                min-width: 0;
-                padding: 0;
-                writing-mode: vertical-rl;
-                text-orientation: mixed;
-                transform: rotate(180deg);
-                font-size: 8.5px;
-                letter-spacing: 0.06em;
-                white-space: nowrap;
-                cursor: pointer;
+            #mf-dashboard-rail {
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
             }
             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #vehicle-load-list-box.mf2026-load-collapsed
-            #mf-load-title::before {
-                display: none;
+            .mf-dashboard-tab {
+                padding-inline: 5px;
             }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #vehicle-load-list-box.mf2026-load-collapsed
-            #mf-load-minimize {
-                width: 23px;
-                min-width: 23px;
-                height: 23px;
-                min-height: 23px;
-                flex: 0 0 23px;
-                padding: 0;
-                border-radius: 5px;
-                font-size: 12px;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) {
+            grid-template-columns: minmax(0, 1fr);
+            grid-template-areas:
+                "rail"
+                "control"
+                "load"
+                "trained"
+                "utility"
+                "footer";
+            gap: 4px;
+            width: min(390px, calc(100vw - 20px));
+            max-width: calc(100vw - 20px);
+            max-height: calc(100vh - 20px);
+            padding: 5px;
+            border-radius: 9px;
+            box-shadow: 0 12px 34px rgba(0, 0, 0, 0.44);
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari) {
+            grid-template-columns: minmax(0, 1fr);
+            grid-template-areas:
+                "rail"
+                "utility"
+                "footer";
+            width: min(390px, calc(100vw - 20px));
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #mf-dashboard-brand {
+            display: none !important;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #mf-dashboard-rail {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 2px;
+            padding: 3px;
+            border-radius: 6px;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf-dashboard-tab {
+            min-height: 27px;
+            padding: 4px 5px;
+            border-radius: 5px;
+            font-size: 9.5px;
+            line-height: 1.1;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf-dashboard-tab-icon {
+            display: none;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf2026-panel,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #mf-dashboard-utility {
+            max-height: none;
+            border-radius: 7px;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari)
+        :is(#control-panel, #vehicle-load-list-box, #trained-personnel-box) {
+            display: none !important;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf2026-control-header-row,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf2026-load-header-row,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf2026-trained-header-row,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf-dashboard-utility-header {
+            min-height: 32px;
+            padding: 3px 5px;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf2026-header,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #mf-dashboard-utility-title {
+            font-size: 9.5px;
+            letter-spacing: 0.04em;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf-control-body,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf-load-body,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf-trained-body,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf-dashboard-utility-pane {
+            gap: 4px;
+            padding: 5px;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf-load-body,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf-trained-body {
+            max-height: min(280px, calc(100vh - 150px));
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf2026-box {
+            padding: 5px;
+            border-radius: 5px;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #status-box {
+            min-height: 34px;
+            font-size: 10px;
+            line-height: 1.3;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf2026-section-title {
+            margin-bottom: 3px;
+            font-size: 8.5px;
+            letter-spacing: 0.04em;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf2026-small,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf2026-name,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf2026-training-course-list {
+            font-size: 9.5px;
+            line-height: 1.3;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf2026-primary-actions {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 3px;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf2026-primary-actions #dispatch-share-box,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf2026-primary-actions #auto-mode-box {
+            grid-column: auto;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        .mf2026-primary-actions .mf2026-button,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #mf-export-unit-finder-diagnostics,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #mf-control-centre,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #mf-control-minimize,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #mf-load-minimize,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #mf-trained-minimize,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #mf-dashboard-utility-close {
+            min-height: 28px;
+            padding: 4px 5px;
+            border-radius: 5px;
+            font-size: 9px;
+            line-height: 1.1;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #mf-control-centre,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #mf-control-minimize,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #mf-load-minimize,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #mf-trained-minimize,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #mf-dashboard-utility-close {
+            width: 26px;
+            min-width: 26px;
+            flex-basis: 26px;
+            padding: 0;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        input,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        select {
+            min-height: 28px;
+            padding: 4px 6px !important;
+            border-radius: 5px !important;
+            font-size: 10px;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #control-panel.mf2026-control-collapsed,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #vehicle-load-list-box.mf2026-load-collapsed,
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #trained-personnel-box.mf2026-trained-collapsed {
+            min-height: 32px;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #mf-dashboard-footer {
+            padding: 0 2px;
+            font-size: 7.5px;
+            line-height: 1.2;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard.mf-compact-shell-collapsed:not(.mf2026-ios-safari) {
+            width: min(205px, calc(100vw - 20px));
+            max-height: 34px;
+            padding: 0;
+            gap: 0;
+            overflow: hidden;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard.mf-compact-shell-collapsed:not(.mf2026-ios-safari)
+        :is(#mf-dashboard-brand, #mf-dashboard-rail, #vehicle-load-list-box,
+            #trained-personnel-box, #mf-dashboard-utility, #mf-dashboard-footer) {
+            display: none !important;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard.mf-compact-shell-collapsed:not(.mf2026-ios-safari)
+        #control-panel {
+            display: block !important;
+            width: 100%;
+            min-height: 32px;
+            border: 0;
+            border-radius: 7px;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard.mf-compact-shell-collapsed:not(.mf2026-ios-safari)
+        .mf2026-control-header-row {
+            border-bottom: 0;
+        }
+        @media (max-width: 700px) {
+            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari),
+            #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari) {
+                width: calc(100vw - 16px);
+                max-width: calc(100vw - 16px);
+                max-height: calc(100vh - 16px);
+                padding: 4px;
             }
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari) {
+            position: fixed;
+            overflow: visible;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #control-panel {
+            position: relative;
+            z-index: 3;
+        }
+        /* Attached Vehicle Load drawer V1.0.72. */
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #control-panel:not(.mf2026-control-collapsed)
+        .mf-control-body {
+            max-height: calc(100vh - 92px);
+            overflow-y: auto;
+            overscroll-behavior: contain;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #vehicle-load-list-box {
+            position: absolute;
+            top: 38px;
+            left: calc(100% - 1px);
+            right: auto;
+            z-index: 7;
+            margin: 0;
+            border-left: 0;
+            border-radius: 0 7px 7px 0;
+            box-shadow: 10px 10px 26px rgba(0, 0, 0, 0.34);
+            transform-origin: left top;
+            transition: width 150ms ease, max-height 150ms ease,
+                box-shadow 150ms ease;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #vehicle-load-list-box.mf2026-load-collapsed {
+            display: block !important;
+            width: 29px;
+            min-width: 29px;
+            max-width: 29px;
+            height: 96px;
+            min-height: 96px;
+            max-height: 96px;
+            padding: 0;
+            overflow: hidden;
+            border-left: 0;
+            border-radius: 0 7px 7px 0;
+            box-shadow: 7px 7px 18px rgba(0, 0, 0, 0.26);
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #vehicle-load-list-box.mf2026-load-collapsed
+        .mf2026-load-header-row {
+            display: flex !important;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            width: 29px;
+            height: 96px;
+            min-height: 96px;
+            padding: 5px 2px 3px;
+            border-bottom: 0;
+            border-radius: 0 7px 7px 0;
+            cursor: pointer;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #vehicle-load-list-box.mf2026-load-collapsed
+        #mf-load-title {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 1 1 auto;
+            min-width: 0;
+            padding: 0;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            transform: rotate(180deg);
+            font-size: 8.5px;
+            letter-spacing: 0.06em;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #vehicle-load-list-box.mf2026-load-collapsed
+        #mf-load-title::before {
+            display: none;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #vehicle-load-list-box.mf2026-load-collapsed
+        #mf-load-minimize {
+            width: 23px;
+            min-width: 23px;
+            height: 23px;
+            min-height: 23px;
+            flex: 0 0 23px;
+            padding: 0;
+            border-radius: 5px;
+            font-size: 12px;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #vehicle-load-list-box:not(.mf2026-load-collapsed) {
+            display: block !important;
+            width: min(286px, calc(100vw - 430px));
+            min-width: 238px;
+            max-width: 286px;
+            max-height: calc(100vh - 58px);
+            overflow: hidden;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #vehicle-load-list-box:not(.mf2026-load-collapsed)
+        .mf2026-load-header-row {
+            border-radius: 0 7px 0 0;
+            cursor: pointer;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #vehicle-load-list-box:not(.mf2026-load-collapsed)
+        #mf-load-title {
+            cursor: pointer;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #vehicle-load-list-box:not(.mf2026-load-collapsed)
+        .mf-load-body {
+            max-height: calc(100vh - 94px);
+            overflow-y: auto;
+            overscroll-behavior: contain;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari)
+        #vehicle-load-list-box,
+        #mission-finder-wrapper.mf-nexus-dashboard.mf-compact-shell-collapsed:not(.mf2026-ios-safari)
+        #vehicle-load-list-box {
+            display: none !important;
+        }
+        @media (max-width: 760px) {
             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
             #vehicle-load-list-box:not(.mf2026-load-collapsed) {
-                display: block !important;
-                width: min(286px, calc(100vw - 430px));
-                min-width: 238px;
-                max-width: 286px;
-                max-height: calc(100vh - 58px);
-                overflow: hidden;
+                left: auto;
+                right: 0;
+                top: 38px;
+                width: min(286px, calc(100vw - 28px));
+                min-width: 0;
+                max-width: calc(100vw - 28px);
+                border-left: 1px solid var(--nx-border);
+                border-radius: 7px;
+                box-shadow: 0 12px 30px rgba(0, 0, 0, 0.46);
             }
             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
             #vehicle-load-list-box:not(.mf2026-load-collapsed)
             .mf2026-load-header-row {
-                border-radius: 0 7px 0 0;
-                cursor: pointer;
+                border-radius: 7px 7px 0 0;
             }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #vehicle-load-list-box:not(.mf2026-load-collapsed)
-            #mf-load-title {
-                cursor: pointer;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #vehicle-load-list-box:not(.mf2026-load-collapsed)
-            .mf-load-body {
-                max-height: calc(100vh - 94px);
-                overflow-y: auto;
-                overscroll-behavior: contain;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard.mf-dashboard-utility-open:not(.mf2026-ios-safari)
-            #vehicle-load-list-box,
-            #mission-finder-wrapper.mf-nexus-dashboard.mf-compact-shell-collapsed:not(.mf2026-ios-safari)
-            #vehicle-load-list-box {
-                display: none !important;
-            }
-            @media (max-width: 760px) {
-                #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-                #vehicle-load-list-box:not(.mf2026-load-collapsed) {
-                    left: auto;
-                    right: 0;
-                    top: 38px;
-                    width: min(286px, calc(100vw - 28px));
-                    min-width: 0;
-                    max-width: calc(100vw - 28px);
-                    border-left: 1px solid var(--nx-border);
-                    border-radius: 7px;
-                    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.46);
-                }
-                #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-                #vehicle-load-list-box:not(.mf2026-load-collapsed)
-                .mf2026-load-header-row {
-                    border-radius: 7px 7px 0 0;
-                }
-            }
-            /* Vehicle drawer top alignment and motion V1.0.73. */
+        }
+        /* Vehicle drawer top alignment and motion V1.0.73. */
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #vehicle-load-list-box {
+            top: 0;
+            transform-origin: left top;
+            transition:
+                width 190ms cubic-bezier(0.22, 1, 0.36, 1),
+                min-width 190ms cubic-bezier(0.22, 1, 0.36, 1),
+                max-width 190ms cubic-bezier(0.22, 1, 0.36, 1),
+                max-height 190ms cubic-bezier(0.22, 1, 0.36, 1),
+                transform 190ms cubic-bezier(0.22, 1, 0.36, 1),
+                opacity 140ms ease-out,
+                box-shadow 190ms ease-out;
+            will-change: width, max-height, transform, opacity;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #vehicle-load-list-box.mf2026-load-collapsed {
+            transform: translateX(-6px) scaleX(0.96);
+            opacity: 0.98;
+        }
+        #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
+        #vehicle-load-list-box:not(.mf2026-load-collapsed) {
+            transform: translateX(0) scaleX(1);
+            opacity: 1;
+        }
+        @media (prefers-reduced-motion: reduce) {
             #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
             #vehicle-load-list-box {
-                top: 0;
-                transform-origin: left top;
-                transition:
-                    width 190ms cubic-bezier(0.22, 1, 0.36, 1),
-                    min-width 190ms cubic-bezier(0.22, 1, 0.36, 1),
-                    max-width 190ms cubic-bezier(0.22, 1, 0.36, 1),
-                    max-height 190ms cubic-bezier(0.22, 1, 0.36, 1),
-                    transform 190ms cubic-bezier(0.22, 1, 0.36, 1),
-                    opacity 140ms ease-out,
-                    box-shadow 190ms ease-out;
-                will-change: width, max-height, transform, opacity;
+                transition-duration: 1ms !important;
             }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #vehicle-load-list-box.mf2026-load-collapsed {
-                transform: translateX(-6px) scaleX(0.96);
-                opacity: 0.98;
-            }
-            #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-            #vehicle-load-list-box:not(.mf2026-load-collapsed) {
-                transform: translateX(0) scaleX(1);
-                opacity: 1;
-            }
-            @media (prefers-reduced-motion: reduce) {
-                #mission-finder-wrapper.mf-nexus-dashboard:not(.mf2026-ios-safari)
-                #vehicle-load-list-box {
-                    transition-duration: 1ms !important;
-                }
-            }
+        }
         `;
         document.head.appendChild(style);
     }
@@ -37630,6 +37714,9 @@ let sessionRuntimeTicker = null;
         requirement,
         registryEntry = null
     ) {
+        // Qualification-sensitive selection fails closed. A correct vehicle
+        // type without a fresh, complete Personnel Register entry is not an
+        // eligible trained-personnel candidate.
         if (
             !isCheckboxVehicleTypeEligibleForTrainingRequirement(
                 checkbox,
@@ -37639,9 +37726,6 @@ let sessionRuntimeTicker = null;
         ) {
             return false;
         }
-        // Qualification-sensitive selection fails closed. A correct vehicle
-        // type without a fresh, complete Personnel Register entry is not an
-        // eligible trained-personnel candidate.
         if (
             !isAuthoritativeLivePoliceTrainingEntry(
                 registryEntry
@@ -39960,6 +40044,7 @@ let sessionRuntimeTicker = null;
         const strictVehicleTypeOnly = !!(
             isAmbulanceTransportRequest(originalName, mappedName) ||
             isFireEngineRequirement(originalName, mappedName) ||
+            getPrvSrvRequirementTypeId(originalName, mappedName) ||
             isAerialApplianceOrRescueStairsRequirement(originalName) ||
             isFireEngineOrRivRequirement(originalName) ||
             isFlatbedRecoveryVehicleRequirement(originalName, mappedName) ||
@@ -40602,10 +40687,18 @@ let sessionRuntimeTicker = null;
                     parseInt(selectionResult?.assigned, 10) || 0
                 )
             );
-            const visualSelected = Math.max(
-                selectedFromDom,
-                selectedFromClicks
+            const exactPrvSrvRequirement = !!(
+                getPrvSrvRequirementTypeId(
+                    unitText,
+                    replacedItemText
+                )
             );
+            const visualSelected = exactPrvSrvRequirement
+                ? selectedFromDom
+                : Math.max(
+                    selectedFromDom,
+                    selectedFromClicks
+                );
             if (
                 visualSelected > 0 &&
                 isAmbulanceOfficerRequirement(
@@ -42921,10 +43014,17 @@ let sessionRuntimeTicker = null;
             advancePending: false
         };
     }
-    function triggerDispatchClick() {
+    async function triggerDispatchClick() {
         try {
             mfPersistUnitFinderDiagnostic('before-dispatch');
         } catch (_error) {}
+        if (
+            !await confirmPrvSrvSelectionBeforeDispatch(
+                'manual Dispatch'
+            )
+        ) {
+            return;
+        }
         clearAutoAdvanceAfterDispatchState(
             'manual normal Dispatch uses native Dispatch-and-next'
         );
@@ -42941,10 +43041,17 @@ let sessionRuntimeTicker = null;
             );
         }
     }
-    function triggerDispatchShareClick() {
+    async function triggerDispatchShareClick() {
         try {
             mfPersistUnitFinderDiagnostic('before-dispatch-share');
         } catch (_error) {}
+        if (
+            !await confirmPrvSrvSelectionBeforeDispatch(
+                'manual Dispatch & Share'
+            )
+        ) {
+            return;
+        }
         const advanceState =
             createAutoAdvanceAfterDispatchState(
                 'manual Dispatch & Share',
@@ -46317,16 +46424,24 @@ let sessionRuntimeTicker = null;
                         patientRequirementType
                     )
                     : 0;
+            const exactPrvSrvRequirement = !!(
+                getPrvSrvRequirementTypeId(
+                    item.unitName,
+                    mappedName
+                )
+            );
             const matchingSelectedTotal =
-                Math.max(
-                    matchingSelectedFromDom,
-                    trackedPatientSelected,
-                    Number.isFinite(
-                        matchingSelectedFromLiveTable
-                    )
-                        ? matchingSelectedFromLiveTable
-                        : 0
-                );
+                exactPrvSrvRequirement
+                    ? matchingSelectedFromDom
+                    : Math.max(
+                        matchingSelectedFromDom,
+                        trackedPatientSelected,
+                        Number.isFinite(
+                            matchingSelectedFromLiveTable
+                        )
+                            ? matchingSelectedFromLiveTable
+                            : 0
+                    );
             const effectiveRequired =
                 Number.isFinite(
                     initialMissingOnMissionTarget
@@ -46435,11 +46550,13 @@ let sessionRuntimeTicker = null;
                     )
                 );
             const visualSelected =
-                Math.max(
-                    selectedFromCurrentDom,
-                    selectedFromThisAttempt,
-                    selectedFromCurrentLiveTable
-                );
+                exactPrvSrvRequirement
+                    ? selectedFromCurrentDom
+                    : Math.max(
+                        selectedFromCurrentDom,
+                        selectedFromThisAttempt,
+                        selectedFromCurrentLiveTable
+                    );
             if (
                 visualSelected > 0 &&
                 isAmbulanceOfficerRequirement(
@@ -46483,6 +46600,7 @@ let sessionRuntimeTicker = null;
             }
             if (
                 mfDebugEnabled &&
+                !exactPrvSrvRequirement &&
                 selectedFromThisAttempt >
                     selectedFromCurrentDom
             ) {
@@ -52213,6 +52331,20 @@ async function handleAutoPrisonerReleaseAfterActions() {
                 await wait(250);
                 continue;
             }
+            const prvSrvSelectionConfirmed =
+                await confirmPrvSrvSelectionBeforeDispatch(
+                    'Auto Mode final dispatch decision'
+                );
+            if (!prvSrvSelectionConfirmed) {
+                const blockText = String(
+                    mfPrvSrvSelectionBlockText ||
+                    'Confirmed PRV/SRV units are still missing.'
+                ).trim();
+                stopAutoMode(
+                    `Auto stopped: ${blockText} Dispatch was not clicked.`
+                );
+                break;
+            }
             if (!vehicleLoadState.ready) {
                 const staffingBlocked =
                     !!personnelQualificationAlert ||
@@ -52316,6 +52448,16 @@ async function handleAutoPrisonerReleaseAfterActions() {
             const queueStateBeforeDispatch = getNextMissionQueueState();
             const finalQueueMission = isFinalQueueSignal(queueStateBeforeDispatch);
             logQueueState('complete-before-dispatch', queueStateBeforeDispatch, finalQueueMission);
+            if (
+                !await confirmPrvSrvSelectionBeforeDispatch(
+                    'Auto Mode immediate pre-dispatch recheck'
+                )
+            ) {
+                stopAutoMode(
+                    `Auto stopped: ${mfPrvSrvSelectionBlockText || 'Confirmed PRV/SRV units are still missing.'} Dispatch was not clicked.`
+                );
+                break;
+            }
             if (!claimAutoMissionDispatch(autoCycleMissionId)) {
                 updateStatusBox(
                     'Auto Mode: duplicate Dispatch blocked for this mission. Waiting for MissionChief to finish the existing handoff...'
@@ -52793,7 +52935,8 @@ async function handleAutoPrisonerReleaseAfterActions() {
                     `Completed page ${clickedPages} | after=${completedSnapshot.signature} | next=${getVehicleListLoadControlToken(getVisibleVehicleListLoadControl()) || 'none'}`
                 );
             }
-            await wait(150);
+            await wait(MF_VEHICLE_NEXT_PAGE_SETTLE_MS);
+            invalidateVehicleListStructureCache();
         }
         const remainingLoadControl =
             getVisibleVehicleListLoadControl();

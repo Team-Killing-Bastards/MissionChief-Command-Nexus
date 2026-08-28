@@ -111,10 +111,13 @@ for (const token of [
   ':is(#control-panel, #vehicle-load-list-box, #trained-personnel-box)',
   '.mf-compact-shell-collapsed:not(.mf2026-ios-safari)',
   'width: min(205px, calc(100vw - 20px))',
-  '#mf-dashboard-brand {\n                display: none !important;',
 ]) {
   expect(injectStyles.includes(token), `Compact mission CSS missing ${token}`);
 }
+expect(
+  /#mf-dashboard-brand\s*{\s*display:\s*none\s*!important;/.test(injectStyles),
+  'Compact mission CSS must hide the dashboard brand',
+);
 
 expect(
   createControlPanel.includes("'mf-compact-shell-collapsed'"),

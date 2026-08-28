@@ -6,6 +6,22 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
+## [3.0.22] - 2026-08-27
+
+### Fixed
+
+- Normal Coastguard Rescue Helicopter requirements now select only exact vehicle type `64`; they no longer map to or substring-match the Large type `65` helicopter.
+- An explicit Large Coastguard Rescue Helicopter requirement selects only exact vehicle type `65`. Neither helicopter type can substitute for the other, and missing native type evidence fails closed.
+- SARTEC demand now uses available exact type-`93` Home Response SAR 4x4 vehicles whose callsigns end `-SAR4x4-{number}` first. These deliberately untrained named units are accepted only on this SARTEC path; when none remain available, the existing `SARTEC`-prefix pool is retained as fallback.
+- Paginated vehicle loading now holds the completion barrier for 1.2 seconds after each confirmed page so a delayed next-page control cannot be mistaken for a complete list. This prevents distant exact type-`102` Search Dog Units being excluded before Rescue Dog selection.
+- Unit Finder diagnostics now record the total loaded checkbox inventory, exact and available type-`102` counts, and whether load-more or loading indicators remained visible.
+- PRV and SRV requirements now use exact native type `27` and type `28` candidates, count only unique vehicle IDs that remain checked, and never treat a click attempt as confirmed coverage.
+- Nexus now rechecks PRV/SRV coverage immediately before manual, shared and Auto Mode Dispatch, tops up only the exact shortfall, and blocks Dispatch fail closed if the confirmed count remains short.
+- Added permanent regression coverage for exact normal/Large mapping, selection and selected-count isolation.
+- Added permanent regression coverage for exact named Home Response SAR 4x4 eligibility, priority, exclusions, selected-count handling and SARTEC fallback.
+- Added permanent regression coverage for PRV/SRV exact-type isolation, non-persistent clicks, unique-ID counting, final top-up, no over-send and fail-closed Dispatch.
+- Increased the unified userscript version from `3.0.21` to `3.0.22`.
+
 ## [3.0.21] - 2026-08-26
 
 ### Fixed

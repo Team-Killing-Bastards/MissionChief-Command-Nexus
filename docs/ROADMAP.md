@@ -5,10 +5,10 @@ MissionChief Command Nexus is an actively released userscript. This roadmap reco
 **Developer and technical owner:** MartyBlyth  
 **Repository and documentation support:** Conroy1988
 
-## Current production baseline — v3.0.21
+## Current production baseline — v3.0.22
 
 - [x] Publish one canonical userscript on trusted `main`.
-- [x] Prepare Command Nexus `3.0.21` with Mission Finder `V10.6.177`, authoritative live-map recovery for completed canonical mission pages, faster disposable post-dispatch `/alarm` 404 recovery, authoritative managed Worker A recovery, throttled and deduplicated Radio Transport scanning, clean worker-free bootstrap recovery with retained startup errors, transport-only zero-selection classification, immediate exact no-cell prisoner release, existing-worker return after a completed prisoner destination, stopped-mission on-demand vehicle expansion, cleared-vehicle exact-mission recovery, a lightweight page-only B preload, reversible sustained-pressure protection, an atomic per-mission Dispatch latch, bounded endurance telemetry and station-aware staffing evidence.
+- [x] Prepare Command Nexus `3.0.22` with Mission Finder `V10.6.177`, exact type-64/type-65 Coastguard helicopter dispatch with no cross-substitution, authoritative live-map recovery for completed canonical mission pages, faster disposable post-dispatch `/alarm` 404 recovery, authoritative managed Worker A recovery, throttled and deduplicated Radio Transport scanning, clean worker-free bootstrap recovery with retained startup errors, transport-only zero-selection classification, immediate exact no-cell prisoner release, existing-worker return after a completed prisoner destination, stopped-mission on-demand vehicle expansion, cleared-vehicle exact-mission recovery, a lightweight page-only B preload, reversible sustained-pressure protection, an atomic per-mission Dispatch latch, bounded endurance telemetry and station-aware staffing evidence.
 - [x] Keep one sole dispatcher active while one dormant worker page-warms the immediate next mission without expanding its vehicle table, and fail closed on uncertain ownership or handoff.
 - [x] Retain Resource Administration `V4.2.8`, with Unit Naming `3.3.27`, Station Naming `1.3.22` and Personnel Assignment `1.3.12`.
 - [x] Protect duplicate initialization and independent engine startup.
