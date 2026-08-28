@@ -155,12 +155,12 @@ requirePattern(
   /if \(missionFinderIosSafari\)[\s\S]{0,1000}resetMissionFinderIosPosition/,
   'iOS Mission Control top placement'
 );
-requireText(
-  '#control-panel {\n                width: 260px;',
+requirePattern(
+  /#control-panel\s*{\s*width:\s*260px;/,
   'desktop Mission Control width preservation'
 );
-requireText(
-  '#vehicle-load-list-box {\n                width: 300px;',
+requirePattern(
+  /#vehicle-load-list-box\s*{\s*width:\s*300px;/,
   'desktop Vehicle Load List width preservation'
 );
 requireText(

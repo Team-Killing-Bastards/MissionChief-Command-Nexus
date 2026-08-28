@@ -115,11 +115,14 @@ for (const token of [
   '#trained-personnel-box.mf2026-trained-collapsed {',
   '#trained-personnel-box.mf2026-trained-collapsed .mf-trained-body {',
   '#mission-finder-wrapper.mf2026-ios-safari #trained-personnel-box',
-  '#mission-finder-wrapper.mf2026-iphone-safari\n            #trained-personnel-box',
   'display: none !important;',
 ]) {
   expect(styleBlock.includes(token), `Trained-personnel responsive styling missing ${token}`);
 }
+expect(
+  /#mission-finder-wrapper\.mf2026-iphone-safari\s+#trained-personnel-box/.test(styleBlock),
+  'Trained-personnel iPhone responsive selector is missing',
+);
 
 // The display feature must leave established trained-personnel selection intact.
 for (const token of [

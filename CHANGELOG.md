@@ -1,1260 +1,21 @@
-# Changelog
-
-All notable changes to MissionChief Command Nexus are documented here.
-
-The project uses Semantic Versioning for the unified userscript release line.
-
-## [Unreleased]
-
-## [3.0.21] - 2026-08-26
-
-### Fixed
-
-- A completed generated mission that returns from transport recovery on a normal `/missions/{id}` URL without `#mission_general_info` no longer enters the Mission Finder bootstrap retry and fatal stop path. After a 1.2-second settle, the controller requires the mission to be absent from the authoritative live map, discards Worker A and resumes from the next actionable canonical mission.
-- Stale canonical-page recovery preserves any final-dispatch latch, excludes the dead mission from immediate reselection and returns to map scanning when no fresh mission exists. It never clicks Dispatch.
-- Live mission shells, missions still listed on the map, active patient/prisoner transport contexts and pages without an authoritative mission list remain fail-closed and untouched.
-- Added permanent regression coverage for both supplied `Smoke Inhalation` failure sequences, the no-target rescan path and every recovery exclusion gate.
-- Increased the unified userscript version from `3.0.20` to `3.0.21`.
-
-## [3.0.20] - 2026-08-26
-
-### Changed
-
-- Reduced the disposable post-dispatch `/alarm` worker handoff from 120 ms to 80 ms so the next canonical mission starts sooner while preserving the worker-generation, duplicate-dispatch and exact-mission verification guards.
-- Increased the unified userscript version from `3.0.19` to `3.0.20`.
-
-## [3.0.19] - 2026-08-25
-
-### Fixed
-
-- A completed mission that leaves Worker A on the one-use `/missions/{id}/alarm` 404 route is now discarded immediately. Nexus preserves the final-dispatch latch, excludes the completed mission, removes A and all preloads, and resumes from a fresh canonical mission without repeating Dispatch. An unconfirmed `/alarm` route reopens only the normal mission page for verification.
-- Transient `/alarm` routes can no longer be stored or restored as resume-mission URLs.
-- Added permanent regression coverage for the supplied `Internal flooding (Risk to life)` failure sequence, no-target map rescan and unconfirmed-dispatch verification path.
-- Increased the unified userscript version from `3.0.18` to `3.0.19`.
-
-## [3.0.18] - 2026-08-25
-
-### Fixed
-
-- A same-origin managed Worker A with a verified active ownership bridge is now authoritative before Mission Finder compares visible mission documents. This prevents a stale or competing mission frame after sleep/transport recovery from making the real active worker suspend itself as `mission-observer-inactive-owner`.
-- Alliance Radio transport requests now retain a larger bounded distinct-key set and sample diagnostic history/log entries, preventing evicted rows from being counted and logged again on every controller pass.
-
-### Performance
-
-- Full Radio Transport DOM scans are capped at once per second instead of running on every 160 ms controller heartbeat. Cached requests retain live pending durations, so mission processing avoids millions of repeated Alliance-row operations while new personal transport requests remain bounded to a one-second discovery delay.
-- The duplicate-dispatch-safe soft queue-lock recovery now runs after five seconds instead of eight. The long-run evidence showed 62 affected missions and a 10.8-second median dispatch-to-next-mission interval; this earlier step only releases stale opening locks and requests runtime reconciliation, while the 16-second hard recovery and repeated-stall circuit breaker remain unchanged.
-
-### Diagnostics and safety
-
-- Embedded bootstrap traces now identify `mission-observer-managed-active-owner` when verified Worker A bypasses generic cross-frame visibility ranking. Dormant and unowned frames remain excluded, and no dispatch timing or duplicate-dispatch guard was weakened.
-
-## [3.0.17] - 2026-08-25
-
-### Fixed
-
-- A missing Mission Finder mount now receives one genuinely clean A-only retry: V3 removes Worker A and every preload, compacts bounded controller caches, leaves a 900 ms worker-free reclamation gap, then recreates only the exact mission. The previous recovery replaced the iframe almost immediately and could reproduce the same failed startup under heavy browser pressure.
-- A verified transport-only upgrade containing `Transport is needed!` or `Prisoners must be transported`, with no explicit missing-resource wording, is no longer reported as a zero-selection vehicle shortage. It remains temporarily rotated so transport clearing can continue without buying or dispatching unrelated units.
-
-### Diagnostics and safety
-
-- Every embedded startup now keeps a bounded trace covering userscript entry, heavy-runtime admission, Mission Finder module entry, observer ownership, mission initialization and control mounting, plus bounded `error` and `unhandledrejection` details. V3 snapshots this evidence before both the retry and any final fail-closed stop.
-- The clean retry remains limited to once per exact mission incident and performs no Dispatch, mission skip or transport action. If it still fails, the export now distinguishes absent userscript injection, rejected heavy-runtime admission, inactive ownership, initialization failure and control-mount failure.
-- Added regression coverage for the clean worker-free retry, retained bootstrap trace and the exported Cruise Liner transport-only zero-selection sequence.
-
-## [3.0.16] - 2026-08-24
-
-### Fixed
-
-- A successful prisoner cell assignment that leaves Worker A on an exact `/vehicles/{vehicle}/gefangener/{prisoner}` result route no longer falls into the generic 20-second transport rebuild. Once the exact personal Radio request has cleared and no prisoner controls remain, the existing Worker A returns to the verified same mission after a bounded six-second settle window.
-- This closes the recurring failure seen on mission `259030749` (`Demonstration against the construction of a motorway project`), where the fourth Noble Jail assignment completed but the later full iframe rebuild failed to mount Mission Finder.
-
-### Safety
-
-- The completed-route return is blocked while the exact Radio request is live or when any structured request, cell-selection alert, usable green cell, release link or release-success alert remains.
-- The route reuses the current Worker A and performs no Dispatch, destination, release, mission-skip or vehicle-selection click. A missing or mismatched exact mission URL stops fail closed.
-- Added a permanent executable regression reproducing vehicle `7505698`, prisoner `2591924` and mission `259030749`, including settle-time, live-request, active-cell, release-flow and wrong-mission guards.
-
-## [3.0.15] - 2026-08-23
-
-### Fixed
-
-- A prisoner handoff with no usable green cell now runs the exact current-mission `Release Prisoners` fallback before Mission Update, vehicle-page expansion or Unit Finder. It no longer spends the transport watchdog window loading vehicle pages after the final cell route disappears.
-- A verified no-cell prisoner screen containing the cell-selection alert and exact release control is owned by the release flow rather than the generic 20-second V3 transport watchdog. This prevents the false `PRISONER:unknown:{missionId}` rebuild and second-attempt circuit-breaker stop seen on mission `258908831` (`Fans fight at basketball game`).
-- The final pre-dispatch prisoner release recheck remains in place for a handoff that changes after the early gate.
-
-### Safety
-
-- A usable visible green cell remains higher priority. Release is still limited to the visible exact-text `Release Prisoners` POST link for the current mission, with duplicate-click protection, confirmed success, owned-lightbox close verification and fail-closed handling.
-- Added regression coverage proving the no-cell release executes before Unit Finder and that V3 cannot rebuild Worker A underneath the release flow.
-
-## [3.0.14] - 2026-08-23
-
-### Fixed
-
-- Worker A no longer remains indefinitely on an Ambulance vehicle page after a patient destination has been assigned and the exact personal Radio Transport Request has cleared. The ambulance continues its server-side transport while the hidden dispatcher resumes mission work.
-- Extended the existing exact pending-mission redirect recovery to cleared `/vehicles/{id}` routes. After the bounded 10-second redirect window, V3 rebuilds Worker A on only the verified pending mission instead of waiting for the transporting Ambulance to arrive.
-- Preserved live transport ownership: recovery remains blocked while the exact vehicle still has a personal Radio request, patient/prisoner destination evidence remains active, or the balanced transport service owns the worker.
-
-### Safety
-
-- Added an executable regression for the exported cleared-patient sequence, including the stale vehicle route, exact pending mission rebuild, live-request guard, active patient-context guard and no-click contract.
-- No Dispatch click, transport destination click, mission skip, vehicle selection, staffing rule, storage key or durable register changed.
-
-## [3.0.13] - 2026-08-23
-
-### Fixed
-
-- Opening a visible mission while Auto Mode is stopped no longer expands every available vehicle page automatically. The complete vehicle list stays collapsed until Unit Finder, Mission Update or Ally Steal explicitly needs it, removing the severe stopped-mission lag on large fleets.
-- Active Auto Mode still performs its mission-update-first precheck and loads the complete stable vehicle list before selection. Manual mission controls remain mounted and unchanged.
-- A confirmed Auto Mode now cancels its pending Mission Finder discovery timer. If navigation has already moved Worker A onto a patient or prisoner vehicle route, stale discovery exits to the route watcher without spending a mission-bootstrap rescue or raising a false missing-Auto-Mode error.
-- Replaced the one-per-run bootstrap rescue cap with one bounded reload per exact mission-bootstrap incident. A genuine later mission can therefore recover even when an earlier mission already needed a reload; the cumulative count remains diagnostic only.
-
-### Safety
-
-- Added a permanent stopped-mission idle regression that executes both stopped and active initialization paths and verifies on-demand vehicle loading remains present for Unit Finder, Mission Update and Ally Steal.
-- Added an executable bootstrap-recovery regression covering the exported failure sequence: stale discovery on a transport route, exact-mission reload isolation, single-reload bounding, later-mission recovery and fail-closed no-click behavior.
-- No storage keys, selection rules, trained-personnel checks, dispatch behavior, transport destination rules or V3 worker ownership changed.
-
-## [3.0.12] - 2026-08-23
-
-### Fixed
-
-- Recover Worker A after a prisoner cell assignment redirects it to the map and leaves the embedded engine waiting without a mission control. The controller reloads the exact persisted mission after 12 seconds, without clicking Dispatch or skipping.
-- Added an atomic session-level Dispatch latch keyed by mission ID. A MissionChief redraw or same-document queue handoff can no longer click Dispatch twice or add a second successful-completion record for the same mission transition.
-- Kept prisoner recovery independent of a still-visible Radio Transport Request, closing the deadlock exposed after the request row had already cleared.
-
-### Safety
-
-- Preserved the single active dispatcher, oldest-first personal transport handling, trained-personnel rules, memory lifecycle and all exact vehicle cross-references.
-- Recovery remains fail-closed when an exact persisted mission URL cannot be verified.
-
-## [3.0.11] - 2026-08-23
-
-### Fixed
-
-- Replaced transport-kind-only watching with exact patient/prisoner identity tracking using the vehicle and subject IDs. A handoff from one patient or prisoner to another now resets the stall clock instead of inheriting a stale context.
-- Added one bounded Worker-A rebuild after 20 seconds in the same exact personal transport context. The recovery reopens only the matching personal request or verified mission, never clicks Dispatch, never skips, and fails closed if that exact context stalls again within two minutes.
-- Rebuilt post-sleep recovery to discard stale workers and timers, then service the oldest outstanding personal transport before mission work resumes. Alliance requests remain ignored.
-- Made adaptive RAM protection reversible: after the heap remains below the safe release threshold for 60 seconds, the A-only latch clears and lightweight preload B may return. Worker C remains parked.
-- Added a run-scoped exact-vehicle staffing quarantine. A uniquely identified vehicle that raises a confirmed staffing alert is excluded and Unit Finder retries the same mission; ambiguous generic alerts still stop safely.
-- Expanded mission-value discovery across the active mission document and readable nested frames, with capture-source and miss telemetry for exports.
-- Increased Command Nexus from `3.0.10` to `3.0.11` and Mission Finder from `V10.6.176` to `V10.6.177`.
-
-### Safety
-
-- Preserved the single active dispatcher, personal oldest-first transport clearing, two-mission pause, trained-personnel fail-closed rules and durable station/unit/personnel registers.
-- Preserved exact cross-references: Rescue Dog to Search Dog Unit type `102`, Airfield Operations Supervisor type `80`, Mission Upgrade Any vehicle to Ambulance type `5`, car towing to Flatbed Recovery type `105`, and truck towing to HGV Recovery type `106`.
-- Added permanent regression coverage for exact transport identity, bounded no-dispatch recovery, wake recovery, reversible RAM protection, staffing quarantine, value parsing and all banked vehicle mappings.
-
-## [3.0.10] - 2026-08-23
-
-### Fixed
-
-- Replaced the controller's rolling 80-ID display count with a true run counter and a bounded 5,000-ID continuity ledger, so a 12-hour endurance export does not stop counting at 80 missions.
-- Added exact successful-dispatch totals from Mission Finder plus estimated mission value, value per hour, dispatches per hour and bounded dispatch/full-cycle percentile telemetry. Estimated value is explicitly distinguished from settled bank income.
-- Added station-aware staffing diagnostics. A staffing stop now records the selected Ambulance/HEMS candidates, vehicle IDs, station names and Personnel Register evidence in the main V3 export.
-- Excluded an Ambulance or HEMS before selection only when an exact Personnel Register match has a complete scan, zero assigned personnel and evidence no older than 24 hours. Missing, incomplete, stale and staffed evidence remains eligible.
-- Added aggregate low-queue pause duration/count telemetry that survives visible-page continuity without retaining an unbounded event history.
-- Increased Command Nexus from `3.0.9` to `3.0.10` and Mission Finder from `V10.6.175` to `V10.6.176`.
-
-### Safety
-
-- The sole active Worker A, lightweight B preload, two-mission pause, transport clearing, trained-personnel fail-closed behavior and all exact vehicle cross-references remain in place.
-- Rescue Dog/Search Dog Unit remains pinned to exact native type `102`; Mission Update Any vehicle remains one exact type-`5` Ambulance.
-- Added permanent endurance telemetry and recent-complete-zero-personnel regression coverage.
-
-## [3.0.9] - 2026-08-22
-
-### Fixed
-
-- Fixed the final Dispatch-only handoff that could leave hidden Worker A inside Mission Finder's standalone silent queue path waiting for 15 unattended missions. A parent-owned active frame now remains identifiable across MissionChief's brief same-document ownership-bridge refresh.
-- Forced every verified final-dispatch route to signal the V3 two-mission controller before standalone queue-watcher state can start. Worker A is released, the zero-worker pause remains transport-aware, and the controller resumes from a fresh A after two actionable missions remain stable.
-- Added final Dispatch, Dispatch & Share and final-queue status evidence to the existing duplicate-safe 8/16-second post-dispatch watchdog, providing a bounded fallback if the primary low-queue signal is ever lost.
-- Cleared stale `TRANSPORT_WARN` UI state when the exact warned personal Radio Transport Request disappears, without changing transport selection or clicking another destination.
-- Counted a full low-queue A/B teardown as satisfying any pending memory-pressure recycle, preventing an unnecessary second Worker A restart immediately after mission supply returns.
-- Increased the unified userscript from `3.0.8` to `3.0.9` and Mission Finder from `V10.6.174` to `V10.6.175`.
-
-### Safety
-
-- Vehicle selection, Mission Upgrade, trained-personnel, hospital, prisoner, Rescue/Search Dog type `102`, Airfield Operations Supervisor type `80`, Ambulance type `5`, Flatbed Recovery type `105`, HGV Recovery type `106`, shortage cooldown and personal-only transport rules are unchanged.
-- Added permanent regression coverage for the observed final-dispatch/15-mission deadlock, bridge-refresh identity, bounded fallback recovery, stale transport-warning restoration and memory-recycle handoff.
-
-## [3.0.8] - 2026-08-22
-
-### Fixed
-
-- Constrained the V3 control panel to the available viewport and added an internal scroll region, preventing long Temporary Skips lists from extending the popup below the screen.
-- Kept Start, Stop, Retry and Export in a fixed control footer outside the scrolling status content so they remain reachable at every list length.
-- Capped Temporary Skips itself at 96 px with independent overflow and removed the obsolete initial Worker C placeholder.
-- Increased the unified userscript from `3.0.7` to `3.0.8` and Mission Finder from `V10.6.173` to `V10.6.174`.
-
-## [3.0.7] - 2026-08-22
-
-### Memory and performance
-
-- Rebuilt dormant Worker B as a lightweight page/network preload. B no longer allocates the complete Mission Finder engine, observers, requirement maps or automation state while waiting.
-- B still loads and stabilises the immediate next MissionChief mission page. On verified promotion and sole-owner handoff, it mounts the complete Mission Finder engine exactly once before Worker A automation starts.
-- This retains the useful DOM/network warm-up while removing the wasteful second full automation runtime during normal A+B operation.
-
-### Safety
-
-- Lightweight B keeps the native dormant protocol, storage-ownership validation, interaction blocker, exact mission-ID check and activation-token gate. A failed promotion still falls back through the existing safe ownership circuit breaker.
-- Increased the unified userscript from `3.0.6` to `3.0.7` and Mission Finder from `V10.6.172` to `V10.6.173`.
-
-## [3.0.6] - 2026-08-22
-
-### Fixed
-
-- Made the stopped main-map state genuinely idle. The large Resource Administration and Mission Finder engines now initialise only for an actual mission, managed A/B worker, patient/prisoner transport page or Stations workspace; the lightweight V3 controller and Dispatch Centres popup support remain available on the map.
-- Prevented an old session `background wanted` flag from silently creating Worker A/B when Nexus is re-enabled. Automatic continuation now requires a fresh 15-second page-navigation handoff or a browser-confirmed discarded-tab restoration.
-- Kept normal sleep recovery for the still-open page and browser-discarded tabs while refusing stale intent left behind by disabling the userscript.
-- Added idle-runtime and resume-lease regression coverage plus an exported `heavyRuntimeLoaded` diagnostic.
-
-### Changed
-
-- Increased the unified userscript from `3.0.5` to `3.0.6` and Mission Finder from `V10.6.171` to `V10.6.172`.
-
-## [3.0.5] - 2026-08-22
-
-### Fixed
-
-- Replaced the absolute 512 MiB RAM trigger, which could disable warm Worker B within seconds on a naturally heavy MissionChief page, with an adaptive pressure guard.
-- The guard now learns the normal A+B high-water baseline for the first 60 seconds, permits 192 MiB of subsequent growth, requires 15 seconds of continuous pressure and retains a firm 768 MiB ceiling.
-- Added diagnostic evidence for baseline, peak, candidate duration, trigger reason and both pressure limits so future exports distinguish normal startup footprint from sustained growth.
-
-### Performance and safety
-
-- Normal A+B page warming now remains active through an expected high starting heap. The existing A-only fallback, clean boundary restart, transport clearing, sole-dispatch ownership and durable-register protections remain unchanged.
-- Increased the unified userscript from `3.0.4` to `3.0.5` and Mission Finder from `V10.6.170` to `V10.6.171`.
-
-## [3.0.4] - 2026-08-22
-
-### Fixed
-
-- Replaced the untracked Airfield cross-reference MutationObservers with an owned observer map. Every observer is now disconnected when Worker A changes document, reloads, is promoted, recycled or removed, preventing old mission DOM from being retained by the top controller.
-- Managed frame teardown now removes its load handler, stops outstanding frame work, asks the embedded runtime to release observers/timers/large transient selection state, then blanks and detaches the frame.
-- Embedded cleanup now drops requirement-preload rows, Unit Finder diagnostic working rows, selected-vehicle state, patient ledgers, stale modal references and iPhone document references before a mission frame is discarded.
-
-### Memory and performance
-
-- Reduced the normal pipeline from A/B/C to A plus one dormant B. B still warms the immediate next missionâ€”the preload that produced the measured handoff benefitâ€”while C no longer holds a third full MissionChief document and userscript runtime.
-- Added adaptive RAM protection at 512 MiB reported JavaScript heap. It releases B immediately, switches the current run to A-only and schedules one clean A restart at the next verified mission boundary.
-- Normal boundary recycling remains 12 advances or 8 minutes. Once RAM protection is active, A-only recycling tightens to 8 advances or 4 minutes with a 900 ms worker-free gap to give the browser a genuine reclamation window.
-- Added controller diagnostics for heap size, preload limit, memory-pressure state/activation count and live Airfield observer count.
-
-### Safety
-
-- Memory actions only stop and recreate disposable mission frames. They do not clear MissionChief data or Command Nexus station, unit, personnel, training, naming, assignment or durable settings registers.
-- Worker A remains the only dispatcher. Personal transport clearing, Alliance exclusion, hospital choice, shortage rotation and every exact vehicle/personnel rule are unchanged.
-
-### Changed
-
-- Increased the unified userscript from `3.0.3` to `3.0.4` and Mission Finder from `V10.6.169` to `V10.6.170`.
-
-## [3.0.3] - 2026-08-22
-
-### Performance
-
-- Replaced repeated 1,500-row vehicle-ID signature construction during list loading with a bounded edge-and-midpoint structural signature. Vehicle counts, row counts, pagination-control transitions, progress evidence and loading indicators remain mandatory before selection can begin.
-- Reduced only state-confirmed Mission Update and final vehicle-list stability windows, while retaining the established bounded timeouts and fail-closed zero-list behavior.
-- Recycle A/B/C at a verified mission boundary after 12 native advances or 8 minutes, reducing long-session frame and detached-DOM accumulation without clearing any durable station, unit, personnel, training or settings register.
-- Release a stale post-transport V2 queue guard immediately only when Worker A is complete, Auto Mode is confirmed running and its exact mission is still the authoritative top actionable personal mission.
-
-### Fixed
-
-- Personal Radio Transport Requests are now ordered by first-seen time, so a newer DOM row cannot continuously hide or reset the age of an older pending request. Cleared requests also release their retry bookkeeping.
-- Dormant B/C pages now capture-block clicks, form submissions and `window.open` until transactional promotion grants sole storage ownership. Any dormant transport navigation or missing/inactive interaction guard opens the existing A-only circuit breaker.
-- Added diagnostics for request age, blocked dormant interactions, post-transport fast releases and the active recycle thresholds.
-
-### Safety
-
-- Kept Worker A as the only operational dispatcher. B/C still perform zero vehicle-pagination clicks and cannot run Mission Finder before verified promotion.
-- Did not change vehicle choice, shortage, dispatch, hospital, personnel, training or Mission Upgrade decisions. Rescue/Search Dog type `102`, Airfield Operations Supervisor type `80`, Mission Upgrade Ambulance type `5`, Mass Casualty Equipment type `33`, Flatbed Recovery type `105`, HGV Recovery type `106`, the universal 20-advance shortage cooldown and personal-only transport rules remain protected by the complete regression suite.
-- Added a permanent speed/transport/isolation regression covering bounded vehicle polling, oldest-first transport fairness, verified stale-guard release and dormant interaction blocking.
-
-### Changed
-
-- Increased the unified userscript from `3.0.2` to `3.0.3` and Mission Finder from `V10.6.168` to `V10.6.169`.
-
-## [3.0.2] - 2026-08-22
-
-### Fixed
-
-- Quarantined a mission after the 16-second post-dispatch hard recovery so the priority controller cannot route Worker A back to the same stale `NEW` row. The normal 20-advance safety window applies, but an authoritative mission-state or requirement change releases this specific quarantine early.
-- Personal Radio transports present at run start, page resume, mission wait or hard recovery now receive the exact transport-only Worker A before another mission is opened; Alliance requests remain excluded.
-- Fatal controller errors now snapshot diagnostics, clear only operational V2 queue/running state and explicitly release A/B/C. Worker A can no longer continue processing after V3 reports `ERROR`.
-- B/C remain dormant page-warm mission preloads but no longer expand the complete vehicle table. Only promoted Worker A loads the full list, cutting the multi-frame heap pressure seen with 1,927-row vehicle lists.
-- Added a permanent regression for stalled-dispatch quarantine and release, transport-first startup, fatal all-worker teardown, priority locking and page-only B/C warming.
-
-### Changed
-
-- Increased the unified userscript from `3.0.1` to `3.0.2`; Mission Finder remains `V10.6.168`.
-
-## [3.0.1] - 2026-08-22
-
-### Added
-
-- Added a V3 low-supply lifecycle: when the active worker sees fewer than two next personal missions, it uses MissionChief's exact Dispatch-only action, leaves one mission in reserve, completes any patient/prisoner transport and requests a zero-worker pause.
-- Added automatic resume after at least two actionable personal missions remain stable for 1.5 seconds. Resume always creates a fresh Worker A; B/C return only as dormant preloads.
-- Added scheduled A/B/C lifecycle recycling at a verified mission boundary after 20 native mission advances or 15 minutes, plus explicit embedded-runtime teardown before every managed frame is blanked and removed.
-
-### Safety
-
-- Preserved standalone Mission Finder queue behavior: outside a sole-owner V3 Worker A, only `Next Mission (0)` is the final-queue signal.
-- Kept low-supply teardown transport-aware and prevented both native Dispatch & Next and saved Dispatch & Share continuation from opening the reserved mission. A personal radio request that arrives during the pause receives one temporary transport-only Worker A, which releases itself after clearing or a bounded retry timeout.
-- Bounded controller mission-identity and handled-event caches. Runtime cleanup does not clear MissionChief data or Command Nexus station, unit, personnel, training and durable setting registers.
-- Added a permanent regression for the two-mission watermark, stable resume, transport gates, boundary recycling, explicit frame teardown and durable-register preservation.
-
-### Changed
-
-- Increased the unified userscript from `3.0.0` to `3.0.1` and Mission Finder from `V10.6.167` to `V10.6.168`.
-
-## [3.0.0] - 2026-08-21
-
-### Added
-
-- Promoted the tested single-install V3 master to the canonical production source. Its ownership controller starts at `document-start`, then starts the complete embedded Command Nexus runtime at its established DOM-ready boundary.
-- Added one active dispatcher (Worker A) with two isolated dormant warm preloads (Workers B/C). Promotion requires the activation token, expected mission, active-frame identity and sole operational-storage ownership before Mission Finder can start.
-- Added a transport-aware post-dispatch watchdog: an 8-second soft queue reconcile preserves the final-dispatch duplicate guard, a 16-second hard recovery prefers a verified warm next mission, and a repeated same-mission hard recovery inside two minutes fails closed.
-- Added exact Airfield Operations Supervisor type `80` routing and separate maximum-truck towing ingestion selecting one exact HGV Recovery type `106` per truck. The existing maximum-car capacity rule remains one exact Flatbed Recovery type `105` per two cars.
-
-### Safety
-
-- Increased Mission Finder to `V10.6.167`; exact selection, selected-unit verification and generic-fallback protection share the same Airfield and towing classifiers.
-- Increased B/C target-rotation retention and freeze rotation during transport, promotion and post-dispatch recovery so warm workers are not repeatedly destroyed by transient queue churn.
-- Added V3 merge, watchdog, Airfield and HGV regressions while preserving transport clearing, Rescue/Search Dog type `102`, Mission Upgrade Ambulance type `5`, the universal 20-advance shortage cooldown and sole-dispatch-owner rules.
-- Preserved computer-sleep recovery: stale B/C preloads are discarded and Worker A is recovered without allowing V3 itself to click Dispatch or guess a transport destination.
-
-### Changed
-
-- Removed obsolete one-use builders, trigger files and historical repair/inspection workflows from permanent repository automation.
-- Centralized canonical release and component-version validation in `scripts/validate-userscript.mjs`; permanent behavioral regressions are now version-agnostic and automatically discovered by the validation workflow.
-- Added a permanent Repository Quality gate that parses every retained GitHub Actions workflow with a pinned YAML parser before repository checks continue.
-- Increased the unified userscript from `2.0.3` to `3.0.0` and made V3 the production installation path.
-
-## [2.0.3] - 2026-08-21
-
-### Fixed
-
-- Mission Update now converts the exact `Any vehicle` requirement family into one normal Ambulance and selects/verifies only native vehicle type `5`; HEMS type `9`, Ambulance Officers and every other vehicle type remain excluded.
-- Added explicit Rescue Dog and Search Dog Unit cross-reference aliases while preserving the established fail-closed native Search Dog Unit type `102` selector.
-
-### Safety
-
-- Added permanent regressions for the exact upgrade conversion, one-vehicle cap, type-5 ownership, selected-unit verification, cross-reference aliases and exclusion of unrelated vehicles.
-- Increased Mission Finder from `V10.6.165` to `V10.6.166` and the unified userscript from `2.0.2` to `2.0.3`. Resource Administration remains `V4.2.8`, Unit Naming remains `3.3.27`, Station Naming remains `1.3.22`, and Personnel Assignment remains `1.3.12`.
-
-## [2.0.2] - 2026-08-21
-
-### Added
-
-- Added a V2-owned dormant-preload lifecycle for explicitly named Nexus V3 B/C frames. Dormant frames may load MissionChief's native mission page and vehicle pagination, but Mission Finder does not mount its UI, observers, alert override or operational Auto Mode state until a validated sole-owner promotion.
-- Added a synchronous, fail-closed promotion bridge that verifies the activation token, expected mission ID, active-frame name and V3 storage ownership before starting Mission Finder in the warm document.
-
-### Safety
-
-- Normal top-level pages, direct mission pages and ordinary child frames retain the established V2 behaviour. The dormant path applies only to the explicit `mcn-v3-pipeline-preload-` frame contract.
-- Increased Mission Finder from `V10.6.164` to `V10.6.165` and the unified userscript from `2.0.1` to `2.0.2`. Resource Administration remains `V4.2.8`, Unit Naming remains `3.3.27`, Station Naming remains `1.3.22`, and Personnel Assignment remains `1.3.12`.
-
-## [2.0.1] - 2026-08-19
-
-### Changed
-
-- Publication recovery for the clean V2 baseline. No MissionChief runtime behaviour changes; this creates a normal canonical userscript version update so Greasy Fork can synchronize V2.
-- Increased the unified userscript version from `2.0.0` to `2.0.1`.
-
-## [2.0.0] - 2026-08-19
-
-### Changed
-
-- Reset the production line to the exact proven Command Nexus `1.0.127` operational baseline and promoted that code to the new major `2.0.0` release line.
-- Deliberately abandoned the Mission Analytics / Sharing & Sync / Google Apps Script logger work introduced after `1.0.127`. V2 contains no external analytics uploader, logger outbox, activity recorder, hard-coded Apps Script endpoint or logger backend integration.
-- Preserved Mission Finder `V10.6.164`, Resource Administration `V4.2.8`, Unit Naming `3.3.27`, Station Naming `1.3.22` and Personnel Assignment `1.3.12` from the proven rollback baseline.
-
-### Safety
-
-- Added a permanent `check-no-external-logger-v200.mjs` regression so the abandoned logger stack cannot silently return to the canonical userscript or repository integration paths.
-- Historical `1.1.x` commits, tags and releases remain historical records only; they are not part of the V2 production source.
-
-## [1.0.127] - 2026-08-16
-
-### Added
-
-- Completed issue #18 by enabling live Aircraft Rescue and Firefighting, Co-Responder, Fire Drone, High Volume Pump and Fire Lifeguard Personnel Assignment profiles with exact UK vehicle types, training keys, seat targets and Fire Station scopes.
-- Completed issue #19 by enabling every listed SAR, Mountain Rescue, Coastguard and Lifeboat profile with exact vehicle, academy, live-seat and eligible-building mappings, plus a live full-service batch.
-- Added same-origin station vehicle-API authority for HVP pods, Boat, Flood, Hovercraft, Rescue Watercraft and Inland Rescue Boat trailers. Explicit `tractive_vehicle_id` links are preferred, a unique one-to-one pair is the only fallback, and ambiguity fails closed without assigning an unrelated tractor.
-- SAR batch runs now merge overlapping qualifications onto the same actual crew, preventing Mud/Flood, Search/Flood, Drone/Flood and other shared-vehicle rules from competing for separate seats.
-- Recorded sanitized issue #18/#19 mapping decisions and added permanent Fire, SAR, companion-link, overlap, quantity, building-scope and live-batch regressions.
-- Added singular, plural and `Required` cross-reference aliases for **Aerial Appliance Truck(s) or Rescue Stairs**.
-- The shared Unit Finder and Mission Update selector now exhausts exact type `78` Rescue Stairs first, then fills only the remaining quantity with exact type `17` Combined Aerial Rescue Pumps (CARPs).
-- Both exact vehicle types count toward selected-unit verification, while Water Ladders, Rescue Pumps and every other Fire or Airfield vehicle remain excluded from this combined requirement.
-- Blocked generic quick-select fallback for this specialist mixed pool and added a permanent regression for alias recognition, exact type ownership, ordering, remainder selection and selected-unit accounting.
-- Increased Mission Finder from `V10.6.163` to `V10.6.164`, Personnel Assignment from `1.3.11` to `1.3.12`, and the unified userscript from `1.0.126` to `1.0.127`. Resource Administration remains `V4.2.8`, Unit Naming remains `3.3.27`, and Station Naming remains `1.3.22`.
-
-## [1.0.126] - 2026-08-16
-
-### Fixed
-
-- Closed issue #331 by repairing the trained-personnel live-verification candidate pool broken in `v1.0.123`.
-- Exact compatible vehicles with missing or stale Personnel Register entries can now enter the live assignment-page scan that creates fresh qualification evidence.
-- Removed the circular gate where the pre-verification pool required a vehicle to already have the fresh evidence that its own scan was responsible for producing.
-- Preserved strict fail-closed final selection, readiness and Auto Mode dispatch: missing, stale, partial or wrong-type evidence still cannot satisfy a trained-personnel requirement.
-- Added sanitized incident evidence and a permanent regression that separately locks pre-verification type eligibility and final evidence-backed selection.
-- Increased Mission Finder from `V10.6.162` to `V10.6.163` and the unified userscript from `1.0.125` to `1.0.126`. Resource Administration remains `V4.2.8`, Unit Naming remains `3.3.27`, Station Naming remains `1.3.22`, and Personnel Assignment remains `1.3.11`.
-
-## [1.0.125] - 2026-08-16
-
-### Added
-
-- Completed issue #17 by enabling live Ambulance Officer, HART, Tactical Command, SORT, Midwifery and Specialist Paramedic Personnel Assignment profiles with exact MissionChief UK vehicle types, academy keys and native seat targets.
-- Added explicit specialist station scopes for Ambulance Stations, Small Ambulance Stations, Urgent Treatment Centers, Home Response Locations, HART Bases and GP Surgeries according to each eligible vehicle family.
-- Enabled `Run all Medical profiles` in specialist-first order with Critical Care Ambulances last, while preserving the established standalone Critical Care engine.
-- Reused the verified background assignment path for both Preview and Live, including exact live-page vehicle-type rejection, per-vehicle confirmation and final station-wide verification.
-- Kept training shortfall and assignment shortfall separate for quantities above one and added permanent mapping, batch-order, scope, preview/live and verification regression coverage.
-- Recorded the current source evidence and resolved the stale ATV association: exact type `30` ATV Carrier uses HART `hazard_response_ems`; Tactical Command `elw2_ems` belongs to exact type `31` Ambulance Control Unit.
-- Increased Personnel Assignment from `1.3.10` to `1.3.11` and the unified userscript from `1.0.124` to `1.0.125`. Resource Administration remains `V4.2.8`, Unit Naming remains `3.3.27`, Station Naming remains `1.3.22`, and Mission Finder remains `V10.6.162`.
-
-## [1.0.124] - 2026-08-16
-
-### Fixed
-
-- Resolved issue #300 from user-supplied native MissionChief UK mission-row evidence: Search Dog Unit (SAR) is exact `vehicle_type_id` `102`, not `101`.
-- Aligned Rescue Dog and Search Dog Unit candidate selection and selected-unit verification with Unit Naming's existing exact type-`102` identity.
-- Retained strict specialist behavior: Police Dog / Dog Support Unit wording remains separate, and no generic vehicle fallback can satisfy Search Dog demand.
-- Added a sanitized evidence record for the native mission route and row attributes plus a permanent consistency regression that checks the Mission Finder selector and Unit Naming map use the same verified ID.
-- Increased Mission Finder from `V10.6.161` to `V10.6.162` and the unified userscript from `1.0.123` to `1.0.124`. Resource Administration remains `V4.2.8`, Unit Naming remains `3.3.27`, Station Naming remains `1.3.22`, and Personnel Assignment remains `1.3.10`.
-
-## [1.0.123] - 2026-08-16
-
-### Fixed
-
-- Aligned trained-personnel selection with the locked strict fail-closed safety contract across Unit Finder, Mission Update and Auto Mode.
-- Only fresh, complete, exact-vehicle Personnel Register evidence now selects and satisfies qualification-sensitive requirements; correct vehicle type or nominal seating capacity alone is insufficient.
-- Removed the untrained correct-type fallback phase. Missing, stale and partial evidence remains an explicit verified-training shortage and keeps the mission not-ready.
-- Auto Mode now stops without clicking Dispatch when a staffing or verified qualification shortage remains instead of dispatching selected units to skip the mission.
-- Added permanent coverage for missing, stale, partial and fully verified Personnel Register states, strict satisfaction, blocked UI state and the no-dispatch Auto Mode path.
-- Increased Mission Finder from `V10.6.160` to `V10.6.161` and the unified userscript from `1.0.122` to `1.0.123`. Resource Administration remains `V4.2.8`, Unit Naming remains `3.3.27`, Station Naming remains `1.3.22`, and Personnel Assignment remains `1.3.10`.
-
-## [1.0.122] - 2026-08-16
-
-### Fixed
-
-- Corrected the supplied SAR mission case where `Required Drones` reported no available unit because Nexus treated the wording as Police Drone type `91` only.
-- `Require Drone(s)`, `Requires Drone(s)` and `Required Drone(s)` now use a strict generic Drone-family mode that accepts exact type `89` **Drone Vehicle SAR HQ** and exact type `91` **Police Drone Vehicle**, ordered by best arrival.
-- Explicit `Police Drone(s)` remains type `91` only, explicit `Police Helicopter(s)` remains type `11` only, and `Police Helicopter or Drone(s)` retains Police Drone-first with Police Helicopter fallback.
-- Bare `Drone` and `Drones` prose remains excluded, preventing unrelated cross-service text from creating dispatch demand.
-- Added permanent regression coverage for both exact Drone families, strict service-specific modes, shared fresh/update selection, selected-unit verification, ETA ordering and the bare-word guard.
-- Increased Mission Finder from `V10.6.159` to `V10.6.160` and the unified userscript from `1.0.121` to `1.0.122`. Unit Naming remains `3.3.27`, Station Naming remains `1.3.22`, and Personnel Assignment remains `1.3.10`.
-
-## [1.0.121] - 2026-08-15
-
-### Fixed
-
-- Fixed the standalone `/leitstellenansicht` timing failure where Dispatch Centre controls rendered first and an empty station-membership map was cached before the native station cards finished loading.
-- Unit Naming and Station Naming now rescan the current native `leitstelle_building_id` rows whenever their normal Refresh Stations path runs, so Dispatch Centre â†’ Service â†’ Station Type â†’ Start From rebuilds from the complete popup DOM.
-- Refresh Dispatch Centres now reapplies the refreshed membership map to Unit and Station Naming snapshots that are already loaded instead of leaving their `dispatchCentreId` values stale.
-- Preserved exact native-row membership authority, true Unassigned/default stations, the same-origin document graph, standalone `window.opener` isolation and the verified background-only rename workflow.
-- Added a permanent late-render regression covering the initial empty snapshot, subsequent native-row render, forced recovery, existing-snapshot rebinding and downstream Fire & Rescue Service filtering.
-- Increased Unit Naming from `3.3.26` to `3.3.27`, Station Naming from `1.3.21` to `1.3.22`, and the unified userscript from `1.0.120` to `1.0.121`. Personnel Assignment remains `1.3.10` and Mission Finder remains `V10.6.159`.
-
-## [1.0.120] - 2026-08-15
-
-### Fixed
-
-- Resource Administration now recognises a popped-out top-level `/leitstellenansicht` window as an authoritative Stations workspace when its native station entries are connected, even though those links do not carry the desktop lightbox classes.
-- Station Naming and Unit Naming now run the same verified background native-form workflow from normal, embedded and standalone Stations layouts without opening station or vehicle pages.
-- The standalone window reads its own MissionChief DOM and same-origin forms; it does not inspect or depend on `window.opener`.
-- Preserved the same-origin embedded-frame gate, desktop Stations lifecycle and iOS rendered-entry lifecycle while keeping mission, building-detail and unrelated frames excluded.
-- Added executable regression coverage for the exact standalone lifecycle failure, background-only Station and Unit saves, disconnected-entry rejection, unrelated-page rejection and existing embedded/desktop paths.
-- Increased Unit Naming from `3.3.25` to `3.3.26`, Station Naming from `1.3.20` to `1.3.21`, and the unified userscript from `1.0.119` to `1.0.120`. Personnel Assignment remains `1.3.10` and Mission Finder remains `V10.6.159`.
-
-## [1.0.119] - 2026-08-15
-
-### Changed
-
-- Station Naming now reads the station and its exact native edit form through same-origin background requests, preserves MissionChief's hidden fields and CSRF token, and verifies the saved name without opening a station lightbox.
-- Unit Naming now reads station vehicle tables and each exact native vehicle edit form in the background, rejects mismatched vehicle IDs or form actions, and counts a rename only after a fresh edit-page verification.
-- Personnel Assignment remains on its established background GET/POST path, with a permanent regression contract preventing link clicks, lightboxes, iframe navigation, or unverified assignment counts.
-- Stop and lifecycle cleanup now abort active Station and Unit Naming requests.
-- Added permanent cross-workflow regression coverage for native-form integrity, same-origin resource validation, background-only operation, and post-save verification ordering.
-- Increased Unit Naming from `3.3.24` to `3.3.25`, Station Naming from `1.3.19` to `1.3.20`, Personnel Assignment from `1.3.9` to `1.3.10`, and the unified userscript from `1.0.118` to `1.0.119`.
-
-## [1.0.118] - 2026-08-15
-
-### Changed
-
-- Fire Engines or RIVs now selects exact type-76 RIVs first and fills only the remaining requirement with exact type-16 Rescue Pumps.
-- Mixed RIV and Rescue Pump selections count together toward the row while Water Ladders and Combined Aerial Rescue Pumps remain excluded.
-- Added permanent regression coverage for RIV-first ordering, exact remainder top-up, selection caps and selected-unit verification.
-- Advanced the Mission Finder engine from V10.6.158 to V10.6.159.
-- Increased the unified userscript version from `1.0.117` to `1.0.118`.
-
-## [1.0.117] - 2026-08-15
-
-### Changed
-
-- Railway Police Officer requirements now use the shared trained PSU and IRV vehicle pool.
-- A live-verified type-51 PSU can contribute up to 9 Railway Police Officers, while type-8 IRVs contribute 2 and handle smaller remainders.
-- Added regression coverage for Railway Police PSU planning and nine-officer trained coverage.
-- Advanced the Mission Finder engine from V10.6.157 to V10.6.158.
-- Increased the unified userscript version from `1.0.116` to `1.0.117`.
-
-## [1.0.116] - 2026-08-15
-
-### Changed
-
-- Mission Update now recalculates the live requirement target from Missing on mission, En-route, Still needed, and Selected before every click.
-- A zero live shortage hard-stops stale mission-definition selections; 1 missing, 1 en-route, and 0 still needed now selects no additional unit.
-- Advanced the Mission Finder engine from V10.6.156 to V10.6.157.
-- Increased the unified userscript version from `1.0.115` to `1.0.116`.
-
-## [1.0.115] - 2026-08-15
-
-### Changed
-
-- Mission Update now treats each Missing on mission Still needed value as the current selection target and stops when the live Selected counter reaches it.
-- BASU, Welfare, HazMat, and HazMat/CBRN requirements now share Operational Support Units and dispatch only the largest Still needed amount.
-- Mission Finder increased from V10.6.155 to V10.6.156.
-- Increased the unified userscript version from `1.0.114` to `1.0.115`.
-
-## [1.0.114] - 2026-08-15
-
-### Fixed
-
-- Completed the Auto Mode `Release Prisoners` flow after MissionChief replaces the cell-selection iframe with the exact `<div class="alert alert-success">The prisoners were released.</div>` result.
-- Captured the owning Vue `.vm--container` and stable `data-modal` identity before release navigation, then reacquired that same modal's live `span.lightbox-close[title="Close"]` control after the old iframe document detached.
-- Added a scoped Font Awesome `xmark` fallback that resolves the SVG to its interactive close ancestor without allowing an unrelated visible modal to be dismissed.
-- Preserved the current-mission release selector, duplicate-click guard, bounded waits, verified-close restart gate and fail-closed Auto Mode stop when either the exact success result or its owned close control cannot be confirmed.
-
-### Regression coverage
-
-- Added `scripts/check-auto-prisoner-release-close-v10114.mjs` with the supplied success result and Vue close-span structure.
-- Covered pre-navigation owner capture, detached result-document discovery, rejection of an unrelated modal with identical success text, live close-control reacquisition and close verification before Auto Mode restarts.
-- Extended the existing prisoner cell gate regression to require owner capture before the release click and exact success confirmation before the result modal is closed.
-
-### Changed engine baseline
-
-- Command Nexus increased from `1.0.113` to `1.0.114`.
-- Mission Finder increased from `V10.6.154` to `V10.6.155`.
-- Unit Naming remains `3.3.24`.
-- Station Naming remains `1.3.19`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.113] - 2026-08-14
-
-### Fixed
-
-- Restored Auto Mode prisoner transport handling for MissionChief's current structured `Cell Selection` screen. The new markup identifies the active chooser with `data-transport-request-type="prisoner"` instead of the older explanatory sentence.
-- Scoped prison destinations to the active prisoner request and continued to select only the first visible, enabled `btn-success` destination with available cells. Full `btn-danger` destinations are ignored, so the supplied DALGETY BAY zero-cell row is skipped and CARDENDEN is selected.
-- Retained the legacy prisoner-alert detection as a fallback for older MissionChief page variants.
-
-### Regression coverage
-
-- Added `scripts/check-auto-prison-cell-success-v10113.mjs` using the supplied current transport-request structure and destination ordering.
-- Covered a red zero-cell destination first, stale zero-capacity and disabled green rows, first valid green selection, later green rows, active-request scoping, and the legacy alert fallback.
-
-### Changed engine baseline
-
-- Command Nexus increased from `1.0.112` to `1.0.113`.
-- Mission Finder increased from `V10.6.153` to `V10.6.154`.
-- Unit Naming remains `3.3.24`.
-- Station Naming remains `1.3.19`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.112] - 2026-08-14
-
-### Fixed
-
-- Restored Unit Naming and Station Naming in a standalone `/leitstellenansicht` window. MissionChief omits type-7 Dispatch Centre cards from that layout and exposes the same native ID/name pairs through `.leitstelle_selection[leitstelle]` navbar controls instead.
-- Retained type-7 building-card discovery in the embedded Stations layout, with full type-7 rows taking precedence when both native layouts expose the same Dispatch Centre.
-- Kept each station card's `leitstelle_building_id` as the authority for Dispatch Centre membership, including the `Unassigned / default` group.
-- Removed any need for the popout to depend on or inspect its opener window; all required centre and station data is read from its own MissionChief DOM.
-
-### Regression coverage
-
-- Added `scripts/check-naming-dispatch-centre-popout-v10112.mjs` using the exact standalone layout from the supplied live HTML: navbar Dispatch Centre controls, membership-bearing station cards, and no type-7 cards.
-- Covered centre-list readiness, station-assignment readiness, Unit/Station Naming filtering, and the unassigned group while preserving existing embedded-layout regressions.
-
-### Changed engine baseline
-
-- Command Nexus increased from `1.0.111` to `1.0.112`.
-- Unit Naming increased from `3.3.23` to `3.3.24`.
-- Station Naming increased from `1.3.18` to `1.3.19`.
-- Mission Finder remains `V10.6.153`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.111] - 2026-08-14
-
-### Changed
-
-- Changed building type `22` response locations to town-only Station Naming. A station previously proposed as `ABERDOUR-FO1` is now named exactly `ABERDOUR`.
-- Removed the vehicle role and station sequence from type-22 station names. Unit Naming now owns both layers, producing names such as `ABERDOUR-FO-1`, `ABERDOUR-AO-1`, `ABERDOUR-OTL-1`, and `ABERDOUR-DSU-1`.
-- Removed the type-22 vehicle-table dependency from Station Naming. These response locations no longer need Station Naming to identify an FO, AO or OTL vehicle before the station can be named.
-- Retained the existing service suffix and station sequence rules for ordinary fire, ambulance, police and other supported station types.
-
-### Regression coverage
-
-- Added `scripts/check-type22-town-only-naming-v10111.mjs` around the exact live `ABERDOUR-FO1` case.
-- Covered town-only station output, FO/AO/OTL/DSU role ownership, Unit Naming sequences `1` and `2`, removal of the duplicate FO layer, and unchanged ordinary station naming.
-
-### Changed engine baseline
-
-- Command Nexus increased from `1.0.110` to `1.0.111`.
-- Station Naming increased from `1.3.17` to `1.3.18`.
-- Mission Finder remains `V10.6.153`.
-- Unit Naming remains `3.3.23`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.110] - 2026-08-14
-
-### Fixed
-
-- Changed Station Naming to prefer MissionChief's coordinate reverse-address response over the flattened Move Building text field. The Move page remains the fallback when coordinates or reverse lookup are unavailable.
-- Added guarded recovery for Move Building values that repeat the post town after a locality. The exact live value `Ladywalk, KY10 3EX Anstruther Easter Anstruther` now resolves to `ANSTRUTHER` instead of `ANSTRUTHER EASTER ANSTRUTHER`.
-- Preserved ordinary multi-word post towns such as `South Queensferry`, `St Andrews`, `Grantown-on-Spey`, and `Bridge of Allan`.
-
-### Regression coverage
-
-- Added `scripts/check-station-move-address-v10110.mjs` using the exact failed Move Building value reported from the live Station Naming run.
-- Covered reverse-address priority, Move-page fallback, an unseparated country suffix, repeated multi-word post towns, and unchanged ordinary multi-word post towns.
-
-### Changed engine baseline
-
-- Command Nexus increased from `1.0.109` to `1.0.110`.
-- Station Naming increased from `1.3.16` to `1.3.17`.
-- Mission Finder remains `V10.6.153`.
-- Unit Naming remains `3.3.23`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.109] - 2026-08-13
-
-### Fixed
-
-- Preserved MissionChief reverse-address line breaks as address-component separators before Station Naming extracts the post town. This stops responses such as `Anstruther Easter` plus `Anstruther` being flattened into the invalid town name `ANSTRUTHER EASTER ANSTRUTHER`.
-- Restored a mandatory station sequence to every generated station name, including building type `22`. The format is now consistently town, service and station sequence, such as `ANSTRUTHER-FS1`, `ANSTRUTHER-FO1`, and `ANSTRUTHER-FO2`.
-- Added a per-run sequence registry that preserves valid existing numbers, allocates the first free number to unnumbered stations, and separates duplicate existing numbers deterministically.
-- Confirmed Unit Naming uses the complete numbered station name before adding the vehicle type and vehicle sequence. A Fire Officer at `ANSTRUTHER-FO1` is therefore named `ANSTRUTHER-FO1-FO-1`; the station `FO` and vehicle `FO` represent separate layers and are both intentional.
-
-### Regression coverage
-
-- Added `scripts/check-station-unit-naming-chain-v10109.mjs` to execute reverse-address normalization, post-town extraction, station sequence allocation, station-name generation and Unit Naming as one chain.
-- Covered HTML and newline address separators, same-town officer station allocation, valid existing sequence preservation, duplicate sequence repair, all three officer service IDs, and unchanged ordinary station/unit naming.
-
-### Changed engine baseline
-
-- Command Nexus increased from `1.0.108` to `1.0.109`.
-- Station Naming increased from `1.3.15` to `1.3.16`.
-- Mission Finder remains `V10.6.153`.
-- Unit Naming remains `3.3.23`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.108] - 2026-08-13
-
-### Added
-
-- Added Station Naming support for MissionChief building type `22` using the exact vehicle held at that location: type `20` produces `-OTL`, type `3` produces `-FO`, and type `34` produces `-AO`.
-- The dynamic rule reads only native `vehicle_type_id` attributes from the station vehicle table; it does not infer officer identity from mutable display text.
-- Dynamic officer locations do not preserve a stale numeric suffix, so `KIRK-AO1` is proposed as exactly `KIRK-AO`, `KIRK-FO`, or `KIRK-OTL` according to the vehicle found.
-- Empty locations, unsupported vehicles, and locations containing more than one distinct supported officer type fail closed with an explicit skip reason instead of risking an incorrect name.
-
-### Regression coverage
-
-- Added `scripts/check-officer-station-naming-v10108.mjs` to execute the real building-type mapping, exact vehicle-table parser, dynamic suffix resolver, and station-name builder.
-- Covered all three verified vehicle IDs, duplicate rows of one type, `data-vehicle-type-id`, empty/unsupported input, ambiguous mixed officer types, removal of the stale dynamic number, and preservation of ordinary station numbering.
-
-### Changed engine baseline
-
-- Command Nexus increased from `1.0.107` to `1.0.108`.
-- Station Naming increased from `1.3.14` to `1.3.15`.
-- Mission Finder remains `V10.6.153`.
-- Unit Naming remains `3.3.23`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.107] - 2026-08-13
-
-### Fixed
-
-- Completed the Road Rail Unit's existing partial Unit Naming integration using its verified native type `107` identity.
-- Changed the naming label from the internal abbreviation `RRU` to MissionChief's canonical `Road Rail Unit` wording while retaining the `RRU` callsign.
-- Moved the class from the incorrect Airfield selector to Fire and retained it under All classes.
-- Replaced the aircraft-themed icon with the service-matched ğŸš’ğŸš† rail/fire icon.
-- Preserved Mission Finder's exact type-107-only selection and verification contract, including separation from the type `59` Coastguard Rope Rescue Unit.
-
-### Regression coverage
-
-- Added `scripts/check-road-rail-unit-naming-class-v10107.mjs` to execute the real Unit Naming class-option builder and callsign generator.
-- Covered the native type, canonical label, Fire and All availability, Airfield exclusion, icon, generated callsign and strict Mission Finder matcher.
-
-### Changed engine baseline
-
-- Command Nexus increased from `1.0.106` to `1.0.107`.
-- Unit Naming increased from `3.3.22` to `3.3.23`.
-- Mission Finder remains `V10.6.153`.
-- Station Naming remains `1.3.14`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.106] - 2026-08-13
-
-### Added
-
-- Added native type `106` HGV Recovery Vehicle to Unit Naming with the `HGV` callsign and a distinct ğŸš› icon.
-- Changed Unit Naming's type `105` display label to MissionChief's live `Recovery Vehicle` wording while preserving its established `FRV` callsign and ğŸ›» icon.
-- Both recovery classes now appear under Recovery and All classes. The existing `Flatbed Recovery Vehicle` naming alias remains compatible.
-- Mission Finder's exact type-105 Flatbed and type-106 HGV recovery selection routes remain unchanged.
-
-### Regression coverage
-
-- Added `scripts/check-recovery-unit-naming-classes-v10106.mjs` to execute the real Unit Naming class-option builder and callsign generator for both recovery types.
-- Covered Recovery and All selector availability, exact type IDs, distinct icons, generated callsigns and legacy Flatbed Recovery naming compatibility.
-- Preserved the Police Unit Naming, towing/recovery selector and current Mission Finder regression baselines.
-
-### Changed engine baseline
-
-- Command Nexus increased from `1.0.105` to `1.0.106`.
-- Unit Naming increased from `3.3.21` to `3.3.22`.
-- Mission Finder remains `V10.6.153`.
-- Station Naming remains `1.3.14`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.105] - 2026-08-13
-
-### Added
-
-- Completed issue #295 using a sanitized live MissionChief UK Police purchase-page capture: type `13` Armed Response Vehicle (`ARV`), type `19` Joint Response Unit (`JRU`), type `24` Traffic Car (`TC`) and type `52` Firearms Personnel Carrier (`FPC`).
-- Added the four exact native mappings and naming rules to Unit Naming. Each class now appears under both Police and All classes and produces its approved callsign code with a distinct service-matched icon.
-- Recorded the verified IDs, canonical labels, approved codes and sanitized capture method in the permanent architecture contract and evidence record.
-- Mission Finder vehicle selection, Police requirement aliases and existing type-25 Armed Traffic Car behaviour remain unchanged.
-
-### Regression coverage
-
-- Added `scripts/check-police-unit-naming-classes-v10105.mjs` to execute the real Unit Naming class-option builder for Police and All classes and verify generated callsigns for all four mappings.
-- Refreshed obsolete release-baseline tokens across the retained regression scripts and repaired stale dashboard/preload harness assumptions, allowing all 69 permanent regressions to run successfully against the current source again.
-- Preserved the canonical userscript validator, repository integrity checks and the current Mission Finder regression baseline.
-
-### Changed engine baseline
-
-- Command Nexus increased from `1.0.104` to `1.0.105`.
-- Unit Naming increased from `3.3.20` to `3.3.21`.
-- Mission Finder remains `V10.6.153`.
-- Station Naming remains `1.3.14`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.104] - 2026-08-12
-
-### Added
-
-- Added issue #304's persistent Auto Mode stop evidence to Mission Control. Automatic safety stops now show a compact red **AUTO STOPPED** flag, the local stop date/time and the exact supplied reason.
-- The stop record is stored independently from the live status message, so mission changes, document reloads and later status updates cannot erase the explanation.
-- A recreated Mission Control panel restores the saved flag and reason. Starting Auto Mode clears the record; deliberately pressing **Auto Mode: Stop** does not create a false automatic-stop warning.
-- Invalid or corrupt saved stop data is discarded safely without blocking Mission Control.
-- Existing safety-stop decisions, selector logic, dispatch behaviour and Police Unit Naming issue #295 remain unchanged.
-
-### Regression coverage
-
-- Added `scripts/check-auto-stop-reason.mjs` to exercise real stop-record storage, flag rendering, exact-reason retention, local timestamp display, cross-panel restoration, live-status isolation, restart clearing and corrupt-data recovery.
-- Preserved the canonical userscript validator, repository integrity checks and current Ambulance Officer/Mission Update authority regressions.
-
-### Changed engine baseline
-
-- Command Nexus increased from `1.0.103` to `1.0.104`.
-- Mission Finder increased from `V10.6.152` to `V10.6.153`.
-- Unit Naming remains `3.3.20`.
-- Station Naming remains `1.3.14`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.103] - 2026-08-12
-
-### Fixed
-
-- Completed issue #299 for genuinely fresh missions: the Ambulance Officer threshold now receives the ordinary Ambulance total already calculated from the current patient badge count, even when no explicit patient `We need: Ambulance` row exists.
-- Fresh patient badge demand and explicit patient Ambulance rows are collapsed to the larger authoritative total for threshold comparison, preventing the same patient demand from being counted twice.
-- The late-render fresh-mission recovery path now applies the same threshold and exact type-34 selector after patient data appears.
-- Late visible, legacy-list and refetched mission-help fallbacks now retain the configured fresh-mission rules instead of silently bypassing them.
-- Existing positive Officer demand, selected/on-mission Officer coverage, live shortage authority, the separate High-risk Missing Person Ambulance rule and the Upgrade exclusion remain unchanged.
-
-### Regression coverage
-
-- Extended `scripts/check-ambulance-officer-threshold-v10101.mjs` with the real missed state: six fresh patient-badge Ambulances, no mission-help Ambulance row and no explicit patient Ambulance alert must select one Officer at threshold five.
-- Added equal-threshold, badge/explicit-row de-duplication, larger-explicit-total, preloaded Vehicle Load and late fresh-recovery assertions.
-- Preserved the chained High-risk Missing Person, Mission Update single-pass and Missing-on-mission authority regressions.
-
-### Changed engine baseline
-
-- Command Nexus increased from `1.0.102` to `1.0.103`.
-- Mission Finder increased from `V10.6.151` to `V10.6.152`.
-- Unit Naming remains `3.3.20`.
-- Station Naming remains `1.3.14`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.102] - 2026-08-12
-
-### Fixed
-
-- Fixed issue #299: the configured Ambulance Officer threshold now runs consistently through Unit Finder, Auto Mode and Mission Update, including cycles where the current live Missing Vehicles/Personnel table is authoritative.
-- The active path counts only its authoritative positive ordinary Ambulance demand and adds exactly one Ambulance Officer when that count is strictly greater than the configured threshold.
-- Ambulance Officer selection now prefers exact MissionChief vehicle type `34`, with an exact-name fallback only when MissionChief does not expose a vehicle type ID.
-- Existing positive Officer demand, an already-selected Officer, a mission-scoped Officer selected by an earlier pass, or a confirmed satisfied live Officer requirement prevents duplication.
-- The separate High-risk Missing Person Ambulance rule remains fresh-mission-only and is not enabled during Mission Update.
-
-### Regression coverage
-
-- Extended `scripts/check-ambulance-officer-threshold-v10101.mjs` to cover fresh Unit Finder, live-authority Unit Finder, Auto Mode, manual/post-selection Mission Update, strict type-34 matching and duplicate protection.
-- Preserved the chained High-risk Missing Person regression and re-ran the Mission Update single-pass and Missing-on-mission authority checks against the current release baseline.
-
-### Changed engine baseline
-
-- Command Nexus increased from `1.0.101` to `1.0.102`.
-- Mission Finder increased from `V10.6.150` to `V10.6.151`.
-- Unit Naming remains `3.3.20`.
-- Station Naming remains `1.3.14`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.101] - 2026-08-12
-
-### Added
-
-- Added a new Settings checkbox, **Automatically add 1 Ambulance Officer**, alongside the existing High-risk Missing Person Ambulance rule.
-- Added a user-set numeric threshold from `0` to `99`, defaulting to `5` while the rule remains disabled by default.
-- On fresh Unit Finder and Auto Mode requirement loads, one **Ambulance Officer** is added when the final ordinary Ambulance demand is strictly greater than the configured threshold. Example: threshold `5` triggers at `6` Ambulances.
-- Multiple ordinary Ambulance rows are summed across fresh mission and current patient requirements, an existing positive Ambulance Officer requirement in either source prevents duplication, and the configured row appears in the preloaded Vehicle Load display.
-
-### Preserved safety and authority
-
-- The existing **Always include 1 Ambulance in Unit Finder** option for High Risk and Very High Risk Missing Person missions remains unchanged and fully covered.
-- The Ambulance Officer threshold evaluates after the high-risk rule, so any configured high-risk Ambulance is included in the final Ambulance count.
-- Current Missing Vehicles, Missing Personnel, Mission Update and other live shortage sources remain authoritative and never re-add the configured Officer.
-- Both settings default off and persist independently in local storage.
-
-### Regression coverage
-
-- Added `scripts/check-ambulance-officer-threshold-v10101.mjs` for settings persistence, threshold bounds, strict more-than comparison, summed Ambulance demand, duplicate protection, fresh-path gating, Vehicle Load display and diagnostics.
-- Chained the new regression through `scripts/check-high-risk-missing-person-ambulance-v1076.mjs`, which continues to prove the original high-risk rule.
-
-### Changed engine baseline
-
-- Command Nexus increased from `1.0.100` to `1.0.101`.
-- Mission Finder increased from `V10.6.149` to `V10.6.150`.
-- Unit Naming remains `3.3.20`.
-- Station Naming remains `1.3.14`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.100] - 2026-08-11
-
-### Fixed
-
-- Added MissionChief Police requirement aliases **Require Drone**, **Requires Drone** and **Required Drone** (plus plural forms) to the existing Police Drone cross-reference.
-- These requirement labels enter the established drone-only Police Air path and select exact MissionChief vehicle type `91`, **Police Drone Vehicle / Drone Vehicle (Police Station)**.
-- Existing helicopter-only and explicit **Police Helicopter or Drone** flexible behavior remains unchanged.
-- A bare **Drone** / **Drones** alias is deliberately not added, avoiding accidental capture of unrelated cross-service drone wording.
-
-### Regression coverage
-
-- Added `scripts/check-police-drone-requirement-v10100.mjs` to lock the reported aliases, exact type-91 selection, drone-only routing, selected-unit verification and the no-bare-Drone guard.
-- Chained the new check through the existing Search Dog / recovery regression path so the permanent validation gate continues to cover it without adding another workflow step.
-
-### Changed engine baseline
-
-- Command Nexus increased from `1.0.99` to `1.0.100`.
-- Mission Finder increased from `V10.6.148` to `V10.6.149`.
-- Unit Naming remains `3.3.20`.
-- Station Naming remains `1.3.14`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.99] - 2026-08-11
-
-### Fixed
-
-- Extended the existing exact Search Dog Unit cross-reference so MissionChief requirement **Required Search Dog Units** follows the same strict rule as **Rescue Dog**.
-- Supported Search Dog Unit wording now includes singular/plural, optional numeric quantities, and optional `Required` prefixes while continuing to select exact MissionChief vehicle type `101`.
-- Police **Dog Support Unit (DSU)** demand remains separate and is not captured by the Search Dog matcher.
-- Generic fallback remains blocked for this specialist requirement, so an unrelated vehicle cannot satisfy Search Dog Unit demand when no type `101` unit is available.
-
-### Regression coverage
-
-- Extended `scripts/check-rescue-dog-search-dog-v1098.mjs` with `Search Dog Unit`, `Search Dog Units`, counted variants, `Required Search Dog Unit`, the reported `Required Search Dog Units`, and counted `Required` variants.
-- Existing negative coverage continues to reject Police Dog / Dog Support Unit wording and unrelated rescue or towing requirements.
-
-### Changed engine baseline
-
-- Command Nexus increased from `1.0.98` to `1.0.99`.
-- Mission Finder increased from `V10.6.147` to `V10.6.148`.
-- Unit Naming remains `3.3.20`.
-- Station Naming remains `1.3.14`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.98] - 2026-08-10
-
-### Fixed
-
-- Added an exact cross-reference from MissionChief requirement **Rescue Dog** to **Search Dog Unit**.
-- Rescue Dog demand now uses exact MissionChief vehicle type `101` in the shared Unit Finder, Upgrade and Auto Mode vehicle-selection path.
-- The specialist requirement is protected from generic fallback so an unrelated vehicle cannot satisfy Rescue Dog demand when no Search Dog Unit is available.
-- Existing Flatbed Recovery type `105` and HGV Recovery type `106` specialist routing remains unchanged.
-
-### Regression coverage
-
-- Added `scripts/check-rescue-dog-search-dog-v1098.mjs` to prove supported Rescue Dog wording, reject unrelated dog/support requirements, require exact type `101`, and verify candidate selection, selected-unit verification and strict fallback protection.
-- Chained the regression through the existing HGV/recovery validation path so the permanent userscript gate covers it without adding another workflow step.
-
-### Changed engine baseline
-
-- Command Nexus increased from `1.0.97` to `1.0.98`.
-- Mission Finder increased from `V10.6.146` to `V10.6.147`.
-- Unit Naming remains `3.3.20`.
-- Station Naming remains `1.3.14`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.97] - 2026-08-09
-
-### Fixed
-
-- Reverted the v1.0.96 towing matcher to the proven v1.0.95 car-towing implementation after v1.0.96 introduced an out-of-scope `normalise(...)` call that could throw during the shared vehicle-selection path used by Unit Finder, Upgrade and Auto Mode.
-- Added a separate HGV towing classifier for explicit `truck to tow`, `HGV to tow` and `lorry to tow` wording without broadening the restored car-towing helper.
-- `Car(s) to tow` continues to use exact MissionChief vehicle type `105` (Flatbed Recovery Vehicle).
-- HGV/truck/lorry towing now uses exact MissionChief vehicle type `106` (HGV Recovery Vehicle).
-- Generic fallback is blocked for both recovery requirements so a missing specialist vehicle cannot silently substitute the wrong type.
-
-### Regression coverage
-
-- Added `scripts/check-hgv-recovery-v1097.mjs` to execute the restored car matcher, prove it has no dependency on an external `normalise` helper, validate the HGV-only towing aliases, protect unrelated truck wording, require exact type 105/106 selectors, and verify the strict matching/count/fallback branches.
-- The existing v1.0.96 towing regression now delegates to the corrected v1.0.97 contract so the established validation chain remains intact.
-
-### Changed engine baseline
-
-- Command Nexus increased from `1.0.96` to `1.0.97`.
-- Mission Finder increased from `V10.6.145` to `V10.6.146`.
-- Unit Naming remains `3.3.20`.
-- Station Naming remains `1.3.14`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.96] - 2026-08-09
-
-### Fixed
-
-- Expanded the existing towing/recovery cross-reference so explicit road-vehicle towing wording such as `1 truck to tow`, `trucks to tow`, `lorry/lorries to tow`, `van/vans to tow`, `vehicle/vehicles to tow`, and `... to be towed` enters the established Recovery path.
-- Added direct `Tow truck(s)` and `Recovery truck(s)` aliases to the same strict Recovery path.
-- Preserved existing `Car to tow`, `Cars to tow`, `Car Recovery` and towing quantity conversion behavior.
-- Recovery selection remains exact MissionChief vehicle type `105` (Flatbed Recovery Vehicle); generic vehicle quick-select fallback remains blocked for recognised recovery demand.
-- Unrelated truck wording such as `1 truck`, `Fire truck`, `Heavy Rescue truck`, or `Trucks required` is deliberately not classified as towing demand.
-
-### Regression coverage
-
-- Added `scripts/check-towing-recovery-crossref-v1096.mjs`, including the reported `1 truck to tow` case, supported road-vehicle towing variants, unrelated-truck negative cases, the existing towing converter, strict recovery classification and exact type-105 selection.
-- Chained the new regression through the already-registered bulk trained-register/recovery validation gate, avoiding a permanent workflow-definition change.
-
-### Changed engine baseline
-
-- Command Nexus increased from `1.0.95` to `1.0.96`.
-- Mission Finder increased from `V10.6.144` to `V10.6.145`.
-- Unit Naming remains `3.3.20`.
-- Station Naming remains `1.3.14`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.95] - 2026-08-09
-
-### Improved
-
-- Selecting a Dispatch Centre in Unit Naming now automatically runs the existing **Refresh Stations** routine before rebuilding the downstream filters.
-- Selecting a Dispatch Centre in Station Naming now automatically runs the existing Station Naming refresh routine before rebuilding the downstream filters.
-- The selected Dispatch Centre is preserved while its options are rebuilt, then the established **Dispatch Centre â†’ Service â†’ Station Type â†’ Start From** cascade is regenerated from the fresh Resource Administration station snapshot.
-- Each Dispatch Centre change performs exactly one station refresh; programmatic restoration of the selected centre does not fire another change event.
-- The manual **Refresh Stations** control remains available unchanged as a fallback.
-- Existing Personnel Assignment/runtime guards remain owned by the normal refresh routines rather than duplicated in the Dispatch Centre handlers.
-
-### Regression coverage
-
-- Added `scripts/check-naming-dispatch-centre-auto-station-refresh-v1095.mjs`.
-- The regression executes both production Dispatch Centre change handlers, requires exactly one normal station-refresh call per selection, protects selected-centre restoration and verifies both refresh routines rebuild Service, Station Type and Start From in order.
-- The regression is chained through the already-registered naming hierarchy gate, so no permanent workflow-definition change is required.
-
-### Changed resource baselines
-
-- Command Nexus increased from `1.0.94` to `1.0.95`.
-- Unit Naming increased from `3.3.19` to `3.3.20`.
-- Station Naming increased from `1.3.13` to `1.3.14`.
-- Mission Finder remains `V10.6.144`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.94] - 2026-08-09
-
-### Fixed
-
-- Fixed Dispatch Centre membership appearing entirely under **Unassigned / default** after the v1.0.93 native-centre discovery correction.
-- Station-to-centre membership now scans the same active/top/same-origin Resource Administration document collection as Dispatch Centre discovery instead of restricting `leitstelle_building_id` reads to the userscript's current document.
-- Native station rows such as `leitstelle_building_id="<centre id>"` now populate the building-to-centre map even when those rows live inside the normal Stations child frame.
-- Literal `null`, `undefined`, `false`, blank and non-positive assignments remain genuinely unassigned.
-- The established **Dispatch Centre â†’ Service â†’ Station Type â†’ Start From** cascade is unchanged; selecting a centre now exposes the services and station types actually assigned to it.
-
-### Regression coverage
-
-- Added `scripts/check-naming-dispatch-centre-membership-frame-v1094.mjs`.
-- The regression starts with an empty top document and puts assigned native station rows in a same-origin Resource Administration child frame, then executes the production membership loader and proves NI Fire Dispatch membership reaches the downstream Fire & Rescue Service subset while only a literal-null station remains Unassigned/default.
-- The regression is permanently registered in `Validate userscript`.
-
-### Changed resource baselines
-
-- Command Nexus increased from `1.0.93` to `1.0.94`.
-- Unit Naming increased from `3.3.18` to `3.3.19`.
-- Station Naming increased from `1.3.12` to `1.3.13`.
-- Mission Finder remains `V10.6.144`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.93] - 2026-08-09
-
-### Fixed
-
-- Fixed the live `Rendered profile did not expose any Dispatch Centre panels within 15000ms` failure in Unit Naming and Station Naming.
-- v1.0.92 incorrectly assumed that loading `/profile/{id}` in a hidden iframe would reproduce the LSSMV4/Vue profile lightbox with its Buildings tab selected; live MissionChief does not expose those modal-only panels in that iframe.
-- Dispatch Centre ID/name authority now comes directly from native Resource Administration building rows with `building_type_id="7"`.
-- Station-to-centre membership remains directly authoritative from the same native row model's `leitstelle_building_id` attribute.
-- Native row discovery checks the active document and same-origin frame documents, so the naming tools work whether Resource Administration owns the current frame or the top page.
-- Removed profile route resolution, `.profile-dispatchcenter` parsing and the hidden profile renderer from Dispatch Centre naming discovery.
-- Dispatch Centre â†’ Service â†’ Station Type â†’ Start From, delegated Refresh/Retry ownership and Personnel Assignment isolation remain unchanged.
-
-### Regression coverage
-
-- Added `scripts/check-naming-dispatch-centre-native-station-rows-v1093.mjs`, executing the production row parser against all seven supplied Dispatch Centres plus ordinary, mismatched and invalid rows.
-- Reworked the retained v1.0.86-v1.0.92 Dispatch Centre regressions so they preserve hierarchy, membership and Retry contracts while permanently rejecting the failed profile acquisition architecture.
-- The already-registered hierarchy gate chains the v1.0.93 regression, so no new workflow-definition mutation is required.
-
-### Changed resource baselines
-
-- Command Nexus increased from `1.0.92` to `1.0.93`.
-- Unit Naming increased from `3.3.17` to `3.3.18`.
-- Station Naming increased from `1.3.11` to `1.3.12`.
-- Mission Finder remains `V10.6.144`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.92] - 2026-08-09
-
-### Fixed
-
-- Fixed the live `Profile did not expose any Dispatch Centre panels` failure in Unit Naming and Station Naming.
-- The signed-in profile is now loaded in a hidden same-origin iframe so MissionChief/Vue can render `.profile-dispatchcenter` panels before Command Nexus reads them.
-- Raw `fetch('/profile/...')` HTML is no longer used as the Dispatch Centre source because the server response can be only the pre-render application shell.
-- The rendered profile frame is bounded to 15 seconds, hidden from interaction, and removed after success or failure.
-- Dispatch Centre â†’ Service â†’ Station Type â†’ Start From, row-level `leitstelle_building_id` membership, delegated Retry ownership and Personnel Assignment isolation remain unchanged.
-
-### Regression coverage
-
-- Added `scripts/check-naming-dispatch-centre-profile-render-v1092.mjs`, which starts from an empty profile shell, simulates the rendered seven-centre DOM appearing, verifies centre extraction, and requires renderer cleanup.
-- The permanent workflow now runs the renderer regression for pull requests and main updates.
-
-### Changed resource baselines
-
-- Command Nexus increased from `1.0.91` to `1.0.92`.
-- Unit Naming increased from `3.3.16` to `3.3.17`.
-- Station Naming increased from `1.3.10` to `1.3.11`.
-- Mission Finder remains `V10.6.144`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.91] - 2026-08-09
-
-### Rebuilt
-
-- Rebuilt Unit Naming and Station Naming around the live MissionChief hierarchy **Dispatch Centre â†’ Service â†’ Station Type â†’ Start From**.
-- Dispatch Centre ID/name pairs now come directly from the signed-in user's native profile `.profile-dispatchcenter` panels. The profile route is resolved from MissionChief's `#navbar_profile_link`, with the page `user_id` available only as a bounded fallback.
-- The empty profile Dispatch Centre placeholder is ignored because it has no exact `/buildings/{id}` centre link.
-- Dispatch Centre options become available as soon as the profile list loads; station-assignment loading no longer blocks the first dropdown.
-- Station membership remains authoritative from row-level `leitstelle_building_id`, including literal `null` normalisation for unassigned buildings.
-- Added a Service stage derived from MissionChief building type IDs so Air Ambulance stays Ambulance while Police Helicopter/EOD remain Police; RNLI, Coastguard and SAR are grouped under Search & Rescue / Coastguard.
-- Station Type is rebuilt from the selected Dispatch Centre + Service subset, and Start From is rebuilt from Dispatch Centre + Service + Station Type.
-- Removed the failed station-seed, `/leitstellenansicht` seed fallback and building-edit-page centre discovery runtime introduced during 1.0.88â€“1.0.90 troubleshooting.
-- Preserved delegated Refresh/Retry ownership, visible Refreshing/error diagnostics and Personnel Assignment isolation.
-
-### Regression coverage
-
-- Added `scripts/check-naming-dispatch-centre-profile-hierarchy-v1091.mjs` using the supplied seven-centre profile fixture and exact service/building-type mappings.
-- Reworked the v1.0.88â€“v1.0.90 Dispatch Centre regressions so they preserve station-membership, Retry and null-normalisation contracts without protecting the removed seed architecture.
-
-### Changed resource baselines
-
-- Command Nexus increased from `1.0.90` to `1.0.91`.
-- Unit Naming increased from `3.3.15` to `3.3.16`.
-- Station Naming increased from `1.3.9` to `1.3.10`.
-- Mission Finder remains `V10.6.144`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.90] - 2026-08-09
-
-### Fixed
-
-- Dispatch Centre name discovery no longer requires the seed station to already be assigned to a Dispatch Centre. Any ordinary station edit page may seed the native **Assigned Dispatch Center** selector.
-- MissionChief's literal `leitstelle_building_id="null"` value is now normalized as genuinely unassigned rather than being treated as a Dispatch Centre ID.
-- When the active Resource Administration document/state has no usable station rows yet, the loader performs one bounded `/leitstellenansicht` fetch only to discover up to three station building IDs, then still reads Dispatch Centre ID/name pairs from the edit-page assignment selector.
-- The native Stations view remains a seed-discovery fallback only; it is not restored as Dispatch Centre name authority, and station-to-centre membership remains the row-level `leitstelle_building_id` relationship.
-
-### Regression coverage
-
-- Added `scripts/check-naming-dispatch-centre-unassigned-seed-v1090.mjs` covering literal `null`, an unassigned ordinary station as a valid edit-page seed, an empty live Resource Administration DOM, and native Stations HTML fallback without changing centre-name authority.
-
-### Changed resource baselines
-
-- Command Nexus increased from `1.0.89` to `1.0.90`.
-- Unit Naming increased from `3.3.14` to `3.3.15`.
-- Station Naming increased from `1.3.8` to `1.3.9`.
-- Mission Finder remains `V10.6.144`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.89] - 2026-08-09
-
-### Fixed
-
-- **Retry Dispatch Centres** now uses one delegated document-level click owner, so the action remains live even if MissionChief replaces the Resource Administration panel DOM after the original mount.
-- Dispatch Centre discovery no longer trusts the first arbitrary building as its edit-page seed. It prefers ordinary fire, ambulance, police and other supported station rows that carry a real `leitstelle_building_id` assignment.
-- The edit-page lookup is bounded to at most three assigned station candidates and stops on the first page that exposes MissionChief's **Assigned Dispatch Center** selector. This is a retry fallback, not a per-building crawl.
-- The button now holds a visible **Refreshingâ€¦** state before loading starts, records an explicit loading/error state, and exposes the concrete loader failure in the button tooltip and naming logs instead of appearing inert.
-- Unit Naming and Station Naming keep the existing Dispatch Centre â†’ Station Type â†’ Start From cascade and authoritative station-row `leitstelle_building_id` membership.
-
-### Regression coverage
-
-- Added `scripts/check-naming-dispatch-centre-retry-v1089.mjs`, which executes the production seed selector against a fixture with early unassigned Home Response rows, a Dispatch Centre row and later assigned ordinary stations; it also protects delegated Retry ownership, visible loading state, failure diagnostics and pointer/touch affordance.
-
-### Changed resource baselines
-
-- Command Nexus increased from `1.0.88` to `1.0.89`.
-- Unit Naming increased from `3.3.13` to `3.3.14`.
-- Station Naming increased from `1.3.7` to `1.3.8`.
-- Mission Finder remains `V10.6.144`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.88] - 2026-08-09
-
-### Fixed
-
-- Dispatch Centre names for Unit Naming and Station Naming now come from MissionChief's **Assigned Dispatch Center** selector on one ordinary building edit page (`#building_leitstelle_building_id`), which exposes the real Dispatch Centre ID/name pairs.
-- Station-to-centre membership now comes directly from each Stations row's `leitstelle_building_id` attribute instead of a second buildings JSON lookup.
-- Selecting a Dispatch Centre scopes the station set first; **Station Type** is rebuilt from that centre subset, then **Start From** is rebuilt from centre + type.
-- The obsolete `/leitstellenansicht` Dispatch Centre-name parser is removed from the naming flow.
-- Refresh/retry states from v1.0.87 remain unchanged.
-
-### Regression coverage
-
-- Added `scripts/check-naming-dispatch-centre-assignment-source-v1088.mjs` using the supplied MissionChief assignment-selector fixture, including the real `LODON DISPATCH` and `Scotlands Dispatch` ID/name pairs.
-- Rebased the v1.0.85-v1.0.87 naming regressions so they protect the filter/cascade/refresh UI without preserving the incorrect old source assumptions.
-
-### Changed resource baselines
-
-- Command Nexus increased from `1.0.87` to `1.0.88`.
-- Unit Naming increased from `3.3.12` to `3.3.13`.
-- Station Naming increased from `1.3.6` to `1.3.7`.
-- Mission Finder remains `V10.6.144`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.87] - 2026-08-09
-
-### Fixed
-
-- **Refresh Dispatch Centres** now parses the native `/leitstellenansicht` list without requiring MissionChief to expose `building_type_id="7"` on each list wrapper.
-- Dispatch Centre discovery first uses MissionChief's building-list containers and falls back to exact same-origin `/buildings/{id}` links if wrapper markup changes.
-- Unit Naming and Station Naming now show **Refreshingâ€¦** while the list is loading and **Retry Dispatch Centres** when either centre discovery or station-to-centre assignment data fails.
-- A failed load now leaves a clear **Dispatch Centres unavailable â€” refresh** placeholder instead of a disabled **All dispatch centres** selector that appears to do nothing.
-- Station membership remains authoritative through `/building/buildings_json` and `leitstelle_building_id`.
-
-### Regression coverage
-
-- Added `scripts/check-naming-dispatch-centre-refresh-v1087.mjs`, which executes the production parser against Dispatch Centre HTML fixtures without `building_type_id="7"`, verifies wrapperless fallback behaviour, rejects nested/cross-origin links and protects the visible refresh/retry states.
-
-### Changed resource baselines
-
-- Command Nexus increased from `1.0.86` to `1.0.87`.
-- Unit Naming increased from `3.3.11` to `3.3.12`.
-- Station Naming increased from `1.3.5` to `1.3.6`.
-- Mission Finder remains `V10.6.144`.
-- Personnel Assignment remains `1.3.9`.
-
-## [1.0.86] - 2026-08-08
-
-### Fixed
-
-- Unit Naming and Station Naming now load the **Dispatch Centre list independently** from MissionChief's native `/leitstellenansicht` view instead of inferring available centres from station records.
-- Naming now follows **Dispatch Centre â†’ Station Type â†’ Start From**. Choosing a centre first narrows Station Type to types represented in that centre, and Start From is then limited to the selected centre and type.
-- Added **Refresh Dispatch Centres** controls to both naming tools.
-- Station membership still uses MissionChief's `leitstelle_building_id` relationship from `/building/buildings_json`; centre names are not hard-coded or guessed.
-
-### Changed resource baselines
-
-- Unit Naming increased from `3.3.10` to `3.3.11`.
-- Station Naming increased from `1.3.4` to `1.3.5`.
-- Mission Finder remains `V10.6.144`.
-- Personnel Assignment remains `1.3.9`.
-- Command Nexus increased from `1.0.85` to `1.0.86`.
-
-## [1.0.85] - 2026-08-08
-
-### Added
-
-- Unit Naming and Station Naming now include a **Dispatch Centre** filter alongside the existing station-type filter.
-- Dispatch Centre options come from MissionChief's authoritative `/building/buildings_json` building data and each station's `leitstelle_building_id` relationship rather than station-name guessing.
-- **All dispatch centres** remains the default. When MissionChief reports stations with no Dispatch Centre assignment, **Unassigned / default** is available as an explicit filter.
-
-### Safety and scope
-
-- The filter only changes which stations enter the Unit Naming or Station Naming queue; established naming and save logic are unchanged.
-- Personnel Assignment is not filtered by this control.
-- If Dispatch Centre data cannot be loaded, the selector stays disabled and naming falls back to the existing all-stations behaviour.
-
-### Changed resource baselines
-
-- Unit Naming increased from `3.3.9` to `3.3.10`.
-- Station Naming increased from `1.3.3` to `1.3.4`.
-- Mission Finder remains `V10.6.144`.
-- Personnel Assignment remains `1.3.9`.
-- Command Nexus increased from `1.0.84` to `1.0.85`.
-
-## [1.0.84] - 2026-08-05
-
-### Changed
-
-- Restore every Personnel Assignment action on iPhone and iPad Safari: Refresh Stations, Import, Start, Pause and Stop.
-- Keep the native JSON file input hidden so it cannot displace or cover the visible mobile action buttons.
-- Restore the Tools and reports disclosure so closed content stays hidden and every status/report tool appears when opened.
-- Add touch-sized two-column mobile grids, dynamic-viewport scrolling and iOS safe-area protection without removing desktop functionality.
-- Increased the unified userscript version from `1.0.83` to `1.0.84`.
-
-## [1.0.83] - 2026-08-05
-
-### Changed
-
-- Patient transport keeps the existing exact-route, iframe and duplicate-click safeguards while reducing the shared repeat-click window from 4.0 seconds to 2.5 seconds.
-- A stalled patient **Transport Patient / Approach** attempt now retries the live Vue/iframe state after 0.9 seconds instead of 1.8 seconds.
-- Prisoner cell and release destination discovery now polls the live result UI at 100-125 ms rather than 200-250 ms.
-- Verified prisoner-result close retries now run after 250 ms instead of 480 ms, and guarded failed-click retries become eligible after 4 seconds instead of 6.5 seconds.
-
-### Safety
-
-- Exact patient and prisoner routes, nearest valid destination selection, pending-state hand-off, result-screen identity, duplicate-click protection and fail-closed maximum timeouts remain unchanged.
-- Unit Finder remains blocked while patient or prisoner transport ownership is unresolved.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.142` to `V10.6.143`.
-
-## [1.0.82] - 2026-08-02
-
-### Fixed
-
-- Reduced the default-on Event Scanner from a one-second independent iframe/document walk to a shared cached document snapshot every 15 seconds, while retaining the immediate startup scan and exact claim route.
-- Reduced top-window mission-frame reconciliation from a forced document-graph rebuild every five seconds to a cached reconciliation every 15 seconds.
-- Background automation now starts only the silent-queue and post-transport pollers whose state is actually active instead of running all three watchers for the whole Auto Mode session.
-- Live Trained Personnel updates are now coalesced, cached briefly and skipped when generated markup is unchanged, preventing repeated full parser/model work and detached DOM churn on rapidly mutating mission pages.
-- High-heap idle recovery can now recycle safely above 700 MiB after user-idle and operational safety checks even when benign live mission mutations prevent a 15-second mutation-free window.
-- Soft memory maintenance releases the live personnel display cache and stale detached transport-modal references.
-- Ally Steal now uses shorter bounded selection, dispatch-resume and parent-close settle delays, reducing the normal path without weakening exact Fire Officer, success-alert or mission-close confirmation.
-
-### Safety and compatibility
-
-- No additional observer, repeating timer, fetch, selection or dispatch path was added.
-- Exact Unit Finder, Mission Update, trained-personnel authority, patient/prisoner transport, Auto Mode mission ownership and final dispatch safeguards remain unchanged.
-- Ally Steal retains the exact selected-vehicle identity, new-success-alert matching, 15-second confirmation window, pending-state hand-off and 12-attempt parent-close fallback.
-- Event collection remains enabled by the existing setting and still performs an immediate scan when the runtime starts.
-- iPhone/iPadOS ownership and native-picker cleanup paths remain intact.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.141` to `V10.6.142`.
-- Unit Naming remains `3.3.9`.
-- Station Naming remains `1.3.3`.
+YªçŠx-®éÜj×¢ëiºÚ+Š§j[h‘éÜ¢éí×­üá:-jZ.¶›­–)Ş³R26†ævVÆöp ¤ÆÂæ÷F&ÆR6†ævW2FòÖ—76–öä6†–Vb6öÖÖæBæW‡W2&RFö7VÖVçFVB†W&Rà ¥F†R&ö¦V7BW6W26VÖçF–2fW'6–öæ–ærf÷"F†RVæ–f–VBW6W'67&—B&VÆV6RÆ–æRà ¢22µVç&VÆV6VEĞ ¢22³2ãã#%ÒÒ##bÓ‚Ó#p ¢222f—†V@ ¢Òæ÷&ÖÂ6ö7FwV&B&W67VR†VÆ–6÷FW"&WV—&VÖVçG2æ÷r6VÆV7BöæÇ’W†7BfV†–6ÆRG—RcF²F†W’æòÆöævW"ÖFò÷"7V'7G&–ærÖÖF6‚F†RÆ&vRG—RcV†VÆ–6÷FW"à¢ÒâW‡Æ–6—BÆ&vR6ö7FwV&B&W67VR†VÆ–6÷FW"&WV—&VÖVçB6VÆV7G2öæÇ’W†7BfV†–6ÆRG—RcVâæV—F†W"†VÆ–6÷FW"G—R6â7V'7F—GWFRf÷"F†R÷F†W"ÂæBÖ—76–æræF—fRG—RWf–FVæ6Rf–Ç26Æ÷6VBà¢Ò4%DT2FVÖæBæ÷rW6W2f–Æ&ÆRW†7BG—RÖ“6†öÖR&W7öç6R4"GƒBfV†–6ÆW2v†÷6R6ÆÇ6–vç2VæBÕ4#GƒB×¶çVÖ&W'Öf—'7BâF†W6RFVÆ–&W&FVÇ’VçG&–æVBæÖVBVæ—G2&R66WFVBöæÇ’öâF†—24%DT2Fƒ²v†VâæöæR&VÖ–âf–Æ&ÆRÂF†RW†—7F–ær4%DT6×&Vf—‚ööÂ—2&WF–æVB2fÆÆ&6²à¢Òv–æFVBfV†–6ÆRÆöF–æræ÷r†öÆG2F†R6ö×ÆWF–öâ&'&–W"f÷"ã"6V6öæG2gFW"V6‚6öæf—&ÖVBvR6òFVÆ–VBæW‡B×vR6öçG&öÂ6ææ÷B&RÖ—7F¶Vâf÷"6ö×ÆWFRÆ—7BâF†—2&WfVçG2F—7FçBW†7BG—RÖ&6V&6‚FörVæ—G2&V–ærW†6ÇVFVB&Vf÷&R&W67VRFör6VÆV7F–öâà¢ÒVæ—Bf–æFW"F–væ÷7F–72æ÷r&V6÷&BF†RF÷FÂÆöFVB6†V6¶&÷‚–çfVçF÷'’ÂW†7BæBf–Æ&ÆRG—RÖ&6÷VçG2ÂæBv†WF†W"ÆöBÖÖ÷&R÷"ÆöF–ær–æF–6F÷'2&VÖ–æVBf—6–&ÆRà¢Ò%bæB5%b&WV—&VÖVçG2æ÷rW6RW†7BæF—fRG—R#væBG—R#†6æF–FFW2Â6÷VçBöæÇ’Væ—VRfV†–6ÆR”G2F†B&VÖ–â6†V6¶VBÂæBæWfW"G&VB6Æ–6²GFV×B26öæf—&ÖVB6÷fW&vRà¢ÒæW‡W2æ÷r&V6†V6·2%bõ5%b6÷fW&vR–ÖÖVF–FVÇ’&Vf÷&RÖçVÂÂ6†&VBæBWFòÖöFRF—7F6‚ÂF÷2WöæÇ’F†RW†7B6†÷'FfÆÂÂæB&Æö6·2F—7F6‚f–Â6Æ÷6VB–bF†R6öæf—&ÖVB6÷VçB&VÖ–ç26†÷'Bà¢ÒFFVBW&ÖæVçB&Vw&W76–öâ6÷fW&vRf÷"W†7Bæ÷&ÖÂôÆ&vRÖ–ærÂ6VÆV7F–öâæB6VÆV7FVBÖ6÷VçB—6öÆF–öâà¢ÒFFVBW&ÖæVçB&Vw&W76–öâ6÷fW&vRf÷"W†7BæÖVB†öÖR&W7öç6R4"GƒBVÆ–v–&–Æ—G’Â&–÷&—G’ÂW†6ÇW6–öç2Â6VÆV7FVBÖ6÷VçB†æFÆ–æræB4%DT2fÆÆ&6²à¢ÒFFVBW&ÖæVçB&Vw&W76–öâ6÷fW&vRf÷"%bõ5%bW†7B×G—R—6öÆF–öâÂæöâ×W'6—7FVçB6Æ–6·2ÂVæ—VRÔ”B6÷VçF–ærÂf–æÂF÷×WÂæò÷fW"×6VæBæBf–ÂÖ6Æ÷6VBF—7F6‚à¢Ò–æ7&V6VBF†RVæ–f–VBW6W'67&—BfW'6–öâg&öÒ2ãã#Fò2ãã#&à ¢22³2ãã#ÒÒ##bÓ‚Ó#` ¢222f—†V@ ¢Ò6ö×ÆWFVBvVæW&FVBÖ—76–öâF†B&WGW&ç2g&öÒG&ç7÷'B&V6÷fW'’öâæ÷&ÖÂöÖ—76–öç2÷¶–GÖU$Âv—F†÷WB6Ö—76–öåövVæW&Åö–æföæòÆöævW"VçFW'2F†RÖ—76–öâf–æFW"&ö÷G7G&&WG'’æBfFÂ7F÷F‚âgFW"ã"×6V6öæB6WGFÆRÂF†R6öçG&öÆÆW"&WV—&W2F†RÖ—76–öâFò&R'6VçBg&öÒF†RWF†÷&—FF—fRÆ—fRÖÂF—66&G2v÷&¶W"æB&W7VÖW2g&öÒF†RæW‡B7F–öæ&ÆR6æöæ–6ÂÖ—76–öâà¢Ò7FÆR6æöæ–6Â×vR&V6÷fW'’&W6W'fW2ç’f–æÂÖF—7F6‚ÆF6‚ÂW†6ÇVFW2F†RFVBÖ—76–öâg&öÒ–ÖÖVF–FR&W6VÆV7F–öâæB&WGW&ç2FòÖ66ææ–ærv†Vâæòg&W6‚Ö—76–öâW†—7G2â—BæWfW"6Æ–6·2F—7F6‚à¢ÒÆ—fRÖ—76–öâ6†VÆÇ2ÂÖ—76–öç27F–ÆÂÆ—7FVBöâF†RÖÂ7F—fRF–VçB÷&—6öæW"G&ç7÷'B6öçFW‡G2æBvW2v—F†÷WBâWF†÷&—FF—fRÖ—76–öâÆ—7B&VÖ–âf–ÂÖ6Æ÷6VBæBVçF÷V6†VBà¢ÒFFVBW&ÖæVçB&Vw&W76–öâ6÷fW&vRf÷"&÷F‚7WÆ–VB6Öö¶R–æ†ÆF–öæf–ÇW&R6WVVæ6W2ÂF†Ræò×F&vWB&W66âF‚æBWfW'’&V6÷fW'’W†6ÇW6–öâvFRà¢Ò–æ7&V6VBF†RVæ–f–VBW6W'67&—BfW'6–öâg&öÒ2ãã#Fò2ãã#à ¢22³2ãã#ÒÒ##bÓ‚Ó#` ¢2226†ævV@ ¢Ò&VGV6VBF†RF—7÷6&ÆR÷7BÖF—7F6‚öÆ&Öv÷&¶W"†æFöfbg&öÒ#×2Fòƒ×26òF†RæW‡B6æöæ–6ÂÖ—76–öâ7F'G26ööæW"v†–ÆR&W6W'f–ærF†Rv÷&¶W"ÖvVæW&F–öâÂGWÆ–6FRÖF—7F6‚æBW†7BÖÖ—76–öâfW&–f–6F–öâwV&G2à¢Ò–æ7&V6VBF†RVæ–f–VBW6W'67&—BfW'6–öâg&öÒ2ãã–Fò2ãã#à ¢22³2ãã•ÒÒ##bÓ‚Ó#P ¢222f—†V@ ¢Ò6ö×ÆWFVBÖ—76–öâF†BÆVfW2v÷&¶W"öâF†RöæR×W6RöÖ—76–öç2÷¶–GÒöÆ&ÖCB&÷WFR—2æ÷rF—66&FVB–ÖÖVF–FVÇ’âæW‡W2&W6W'fW2F†Rf–æÂÖF—7F6‚ÆF6‚ÂW†6ÇVFW2F†R6ö×ÆWFVBÖ—76–öâÂ&VÖ÷fW2æBÆÂ&VÆöG2ÂæB&W7VÖW2g&öÒg&W6‚6æöæ–6ÂÖ—76–öâv—F†÷WB&WVF–ærF—7F6‚ââVæ6öæf—&ÖVBöÆ&Ö&÷WFR&V÷Vç2öæÇ’F†Ræ÷&ÖÂÖ—76–öâvRf÷"fW&–f–6F–öâà¢ÒG&ç6–VçBöÆ&Ö&÷WFW26âæòÆöævW"&R7F÷&VB÷"&W7F÷&VB2&W7VÖRÖÖ—76–öâU$Ç2à¢ÒFFVBW&ÖæVçB&Vw&W76–öâ6÷fW&vRf÷"F†R7WÆ–VB–çFW&æÂfÆööF–ær…&—6²FòÆ–fR–f–ÇW&R6WVVæ6RÂæò×F&vWBÖ&W66âæBVæ6öæf—&ÖVBÖF—7F6‚fW&–f–6F–öâF‚à¢Ò–æ7&V6VBF†RVæ–f–VBW6W'67&—BfW'6–öâg&öÒ2ãã†Fò2ãã–à ¢22³2ãã…ÒÒ##bÓ‚Ó#P ¢222f—†V@ ¢Ò6ÖRÖ÷&–v–âÖævVBv÷&¶W"v—F‚fW&–f–VB7F—fR÷væW'6†—'&–FvR—2æ÷rWF†÷&—FF—fR&Vf÷&RÖ—76–öâf–æFW"6ö×&W2f—6–&ÆRÖ—76–öâFö7VÖVçG2âF†—2&WfVçG27FÆR÷"6ö×WF–ærÖ—76–öâg&ÖRgFW"6ÆVW÷G&ç7÷'B&V6÷fW'’g&öÒÖ¶–ærF†R&VÂ7F—fRv÷&¶W"7W7VæB—G6VÆb2Ö—76–öâÖö'6W'fW"Ö–æ7F—fRÖ÷væW&à¢ÒÆÆ–æ6R&F–òG&ç7÷'B&WVW7G2æ÷r&WF–âÆ&vW"&÷VæFVBF—7F–æ7BÖ¶W’6WBæB6×ÆRF–væ÷7F–2†—7F÷'’öÆörVçG&–W2Â&WfVçF–ærWf–7FVB&÷w2g&öÒ&V–ær6÷VçFVBæBÆövvVBv–âöâWfW'’6öçG&öÆÆW"72à ¢222W&f÷&Öæ6P ¢ÒgVÆÂ&F–òG&ç7÷'BDôÒ66ç2&R6VBBöæ6RW"6V6öæB–ç7FVBöb'Vææ–æröâWfW'’c×26öçG&öÆÆW"†V'F&VBâ66†VB&WVW7G2&WF–âÆ—fRVæF–ærGW&F–öç2Â6òÖ—76–öâ&ö6W76–ærfö–G2Ö–ÆÆ–öç2öb&WVFVBÆÆ–æ6R×&÷r÷W&F–öç2v†–ÆRæWrW'6öæÂG&ç7÷'B&WVW7G2&VÖ–â&÷VæFVBFòöæR×6V6öæBF—66÷fW'’FVÆ’à¢ÒF†RGWÆ–6FRÖF—7F6‚×6fR6ögBVWVRÖÆö6²&V6÷fW'’æ÷r'Vç2gFW"f—fR6V6öæG2–ç7FVBöbV–v‡BâF†RÆöær×'VâWf–FVæ6R6†÷vVBc"ffV7FVBÖ—76–öç2æBã‚×6V6öæBÖVF–âF—7F6‚×FòÖæW‡BÖÖ—76–öâ–çFW'fÃ²F†—2V&Æ–W"7FWöæÇ’&VÆV6W27FÆR÷Væ–ærÆö6·2æB&WVW7G2'VçF–ÖR&V6öæ6–Æ–F–öâÂv†–ÆRF†Rb×6V6öæB†&B&V6÷fW'’æB&WVFVB×7FÆÂ6—&7V—B'&V¶W"&VÖ–âVæ6†ævVBà ¢222F–væ÷7F–72æB6fWG ¢ÒVÖ&VFFVB&ö÷G7G&G&6W2æ÷r–FVçF–g’Ö—76–öâÖö'6W'fW"ÖÖævVBÖ7F—fRÖ÷væW&v†VâfW&–f–VBv÷&¶W"'—76W2vVæW&–27&÷72Ög&ÖRf—6–&–Æ—G’&æ¶–ærâF÷&ÖçBæBVæ÷væVBg&ÖW2&VÖ–âW†6ÇVFVBÂæBæòF—7F6‚F–Ö–ær÷"GWÆ–6FRÖF—7F6‚wV&Bv2vV¶VæVBà ¢22³2ããuÒÒ##bÓ‚Ó#P ¢222f—†V@ ¢ÒÖ—76–ærÖ—76–öâf–æFW"Ö÷VçBæ÷r&V6V—fW2öæRvVçV–æVÇ’6ÆVâÖöæÇ’&WG'“¢c2&VÖ÷fW2v÷&¶W"æBWfW'’&VÆöBÂ6ö×7G2&÷VæFVB6öçG&öÆÆW"66†W2ÂÆVfW2“×2v÷&¶W"Ög&VR&V6ÆÖF–öâvÂF†Vâ&V7&VFW2öæÇ’F†RW†7BÖ—76–öââF†R&Wf–÷W2&V6÷fW'’&WÆ6VBF†R–g&ÖRÆÖ÷7B–ÖÖVF–FVÇ’æB6÷VÆB&W&öGV6RF†R6ÖRf–ÆVB7F'GWVæFW"†Vg’'&÷w6W"&W77W&Rà¢ÒfW&–f–VBG&ç7÷'BÖöæÇ’Ww&FR6öçF–æ–ærG&ç7÷'B—2æVVFVB÷"&—6öæW'2×W7B&RG&ç7÷'FVFÂv—F‚æòW‡Æ–6—BÖ—76–ær×&W6÷W&6Rv÷&F–ærÂ—2æòÆöævW"&W÷'FVB2¦W&ò×6VÆV7F–öâfV†–6ÆR6†÷'FvRâ—B&VÖ–ç2FV×÷&&–Ç’&÷FFVB6òG&ç7÷'B6ÆV&–ær6â6öçF–çVRv—F†÷WB'W––ær÷"F—7F6†–ærVç&VÆFVBVæ—G2à ¢222F–væ÷7F–72æB6fWG ¢ÒWfW'’VÖ&VFFVB7F'GWæ÷r¶VW2&÷VæFVBG&6R6÷fW&–ærW6W'67&—BVçG'’Â†Vg’×'VçF–ÖRFÖ—76–öâÂÖ—76–öâf–æFW"ÖöGVÆRVçG'’Âö'6W'fW"÷væW'6†—ÂÖ—76–öâ–æ—F–Æ—¦F–öâæB6öçG&öÂÖ÷VçF–ærÂÇW2&÷VæFVBW'&÷&æBVæ†æFÆVG&V¦V7F–öæFWF–Ç2âc26æ6†÷G2F†—2Wf–FVæ6R&Vf÷&R&÷F‚F†R&WG'’æBç’f–æÂf–ÂÖ6Æ÷6VB7F÷à¢ÒF†R6ÆVâ&WG'’&VÖ–ç2Æ–Ö—FVBFòöæ6RW"W†7BÖ—76–öâ–æ6–FVçBæBW&f÷&×2æòF—7F6‚ÂÖ—76–öâ6¶—÷"G&ç7÷'B7F–öââ–b—B7F–ÆÂf–Ç2ÂF†RW‡÷'Bæ÷rF—7F–æwV—6†W2'6VçBW6W'67&—B–æ¦V7F–öâÂ&V¦V7FVB†Vg’×'VçF–ÖRFÖ—76–öâÂ–æ7F—fR÷væW'6†—Â–æ—F–Æ—¦F–öâf–ÇW&RæB6öçG&öÂÖÖ÷VçBf–ÇW&Rà¢ÒFFVB&Vw&W76–öâ6÷fW&vRf÷"F†R6ÆVâv÷&¶W"Ög&VR&WG'’Â&WF–æVB&ö÷G7G&G&6RæBF†RW‡÷'FVB7'V—6RÆ–æW"G&ç7÷'BÖöæÇ’¦W&ò×6VÆV7F–öâ6WVVæ6Rà ¢22³2ããeÒÒ##bÓ‚Ó#@ ¢222f—†V@ ¢Ò7V66W76gVÂ&—6öæW"6VÆÂ76–væÖVçBF†BÆVfW2v÷&¶W"öââW†7B÷fV†–6ÆW2÷·fV†–6ÆWÒövVfævVæW"÷·&—6öæW'Ö&W7VÇB&÷WFRæòÆöævW"fÆÇ2–çFòF†RvVæW&–2#×6V6öæBG&ç7÷'B&V'V–ÆBâöæ6RF†RW†7BW'6öæÂ&F–ò&WVW7B†26ÆV&VBæBæò&—6öæW"6öçG&öÇ2&VÖ–âÂF†RW†—7F–ærv÷&¶W"&WGW&ç2FòF†RfW&–f–VB6ÖRÖ—76–öâgFW"&÷VæFVB6—‚×6V6öæB6WGFÆRv–æF÷rà¢ÒF†—26Æ÷6W2F†R&V7W'&–ærf–ÇW&R6VVâöâÖ—76–öâ#S“3sC–†FVÖöç7G&F–öâv–ç7BF†R6öç7G'V7F–öâöbÖ÷F÷'v’&ö¦V7F’Âv†W&RF†Rf÷W'F‚æö&ÆR¦–Â76–væÖVçB6ö×ÆWFVB'WBF†RÆFW"gVÆÂ–g&ÖR&V'V–ÆBf–ÆVBFòÖ÷VçBÖ—76–öâf–æFW"à ¢2226fWG ¢ÒF†R6ö×ÆWFVB×&÷WFR&WGW&â—2&Æö6¶VBv†–ÆRF†RW†7B&F–ò&WVW7B—2Æ—fR÷"v†Vâç’7G'V7GW&VB&WVW7BÂ6VÆÂ×6VÆV7F–öâÆW'BÂW6&ÆRw&VVâ6VÆÂÂ&VÆV6RÆ–æ²÷"&VÆV6R×7V66W72ÆW'B&VÖ–ç2à¢ÒF†R&÷WFR&WW6W2F†R7W'&VçBv÷&¶W"æBW&f÷&×2æòF—7F6‚ÂFW7F–æF–öâÂ&VÆV6RÂÖ—76–öâ×6¶—÷"fV†–6ÆR×6VÆV7F–öâ6Æ–6²âÖ—76–ær÷"Ö—6ÖF6†VBW†7BÖ—76–öâU$Â7F÷2f–Â6Æ÷6VBà¢ÒFFVBW&ÖæVçBW†V7WF&ÆR&Vw&W76–öâ&W&öGV6–ærfV†–6ÆRsSSc“†Â&—6öæW"#S““#FæBÖ—76–öâ#S“3sC–Â–æ6ÇVF–ær6WGFÆR×F–ÖRÂÆ—fR×&WVW7BÂ7F—fRÖ6VÆÂÂ&VÆV6RÖfÆ÷ræBw&öærÖÖ—76–öâwV&G2à ¢22³2ããUÒÒ##bÓ‚Ó#0 ¢222f—†V@ ¢Ò&—6öæW"†æFöfbv—F‚æòW6&ÆRw&VVâ6VÆÂæ÷r'Vç2F†RW†7B7W'&VçBÖÖ—76–öâ&VÆV6R&—6öæW'6fÆÆ&6²&Vf÷&RÖ—76–öâWFFRÂfV†–6ÆR×vRW‡ç6–öâ÷"Væ—Bf–æFW"â—BæòÆöævW"7VæG2F†RG&ç7÷'BvF6†Förv–æF÷rÆöF–ærfV†–6ÆRvW2gFW"F†Rf–æÂ6VÆÂ&÷WFRF—6V'2à¢ÒfW&–f–VBæòÖ6VÆÂ&—6öæW"67&VVâ6öçF–æ–ærF†R6VÆÂ×6VÆV7F–öâÆW'BæBW†7B&VÆV6R6öçG&öÂ—2÷væVB'’F†R&VÆV6RfÆ÷r&F†W"F†âF†RvVæW&–2#×6V6öæBc2G&ç7÷'BvF6†FörâF†—2&WfVçG2F†RfÇ6R$•4ôäU#§Væ¶æ÷vã§¶Ö—76–öä–GÖ&V'V–ÆBæB6V6öæBÖGFV×B6—&7V—BÖ'&V¶W"7F÷6VVâöâÖ—76–öâ#Sƒ“ƒƒ3†fç2f–v‡BB&6¶WF&ÆÂvÖV’à¢ÒF†Rf–æÂ&RÖF—7F6‚&—6öæW"&VÆV6R&V6†V6²&VÖ–ç2–âÆ6Rf÷"†æFöfbF†B6†ævW2gFW"F†RV&Ç’vFRà ¢2226fWG ¢ÒW6&ÆRf—6–&ÆRw&VVâ6VÆÂ&VÖ–ç2†–v†W"&–÷&—G’â&VÆV6R—27F–ÆÂÆ–Ö—FVBFòF†Rf—6–&ÆRW†7B×FW‡B&VÆV6R&—6öæW'6õ5BÆ–æ²f÷"F†R7W'&VçBÖ—76–öâÂv—F‚GWÆ–6FRÖ6Æ–6²&÷FV7F–öâÂ6öæf—&ÖVB7V66W72Â÷væVBÖÆ–v‡F&÷‚6Æ÷6RfW&–f–6F–öâæBf–ÂÖ6Æ÷6VB†æFÆ–ærà¢ÒFFVB&Vw&W76–öâ6÷fW&vR&÷f–ærF†RæòÖ6VÆÂ&VÆV6RW†V7WFW2&Vf÷&RVæ—Bf–æFW"æBF†Bc26ææ÷B&V'V–ÆBv÷&¶W"VæFW&æVF‚F†R&VÆV6RfÆ÷rà ¢22³2ããEÒÒ##bÓ‚Ó#0 ¢222f—†V@ ¢Òv÷&¶W"æòÆöævW"&VÖ–ç2–æFVf–æ—FVÇ’öââÖ'VÆæ6RfV†–6ÆRvRgFW"F–VçBFW7F–æF–öâ†2&VVâ76–væVBæBF†RW†7BW'6öæÂ&F–òG&ç7÷'B&WVW7B†26ÆV&VBâF†RÖ'VÆæ6R6öçF–çVW2—G26W'fW"×6–FRG&ç7÷'Bv†–ÆRF†R†–FFVâF—7F6†W"&W7VÖW2Ö—76–öâv÷&²à¢ÒW‡FVæFVBF†RW†—7F–ærW†7BVæF–ærÖÖ—76–öâ&VF—&V7B&V6÷fW'’Fò6ÆV&VB÷fV†–6ÆW2÷¶–GÖ&÷WFW2âgFW"F†R&÷VæFVB×6V6öæB&VF—&V7Bv–æF÷rÂc2&V'V–ÆG2v÷&¶W"öâöæÇ’F†RfW&–f–VBVæF–ærÖ—76–öâ–ç7FVBöbv—F–ærf÷"F†RG&ç7÷'F–ærÖ'VÆæ6RFò'&—fRà¢Ò&W6W'fVBÆ—fRG&ç7÷'B÷væW'6†—¢&V6÷fW'’&VÖ–ç2&Æö6¶VBv†–ÆRF†RW†7BfV†–6ÆR7F–ÆÂ†2W'6öæÂ&F–ò&WVW7BÂF–VçB÷&—6öæW"FW7F–æF–öâWf–FVæ6R&VÖ–ç27F—fRÂ÷"F†R&Ææ6VBG&ç7÷'B6W'f–6R÷vç2F†Rv÷&¶W"à ¢2226fWG ¢ÒFFVBâW†V7WF&ÆR&Vw&W76–öâf÷"F†RW‡÷'FVB6ÆV&VB×F–VçB6WVVæ6RÂ–æ6ÇVF–ærF†R7FÆRfV†–6ÆR&÷WFRÂW†7BVæF–ærÖ—76–öâ&V'V–ÆBÂÆ—fR×&WVW7BwV&BÂ7F—fRF–VçBÖ6öçFW‡BwV&BæBæòÖ6Æ–6²6öçG&7Bà¢ÒæòF—7F6‚6Æ–6²ÂG&ç7÷'BFW7F–æF–öâ6Æ–6²ÂÖ—76–öâ6¶—ÂfV†–6ÆR6VÆV7F–öâÂ7Fff–ær'VÆRÂ7F÷&vR¶W’÷"GW&&ÆR&Vv—7FW"6†ævVBà ¢22³2ãã5ÒÒ##bÓ‚Ó#0 ¢222f—†V@ ¢Ò÷Væ–ærf—6–&ÆRÖ—76–öâv†–ÆRWFòÖöFR—27F÷VBæòÆöævW"W‡æG2WfW'’f–Æ&ÆRfV†–6ÆRvRWFöÖF–6ÆÇ’âF†R6ö×ÆWFRfV†–6ÆRÆ—7B7F—26öÆÆ6VBVçF–ÂVæ—Bf–æFW"ÂÖ—76–öâWFFR÷"ÆÇ’7FVÂW‡Æ–6—FÇ’æVVG2—BÂ&VÖ÷f–ærF†R6WfW&R7F÷VBÖÖ—76–öâÆröâÆ&vRfÆVWG2à¢Ò7F—fRWFòÖöFR7F–ÆÂW&f÷&×2—G2Ö—76–öâ×WFFRÖf—'7B&V6†V6²æBÆöG2F†R6ö×ÆWFR7F&ÆRfV†–6ÆRÆ—7B&Vf÷&R6VÆV7F–öââÖçVÂÖ—76–öâ6öçG&öÇ2&VÖ–âÖ÷VçFVBæBVæ6†ævVBà¢Ò6öæf—&ÖVBWFòÖöFRæ÷r6æ6VÇ2—G2VæF–ærÖ—76–öâf–æFW"F—66÷fW'’F–ÖW"â–bæf–vF–öâ†2Ç&VG’Ö÷fVBv÷&¶W"öçFòF–VçB÷"&—6öæW"fV†–6ÆR&÷WFRÂ7FÆRF—66÷fW'’W†—G2FòF†R&÷WFRvF6†W"v—F†÷WB7VæF–ærÖ—76–öâÖ&ö÷G7G&&W67VR÷"&—6–ærfÇ6RÖ—76–ærÔWFòÔÖöFRW'&÷"à¢Ò&WÆ6VBF†RöæR×W"×'Vâ&ö÷G7G&&W67VR6v—F‚öæR&÷VæFVB&VÆöBW"W†7BÖ—76–öâÖ&ö÷G7G&–æ6–FVçBâvVçV–æRÆFW"Ö—76–öâ6âF†W&Vf÷&R&V6÷fW"WfVâv†VââV&Æ–W"Ö—76–öâÇ&VG’æVVFVB&VÆöC²F†R7V×VÆF—fR6÷VçB&VÖ–ç2F–væ÷7F–2öæÇ’à ¢2226fWG ¢ÒFFVBW&ÖæVçB7F÷VBÖÖ—76–öâ–FÆR&Vw&W76–öâF†BW†V7WFW2&÷F‚7F÷VBæB7F—fR–æ—F–Æ—¦F–öâF‡2æBfW&–f–W2öâÖFVÖæBfV†–6ÆRÆöF–ær&VÖ–ç2&W6VçBf÷"Væ—Bf–æFW"ÂÖ—76–öâWFFRæBÆÇ’7FVÂà¢ÒFFVBâW†V7WF&ÆR&ö÷G7G&×&V6÷fW'’&Vw&W76–öâ6÷fW&–ærF†RW‡÷'FVBf–ÇW&R6WVVæ6S¢7FÆRF—66÷fW'’öâG&ç7÷'B&÷WFRÂW†7BÖÖ—76–öâ&VÆöB—6öÆF–öâÂ6–ævÆR×&VÆöB&÷VæF–ærÂÆFW"ÖÖ—76–öâ&V6÷fW'’æBf–ÂÖ6Æ÷6VBæòÖ6Æ–6²&V†f–÷"à¢Òæò7F÷&vR¶W—2Â6VÆV7F–öâ'VÆW2ÂG&–æVB×W'6öææVÂ6†V6·2ÂF—7F6‚&V†f–÷"ÂG&ç7÷'BFW7F–æF–öâ'VÆW2÷"c2v÷&¶W"÷væW'6†—6†ævVBà ¢22³2ãã%ÒÒ##bÓ‚Ó#0 ¢222f—†V@ ¢Ò&V6÷fW"v÷&¶W"gFW"&—6öæW"6VÆÂ76–væÖVçB&VF—&V7G2—BFòF†RÖæBÆVfW2F†RVÖ&VFFVBVæv–æRv—F–ærv—F†÷WBÖ—76–öâ6öçG&öÂâF†R6öçG&öÆÆW"&VÆöG2F†RW†7BW'6—7FVBÖ—76–öâgFW""6V6öæG2Âv—F†÷WB6Æ–6¶–ærF—7F6‚÷"6¶—–ærà¢ÒFFVBâFöÖ–26W76–öâÖÆWfVÂF—7F6‚ÆF6‚¶W–VB'’Ö—76–öâ”BâÖ—76–öä6†–Vb&VG&r÷"6ÖRÖFö7VÖVçBVWVR†æFöfb6âæòÆöævW"6Æ–6²F—7F6‚Gv–6R÷"FB6V6öæB7V66W76gVÂÖ6ö×ÆWF–öâ&V6÷&Bf÷"F†R6ÖRÖ—76–öâG&ç6—F–öâà¢Ò¶WB&—6öæW"&V6÷fW'’–æFWVæFVçBöb7F–ÆÂ×f—6–&ÆR&F–òG&ç7÷'B&WVW7BÂ6Æ÷6–ærF†RFVFÆö6²W‡÷6VBgFW"F†R&WVW7B&÷r†BÇ&VG’6ÆV&VBà ¢2226fWG ¢Ò&W6W'fVBF†R6–ævÆR7F—fRF—7F6†W"ÂöÆFW7BÖf—'7BW'6öæÂG&ç7÷'B†æFÆ–ærÂG&–æVB×W'6öææVÂ'VÆW2ÂÖVÖ÷'’Æ–fV7–6ÆRæBÆÂW†7BfV†–6ÆR7&÷72×&VfW&Væ6W2à¢Ò&V6÷fW'’&VÖ–ç2f–ÂÖ6Æ÷6VBv†VââW†7BW'6—7FVBÖ—76–öâU$Â6ææ÷B&RfW&–f–VBà ¢22³2ããÒÒ##bÓ‚Ó#0 ¢222f—†V@ ¢Ò&WÆ6VBG&ç7÷'BÖ¶–æBÖöæÇ’vF6†–ærv—F‚W†7BF–VçB÷&—6öæW"–FVçF—G’G&6¶–ærW6–ærF†RfV†–6ÆRæB7V&¦V7B”G2â†æFöfbg&öÒöæRF–VçB÷"&—6öæW"Fòæ÷F†W"æ÷r&W6WG2F†R7FÆÂ6Æö6²–ç7FVBöb–æ†W&—F–ær7FÆR6öçFW‡Bà¢ÒFFVBöæR&÷VæFVBv÷&¶W"Ô&V'V–ÆBgFW"#6V6öæG2–âF†R6ÖRW†7BW'6öæÂG&ç7÷'B6öçFW‡BâF†R&V6÷fW'’&V÷Vç2öæÇ’F†RÖF6†–ærW'6öæÂ&WVW7B÷"fW&–f–VBÖ—76–öâÂæWfW"6Æ–6·2F—7F6‚ÂæWfW"6¶—2ÂæBf–Ç26Æ÷6VB–bF†BW†7B6öçFW‡B7FÆÇ2v–âv—F†–âGvòÖ–çWFW2à¢Ò&V'V–ÇB÷7B×6ÆVW&V6÷fW'’FòF—66&B7FÆRv÷&¶W'2æBF–ÖW'2ÂF†Vâ6W'f–6RF†RöÆFW7B÷WG7FæF–ærW'6öæÂG&ç7÷'B&Vf÷&RÖ—76–öâv÷&²&W7VÖW2âÆÆ–æ6R&WVW7G2&VÖ–â–væ÷&VBà¢ÒÖFRFF—fR$Ò&÷FV7F–öâ&WfW'6–&ÆS¢gFW"F†R†V&VÖ–ç2&VÆ÷rF†R6fR&VÆV6RF‡&W6†öÆBf÷"c6V6öæG2ÂF†RÖöæÇ’ÆF6‚6ÆV'2æBÆ–v‡GvV–v‡B&VÆöB"Ö’&WGW&ââv÷&¶W"2&VÖ–ç2&¶VBà¢ÒFFVB'Vâ×66÷VBW†7B×fV†–6ÆR7Fff–ærV&çF–æRâVæ—VVÇ’–FVçF–f–VBfV†–6ÆRF†B&—6W26öæf—&ÖVB7Fff–ærÆW'B—2W†6ÇVFVBæBVæ—Bf–æFW"&WG&–W2F†R6ÖRÖ—76–öã²Ö&–wV÷W2vVæW&–2ÆW'G27F–ÆÂ7F÷6fVÇ’à¢ÒW‡æFVBÖ—76–öâ×fÇVRF—66÷fW'’7&÷72F†R7F—fRÖ—76–öâFö7VÖVçBæB&VF&ÆRæW7FVBg&ÖW2Âv—F‚6GW&R×6÷W&6RæBÖ—72FVÆVÖWG'’f÷"W‡÷'G2à¢Ò–æ7&V6VB6öÖÖæBæW‡W2g&öÒ2ããFò2ããæBÖ—76–öâf–æFW"g&öÒcãbãsfFòcãbãsvà ¢2226fWG ¢Ò&W6W'fVBF†R6–ævÆR7F—fRF—7F6†W"ÂW'6öæÂöÆFW7BÖf—'7BG&ç7÷'B6ÆV&–ærÂGvòÖÖ—76–öâW6RÂG&–æVB×W'6öææVÂf–ÂÖ6Æ÷6VB'VÆW2æBGW&&ÆR7FF–öâ÷Væ—B÷W'6öææVÂ&Vv—7FW'2à¢Ò&W6W'fVBW†7B7&÷72×&VfW&Væ6W3¢&W67VRFörFò6V&6‚FörVæ—BG—R&Â—&f–VÆB÷W&F–öç27WW'f—6÷"G—RƒÂÖ—76–öâWw&FRç’fV†–6ÆRFòÖ'VÆæ6RG—RVÂ6"F÷v–ærFòfÆF&VB&V6÷fW'’G—RVÂæBG'V6²F÷v–ærFò„ub&V6÷fW'’G—Rfà¢ÒFFVBW&ÖæVçB&Vw&W76–öâ6÷fW&vRf÷"W†7BG&ç7÷'B–FVçF—G’Â&÷VæFVBæòÖF—7F6‚&V6÷fW'’Âv¶R&V6÷fW'’Â&WfW'6–&ÆR$Ò&÷FV7F–öâÂ7Fff–ærV&çF–æRÂfÇVR'6–æræBÆÂ&æ¶VBfV†–6ÆRÖ–æw2à ¢22³2ããÒÒ##bÓ‚Ó#0 ¢222f—†V@ ¢Ò&WÆ6VBF†R6öçG&öÆÆW"w2&öÆÆ–ærƒÔ”BF—7Æ’6÷VçBv—F‚G'VR'Vâ6÷VçFW"æB&÷VæFVBRÃÔ”B6öçF–çV—G’ÆVFvW"Â6ò"Ö†÷W"VæGW&æ6RW‡÷'BFöW2æ÷B7F÷6÷VçF–ærBƒÖ—76–öç2à¢ÒFFVBW†7B7V66W76gVÂÖF—7F6‚F÷FÇ2g&öÒÖ—76–öâf–æFW"ÇW2W7F–ÖFVBÖ—76–öâfÇVRÂfÇVRW"†÷W"ÂF—7F6†W2W"†÷W"æB&÷VæFVBF—7F6‚ögVÆÂÖ7–6ÆRW&6VçF–ÆRFVÆVÖWG'’âW7F–ÖFVBfÇVR—2W‡Æ–6—FÇ’F—7F–æwV—6†VBg&öÒ6WGFÆVB&æ²–æ6öÖRà¢ÒFFVB7FF–öâÖv&R7Fff–ærF–væ÷7F–72â7Fff–ær7F÷æ÷r&V6÷&G2F†R6VÆV7FVBÖ'VÆæ6Rô„TÕ26æF–FFW2ÂfV†–6ÆR”G2Â7FF–öâæÖW2æBW'6öææVÂ&Vv—7FW"Wf–FVæ6R–âF†RÖ–âc2W‡÷'Bà¢ÒW†6ÇVFVBâÖ'VÆæ6R÷"„TÕ2&Vf÷&R6VÆV7F–öâöæÇ’v†VââW†7BW'6öææVÂ&Vv—7FW"ÖF6‚†26ö×ÆWFR66âÂ¦W&ò76–væVBW'6öææVÂæBWf–FVæ6RæòöÆFW"F†â#B†÷W'2âÖ—76–ærÂ–æ6ö×ÆWFRÂ7FÆRæB7FffVBWf–FVæ6R&VÖ–ç2VÆ–v–&ÆRà¢ÒFFVBvw&VvFRÆ÷r×VWVRW6RGW&F–öâö6÷VçBFVÆVÖWG'’F†B7W'f—fW2f—6–&ÆR×vR6öçF–çV—G’v—F†÷WB&WF–æ–ærâVæ&÷VæFVBWfVçB†—7F÷'’à¢Ò–æ7&V6VB6öÖÖæBæW‡W2g&öÒ2ãã–Fò2ããæBÖ—76–öâf–æFW"g&öÒcãbãsVFòcãbãsfà ¢2226fWG ¢ÒF†R6öÆR7F—fRv÷&¶W"ÂÆ–v‡GvV–v‡B"&VÆöBÂGvòÖÖ—76–öâW6RÂG&ç7÷'B6ÆV&–ærÂG&–æVB×W'6öææVÂf–ÂÖ6Æ÷6VB&V†f–÷"æBÆÂW†7BfV†–6ÆR7&÷72×&VfW&Væ6W2&VÖ–â–âÆ6Rà¢Ò&W67VRFörõ6V&6‚FörVæ—B&VÖ–ç2–ææVBFòW†7BæF—fRG—R&²Ö—76–öâWFFRç’fV†–6ÆR&VÖ–ç2öæRW†7BG—RÖVÖ'VÆæ6Rà¢ÒFFVBW&ÖæVçBVæGW&æ6RFVÆVÖWG'’æB&V6VçBÖ6ö×ÆWFR×¦W&ò×W'6öææVÂ&Vw&W76–öâ6÷fW&vRà ¢22³2ãã•ÒÒ##bÓ‚Ó#  ¢222f—†V@ ¢Òf—†VBF†Rf–æÂF—7F6‚ÖöæÇ’†æFöfbF†B6÷VÆBÆVfR†–FFVâv÷&¶W"–ç6–FRÖ—76–öâf–æFW"w27FæFÆöæR6–ÆVçBVWVRF‚v—F–ærf÷"RVæGFVæFVBÖ—76–öç2â&VçBÖ÷væVB7F—fRg&ÖRæ÷r&VÖ–ç2–FVçF–f–&ÆR7&÷72Ö—76–öä6†–Vbw2'&–Vb6ÖRÖFö7VÖVçB÷væW'6†—Ö'&–FvR&Vg&W6‚à¢Òf÷&6VBWfW'’fW&–f–VBf–æÂÖF—7F6‚&÷WFRFò6–væÂF†Rc2GvòÖÖ—76–öâ6öçG&öÆÆW"&Vf÷&R7FæFÆöæRVWVR×vF6†W"7FFR6â7F'Bâv÷&¶W"—2&VÆV6VBÂF†R¦W&ò×v÷&¶W"W6R&VÖ–ç2G&ç7÷'BÖv&RÂæBF†R6öçG&öÆÆW"&W7VÖW2g&öÒg&W6‚gFW"Gvò7F–öæ&ÆRÖ—76–öç2&VÖ–â7F&ÆRà¢ÒFFVBf–æÂF—7F6‚ÂF—7F6‚b6†&RæBf–æÂ×VWVR7FGW2Wf–FVæ6RFòF†RW†—7F–ærGWÆ–6FR×6fR‚ób×6V6öæB÷7BÖF—7F6‚vF6†FörÂ&÷f–F–ær&÷VæFVBfÆÆ&6²–bF†R&–Ö'’Æ÷r×VWVR6–væÂ—2WfW"Æ÷7Bà¢Ò6ÆV&VB7FÆRE$å5õ%Eõt$æT’7FFRv†VâF†RW†7Bv&æVBW'6öæÂ&F–òG&ç7÷'B&WVW7BF—6V'2Âv—F†÷WB6†æv–ærG&ç7÷'B6VÆV7F–öâ÷"6Æ–6¶–æræ÷F†W"FW7F–æF–öâà¢Ò6÷VçFVBgVÆÂÆ÷r×VWVRô"FV&F÷vâ26F—6g––ærç’VæF–ærÖVÖ÷'’×&W77W&R&V7–6ÆRÂ&WfVçF–ærâVææV6W76'’6V6öæBv÷&¶W"&W7F'B–ÖÖVF–FVÇ’gFW"Ö—76–öâ7WÇ’&WGW&ç2à¢Ò–æ7&V6VBF†RVæ–f–VBW6W'67&—Bg&öÒ2ãã†Fò2ãã–æBÖ—76–öâf–æFW"g&öÒcãbãsFFòcãbãsVà ¢2226fWG ¢ÒfV†–6ÆR6VÆV7F–öâÂÖ—76–öâWw&FRÂG&–æVB×W'6öææVÂÂ†÷7—FÂÂ&—6öæW"Â&W67VRõ6V&6‚FörG—R&Â—&f–VÆB÷W&F–öç27WW'f—6÷"G—RƒÂÖ'VÆæ6RG—RVÂfÆF&VB&V6÷fW'’G—RVÂ„ub&V6÷fW'’G—RfÂ6†÷'FvR6ööÆF÷vâæBW'6öæÂÖöæÇ’G&ç7÷'B'VÆW2&RVæ6†ævVBà¢ÒFFVBW&ÖæVçB&Vw&W76–öâ6÷fW&vRf÷"F†Rö'6W'fVBf–æÂÖF—7F6‚óRÖÖ—76–öâFVFÆö6²Â'&–FvR×&Vg&W6‚–FVçF—G’Â&÷VæFVBfÆÆ&6²&V6÷fW'’Â7FÆRG&ç7÷'B×v&æ–ær&W7F÷&F–öâæBÖVÖ÷'’×&V7–6ÆR†æFöfbà ¢22³2ãã…ÒÒ##bÓ‚Ó#  ¢222f—†V@ ¢Ò6öç7G&–æVBF†Rc26öçG&öÂæVÂFòF†Rf–Æ&ÆRf–Ww÷'BæBFFVBâ–çFW&æÂ67&öÆÂ&Vv–öâÂ&WfVçF–ærÆöærFV×÷&'’6¶—2Æ—7G2g&öÒW‡FVæF–ærF†R÷W&VÆ÷rF†R67&VVâà¢Ò¶WB7F'BÂ7F÷Â&WG'’æBW‡÷'B–âf—†VB6öçG&öÂfö÷FW"÷WG6–FRF†R67&öÆÆ–ær7FGW26öçFVçB6òF†W’&VÖ–â&V6†&ÆRBWfW'’Æ—7BÆVæwF‚à¢Ò6VBFV×÷&'’6¶—2—G6VÆbB“b‚v—F‚–æFWVæFVçB÷fW&fÆ÷ræB&VÖ÷fVBF†Rö'6öÆWFR–æ—F–Âv÷&¶W"2Æ6V†öÆFW"à¢Ò–æ7&V6VBF†RVæ–f–VBW6W'67&—Bg&öÒ2ããvFò2ãã†æBÖ—76–öâf–æFW"g&öÒcãbãs6FòcãbãsFà ¢22³2ããuÒÒ##bÓ‚Ó#  ¢222ÖVÖ÷'’æBW&f÷&Öæ6P ¢Ò&V'V–ÇBF÷&ÖçBv÷&¶W""2Æ–v‡GvV–v‡BvRöæWGv÷&²&VÆöBâ"æòÆöævW"ÆÆö6FW2F†R6ö×ÆWFRÖ—76–öâf–æFW"Væv–æRÂö'6W'fW'2Â&WV—&VÖVçBÖ2÷"WFöÖF–öâ7FFRv†–ÆRv—F–ærà¢Ò"7F–ÆÂÆöG2æB7F&–Æ—6W2F†R–ÖÖVF–FRæW‡BÖ—76–öä6†–VbÖ—76–öâvRâöâfW&–f–VB&öÖ÷F–öâæB6öÆRÖ÷væW"†æFöfbÂ—BÖ÷VçG2F†R6ö×ÆWFRÖ—76–öâf–æFW"Væv–æRW†7FÇ’öæ6R&Vf÷&Rv÷&¶W"WFöÖF–öâ7F'G2à¢ÒF†—2&WF–ç2F†RW6VgVÂDôÒöæWGv÷&²v&Ò×Wv†–ÆR&VÖ÷f–ærF†Rv7FVgVÂ6V6öæBgVÆÂWFöÖF–öâ'VçF–ÖRGW&–æræ÷&ÖÂ´"÷W&F–öâà ¢2226fWG ¢ÒÆ–v‡GvV–v‡B"¶VW2F†RæF—fRF÷&ÖçB&÷Fö6öÂÂ7F÷&vRÖ÷væW'6†—fÆ–FF–öâÂ–çFW&7F–öâ&Æö6¶W"ÂW†7BÖ—76–öâÔ”B6†V6²æB7F—fF–öâ×Fö¶VâvFRâf–ÆVB&öÖ÷F–öâ7F–ÆÂfÆÇ2&6²F‡&÷Vv‚F†RW†—7F–ær6fR÷væW'6†—6—&7V—B'&V¶W"à¢Ò–æ7&V6VBF†RVæ–f–VBW6W'67&—Bg&öÒ2ããfFò2ããvæBÖ—76–öâf–æFW"g&öÒcãbãs&Fòcãbãs6à ¢22³2ããeÒÒ##bÓ‚Ó#  ¢222f—†V@ ¢ÒÖFRF†R7F÷VBÖ–âÖÖ7FFRvVçV–æVÇ’–FÆRâF†RÆ&vR&W6÷W&6RFÖ–æ—7G&F–öâæBÖ—76–öâf–æFW"Væv–æW2æ÷r–æ—F–Æ—6RöæÇ’f÷"â7GVÂÖ—76–öâÂ·ó‹h‘éì¶»§q«^u½µÁ±•Ñ”Ù•¡¥±”Ñ…‰±”¸=¹±äÁÉ½µ½Ñ•]½É­•È±½…‘ÌÑ¡”™Õ±°±¥ÍĞ°ÕÑÑ¥¹œÑ¡”µÕ±Ñ¤µ™É…µ”¡•…ÀÁÉ•ÍÍÕÉ”Í••¸İ¥Ñ €Ä°äÈÜµÉ½ÜÙ•¡¥±”±¥ÍÑÌ¸(´‘‘•„Á•Éµ…¹•¹ĞÉ•É•ÍÍ¥½¸™½ÈÍÑ…±±•µ‘¥ÍÁ…Ñ ÅÕ…É…¹Ñ¥¹”…¹É•±•…Í”°ÑÉ…¹ÍÁ½ÉĞµ™¥ÉÍĞÍÑ…ÉÑÕÀ°™…Ñ…°…±°µİ½É­•ÈÑ•…É‘½İ¸°ÁÉ¥½É¥Ñä±½­¥¹œ…¹Á…”µ½¹±ä½İ…Éµ¥¹œ¸((ŒŒŒ¡…¹•((´%¹É•…Í•Ñ¡”Õ¹¥™¥•ÕÍ•ÉÍÉ¥ÁĞ™É½´€Ì¸À¸Å€Ñ¼€Ì¸À¸É€ì5¥ÍÍ¥½¸¥¹‘•ÈÉ•µ…¥¹ÌXÄÀ¸Ø¸ÄØá€¸((ŒŒlÌ¸À¸Åt€´€ÈÀÈØ´Àà´ÈÈ((ŒŒŒ‘‘•((´‘‘•„XÌ±½ÜµÍÕÁÁ±ä±¥™•å±”èİ¡•¸Ñ¡”…Ñ¥Ù”İ½É­•ÈÍ••Ì™•İ•ÈÑ¡…¸Ñİ¼¹•áĞÁ•ÉÍ½¹…°µ¥ÍÍ¥½¹Ì°¥ĞÕÍ•Ì5¥ÍÍ¥½¹¡¥•˜Ì•á…Ğ¥ÍÁ…Ñ µ½¹±ä…Ñ¥½¸°±•…Ù•Ì½¹”µ¥ÍÍ¥½¸¥¸É•Í•ÉÙ”°½µÁ±•Ñ•Ì…¹äÁ…Ñ¥•¹Ğ½ÁÉ¥Í½¹•ÈÑÉ…¹ÍÁ½ÉĞ…¹É•ÅÕ•ÍÑÌ„é•É¼µİ½É­•ÈÁ…ÕÍ”¸(´‘‘•…ÕÑ½µ…Ñ¥ŒÉ•ÍÕµ”…™Ñ•È…Ğ±•…ÍĞÑİ¼…Ñ¥½¹…‰±”Á•ÉÍ½¹…°µ¥ÍÍ¥½¹ÌÉ•µ…¥¸ÍÑ…‰±”™½È€Ä¸ÔÍ•½¹‘Ì¸I•ÍÕµ”…±İ…åÌÉ•…Ñ•Ì„™É•Í ]½É­•Èì½É•ÑÕÉ¸½¹±ä…Ì‘½Éµ…¹ĞÁÉ•±½…‘Ì¸(´‘‘•Í¡•‘Õ±•½½±¥™•å±”É•å±¥¹œ…Ğ„Ù•É¥™¥•µ¥ÍÍ¥½¸‰½Õ¹‘…Éä…™Ñ•È€ÈÀ¹…Ñ¥Ù”µ¥ÍÍ¥½¸…‘Ù…¹•Ì½È€ÄÔµ¥¹ÕÑ•Ì°Á±ÕÌ•áÁ±¥¥Ğ•µ‰•‘‘•µÉÕ¹Ñ¥µ”Ñ•…É‘½İ¸‰•™½É”•Ù•Éäµ…¹…•™É…µ”¥Ì‰±…¹­•…¹É•µ½Ù•¸((ŒŒŒM…™•Ñä((´AÉ•Í•ÉÙ•ÍÑ…¹‘…±½¹”5¥ÍÍ¥½¸¥¹‘•ÈÅÕ•Õ”‰•¡…Ù¥½Èè½ÕÑÍ¥‘”„Í½±”µ½İ¹•ÈXÌ]½É­•È°½¹±ä9•áĞ5¥ÍÍ¥½¸€ À¥€¥ÌÑ¡”™¥¹…°µÅÕ•Õ”Í¥¹…°¸(´-•ÁĞ±½ÜµÍÕÁÁ±äÑ•…É‘½İ¸ÑÉ…¹ÍÁ½ÉĞµ…İ…É”…¹ÁÉ•Ù•¹Ñ•‰½Ñ ¹…Ñ¥Ù”¥ÍÁ…Ñ €˜9•áĞ…¹Í…Ù•¥ÍÁ…Ñ €˜M¡…É”½¹Ñ¥¹Õ…Ñ¥½¸™É½´½Á•¹¥¹œÑ¡”É•Í•ÉÙ•µ¥ÍÍ¥½¸¸Á•ÉÍ½¹…°É…‘¥¼É•ÅÕ•ÍĞÑ¡…Ğ…ÉÉ¥Ù•Ì‘ÕÉ¥¹œÑ¡”Á…ÕÍ”É••¥Ù•Ì½¹”Ñ•µÁ½É…ÉäÑÉ…¹ÍÁ½ÉĞµ½¹±ä]½É­•È°İ¡¥ É•±•…Í•Ì¥ÑÍ•±˜…™Ñ•È±•…É¥¹œ½È„‰½Õ¹‘•É•ÑÉäÑ¥µ•½ÕĞ¸(´	½Õ¹‘•½¹ÑÉ½±±•Èµ¥ÍÍ¥½¸µ¥‘•¹Ñ¥Ñä…¹¡…¹‘±•µ•Ù•¹Ğ…¡•Ì¸IÕ¹Ñ¥µ”±•…¹ÕÀ‘½•Ì¹½Ğ±•…È5¥ÍÍ¥½¹¡¥•˜‘…Ñ„½È½µµ…¹9•áÕÌÍÑ…Ñ¥½¸°Õ¹¥Ğ°Á•ÉÍ½¹¹•°°ÑÉ…¥¹¥¹œ…¹‘ÕÉ…‰±”Í•ÑÑ¥¹œÉ•¥ÍÑ•ÉÌ¸(´‘‘•„Á•Éµ…¹•¹ĞÉ•É•ÍÍ¥½¸™½ÈÑ¡”Ñİ¼µµ¥ÍÍ¥½¸İ…Ñ•Éµ…É¬°ÍÑ…‰±”É•ÍÕµ”°ÑÉ…¹ÍÁ½ÉĞ…Ñ•Ì°‰½Õ¹‘…ÉäÉ•å±¥¹œ°•áÁ±¥¥Ğ™É…µ”Ñ•…É‘½İ¸…¹‘ÕÉ…‰±”µÉ•¥ÍÑ•ÈÁÉ•Í•ÉÙ…Ñ¥½¸¸((ŒŒŒ¡…¹•((´%¹É•…Í•Ñ¡”Õ¹¥™¥•ÕÍ•ÉÍÉ¥ÁĞ™É½´€Ì¸À¸Á€Ñ¼€Ì¸À¸Å€…¹5¥ÍÍ¥½¸¥¹‘•È™É½´XÄÀ¸Ø¸ÄØİ€Ñ¼XÄÀ¸Ø¸ÄØá€¸((ŒŒlÌ¸À¸Át€´€ÈÀÈØ´Àà´ÈÄ((ŒŒŒ‘‘•((´AÉ½µ½Ñ•Ñ¡”Ñ•ÍÑ•Í¥¹±”µ¥¹ÍÑ…±°XÌµ…ÍÑ•ÈÑ¼Ñ¡”…¹½¹¥…°ÁÉ½‘ÕÑ¥½¸Í½ÕÉ”¸%ÑÌ½İ¹•ÉÍ¡¥À½¹ÑÉ½±±•ÈÍÑ…ÉÑÌ…Ğ‘½Õµ•¹ĞµÍÑ…ÉÑ€°Ñ¡•¸ÍÑ…ÉÑÌÑ¡”½µÁ±•Ñ”•µ‰•‘‘•½µµ…¹9•áÕÌÉÕ¹Ñ¥µ”…Ğ¥ÑÌ•ÍÑ…‰±¥Í¡•=4µÉ•…‘ä‰½Õ¹‘…Éä¸(´‘‘•½¹”…Ñ¥Ù”‘¥ÍÁ…Ñ¡•È€¡]½É­•È¤İ¥Ñ Ñİ¼¥Í½±…Ñ•‘½Éµ…¹Ğİ…É´ÁÉ•±½…‘Ì€¡]½É­•ÉÌ½¤¸AÉ½µ½Ñ¥½¸É•ÅÕ¥É•ÌÑ¡”…Ñ¥Ù…Ñ¥½¸Ñ½­•¸°•áÁ•Ñ•µ¥ÍÍ¥½¸°…Ñ¥Ù”µ™É…µ”¥‘•¹Ñ¥Ñä…¹Í½±”½Á•É…Ñ¥½¹…°µÍÑ½É…”½İ¹•ÉÍ¡¥À‰•™½É”5¥ÍÍ¥½¸¥¹‘•È…¸ÍÑ…ÉĞ¸(´‘‘•„ÑÉ…¹ÍÁ½ÉĞµ…İ…É”Á½ÍĞµ‘¥ÍÁ…Ñ İ…Ñ¡‘½œè…¸€àµÍ•½¹Í½™ĞÅÕ•Õ”É•½¹¥±”ÁÉ•Í•ÉÙ•ÌÑ¡”™¥¹…°µ‘¥ÍÁ…Ñ ‘ÕÁ±¥…Ñ”Õ…É°„€ÄØµÍ•½¹¡…ÉÉ•½Ù•ÉäÁÉ•™•ÉÌ„Ù•É¥™¥•İ…É´¹•áĞµ¥ÍÍ¥½¸°…¹„É•Á•…Ñ•Í…µ”µµ¥ÍÍ¥½¸¡…ÉÉ•½Ù•Éä¥¹Í¥‘”Ñİ¼µ¥¹ÕÑ•Ì™…¥±Ì±½Í•¸(´‘‘••á…Ğ¥É™¥•±=Á•É…Ñ¥½¹ÌMÕÁ•ÉÙ¥Í½ÈÑåÁ”€àÁ€É½ÕÑ¥¹œ…¹Í•Á…É…Ñ”µ…á¥µÕ´µÑÉÕ¬Ñ½İ¥¹œ¥¹•ÍÑ¥½¸Í•±•Ñ¥¹œ½¹”•á…Ğ!XI•½Ù•ÉäÑåÁ”€ÄÀÙ€Á•ÈÑÉÕ¬¸Q¡”•á¥ÍÑ¥¹œµ…á¥µÕ´µ…È…Á…¥ÑäÉÕ±”É•µ…¥¹Ì½¹”•á…Ğ±…Ñ‰•I•½Ù•ÉäÑåÁ”€ÄÀÕ€Á•ÈÑİ¼…ÉÌ¸((ŒŒŒM…™•Ñä((´%¹É•…Í•5¥ÍÍ¥½¸¥¹‘•ÈÑ¼XÄÀ¸Ø¸ÄØİ€ì•á…ĞÍ•±•Ñ¥½¸°Í•±•Ñ•µÕ¹¥ĞÙ•É¥™¥…Ñ¥½¸…¹•¹•É¥Œµ™…±±‰…¬ÁÉ½Ñ•Ñ¥½¸Í¡…É”Ñ¡”Í…µ”¥É™¥•±…¹Ñ½İ¥¹œ±…ÍÍ¥™¥•ÉÌ¸(´%¹É•…Í•½Ñ…É•ĞµÉ½Ñ…Ñ¥½¸É•Ñ•¹Ñ¥½¸…¹™É••é”É½Ñ…Ñ¥½¸‘ÕÉ¥¹œÑÉ…¹ÍÁ½ÉĞ°ÁÉ½µ½Ñ¥½¸…¹Á½ÍĞµ‘¥ÍÁ…Ñ É•½Ù•ÉäÍ¼İ…É´İ½É­•ÉÌ…É”¹½ĞÉ•Á•…Ñ•‘±ä‘•ÍÑÉ½å•‰äÑÉ…¹Í¥•¹ĞÅÕ•Õ”¡ÕÉ¸¸(´‘‘•XÌµ•É”°İ…Ñ¡‘½œ°¥É™¥•±…¹!XÉ•É•ÍÍ¥½¹Ìİ¡¥±”ÁÉ•Í•ÉÙ¥¹œÑÉ…¹ÍÁ½ÉĞ±•…É¥¹œ°I•ÍÕ”½M•…É ½œÑåÁ”€ÄÀÉ€°5¥ÍÍ¥½¸UÁÉ…‘”µ‰Õ±…¹”ÑåÁ”€Õ€°Ñ¡”Õ¹¥Ù•ÉÍ…°€ÈÀµ…‘Ù…¹”Í¡½ÉÑ…”½½±‘½İ¸…¹Í½±”µ‘¥ÍÁ…Ñ µ½İ¹•ÈÉÕ±•Ì¸(´AÉ•Í•ÉÙ•½µÁÕÑ•ÈµÍ±••ÀÉ•½Ù•ÉäèÍÑ…±”½ÁÉ•±½…‘Ì…É”‘¥Í…É‘•…¹]½É­•È¥ÌÉ•½Ù•É•İ¥Ñ¡½ÕĞ…±±½İ¥¹œXÌ¥ÑÍ•±˜Ñ¼±¥¬¥ÍÁ…Ñ ½ÈÕ•ÍÌ„ÑÉ…¹ÍÁ½ÉĞ‘•ÍÑ¥¹…Ñ¥½¸¸((ŒŒŒ¡…¹•((´I•µ½Ù•½‰Í½±•Ñ”½¹”µÕÍ”‰Õ¥±‘•ÉÌ°ÑÉ¥•È™¥±•Ì…¹¡¥ÍÑ½É¥…°É•Á…¥È½¥¹ÍÁ•Ñ¥½¸İ½É­™±½İÌ™É½´Á•Éµ…¹•¹ĞÉ•Á½Í¥Ñ½Éä…ÕÑ½µ…Ñ¥½¸¸(´•¹ÑÉ…±¥é•…¹½¹¥…°É•±•…Í”…¹½µÁ½¹•¹ĞµÙ•ÉÍ¥½¸Ù…±¥‘…Ñ¥½¸¥¸ÍÉ¥ÁÑÌ½Ù…±¥‘…Ñ”µÕÍ•ÉÍÉ¥ÁĞ¹µ©Í€ìÁ•Éµ…¹•¹Ğ‰•¡…Ù¥½É…°É•É•ÍÍ¥½¹Ì…É”¹½ÜÙ•ÉÍ¥½¸µ…¹½ÍÑ¥Œ…¹…ÕÑ½µ…Ñ¥…±±ä‘¥Í½Ù•É•‰äÑ¡”Ù…±¥‘…Ñ¥½¸İ½É­™±½Ü¸(´‘‘•„Á•Éµ…¹•¹ĞI•Á½Í¥Ñ½ÉäEÕ…±¥Ñä…Ñ”Ñ¡…ĞÁ…ÉÍ•Ì•Ù•ÉäÉ•Ñ…¥¹•¥Ñ!ÕˆÑ¥½¹Ìİ½É­™±½Üİ¥Ñ „Á¥¹¹•e50Á…ÉÍ•È‰•™½É”É•Á½Í¥Ñ½Éä¡•­Ì½¹Ñ¥¹Õ”¸(´%¹É•…Í•Ñ¡”Õ¹¥™¥•ÕÍ•ÉÍÉ¥ÁĞ™É½´€È¸À¸Í€Ñ¼€Ì¸À¸Á€…¹µ…‘”XÌÑ¡”ÁÉ½‘ÕÑ¥½¸¥¹ÍÑ…±±…Ñ¥½¸Á…Ñ ¸((ŒŒlÈ¸À¸Ít€´€ÈÀÈØ´Àà´ÈÄ((ŒŒŒ¥á•((´5¥ÍÍ¥½¸UÁ‘…Ñ”¹½Ü½¹Ù•ÉÑÌÑ¡”•á…Ğ¹äÙ•¡¥±•€É•ÅÕ¥É•µ•¹Ğ™…µ¥±ä¥¹Ñ¼½¹”¹½Éµ…°µ‰Õ±…¹”…¹Í•±•ÑÌ½Ù•É¥™¥•Ì½¹±ä¹…Ñ¥Ù”Ù•¡¥±”ÑåÁ”€Õ€ì!5LÑåÁ”€å€°µ‰Õ±…¹”=™™¥•ÉÌ…¹•Ù•Éä½Ñ¡•ÈÙ•¡¥±”ÑåÁ”É•µ…¥¸•á±Õ‘•¸(´‘‘••áÁ±¥¥ĞI•ÍÕ”½œ…¹M•…É ½œU¹¥ĞÉ½ÍÌµÉ•™•É•¹”…±¥…Í•Ìİ¡¥±”ÁÉ•Í•ÉÙ¥¹œÑ¡”•ÍÑ…‰±¥Í¡•™…¥°µ±½Í•¹…Ñ¥Ù”M•…É ½œU¹¥ĞÑåÁ”€ÄÀÉ€Í•±•Ñ½È¸((ŒŒŒM…™•Ñä((´‘‘•Á•Éµ…¹•¹ĞÉ•É•ÍÍ¥½¹Ì™½ÈÑ¡”•á…ĞÕÁÉ…‘”½¹Ù•ÉÍ¥½¸°½¹”µÙ•¡¥±”…À°ÑåÁ”´Ô½İ¹•ÉÍ¡¥À°Í•±•Ñ•µÕ¹¥ĞÙ•É¥™¥…Ñ¥½¸°É½ÍÌµÉ•™•É•¹”…±¥…Í•Ì…¹•á±ÕÍ¥½¸½˜Õ¹É•±…Ñ•Ù•¡¥±•Ì¸(´%¹É•…Í•5¥ÍÍ¥½¸¥¹‘•È™É½´XÄÀ¸Ø¸ÄØÕ€Ñ¼XÄÀ¸Ø¸ÄØÙ€…¹Ñ¡”Õ¹¥™¥•ÕÍ•ÉÍÉ¥ÁĞ™É½´€È¸À¸É€Ñ¼€È¸À¸Í€¸I•Í½ÕÉ”‘µ¥¹¥ÍÑÉ…Ñ¥½¸É•µ…¥¹ÌXĞ¸È¸á€°U¹¥Ğ9…µ¥¹œÉ•µ…¥¹Ì€Ì¸Ì¸Èİ€°MÑ…Ñ¥½¸9…µ¥¹œÉ•µ…¥¹Ì€Ä¸Ì¸ÈÉ€°…¹A•ÉÍ½¹¹•°ÍÍ¥¹µ•¹ĞÉ•µ…¥¹Ì€Ä¸Ì¸ÄÉ€¸((ŒŒlÈ¸À¸Ét€´€ÈÀÈØ´Àà´ÈÄ((ŒŒŒ‘‘•((´‘‘•„XÈµ½İ¹•‘½Éµ…¹ĞµÁÉ•±½…±¥™•å±”™½È•áÁ±¥¥Ñ±ä¹…µ•9•áÕÌXÌ½™É…µ•Ì¸½Éµ…¹Ğ™É…µ•Ìµ…ä±½…5¥ÍÍ¥½¹¡¥•˜Ì¹…Ñ¥Ù”µ¥ÍÍ¥½¸Á…”…¹Ù•¡¥±”Á…¥¹…Ñ¥½¸°‰ÕĞ5¥ÍÍ¥½¸¥¹‘•È‘½•Ì¹½Ğµ½Õ¹Ğ¥ÑÌU$°½‰Í•ÉÙ•ÉÌ°…±•ÉĞ½Ù•ÉÉ¥‘”½È½Á•É…Ñ¥½¹…°ÕÑ¼5½‘”ÍÑ…Ñ”Õ¹Ñ¥°„Ù…±¥‘…Ñ•Í½±”µ½İ¹•ÈÁÉ½µ½Ñ¥½¸¸(´‘‘•„Íå¹¡É½¹½ÕÌ°™…¥°µ±½Í•ÁÉ½µ½Ñ¥½¸‰É¥‘”Ñ¡…ĞÙ•É¥™¥•ÌÑ¡”…Ñ¥Ù…Ñ¥½¸Ñ½­•¸°•áÁ•Ñ•µ¥ÍÍ¥½¸%°…Ñ¥Ù”µ™É…µ”¹…µ”…¹XÌÍÑ½É…”½İ¹•ÉÍ¡¥À‰•™½É”ÍÑ…ÉÑ¥¹œ5¥ÍÍ¥½¸¥¹‘•È¥¸Ñ¡”İ…É´‘½Õµ•¹Ğ¸((ŒŒŒM…™•Ñä((´9½Éµ…°Ñ½Àµ±•Ù•°Á…•Ì°‘¥É•Ğµ¥ÍÍ¥½¸Á…•Ì…¹½É‘¥¹…Éä¡¥±™É…µ•ÌÉ•Ñ…¥¸Ñ¡”•ÍÑ…‰±¥Í¡•XÈ‰•¡…Ù¥½ÕÈ¸Q¡”‘½Éµ…¹ĞÁ…Ñ …ÁÁ±¥•Ì½¹±äÑ¼Ñ¡”•áÁ±¥¥Ğµ¸µØÌµÁ¥Á•±¥¹”µÁÉ•±½…µ€™É…µ”½¹ÑÉ…Ğ¸(´%¹É•…Í•5¥ÍÍ¥½¸¥¹‘•È™É½´XÄÀ¸Ø¸ÄØÑ€Ñ¼XÄÀ¸Ø¸ÄØÕ€…¹Ñ¡”Õ¹¥™¥•ÕÍ•ÉÍÉ¥ÁĞ™É½´€È¸À¸Å€Ñ¼€È¸À¸É€¸I•Í½ÕÉ”‘µ¥¹¥ÍÑÉ…Ñ¥½¸É•µ…¥¹ÌXĞ¸È¸á€°U¹¥Ğ9…µ¥¹œÉ•µ…¥¹Ì€Ì¸Ì¸Èİ€°MÑ…Ñ¥½¸9…µ¥¹œÉ•µ…¥¹Ì€Ä¸Ì¸ÈÉ€°…¹A•ÉÍ½¹¹•°ÍÍ¥¹µ•¹ĞÉ•µ…¥¹Ì€Ä¸Ì¸ÄÉ€¸((ŒŒlÈ¸À¸Åt€´€ÈÀÈØ´Àà´Ää((ŒŒŒ¡…¹•((´AÕ‰±¥…Ñ¥½¸É•½Ù•Éä™½ÈÑ¡”±•…¸XÈ‰…Í•±¥¹”¸9¼5¥ÍÍ¥½¹¡¥•˜ÉÕ¹Ñ¥µ”‰•¡…Ù¥½ÕÈ¡…¹•ÌìÑ¡¥ÌÉ•…Ñ•Ì„¹½Éµ…°…¹½¹¥…°ÕÍ•ÉÍÉ¥ÁĞÙ•ÉÍ¥½¸ÕÁ‘…Ñ”Í¼É•…Íä½É¬…¸Íå¹¡É½¹¥é”XÈ¸(´%¹É•…Í•Ñ¡”Õ¹¥™¥•ÕÍ•ÉÍÉ¥ÁĞÙ•ÉÍ¥½¸™É½´€È¸À¸Á€Ñ¼€È¸À¸Å€¸((ŒŒlÈ¸À¸Át€´€ÈÀÈØ´Àà´Ää((ŒŒŒ¡…¹•((´I•Í•ĞÑ¡”ÁÉ½‘ÕÑ¥½¸±¥¹”Ñ¼Ñ¡”•á…ĞÁÉ½Ù•¸½µµ…¹9•áÕÌ€Ä¸À¸ÄÈİ€½Á•É…Ñ¥½¹…°‰…Í•±¥¹”…¹ÁÉ½µ½Ñ•Ñ¡…Ğ½‘”Ñ¼Ñ¡”¹•Üµ…©½È€È¸À¸Á€É•±•…Í”±¥¹”¸(´•±¥‰•É…Ñ•±ä…‰…¹‘½¹•Ñ¡”5¥ÍÍ¥½¸¹…±åÑ¥Ì€¼M¡…É¥¹œ€˜Må¹Œ€¼½½±”ÁÁÌMÉ¥ÁĞ±½•Èİ½É¬¥¹ÑÉ½‘Õ•…™Ñ•È€Ä¸À¸ÄÈİ€¸XÈ½¹Ñ…¥¹Ì¹¼•áÑ•É¹…°…¹…±åÑ¥ÌÕÁ±½…‘•È°±½•È½ÕÑ‰½à°…Ñ¥Ù¥ÑäÉ•½É‘•È°¡…Éµ½‘•ÁÁÌMÉ¥ÁĞ•¹‘Á½¥¹Ğ½È±½•È‰…­•¹¥¹Ñ•É…Ñ¥½¸¸(´AÉ•Í•ÉÙ•5¥ÍÍ¥½¸¥¹‘•ÈXÄÀ¸Ø¸ÄØÑ€°I•Í½ÕÉ”‘µ¥¹¥ÍÑÉ…Ñ¥½¸XĞ¸È¸á€°U¹¥Ğ9…µ¥¹œ€Ì¸Ì¸Èİ€°MÑ…Ñ¥½¸9…µ¥¹œ€Ä¸Ì¸ÈÉ€…¹A•ÉÍ½¹¹•°ÍÍ¥¹µ•¹Ğ€Ä¸Ì¸ÄÉ€™É½´Ñ¡”ÁÉ½Ù•¸É½±±‰…¬‰…Í•±¥¹”¸((ŒŒŒM…™•Ñä((´‘‘•„Á•Éµ…¹•¹Ğ¡•¬µ¹¼µ•áÑ•É¹…°µ±½•ÈµØÈÀÀ¹µ©Í€É•É•ÍÍ¥½¸Í¼Ñ¡”…‰…¹‘½¹•±½•ÈÍÑ…¬…¹¹½ĞÍ¥±•¹Ñ±äÉ•ÑÕÉ¸Ñ¼Ñ¡”…¹½¹¥…°ÕÍ•ÉÍÉ¥ÁĞ½ÈÉ•Á½Í¥Ñ½Éä¥¹Ñ•É…Ñ¥½¸Á…Ñ¡Ì¸(´!¥ÍÑ½É¥…°€Ä¸Ä¹á€½µµ¥ÑÌ°Ñ…Ì…¹É•±•…Í•ÌÉ•µ…¥¸¡¥ÍÑ½É¥…°É•½É‘Ì½¹±äìÑ¡•ä…É”¹½ĞÁ…ÉĞ½˜Ñ¡”XÈÁÉ½‘ÕÑ¥½¸Í½ÕÉ”¸((ŒŒlÄ¸À¸ÄÈİt€´€ÈÀÈØ´Àà´ÄØ((ŒŒŒ‘‘•((´½µÁ±•Ñ•¥ÍÍÕ”€ŒÄà‰ä•¹…‰±¥¹œ±¥Ù”¥ÉÉ…™ĞI•ÍÕ”…¹¥É•™¥¡Ñ¥¹œ°¼µI•ÍÁ½¹‘•È°¥É”É½¹”°!¥ Y½±Õµ”AÕµÀ…¹¥É”1¥™•Õ…ÉA•ÉÍ½¹¹•°ÍÍ¥¹µ•¹ĞÁÉ½™¥±•Ìİ¥Ñ •á…ĞU,Ù•¡¥±”ÑåÁ•Ì°ÑÉ…¥¹¥¹œ­•åÌ°Í•…ĞÑ…É•ÑÌ…¹¥É”MÑ…Ñ¥½¸Í½Á•Ì¸(´½µÁ±•Ñ•¥ÍÍÕ”€ŒÄä‰ä•¹…‰±¥¹œ•Ù•Éä±¥ÍÑ•MH°5½Õ¹Ñ…¥¸I•ÍÕ”°½…ÍÑÕ…É…¹1¥™•‰½…ĞÁÉ½™¥±”İ¥Ñ •á…ĞÙ•¡¥±”°……‘•µä°±¥Ù”µÍ•…Ğ…¹•±¥¥‰±”µ‰Õ¥±‘¥¹œµ…ÁÁ¥¹Ì°Á±ÕÌ„±¥Ù”™Õ±°µÍ•ÉÙ¥”‰…Ñ ¸(´‘‘•Í…µ”µ½É¥¥¸ÍÑ…Ñ¥½¸Ù•¡¥±”µA$…ÕÑ¡½É¥Ñä™½È!Y@Á½‘Ì°	½…Ğ°±½½°!½Ù•ÉÉ…™Ğ°I•ÍÕ”]…Ñ•ÉÉ…™Ğ…¹%¹±…¹I•ÍÕ”	½…ĞÑÉ…¥±•ÉÌ¸áÁ±¥¥ĞÑÉ…Ñ¥Ù•}Ù•¡¥±•}¥‘€±¥¹­Ì…É”ÁÉ•™•ÉÉ•°„Õ¹¥ÅÕ”½¹”µÑ¼µ½¹”Á…¥È¥ÌÑ¡”½¹±ä™…±±‰…¬°…¹…µ‰¥Õ¥Ñä™…¥±Ì±½Í•İ¥Ñ¡½ÕĞ…ÍÍ¥¹¥¹œ…¸Õ¹É•±…Ñ•ÑÉ…Ñ½È¸(´MH‰…Ñ ÉÕ¹Ì¹½Üµ•É”½Ù•É±…ÁÁ¥¹œÅÕ…±¥™¥…Ñ¥½¹Ì½¹Ñ¼Ñ¡”Í…µ”…ÑÕ…°É•Ü°ÁÉ•Ù•¹Ñ¥¹œ5Õ½±½½°M•…É ½±½½°É½¹”½±½½…¹½Ñ¡•ÈÍ¡…É•µÙ•¡¥±”ÉÕ±•Ì™É½´½µÁ•Ñ¥¹œ™½ÈÍ•Á…É…Ñ”Í•…ÑÌ¸(´I•½É‘•Í…¹¥Ñ¥é•¥ÍÍÕ”€ŒÄà¼ŒÄäµ…ÁÁ¥¹œ‘•¥Í¥½¹Ì…¹…‘‘•Á•Éµ…¹•¹Ğ¥É”°MH°½µÁ…¹¥½¸µ±¥¹¬°½Ù•É±…À°ÅÕ…¹Ñ¥Ñä°‰Õ¥±‘¥¹œµÍ½Á”…¹±¥Ù”µ‰…Ñ É•É•ÍÍ¥½¹Ì¸(´‘‘•Í¥¹Õ±…È°Á±ÕÉ…°…¹I•ÅÕ¥É•‘€É½ÍÌµÉ•™•É•¹”…±¥…Í•Ì™½È€¨©•É¥…°ÁÁ±¥…¹”QÉÕ¬¡Ì¤½ÈI•ÍÕ”MÑ…¥ÉÌ¨¨¸(´Q¡”Í¡…É•U¹¥Ğ¥¹‘•È…¹5¥ÍÍ¥½¸UÁ‘…Ñ”Í•±•Ñ½È¹½Ü•á¡…ÕÍÑÌ•á…ĞÑåÁ”€Üá€I•ÍÕ”MÑ…¥ÉÌ™¥ÉÍĞ°Ñ¡•¸™¥±±Ì½¹±äÑ¡”É•µ…¥¹¥¹œÅÕ…¹Ñ¥Ñäİ¥Ñ •á…ĞÑåÁ”€Äİ€½µ‰¥¹••É¥…°I•ÍÕ”AÕµÁÌ€¡IAÌ¤¸(´	½Ñ •á…ĞÙ•¡¥±”ÑåÁ•Ì½Õ¹ĞÑ½İ…ÉÍ•±•Ñ•µÕ¹¥ĞÙ•É¥™¥…Ñ¥½¸°İ¡¥±”]…Ñ•È1…‘‘•ÉÌ°I•ÍÕ”AÕµÁÌ…¹•Ù•Éä½Ñ¡•È¥É”½È¥É™¥•±Ù•¡¥±”É•µ…¥¸•á±Õ‘•™É½´Ñ¡¥Ì½µ‰¥¹•É•ÅÕ¥É•µ•¹Ğ¸(´	±½­••¹•É¥ŒÅÕ¥¬µÍ•±•Ğ™…±±‰…¬™½ÈÑ¡¥ÌÍÁ•¥…±¥ÍĞµ¥á•Á½½°…¹…‘‘•„Á•Éµ…¹•¹ĞÉ•É•ÍÍ¥½¸™½È…±¥…ÌÉ•½¹¥Ñ¥½¸°•á…ĞÑåÁ”½İ¹•ÉÍ¡¥À°½É‘•É¥¹œ°É•µ…¥¹‘•ÈÍ•±•Ñ¥½¸…¹Í•±•Ñ•µÕ¹¥Ğ…½Õ¹Ñ¥¹œ¸(´%¹É•…Í•5¥ÍÍ¥½¸¥¹‘•È™É½´XÄÀ¸Ø¸ÄØÍ€Ñ¼XÄÀ¸Ø¸ÄØÑ€°A•ÉÍ½¹¹•°ÍÍ¥¹µ•¹Ğ™É½´€Ä¸Ì¸ÄÅ€Ñ¼€Ä¸Ì¸ÄÉ€°…¹Ñ¡”Õ¹¥™¥•ÕÍ•ÉÍÉ¥ÁĞ™É½´€Ä¸À¸ÄÈÙ€Ñ¼€Ä¸À¸ÄÈİ€¸I•Í½ÕÉ”‘µ¥¹¥ÍÑÉ…Ñ¥½¸É•µ…¥¹ÌXĞ¸È¸á€°U¹¥Ğ9…µ¥¹œÉ•µ…¥¹Ì€Ì¸Ì¸Èİ€°…¹MÑ…Ñ¥½¸9…µ¥¹œÉ•µ…¥¹Ì€Ä¸Ì¸ÈÉ€¸((ŒŒlÄ¸À¸ÄÈÙt€´€ÈÀÈØ´Àà´ÄØ((ŒŒŒ¥á•((´±½Í•¥ÍÍÕ”€ŒÌÌÄ‰äÉ•Á…¥É¥¹œÑ¡”ÑÉ…¥¹•µÁ•ÉÍ½¹¹•°±¥Ù”µÙ•É¥™¥…Ñ¥½¸…¹‘¥‘…Ñ”Á½½°‰É½­•¸¥¸ØÄ¸À¸ÄÈÍ€¸(´á…Ğ½µÁ…Ñ¥‰±”Ù•¡¥±•Ìİ¥Ñ µ¥ÍÍ¥¹œ½ÈÍÑ…±”A•ÉÍ½¹¹•°I•¥ÍÑ•È•¹ÑÉ¥•Ì…¸¹½Ü•¹Ñ•ÈÑ¡”±¥Ù”…ÍÍ¥¹µ•¹ĞµÁ…”Í…¸Ñ¡…ĞÉ•…Ñ•Ì™É•Í ÅÕ…±¥™¥…Ñ¥½¸•Ù¥‘•¹”¸(´I•µ½Ù•Ñ¡”¥ÉÕ±…È…Ñ”İ¡•É”Ñ¡”ÁÉ”µÙ•É¥™¥…Ñ¥½¸Á½½°É•ÅÕ¥É•„Ù•¡¥±”Ñ¼…±É•…‘ä¡…Ù”Ñ¡”™É•Í •Ù¥‘•¹”Ñ¡…Ğ¥ÑÌ½İ¸Í…¸İ…ÌÉ•ÍÁ½¹Í¥‰±”™½ÈÁÉ½‘Õ¥¹œ¸(´AÉ•Í•ÉÙ•ÍÑÉ¥Ğ™…¥°µ±½Í•™¥¹…°Í•±•Ñ¥½¸°É•…‘¥¹•ÍÌ…¹ÕÑ¼5½‘”‘¥ÍÁ…Ñ èµ¥ÍÍ¥¹œ°ÍÑ…±”°Á…ÉÑ¥…°½ÈİÉ½¹œµÑåÁ”•Ù¥‘•¹”ÍÑ¥±°…¹¹½ĞÍ…Ñ¥Í™ä„ÑÉ…¥¹•µÁ•ÉÍ½¹¹•°É•ÅÕ¥É•µ•¹Ğ¸(´‘‘•Í…¹¥Ñ¥é•¥¹¥‘•¹Ğ•Ù¥‘•¹”…¹„Á•Éµ…¹•¹ĞÉ•É•ÍÍ¥½¸Ñ¡…ĞÍ•Á…É…Ñ•±ä±½­ÌÁÉ”µÙ•É¥™¥…Ñ¥½¸ÑåÁ”•±¥¥‰¥±¥Ñä…¹™¥¹…°•Ù¥‘•¹”µ‰…­•Í•±•Ñ¥½¸¸(´%¹É•…Í•5¥ÍÍ¥½¸¥¹‘•È™É½´XÄÀ¸Ø¸ÄØÉ€Ñ¼XÄÀ¸Ø¸ÄØÍ€…¹Ñ¡”Õ¹¥™¥•ÕÍ•ÉÍÉ¥ÁĞ™É½´€Ä¸À¸ÄÈÕ€Ñ¼€Ä¸À¸ÄÈÙ€¸I•Í½ÕÉ”‘µ¥¹¥ÍÑÉ…Ñ¥½¸É•µ…¥¹ÌXĞ¸È¸á€°U¹¥Ğ9…µ¥¹œÉ•µ…¥¹Ì€Ì¸Ì¸Èİ€°MÑ…Ñ¥½¸9…µ¥¹œÉ•µ…¥¹Ì€Ä¸Ì¸ÈÉ€°…¹A•ÉÍ½¹¹•°ÍÍ¥¹µ•¹ĞÉ•µ…¥¹Ì€Ä¸Ì¸ÄÅ€¸((ŒŒlÄ¸À¸ÄÈÕt€´€ÈÀÈØ´Àà´ÄØ((ŒŒŒ‘‘•((´½µÁ±•Ñ•¥ÍÍÕ”€ŒÄÜ‰ä•¹…‰±¥¹œ±¥Ù”µ‰Õ±…¹”=™™¥•È°!IP°Q…Ñ¥…°½µµ…¹°M=IP°5¥‘İ¥™•Éä…¹MÁ•¥…±¥ÍĞA…É…µ•‘¥ŒA•ÉÍ½¹¹•°ÍÍ¥¹µ•¹ĞÁÉ½™¥±•Ìİ¥Ñ •á…Ğ5¥ÍÍ¥½¹¡¥•˜U,Ù•¡¥±”ÑåÁ•Ì°……‘•µä­•åÌ…¹¹…Ñ¥Ù”Í•…ĞÑ…É•ÑÌ¸(´‘‘••áÁ±¥¥ĞÍÁ•¥…±¥ÍĞÍÑ…Ñ¥½¸Í½Á•Ì™½Èµ‰Õ±…¹”MÑ…Ñ¥½¹Ì°Mµ…±°µ‰Õ±…¹”MÑ…Ñ¥½¹Ì°UÉ•¹ĞQÉ•…Ñµ•¹Ğ•¹Ñ•ÉÌ°!½µ”I•ÍÁ½¹Í”1½…Ñ¥½¹Ì°!IP	…Í•Ì…¹@MÕÉ•É¥•Ì…½É‘¥¹œÑ¼•… •±¥¥‰±”Ù•¡¥±”™…µ¥±ä¸(´¹…‰±•IÕ¸…±°5•‘¥…°ÁÉ½™¥±•Í€¥¸ÍÁ•¥…±¥ÍĞµ™¥ÉÍĞ½É‘•Èİ¥Ñ É¥Ñ¥…°…É”µ‰Õ±…¹•Ì±…ÍĞ°İ¡¥±”ÁÉ•Í•ÉÙ¥¹œÑ¡”•ÍÑ…‰±¥Í¡•ÍÑ…¹‘…±½¹”É¥Ñ¥…°…É”•¹¥¹”¸(´I•ÕÍ•Ñ¡”Ù•É¥™¥•‰…­É½Õ¹…ÍÍ¥¹µ•¹ĞÁ…Ñ ™½È‰½Ñ AÉ•Ù¥•Ü…¹1¥Ù”°¥¹±Õ‘¥¹œ•á…Ğ±¥Ù”µÁ…”Ù•¡¥±”µÑåÁ”É•©•Ñ¥½¸°Á•ÈµÙ•¡¥±”½¹™¥Éµ…Ñ¥½¸…¹™¥¹…°ÍÑ…Ñ¥½¸µİ¥‘”Ù•É¥™¥…Ñ¥½¸¸(´-•ÁĞÑÉ…¥¹¥¹œÍ¡½ÉÑ™…±°…¹…ÍÍ¥¹µ•¹ĞÍ¡½ÉÑ™…±°Í•Á…É…Ñ”™½ÈÅÕ…¹Ñ¥Ñ¥•Ì…‰½Ù”½¹”…¹…‘‘•Á•Éµ…¹•¹Ğµ…ÁÁ¥¹œ°‰…Ñ µ½É‘•È°Í½Á”°ÁÉ•Ù¥•Ü½±¥Ù”…¹Ù•É¥™¥…Ñ¥½¸É•É•ÍÍ¥½¸½Ù•É…”¸(´I•½É‘•Ñ¡”ÕÉÉ•¹ĞÍ½ÕÉ”•Ù¥‘•¹”…¹É•Í½±Ù•Ñ¡”ÍÑ…±”QX…ÍÍ½¥…Ñ¥½¸è•á…ĞÑåÁ”€ÌÁ€QX…ÉÉ¥•ÈÕÍ•Ì!IP¡…é…É‘}É•ÍÁ½¹Í•}•µÍ€ìQ…Ñ¥…°½µµ…¹•±ÜÉ}•µÍ€‰•±½¹ÌÑ¼•á…ĞÑåÁ”€ÌÅ€µ‰Õ±…¹”½¹ÑÉ½°U¹¥Ğ¸(´%¹É•…Í•A•ÉÍ½¹¹•°ÍÍ¥¹µ•¹Ğ™É½´€Ä¸Ì¸ÄÁ€Ñ¼€Ä¸Ì¸ÄÅ€…¹Ñ¡”Õ¹¥™¥•ÕÍ•ÉÍÉ¥ÁĞ™É½´€Ä¸À¸ÄÈÑ€Ñ¼€Ä¸À¸ÄÈÕ€¸I•Í½ÕÉ”‘µ¥¹¥ÍÑÉ…Ñ¥½¸É•µ…¥¹ÌXĞ¸È¸á€°U¹¥Ğ9…µ¥¹œÉ•µ…¥¹Ì€Ì¸Ì¸Èİ€°MÑ…Ñ¥½¸9…µ¥¹œÉ•µ…¥¹Ì€Ä¸Ì¸ÈÉ€°…¹5¥ÍÍ¥½¸¥¹‘•ÈÉ•µ…¥¹ÌXÄÀ¸Ø¸ÄØÉ€¸((ŒŒlÄ¸À¸ÄÈÑt€´€ÈÀÈØ´Àà´ÄØ((ŒŒŒ¥á•((´I•Í½±Ù•¥ÍÍÕ”€ŒÌÀÀ™É½´ÕÍ•ÈµÍÕÁÁ±¥•¹…Ñ¥Ù”5¥ÍÍ¥½¹¡¥•˜U,µ¥ÍÍ¥½¸µÉ½Ü•Ù¥‘•¹”èM•…É ½œU¹¥Ğ€¡MH¤¥Ì•á…ĞÙ•¡¥±•}ÑåÁ•}¥‘€€ÄÀÉ€°¹½Ğ€ÄÀÅ€¸(´±¥¹•I•ÍÕ”½œ…¹M•…É ½œU¹¥Ğ…¹‘¥‘…Ñ”Í•±•Ñ¥½¸…¹Í•±•Ñ•µÕ¹¥ĞÙ•É¥™¥…Ñ¥½¸İ¥Ñ U¹¥Ğ9…µ¥¹œÌ•á¥ÍÑ¥¹œ•á…ĞÑåÁ”µ€ÄÀÉ€¥‘•¹Ñ¥Ñä¸(´I•Ñ…¥¹•ÍÑÉ¥ĞÍÁ•¥…±¥ÍĞ‰•¡…Ù¥½ÈèA½±¥”½œ€¼½œMÕÁÁ½ÉĞU¹¥Ğİ½É‘¥¹œÉ•µ…¥¹ÌÍ•Á…É…Ñ”°…¹¹¼•¹•É¥ŒÙ•¡¥±”™…±±‰…¬…¸Í…Ñ¥Í™äM•…É ½œ‘•µ…¹¸(´‘‘•„Í…¹¥Ñ¥é••Ù¥‘•¹”É•½É™½ÈÑ¡”¹…Ñ¥Ù”µ¥ÍÍ¥½¸É½ÕÑ”…¹É½Ü…ÑÑÉ¥‰ÕÑ•ÌÁ±ÕÌ„Á•Éµ…¹•¹Ğ½¹Í¥ÍÑ•¹äÉ•É•ÍÍ¥½¸Ñ¡…Ğ¡•­ÌÑ¡”5¥ÍÍ¥½¸¥¹‘•ÈÍ•±•Ñ½È…¹U¹¥Ğ9…µ¥¹œµ…ÀÕÍ”Ñ¡”Í…µ”Ù•É¥™¥•%¸(´%¹É•…Í•5¥ÍÍ¥½¸¥¹‘•È™É½´XÄÀ¸Ø¸ÄØÅ€Ñ¼XÄÀ¸Ø¸ÄØÉ€…¹Ñ¡”Õ¹¥™¥•ÕÍ•ÉÍÉ¥ÁĞ™É½´€Ä¸À¸ÄÈÍ€Ñ¼€Ä¸À¸ÄÈÑ€¸I•Í½ÕÉ”‘µ¥¹¥ÍÑÉ…Ñ¥½¸É•µ…¥¹ÌXĞ¸È¸á€°U¹¥Ğ9…µ¥¹œÉ•µ…¥¹Ì€Ì¸Ì¸Èİ€°MÑ…Ñ¥½¸9…µ¥¹œÉ•µ…¥¹Ì€Ä¸Ì¸ÈÉ€°…¹A•ÉÍ½¹¹•°ÍÍ¥¹µ•¹ĞÉ•µ…¥¹Ì€Ä¸Ì¸ÄÁ€¸((ŒŒlÄ¸À¸ÄÈÍt€´€ÈÀÈØ´Àà´ÄØ((ŒŒŒ¥á•((´±¥¹•ÑÉ…¥¹•µÁ•ÉÍ½¹¹•°Í•±•Ñ¥½¸İ¥Ñ Ñ¡”±½­•ÍÑÉ¥Ğ™…¥°µ±½Í•Í…™•Ñä½¹ÑÉ…Ğ…É½ÍÌU¹¥Ğ¥¹‘•È°5¥ÍÍ¥½¸UÁ‘…Ñ”…¹ÕÑ¼5½‘”¸(´=¹±ä™É•Í °½µÁ±•Ñ”°•á…ĞµÙ•¡¥±”A•ÉÍ½¹¹•°I•¥ÍÑ•È•Ù¥‘•¹”¹½ÜÍ•±•ÑÌ…¹Í…Ñ¥Í™¥•ÌÅÕ…±¥™¥…Ñ¥½¸µÍ•¹Í¥Ñ¥Ù”É•ÅÕ¥É•µ•¹ÑÌì½ÉÉ•ĞÙ•¡¥±”ÑåÁ”½È¹½µ¥¹…°Í•…Ñ¥¹œ…Á…¥Ñä…±½¹”¥Ì¥¹ÍÕ™™¥¥•¹Ğ¸(´I•µ½Ù•Ñ¡”Õ¹ÑÉ…¥¹•½ÉÉ•ĞµÑåÁ”™…±±‰…¬Á¡…Í”¸5¥ÍÍ¥¹œ°ÍÑ…±”…¹Á…ÉÑ¥…°•Ù¥‘•¹”É•µ…¥¹Ì…¸•áÁ±¥¥ĞÙ•É¥™¥•µÑÉ…¥¹¥¹œÍ¡½ÉÑ…”…¹­••ÁÌÑ¡”µ¥ÍÍ¥½¸¹½ĞµÉ•…‘ä¸(´ÕÑ¼5½‘”¹½ÜÍÑ½ÁÌİ¥Ñ¡½ÕĞ±¥­¥¹œ¥ÍÁ…Ñ İ¡•¸„ÍÑ…™™¥¹œ½ÈÙ•É¥™¥•ÅÕ…±¥™¥…Ñ¥½¸Í¡½ÉÑ…”É•µ…¥¹Ì¥¹ÍÑ•…½˜‘¥ÍÁ…Ñ¡¥¹œÍ•±•Ñ•Õ¹¥ÑÌÑ¼Í­¥ÀÑ¡”µ¥ÍÍ¥½¸¸(´‘‘•Á•Éµ…¹•¹Ğ½Ù•É…”™½Èµ¥ÍÍ¥¹œ°ÍÑ…±”°Á…ÉÑ¥…°…¹™Õ±±äÙ•É¥™¥•A•ÉÍ½¹¹•°I•¥ÍÑ•ÈÍÑ…Ñ•Ì°ÍÑÉ¥ĞÍ…Ñ¥Í™…Ñ¥½¸°‰±½­•U$ÍÑ…Ñ”…¹Ñ¡”¹¼µ‘¥ÍÁ…Ñ ÕÑ¼5½‘”Á…Ñ ¸(´%¹É•…Í•5¥ÍÍ¥½¸¥¹‘•È™É½´XÄÀ¸Ø¸ÄØÁ€Ñ¼XÄÀ¸Ø¸ÄØÅ€…¹Ñ¡”Õ¹¥™¥•ÕÍ•ÉÍÉ¥ÁĞ™É½´€Ä¸À¸ÄÈÉ€Ñ¼€Ä¸À¸ÄÈÍ€¸I•Í½ÕÉ”‘µ¥¹¥ÍÑÉ…Ñ¥½¸É•µ…¥¹ÌXĞ¸È¸á€°U¹¥Ğ9…µ¥¹œÉ•µ…¥¹Ì€Ì¸Ì¸Èİ€°MÑ…Ñ¥½¸9…µ¥¹œÉ•µ…¥¹Ì€Ä¸Ì¸ÈÉ€°…¹A•ÉÍ½¹¹•°ÍÍ¥¹µ•¹ĞÉ•µ…¥¹Ì€Ä¸Ì¸ÄÁ€¸((ŒŒlÄ¸À¸ÄÈÉt€´€ÈÀÈØ´Àà´ÄØ((ŒŒŒ¥á•((´½ÉÉ•Ñ•Ñ¡”ÍÕÁÁ±¥•MHµ¥ÍÍ¥½¸…Í”İ¡•É”I•ÅÕ¥É•É½¹•Í€É•Á½ÉÑ•¹¼…Ù…¥±…‰±”Õ¹¥Ğ‰•…ÕÍ”9•áÕÌÑÉ•…Ñ•Ñ¡”İ½É‘¥¹œ…ÌA½±¥”É½¹”ÑåÁ”€äÅ€½¹±ä¸(´I•ÅÕ¥É”É½¹”¡Ì¥€°I•ÅÕ¥É•ÌÉ½¹”¡Ì¥€…¹I•ÅÕ¥É•É½¹”¡Ì¥€¹½ÜÕÍ”„ÍÑÉ¥Ğ•¹•É¥ŒÉ½¹”µ™…µ¥±äµ½‘”Ñ¡…Ğ…•ÁÑÌ•á…ĞÑåÁ”€àå€€¨©É½¹”Y•¡¥±”MH!D¨¨…¹•á…ĞÑåÁ”€äÅ€€¨©A½±¥”É½¹”Y•¡¥±”¨¨°½É‘•É•‰ä‰•ÍĞ…ÉÉ¥Ù…°¸(´áÁ±¥¥ĞA½±¥”É½¹”¡Ì¥€É•µ…¥¹ÌÑåÁ”€äÅ€½¹±ä°•áÁ±¥¥ĞA½±¥”!•±¥½ÁÑ•È¡Ì¥€É•µ…¥¹ÌÑåÁ”€ÄÅ€½¹±ä°…¹A½±¥”!•±¥½ÁÑ•È½ÈÉ½¹”¡Ì¥€É•Ñ…¥¹ÌA½±¥”É½¹”µ™¥ÉÍĞİ¥Ñ A½±¥”!•±¥½ÁÑ•È™…±±‰…¬¸(´	…É”É½¹•€…¹É½¹•Í€ÁÉ½Í”É•µ…¥¹Ì•á±Õ‘•°ÁÉ•Ù•¹Ñ¥¹œÕ¹É•±…Ñ•É½ÍÌµÍ•ÉÙ¥”Ñ•áĞ™É½´É•…Ñ¥¹œ‘¥ÍÁ…Ñ ‘•µ…¹¸(´‘‘•Á•Éµ…¹•¹ĞÉ•É•ÍÍ¥½¸½Ù•É…”™½È‰½Ñ •á…ĞÉ½¹”™…µ¥±¥•Ì°ÍÑÉ¥ĞÍ•ÉÙ¥”µÍÁ•¥™¥Œµ½‘•Ì°Í¡…É•™É•Í ½ÕÁ‘…Ñ”Í•±•Ñ¥½¸°Í•±•Ñ•µÕ¹¥ĞÙ•É¥™¥…Ñ¥½¸°Q½É‘•É¥¹œ…¹Ñ¡”‰…É”µİ½ÉÕ…É¸(´%¹É•…Í•5¥ÍÍ¥½¸¥¹‘•È™É½´XÄÀ¸Ø¸ÄÔå€Ñ¼XÄÀ¸Ø¸ÄØÁ€…¹Ñ¡”Õ¹¥™¥•ÕÍ•ÉÍÉ¥ÁĞ™É½´€Ä¸À¸ÄÈÅ€Ñ¼€Ä¸À¸ÄÈÉ€¸U¹¥Ğ9…µ¥¹œÉ•µ…¥¹Ì€Ì¸Ì¸Èİ€°MÑ…Ñ¥½¸9…µ¥¹œÉ•µ…¥¹Ì€Ä¸Ì¸ÈÉ€°…¹A•ÉÍ½¹¹•°ÍÍ¥¹µ•¹ĞÉ•µ…¥¹Ì€Ä¸Ì¸ÄÁ€¸((ŒŒlÄ¸À¸ÄÈÅt€´€ÈÀÈØ´Àà´ÄÔ((ŒŒŒ¥á•((´¥á•Ñ¡”ÍÑ…¹‘…±½¹”€½±•¥ÑÍÑ•±±•¹…¹Í¥¡Ñ€Ñ¥µ¥¹œ™…¥±ÕÉ”İ¡•É”¥ÍÁ…Ñ •¹ÑÉ”½¹ÑÉ½±ÌÉ•¹‘•É•™¥ÉÍĞ…¹…¸•µÁÑäÍÑ…Ñ¥½¸µµ•µ‰•ÉÍ¡¥Àµ…Àİ…Ì…¡•‰•™½É”Ñ¡”¹…Ñ¥Ù”ÍÑ…Ñ¥½¸…É‘Ì™¥¹¥Í¡•±½…‘¥¹œ¸(´U¹¥Ğ9…µ¥¹œ…¹MÑ…Ñ¥½¸9…µ¥¹œ¹½ÜÉ•Í…¸Ñ¡”ÕÉÉ•¹Ğ¹…Ñ¥Ù”±•¥ÑÍÑ•±±•}‰Õ¥±‘¥¹}¥‘€É½İÌİ¡•¹•Ù•ÈÑ¡•¥È¹½Éµ…°I•™É•Í MÑ…Ñ¥½¹ÌÁ…Ñ ÉÕ¹Ì°Í¼¥ÍÁ…Ñ •¹ÑÉ”ƒŠHM•ÉÙ¥”ƒŠHMÑ…Ñ¥½¸QåÁ”ƒŠHMÑ…ÉĞÉ½´É•‰Õ¥±‘Ì™É½´Ñ¡”½µÁ±•Ñ”Á½ÁÕÀ=4¸(´I•™É•Í ¥ÍÁ…Ñ •¹ÑÉ•Ì¹½ÜÉ•…ÁÁ±¥•ÌÑ¡”É•™É•Í¡•µ•µ‰•ÉÍ¡¥Àµ…ÀÑ¼U¹¥Ğ…¹MÑ…Ñ¥½¸9…µ¥¹œÍ¹…ÁÍ¡½ÑÌÑ¡…Ğ…É”…±É•…‘ä±½…‘•¥¹ÍÑ•…½˜±•…Ù¥¹œÑ¡•¥È‘¥ÍÁ…Ñ¡•¹ÑÉ•%‘€Ù…±Õ•ÌÍÑ…±”¸(´AÉ•Í•ÉÙ••á…Ğ¹…Ñ¥Ù”µÉ½Üµ•µ‰•ÉÍ¡¥À…ÕÑ¡½É¥Ñä°ÑÉÕ”U¹…ÍÍ¥¹•½‘•™…Õ±ĞÍÑ…Ñ¥½¹Ì°Ñ¡”Í…µ”µ½É¥¥¸‘½Õµ•¹ĞÉ…Á °ÍÑ…¹‘…±½¹”İ¥¹‘½Ü¹½Á•¹•É€¥Í½±…Ñ¥½¸…¹Ñ¡”Ù•É¥™¥•‰…­É½Õ¹µ½¹±äÉ•¹…µ”İ½É­™±½Ü¸(´‘‘•„Á•Éµ…¹•¹Ğ±…Ñ”µÉ•¹‘•ÈÉ•É•ÍÍ¥½¸½Ù•É¥¹œÑ¡”¥¹¥Ñ¥…°•µÁÑäÍ¹…ÁÍ¡½Ğ°ÍÕ‰Í•ÅÕ•¹Ğ¹…Ñ¥Ù”µÉ½ÜÉ•¹‘•È°™½É•É•½Ù•Éä°•á¥ÍÑ¥¹œµÍ¹…ÁÍ¡½ĞÉ•‰¥¹‘¥¹œ…¹‘½İ¹ÍÑÉ•…´¥É”€˜I•ÍÕ”M•ÉÙ¥”™¥±Ñ•É¥¹œ¸(´%¹É•…Í•U¹¥Ğ9…µ¥¹œ™É½´€Ì¸Ì¸ÈÙ€Ñ¼€Ì¸Ì¸Èİ€°MÑ…Ñ¥½¸9…µ¥¹œ™É½´€Ä¸Ì¸ÈÅ€Ñ¼€Ä¸Ì¸ÈÉ€°…¹Ñ¡”Õ¹¥™¥•ÕÍ•ÉÍÉ¥ÁĞ™É½´€Ä¸À¸ÄÈÁ€Ñ¼€Ä¸À¸ÄÈÅ€¸A•ÉÍ½¹¹•°ÍÍ¥¹µ•¹ĞÉ•µ…¥¹Ì€Ä¸Ì¸ÄÁ€…¹5¥ÍÍ¥½¸¥¹‘•ÈÉ•µ…¥¹ÌXÄÀ¸Ø¸ÄÔå€¸((ŒŒlÄ¸À¸ÄÈÁt€´€ÈÀÈØ´Àà´ÄÔ((ŒŒŒ¥á•((´I•Í½ÕÉ”‘µ¥¹¥ÍÑÉ…Ñ¥½¸¹½ÜÉ•½¹¥Í•Ì„Á½ÁÁ•µ½ÕĞÑ½Àµ±•Ù•°€½±•¥ÑÍÑ•±±•¹…¹Í¥¡Ñ€İ¥¹‘½Ü…Ì…¸…ÕÑ¡½É¥Ñ…Ñ¥Ù”MÑ…Ñ¥½¹Ìİ½É­ÍÁ…”İ¡•¸¥ÑÌ¹…Ñ¥Ù”ÍÑ…Ñ¥½¸•¹ÑÉ¥•Ì…É”½¹¹•Ñ•°•Ù•¸Ñ¡½Õ Ñ¡½Í”±¥¹­Ì‘¼¹½Ğ…ÉÉäÑ¡”‘•Í­Ñ½À±¥¡Ñ‰½à±…ÍÍ•Ì¸(´MÑ…Ñ¥½¸9…µ¥¹œ…¹U¹¥Ğ9…µ¥¹œ¹½ÜÉÕ¸Ñ¡”Í…µ”Ù•É¥™¥•‰…­É½Õ¹¹…Ñ¥Ù”µ™½É´İ½É­™±½Ü™É½´¹½Éµ…°°•µ‰•‘‘•…¹ÍÑ…¹‘…±½¹”MÑ…Ñ¥½¹Ì±…å½ÕÑÌİ¥Ñ¡½ÕĞ½Á•¹¥¹œÍÑ…Ñ¥½¸½ÈÙ•¡¥±”Á…•Ì¸(´Q¡”ÍÑ…¹‘…±½¹”İ¥¹‘½ÜÉ•…‘Ì¥ÑÌ½İ¸5¥ÍÍ¥½¹¡¥•˜=4…¹Í…µ”µ½É¥¥¸™½ÉµÌì¥Ğ‘½•Ì¹½Ğ¥¹ÍÁ•Ğ½È‘•Á•¹½¸İ¥¹‘½Ü¹½Á•¹•É€¸(´AÉ•Í•ÉÙ•Ñ¡”Í…µ”µ½É¥¥¸•µ‰•‘‘•µ™É…µ”…Ñ”°‘•Í­Ñ½ÀMÑ…Ñ¥½¹Ì±¥™•å±”…¹¥=LÉ•¹‘•É•µ•¹ÑÉä±¥™•å±”İ¡¥±”­••Á¥¹œµ¥ÍÍ¥½¸°‰Õ¥±‘¥¹œµ‘•Ñ…¥°…¹Õ¹É•±…Ñ•™É…µ•Ì•á±Õ‘•¸(´‘‘••á•ÕÑ…‰±”É•É•ÍÍ¥½¸½Ù•É…”™½ÈÑ¡”•á…ĞÍÑ…¹‘…±½¹”±¥™•å±”™…¥±ÕÉ”°‰…­É½Õ¹µ½¹±äMÑ…Ñ¥½¸…¹U¹¥ĞÍ…Ù•Ì°‘¥Í½¹¹•Ñ•µ•¹ÑÉäÉ•©•Ñ¥½¸°Õ¹É•±…Ñ•µÁ…”É•©•Ñ¥½¸…¹•á¥ÍÑ¥¹œ•µ‰•‘‘•½‘•Í­Ñ½ÀÁ…Ñ¡Ì¸(´%¹É•…Í•U¹¥Ğ9…µ¥¹œ™É½´€Ì¸Ì¸ÈÕ€Ñ¼€Ì¸Ì¸ÈÙ€°MÑ…Ñ¥½¸9…µ¥¹œ™É½´€Ä¸Ì¸ÈÁ€Ñ¼€Ä¸Ì¸ÈÅ€°…¹Ñ¡”Õ¹¥™¥•ÕÍ•ÉÍÉ¥ÁĞ™É½´€Ä¸À¸ÄÄå€Ñ¼€Ä¸À¸ÄÈÁ€¸A•ÉÍ½¹¹•°ÍÍ¥¹µ•¹ĞÉ•µ…¥¹Ì€Ä¸Ì¸ÄÁ€…¹5¥ÍÍ¥½¸¥¹‘•ÈÉ•µ…¥¹ÌXÄÀ¸Ø¸ÄÔå€¸((ŒŒlÄ¸À¸ÄÄåt€´€ÈÀÈØ´Àà´ÄÔ((ŒŒŒ¡…¹•((´MÑ…Ñ¥½¸9…µ¥¹œ¹½ÜÉ•…‘ÌÑ¡”ÍÑ…Ñ¥½¸…¹¥ÑÌ•á…Ğ¹…Ñ¥Ù”•‘¥Ğ™½É´Ñ¡É½Õ Í…µ”µ½É¥¥¸‰…­É½Õ¹É•ÅÕ•ÍÑÌ°ÁÉ•Í•ÉÙ•Ì5¥ÍÍ¥½¹¡¥•˜Ì¡¥‘‘•¸™¥•±‘Ì…¹MIÑ½­•¸°…¹Ù•É¥™¥•ÌÑ¡”Í…Ù•¹…µ”İ¥Ñ¡½ÕĞ½Á•¹¥¹œ„ÍÑ…Ñ¥½¸±¥¡Ñ‰½à¸(´U¹¥Ğ9…µ¥¹œ¹½ÜÉ•…‘ÌÍÑ…Ñ¥½¸Ù•¡¥±”Ñ…‰±•Ì…¹•… •á…Ğ¹…Ñ¥Ù”Ù•¡¥±”•‘¥Ğ™½É´¥¸Ñ¡”‰…­É½Õ¹°É•©•ÑÌµ¥Íµ…Ñ¡•Ù•¡¥±”%Ì½È™½É´…Ñ¥½¹Ì°…¹½Õ¹ÑÌ„É•¹…µ”½¹±ä…™Ñ•È„™É•Í •‘¥ĞµÁ…”Ù•É¥™¥…Ñ¥½¸¸(´A•ÉÍ½¹¹•°ÍÍ¥¹µ•¹ĞÉ•µ…¥¹Ì½¸¥ÑÌ•ÍÑ…‰±¥Í¡•‰…­É½Õ¹P½A=MPÁ…Ñ °İ¥Ñ „Á•Éµ…¹•¹ĞÉ•É•ÍÍ¥½¸½¹ÑÉ…ĞÁÉ•Ù•¹Ñ¥¹œ±¥¹¬±¥­Ì°±¥¡Ñ‰½á•Ì°¥™É…µ”¹…Ù¥…Ñ¥½¸°½ÈÕ¹Ù•É¥™¥•…ÍÍ¥¹µ•¹Ğ½Õ¹ÑÌ¸(´MÑ½À…¹±¥™•å±”±•…¹ÕÀ¹½Ü…‰½ÉĞ…Ñ¥Ù”MÑ…Ñ¥½¸…¹U¹¥Ğ9…µ¥¹œÉ•ÅÕ•ÍÑÌ¸(´‘‘•Á•Éµ…¹•¹ĞÉ½ÍÌµİ½É­™±½ÜÉ•É•ÍÍ¥½¸½Ù•É…”™½È¹…Ñ¥Ù”µ™½É´¥¹Ñ•É¥Ñä°Í…µ”µ½É¥¥¸É•Í½ÕÉ”Ù…±¥‘…Ñ¥½¸°‰…­É½Õ¹µ½¹±ä½Á•É…Ñ¥½¸°…¹Á½ÍĞµÍ…Ù”Ù•É¥™¥…Ñ¥½¸½É‘•É¥¹œ¸(´%¹É•…Í•U¹¥Ğ9…µ¥¹œ™É½´€Ì¸Ì¸ÈÑ€Ñ¼€Ì¸Ì¸ÈÕ€°MÑ…Ñ¥½¸9…µ¥¹œ™É½´€Ä¸Ì¸Äå€Ñ¼€Ä¸Ì¸ÈÁ€°A•ÉÍ½¹¹•°ÍÍ¥¹µ•¹Ğ™É½´€Ä¸Ì¸å€Ñ¼€Ä¸Ì¸ÄÁ€°…¹Ñ¡”Õ¹¥™¥•ÕÍ•ÉÍÉ¥ÁĞ™É½´€Ä¸À¸ÄÄá€Ñ¼€Ä¸À¸ÄÄå€¸((ŒŒlÄ¸À¸ÄÄát€´€ÈÀÈØ´Àà´ÄÔ((ŒŒŒ¡…¹•((´¥É”¹¥¹•Ì½ÈI%YÌ¹½ÜÍ•±•ÑÌ•á…ĞÑåÁ”´ÜØI%YÌ™¥ÉÍĞ…¹™¥±±Ì½¹±äÑ¡”É•µ…¥¹¥¹œÉ•ÅÕ¥É•µ•¹Ğİ¥Ñ •á…ĞÑåÁ”´ÄØI•ÍÕ”AÕµÁÌ¸(´5¥á•I%X…¹I•ÍÕ”AÕµÀÍ•±•Ñ¥½¹Ì½Õ¹ĞÑ½•Ñ¡•ÈÑ½İ…ÉÑ¡”É½Üİ¡¥±”]…Ñ•È1…‘‘•ÉÌ…¹½µ‰¥¹••É¥…°I•ÍÕ”AÕµÁÌÉ•µ…¥¸•á±Õ‘•¸(´‘‘•Á•Éµ…¹•¹ĞÉ•É•ÍÍ¥½¸½Ù•É…”™½ÈI%Xµ™¥ÉÍĞ½É‘•É¥¹œ°•á…ĞÉ•µ…¥¹‘•ÈÑ½ÀµÕÀ°Í•±•Ñ¥½¸…ÁÌ…¹Í•±•Ñ•µÕ¹¥ĞÙ•É¥™¥…Ñ¥½¸¸(´‘Ù…¹•Ñ¡”5¥ÍÍ¥½¸¥¹‘•È•¹¥¹”™É½´XÄÀ¸Ø¸ÄÔàÑ¼XÄÀ¸Ø¸ÄÔä¸(´%¹É•…Í•Ñ¡”Õ¹¥™¥•ÕÍ•ÉÍÉ¥ÁĞÙ•ÉÍ¥½¸™É½´€Ä¸À¸ÄÄİ€Ñ¼€Ä¸À¸ÄÄá€¸((ŒŒlÄ¸À¸ÄÄİt€´€ÈÀÈØ´Àà´ÄÔ((ŒŒŒ¡…¹•((´I…¥±İ…äA½±¥”=™™¥•ÈÉ•ÅÕ¥É•µ•¹ÑÌ¹½ÜÕÍ”Ñ¡”Í¡…É•ÑÉ…¥¹•AMT…¹%IXÙ•¡¥±”Á½½°¸(´±¥Ù”µÙ•É¥™¥•ÑåÁ”´ÔÄAMT…¸½¹ÑÉ¥‰ÕÑ”ÕÀÑ¼€äI…¥±İ…äA½±¥”=™™¥•ÉÌ°İ¡¥±”ÑåÁ”´à%IYÌ½¹ÑÉ¥‰ÕÑ”€È…¹¡…¹‘±”Íµ…±±•ÈÉ•µ…¥¹‘•ÉÌ¸(´‘‘•É•É•ÍÍ¥½¸½Ù•É…”™½ÈI…¥±İ…äA½±¥”AMTÁ±…¹¹¥¹œ…¹¹¥¹”µ½™™¥•ÈÑÉ…¥¹•½Ù•É…”¸(´‘Ù…¹•Ñ¡”5¥ÍÍ¥½¸¥¹‘•È•¹¥¹”™É½´XÄÀ¸Ø¸ÄÔÜÑ¼XÄÀ¸Ø¸ÄÔà¸(´%¹É•…Í•Ñ¡”Õ¹¥™¥•ÕÍ•ÉÍÉ¥ÁĞÙ•ÉÍ¥½¸™É½´€Ä¸À¸ÄÄÙ€Ñ¼€Ä¸À¸ÄÄİ€¸((ŒŒlÄ¸À¸ÄÄÙt€´€ÈÀÈØ´Àà´ÄÔ((ŒŒŒ¡…¹•((´5¥ÍÍ¥½¸UÁ‘…Ñ”¹½ÜÉ•…±Õ±…Ñ•ÌÑ¡”±¥Ù”É•ÅÕ¥É•µ•¹ĞÑ…É•Ğ™É½´5¥ÍÍ¥¹œ½¸µ¥ÍÍ¥½¸°¸µÉ½ÕÑ”°MÑ¥±°¹••‘•°…¹M•±•Ñ•‰•™½É”•Ù•Éä±¥¬¸(´é•É¼±¥Ù”Í¡½ÉÑ…”¡…ÉµÍÑ½ÁÌÍÑ…±”µ¥ÍÍ¥½¸µ‘•™¥¹¥Ñ¥½¸Í•±•Ñ¥½¹Ìì€Äµ¥ÍÍ¥¹œ°€Ä•¸µÉ½ÕÑ”°…¹€ÀÍÑ¥±°¹••‘•¹½ÜÍ•±•ÑÌ¹¼…‘‘¥Ñ¥½¹…°Õ¹¥Ğ¸(´‘Ù…¹•Ñ¡”5¥ÍÍ¥½¸¥¹‘•È•¹¥¹”™É½´XÄÀ¸Ø¸ÄÔØÑ¼XÄÀ¸Ø¸ÄÔÜ¸(´%¹É•…Í•Ñ¡”Õ¹¥™¥•ÕÍ•ÉÍÉ¥ÁĞÙ•ÉÍ¥½¸™É½´€Ä¸À¸ÄÄÕ€Ñ¼€Ä¸À¸ÄÄÙ€¸((ŒŒlÄ¸À¸ÄÄÕt€´€ÈÀÈØ´Àà´ÄÔ((ŒŒŒ¡…¹f«)à¶»§q«^v‹­¦ëh®("©m¢G§r‹§·^·ó„èµ©hºÚn¶X§zÍYÙY‚‹HZ\ÜÚ[Ûˆ\]H›İÈ™X]ÈXXÚZ\ÜÚ[™ÈÛˆZ\ÜÚ[Ûˆİ[™YYY˜[YH\ÈHİ\œ™[Ù[Xİ[Ûˆ\™Ù][™İÜÈÚ[ˆH]™HÙ[XİYÛİ[\ˆ™XXÚ\È]‚‹HTÕKÙ[˜\™K^“X][™^“X]ĞĞ”“ˆ™\]Z\™[Y[È›İÈÚ\™HÜ\˜][Û˜[İ\Ü[š]È[™\Ü]ÚÛ›HH\™Ù\İİ[™YYY[[İ[‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹ŒMMHÈŒL‹ŒMM‹‚‹H[˜Ü™X\ÙYH[šYšYY\Ù\œØÜš\™\œÚ[Ûˆœ›ÛHKŒŒLMÈKŒŒLMX‚‚ˆÈÈÌKŒŒLMHHŒ‹LLMB‚ˆÈÈÈš^Y‚‹HÛÛ\]YH]]È[ÙH™[X\ÙHš\ÛÛ™\œØ›İÈY\ˆZ\ÜÚ[ÛÚYYˆ™\XÙ\ÈHÙ[\Ù[Xİ[ÛˆYœ˜[YHÚ]H^Xİ]ˆÛ\ÜÏH˜[\[\\İXØÙ\ÜÈ•Hš\ÛÛ™\œÈÙ\™H™[X\ÙYÙ]˜™\İ[‚‹HØ\\™YHİÛš[™ÈYH›KKXÛÛZ[™\˜[™İX›H]K[[Ù[Y[]H™Y›Ü™H™[X\ÙH˜]šYØ][Û‹[ˆ™XXÜ]Z\™Y]Ø[YH[Ù[	ÜÈ]™HÜ[‹›YÚ›ŞXÛÜÙVİ]OHÛÜÙH—XÛÛ›ÛY\ˆHÛYœ˜[YHØİ[Y[]XÚY‚‹HYYHØÛÜY›Û]Ù\ÛÛYHX\šØ˜[˜XÚÈ]™\ÛÛ™\ÈHÕ‘ÈÈ]È[\˜Xİ]™HÛÜÙH[˜Ù\İÜˆÚ]İ][İÚ[™È[ˆ[œ™[]Yš\ÚX›H[Ù[È™H\ÛZ\ÜÙY‚‹H™\Ù\™YHİ\œ™[[Z\ÜÚ[Ûˆ™[X\ÙHÙ[XİÜ‹\XØ]KXÛXÚÈİX\™›İ[™YØZ]Ë™\šYšYYXÛÜÙH™\İ\Ø]H[™˜Z[XÛÜÙY]]È[ÙHİÜÚ[ˆZ]\ˆH^XİİXØÙ\ÜÈ™\İ[Üˆ]ÈİÛ™YÛÜÙHÛÛ›ÛØ[››İ™HÛÛ™š\›YY‚‚ˆÈÈÈ™YÜ™\ÜÚ[ÛˆÛİ™\˜YÙB‚‹HYYØÜš\ËØÚXÚËX]]Ë\š\ÛÛ™\‹\™[X\ÙKXÛÜÙK]ŒLLM›ZœØÚ]Hİ\YYİXØÙ\ÜÈ™\İ[[™YHÛÜÙK\Ü[ˆİXİ\™K‚‹HÛİ™\™Y™K[˜]šYØ][ÛˆİÛ™\ˆØ\\™K]XÚY™\İ[YØİ[Y[\ØÛİ™\K™Z™Xİ[ÛˆÙˆ[ˆ[œ™[]Y[Ù[Ú]Y[XØ[İXØÙ\ÜÈ^]™HÛÜÙKXÛÛ›Û™XXÜ]Z\Ú][Ûˆ[™ÛÜÙH™\šYšXØ][Ûˆ™Y›Ü™H]]È[ÙH™\İ\Ë‚‹H^[™YH^\İ[™Èš\ÛÛ™\ˆÙ[Ø]H™YÜ™\ÜÚ[ÛˆÈ™\]Z\™HİÛ™\ˆØ\\™H™Y›Ü™HH™[X\ÙHÛXÚÈ[™^XİİXØÙ\ÜÈÛÛ™š\›X][Ûˆ™Y›Ü™HH™\İ[[Ù[\ÈÛÜÙY‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HÛÛ[X[™™^\È[˜Ü™X\ÙYœ›ÛHKŒŒLLØÈKŒŒLM‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹ŒMMÈŒL‹ŒMMX‚‹H[š]˜[Z[™È™[XZ[œÈËŒËŒ‚‹Hİ][Ûˆ˜[Z[™È™[XZ[œÈKŒËŒNX‚‹H\œÛÛ›™[\ÜÚYÛ›Y[™[XZ[œÈKŒËX‚‚ˆÈÈÌKŒŒLL×HHŒ‹LLM‚ˆÈÈÈš^Y‚‹H™\İÜ™Y]]È[ÙHš\ÛÛ™\ˆ˜[œÜÜ[™[™È›ÜˆZ\ÜÚ[ÛÚYY‰ÜÈİ\œ™[İXİ\™YÙ[Ù[Xİ[Û˜ØÜ™Y[‹ˆH™]ÈX\šİ\Y[YšY\ÈHXİ]™HÚÛÜÙ\ˆÚ]]K]˜[œÜÜ\™\]Y\İ]\OHœš\ÛÛ™\ˆ˜[œİXYÙˆHÛ\ˆ^[˜]ÜHÙ[[˜ÙK‚‹HØÛÜYš\ÛÛˆ\İ[˜][ÛœÈÈHXİ]™Hš\ÛÛ™\ˆ™\]Y\İ[™ÛÛ[YYÈÙ[XİÛ›HHš\œİš\ÚX›K[˜X›Y‹\İXØÙ\ÜØ\İ[˜][ÛˆÚ]]˜Z[X›HÙ[Ëˆ[‹Y[™Ù\˜\İ[˜][ÛœÈ\™HYÛ›Ü™YÛÈHİ\YYSÑUHVH™\›ËXÙ[›İÈ\ÈÚÚ\Y[™ĞT‘S‘Sˆ\ÈÙ[XİY‚‹H™]Z[™YHYØXŞHš\ÛÛ™\‹X[\]Xİ[Ûˆ\ÈH˜[˜XÚÈ›ÜˆÛ\ˆZ\ÜÚ[ÛÚYYˆYÙH˜\šX[Ë‚‚ˆÈÈÈ™YÜ™\ÜÚ[ÛˆÛİ™\˜YÙB‚‹HYYØÜš\ËØÚXÚËX]]Ë\š\ÛÛ‹XÙ[\İXØÙ\ÜË]ŒLLLË›ZœØ\Ú[™ÈHİ\YYİ\œ™[˜[œÜÜ\™\]Y\İİXİ\™H[™\İ[˜][ÛˆÜ™\š[™Ë‚‹HÛİ™\™YH™Y™\›ËXÙ[\İ[˜][Ûˆš\œİİ[H™\›ËXØ\XÚ]H[™\ØX›YÜ™Y[ˆ›İÜËš\œİ˜[YÜ™Y[ˆÙ[Xİ[Û‹]\ˆÜ™Y[ˆ›İÜËXİ]™K\™\]Y\İØÛÜ[™Ë[™HYØXŞH[\˜[˜XÚË‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HÛÛ[X[™™^\È[˜Ü™X\ÙYœ›ÛHKŒŒLL˜ÈKŒŒLLØ‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹ŒMLØÈŒL‹ŒMM‚‹H[š]˜[Z[™È™[XZ[œÈËŒËŒ‚‹Hİ][Ûˆ˜[Z[™È™[XZ[œÈKŒËŒNX‚‹H\œÛÛ›™[\ÜÚYÛ›Y[™[XZ[œÈKŒËX‚‚ˆÈÈÌKŒŒLL—HHŒ‹LLM‚ˆÈÈÈš^Y‚‹H™\İÜ™Y[š]˜[Z[™È[™İ][Ûˆ˜[Z[™È[ˆHİ[™[Û™HÛZ]İ[[˜[œÚXÚÚ[™İËˆZ\ÜÚ[ÛÚYYˆÛZ]È\KMÈ\Ü]ÚÙ[™HØ\™Èœ›ÛH]^[İ][™^ÜÙ\ÈHØ[YH˜]]™HQÛ˜[YHZ\œÈ›İYÚ›Z]İ[WÜÙ[Xİ[Û–ÛZ]İ[WX˜]˜˜\ˆÛÛ›ÛÈ[œİXY‚‹H™]Z[™Y\KMÈZ[[™ËXØ\™\ØÛİ™\H[ˆH[X™YYİ][ÛœÈ^[İ]Ú][\KMÈ›İÜÈZÚ[™È™XÙY[˜ÙHÚ[ˆ›İ˜]]™H^[İ]È^ÜÙHHØ[YH\Ü]ÚÙ[™K‚‹HÙ\XXÚİ][ÛˆØ\™	ÜÈZ]İ[WØZ[[™×ÚY\ÈH]]Üš]H›Üˆ\Ü]ÚÙ[™HY[X™\œÚ\[˜ÛY[™ÈH[˜\ÜÚYÛ™YÈY˜][Ü›İ\‚‹H™[[İ™Y[H™YY›ÜˆHÜİ]È\[™ÛˆÜˆ[œÜXİ]ÈÜ[™\ˆÚ[™İÎÈ[™\]Z\™YÙ[™H[™İ][Ûˆ]H\È™XYœ›ÛH]ÈİÛˆZ\ÜÚ[ÛÚYYˆÓK‚‚ˆÈÈÈ™YÜ™\ÜÚ[ÛˆÛİ™\˜YÙB‚‹HYYØÜš\ËØÚXÚË[˜[Z[™ËY\Ü]ÚXÙ[™K\Üİ]]ŒLLL‹›ZœØ\Ú[™ÈH^Xİİ[™[Û™H^[İ]œ›ÛHHİ\YY]™HSˆ˜]˜˜\ˆ\Ü]ÚÙ[™HÛÛ›ÛËY[X™\œÚ\X™X\š[™Èİ][ÛˆØ\™Ë[™›È\KMÈØ\™Ë‚‹HÛİ™\™YÙ[™K[\İ™XY[™\ÜËİ][Û‹X\ÜÚYÛ›Y[™XY[™\ÜË[š]Ôİ][Ûˆ˜[Z[™Èš[\š[™Ë[™H[˜\ÜÚYÛ™YÜ›İ\Ú[H™\Ù\š[™È^\İ[™È[X™YY[^[İ]™YÜ™\ÜÚ[ÛœË‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HÛÛ[X[™™^\È[˜Ü™X\ÙYœ›ÛHKŒŒLLXÈKŒŒLL˜‚‹H[š]˜[Z[™È[˜Ü™X\ÙYœ›ÛHËŒËŒŒØÈËŒËŒ‚‹Hİ][Ûˆ˜[Z[™È[˜Ü™X\ÙYœ›ÛHKŒËŒNÈKŒËŒNX‚‹HZ\ÜÚ[Ûˆš[™\ˆ™[XZ[œÈŒL‹ŒMLØ‚‹H\œÛÛ›™[\ÜÚYÛ›Y[™[XZ[œÈKŒËX‚‚ˆÈÈÌKŒŒLLWHHŒ‹LLM‚ˆÈÈÈÚ[™ÙY‚‹HÚ[™ÙYZ[[™È\HŒ˜™\ÜÛœÙHØØ][ÛœÈÈİÛ‹[Û›Hİ][Ûˆ˜[Z[™ËˆHİ][Ûˆ™]š[İ\ÛH›ÜÜÙY\ÈP‘T‘ÕT‹Q“ÌX\È›İÈ˜[YY^XİHP‘T‘ÕT˜‚‹H™[[İ™YH™ZXÛH›ÛH[™İ][ÛˆÙ\]Y[˜ÙHœ›ÛH\KLŒˆİ][Ûˆ˜[Y\Ëˆ[š]˜[Z[™È›İÈİÛœÈ›İ^Y\œË›ÙXÚ[™È˜[Y\ÈİXÚ\ÈP‘T‘ÕT‹Q“ËLXP‘T‘ÕT‹PSËLXP‘T‘ÕT‹SÕLX[™P‘T‘ÕT‹QÕKLX‚‹H™[[İ™YH\KLŒˆ™ZXÛK]X›H\[™[˜ŞHœ›ÛHİ][Ûˆ˜[Z[™Ëˆ\ÙH™\ÜÛœÙHØØ][ÛœÈ›ÈÛ™Ù\ˆ™YYİ][Ûˆ˜[Z[™ÈÈY[YH[ˆ“ËSÈÜˆÕ™ZXÛH™Y›Ü™HHİ][ÛˆØ[ˆ™H˜[YY‚‹H™]Z[™YH^\İ[™ÈÙ\šXÙHİY™š^[™İ][ÛˆÙ\]Y[˜ÙH[\È›ÜˆÜ™[˜\Hš\™K[X[[˜ÙKÛXÙH[™İ\ˆİ\ÜYİ][Ûˆ\\Ë‚‚ˆÈÈÈ™YÜ™\ÜÚ[ÛˆÛİ™\˜YÙB‚‹HYYØÜš\ËØÚXÚË]\LŒ‹]İÛ‹[Û›K[˜[Z[™Ë]ŒLLLK›ZœØ\›İ[™H^Xİ]™HP‘T‘ÕT‹Q“ÌXØ\ÙK‚‹HÛİ™\™YİÛ‹[Û›Hİ][Ûˆİ]]“ËĞSËÓÕÑÕH›ÛHİÛ™\œÚ\[š]˜[Z[™ÈÙ\]Y[˜Ù\ÈX[™˜™[[İ˜[ÙˆH\XØ]H“È^Y\‹[™[˜Ú[™ÙYÜ™[˜\Hİ][Ûˆ˜[Z[™Ë‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HÛÛ[X[™™^\È[˜Ü™X\ÙYœ›ÛHKŒŒLLÈKŒŒLLX‚‹Hİ][Ûˆ˜[Z[™È[˜Ü™X\ÙYœ›ÛHKŒËŒMØÈKŒËŒN‚‹HZ\ÜÚ[Ûˆš[™\ˆ™[XZ[œÈŒL‹ŒMLØ‚‹H[š]˜[Z[™È™[XZ[œÈËŒËŒŒØ‚‹H\œÛÛ›™[\ÜÚYÛ›Y[™[XZ[œÈKŒËX‚‚ˆÈÈÌKŒŒLLHHŒ‹LLM‚ˆÈÈÈš^Y‚‹HÚ[™ÙYİ][Ûˆ˜[Z[™ÈÈ™Y™\ˆZ\ÜÚ[ÛÚYY‰ÜÈÛÛÜ™[˜]H™]™\œÙKXY™\ÜÈ™\ÜÛœÙHİ™\ˆH›][™Y[İ™HZ[[™È^šY[ˆH[İ™HYÙH™[XZ[œÈH˜[˜XÚÈÚ[ˆÛÛÜ™[˜]\ÈÜˆ™]™\œÙHÛÚİ\\™H[˜]˜Z[X›K‚‹HYYİX\™Y™XÛİ™\H›Üˆ[İ™HZ[[™È˜[Y\È]™\X]HÜİİÛˆY\ˆHØØ[]KˆH^Xİ]™H˜[YHY]Ø[ËÖLLÑV[œİ]\ˆX\İ\ˆ[œİ]\˜›İÈ™\ÛÛ™\ÈÈS”Õ•UT˜[œİXYÙˆS”Õ•UTˆPTÕTˆS”Õ•UT˜‚‹H™\Ù\™YÜ™[˜\H][K]ÛÜ™ÜİİÛœÈİXÚ\ÈÛİ]]YY[œÙ™\œXİ[™™]ÜØÜ˜[İÛ‹[Û‹TÜ^X[™œšYÙHÙˆ[[˜‚‚ˆÈÈÈ™YÜ™\ÜÚ[ÛˆÛİ™\˜YÙB‚‹HYYØÜš\ËØÚXÚË\İ][Û‹[[İ™KXY™\ÜË]ŒLLL›ZœØ\Ú[™ÈH^Xİ˜Z[Y[İ™HZ[[™È˜[YH™\ÜYœ›ÛHH]™Hİ][Ûˆ˜[Z[™È[‹‚‹HÛİ™\™Y™]™\œÙKXY™\ÜÈš[Üš]K[İ™K\YÙH˜[˜XÚË[ˆ[œÙ\\˜]YÛİ[HİY™š^™\X]Y][K]ÛÜ™ÜİİÛœË[™[˜Ú[™ÙYÜ™[˜\H][K]ÛÜ™ÜİİÛœË‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HÛÛ[X[™™^\È[˜Ü™X\ÙYœ›ÛHKŒŒLXÈKŒŒLL‚‹Hİ][Ûˆ˜[Z[™È[˜Ü™X\ÙYœ›ÛHKŒËŒM˜ÈKŒËŒMØ‚‹HZ\ÜÚ[Ûˆš[™\ˆ™[XZ[œÈŒL‹ŒMLØ‚‹H[š]˜[Z[™È™[XZ[œÈËŒËŒŒØ‚‹H\œÛÛ›™[\ÜÚYÛ›Y[™[XZ[œÈKŒËX‚‚ˆÈÈÌKŒŒLWHHŒ‹LLLÂ‚ˆÈÈÈš^Y‚‹H™\Ù\™YZ\ÜÚ[ÛÚYYˆ™]™\œÙKXY™\ÜÈ[™Hœ™XZÜÈ\ÈY™\ÜËXÛÛ\Û™[Ù\\˜]ÜœÈ™Y›Ü™Hİ][Ûˆ˜[Z[™È^˜XİÈHÜİİÛ‹ˆ\ÈİÜÈ™\ÜÛœÙ\ÈİXÚ\È[œİ]\ˆX\İ\˜\È[œİ]\˜™Z[™È›][™Y[ÈH[˜[YİÛˆ˜[YHS”Õ•UTˆPTÕTˆS”Õ•UT˜‚‹H™\İÜ™YHX[™]ÜHİ][ÛˆÙ\]Y[˜ÙHÈ]™\HÙ[™\˜]Yİ][Ûˆ˜[YK[˜ÛY[™ÈZ[[™È\HŒ˜ˆH›Ü›X]\È›İÈÛÛœÚ\İ[HİÛ‹Ù\šXÙH[™İ][ÛˆÙ\]Y[˜ÙKİXÚ\ÈS”Õ•UT‹Q”ÌXS”Õ•UT‹Q“ÌX[™S”Õ•UT‹Q“Ì˜‚‹HYYH\‹\[ˆÙ\]Y[˜ÙH™YÚ\İH]™\Ù\™\È˜[Y^\İ[™È[X™\œË[ØØ]\ÈHš\œİœ™YH[X™\ˆÈ[›[X™\™Yİ][ÛœË[™Ù\\˜]\È\XØ]H^\İ[™È[X™\œÈ]\›Z[š\İXØ[K‚‹HÛÛ™š\›YY[š]˜[Z[™È\Ù\ÈHÛÛ\]H[X™\™Yİ][Ûˆ˜[YH™Y›Ü™HY[™ÈH™ZXÛH\H[™™ZXÛHÙ\]Y[˜ÙKˆHš\™HÙ™šXÙ\ˆ]S”Õ•UT‹Q“ÌX\È\™Y›Ü™H˜[YYS”Õ•UT‹Q“ÌKQ“ËLXÈHİ][Ûˆ“Ø[™™ZXÛH“Ø™\™\Ù[Ù\\˜]H^Y\œÈ[™\™H›İ[[[Û˜[‚‚ˆÈÈÈ™YÜ™\ÜÚ[ÛˆÛİ™\˜YÙB‚‹HYYØÜš\ËØÚXÚË\İ][Û‹][š][˜[Z[™ËXÚZ[‹]ŒLLK›ZœØÈ^Xİ]H™]™\œÙKXY™\ÜÈ›Ü›X[^˜][Û‹Üİ]İÛˆ^˜Xİ[Û‹İ][ÛˆÙ\]Y[˜ÙH[ØØ][Û‹İ][Û‹[˜[YHÙ[™\˜][Ûˆ[™[š]˜[Z[™È\ÈÛ™HÚZ[‹‚‹HÛİ™\™YS[™™]Û[™HY™\ÜÈÙ\\˜]ÜœËØ[YK]İÛˆÙ™šXÙ\ˆİ][Ûˆ[ØØ][Û‹˜[Y^\İ[™ÈÙ\]Y[˜ÙH™\Ù\˜][Û‹\XØ]HÙ\]Y[˜ÙH™\Z\‹[™YHÙ™šXÙ\ˆÙ\šXÙHQË[™[˜Ú[™ÙYÜ™[˜\Hİ][Û‹İ[š]˜[Z[™Ë‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HÛÛ[X[™™^\È[˜Ü™X\ÙYœ›ÛHKŒŒLÈKŒŒLX‚‹Hİ][Ûˆ˜[Z[™È[˜Ü™X\ÙYœ›ÛHKŒËŒMXÈKŒËŒM˜‚‹HZ\ÜÚ[Ûˆš[™\ˆ™[XZ[œÈŒL‹ŒMLØ‚‹H[š]˜[Z[™È™[XZ[œÈËŒËŒŒØ‚‹H\œÛÛ›™[\ÜÚYÛ›Y[™[XZ[œÈKŒËX‚‚ˆÈÈÌKŒŒLHHŒ‹LLLÂ‚ˆÈÈÈYY‚‹HYYİ][Ûˆ˜[Z[™Èİ\Ü›ÜˆZ\ÜÚ[ÛÚYYˆZ[[™È\HŒ˜\Ú[™ÈH^Xİ™ZXÛH[]]ØØ][Ûˆ\HŒ›ÙXÙ\ÈSÕ\HØ›ÙXÙ\ÈQ“Ø[™\HÍ›ÙXÙ\ÈPSØ‚‹HH[˜[ZXÈ[H™XYÈÛ›H˜]]™H™ZXÛWİ\WÚY]šX]\Èœ›ÛHHİ][Ûˆ™ZXÛHX›NÈ]Ù\È›İ[™™\ˆÙ™šXÙ\ˆY[]Hœ›ÛH]]X›H\Ü^H^‚‹H[˜[ZXÈÙ™šXÙ\ˆØØ][ÛœÈÈ›İ™\Ù\™HHİ[H[Y\šXÈİY™š^ÛÈÒT’ËPSÌX\È›ÜÜÙY\È^XİHÒT’ËPSØÒT’ËQ“ØÜˆÒT’ËSÕXØÛÜ™[™ÈÈH™ZXÛH›İ[™‚‹H[\HØØ][ÛœË[œİ\ÜY™ZXÛ\Ë[™ØØ][ÛœÈÛÛZ[š[™È[Ü™H[ˆÛ™H\İ[˜İİ\ÜYÙ™šXÙ\ˆ\H˜Z[ÛÜÙYÚ][ˆ^XÚ]ÚÚ\™X\ÛÛˆ[œİXYÙˆš\ÚÚ[™È[ˆ[˜ÛÜœ™Xİ˜[YK‚‚ˆÈÈÈ™YÜ™\ÜÚ[ÛˆÛİ™\˜YÙB‚‹HYYØÜš\ËØÚXÚË[Ù™šXÙ\‹\İ][Û‹[˜[Z[™Ë]ŒLL›ZœØÈ^Xİ]HH™X[Z[[™Ë]\HX\[™Ë^Xİ™ZXÛK]X›H\œÙ\‹[˜[ZXÈİY™š^™\ÛÛ™\‹[™İ][Û‹[˜[YHZ[\‹‚‹HÛİ™\™Y[™YH™\šYšYY™ZXÛHQË\XØ]H›İÜÈÙˆÛ™H\K]K]™ZXÛK]\KZY[\Kİ[œİ\ÜY[œ][XšYİ[İ\ÈZ^YÙ™šXÙ\ˆ\\Ë™[[İ˜[ÙˆHİ[H[˜[ZXÈ[X™\‹[™™\Ù\˜][ÛˆÙˆÜ™[˜\Hİ][Ûˆ[X™\š[™Ë‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HÛÛ[X[™™^\È[˜Ü™X\ÙYœ›ÛHKŒŒLØÈKŒŒL‚‹Hİ][Ûˆ˜[Z[™È[˜Ü™X\ÙYœ›ÛHKŒËŒMÈKŒËŒMX‚‹HZ\ÜÚ[Ûˆš[™\ˆ™[XZ[œÈŒL‹ŒMLØ‚‹H[š]˜[Z[™È™[XZ[œÈËŒËŒŒØ‚‹H\œÛÛ›™[\ÜÚYÛ›Y[™[XZ[œÈKŒËX‚‚ˆÈÈÌKŒŒL×HHŒ‹LLLÂ‚ˆÈÈÈš^Y‚‹HÛÛ\]YH›ØY˜Z[[š]	ÜÈ^\İ[™È\X[[š]˜[Z[™È[YÜ˜][Ûˆ\Ú[™È]È™\šYšYY˜]]™H\HLØY[]K‚‹HÚ[™ÙYH˜[Z[™ÈX™[œ›ÛHH[\›˜[X˜œ™]šX][Ûˆ”•XÈZ\ÜÚ[ÛÚYY‰ÜÈØ[›ÛšXØ[›ØY˜Z[[š]ÛÜ™[™ÈÚ[H™]Z[š[™ÈH”•XØ[ÚYÛ‹‚‹H[İ™YHÛ\ÜÈœ›ÛHH[˜ÛÜœ™XİZ\™šY[Ù[XİÜˆÈš\™H[™™]Z[™Y][™\ˆ[Û\ÜÙ\Ë‚‹H™\XÙYHZ\˜Ü˜Y][YYXÛÛˆÚ]HÙ\šXÙK[X]ÚY<'æ¤¼'æ¡ˆ˜Z[Ùš\™HXÛÛ‹‚‹H™\Ù\™YZ\ÜÚ[Ûˆš[™\‰ÜÈ^Xİ\KLLË[Û›HÙ[Xİ[Ûˆ[™™\šYšXØ][ÛˆÛÛ˜Xİ[˜ÛY[™ÈÙ\\˜][Ûˆœ›ÛHH\HNXÛØ\İİX\™›ÜH™\ØİYH[š]‚‚ˆÈÈÈ™YÜ™\ÜÚ[ÛˆÛİ™\˜YÙB‚‹HYYØÜš\ËØÚXÚË\›ØY\˜Z[][š][˜[Z[™ËXÛ\ÜË]ŒLLË›ZœØÈ^Xİ]HH™X[[š]˜[Z[™ÈÛ\ÜË[Ü[ÛˆZ[\ˆ[™Ø[ÚYÛˆÙ[™\˜]Ü‹‚‹HÛİ™\™YH˜]]™H\KØ[›ÛšXØ[X™[š\™H[™[]˜Z[Xš[]KZ\™šY[^Û\Ú[Û‹XÛÛ‹Ù[™\˜]YØ[ÚYÛˆ[™İšXİZ\ÜÚ[Ûˆš[™\ˆX]Ú\‹‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HÛÛ[X[™™^\È[˜Ü™X\ÙYœ›ÛHKŒŒL˜ÈKŒŒLØ‚‹H[š]˜[Z[™È[˜Ü™X\ÙYœ›ÛHËŒËŒŒ˜ÈËŒËŒŒØ‚‹HZ\ÜÚ[Ûˆš[™\ˆ™[XZ[œÈŒL‹ŒMLØ‚‹Hİ][Ûˆ˜[Z[™È™[XZ[œÈKŒËŒM‚‹H\œÛÛ›™[\ÜÚYÛ›Y[™[XZ[œÈKŒËX‚‚ˆÈÈÌKŒŒL—HHŒ‹LLLÂ‚ˆÈÈÈYY‚‹HYY˜]]™H\HL˜Õˆ™XÛİ™\H™ZXÛHÈ[š]˜[Z[™ÈÚ]HÕ˜Ø[ÚYÛˆ[™H\İ[˜İ<'æ¦ÈXÛÛ‹‚‹HÚ[™ÙY[š]˜[Z[™ÉÜÈ\HLX\Ü^HX™[ÈZ\ÜÚ[ÛÚYY‰ÜÈ]™H™XÛİ™\H™ZXÛXÛÜ™[™ÈÚ[H™\Ù\š[™È]È\İX›\ÚY”•˜Ø[ÚYÛˆ[™<'æîÈXÛÛ‹‚‹H›İ™XÛİ™\HÛ\ÜÙ\È›İÈ\X\ˆ[™\ˆ™XÛİ™\H[™[Û\ÜÙ\ËˆH^\İ[™È›]™Y™XÛİ™\H™ZXÛX˜[Z[™È[X\È™[XZ[œÈÛÛ\]X›K‚‹HZ\ÜÚ[Ûˆš[™\‰ÜÈ^Xİ\KLLH›]™Y[™\KLLˆÕˆ™XÛİ™\HÙ[Xİ[Ûˆ›İ]\È™[XZ[ˆ[˜Ú[™ÙY‚‚ˆÈÈÈ™YÜ™\ÜÚ[ÛˆÛİ™\˜YÙB‚‹HYYØÜš\ËØÚXÚË\™XÛİ™\K][š][˜[Z[™ËXÛ\ÜÙ\Ë]ŒLL‹›ZœØÈ^Xİ]HH™X[[š]˜[Z[™ÈÛ\ÜË[Ü[ÛˆZ[\ˆ[™Ø[ÚYÛˆÙ[™\˜]Üˆ›Üˆ›İ™XÛİ™\H\\Ë‚‹HÛİ™\™Y™XÛİ™\H[™[Ù[XİÜˆ]˜Z[Xš[]K^Xİ\HQË\İ[˜İXÛÛœËÙ[™\˜]YØ[ÚYÛœÈ[™YØXŞH›]™Y™XÛİ™\H˜[Z[™ÈÛÛ\]Xš[]K‚‹H™\Ù\™YHÛXÙH[š]˜[Z[™ËİÚ[™ËÜ™XÛİ™\HÙ[XİÜˆ[™İ\œ™[Z\ÜÚ[Ûˆš[™\ˆ™YÜ™\ÜÚ[Ûˆ˜\Ù[[™\Ë‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HÛÛ[X[™™^\È[˜Ü™X\ÙYœ›ÛHKŒŒLXÈKŒŒL˜‚‹H[š]˜[Z[™È[˜Ü™X\ÙYœ›ÛHËŒËŒŒXÈËŒËŒŒ˜‚‹HZ\ÜÚ[Ûˆš[™\ˆ™[XZ[œÈŒL‹ŒMLØ‚‹Hİ][Ûˆ˜[Z[™È™[XZ[œÈKŒËŒM‚‹H\œÛÛ›™[\ÜÚYÛ›Y[™[XZ[œÈKŒËX‚‚ˆÈÈÌKŒŒLWHHŒ‹LLLÂ‚ˆÈÈÈYY‚‹HÛÛ\]Y\ÜİYHÌMH\Ú[™ÈHØ[š]^™Y]™HZ\ÜÚ[ÛÚYYˆRÈÛXÙH\˜Ú\ÙK\YÙHØ\\™Nˆ\HLØ\›YY™\ÜÛœÙH™ZXÛH
+T•˜
+K\HNX›Ú[™\ÜÛœÙH[š]
+”•X
+K\H˜Y™šXÈØ\ˆ
+Ø
+H[™\HL˜š\™X\›\È\œÛÛ›™[Ø\œšY\ˆ
+”Ø
+K‚‹HYYH›İ\ˆ^Xİ˜]]™HX\[™ÜÈ[™˜[Z[™È[\ÈÈ[š]˜[Z[™ËˆXXÚÛ\ÜÈ›İÈ\X\œÈ[™\ˆ›İÛXÙH[™[Û\ÜÙ\È[™›ÙXÙ\È]È\›İ™YØ[ÚYÛˆÛÙHÚ]H\İ[˜İÙ\šXÙK[X]ÚYXÛÛ‹‚‹H™XÛÜ™YH™\šYšYYQËØ[›ÛšXØ[X™[Ë\›İ™YÛÙ\È[™Ø[š]^™YØ\\™HY]Ù[ˆH\›X[™[\˜Ú]Xİ\™HÛÛ˜Xİ[™]šY[˜ÙH™XÛÜ™‚‹HZ\ÜÚ[Ûˆš[™\ˆ™ZXÛHÙ[Xİ[Û‹ÛXÙH™\]Z\™[Y[[X\Ù\È[™^\İ[™È\KLH\›YY˜Y™šXÈØ\ˆ™Z]š[İ\ˆ™[XZ[ˆ[˜Ú[™ÙY‚‚ˆÈÈÈ™YÜ™\ÜÚ[ÛˆÛİ™\˜YÙB‚‹HYYØÜš\ËØÚXÚË\ÛXÙK][š][˜[Z[™ËXÛ\ÜÙ\Ë]ŒLLK›ZœØÈ^Xİ]HH™X[[š]˜[Z[™ÈÛ\ÜË[Ü[ÛˆZ[\ˆ›ÜˆÛXÙH[™[Û\ÜÙ\È[™™\šYHÙ[™\˜]YØ[ÚYÛœÈ›Üˆ[›İ\ˆX\[™ÜË‚‹H™Yœ™\ÚYØœÛÛ]H™[X\ÙKX˜\Ù[[™HÚÙ[œÈXÜ›ÜÜÈH™]Z[™Y™YÜ™\ÜÚ[ÛˆØÜš\È[™™\Z\™Yİ[H\Ú›Ø\™Ü™[ØY\›™\ÜÈ\Üİ[\[ÛœË[İÚ[™È[H\›X[™[™YÜ™\ÜÚ[ÛœÈÈ[ˆİXØÙ\ÜÙ[HYØZ[œİHİ\œ™[Ûİ\˜ÙHYØZ[‹‚‹H™\Ù\™YHØ[›ÛšXØ[\Ù\œØÜš\˜[Y]Ü‹™\ÜÚ]ÜH[YÜš]HÚXÚÜÈ[™Hİ\œ™[Z\ÜÚ[Ûˆš[™\ˆ™YÜ™\ÜÚ[Ûˆ˜\Ù[[™K‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HÛÛ[X[™™^\È[˜Ü™X\ÙYœ›ÛHKŒŒLÈKŒŒLX‚‹H[š]˜[Z[™È[˜Ü™X\ÙYœ›ÛHËŒËŒŒÈËŒËŒŒX‚‹HZ\ÜÚ[Ûˆš[™\ˆ™[XZ[œÈŒL‹ŒMLØ‚‹Hİ][Ûˆ˜[Z[™È™[XZ[œÈKŒËŒM‚‹H\œÛÛ›™[\ÜÚYÛ›Y[™[XZ[œÈKŒËX‚‚ˆÈÈÌKŒŒLHHŒ‹LLL‚‚ˆÈÈÈYY‚‹HYY\ÜİYHÌÌ	ÜÈ\œÚ\İ[]]È[ÙHİÜ]šY[˜ÙHÈZ\ÜÚ[ÛˆÛÛ›Ûˆ]]ÛX]XÈØY™]HİÜÈ›İÈÚİÈHÛÛ\Xİ™Y
+ŠUUÈÕÔQ
+Šˆ›YËHØØ[İÜ]Kİ[YH[™H^Xİİ\YY™X\ÛÛ‹‚‹HHİÜ™XÛÜ™\ÈİÜ™Y[™\[™[Hœ›ÛHH]™Hİ]\ÈY\ÜØYÙKÛÈZ\ÜÚ[ÛˆÚ[™Ù\ËØİ[Y[™[ØYÈ[™]\ˆİ]\È\]\ÈØ[››İ\˜\ÙHH^[˜][Û‹‚‹HH™XÜ™X]YZ\ÜÚ[ÛˆÛÛ›Û[™[™\İÜ™\ÈHØ]™Y›YÈ[™™X\ÛÛ‹ˆİ\[™È]]È[ÙHÛX\œÈH™XÛÜ™È[X™\˜][H™\ÜÚ[™È
+Š]]È[ÙNˆİÜ
+ŠˆÙ\È›İÜ™X]HH˜[ÙH]]ÛX]XË\İÜØ\›š[™Ë‚‹H[˜[YÜˆÛÜœ\Ø]™YİÜ]H\È\ØØ\™YØY™[HÚ]İ]›ØÚÚ[™ÈZ\ÜÚ[ÛˆÛÛ›Û‚‹H^\İ[™ÈØY™]K\İÜXÚ\Ú[ÛœËÙ[XİÜˆÙÚXË\Ü]Ú™Z]š[İ\ˆ[™ÛXÙH[š]˜[Z[™È\ÜİYHÌMH™[XZ[ˆ[˜Ú[™ÙY‚‚ˆÈÈÈ™YÜ™\ÜÚ[ÛˆÛİ™\˜YÙB‚‹HYYØÜš\ËØÚXÚËX]]Ë\İÜ\™X\ÛÛ‹›ZœØÈ^\˜Ú\ÙH™X[İÜ\™XÛÜ™İÜ˜YÙK›YÈ™[™\š[™Ë^Xİ\™X\ÛÛˆ™][[Û‹ØØ[[Y\İ[\\Ü^KÜ›ÜÜË\[™[™\İÜ˜][Û‹]™K\İ]\È\ÛÛ][Û‹™\İ\ÛX\š[™È[™ÛÜœ\Y]H™XÛİ™\K‚‹H™\Ù\™YHØ[›ÛšXØ[\Ù\œØÜš\˜[Y]Ü‹™\ÜÚ]ÜH[YÜš]HÚXÚÜÈ[™İ\œ™[[X[[˜ÙHÙ™šXÙ\‹ÓZ\ÜÚ[Ûˆ\]H]]Üš]H™YÜ™\ÜÚ[ÛœË‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HÛÛ[X[™™^\È[˜Ü™X\ÙYœ›ÛHKŒŒLØÈKŒŒL‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹ŒML˜ÈŒL‹ŒMLØ‚‹H[š]˜[Z[™È™[XZ[œÈËŒËŒŒ‚‹Hİ][Ûˆ˜[Z[™È™[XZ[œÈKŒËŒM‚‹H\œÛÛ›™[\ÜÚYÛ›Y[™[XZ[œÈKŒËX‚‚ˆÈÈÌKŒŒL×HHŒ‹LLL‚‚ˆÈÈÈš^Y‚‹HÛÛ\]Y\ÜİYHÌNH›ÜˆÙ[Z[™[Hœ™\ÚZ\ÜÚ[ÛœÎˆH[X[[˜ÙHÙ™šXÙ\ˆ™\ÚÛ›İÈ™XÙZ]™\ÈHÜ™[˜\H[X[[˜ÙHİ[[™XYHØ[İ[]Yœ›ÛHHİ\œ™[]Y[˜YÙHÛİ[]™[ˆÚ[ˆ›È^XÚ]]Y[ÙH™YYˆ[X[[˜ÙX›İÈ^\İË‚‹Hœ™\Ú]Y[˜YÙH[X[™[™^XÚ]]Y[[X[[˜ÙH›İÜÈ\™HÛÛ\ÙYÈH\™Ù\ˆ]]Üš]]]™Hİ[›Üˆ™\ÚÛÛÛ\\š\ÛÛ‹™]™[[™ÈHØ[YH]Y[[X[™œ›ÛH™Z[™ÈÛİ[YÚXÙK‚‹HH]K\™[™\ˆœ™\Ú[Z\ÜÚ[Ûˆ™XÛİ™\H]›İÈ\Y\ÈHØ[YH™\ÚÛ[™^Xİ\KLÍÙ[XİÜˆY\ˆ]Y[]H\X\œË‚‹H]Hš\ÚX›KYØXŞK[\İ[™™Y™]ÚYZ\ÜÚ[Û‹Z[˜[˜XÚÜÈ›İÈ™]Z[ˆHÛÛ™šYİ\™Yœ™\Ú[Z\ÜÚ[Ûˆ[\È[œİXYÙˆÚ[[H\\ÜÚ[™È[K‚‹H^\İ[™ÈÜÚ]]™HÙ™šXÙ\ˆ[X[™Ù[XİYÛÛ‹[Z\ÜÚ[ÛˆÙ™šXÙ\ˆÛİ™\˜YÙK]™HÚÜYÙH]]Üš]KHÙ\\˜]HYÚ\š\ÚÈZ\ÜÚ[™È\œÛÛˆ[X[[˜ÙH[H[™H\Ü˜YH^Û\Ú[Ûˆ™[XZ[ˆ[˜Ú[™ÙY‚‚ˆÈÈÈ™YÜ™\ÜÚ[ÛˆÛİ™\˜YÙB‚‹H^[™YØÜš\ËØÚXÚËX[X[[˜ÙK[Ù™šXÙ\‹]™\ÚÛ]ŒLLK›ZœØÚ]H™X[Z\ÜÙYİ]NˆÚ^œ™\Ú]Y[X˜YÙH[X[[˜Ù\Ë›ÈZ\ÜÚ[Û‹Z[[X[[˜ÙH›İÈ[™›È^XÚ]]Y[[X[[˜ÙH[\]\İÙ[XİÛ™HÙ™šXÙ\ˆ]™\ÚÛš]™K‚‹HYY\]X[]™\ÚÛ˜YÙKÙ^XÚ]\›İÈKY\XØ][Û‹\™Ù\‹Y^XÚ]]İ[™[ØYY™ZXÛHØY[™]Hœ™\Ú\™XÛİ™\H\ÜÙ\[ÛœË‚‹H™\Ù\™YHÚZ[™YYÚ\š\ÚÈZ\ÜÚ[™È\œÛÛ‹Z\ÜÚ[Ûˆ\]HÚ[™ÛK\\ÜÈ[™Z\ÜÚ[™Ë[Û‹[Z\ÜÚ[Ûˆ]]Üš]H™YÜ™\ÜÚ[ÛœË‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HÛÛ[X[™™^\È[˜Ü™X\ÙYœ›ÛHKŒŒL˜ÈKŒŒLØ‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹ŒMLXÈŒL‹ŒML˜‚‹H[š]˜[Z[™È™[XZ[œÈËŒËŒŒ‚‹Hİ][Ûˆ˜[Z[™È™[XZ[œÈKŒËŒM‚‹H\œÛÛ›™[\ÜÚYÛ›Y[™[XZ[œÈKŒËX‚‚ˆÈÈÌKŒŒL—HHŒ‹LLL‚‚ˆÈÈÈš^Y‚‹Hš^Y\ÜİYHÌNNˆHÛÛ™šYİ\™Y[X[[˜ÙHÙ™šXÙ\ˆ™\ÚÛ›İÈ[œÈÛÛœÚ\İ[H›İYÚ[š]š[™\‹]]È[ÙH[™Z\ÜÚ[Ûˆ\]K[˜ÛY[™ÈŞXÛ\ÈÚ\™HHİ\œ™[]™HZ\ÜÚ[™È™ZXÛ\ËÔ\œÛÛ›™[X›H\È]]Üš]]]™K‚‹HHXİ]™H]Ûİ[ÈÛ›H]È]]Üš]]]™HÜÚ]]™HÜ™[˜\H[X[[˜ÙH[X[™[™YÈ^XİHÛ™H[X[[˜ÙHÙ™šXÙ\ˆÚ[ˆ]Ûİ[\ÈİšXİHÜ™X]\ˆ[ˆHÛÛ™šYİ\™Y™\ÚÛ‚‹H[X[[˜ÙHÙ™šXÙ\ˆÙ[Xİ[Ûˆ›İÈ™Y™\œÈ^XİZ\ÜÚ[ÛÚYYˆ™ZXÛH\HÍÚ][ˆ^Xİ[˜[YH˜[˜XÚÈÛ›HÚ[ˆZ\ÜÚ[ÛÚYYˆÙ\È›İ^ÜÙHH™ZXÛH\HQ‚‹H^\İ[™ÈÜÚ]]™HÙ™šXÙ\ˆ[X[™[ˆ[™XYK\Ù[XİYÙ™šXÙ\‹HZ\ÜÚ[Û‹\ØÛÜYÙ™šXÙ\ˆÙ[XİYH[ˆX\›Y\ˆ\ÜËÜˆHÛÛ™š\›YYØ]\ÙšYY]™HÙ™šXÙ\ˆ™\]Z\™[Y[™]™[È\XØ][Û‹‚‹HHÙ\\˜]HYÚ\š\ÚÈZ\ÜÚ[™È\œÛÛˆ[X[[˜ÙH[H™[XZ[œÈœ™\Ú[Z\ÜÚ[Û‹[Û›H[™\È›İ[˜X›Y\š[™ÈZ\ÜÚ[Ûˆ\]K‚‚ˆÈÈÈ™YÜ™\ÜÚ[ÛˆÛİ™\˜YÙB‚‹H^[™YØÜš\ËØÚXÚËX[X[[˜ÙK[Ù™šXÙ\‹]™\ÚÛ]ŒLLK›ZœØÈÛİ™\ˆœ™\Ú[š]š[™\‹]™KX]]Üš]H[š]š[™\‹]]È[ÙKX[X[ÜÜİ\Ù[Xİ[ÛˆZ\ÜÚ[Ûˆ\]KİšXİ\KLÍX]Ú[™È[™\XØ]H›İXİ[Û‹‚‹H™\Ù\™YHÚZ[™YYÚ\š\ÚÈZ\ÜÚ[™È\œÛÛˆ™YÜ™\ÜÚ[Ûˆ[™™K\˜[ˆHZ\ÜÚ[Ûˆ\]HÚ[™ÛK\\ÜÈ[™Z\ÜÚ[™Ë[Û‹[Z\ÜÚ[Ûˆ]]Üš]HÚXÚÜÈYØZ[œİHİ\œ™[™[X\ÙH˜\Ù[[™K‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HÛÛ[X[™™^\È[˜Ü™X\ÙYœ›ÛHKŒŒLXÈKŒŒL˜‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹ŒMLÈŒL‹ŒMLX‚‹H[š]˜[Z[™È™[XZ[œÈËŒËŒŒ‚‹Hİ][Ûˆ˜[Z[™È™[XZ[œÈKŒËŒM‚‹H\œÛÛ›™[\ÜÚYÛ›Y[™[XZ[œÈKŒËX‚‚ˆÈÈÌKŒŒLWHHŒ‹LLL‚‚ˆÈÈÈYY‚‹HYYH™]ÈÙ][™ÜÈÚXÚØ›Ş
+Š]]ÛX]XØ[HYH[X[[˜ÙHÙ™šXÙ\ŠŠ‹[Û™ÜÚYHH^\İ[™ÈYÚ\š\ÚÈZ\ÜÚ[™È\œÛÛˆ[X[[˜ÙH[K‚‹HYYH\Ù\‹\Ù][Y\šXÈ™\ÚÛœ›ÛHÈNXY˜][[™ÈÈXÚ[HH[H™[XZ[œÈ\ØX›YHY˜][‚‹HÛˆœ™\Ú[š]š[™\ˆ[™]]È[ÙH™\]Z\™[Y[ØYËÛ™H
+Š[X[[˜ÙHÙ™šXÙ\ŠŠˆ\ÈYYÚ[ˆHš[˜[Ü™[˜\H[X[[˜ÙH[X[™\ÈİšXİHÜ™X]\ˆ[ˆHÛÛ™šYİ\™Y™\ÚÛˆ^[\Nˆ™\ÚÛXšYÙÙ\œÈ]˜[X[[˜Ù\Ë‚‹H][\HÜ™[˜\H[X[[˜ÙH›İÜÈ\™Hİ[[YYXÜ›ÜÜÈœ™\ÚZ\ÜÚ[Ûˆ[™İ\œ™[]Y[™\]Z\™[Y[Ë[ˆ^\İ[™ÈÜÚ]]™H[X[[˜ÙHÙ™šXÙ\ˆ™\]Z\™[Y[[ˆZ]\ˆÛİ\˜ÙH™]™[È\XØ][Û‹[™HÛÛ™šYİ\™Y›İÈ\X\œÈ[ˆH™[ØYY™ZXÛHØY\Ü^K‚‚ˆÈÈÈ™\Ù\™YØY™]H[™]]Üš]B‚‹HH^\İ[™È
+Š[Ø^\È[˜ÛYHH[X[[˜ÙH[ˆ[š]š[™\ŠŠˆÜ[Ûˆ›ÜˆYÚš\ÚÈ[™™\HYÚš\ÚÈZ\ÜÚ[™È\œÛÛˆZ\ÜÚ[ÛœÈ™[XZ[œÈ[˜Ú[™ÙY[™[HÛİ™\™Y‚‹HH[X[[˜ÙHÙ™šXÙ\ˆ™\ÚÛ]˜[X]\ÈY\ˆHYÚ\š\ÚÈ[KÛÈ[HÛÛ™šYİ\™YYÚ\š\ÚÈ[X[[˜ÙH\È[˜ÛYY[ˆHš[˜[[X[[˜ÙHÛİ[‚‹Hİ\œ™[Z\ÜÚ[™È™ZXÛ\ËZ\ÜÚ[™È\œÛÛ›™[Z\ÜÚ[Ûˆ\]H[™İ\ˆ]™HÚÜYÙHÛİ\˜Ù\È™[XZ[ˆ]]Üš]]]™H[™™]™\ˆ™KXYHÛÛ™šYİ\™YÙ™šXÙ\‹‚‹H›İÙ][™ÜÈY˜][Ù™ˆ[™\œÚ\İ[™\[™[H[ˆØØ[İÜ˜YÙK‚‚ˆÈÈÈ™YÜ™\ÜÚ[ÛˆÛİ™\˜YÙB‚‹HYYØÜš\ËØÚXÚËX[X[[˜ÙK[Ù™šXÙ\‹]™\ÚÛ]ŒLLK›ZœØ›ÜˆÙ][™ÜÈ\œÚ\İ[˜ÙK™\ÚÛ›İ[™ËİšXİ[Ü™K][ˆÛÛ\\š\ÛÛ‹İ[[YY[X[[˜ÙH[X[™\XØ]H›İXİ[Û‹6ßÎ-¢G§²ÚîÆ­yÖãã“VFòãã“fà¢ÒÖ—76–öâf–æFW"–æ7&V6VBg&öÒcãbãCFFòcãbãCVà¢ÒVæ—BæÖ–ær&VÖ–ç22ã2ã#à¢Ò7FF–öâæÖ–ær&VÖ–ç2ã2ãFà¢ÒW'6öææVÂ76–væÖVçB&VÖ–ç2ã2ã–à ¢22³ãã“UÒÒ##bÓ‚Ó ¢222–×&÷fV@ ¢Ò6VÆV7F–ærF—7F6‚6VçG&R–âVæ—BæÖ–æræ÷rWFöÖF–6ÆÇ’'Vç2F†RW†—7F–ær¢¥&Vg&W6‚7FF–öç2¢¢&÷WF–æR&Vf÷&R&V'V–ÆF–ærF†RF÷vç7G&VÒf–ÇFW'2à¢Ò6VÆV7F–ærF—7F6‚6VçG&R–â7FF–öâæÖ–æræ÷rWFöÖF–6ÆÇ’'Vç2F†RW†—7F–ær7FF–öâæÖ–ær&Vg&W6‚&÷WF–æR&Vf÷&R&V'V–ÆF–ærF†RF÷vç7G&VÒf–ÇFW'2à¢ÒF†R6VÆV7FVBF—7F6‚6VçG&R—2&W6W'fVBv†–ÆR—G2÷F–öç2&R&V'V–ÇBÂF†VâF†RW7F&Æ—6†VB¢¤F—7F6‚6VçG&R(i"6W'f–6R(i"7FF–öâG—R(i"7F'Bg&öÒ¢¢666FR—2&VvVæW&FVBg&öÒF†Rg&W6‚&W6÷W&6RFÖ–æ—7G&F–öâ7FF–öâ6æ6†÷Bà¢ÒV6‚F—7F6‚6VçG&R6†ævRW&f÷&×2W†7FÇ’öæR7FF–öâ&Vg&W6ƒ²&öw&ÖÖF–2&W7F÷&F–öâöbF†R6VÆV7FVB6VçG&RFöW2æ÷Bf—&Ræ÷F†W"6†ævRWfVçBà¢ÒF†RÖçVÂ¢¥&Vg&W6‚7FF–öç2¢¢6öçG&öÂ&VÖ–ç2f–Æ&ÆRVæ6†ævVB2fÆÆ&6²à¢ÒW†—7F–ærW'6öææVÂ76–væÖVçB÷'VçF–ÖRwV&G2&VÖ–â÷væVB'’F†Ræ÷&ÖÂ&Vg&W6‚&÷WF–æW2&F†W"F†âGWÆ–6FVB–âF†RF—7F6‚6VçG&R†æFÆW'2à ¢222&Vw&W76–öâ6÷fW&vP ¢ÒFFVB67&—G2ö6†V6²ÖæÖ–ærÖF—7F6‚Ö6VçG&RÖWFò×7FF–öâ×&Vg&W6‚×c“RæÖ§6à¢ÒF†R&Vw&W76–öâW†V7WFW2&÷F‚&öGV7F–öâF—7F6‚6VçG&R6†ævR†æFÆW'2Â&WV—&W2W†7FÇ’öæRæ÷&ÖÂ7FF–öâ×&Vg&W6‚6ÆÂW"6VÆV7F–öâÂ&÷FV7G26VÆV7FVBÖ6VçG&R&W7F÷&F–öâæBfW&–f–W2&÷F‚&Vg&W6‚&÷WF–æW2&V'V–ÆB6W'f–6RÂ7FF–öâG—RæB7F'Bg&öÒ–â÷&FW"à¢ÒF†R&Vw&W76–öâ—26†–æVBF‡&÷Vv‚F†RÇ&VG’×&Vv—7FW&VBæÖ–ær†–W&&6‡’vFRÂ6òæòW&ÖæVçBv÷&¶fÆ÷rÖFVf–æ—F–öâ6†ævR—2&WV—&VBà ¢2226†ævVB&W6÷W&6R&6VÆ–æW0 ¢Ò6öÖÖæBæW‡W2–æ7&V6VBg&öÒãã“FFòãã“Và¢ÒVæ—BæÖ–ær–æ7&V6VBg&öÒ2ã2ã–Fò2ã2ã#à¢Ò7FF–öâæÖ–ær–æ7&V6VBg&öÒã2ã6Fòã2ãFà¢ÒÖ—76–öâf–æFW"&VÖ–ç2cãbãCFà¢ÒW'6öææVÂ76–væÖVçB&VÖ–ç2ã2ã–à ¢22³ãã“EÒÒ##bÓ‚Ó ¢222f—†V@ ¢Òf—†VBF—7F6‚6VçG&RÖVÖ&W'6†—V&–ærVçF—&VÇ’VæFW"¢¥Væ76–væVBòFVfVÇB¢¢gFW"F†Rcãã“2æF—fRÖ6VçG&RF—66÷fW'’6÷'&V7F–öâà¢Ò7FF–öâ×FòÖ6VçG&RÖVÖ&W'6†—æ÷r66ç2F†R6ÖR7F—fR÷F÷÷6ÖRÖ÷&–v–â&W6÷W&6RFÖ–æ—7G&F–öâFö7VÖVçB6öÆÆV7F–öâ2F—7F6‚6VçG&RF—66÷fW'’–ç7FVBöb&W7G&–7F–ærÆV—G7FVÆÆUö'V–ÆF–æuö–F&VG2FòF†RW6W'67&—Bw27W'&VçBFö7VÖVçBà¢ÒæF—fR7FF–öâ&÷w27V6‚2ÆV—G7FVÆÆUö'V–ÆF–æuö–CÒ#Æ6VçG&R–Câ&æ÷r÷VÆFRF†R'V–ÆF–ær×FòÖ6VçG&RÖWfVâv†VâF†÷6R&÷w2Æ—fR–ç6–FRF†Ræ÷&ÖÂ7FF–öç26†–ÆBg&ÖRà¢ÒÆ—FW&ÂçVÆÆÂVæFVf–æVFÂfÇ6VÂ&Ææ²æBæöâ×÷6—F—fR76–væÖVçG2&VÖ–âvVçV–æVÇ’Væ76–væVBà¢ÒF†RW7F&Æ—6†VB¢¤F—7F6‚6VçG&R(i"6W'f–6R(i"7FF–öâG—R(i"7F'Bg&öÒ¢¢666FR—2Væ6†ævVC²6VÆV7F–ær6VçG&Ræ÷rW‡÷6W2F†R6W'f–6W2æB7FF–öâG—W27GVÆÇ’76–væVBFò—Bà ¢222&Vw&W76–öâ6÷fW&vP ¢ÒFFVB67&—G2ö6†V6²ÖæÖ–ærÖF—7F6‚Ö6VçG&RÖÖVÖ&W'6†—Ög&ÖR×c“BæÖ§6à¢ÒF†R&Vw&W76–öâ7F'G2v—F‚âV×G’F÷Fö7VÖVçBæBWG276–væVBæF—fR7FF–öâ&÷w2–â6ÖRÖ÷&–v–â&W6÷W&6RFÖ–æ—7G&F–öâ6†–ÆBg&ÖRÂF†VâW†V7WFW2F†R&öGV7F–öâÖVÖ&W'6†—ÆöFW"æB&÷fW2ä’f—&RF—7F6‚ÖVÖ&W'6†—&V6†W2F†RF÷vç7G&VÒf—&Rb&W67VR6W'f–6R7V'6WBv†–ÆRöæÇ’Æ—FW&ÂÖçVÆÂ7FF–öâ&VÖ–ç2Væ76–væVBöFVfVÇBà¢ÒF†R&Vw&W76–öâ—2W&ÖæVçFÇ’&Vv—7FW&VB–âfÆ–FFRW6W'67&—Fà ¢2226†ævVB&W6÷W&6R&6VÆ–æW0 ¢Ò6öÖÖæBæW‡W2–æ7&V6VBg&öÒãã“6Fòãã“Fà¢ÒVæ—BæÖ–ær–æ7&V6VBg&öÒ2ã2ã†Fò2ã2ã–à¢Ò7FF–öâæÖ–ær–æ7&V6VBg&öÒã2ã&Fòã2ã6à¢ÒÖ—76–öâf–æFW"&VÖ–ç2cãbãCFà¢ÒW'6öææVÂ76–væÖVçB&VÖ–ç2ã2ã–à ¢22³ãã“5ÒÒ##bÓ‚Ó ¢222f—†V@ ¢Òf—†VBF†RÆ—fR&VæFW&VB&öf–ÆRF–Bæ÷BW‡÷6Rç’F—7F6‚6VçG&RæVÇ2v—F†–âS×6f–ÇW&R–âVæ—BæÖ–æræB7FF–öâæÖ–ærà¢Òcãã“"–æ6÷'&V7FÇ’77VÖVBF†BÆöF–ær÷&öf–ÆR÷¶–GÖ–â†–FFVâ–g&ÖRv÷VÆB&W&öGV6RF†RÅ54ÕcBõgVR&öf–ÆRÆ–v‡F&÷‚v—F‚—G2'V–ÆF–æw2F"6VÆV7FVC²Æ—fRÖ—76–öä6†–VbFöW2æ÷BW‡÷6RF†÷6RÖöFÂÖöæÇ’æVÇ2–âF†B–g&ÖRà¢ÒF—7F6‚6VçG&R”BöæÖRWF†÷&—G’æ÷r6öÖW2F—&V7FÇ’g&öÒæF—fR&W6÷W&6RFÖ–æ—7G&F–öâ'V–ÆF–ær&÷w2v—F‚'V–ÆF–æu÷G—Uö–CÒ#r&à¢Ò7FF–öâ×FòÖ6VçG&RÖVÖ&W'6†—&VÖ–ç2F—&V7FÇ’WF†÷&—FF—fRg&öÒF†R6ÖRæF—fR&÷rÖöFVÂw2ÆV—G7FVÆÆUö'V–ÆF–æuö–FGG&–'WFRà¢ÒæF—fR&÷rF—66÷fW'’6†V6·2F†R7F—fRFö7VÖVçBæB6ÖRÖ÷&–v–âg&ÖRFö7VÖVçG2Â6òF†RæÖ–ærFööÇ2v÷&²v†WF†W"&W6÷W&6RFÖ–æ—7G&F–öâ÷vç2F†R7W'&VçBg&ÖR÷"F†RF÷vRà¢Ò&VÖ÷fVB&öf–ÆR&÷WFR&W6öÇWF–öâÂç&öf–ÆRÖF—7F6†6VçFW&'6–æræBF†R†–FFVâ&öf–ÆR&VæFW&W"g&öÒF—7F6‚6VçG&RæÖ–ærF—66÷fW'’à¢ÒF—7F6‚6VçG&R(i"6W'f–6R(i"7FF–öâG—R(i"7F'Bg&öÒÂFVÆVvFVB&Vg&W6‚õ&WG'’÷væW'6†—æBW'6öææVÂ76–væÖVçB—6öÆF–öâ&VÖ–âVæ6†ævVBà ¢222&Vw&W76–öâ6÷fW&vP ¢ÒFFVB67&—G2ö6†V6²ÖæÖ–ærÖF—7F6‚Ö6VçG&RÖæF—fR×7FF–öâ×&÷w2×c“2æÖ§6ÂW†V7WF–ærF†R&öGV7F–öâ&÷r'6W"v–ç7BÆÂ6WfVâ7WÆ–VBF—7F6‚6VçG&W2ÇW2÷&F–æ'’ÂÖ—6ÖF6†VBæB–çfÆ–B&÷w2à¢Ò&Wv÷&¶VBF†R&WF–æVBcããƒb×cãã“"F—7F6‚6VçG&R&Vw&W76–öç26òF†W’&W6W'fR†–W&&6‡’ÂÖVÖ&W'6†—æB&WG'’6öçG&7G2v†–ÆRW&ÖæVçFÇ’&V¦V7F–ærF†Rf–ÆVB&öf–ÆR7V—6—F–öâ&6†—FV7GW&Rà¢ÒF†RÇ&VG’×&Vv—7FW&VB†–W&&6‡’vFR6†–ç2F†Rcãã“2&Vw&W76–öâÂ6òæòæWrv÷&¶fÆ÷rÖFVf–æ—F–öâ×WFF–öâ—2&WV—&VBà ¢2226†ævVB&W6÷W&6R&6VÆ–æW0 ¢Ò6öÖÖæBæW‡W2–æ7&V6VBg&öÒãã“&Fòãã“6à¢ÒVæ—BæÖ–ær–æ7&V6VBg&öÒ2ã2ãvFò2ã2ã†à¢Ò7FF–öâæÖ–ær–æ7&V6VBg&öÒã2ãFòã2ã&à¢ÒÖ—76–öâf–æFW"&VÖ–ç2cãbãCFà¢ÒW'6öææVÂ76–væÖVçB&VÖ–ç2ã2ã–à ¢22³ãã“%ÒÒ##bÓ‚Ó ¢222f—†V@ ¢Òf—†VBF†RÆ—fR&öf–ÆRF–Bæ÷BW‡÷6Rç’F—7F6‚6VçG&RæVÇ6f–ÇW&R–âVæ—BæÖ–æræB7FF–öâæÖ–ærà¢ÒF†R6–væVBÖ–â&öf–ÆR—2æ÷rÆöFVB–â†–FFVâ6ÖRÖ÷&–v–â–g&ÖR6òÖ—76–öä6†–VbõgVR6â&VæFW"ç&öf–ÆRÖF—7F6†6VçFW&æVÇ2&Vf÷&R6öÖÖæBæW‡W2&VG2F†VÒà¢Ò&rfWF6‚‚r÷&öf–ÆRòâââr–…DÔÂ—2æòÆöævW"W6VB2F†RF—7F6‚6VçG&R6÷W&6R&V6W6RF†R6W'fW"&W7öç6R6â&RöæÇ’F†R&R×&VæFW"Æ–6F–öâ6†VÆÂà¢ÒF†R&VæFW&VB&öf–ÆRg&ÖR—2&÷VæFVBFòR6V6öæG2Â†–FFVâg&öÒ–çFW&7F–öâÂæB&VÖ÷fVBgFW"7V66W72÷"f–ÇW&Rà¢ÒF—7F6‚6VçG&R(i"6W'f–6R(i"7FF–öâG—R(i"7F'Bg&öÒÂ&÷rÖÆWfVÂÆV—G7FVÆÆUö'V–ÆF–æuö–FÖVÖ&W'6†—ÂFVÆVvFVB&WG'’÷væW'6†—æBW'6öææVÂ76–væÖVçB—6öÆF–öâ&VÖ–âVæ6†ævVBà ¢222&Vw&W76–öâ6÷fW&vP ¢ÒFFVB67&—G2ö6†V6²ÖæÖ–ærÖF—7F6‚Ö6VçG&R×&öf–ÆR×&VæFW"×c“"æÖ§6Âv†–6‚7F'G2g&öÒâV×G’&öf–ÆR6†VÆÂÂ6–×VÆFW2F†R&VæFW&VB6WfVâÖ6VçG&RDôÒV&–ærÂfW&–f–W26VçG&RW‡G&7F–öâÂæB&WV—&W2&VæFW&W"6ÆVçWà¢ÒF†RW&ÖæVçBv÷&¶fÆ÷ræ÷r'Vç2F†R&VæFW&W"&Vw&W76–öâf÷"VÆÂ&WVW7G2æBÖ–âWFFW2à ¢2226†ævVB&W6÷W&6R&6VÆ–æW0 ¢Ò6öÖÖæBæW‡W2–æ7&V6VBg&öÒãã“Fòãã“&à¢ÒVæ—BæÖ–ær–æ7&V6VBg&öÒ2ã2ãfFò2ã2ãvà¢Ò7FF–öâæÖ–ær–æ7&V6VBg&öÒã2ãFòã2ãà¢ÒÖ—76–öâf–æFW"&VÖ–ç2cãbãCFà¢ÒW'6öææVÂ76–væÖVçB&VÖ–ç2ã2ã–à ¢22³ãã“ÒÒ##bÓ‚Ó ¢222&V'V–Ç@ ¢Ò&V'V–ÇBVæ—BæÖ–æræB7FF–öâæÖ–ær&÷VæBF†RÆ—fRÖ—76–öä6†–Vb†–W&&6‡’¢¤F—7F6‚6VçG&R(i"6W'f–6R(i"7FF–öâG—R(i"7F'Bg&öÒ¢¢à¢ÒF—7F6‚6VçG&R”BöæÖR—'2æ÷r6öÖRF—&V7FÇ’g&öÒF†R6–væVBÖ–âW6W"w2æF—fR&öf–ÆRç&öf–ÆRÖF—7F6†6VçFW&æVÇ2âF†R&öf–ÆR&÷WFR—2&W6öÇfVBg&öÒÖ—76–öä6†–Vbw26æf&%÷&öf–ÆUöÆ–æ¶Âv—F‚F†RvRW6W%ö–Ff–Æ&ÆRöæÇ’2&÷VæFVBfÆÆ&6²à¢ÒF†RV×G’&öf–ÆRF—7F6‚6VçG&RÆ6V†öÆFW"—2–væ÷&VB&V6W6R—B†2æòW†7Bö'V–ÆF–æw2÷¶–GÖ6VçG&RÆ–æ²à¢ÒF—7F6‚6VçG&R÷F–öç2&V6öÖRf–Æ&ÆR26ööâ2F†R&öf–ÆRÆ—7BÆöG3²7FF–öâÖ76–væÖVçBÆöF–æræòÆöævW"&Æö6·2F†Rf—'7BG&÷F÷vâà¢Ò7FF–öâÖVÖ&W'6†—&VÖ–ç2WF†÷&—FF—fRg&öÒ&÷rÖÆWfVÂÆV—G7FVÆÆUö'V–ÆF–æuö–FÂ–æ6ÇVF–ærÆ—FW&ÂçVÆÆæ÷&ÖÆ—6F–öâf÷"Væ76–væVB'V–ÆF–æw2à¢ÒFFVB6W'f–6R7FvRFW&—fVBg&öÒÖ—76–öä6†–Vb'V–ÆF–ærG—R”G26ò—"Ö'VÆæ6R7F—2Ö'VÆæ6Rv†–ÆRöÆ–6R†VÆ–6÷FW"ôTôB&VÖ–âöÆ–6S²$äÄ’Â6ö7FwV&BæB4"&Rw&÷WVBVæFW"6V&6‚b&W67VRò6ö7FwV&Bà¢Ò7FF–öâG—R—2&V'V–ÇBg&öÒF†R6VÆV7FVBF—7F6‚6VçG&R²6W'f–6R7V'6WBÂæB7F'Bg&öÒ—2&V'V–ÇBg&öÒF—7F6‚6VçG&R²6W'f–6R²7FF–öâG—Rà¢Ò&VÖ÷fVBF†Rf–ÆVB7FF–öâ×6VVBÂöÆV—G7FVÆÆVæç6–6‡F6VVBfÆÆ&6²æB'V–ÆF–ærÖVF—B×vR6VçG&RF—66÷fW'’'VçF–ÖR–çG&öGV6VBGW&–ærããƒ(	3ãã“G&÷V&ÆW6†ö÷F–ærà¢Ò&W6W'fVBFVÆVvFVB&Vg&W6‚õ&WG'’÷væW'6†—Âf—6–&ÆR&Vg&W6†–æröW'&÷"F–væ÷7F–72æBW'6öææVÂ76–væÖVçB—6öÆF–öâà ¢222&Vw&W76–öâ6÷fW&vP ¢ÒFFVB67&—G2ö6†V6²ÖæÖ–ærÖF—7F6‚Ö6VçG&R×&öf–ÆRÖ†–W&&6‡’×c“æÖ§6W6–ærF†R7WÆ–VB6WfVâÖ6VçG&R&öf–ÆRf—‡GW&RæBW†7B6W'f–6Rö'V–ÆF–ær×G—RÖ–æw2à¢Ò&Wv÷&¶VBF†Rcããƒ(	7cãã“F—7F6‚6VçG&R&Vw&W76–öç26òF†W’&W6W'fR7FF–öâÖÖVÖ&W'6†—Â&WG'’æBçVÆÂÖæ÷&ÖÆ—6F–öâ6öçG&7G2v—F†÷WB&÷FV7F–ærF†R&VÖ÷fVB6VVB&6†—FV7GW&Rà ¢2226†ævVB&W6÷W&6R&6VÆ–æW0 ¢Ò6öÖÖæBæW‡W2–æ7&V6VBg&öÒãã“Fòãã“à¢ÒVæ—BæÖ–ær–æ7&V6VBg&öÒ2ã2ãVFò2ã2ãfà¢Ò7FF–öâæÖ–ær–æ7&V6VBg&öÒã2ã–Fòã2ãà¢ÒÖ—76–öâf–æFW"&VÖ–ç2cãbãCFà¢ÒW'6öææVÂ76–væÖVçB&VÖ–ç2ã2ã–à ¢22³ãã“ÒÒ##bÓ‚Ó ¢222f—†V@ ¢ÒF—7F6‚6VçG&RæÖRF—66÷fW'’æòÆöævW"&WV—&W2F†R6VVB7FF–öâFòÇ&VG’&R76–væVBFòF—7F6‚6VçG&Râç’÷&F–æ'’7FF–öâVF—BvRÖ’6VVBF†RæF—fR¢¤76–væVBF—7F6‚6VçFW"¢¢6VÆV7F÷"à¢ÒÖ—76–öä6†–Vbw2Æ—FW&ÂÆV—G7FVÆÆUö'V–ÆF–æuö–CÒ&çVÆÂ&fÇVR—2æ÷ræ÷&ÖÆ—¦VB2vVçV–æVÇ’Væ76–væVB&F†W"F†â&V–ærG&VFVB2F—7F6‚6VçG&R”Bà¢Òv†VâF†R7F—fR&W6÷W&6RFÖ–æ—7G&F–öâFö7VÖVçB÷7FFR†2æòW6&ÆR7FF–öâ&÷w2–WBÂF†RÆöFW"W&f÷&×2öæR&÷VæFVBöÆV—G7FVÆÆVæç6–6‡FfWF6‚öæÇ’FòF—66÷fW"WFòF‡&VR7FF–öâ'V–ÆF–ær”G2ÂF†Vâ7F–ÆÂ&VG2F—7F6‚6VçG&R”BöæÖR—'2g&öÒF†RVF—B×vR76–væÖVçB6VÆV7F÷"à¢ÒF†RæF—fR7FF–öç2f–Wr&VÖ–ç26VVBÖF—66÷fW'’fÆÆ&6²öæÇ“²—B—2æ÷B&W7F÷&VB2F—7F6‚6VçG&RæÖRWF†÷&—G’ÂæB7FF–öâ×FòÖ6VçG&RÖVÖ&W'6†—&VÖ–ç2F†R&÷rÖÆWfVÂÆV—G7FVÆÆUö'V–ÆF–æuö–F&VÆF–öç6†—à ¢222&Vw&W76–öâ6÷fW&vP ¢ÒFFVB67&—G2ö6†V6²ÖæÖ–ærÖF—7F6‚Ö6VçG&R×Væ76–væVB×6VVB×c“æÖ§66÷fW&–ærÆ—FW&ÂçVÆÆÂâVæ76–væVB÷&F–æ'’7FF–öâ2fÆ–BVF—B×vR6VVBÂâV×G’Æ—fR&W6÷W&6RFÖ–æ—7G&F–öâDôÒÂæBæF—fR7FF–öç2…DÔÂfÆÆ&6²v—F†÷WB6†æv–ær6VçG&RÖæÖRWF†÷&—G’à ¢2226†ævVB&W6÷W&6R&6VÆ–æW0 ¢Ò6öÖÖæBæW‡W2–æ7&V6VBg&öÒããƒ–Fòãã“à¢ÒVæ—BæÖ–ær–æ7&V6VBg&öÒ2ã2ãFFò2ã2ãVà¢Ò7FF–öâæÖ–ær–æ7&V6VBg&öÒã2ã†Fòã2ã–à¢ÒÖ—76–öâf–æFW"&VÖ–ç2cãbãCFà¢ÒW'6öææVÂ76–væÖVçB&VÖ–ç2ã2ã–à ¢22³ããƒ•ÒÒ##bÓ‚Ó ¢222f—†V@ ¢Ò¢¥&WG'’F—7F6‚6VçG&W2¢¢æ÷rW6W2öæRFVÆVvFVBFö7VÖVçBÖÆWfVÂ6Æ–6²÷væW"Â6òF†R7F–öâ&VÖ–ç2Æ—fRWfVâ–bÖ—76–öä6†–Vb&WÆ6W2F†R&W6÷W&6RFÖ–æ—7G&F–öâæVÂDôÒgFW"F†R÷&–v–æÂÖ÷VçBà¢ÒF—7F6‚6VçG&RF—66÷fW'’æòÆöævW"G'W7G2F†Rf—'7B&&—G&'’'V–ÆF–ær2—G2VF—B×vR6VVBâ—B&VfW'2÷&F–æ'’f—&RÂÖ'VÆæ6RÂöÆ–6RæB÷F†W"7W÷'FVB7FF–öâ&÷w2F†B6''’&VÂÆV—G7FVÆÆUö'V–ÆF–æuö–F76–væÖVçBà¢ÒF†RVF—B×vRÆöö·W—2&÷VæFVBFòBÖ÷7BF‡&VR76–væVB7FF–öâ6æF–FFW2æB7F÷2öâF†Rf—'7BvRF†BW‡÷6W2Ö—76–öä6†–Vbw2¢¤76–væVBF—7F6‚6VçFW"¢¢6VÆV7F÷"âF†—2—2&WG'’fÆÆ&6²Âæ÷BW"Ö'V–ÆF–ær7&vÂà¢ÒF†R'WGFöâæ÷r†öÆG2f—6–&ÆR¢¥&Vg&W6†–æ~(
+b¢¢7FFR&Vf÷&RÆöF–ær7F'G2Â&V6÷&G2âW‡Æ–6—BÆöF–æröW'&÷"7FFRÂæBW‡÷6W2F†R6öæ7&WFRÆöFW"f–ÇW&R–âF†R'WGFöâFööÇF—æBæÖ–ærÆöw2–ç7FVBöbV&–ær–æW'Bà¢ÒVæ—BæÖ–æræB7FF–öâæÖ–ær¶VWF†RW†—7F–ærF—7F6‚6VçG&R(i"7FF–öâG—R(i"7F'Bg&öÒ666FRæBWF†÷&—FF—fR7FF–öâ×&÷rÆV—G7FVÆÆUö'V–ÆF–æuö–FÖVÖ&W'6†—à ¢222&Vw&W76–öâ6÷fW&vP ¢ÒFFVB67&—G2ö6†V6²ÖæÖ–ærÖF—7F6‚Ö6VçG&R×&WG'’×cƒ’æÖ§6Âv†–6‚W†V7WFW2F†R&öGV7F–öâ6VVB6VÆV7F÷"v–ç7Bf—‡GW&Rv—F‚V&Ç’Væ76–væVB†öÖR&W7öç6R&÷w2ÂF—7F6‚6VçG&R&÷ræBÆFW"76–væVB÷&F–æ'’7FF–öç3²—BÇ6ò&÷FV7G2FVÆVvFVB&WG'’÷væW'6†—Âf—6–&ÆRÆöF–ær7FFRÂf–ÇW&RF–væ÷7F–72æBö–çFW"÷F÷V6‚ff÷&Fæ6Rà ¢2226†ævVB&W6÷W&6R&6VÆ–æW0 ¢Ò6öÖÖæBæW‡W2–æ7&V6VBg&öÒããƒ†Fòããƒ–à¢ÒVæ—BæÖ–ær–æ7&V6VBg&öÒ2ã2ã6Fò2ã2ãFà¢Ò7FF–öâæÖ–ær–æ7&V6VBg&öÒã2ãvFòã2ã†à¢ÒÖ—76–öâf–æFW"&VÖ–ç2cãbãCFà¢ÒW'6öææVÂ76–væÖVçB&VÖ–ç2ã2ã–à ¢22³ããƒ…ÒÒ##bÓ‚Ó ¢222f—†V@ ¢ÒF—7F6‚6VçG&RæÖW2f÷"Væ—BæÖ–æræB7FF–öâæÖ–æræ÷r6öÖRg&öÒÖ—76–öä6†–Vbw2¢¤76–væVBF—7F6‚6VçFW"¢¢6VÆV7F÷"öâöæR÷&F–æ'’'V–ÆF–ærVF—BvR†6'V–ÆF–æuöÆV—G7FVÆÆUö'V–ÆF–æuö–F’Âv†–6‚W‡÷6W2F†R&VÂF—7F6‚6VçG&R”BöæÖR—'2à¢Ò7FF–öâ×FòÖ6VçG&RÖVÖ&W'6†—æ÷r6öÖW2F—&V7FÇ’g&öÒV6‚7FF–öç2&÷rw2ÆV—G7FVÆÆUö'V–ÆF–æuö–FGG&–'WFR–ç7FVBöb6V6öæB'V–ÆF–æw2¥4ôâÆöö·Wà¢Ò6VÆV7F–ærF—7F6‚6VçG&R66÷W2F†R7FF–öâ6WBf—'7C²¢¥7FF–öâG—R¢¢—2&V'V–ÇBg&öÒF†B6VçG&R7V'6WBÂF†Vâ¢¥7F'Bg&öÒ¢¢—2&V'V–ÇBg&öÒ6VçG&R²G—Rà¢ÒF†Rö'6öÆWFRöÆV—G7FVÆÆVæç6–6‡FF—7F6‚6VçG&RÖæÖR'6W"—2&VÖ÷fVBg&öÒF†RæÖ–ærfÆ÷rà¢Ò&Vg&W6‚÷&WG'’7FFW2g&öÒcããƒr&VÖ–âVæ6†ævVBà ¢222&Vw&W76–öâ6÷fW&vP ¢ÒFFVB67&—G2ö6†V6²ÖæÖ–ærÖF—7F6‚Ö6VçG&RÖ76–væÖVçB×6÷W&6R×cƒ‚æÖ§6W6–ærF†R7WÆ–VBÖ—76–öä6†–Vb76–væÖVçB×6VÆV7F÷"f—‡GW&RÂ–æ6ÇVF–ærF†R&VÂÄôDôâD•5D4†æB66÷FÆæG2F—7F6†”BöæÖR—'2à¢Ò&V&6VBF†RcããƒR×cããƒræÖ–ær&Vw&W76–öç26òF†W’&÷FV7BF†Rf–ÇFW"ö666FR÷&Vg&W6‚T’v—F†÷WB&W6W'f–ærF†R–æ6÷'&V7BöÆB6÷W&6R77V×F–öç2à ¢2226†ævVB&W6÷W&6R&6VÆ–æW0 ¢Ò6öÖÖæBæW‡W2–æ7&V6VBg&öÒããƒvFòããƒ†à¢ÒVæ—BæÖ–ær–æ7&V6VBg&öÒ2ã2ã&Fò2ã2ã6à¢Ò7FF–öâæÖ–ær–æ7&V6VBg&öÒã2ãfFòã2ãvà¢ÒÖ—76–öâf–æFW"&VÖ–ç2cãbãCFà¢ÒW'6öææVÂ76–væÖVçB&VÖ–ç2ã2ã–à ¢22³ããƒuÒÒ##bÓ‚Ó ¢222f—†V@ ¢Ò¢¥&Vg&W6‚F—7F6‚6VçG&W2¢¢æ÷r'6W2F†RæF—fRöÆV—G7FVÆÆVæç6–6‡FÆ—7Bv—F†÷WB&WV—&–ærÖ—76–öä6†–VbFòW‡÷6R'V–ÆF–æu÷G—Uö–CÒ#r&öâV6‚Æ—7Bw&W"à¢ÒF—7F6‚6VçG&RF—66÷fW'’f—'7BW6W2Ö—76–öä6†–Vbw2'V–ÆF–ærÖÆ—7B6öçF–æW'2æBfÆÇ2&6²FòW†7B6ÖRÖ÷&–v–âö'V–ÆF–æw2÷¶–GÖÆ–æ·2–bw&W"Ö&·W6†ævW2à¢ÒVæ—BæÖ–æræB7FF–öâæÖ–æræ÷r6†÷r¢¥&Vg&W6†–æ~(
+b¢¢v†–ÆRF†RÆ—7B—2ÆöF–æræB¢¥&WG'’F—7F6‚6VçG&W2¢¢v†VâV—F†W"6VçG&RF—66÷fW'’÷"7FF–öâ×FòÖ6VçG&R76–væÖVçBFFf–Ç2à¢Òf–ÆVBÆöBæ÷rÆVfW26ÆV"¢¤F—7F6‚6VçG&W2Væf–Æ&ÆR(	B&Vg&W6‚¢¢Æ6V†öÆFW"–ç7FVBöbF—6&ÆVB¢¤ÆÂF—7F6‚6VçG&W2¢¢6VÆV7F÷"F†BV'2FòFòæ÷F†–ærà¢Ò7FF–öâÖVÖ&W'6†—&VÖ–ç2WF†÷&—FF—fRF‡&÷Vv‚ö'V–ÆF–ærö'V–ÆF–æw5ö§6öææBÆV—G7FVÆÆUö'V–ÆF–æuö–Fà ¢222&Vw&W76–öâ6÷fW&vP ¢ÒFFVB67&—G2ö6†V6²ÖæÖ–ærÖF—7F6‚Ö6VçG&R×&Vg&W6‚×cƒræÖ§6Âv†–6‚W†V7WFW2F†R&öGV7F–öâ'6W"v–ç7BF—7F6‚6VçG&R…DÔÂf—‡GW&W2v—F†÷WB'V–ÆF–æu÷G—Uö–CÒ#r&ÂfW&–f–W2w&W&ÆW72fÆÆ&6²&V†f–÷W"Â&V¦V7G2æW7FVBö7&÷72Ö÷&–v–âÆ–æ·2æB&÷FV7G2F†Rf—6–&ÆR&Vg&W6‚÷&WG'’7FFW2à ¢2226†ævVB&W6÷W&6R&6VÆ–æW0 ¢Ò6öÖÖæBæW‡W2–æ7&V6VBg&öÒããƒfFòããƒvà¢ÒVæ—BæÖ–ær–æ7&V6VBg&öÒ2ã2ãFò2ã2ã&à¢Ò7FF–öâæÖ–ær–æ7&V6VBg&öÒã2ãVFòã2ãfà¢ÒÖ—76–öâf–æFW"&VÖ–ç2cãbãCFà¢ÒW'6öææVÂ76–væÖVçB&VÖ–ç2ã2ã–à ¢22³ããƒeÒÒ##bÓ‚Ó€ ¢222f—†V@ ¢ÒVæ—BæÖ–æræB7FF–öâæÖ–æræ÷rÆöBF†R¢¤F—7F6‚6VçG&RÆ—7B–æFWVæFVçFÇ’¢¢g&öÒÖ—76–öä6†–Vbw2æF—fRöÆV—G7FVÆÆVæç6–6‡Ff–Wr–ç7FVBöb–æfW'&–ærf–Æ&ÆR6VçG&W2g&öÒ7FF–öâ&V6÷&G2à¢ÒæÖ–æræ÷rföÆÆ÷w2¢¤F—7F6‚6VçG&R(i"7FF–öâG—R(i"7F'Bg&öÒ¢¢â6†ö÷6–ær6VçG&Rf—'7Bæ'&÷w27FF–öâG—RFòG—W2&W&W6VçFVB–âF†B6VçG&RÂæB7F'Bg&öÒ—2F†VâÆ–Ö—FVBFòF†R6VÆV7FVB6VçG&RæBG—Rà¢ÒFFVB¢¥&Vg&W6‚F—7F6‚6VçG&W2¢¢6öçG&öÇ2Fò&÷F‚æÖ–ærFööÇ2à¢Ò7FF–öâÖVÖ&W'6†—7F–ÆÂW6W2Ö—76–öä6†–Vbw2ÆV—G7FVÆÆUö'V–ÆF–æuö–F&VÆF–öç6†—g&öÒö'V–ÆF–ærö'V–ÆF–æw5ö§6öæ²6VçG&RæÖW2&Ræ÷B†&BÖ6öFVB÷"wVW76VBà ¢2226†ævVB&W6÷W&6R&6VÆ–æW0 ¢ÒVæ—BæÖ–ær–æ7&V6VBg&öÒ2ã2ãFò2ã2ãà¢Ò7FF–öâæÖ–ær–æ7&V6VBg&öÒã2ãFFòã2ãVà¢ÒÖ—76–öâf–æFW"&VÖ–ç2cãbãCFà¢ÒW'6öææVÂ76–væÖVçB&VÖ–ç2ã2ã–à¢Ò6öÖÖæBæW‡W2–æ7&V6VBg&öÒããƒVFòããƒfà ¢22³ããƒUÒÒ##bÓ‚Ó€ ¢222FFV@ ¢ÒVæ—BæÖ–æræB7FF–öâæÖ–æræ÷r–æ6ÇVFR¢¤F—7F6‚6VçG&R¢¢f–ÇFW"Æöæw6–FRF†RW†—7F–ær7FF–öâ×G—Rf–ÇFW"à¢ÒF—7F6‚6VçG&R÷F–öç26öÖRg&öÒÖ—76–öä6†–Vbw2WF†÷&—FF—fRö'V–ÆF–ærö'V–ÆF–æw5ö§6öæ'V–ÆF–ærFFæBV6‚7FF–öâw2ÆV—G7FVÆÆUö'V–ÆF–æuö–F&VÆF–öç6†—&F†W"F†â7FF–öâÖæÖRwVW76–ærà¢Ò¢¤ÆÂF—7F6‚6VçG&W2¢¢&VÖ–ç2F†RFVfVÇBâv†VâÖ—76–öä6†–Vb&W÷'G27FF–öç2v—F‚æòF—7F6‚6VçG&R76–væÖVçBÂ¢¥Væ76–væVBòFVfVÇB¢¢—2f–Æ&ÆR2âW‡Æ–6—Bf–ÇFW"à ¢2226fWG’æB66÷P ¢ÒF†Rf–ÇFW"öæÇ’6†ævW2v†–6‚7FF–öç2VçFW"F†RVæ—BæÖ–ær÷"7FF–öâæÖ–ærVWVS²W7F&Æ—6†VBæÖ–æræB6fRÆöv–2&RVæ6†ævVBà¢ÒW'6öææVÂ76–væÖVçB—2æ÷Bf–ÇFW&VB'’F†—26öçG&öÂà¢Ò–bF—7F6‚6VçG&RFF6ææ÷B&RÆöFVBÂF†R6VÆV7F÷"7F—2F—6&ÆVBæBæÖ–ærfÆÇ2&6²FòF†RW†—7F–ærÆÂ×7FF–öç2&V†f–÷W"à ¢2226†ævVB&W6÷W&6R&6VÆ–æW0 ¢ÒVæ—BæÖ–ær–æ7&V6VBg&öÒ2ã2ã–Fò2ã2ãà¢Ò7FF–öâæÖ–ær–æ7&V6VBg&öÒã2ã6Fòã2ãFà¢ÒÖ—76–öâf–æFW"&VÖ–ç2cãbãCFà¢ÒW'6öææVÂ76–væÖVçB&VÖ–ç2ã2ã–à¢Ò6öÖÖæBæW‡W2–æ7&V6VBg&öÒããƒFFòããƒVà ¢22³ããƒEÒÒ##bÓ‚ÓP ¢2226†ævV@ ¢Ò&W7F÷&RWfW'’W'6öææVÂ76–væÖVçB7F–öâöâ•†öæRæB•B6f&“¢&Vg&W6‚7FF–öç2Â–×÷'BÂ7F'BÂW6RæB7F÷à¢Ò¶VWF†RæF—fR¥4ôâf–ÆR–çWB†–FFVâ6ò—B6ææ÷BF—7Æ6R÷"6÷fW"F†Rf—6–&ÆRÖö&–ÆR7F–öâ'WGFöç2à¢Ò&W7F÷&RF†RFööÇ2æB&W÷'G2F—66Æ÷7W&R6ò6Æ÷6VB6öçFVçB7F—2†–FFVâæBWfW'’7FGW2÷&W÷'BFööÂV'2v†Vâ÷VæVBà¢ÒFBF÷V6‚×6—¦VBGvòÖ6öÇVÖâÖö&–ÆRw&–G2ÂG–æÖ–2×f–Ww÷'B67&öÆÆ–æræB”õ26fRÖ&V&÷FV7F–öâv—F†÷WB&VÖ÷f–ærFW6·F÷gVæ7F–öæÆ—G’à¢Ò–æ7&V6VBF†RVæ–f–VBW6W'67&—BfW'6–öâg&öÒããƒ6FòããƒFà ¢22³ããƒ5ÒÒ##bÓ‚ÓP ¢2226†ævV@ ¢ÒF–VçBG&ç7÷'B¶VW2F†RW†—7F–ærW†7B×&÷WFRÂ–g&ÖRæBGWÆ–6FRÖ6Æ–6²6fVwV&G2v†–ÆR&VGV6–ærF†R6†&VB&WVBÖ6Æ–6²v–æF÷rg&öÒBã6V6öæG2Fò"ãR6V6öæG2à¢Ò7FÆÆVBF–VçB¢¥G&ç7÷'BF–VçBò&ö6‚¢¢GFV×Bæ÷r&WG&–W2F†RÆ—fRgVRö–g&ÖR7FFRgFW"ã’6V6öæG2–ç7FVBöbã‚6V6öæG2à¢Ò&—6öæW"6VÆÂæB&VÆV6RFW7F–æF–öâF—66÷fW'’æ÷röÆÇ2F†RÆ—fR&W7VÇBT’BÓ#R×2&F†W"F†â#Ó#S×2à¢ÒfW&–f–VB&—6öæW"×&W7VÇB6Æ÷6R&WG&–W2æ÷r'VâgFW"#S×2–ç7FVBöbCƒ×2ÂæBwV&FVBf–ÆVBÖ6Æ–6²&WG&–W2&V6öÖRVÆ–v–&ÆRgFW"B6V6öæG2–ç7FVBöbbãR6V6öæG2à ¢2226fWG ¢ÒW†7BF–VçBæB&—6öæW"&÷WFW2ÂæV&W7BfÆ–BFW7F–æF–öâ6VÆV7F–öâÂVæF–ær×7FFR†æBÖöfbÂ&W7VÇB×67&VVâ–FVçF—G’ÂGWÆ–6FRÖ6Æ–6²&÷FV7F–öâæBf–ÂÖ6Æ÷6VBÖ†–×VÒF–ÖV÷WG2&VÖ–âVæ6†ævVBà¢ÒVæ—Bf–æFW"&VÖ–ç2&Æö6¶VBv†–ÆRF–VçB÷"&—6öæW"G&ç7÷'B÷væW'6†——2Vç&W6öÇfVBà ¢2226†ævVBVæv–æR&6VÆ–æP ¢ÒÖ—76–öâf–æFW"–æ7&V6VBg&öÒcãbãC&FòcãbãC6à ¢22³ããƒ%ÒÒ##bÓ‚Ó  ¢222f—†V@ ¢Ò&VGV6VBF†RFVfVÇBÖöâWfVçB66ææW"g&öÒöæR×6V6öæB–æFWVæFVçB–g&ÖRöFö7VÖVçBvÆ²Fò6†&VB66†VBFö7VÖVçB6æ6†÷BWfW'’R6V6öæG2Âv†–ÆR&WF–æ–ærF†R–ÖÖVF–FR7F'GW66âæBW†7B6Æ–Ò&÷WFRà¢Ò&VGV6VBF÷×v–æF÷rÖ—76–öâÖg&ÖR&V6öæ6–Æ–F–öâg&öÒf÷&6VBFö7VÖVçBÖw&‚&V'V–ÆBWfW'’f—fR6V6öæG2Fò66†VB&V6öæ6–Æ–F–öâWfW'’R6V6öæG2à¢Ò&6¶w&÷VæBWFöÖF–öâæ÷r7F'G2öæÇ’F†R6–ÆVçB×VWVRæB÷7B×G&ç7÷'BöÆÆW'2v†÷6R7FFR—27GVÆÇ’7F—fR–ç7FVBöb'Vææ–ærÆÂF‡&VRvF6†W'2f÷"F†Rv†öÆRWFòÖöFR6W76–öâà¢ÒÆ—fRG&–æVBW'6öææVÂWFFW2&Ræ÷r6öÆW66VBÂ66†VB'&–VfÇ’æB6¶—VBv†VâvVæW&FVBÖ&·W—2Væ6†ævVBÂ&WfVçF–ær&WVFVBgVÆÂ'6W"öÖöFVÂv÷&²æBFWF6†VBDôÒ6‡W&âöâ&–FÇ’×WFF–ærÖ—76–öâvW2à¢Ò†–v‚Ö†V–FÆR&V6÷fW'’6âæ÷r&V7–6ÆR6fVÇ’&÷fRsÖ”"gFW"W6W"Ö–FÆRæB÷W&F–öæÂ6fWG’6†V6·2WfVâv†Vâ&Væ–vâÆ—fRÖ—76–öâ×WFF–öç2&WfVçBR×6V6öæB×WFF–öâÖg&VRv–æF÷rà¢Ò6ögBÖVÖ÷'’Ö–çFVææ6R&VÆV6W2F†RÆ—fRW'6öææVÂF—7Æ’66†RæB7FÆRFWF6†VBG&ç7÷'BÖÖöFÂ&VfW&Væ6W2à¢ÒÆÇ’7FVÂæ÷rW6W26†÷'FW"&÷VæFVB6VÆV7F–öâÂF—7F6‚×&W7VÖRæB&VçBÖ6Æ÷6R6WGFÆRFVÆ—2Â&VGV6–ærF†Ræ÷&ÖÂF‚v—F†÷WBvV¶Væ–ærW†7Bf—&Röff–6W"Â7V66W72ÖÆW'B÷"Ö—76–öâÖ6Æ÷6R6öæf—&ÖF–öâà ¢2226fWG’æB6ö×F–&–Æ—G ¢ÒæòFF—F–öæÂö'6W'fW"Â&WVF–ærF–ÖW"ÂfWF6‚Â6VÆV7F–öâ÷"F—7F6‚F‚v2FFVBà¢ÒW†7BVæ—Bf–æFW"ÂÖ—76–öâWFFRÂG&–æVB×W'6öææVÂWF†÷&—G’ÂF–VçB÷&—6öæW"G&ç7÷'BÂWFòÖöFRÖ—76–öâ÷væW'6†—æBf–æÂF—7F6‚6fVwV&G2&VÖ–âVæ6†ævVBà¢ÒÆÇ’7FVÂ&WF–ç2F†RW†7B6VÆV7FVB×fV†–6ÆR–FVçF—G’ÂæWr×7V66W72ÖÆW'BÖF6†–ærÂR×6V6öæB6öæf—&ÖF–öâv–æF÷rÂVæF–ær×7FFR†æBÖöfbæB"ÖGFV×B&VçBÖ6Æ÷6RfÆÆ&6²à¢ÒWfVçB6öÆÆV7F–öâ&VÖ–ç2Væ&ÆVB'’F†RW†—7F–ær6WGF–æræB7F–ÆÂW&f÷&×2â–ÖÖVF–FR66âv†VâF†R'VçF–ÖR7F'G2à¢Ò•†öæRö•Dõ2÷væW'6†—æBæF—fR×–6¶W"6ÆVçWF‡2&VÖ–â–çF7Bà ¢2226†ævVBVæv–æR&6VÆ–æP ¢ÒÖ—76–öâf–æFW"–æ7&V6VBg&öÒcãbãCFòcãbãC&à¢ÒVæ—BæÖ–ær&VÖ–ç22ã2ã–à¢Õš®x§‚ÚîÆ­yÚ.¶›­¢¸ Šv¥¶‰Ê.İzßÎ¢Ö¥¢ëiºÙbë5 Station Naming remains `1.3.3`.
 - Personnel Assignment remains `1.3.8`.
 
 ## [1.0.81] - 2026-08-01
@@ -1614,1164 +375,52 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ### Changed engine baseline
 
-- Mission Finder increased from `V10.6.129` to `V10.6.130`.
-- Personnel Assignment remains `1.3.8`.
-
-
-## [1.0.66] - 2026-07-31
-
-### Fixed
-
-- Restored the selected trained-personnel display after Unit Finder by separating its renderer from the mission requirement preload scheduler.
-- Removed the render-to-preload recursion introduced in `1.0.65`, so a panel refresh can no longer start another requirement fetch and render cycle.
-- Isolated preload-cache failures from the existing selected-vehicle Personnel Register display; preloading can fail without hiding selected trained staff.
-- Kept mission-load `Required Personnel` preloading in the mission lifecycle and retained reuse of the mission-bound requirement snapshot during Unit Finder.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.128` to `V10.6.129`.
-- Personnel Assignment remains `1.3.8`.
-
-
-## [1.0.65] - 2026-07-31
-
-### Added
-
-- Mission Finder now preloads the authoritative `Required Personnel` row as soon as the mission UI is available, before Unit Finder starts selecting vehicles.
-- The trained-personnel panel now shows each required course with required, selected and still-needed personnel counts, including composite rows such as Level 2 Public Order Officer, Police Medic and Police Sergeant.
-
-### Fixed
-
-- Unit Finder reuses the mission-load requirement snapshot instead of fetching and parsing the same mission definition again, while retaining mission-identity checks and clearing stale requirements when the mission changes.
-- `Required Personnel Available` remains excluded because it is a mission precondition rather than dispatch demand.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.127` to `V10.6.128`.
-- Personnel Assignment remains `1.3.8`.
-
-## [1.0.64] - 2026-07-31
-
-### Fixed
-
-- `Missing Personnel: Nx HazMat Unit` is now interpreted as a HazMat-trained personnel shortage rather than an ordinary vehicle quantity.
-- HazMat personnel demand now uses six `gw_gefahrgut`-trained staff per exact type-39 Fire Operational Support Unit, so four missing staff select one OSU and seven select two.
-- The Fire HazMat Personnel Assignment profile now fills six trained staff per OSU, keeping the verified Personnel Register and Mission Finder coverage calculation aligned.
-- Ordinary HazMat vehicle requirements remain separate, retain their exact vehicle quantity and continue to reject type-7 HazMat Units and type-86 Operational Support Vans.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.126` to `V10.6.127`.
-- Personnel Assignment increased from `1.3.7` to `1.3.8`.
-
-## [1.0.63] - 2026-07-31
-
-### Fixed
-
-- Fixed Issue #215 by mapping singular, plural and `Required` HazMat-unit captions directly to the Fire Operational Support Unit.
-- HazMat-unit requirements now accept only exact MissionChief vehicle type `39` OSUs; type `7` HazMat Units, type `86` Operational Support Vans and other support vehicles cannot satisfy the requirement.
-- OSU requirements are now strict no-fallback selections in Unit Finder, Mission Update/Upgrade and Auto Mode while preserving exact quantities and counting already selected OSUs.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.125` to `V10.6.126`.
-- Personnel Assignment remains `1.3.7`.
-
-## [1.0.62] - 2026-07-30
-
-### Added
-
-- Added an independently minimisable **Trained Personnel** panel to the right of Vehicle Load List on desktop and the stacked iPad layout.
-- The panel shows only personnel training attached to currently selected vehicles, using exact vehicle-ID Personnel Register evidence.
-- Complete register evidence is shown as numbered personnel profiles with their courses; summary-only evidence falls back to per-course counts.
-- The compact iPhone two-button layout is unchanged and the additional sibling panel is hidden there to prevent overlap.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.124` to `V10.6.125`.
-- Personnel Assignment remains `1.3.7`.
-
-## [1.0.61] - 2026-07-30
-
-### Fixed
-
-- Auto Mode now records whether the main selection pass used current Mission Update authority and suppresses the post-selection Mission Update re-read for that same cycle.
-- Fresh Unit Finder missions still retain the late Missing Vehicles/Personnel check, so genuinely new shortages appearing during initial selection remain actionable.
-- Trained-personnel Mission Update selection remains on the established exact-register route and is executed once rather than being repopulated by a duplicate update pass.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.123` to `V10.6.124`.
-- Personnel Assignment remains `1.3.7`.
-
-## [1.0.60] - 2026-07-30
-
-### Fixed
-
-- Auto Mode once again treats a visible `Missing on mission / En-route / Still needed / Selected` table as Mission Update authority and suppresses the full mission-definition Unit Finder route.
-- Positive `Still needed` values are converted to a current-selection target using the table's `Selected` value, preventing the same shortage from being selected twice during the post-selection recheck.
-- A visible Missing-on-mission table with zero positive shortages remains authoritative, so an existing fully supplied mission cannot be mistaken for a fresh mission.
-- MissionChief's escaped `data-raw-html` Missing Vehicles alert is now parsed as a scoped fallback when the structured child exists only inside the attribute.
-- Existing patient, trained-personnel, prisoner, transport and memory lifecycle rules are unchanged.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.122` to `V10.6.123`.
-- Personnel Assignment remains `1.3.7`.
-
-## [1.0.59] - 2026-07-29
-
-### Fixed
-
-- Browser back-forward-cache transitions now suspend the complete Mission Finder runtime instead of retaining the main subtree observer, session ticker, automation timers and DOM caches with the old mission document.
-- Auto Mode now has a high-heap circuit breaker. Before any Unit Finder selection, an Edge/Chromium mission frame using at least 640 MiB of JavaScript heap is reloaded once with `location.replace`, then Auto Mode resumes on the same mission.
-- The recycle is guarded by current selection, dispatch-transition, transport and cooldown checks, so it cannot interrupt selected vehicles or change mission requirements.
-
-### Diagnostics
-
-- Memory exports now include runtime suspension state, session ticker state and the bounded automatic recycle receipt.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.121` to `V10.6.122`.
-- Personnel Assignment remains `1.3.7`.
-
-## [1.0.58] - 2026-07-29
-
-### Fixed
-
-- Seasonal collectible scanning now has one top-window owner instead of starting a one-second recursive iframe scanner in every MissionChief frame.
-- The collector now starts only after the Mission Finder duplicate-instance guard and is stopped during runtime cleanup and Safari back-forward-cache suspension, then restarted safely on restoration.
-- This removes a confirmed long-session timer and frame-retention path without changing Unit Finder, Mission Update, vehicle matching or Auto Mode dispatch decisions.
-
-### Diagnostics
-
-- Existing Unit Finder exports now include an on-demand browser memory snapshot with JavaScript heap figures when supported, accessible document/frame counts, DOM and vehicle-checkbox totals, active timer/observer state and bounded cache sizes.
-- Memory evidence is collected only when Export Diagnostics is clicked; no new polling timer is introduced.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.120` to `V10.6.121`.
-- Personnel Assignment remains `1.3.7`.
-
-## [1.0.57] - 2026-07-29
-
-### Fixed
-
-- Auto Mode now runs the mission-definition requirement set once. Its post-Unit Finder Mission Update pass accepts only explicit current **Missing Vehicles** or **Missing Personnel** rows, preventing complete double dispatches.
-- Normal **EOD Response Vehicles** use exact MissionChief vehicle type `110`; **Marine EOD Response Vehicles** remain separate on type `113` and can no longer satisfy one another through substring matching.
-- Composite **Required Personnel** rows now retain Search Advisor trained-profile demand while also converting Search Technicians and SAR Commanders to their established SARTEC and Control Van capacities.
-- **Required Personnel Available** remains a mission precondition and is deliberately excluded from dispatch demand.
-
-### Diagnostics
-
-- Empty post-selection Mission Update snapshots are no longer stored, and diagnostic history capacity increased from 12 to 24 useful attempts.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.119` to `V10.6.120`.
-- Personnel Assignment remains `1.3.7`.
-
-## [1.0.56] - 2026-07-29
-
-### Added
-
-- Added **Export Diagnostics** to Mission Finder. It downloads a JSON report containing the raw mission-definition rows, supplied and processed Unit Finder requirements, current live missing requirements, visible shortage alerts and the vehicles actually selected.
-- The report retains the latest 12 Unit Finder and Mission Update attempts so Automatic Unit Finder problems can still be exported after Auto Mode advances to another mission.
-- Selected trained vehicles include exact Personnel Register evidence such as training counts, per-person training-code profiles, scan-completeness flags and evidence source. Personnel names, cookies and passwords are not included.
-
-### Diagnostics
-
-- Ready, not-ready, normal Dispatch and Dispatch & Share states create diagnostic snapshots.
-- Reports distinguish the original requirement source from any replacement source and include the aggregate selected/required rows shown in the Vehicle Load List.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.118` to `V10.6.119`.
-- Personnel Assignment remains `1.3.7`.
-
-## [1.0.55] - 2026-07-29
-
-### Fixed
-
-- Initial Unit Finder and Automatic Unit Finder now preserve mission-definition trained-personnel rows when MissionChief has rendered a live-requirements panel but has not reported an explicit current shortage.
-- The generic authority guard applies to every supported mission-definition training type: Level 1 and Level 2 Public Order, Police Sergeant, Police Medic, Police Inspector, Railway Police Officer, Search Advisor and Armed Response Personnel.
-- Railway Police and other trained requirements can no longer disappear between successful definition parsing and the trained-profile optimiser. Mission Update continues to use explicit live Missing Personnel and Missing Vehicles shortages.
-
-### Validation
-
-- Added regression coverage for all supported definition-trained codes and for the initial-dispatch authority boundary.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.117` to `V10.6.118`.
-- Personnel Assignment remains `1.3.7`.
-
-## [1.0.54] - 2026-07-29
-
-### Added
-
-- Unit Finder and Automatic Unit Finder now read the mission definition's composite **Required Personnel** row before the initial dispatch.
-- Supported trained-personnel totals are combined with ordinary vehicle requirements and resolved through the existing exact Personnel Register optimiser.
-- Level 1/2 Public Order, Police Medic, Police Sergeant, Police Inspector, Railway Police, Search Advisor and Armed Response personnel labels use their existing exact training mappings.
-
-### Behaviour
-
-- Multi-trained personnel count toward every matching course they hold, while singly trained personnel count only toward their own qualification.
-- The initial mission definition supplies full personnel totals; later mission upgrades continue to use current live **Missing Personnel** shortages, preventing the definition totals from being dispatched twice.
-- Unknown personnel labels remain ignored rather than being guessed, and vehicle selection still fails closed when trusted register evidence is unavailable.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.116` to `V10.6.117`.
-- Personnel Assignment remains `1.3.7`.
-
-## [1.0.53] - 2026-07-28
-
-### Fixed
-
-- Auto Mode patient transport now searches the top-level page, active transport scopes and recursively accessible same-origin iframe documents.
-- Current green **Transport Patient** anchors with exact `/vehicles/{vehicle}/patient/{hospital}` routes are found inside nested vehicle lightbox iframes.
-- Cross-origin or unavailable frames fail closed, and unrelated green controls remain excluded.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.115` to `V10.6.116`.
-- Personnel Assignment remains `1.3.7`.
-
-## [1.0.52] - 2026-07-28
-
-### Fixed
-
-- Restored Auto Mode patient transport clicking for MissionChief's current green **Transport Patient** anchor with an exact `/vehicles/{vehicle}/patient/{hospital}` route.
-- The exact visible enabled patient route is checked before both legacy **Approach** paths; unrelated green links remain excluded.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.114` to `V10.6.115`.
-- Personnel Assignment remains `1.3.7`.
-
-## [1.0.51] - 2026-07-28
-
-### Changed
-
-- Replaced the single slow mass-register action with **Quick Refresh Register** and **Full Verify Register**.
-- Quick Refresh reads every station snapshot but reuses a vehicle's previous complete exact record when its exact ID, type, assigned personnel count and complete per-person training profiles are unchanged.
-- Changed, new, expired or ambiguous vehicles automatically fall back to their exact `/vehicles/{id}/zuweisung` page; unsafe station evidence can never qualify for reuse.
-- Full Verify retains the complete audit path and opens every exact vehicle assignment page.
-- Exact vehicle pages now run through a bounded pool of three desktop workers or two iPhone/iPad workers, with one controlled retry, instead of a strictly serial loop.
-- Deleted vehicles are removed only after their station page is read successfully, and stopped or failed work preserves older exact records that were not safely replaced.
-- Unit or Station Naming runs now block a register refresh, preserving the existing single-tool safety boundary.
-- Station records are pruned only when the authoritative `#vehicle_table` is present; an incomplete or unexpected station page fails closed.
-- When a changed vehicle exact page fails, its previous record is retained for diagnosis but marked incomplete and non-exact, so a known-changed vehicle cannot remain authoritative.
-
-### Interface and reporting
-
-- Progress reports now separate exact pages read, exact records reused, unsafe stations, deleted vehicles and final retained-register size.
-- Unchanged records retain their original exact verification timestamp and receive a separate station-confirmation timestamp.
-
-### Changed engine baseline
-
-- Personnel Assignment increased from `1.3.6` to `1.3.7`.
-- Mission Finder remains `V10.6.114`.
-
-## [1.0.50] - 2026-07-27
-
-### Fixed
-
-- Trained-personnel selection now continues through all ready compatible vehicles until the actual quantity for every required training course is covered or no useful trained unit remains.
-- Nominal vehicle-seat coverage and qualification coverage are tracked independently. A partly trained PSU or IRV can no longer reduce seat demand to zero and prematurely trigger a false training shortfall while another ready trained unit is available.
-- A trained officer on a later vehicle still reduces the correct course deficit even when earlier selected vehicles already provide enough nominal seats.
-- Live assignment verification now walks the complete ready compatible vehicle pool in ordered batches and stops as soon as the real per-course demand is covered, instead of imposing a 48-page blind spot.
-- Multi-trained personnel continue to satisfy every required course they hold. Singly trained personnel count only toward their own course.
-- Type-51 PSUs remain preferred for useful high-capacity Public Order blocks, with type-8 IRVs filling smaller remainders. Correct-type untrained fallback units are selected only after trained coverage is exhausted.
-- A training shortfall is now reported only after the complete ready trained pool has been checked. Compatible vehicle-capacity shortages remain separately blocking.
-
-### Validation
-
-- Added regression coverage for a second trained IRV clearing a deficit after nominal seats are already covered, and for a 12-person requirement fulfilled by one PSU plus the minimum IRV mixture.
-- Existing register, Search Advisor, Public Order, Armed Response, iOS Safari, mission-requirement, release and repository contracts remain enabled.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.113` to `V10.6.114`.
-
-## [1.0.49] - 2026-07-26
-
-### Fixed
-
-- Personnel training parsing now supports MissionChief's current space-separated quoted `data-filterable-by` format, so `drone` and `search_and_rescue` are stored as separate qualifications instead of one invalid combined value.
-- Build All Register now supplements verified vehicle assignment pages with the station personnel table's persistent **Assigned To** value. This covers Police Search Advisors who are assigned to a Police Drone Vehicle but currently display as **Available**.
-- Station-table vehicle-name fallback is accepted only when it resolves to one unique exact vehicle ID; direct `/vehicles/{id}` links remain authoritative and duplicate names fail closed.
-- Exact assignment-page evidence still overrides station fallback evidence when both are available.
-
-### Safety
-
-- Search Advisor remains a trained-personnel requirement for `search_and_rescue` and may use any selectable exact registered vehicle carrying the assigned officer.
-- Unverified assignments, missing personnel IDs and ambiguous duplicate vehicle names cannot satisfy the requirement.
-- The change does not move personnel or broaden automatic Personnel Assignment target vehicles.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.112` to `V10.6.113`.
-- Personnel Assignment increased from `1.3.5` to `1.3.6`.
-
-## [1.0.48] - 2026-07-26
-
-### Changed
-
-- Standard patient and Ambulance demand now compares exact type-5 road Ambulances with exact type-9 HEMS/Air Ambulances in one candidate pool.
-- MissionChief displayed arrival time is the primary ordering metric, so a geographically farther HEMS is selected first whenever its ETA is quicker; distance remains only the equal-ETA tie-breaker.
-- Already-selected HEMS now count toward ordinary Ambulance demand in Unit Finder, Mission Update and Auto Mode.
-
-### Safety
-
-- Explicit HEMS/Air Ambulance requirements remain strict type 9.
-- Critical Care Transfer Ambulance requirements remain strict type 98.
-- Generic Critical Care continues to compare HEMS with only verified Critical Care-trained road Ambulances.
-- Standard Ambulance demand cannot fall through to generic text or quick-select buttons.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.111` to `V10.6.112`.
-
-## [1.0.47] - 2026-07-26
-
-### Fixed
-
-- Auto Mode now closes the exact Vue prisoner-release result lightbox after releasing prisoners.
-- The close handler follows the owning `.vm--container` and its `data-modal` identity, reacquires the live close span after Vue replaces modal nodes, and verifies that the current replacement modal is gone before restarting.
-- Scoped pointer and overlay fallbacks run only inside the same prisoner lightbox when the native close click does not dismiss it.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.110` to `V10.6.111`.
-
-## [1.0.46] - 2026-07-26
-
-### Changed
-
-- Removed the explanatory copy beneath Mission Ready Delay while retaining its control and 1000 ms default.
-- Build All Register now publishes complete per-person training profiles for every exact vehicle assignment page across all vehicle types.
-- Mission Finder trusts fresh exact all-vehicle register scans and can find specialist trained staff on any assigned unit.
-- Search Advisor demand now selects exact registered vehicles carrying assigned `search_and_rescue`-trained staff instead of hard-mapping to Control Vans.
-- `Car to tow` and `Cars to tow` now route through exact type-105 Flatbed Recovery Vehicles, including structured Missing Vehicles alerts.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.109` to `V10.6.110`.
-- Personnel Assignment increased from `1.3.4` to `1.3.5`.
-
-## [1.0.45] - 2026-07-26
-
-### Changed
-
-- Removed the explanatory sentence beneath `Keep my saved panel position` from the Mission Finder control panel.
-- The checkbox, stored panel coordinates and centre-on-mission behaviour remain unchanged.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.108` to `V10.6.109`.
-
-## [1.0.44] - 2026-07-26
-
-### Fixed
-
-- `Missing Vehicles: 3 Fire engines` now uses an exact Fire Engine requirement route instead of the generic substring matcher that could select Ambulances.
-- Fire Engine selection and selected-count verification accept only MissionChief UK pump-capable Fire vehicle types `0`, `16` and `17`; Ambulance type `5` is explicitly outside the route.
-- The fallback selector can no longer use a generic `search_attribute` quick-select button for Fire Engine shortages.
-
-### Interface
-
-- Removed the explanatory helper sentence beneath the Auto Mode queue checkbox while retaining the checkbox, Start/Stop control and operational status display.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.107` to `V10.6.108`.
-
-## [1.0.43] - 2026-07-26
-
-### Fixed
-
-- After the exact `Release Prisoners` fallback completes, Auto Mode now waits for the resulting lightbox, clicks its visible topmost `<span title="Close" class="lightbox-close">` control and confirms the screen has disappeared.
-- The release-result close path supports MissionChief layouts where the close span is not wrapped by `.control-btn-container`.
-- Once the dismiss screen is closed, release state is cleared and Auto Mode restarts the mission cycle instead of remaining blocked on the result screen.
-
-### Safety
-
-- The dismiss close runs only after the exact current-mission `Release Prisoners` action has cleared the prisoner alert.
-- Existing patient transport and positive-capacity prison-cell handling remain higher priority and unchanged.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.106` to `V10.6.107`.
-
-## [1.0.42] - 2026-07-26
-
-### Changed
-
-- Auto Mode continues to prefer the first visible active prison destination with free cells.
-- When the prisoner alert remains but no available cell destination exists, Unit Finder, Mission Update and normal vehicle-selection actions are allowed to finish before the fallback is considered.
-
-### Added
-
-- After all normal Auto Mode actions complete, the exact current-mission `Release Prisoners` link is clicked if the prisoner alert still remains.
-- The release fallback restarts the Auto cycle and must clear before dispatch or queue advance can continue.
-
-### Safety
-
-- Release is allowed only for a visible `btn-danger` link with `data-method="post"`, exact text `Release Prisoners` and the exact current mission `/gefangene/entlassen` route.
-- The fallback is never used while any active destination with positive free-cell capacity remains.
-- A separate session guard prevents duplicate release clicks while MissionChief processes the request.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.105` to `V10.6.106`.
-
-## [1.0.41] - 2026-07-26
-
-### Added
-
-- Auto Mode now detects the visible prisoner-cell handoff before Mission Update, vehicle loading or Unit Finder.
-- It selects the first visible green MissionChief destination link in DOM order when the link has a valid `data-prison-id`, a `/gefangener/` route and positive free-cell capacity.
-- A session guard prevents duplicate clicks while MissionChief processes the handoff.
-
-### Safety
-
-- The red `Release Prisoners` action is never considered or clicked.
-- Auto Mode stops without running Unit Finder when the prisoner alert remains but no active destination can be completed.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.104` to `V10.6.105`.
-
-## [1.0.40] - 2026-07-26
-
-### Fixed
-
-- Removed the final text-based `RRU` fallback from Road Rail Unit dispatch matching.
-- Road Rail Unit requirements now select and verify only checkboxes exposing exact MissionChief vehicle type `107`.
-- Coastguard Rope Rescue Unit remains separate as vehicle type `59` and cannot satisfy a Fire Road Rail Unit requirement, even when renamed with an `RRU`-containing callsign.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.103` to `V10.6.104`.
-
-## [1.0.39] - 2026-07-26
-
-### Fixed
-
-- Separated the Fire Road Rail Unit from the Coastguard Rope Rescue Unit despite their shared RRU abbreviation.
-- `Road Rail Unit` and `Road Rail Units` shortages now use a dedicated exact type-107 Fire matcher.
-- Coastguard Rope Rescue Unit type 59 is explicitly excluded from the Road Rail route.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.102` to `V10.6.103`.
-
-## [1.0.38] - 2026-07-26
-
-### Fixed
-
-- `Missing Vehicles: 2 Road Rail Units` now maps the plural MissionChief wording to the established `RRU` route.
-- Singular `Road Rail Unit` wording remains supported.
-- The route remains restricted to the exact type-107 Road Rail Unit vehicle mapping.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.101` to `V10.6.102`.
-
-## [1.0.37] - 2026-07-26
-
-### Restored
-
-- Restored Personnel Assignment `1.3.4` on top of the latest `main` source.
-- Restored the readable **Build All Register** action, JSON register export/import, saved-register status, and accurate retained-register reporting.
-
-### Preserved
-
-- Preserved Mission Finder `V10.6.101`, the trained-personnel coverage optimiser, PSU/IRV multi-trained allocation, compatible fallback selection, and non-blocking training-shortfall handling.
-
-### Safety and compatibility
-
-- Register imports validate schema and object keys, enforce the existing 5,000-vehicle limit, cap files at 10 MB, and require confirmation before replacing browser data.
-- Export and import remain blocked while Personnel Assignment or a register build is active.
-- Added a permanent regression check requiring the Personnel Register controls and the latest trained-coverage optimiser to remain present together.
-
-## [1.0.36] - 2026-07-26
-
-### Changed
-
-- Replaced strict trained-unit pass/fail selection with a best-available coverage optimiser for every supported trained-personnel requirement.
-- Level 1 Public Order, Level 2 Public Order, Police Sergeant and Police Medic requirements now share exact type-51 PSU and type-8 IRV candidates. A PSU supplies up to nine personnel seats, while IRVs supply two and fill smaller remainders.
-- Multi-trained assigned staff reduce every matching simultaneous course requirement from the same selected vehicle.
-- Partially trained vehicles remain useful: an IRV carrying one relevant trained officer can be selected and contributes that one officer instead of being discarded.
-- Candidate ranking prefers verified trained coverage, then correct-type capacity, avoids excessive spare capacity, and uses MissionChief arrival order as the final tie-breaker.
-
-### Fallback and reporting
-
-- When verified trained coverage is exhausted, Command Nexus still selects enough correct-type vehicles to provide the required nominal personnel capacity.
-- Remaining training deficits are reported clearly but no longer block dispatch when compatible vehicle capacity is present.
-- Missing compatible vehicle capacity remains release-blocking and is reported separately from the training shortfall.
-- Selection stops as soon as the shared personnel-capacity vector is covered, preventing extra PSUs or IRVs when multi-trained crews already satisfy several courses.
-- A 12-person compatible Public Order requirement prefers one nine-seat PSU and two IRVs for the three-person remainder; a second PSU is used only when it is a better fit or the IRV remainder cannot be supplied.
-
-### Safety and validation
-
-- Police Inspector and Railway Police remain exact type-8 profiles; Armed Response remains exact type-25 and still requires the Roads Policing plus Firearms combination for trained credit.
-- Exact vehicle IDs and live `/vehicles/{id}/zuweisung` assignment scans remain authoritative for trained-personnel counts.
-- Added permanent regression coverage for PSU capacity, partial training, multi-course coverage, correct-type untrained fallback, shortfall reporting and no-oversend behaviour.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.100` to `V10.6.101`.
-
-## [1.0.35] - 2026-07-25
-
-### Fixed
-
-- Manual Unit Finder and Auto Mode now check visible current **Missing Vehicles** and supported **Missing Personnel** alerts before reading the full static mission-help requirement set.
-- When MissionChief reports a current shortage such as `Missing Vehicles: 2 Fire engines`, only that current shortage is processed; unrelated original mission requirements are no longer selected again.
-- Explicit Missing Vehicles quantities are treated as the target number of currently checked unsent vehicles. Existing matching selections reduce the remaining clicks, so Unit Finder followed by Mission Update cannot add the same shortage twice.
-- A second current-requirement check runs after the mission-help request completes, preventing a newly rendered shortage from being overwritten by an attachment response already in flight.
-- Explicit current shortages outrank larger full/live totals during de-duplication. Current patient shortages are retained while unrelated full mission rows are suppressed.
-
-### Safety and compatibility
-
-- Patient-only `We need` alerts do not suppress the normal authoritative mission-help route.
-- Numeric **Still Needed** values from the Live Mission Requirements table retain their existing additional-shortage handling; the current-selection target rule applies only to explicit visible Missing Vehicles/Personnel alerts.
-- Specialist training verification, Police IRV protection, HEMS/Critical Care proximity, iPhone Safari interfaces, dispatch validation and Resource Administration remain on their established paths.
-- Added permanent regression coverage for missing-requirements-first authority, late-render rechecking, patient retention and duplicate-selection prevention.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.99` to `V10.6.100`.
-
-## [1.0.34] - 2026-07-25
-
-### Fixed
-
-- Removed the JavaScript-owned iPhone **Unit Quick Select** title, disclosure button, collapse state, per-node classes and repeated native-picker structural enhancement.
-- The visible native/enhanced alternation shown in the supplied recording can no longer occur because Command Nexus no longer inserts or reattaches a wrapper inside MissionChief's quick-select DOM.
-- MissionChief's native category and unit controls now receive only passive, document-owned iPhone CSS using stable `a[search_attribute]` and `:has(...)` selectors.
-- Replacement quick-select DOM is styled automatically by the existing stylesheet without a MutationObserver-driven reattachment pass.
-- Removed native-picker state storage and main-observer resynchronisation. Historical toggle/classes/state are cleaned during upgrade and Safari bfcache restoration.
-
-### Compatibility and safety
-
-- The **Mission** and **Vehicle** launcher is unchanged.
-- Passive quick-select styling remains strictly limited to the established iPhone Safari document class, including phone-sized desktop-site sessions.
-- iPad/tablet and desktop layouts remain unchanged.
-- MissionChief's native anchors, counts, colours and click handlers are not cloned or replaced.
-- Mission requirements, unit selection, dispatch, Mission Update, Ally Steal, Auto Mode and Resource Administration are unchanged.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.98` to `V10.6.99`.
-
-## [1.0.33] - 2026-07-25
-
-### Fixed
-
-- Stopped the iPhone Unit Quick Select disclosure from repeatedly expanding and collapsing after one tap.
-- User-triggered picker state changes now update the tracked mission documents directly and no longer schedule an immediate structural re-scan of the control being tapped.
-- Added a bounded duplicate-touch/click lock and immediate propagation guard for the native picker disclosure.
-- Native picker class, text, ARIA, title and count writes are now idempotent and use a per-document render signature.
-- The main MutationObserver now ignores the short, explicitly marked window of Command Nexus-owned native-picker mutations while continuing to observe genuine MissionChief vehicle-list changes.
-- Mission and Vehicle launcher placement now measures the union of all visible top-right native controls rather than trusting one container rectangle.
-- The launcher now clears that full cluster by 16px, uses a farther-left 112px fallback and retains the last valid cluster briefly during modal replacement.
-- Pixel hysteresis prevents sub-pixel geometry changes from continuously rewriting launcher CSS variables.
-
-### Compatibility and safety
-
-- The correction remains strictly limited to the established iPhone Safari path, including phone-sized desktop-site sessions.
-- iPad/tablet and desktop layouts are unchanged.
-- Mission requirements, matching, vehicle selection, dispatch, Mission Update, Ally Steal, Auto Mode, Unit Quick Select anchors and Resource Administration logic are unchanged.
-- No new observer or recurring timer was added; the existing bounded/coalesced lifecycle remains authoritative.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.97` to `V10.6.98`.
-
-## [1.0.32] - 2026-07-25
-
-### Changed
-
-- Replaced the two full-width iPhone Mission Finder header bars with one compact launcher containing exactly **Mission** and **Vehicle** buttons.
-- Both panels start closed. Opening Mission closes Vehicle, opening Vehicle closes Mission, and tapping the active button again closes it.
-- The launcher is positioned from MissionChief's live native `.control-btn-container`, immediately to the left of the visible mission controls rather than from a hard-coded screen offset.
-- Mission Control and Vehicle Load List open below the launcher and remain bounded to the visual viewport and Safari safe area.
-
-### Fixed
-
-- Removed the detached right-side collapse controls and overlapping full-width header layer seen in the supplied iPhone recording.
-- Native Unit Quick Select expansion no longer changes the Command Nexus launcher geometry through the obsolete bars.
-- Launcher active state, `aria-pressed`, `aria-expanded` and `aria-controls` remain synchronized.
-- Modal replacement, visual viewport changes, rotation and Safari page restoration now recalculate launcher placement through the existing bounded lifecycle.
-
-### Compatibility and safety
-
-- The launcher exists only on the established iPhone Safari path, including phone-sized desktop-site sessions.
-- iPad/tablet and all desktop layouts retain the existing Mission Control and Vehicle Load headers and controls.
-- Mission requirements, matching, checkbox selection, dispatch, Mission Update, Ally Steal, Auto Mode, native quick-select controls and Resource Administration logic are unchanged.
-- Added permanent regression checks for exact labels, exclusive panel state, hidden legacy bars, native-control-cluster positioning and mutation/viewport reconciliation.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.96` to `V10.6.97`.
-
-## [1.0.31] - 2026-07-25
-
-### Fixed
-
-- Mission Control, Vehicle Load List and Unit Quick Select now migrate to collapsed defaults on the corrected iPhone Safari profile instead of inheriting stale expanded state from the earlier mobile rollout.
-- Mission Control and Vehicle Load List disclosures now own touch and keyboard activation explicitly, prevent event propagation into MissionChief and keep icons, titles, `aria-expanded` and `aria-controls` synchronized.
-- Collapsed iPhone cards now hide their bodies through explicit iPhone-scoped rules, leaving one compact header row.
-- Mission Control now reserves a pointer-transparent upper-right gutter for MissionChief's visible native close control, preventing the Command Nexus card from covering or intercepting the mission-window X button.
-- The close-control gutter is recalculated from the live modal control during visual-viewport changes, orientation changes and Safari page restoration.
-
-### Compatibility and safety
-
-- The correction remains strictly gated to the established iPhone Safari path, including phone-sized desktop-site sessions.
-- iPad/tablet and desktop layout, dragging and saved positioning remain unchanged.
-- Mission requirements, resource matching, vehicle selection, dispatch, Mission Update, Ally Steal, Auto Mode and Resource Administration logic are unchanged.
-- Added permanent regression contracts for collapse migration, deterministic disclosure ownership, explicit collapsed-body hiding, ARIA synchronization and native close-control clearance.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.95` to `V10.6.96`.
-
-## [1.0.30] - 2026-07-25
-
-### Fixed
-
-- Personnel Assignment registry scans now detect PSU/type-51 vehicles through all current vehicle-type attributes, parse every personnel row on each exact `/vehicles/{id}/zuweisung` page and recognise both `btn-assigned` and visible **Remove binding** controls. Exact vehicle IDs remain authoritative, separate PSU records are preserved and refreshed snapshots replace stale assignment counts.
-- `CRV` and `CRVs` now select and count only the exact type-57 Coastguard Rescue Vehicle in Unit Finder, Mission Update and Auto Mode.
-- Current `[data-requirement-type="vehicles"]` **Missing Vehicles** elements are parsed with non-breaking-space normalisation even when the Live Mission Requirements panel is present. Police Car quantities remain additional vehicle shortages, not personnel counts or total-fleet targets, and flow through the existing type-8 ordinary-first selector.
-- Each Search Advisor requirement now maps one-for-one to an exact type-85 Control Van. Search Technicians remain on SARTEC and SAR Commanders remain on Control Vans.
-- Missing Police Officers continue to convert with ceiling division at two officers per Police Car, including current visible alerts beside the live panel.
-- Generic Critical Care requirements now compare exact type-9 HEMS/Air Ambulances with exact type-5 Ambulances whose current exact-ID Personnel registry record confirms at least one `critical_care` member, then choose whichever eligible resource has the better MissionChief arrival order. Explicit HEMS-only, Critical Care Transfer Ambulance/type-98 and road-transport Ambulance requirements remain strict and separate.
-
-### Validation
-
-- Added permanent regression coverage for PSU registry capture, exact CRV and Control Van mapping, structured Missing Vehicles markup, Police Officer conversion and nearest eligible HEMS/Critical Care selection.
-- Existing iOS Safari, iPhone desktop-site detection, iPhone UI, Police IRV, lifecycle, repository and userscript validation contracts remain enabled.
-
-### Changed
-
-- Personnel Assignment increased from `1.3.2` to `1.3.3`.
-- Mission Finder increased from `V10.6.94` to `V10.6.95`.
-
-## [1.0.29] - 2026-07-25
-
-### Fixed
-
-- Corrected the iPhone Safari gate for Safari **Request Desktop Website** sessions that report `MacIntel`, which caused the compact `v1.0.27` and native-picker `v1.0.28` layouts to be skipped completely.
-- Touch-capable `MacIntel` Safari now enters the phone layout only when the physical screen's shortest side is phone-sized (`<= 600` CSS pixels).
-
-### Compatibility and regression protection
-
-- iPad remains excluded by physical screen dimensions even in desktop-site or narrow split-screen layouts.
-- Desktop Safari remains excluded by its non-touch identity; other iOS browsers remain excluded by the Safari guard.
-- Added positive regression coverage for a 393px physical iPhone screen with a 980px desktop layout viewport and negative coverage for an 820px iPad in a 500px split-screen viewport.
-- Mission logic, native controls, matching, selection and dispatch remain unchanged.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.93` to `V10.6.94`.
-
-## [1.0.28] - 2026-07-25
-
-### Fixed
-
-- Completed the iPhone Safari mission-interface redesign by taking ownership of MissionChief's native `a[search_attribute]` unit quick-selection matrix, which remained desktop-sized after `v1.0.27`.
-- The native search field, wrapped service tabs and three-column unit matrix are now discovered in the same active mission document that renders them, including same-origin mission iframes and lightboxes.
-- Added one compact **Unit Quick Select** disclosure that defaults collapsed on iPhone. Expanding it reveals a single horizontally scrolling category strip and a readable two-column internally scrolling unit grid.
-- Native quick-select anchors are styled in place. Their original `search_attribute`, colours, counts, text and MissionChief click handlers are not cloned, moved or replaced.
-
-### Lifecycle and compatibility
-
-- Added bounded initial retries for mission iframe load timing and reuse of the existing filtered/coalesced Mission Finder mutation observer when the native selector matrix is replaced.
-- Native picker classes, disclosure controls, document-local styles and retry timers now have deterministic mission-close, unload and bfcache reconciliation paths.
-- The native picker stylesheet is injected into the document that owns the controls rather than only the top page.
-- The correction remains strictly limited to iPhone/iPod Safari. iPad Safari, iPad desktop-site mode, desktop browsers, other iOS browsers and native webviews remain unchanged.
-- Added permanent regression contracts for cross-document injection, native selector discovery, horizontal categories, two-column layout, collapsed state, mutation resynchronisation and cleanup ownership.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.92` to `V10.6.93`.
-
-## [1.0.27] - 2026-07-25
-
-### Changed
-
-- Rebuilt Mission Finder's mission-tab interface as a compact iPhone Safari command card based on the supplied screen recording.
-- Advanced Mission Ready Delay and Queue Restart controls now sit behind a dedicated Settings disclosure on iPhone, while primary mission actions remain immediately available.
-- Mission Control and Vehicle Load List use smaller native-style headers, tighter card spacing, compact touch targets and bounded internal scrolling.
-- The six established action handlers now render in a compact two-column grid without changing their logic or dispatch ownership.
-- Vehicle Load List remains independently collapsible and defaults to its compact state on a fresh iPhone UI profile.
-
-### Compatibility and safety
-
-- Added a strict iPhone/iPod Safari detector separate from the existing iOS detector.
-- iPad Safari, iPad desktop-site `MacIntel`, desktop Safari, Chrome/Firefox/Edge on iOS and every desktop browser remain on their previous layouts.
-- The iPhone card respects Safari safe areas, `visualViewport`, `100dvh`, address-bar changes and bounded overscroll.
-- Drag ownership is disabled only for the fixed iPhone command card; iPad and desktop dragging remain unchanged.
-- Mission requirement acquisition, unit matching, checkbox selection, Mission Update, Ally Steal, dispatch, sharing and Auto Mode handlers are unchanged.
-- Added permanent regression checks for strict platform gating, compact presentation contracts and preserved action handlers.
-
-### Changed engine baseline
-
-- Mission Finder increased from `V10.6.91` to `V10.6.92`.
-
-## [1.0.26] - 2026-07-25
-
-### Fixed
-
-- iPhone and iPad Safari Unit Finder now discovers the authoritative `#mission_help` link even when MissionChief hides the desktop button with `hidden-xs`.
-- Mission-help URLs are constrained to the current MissionChief origin, the `/einsaetze/{missionType}` route and the exact active `mission_id`; stale or cross-mission links are rejected.
-- When the hidden link is absent, Mission Finder may construct the same requirement route only from explicit active-mission type metadata and the exact active mission instance.
-- Requirement responses are verified against the requested mission type and instance before their HTML is parsed.
-- The Vehicle and Personnel Requirements table detector now accepts the exact heading and a bounded semantic table fallback while rejecting unrelated HTML responses.
-
-### Safety and diagnostics
-
-- Missing, failed, redirected-to-the-wrong-mission or structurally invalid requirement responses now stop Unit Finder before visible or legacy fallbacks can report a false success.
-- A legitimate authoritative table with no actionable vehicle rows remains valid so patient-only missions can continue through the established patient path.
-- The previous `v1.0.25` exact checkbox-state verification remains unchanged and now receives authoritative mission rows on mobile Safari.
-- Added permanent tests for the supplied hidden link, same-origin URL construction, mission-ID mismatch rejection, response identity, hidden-link discovery, table selection and fail-closed handoff.
-
-### Changed
-
-- Mission Finder increased from `V10.6.90` to `V10.6.91`.
-
-## [1.0.25] - 2026-07-25
-
-### Fixed
-
-- Unit Finder on the MissionChief website in iPhone and iPad Safari now resolves vehicle checkboxes, load controls and fallback selectors from the active mission document instead of assuming the global document owns the live vehicle table.
-- Vehicle selection is counted only after MissionChief's exact checkbox is confirmed checked. Safari now receives bounded native-click, associated-label and checked-property plus `input`/`change` fallbacks when required.
-- Complete vehicle-list stability checks, visible load controls, loading indicators, legacy vehicle requirements and the Mission Update first-pass gate now use the same active mission document as Unit Finder.
-
-### Safety and compatibility
-
-- A failed or ignored checkbox activation now returns selection failure instead of advancing internal assigned counts.
-- Exact vehicle type, trained-personnel, mission ownership, stale-mission, complete-list and final-confirmation safeguards remain unchanged.
-- Desktop selection retains the native click path; the additional fallbacks run only when the real checkbox remains unchecked.
-- Added permanent regression tests covering active mission-document resolution and native, label, property/event, failed and disabled checkbox activation paths.
-
-### Changed
-
-- Mission Finder increased from `V10.6.89` to `V10.6.90`.
-
-## [1.0.24] - 2026-07-25
-
-### Fixed
-
-- Restored normal type-8 Incident Response Vehicle / Police Car selection in both manual Unit Finder and Auto Mode.
-- Generic Police attendance now prefers verified ordinary IRVs, then unknown or stale IRVs, and uses known specialist-trained IRVs only when the ordinary pool is insufficient.
-- Any already selected exact type-8 IRV now counts toward a generic Police Car requirement, preventing trained IRVs from being ignored and duplicate cars from being requested.
-- `Missing Personnel: Police Officers` remains actionable when the Live Mission Requirements panel is present and converts at two officers per Police Car, including `Police Officers: 3`-style wording.
-
-### Safety and performance
-
-- Named Police Inspector, Police Medic, Public Order, Railway Police and other trained-personnel requirements remain exact type-8, exact-vehicle-ID and live-assignment verified.
-- Generic Police Car selection no longer scans multiple `/zuweisung` pages before choosing ordinary attendance; the training registry is used only to rank ordinary, unknown and specialist fallback candidates.
-- Added permanent regression checks for ordinary-first ordering, specialist fallback, selected trained-IRV counting and live-panel Missing Personnel parsing.
-
-### Changed
-
-- Mission Finder increased from `V10.6.88` to `V10.6.89`.
-
-## [1.0.23] - 2026-07-24
-
-### Added
-
-- Added automatic collection for visible seasonal mission items, including the current summer sunflower, when MissionChief renders the exact `#easter-egg-link` claim control.
-- The collector recognises only `/missions/{id}/claim_found_object_sync`, including mission content rendered inside same-origin lightboxes and iframes.
-
-### Safety and performance
-
-- Claims use a same-origin background GET, so collecting an item does not navigate away from the mission or interrupt dispatch selection.
-- Duplicate requests are guarded by an in-flight/retry cooldown and a bounded claim cache.
-- The collector uses a lightweight one-second exact-ID scan and adds no new `MutationObserver`, preserving the v1.0.22 runtime-hardening contract.
-
-### Changed
-
-- Mission Finder increased from `V10.6.87` to `V10.6.88`.
-
-## [1.0.22] - 2026-07-24
-
-### Fixed
-
-- Resource Administration on iOS Safari now follows only the visibly rendered personal Stations view, removing the stale panel from Map, Missions, Chat and Radio while preserving one panel instance and its saved state.
-- Mission Finder now preserves its observer, timers and listeners during Safari bfcache entry and reconciles the restored page on `pageshow` instead of returning with a torn-down runtime.
-- The personnel-training registry update listener now has a named owner and deterministic teardown.
-
-### Performance
-
-- Consolidated two full-document Resource Administration observers into one filtered, animation-frame-coalesced lifecycle controller.
-- Mission Finder now ignores mutations generated inside its own panel while retaining wrapper creation/removal detection and all mission, patient, vehicle and transport invalidation paths.
-- Added permanent runtime-hardening tests for observer count, lifecycle decisions, bfcache preservation, listener ownership and self-mutation exclusion.
-
-### Changed
-
-- Unit Naming increased from `3.3.7` to `3.3.8`.
-- Mission Finder increased from `V10.6.86` to `V10.6.87`.
-- Desktop Resource Administration, Mission Control, vehicle selection, trained-personnel verification and fail-closed dispatch safeguards remain on their established paths.
-
-## [1.0.21] - 2026-07-23
-
-### Added
-
-- Added `Firefighter`, `Firefighters` and `Required` aliases mapped to `Rescue Pump`.
-- Added `Car Recovery` and `Required Car Recovery` aliases mapped to the existing `Flatbed Recovery Vehicle`.
-- Added singular, plural and `Required` aliases for `RIV or Major Foam Tender`.
-
-### Changed
-
-- Firefighter personnel requirements now convert at 9 personnel per Rescue Pump: 1â€“9 â†’ 1, 10â€“18 â†’ 2, and so on.
-- `RIV or Major Foam Tender` now selects eligible type-76 RIVs first and uses a type-75 Major Foam Tender only when no eligible RIV is available.
-- Mission Finder increased from `V10.6.85` to `V10.6.86`.
-
-## [1.0.20] - 2026-07-23
-
-### Fixed
-
-- Added the exact Fire cross-reference `Road Rail Unit` â†’ `RRU`.
-
-### Verified
-
-- Police Medic personnel counts continue to use two `police_medic`-trained personnel per exact type-8 IRV: 1 â†’ 1 IRV, 2 â†’ 1 IRV and 3 â†’ 2 IRVs.
-
-### Changed
-
-- Mission Finder increased from `V10.6.84` to `V10.6.85`.
-
-## [1.0.19] - 2026-07-22
-
-### Fixed
-
-- Mapped the exact `Fire, rescue or aerial appliance` mission requirement to `Rescue Pump`.
-
-### Changed
-
-- Mission Finder increased from `V10.6.83` to `V10.6.84`.
-
-## [1.0.18] - 2026-07-22
-
-### Added
-
-- Enabled Railway Fire (2 `railway_fire` per type-107 RRU), Level 1 Incident Commander (3 `elw2` per type-15 ICCU) and HazMat (3 `gw_gefahrgut` per type-39 Fire OSU) personnel profiles.
-
-### Fixed
-
-- Mission Control now uses an iOS Safari-only safe-area top layout instead of opening as the centred 560px desktop interface over the dispatch screen.
-- Added a horizontal chevron collapse control, pointer dragging and visual-viewport recovery for Safari address-bar changes, rotation and bfcache restoration.
-- The Vehicle Load List defaults collapsed on first iOS Safari use and uses mobile-specific collapse storage without changing desktop preferences.
-
-### Changed
-
-- BASU, Welfare and HazMat mission wording now shares one exact type-39 Fire OSU; type-86 SAR Operational Support Vans remain separate.
-- High Volume Pump, Drone Operator, Co-Responder and Lifeguard remain disabled pending later evidence.
-- Desktop Mission Control sizing, saved positioning, centring and mouse dragging remain unchanged.
-- Personnel Assignment increased to `1.3.2`; Mission Finder increased to `V10.6.83`.
-
-## [1.0.17] - 2026-07-22
-
-### Fixed
-
-- Restored the `Operational Support or SAR Vehicle` requirement mapping to `Operational Support Van`.
-- Unit Finder, Mission Update/Upgrade and final selected-unit verification now use the exact MissionChief type-86 Operational Support Van.
-- Fire Operational Support Units using type 39 are explicitly excluded from satisfying the SAR requirement.
-- Added current, legacy, singular, plural, `Required` and `x1` wording aliases for the same requirement.
-
-### Changed
-
-- Mission Finder increased from `V10.6.80` to `V10.6.81`.
-
-## [1.0.16] - 2026-07-22
-
-### Changed
-
-- Restore Unit Naming, Station Naming, Personnel Assignment and Personnel Register station discovery on the responsive iOS Stations tab.
-- Enforce exactly one Command Nexus tools menu after Safari bfcache restoration or duplicate injection.
-- Add a same-origin iOS station iframe fallback when responsive Details links do not activate MissionChief lightboxes.
-- Increased the unified userscript version from `1.0.15` to `1.0.16`.
-
-## [1.0.15] - 2026-07-22
-
-### Added
-
-- Added Safari website support on iPhone and iPad for the shared Unit Naming, Station Naming and Personnel Assignment menu.
-- Added iPad desktop-site detection through `MacIntel` plus touch capability while excluding Chrome, Firefox, Edge and native iOS webview wrappers.
-- Added touch/pointer dragging and visual-viewport clamping for the shared tools panel.
-
-### Fixed
-
-- Fixed the shared tools menu not appearing when MissionChief uses the responsive iOS station-list markup.
-- Fixed the 470px desktop panel width placing the menu partly or completely outside an iPhone viewport.
-- Fixed panel positioning after Safari address-bar changes, bfcache restoration and device rotation.
-
-### Changed
-
-- Unit Naming increased from `3.3.5` to `3.3.6`.
-- Station Naming increased from `1.3.1` to `1.3.2`.
-- Personnel Assignment increased from `1.2.9` to `1.3.0`.
-
-### Preserved
-
-- Desktop layout, station and vehicle filtering, naming rules, personnel assignment rules, logs, reports, pause/stop controls and saved active-tab/collapse state remain unchanged.
-
-## [1.0.14] - 2026-07-21
-
-### Fixed
-
-- Unit Finder now uses the visible Live Mission Requirements panel as the authoritative source whenever it exists, preventing stale mission-help rows from requesting outdated units.
-- A current `Rescue Support Vehicles` live row can no longer be replaced by an outdated `Major Foam Tender` mission-help requirement.
-- Numeric or bounded `Still Needed` values are now treated as shortages and are no longer reduced by already-selected units a second time.
-- `Still Needed = ?` continues to use `Required` as a total target and deducts existing matching selections.
-- Successful selection clicks are included in final confirmation, preventing a false `Fire Engines or RIVs x2` warning when the live shortage was one.
-
-### Preserved
-
-- Static mission-help remains the fallback when no live requirements panel exists.
-- Armed Personnel exact type-25 Armed Traffic Car selection remains enabled.
-
-### Changed
-
-- Mission Finder increased from `V10.6.79` to `V10.6.80`.
-
-## [1.0.13] - 2026-07-21
-
-### Fixed
-
-- Mission Update/Upgrade now uses a numeric `Still Needed` value as the dispatch shortage instead of replacing it with the full `Required` total.
-- A bounded `Still Needed` range such as `0-3` continues to use its upper bound.
-- A literal `Still Needed` value of `?` now falls back to the row's `Required` value.
-- Existing matching selections are still deducted before additional vehicles are selected.
-
-### Preserved
-
-- The v1.0.12 Armed Personnel to exact type-25 Armed Traffic Car route remains enabled, including Roads Policing plus Firearms live verification and the two-person-first/one-person-fallback policy.
-
-### Changed
-
-- Mission Finder increased from `V10.6.78` to `V10.6.79`.
-
-## [1.0.12] - 2026-07-21
-
-### Fixed
-
-- Mission Update/Upgrade now uses the confirmed `Required` column as its total vehicle target instead of using `Still Needed` as the target quantity.
-- Existing selected vehicles are still counted and subtracted before any new selections, preventing duplicate dispatches while fulfilling the full required total.
-- Unknown unresolved `?` rows remain blocked from full-target dispatch unless the existing trusted-row rules provide a confirmed actionable value.
-- Unit Finder now converts `Armed Personnel`, `Armed Response Personnel` and their `Required`/`In Armed Vehicles` variants into the trained Armed Traffic Car route.
-- Armed personnel requirements now live-verify and select exact type-25 Armed Traffic Cars carrying Roads Policing and Firearms-qualified personnel.
-
-### Changed
-
-- Mission Finder increased from `V10.6.77` to `V10.6.78`.
-
-### Preserved
-
-- Exact vehicle-ID assignment-page verification, two-person preference, one-person trained fallback, ordinary IRV protection, patient authority rules and genuine trained-personnel shortfall warnings remain enabled.
-
-## [1.0.11] - 2026-07-21
-
-### Fixed
-
-- Restored the live `4x4 Vehicle` requirement link in Unit Finder and Mission Update/Upgrade by matching the exact MissionChief type-66 4x4 Vehicle.
-- Kept the explicit `Mountain Rescue 4x4 or SAR 4x4` requirement on its separate type-99/type-93 specialist pool.
-- Restored raw live-table `SAR Commander` conversion at both shared processing entry points: two SAR Commanders are covered by one Control Van.
-- Added direct SAR Commander aliases so singular, plural and `Required` labels resolve consistently.
-
-### Changed
-
-- Mission Finder increased from `V10.6.76` to `V10.6.77`.
-
-### Preserved
-
-- Existing SARTEC, Search Advisor, Mountain Rescue, SAR 4x4, Control Van, trained-personnel, patient and vehicle verification rules remain enabled.
-
-## [1.0.10] - 2026-07-21
-
-### Added
-
-- Added issue #63 Unit Class filtering directly below Station Type in the Unit Naming Tool.
-- Unit Class options are generated from the vehicle classes valid for the selected station type, with All classes preserving the existing broad rename behaviour.
-- Selected-station and all-matching-stations runs now filter the lightweight vehicle queue before opening any vehicle edit page, preventing unrelated classes from being renamed.
-
-### Changed
-
-- Trained Police vehicle selection now prefers exact vehicles carrying two correctly trained personnel, then falls back to exact vehicles carrying one correctly trained person when no two-person option remains.
-- Trained mission fulfilment is now measured against the complete qualified-personnel demand, so one-person fallback vehicles continue to be selected until the requirement is genuinely covered.
-- One-person registry hints are prioritised after two-person hints and before ordinary arrival-limited candidates.
-- Unit Naming Tool increased from `3.3.4` to `3.3.5`.
-- Mission Finder increased from `V10.6.75` to `V10.6.76`.
-
-### Preserved
-
-- Critical Care Ambulances remain one Critical Care-trained person per ambulance.
-- Exact vehicle-ID assignment-page verification, vehicle-type restrictions, multi-profile matching, ordinary IRV protection and genuine shortfall warnings remain enabled.
-
-## [1.0.9] - 2026-07-20
-
-### Fixed
-
-- Fixed urgent issue #57: Level 1 Public Order, Level 2 Public Order and Police Sergeant requirements are now matched independently instead of being collapsed into one mandatory combined profile bundle.
-- Sergeant-only, Level 1-only, Level 2-only and Police Medic-only personnel now qualify for missions requesting their exact training profile.
-- Multi-trained personnel continue to qualify for every requested profile they actually hold without unrelated training becoming a prerequisite.
-- Preserved exact type-8 IRV verification, two trained personnel per selected IRV, capacity controls and genuine missing-training shortfall warnings across Unit Finder, Mission Update and Auto Mode.
-
-### Changed
-
-- Mission Finder increased from `V10.6.74` to `V10.6.75`.
-
-## [1.0.8] - 2026-07-20
-
-### Fixed
-
-- Fixed Unit Naming long runs retaining the full original station document while navigating through every vehicle edit page.
-- Replaced Unit Naming iframe navigation history entries instead of continually appending edit-page history.
-- Closed the modal associated with the active Unit Naming iframe rather than the first close control in the document.
-- Cleared hidden or reused station iframes after each station so old station and vehicle documents can be garbage collected.
-- Released edit-document and form-control references before each post-save delay and guaranteed iframe cleanup after stop, error or page exit.
-
-### Changed
-
-- Unit Naming increased from `3.3.3` to `3.3.4`; naming rules, vehicle order, numbering and save behaviour are unchanged.
-
-## [1.0.7] - 2026-07-20
-
-### Fixed
-
-- Fixed Mission Update treating bounded unresolved requirement ranges such as `0-3` and `0-1` as zero by reading only the first number.
-- Mission Update now uses the upper bound of an explicit range, allowing Fire Engine, ICCU/ACU, Police Car, PRV and SRV shortages from the live panel to reach the normal selector.
-- Kept the existing safety behaviour for a completely unknown naked `?`, so unsupported unresolved rows still cannot resend an entire original mission load.
-- Applied the corrected live-range interpretation to manual Mission Update and the shared Auto Mode update path.
-
-### Changed
-
-- Mission Finder baseline increased from `V10.6.73` to `V10.6.74`.
-
-## [1.0.6] - 2026-07-20
-
-### Added
-
-- Added exact Armed Response mission matching for `Required Armed Response Personnel (In Armed Vehicles)`, using type-25 Armed Traffic Cars with two personnel who each hold both Roads Policing and Firearms.
-- Expanded the one-click Personnel Register builder to every station type and every discovered vehicle, reading each vehicle's own assignment page before recording trained personnel.
-- Added strict Seagoing Vessel matching for ALB/ABL and All-weather Lifeboat display variants.
-
-### Changed
-
-- Changed the Medical Critical Care assignment target from two trained personnel to one trained person per normal Ambulance, including Preview, Live, target planning, shortfall and reporting calculations.
-- Police Officer mission-upgrade rows now convert at two officers per normal Police IRV before Unit Finder, Mission Update or Auto Mode selects vehicles.
-- Mission Finder baseline increased from `V10.6.72` to `V10.6.73`; Personnel Assignment increased from `1.2.8` to `1.2.9`.
-
-### Fixed
-
-- Fixed issue #42 by stopping the Personnel Assignment Tool from planning or assigning a second unnecessary Critical Care-trained person to each Ambulance.
-- Fixed issue #30 by restoring Armed Response Personnel selection through dual-trained Armed Traffic Cars without excluding officers who also hold Firearms training.
-- Fixed live upgrade rows such as `Police Officers x8` selecting eight IRVs instead of four.
-- Fixed Seagoing Vessel upgrade rows falling through generic text matching instead of selecting an exact ALB/ABL vehicle.
-- Fixed the register builder copying a single vehicle-page snapshot across a station instead of recording exact vehicle assignments.
-
-## [1.0.5] - 2026-07-20
-
-### Added
-
-- Added a one-click **Build Personnel Register** action that scans Police, Police Aviation and EOD stations without changing staffing assignments or requiring profile, mode, action or start-point setup.
-- Added exact trained-IRV mission selection for **Police Medic** and **Railway Police Officer**, using two correctly trained personnel per IRV.
-
-### Changed
-
-- Ordinary Police Car attendance now accepts a freshly verified exact IRV with zero protected specialist qualifications even when no personnel are permanently bound to that vehicle.
-- Mission Finder baseline increased from `V10.6.71` to `V10.6.72`; Personnel Assignment increased from `1.2.7` to `1.2.8`.
-
-### Fixed
-
-- Fixed ordinary Police Cars being rejected by Unit Finder, Mission Update and Auto Mode solely because their assignment page reported zero permanent bindings.
-- Fixed issue #16 by mapping Police Medic requirement rows and Missing Personnel text to exact IRVs containing two `police_medic`-trained personnel.
-- Added Railway Police Officer parsing for both table and alert layouts, selecting exact type-8 IRVs containing two `railway_police`-trained personnel.
-- Added an authoritative type-30 ATV Carrier matcher, including `ATV Carrier`, `ATV` and `ATC Carrier` display aliases without matching Police Armed Traffic Cars.
-- Prevented incomplete or structurally invalid assignment-page scans from overwriting or authorising specialist-training decisions.
-
-## [1.0.4] - 2026-07-20
-
-### Changed
-
-- Auto Mode now activates every visible MissionChief `missing_vehicles_load` control before Unit Finder begins selecting vehicles.
-- Increased the unified userscript version from `1.0.3` to `1.0.4` and the Mission Finder baseline from `V10.6.70` to `V10.6.71`.
-
-### Fixed
-
-- Fixed Auto Mode waiting on the `Vehicle display limited! Load more vehicles!` bar without clicking it.
-- Added sequential `offset_page` loading so every additional vehicle page is requested, not only the first page.
-- Added per-page progress checks using the vehicle ID and row-count signature, control replacement and loading-indicator state.
-- Unit selection now starts only after the final load control has disappeared and the complete vehicle list remains stable.
-- Loading fails closed when the mission changes, the control cannot be clicked, no progress occurs or the bounded timeout is reached.
-
-## [1.0.3] - 2026-07-20
-
-### Changed
-
-- Normal Police Car and Police Officer attendance now uses only exact-ID IRVs live-verified with assigned staff and no protected specialist Police training.
-- Auto Mode and the manual Unit Finder/Mission Update paths now wait for a complete, non-zero, ID-stable vehicle list after loading finishes before selecting units.
-- Increased the unified userscript version from `1.0.2` to `1.0.3`.
-
-### Fixed
-
-- Prevented Level 1, Level 2, Sergeant, Medic, Inspector and other specialist-trained Police IRVs from satisfying ordinary Police attendance requirements.
-- Prevented an ordinary Police group-button fallback from bypassing exact vehicle training protection.
-- Prevented Auto Mode from continuing to selection or dispatch when the vehicle list times out, remains empty or is still changing.
-
-## [1.0.2] - 2026-07-19
-
-### Changed
-
-- Adds verified GitHub, Greasy Fork and Discord deployment notifications. This release tests the complete automated publication and validation process without changing MissionChief runtime behaviour.
-- Increased the unified userscript version from `1.0.1` to `1.0.2`.
-
-## [1.0.1] - 2026-07-19
-
-### Changed
-
-- Increased the unified userscript version from `1.0.0` to `1.0.1` without functional changes.
-- Confirmed the canonical `main`-branch source synchronization path used for external distribution.
-
-## [1.0.0] - 2026-07-19
-
-### Added
-
-- First canonical MissionChief Command Nexus userscript.
-- One standardized userscript metadata block naming MartyBlyth as author.
-- Mission Finder `V10.6.69` baseline.
-- Unit, Station & Personnel Tools `V4.2.8` baseline.
-- One combined installation guard with retained module startup isolation.
-- Unit and station naming workflows.
-- Personnel assignment, verification and reporting workflows.
-- Shared vehicle-training registry.
-- Mission requirement, patient and specialist-resource handling.
-- Qualification-aware vehicle selection.
-- Unit Finder, Mission Update, dispatch and Auto Mode workflows.
-- Queue continuation and transport handling.
-- JavaScript, metadata, file-size and version-increase validation.
-- Tag-driven GitHub Release packaging with a userscript asset and SHA-256 checksum.
-- Greasy Fork synchronization, rollback and troubleshooting guidance.
-- Contribution, support, security and community policies.
-
-## Release format
-
-Future entries use:
-
-```text
-## [x.y.z] - YYYY-MM-DD
-### Added
-### Changed
-### Fixed
-### Removed
-### Security
-```
-
-Release notes should describe user-visible behaviour, migration impact, tested environments and known limitations rather than commit history alone.
+- MissiÛ8¶‰ËkºwµçZ[ÛœË‚‚ˆÈÈÈXYÛ›ÜİXÜÂ‚‹H^\İ[™È[š]š[™\ˆ^ÜÈ›İÈ[˜ÛYH[ˆÛ‹Y[X[™œ›İÜÙ\ˆY[[ÜHÛ˜\ÚİÚ]˜]˜TØÜš\X\šYİ\™\ÈÚ[ˆİ\ÜYXØÙ\ÜÚX›HØİ[Y[Ùœ˜[YHÛİ[ËÓH[™™ZXÛKXÚXÚØ›Şİ[ËXİ]™H[Y\‹ÛØœÙ\™\ˆİ]H[™›İ[™YØXÚHÚ^™\Ë‚‹HY[[ÜH]šY[˜ÙH\ÈÛÛXİYÛ›HÚ[ˆ^ÜXYÛ›ÜİXÜÈ\ÈÛXÚÙYÈ›È™]ÈÛ[™È[Y\ˆ\È[›ÙXÙY‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹ŒLŒÈŒL‹ŒLŒX‚‹H\œÛÛ›™[\ÜÚYÛ›Y[™[XZ[œÈKŒËØ‚‚ˆÈÈÌKŒM×HHŒ‹LËLB‚ˆÈÈÈš^Y‚‹H]]È[ÙH›İÈ[œÈHZ\ÜÚ[Û‹YYš[š][Ûˆ™\]Z\™[Y[Ù]Û˜ÙKˆ]ÈÜİU[š]š[™\ˆZ\ÜÚ[Ûˆ\]H\ÜÈXØÙ\ÈÛ›H^XÚ]İ\œ™[
+Š“Z\ÜÚ[™È™ZXÛ\ÊŠˆÜˆ
+Š“Z\ÜÚ[™È\œÛÛ›™[
+Šˆ›İÜË™]™[[™ÈÛÛ\]HİX›H\Ü]Ú\Ë‚‹H›Ü›X[
+Š‘SÑ™\ÜÛœÙH™ZXÛ\ÊŠˆ\ÙH^XİZ\ÜÚ[ÛÚYYˆ™ZXÛH\HLLÈ
+Š“X\š[™HSÑ™\ÜÛœÙH™ZXÛ\ÊŠˆ™[XZ[ˆÙ\\˜]HÛˆ\HLLØ[™Ø[ˆ›ÈÛ™Ù\ˆØ]\ÙHÛ™H[›İ\ˆ›İYÚİXœİš[™ÈX]Ú[™Ë‚‹HÛÛ\ÜÚ]H
+Š”™\]Z\™Y\œÛÛ›™[
+Šˆ›İÜÈ›İÈ™]Z[ˆÙX\˜ÚYš\ÛÜˆ˜Z[™Y\›Ùš[H[X[™Ú[H[ÛÈÛÛ™\[™ÈÙX\˜ÚXÚšXÚX[œÈ[™ĞTˆÛÛ[X[™\œÈÈZ\ˆ\İX›\ÚYĞT•PÈ[™ÛÛ›Û˜[ˆØ\XÚ]Y\Ë‚‹H
+Š”™\]Z\™Y\œÛÛ›™[]˜Z[X›JŠˆ™[XZ[œÈHZ\ÜÚ[Ûˆ™XÛÛ™][Ûˆ[™\È[X™\˜][H^ÛYYœ›ÛH\Ü]Ú[X[™‚‚ˆÈÈÈXYÛ›ÜİXÜÂ‚‹H[\HÜİ\Ù[Xİ[ÛˆZ\ÜÚ[Ûˆ\]HÛ˜\ÚİÈ\™H›ÈÛ™Ù\ˆİÜ™Y[™XYÛ›ÜİXÈ\İÜHØ\XÚ]H[˜Ü™X\ÙYœ›ÛHLˆÈ\ÙY[][\Ë‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹ŒLNXÈŒL‹ŒLŒ‚‹H\œÛÛ›™[\ÜÚYÛ›Y[™[XZ[œÈKŒËØ‚‚ˆÈÈÌKŒM—HHŒ‹LËLB‚ˆÈÈÈYY‚‹HYY
+Š‘^ÜXYÛ›ÜİXÜÊŠˆÈZ\ÜÚ[Ûˆš[™\‹ˆ]İÛ›ØYÈH”ÓÓˆ™\ÜÛÛZ[š[™ÈH˜]ÈZ\ÜÚ[Û‹YYš[š][Ûˆ›İÜËİ\YY[™›ØÙ\ÜÙY[š]š[™\ˆ™\]Z\™[Y[Ëİ\œ™[]™HZ\ÜÚ[™È™\]Z\™[Y[Ëš\ÚX›HÚÜYÙH[\È[™H™ZXÛ\ÈXİX[HÙ[XİY‚‹HH™\Ü™]Z[œÈH]\İLˆ[š]š[™\ˆ[™Z\ÜÚ[Ûˆ\]H][\ÈÛÈ]]ÛX]XÈ[š]š[™\ˆ›Ø›[\ÈØ[ˆİ[™H^ÜYY\ˆ]]È[ÙHY˜[˜Ù\ÈÈ[›İ\ˆZ\ÜÚ[Û‹‚‹HÙ[XİY˜Z[™Y™ZXÛ\È[˜ÛYH^Xİ\œÛÛ›™[™YÚ\İ\ˆ]šY[˜ÙHİXÚ\È˜Z[š[™ÈÛİ[Ë\‹\\œÛÛˆ˜Z[š[™ËXÛÙH›Ùš[\ËØØ[‹XÛÛ\][™\ÜÈ›YÜÈ[™]šY[˜ÙHÛİ\˜ÙKˆ\œÛÛ›™[˜[Y\ËÛÛÚÚY\È[™\ÜİÛÜ™È\™H›İ[˜ÛYY‚‚ˆÈÈÈXYÛ›ÜİXÜÂ‚‹H™XYK›İ\™XYK›Ü›X[\Ü]Ú[™\Ü]Ú	ˆÚ\™Hİ]\ÈÜ™X]HXYÛ›ÜİXÈÛ˜\ÚİË‚‹H™\ÜÈ\İ[™İZ\ÚHÜšYÚ[˜[™\]Z\™[Y[Ûİ\˜ÙHœ›ÛH[H™\XÙ[Y[Ûİ\˜ÙH[™[˜ÛYHHYÙÜ™YØ]HÙ[XİYÜ™\]Z\™Y›İÜÈÚİÛˆ[ˆH™ZXÛHØY\İ‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹ŒLNÈŒL‹ŒLNX‚‹H\œÛÛ›™[\ÜÚYÛ›Y[™[XZ[œÈKŒËØ‚‚ˆÈÈÌKŒMWHHŒ‹LËLB‚ˆÈÈÈš^Y‚‹H[š]X[[š]š[™\ˆ[™]]ÛX]XÈ[š]š[™\ˆ›İÈ™\Ù\™HZ\ÜÚ[Û‹YYš[š][Ûˆ˜Z[™Y\\œÛÛ›™[›İÜÈÚ[ˆZ\ÜÚ[ÛÚYYˆ\È™[™\™YH]™K\™\]Z\™[Y[È[™[]\È›İ™\ÜY[ˆ^XÚ]İ\œ™[ÚÜYÙK‚‹HHÙ[™\šXÈ]]Üš]HİX\™\Y\ÈÈ]™\Hİ\ÜYZ\ÜÚ[Û‹YYš[š][Ûˆ˜Z[š[™È\Nˆ]™[H[™]™[ˆX›XÈÜ™\‹ÛXÙHÙ\™ÙX[ÛXÙHYYXËÛXÙH[œÜXİÜ‹˜Z[Ø^HÛXÙHÙ™šXÙ\‹ÙX\˜ÚYš\ÛÜˆ[™\›YY™\ÜÛœÙH\œÛÛ›™[‚‹H˜Z[Ø^HÛXÙH[™İ\ˆ˜Z[™Y™\]Z\™[Y[ÈØ[ˆ›ÈÛ™Ù\ˆ\Ø\X\ˆ™]ÙY[ˆİXØÙ\ÜÙ[Yš[š][Ûˆ\œÚ[™È[™H˜Z[™Y\›Ùš[HÜ[Z\Ù\‹ˆZ\ÜÚ[Ûˆ\]HÛÛ[Y\ÈÈ\ÙH^XÚ]]™HZ\ÜÚ[™È\œÛÛ›™[[™Z\ÜÚ[™È™ZXÛ\ÈÚÜYÙ\Ë‚‚ˆÈÈÈ˜[Y][Û‚‚‹HYY™YÜ™\ÜÚ[ÛˆÛİ™\˜YÙH›Üˆ[İ\ÜYYš[š][Û‹]˜Z[™YÛÙ\È[™›ÜˆH[š]X[Y\Ü]Ú]]Üš]H›İ[™\K‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹ŒLMØÈŒL‹ŒLN‚‹H\œÛÛ›™[\ÜÚYÛ›Y[™[XZ[œÈKŒËØ‚‚ˆÈÈÌKŒMHHŒ‹LËLB‚ˆÈÈÈYY‚‹H[š]š[™\ˆ[™]]ÛX]XÈ[š]š[™\ˆ›İÈ™XYHZ\ÜÚ[ÛˆYš[š][Û‰ÜÈÛÛ\ÜÚ]H
+Š”™\]Z\™Y\œÛÛ›™[
+Šˆ›İÈ™Y›Ü™HH[š]X[\Ü]Ú‚‹Hİ\ÜY˜Z[™Y\\œÛÛ›™[İ[È\™HÛÛXš[™YÚ]Ü™[˜\H™ZXÛH™\]Z\™[Y[È[™™\ÛÛ™Y›İYÚH^\İ[™È^Xİ\œÛÛ›™[™YÚ\İ\ˆÜ[Z\Ù\‹‚‹H]™[KÌˆX›XÈÜ™\‹ÛXÙHYYXËÛXÙHÙ\™ÙX[ÛXÙH[œÜXİÜ‹˜Z[Ø^HÛXÙKÙX\˜ÚYš\ÛÜˆ[™\›YY™\ÜÛœÙH\œÛÛ›™[X™[È\ÙHZ\ˆ^\İ[™È^Xİ˜Z[š[™ÈX\[™ÜË‚‚ˆÈÈÈ™Z]š[İ\‚‚‹H][K]˜Z[™Y\œÛÛ›™[Ûİ[İØ\™]™\HX]Ú[™ÈÛİ\œÙH^HÛÚ[HÚ[™ÛH˜Z[™Y\œÛÛ›™[Ûİ[Û›HİØ\™Z\ˆİÛˆ]X[YšXØ][Û‹‚‹HH[š]X[Z\ÜÚ[ÛˆYš[š][Ûˆİ\Y\È[\œÛÛ›™[İ[ÎÈ]\ˆZ\ÜÚ[Ûˆ\Ü˜Y\ÈÛÛ[YHÈ\ÙHİ\œ™[]™H
+Š“Z\ÜÚ[™È\œÛÛ›™[
+ŠˆÚÜYÙ\Ë™]™[[™ÈHYš[š][Ûˆİ[Èœ›ÛH™Z[™È\Ü]ÚYÚXÙK‚‹H[šÛ›İÛˆ\œÛÛ›™[X™[È™[XZ[ˆYÛ›Ü™Y˜]\ˆ[ˆ™Z[™ÈİY\ÜÙY[™™ZXÛHÙ[Xİ[Ûˆİ[˜Z[ÈÛÜÙYÚ[ˆ\İY™YÚ\İ\ˆ]šY[˜ÙH\È[˜]˜Z[X›K‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹ŒLM˜ÈŒL‹ŒLMØ‚‹H\œÛÛ›™[\ÜÚYÛ›Y[™[XZ[œÈKŒËØ‚‚ˆÈÈÌKŒL×HHŒ‹LËL‚ˆÈÈÈš^Y‚‹H]]È[ÙH]Y[˜[œÜÜ›İÈÙX\˜Ú\ÈHÜ[]™[YÙKXİ]™H˜[œÜÜØÛÜ\È[™™Xİ\œÚ]™[HXØÙ\ÜÚX›HØ[YK[ÜšYÚ[ˆYœ˜[YHØİ[Y[Ë‚‹Hİ\œ™[Ü™Y[ˆ
+Š•˜[œÜÜ]Y[
+Šˆ[˜ÚÜœÈÚ]^Xİİ™ZXÛ\ËŞİ™ZXÛ_KÜ]Y[ŞÚÜÜ][X›İ]\È\™H›İ[™[œÚYH™\İY™ZXÛHYÚ›ŞYœ˜[Y\Ë‚‹HÜ›ÜÜË[ÜšYÚ[ˆÜˆ[˜]˜Z[X›Hœ˜[Y\È˜Z[ÛÜÙY[™[œ™[]YÜ™Y[ˆÛÛ›ÛÈ™[XZ[ˆ^ÛYY‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹ŒLMXÈŒL‹ŒLM˜‚‹H\œÛÛ›™[\ÜÚYÛ›Y[™[XZ[œÈKŒËØ‚‚ˆÈÈÌKŒL—HHŒ‹LËL‚ˆÈÈÈš^Y‚‹H™\İÜ™Y]]È[ÙH]Y[˜[œÜÜÛXÚÚ[™È›ÜˆZ\ÜÚ[ÛÚYY‰ÜÈİ\œ™[Ü™Y[ˆ
+Š•˜[œÜÜ]Y[
+Šˆ[˜ÚÜˆÚ][ˆ^Xİİ™ZXÛ\ËŞİ™ZXÛ_KÜ]Y[ŞÚÜÜ][X›İ]K‚‹HH^Xİš\ÚX›H[˜X›Y]Y[›İ]H\ÈÚXÚÙY™Y›Ü™H›İYØXŞH
+Š\›ØXÚ
+Šˆ]ÎÈ[œ™[]YÜ™Y[ˆ[šÜÈ™[XZ[ˆ^ÛYY‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹ŒLMÈŒL‹ŒLMX‚‹H\œÛÛ›™[\ÜÚYÛ›Y[™[XZ[œÈKŒËØ‚‚ˆÈÈÌKŒLWHHŒ‹LËL‚ˆÈÈÈÚ[™ÙY‚‹H™\XÙYHÚ[™ÛHÛİÈX\ÜË\™YÚ\İ\ˆXİ[ÛˆÚ]
+Š”]ZXÚÈ™Yœ™\Ú™YÚ\İ\ŠŠˆ[™
+Š‘[™\šYH™YÚ\İ\ŠŠ‹‚‹H]ZXÚÈ™Yœ™\Ú™XYÈ]™\Hİ][ÛˆÛ˜\Úİ]™]\Ù\ÈH™ZXÛIÜÈ™]š[İ\ÈÛÛ\]H^Xİ™XÛÜ™Ú[ˆ]È^XİQ\K\ÜÚYÛ™Y\œÛÛ›™[Ûİ[[™ÛÛ\]H\‹\\œÛÛˆ˜Z[š[™È›Ùš[\È\™H[˜Ú[™ÙY‚‹HÚ[™ÙY™]Ë^\™YÜˆ[XšYİ[İ\È™ZXÛ\È]]ÛX]XØ[H˜[˜XÚÈÈZ\ˆ^Xİİ™ZXÛ\ËŞÚYKŞ]ÙZ\İ[™ØYÙNÈ[œØY™Hİ][Ûˆ]šY[˜ÙHØ[ˆ™]™\ˆ]X[YH›Üˆ™]\ÙK‚‹H[™\šYH™]Z[œÈHÛÛ\]H]Y]][™Ü[œÈ]™\H^Xİ™ZXÛH\ÜÚYÛ›Y[YÙK‚‹H^Xİ™ZXÛHYÙ\È›İÈ[ˆ›İYÚH›İ[™YÛÛÙˆ™YH\ÚİÜÛÜšÙ\œÈÜˆÛÈTÛ™KÚTYÛÜšÙ\œËÚ]Û™HÛÛ›ÛY™]K[œİXYÙˆHİšXİHÙ\šX[ÛÜ‚‹H[]Y™ZXÛ\È\™H™[[İ™YÛ›HY\ˆZ\ˆİ][ÛˆYÙH\È™XYİXØÙ\ÜÙ[K[™İÜYÜˆ˜Z[YÛÜšÈ™\Ù\™\ÈÛ\ˆ^Xİ™XÛÜ™È]Ù\™H›İØY™[H™\XÙY‚‹H[š]Üˆİ][Ûˆ˜[Z[™È[œÈ›İÈ›ØÚÈH™YÚ\İ\ˆ™Yœ™\Ú™\Ù\š[™ÈH^\İ[™ÈÚ[™ÛK]ÛÛØY™]H›İ[™\K‚‹Hİ][Ûˆ™XÛÜ™È\™H[™YÛ›HÚ[ˆH]]Üš]]]™Hİ™ZXÛWİX›X\È™\Ù[È[ˆ[˜ÛÛ\]HÜˆ[™^XİYİ][ÛˆYÙH˜Z[ÈÛÜÙY‚‹HÚ[ˆHÚ[™ÙY™ZXÛH^XİYÙH˜Z[Ë]È™]š[İ\È™XÛÜ™\È™]Z[™Y›ÜˆXYÛ›ÜÚ\È]X\šÙY[˜ÛÛ\]H[™›Û‹Y^XİÛÈHÛ›İÛ‹XÚ[™ÙY™ZXÛHØ[››İ™[XZ[ˆ]]Üš]]]™K‚‚ˆÈÈÈ[\™˜XÙH[™™\Ü[™Â‚‹H›ÙÜ™\ÜÈ™\ÜÈ›İÈÙ\\˜]H^XİYÙ\È™XY^Xİ™XÛÜ™È™]\ÙY[œØY™Hİ][ÛœË[]Y™ZXÛ\È[™š[˜[™]Z[™Y\™YÚ\İ\ˆÚ^™K‚‹H[˜Ú[™ÙY™XÛÜ™È™]Z[ˆZ\ˆÜšYÚ[˜[^Xİ™\šYšXØ][Ûˆ[Y\İ[\[™™XÙZ]™HHÙ\\˜]Hİ][Û‹XÛÛ™š\›X][Ûˆ[Y\İ[\‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹H\œÛÛ›™[\ÜÚYÛ›Y[[˜Ü™X\ÙYœ›ÛHKŒË˜ÈKŒËØ‚‹HZ\ÜÚ[Ûˆš[™\ˆ™[XZ[œÈŒL‹ŒLM‚‚ˆÈÈÌKŒLHHŒ‹LËLÂ‚ˆÈÈÈš^Y‚‹H˜Z[™Y\\œÛÛ›™[Ù[Xİ[Ûˆ›İÈÛÛ[Y\È›İYÚ[™XYHÛÛ\]X›H™ZXÛ\È[[HXİX[]X[]H›Üˆ]™\H™\]Z\™Y˜Z[š[™ÈÛİ\œÙH\ÈÛİ™\™YÜˆ›È\ÙY[˜Z[™Y[š]™[XZ[œË‚‹H›ÛZ[˜[™ZXÛK\ÙX]Ûİ™\˜YÙH[™]X[YšXØ][ÛˆÛİ™\˜YÙH\™H˜XÚÙY[™\[™[KˆH\H˜Z[™YÕHÜˆT•ˆØ[ˆ›ÈÛ™Ù\ˆ™YXÙHÙX][X[™È™\›È[™™[X]\™[HšYÙÙ\ˆH˜[ÙH˜Z[š[™ÈÚÜ˜[Ú[H[›İ\ˆ™XYH˜Z[™Y[š]\È]˜Z[X›K‚‹HH˜Z[™YÙ™šXÙ\ˆÛˆH]\ˆ™ZXÛHİ[™YXÙ\ÈHÛÜœ™XİÛİ\œÙHYšXÚ]]™[ˆÚ[ˆX\›Y\ˆÙ[XİY™ZXÛ\È[™XYH›İšYH[›İYÚ›ÛZ[˜[ÙX]Ë‚‹H]™H\ÜÚYÛ›Y[™\šYšXØ][Ûˆ›İÈØ[ÜÈHÛÛ\]H™XYHÛÛ\]X›H™ZXÛHÛÛ[ˆÜ™\™Y˜]Ú\È[™İÜÈ\ÈÛÛÛˆ\ÈH™X[\‹XÛİ\œÙH[X[™\ÈÛİ™\™Y[œİXYÙˆ[\ÜÚ[™ÈH\YÙH›[™Üİ‚‹H][K]˜Z[™Y\œÛÛ›™[ÛÛ[YHÈØ]\ÙH]™\H™\]Z\™YÛİ\œÙH^HÛˆÚ[™ÛH˜Z[™Y\œÛÛ›™[Ûİ[Û›HİØ\™Z\ˆİÛˆÛİ\œÙK‚‹H\KMLHÕ\È™[XZ[ˆ™Y™\œ™Y›Üˆ\ÙY[YÚXØ\XÚ]HX›XÈÜ™\ˆ›ØÚÜËÚ]\KNT•œÈš[[™ÈÛX[\ˆ™[XZ[™\œËˆÛÜœ™Xİ]\H[˜Z[™Y˜[˜XÚÈ[š]È\™HÙ[XİYÛ›HY\ˆ˜Z[™YÛİ™\˜YÙH\È^]\İY‚‹HH˜Z[š[™ÈÚÜ˜[\È›İÈ™\ÜYÛ›HY\ˆHÛÛ\]H™XYH˜Z[™YÛÛ\È™Y[ˆÚXÚÙYˆÛÛ\]X›H™ZXÛKXØ\XÚ]HÚÜYÙ\È™[XZ[ˆÙ\\˜][H›ØÚÚ[™Ë‚‚ˆÈÈÈ˜[Y][Û‚‚‹HYY™YÜ™\ÜÚ[ÛˆÛİ™\˜YÙH›ÜˆHÙXÛÛ™˜Z[™YT•ˆÛX\š[™ÈHYšXÚ]Y\ˆ›ÛZ[˜[ÙX]È\™H[™XYHÛİ™\™Y[™›ÜˆHL‹\\œÛÛˆ™\]Z\™[Y[[š[YHÛ™HÕH\ÈHZ[š[][HT•ˆZ^\™K‚‹H^\İ[™È™YÚ\İ\‹ÙX\˜ÚYš\ÛÜ‹X›XÈÜ™\‹\›YY™\ÜÛœÙKSÔÈØY˜\šKZ\ÜÚ[Û‹\™\]Z\™[Y[™[X\ÙH[™™\ÜÚ]ÜHÛÛ˜XİÈ™[XZ[ˆ[˜X›Y‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹ŒLLØÈŒL‹ŒLM‚‚ˆÈÈÌKŒWHHŒ‹LËL‚‚ˆÈÈÈš^Y‚‹H\œÛÛ›™[˜Z[š[™È\œÚ[™È›İÈİ\ÜÈZ\ÜÚ[ÛÚYY‰ÜÈİ\œ™[ÜXÙK\Ù\\˜]Y][İY]KYš[\˜X›KXX›Ü›X]ÛÈ›Û™X[™ÙX\˜ÚØ[™Ü™\ØİYX\™HİÜ™Y\ÈÙ\\˜]H]X[YšXØ][ÛœÈ[œİXYÙˆÛ™H[˜[YÛÛXš[™Y˜[YK‚‹HZ[[™YÚ\İ\ˆ›İÈİ\[Y[È™\šYšYY™ZXÛH\ÜÚYÛ›Y[YÙ\ÈÚ]Hİ][Ûˆ\œÛÛ›™[X›IÜÈ\œÚ\İ[
+Š\ÜÚYÛ™YÊŠˆ˜[YKˆ\ÈÛİ™\œÈÛXÙHÙX\˜ÚYš\ÛÜœÈÚÈ\™H\ÜÚYÛ™YÈHÛXÙH›Û™H™ZXÛH]İ\œ™[H\Ü^H\È
+Š]˜Z[X›JŠ‹‚‹Hİ][Û‹]X›H™ZXÛK[˜[YH˜[˜XÚÈ\ÈXØÙ\YÛ›HÚ[ˆ]™\ÛÛ™\ÈÈÛ™H[š\]YH^Xİ™ZXÛHQÈ\™Xİİ™ZXÛ\ËŞÚYX[šÜÈ™[XZ[ˆ]]Üš]]]™H[™\XØ]H˜[Y\È˜Z[ÛÜÙY‚‹H^Xİ\ÜÚYÛ›Y[\YÙH]šY[˜ÙHİ[İ™\œšY\Èİ][Ûˆ˜[˜XÚÈ]šY[˜ÙHÚ[ˆ›İ\™H]˜Z[X›K‚‚ˆÈÈÈØY™]B‚‹HÙX\˜ÚYš\ÛÜˆ™[XZ[œÈH˜Z[™Y\\œÛÛ›™[™\]Z\™[Y[›ÜˆÙX\˜ÚØ[™Ü™\ØİYX[™X^H\ÙH[HÙ[XİX›H^Xİ™YÚ\İ\™Y™ZXÛHØ\œZ[™ÈH\ÜÚYÛ™YÙ™šXÙ\‹‚‹H[™\šYšYY\ÜÚYÛ›Y[ËZ\ÜÚ[™È\œÛÛ›™[QÈ[™[XšYİ[İ\È\XØ]H™ZXÛH˜[Y\ÈØ[››İØ]\ÙHH™\]Z\™[Y[‚‹HHÚ[™ÙHÙ\È›İ[İ™H\œÛÛ›™[Üˆœ›ØY[ˆ]]ÛX]XÈ\œÛÛ›™[\ÜÚYÛ›Y[\™Ù]™ZXÛ\Ë‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹ŒLL˜ÈŒL‹ŒLLØ‚‹H\œÛÛ›™[\ÜÚYÛ›Y[[˜Ü™X\ÙYœ›ÛHKŒËXÈKŒË˜‚‚ˆÈÈÌKŒHHŒ‹LËL‚‚ˆÈÈÈÚ[™ÙY‚‹Hİ[™\™]Y[[™[X[[˜ÙH[X[™›İÈÛÛ\\™\È^Xİ\KMH›ØY[X[[˜Ù\ÈÚ]^Xİ\KNHSTËĞZ\ˆ[X[[˜Ù\È[ˆÛ™HØ[™Y]HÛÛ‚‹HZ\ÜÚ[ÛÚYYˆ\Ü^YY\œš]˜[[YH\ÈHš[X\HÜ™\š[™ÈY]šXËÛÈHÙ[ÙÜ˜\XØ[H˜\\ˆSTÈ\ÈÙ[XİYš\œİÚ[™]™\ˆ]ÈUH\È]ZXÚÙ\È\İ[˜ÙH™[XZ[œÈÛ›HH\]X[QUHYKXœ™XZÙ\‹‚‹H[™XYK\Ù[XİYSTÈ›İÈÛİ[İØ\™Ü™[˜\H[X[[˜ÙH[X[™[ˆ[š]š[™\‹Z\ÜÚ[Ûˆ\]H[™]]È[ÙK‚‚ˆÈÈÈØY™]B‚‹H^XÚ]STËĞZ\ˆ[X[[˜ÙH™\]Z\™[Y[È™[XZ[ˆİšXİ\HK‚‹HÜš]XØ[Ø\™H˜[œÙ™\ˆ[X[[˜ÙH™\]Z\™[Y[È™[XZ[ˆİšXİ\HN‚‹HÙ[™\šXÈÜš]XØ[Ø\™HÛÛ[Y\ÈÈÛÛ\\™HSTÈÚ]Û›H™\šYšYYÜš]XØ[Ø\™K]˜Z[™Y›ØY[X[[˜Ù\Ë‚‹Hİ[™\™[X[[˜ÙH[X[™Ø[››İ˜[›İYÚÈÙ[™\šXÈ^Üˆ]ZXÚË\Ù[Xİ]ÛœË‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹ŒLLXÈŒL‹ŒLL˜‚‚ˆÈÈÌKŒ×HHŒ‹LËL‚‚ˆÈÈÈš^Y‚‹H]]È[ÙH›İÈÛÜÙ\ÈH^XİYHš\ÛÛ™\‹\™[X\ÙH™\İ[YÚ›ŞY\ˆ™[X\Ú[™Èš\ÛÛ™\œË‚‹HHÛÜÙH[™\ˆ›ÛİÜÈHİÛš[™È›KKXÛÛZ[™\˜[™]È]K[[Ù[Y[]K™XXÜ]Z\™\ÈH]™HÛÜÙHÜ[ˆY\ˆYH™\XÙ\È[Ù[›Ù\Ë[™™\šYšY\È]Hİ\œ™[™\XÙ[Y[[Ù[\ÈÛÛ™H™Y›Ü™H™\İ\[™Ë‚‹HØÛÜYÚ[\ˆ[™İ™\›^H˜[˜XÚÜÈ[ˆÛ›H[œÚYHHØ[YHš\ÛÛ™\ˆYÚ›ŞÚ[ˆH˜]]™HÛÜÙHÛXÚÈÙ\È›İ\ÛZ\ÜÈ]‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹ŒLLÈŒL‹ŒLLX‚‚ˆÈÈÌKŒ—HHŒ‹LËL‚‚ˆÈÈÈÚ[™ÙY‚‹H™[[İ™YH^[˜]ÜHÛÜH™[™X]Z\ÜÚ[Ûˆ™XYH[^HÚ[H™]Z[š[™È]ÈÛÛ›Û[™L\ÈY˜][‚‹HZ[[™YÚ\İ\ˆ›İÈX›\Ú\ÈÛÛ\]H\‹\\œÛÛˆ˜Z[š[™È›Ùš[\È›Üˆ]™\H^Xİ™ZXÛH\ÜÚYÛ›Y[YÙHXÜ›ÜÜÈ[™ZXÛH\\Ë‚‹HZ\ÜÚ[Ûˆš[™\ˆ\İÈœ™\Ú^Xİ[]™ZXÛH™YÚ\İ\ˆØØ[œÈ[™Ø[ˆš[™ÜXÚX[\İ˜Z[™YİY™ˆÛˆ[H\ÜÚYÛ™Y[š]‚‹HÙX\˜ÚYš\ÛÜˆ[X[™›İÈÙ[XİÈ^Xİ™YÚ\İ\™Y™ZXÛ\ÈØ\œZ[™È\ÜÚYÛ™YÙX\˜ÚØ[™Ü™\ØİYX]˜Z[™YİY™ˆ[œİXYÙˆ\™[X\[™ÈÈÛÛ›Û˜[œË‚‹HØ\ˆÈİØ[™Ø\œÈÈİØ›İÈ›İ]H›İYÚ^Xİ\KLLH›]™Y™XÛİ™\H™ZXÛ\Ë[˜ÛY[™ÈİXİ\™YZ\ÜÚ[™È™ZXÛ\È[\Ë‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹ŒLXÈŒL‹ŒLL‚‹H\œÛÛ›™[\ÜÚYÛ›Y[[˜Ü™X\ÙYœ›ÛHKŒËÈKŒËX‚‚ˆÈÈÌKŒWHHŒ‹LËL‚‚ˆÈÈÈÚ[™ÙY‚‹H™[[İ™YH^[˜]ÜHÙ[[˜ÙH™[™X]ÙY\^HØ]™Y[™[ÜÚ][Û˜œ›ÛHHZ\ÜÚ[Ûˆš[™\ˆÛÛ›Û[™[‚‹HHÚXÚØ›ŞİÜ™Y[™[ÛÛÜ™[˜]\È[™Ù[™K[Û‹[Z\ÜÚ[Ûˆ™Z]š[İ\ˆ™[XZ[ˆ[˜Ú[™ÙY‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹ŒLÈŒL‹ŒLX‚‚ˆÈÈÌKŒHHŒ‹LËL‚‚ˆÈÈÈš^Y‚‹HZ\ÜÚ[™È™ZXÛ\ÎˆÈš\™H[™Ú[™\Ø›İÈ\Ù\È[ˆ^Xİš\™H[™Ú[™H™\]Z\™[Y[›İ]H[œİXYÙˆHÙ[™\šXÈİXœİš[™ÈX]Ú\ˆ]Ûİ[Ù[Xİ[X[[˜Ù\Ë‚‹Hš\™H[™Ú[™HÙ[Xİ[Ûˆ[™Ù[XİYXÛİ[™\šYšXØ][ÛˆXØÙ\Û›HZ\ÜÚ[ÛÚYYˆRÈ[\XØ\X›Hš\™H™ZXÛH\\ÈM˜[™MØÈ[X[[˜ÙH\HX\È^XÚ]Hİ]ÚYHH›İ]K‚‹HH˜[˜XÚÈÙ[XİÜˆØ[ˆ›ÈÛ™Ù\ˆ\ÙHHÙ[™\šXÈÙX\˜ÚØ]šX]X]ZXÚË\Ù[Xİ]Ûˆ›Üˆš\™H[™Ú[™HÚÜYÙ\Ë‚‚ˆÈÈÈ[\™˜XÙB‚‹H™[[İ™YH^[˜]ÜH[\ˆÙ[[˜ÙH™[™X]H]]È[ÙH]Y]YHÚXÚØ›ŞÚ[H™]Z[š[™ÈHÚXÚØ›Şİ\ÔİÜÛÛ›Û[™Ü\˜][Û˜[İ]\È\Ü^K‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹ŒLØÈŒL‹ŒL‚‚ˆÈÈÌKŒ×HHŒ‹LËL‚‚ˆÈÈÈš^Y‚‹HY\ˆH^Xİ™[X\ÙHš\ÛÛ™\œØ˜[˜XÚÈÛÛ\]\Ë]]È[ÙH›İÈØZ]È›ÜˆH™\İ[[™ÈYÚ›ŞÛXÚÜÈ]Èš\ÚX›HÜ[ÜİÜ[ˆ]OHÛÜÙHˆÛ\ÜÏH›YÚ›ŞXÛÜÙH˜ÛÛ›Û[™ÛÛ™š\›\ÈHØÜ™Y[ˆ\È\Ø\X\™Y‚‹HH™[X\ÙK\™\İ[ÛÜÙH]İ\ÜÈZ\ÜÚ[ÛÚYYˆ^[İ]ÈÚ\™HHÛÜÙHÜ[ˆ\È›İÜ˜\YH˜ÛÛ›ÛX‹XÛÛZ[™\˜‚‹HÛ˜ÙHH\ÛZ\ÜÈØÜ™Y[ˆ\ÈÛÜÙY™[X\ÙHİ]H\ÈÛX\™Y[™]]È[ÙH™\İ\ÈHZ\ÜÚ[ÛˆŞXÛH[œİXYÙˆ™[XZ[š[™È›ØÚÙYÛˆH™\İ[ØÜ™Y[‹‚‚ˆÈÈÈØY™]B‚‹HH\ÛZ\ÜÈÛÜÙH[œÈÛ›HY\ˆH^Xİİ\œ™[[Z\ÜÚ[Ûˆ™[X\ÙHš\ÛÛ™\œØXİ[Ûˆ\ÈÛX\™YHš\ÛÛ™\ˆ[\‚‹H^\İ[™È]Y[˜[œÜÜ[™ÜÚ]]™KXØ\XÚ]Hš\ÛÛ‹XÙ[[™[™È™[XZ[ˆYÚ\ˆš[Üš]H[™[˜Ú[™ÙY‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹ŒL˜ÈŒL‹ŒLØ‚‚ˆÈÈÌKŒ—HHŒ‹LËL‚‚ˆÈÈÈÚ[™ÙY‚‹H]]È[ÙHÛÛ[Y\ÈÈ™Y™\ˆHš\œİš\ÚX›HXİ]™Hš\ÛÛˆ\İ[˜][ÛˆÚ]œ™YHÙ[Ë‚‹HÚ[ˆHš\ÛÛ™\ˆ[\™[XZ[œÈ]›È]˜Z[X›HÙ[\İ[˜][Ûˆ^\İË[š]š[™\‹Z\ÜÚ[Ûˆ\]H[™›Ü›X[™ZXÛK\Ù[Xİ[ÛˆXİ[ÛœÈ\™H[İÙYÈš[š\Ú™Y›Ü™HH˜[˜XÚÈ\ÈÛÛœÚY\™Y‚‚ˆÈÈÈYY‚‹HY\ˆ[›Ü›X[]]È[ÙHXİ[ÛœÈÛÛ\]KH^Xİİ\œ™[[Z\ÜÚ[Ûˆ™[X\ÙHš\ÛÛ™\œØ[šÈ\ÈÛXÚÙYYˆHš\ÛÛ™\ˆ[\İ[™[XZ[œË‚‹HH™[X\ÙH˜[˜XÚÈ™\İ\ÈH]]ÈŞXÛH[™]\İÛX\ˆ™Y›Ü™H\Ü]ÚÜˆ]Y]YHY˜[˜ÙHØ[ˆÛÛ[YK‚‚ˆÈÈÈØY™]B‚‹H™[X\ÙH\È[İÙYÛ›H›ÜˆHš\ÚX›H‹Y[™Ù\˜[šÈÚ]]K[Y]ÙHœÜİ˜^Xİ^™[X\ÙHš\ÛÛ™\œØ[™H^Xİİ\œ™[Z\ÜÚ[ÛˆÙÙY˜[™Ù[™KÙ[\ÜÙ[˜›İ]K‚‹HH˜[˜XÚÈ\È™]™\ˆ\ÙYÚ[H[HXİ]™H\İ[˜][ÛˆÚ]ÜÚ]]™Hœ™YKXÙ[Ø\XÚ]H™[XZ[œË‚‹HHÙ\\˜]HÙ\ÜÚ[ÛˆİX\™™]™[È\XØ]H™[X\ÙHÛXÚÜÈÚ[HZ\ÜÚ[ÛÚYYˆ›ØÙ\ÜÙ\ÈH™\]Y\İ‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹ŒLXÈŒL‹ŒL˜‚‚ˆÈÈÌKŒWHHŒ‹LËL‚‚ˆÈÈÈYY‚‹H]]È[ÙH›İÈ]XİÈHš\ÚX›Hš\ÛÛ™\‹XÙ[[™Ù™ˆ™Y›Ü™HZ\ÜÚ[Ûˆ\]K™ZXÛHØY[™ÈÜˆ[š]š[™\‹‚‹H]Ù[XİÈHš\œİš\ÚX›HÜ™Y[ˆZ\ÜÚ[ÛÚYYˆ\İ[˜][Ûˆ[šÈ[ˆÓHÜ™\ˆÚ[ˆH[šÈ\ÈH˜[Y]K\š\ÛÛ‹ZYHÙÙY˜[™Ù[™\‹Ø›İ]H[™ÜÚ]]™Hœ™YKXÙ[Ø\XÚ]K‚‹HHÙ\ÜÚ[ÛˆİX\™™]™[È\XØ]HÛXÚÜÈÚ[HZ\ÜÚ[ÛÚYYˆ›ØÙ\ÜÙ\ÈH[™Ù™‹‚‚ˆÈÈÈØY™]B‚‹HH™Y™[X\ÙHš\ÛÛ™\œØXİ[Ûˆ\È™]™\ˆÛÛœÚY\™YÜˆÛXÚÙY‚‹H]]È[ÙHİÜÈÚ]İ][›š[™È[š]š[™\ˆÚ[ˆHš\ÛÛ™\ˆ[\™[XZ[œÈ]›ÈXİ]™H\İ[˜][ÛˆØ[ˆ™HÛÛ\]Y‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹ŒLÈŒL‹ŒLX‚‚ˆÈÈÌKŒHHŒ‹LËL‚‚ˆÈÈÈš^Y‚‹H™[[İ™YHš[˜[^X˜\ÙY”•X˜[˜XÚÈœ›ÛH›ØY˜Z[[š]\Ü]ÚX]Ú[™Ë‚‹H›ØY˜Z[[š]™\]Z\™[Y[È›İÈÙ[Xİ[™™\šYHÛ›HÚXÚØ›Ş\È^ÜÚ[™È^XİZ\ÜÚ[ÛÚYYˆ™ZXÛH\HLØ‚‹HÛØ\İİX\™›ÜH™\ØİYH[š]™[XZ[œÈÙ\\˜]H\È™ZXÛH\HNX[™Ø[››İØ]\ÙHHš\™H›ØY˜Z[[š]™\]Z\™[Y[]™[ˆÚ[ˆ™[˜[YYÚ][ˆ”•XXÛÛZ[š[™ÈØ[ÚYÛ‹‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹ŒLØÈŒL‹ŒL‚‚ˆÈÈÌKŒŒÎWHHŒ‹LËL‚‚ˆÈÈÈš^Y‚‹HÙ\\˜]YHš\™H›ØY˜Z[[š]œ›ÛHHÛØ\İİX\™›ÜH™\ØİYH[š]\Ü]HZ\ˆÚ\™Y”•HX˜œ™]šX][Û‹‚‹H›ØY˜Z[[š][™›ØY˜Z[[š]ØÚÜYÙ\È›İÈ\ÙHHYXØ]Y^Xİ\KLLÈš\™HX]Ú\‹‚‹HÛØ\İİX\™›ÜH™\ØİYH[š]\HNH\È^XÚ]H^ÛYYœ›ÛHH›ØY˜Z[›İ]K‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹ŒL˜ÈŒL‹ŒLØ‚‚ˆÈÈÌKŒŒÎHHŒ‹LËL‚‚ˆÈÈÈš^Y‚‹HZ\ÜÚ[™È™ZXÛ\Îˆˆ›ØY˜Z[[š]Ø›İÈX\ÈH\˜[Z\ÜÚ[ÛÚYYˆÛÜ™[™ÈÈH\İX›\ÚY”•X›İ]K‚‹HÚ[™İ[\ˆ›ØY˜Z[[š]ÛÜ™[™È™[XZ[œÈİ\ÜY‚‹HH›İ]H™[XZ[œÈ™\İšXİYÈH^Xİ\KLLÈ›ØY˜Z[[š]™ZXÛHX\[™Ë‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹ŒLXÈŒL‹ŒL˜‚‚ˆÈÈÌKŒŒÍ×HHŒ‹LËL‚‚ˆÈÈÈ™\İÜ™Y‚‹H™\İÜ™Y\œÛÛ›™[\ÜÚYÛ›Y[KŒËÛˆÜÙˆH]\İXZ[˜Ûİ\˜ÙK‚‹H™\İÜ™YH™XYX›H
+ŠZ[[™YÚ\İ\ŠŠˆXİ[Û‹”ÓÓˆ™YÚ\İ\ˆ^ÜÚ[\ÜØ]™Y\™YÚ\İ\ˆİ]\Ë[™XØİ\˜]H™]Z[™Y\™YÚ\İ\ˆ™\Ü[™Ë‚‚ˆÈÈÈ™\Ù\™Y‚‹H™\Ù\™YZ\ÜÚ[Ûˆš[™\ˆŒL‹ŒLXH˜Z[™Y\\œÛÛ›™[Ûİ™\˜YÙHÜ[Z\Ù\‹ÕKÒT•ˆ][K]˜Z[™Y[ØØ][Û‹ÛÛ\]X›H˜[˜XÚÈÙ[Xİ[Û‹[™›Û‹X›ØÚÚ[™È˜Z[š[™Ë\ÚÜ˜[[™[™Ë‚‚ˆÈÈÈØY™]H[™ÛÛ\]Xš[]B‚‹H™YÚ\İ\ˆ[\ÜÈ˜[Y]HØÚ[XH[™Øš™XİÙ^\Ë[™›Ü˜ÙHH^\İ[™ÈK]™ZXÛH[Z]Ø\š[\È]LP‹[™™\]Z\™HÛÛ™š\›X][Ûˆ™Y›Ü™H™\XÚ[™Èœ›İÜÙ\ˆ]K‚‹H^Ü[™[\Ü™[XZ[ˆ›ØÚÙYÚ[H\œÛÛ›™[\ÜÚYÛ›Y[ÜˆH™YÚ\İ\ˆZ[\ÈXİ]™K‚‹HYYH\›X[™[™YÜ™\ÜÚ[ÛˆÚXÚÈ™\]Z\š[™ÈH\œÛÛ›™[™YÚ\İ\ˆÛÛ›ÛÈ[™H]\İ˜Z[™YXÛİ™\˜YÙHÜ[Z\Ù\ˆÈ™[XZ[ˆ™\Ù[ÙÙ]\‹‚‚ˆÈÈÌKŒŒÍ—HHŒ‹LËL‚‚ˆÈÈÈÚ[™ÙY‚‹H™\XÙYİšXİ˜Z[™Y][š]\ÜËÙ˜Z[Ù[Xİ[ÛˆÚ]H™\İX]˜Z[X›HÛİ™\˜YÙHÜ[Z\Ù\ˆ›Üˆ]™\Hİ\ÜY˜Z[™Y\\œÛÛ›™[™\]Z\™[Y[‚‹H]™[HX›XÈÜ™\‹]™[ˆX›XÈÜ™\‹ÛXÙHÙ\™ÙX[[™ÛXÙHYYXÈ™\]Z\™[Y[È›İÈÚ\™H^Xİ\KMLHÕH[™\KNT•ˆØ[™Y]\ËˆHÕHİ\Y\È\Èš[™H\œÛÛ›™[ÙX]ËÚ[HT•œÈİ\HÛÈ[™š[ÛX[\ˆ™[XZ[™\œË‚‹H][K]˜Z[™Y\ÜÚYÛ™YİY™ˆ™YXÙH]™\HX]Ú[™ÈÚ[][[™[İ\ÈÛİ\œÙH™\]Z\™[Y[œ›ÛHHØ[YHÙ[XİY™ZXÛK‚‹H\X[H˜Z[™Y™ZXÛ\È™[XZ[ˆ\ÙY[ˆ[ˆT•ˆØ\œZ[™ÈÛ™H™[]˜[˜Z[™YÙ™šXÙ\ˆØ[ˆ™HÙ[XİY[™ÛÛšX]\È]Û™HÙ™šXÙ\ˆ[œİXYÙˆ™Z[™È\ØØ\™Y‚‹HØ[™Y]H˜[šÚ[™È™Y™\œÈ™\šYšYY˜Z[™YÛİ™\˜YÙK[ˆÛÜœ™Xİ]\HØ\XÚ]K]›ÚYÈ^Ù\ÜÚ]™HÜ\™HØ\XÚ]K[™\Ù\ÈZ\ÜÚ[ÛÚYYˆ\œš]˜[Ü™\ˆ\ÈHš[˜[YKXœ™XZÙ\‹‚‚ˆÈÈÈ˜[˜XÚÈ[™™\Ü[™Â‚‹HÚ[ˆ™\šYšYY˜Z[™YÛİ™\˜YÙH\È^]\İYÛÛ[X[™™^\Èİ[Ù[XİÈ[›İYÚÛÜœ™Xİ]\H™ZXÛ\ÈÈ›İšYHH™\]Z\™Y›ÛZ[˜[\œÛÛ›™[Ø\XÚ]K‚‹H™[XZ[š[™È˜Z[š[™ÈYšXÚ]È\™H™\ÜYÛX\›H]›ÈÛ™Ù\ˆ›ØÚÈ\Ü]ÚÚ[ˆÛÛ\]X›H™ZXÛHØ\XÚ]H\È™\Ù[‚‹HZ\ÜÚ[™ÈÛÛ\]X›H™ZXÛHØ\XÚ]H™[XZ[œÈ™[X\ÙKX›ØÚÚ[™È[™\È™\ÜYÙ\\˜][Hœ›ÛHH˜Z[š[™ÈÚÜ˜[‚‹HÙ[Xİ[ÛˆİÜÈ\ÈÛÛÛˆ\ÈHÚ\™Y\œÛÛ›™[XØ\XÚ]H™XİÜˆ\ÈÛİ™\™Y™]™[[™È^˜HÕ\ÈÜˆT•œÈÚ[ˆ][K]˜Z[™YÜ™]ÜÈ[™XYHØ]\ÙHÙ]™\˜[Ûİ\œÙ\Ë‚‹HHL‹\\œÛÛˆÛÛ\]X›HX›XÈÜ™\ˆ™\]Z\™[Y[™Y™\œÈÛ™Hš[™K\ÙX]ÕH[™ÛÈT•œÈ›ÜˆH™YK\\œÛÛˆ™[XZ[™\ÈHÙXÛÛ™ÕH\È\ÙYÛ›HÚ[ˆ]\ÈH™]\ˆš]ÜˆHT•ˆ™[XZ[™\ˆØ[››İ™Hİ\YY‚‚ˆÈÈÈØY™]H[™˜[Y][Û‚‚‹HÛXÙH[œÜXİÜˆ[™˜Z[Ø^HÛXÙH™[XZ[ˆ^Xİ\KN›Ùš[\ÎÈ\›YY™\ÜÛœÙH™[XZ[œÈ^Xİ\KLH[™İ[™\]Z\™\ÈH›ØYÈÛXÚ[™È\Èš\™X\›\ÈÛÛXš[˜][Ûˆ›Üˆ˜Z[™YÜ™Y]‚‹H^Xİ™ZXÛHQÈ[™]™Hİ™ZXÛ\ËŞÚYKŞ]ÙZ\İ[™Ø\ÜÚYÛ›Y[ØØ[œÈ™[XZ[ˆ]]Üš]]]™H›Üˆ˜Z[™Y\\œÛÛ›™[Ûİ[Ë‚‹HYY\›X[™[™YÜ™\ÜÚ[ÛˆÛİ™\˜YÙH›ÜˆÕHØ\XÚ]K\X[˜Z[š[™Ë][KXÛİ\œÙHÛİ™\˜YÙKÛÜœ™Xİ]\H[˜Z[™Y˜[˜XÚËÚÜ˜[™\Ü[™È[™›Ë[İ™\œÙ[™™Z]š[İ\‹‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹ŒLÈŒL‹ŒLX‚‚ˆÈÈÌKŒŒÍWHHŒ‹LËLB‚ˆÈÈÈš^Y‚‹HX[X[[š]š[™\ˆ[™]]È[ÙH›İÈÚXÚÈš\ÚX›Hİ\œ™[
+Š“Z\ÜÚ[™È™ZXÛ\ÊŠˆ[™İ\ÜY
+Š“Z\ÜÚ[™È\œÛÛ›™[
+Šˆ[\È™Y›Ü™H™XY[™ÈH[İ]XÈZ\ÜÚ[Û‹Z[™\]Z\™[Y[Ù]‚‹HÚ[ˆZ\ÜÚ[ÛÚYYˆ™\ÜÈHİ\œ™[ÚÜYÙHİXÚ\ÈZ\ÜÚ[™È™ZXÛ\Îˆˆš\™H[™Ú[™\ØÛ›H]İ\œ™[ÚÜYÙH\È›ØÙ\ÜÙYÈ[œ™[]YÜšYÚ[˜[Z\ÜÚ[Ûˆ™\]Z\™[Y[È\™H›ÈÛ™Ù\ˆÙ[XİYYØZ[‹‚‹H^XÚ]Z\ÜÚ[™È™ZXÛ\È]X[]Y\È\™H™X]Y\ÈH\™Ù][X™\ˆÙˆİ\œ™[HÚXÚÙY[œÙ[™ZXÛ\Ëˆ^\İ[™ÈX]Ú[™ÈÙ[Xİ[ÛœÈ™YXÙHH™[XZ[š[™ÈÛXÚÜËÛÈ[š]š[™\ˆ›ÛİÙYHZ\ÜÚ[Ûˆ\]HØ[››İYHØ[YHÚÜYÙHÚXÙK‚‹HHÙXÛÛ™İ\œ™[\™\]Z\™[Y[ÚXÚÈ[œÈY\ˆHZ\ÜÚ[Û‹Z[™\]Y\İÛÛ\]\Ë™]™[[™ÈH™]ÛH™[™\™YÚÜYÙHœ›ÛH™Z[™Èİ™\Üš][ˆH[ˆ]XÚY[™\ÜÛœÙH[™XYH[ˆ›YÚ‚‹H^XÚ]İ\œ™[ÚÜYÙ\Èİ]˜[šÈ\™Ù\ˆ[Û]™Hİ[È\š[™ÈKY\XØ][Û‹ˆİ\œ™[]Y[ÚÜYÙ\È\™H™]Z[™YÚ[H[œ™[]Y[Z\ÜÚ[Ûˆ›İÜÈ\™Hİ\™\ÜÙY‚‚ˆÈÈÈØY™]H[™ÛÛ\]Xš[]B‚‹H]Y[[Û›HÙH™YY[\ÈÈ›İİ\™\ÜÈH›Ü›X[]]Üš]]]™HZ\ÜÚ[Û‹Z[›İ]K‚‹H[Y\šXÈ
+Š”İ[™YYY
+Šˆ˜[Y\Èœ›ÛHH]™HZ\ÜÚ[Ûˆ™\]Z\™[Y[ÈX›H™]Z[ˆZ\ˆ^\İ[™ÈY][Û˜[\ÚÜYÙH[™[™ÎÈHİ\œ™[\Ù[Xİ[Ûˆ\™Ù][H\Y\ÈÛ›HÈ^XÚ]š\ÚX›HZ\ÜÚ[™È™ZXÛ\ËÔ\œÛÛ›™[[\Ë‚‹HÜXÚX[\İ˜Z[š[™È™\šYšXØ][Û‹ÛXÙHT•ˆ›İXİ[Û‹STËĞÜš]XØ[Ø\™H›Ş[Z]KTÛ™HØY˜\šH[\™˜XÙ\Ë\Ü]Ú˜[Y][Ûˆ[™™\Ûİ\˜ÙHYZ[š\İ˜][Ûˆ™[XZ[ˆÛˆZ\ˆ\İX›\ÚY]Ë‚‹HYY\›X[™[™YÜ™\ÜÚ[ÛˆÛİ™\˜YÙH›ÜˆZ\ÜÚ[™Ë\™\]Z\™[Y[ËYš\œİ]]Üš]K]K\™[™\ˆ™XÚXÚÚ[™Ë]Y[™][[Ûˆ[™\XØ]K\Ù[Xİ[Ûˆ™]™[[Û‹‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹NXÈŒL‹ŒL‚‚ˆÈÈÌKŒŒÍHHŒ‹LËLB‚ˆÈÈÈš^Y‚‹H™[[İ™YH˜]˜TØÜš\[İÛ™YTÛ™H
+Š•[š]]ZXÚÈÙ[Xİ
+Šˆ]K\ØÛÜİ\™H]Û‹ÛÛ\ÙHİ]K\‹[›ÙHÛ\ÜÙ\È[™™\X]Y˜]]™K\XÚÙ\ˆİXİ\˜[[š[˜Ù[Y[‚‹HHš\ÚX›H˜]]™KÙ[š[˜ÙY[\›˜][ÛˆÚİÛˆ[ˆHİ\YY™XÛÜ™[™ÈØ[ˆ›ÈÛ™Ù\ˆØØİ\ˆ™XØ]\ÙHÛÛ[X[™™^\È›ÈÛ™Ù\ˆ[œÙ\ÈÜˆ™X]XÚ\ÈHÜ˜\\ˆ[œÚYHZ\ÜÚ[ÛÚYY‰ÜÈ]ZXÚË\Ù[XİÓK‚‹HZ\ÜÚ[ÛÚYY‰ÜÈ˜]]™HØ]YÛÜH[™[š]ÛÛ›ÛÈ›İÈ™XÙZ]™HÛ›H\ÜÚ]™KØİ[Y[[İÛ™YTÛ™HÔÔÈ\Ú[™ÈİX›HVÜÙX\˜ÚØ]šX]WX[™š\Ê‹‹ŠXÙ[XİÜœË‚‹H™\XÙ[Y[]ZXÚË\Ù[XİÓH\Èİ[Y]]ÛX]XØ[HHH^\İ[™Èİ[\ÚY]Ú]İ]H]]][Û“ØœÙ\™\‹Yš]™[ˆ™X]XÚY[\ÜË‚‹H™[[İ™Y˜]]™K\XÚÙ\ˆİ]HİÜ˜YÙH[™XZ[‹[ØœÙ\™\ˆ™\Ş[˜Ú›Ûš\Ø][Û‹ˆ\İÜšXØ[ÙÙÛKØÛ\ÜÙ\ËÜİ]H\™HÛX[™Y\š[™È\Ü˜YH[™ØY˜\šH™˜ØXÚH™\İÜ˜][Û‹‚‚ˆÈÈÈÛÛ\]Xš[]H[™ØY™]B‚‹HH
+Š“Z\ÜÚ[ÛŠŠˆ[™
+Š•™ZXÛJŠˆ][˜Ú\ˆ\È[˜Ú[™ÙY‚‹H\ÜÚ]™H]ZXÚË\Ù[Xİİ[[™È™[XZ[œÈİšXİH[Z]YÈH\İX›\ÚYTÛ™HØY˜\šHØİ[Y[Û\ÜË[˜ÛY[™ÈÛ™K\Ú^™Y\ÚİÜ\Ú]HÙ\ÜÚ[ÛœË‚‹HTYİX›][™\ÚİÜ^[İ]È™[XZ[ˆ[˜Ú[™ÙY‚‹HZ\ÜÚ[ÛÚYY‰ÜÈ˜]]™H[˜ÚÜœËÛİ[ËÛÛİ\œÈ[™ÛXÚÈ[™\œÈ\™H›İÛÛ™YÜˆ™\XÙY‚‹HZ\ÜÚ[Ûˆ™\]Z\™[Y[Ë[š]Ù[Xİ[Û‹\Ü]ÚZ\ÜÚ[Ûˆ\]K[HİX[]]È[ÙH[™™\Ûİ\˜ÙHYZ[š\İ˜][Ûˆ\™H[˜Ú[™ÙY‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹NÈŒL‹NX‚‚ˆÈÈÌKŒŒÌ×HHŒ‹LËLB‚ˆÈÈÈš^Y‚‹HİÜYHTÛ™H[š]]ZXÚÈÙ[Xİ\ØÛÜİ\™Hœ›ÛH™\X]YH^[™[™È[™ÛÛ\Ú[™ÈY\ˆÛ™H\‚‹H\Ù\‹]šYÙÙ\™YXÚÙ\ˆİ]HÚ[™Ù\È›İÈ\]HH˜XÚÙYZ\ÜÚ[ÛˆØİ[Y[È\™XİH[™›ÈÛ™Ù\ˆØÚY[H[ˆ[[YYX]HİXİ\˜[™K\ØØ[ˆÙˆHÛÛ›Û™Z[™È\Y‚‹HYYH›İ[™Y\XØ]K]İXÚØÛXÚÈØÚÈ[™[[YYX]H›ÜYØ][ÛˆİX\™›ÜˆH˜]]™HXÚÙ\ˆ\ØÛÜİ\™K‚‹H˜]]™HXÚÙ\ˆÛ\ÜË^T’PK]H[™Ûİ[Üš]\È\™H›İÈY[\İ[[™\ÙHH\‹YØİ[Y[™[™\ˆÚYÛ˜]\™K‚‹HHXZ[ˆ]]][Û“ØœÙ\™\ˆ›İÈYÛ›Ü™\ÈHÚÜ^XÚ]HX\šÙYÚ[™İÈÙˆÛÛ[X[™™^\Ë[İÛ™Y˜]]™K\XÚÙ\ˆ]]][ÛœÈÚ[HÛÛ[Z[™ÈÈØœÙ\™HÙ[Z[™HZ\ÜÚ[ÛÚYYˆ™ZXÛK[\İÚ[™Ù\Ë‚‹HZ\ÜÚ[Ûˆ[™™ZXÛH][˜Ú\ˆXÙ[Y[›İÈYX\İ\™\ÈH[š[ÛˆÙˆ[š\ÚX›HÜ\šYÚ˜]]™HÛÛ›ÛÈ˜]\ˆ[ˆ\İ[™ÈÛ™HÛÛZ[™\ˆ™Xİ[™ÛK‚‹HH][˜Ú\ˆ›İÈÛX\œÈ][Û\İ\ˆHMœ\Ù\ÈH˜\\‹[YLLœ˜[˜XÚÈ[™™]Z[œÈH\İ˜[YÛ\İ\ˆœšYY›H\š[™È[Ù[™\XÙ[Y[‚‹H^[\İ\™\Ú\È™]™[ÈİX‹\^[Ù[ÛY]HÚ[™Ù\Èœ›ÛHÛÛ[[İ\ÛH™]Üš][™È][˜Ú\ˆÔÔÈ˜\šXX›\Ë‚‚ˆÈÈÈÛÛ\]Xš[]H[™ØY™]B‚‹HHÛÜœ™Xİ[Ûˆ™[XZ[œÈİšXİH[Z]YÈH\İX›\ÚYTÛ™HØY˜\šH][˜ÛY[™ÈÛ™K\Ú^™Y\ÚİÜ\Ú]HÙ\ÜÚ[ÛœË‚‹HTYİX›][™\ÚİÜ^[İ]È\™H[˜Ú[™ÙY‚‹HZ\ÜÚ[Ûˆ™\]Z\™[Y[ËX]Ú[™Ë™ZXÛHÙ[Xİ[Û‹\Ü]ÚZ\ÜÚ[Ûˆ\]K[HİX[]]È[ÙK[š]]ZXÚÈÙ[Xİ[˜ÚÜœÈ[™™\Ûİ\˜ÙHYZ[š\İ˜][ÛˆÙÚXÈ\™H[˜Ú[™ÙY‚‹H›È™]ÈØœÙ\™\ˆÜˆ™Xİ\œš[™È[Y\ˆØ\ÈYYÈH^\İ[™È›İ[™YØÛØ[\ØÙYY™XŞXÛH™[XZ[œÈ]]Üš]]]™K‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹MØÈŒL‹N‚‚ˆÈÈÌKŒŒÌ—HHŒ‹LËLB‚ˆÈÈÈÚ[™ÙY‚‹H™\XÙYHÛÈ[]ÚYTÛ™HZ\ÜÚ[Ûˆš[™\ˆXY\ˆ˜\œÈÚ]Û™HÛÛ\Xİ][˜Ú\ˆÛÛZ[š[™È^XİH
+Š“Z\ÜÚ[ÛŠŠˆ[™
+Š•™ZXÛJŠˆ]ÛœË‚‹H›İ[™[Èİ\ÛÜÙYˆÜ[š[™ÈZ\ÜÚ[ÛˆÛÜÙ\È™ZXÛKÜ[š[™È™ZXÛHÛÜÙ\ÈZ\ÜÚ[Û‹[™\[™ÈHXİ]™H]ÛˆYØZ[ˆÛÜÙ\È]‚‹HH][˜Ú\ˆ\ÈÜÚ][Û™Yœ›ÛHZ\ÜÚ[ÛÚYY‰ÜÈ]™H˜]]™H˜ÛÛ›ÛX‹XÛÛZ[™\˜[[YYX][HÈHYÙˆHš\ÚX›HZ\ÜÚ[ÛˆÛÛ›ÛÈ˜]\ˆ[ˆœ›ÛHH\™XÛÙYØÜ™Y[ˆÙ™œÙ]‚‹HZ\ÜÚ[ÛˆÛÛ›Û[™™ZXÛHØY\İÜ[ˆ™[İÈH][˜Ú\ˆ[™™[XZ[ˆ›İ[™YÈHš\İX[šY]ÜÜ[™ØY˜\šHØY™H\™XK‚‚ˆÈÈÈš^Y‚‹H™[[İ™YH]XÚYšYÚ\ÚYHÛÛ\ÙHÛÛ›ÛÈ[™İ™\›\[™È[]ÚYXY\ˆ^Y\ˆÙY[ˆ[ˆHİ\YYTÛ™H™XÛÜ™[™Ë‚‹H˜]]™H[š]]ZXÚÈÙ[Xİ^[œÚ[Ûˆ›ÈÛ™Ù\ˆÚ[™Ù\ÈHÛÛ[X[™™^\È][˜Ú\ˆÙ[ÛY]H›İYÚHØœÛÛ]H˜\œË‚‹H][˜Ú\ˆXİ]™Hİ]K\šXK\™\ÜÙY\šXKY^[™Y[™\šXKXÛÛ›ÛØ™[XZ[ˆŞ[˜Ú›Ûš^™Y‚‹H[Ù[™\XÙ[Y[š\İX[šY]ÜÜÚ[™Ù\Ë›İ][Ûˆ[™ØY˜\šHYÙH™\İÜ˜][Ûˆ›İÈ™XØ[İ[]H][˜Ú\ˆXÙ[Y[›İYÚH^\İ[™È›İ[™YY™XŞXÛK‚‚ˆÈÈÈÛÛ\]Xš[]H[™ØY™]B‚‹HH][˜Ú\ˆ^\İÈÛ›HÛˆH\İX›\ÚYTÛ™HØY˜\šH][˜ÛY[™ÈÛ™K\Ú^™Y\ÚİÜ\Ú]HÙ\ÜÚ[ÛœË‚‹HTYİX›][™[\ÚİÜ^[İ]È™]Z[ˆH^\İ[™ÈZ\ÜÚ[ÛˆÛÛ›Û[™™ZXÛHØYXY\œÈ[™ÛÛ›ÛË‚‹HZ\ÜÚ[Ûˆ™\]Z\™[Y[ËX]Ú[™ËÚXÚØ›ŞÙ[Xİ[Û‹\Ü]ÚZ\ÜÚ[Ûˆ\]K[HİX[]]È[ÙK˜]]™H]ZXÚË\Ù[XİÛÛ›ÛÈ[™™\Ûİ\˜ÙHYZ[š\İ˜][ÛˆÙÚXÈ\™H[˜Ú[™ÙY‚‹HYY\›X[™[™YÜ™\ÜÚ[ÛˆÚXÚÜÈ›Üˆ^XİX™[Ë^Û\Ú]™H[™[İ]KY[ˆYØXŞH˜\œË˜]]™KXÛÛ›ÛXÛ\İ\ˆÜÚ][Ûš[™È[™]]][Û‹İšY]ÜÜ™XÛÛ˜Ú[X][Û‹‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹M˜ÈŒL‹MØ‚‚ˆÈÈÌKŒŒÌWHHŒ‹LËLB‚ˆÈÈÈš^Y‚‹HZ\ÜÚ[ÛˆÛÛ›Û™ZXÛHØY\İ[™[š]]ZXÚÈÙ[Xİ›İÈZYÜ˜]HÈÛÛ\ÙYY˜][ÈÛˆHÛÜœ™XİYTÛ™HØY˜\šH›Ùš[H[œİXYÙˆ[š\š][™Èİ[H^[™Yİ]Hœ›ÛHHX\›Y\ˆ[Øš[H›Ûİ]‚‹HZ\ÜÚ[ÛˆÛÛ›Û[™™ZXÛHØY\İ\ØÛÜİ\™\È›İÈİÛˆİXÚ[™Ù^X›Ø\™Xİ]˜][Ûˆ^XÚ]K™]™[]™[›ÜYØ][Ûˆ[ÈZ\ÜÚ[ÛÚYYˆ[™ÙY\XÛÛœË]\Ë\šXKY^[™Y[™\šXKXÛÛ›ÛØŞ[˜Ú›Ûš^™Y‚‹HÛÛ\ÙYTÛ™HØ\™È›İÈYHZ\ˆ›ÙY\È›İYÚ^XÚ]TÛ™K\ØÛÜY[\ËX]š[™ÈÛ™HÛÛ\XİXY\ˆ›İË‚‹HZ\ÜÚ[ÛˆÛÛ›Û›İÈ™\Ù\™\ÈHÚ[\‹]˜[œÜ\™[\\‹\šYÚİ]\ˆ›ÜˆZ\ÜÚ[ÛÚYY‰ÜÈš\ÚX›H˜]]™HÛÜÙHÛÛ›Û™]™[[™ÈHÛÛ[X[™™^\ÈØ\™œ›ÛHÛİ™\š[™ÈÜˆ[\˜Ù\[™ÈHZ\ÜÚ[Û‹]Ú[™İÈ]Û‹‚‹HHÛÜÙKXÛÛ›Ûİ]\ˆ\È™XØ[İ[]Yœ›ÛHH]™H[Ù[ÛÛ›Û\š[™Èš\İX[]šY]ÜÜÚ[™Ù\ËÜšY[][ÛˆÚ[™Ù\È[™ØY˜\šHYÙH™\İÜ˜][Û‹‚‚ˆÈÈÈÛÛ\]Xš[]H[™ØY™]B‚‹HHÛÜœ™Xİ[Ûˆ™[XZ[œÈİšXİHØ]YÈH\İX›\ÚYTÛ™HØY˜\šH][˜ÛY[™ÈÛ™K\Ú^™Y\ÚİÜ\Ú]HÙ\ÜÚ[ÛœË‚‹HTYİX›][™\ÚİÜ^[İ]˜YÙÚ[™È[™Ø]™YÜÚ][Ûš[™È™[XZ[ˆ[˜Ú[™ÙY‚‹HZ\ÜÚ[Ûˆ™\]Z\™[Y[Ë™\Ûİ\˜ÙHX]Ú[™Ë™ZXÛHÙ[Xİ[Û‹\Ü]ÚZ\ÜÚ[Ûˆ\]K[HİX[]]È[ÙH[™™\Ûİ\˜ÙHYZ[š\İ˜][ÛˆÙÚXÈ\™H[˜Ú[™ÙY‚‹HYY\›X[™[™YÜ™\ÜÚ[ÛˆÛÛ˜XİÈ›ÜˆÛÛ\ÙHZYÜ˜][Û‹]\›Z[š\İXÈ\ØÛÜİ\™HİÛ™\œÚ\^XÚ]ÛÛ\ÙYX›ÙHY[™ËT’PHŞ[˜Ú›Ûš^˜][Ûˆ[™˜]]™HÛÜÙKXÛÛ›ÛÛX\˜[˜ÙK‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹MXÈŒL‹M˜‚‚ˆÈÈÌKŒŒÌHHŒ‹LËLB‚ˆÈÈÈš^Y‚‹H\œÛÛ›™[\ÜÚYÛ›Y[™YÚ\İHØØ[œÈ›İÈ]XİÕKİ\KMLH™ZXÛ\È›İYÚ[İ\œ™[™ZXÛK]\H]šX]\Ë\œÙH]™\H\œÛÛ›™[›İÈÛˆXXÚ^Xİİ™ZXÛ\ËŞÚYKŞ]ÙZ\İ[™ØYÙH[™™XÛÙÛš\ÙH›İ‹X\ÜÚYÛ™Y[™š\ÚX›H
+Š”™[[İ™Hš[™[™ÊŠˆÛÛ›ÛËˆ^Xİ™ZXÛHQÈ™[XZ[ˆ]]Üš]]]™KÙ\\˜]HÕH™XÛÜ™È\™H™\Ù\™Y[™™Yœ™\ÚYÛ˜\ÚİÈ™\XÙHİ[H\ÜÚYÛ›Y[Ûİ[Ë‚‹HÔ•˜[™Ô•œØ›İÈÙ[Xİ[™Ûİ[Û›HH^Xİ\KMMÈÛØ\İİX\™™\ØİYH™ZXÛH[ˆ[š]š[™\‹Z\ÜÚ[Ûˆ\]H[™]]È[ÙK‚‹Hİ\œ™[Ù]K\™\]Z\™[Y[]\OH™ZXÛ\È—X
+Š“Z\ÜÚ[™È™ZXÛ\ÊŠˆ[[Y[È\™H\œÙYÚ]›Û‹Xœ™XZÚ[™Ë\ÜXÙH›Ü›X[\Ø][Ûˆ]™[ˆÚ[ˆH]™HZ\ÜÚ[Ûˆ™\]Z\™[Y[È[™[\È™\Ù[ˆÛXÙHØ\ˆ]X[]Y\È™[XZ[ˆY][Û˜[™ZXÛHÚÜYÙ\Ë›İ\œÛÛ›™[Ûİ[ÈÜˆİ[Y›Y]\™Ù]Ë[™›İÈ›İYÚH^\İ[™È\KNÜ™[˜\KYš\œİÙ[XİÜ‹‚‹HXXÚÙX\˜ÚYš\ÛÜˆ™\]Z\™[Y[›İÈX\ÈÛ™KY›Ü‹[Û™HÈ[ˆ^Xİ\KNHÛÛ›Û˜[‹ˆÙX\˜ÚXÚšXÚX[œÈ™[XZ[ˆÛˆĞT•PÈ[™ĞTˆÛÛ[X[™\œÈ™[XZ[ˆÛˆÛÛ›Û˜[œË‚‹HZ\ÜÚ[™ÈÛXÙHÙ™šXÙ\œÈÛÛ[YHÈÛÛ™\Ú]ÙZ[[™È]š\Ú[Ûˆ]ÛÈÙ™šXÙ\œÈ\ˆÛXÙHØ\‹[˜ÛY[™Èİ\œ™[š\ÚX›H[\È™\ÚYHH]™H[™[‚‹HÙ[™\šXÈÜš]XØ[Ø\™H™\]Z\™[Y[È›İÈÛÛ\\™H^Xİ\KNHSTËĞZ\ˆ[X[[˜Ù\ÈÚ]^Xİ\KMH[X[[˜Ù\ÈÚÜÙHİ\œ™[^XİRQ\œÛÛ›™[™YÚ\İH™XÛÜ™ÛÛ™š\›\È]X\İÛ™HÜš]XØ[ØØ\™XY[X™\‹[ˆÚÛÜÙHÚXÚ]™\ˆ[YÚX›H™\Ûİ\˜ÙH\ÈH™]\ˆZ\ÜÚ[ÛÚYYˆ\œš]˜[Ü™\‹ˆ^XÚ]STË[Û›KÜš]XØ[Ø\™H˜[œÙ™\ˆ[X[[˜ÙKİ\KNN[™›ØY]˜[œÜÜ[X[[˜ÙH™\]Z\™[Y[È™[XZ[ˆİšXİ[™Ù\\˜]K‚‚ˆÈÈÈ˜[Y][Û‚‚‹HYY\›X[™[™YÜ™\ÜÚ[ÛˆÛİ™\˜YÙH›ÜˆÕH™YÚ\İHØ\\™K^XİÔ•ˆ[™ÛÛ›Û˜[ˆX\[™ËİXİ\™YZ\ÜÚ[™È™ZXÛ\ÈX\šİ\ÛXÙHÙ™šXÙ\ˆÛÛ™\œÚ[Ûˆ[™™X\™\İ[YÚX›HSTËĞÜš]XØ[Ø\™HÙ[Xİ[Û‹‚‹H^\İ[™ÈSÔÈØY˜\šKTÛ™H\ÚİÜ\Ú]H]Xİ[Û‹TÛ™HRKÛXÙHT•‹Y™XŞXÛK™\ÜÚ]ÜH[™\Ù\œØÜš\˜[Y][ÛˆÛÛ˜XİÈ™[XZ[ˆ[˜X›Y‚‚ˆÈÈÈÚ[™ÙY‚‹H\œÛÛ›™[\ÜÚYÛ›Y[[˜Ü™X\ÙYœ›ÛHKŒËŒ˜ÈKŒËŒØ‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹MÈŒL‹MX‚‚ˆÈÈÌKŒŒWHHŒ‹LËLB‚ˆÈÈÈš^Y‚‹HÛÜœ™XİYHTÛ™HØY˜\šHØ]H›ÜˆØY˜\šH
+Š”™\]Y\İ\ÚİÜÙXœÚ]JŠˆÙ\ÜÚ[ÛœÈ]™\ÜXXÒ[[ÚXÚØ]\ÙYHÛÛ\XİŒKŒŒØ[™˜]]™K\XÚÙ\ˆŒKŒŒ^[İ]ÈÈ™HÚÚ\YÛÛ\][K‚‹HİXÚXØ\X›HXXÒ[[ØY˜\šH›İÈ[\œÈHÛ™H^[İ]Û›HÚ[ˆH\ÚXØ[ØÜ™Y[‰ÜÈÚÜ\İÚYH\ÈÛ™K\Ú^™Y
+HŒÔÔÈ^[ÊK‚‚ˆÈÈÈÛÛ\]Xš[]H[™™YÜ™\ÜÚ[Ûˆ›İXİ[Û‚‚‹HTY™[XZ[œÈ^ÛYYH\ÚXØ[ØÜ™Y[ˆ[Y[œÚ[ÛœÈ]™[ˆ[ˆ\ÚİÜ\Ú]HÜˆ˜\œ›İÈÜ]\ØÜ™Y[ˆ^[İ]Ë‚‹H\ÚİÜØY˜\šH™[XZ[œÈ^ÛYYH]È›Û‹]İXÚY[]NÈİ\ˆSÔÈœ›İÜÙ\œÈ™[XZ[ˆ^ÛYYHHØY˜\šHİX\™‚‹HYYÜÚ]]™H™YÜ™\ÜÚ[ÛˆÛİ™\˜YÙH›ÜˆHÎLÜ\ÚXØ[TÛ™HØÜ™Y[ˆÚ]HN\ÚİÜ^[İ]šY]ÜÜ[™™YØ]]™HÛİ™\˜YÙH›Üˆ[ˆŒTY[ˆHLÜ]\ØÜ™Y[ˆšY]ÜÜ‚‹HZ\ÜÚ[ÛˆÙÚXË˜]]™HÛÛ›ÛËX]Ú[™ËÙ[Xİ[Ûˆ[™\Ü]Ú™[XZ[ˆ[˜Ú[™ÙY‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹LØÈŒL‹M‚‚ˆÈÈÌKŒŒHHŒ‹LËLB‚ˆÈÈÈš^Y‚‹HÛÛ\]YHTÛ™HØY˜\šHZ\ÜÚ[Û‹Z[\™˜XÙH™Y\ÚYÛˆHZÚ[™ÈİÛ™\œÚ\ÙˆZ\ÜÚ[ÛÚYY‰ÜÈ˜]]™HVÜÙX\˜ÚØ]šX]WX[š]]ZXÚË\Ù[Xİ[ÛˆX]š^ÚXÚ™[XZ[™Y\ÚİÜ\Ú^™YY\ˆŒKŒŒØ‚‹HH˜]]™HÙX\˜ÚšY[Ü˜\YÙ\šXÙHXœÈ[™™YKXÛÛ[[ˆ[š]X]š^\™H›İÈ\ØÛİ™\™Y[ˆHØ[YHXİ]™HZ\ÜÚ[ÛˆØİ[Y[]™[™\œÈ[K[˜ÛY[™ÈØ[YK[ÜšYÚ[ˆZ\ÜÚ[ÛˆYœ˜[Y\È[™YÚ›Ş\Ë‚‹HYYÛ™HÛÛ\Xİ
+Š•[š]]ZXÚÈÙ[Xİ
+Šˆ\ØÛÜİ\™H]Y˜][ÈÛÛ\ÙYÛˆTÛ™Kˆ^[™[™È]™]™X[ÈHÚ[™ÛHÜš^›Û[HØÜ›Û[™ÈØ]YÛÜHİš\[™H™XYX›HÛËXÛÛ[[ˆ[\›˜[HØÜ›Û[™È[š]ÜšY‚‹H˜]]™H]ZXÚË\Ù[Xİ[˜ÚÜœÈ\™Hİ[Y[ˆXÙKˆZ\ˆÜšYÚ[˜[ÙX\˜ÚØ]šX]XÛÛİ\œËÛİ[Ë^[™Z\ÜÚ[ÛÚYYˆÛXÚÈ[™\œÈ\™H›İÛÛ™Y[İ™YÜˆ™\XÙY‚‚ˆÈÈÈY™XŞXÛH[™ÛÛ\]Xš[]B‚‹HYY›İ[™Y[š]X[™]šY\È›ÜˆZ\ÜÚ[ÛˆYœ˜[YHØY[Z[™È[™™]\ÙHÙˆH^\İ[™Èš[\™YØÛØ[\ØÙYZ\ÜÚ[Ûˆš[™\ˆ]]][ÛˆØœÙ\™\ˆÚ[ˆH˜]]™HÙ[XİÜˆX]š^\È™\XÙY‚‹H˜]]™HXÚÙ\ˆÛ\ÜÙ\Ë\ØÛÜİ\™HÛÛ›ÛËØİ[Y[[ØØ[İ[\È[™™]H[Y\œÈ›İÈ]™H]\›Z[š\İXÈZ\ÜÚ[Û‹XÛÜÙK[›ØY[™™˜ØXÚH™XÛÛ˜Ú[X][Ûˆ]Ë‚‹HH˜]]™HXÚÙ\ˆİ[\ÚY]\È[š™XİY[ÈHØİ[Y[]İÛœÈHÛÛ›ÛÈ˜]\ˆ[ˆÛ›HHÜYÙK‚‹HHÛÜœ™Xİ[Ûˆ™[XZ[œÈİšXİH[Z]YÈTÛ™KÚTÙØY˜\šKˆTYØY˜\šKTY\ÚİÜ\Ú]H[ÙK\ÚİÜœ›İÜÙ\œËİ\ˆSÔÈœ›İÜÙ\œÈ[™˜]]™HÙXšY]ÜÈ™[XZ[ˆ[˜Ú[™ÙY‚‹HYY\›X[™[™YÜ™\ÜÚ[ÛˆÛÛ˜XİÈ›ÜˆÜ›ÜÜËYØİ[Y[[š™Xİ[Û‹˜]]™HÙ[XİÜˆ\ØÛİ™\KÜš^›Û[Ø]YÛÜšY\ËÛËXÛÛ[[ˆ^[İ]ÛÛ\ÙYİ]K]]][Ûˆ™\Ş[˜Ú›Ûš\Ø][Ûˆ[™ÛX[\İÛ™\œÚ\‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹L˜ÈŒL‹LØ‚‚ˆÈÈÌKŒŒ×HHŒ‹LËLB‚ˆÈÈÈÚ[™ÙY‚‹H™XZ[Z\ÜÚ[Ûˆš[™\‰ÜÈZ\ÜÚ[Û‹]Xˆ[\™˜XÙH\ÈHÛÛ\XİTÛ™HØY˜\šHÛÛ[X[™Ø\™˜\ÙYÛˆHİ\YYØÜ™Y[ˆ™XÛÜ™[™Ë‚‹HY˜[˜ÙYZ\ÜÚ[Ûˆ™XYH[^H[™]Y]YH™\İ\ÛÛ›ÛÈ›İÈÚ]™Z[™HYXØ]YÙ][™ÜÈ\ØÛÜİ\™HÛˆTÛ™KÚ[Hš[X\HZ\ÜÚ[ÛˆXİ[ÛœÈ™[XZ[ˆ[[YYX][H]˜Z[X›K‚‹HZ\ÜÚ[ÛˆÛÛ›Û[™™ZXÛHØY\İ\ÙHÛX[\ˆ˜]]™K\İ[HXY\œËYÚ\ˆØ\™ÜXÚ[™ËÛÛ\XİİXÚ\™Ù]È[™›İ[™Y[\›˜[ØÜ›Û[™Ë‚‹HHÚ^\İX›\ÚYXİ[Ûˆ[™\œÈ›İÈ™[™\ˆ[ˆHÛÛ\XİÛËXÛÛ[[ˆÜšYÚ]İ]Ú[™Ú[™ÈZ\ˆÙÚXÈÜˆ\Ü]ÚİÛ™\œÚ\‚‹H™ZXÛHØY\İ™[XZ[œÈ[™\[™[HÛÛ\ÚX›H[™Y˜][ÈÈ]ÈÛÛ\Xİİ]HÛˆHœ™\ÚTÛ™HRH›Ùš[K‚‚ˆÈÈÈÛÛ\]Xš[]H[™ØY™]B‚‹HYYHİšXİTÛ™KÚTÙØY˜\šH]XİÜˆÙ\\˜]Hœ›ÛHH^\İ[™ÈSÔÈ]XİÜ‹‚‹HTYØY˜\šKTY\ÚİÜ\Ú]HXXÒ[[\ÚİÜØY˜\šKÚ›ÛYKÑš\™Y›ŞÑYÙHÛˆSÔÈ[™]™\H\ÚİÜœ›İÜÙ\ˆ™[XZ[ˆÛˆZ\ˆ™]š[İ\È^[İ]Ë‚‹HHTÛ™HØ\™™\ÜXİÈØY˜\šHØY™H\™X\Ëš\İX[šY]ÜÜLšY™\ÜËX˜\ˆÚ[™Ù\È[™›İ[™Yİ™\œØÜ›Û‚‹H˜YÈİÛ™\œÚ\\È\ØX›YÛ›H›ÜˆHš^YTÛ™HÛÛ[X[™Ø\™ÈTY[™\ÚİÜ˜YÙÚ[™È™[XZ[ˆ[˜Ú[™ÙY‚‹HZ\ÜÚ[Ûˆ™\]Z\™[Y[XÜ]Z\Ú][Û‹[š]X]Ú[™ËÚXÚØ›ŞÙ[Xİ[Û‹Z\ÜÚ[Ûˆ\]K[HİX[\Ü]ÚÚ\š[™È[™]]È[ÙH[™\œÈ\™H[˜Ú[™ÙY‚‹HYY\›X[™[™YÜ™\ÜÚ[ÛˆÚXÚÜÈ›ÜˆİšXİ]›Ü›HØ][™ËÛÛ\Xİ™\Ù[][ÛˆÛÛ˜XİÈ[™™\Ù\™YXİ[Ûˆ[™\œË‚‚ˆÈÈÈÚ[™ÙY[™Ú[™H˜\Ù[[™B‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹LXÈŒL‹L˜‚‚ˆÈÈÌKŒŒ—HHŒ‹LËLB‚ˆÈÈÈš^Y‚‹HTÛ™H[™TYØY˜\šH[š]š[™\ˆ›İÈ\ØÛİ™\œÈH]]Üš]]]™HÛZ\ÜÚ[Û—Ú[[šÈ]™[ˆÚ[ˆZ\ÜÚ[ÛÚYYˆY\ÈH\ÚİÜ]ÛˆÚ]Y[‹^Ø‚‹HZ\ÜÚ[Û‹Z[T“È\™HÛÛœİ˜Z[™YÈHİ\œ™[Z\ÜÚ[ÛÚYYˆÜšYÚ[‹HÙZ[œØY]™KŞÛZ\ÜÚ[Û•\_X›İ]H[™H^XİXİ]™HZ\ÜÚ[Û—ÚYÈİ[HÜˆÜ›ÜÜË[Z\ÜÚ[Ûˆ[šÜÈ\™H™Z™XİY‚‹HÚ[ˆHY[ˆ[šÈ\ÈXœÙ[Z\ÜÚ[Ûˆš[™\ˆX^HÛÛœİXİHØ[YH™\]Z\™[Y[›İ]HÛ›Hœ›ÛH^XÚ]Xİ]™K[Z\ÜÚ[Ûˆ\HY]Y]H[™H^XİXİ]™HZ\ÜÚ[Ûˆ[œİ[˜ÙK‚‹H™\]Z\™[Y[™\ÜÛœÙ\È\™H™\šYšYYYØZ[œİH™\]Y\İYZ\ÜÚ[Ûˆ\H[™[œİ[˜ÙH™Y›Ü™HZ\ˆS\È\œÙY‚‹HH™ZXÛH[™\œÛÛ›™[™\]Z\™[Y[ÈX›H]XİÜˆ›İÈXØÙ\ÈH^XİXY[™È[™H›İ[™YÙ[X[XÈX›H˜[˜XÚÈÚ[H™Z™Xİ[™È[œ™[]YS™\ÜÛœÙ\Ë‚‚ˆÈÈÈØY™]H[™XYÛ›ÜİXÜÂ‚‹HZ\ÜÚ[™Ë˜Z[Y™Y\™XİY]Ë]K]Ü›Û™Ë[Z\ÜÚ[ÛˆÜˆİXİ\˜[H[˜[Y™\]Z\™[Y[™\ÜÛœÙ\È›İÈİÜ[š]š[™\ˆ™Y›Ü™Hš\ÚX›HÜˆYØXŞH˜[˜XÚÜÈØ[ˆ™\ÜH˜[ÙHİXØÙ\ÜË‚‹HHYÚ][X]H]]Üš]]]™HX›HÚ]›ÈXİ[Û˜X›H™ZXÛH›İÜÈ™[XZ[œÈ˜[YÛÈ]Y[[Û›HZ\ÜÚ[ÛœÈØ[ˆÛÛ[YH›İYÚH\İX›\ÚY]Y[]‚‹HH™]š[İ\ÈŒKŒŒX^XİÚXÚØ›Ş\İ]H™\šYšXØ][Ûˆ™[XZ[œÈ[˜Ú[™ÙY[™›İÈ™XÙZ]™\È]]Üš]]]™HZ\ÜÚ[Ûˆ›İÜÈÛˆ[Øš[HØY˜\šK‚‹HYY\›X[™[\İÈ›ÜˆHİ\YYY[ˆ[šËØ[YK[ÜšYÚ[ˆT“ÛÛœİXİ[Û‹Z\ÜÚ[Û‹RQZ\ÛX]Ú™Z™Xİ[Û‹™\ÜÛœÙHY[]KY[‹[[šÈ\ØÛİ™\KX›HÙ[Xİ[Ûˆ[™˜Z[XÛÜÙY[™Ù™‹‚‚ˆÈÈÈÚ[™ÙY‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹LÈŒL‹LX‚‚ˆÈÈÌKŒŒWHHŒ‹LËLB‚ˆÈÈÈš^Y‚‹H[š]š[™\ˆÛˆHZ\ÜÚ[ÛÚYYˆÙXœÚ]H[ˆTÛ™H[™TYØY˜\šH›İÈ™\ÛÛ™\È™ZXÛHÚXÚØ›Ş\ËØYÛÛ›ÛÈ[™˜[˜XÚÈÙ[XİÜœÈœ›ÛHHXİ]™HZ\ÜÚ[ÛˆØİ[Y[[œİXYÙˆ\Üİ[Z[™ÈHÛØ˜[Øİ[Y[İÛœÈH]™H™ZXÛHX›K‚‹H™ZXÛHÙ[Xİ[Ûˆ\ÈÛİ[YÛ›HY\ˆZ\ÜÚ[ÛÚYY‰ÜÈ^XİÚXÚØ›Ş\ÈÛÛ™š\›YYÚXÚÙYˆØY˜\šH›İÈ™XÙZ]™\È›İ[™Y˜]]™KXÛXÚË\ÜÛØÚX]Y[X™[[™ÚXÚÙY\›Ü\H\È[œ]ØÚ[™ÙX˜[˜XÚÜÈÚ[ˆ™\]Z\™Y‚‹HÛÛ\]H™ZXÛK[\İİXš[]HÚXÚÜËš\ÚX›HØYÛÛ›ÛËØY[™È[™XØ]ÜœËYØXŞH™ZXÛH™\]Z\™[Y[È[™HZ\ÜÚ[Ûˆ\]Hš\œİ\\ÜÈØ]H›İÈ\ÙHHØ[YHXİ]™HZ\ÜÚ[ÛˆØİ[Y[\È[š]š[™\‹‚‚ˆÈÈÈØY™]H[™ÛÛ\]Xš[]B‚‹HH˜Z[YÜˆYÛ›Ü™YÚXÚØ›ŞXİ]˜][Ûˆ›İÈ™]\›œÈÙ[Xİ[Ûˆ˜Z[\™H[œİXYÙˆY˜[˜Ú[™È[\›˜[\ÜÚYÛ™YÛİ[Ë‚‹H^Xİ™ZXÛH\K˜Z[™Y\\œÛÛ›™[Z\ÜÚ[ÛˆİÛ™\œÚ\İ[K[Z\ÜÚ[Û‹ÛÛ\]K[\İ[™š[˜[XÛÛ™š\›X][ÛˆØY™YİX\™È™[XZ[ˆ[˜Ú[™ÙY‚‹H\ÚİÜÙ[Xİ[Ûˆ™]Z[œÈH˜]]™HÛXÚÈ]ÈHY][Û˜[˜[˜XÚÜÈ[ˆÛ›HÚ[ˆH™X[ÚXÚØ›Ş™[XZ[œÈ[˜ÚXÚÙY‚‹HYY\›X[™[™YÜ™\ÜÚ[Ûˆ\İÈÛİ™\š[™ÈXİ]™HZ\ÜÚ[Û‹YØİ[Y[™\ÛÛ][Ûˆ[™˜]]™KX™[›Ü\KÙ]™[˜Z[Y[™\ØX›YÚXÚØ›ŞXİ]˜][Ûˆ]Ë‚‚ˆÈÈÈÚ[™ÙY‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹XÈŒL‹L‚‚ˆÈÈÌKŒŒHHŒ‹LËLB‚ˆÈÈÈš^Y‚‹H™\İÜ™Y›Ü›X[\KN[˜ÚY[™\ÜÛœÙH™ZXÛHÈÛXÙHØ\ˆÙ[Xİ[Ûˆ[ˆ›İX[X[[š]š[™\ˆ[™]]È[ÙK‚‹HÙ[™\šXÈÛXÙH][™[˜ÙH›İÈ™Y™\œÈ™\šYšYYÜ™[˜\HT•œË[ˆ[šÛ›İÛˆÜˆİ[HT•œË[™\Ù\ÈÛ›İÛˆÜXÚX[\İ]˜Z[™YT•œÈÛ›HÚ[ˆHÜ™[˜\HÛÛ\È[œİY™šXÚY[‚‹H[H[™XYHÙ[XİY^Xİ\KNT•ˆ›İÈÛİ[ÈİØ\™HÙ[™\šXÈÛXÙHØ\ˆ™\]Z\™[Y[™]™[[™È˜Z[™YT•œÈœ›ÛH™Z[™ÈYÛ›Ü™Y[™\XØ]HØ\œÈœ›ÛH™Z[™È™\]Y\İY‚‹HZ\ÜÚ[™È\œÛÛ›™[ˆÛXÙHÙ™šXÙ\œØ™[XZ[œÈXİ[Û˜X›HÚ[ˆH]™HZ\ÜÚ[Ûˆ™\]Z\™[Y[È[™[\È™\Ù[[™ÛÛ™\È]ÛÈÙ™šXÙ\œÈ\ˆÛXÙHØ\‹[˜ÛY[™ÈÛXÙHÙ™šXÙ\œÎˆØ\İ[HÛÜ™[™Ë‚‚ˆÈÈÈØY™]H[™\™›Ü›X[˜ÙB‚‹H˜[YYÛXÙH[œÜXİÜ‹ÛXÙHYYXËX›XÈÜ™\‹˜Z[Ø^HÛXÙH[™İ\ˆ˜Z[™Y\\œÛÛ›™[™\]Z\™[Y[È™[XZ[ˆ^Xİ\KN^Xİ]™ZXÛKRQ[™]™KX\ÜÚYÛ›Y[™\šYšYY‚‹HÙ[™\šXÈÛXÙHØ\ˆÙ[Xİ[Ûˆ›ÈÛ™Ù\ˆØØ[œÈ][\HŞ]ÙZ\İ[™ØYÙ\È™Y›Ü™HÚÛÜÚ[™ÈÜ™[˜\H][™[˜ÙNÈH˜Z[š[™È™YÚ\İH\È\ÙYÛ›HÈ˜[šÈÜ™[˜\K[šÛ›İÛˆ[™ÜXÚX[\İ˜[˜XÚÈØ[™Y]\Ë‚‹HYY\›X[™[™YÜ™\ÜÚ[ÛˆÚXÚÜÈ›ÜˆÜ™[˜\KYš\œİÜ™\š[™ËÜXÚX[\İ˜[˜XÚËÙ[XİY˜Z[™YRT•ˆÛİ[[™È[™]™K\[™[Z\ÜÚ[™È\œÛÛ›™[\œÚ[™Ë‚‚ˆÈÈÈÚ[™ÙY‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹ÈŒL‹X‚‚ˆÈÈÌKŒŒŒ×HHŒ‹LËL‚ˆÈÈÈYY‚‹HYY]]ÛX]XÈÛÛXİ[Ûˆ›Üˆš\ÚX›HÙX\ÛÛ˜[Z\ÜÚ[Ûˆ][\Ë[˜ÛY[™ÈHİ\œ™[İ[[Y\ˆİ[™›İÙ\‹Ú[ˆZ\ÜÚ[ÛÚYYˆ™[™\œÈH^XİÙX\İ\‹YYÙË[[šØÛZ[HÛÛ›Û‚‹HHÛÛXİÜˆ™XÛÙÛš\Ù\ÈÛ›HÛZ\ÜÚ[ÛœËŞÚYKØÛZ[WÙ›İ[™ÛØš™XİÜŞ[˜Ø[˜ÛY[™ÈZ\ÜÚ[ÛˆÛÛ[™[™\™Y[œÚYHØ[YK[ÜšYÚ[ˆYÚ›Ş\È[™Yœ˜[Y\Ë‚‚ˆÈÈÈØY™]H[™\™›Ü›X[˜ÙB‚‹HÛZ[\È\ÙHHØ[YK[ÜšYÚ[ˆ˜XÚÙÜ›İ[™ÑUÛÈÛÛXİ[™È[ˆ][HÙ\È›İ˜]šYØ]H]Ø^Hœ›ÛHHZ\ÜÚ[ÛˆÜˆ[\œ\\Ü]ÚÙ[Xİ[Û‹‚‹H\XØ]H™\]Y\İÈ\™HİX\™YH[ˆ[‹Y›YÚÜ™]HÛÛÛİÛˆ[™H›İ[™YÛZ[HØXÚK‚‹HHÛÛXİÜˆ\Ù\ÈHYÚÙZYÚÛ™K\ÙXÛÛ™^XİRQØØ[ˆ[™YÈ›È™]È]]][Û“ØœÙ\™\˜™\Ù\š[™ÈHŒKŒŒŒˆ[[YKZ\™[š[™ÈÛÛ˜Xİ‚‚ˆÈÈÈÚ[™ÙY‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹ØÈŒL‹‚‚ˆÈÈÌKŒŒŒ—HHŒ‹LËL‚ˆÈÈÈš^Y‚‹H™\Ûİ\˜ÙHYZ[š\İ˜][ÛˆÛˆSÔÈØY˜\šH›İÈ›ÛİÜÈÛ›HHš\ÚX›H™[™\™Y\œÛÛ˜[İ][ÛœÈšY]Ë™[[İš[™ÈHİ[H[™[œ›ÛHX\Z\ÜÚ[ÛœËÚ][™˜Y[ÈÚ[H™\Ù\š[™ÈÛ™H[™[[œİ[˜ÙH[™]ÈØ]™Yİ]K‚‹HZ\ÜÚ[Ûˆš[™\ˆ›İÈ™\Ù\™\È]ÈØœÙ\™\‹[Y\œÈ[™\İ[™\œÈ\š[™ÈØY˜\šH™˜ØXÚH[H[™™XÛÛ˜Ú[\ÈH™\İÜ™YYÙHÛˆYÙ\ÚİØ[œİXYÙˆ™]\›š[™ÈÚ]HÜ›‹YİÛˆ[[YK‚‹HH\œÛÛ›™[]˜Z[š[™È™YÚ\İH\]H\İ[™\ˆ›İÈ\ÈH˜[YYİÛ™\ˆ[™]\›Z[š\İXÈX\™İÛ‹‚‚ˆÈÈÈ\™›Ü›X[˜ÙB‚‹HÛÛœÛÛY]YÛÈ[YØİ[Y[™\Ûİ\˜ÙHYZ[š\İ˜][ÛˆØœÙ\™\œÈ[ÈÛ™Hš[\™Y[š[X][Û‹Yœ˜[YKXÛØ[\ØÙYY™XŞXÛHÛÛ›Û\‹‚‹HZ\ÜÚ[Ûˆš[™\ˆ›İÈYÛ›Ü™\È]]][ÛœÈÙ[™\˜]Y[œÚYH]ÈİÛˆ[™[Ú[H™]Z[š[™ÈÜ˜\\ˆÜ™X][Û‹Ü™[[İ˜[]Xİ[Ûˆ[™[Z\ÜÚ[Û‹]Y[™ZXÛH[™˜[œÜÜ[˜[Y][Ûˆ]Ë‚‹HYY\›X[™[[[YKZ\™[š[™È\İÈ›ÜˆØœÙ\™\ˆÛİ[Y™XŞXÛHXÚ\Ú[ÛœË™˜ØXÚH™\Ù\˜][Û‹\İ[™\ˆİÛ™\œÚ\[™Ù[‹[]]][Ûˆ^Û\Ú[Û‹‚‚ˆÈÈÈÚ[™ÙY‚‹H[š]˜[Z[™È[˜Ü™X\ÙYœ›ÛHËŒËØÈËŒË‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹˜ÈŒL‹Ø‚‹H\ÚİÜ™\Ûİ\˜ÙHYZ[š\İ˜][Û‹Z\ÜÚ[ÛˆÛÛ›Û™ZXÛHÙ[Xİ[Û‹˜Z[™Y\\œÛÛ›™[™\šYšXØ][Ûˆ[™˜Z[XÛÜÙY\Ü]ÚØY™YİX\™È™[XZ[ˆÛˆZ\ˆ\İX›\ÚY]Ë‚‚ˆÈÈÌKŒŒŒWHHŒ‹LËLŒÂ‚ˆÈÈÈYY‚‹HYYš\™YšYÚ\˜š\™YšYÚ\œØ[™™\]Z\™Y[X\Ù\ÈX\YÈ™\ØİYH[\‚‹HYYØ\ˆ™XÛİ™\X[™™\]Z\™YØ\ˆ™XÛİ™\X[X\Ù\ÈX\YÈH^\İ[™È›]™Y™XÛİ™\H™ZXÛX‚‹HYYÚ[™İ[\‹\˜[[™™\]Z\™Y[X\Ù\È›Üˆ’UˆÜˆXZ›Üˆ›Ø[H[™\˜‚‚ˆÈÈÈÚ[™ÙY‚‹Hš\™YšYÚ\ˆ\œÛÛ›™[™\]Z\™[Y[È›İÈÛÛ™\]H\œÛÛ›™[\ˆ™\ØİYH[\ˆx $ÎH8¡¤ˆKL8 $ÌN8¡¤ˆ‹[™ÛÈÛ‹‚‹H’UˆÜˆXZ›Üˆ›Ø[H[™\˜›İÈÙ[XİÈ[YÚX›H\KMÍˆ’UœÈš\œİ[™\Ù\ÈH\KMÍHXZ›Üˆ›Ø[H[™\ˆÛ›HÚ[ˆ›È[YÚX›H’Uˆ\È]˜Z[X›K‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹XÈŒL‹˜‚‚ˆÈÈÌKŒŒŒHHŒ‹LËLŒÂ‚ˆÈÈÈš^Y‚‹HYYH^Xİš\™HÜ›ÜÜË\™Y™\™[˜ÙH›ØY˜Z[[š]8¡¤ˆ”•X‚‚ˆÈÈÈ™\šYšYY‚‹HÛXÙHYYXÈ\œÛÛ›™[Ûİ[ÈÛÛ[YHÈ\ÙHÛÈÛXÙWÛYYXØ]˜Z[™Y\œÛÛ›™[\ˆ^Xİ\KNT•ˆH8¡¤ˆHT•‹ˆ8¡¤ˆHT•ˆ[™È8¡¤ˆˆT•œË‚‚ˆÈÈÈÚ[™ÙY‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹ÈŒL‹X‚‚ˆÈÈÌKŒŒNWHHŒ‹LËLŒ‚‚ˆÈÈÈš^Y‚‹HX\YH^Xİš\™K™\ØİYHÜˆY\šX[\X[˜ÙXZ\ÜÚ[Ûˆ™\]Z\™[Y[È™\ØİYH[\‚‚ˆÈÈÈÚ[™ÙY‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹ØÈŒL‹‚‚ˆÈÈÌKŒŒNHHŒ‹LËLŒ‚‚ˆÈÈÈYY‚‹H[˜X›Y˜Z[Ø^Hš\™H
+ˆ˜Z[Ø^WÙš\™X\ˆ\KLLÈ”•JK]™[H[˜ÚY[ÛÛ[X[™\ˆ
+È[Ì˜\ˆ\KLMHPĞÕJH[™^“X]
+Èİ×ÙÙY˜Z™İ]\ˆ\KLÎHš\™HÔÕJH\œÛÛ›™[›Ùš[\Ë‚‚ˆÈÈÈš^Y‚‹HZ\ÜÚ[ÛˆÛÛ›Û›İÈ\Ù\È[ˆSÔÈØY˜\šK[Û›HØY™KX\™XHÜ^[İ][œİXYÙˆÜ[š[™È\ÈHÙ[™YMŒ\ÚİÜ[\™˜XÙHİ™\ˆH\Ü]ÚØÜ™Y[‹‚‹HYYHÜš^›Û[Ú]œ›ÛˆÛÛ\ÙHÛÛ›ÛÚ[\ˆ˜YÙÚ[™È[™š\İX[]šY]ÜÜ™XÛİ™\H›ÜˆØY˜\šHY™\ÜËX˜\ˆÚ[™Ù\Ë›İ][Ûˆ[™™˜ØXÚH™\İÜ˜][Û‹‚‹HH™ZXÛHØY\İY˜][ÈÛÛ\ÙYÛˆš\œİSÔÈØY˜\šH\ÙH[™\Ù\È[Øš[K\ÜXÚYšXÈÛÛ\ÙHİÜ˜YÙHÚ]İ]Ú[™Ú[™È\ÚİÜ™Y™\™[˜Ù\Ë‚‚ˆÈÈÈÚ[™ÙY‚‹HTÕKÙ[˜\™H[™^“X]Z\ÜÚ[ÛˆÛÜ™[™È›İÈÚ\™\ÈÛ™H^Xİ\KLÎHš\™HÔÕNÈ\KNˆĞTˆÜ\˜][Û˜[İ\Ü˜[œÈ™[XZ[ˆÙ\\˜]K‚‹HYÚ›Û[YH[\›Û™HÜ\˜]Ü‹ÛËT™\ÜÛ™\ˆ[™Y™YİX\™™[XZ[ˆ\ØX›Y[™[™È]\ˆ]šY[˜ÙK‚‹H\ÚİÜZ\ÜÚ[ÛˆÛÛ›ÛÚ^š[™ËØ]™YÜÚ][Ûš[™ËÙ[š[™È[™[İ\ÙH˜YÙÚ[™È™[XZ[ˆ[˜Ú[™ÙY‚‹H\œÛÛ›™[\ÜÚYÛ›Y[[˜Ü™X\ÙYÈKŒËŒ˜ÈZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYÈŒL‹Ø‚‚ˆÈÈÌKŒŒM×HHŒ‹LËLŒ‚‚ˆÈÈÈš^Y‚‹H™\İÜ™YHÜ\˜][Û˜[İ\ÜÜˆĞTˆ™ZXÛX™\]Z\™[Y[X\[™ÈÈÜ\˜][Û˜[İ\Ü˜[˜‚‹H[š]š[™\‹Z\ÜÚ[Ûˆ\]KÕ\Ü˜YH[™š[˜[Ù[XİY][š]™\šYšXØ][Ûˆ›İÈ\ÙHH^XİZ\ÜÚ[ÛÚYYˆ\KNˆÜ\˜][Û˜[İ\Ü˜[‹‚‹Hš\™HÜ\˜][Û˜[İ\Ü[š]È\Ú[™È\HÎH\™H^XÚ]H^ÛYYœ›ÛHØ]\ÙZ[™ÈHĞTˆ™\]Z\™[Y[‚‹HYYİ\œ™[YØXŞKÚ[™İ[\‹\˜[™\]Z\™Y[™XÛÜ™[™È[X\Ù\È›ÜˆHØ[YH™\]Z\™[Y[‚‚ˆÈÈÈÚ[™ÙY‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹ÈŒL‹X‚‚ˆÈÈÌKŒŒM—HHŒ‹LËLŒ‚‚ˆÈÈÈÚ[™ÙY‚‹H™\İÜ™H[š]˜[Z[™Ëİ][Ûˆ˜[Z[™Ë\œÛÛ›™[\ÜÚYÛ›Y[[™\œÛÛ›™[™YÚ\İ\ˆİ][Ûˆ\ØÛİ™\HÛˆH™\ÜÛœÚ]™HSÔÈİ][ÛœÈX‹‚‹H[™›Ü˜ÙH^XİHÛ™HÛÛ[X[™™^\ÈÛÛÈY[HY\ˆØY˜\šH™˜ØXÚH™\İÜ˜][ÛˆÜˆ\XØ]H[š™Xİ[Û‹‚‹HYHØ[YK[ÜšYÚ[ˆSÔÈİ][ÛˆYœ˜[YH˜[˜XÚÈÚ[ˆ™\ÜÛœÚ]™H]Z[È[šÜÈÈ›İXİ]˜]HZ\ÜÚ[ÛÚYYˆYÚ›Ş\Ë‚‹H[˜Ü™X\ÙYH[šYšYY\Ù\œØÜš\™\œÚ[Ûˆœ›ÛHKŒŒMXÈKŒŒM˜‚‚ˆÈÈÌKŒŒMWHHŒ‹LËLŒ‚‚ˆÈÈÈYY‚‹HYYØY˜\šHÙXœÚ]Hİ\ÜÛˆTÛ™H[™TY›ÜˆHÚ\™Y[š]˜[Z[™Ëİ][Ûˆ˜[Z[™È[™\œÛÛ›™[\ÜÚYÛ›Y[Y[K‚‹HYYTY\ÚİÜ\Ú]H]Xİ[Ûˆ›İYÚXXÒ[[\ÈİXÚØ\Xš[]HÚ[H^ÛY[™ÈÚ›ÛYKš\™Y›ŞYÙH[™˜]]™HSÔÈÙXšY]ÈÜ˜\\œË‚‹HYYİXÚÜÚ[\ˆ˜YÙÚ[™È[™š\İX[]šY]ÜÜÛ[\[™È›ÜˆHÚ\™YÛÛÈ[™[‚‚ˆÈÈÈš^Y‚‹Hš^YHÚ\™YÛÛÈY[H›İ\X\š[™ÈÚ[ˆZ\ÜÚ[ÛÚYYˆ\Ù\ÈH™\ÜÛœÚ]™HSÔÈİ][Û‹[\İX\šİ\‚‹Hš^YHÌ\ÚİÜ[™[ÚYXÚ[™ÈHY[H\HÜˆÛÛ\][Hİ]ÚYH[ˆTÛ™HšY]ÜÜ‚‹Hš^Y[™[ÜÚ][Ûš[™ÈY\ˆØY˜\šHY™\ÜËX˜\ˆÚ[™Ù\Ë™˜ØXÚH™\İÜ˜][Ûˆ[™]šXÙH›İ][Û‹‚‚ˆÈÈÈÚ[™ÙY‚‹H[š]˜[Z[™È[˜Ü™X\ÙYœ›ÛHËŒËXÈËŒË˜‚‹Hİ][Ûˆ˜[Z[™È[˜Ü™X\ÙYœ›ÛHKŒËŒXÈKŒËŒ˜‚‹H\œÛÛ›™[\ÜÚYÛ›Y[[˜Ü™X\ÙYœ›ÛHKŒ‹XÈKŒËŒ‚‚ˆÈÈÈ™\Ù\™Y‚‹H\ÚİÜ^[İ]İ][Ûˆ[™™ZXÛHš[\š[™Ë˜[Z[™È[\Ë\œÛÛ›™[\ÜÚYÛ›Y[[\ËÙÜË™\ÜË]\ÙKÜİÜÛÛ›ÛÈ[™Ø]™YXİ]™K]X‹ØÛÛ\ÙHİ]H™[XZ[ˆ[˜Ú[™ÙY‚‚ˆÈÈÌKŒŒMHHŒ‹LËLŒB‚ˆÈÈÈš^Y‚‹H[š]š[™\ˆ›İÈ\Ù\ÈHš\ÚX›H]™HZ\ÜÚ[Ûˆ™\]Z\™[Y[È[™[\ÈH]]Üš]]]™HÛİ\˜ÙHÚ[™]™\ˆ]^\İË™]™[[™Èİ[HZ\ÜÚ[Û‹Z[›İÜÈœ›ÛH™\]Y\İ[™Èİ]]Y[š]Ë‚‹HHİ\œ™[™\ØİYHİ\Ü™ZXÛ\Ø]™H›İÈØ[ˆ›ÈÛ™Ù\ˆ™H™\XÙYH[ˆİ]]YXZ›Üˆ›Ø[H[™\˜Z\ÜÚ[Û‹Z[™\]Z\™[Y[‚‹H[Y\šXÈÜˆ›İ[™Yİ[™YYY˜[Y\È\™H›İÈ™X]Y\ÈÚÜYÙ\È[™\™H›ÈÛ™Ù\ˆ™YXÙYH[™XYK\Ù[XİY[š]ÈHÙXÛÛ™[YK‚‹Hİ[™YYYHØÛÛ[Y\ÈÈ\ÙH™\]Z\™Y\ÈHİ[\™Ù][™YXİÈ^\İ[™ÈX]Ú[™ÈÙ[Xİ[ÛœË‚‹HİXØÙ\ÜÙ[Ù[Xİ[ÛˆÛXÚÜÈ\™H[˜ÛYY[ˆš[˜[ÛÛ™š\›X][Û‹™]™[[™ÈH˜[ÙHš\™H[™Ú[™\ÈÜˆ’UœÈ˜Ø\›š[™ÈÚ[ˆH]™HÚÜYÙHØ\ÈÛ™K‚‚ˆÈÈÈ™\Ù\™Y‚‹Hİ]XÈZ\ÜÚ[Û‹Z[™[XZ[œÈH˜[˜XÚÈÚ[ˆ›È]™H™\]Z\™[Y[È[™[^\İË‚‹H\›YY\œÛÛ›™[^Xİ\KLH\›YY˜Y™šXÈØ\ˆÙ[Xİ[Ûˆ™[XZ[œÈ[˜X›Y‚‚ˆÈÈÈÚ[™ÙY‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹ÎXÈŒL‹‚‚ˆÈÈÌKŒŒL×HHŒ‹LËLŒB‚ˆÈÈÈš^Y‚‹HZ\ÜÚ[Ûˆ\]KÕ\Ü˜YH›İÈ\Ù\ÈH[Y\šXÈİ[™YYY˜[YH\ÈH\Ü]ÚÚÜYÙH[œİXYÙˆ™\XÚ[™È]Ú]H[™\]Z\™Yİ[‚‹HH›İ[™Yİ[™YYY˜[™ÙHİXÚ\ÈLØÛÛ[Y\ÈÈ\ÙH]È\\ˆ›İ[™‚‹HH]\˜[İ[™YYY˜[YHÙˆØ›İÈ˜[È˜XÚÈÈH›İÉÜÈ™\]Z\™Y˜[YK‚‹H^\İ[™ÈX]Ú[™ÈÙ[Xİ[ÛœÈ\™Hİ[YXİY™Y›Ü™HY][Û˜[™ZXÛ\È\™HÙ[XİY‚‚ˆÈÈÈ™\Ù\™Y‚‹HHŒKŒŒLˆ\›YY\œÛÛ›™[È^Xİ\KLH\›YY˜Y™šXÈØ\ˆ›İ]H™[XZ[œÈ[˜X›Y[˜ÛY[™È›ØYÈÛXÚ[™È\Èš\™X\›\È]™H™\šYšXØ][Ûˆ[™HÛË\\œÛÛ‹Yš\œİÛÛ™K\\œÛÛ‹Y˜[˜XÚÈÛXŞK‚‚ˆÈÈÈÚ[™ÙY‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹ÎÈŒL‹ÎX‚‚ˆÈÈÌKŒŒL—HHŒ‹LËLŒB‚ˆÈÈÈš^Y‚‹HZ\ÜÚ[Ûˆ\]KÕ\Ü˜YH›İÈ\Ù\ÈHÛÛ™š\›YY™\]Z\™YÛÛ[[ˆ\È]Èİ[™ZXÛH\™Ù][œİXYÙˆ\Ú[™Èİ[™YYY\ÈH\™Ù]]X[]K‚‹H^\İ[™ÈÙ[XİY™ZXÛ\È\™Hİ[Ûİ[Y[™İX˜XİY™Y›Ü™H[H™]ÈÙ[Xİ[ÛœË™]™[[™È\XØ]H\Ü]Ú\ÈÚ[H[š[[™ÈH[™\]Z\™Yİ[‚‹H[šÛ›İÛˆ[œ™\ÛÛ™YØ›İÜÈ™[XZ[ˆ›ØÚÙYœ›ÛH[]\™Ù]\Ü]Ú[›\ÜÈH^\İ[™È\İY\›İÈ[\È›İšYHHÛÛ™š\›YYXİ[Û˜X›H˜[YK‚‹H[š]š[™\ˆ›İÈÛÛ™\È\›YY\œÛÛ›™[\›YY™\ÜÛœÙH\œÛÛ›™[[™Z\ˆ™\]Z\™YØ[ˆ\›YY™ZXÛ\Ø˜\šX[È[ÈH˜Z[™Y\›YY˜Y™šXÈØ\ˆ›İ]K‚‹H\›YY\œÛÛ›™[™\]Z\™[Y[È›İÈ]™K]™\šYH[™Ù[Xİ^Xİ\KLH\›YY˜Y™šXÈØ\œÈØ\œZ[™È›ØYÈÛXÚ[™È[™š\™X\›\Ë\]X[YšYY\œÛÛ›™[‚‚ˆÈÈÈÚ[™ÙY‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹ÍØÈŒL‹Î‚‚ˆÈÈÈ™\Ù\™Y‚‹H^Xİ™ZXÛKRQ\ÜÚYÛ›Y[\YÙH™\šYšXØ][Û‹ÛË\\œÛÛˆ™Y™\™[˜ÙKÛ™K\\œÛÛˆ˜Z[™Y˜[˜XÚËÜ™[˜\HT•ˆ›İXİ[Û‹]Y[]]Üš]H[\È[™Ù[Z[™H˜Z[™Y\\œÛÛ›™[ÚÜ˜[Ø\›š[™ÜÈ™[XZ[ˆ[˜X›Y‚‚ˆÈÈÌKŒŒLWHHŒ‹LËLŒB‚ˆÈÈÈš^Y‚‹H™\İÜ™YH]™H™ZXÛX™\]Z\™[Y[[šÈ[ˆ[š]š[™\ˆ[™Z\ÜÚ[Ûˆ\]KÕ\Ü˜YHHX]Ú[™ÈH^XİZ\ÜÚ[ÛÚYYˆ\KMˆ™ZXÛK‚‹HÙ\H^XÚ][İ[Z[ˆ™\ØİYHÜˆĞTˆ™\]Z\™[Y[Ûˆ]ÈÙ\\˜]H\KNNKİ\KNLÈÜXÚX[\İÛÛ‚‹H™\İÜ™Y˜]È]™K]X›HĞTˆÛÛ[X[™\˜ÛÛ™\œÚ[Ûˆ]›İÚ\™Y›ØÙ\ÜÚ[™È[HÚ[ÎˆÛÈĞTˆÛÛ[X[™\œÈ\™HÛİ™\™YHÛ™HÛÛ›Û˜[‹‚‹HYY\™XİĞTˆÛÛ[X[™\ˆ[X\Ù\ÈÛÈÚ[™İ[\‹\˜[[™™\]Z\™YX™[È™\ÛÛ™HÛÛœÚ\İ[K‚‚ˆÈÈÈÚ[™ÙY‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹Í˜ÈŒL‹ÍØ‚‚ˆÈÈÈ™\Ù\™Y‚‹H^\İ[™ÈĞT•PËÙX\˜ÚYš\ÛÜ‹[İ[Z[ˆ™\ØİYKĞTˆÛÛ›Û˜[‹˜Z[™Y\\œÛÛ›™[]Y[[™™ZXÛH™\šYšXØ][Ûˆ[\È™[XZ[ˆ[˜X›Y‚‚ˆÈÈÌKŒŒLHHŒ‹LËLŒB‚ˆÈÈÈYY‚‹HYY\ÜİYHÍŒÈ[š]Û\ÜÈš[\š[™È\™XİH™[İÈİ][Ûˆ\H[ˆH[š]˜[Z[™ÈÛÛ‚‹H[š]Û\ÜÈÜ[ÛœÈ\™HÙ[™\˜]Yœ›ÛHH™ZXÛHÛ\ÜÙ\È˜[Y›ÜˆHÙ[XİYİ][Ûˆ\KÚ][Û\ÜÙ\È™\Ù\š[™ÈH^\İ[™Èœ›ØY™[˜[YH™Z]š[İ\‹‚‹HÙ[XİY\İ][Ûˆ[™[[X]Ú[™Ë\İ][ÛœÈ[œÈ›İÈš[\ˆHYÚÙZYÚ™ZXÛH]Y]YH™Y›Ü™HÜ[š[™È[H™ZXÛHY]YÙK™]™[[™È[œ™[]YÛ\ÜÙ\Èœ›ÛH™Z[™È™[˜[YY‚‚ˆÈÈÈÚ[™ÙY‚‹H˜Z[™YÛXÙH™ZXÛHÙ[Xİ[Ûˆ›İÈ™Y™\œÈ^Xİ™ZXÛ\ÈØ\œZ[™ÈÛÈÛÜœ™XİH˜Z[™Y\œÛÛ›™[[ˆ˜[È˜XÚÈÈ^Xİ™ZXÛ\ÈØ\œZ[™ÈÛ™HÛÜœ™XİH˜Z[™Y\œÛÛˆÚ[ˆ›ÈÛË\\œÛÛˆÜ[Ûˆ™[XZ[œË‚‹H˜Z[™YZ\ÜÚ[Ûˆ[š[Y[\È›İÈYX\İ\™YYØZ[œİHÛÛ\]H]X[YšYY\\œÛÛ›™[[X[™ÛÈÛ™K\\œÛÛˆ˜[˜XÚÈ™ZXÛ\ÈÛÛ[YHÈ™HÙ[XİY[[H™\]Z\™[Y[\ÈÙ[Z[™[HÛİ™\™Y‚‹HÛ™K\\œÛÛˆ™YÚ\İH[È\™Hš[Üš]\ÙYY\ˆÛË\\œÛÛˆ[È[™™Y›Ü™HÜ™[˜\H\œš]˜[[[Z]YØ[™Y]\Ë‚‹H[š]˜[Z[™ÈÛÛ[˜Ü™X\ÙYœ›ÛHËŒËÈËŒËX‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹ÍXÈŒL‹Í˜‚‚ˆÈÈÈ™\Ù\™Y‚‹HÜš]XØ[Ø\™H[X[[˜Ù\È™[XZ[ˆÛ™HÜš]XØ[Ø\™K]˜Z[™Y\œÛÛˆ\ˆ[X[[˜ÙK‚‹H^Xİ™ZXÛKRQ\ÜÚYÛ›Y[\YÙH™\šYšXØ][Û‹™ZXÛK]\H™\İšXİ[ÛœË][K\›Ùš[HX]Ú[™ËÜ™[˜\HT•ˆ›İXİ[Ûˆ[™Ù[Z[™HÚÜ˜[Ø\›š[™ÜÈ™[XZ[ˆ[˜X›Y‚‚ˆÈÈÌKŒWHHŒ‹LËLŒ‚ˆÈÈÈš^Y‚‹Hš^Y\™Ù[\ÜİYHÍMÎˆ]™[HX›XÈÜ™\‹]™[ˆX›XÈÜ™\ˆ[™ÛXÙHÙ\™ÙX[™\]Z\™[Y[È\™H›İÈX]ÚY[™\[™[H[œİXYÙˆ™Z[™ÈÛÛ\ÙY[ÈÛ™HX[™]ÜHÛÛXš[™Y›Ùš[H[™K‚‹HÙ\™ÙX[[Û›K]™[K[Û›K]™[‹[Û›H[™ÛXÙHYYXË[Û›H\œÛÛ›™[›İÈ]X[YH›ÜˆZ\ÜÚ[ÛœÈ™\]Y\İ[™ÈZ\ˆ^Xİ˜Z[š[™È›Ùš[K‚‹H][K]˜Z[™Y\œÛÛ›™[ÛÛ[YHÈ]X[YH›Üˆ]™\H™\]Y\İY›Ùš[H^HXİX[HÛÚ]İ][œ™[]Y˜Z[š[™È™XÛÛZ[™ÈH™\™\]Z\Ú]K‚‹H™\Ù\™Y^Xİ\KNT•ˆ™\šYšXØ][Û‹ÛÈ˜Z[™Y\œÛÛ›™[\ˆÙ[XİYT•‹Ø\XÚ]HÛÛ›ÛÈ[™Ù[Z[™HZ\ÜÚ[™Ë]˜Z[š[™ÈÚÜ˜[Ø\›š[™ÜÈXÜ›ÜÜÈ[š]š[™\‹Z\ÜÚ[Ûˆ\]H[™]]È[ÙK‚‚ˆÈÈÈÚ[™ÙY‚‹HZ\ÜÚ[Ûˆš[™\ˆ[˜Ü™X\ÙYœ›ÛHŒL‹ÍÈŒL‹ÍX‚‚ˆÈÈÌKŒHHŒ‹LËLŒ‚ˆÈÈÈš^Y‚‹Hš^Y[š]˜[Z[™ÈÛ™È[œÈ™]Z[š[™ÈH[ÜšYÚ[˜[İ][ÛˆØİ[Y[Ú[H˜]šYØ][™È›İYÚ]™\H™ZXÛHY]YÙK‚‹H™\XÙY[š]˜[Z[™ÈYœ˜[YH˜]šYØ][Ûˆ\İÜH[šY\È[œİXYÙˆÛÛ[X[H\[™[™ÈY]\YÙH\İÜK‚‹HÛÜÙYH[Ù[\ÜÛØÚX]YÚ]HXİ]™H[š]˜[Z[™ÈYœ˜[YH˜]\ˆ[ˆHš\œİÛÜÙHÛÛ›Û[ˆHØİ[Y[‚‹HÛX\™YY[ˆÜˆ™]\ÙYİ][ÛˆYœ˜[Y\ÈY\ˆXXÚİ][ÛˆÛÈÛİ][Ûˆ[™™ZXÛHØİ[Y[ÈØ[ˆ™HØ\˜˜YÙHÛÛXİY‚‹H™[X\ÙYY]YØİ[Y[[™›Ü›KXÛÛ›Û™Y™\™[˜Ù\È™Y›Ü™HXXÚÜİ\Ø]™H[^H[™İX\˜[YYYœ˜[YHÛX[\Y\ˆİÜ\œ›ÜˆÜˆYÙH^]‚‚ˆÈÈÈÚ[™ÙY‚‹H[š]˜[Z[™È[˜Ü™X\ÙYœ›ÛHËŒËŒØÈËŒËÈ˜[Z[™È[\Ë™ZXÛHÜ™\‹[X™\š[™È[™Ø]™H™Z]š[İ\ˆ\™H[˜Ú[™ÙY‚‚ˆÈÈÌKŒ×HHŒ‹LËLŒ‚ˆÈÈÈš^Y‚‹Hš^YZ\ÜÚ[Ûˆ\]H™X][™È›İ[™Y[œ™\ÛÛ™Y™\]Z\™[Y[˜[™Ù\ÈİXÚ\ÈLØ[™LX\È™\›ÈH™XY[™ÈÛ›HHš\œİ[X™\‹‚‹HZ\ÜÚ[Ûˆ\]H›İÈ\Ù\ÈH\\ˆ›İ[™Ùˆ[ˆ^XÚ]˜[™ÙK[İÚ[™Èš\™H[™Ú[™KPĞÕKĞPÕKÛXÙHØ\‹•ˆ[™Ô•ˆÚÜYÙ\Èœ›ÛHH]™H[™[È™XXÚH›Ü›X[Ù[XİÜ‹‚‹HÙ\H^\İ[™ÈØY™]H™Z]š[İ\ˆ›ÜˆHÛÛ\][H[šÛ›İÛˆ˜ZÙYØÛÈ[œİ\ÜY[œ™\ÛÛ™Y›İÜÈİ[Ø[››İ™\Ù[™[ˆ[\™HÜšYÚ[˜[Z\ÜÚ[ÛˆØY‚‹H\YYHÛÜœ™XİY]™K\˜[™ÙH[\œ™]][ÛˆÈX[X[Z\ÜÚ[Ûˆ\]H[™HÚ\™Y]]È[ÙH\]H]‚‚ˆÈÈÈÚ[™ÙY‚‹HZ\ÜÚ[Ûˆš[™\ˆ˜\Ù[[™H[˜Ü™X\ÙYœ›ÛHŒL‹ÌØÈŒL‹Í‚‚ˆÈÈÌKŒ—HHŒ‹LËLŒ‚ˆÈÈÈYY‚‹HYY^Xİ\›YY™\ÜÛœÙHZ\ÜÚ[ÛˆX]Ú[™È›Üˆ™\]Z\™Y\›YY™\ÜÛœÙH\œÛÛ›™[
+[ˆ\›YY™ZXÛ\ÊX\Ú[™È\KLH\›YY˜Y™šXÈØ\œÈÚ]ÛÈ\œÛÛ›™[ÚÈXXÚÛ›İ›ØYÈÛXÚ[™È[™š\™X\›\Ë‚‹H^[™YHÛ™KXÛXÚÈ\œÛÛ›™[™YÚ\İ\ˆZ[\ˆÈ]™\Hİ][Ûˆ\H[™]™\H\ØÛİ™\™Y™ZXÛK™XY[™ÈXXÚ™ZXÛIÜÈİÛˆ\ÜÚYÛ›Y[YÙH™Y›Ü™H™XÛÜ™[™È˜Z[™Y\œÛÛ›™[‚‹HYYİšXİÙXYÛÚ[™È™\ÜÙ[X]Ú[™È›ÜˆS‹ĞP“[™[]ÙX]\ˆY™X›Ø]\Ü^H˜\šX[Ë‚‚ˆÈÈÈÚ[™ÙY‚‹HÚ[™ÙYHYYXØ[Üš]XØ[Ø\™H\ÜÚYÛ›Y[\™Ù]œ›ÛHÛÈ˜Z[™Y\œÛÛ›™[ÈÛ™H˜Z[™Y\œÛÛˆ\ˆ›Ü›X[[X[[˜ÙK[˜ÛY[™È™]šY]Ë]™K\™Ù][›š[™ËÚÜ˜[[™™\Ü[™ÈØ[İ[][ÛœË‚‹HÛXÙHÙ™šXÙ\ˆZ\ÜÚ[Û‹]\Ü˜YH›İÜÈ›İÈÛÛ™\]ÛÈÙ™šXÙ\œÈ\ˆ›Ü›X[ÛXÙHT•ˆ™Y›Ü™H[š]š[™\‹Z\ÜÚ[Ûˆ\]HÜˆ]]È[ÙHÙ[XİÈ™ZXÛ\Ë‚‹HZ\ÜÚ[Ûˆš[™\ˆ˜\Ù[[™H[˜Ü™X\ÙYœ›ÛHŒL‹Ì˜ÈŒL‹ÌØÈ\œÛÛ›™[\ÜÚYÛ›Y[[˜Ü™X\ÙYœ›ÛHKŒ‹ÈKŒ‹X‚‚ˆÈÈÈš^Y‚‹Hš^Y\ÜİYHÍˆHİÜ[™ÈH\œÛÛ›™[\ÜÚYÛ›Y[ÛÛœ›ÛH[›š[™ÈÜˆ\ÜÚYÛš[™ÈHÙXÛÛ™[›™XÙ\ÜØ\HÜš]XØ[Ø\™K]˜Z[™Y\œÛÛˆÈXXÚ[X[[˜ÙK‚‹Hš^Y\ÜİYHÌÌH™\İÜš[™È\›YY™\ÜÛœÙH\œÛÛ›™[Ù[Xİ[Ûˆ›İYÚX[]˜Z[™Y\›YY˜Y™šXÈØ\œÈÚ]İ]^ÛY[™ÈÙ™šXÙ\œÈÚÈ[ÛÈÛš\™X\›\È˜Z[š[™Ë‚‹Hš^Y]™H\Ü˜YH›İÜÈİXÚ\ÈÛXÙHÙ™šXÙ\œÈÙ[Xİ[™ÈZYÚT•œÈ[œİXYÙˆ›İ\‹‚‹Hš^YÙXYÛÚ[™È™\ÜÙ[\Ü˜YH›İÜÈ˜[[™È›İYÚÙ[™\šXÈ^X]Ú[™È[œİXYÙˆÙ[Xİ[™È[ˆ^XİS‹ĞP“™ZXÛK‚‹Hš^YH™YÚ\İ\ˆZ[\ˆÛÜZ[™ÈHÚ[™ÛH™ZXÛK\YÙHÛ˜\ÚİXÜ›ÜÜÈHİ][Ûˆ[œİXYÙˆ™XÛÜ™[™È^Xİ™ZXÛH\ÜÚYÛ›Y[Ë‚‚ˆÈÈÌKŒWHHŒ‹LËLŒ‚ˆÈÈÈYY‚‹HYYHÛ™KXÛXÚÈ
+ŠZ[\œÛÛ›™[™YÚ\İ\ŠŠˆXİ[Ûˆ]ØØ[œÈÛXÙKÛXÙH]šX][Ûˆ[™SÑİ][ÛœÈÚ]İ]Ú[™Ú[™ÈİY™š[™È\ÜÚYÛ›Y[ÈÜˆ™\]Z\š[™È›Ùš[K[ÙKXİ[ÛˆÜˆİ\\Ú[Ù]\‚‹HYY^Xİ˜Z[™YRT•ˆZ\ÜÚ[ÛˆÙ[Xİ[Ûˆ›Üˆ
+Š”ÛXÙHYYXÊŠˆ[™
+Š”˜Z[Ø^HÛXÙHÙ™šXÙ\ŠŠ‹\Ú[™ÈÛÈÛÜœ™XİH˜Z[™Y\œÛÛ›™[\ˆT•‹‚‚ˆÈÈÈÚ[™ÙY‚‹HÜ™[˜\HÛXÙHØ\ˆ][™[˜ÙH›İÈXØÙ\ÈHœ™\ÚH™\šYšYY^XİT•ˆÚ]™\›È›İXİYÜXÚX[\İ]X[YšXØ][ÛœÈ]™[ˆÚ[ˆ›È\œÛÛ›™[\™H\›X[™[H›İ[™È]™ZXÛK‚‹HZ\ÜÚ[Ûˆš[™\ˆ˜\Ù[[™H[˜Ü™X\ÙYœ›ÛHŒL‹ÌXÈŒL‹Ì˜È\œÛÛ›™[\ÜÚYÛ›Y[[˜Ü™X\ÙYœ›ÛHKŒ‹ØÈKŒ‹‚‚ˆÈÈÈš^Y‚‹Hš^YÜ™[˜\HÛXÙHØ\œÈ™Z[™È™Z™XİYH[š]š[™\‹Z\ÜÚ[Ûˆ\]H[™]]È[ÙHÛÛ[H™XØ]\ÙHZ\ˆ\ÜÚYÛ›Y[YÙH™\ÜY™\›È\›X[™[š[™[™ÜË‚‹Hš^Y\ÜİYHÌMˆHX\[™ÈÛXÙHYYXÈ™\]Z\™[Y[›İÜÈ[™Z\ÜÚ[™È\œÛÛ›™[^È^XİT•œÈÛÛZ[š[™ÈÛÈÛXÙWÛYYXØ]˜Z[™Y\œÛÛ›™[‚‹HYY˜Z[Ø^HÛXÙHÙ™šXÙ\ˆ\œÚ[™È›Üˆ›İX›H[™[\^[İ]ËÙ[Xİ[™È^Xİ\KNT•œÈÛÛZ[š[™ÈÛÈ˜Z[Ø^WÜÛXÙX]˜Z[™Y\œÛÛ›™[‚‹HYY[ˆ]]Üš]]]™H\KLÌUˆØ\œšY\ˆX]Ú\‹[˜ÛY[™ÈUˆØ\œšY\˜U˜[™UÈØ\œšY\˜\Ü^H[X\Ù\ÈÚ]İ]X]Ú[™ÈÛXÙH\›YY˜Y™šXÈØ\œË‚‹H™]™[Y[˜ÛÛ\]HÜˆİXİ\˜[H[˜[Y\ÜÚYÛ›Y[\YÙHØØ[œÈœ›ÛHİ™\Üš][™ÈÜˆ]]Üš\Ú[™ÈÜXÚX[\İ]˜Z[š[™ÈXÚ\Ú[ÛœË‚‚ˆÈÈÌKŒHHŒ‹LËLŒ‚ˆÈÈÈÚ[™ÙY‚‹H]]È[ÙH›İÈXİ]˜]\È]™\Hš\ÚX›HZ\ÜÚ[ÛÚYYˆZ\ÜÚ[™×İ™ZXÛ\×ÛØYÛÛ›Û™Y›Ü™H[š]š[™\ˆ™YÚ[œÈÙ[Xİ[™È™ZXÛ\Ë‚‹H[˜Ü™X\ÙYH[šYšYY\Ù\œØÜš\™\œÚ[Ûˆœ›ÛHKŒŒØÈKŒ[™HZ\ÜÚ[Ûˆš[™\ˆ˜\Ù[[™Hœ›ÛHŒL‹ÌÈŒL‹ÌX‚‚ˆÈÈÈš^Y‚‹Hš^Y]]È[ÙHØZ][™ÈÛˆH™ZXÛH\Ü^H[Z]YHØY[Ü™H™ZXÛ\ÈX˜\ˆÚ]İ]ÛXÚÚ[™È]‚‹HYYÙ\]Y[X[Ù™œÙ]ÜYÙXØY[™ÈÛÈ]™\HY][Û˜[™ZXÛHYÙH\È™\]Y\İY›İÛ›HHš\œİYÙK‚‹HYY\‹\YÙH›ÙÜ™\ÜÈÚXÚÜÈ\Ú[™ÈH™ZXÛHQ[™›İËXÛİ[ÚYÛ˜]\™KÛÛ›Û™\XÙ[Y[[™ØY[™ËZ[™XØ]Üˆİ]K‚‹H[š]Ù[Xİ[Ûˆ›İÈİ\ÈÛ›HY\ˆHš[˜[ØYÛÛ›Û\È\Ø\X\™Y[™HÛÛ\]H™ZXÛH\İ™[XZ[œÈİX›K‚‹HØY[™È˜Z[ÈÛÜÙYÚ[ˆHZ\ÜÚ[ÛˆÚ[™Ù\ËHÛÛ›ÛØ[››İ™HÛXÚÙY›È›ÙÜ™\ÜÈØØİ\œÈÜˆH›İ[™Y[Y[İ]\È™XXÚY‚‚ˆÈÈÌKŒŒ×HHŒ‹LËLŒ‚ˆÈÈÈÚ[™ÙY‚‹H›Ü›X[ÛXÙHØ\ˆ[™ÛXÙHÙ™šXÙ\ˆ][™[˜ÙH›İÈ\Ù\ÈÛ›H^XİRQT•œÈ]™K]™\šYšYYÚ]\ÜÚYÛ™YİY™ˆ[™›È›İXİYÜXÚX[\İÛXÙH˜Z[š[™Ë‚‹H]]È[ÙH[™HX[X[[š]š[™\‹ÓZ\ÜÚ[Ûˆ\]H]È›İÈØZ]›ÜˆHÛÛ\]K›Û‹^™\›ËQ\İX›H™ZXÛH\İY\ˆØY[™Èš[š\Ú\È™Y›Ü™HÙ[Xİ[™È[š]Ë‚‹H[˜Ü™X\ÙYH[šYšYY\Ù\œØÜš\™\œÚ[Ûˆœ›ÛHKŒŒ˜ÈKŒŒØ‚‚ˆÈÈÈš^Y‚‹H™]™[Y]™[K]™[‹Ù\™ÙX[YYXË[œÜXİÜˆ[™İ\ˆÜXÚX[\İ]˜Z[™YÛXÙHT•œÈœ›ÛHØ]\ÙZ[™ÈÜ™[˜\HÛXÙH][™[˜ÙH™\]Z\™[Y[Ë‚‹H™]™[Y[ˆÜ™[˜\HÛXÙHÜ›İ\X]Ûˆ˜[˜XÚÈœ›ÛH\\ÜÚ[™È^Xİ™ZXÛH˜Z[š[™È›İXİ[Û‹‚‹H™]™[Y]]È[ÙHœ›ÛHÛÛ[Z[™ÈÈÙ[Xİ[ÛˆÜˆ\Ü]ÚÚ[ˆH™ZXÛH\İ[Y\Èİ]™[XZ[œÈ[\HÜˆ\Èİ[Ú[™Ú[™Ë‚‚ˆÈÈÌKŒŒ—HHŒ‹LËLNB‚ˆÈÈÈÚ[™ÙY‚‹HYÈ™\šYšYYÚ]X‹Ü™X\ŞH›ÜšÈ[™\ØÛÜ™\Ş[Y[›İYšXØ][ÛœËˆ\È™[X\ÙH\İÈHÛÛ\]H]]ÛX]YX›XØ][Ûˆ[™˜[Y][Ûˆ›ØÙ\ÜÈÚ]İ]Ú[™Ú[™ÈZ\ÜÚ[ÛÚYYˆ[[YH™Z]š[İ\‹‚‹H[˜Ü™X\ÙYH[šYšYY\Ù\œØÜš\™\œÚ[Ûˆœ›ÛHKŒŒXÈKŒŒ˜‚‚ˆÈÈÌKŒŒWHHŒ‹LËLNB‚ˆÈÈÈÚ[™ÙY‚‹H[˜Ü™X\ÙYH[šYšYY\Ù\œØÜš\™\œÚ[Ûˆœ›ÛHKŒŒÈKŒŒXÚ]İ][˜İ[Û˜[Ú[™Ù\Ë‚‹HÛÛ™š\›YYHØ[›ÛšXØ[XZ[˜Xœ˜[˜ÚÛİ\˜ÙHŞ[˜Ú›Ûš^˜][Ûˆ]\ÙY›Üˆ^\›˜[\İšX][Û‹‚‚ˆÈÈÌKŒŒHHŒ‹LËLNB‚ˆÈÈÈYY‚‹Hš\œİØ[›ÛšXØ[Z\ÜÚ[ÛÚYYˆÛÛ[X[™™^\È\Ù\œØÜš\‚‹HÛ™Hİ[™\™^™Y\Ù\œØÜš\Y]Y]H›ØÚÈ˜[Z[™ÈX\P›]\È]]Ü‹‚‹HZ\ÜÚ[Ûˆš[™\ˆŒL‹X˜\Ù[[™K‚‹H[š]İ][Ûˆ	ˆ\œÛÛ›™[ÛÛÈŒ‹˜\Ù[[™K‚‹HÛ™HÛÛXš[™Y[œİ[][ÛˆİX\™Ú]™]Z[™Y[Ù[Hİ\\\ÛÛ][Û‹‚‹H[š][™İ][Ûˆ˜[Z[™ÈÛÜšÙ›İÜË‚‹H\œÛÛ›™[\ÜÚYÛ›Y[™\šYšXØ][Ûˆ[™™\Ü[™ÈÛÜšÙ›İÜË‚‹HÚ\™Y™ZXÛK]˜Z[š[™È™YÚ\İK‚‹HZ\ÜÚ[Ûˆ™\]Z\™[Y[]Y[[™ÜXÚX[\İ\™\Ûİ\˜ÙH[™[™Ë‚‹H]X[YšXØ][Û‹X]Ø\™H™ZXÛHÙ[Xİ[Û‹‚‹H[š]š[™\‹Z\ÜÚ[Ûˆ\]K\Ü]Ú[™]]È[ÙHÛÜšÙ›İÜË‚‹H]Y]YHÛÛ[X][Ûˆ[™˜[œÜÜ[™[™Ë‚‹H˜]˜TØÜš\Y]Y]Kš[K\Ú^™H[™™\œÚ[Û‹Z[˜Ü™X\ÙH˜[Y][Û‹‚‹HYËYš]™[ˆÚ]Xˆ™[X\ÙHXÚØYÚ[™ÈÚ]H\Ù\œØÜš\\ÜÙ][™ÒKLMˆÚXÚÜİ[K‚‹HÜ™X\ŞH›ÜšÈŞ[˜Ú›Ûš^˜][Û‹›Û˜XÚÈ[™›İX›\ÚÛİ[™ÈİZY[˜ÙK‚‹HÛÛšX][Û‹İ\ÜÙXİ\š]H[™ÛÛ[][š]HÛXÚY\Ë‚‚ˆÈÈ™[X\ÙH›Ü›X]‚‘]\™H[šY\È\ÙN‚‚˜^ˆÈÈŞK—HHVVVKSSKQˆÈÈÈYYˆÈÈÈÚ[™ÙYˆÈÈÈš^YˆÈÈÈ™[[İ™YˆÈÈÈÙXİ\š]B˜‚”™[X\ÙH›İ\ÈÚİ[\ØÜšX™H\Ù\‹]š\ÚX›H™Z]š[İ\‹ZYÜ˜][Ûˆ[\Xİ\İY[š\›Û›Y[È[™Û›İÛˆ[Z]][ÛœÈ˜]\ˆ[ˆÛÛ[Z]\İÜH[Û™K‚
