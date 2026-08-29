@@ -108,10 +108,7 @@ expect(!namingModuleStart.includes('if (!TOOL_IS_TOP_WINDOW) return;'), 'Blanket
 
 const frameOwner = extractFunction('shouldKeepMissionFinderObserverForCurrentFrame');
 expect(frameOwner.includes('if (MF_IS_TOP_WINDOW) return true'), 'Top MissionChief document must retain its observer');
-expect(frameOwner.includes('if (isVisibleManualMissionFrame()) return true'), 'Visible manual mission frames must retain Mission Control independently of Worker A');
 expect(frameOwner.includes('if (isMfV3ManagedActiveWorker()) return true'), 'Verified managed Worker A must outrank stale or competing mission documents');
-expect(frameOwner.includes('if (isMfV3ManagedActiveFrame())'), 'A returned Worker A must be able to repair a dropped ownership latch');
-expect(frameOwner.includes('bridge?.activate?.()'), 'Returned Worker A ownership repair must reactivate the document-start bridge');
 expect(frameOwner.includes('getPrimaryMissionRequirementDocument() === document'), 'Child observer ownership must follow the visible primary mission document');
 expect(frameOwner.indexOf('isMfV3ManagedActiveWorker()') < frameOwner.indexOf('getPrimaryMissionRequirementDocument()'), 'Managed Worker A authority must be checked before generic cross-frame visibility ranking');
 const ownerDocument = { body: {} };
@@ -119,11 +116,7 @@ const ownerContext = vm.createContext({
   MF_IS_TOP_WINDOW: false,
   document: ownerDocument,
   isMissionPage: () => true,
-  isVisibleManualMissionFrame: () => false,
   isMfV3ManagedActiveWorker: () => true,
-  isMfV3ManagedActiveFrame: () => true,
-  isMfV3ParentVerifiedActiveWorker: () => true,
-  getMfV3OperationalOwnershipBridge: () => ({ activate: () => true, isActive: () => true }),
   getPrimaryMissionRequirementDocument: () => ({ stale: true }),
   result: null,
 });
@@ -131,13 +124,7 @@ vm.runInContext(`${frameOwner}\nresult = shouldKeepMissionFinderObserverForCurre
 expect(ownerContext.result === true, 'Verified managed Worker A must remain active when a stale visible mission document wins generic ranking');
 ownerContext.isMfV3ManagedActiveWorker = () => false;
 vm.runInContext('result = shouldKeepMissionFinderObserverForCurrentFrame();', ownerContext);
-expect(ownerContext.result === true, 'A named returning Worker A must repair its dropped ownership latch');
-ownerContext.isMfV3ParentVerifiedActiveWorker = () => false;
-vm.runInContext('result = shouldKeepMissionFinderObserverForCurrentFrame();', ownerContext);
-expect(ownerContext.result === false, 'A stale named frame must fail closed without exact parent identity proof');
-ownerContext.isMfV3ManagedActiveFrame = () => false;
-vm.runInContext('result = shouldKeepMissionFinderObserverForCurrentFrame();', ownerContext);
-expect(ownerContext.result === false, 'An unrelated unowned child frame must still yield to the primary visible mission document');
+expect(ownerContext.result === false, 'An unowned child frame must still yield to the primary visible mission document');
 
 const inactiveSuspend = extractFunction('suspendMissionFinderRuntimeForInactiveFrame');
 for (const token of [

@@ -5,16 +5,15 @@ MissionChief Command Nexus is an actively released userscript. This roadmap reco
 **Developer and technical owner:** MartyBlyth  
 **Repository and documentation support:** Conroy1988
 
-## Current production baseline — v3.0.32
+## Current production baseline — v3.0.33
 
 - [x] Publish one canonical userscript on trusted `main`.
-- [x] Prepare Command Nexus `3.0.32` with Mission Finder `V10.6.177`, generation-scoped Worker A ownership, a permanently protected visible mission-screen overlay/manual workflow, mission-level fulfilment/failure exports, optional High Risk Missing Person Ambulance coverage, restored standalone pop-out naming filters, exact PRV/SRV and Coastguard helicopter selection, transport/prisoner recovery, bounded endurance telemetry and station-aware staffing evidence.
+- [x] Publish Command Nexus `3.0.33` with the proven `3.0.29` runtime, rolling back the Worker A ownership changes from `3.0.30`–`3.0.32` while retaining mission-level fulfilment/failure exports, optional High Risk Missing Person Ambulance coverage, standalone pop-out naming filters, exact PRV/SRV and Coastguard helicopter selection, transport/prisoner recovery, bounded endurance telemetry and station-aware staffing evidence.
 - [x] Keep one sole dispatcher active while one dormant worker page-warms the immediate next mission without expanding its vehicle table, and fail closed on uncertain ownership or handoff.
 - [x] Retain Resource Administration `V4.2.8`, with Unit Naming `3.3.27`, Station Naming `1.3.22` and Personnel Assignment `1.3.12`.
 - [x] Protect duplicate initialization and independent engine startup.
 - [x] Provide Unit Naming, Station Naming and Personnel Assignment through background native-form workflows.
 - [x] Provide requirement parsing, patient handling, trained-capability selection, Mission Update, dispatch, Auto Mode and queue continuation.
-- [x] Permanently retain the visible Mission Control overlay and manual Unit Finder/Mission Update workflow independently of background Auto Mode ownership.
 - [x] Reconcile selected and en-route capability before mission-upgrade selection.
 - [x] Fail closed when fresh, complete Personnel Register evidence does not verify the full trained-personnel requirement.
 - [x] Admit missing and stale exact-type vehicles to live verification before enforcing the final evidence-backed selection gate.

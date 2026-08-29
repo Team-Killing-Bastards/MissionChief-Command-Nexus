@@ -1,6 +1,6 @@
 # Architecture
 
-This document describes the architecture in the current MissionChief Command Nexus v3.0.32 candidate source and the direction for future consolidation.
+This document describes the architecture in the current MissionChief Command Nexus v3.0.33 source and the direction for future consolidation.
 
 > Source-code direction and final technical decisions remain with **MartyBlyth**, the project developer. Conroy1988 provides repository and documentation support only.
 
@@ -61,8 +61,6 @@ Qualification-sensitive dispatch is fail-closed. A candidate must have a fresh, 
 Personnel Assignment uses the same fail-closed approach for companion vehicles. It resolves pods and trailers through MissionChief's same-origin building vehicle API, selects only the actual eligible tractor, and skips ambiguous relationships. Full Fire and SAR batches build one effective rule per actual vehicle so overlapping qualifications are held by the same crew rather than competing for seats.
 
 Shared operational concerns also include:
-
-- The visible mission-screen Mission Control overlay and manual Unit Finder/Mission Update workflow are permanent product surfaces. Background ownership and memory maintenance may never remove or demote a visible ordinary mission frame.
 
 - One public userscript name and version.
 - One installation and distribution file.

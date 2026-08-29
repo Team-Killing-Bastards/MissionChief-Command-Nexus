@@ -6,6 +6,15 @@ The project uses Semantic Versioning for the unified userscript release line.
 
 ## [Unreleased]
 
+## [3.0.33] - 2026-08-29
+
+### Fixed
+
+- Restore the complete proven `3.0.29` runtime after the Worker A ownership changes introduced in `3.0.30` and tightened in `3.0.31` continued to reject or suspend valid mission frames in `3.0.32`.
+- Remove the regression path responsible for false Auto Mode holds, missing mission overlay controls and Worker A startup failures after transport or worker recycling.
+- Retain the `3.0.29` fixes for mission diagnostics, missing-person-only optional Ambulance coverage, pop-out naming filters, towing quantities and bounded runtime memory maintenance.
+- Increased the unified userscript version from `3.0.32` to `3.0.33`.
+
 ## [3.0.32] - 2026-08-29
 
 ### Fixed

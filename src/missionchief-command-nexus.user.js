@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         MissionChief Command Nexus
 // @namespace    https://github.com/Team-Killing-Bastards/MissionChief-Command-Nexus
-// @version      3.0.32
+// @version      3.0.33
 // @description  MissionChief safe background automation.
 // @author       MartyBlyth
 // @license      MIT
@@ -16,7 +16,6 @@
 'use strict';
 const ACTIVE_WORKER_NAME_PREFIX = 'mcn-v3-active-worker-';
 const PIPELINE_PRELOAD_NAME_PREFIX = 'mcn-v3-pipeline-preload-';
-const ACTIVE_WORKER_GENERATION_ATTRIBUTE = 'data-mcn-v3-worker-generation';
 const isOperationalV2StorageKey = rawKey => {
 const key = String(rawKey || '');
 return key === 'mf_auto_mode_running' ||
@@ -146,8 +145,8 @@ return;
 if (window.top !== window.self) return;
 if (window.__MCN_V3_CONTROLLER__) return;
 window.__MCN_V3_CONTROLLER__ = true;
-const VERSION = '3.0.32';
-const MASTER_VERSION = '3.0.32';
+const VERSION = '3.0.33';
+const MASTER_VERSION = '3.0.33';
 const MISSION_FINDER_VERSION = '10.6.177';
 const WORKER_ID = 'mcn-v3-background-mission-worker';
 const ROOT_ID = 'mcn-v3-map-controller';
@@ -561,26 +560,6 @@ ui: null,
 dragging: false,
 dragOffsetX: 0,
 dragOffsetY: 0,
-};
-window.__MCN_V3_VERIFY_ACTIVE_WORKER__ = (generationToken = '') => {
-try {
-const frame = state.worker;
-if (
-!state.wanted ||
-state.stopping ||
-!frame?.isConnected
-) return false;
-const expectedGeneration = String(state.workerGeneration);
-return Boolean(
-expectedGeneration &&
-String(generationToken || '') === expectedGeneration &&
-frame.getAttribute(ACTIVE_WORKER_GENERATION_ATTRIBUTE) === expectedGeneration &&
-frame.getAttribute('data-mcn-v3-worker') === 'true' &&
-String(frame.name || '').startsWith(ACTIVE_WORKER_NAME_PREFIX)
-);
-} catch {
-return false;
-}
 };
 function nowIso() {
 return new Date().toISOString();
@@ -4458,7 +4437,6 @@ state.worker = slot.frame;
 state.worker.id = WORKER_ID;
 state.worker.name = `${ACTIVE_WORKER_NAME_PREFIX}${generation}-${id}`;
 state.worker.setAttribute('data-mcn-v3-worker', 'true');
-state.worker.setAttribute(ACTIVE_WORKER_GENERATION_ATTRIBUTE, String(generation));
 state.worker.removeAttribute('data-mcn-v3-pipeline-preload');
 applyActiveWorkerFrameStyle(state.worker);
 bindManagedFrameLoad(state.worker, () => {
@@ -5800,12 +5778,12 @@ frame.src = url;
 frame.setAttribute('aria-hidden', 'true');
 frame.setAttribute('tabindex', '-1');
 frame.setAttribute('data-mcn-v3-worker', 'true');
-frame.setAttribute(ACTIVE_WORKER_GENERATION_ATTRIBUTE, String(generation));
 applyActiveWorkerFrameStyle(frame);
 bindManagedFrameLoad(frame, () => {
 if (generation !== state.workerGeneration || state.worker !== frame) return;
 onWorkerLoad(frame, generation);
 });
+document.body.appendChild(frame);
 state.worker = frame;
 state.lastWatchHeartbeatAt = Date.now();
 state.wakeRecoveryActive = false;
@@ -5829,7 +5807,6 @@ state.transportSince = 0;
 state.transportWarned = false;
 state.foreignMissionUiWarned = false;
 recordMissionVisit(url, 'worker-created');
-document.body.appendChild(frame);
 clearTimer('workerLoadTimer');
 state.workerLoadTimer = window.setTimeout(() => {
 if (generation !== state.workerGeneration || !state.wanted) return;
@@ -8978,29 +8955,12 @@ resumePersistedBackground();
   window.addEventListener('unhandledrejection', event => bootError('unhandledrejection', event));
   bootMark('embedded-wrapper-entered', document.readyState);
   let started = false;
-  const isParentVerifiedActiveWorker = () => {
-    try {
-      const frame = window.frameElement;
-      const generationToken = frame?.getAttribute?.(ACTIVE_WORKER_GENERATION_ATTRIBUTE) || '';
-      const verifier = window.top?.__MCN_V3_VERIFY_ACTIVE_WORKER__;
-      return Boolean(
-        generationToken &&
-        typeof verifier === 'function' &&
-        verifier(generationToken) === true
-      );
-    } catch (_error) {
-      return false;
-    }
-  };
   const shouldStartHeavyCommandNexusRuntime = () => {
     try {
       const name = String(window.name || '');
       const path = String(location.pathname || '');
-      if (name.startsWith(ACTIVE_WORKER_NAME_PREFIX)) {
-        return isParentVerifiedActiveWorker();
-      }
-      if (name.startsWith(PIPELINE_PRELOAD_NAME_PREFIX)) return false;
-      return /^\/missions\/\d+(?:\/|$)/i.test(path) ||
+      return name.startsWith('mcn-v3-active-worker-') ||
+        /^\/missions\/\d+(?:\/|$)/i.test(path) ||
         /^\/vehicles\/\d+\/(?:patient|gefangener)\/\d+(?:\/|$)/i.test(path) ||
         /^\/leitstellenansicht\/?$/i.test(path) ||
         Boolean(document.querySelector('#mission_general_info'));
@@ -18836,8 +18796,6 @@ bootMark('heavy-runtime-start');
         'mcn-v3-pipeline-preload-';
     const MF_V3_ACTIVE_NAME_PREFIX =
         'mcn-v3-active-worker-';
-    const MF_V3_ACTIVE_GENERATION_ATTRIBUTE =
-        'data-mcn-v3-worker-generation';
     const MF_V3_DORMANT_PRELOAD_BRIDGE_KEY =
         '__MCN_V2_DORMANT_PRELOAD_BRIDGE__';
     const MF_V3_LOW_QUEUE_PAUSE_REQUEST_KEY =
@@ -18870,31 +18828,13 @@ bootMark('heavy-runtime-start');
             return false;
         }
     }
-    function isMfV3ParentVerifiedActiveWorker() {
-        try {
-            if (!isMfV3ManagedActiveFrame()) return false;
-            const frame = window.frameElement;
-            const generationToken = frame?.getAttribute?.(
-                MF_V3_ACTIVE_GENERATION_ATTRIBUTE
-            ) || '';
-            const verifier = window.top?.__MCN_V3_VERIFY_ACTIVE_WORKER__;
-            return Boolean(
-                generationToken &&
-                typeof verifier === 'function' &&
-                verifier(window, generationToken) === true
-            );
-        } catch (_error) {
-            return false;
-        }
-    }
     function isMfV3ManagedActiveWorker() {
         try {
-            if (!isMfV3ParentVerifiedActiveWorker()) return false;
+            if (!isMfV3ManagedActiveFrame()) return false;
             const ownershipBridge =
                 window.__MCN_V3_FRAME_OWNERSHIP_BRIDGE__ ||
                 window.__MCN_V3_PIPELINE_PRELOAD_BRIDGE__ ||
                 null;
-            ownershipBridge?.activate?.();
             return ownershipBridge?.isActive?.() === true;
         } catch (_error) {
             return false;
@@ -21106,7 +21046,7 @@ bootMark('heavy-runtime-start');
             capturedAtUnix: Date.now(),
             reason: String(reason || 'manual-export'),
             versions: {
-                commandNexus: '3.0.32',
+                commandNexus: '3.0.33',
                 missionFinder: 'V10.6.177',
                 personnelAssignment: '1.3.8'
             },
@@ -52393,31 +52333,9 @@ async function handleAutoPrisonerReleaseAfterActions() {
     function shouldKeepMissionFinderObserverForCurrentFrame() {
         if (MF_IS_TOP_WINDOW) return true;
         if (!document.body || !isMissionPage()) return false;
-        if (isVisibleManualMissionFrame()) return true;
         if (isMfV3ManagedActiveWorker()) return true;
-        if (isMfV3ManagedActiveFrame()) {
-            if (!isMfV3ParentVerifiedActiveWorker()) return false;
-            const bridge = getMfV3OperationalOwnershipBridge();
-            bridge?.activate?.();
-            if (bridge?.isActive?.() === true) return true;
-        }
         try {
             return getPrimaryMissionRequirementDocument() === document;
-        } catch (_error) {
-            return true;
-        }
-    }
-    function isVisibleManualMissionFrame() {
-        if (MF_IS_TOP_WINDOW) return false;
-        if (!document.body || !isMissionPage()) return false;
-        if (
-            isMfV3ManagedActiveFrame() ||
-            mfV3DormantPreload
-        ) {
-            return false;
-        }
-        try {
-            return isMissionDocumentVisible(document);
         } catch (_error) {
             return true;
         }
