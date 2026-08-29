@@ -1,0 +1,1235 @@
+===== context-1 [18790-18855] =====
+018790:             );
+018791:         } catch (_error) {
+018792:             return false;
+018793:         }
+018794:     })();
+018795:     let mfV3DormantPreloadPromoted = false;
+018796:     let mfV3DormantPreloadPromotedAt = 0;
+018797:     let mfV3DormantPreloadPromotionSource = '';
+018798:     function isMfV3ManagedActiveFrame() {
+018799:         try {
+018800:             return (
+018801:                 window.top !== window.self &&
+018802:                 String(window.name || '').startsWith(
+018803:                     MF_V3_ACTIVE_NAME_PREFIX
+018804:                 )
+018805:             );
+018806:         } catch (_error) {
+018807:             return false;
+018808:         }
+018809:     }
+018810:     function isMfV3ManagedTransportWorker() {
+018811:         try {
+018812:             return window.top !== window.self &&
+018813:                 String(window.name || '').startsWith(
+018814:                     MF_V3_ACTIVE_NAME_PREFIX + 'transport-b-'
+018815:                 );
+018816:         } catch (_error) {
+018817:             return false;
+018818:         }
+018819:     }
+018820:     function isMfV3ManagedActiveWorker() {
+018821:         try {
+018822:             if (!isMfV3ManagedActiveFrame()) return false;
+018823:             const ownershipBridge =
+018824:                 window.__MCN_V3_FRAME_OWNERSHIP_BRIDGE__ ||
+018825:                 window.__MCN_V3_PIPELINE_PRELOAD_BRIDGE__ ||
+018826:                 null;
+018827:             return ownershipBridge?.isActive?.() === true;
+018828:         } catch (_error) {
+018829:             return false;
+018830:         }
+018831:     }
+018832:     const MF_EVENT_COLLECTIBLE_SELECTOR =
+018833:         'a#easter-egg-link[href^="/missions/"][href*="/claim_found_object_sync"]';
+018834:     const MF_EVENT_COLLECTIBLE_SCAN_INTERVAL_MS =
+018835:         15 * 1000;
+018836:     const MF_EVENT_COLLECTIBLE_REQUEST_COOLDOWN_MS = 10000;
+018837:     const MF_EVENT_COLLECTIBLE_MAX_TRACKED = 250;
+018838:     const mfEventCollectibleClaimTimes = new Map();
+018839:     let mfEventCollectibleScanTimer = null;
+018840:     let mfEventCollectibleScanRunning = false;
+018841:     const MF_EVENT_SCANNER_ENABLED_KEY =
+018842:         'mf_event_scanner_enabled_v1';
+018843:     let mfEventScannerEnabled =
+018844:         localStorage.getItem(
+018845:             MF_EVENT_SCANNER_ENABLED_KEY
+018846:         ) !== 'false';
+018847:     function getMissionEventCollectibleDocuments() {
+018848:         try {
+018849:             return getMissionAccessibleDocuments(false)
+018850:                 .slice(0, 24);
+018851:         } catch (_error) {
+018852:             return [document];
+018853:         }
+018854:     }
+018855:     function readMissionEventCollectibleClaim(link) {
+
+===== context-2 [19045-19110] =====
+019045:     }
+019046:     const MF_IS_TOP_WINDOW = (() => {
+019047:         try {
+019048:             return window.top === window.self;
+019049:         } catch (error) {
+019050:             return true;
+019051:         }
+019052:     })();
+019053:     function isMissionPage() {
+019054:         return !!document.querySelector('#mission_general_info');
+019055:     }
+019056:     if (window.missionFinder2026Initialized) return;
+019057:     window.missionFinder2026Initialized = true;
+019058:     window.missionFinderInitialized = true;
+019059:     globalThis.__MCN_BOOT_MARK__?.('mission-finder-module-entered');
+019060:     if (!mfV3DormantPreload) {
+019061:         startMissionEventCollectibleCollector();
+019062:     }
+019063:     let autoModeRunning =
+019064:         !mfV3DormantPreload &&
+019065:         !isMfV3ManagedTransportWorker() &&
+019066:         (
+019067:             sessionStorage.getItem('mf_auto_mode_running') === 'true' ||
+019068:             localStorage.getItem('mf_auto_mode_running') === 'true'
+019069:         );
+019070:     let autoModeLoopActive = false;
+019071:     const MF_FINAL_QUEUE_DISPATCH_FLAG = 'mf_final_queue_dispatch_clicked_v10';
+019072:     const MF_QUEUE_WAIT_ACTIVE_FLAG = 'mf_queue_wait_active_v10';
+019073:     const MF_QUEUE_OPENING_MISSION_FLAG = 'mf_queue_opening_mission_v10';
+019074:     let mfQueueRestartEnabled = localStorage.getItem('mf_next_queue_restart_enabled_v10') !== 'false';
+019075:     let mfQueueRestartThreshold = parseInt(localStorage.getItem('mf_next_queue_restart_threshold_v10_1_3') || '20', 10);
+019076:     let mfQueueRestartWaiting = false;
+019077:     let mfSilentQueueWatcherTimer = null;
+019078:     let mfSilentQueueOpening = false;
+019079:     let mfGlobalTransportWatcherTimer = null;
+019080:     let mfGlobalTransportClicking = false;
+019081:     let mfLastTransportFingerprint = '';
+019082:     let mfLastTransportClickAt = 0;
+019083:     let mfBruteApproachWatcherTimer = null;
+019084:     let mfBruteApproachClicking = false;
+019085:     let mfBruteLastFingerprint = '';
+019086:     let mfBruteLastClickAt = 0;
+019087:     let mfTransportApproachClicking = false;
+019088:     let mfTransportLastClickAt = 0;
+019089:     let mfTransportSequenceActive = false;
+019090:     let mfTransportContinuationRunning = false;
+019091:     let mfPostTransportRehookTimer = null;
+019092:     let mfPostTransportOpening = false;
+019093:     let mfTransportOwnerModal = null;
+019094:     let mfTransportOwnerApproachGoneAt = 0;
+019095:     let mfTransportOwnerCloseAttemptedAt = 0;
+019096:     let mfTransportMainStableAt = 0;
+019097:     let mfMissionUpdateFirstPassRequired = true;
+019098:     let mfMissionUpdateFirstPassMissionKey = '';
+019099:     let mfMissionUpdateFirstPassCompletedAt = 0;
+019100:     let mfLastQueueThresholdStatusAt = 0;
+019101:     let mfLastQueueThresholdStatusKey = '';
+019102:     const MF_MANUAL_AUTO_STOP_FLAG = 'mf_manual_auto_stop_v10_3_9u';
+019103:     const MF_AUTO_STOP_RECORD_KEY =
+019104:         'mf_auto_stop_record_v10_6_153';
+019105:     const MF_MAIN_MISSION_OPEN_LOCK_KEY = 'mf_main_mission_open_lock_until_v10_3_9v';
+019106:     const MF_MAIN_MISSION_OPEN_REASON_KEY = 'mf_main_mission_open_reason_v10_3_9v';
+019107:     const MF_TRANSPORT_REHOOK_LOCK_KEY = 'mf_transport_rehook_lock_until_v10_3_9x';
+019108:     const MF_TRANSPORT_REHOOK_REASON_KEY = 'mf_transport_rehook_reason_v10_3_9x';
+019109:     const MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY = 'mf_transport_rehook_recent_until_v10_3_9y';
+019110:     const MF_MAIN_MISSION_PENDING_UNTIL_KEY = 'mf_main_mission_pending_until_v10_3_9zc';
+
+===== context-3 [48852-49020] =====
+048852:             modalText.includes('custody')
+048853:         ) && (
+048854:             modalText.includes('patient / prisoner handoff') ||
+048855:             modalText.includes('hospital') ||
+048856:             modalText.includes('free beds') ||
+048857:             modalText.includes('approach') ||
+048858:             modalText.includes('prisoner') ||
+048859:             modalText.includes('police cell') ||
+048860:             modalText.includes('cell') ||
+048861:             modalText.includes('custody')
+048862:         );
+048863:     }
+048864:     function isAnyTransportModalOrApproachVisible() {
+048865:         return !!(
+048866:             findExactFirstApproachTransportButton() ||
+048867:             (typeof mfBruteFindFirstApproachButton === 'function' && mfBruteFindFirstApproachButton()) ||
+048868:             (typeof mfBruteFindVehicleTransportModal === 'function' && mfBruteFindVehicleTransportModal()) ||
+048869:             (typeof isVehicleTransportModalVisible === 'function' && isVehicleTransportModalVisible())
+048870:         );
+048871:     }
+048872:     function markTransportSequenceActive() {
+048873:         mfTransportSequenceActive = true;
+048874:         sessionStorage.setItem('mf_transport_sequence_active_v1', 'true');
+048875:         sessionStorage.setItem('mf_post_transport_rehook_pending_v1', 'true');
+048876:         localStorage.setItem('mf_post_transport_rehook_pending_v1', 'true');
+048877:         localStorage.setItem('mf_auto_mode_running', 'true');
+048878:         const rehookUntil = Date.now() + 120000;
+048879:         sessionStorage.setItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY, String(rehookUntil));
+048880:         localStorage.setItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY, String(rehookUntil));
+048881:     }
+048882:     function clearTransportSequenceActive() {
+048883:         mfTransportSequenceActive = false;
+048884:         sessionStorage.removeItem('mf_transport_sequence_active_v1');
+048885:         sessionStorage.removeItem('mf_brute_transport_sent_v1');
+048886:         sessionStorage.removeItem('mf_transport_sent_in_vehicle_modal_v1');
+048887:     }
+048888:     function clearPostTransportRehookPending() {
+048889:         clearTransportSequenceActive();
+048890:         sessionStorage.removeItem('mf_post_transport_rehook_pending_v1');
+048891:         localStorage.removeItem('mf_post_transport_rehook_pending_v1');
+048892:         mfClearTransportOwner('post-transport complete');
+048893:     }
+048894:     function isRecentTransportRehookWindowActive() {
+048895:         if (isManualAutoStopActive()) return false;
+048896:         const until = Math.max(
+048897:             parseInt(sessionStorage.getItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY) || '0', 10) || 0,
+048898:             parseInt(localStorage.getItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY) || '0', 10) || 0
+048899:         );
+048900:         if (until > Date.now()) return true;
+048901:         sessionStorage.removeItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY);
+048902:         localStorage.removeItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY);
+048903:         return false;
+048904:     }
+048905:     function isPostTransportRehookPending() {
+048906:         if (isManualAutoStopActive()) return false;
+048907:         return sessionStorage.getItem('mf_post_transport_rehook_pending_v1') === 'true' ||
+048908:             localStorage.getItem('mf_post_transport_rehook_pending_v1') === 'true' ||
+048909:             wasTransportSequenceActive() ||
+048910:             isRecentTransportRehookWindowActive();
+048911:     }
+048912:     function isAutoModeActiveFlagSet() {
+048913:         if (isManualAutoStopActive()) return false;
+048914:         return autoModeRunning === true ||
+048915:             sessionStorage.getItem('mf_auto_mode_running') === 'true' ||
+048916:             localStorage.getItem('mf_auto_mode_running') === 'true';
+048917:     }
+048918:     function isTransportAutomationAllowed() {
+048919:         if (isManualAutoStopActive()) return false;
+048920:         return isMfV3ManagedTransportWorker() ||
+048921:             isAutoModeActiveFlagSet() || isPostTransportRehookPending();
+048922:     }
+048923:     function clearAllTransportAutomationFlags(reason) {
+048924:         mfTransportSequenceActive = false;
+048925:         mfTransportContinuationRunning = false;
+048926:         mfPostTransportOpening = false;
+048927:         mfGlobalTransportClicking = false;
+048928:         mfBruteApproachClicking = false;
+048929:         mfTransportApproachClicking = false;
+048930:         sessionStorage.removeItem('mf_transport_sequence_active_v1');
+048931:         sessionStorage.removeItem('mf_post_transport_rehook_pending_v1');
+048932:         sessionStorage.removeItem('mf_brute_transport_sent_v1');
+048933:         sessionStorage.removeItem('mf_transport_sent_in_vehicle_modal_v1');
+048934:         localStorage.removeItem('mf_post_transport_rehook_pending_v1');
+048935:         sessionStorage.removeItem(MF_TRANSPORT_CLICK_LOCK_UNTIL_KEY);
+048936:         sessionStorage.removeItem(MF_TRANSPORT_LAST_CLICK_AT_KEY);
+048937:         sessionStorage.removeItem(MF_TRANSPORT_LAST_CLICK_REASON_KEY);
+048938:         mfClearTransportOwner(reason || 'transport flags cleared');
+048939:         const clearReason = String(reason || '').toLowerCase();
+048940:         const clearRecentRehook = clearReason.includes('manual') ||
+048941:             clearReason.includes('stopped') || clearReason.includes('transport-worker-b');
+048942:         if (clearRecentRehook) {
+048943:             sessionStorage.removeItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY);
+048944:             localStorage.removeItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY);
+048945:         }
+048946:         if (mfDebugEnabled) {
+048947:             debugLog('AUTO GUARD', `Cleared all transport automation flags. reason=${reason || 'unknown'}`);
+048948:         }
+048949:     }
+048950:     function hasVisibleApproachButtonForTransportRehook() {
+048951:         return !!(
+048952:             (typeof mfFindAnyVisibleApproachButtonDeep === 'function' && mfFindAnyVisibleApproachButtonDeep()) ||
+048953:             (typeof mfFindAnyVisibleApproachButtonInModal === 'function' && mfFindAnyVisibleApproachButtonInModal())
+048954:         );
+048955:     }
+048956:     function forceAutoModeBackOnForTransportRehook() {
+048957:         if (isManualAutoStopActive()) {
+048958:             if (mfDebugEnabled) {
+048959:                 debugLog('AUTO STOP GUARD', 'Blocked forceAutoModeBackOnForTransportRehook because Auto Mode was manually stopped.');
+048960:             }
+048961:             return false;
+048962:         }
+048963:         autoModeRunning = true;
+048964:         autoModeLoopActive = false;
+048965:         sessionStorage.setItem('mf_auto_mode_running', 'true');
+048966:         localStorage.setItem('mf_auto_mode_running', 'true');
+048967:         return true;
+048968:     }
+048969:     function findAnyMainScreenMissionOpenButton() {
+048970:         return findFirstMissionButtonForQueueRestart();
+048971:     }
+048972:     async function hardOpenFirstMissionFromMainAfterTransport(reason) {
+048973:         if (!MF_IS_TOP_WINDOW) return false;
+048974:         if (isManualAutoStopActive()) return false;
+048975:         if (!isTransportAutomationAllowed()) return false;
+048976:         if (!mfTransportShellReadyForRehook(`hard-${reason}`)) return false;
+048977:         if (!acquireTransportRehookLock(`hard-rehook-${reason}`, 28000)) return false;
+048978:         try {
+048979:             if (shouldBlockOpeningNewMissionForTransport(`hard-rehook-${reason}`)) {
+048980:                 return false;
+048981:             }
+048982:             if (isCurrentMissionWindowStillOpenForSafeOpen(`hard-rehook-${reason}`)) {
+048983:                 if (mfDebugEnabled) {
+048984:                     debugLog('TRANSPORT REHOOK', `${reason}: mission window still open; waiting for next rehook tick.`);
+048985:                 }
+048986:                 return false;
+048987:             }
+048988:             if (!forceAutoModeBackOnForTransportRehook()) return false;
+048989:             if (mfDebugEnabled) {
+048990:                 debugLog('TRANSPORT REHOOK', `${reason}: hard main-screen open attempt started.`);
+048991:             }
+048992:             if (window.location.pathname.startsWith('/vehicles/')) {
+048993:                 if (mfDebugEnabled) {
+048994:                     debugLog('TRANSPORT REHOOK', `${reason}: on vehicle page after transport, loading main page for mission count.`);
+048995:                 }
+048996:                 sessionStorage.setItem('mf_post_transport_rehook_pending_v1', 'true');
+048997:                 localStorage.setItem('mf_post_transport_rehook_pending_v1', 'true');
+048998:                 const rehookUntil = Date.now() + 120000;
+048999:                 sessionStorage.setItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY, String(rehookUntil));
+049000:                 localStorage.setItem(MF_TRANSPORT_REHOOK_RECENT_UNTIL_KEY, String(rehookUntil));
+049001:                 window.location.href = '/';
+049002:                 return false;
+049003:             }
+049004:             const started = Date.now();
+049005:             let filterClickedAt = 0;
+049006:             while (Date.now() - started < 120000) {
+049007:                 if (isManualAutoStopActive()) return false;
+049008:                 if (!mfTransportShellReadyForRehook(`hard-loop-${reason}`)) {
+049009:                     await wait(800);
+049010:                     continue;
+049011:                 }
+049012:                 if (hasVisibleApproachButtonForTransportRehook()) {
+049013:                     if (mfDebugEnabled) {
+049014:                         debugLog('TRANSPORT REHOOK', `${reason}: Approach visible again; pausing rehook.`);
+049015:                     }
+049016:                     return false;
+049017:                 }
+049018:                 if (isCurrentMissionWindowStillOpenForSafeOpen(`hard-rehook-${reason}`)) {
+049019:                     if (mfDebugEnabled) {
+049020:                         debugLog('TRANSPORT REHOOK', `${reason}: current mission window still open; retrying shortly.`);
+
+===== context-4 [49147-49329] =====
+049147:                 }
+049148:                 await wait(1000);
+049149:             }
+049150:             if (mfDebugEnabled) {
+049151:                 debugLog('TRANSPORT REHOOK', `${reason}: hard main-screen rehook timed out.`);
+049152:             }
+049153:             return false;
+049154:         } finally {
+049155:             releaseTransportRehookLock(`hard-rehook-${reason}-finally`);
+049156:         }
+049157:     }
+049158:     function wasTransportSequenceActive() {
+049159:         return mfTransportSequenceActive ||
+049160:             sessionStorage.getItem('mf_transport_sequence_active_v1') === 'true' ||
+049161:             sessionStorage.getItem('mf_brute_transport_sent_v1') === 'true' ||
+049162:             sessionStorage.getItem('mf_transport_sent_in_vehicle_modal_v1') === 'true';
+049163:     }
+049164:     async function openFirstMissionAfterTransportAutoClose(reason) {
+049165:         if (!MF_IS_TOP_WINDOW) return false;
+049166:         if (isManualAutoStopActive()) return false;
+049167:         if (!isTransportAutomationAllowed()) return false;
+049168:         if (isTransportRehookLockActive(`open-after-transport-${reason}`)) {
+049169:             return false;
+049170:         }
+049171:         if (mfTransportContinuationRunning || mfPostTransportOpening) {
+049172:             return false;
+049173:         }
+049174:         if (!isPostTransportRehookPending()) return false;
+049175:         if (hasVisibleApproachButtonForTransportRehook()) return false;
+049176:         if (!mfTransportShellReadyForRehook(reason)) return false;
+049177:         mfTransportContinuationRunning = true;
+049178:         mfPostTransportOpening = true;
+049179:         try {
+049180:             forceAutoModeBackOnForTransportRehook();
+049181:             if (mfDebugEnabled) {
+049182:                 debugLog(
+049183:                     'TRANSPORT REHOOK',
+049184:                     `${reason}: old transport shell gone; starting one rehook.`
+049185:                 );
+049186:             }
+049187:             updateStatusBox(
+049188:                 'Transport complete. Main screen stable; opening one mission...'
+049189:             );
+049190:             if (
+049191:                 isMissionPage() &&
+049192:                 isMissionScreenVisibleForQueueRestart()
+049193:             ) {
+049194:                 clearPostTransportRehookPending();
+049195:                 setTimeout(() => {
+049196:                     forceAutoModeBackOnForTransportRehook();
+049197:                     if (!autoModeLoopActive) runAutoModeLoop();
+049198:                 }, 1000);
+049199:                 return true;
+049200:             }
+049201:             return await hardOpenFirstMissionFromMainAfterTransport(reason);
+049202:         } finally {
+049203:             mfTransportContinuationRunning = false;
+049204:             mfPostTransportOpening = false;
+049205:         }
+049206:     }
+049207:     function startPostTransportRehookWatcher() {
+049208:         if (!MF_IS_TOP_WINDOW) return;
+049209:         if (mfPostTransportRehookTimer) return;
+049210:         mfPostTransportRehookTimer = setInterval(async () => {
+049211:             if (isManualAutoStopActive()) return;
+049212:             if (!isTransportAutomationAllowed()) return;
+049213:             if (!isPostTransportRehookPending()) return;
+049214:             if (mfPostTransportOpening || mfTransportContinuationRunning) return;
+049215:             if (isMainMissionOpeningPending('post-transport-watch')) return;
+049216:             if (hasVisibleApproachButtonForTransportRehook()) return;
+049217:             await openFirstMissionAfterTransportAutoClose(
+049218:                 'post-transport-watch'
+049219:             );
+049220:         }, 1200);
+049221:     }
+049222:     function closeVehicleTransportModalIfDone(reason) {
+049223:         return false;
+049224:     }
+049225:     async function clickExactApproachTransportButton(reason) {
+049226:         if (isManualAutoStopActive()) return false;
+049227:         if (!isTransportAutomationAllowed()) return false;
+049228:         if (mfGlobalTransportClicking) return false;
+049229:         if (mfTransportApproachClicking) return false;
+049230:         if (Date.now() - mfTransportLastClickAt < 2500) return false;
+049231:         const button = findExactFirstApproachTransportButton();
+049232:         if (!button) return false;
+049233:         if (!mfAcquireSharedTransportClick(
+049234:             `exact-${reason || 'unknown'}`
+049235:         )) {
+049236:             return false;
+049237:         }
+049238:         mfMarkTransportOwner(
+049239:             button,
+049240:             `exact-${reason || 'unknown'}`
+049241:         );
+049242:         const activeScopes = mfGetTransportActiveScopes();
+049243:         if (
+049244:             activeScopes.length &&
+049245:             !activeScopes[0].contains(button) &&
+049246:             activeScopes[0] !== button.ownerDocument.body
+049247:         ) {
+049248:             if (mfDebugEnabled) {
+049249:                 debugLog('GLOBAL TRANSPORT', 'Blocked stale Approach button from a background transport modal.');
+049250:             }
+049251:             return false;
+049252:         }
+049253:         const fingerprint = getTransportScreenFingerprint();
+049254:         const now = Date.now();
+049255:         if (fingerprint && fingerprint === mfLastTransportFingerprint && now - mfLastTransportClickAt < 2500) {
+049256:             return false;
+049257:         }
+049258:         mfGlobalTransportClicking = true;
+049259:         mfTransportApproachClicking = true;
+049260:         mfLastTransportFingerprint = fingerprint || '';
+049261:         mfLastTransportClickAt = now;
+049262:         mfTransportLastClickAt = now;
+049263:         if (!isMfV3ManagedTransportWorker()) markTransportSequenceActive();
+049264:         try {
+049265:             const row = button.closest('tr');
+049266:             const rowText = row ? (row.innerText || '').replace(/\s+/g, ' ').trim() : '';
+049267:             const text = (button.textContent || 'Approach').replace(/\s+/g, ' ').trim();
+049268:             if (mfDebugEnabled) {
+049269:                 debugLog('GLOBAL TRANSPORT', `${reason}: clicking "${text}" | row="${rowText}"`);
+049270:             }
+049271:             try {
+049272:                 updateStatusBox(`Transport handoff: clicking ${text}...`);
+049273:             } catch (error) {}
+049274:             if (!isMfV3ManagedTransportWorker()) sessionStorage.setItem('mf_transport_sent_in_vehicle_modal_v1', 'true');
+049275:             realClickForQueueRestart(button);
+049276:             await wait(4000);
+049277:             return true;
+049278:         } finally {
+049279:             mfGlobalTransportClicking = false;
+049280:             mfTransportApproachClicking = false;
+049281:         }
+049282:     }
+049283:     function isAutoModeSessionActiveForTransportWatcher() {
+049284:         return isTransportAutomationAllowed();
+049285:     }
+049286:     function startGlobalTransportApproachWatcher() {
+049287:         return;
+049288:     }
+049289:     function mfBruteNormaliseText(value) {
+049290:         return String(value || '').replace(/\s+/g, ' ').trim();
+049291:     }
+049292:     function mfFindAnyVisibleApproachButtonInModal() {
+049293:         const deepButton = mfFindAnyVisibleApproachButtonDeep();
+049294:         if (deepButton) return deepButton;
+049295:         const modals = Array.from(document.querySelectorAll(
+049296:             '.vm--modal, .modal, .lightbox, .vehicle-window, .redesign-wrapper[type="vehicle"]'
+049297:         )).filter(modal => {
+049298:             try {
+049299:                 return mfIsVisibleInOwnDocument(modal);
+049300:             } catch (error) {
+049301:                 return false;
+049302:             }
+049303:         });
+049304:         for (const modal of modals) {
+049305:             const button = mfChoosePreferredApproachButton(modal);
+049306:             if (button) return button;
+049307:         }
+049308:         return null;
+049309:     }
+049310:     function mfIsApproachTransportVisible() {
+049311:         return !!mfFindAnyVisibleApproachButtonInModal();
+049312:     }
+049313:     function mfBruteFindVehicleTransportModal() {
+049314:         const simpleButton = mfFindAnyVisibleApproachButtonInModal();
+049315:         if (simpleButton) {
+049316:             return simpleButton.closest('.vm--modal, .modal, .lightbox, .vehicle-window, body') || null;
+049317:         }
+049318:         const scopes = mfGetTransportActiveScopes();
+049319:         if (scopes.length) {
+049320:             return scopes[0];
+049321:         }
+049322:         const modals = Array.from(document.querySelectorAll('.vm--modal'));
+049323:         for (const modal of modals) {
+049324:             const modalText = mfBruteNormaliseText(modal.innerText).toLowerCase();
+049325:             const hasVehicleWindow = !!modal.querySelector('.vehicle-window, .redesign-wrapper[type="vehicle"]');
+049326:             const hasTransportWords =
+049327:                 modalText.includes('hospital') ||
+049328:                 modalText.includes('free beds') ||
+049329:                 modalText.includes('patient') ||
+
+===== context-5 [49398-49576] =====
+049398:             const y = rect.top + Math.max(1, rect.height / 2);
+049399:             for (const eventName of ['mousedown', 'mouseup', 'click']) {
+049400:                 const event = new MouseEvent(eventName, {
+049401:                     bubbles: true,
+049402:                     cancelable: true,
+049403:                     view: window,
+049404:                     clientX: x,
+049405:                     clientY: y
+049406:                 });
+049407:                 element.dispatchEvent(event);
+049408:             }
+049409:             return true;
+049410:         } catch (error) {
+049411:             return false;
+049412:         }
+049413:     }
+049414:     function mfBruteCloseTransportModalIfDone() {
+049415:         return false;
+049416:     }
+049417:     async function mfBruteClickFirstApproach(reason) {
+049418:         if (!isTransportAutomationAllowed()) return false;
+049419:         if (mfBruteApproachClicking) return false;
+049420:         if (mfTransportApproachClicking) return false;
+049421:         if (Date.now() - mfTransportLastClickAt < 2500) return false;
+049422:         const button = mfBruteFindFirstApproachButton();
+049423:         if (!button) return false;
+049424:         if (!mfAcquireSharedTransportClick(
+049425:             `brute-${reason || 'unknown'}`
+049426:         )) {
+049427:             return false;
+049428:         }
+049429:         mfMarkTransportOwner(
+049430:             button,
+049431:             `brute-${reason || 'unknown'}`
+049432:         );
+049433:         const activeScopes = mfGetTransportActiveScopes();
+049434:         if (
+049435:             activeScopes.length &&
+049436:             !activeScopes[0].contains(button) &&
+049437:             activeScopes[0] !== button.ownerDocument.body
+049438:         ) {
+049439:             if (mfDebugEnabled) {
+049440:                 debugLog('TRANSPORT APPROACH', 'Blocked stale Approach button from a background transport modal.');
+049441:             }
+049442:             return false;
+049443:         }
+049444:         const now = Date.now();
+049445:         mfBruteApproachClicking = true;
+049446:         mfTransportApproachClicking = true;
+049447:         mfBruteLastFingerprint = mfBruteTransportFingerprint(button) || '';
+049448:         mfBruteLastClickAt = now;
+049449:         mfTransportLastClickAt = now;
+049450:         if (!isMfV3ManagedTransportWorker()) markTransportSequenceActive();
+049451:         try {
+049452:             const row = button.closest('tr');
+049453:             const rowText = row ? mfBruteNormaliseText(row.innerText) : '';
+049454:             const buttonText = mfBruteNormaliseText(button.textContent);
+049455:             const capacityInfo = mfGetApproachCapacityInfo(button);
+049456:             try {
+049457:                 updateStatusBox(
+049458:                     capacityInfo.hasCapacityColumn
+049459:                         ? `Transport handoff: clicking Approach with ${capacityInfo.capacity} free place(s)...`
+049460:                         : 'Transport handoff: clicking first Approach...'
+049461:                 );
+049462:             } catch (error) {}
+049463:             if (mfDebugEnabled) {
+049464:                 debugLog(
+049465:                     'TRANSPORT APPROACH',
+049466:                     `chosenCapacity=${capacityInfo.hasCapacityColumn ? capacityInfo.capacity : 'n/a'} | row="${capacityInfo.rowText || rowText}"`
+049467:                 );
+049468:             }
+049469:             if (!isMfV3ManagedTransportWorker()) sessionStorage.setItem('mf_brute_transport_sent_v1', 'true');
+049470:             const clicked = mfBruteClickElement(button);
+049471:             await wait(4000);
+049472:             return clicked;
+049473:         } finally {
+049474:             mfBruteApproachClicking = false;
+049475:             mfTransportApproachClicking = false;
+049476:         }
+049477:     }
+049478:     function startBruteApproachTransportWatcher() {
+049479:         if (!MF_IS_TOP_WINDOW) return;
+049480:         if (mfBruteApproachWatcherTimer) return;
+049481:         mfBruteApproachWatcherTimer = setInterval(async () => {
+049482:             if (isManualAutoStopActive()) return;
+049483:             if (!isTransportAutomationAllowed()) return;
+049484:             if (!mfHasPotentialTransportUi()) return;
+049485:             const button = mfBruteFindFirstApproachButton();
+049486:             if (button) {
+049487:                 await mfBruteClickFirstApproach('global-brute-watch');
+049488:                 return;
+049489:             }
+049490:         }, 1000);
+049491:     }
+049492:     function findTransportSendButton() {
+049493:         const exactApproachButton = findExactFirstApproachTransportButton();
+049494:         if (exactApproachButton) {
+049495:             return exactApproachButton;
+049496:         }
+049497:         const candidates = Array.from(document.querySelectorAll('button, a, input[type="button"], input[type="submit"]'))
+049498:             .filter(element => isElementVisible(element))
+049499:             .filter(element => !isBadTransportButtonCandidate(element))
+049500:             .map(element => ({
+049501:                 element,
+049502:                 score: scoreTransportButtonCandidate(element)
+049503:             }))
+049504:             .filter(item => item.score > 0)
+049505:             .sort((a, b) => b.score - a.score);
+049506:         return candidates.length ? candidates[0].element : null;
+049507:     }
+049508:     async function waitForTransportScreenAfterDispatch(timeoutMs) {
+049509:         const started = Date.now();
+049510:         const limit = Number.isFinite(timeoutMs) ? timeoutMs : 5000;
+049511:         while (Date.now() - started < limit) {
+049512:             if (isTransportScreenBlockingQueueRestart()) {
+049513:                 return true;
+049514:             }
+049515:             await wait(250);
+049516:         }
+049517:         return false;
+049518:     }
+049519:     async function handleTransportRequestsAfterDispatch(reason) {
+049520:         if (!isTransportAutomationAllowed()) return 'none';
+049521:         const firstFound = await waitForTransportScreenAfterDispatch(5000);
+049522:         if (!firstFound) {
+049523:             return 'none';
+049524:         }
+049525:         updateStatusBox('Transport request detected. Sending transport...');
+049526:         if (mfDebugEnabled) {
+049527:             debugLog('AUTO TRANSPORT', `${reason}: transport request detected.`);
+049528:         }
+049529:         let sentCount = 0;
+049530:         const started = Date.now();
+049531:         while ((autoModeRunning || isMfV3ManagedTransportWorker()) && Date.now() - started < 90000 && sentCount < 25) {
+049532:             if (!isTransportScreenBlockingQueueRestart()) {
+049533:                 break;
+049534:             }
+049535:             const sendButton = findTransportSendButton();
+049536:             if (!sendButton) {
+049537:                 if (mfDebugEnabled) {
+049538:                     debugLog('AUTO TRANSPORT', `${reason}: transport screen found but no send/approach button found.`);
+049539:                 }
+049540:                 updateStatusBox('Transport request detected, but no transport send button was found.');
+049541:                 return sentCount > 0 ? 'partial' : 'stuck';
+049542:             }
+049543:             const clicked = await clickExactApproachTransportButton(`auto-transport-${reason}`);
+049544:             if (!clicked) {
+049545:                 const bruteClicked = await mfBruteClickFirstApproach(`auto-transport-police-brute-${reason}`);
+049546:                 if (!bruteClicked) {
+049547:                     if (mfDebugEnabled) {
+049548:                         debugLog('AUTO TRANSPORT', `${reason}: Approach found but click helper did not click yet; waiting for Vue/iframe update.`);
+049549:                     }
+049550:                     await wait(900);
+049551:                     continue;
+049552:                 }
+049553:             }
+049554:             sentCount += 1;
+049555:             updateStatusBox(`Transport sent (${sentCount}). Checking for more transport requests...`);
+049556:         }
+049557:         if (sentCount > 0) {
+049558:             await wait(1200);
+049559:             const rehookWaitStarted = Date.now();
+049560:             while (
+049561:                 isPostTransportRehookPending() &&
+049562:                 !isManualAutoStopActive() &&
+049563:                 Date.now() - rehookWaitStarted < 60000
+049564:             ) {
+049565:                 await wait(500);
+049566:             }
+049567:         }
+049568:         if (mfDebugEnabled) {
+049569:             debugLog('AUTO TRANSPORT', `${reason}: completed. sent=${sentCount}`);
+049570:         }
+049571:         return sentCount > 0 ? 'sent' : 'none';
+049572:     }
+049573:     async function waitForQueueRestartAndOpenMission(reason) {
+049574:         if (mfQueueRestartWaiting) return false;
+049575:         if (
+049576:             requestV3LowQueuePause(
+
+===== context-6 [49958-50023] =====
+049958:                         },
+049959:                         300
+049960:                     );
+049961:                 } else {
+049962:                     updateStatusBox(
+049963:                         'Next mission opened.'
+049964:                     );
+049965:                 }
+049966:                 return true;
+049967:             }
+049968:             updateStatusBox(
+049969:                 mode === 'auto'
+049970:                     ? 'Auto Mode: dispatch refresh complete. Moving to the next mission...'
+049971:                     : 'Dispatch refresh complete. Moving to the next mission...'
+049972:             );
+049973:             if (
+049974:                 mode === 'auto' &&
+049975:                 isTransportScreenBlockingQueueRestart()
+049976:             ) {
+049977:                 const transportResult =
+049978:                     await handleTransportRequestsAfterDispatch(
+049979:                         `advance-resume-${source}`
+049980:                     );
+049981:                 if (
+049982:                     transportResult === 'stuck'
+049983:                 ) {
+049984:                     clearAutoAdvanceAfterDispatchState(
+049985:                         'transport request stuck'
+049986:                     );
+049987:                     stopAutoMode(
+049988:                         'Auto stopped: transport request found but no send button was found.'
+049989:                     );
+049990:                     return false;
+049991:                 }
+049992:                 if (
+049993:                     transportResult === 'sent' ||
+049994:                     transportResult === 'partial'
+049995:                 ) {
+049996:                     clearAutoAdvanceAfterDispatchState(
+049997:                         'transport rehook owns continuation'
+049998:                     );
+049999:                     return true;
+050000:                 }
+050001:             }
+050002:             return await clickExactNextMissionAfterDispatch(
+050003:                 state
+050004:             );
+050005:         } finally {
+050006:             mfAutoAdvanceResumeActive = false;
+050007:         }
+050008:     }
+050009:     function readAutoPostDispatchUpgradeState() {
+050010:         clearAutoPostDispatchUpgradeState(
+050011:             'post-dispatch upgrade workflow retired'
+050012:         );
+050013:         return null;
+050014:     }
+050015:     function writeAutoPostDispatchUpgradeState(
+050016:         state
+050017:     ) {
+050018:         const encoded =
+050019:             JSON.stringify(state);
+050020:         try {
+050021:             sessionStorage.setItem(
+050022:                 MF_AUTO_UPGRADE_PENDING_KEY,
+050023:                 encoded
+
+===== context-7 [50475-50540] =====
+050475:     ) {
+050476:         clearAutoPostDispatchUpgradeState(
+050477:             `retired callback ignored: ${source}`
+050478:         );
+050479:         mfAutoUpgradeResumeActive = false;
+050480:         return false;
+050481:     }
+050482:     async function handleAfterFinalQueueDispatch(
+050483:         queueStateBeforeDispatch = null
+050484:     ) {
+050485:         await wait(800);
+050486:         if (!autoModeRunning) return false;
+050487:         const v3LowQueueRequested =
+050488:             requestV3LowQueuePause(
+050489:                 queueStateBeforeDispatch,
+050490:                 'dispatch completed at the V3 low mission watermark',
+050491:                 { finalDispatch: true }
+050492:             );
+050493:         if (mfIsApproachTransportVisible() || isTransportScreenBlockingQueueRestart()) {
+050494:             updateStatusBox('Final mission transport detected. Sending Approach sequence...');
+050495:             if (!isMfV3ManagedTransportWorker()) markTransportSequenceActive();
+050496:             const started = Date.now();
+050497:             while (autoModeRunning && Date.now() - started < 90000) {
+050498:                 if (mfIsApproachTransportVisible()) {
+050499:                     await mfBruteClickFirstApproach('after-final-dispatch');
+050500:                     await wait(300);
+050501:                     continue;
+050502:                 }
+050503:                 if (!hasVisibleApproachButtonForTransportRehook()) {
+050504:                     return false;
+050505:                 }
+050506:                 await wait(1000);
+050507:             }
+050508:             return false;
+050509:         }
+050510:         if (v3LowQueueRequested) {
+050511:             updateStatusBox(
+050512:                 'V3 low mission supply reached. Waiting for the controller to release A/B and pause safely...'
+050513:             );
+050514:             return false;
+050515:         }
+050516:         return await waitForQueueRestartAndOpenMission('after-final-dispatch');
+050517:     }
+050518:     function getCurrentAutoDispatchSelectionState() {
+050519:         const badge =
+050520:             document.getElementById(
+050521:                 'vehicle_amount'
+050522:             );
+050523:         const badgeCount =
+050524:             parseInt(
+050525:                 (
+050526:                     badge?.textContent ||
+050527:                     badge?.innerText ||
+050528:                     '0'
+050529:                 ).replace(/[^0-9]/g, ''),
+050530:                 10
+050531:             ) || 0;
+050532:         const checkedCount =
+050533:             document.querySelectorAll(
+050534:                 'input.vehicle_checkbox:checked'
+050535:             ).length;
+050536:         return {
+050537:             badgeCount,
+050538:             checkedCount,
+050539:             selectedCount:
+050540:                 Math.max(
+
+===== context-8 [52151-52216] =====
+052151:         if (!MF_IS_TOP_WINDOW) return;
+052152:         autoModeRunning =
+052153:             !isManualAutoStopActive() &&
+052154:             (
+052155:                 sessionStorage.getItem('mf_auto_mode_running') === 'true' ||
+052156:                 localStorage.getItem('mf_auto_mode_running') === 'true'
+052157:             );
+052158:         mfQueueRestartEnabled =
+052159:             localStorage.getItem(
+052160:                 'mf_next_queue_restart_enabled_v10'
+052161:             ) !== 'false';
+052162:         const silentQueueRequired = Boolean(
+052163:             sessionStorage.getItem(
+052164:                 MF_QUEUE_WAIT_ACTIVE_FLAG
+052165:             ) === 'true' ||
+052166:             sessionStorage.getItem(
+052167:                 MF_FINAL_QUEUE_DISPATCH_FLAG
+052168:             ) === 'true'
+052169:         );
+052170:         const transportWatcherRequired =
+052171:             isTransportAutomationAllowed();
+052172:         const postTransportWatcherRequired = Boolean(
+052173:             isPostTransportRehookPending() ||
+052174:             isRecentTransportRehookWindowActive()
+052175:         );
+052176:         if (silentQueueRequired) {
+052177:             startSilentQueueWatcher();
+052178:         } else {
+052179:             stopSilentQueueWatcher();
+052180:         }
+052181:         if (transportWatcherRequired) {
+052182:             startBruteApproachTransportWatcher();
+052183:         } else {
+052184:             stopBruteApproachTransportWatcher();
+052185:         }
+052186:         if (postTransportWatcherRequired) {
+052187:             startPostTransportRehookWatcher();
+052188:         } else {
+052189:             stopPostTransportRehookWatcher();
+052190:         }
+052191:     }
+052192:     function installBackgroundWatcherSupervisor() {
+052193:         if (!MF_IS_TOP_WINDOW) return;
+052194:         if (!mfBackgroundStorageHandler) {
+052195:             mfBackgroundStorageHandler = function(event) {
+052196:                 const key = String(event?.key || '');
+052197:                 if (
+052198:                     !key ||
+052199:                     key.startsWith('mf_')
+052200:                 ) {
+052201:                     syncBackgroundAutomationWatchers();
+052202:                 }
+052203:             };
+052204:             window.addEventListener(
+052205:                 'storage',
+052206:                 mfBackgroundStorageHandler
+052207:             );
+052208:         }
+052209:         if (!mfBackgroundWatcherSupervisorTimer) {
+052210:             mfBackgroundWatcherSupervisorTimer = setInterval(
+052211:                 () => {
+052212:                     syncBackgroundAutomationWatchers();
+052213:                     reconcileMissionFinderFrameRuntimesFromTop();
+052214:                 },
+052215:                 15 * 1000
+052216:             );
+
+===== context-9 [52397-52462] =====
+052397:         if (!mfRuntimeSuspendedForInactiveFrame) {
+052398:             mfRuntimeMemoryInactiveSuspendCount += 1;
+052399:         }
+052400:         mfRuntimeSuspendedForInactiveFrame = true;
+052401:         mfRuntimeMemoryLastReason =
+052402:             String(reason || 'inactive mission frame');
+052403:         return true;
+052404:     }
+052405:     function reconcileMissionFinderFrameRuntime(
+052406:         reason = 'top-window ownership check'
+052407:     ) {
+052408:         if (MF_IS_TOP_WINDOW) return;
+052409:         if (!shouldKeepMissionFinderObserverForCurrentFrame()) {
+052410:             suspendMissionFinderRuntimeForInactiveFrame(reason);
+052411:             return;
+052412:         }
+052413:         const wasSuspended =
+052414:             mfRuntimeSuspendedForInactiveFrame;
+052415:         mfRuntimeSuspendedForInactiveFrame = false;
+052416:         if (!mfMainMutationObserver) {
+052417:             startMissionFinderObserver();
+052418:         }
+052419:         if (
+052420:             wasSuspended &&
+052421:             isMissionPage() &&
+052422:             !document.getElementById(
+052423:                 'mission-finder-wrapper'
+052424:             )
+052425:         ) {
+052426:             initialize();
+052427:         }
+052428:         startMissionFinderRuntimeMemoryMaintenance();
+052429:     }
+052430:     function dispatchMissionFinderFrameRuntimeEvent(
+052431:         candidateDocument,
+052432:         detail = {}
+052433:     ) {
+052434:         try {
+052435:             if (!candidateDocument?.documentElement) return;
+052436:             const ownerWindow =
+052437:                 candidateDocument.defaultView || window;
+052438:             const EventConstructor =
+052439:                 ownerWindow.CustomEvent || CustomEvent;
+052440:             candidateDocument.dispatchEvent(
+052441:                 new EventConstructor(
+052442:                     MF_FRAME_RUNTIME_RECONCILE_EVENT,
+052443:                     { detail }
+052444:                 )
+052445:             );
+052446:         } catch (_error) {}
+052447:     }
+052448:     function reconcileMissionFinderFrameRuntimesFromTop() {
+052449:         if (!MF_IS_TOP_WINDOW) return;
+052450:         try {
+052451:             getMissionAccessibleDocuments(false)
+052452:                 .forEach(candidateDocument => {
+052453:                     if (candidateDocument === document) return;
+052454:                     dispatchMissionFinderFrameRuntimeEvent(
+052455:                         candidateDocument,
+052456:                         {
+052457:                             reason:
+052458:                                 'top-window ownership supervisor'
+052459:                         }
+052460:                     );
+052461:                 });
+052462:         } catch (_error) {}
+
+===== context-10 [52696-52881] =====
+052696:         resetMainMutationFlags();
+052697:         mfRuntimeCleanupInstalled = false;
+052698:     }
+052699:     function shouldPreserveMissionFinderRuntimeOnPageHide(
+052700:         persisted
+052701:     ) {
+052702:         return Boolean(persisted);
+052703:     }
+052704:     function reconcileMissionFinderAfterPageShow() {
+052705:         mfRuntimeSuspendedForPageHide = false;
+052706:         startMissionEventCollectibleCollector();
+052707:         invalidateVehicleCheckboxCache();
+052708:         invalidateMissionContextCaches();
+052709:         invalidatePatientCountCache();
+052710:         invalidateTransportCaches();
+052711:         resetMainMutationFlags();
+052712:         if (
+052713:             document.body &&
+052714:             !mfMainMutationObserver
+052715:         ) {
+052716:             startMissionFinderObserver();
+052717:         }
+052718:         if (!shouldKeepMissionFinderObserverForCurrentFrame()) {
+052719:             suspendMissionFinderRuntimeForInactiveFrame(
+052720:                 'bfcache frame is not the active mission owner'
+052721:             );
+052722:             return;
+052723:         }
+052724:         const missionPage = isMissionPage();
+052725:         const wrapper = document.getElementById(
+052726:             'mission-finder-wrapper'
+052727:         );
+052728:         if (missionPage && !wrapper) {
+052729:             initialize();
+052730:         } else if (!missionPage && wrapper) {
+052731:             removeMissionFinderPanelForClosedMission(
+052732:                 'Safari bfcache restoration'
+052733:             );
+052734:         }
+052735:         scheduleMissionFinderIphoneNativePickerSync(
+052736:             'Safari bfcache restoration',
+052737:             0,
+052738:             0
+052739:         );
+052740:         syncBackgroundAutomationWatchers();
+052741:         if (
+052742:             document.getElementById(
+052743:                 'session-panel-content'
+052744:             )
+052745:         ) {
+052746:             startSessionRuntimeTicker();
+052747:         }
+052748:         if (isMissionPage()) {
+052749:             startMissionFinderRuntimeMemoryMaintenance();
+052750:         }
+052751:     }
+052752:     function installMissionFinderRuntimeCleanup() {
+052753:         if (mfRuntimeCleanupInstalled) return;
+052754:         mfRuntimeCleanupInstalled = true;
+052755:         mfRuntimePageHideHandler = event => {
+052756:             if (
+052757:                 shouldPreserveMissionFinderRuntimeOnPageHide(
+052758:                     event?.persisted
+052759:                 )
+052760:             ) {
+052761:                 suspendMissionFinderRuntimeForPageHide(
+052762:                     'browser back-forward cache pagehide'
+052763:                 );
+052764:                 return;
+052765:             }
+052766:             cleanupMissionFinderRuntime();
+052767:         };
+052768:         mfRuntimePageShowHandler = event => {
+052769:             if (!event?.persisted) return;
+052770:             reconcileMissionFinderAfterPageShow();
+052771:         };
+052772:         window.addEventListener(
+052773:             'pagehide',
+052774:             mfRuntimePageHideHandler
+052775:         );
+052776:         window.addEventListener(
+052777:             'pageshow',
+052778:             mfRuntimePageShowHandler,
+052779:             { passive: true }
+052780:         );
+052781:     }
+052782:     function startMissionFinderObserver() {
+052783:         if (mfV3DormantPreload) return;
+052784:         globalThis.__MCN_BOOT_MARK__?.('mission-observer-entered', document.readyState);
+052785:         if (isMfV3ManagedActiveWorker()) {
+052786:             globalThis.__MCN_BOOT_MARK__?.('mission-observer-managed-active-owner');
+052787:         }
+052788:         if (mfMainMutationObserver) return;
+052789:         installMissionFinderRuntimeCleanup();
+052790:         installMissionFinderFrameRuntimeReconciliation();
+052791:         if (!shouldKeepMissionFinderObserverForCurrentFrame()) {
+052792:             globalThis.__MCN_BOOT_MARK__?.('mission-observer-inactive-owner');
+052793:             suspendMissionFinderRuntimeForInactiveFrame(
+052794:                 'startup frame is not the active mission owner'
+052795:             );
+052796:             return;
+052797:         }
+052798:         mfRuntimeSuspendedForInactiveFrame = false;
+052799:         installIssueRecorderWatchers();
+052800:         installPersonnelRegistryUpdateHandler();
+052801:         installMissionFinderRuntimeMemoryActivityTracking();
+052802:         if (MF_IS_TOP_WINDOW) {
+052803:             installManualMissionClickFlagClearer();
+052804:             installBackgroundWatcherSupervisor();
+052805:             compactMissionFinderPersistentStorage();
+052806:             if (
+052807:                 localStorage.getItem(
+052808:                     'mf_post_transport_rehook_pending_v1'
+052809:                 ) === 'true' ||
+052810:                 isRecentTransportRehookWindowActive()
+052811:             ) {
+052812:                 forceAutoModeBackOnForTransportRehook();
+052813:                 setTimeout(() => {
+052814:                     openFirstMissionAfterTransportAutoClose(
+052815:                         'startup-pending-rehook'
+052816:                     );
+052817:                 }, 2500);
+052818:             }
+052819:         }
+052820:         if (isMissionPage()) initialize();
+052821:         globalThis.__MCN_BOOT_MARK__?.('mission-observer-active');
+052822:         mfMainMutationObserver = new MutationObserver(records => {
+052823:             releaseRemovedMissionFinderFrameRuntimes(records);
+052824:             scheduleMissionFinderMutationWork(records);
+052825:         });
+052826:         mfMainMutationObserver.observe(document.body, {
+052827:             childList: true,
+052828:             subtree: true
+052829:         });
+052830:         if (isMissionPage()) {
+052831:             startMissionFinderRuntimeMemoryMaintenance();
+052832:         }
+052833:         scheduleAutoMemoryRecycleResume();
+052834:         if (isMfV3ManagedTransportWorker()) {
+052835:             clearAllTransportAutomationFlags('transport-worker-b');
+052836:             void handleTransportRequestsAfterDispatch('worker-b');
+052837:         }
+052838:     }
+052839:     function getMfV3DormantPreloadMissionId() {
+052840:         try {
+052841:             const match = String(
+052842:                 window.location.pathname || ''
+052843:             ).match(/^\/missions\/(\d+)(?:\/|$)/i);
+052844:             return match ? match[1] : '';
+052845:         } catch (_error) {
+052846:             return '';
+052847:         }
+052848:     }
+052849:     function getMfV3OperationalOwnershipBridge() {
+052850:         try {
+052851:             return (
+052852:                 window.__MCN_V3_FRAME_OWNERSHIP_BRIDGE__ ||
+052853:                 window.__MCN_V3_PIPELINE_PRELOAD_BRIDGE__ ||
+052854:                 null
+052855:             );
+052856:         } catch (_error) {
+052857:             return null;
+052858:         }
+052859:     }
+052860:     function installMfV3DormantPreloadBridge() {
+052861:         if (!mfV3DormantPreload) return null;
+052862:         try {
+052863:             const existing =
+052864:                 window[MF_V3_DORMANT_PRELOAD_BRIDGE_KEY];
+052865:             if (existing) return existing;
+052866:             const bridge = Object.freeze({
+052867:                 protocolVersion() {
+052868:                     return 1;
+052869:                 },
+052870:                 missionFinderVersion() {
+052871:                     return '10.6.177';
+052872:                 },
+052873:                 isDormant() {
+052874:                     return mfV3DormantPreload;
+052875:                 },
+052876:                 isPromoted() {
+052877:                     return mfV3DormantPreloadPromoted;
+052878:                 },
+052879:                 missionId() {
+052880:                     return getMfV3DormantPreloadMissionId();
+052881:                 },
+
+===== context-11 [52933-53033] =====
+052933:                         !activationToken ||
+052934:                         !currentMissionId ||
+052935:                         expectedMissionId !== currentMissionId ||
+052936:                         !frameName.startsWith(
+052937:                             MF_V3_ACTIVE_NAME_PREFIX
+052938:                         ) ||
+052939:                         !ownsOperationalState
+052940:                     ) {
+052941:                         return false;
+052942:                     }
+052943:                     mfV3DormantPreload = false;
+052944:                     mfV3DormantPreloadPromoted = true;
+052945:                     mfV3DormantPreloadPromotedAt = Date.now();
+052946:                     mfV3DormantPreloadPromotionSource = String(
+052947:                         payload.source || 'v3-promotion'
+052948:                     ).slice(0, 120);
+052949:                     autoModeRunning = false;
+052950:                     try {
+052951:                         installMissionFinderAlertOverride();
+052952:                         if (document.body) {
+052953:                             startMissionFinderObserver();
+052954:                         } else {
+052955:                             document.addEventListener(
+052956:                                 'DOMContentLoaded',
+052957:                                 startMissionFinderObserver,
+052958:                                 { once: true }
+052959:                             );
+052960:                         }
+052961:                         return true;
+052962:                     } catch (error) {
+052963:                         try {
+052964:                             cleanupMissionFinderRuntime();
+052965:                         } catch (_cleanupError) {}
+052966:                         try {
+052967:                             document.getElementById(
+052968:                                 'mission-finder-wrapper'
+052969:                             )?.remove();
+052970:                         } catch (_cleanupError) {}
+052971:                         mfV3DormantPreload = true;
+052972:                         mfV3DormantPreloadPromoted = false;
+052973:                         mfV3DormantPreloadPromotedAt = 0;
+052974:                         mfV3DormantPreloadPromotionSource = '';
+052975:                         return false;
+052976:                     }
+052977:                 }
+052978:             });
+052979:             window[MF_V3_DORMANT_PRELOAD_BRIDGE_KEY] = bridge;
+052980:             return bridge;
+052981:         } catch (_error) {
+052982:             return null;
+052983:         }
+052984:     }
+052985:     if (mfV3DormantPreload) {
+052986:         installMfV3DormantPreloadBridge();
+052987:     } else if (document.body) {
+052988:         startMissionFinderObserver();
+052989:     } else {
+052990:         document.addEventListener(
+052991:             'DOMContentLoaded',
+052992:             startMissionFinderObserver,
+052993:             { once: true }
+052994:         );
+052995:     }
+052996: })();
+052997:     } catch (error) {
+052998:         bootError('mission-finder-startup', error);
+052999:         console.error('[MissionChief Complete Tools] Mission Finder module startup failed:', error);
+053000:     }
+053001: })();
+053002: return true;
+053003: };
+053004: const dormantPreload = String(window.name || '').startsWith('mcn-v3-pipeline-preload-');
+053005: if (dormantPreload) {
+053006: window.__MCN_HEAVY_RUNTIME_LOADED__ = false;
+053007: globalThis.__MCN_BOOT_MARK__?.('dormant-preload-admitted');
+053008: let promoted = false;
+053009: let promotedAt = 0;
+053010: let promotionSource = '';
+053011: const missionId = () => String(location.pathname || '').match(/^\/missions\/(\d+)/i)?.[1] || '';
+053012: const ownership = () => window.__MCN_V3_FRAME_OWNERSHIP_BRIDGE__ || window.__MCN_V3_PIPELINE_PRELOAD_BRIDGE__ || null;
+053013: const bridge = Object.freeze({
+053014: protocolVersion: () => 1,
+053015: missionFinderVersion: () => '10.6.177',
+053016: isDormant: () => !promoted,
+053017: isPromoted: () => promoted,
+053018: missionId,
+053019: status() {
+053020: return {
+053021: protocolVersion: 1,
+053022: missionFinderVersion: '10.6.177',
+053023: dormant: !promoted,
+053024: promoted,
+053025: promotedAt,
+053026: promotionSource,
+053027: missionId: missionId(),
+053028: frameName: String(window.name || ''),
+053029: ownsOperationalState: ownership()?.isActive?.() === true,
+053030: observerStarted: heavyStarted,
+053031: lightweight: !heavyStarted,
+053032: };
+053033: },
