@@ -18,7 +18,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Build targeted source maps
+      - name: Build exact transport-worker source ranges
         shell: bash
         run: |
           python3 - <<'PY'
@@ -28,55 +28,33 @@ jobs:
           source_path = Path('src/missionchief-command-nexus.user.js')
           lines = source_path.read_text(encoding='utf-8').splitlines()
 
-          def contexts(output, terms, before=12, after=28, max_ranges=180):
-              ranges = []
-              for number, line in enumerate(lines, 1):
-                  lowered = line.lower()
-                  if any(term.lower() in lowered for term in terms):
-                      ranges.append((max(1, number-before), min(len(lines), number+after)))
-              merged = []
-              for start, end in ranges:
-                  if merged and start <= merged[-1][1] + 3:
-                      merged[-1] = (merged[-1][0], max(merged[-1][1], end))
-                  else:
-                      merged.append((start, end))
-              report = [f'lines={len(lines)} bytes={source_path.stat().st_size}', 'terms=' + repr(terms)]
-              for index, (start, end) in enumerate(merged[:max_ranges], 1):
-                  report.append(f'\n===== context-{index} [{start}-{end}] =====')
-                  for line_number in range(start, end+1):
-                      report.append(f'{line_number:06d}: {lines[line_number-1]}')
-              Path(output).write_text('\n'.join(report) + '\n', encoding='utf-8')
+          def write_range(name, start, end):
+              start = max(1, start); end = min(len(lines), end)
+              Path(name).write_text('\n'.join(f'{i:06d}: {lines[i-1]}' for i in range(start, end + 1)) + '\n', encoding='utf-8')
 
-          contexts('.tmp-transport-service-map.txt', [
-              'transportService', 'transport service', 'radioTransportRequests',
-              'currentTransportVehicleId', 'transportRequestMissionId',
-              'patientAssist', 'prisonerAssist', 'transportAffinity',
-              'postTransportRehook', 'serviceTransport', 'balanced transport',
-              'TRANSPORT_SERVICE_', 'TRANSPORT_ASSIST_', 'PRISONER_ASSIST_',
-              'PATIENT_ASSIST_'
-          ], max_ranges=220)
-
-          contexts('.tmp-worker-lifecycle-map.txt', [
-              'function createWorker', 'function removeWorker', 'function destroyWorker',
-              'workerGeneration', 'createPipeline', 'removePipeline', 'pipelineSlots',
-              'promotePipeline', 'pipelinePromotion', 'pipelineActiveOnly',
-              'runtime recycle', 'memory pressure', 'createIframe', 'removeIframe',
-              'ACTIVE_WORKER_NAME_PREFIX', 'PIPELINE_PRELOAD_NAME_PREFIX'
-          ], max_ranges=220)
-
-          contexts('.tmp-controller-flow-map.txt', [
-              'function watcher', 'function watch', 'function tick', 'setInterval(',
-              'function start', 'function stop', 'function render', 'function diagnosticsSnapshot',
-              'function choose', 'function redirect', 'priorityRedirect', 'topMission',
-              'postDispatchWatchdog', 'queueFastRelease', 'activeBootstrapRescue'
-          ], max_ranges=220)
-
-          contexts('.tmp-embedded-transport-map.txt', [
-              'patient transport', 'prisoner transport', 'transport request',
-              'select hospital', 'hospital', 'cell selection', 'release prisoners',
-              'mfHandle', 'mfProcess', 'mfTransport', 'transportState',
-              '/patient/', '/gefangene/', 'Release Prisoners'
-          ], max_ranges=260)
+          ranges = [
+              ('.tmp-src-controller-state-a.txt', 150, 900),
+              ('.tmp-src-controller-state-b.txt', 900, 1800),
+              ('.tmp-src-pipeline-a.txt', 3000, 3850),
+              ('.tmp-src-pipeline-b.txt', 3850, 4700),
+              ('.tmp-src-transport-a.txt', 4700, 5200),
+              ('.tmp-src-transport-b.txt', 5200, 5660),
+              ('.tmp-src-worker-a.txt', 5660, 6400),
+              ('.tmp-src-worker-b.txt', 6400, 7105),
+              ('.tmp-src-watcher-a.txt', 7100, 7600),
+              ('.tmp-src-export-a.txt', 7600, 8500),
+              ('.tmp-src-ui-a.txt', 8500, 9100),
+              ('.tmp-src-embedded-bootstrap-a.txt', 18300, 19350),
+              ('.tmp-src-embedded-transport-a.txt', 19350, 20350),
+              ('.tmp-src-embedded-transport-b.txt', 20350, 21350),
+              ('.tmp-src-embedded-auto-a.txt', 44500, 45700),
+              ('.tmp-src-embedded-auto-b.txt', 45700, 46900),
+              ('.tmp-src-embedded-auto-c.txt', 46900, 48100),
+              ('.tmp-src-embedded-auto-d.txt', 48100, 49300),
+              ('.tmp-src-tail.txt', max(1, len(lines)-700), len(lines)),
+          ]
+          for args in ranges:
+              write_range(*args)
 
           declaration = re.compile(r'^\s*(?:async\s+)?function\s+([A-Za-z0-9_$]+)|^\s*(?:const|let|var)\s+([A-Za-z0-9_$]+)\s*=')
           keywords = ('transport', 'radio', 'worker', 'pipeline', 'patient', 'prisoner', 'mission', 'dispatch', 'watch', 'recycle', 'memory', 'ownership')
@@ -89,18 +67,9 @@ jobs:
               if name and any(keyword in name.lower() for keyword in keywords):
                   report.append(f'{number:06d}: {line}')
           Path('.tmp-transport-declarations.txt').write_text('\n'.join(report) + '\n', encoding='utf-8')
-
-          for name, start, end in [
-              ('.tmp-source-head.txt', 1, 900),
-              ('.tmp-source-controller-state.txt', 900, 1900),
-              ('.tmp-source-controller-export.txt', 7600, 8500),
-              ('.tmp-source-embedded-bootstrap.txt', 18000, 19400),
-          ]:
-              start = max(1, start); end = min(len(lines), end)
-              Path(name).write_text('\n'.join(f'{i:06d}: {lines[i-1]}' for i in range(start, end+1)) + '\n', encoding='utf-8')
           PY
 
-      - name: Commit inspection maps
+      - name: Commit exact ranges
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
@@ -109,5 +78,5 @@ jobs:
           if git diff --cached --quiet; then
             exit 0
           fi
-          git commit -m "Add transport-worker source maps [skip transport inspection]"
+          git commit -m "Add exact transport-worker ranges [skip transport inspection]"
           git push origin HEAD:feature/v3035-worker-b-transport
